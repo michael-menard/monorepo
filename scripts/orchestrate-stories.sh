@@ -62,6 +62,8 @@ MAX_RETRIES=1
 LOG_DIR=""
 PLAN_SLUG_ARG=""
 MAX_PASSES=10
+TOKEN_LIMIT_HIT=false          # Global flag: stop launching when rate-limited
+SKIP_SYNC=false                # Skip per-transition KB/index syncs (final reconciliation only)
 
 # All tools needed across all phases — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -82,6 +84,7 @@ while [[ $# -gt 0 ]]; do
     --plan)           PLAN_SLUG_ARG="$2"; shift 2 ;;
     --autonomy)       AUTONOMY="$2"; shift 2 ;;
     --max-passes)     MAX_PASSES="$2"; shift 2 ;;
+    --skip-sync)      SKIP_SYNC=true; shift ;;
     --help|-h)
       echo "Usage: $0 [options]"
       echo ""
@@ -96,6 +99,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --plan SLUG           Discover stories from a KB plan (mutually exclusive with --work-order)"
       echo "  --autonomy LEVEL      Set autonomy level (default aggressive)"
       echo "  --max-passes N        Max dependency loop-back passes (default 10)"
+      echo "  --skip-sync           Skip per-transition KB/index syncs (final reconciliation only)"
       exit 0
       ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
@@ -105,6 +109,7 @@ done
 # ── Set up logging ───────────────────────────────────────────────────
 LOG_DIR="/tmp/orchestrator-$(date '+%Y%m%d-%H%M%S')"
 mkdir -p "$LOG_DIR/.state" "$LOG_DIR/.results"
+RATE_LIMIT_SENTINEL="$LOG_DIR/.token-limit-hit"
 
 # ── Mutual exclusion: --plan vs --work-order ───────────────────────────
 if [[ -n "$PLAN_SLUG_ARG" && "$WORK_ORDER" != "$REPO_ROOT/plans/future/platform/WORK-ORDER-BY-BATCH.md" ]]; then
@@ -205,6 +210,17 @@ for STORY_ID in "${WO_STORY_IDS[@]}"; do
 done
 
 TOTAL=${#FILTERED_STORIES[@]}
+
+# Validate --only list: warn if some IDs didn't match
+if [[ -n "$ONLY_LIST" ]]; then
+  only_count=$(echo "$ONLY_LIST" | tr ',' '\n' | wc -l | xargs)
+  if [[ ${#FILTERED_STORIES[@]} -lt $only_count ]]; then
+    echo "WARNING: --only specified $only_count stories but only ${#FILTERED_STORIES[@]} matched."
+    echo "  Possible causes: stories not in work order, or --only value was truncated by shell."
+    echo "  Only list: $ONLY_LIST"
+    echo "WARNING: --only count mismatch: expected=$only_count matched=${#FILTERED_STORIES[@]}" >> "$FILTER_LOG"
+  fi
+fi
 
 if [[ $TOTAL -eq 0 ]]; then
   echo "No stories to process."
@@ -364,14 +380,15 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
   fi
 
   kb_st=$(kb_story_state "$STORY_ID")
-  detect_story_state "$STORY_ID" "$FEAT_DIR" "" "$kb_st"
+  detect_story_state "$STORY_ID" "$FEAT_DIR" "cleanup" "$kb_st"
   action=$(state_to_action "$DETECTED_STATE")
 
   printf "  %-14s state=%-14s stage=%-22s next=%s\n" \
     "$STORY_ID" "$DETECTED_STATE" "${DETECTED_STAGE:-<none>}" "$action"
 
   if [[ -n "$DETECTED_DUPLICATES" ]]; then
-    echo "    ⚠ duplicate dirs (would cleanup on real run): $DETECTED_DUPLICATES"
+    echo "    DEDUP: removed stale dirs: $DETECTED_DUPLICATES"
+    echo "DEDUP $STORY_ID removed: $DETECTED_DUPLICATES" >> "$FILTER_LOG"
   fi
 
   write_state_file "$STORY_ID" "$FEAT_DIR" "$DETECTED_STATE" "$MAX_RETRIES" "" ""
@@ -450,6 +467,39 @@ RUN_LOG="$LOG_DIR/run.log"
   echo "---"
 } > "$RUN_LOG"
 
+# ── Pre-QA environment check ──────────────────────────────────────────
+# Verifies preconditions before launching the QA agent to avoid wasted cycles.
+pre_qa_check() {
+  local STORY_ID="$1"
+  local TAG="$2"
+
+  # Check story dependencies are satisfied
+  if ! check_deps_satisfied "$STORY_ID"; then
+    echo "$TAG QA   SKIP:    $STORY_ID (blocked by deps: $BLOCKING_DEPS)"
+    return 1
+  fi
+
+  # Quick type-check in worktree if it exists
+  local WT_PATH
+  WT_PATH=$(resolve_worktree_root "$STORY_ID")
+  if [[ -n "$WT_PATH" && -d "$WT_PATH" ]]; then
+    if ! pnpm --dir "$WT_PATH" check-types --quiet 2>/dev/null; then
+      echo "$TAG QA   SKIP:    $STORY_ID (type-check failed in worktree — env not ready)"
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
+# ── Log check helpers ──────────────────────────────────────────────────
+# Returns true (0) if the log check result indicates a real failure.
+# NOOP results are warnings, not failures — they don't consume retries.
+is_log_failure() {
+  local result="$1"
+  [[ "$result" != "OK" && "$result" != NOOP:* ]]
+}
+
 # ── Log failure detection (reused from implement-stories.sh) ─────────
 check_log_for_failure() {
   local LOG_FILE="$1"
@@ -462,7 +512,12 @@ check_log_for_failure() {
   local FILE_SIZE
   FILE_SIZE=$(wc -c < "$LOG_FILE" 2>/dev/null) || FILE_SIZE=0
   if [[ $FILE_SIZE -lt 100 ]]; then
-    echo "FAIL:signal:truncated-log"
+    if [[ $FILE_SIZE -gt 0 ]]; then
+      # Some output but very short — likely a clean no-op (agent started, found nothing to do)
+      echo "NOOP:signal:truncated-log"
+    else
+      echo "FAIL:signal:empty-log"
+    fi
     return 0
   fi
 
@@ -491,7 +546,62 @@ check_log_for_failure() {
     return 0
   fi
 
+  # Check for account-level token/rate limits (triggers orchestrator shutdown)
+  if check_token_limit "$LOG_FILE"; then
+    echo "FAIL:token_limit:account token or rate limit hit"
+    return 0
+  fi
+
   echo "OK"
+}
+
+# ── Token / rate-limit detection ─────────────────────────────────────
+# Check if a claude invocation log indicates we've hit the account token
+# limit or been rate-limited. Writes a sentinel file so all parallel
+# workers and the main loop can detect it.
+RATE_LIMIT_SENTINEL=""   # Set after LOG_DIR is created
+
+check_token_limit() {
+  local LOG_FILE="$1"
+  local EXIT_CODE="${2:-0}"
+  [[ -z "$LOG_FILE" || ! -f "$LOG_FILE" ]] && return 1
+
+  # Exit code 2 is often used for overload/rate-limit by claude CLI
+  local hit=false
+
+  # Scan log for rate-limit / quota / overloaded signals
+  if grep -qEi "rate.?limit|quota.?exceeded|token.?limit|account.?limit|overloaded|too many requests|429|billing|usage.?cap|max.*usage|plan.?limit" "$LOG_FILE" 2>/dev/null; then
+    hit=true
+  fi
+
+  # Also check for specific exit code patterns
+  if [[ "$EXIT_CODE" -eq 2 ]]; then
+    # Claude CLI exit code 2 can indicate overload — only flag with specific rate/quota language
+    if grep -qEi "rate.?limit|quota.?exceeded|overloaded|too many requests|429|billing|usage.?cap" "$LOG_FILE" 2>/dev/null; then
+      hit=true
+    fi
+  fi
+
+  if $hit; then
+    TOKEN_LIMIT_HIT=true
+    if [[ -n "$RATE_LIMIT_SENTINEL" ]]; then
+      echo "TOKEN_LIMIT_HIT=$(date '+%Y-%m-%d %H:%M:%S')" > "$RATE_LIMIT_SENTINEL"
+    fi
+    return 0
+  fi
+  return 1
+}
+
+# Check if any worker has already flagged a token limit
+is_token_limited() {
+  if $TOKEN_LIMIT_HIT; then
+    return 0
+  fi
+  if [[ -n "$RATE_LIMIT_SENTINEL" && -f "$RATE_LIMIT_SENTINEL" ]]; then
+    TOKEN_LIMIT_HIT=true
+    return 0
+  fi
+  return 1
 }
 
 # ── Git lifecycle helpers ────────────────────────────────────────────
@@ -566,15 +676,18 @@ sync_worktree_for_agents() {
 ensure_worktree() {
   local STORY_ID="$1"
   local TAG="$2"
+  local SKIP_REBASE="${3:-false}"
   local BRANCH="story/${STORY_ID}"
   local WT_PATH="${WORKTREE_BASE}/${STORY_ID}"
 
   if [[ -d "$WT_PATH" ]]; then
     echo "$TAG WT   EXISTS:  $STORY_ID ($WT_PATH)"
-    git -C "$WT_PATH" fetch origin main --quiet 2>/dev/null || true
-    if ! git -C "$WT_PATH" rebase origin/main --quiet 2>/dev/null; then
-      echo "$TAG WT   WARN:    $STORY_ID (rebase conflicts — aborting)"
-      git -C "$WT_PATH" rebase --abort 2>/dev/null || true
+    if [[ "$SKIP_REBASE" != "true" ]]; then
+      git -C "$WT_PATH" fetch origin main --quiet 2>/dev/null || true
+      if ! git -C "$WT_PATH" rebase origin/main --quiet 2>/dev/null; then
+        echo "$TAG WT   WARN:    $STORY_ID (rebase conflicts — aborting)"
+        git -C "$WT_PATH" rebase --abort 2>/dev/null || true
+      fi
     fi
     return 0
   fi
@@ -758,8 +871,28 @@ update_index_status() {
   echo "$TAG IDX  UPDATE:  $STORY_ID → $index_status"
 }
 
+# ── Work order locking (mkdir-based, POSIX-safe, macOS-compatible) ────
+WO_LOCK_DIR="$LOG_DIR/.wo-lock.d"
+
+wo_lock() {
+  local max_wait=30
+  local waited=0
+  while ! mkdir "$WO_LOCK_DIR" 2>/dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+    if [[ $waited -ge $max_wait ]]; then
+      echo "WARN: work order lock timeout after ${max_wait}s, proceeding" >&2
+      break
+    fi
+  done
+}
+
+wo_unlock() {
+  rmdir "$WO_LOCK_DIR" 2>/dev/null || true
+}
+
 # Remove a completed/UAT story row from the work order file.
-# Uses sed to delete lines containing the story ID from the table.
+# Uses line-by-line filtering with a lock to prevent parallel write races.
 remove_from_work_order() {
   local STORY_ID="$1"
   local WO_FILE="$2"
@@ -773,6 +906,8 @@ remove_from_work_order() {
   if ! grep -q "$STORY_ID" "$WO_FILE" 2>/dev/null; then
     return 0
   fi
+
+  wo_lock
 
   # Remove all lines containing this story ID (data rows + continuation rows)
   # Create temp file (macOS sed doesn't support -i without extension)
@@ -807,7 +942,127 @@ remove_from_work_order() {
   done < "$WO_FILE" > "$TMP_FILE"
 
   mv "$TMP_FILE" "$WO_FILE"
+
+  wo_unlock
+
   echo "$TAG WO   REMOVE:  $STORY_ID (removed from work order)"
+}
+
+# ── State → work order status mapping ─────────────────────────────────
+_state_to_wo_status() {
+  case "$1" in
+    NOT_FOUND)      echo "backlog" ;;
+    GENERATED)      echo "backlog" ;;
+    ELABORATED)     echo "ready-to-work" ;;
+    NEEDS_REVIEW)   echo "needs-code-review" ;;
+    FAILED_REVIEW)  echo "failed-code-review" ;;
+    READY_FOR_QA)   echo "ready-for-qa" ;;
+    FAILED_QA)      echo "failed-qa" ;;
+    UAT)            echo "UAT" ;;
+    NEEDS_SPLIT)    echo "needs-split" ;;
+    *)              echo "unknown" ;;
+  esac
+}
+
+# ── State → next command mapping ──────────────────────────────────────
+_state_to_wo_command() {
+  local state="$1" feat_dir="$2" story_id="$3"
+  case "$state" in
+    NOT_FOUND)      echo "/pm-story generate ${feat_dir} ${story_id}" ;;
+    GENERATED)      echo "/elab-story ${feat_dir} ${story_id}" ;;
+    ELABORATED)     echo "/dev-implement-story ${feat_dir} ${story_id}" ;;
+    NEEDS_REVIEW)   echo "/dev-code-review ${feat_dir} ${story_id}" ;;
+    FAILED_REVIEW)  echo "/dev-fix-story ${feat_dir} ${story_id}" ;;
+    READY_FOR_QA)   echo "/qa-verify-story ${feat_dir} ${story_id}" ;;
+    FAILED_QA)      echo "/dev-fix-story ${feat_dir} ${story_id}" ;;
+    *)              echo "" ;;
+  esac
+}
+
+# Update a story's Status and Next Command columns in the work order.
+# Does NOT remove — only rewrites the Status and Command columns in-place.
+update_wo_status() {
+  local STORY_ID="$1"
+  local NEW_STATE="$2"
+  local FEAT_DIR="$3"
+  local WO_FILE="$4"
+  local TAG="$5"
+
+  if [[ ! -f "$WO_FILE" ]]; then
+    return 0
+  fi
+
+  if ! grep -q "$STORY_ID" "$WO_FILE" 2>/dev/null; then
+    return 0
+  fi
+
+  local NEW_STATUS
+  NEW_STATUS=$(_state_to_wo_status "$NEW_STATE")
+  local NEW_CMD
+  NEW_CMD=$(_state_to_wo_command "$NEW_STATE" "$FEAT_DIR" "$STORY_ID")
+
+  # Read current status to avoid no-op writes
+  local CUR_STATUS
+  CUR_STATUS=$(grep "$STORY_ID" "$WO_FILE" 2>/dev/null | awk -F '│' '{print $5}' | head -1 | xargs) || true
+  if [[ "$CUR_STATUS" == "$NEW_STATUS" ]]; then
+    return 0
+  fi
+
+  wo_lock
+
+  local TMP_FILE
+  TMP_FILE=$(mktemp /tmp/wo-update-XXXXXX)
+  local in_story=false
+
+  while IFS= read -r line; do
+    if [[ "$line" == *"$STORY_ID"* && "$line" == *"│"* ]]; then
+      # Main data row — rewrite Status and Command columns
+      local col1 col2 col3 orig_status orig_cmd sw cw
+      col1=$(echo "$line" | awk -F '│' '{print $2}')
+      col2=$(echo "$line" | awk -F '│' '{print $3}')
+      col3=$(echo "$line" | awk -F '│' '{print $4}')
+      orig_status=$(echo "$line" | awk -F '│' '{print $5}')
+      orig_cmd=$(echo "$line" | awk -F '│' '{print $6}')
+      sw=${#orig_status}
+      cw=${#orig_cmd}
+
+      local padded_status padded_cmd
+      padded_status=$(printf "%-${sw}s" " $NEW_STATUS")
+      padded_cmd=$(printf "%-${cw}s" " $NEW_CMD")
+
+      echo "│${col1}│${col2}│${col3}│${padded_status}│${padded_cmd}│"
+      in_story=true
+    elif $in_story; then
+      local story_col
+      story_col=$(echo "$line" | awk -F '│' '{print $3}' 2>/dev/null | xargs) || true
+      if [[ -z "$story_col" && "$line" == *"│"* && "$line" != *"├"* && "$line" != *"┌"* && "$line" != *"└"* ]]; then
+        # Continuation row — clear status/command continuation
+        local col1 col2 col3 orig_status orig_cmd sw cw
+        col1=$(echo "$line" | awk -F '│' '{print $2}')
+        col2=$(echo "$line" | awk -F '│' '{print $3}')
+        col3=$(echo "$line" | awk -F '│' '{print $4}')
+        orig_status=$(echo "$line" | awk -F '│' '{print $5}')
+        orig_cmd=$(echo "$line" | awk -F '│' '{print $6}')
+        sw=${#orig_status}
+        cw=${#orig_cmd}
+        local padded_status padded_cmd
+        padded_status=$(printf "%-${sw}s" " ")
+        padded_cmd=$(printf "%-${cw}s" " ")
+        echo "│${col1}│${col2}│${col3}│${padded_status}│${padded_cmd}│"
+      else
+        in_story=false
+        echo "$line"
+      fi
+    else
+      echo "$line"
+    fi
+  done < "$WO_FILE" > "$TMP_FILE"
+
+  mv "$TMP_FILE" "$WO_FILE"
+
+  wo_unlock
+
+  echo "$TAG WO   UPDATE:  $STORY_ID → $NEW_STATUS"
 }
 
 # Combined sync: update KB + index + work order after a state transition.
@@ -819,15 +1074,18 @@ sync_status_after_transition() {
   local FEAT_DIR="$4"
   local TAG="$5"
 
-  # Update KB (best-effort, in background to not slow down pipeline)
-  update_kb_status "$STORY_ID" "$NEW_STATE" "$PHASE" "$TAG" &
+  # Update KB + index (best-effort, in background to not slow down pipeline)
+  # With --skip-sync, skip per-transition syncs — final reconciliation handles it
+  if ! $SKIP_SYNC; then
+    update_kb_status "$STORY_ID" "$NEW_STATE" "$PHASE" "$TAG" > "$LOG_DIR/.sync-kb-${STORY_ID}.log" 2>&1 &
+    update_index_status "$FEAT_DIR" "$STORY_ID" "$NEW_STATE" "$TAG" > "$LOG_DIR/.sync-idx-${STORY_ID}.log" 2>&1 &
+  fi
 
-  # Update stories.index.md (best-effort, in background)
-  update_index_status "$FEAT_DIR" "$STORY_ID" "$NEW_STATE" "$TAG" &
-
-  # If completed/UAT, remove from work order
+  # If completed/UAT, remove from work order; otherwise update status column
   if [[ "$NEW_STATE" == "UAT" ]]; then
     remove_from_work_order "$STORY_ID" "$WORK_ORDER" "$TAG"
+  else
+    update_wo_status "$STORY_ID" "$NEW_STATE" "$FEAT_DIR" "$WORK_ORDER" "$TAG"
   fi
 
   # Don't wait for background jobs here — they're best-effort
@@ -845,6 +1103,7 @@ move_story_to() {
     return 0
   fi
   if [[ -d "$FEAT_DIR/$TO_STAGE/$STORY_ID" ]]; then
+    echo "$TAG MOVE:        $STORY_ID ($FROM_STAGE → $TO_STAGE already exists, removing stale $FROM_STAGE copy)"
     rm -rf "$FEAT_DIR/$FROM_STAGE/$STORY_ID"
     return 0
   fi
@@ -933,6 +1192,14 @@ process_story() {
   # ── State machine loop ─────────────────────────────────────────
   while [[ $MAX_TRANSITIONS -gt 0 ]]; do
     ((MAX_TRANSITIONS--))
+
+    # Bail out if any worker hit the account token limit
+    if is_token_limited; then
+      FINAL_RESULT="token_limit"
+      echo "$TAG TOKEN LIMIT:  $STORY_ID — account token/rate limit hit, stopping"
+      break
+    fi
+
     refresh_state
 
     local CURRENT_STATE="$DETECTED_STATE"
@@ -983,7 +1250,7 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$GEN_LOG" "generate")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
+        if is_log_failure "$LOG_CHECK"; then
           ((PHASE_ATTEMPTS++))
           if [[ $PHASE_ATTEMPTS -ge $MAX_PHASE_ATTEMPTS ]]; then
             FINAL_RESULT="stuck"
@@ -1014,7 +1281,7 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$ELAB_LOG" "elaborate")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
+        if is_log_failure "$LOG_CHECK"; then
           ((PHASE_ATTEMPTS++))
           if [[ $PHASE_ATTEMPTS -ge $MAX_PHASE_ATTEMPTS ]]; then
             FINAL_RESULT="stuck"
@@ -1065,7 +1332,7 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$IMPL_LOG" "implement")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
+        if is_log_failure "$LOG_CHECK"; then
           ((PHASE_ATTEMPTS++))
           if [[ $PHASE_ATTEMPTS -ge $MAX_PHASE_ATTEMPTS ]]; then
             FINAL_RESULT="stuck"
@@ -1103,7 +1370,8 @@ process_story() {
         fi
 
         # Ensure worktree exists and code is pushed so review agents can find it
-        ensure_worktree "$STORY_ID" "$TAG" || true
+        # Skip rebase for review — code shouldn't change mid-review
+        ensure_worktree "$STORY_ID" "$TAG" "true" || true
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local REVIEW_LOG="$LOG_DIR/${STORY_ID}-review.log"
@@ -1120,7 +1388,7 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$REVIEW_LOG" "review")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
+        if is_log_failure "$LOG_CHECK"; then
           # Review agent crashed or hit precondition — NOT a code quality issue.
           # Move to failed-code-review so the fix path can handle it.
           # This does NOT consume retry budget — the fix cycle does.
@@ -1175,11 +1443,21 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$FIX_LOG" "fix")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
-          # Fix agent crashed — self-heal by moving back to ready-to-work
-          # for fresh implementation. Does NOT consume extra retry.
-          echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — moving back to ready-to-work for re-impl (see $FIX_LOG)"
-          move_story_to "$STORY_ID" "failed-code-review" "ready-to-work" "$FEAT_DIR" "$TAG"
+        if is_log_failure "$LOG_CHECK"; then
+          # Fix agent crashed — check if artifacts are intact before deciding recovery path
+          local has_evidence=false
+          refresh_state
+          if [[ -n "$DETECTED_STORY_DIR" && -f "${DETECTED_STORY_DIR}/_implementation/EVIDENCE.yaml" ]]; then
+            has_evidence=true
+          fi
+
+          if $has_evidence; then
+            echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — artifacts intact, moving to needs-code-review for retry (see $FIX_LOG)"
+            move_story_to "$STORY_ID" "failed-code-review" "needs-code-review" "$FEAT_DIR" "$TAG"
+          else
+            echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — no evidence, moving to ready-to-work for re-impl (see $FIX_LOG)"
+            move_story_to "$STORY_ID" "failed-code-review" "ready-to-work" "$FEAT_DIR" "$TAG"
+          fi
           continue
         fi
 
@@ -1201,8 +1479,16 @@ process_story() {
 
       # ── Ready for QA ──────────────────────────────────────────
       READY_FOR_QA)
+        # Pre-QA environment check — skip if deps unmet or env not ready
+        if ! pre_qa_check "$STORY_ID" "$TAG"; then
+          echo "$TAG QA   DEFERRED: $STORY_ID (pre-QA env check failed)"
+          FINAL_RESULT="deferred"
+          break
+        fi
+
         # Ensure worktree is synced so QA agents can run tests against story code
-        ensure_worktree "$STORY_ID" "$TAG" || true
+        # Skip rebase for QA — code shouldn't change mid-QA
+        ensure_worktree "$STORY_ID" "$TAG" "true" || true
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local QA_LOG="$LOG_DIR/${STORY_ID}-qa.log"
@@ -1224,7 +1510,7 @@ process_story() {
           sync_status_after_transition "$STORY_ID" "UAT" "qa" "$FEAT_DIR" "$TAG"
           merge_and_cleanup "$STORY_ID" "$TAG"
           break
-        elif [[ "$LOG_CHECK" != "OK" ]]; then
+        elif is_log_failure "$LOG_CHECK"; then
           # QA agent crashed or found issues — route to fix path (no retry cost here)
           echo "$TAG QA   ISSUE:  $STORY_ID ($LOG_CHECK) — routing to fix path (see $QA_LOG)"
           if [[ "$DETECTED_STAGE" != "failed-qa" ]]; then
@@ -1273,10 +1559,21 @@ process_story() {
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$FIX_LOG" "fix")
 
-        if [[ "$LOG_CHECK" != "OK" ]]; then
-          # Fix agent crashed — self-heal by moving back to ready-to-work
-          echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — moving back to ready-to-work for re-impl (see $FIX_LOG)"
-          move_story_to "$STORY_ID" "failed-qa" "ready-to-work" "$FEAT_DIR" "$TAG"
+        if is_log_failure "$LOG_CHECK"; then
+          # Fix agent crashed — check if artifacts are intact before deciding recovery path
+          local has_evidence=false
+          refresh_state
+          if [[ -n "$DETECTED_STORY_DIR" && -f "${DETECTED_STORY_DIR}/_implementation/EVIDENCE.yaml" ]]; then
+            has_evidence=true
+          fi
+
+          if $has_evidence; then
+            echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — artifacts intact, moving to ready-for-qa for retry (see $FIX_LOG)"
+            move_story_to "$STORY_ID" "failed-qa" "ready-for-qa" "$FEAT_DIR" "$TAG"
+          else
+            echo "$TAG FIX  HEAL:   $STORY_ID ($LOG_CHECK) — no evidence, moving to ready-to-work for re-impl (see $FIX_LOG)"
+            move_story_to "$STORY_ID" "failed-qa" "ready-to-work" "$FEAT_DIR" "$TAG"
+          fi
           continue
         fi
 
@@ -1346,7 +1643,7 @@ is_story_done_or_stuck() {
   if [[ -f "$rf" ]]; then
     local r
     r=$(cat "$rf")
-    if [[ "$r" == *"result=ok"* || "$r" == *"result=skip"* || "$r" == *"result=fail"* || "$r" == *"result=stuck"* ]]; then
+    if [[ "$r" == *"result=ok"* || "$r" == *"result=skip"* || "$r" == *"result=fail"* || "$r" == *"result=stuck"* || "$r" == *"result=token_limit"* ]]; then
       return 0
     fi
   fi
@@ -1381,9 +1678,30 @@ while true; do
     STORY_ID="${FILTERED_STORIES[$i]}"
     IDX=$((i + 1))
 
+    # Stop launching if token limit was hit by any worker
+    if is_token_limited; then
+      echo ""
+      echo "TOKEN LIMIT HIT — not launching any more stories."
+      echo "Waiting for ${#RUNNING_PIDS[@]} running jobs to finish..."
+      break
+    fi
+
     # Skip stories that already have a final result
     if is_story_done_or_stuck "$STORY_ID"; then
       continue
+    fi
+
+    # On pass > 1, re-detect state — another worker or prior pass may have advanced it
+    if [[ $PASS_NUM -gt 1 ]]; then
+      local_feat_dir=$(read_state_field "$STORY_ID" "feature_dir")
+      if [[ -n "$local_feat_dir" ]]; then
+        kb_st=$(kb_story_state "$STORY_ID")
+        detect_story_state "$STORY_ID" "$local_feat_dir" "" "$kb_st"
+        if [[ "$DETECTED_STATE" == "UAT" ]]; then
+          echo "result=ok phases= state=UAT transitions=" > "$LOG_DIR/.results/${STORY_ID}"
+          continue
+        fi
+      fi
     fi
 
     # Check dependencies
@@ -1414,6 +1732,14 @@ while true; do
     wait
     # Wait for background sync jobs too
     wait 2>/dev/null || true
+  fi
+
+  # If token limit was hit, stop all further passes
+  if is_token_limited; then
+    echo ""
+    echo "TOKEN LIMIT: Account token/rate limit detected. Stopping orchestrator."
+    echo "  Check logs in: $LOG_DIR"
+    break
   fi
 
   # If nothing was deferred, we're done
@@ -1473,16 +1799,18 @@ RESULT_OK=0
 RESULT_FAIL=0
 RESULT_SKIP=0
 RESULT_STUCK=0
+RESULT_TOKEN_LIMIT=0
 MISSING=0
 
 for STORY_ID in "${FILTERED_STORIES[@]}"; do
   RESULT_FILE="$LOG_DIR/.results/${STORY_ID}"
   if [[ -f "$RESULT_FILE" ]]; then
     RESULT=$(cat "$RESULT_FILE")
-    [[ "$RESULT" == *"result=ok"* ]]    && ((RESULT_OK++))    || true
-    [[ "$RESULT" == *"result=fail"* ]]  && ((RESULT_FAIL++))  || true
-    [[ "$RESULT" == *"result=skip"* ]]  && ((RESULT_SKIP++))  || true
-    [[ "$RESULT" == *"result=stuck"* ]] && ((RESULT_STUCK++)) || true
+    [[ "$RESULT" == *"result=ok"* ]]           && ((RESULT_OK++))          || true
+    [[ "$RESULT" == *"result=fail"* ]]         && ((RESULT_FAIL++))        || true
+    [[ "$RESULT" == *"result=skip"* ]]         && ((RESULT_SKIP++))        || true
+    [[ "$RESULT" == *"result=stuck"* ]]        && ((RESULT_STUCK++))       || true
+    [[ "$RESULT" == *"result=token_limit"* ]]  && ((RESULT_TOKEN_LIMIT++)) || true
   else
     ((MISSING++))
   fi
@@ -1494,7 +1822,7 @@ done
   echo "=== Final Summary ==="
   echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   echo "Passes: $PASS_NUM  Dep-blocked: $TOTAL_DEFERRED"
-  echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  Missing: $MISSING"
+  echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  TOKEN_LIMIT: $RESULT_TOKEN_LIMIT  Missing: $MISSING"
   echo "---"
   echo "Per-story results:"
   for SID in "${FILTERED_STORIES[@]}"; do
@@ -1519,6 +1847,7 @@ echo " OK:                $RESULT_OK"
 echo " FAILED:            $RESULT_FAIL"
 echo " STUCK:             $RESULT_STUCK"
 echo " SKIPPED:           $RESULT_SKIP"
+[[ $RESULT_TOKEN_LIMIT -gt 0 ]] && echo " TOKEN LIMITED:     $RESULT_TOKEN_LIMIT"
 echo " Passes:            $PASS_NUM"
 [[ $TOTAL_DEFERRED -gt 0 ]] && echo " Dep-blocked:       $TOTAL_DEFERRED"
 [[ $MISSING -gt 0 ]] && echo " Missing results:   $MISSING"
@@ -1527,13 +1856,32 @@ echo "======================================"
 
 echo ""
 echo "Per-story results:"
+printf "  %-14s %-14s   %-14s  %s\n" "STORY" "INITIAL" "FINAL" "RESULT"
+printf "  %-14s %-14s   %-14s  %s\n" "─────" "───────" "─────" "──────"
 for STORY_ID in "${FILTERED_STORIES[@]}"; do
+  # Get initial state from STATE_SUMMARY (set during detection pass)
+  init_state="?"
+  case "$STATE_SUMMARY" in
+    *"${STORY_ID}="*)
+      init_state=$(echo "$STATE_SUMMARY" | grep -oE "${STORY_ID}=[A-Z_]+" | head -1 | cut -d= -f2)
+      ;;
+  esac
+
+  # Get final state and result from result file
+  final_state="?"
+  result_text="no result (crashed?)"
   RESULT_FILE="$LOG_DIR/.results/${STORY_ID}"
   if [[ -f "$RESULT_FILE" ]]; then
-    echo "  $STORY_ID: $(cat "$RESULT_FILE")"
-  else
-    echo "  $STORY_ID: no result (crashed?)"
+    result_text=$(cat "$RESULT_FILE")
+    # Extract state= value from result line
+    case "$result_text" in
+      *"state="*)
+        final_state=$(echo "$result_text" | grep -oE 'state=[A-Za-z_]+' | head -1 | cut -d= -f2)
+        ;;
+    esac
   fi
+
+  printf "  %-14s %-14s → %-14s  %s\n" "$STORY_ID" "$init_state" "$final_state" "$result_text"
 done
 
 # ── Retry suggestions ────────────────────────────────────────────────
@@ -1557,6 +1905,16 @@ if [[ $TOTAL_FAIL -gt 0 ]]; then
   if [[ -n "$FAILED_IDS" ]]; then
     echo "Retry failed: $0 --only $FAILED_IDS --max-retries $((MAX_RETRIES + 1))"
   fi
+fi
+
+# ── Token limit exit ────────────────────────────────────────────────
+if is_token_limited; then
+  echo ""
+  echo "*** STOPPED: Claude Code account token/rate limit reached. ***"
+  echo "    Remaining stories were NOT processed."
+  echo "    Wait for your limit to reset, then re-run with:"
+  echo "    $0 --only <remaining-story-ids>"
+  echo ""
 fi
 
 # ── Cleanup ──────────────────────────────────────────────────────────

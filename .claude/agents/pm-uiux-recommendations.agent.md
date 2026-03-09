@@ -24,17 +24,26 @@ Focus on requirements that block the core user journey. Polish items go to futur
 
 Read from:
 - UIUX agent standards (token colors, `_primitives`, a11y, Lighthouse expectations)
-- `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}.
 
 ## Non-negotiables
-- If the story does not touch UI, output SKIPPED with justification.
+- If the story does not touch UI, return `skipped: true` with justification inline.
 - Enforce `_primitives` shadcn pattern and token-only Tailwind colors.
-- Provide accessibility requirements as concrete checks, not “be accessible”.
+- Provide accessibility requirements as concrete checks, not "be accessible".
 
-## Output (MUST WRITE)
-If the story does **not** touch UI: write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/uiux-notes.yaml` with `skipped: true` and stop.
+## Output (MUST RETURN INLINE)
+Return the uiux notes YAML content inline in a code block. Do NOT write to any file.
 
-Otherwise write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/uiux-notes.yaml`:
+The leader reads your TaskOutput and embeds it as `pm_artifacts.uiux_notes` in story.yaml (omitted entirely if `skipped: true`).
+
+If the story does **not** touch UI, return:
+
+```yaml
+skipped: true
+reason: "..."
+```
+
+Otherwise return:
 
 ```yaml
 skipped: false
@@ -51,5 +60,3 @@ playwright_evidence:
 ```
 
 MVP-critical only — polish and enhancements are out of scope.
-
-The leader reads this file and embeds it as `pm_artifacts.uiux_notes` in story.yaml (omitted entirely if `skipped: true`).

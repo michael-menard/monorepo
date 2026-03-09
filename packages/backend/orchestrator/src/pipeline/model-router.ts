@@ -177,7 +177,6 @@ export class PipelineModelRouter {
   private readonly conservativeOpenRouterModel: string
   private readonly explorationBudgetFraction: number
   private readonly explorationMinSuccessRateFloor: number
-  private readonly manualSeedEnabled: boolean
   private readonly randomFn: () => number
   private readonly hasAnyQualifyingProfile: (() => Promise<boolean>) | undefined
   // AC-2: cold-start flag (null = not yet evaluated)
@@ -193,7 +192,6 @@ export class PipelineModelRouter {
       this.conservativeOpenRouterModel = 'openrouter/anthropic/claude-3-haiku'
       this.explorationBudgetFraction = 0.1
       this.explorationMinSuccessRateFloor = 0.3
-      this.manualSeedEnabled = false
       this.randomFn = Math.random
       this.hasAnyQualifyingProfile = undefined
     } else {
@@ -206,7 +204,6 @@ export class PipelineModelRouter {
         config?.conservativeOpenRouterModel ?? 'openrouter/anthropic/claude-3-haiku'
       this.explorationBudgetFraction = config?.explorationBudgetFraction ?? 0.1
       this.explorationMinSuccessRateFloor = config?.explorationMinSuccessRateFloor ?? 0.3
-      this.manualSeedEnabled = config?.manualSeedEnabled ?? false
       this.randomFn = config?.randomFn ?? Math.random
       this.hasAnyQualifyingProfile = config?.hasAnyQualifyingProfile
     }
@@ -280,7 +277,7 @@ export class PipelineModelRouter {
    */
   private async _dispatchFourTier(
     storyId: string,
-    agentId: string,
+    _agentId: string,
     messages: BaseMessage[],
     changeType: string,
     fileType: string,
@@ -789,7 +786,7 @@ export class PipelineModelRouter {
   /**
    * Get a LangChain BaseChatModel instance for the given provider and model string.
    */
-  private async _getModelInstance(provider: EscalationProvider, modelString: string) {
+  private async _getModelInstance(_provider: EscalationProvider, modelString: string) {
     const router = await ModelRouterFactory.getInstance()
     const llmProvider = await router.getProvider(modelString)
     return llmProvider.getModel(modelString)

@@ -44,8 +44,7 @@ For **Feature + Story ID** mode, the database is the primary source of truth. Th
 
 **Migration window context**: During the Phase 1 migration window, some stories may not yet exist in the database. The directory fallback ensures these stories remain visible via filesystem state. The DB is authoritative for all stories that have been written to it.
 
-**Non-Goals (deferred)**:
-- Feature Only DB routing (e.g., `/story-status plans/future/wishlist` summary via DB) is deferred to WINT-1070. Feature-level queries still read `stories.index.md` directly.
+**Feature-level queries**: For Feature Only and Feature + --depth modes, try `kb_list_stories` first to get story states from KB. Fall back to `stories.index.md` if KB is unavailable. Story metadata (titles, descriptions, dependencies) may still come from `stories.index.md` until fully migrated to KB.
 
 ### DB State Display Labels
 
@@ -54,15 +53,18 @@ When a DB result is returned, map the `state` field to a human-readable display 
 | DB State (`state`) | Display Label |
 |--------------------|---------------|
 | `backlog` | backlog |
-| `ready_to_work` | ready-to-work |
+| `ready` | ready-to-work |
 | `in_progress` | in-progress |
+| `ready_for_review` | needs-code-review |
 | `ready_for_qa` | ready-for-qa |
 | `in_qa` | uat |
-| `done` | completed |
+| `completed` | completed |
 | `blocked` | BLOCKED |
 | `cancelled` | superseded |
+| `failed_code_review` | failed-code-review |
+| `failed_qa` | failed-qa |
 
-**Note**: Directory-only states (`elaboration`, `needs-code-review`, `failed-code-review`, `failed-qa`, `created`) have no DB equivalent. These appear only via directory fallback during the migration window and are not in this table.
+**Note**: All workflow states now have DB equivalents. The KB is the authoritative source for story state (KSOT Phase 2). Directory fallback is retained for robustness.
 
 ---
 
@@ -167,3 +169,11 @@ Status: in-progress
 Location: plans/future/wishlist/in-progress/WISH-001/
 Depends On: none
 ```
+
+---
+
+## Telemetry
+
+**Telemetry not applicable for this command.**
+
+`story-status` is a read-only status check utility with no state transitions. It produces no workflow outputs and does not advance any story phase. Logging a telemetry record for every status query would generate noise without observability value. This exemption is documented explicitly per WINT-3070 AC-8.

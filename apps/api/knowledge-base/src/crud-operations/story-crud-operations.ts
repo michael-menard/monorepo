@@ -8,10 +8,90 @@
  */
 
 import { z } from 'zod'
-import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
+import { eq, and, or, sql, desc, asc, inArray, notInArray, isNull, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
+import {
+  stories,
+  storyArtifacts,
+  storyDependencies,
+  plans,
+  planStoryLinks,
+  storyDetails,
+} from '../db/schema.js'
+
+// ============================================================================
+// Explicit column selectors — guard against schema-vs-DB drift
+// ============================================================================
+
+const storyColumns = {
+  id: stories.id,
+  storyId: stories.storyId,
+  feature: stories.feature,
+  epic: stories.epic,
+  title: stories.title,
+  storyType: stories.storyType,
+  points: stories.points,
+  priority: stories.priority,
+  state: stories.state,
+  phase: stories.phase,
+  iteration: stories.iteration,
+  blocked: stories.blocked,
+  createdAt: stories.createdAt,
+  updatedAt: stories.updatedAt,
+  deletedAt: stories.deletedAt,
+  deletedBy: stories.deletedBy,
+  completedAt: stories.completedAt,
+  fileSyncedAt: stories.fileSyncedAt,
+  fileHash: stories.fileHash,
+  description: stories.description,
+  acceptanceCriteria: stories.acceptanceCriteria,
+  nonGoals: stories.nonGoals,
+  packages: stories.packages,
+  embedding: stories.embedding,
+} as const
+
+const storyArtifactColumns = {
+  id: storyArtifacts.id,
+  storyId: storyArtifacts.storyId,
+  artifactType: storyArtifacts.artifactType,
+  artifactName: storyArtifacts.artifactName,
+  kbEntryId: storyArtifacts.kbEntryId,
+  phase: storyArtifacts.phase,
+  iteration: storyArtifacts.iteration,
+  summary: storyArtifacts.summary,
+  detailTable: storyArtifacts.detailTable,
+  detailId: storyArtifacts.detailId,
+  createdAt: storyArtifacts.createdAt,
+  updatedAt: storyArtifacts.updatedAt,
+} as const
+
+const storyDependencyColumns = {
+  id: storyDependencies.id,
+  storyId: storyDependencies.storyId,
+  targetStoryId: storyDependencies.targetStoryId,
+  dependencyType: storyDependencies.dependencyType,
+  satisfied: storyDependencies.satisfied,
+  createdAt: storyDependencies.createdAt,
+} as const
+
+const storyDetailColumns = {
+  id: storyDetails.id,
+  storyId: storyDetails.storyId,
+  storyDir: storyDetails.storyDir,
+  storyFile: storyDetails.storyFile,
+  blockedReason: storyDetails.blockedReason,
+  blockedByStory: storyDetails.blockedByStory,
+  touchesBackend: storyDetails.touchesBackend,
+  touchesFrontend: storyDetails.touchesFrontend,
+  touchesDatabase: storyDetails.touchesDatabase,
+  touchesInfra: storyDetails.touchesInfra,
+  startedAt: storyDetails.startedAt,
+  completedAt: storyDetails.completedAt,
+  fileSyncedAt: storyDetails.fileSyncedAt,
+  fileHash: storyDetails.fileHash,
+  updatedAt: storyDetails.updatedAt,
+} as const
 import {
   StoryStateSchema,
   StoryPhaseSchema,
@@ -51,6 +131,7 @@ export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
  */
 export const KbGetStoryResultSchema = z.object({
   story: z.custom<typeof stories.$inferSelect>().nullable(),
+  detail: z.custom<typeof storyDetails.$inferSelect>().nullable().optional(),
   artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
   dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
   message: z.string(),
@@ -325,9 +406,9 @@ export async function kb_get_story(
   const validated = KbGetStoryInputSchema.parse(input)
 
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
-    .where(eq(stories.storyId, validated.story_id))
+    .where(and(eq(stories.storyId, validated.story_id), isNull(stories.deletedAt)))
     .limit(1)
 
   const story = result[0] ?? null
@@ -338,15 +419,25 @@ export async function kb_get_story(
       story: null,
       artifacts: [],
       dependencies: [],
+      detail: null,
       message: `Story ${validated.story_id} not found`,
     }
   }
+
+  // Fetch story details (1:1 detail table — cold columns)
+  const detailResult = await deps.db
+    .select(storyDetailColumns)
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const detail = detailResult[0] ?? null
 
   // Conditionally fetch artifacts (single SELECT, not N+1)
   let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
   if (validated.include_artifacts) {
     artifacts = await deps.db
-      .select()
+      .select(storyArtifactColumns)
       .from(storyArtifacts)
       .where(eq(storyArtifacts.storyId, validated.story_id))
   }
@@ -355,7 +446,7 @@ export async function kb_get_story(
   let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
   if (validated.include_dependencies) {
     dependencies = await deps.db
-      .select()
+      .select(storyDependencyColumns)
       .from(storyDependencies)
       .where(
         or(
@@ -367,6 +458,7 @@ export async function kb_get_story(
 
   return {
     story,
+    detail,
     ...(artifacts !== undefined ? { artifacts } : {}),
     ...(dependencies !== undefined ? { dependencies } : {}),
     message: `Found story ${validated.story_id}`,
@@ -393,7 +485,7 @@ export async function kb_list_stories(
   // Build WHERE condition
   let whereCondition: SQL<unknown> | undefined
 
-  const conditions: SQL<unknown>[] = []
+  const conditions: SQL<unknown>[] = [isNull(stories.deletedAt)]
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
@@ -451,7 +543,7 @@ export async function kb_list_stories(
 
   // Get paginated results
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(desc(stories.updatedAt))
@@ -484,7 +576,7 @@ export async function kb_update_story_status(
 
   // Check if story exists
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -497,9 +589,18 @@ export async function kb_update_story_status(
     }
   }
 
+  // Fetch storyDetails to check timestamps (moved from stories header in CDTS-1030)
+  const existingDetails = await deps.db
+    .select(storyDetailColumns)
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const currentDetail = existingDetails[0] ?? null
+
   // Terminal-state guard: prevent transitions OUT of terminal states
   // Same-state transitions are always allowed (idempotent)
-  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa']
+  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred']
   const currentState = existing[0].state
   if (
     validated.state !== undefined &&
@@ -514,20 +615,23 @@ export async function kb_update_story_status(
     }
   }
 
-  // Build update object
+  // Build update object for stories header
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),
   }
 
+  // Build update object for storyDetails (moved columns)
+  const detailUpdates: Partial<typeof storyDetails.$inferInsert> = {}
+
   if (validated.state !== undefined) {
     updates.state = validated.state
 
-    // Auto-set timestamps for state transitions
-    if (validated.state === 'in_progress' && !existing[0].startedAt) {
-      updates.startedAt = new Date()
+    // Auto-set timestamps for state transitions (stored in storyDetails)
+    if (validated.state === 'in_progress' && !currentDetail?.startedAt) {
+      detailUpdates.startedAt = new Date()
     }
-    if (validated.state === 'completed' && !existing[0].completedAt) {
-      updates.completedAt = new Date()
+    if (validated.state === 'completed' && !currentDetail?.completedAt) {
+      detailUpdates.completedAt = new Date()
     }
   }
 
@@ -542,31 +646,45 @@ export async function kb_update_story_status(
   if (validated.blocked !== undefined) {
     updates.blocked = validated.blocked
 
-    // Clear blocked fields when unblocking
+    // Clear blocked fields when unblocking (stored in storyDetails)
     if (!validated.blocked) {
-      updates.blockedReason = null
-      updates.blockedByStory = null
+      detailUpdates.blockedReason = null
+      detailUpdates.blockedByStory = null
     }
   }
 
   if (validated.blocked_reason !== undefined) {
-    updates.blockedReason = validated.blocked_reason
+    detailUpdates.blockedReason = validated.blocked_reason
   }
 
   if (validated.blocked_by_story !== undefined) {
-    updates.blockedByStory = validated.blocked_by_story
+    detailUpdates.blockedByStory = validated.blocked_by_story
   }
 
   if (validated.priority !== undefined) {
     updates.priority = validated.priority
   }
 
-  // Perform update
+  // Perform update on stories header
   const result = await deps.db
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
     .returning()
+
+  // Upsert storyDetails if there are detail fields to update
+  if (Object.keys(detailUpdates).length > 0) {
+    await deps.db
+      .insert(storyDetails)
+      .values({
+        storyId: validated.story_id,
+        ...detailUpdates,
+      })
+      .onConflictDoUpdate({
+        target: storyDetails.storyId,
+        set: { ...detailUpdates, updatedAt: new Date() },
+      })
+  }
 
   const story = result[0] ?? null
 
@@ -607,6 +725,7 @@ export async function kb_get_next_story(
 
   // Build base conditions
   const conditions: SQL<unknown>[] = [
+    isNull(stories.deletedAt),
     eq(stories.epic, validated.epic),
     eq(stories.blocked, false),
     inArray(stories.state, validStates),
@@ -643,7 +762,7 @@ export async function kb_get_next_story(
 
   // Get candidate stories (unblocked, in correct state)
   const candidates = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(
@@ -759,7 +878,7 @@ export async function kb_update_story(
   const validated = KbUpdateStoryInputSchema.parse(input)
 
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -855,7 +974,7 @@ export async function kb_create_story(
 
   // Require title for new stories — check existence first
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -870,27 +989,20 @@ export async function kb_create_story(
 
   if (isNew) {
     // -----------------------------------------------------------------------
-    // INSERT path: create the story with all supplied fields
+    // INSERT path: create the story header + storyDetails atomically
+    // Wrapped in a transaction to prevent partial state on crash.
     // -----------------------------------------------------------------------
     const insertValues: typeof stories.$inferInsert = {
       storyId: validated.story_id,
       title: validated.title!, // checked above
       feature: validated.feature ?? null,
       epic: validated.epic ?? null,
-      storyDir: validated.story_dir ?? null,
-      storyFile: validated.story_file ?? 'story.yaml',
       storyType: validated.story_type ?? null,
       points: validated.points ?? null,
       priority: validated.priority ?? null,
       state: validated.state ?? null,
       phase: validated.phase ?? null,
       blocked: validated.blocked ?? false,
-      blockedReason: validated.blocked_reason ?? null,
-      blockedByStory: validated.blocked_by_story ?? null,
-      touchesBackend: validated.touches_backend ?? false,
-      touchesFrontend: validated.touches_frontend ?? false,
-      touchesDatabase: validated.touches_database ?? false,
-      touchesInfra: validated.touches_infra ?? false,
       description: validated.description ?? null,
       acceptanceCriteria: validated.acceptance_criteria ?? null,
       nonGoals: validated.non_goals ?? null,
@@ -899,8 +1011,53 @@ export async function kb_create_story(
       updatedAt: now,
     }
 
-    const result = await deps.db.insert(stories).values(insertValues).returning()
-    const story = result[0]!
+    const hasDetailFields =
+      validated.story_dir !== undefined ||
+      validated.story_file !== undefined ||
+      validated.blocked_reason !== undefined ||
+      validated.blocked_by_story !== undefined ||
+      validated.touches_backend !== undefined ||
+      validated.touches_frontend !== undefined ||
+      validated.touches_database !== undefined ||
+      validated.touches_infra !== undefined
+
+    const story = await deps.db.transaction(async tx => {
+      const result = await tx.insert(stories).values(insertValues).returning()
+      const created = result[0]!
+
+      if (hasDetailFields) {
+        await tx
+          .insert(storyDetails)
+          .values({
+            storyId: validated.story_id,
+            storyDir: validated.story_dir ?? null,
+            storyFile: validated.story_file ?? 'story.yaml',
+            blockedReason: validated.blocked_reason ?? null,
+            blockedByStory: validated.blocked_by_story ?? null,
+            touchesBackend: validated.touches_backend ?? false,
+            touchesFrontend: validated.touches_frontend ?? false,
+            touchesDatabase: validated.touches_database ?? false,
+            touchesInfra: validated.touches_infra ?? false,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: storyDetails.storyId,
+            set: {
+              storyDir: validated.story_dir ?? null,
+              storyFile: validated.story_file ?? 'story.yaml',
+              blockedReason: validated.blocked_reason ?? null,
+              blockedByStory: validated.blocked_by_story ?? null,
+              touchesBackend: validated.touches_backend ?? false,
+              touchesFrontend: validated.touches_frontend ?? false,
+              touchesDatabase: validated.touches_database ?? false,
+              touchesInfra: validated.touches_infra ?? false,
+              updatedAt: now,
+            },
+          })
+      }
+
+      return created
+    })
 
     return {
       story,
@@ -919,33 +1076,74 @@ export async function kb_create_story(
   if (validated.title !== undefined) updates.title = validated.title
   if (validated.feature !== undefined) updates.feature = validated.feature
   if (validated.epic !== undefined) updates.epic = validated.epic
-  if (validated.story_dir !== undefined) updates.storyDir = validated.story_dir
-  if (validated.story_file !== undefined) updates.storyFile = validated.story_file
   if (validated.story_type !== undefined) updates.storyType = validated.story_type
   if (validated.points !== undefined) updates.points = validated.points
   if (validated.priority !== undefined) updates.priority = validated.priority
   if (validated.state !== undefined) updates.state = validated.state
   if (validated.phase !== undefined) updates.phase = validated.phase
   if (validated.blocked !== undefined) updates.blocked = validated.blocked
-  if (validated.blocked_reason !== undefined) updates.blockedReason = validated.blocked_reason
-  if (validated.blocked_by_story !== undefined) updates.blockedByStory = validated.blocked_by_story
-  if (validated.touches_backend !== undefined) updates.touchesBackend = validated.touches_backend
-  if (validated.touches_frontend !== undefined) updates.touchesFrontend = validated.touches_frontend
-  if (validated.touches_database !== undefined) updates.touchesDatabase = validated.touches_database
-  if (validated.touches_infra !== undefined) updates.touchesInfra = validated.touches_infra
   if (validated.description !== undefined) updates.description = validated.description
   if (validated.acceptance_criteria !== undefined)
     updates.acceptanceCriteria = validated.acceptance_criteria
   if (validated.non_goals !== undefined) updates.nonGoals = validated.non_goals
   if (validated.packages !== undefined) updates.packages = validated.packages
 
-  const result = await deps.db
-    .update(stories)
-    .set(updates)
-    .where(eq(stories.storyId, validated.story_id))
-    .returning()
+  // Upsert detail fields if any were supplied
+  const detailUpdates: Partial<typeof storyDetails.$inferInsert> = { updatedAt: now }
+  let hasDetailUpdates = false
 
-  const story = result[0]!
+  if (validated.story_dir !== undefined) {
+    detailUpdates.storyDir = validated.story_dir
+    hasDetailUpdates = true
+  }
+  if (validated.story_file !== undefined) {
+    detailUpdates.storyFile = validated.story_file
+    hasDetailUpdates = true
+  }
+  if (validated.blocked_reason !== undefined) {
+    detailUpdates.blockedReason = validated.blocked_reason
+    hasDetailUpdates = true
+  }
+  if (validated.blocked_by_story !== undefined) {
+    detailUpdates.blockedByStory = validated.blocked_by_story
+    hasDetailUpdates = true
+  }
+  if (validated.touches_backend !== undefined) {
+    detailUpdates.touchesBackend = validated.touches_backend
+    hasDetailUpdates = true
+  }
+  if (validated.touches_frontend !== undefined) {
+    detailUpdates.touchesFrontend = validated.touches_frontend
+    hasDetailUpdates = true
+  }
+  if (validated.touches_database !== undefined) {
+    detailUpdates.touchesDatabase = validated.touches_database
+    hasDetailUpdates = true
+  }
+  if (validated.touches_infra !== undefined) {
+    detailUpdates.touchesInfra = validated.touches_infra
+    hasDetailUpdates = true
+  }
+
+  // Wrap stories + story_details writes in a transaction for atomicity
+  const story = await deps.db.transaction(async tx => {
+    const result = await tx
+      .update(stories)
+      .set(updates)
+      .where(eq(stories.storyId, validated.story_id))
+      .returning()
+
+    const updated = result[0]!
+
+    if (hasDetailUpdates) {
+      await tx
+        .insert(storyDetails)
+        .values({ storyId: validated.story_id, ...detailUpdates })
+        .onConflictDoUpdate({ target: storyDetails.storyId, set: detailUpdates })
+    }
+
+    return updated
+  })
 
   return {
     story,

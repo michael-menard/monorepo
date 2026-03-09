@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-2010 is a backend sidecar service with no user-facing UI components. It exposes an HTTP endpoint and MCP tool wrapper consumed exclusively by agent processes — no browser rendering, no React components, no design system interaction."

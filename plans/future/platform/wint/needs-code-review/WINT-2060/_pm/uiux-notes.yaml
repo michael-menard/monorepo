@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-2060 is a backend-only Node.js population script with no UI surface, no HTTP endpoints, and no user-facing interaction. React/Tailwind/shadcn patterns are not applicable. UI/UX review is not required for this story."

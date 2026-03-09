@@ -16,16 +16,16 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 14 |
+| uat | 16 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 1 |
 | ready-to-work | 0 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 2 |
-| failed-code-review | 1 |
-| ready-for-qa | 1 |
+| needs-code-review | 0 |
+| failed-code-review | 0 |
+| ready-for-qa | 2 |
 | pending | 15 |
 
 ---
@@ -437,8 +437,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-023: DB-Driven Index Generation
 
-**Status:** failed-code-review
-**Depends On:** KBAR-022
+**Status:** uat
+**Depends On:** none
 **Phase:** 6
 
 **Feature:** Implement generateStoriesIndex() to create stories.index.md from database
@@ -454,7 +454,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-024: Regenerate Index CLI
 
-**Status:** needs-code-review
+**Status:** uat
 **Depends On:** KBAR-023
 **Phase:** 6
 

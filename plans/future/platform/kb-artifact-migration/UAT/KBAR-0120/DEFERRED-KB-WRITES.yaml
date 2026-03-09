@@ -53,3 +53,7 @@ writes:
         A test with { story_id, phase: 'implementation' } would verify filter forwarding at the handler layer.
         Impact: Low | Effort: Low
         Recommendation: Add handleKbListArtifacts tests with phase and artifact_type filters.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

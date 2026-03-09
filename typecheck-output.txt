@@ -1,0 +1,153 @@
+• turbo 2.8.3
+• Packages in scope: @repo/accessibility, @repo/accessibility-testing, @repo/api-client, @repo/api-core, @repo/api-types, @repo/app-component-library, @repo/app-dashboard, @repo/app-inspiration-gallery, @repo/app-instructions-gallery, @repo/app-sets-gallery, @repo/app-wishlist-gallery, @repo/auth-hooks, @repo/auth-services, @repo/auth-utils, @repo/cache, @repo/charts, @repo/cognito-client, @repo/context-pack-sidecar, @repo/database-schema, @repo/db, @repo/design-system, @repo/file-list, @repo/file-validator, @repo/gallery, @repo/gallery-core, @repo/health-check-core, @repo/hooks, @repo/image-processing, @repo/kbar-sync, @repo/knowledge-base, @repo/lambda-auth, @repo/lambda-responses, @repo/lambda-utils, @repo/lego-api, @repo/logger, @repo/main-app, @repo/mcp-tools, @repo/moc-instructions-core, @repo/moc-parts-lists-core, @repo/mock-data, @repo/observability, @repo/orchestrator, @repo/pii-sanitizer, @repo/pipeline, @repo/pipeline-queue, @repo/playwright, @repo/rate-limit, @repo/rate-limiter, @repo/reset-password, @repo/resilience, @repo/s3-client, @repo/search, @repo/sets-core, @repo/sidecar-role-pack, @repo/tech-radar, @repo/upload, @repo/upload-client, @repo/upload-config, @repo/upload-config-core, @repo/upload-types, @repo/user-settings, @repo/vercel-adapter, @repo/vercel-multipart, @repo/wishlist-core, @repo/workflow-logic
+• Running check-types in 65 packages
+• Remote caching disabled
+@repo/upload-client:check-types: cache hit, replaying logs 23c426f8197843ab
+@repo/upload-client:check-types: 
+@repo/upload-client:check-types: > @repo/upload-client@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/upload-client
+@repo/upload-client:check-types: > tsc --noEmit
+@repo/upload-client:check-types: 
+@repo/upload-config:check-types: cache hit, replaying logs 6494c990f055446f
+@repo/upload-config:check-types: 
+@repo/upload-config:check-types: > @repo/upload-config@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/tools/upload-config
+@repo/upload-config:check-types: > tsc --noEmit
+@repo/upload-config:check-types: 
+@repo/accessibility:check-types: cache hit, replaying logs 3a62b28459d2928a
+@repo/accessibility:check-types: 
+@repo/accessibility:check-types: > @repo/accessibility@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/accessibility
+@repo/accessibility:check-types: > tsc --noEmit
+@repo/accessibility:check-types: 
+@repo/accessibility-testing:check-types: cache hit, replaying logs 9307c4f68b8015d9
+@repo/accessibility-testing:check-types: 
+@repo/accessibility-testing:check-types: > @repo/accessibility-testing@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/accessibility-testing
+@repo/accessibility-testing:check-types: > tsc --noEmit
+@repo/accessibility-testing:check-types: 
+@repo/rate-limit:check-types: cache hit, replaying logs b03a1f5e352a1483
+@repo/rate-limit:check-types: 
+@repo/rate-limit:check-types: > @repo/rate-limit@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/tools/rate-limit
+@repo/rate-limit:check-types: > tsc --noEmit
+@repo/rate-limit:check-types: 
+@repo/upload-types:check-types: cache hit, replaying logs f1584733d8cf8d72
+@repo/upload-types:check-types: 
+@repo/upload-types:check-types: > @repo/upload-types@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/upload-types
+@repo/upload-types:check-types: > tsc --noEmit
+@repo/upload-types:check-types: 
+@repo/design-system:check-types: cache hit, replaying logs 5f5cb82607844297
+@repo/design-system:check-types: 
+@repo/design-system:check-types: > @repo/design-system@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/design-system
+@repo/design-system:check-types: > tsc --noEmit
+@repo/design-system:check-types: 
+@repo/tech-radar:check-types: cache hit, replaying logs 5fac313d8dc2e3c6
+@repo/tech-radar:check-types: 
+@repo/tech-radar:check-types: > @repo/tech-radar@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/dev/tech-radar
+@repo/tech-radar:check-types: > tsc --noEmit
+@repo/tech-radar:check-types: 
+@repo/auth-utils:check-types: cache hit, replaying logs 5e9e56031f464bba
+@repo/auth-utils:check-types: 
+@repo/auth-utils:check-types: > @repo/auth-utils@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/auth-utils
+@repo/auth-utils:check-types: > tsc --noEmit
+@repo/auth-utils:check-types: 
+@repo/hooks:check-types: cache hit, replaying logs 9e59953aa3c187ed
+@repo/hooks:check-types: 
+@repo/hooks:check-types: > @repo/hooks@0.1.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/hooks
+@repo/hooks:check-types: > tsc --noEmit
+@repo/hooks:check-types: 
+@repo/auth-services:check-types: cache hit, replaying logs 243ab32d4da54626
+@repo/auth-services:check-types: 
+@repo/auth-services:check-types: > @repo/auth-services@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/auth-services
+@repo/auth-services:check-types: > tsc --noEmit
+@repo/auth-services:check-types: 
+@repo/cache:check-types: cache hit, replaying logs 0c19d0282d7cc42d
+@repo/cache:check-types: 
+@repo/cache:check-types: > @repo/cache@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/core/cache
+@repo/cache:check-types: > tsc --noEmit
+@repo/cache:check-types: 
+@repo/api-client:check-types: cache hit, replaying logs cbb0284efc42062d
+@repo/api-client:check-types: 
+@repo/api-client:check-types: > @repo/api-client@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/api-client
+@repo/api-client:check-types: > tsc --noEmit
+@repo/api-client:check-types: 
+@repo/context-pack-sidecar:check-types: cache hit, replaying logs 86d84f6684acdf7d
+@repo/context-pack-sidecar:check-types: 
+@repo/context-pack-sidecar:check-types: > @repo/context-pack-sidecar@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/backend/sidecars/context-pack
+@repo/context-pack-sidecar:check-types: > tsc --noEmit
+@repo/context-pack-sidecar:check-types: 
+@repo/kbar-sync:check-types: cache hit, replaying logs 23b8b2ddf4f7a223
+@repo/kbar-sync:check-types: 
+@repo/kbar-sync:check-types: > @repo/kbar-sync@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/backend/kbar-sync
+@repo/kbar-sync:check-types: > tsc --noEmit
+@repo/kbar-sync:check-types: 
+@repo/app-component-library:check-types: cache hit, replaying logs 6f0cec456c7a08e4
+@repo/app-component-library:check-types: 
+@repo/app-component-library:check-types: > @repo/app-component-library@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/app-component-library
+@repo/app-component-library:check-types: > tsc --noEmit
+@repo/app-component-library:check-types: 
+@repo/mcp-tools:check-types: cache hit, replaying logs af694ceeabb50cd4
+@repo/mcp-tools:check-types: 
+@repo/mcp-tools:check-types: > @repo/mcp-tools@1.0.0 check-types /Users/michaelmenard/Development/monorepo/packages/backend/mcp-tools
+@repo/mcp-tools:check-types: > tsc --noEmit
+@repo/mcp-tools:check-types: 
+@repo/user-settings:check-types: cache hit, replaying logs 5d3d1776afd1c979
+@repo/user-settings:check-types: 
+@repo/user-settings:check-types: > @repo/user-settings@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/user-settings
+@repo/user-settings:check-types: > tsc --noEmit
+@repo/user-settings:check-types: 
+@repo/reset-password:check-types: cache hit, replaying logs 02c5b8ad6326e2dd
+@repo/reset-password:check-types: 
+@repo/reset-password:check-types: > @repo/reset-password@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/reset-password
+@repo/reset-password:check-types: > tsc --noEmit
+@repo/reset-password:check-types: 
+@repo/app-dashboard:check-types: cache hit, replaying logs 9e516f7d131a7949
+@repo/app-dashboard:check-types: 
+@repo/app-dashboard:check-types: > @repo/app-dashboard@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/app-dashboard
+@repo/app-dashboard:check-types: > tsc --noEmit
+@repo/app-dashboard:check-types: 
+@repo/upload:check-types: cache hit, replaying logs c92ec9a71d7d62a8
+@repo/upload:check-types: 
+@repo/upload:check-types: > @repo/upload@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/core/upload
+@repo/upload:check-types: > tsc --noEmit
+@repo/upload:check-types: 
+@repo/orchestrator:check-types: cache miss, executing 48e4e4666f8dccff
+@repo/knowledge-base:check-types: cache hit, replaying logs 6d726e91f8766808
+@repo/knowledge-base:check-types: 
+@repo/knowledge-base:check-types: > @repo/knowledge-base@1.0.0 check-types /Users/michaelmenard/Development/monorepo/apps/api/knowledge-base
+@repo/knowledge-base:check-types: > tsc --noEmit
+@repo/knowledge-base:check-types: 
+@repo/app-inspiration-gallery:check-types: cache miss, executing 2429295fc8688180
+@repo/app-instructions-gallery:check-types: cache miss, executing 1abd1e08481d3ce5
+@repo/app-sets-gallery:check-types: cache miss, executing fa98268bffc024bd
+@repo/app-wishlist-gallery:check-types: cache miss, executing 10c753c586fe952e
+@repo/app-inspiration-gallery:check-types: 
+@repo/app-inspiration-gallery:check-types: > @repo/app-inspiration-gallery@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/app-inspiration-gallery
+@repo/app-inspiration-gallery:check-types: > tsc --noEmit
+@repo/app-inspiration-gallery:check-types: 
+@repo/orchestrator:check-types: 
+@repo/orchestrator:check-types: > @repo/orchestrator@0.0.1 check-types /Users/michaelmenard/Development/monorepo/packages/backend/orchestrator
+@repo/orchestrator:check-types: > tsc --noEmit
+@repo/orchestrator:check-types: 
+@repo/app-instructions-gallery:check-types: 
+@repo/app-instructions-gallery:check-types: > @repo/app-instructions-gallery@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/app-instructions-gallery
+@repo/app-instructions-gallery:check-types: > tsc --noEmit
+@repo/app-instructions-gallery:check-types: 
+@repo/app-sets-gallery:check-types: 
+@repo/app-sets-gallery:check-types: > @repo/app-sets-gallery@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/app-sets-gallery
+@repo/app-sets-gallery:check-types: > tsc --noEmit
+@repo/app-sets-gallery:check-types: 
+@repo/app-wishlist-gallery:check-types: 
+@repo/app-wishlist-gallery:check-types: > @repo/app-wishlist-gallery@0.0.1 check-types /Users/michaelmenard/Development/monorepo/apps/web/app-wishlist-gallery
+@repo/app-wishlist-gallery:check-types: > tsc --noEmit
+@repo/app-wishlist-gallery:check-types: 
+@repo/orchestrator:check-types: src/graphs/elaboration.ts(1037,78): error TS2554: Expected 0-1 arguments, but got 2.
+@repo/orchestrator:check-types: src/nodes/elaboration/affinity-reader.ts(226,38): error TS2307: Cannot find module 'drizzle-orm' or its corresponding type declarations.
+@repo/orchestrator:check-types: src/nodes/elaboration/index.ts(102,3): error TS2305: Module '"./structurer.js"' has no exported member 'AffinityConfigSchema'.
+@repo/orchestrator:check-types: src/nodes/elaboration/index.ts(107,8): error TS2305: Module '"./structurer.js"' has no exported member 'AffinityConfig'.
+@repo/orchestrator:check-types:  ELIFECYCLE  Command failed with exit code 2.
+@repo/orchestrator:check-types: ERROR: command finished with error: command (/Users/michaelmenard/Development/monorepo/packages/backend/orchestrator) /Users/michaelmenard/.asdf/installs/nodejs/23.11.1/bin/pnpm run check-types exited (2)
+@repo/orchestrator#check-types: command (/Users/michaelmenard/Development/monorepo/packages/backend/orchestrator) /Users/michaelmenard/.asdf/installs/nodejs/23.11.1/bin/pnpm run check-types exited (2)
+
+ Tasks:    22 successful, 27 total
+Cached:    22 cached, 27 total
+  Time:    11.71s 
+Failed:    @repo/orchestrator#check-types
+
+ ERROR  run failed: command  exited (2)

@@ -119,8 +119,9 @@ export async function kb_get_related(
             FROM unnest(tags) t1
             WHERE t1 = ANY(${targetTags}::text[])
           ) as overlap_count
-        FROM knowledge_entries
-        WHERE id != ${entry_id}
+        FROM public.knowledge_entries
+        WHERE deleted_at IS NULL
+          AND id != ${entry_id}
           AND tags IS NOT NULL
           AND (
             SELECT COUNT(*)
@@ -208,8 +209,9 @@ export async function findByTagOverlap(
           FROM unnest(tags) t1
           WHERE t1 = ANY(${tags}::text[])
         ) as overlap_count
-      FROM knowledge_entries
-      WHERE id != ${entryId}
+      FROM public.knowledge_entries
+      WHERE deleted_at IS NULL
+        AND id != ${entryId}
         AND tags IS NOT NULL
         AND (
           SELECT COUNT(*)

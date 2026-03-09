@@ -30,3 +30,7 @@ retry_info:
   attempts: 0
   last_attempt: null
   reason: "KB unavailable at story generation time"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

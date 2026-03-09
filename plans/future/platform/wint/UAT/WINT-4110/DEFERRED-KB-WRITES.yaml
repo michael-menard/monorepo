@@ -1,0 +1,25 @@
+deferred_at: "2026-03-08"
+reason: "KB not reachable at story generation time"
+writes:
+  - operation: "INSERT INTO stories"
+    story_id: "WINT-4110"
+    feature: "wint"
+    title: "Create /cohesion-check Command"
+    story_dir: "plans/future/platform/wint/backlog/WINT-4110"
+    story_file: "plans/future/platform/wint/backlog/WINT-4110/WINT-4110.md"
+    story_type: "feature"
+    points: 1
+    priority: "medium"
+    state: "backlog"
+    touches_backend: false
+    touches_frontend: false
+    touches_database: false
+    touches_infra: false
+  - operation: "kb_update_story_status"
+    story_id: "WINT-4110"
+    state: "created"
+    phase: "pm_generation"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

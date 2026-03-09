@@ -16,8 +16,8 @@
 | 2 | Resilience & Monitoring | 3 | 3 | 0 | 0 | complete |
 | 3 | Learning System & Optimization | 9 | 9 | 0 | 0 | complete |
 | 4 | Long-Term Quality | 7 | 6 | 0 | 1 | near-complete |
-| 5 | Pipeline Resilience | 3 | 0 | 0 | 3 | backlog |
-| **TOTAL** | | **42** | **32** | **0** | **10** | |
+| 5 | Pipeline Resilience | 3 | 2 | 0 | 1 | near-complete |
+| **TOTAL** | | **42** | **34** | **0** | **8** | |
 
 ## Phase 0: Foundation (10 stories)
 
@@ -44,13 +44,13 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 |---|---|---|---|
 | APIP-1010 | Structurer Node in Elaboration Graph | none | ✅ Completed |
 | APIP-1020 | ChangeSpec Schema Design and Validation Spike | APIP-1010 | ✅ Completed |
-| APIP-1031 | Implementation Graph Skeleton with Worktree and Evidence Infrastructure | APIP-1020, APIP-0040 | 🔍 Ready for QA |
+| APIP-1031 | Implementation Graph Skeleton with Worktree and Evidence Infrastructure | APIP-1020, APIP-0040 | ✅ UAT |
 | APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | ✅ UAT |
 | APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | ✅ Completed |
 | APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | ✅ Completed |
 | APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ Completed |
 | APIP-1070 | Merge Graph with Learnings Extraction | none | UAT |
-| APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1070 | ✅ Completed |
+| APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1070 | 🧪 UAT |
 | APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | UAT |
 
 ## Phase 2: Resilience & Monitoring (3 stories)
@@ -100,26 +100,19 @@ Artifact validation gates, stuck story recovery, and KB-filesystem state reconci
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
 | APIP-6001 | Pipeline Phase Gate Validation | none | 🧪 UAT |
-| APIP-6002 | Stuck Story Recovery Loop | APIP-6001 | ⚠️ Failed QA |
-| APIP-6003 | KB-Filesystem State Reconciliation | APIP-6001 | 👀 Needs Code Review |
+| APIP-6002 | Stuck Story Recovery Loop | APIP-6001 | ✅ UAT |
+| APIP-6003 | KB-Filesystem State Reconciliation | APIP-6001 | 🔧 Ready to Work |
 
 ## Metrics Summary
 
 - **Total Stories**: 42
-- **Completed**: 32 (76%)
-- **UAT**: 7 (APIP-0040, APIP-1032, APIP-1070, APIP-3070, APIP-4020, APIP-5000, APIP-5006)
-- **Ready for QA**: 1 (APIP-1031)
-- **Needs Code Review**: 0
-- **Remaining**: 3 Phase 5 stories (pipeline resilience)
+- **Completed**: 34 (81%)
+- **UAT**: 10 (APIP-0010, APIP-0040, APIP-1031, APIP-1032, APIP-1070, APIP-3050, APIP-3060, APIP-3070, APIP-4020, APIP-4040, APIP-5000, APIP-5002, APIP-5006, APIP-6001, APIP-6002)
+- **Ready to Work**: 1 (APIP-6003)
 - **Cancelled**: 1 (APIP-1030, superseded by APIP-1031/1032)
 
 ## Critical Path (Remaining)
 
 The only remaining work to reach full autonomous pipeline:
 
-1. APIP-0040 — Model Router v1 (in UAT, needs final acceptance)
-2. APIP-1031 — Implementation Graph Skeleton (🔍 ready for QA)
-3. APIP-1032 — Change Loop with Model Dispatch (✅ UAT verified)
-4. APIP-6001 — Pipeline Phase Gate Validation
-5. APIP-6002 — Stuck Story Recovery Loop
-6. APIP-6003 — KB-Filesystem State Reconciliation
+1. APIP-6003 — KB-Filesystem State Reconciliation (ready to work, blocked by APIP-6001 UAT acceptance)

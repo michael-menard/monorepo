@@ -1,0 +1,181 @@
+schema_version: 1
+story_id: "WINT-4100"
+timestamp: "2026-03-08T00:00:00Z"
+
+# Story type: docs-only agent-prompt story (creates one .md file)
+# Testability assessed for manual/structural verification — no automated tests expected.
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope (single new file: .claude/agents/backlog-curator.agent.md) matches
+      STORY-SEED.md, DEFERRED-KB-WRITES pending write payload, and frontmatter metadata.
+      touches_agents: true; all other touch flags false. No extra endpoints,
+      infrastructure, or packages introduced. KB-first design aligns with MEMORY.md constraint.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (collect, deduplicate, rank, surface deferred items) are fully expressed in
+      AC-1 through AC-12. Non-goals (no auto-create stories, no KB entry modification,
+      no gap-hygiene items, no WINT-4070 verdicts) do not contradict any AC or goal.
+      Architecture Notes (KB-first, bounded output, dedup identity key, DEFERRED-KB-WRITES
+      resilience) are internally consistent with AC-4, AC-6, AC-7, and AC-8. Test plan
+      strategy (manual structural verification) matches agent-only nature and ACs.
+      No contradictions detected.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Four explicit reuse candidates documented: (1) scope-defender.agent.md structural
+      template; (2) decision-handling.md KB query pattern (kb_search deferred moonshot);
+      (3) gap-hygiene-agent.agent.md dedup merge strategy; (4) scope-defender
+      scope-challenges.json output schema shape. No npm packages — correct for agent-only
+      story. No per-story one-off utilities. Reuse table in story body is concrete and
+      cites exact locations and usage patterns.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Not applicable — docs-only agent-prompt story. No TypeScript code, no API endpoints,
+      no route handlers, no service layer, no HTTP types. Agent prompt file itself is
+      the deliverable. Evaluated as PASS per agent instruction to assess docs-only
+      stories for structural verification, not code compliance.
+
+  - id: testability
+    status: PASS
+    note: >
+      Manual structural verification plan is concrete and executable. Test Plan section
+      defines 7 specific grep/ls commands. pm_artifacts.test_plan provides 6 happy-path
+      tests (HP-1 through HP-6), 3 error cases (EC-1 through EC-3), 3 edge cases
+      (ED-1 through ED-3), and 2 manual cases (MC-1 through MC-2) — all with exact
+      evidence commands. Strategy matches agent-only story type. No automated tests
+      expected or required.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs found. STORY-SEED.md conflict analysis identified 2 warnings
+      (WINT-4060 runtime dependency, deferred-item scope ambiguity) — both resolved in
+      the story body. WINT-4060 declared as runtime dep (not authoring dep); scope
+      bounded to KB tags + scope-challenges.json only in v1 (gap-hygiene and prosecution
+      verdicts explicitly deferred in non-goals). No open questions flagged. dev_feasibility
+      confidence: high. Conflicts resolved before elaboration.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      All material risks are disclosed. WINT-4060 runtime dependency: explicitly
+      acknowledged with mitigation (graceful degradation when scope-challenges files
+      absent). KB MCP unavailability: AC-5 and EC-1 both cover this with fallback to
+      filesystem scan. Deferred item scope ambiguity: resolved by constraining v1 to
+      two sources. pm_artifacts.risks and dev_feasibility.risks sections present.
+      No hidden dependencies detected.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      12 ACs exceed the 8-AC indicator threshold — this is the only triggered indicator.
+      However, all 12 ACs are granular structural verification checks on a single
+      deliverable file, not independent features. No endpoints, no frontend+backend
+      split, no multi-package scope, no independent feature bundling, and a linear
+      subtask chain (ST-1→ST-5) with a tight token estimate (4,500 tokens total).
+      Story sizing is appropriate for a single-file agent authoring task. Split not
+      recommended.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      5 subtasks (ST-1 through ST-5) present. All 12 ACs covered — explicit AC coverage
+      check table at story bottom confirms no gaps. File counts per subtask: ST-1 reads
+      3/modifies 0; ST-2 reads 1/modifies 1; ST-3 through ST-5 each read 0/modifies 1.
+      All within 3-file limit. Dependency chain (none→ST-1→ST-2→ST-3→ST-4→ST-5) forms
+      a valid DAG with no cycles. Verification commands present and executable per
+      subtask. Canonical References section present with 3 entries (within 2-4 range).
+
+  - id: clarity_format
+    status: PASS
+    note: >
+      All three required sections present. Goal section: present (concise, single
+      paragraph). Examples section: present (3 concrete examples covering happy path,
+      scoped run, and graceful zero-item run). Edge Cases section: present (4 edge cases:
+      KB unavailable, cross-source duplicate, batch overflow, WINT-4060 not yet run).
+      Fixture D criteria satisfied — full PASS.
+
+gaps: []
+# No MVP-blocking gaps found. Story is complete, consistent, and well-bounded.
+# All ACs are verifiable, all risks are disclosed and mitigated, no blocking TBDs exist.
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      HP-2 in pm_artifacts.test_plan verifies scope and output_dir inputs via grep but
+      does not include a grep evidence command for the optional deferred_writes_dir input
+      (AC-2). If an implementing agent authors the agent file without deferred_writes_dir
+      in the optional inputs table, HP-2 would still pass (it only checks scope and
+      output_dir). A targeted check for deferred_writes_dir would close this gap.
+    effort: low
+    decision: defer
+    kb_entry_id: null
+
+  - id: opp-2
+    category: ux_polish
+    finding: >
+      The risk_signal field in pm-review-batch.json items (AC-8) has no defined enum
+      or value set. Downstream PM tooling or a LangGraph node consuming pm-review-batch.json
+      cannot validate or filter by risk_signal without a known value set. Consider
+      defining an enum (e.g., high | medium | low | unknown) in the output schema
+      definition for AC-8. This would improve machine-readability and enable
+      automated risk-based sorting in future iterations.
+    effort: low
+    decision: defer
+    kb_entry_id: null
+
+  - id: opp-3
+    category: edge_cases
+    finding: >
+      Idempotency of output file writes is unspecified. The scope-defender agent
+      explicitly states "overwrite scope-challenges.json if it already exists (idempotent)"
+      in its non-negotiables. The backlog-curator agent story does not specify whether
+      pm-review-batch.json and PM-REVIEW-REPORT.md are overwritten or appended when the
+      curator runs multiple times against the same output_dir. Adding an idempotency
+      statement to the agent's non-negotiables (matching scope-defender precedent)
+      would close this ambiguity for implementing agents.
+    effort: low
+    decision: defer
+    kb_entry_id: null
+
+  - id: opp-4
+    category: observability
+    finding: >
+      The PM-REVIEW-REPORT.md output format specifies "one section per item, ~5 lines"
+      but does not define a summary header for truncated runs. Example 1 in the story
+      references truncated: true but only mentions the JSON output. MC-2 checks for
+      "section per item, description, deferral reason, recommended_action" but does not
+      verify a truncation notice at the top of the report when items are capped.
+      Scope-defender precedent includes a truncated flag in its JSON output; curator's
+      human-readable report could echo this for PM awareness.
+    effort: low
+    decision: defer
+    kb_entry_id: null
+
+split_recommendation: null
+# Story sizing check: PASS — no split required.
+
+preliminary_verdict: PASS
+# All 10 audit checks pass. Zero MVP-blocking gaps. 4 non-blocking opportunities identified
+# (all low effort, all targeting minor completeness improvements in test coverage,
+# output schema definition, idempotency specification, and report truncation notice).
+# Story is well-structured, concrete, appropriately scoped, and ready for implementation.
+
+verdict: PASS
+decided_at: "2026-03-08T00:00:00Z"
+
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0

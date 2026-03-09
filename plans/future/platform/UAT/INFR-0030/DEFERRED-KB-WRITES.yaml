@@ -207,3 +207,7 @@ notes:
   - Story is searchable via filesystem until KB write succeeds
   - Index update should proceed regardless of KB write status
   - Future opportunities added by elab-autonomous-decider (19 findings)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

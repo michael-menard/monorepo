@@ -20,95 +20,63 @@
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 7 — KBAR Tooling │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 78  │ KBAR-0140             │ Artifact Summary Extraction      │ backlog               │ /elab-story plans/future/platform/kb-artifact-migration       │
- │     │                       │                                  │                       │ KBAR-0140                                                    │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 8 — Context &    │                                  │                       │                                                              │
  │     │ Session               │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 89  │ KBAR-0200             │ Update Knowledge Context Loader  │ in-progress           │ /dev-implement-story plans/future/platform/kb-artifact-       │
- │     │                       │                                  │                       │ migration KBAR-0200                                          │
+│ 89  │ KBAR-0200             │ Update Knowledge Context Loader  │ backlog               │ /elab-story plans/future/platform/kb-artifact- KBAR-0200      │
+│     │                       │                                  │ backlog               │ /elab-story plans/future/platform/kb-artifact- KBAR-0200     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 9 — LangGraph    │                                  │                       │                                                              │
  │     │ Operational!          │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 92a │ WINT-9105             │ Define LangGraph Error Handling  │ backlog               │ /elab-story plans/future/platform/wint WINT-9105              │
- │     │                       │ & Retry Strategy                 │                       │                                                              │
+│ 92a │ WINT-9105             │ Define LangGraph Error Handling  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9105         │
+│     │                       │ & Retry Strategy                 │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 92b │ WINT-9106             │ Implement LangGraph Checkpointer │ backlog               │ /elab-story plans/future/platform/wint WINT-9106              │
- │     │                       │  & State Recovery                │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 92  │ WINT-9110             │ Create Full Workflow LangGraph   │ backlog               │ /elab-story plans/future/platform/wint WINT-9110              │
- │     │                       │ Graphs                           │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 93  │ WINT-9120             │ Create Workflow Parity Test      │ backlog               │ /elab-story plans/future/platform/wint WINT-9120              │
- │     │                       │ Suite                            │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 94  │ WINT-9130             │ Document Migration Path          │ backlog               │ /elab-story plans/future/platform/wint WINT-9130              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 95  │ WINT-9140             │ Validate LangGraph Parity Phase  │ backlog               │ /elab-story plans/future/platform/wint WINT-9140              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 96  │ KBAR-0230             │ DB-Driven Index Generation       │ backlog               │ /elab-story plans/future/platform/kb-artifact-migration       │
- │     │                       │                                  │                       │ KBAR-0230                                                    │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 97  │ KBAR-0240             │ Regenerate Index CLI             │ backlog               │ /elab-story plans/future/platform/kb-artifact-migration       │
- │     │                       │                                  │                       │ KBAR-0240                                                    │
+│ 92b │ WINT-9106             │ Implement LangGraph Checkpointer │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9106         │
+│     │                       │  & State Recovery                │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 10 — Context     │                                  │                       │                                                              │
  │     │ Caching               │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 98  │ WINT-2010             │ Create Role Pack Sidecar         │ backlog               │ /elab-story plans/future/platform/wint WINT-2010              │
+│ 99  │ WINT-2020             │ Create Context Pack Sidecar      │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2020           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 99  │ WINT-2020             │ Create Context Pack Sidecar      │ backlog               │ /elab-story plans/future/platform/wint WINT-2020              │
+│ 100 │ WINT-2030             │ Populate Project Context Cache   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2030         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 100 │ WINT-2030             │ Populate Project Context Cache   │ backlog               │ /elab-story plans/future/platform/wint WINT-2030              │
+│ 103 │ WINT-2060             │ Populate Library Cache           │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2060           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 101 │ WINT-2040             │ Populate Agent Mission Cache     │ backlog               │ /elab-story plans/future/platform/wint WINT-2040              │
+│ 107 │ WINT-2120             │ Measure Token Reduction          │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2120         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 102 │ WINT-2050             │ Populate Domain Knowledge Cache  │ backlog               │ /elab-story plans/future/platform/wint WINT-2050              │
+│ 108 │ WINT-4010             │ Create Cohesion Sidecar          │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-4010           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 103 │ WINT-2060             │ Populate Library Cache           │ backlog               │ /elab-story plans/future/platform/wint WINT-2060              │
+│ 109 │ WINT-4020             │ Create Rules Registry Sidecar    │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-4020     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 104 │ WINT-2070             │ Implement Cache Warming Strategy │ backlog               │ /elab-story plans/future/platform/wint WINT-2070              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 105 │ WINT-2080             │ Create context-warmer Agent      │ backlog               │ /elab-story plans/future/platform/wint WINT-2080              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 106 │ WINT-2110             │ Update 5 High-Volume Agents to   │ backlog               │ /elab-story plans/future/platform/wint WINT-2110              │
- │     │                       │ Use Cache                        │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 107 │ WINT-2120             │ Measure Token Reduction          │ backlog               │ /elab-story plans/future/platform/wint WINT-2120              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 108 │ WINT-4010             │ Create Cohesion Sidecar          │ backlog               │ /elab-story plans/future/platform/wint WINT-4010              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 109 │ WINT-4020             │ Create Rules Registry Sidecar    │ backlog               │ /elab-story plans/future/platform/wint WINT-4020              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 110 │ WINT-4030             │ Populate Graph with Existing     │ backlog               │ /elab-story plans/future/platform/wint WINT-4030              │
- │     │                       │ Features                         │                       │                                                              │
+│ 110 │ WINT-4030             │ Populate Graph with Existing     │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4030         │
+│     │                       │ Features                         │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 11 — Graph &     │                                  │                       │                                                              │
  │     │ Cohesion              │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 111 │ WINT-4040             │ Infer Existing Capabilities      │ backlog               │ /elab-story plans/future/platform/wint WINT-4040              │
+│ 111 │ WINT-4040             │ Infer Existing Capabilities      │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-4040           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 112 │ WINT-4050             │ Create Cohesion Rules            │ backlog               │ /elab-story plans/future/platform/wint WINT-4050              │
+│ 112 │ WINT-4050             │ Create Cohesion Rules            │ needs-code-review    │ /dev-code-review plans/future/platform/wint WINT-4050         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 113 │ WINT-4060             │ Create graph-checker Agent       │ backlog               │ /elab-story plans/future/platform/wint WINT-4060              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 114 │ WINT-4070             │ Create cohesion-prosecutor Agent │ backlog               │ /elab-story plans/future/platform/wint WINT-4070              │
- │     │                       │  (PO)                            │                       │                                                              │
+│ 114 │ WINT-4070             │ Create cohesion-prosecutor Agent │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-4070           │
+│     │                       │  (PO)                            │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 115 │ WINT-4100             │ Create backlog-curator Agent     │ backlog               │ /elab-story plans/future/platform/wint WINT-4100              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 116 │ WINT-4110             │ Create Cohesion Check Command    │ backlog               │ /elab-story plans/future/platform/wint WINT-4110              │
+│ 116 │ WINT-4110             │ Create Cohesion Check Command    │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4110         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 117 │ WINT-4120             │ Integrate Cohesion into Workflow │ backlog               │ /elab-story plans/future/platform/wint WINT-4120              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 118 │ WINT-4130             │ Validate Graph & Cohesion System │ backlog               │ /elab-story plans/future/platform/wint WINT-4130              │
+│ 118 │ WINT-4130             │ Validate Graph & Cohesion System │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-4130           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 119 │ WINT-4140             │ Create Round Table Agent         │ backlog               │ /elab-story plans/future/platform/wint WINT-4140              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 120 │ WINT-4150             │ Standardize Elab Output          │ backlog               │ /elab-story plans/future/platform/wint WINT-4150              │
- │     │                       │ Artifacts                        │                       │                                                              │
+│ 120 │ WINT-4150             │ Standardize Elab Output          │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4150         │
+│     │                       │ Artifacts                        │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 12 — Additional  │                                  │                       │                                                              │
  │     │ LangGraph Nodes       │                                  │                       │                                                              │
@@ -116,30 +84,30 @@
  │ 121 │ WINT-9030             │ Create cohesion-prosecutor       │ backlog               │ /elab-story plans/future/platform/wint WINT-9030              │
  │     │                       │ LangGraph Node                   │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 122 │ WINT-9040             │ Create scope-defender LangGraph  │ backlog               │ /elab-story plans/future/platform/wint WINT-9040              │
- │     │                       │ Node                             │                       │                                                              │
+│ 122 │ WINT-9040             │ Create scope-defender LangGraph  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9040         │
+│     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ backlog               │ /elab-story plans/future/platform/wint WINT-9050              │
- │     │                       │ Node                             │                       │                                                              │
+│ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-9050           │
+│     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 124 │ WINT-9060             │ Create batch-coordinator         │ backlog               │ /elab-story plans/future/platform/wint WINT-9060              │
  │     │                       │ LangGraph Graph                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 13 — Telemetry   │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 125 │ WINT-0120             │ Create Telemetry MCP Tools       │ backlog               │ /elab-story plans/future/platform/wint WINT-0120              │
+│ 125 │ WINT-0120             │ Create Telemetry MCP Tools       │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-0120     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 126 │ WINT-3010             │ Create Gatekeeper Sidecar        │ backlog               │ /elab-story plans/future/platform/wint WINT-3010              │
+│ 126 │ WINT-3010             │ Create Gatekeeper Sidecar        │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-3010           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 127 │ WINT-3020             │ Implement Invocation Logging     │ backlog               │ /elab-story plans/future/platform/wint WINT-3020              │
+│ 127 │ WINT-3020             │ Implement Invocation Logging     │ needs-code-review    │ /dev-code-review plans/future/platform/wint WINT-3020         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 128 │ WINT-3030             │ Create telemetry-logger Agent    │ backlog               │ /elab-story plans/future/platform/wint WINT-3030              │
+│ 128 │ WINT-3030             │ Create telemetry-logger Agent    │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-3030         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 129 │ WINT-3040             │ Decision Logging with Embeddings │ backlog               │ /elab-story plans/future/platform/wint WINT-3040              │
+│ 129 │ WINT-3040             │ Decision Logging with Embeddings │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-3040     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 130 │ WINT-3050             │ Implement Outcome Logging        │ backlog               │ /elab-story plans/future/platform/wint WINT-3050              │
+│ 130 │ WINT-3050             │ Implement Outcome Logging        │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-3050           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 131 │ WINT-3060             │ Create Telemetry Query Command   │ backlog               │ /elab-story plans/future/platform/wint WINT-3060              │
+│ 131 │ WINT-3060             │ Create Telemetry Query Command   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-3060         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 132 │ WINT-3070             │ Update 10 Core Agents with       │ backlog               │ /elab-story plans/future/platform/wint WINT-3070              │
  │     │                       │ Telemetry                        │                       │                                                              │

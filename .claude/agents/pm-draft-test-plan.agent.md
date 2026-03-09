@@ -22,7 +22,7 @@ Do not write implementation code.
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry).
 - `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 
@@ -31,8 +31,12 @@ Read from:
 - Do NOT invent endpoints beyond the index/story scope.
 - Tests must be locally runnable and evidence-based.
 
-## Output (MUST WRITE)
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
+## Output (MUST RETURN INLINE)
+Return the test plan YAML content inline in a code block. Do NOT write to any file.
+
+The leader reads your TaskOutput and embeds it as `pm_artifacts.test_plan` in story.yaml.
+
+Return your output in this exact format:
 
 ```yaml
 strategy: unit+integration+e2e   # unit | integration | e2e | manual
@@ -72,5 +76,3 @@ manual_cases: []                 # { id, title, steps, expected } for manual-onl
 fixture_definitions: []          # { name, type, description }
 risks: []                        # test fragility, ambiguity, missing prereqs
 ```
-
-The leader reads this file and embeds it as `pm_artifacts.test_plan` in story.yaml.

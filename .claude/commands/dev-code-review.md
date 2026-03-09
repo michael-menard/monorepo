@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-11
-version: 6.0.0
+updated: 2026-03-09
+version: 6.1.0
 type: orchestrator
 agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md", "code-review-reusability.agent.md", "code-review-react.agent.md", "code-review-typescript.agent.md", "code-review-accessibility.agent.md", "review-aggregate-leader.agent.md"]
 schema: packages/backend/orchestrator/src/artifacts/review.ts
@@ -38,8 +38,7 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 ## Phase 0 — Setup
 
 Validate (HARD STOP if fail):
-- Story has `status: needs-code-review`
-- Story directory exists at `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
+- KB story state is `ready_for_review`: `kb_get_story({ story_id: "{STORY_ID}" })` → `state == "ready_for_review"`
 - `evidence` artifact exists in KB: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })`
 
 Extract touched files from evidence artifact:
@@ -143,22 +142,19 @@ The aggregate leader will:
 
 ## Phase 3 — Finalize
 
-| Verdict | Move To | Status | Next |
-|---------|---------|--------|------|
-| PASS | `ready-for-qa/` | 🔍 `ready-for-qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
-| FAIL | `failed-code-review/` | 🔴 `failed-code-review` | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| Verdict | Status | Next |
+|---------|--------|------|
+| PASS | 🔍 `ready-for-qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+| FAIL | 🔴 `failed-code-review` | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
 
 On PASS:
-```
+```javascript
 kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_qa", phase: "code_review" })
-/story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
 ```
 
 On FAIL:
-```
+```javascript
 kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_code_review", phase: "code_review" })
-/story-move {FEATURE_DIR} {STORY_ID} failed-code-review --update-status
-/index-update {FEATURE_DIR} {STORY_ID} --status=failed-code-review
 ```
 
 Token log: `/token-log {STORY_ID} code-review <in> <out>`

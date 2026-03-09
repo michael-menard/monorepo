@@ -189,3 +189,7 @@ When KB becomes available, run:
 ```
 
 This will execute the deferred SQL insert for searchability in the knowledge base and write all 18 elaboration findings.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

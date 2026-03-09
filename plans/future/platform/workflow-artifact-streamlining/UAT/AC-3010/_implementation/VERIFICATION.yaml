@@ -1,0 +1,112 @@
+schema: 1
+story_id: AC-3010
+timestamp: '2026-03-07T23:45:00Z'
+verdict: PASS
+tests_executed: false
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+tests_exempt: true
+tests_exempt_reason: >-
+  Agent documentation changes only — no TypeScript, no database, no API, no application code. All 5 touched files are
+  .md agent instruction files. EVIDENCE.yaml records e2e_tests.status=exempt with mode=n/a. Verification is behavioral
+  via grep and file inspection.
+coverage: null
+coverage_meets_threshold: true
+coverage_note: Coverage threshold not applicable — no code files modified.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-1
+    notes: >-
+      Verified directly: all three worker agents (pm-draft-test-plan, pm-uiux-recommendations,
+      pm-dev-feasibility-review) now have '## Output (MUST RETURN INLINE)' section with explicit 'Do NOT write to any
+      file.' instruction. Leader Workers table on story branch shows Output column as '(inline)' for all three workers.
+      Main branch comparison confirms workers previously used '## Output (MUST WRITE)' with _pm/ file paths. Leader
+      Phase 4 reads from TaskOutput, not filesystem files. Leader directory creation now shows only '{OUTPUT_DIR}/' —
+      the '_pm/' subdirectory is no longer created.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-2
+    notes: >-
+      Verified in pm-story-generation-leader Phase 4: 'Read Test Plan Writer TaskOutput → pm_artifacts.test_plan'.
+      Story.yaml AC-2 requires pm_artifacts.test_plan with strategy, happy_path_tests, error_cases, edge_cases keys —
+      the test plan worker output schema contains exactly these fields. Leader explicitly maps TaskOutput to
+      pm_artifacts.test_plan in the PM Artifacts section.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-3
+    notes: >-
+      Verified in pm-story-generation-leader Phase 4: 'Read Dev Feasibility worker TaskOutput →
+      pm_artifacts.dev_feasibility (include subtasks key — embed subtasks under pm_artifacts.dev_feasibility.subtasks)'.
+      Story.yaml AC-3 requires feasible, confidence, subtasks keys — the dev-feasibility worker output schema contains
+      exactly these fields. Leader explicitly maps TaskOutput to pm_artifacts.dev_feasibility.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-4
+    notes: >-
+      Verified in pm-uiux-recommendations: Non-UI path returns 'skipped: true' with 'reason' field inline. Leader Phase
+      4 PM Artifacts section: 'Read UI/UX Advisor TaskOutput → pm_artifacts.uiux_notes (omit entirely if skipped:
+      true)'. Story.yaml AC-4 requires: UI stories include uiux_notes with skipped:false; non-UI stories omit uiux_notes
+      entirely. The conditional omission logic is explicitly stated in the leader instructions.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:grep_verification.in_scope_stale_refs
+    notes: >-
+      QA grep independently confirmed: grep for '_pm/test-plan', '_pm/uiux-notes', '_pm/dev-feasibility' across all 5
+      in-scope files on story/AC-3010 branch returns 0 matches. Files checked: pm-draft-test-plan.agent.md,
+      pm-uiux-recommendations.agent.md, pm-dev-feasibility-review.agent.md, pm-story-generation-leader.agent.md,
+      _reference/patterns/pm-spawn-patterns.md. Result matches EVIDENCE.yaml claim of 0 stale refs.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:grep_verification.out_of_scope_refs_intact
+    notes: >-
+      Verified: (1) STORY-SEED.md references retained in leader (3 occurrences) and in pm-spawn-patterns.md (2
+      occurrences referencing {OUTPUT_DIR}/_pm/STORY-SEED.md). (2) pm-story-fix-leader.agent.md not modified on story
+      branch — still contains _pm/ references for QA-FEEDBACK.md and other artifact types. (3)
+      pm-harness-generation-leader.agent.md not modified on story branch — still contains _pm/test-plan.yaml and
+      _pm/dev-feasibility.yaml references for harness generation context. No unintended removals of out-of-scope _pm/
+      references detected. Note: the BLOCKERS.md reference in the leader was removed from the 'Wait for workers' line
+      (previously 'Check for blockers in _pm/BLOCKERS.md', now 'Check each worker output for blockers') — this is
+      consistent with the inline-return protocol since blockers are now returned in TaskOutput rather than written to a
+      file, and does not violate AC-6 scope since BLOCKERS.md is managed by separate harness/fix agents that are
+      unchanged.
+architecture_compliant: true
+architecture_notes: >-
+  Changes are agent instruction files only. No ADR violations applicable. Pattern follows inline TaskOutput return —
+  consistent with orchestrator/worker communication patterns already used in the codebase. No new infrastructure, no new
+  API paths, no frontend changes.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For agent-instruction-only stories, QA verification is fully behavioral (grep + file inspection) — no test suite
+      execution required. EVIDENCE.yaml e2e_tests.status=exempt is the correct signal to skip test runs.
+    category: pattern
+    tags:
+      - qa-verify
+      - agent-docs
+      - workflow
+  - lesson: >-
+      When migrating workers from file-write to inline-return protocol, verify both the worker Output sections AND the
+      leader's TaskOutput read pattern in Phase 4. The Workers table in the leader is a reliable secondary signal.
+    category: pattern
+    tags:
+      - workflow
+      - pm-generation
+      - agent-protocol
+tokens:
+  in: 12000
+  out: 3000

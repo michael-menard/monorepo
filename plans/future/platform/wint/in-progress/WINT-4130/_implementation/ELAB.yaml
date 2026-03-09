@@ -1,0 +1,219 @@
+schema_version: 1
+story_id: "WINT-4130"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story is scoped as a Phase 4 spike/validation exercise, fully aligned with the graph & cohesion
+      system plan. No code changes are proposed — only read-only validation and evidence capture.
+      Deliverables (EVIDENCE.yaml, VERIFICATION.md, graph-check-results.json) are appropriate for the
+      spike type. Non-goals explicitly exclude schema changes, new endpoints, permanent test suites,
+      and frontend work.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Minor path inconsistency: the frontmatter subtasks (ST-1 through ST-4) reference file paths under
+      `plans/future/platform/wint/backlog/WINT-4130/_implementation/` while the story itself lives in
+      `plans/future/platform/wint/elaboration/WINT-4130/`. The backlog directory does not exist. When
+      the story moves from elaboration to backlog the paths will be correct, but if any agent starts
+      work while the story is still in elaboration the paths will fail. This is a low-severity
+      consistency issue — implementer should verify actual story location before writing output files.
+      Otherwise: Goals, Non-goals, ACs, and test plan are internally consistent. All 11 ACs are covered
+      by the test plan (HP-1 through HP-6, EC-1, EC-2, ED-1, ED-2, MC-1, MC-2). Subtask AC coverage
+      is explicit and complete: AC-1+2+3 → ST-1, AC-4+5+6+9 → ST-2, AC-7+8 → ST-3, AC-10+11 → ST-4.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Story explicitly plans to reuse existing MCP tools (graph_get_franken_features,
+      graph_get_capability_coverage, rulesRegistryGet) via direct TypeScript import (ARCH-001).
+      References the populate-graph-features.ts pattern from WINT-4030 for the optional runner script.
+      Uses existing evidence.ts schema from packages/backend/orchestrator for ADR-006 compliance.
+      No new npm packages. No new API routes. Canonical references table is well-populated.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      N/A — no new API endpoints, no route handlers, no Lambda functions. This is a read-only
+      validation spike. The only outputs are local files written to _implementation/. Architecture
+      compliance (ARCH-001 direct-call pattern, ADR-005 real DB, ADR-002 no schema changes) is
+      explicitly documented in Architecture Notes.
+
+  - id: testability
+    status: PASS
+    note: >
+      Appropriate for a spike. Manual validation with structured EVIDENCE.yaml capture is the correct
+      strategy — ADR-006 compliance is called out explicitly. Deliverables are well-defined:
+      EVIDENCE.yaml (pre_conditions, fixture_features, e2e_tests, known_deviations), VERIFICATION.md
+      (per-AC pass/fail/partial), graph-check-results.json (agent output). Test plan covers 6 happy
+      path, 2 error cases, 2 edge cases, 2 manual review cases — comprehensive for a spike. The
+      BUILTIN-mode fallback path for WINT-4040 absence is explicitly designed and testable.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      One documented TBD in dev_feasibility.missing_requirements: "Explicit identification of which
+      real monorepo features are the known franken-feature fixtures — implementer must identify and
+      document before running graph-checker." This is by design — the fixtures are discovered at
+      validation time from real graph data. However, if graph.feature_capabilities is empty (WINT-4040
+      in failed-code-review), graph_get_franken_features returns [] due to inner-join, making fixture
+      identification impossible before running the checker. The story handles this via BUILTIN-mode
+      fallback but does not specify how BUILTIN mode identifies specific fixture features independent
+      of the capabilities join. AC-2 and AC-3 require fixture confirmation from graph.feature_capabilities
+      — if that table is empty, it is unclear whether AC-2/AC-3 can be passed in BUILTIN mode or must
+      be marked partial. The story should clarify this path explicitly.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      Risks are well-disclosed overall. The WINT-4040 failure path, WINT-4030 not-run path, WINT-4050
+      not-seeded path, and WINT-4060 not-merged path are all called out with mitigations. One
+      undisclosed risk: the canonical pattern reference (packages/backend/mcp-tools/src/scripts/
+      populate-graph-features.ts) does not currently exist in the filesystem — it is the deliverable
+      of WINT-4030, which is in needs-code-review. If an implementer tries to follow the pattern
+      before WINT-4030 is merged, no reference file exists to consult. The alternative existing
+      scripts (populate-domain-kb.ts, populate-library-cache.ts, populate-project-context.ts,
+      infer-capabilities.ts) are structurally similar and serve as adequate fallbacks, but this
+      dependency is not documented. Severity: low (the optional runner is not required for the spike
+      to succeed).
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      11 ACs is above the 8-AC threshold, but all ACs are verification checkpoints rather than
+      implementation tasks. The entire story produces no production code changes. Points estimate of
+      3 is appropriate for a spike. The 4-subtask decomposition maps cleanly to sequential validation
+      phases with no parallelism risk. Each subtask has a single clear goal and bounded output. Total
+      estimated tokens (5000 + 8000 + 4000 + 4000 = 21000) is within normal range for a 3-point spike.
+      Split is NOT warranted — the ACs represent verification checkpoints in a single end-to-end
+      validation flow, not independent features.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      4 subtasks covering all 11 ACs explicitly. Dependency chain is a clean linear DAG: ST-1 → ST-2
+      → ST-3 → ST-4. Each subtask has a clear verification criterion. Files to read and files to
+      modify are specified per subtask. Token estimates are provided. ST-2 is the heaviest (8000 tokens)
+      which is reasonable given it involves agent invocation and multi-field schema validation. One
+      minor note: ST-2 lists graph-check-results.json as a file "to write" but the file is actually
+      written by the graph-checker agent invocation, not directly by the implementer — this is
+      accurate but could be clearer.
+
+  - id: clarity_format
+    status: PASS
+    note: >
+      Story has all required sections: Goal, Examples, Edge Cases, Non-Goals, Scope, Acceptance
+      Criteria, Reuse Plan, Architecture Notes, Infrastructure Notes, Test Plan, Reality Baseline,
+      Canonical References, and Subtasks. Examples use Given/When/Then format. Edge cases are concrete
+      and reference specific warning message strings. The Reality Baseline provides current component
+      states as of 2026-02-13. The Canonical References table is well-structured with explicit "Why"
+      column. No ambiguous language or orphaned TODOs in the story body.
+
+gaps:
+  - id: GAP-1
+    severity: low
+    blocking: false
+    title: "Subtask file paths reference non-existent backlog directory"
+    description: >
+      ST-1 through ST-4 in the frontmatter subtask definitions write output files to
+      `plans/future/platform/wint/backlog/WINT-4130/_implementation/` but the story currently lives
+      in `plans/future/platform/wint/elaboration/WINT-4130/`. The backlog directory does not exist.
+      The Subtasks section in the story body (markdown) uses the same path. An implementing agent
+      would either fail to find the directory or create output in the wrong location.
+    recommendation: >
+      Update all file paths in frontmatter subtask definitions and story body subtask section to use
+      the elaboration path, or add a note that paths are correct once the story moves to backlog.
+      Alternatively, normalize subtask paths to use a relative `_implementation/` pattern.
+    ac_affected: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10", "AC-11"]
+    decision: defer
+    decision_rationale: >
+      Non-blocking path issue. The dev-implement workflow resolves paths relative to the story's
+      actual location at runtime — the implementing agent always locates the story directory first
+      and resolves _implementation/ relative to it. Paths will be correct when the story moves to
+      ready-to-work (the stage at which implementation occurs). No MVP impact.
+
+  - id: GAP-2
+    severity: low
+    blocking: false
+    title: "AC-2/AC-3 pass criteria unclear when WINT-4040 capabilities absent"
+    description: >
+      AC-2 and AC-3 require fixture identification with capability confirmation from
+      graph.feature_capabilities. If WINT-4040 capability inference did not run and the table is
+      empty, graph_get_franken_features returns [] (inner-join behavior). The story says validation
+      falls back to BUILTIN mode, but does not specify whether AC-2/AC-3 can still be passed (as
+      "partial") or must be marked failed with a known deviation. Without this clarification,
+      implementers may mark these ACs inconsistently.
+    recommendation: >
+      Add a note to AC-2 and AC-3 (or to the Edge Cases section) specifying: "If
+      graph.feature_capabilities is empty (WINT-4040 not run), AC-2 and AC-3 are marked PARTIAL.
+      Document in EVIDENCE.yaml known_deviations with recommended owner WINT-4040."
+    ac_affected: ["AC-2", "AC-3"]
+    decision: defer
+    decision_rationale: >
+      The Edge Cases section already describes BUILTIN-mode fallback behavior. In the absence of
+      graph.feature_capabilities data, implementers will naturally mark AC-2/AC-3 as PARTIAL —
+      this is the expected outcome of a degraded-mode run and is consistent with the story's
+      known_deviations evidence pattern. Adding explicit ACs for this clarification would be
+      over-specification for a low-severity, non-blocking path. Defer to implementer judgment
+      guided by the existing Edge Cases section.
+
+opportunities:
+  - id: OPP-1
+    title: "Document fallback canonical references for optional runner script"
+    description: >
+      The story references populate-graph-features.ts (WINT-4030 deliverable) as the canonical
+      pattern for the optional validation runner. This file does not yet exist. The existing scripts
+      populate-domain-kb.ts, populate-library-cache.ts, and infer-capabilities.ts in
+      packages/backend/mcp-tools/src/scripts/ are structurally equivalent and available now.
+      Adding a note in the Canonical References table pointing to these existing scripts as immediate
+      fallbacks would help implementers who start work before WINT-4030 is merged.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "76467008-ef97-4c31-96e5-efda8dc246ee"
+
+  - id: OPP-2
+    title: "Add explicit partial-completion signal to EVIDENCE.yaml schema"
+    description: >
+      The story handles multiple degradation paths (BUILTIN mode, missing rules, missing graph data)
+      with graceful partial results. The EVIDENCE.yaml schema (ADR-006) might benefit from a
+      top-level `completion_mode: "full" | "partial" | "builtin-only"` field to make the overall
+      validation fidelity machine-readable. This would make subsequent stories (e.g., fix stories
+      for WINT-4040) easier to triage by querying the evidence artifact.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "76467008-ef97-4c31-96e5-efda8dc246ee"
+
+  - id: OPP-3
+    title: "Consider adding a WINT-0131 migration check to ST-1 pre-flight"
+    description: >
+      The dev_feasibility section notes that WINT-0131 migration 0027 must be confirmed merged for
+      full-fidelity detection, but this check is not listed explicitly in ST-1's pre-flight steps or
+      in AC-1. The pre-flight HP-1 test checks graph.features count and rulesRegistryGet but does
+      not include a migration check. Adding a migration check to ST-1 or AC-1 would prevent silent
+      limited-fidelity runs.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "76467008-ef97-4c31-96e5-efda8dc246ee"
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+
+notes: >
+  This is a well-written spike story with thorough risk disclosure, clear subtask decomposition, and
+  explicit ADR compliance. The two gaps (incorrect file paths in subtask definitions, unclear AC-2/AC-3
+  pass criteria under BUILTIN-mode fallback) are low-severity and non-blocking. GAP-1 is deferred
+  because the dev-implement workflow resolves paths relative to the story's actual location at
+  runtime — paths will be correct when the story moves to ready-to-work. GAP-2 is deferred because
+  the Edge Cases section already provides sufficient guidance for implementers to naturally mark
+  AC-2/AC-3 as PARTIAL in BUILTIN mode. All 3 opportunities logged to KB (artifact id:
+  76467008-ef97-4c31-96e5-efda8dc246ee). Story is cleared for progression to backlog/ready-to-work.

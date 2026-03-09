@@ -68,9 +68,37 @@ export interface EmbeddingClientConfig {
  * ])
  * ```
  */
+/**
+ * Simple concurrency limiter.
+ * Queues requests and releases slots as they complete.
+ */
+class ConcurrencyLimiter {
+  private running = 0
+  private readonly queue: Array<() => void> = []
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.running >= this.limit) {
+      await new Promise<void>(resolve => this.queue.push(resolve))
+    }
+    this.running++
+    try {
+      return await fn()
+    } finally {
+      this.running--
+      if (this.queue.length > 0) {
+        const next = this.queue.shift()!
+        next()
+      }
+    }
+  }
+}
+
 export class EmbeddingClient {
   private readonly config: Required<EmbeddingClientConfig>
   private readonly retryConfig: RetryConfig
+  private readonly limiter: ConcurrencyLimiter
 
   constructor(config: EmbeddingClientConfig) {
     // Apply defaults
@@ -96,10 +124,13 @@ export class EmbeddingClient {
       retryCount: this.config.retryCount,
     }
 
+    this.limiter = new ConcurrencyLimiter(this.config.maxConcurrentRequests)
+
     logger.info('EmbeddingClient initialized', {
       model: this.config.model,
       cacheEnabled: this.config.cacheEnabled,
       retryCount: this.config.retryCount,
+      maxConcurrentRequests: this.config.maxConcurrentRequests,
     })
   }
 
@@ -138,8 +169,10 @@ export class EmbeddingClient {
       }
     }
 
-    // Generate embedding via OpenAI API
-    const embedding = await generateEmbeddingWithRetry(validatedText, this.retryConfig)
+    // Generate embedding via OpenAI API (concurrency-limited)
+    const embedding = await this.limiter.run(() =>
+      generateEmbeddingWithRetry(validatedText, this.retryConfig),
+    )
 
     // Save to cache if enabled
     if (this.config.cacheEnabled) {
@@ -178,13 +211,17 @@ export class EmbeddingClient {
       })
 
       return Promise.all(
-        validatedTexts.map(text => generateEmbeddingWithRetry(text, this.retryConfig)),
+        validatedTexts.map(text =>
+          this.limiter.run(() => generateEmbeddingWithRetry(text, this.retryConfig)),
+        ),
       )
     }
 
-    // Process batch with cache coordination
+    // Process batch with cache coordination (concurrency-limited)
     const generateFn = async (text: string): Promise<Embedding> => {
-      const embedding = await generateEmbeddingWithRetry(text, this.retryConfig)
+      const embedding = await this.limiter.run(() =>
+        generateEmbeddingWithRetry(text, this.retryConfig),
+      )
 
       // Save to cache
       const contentHash = computeContentHash(text)

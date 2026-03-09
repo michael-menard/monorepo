@@ -1,0 +1,5 @@
+current_phase: qa-verify
+last_successful_phase: qa-verify
+iteration: 1
+blocked: false
+verdict: PASS

@@ -125,15 +125,17 @@ export function isDatabaseError(error: unknown): boolean {
   const message = error.message.toLowerCase()
   const name = error.name.toLowerCase()
 
-  // PostgreSQL error codes and common patterns
+  // PostgreSQL error codes, connection errors, and common patterns
   const dbPatterns = [
     'connection',
     'postgres',
     'pg_',
     'database',
     'econnrefused',
+    'econnreset',
     'enotfound',
     'etimedout',
+    'epipe',
     'pool',
     'relation',
     'column',
@@ -141,6 +143,14 @@ export function isDatabaseError(error: unknown): boolean {
     'duplicate key',
     'foreign key',
     'unique violation',
+    'socket hang up',
+    'connection terminated',
+    'timeout expired',
+    'client has encountered a connection error',
+    'cannot use a pool after calling end',
+    'remaining connection slots are reserved',
+    'too many clients already',
+    'sorry, too many clients',
   ]
 
   return (

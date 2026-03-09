@@ -23,3 +23,7 @@ deferred_writes:
       touches_infra: true
     reason: "KB MCP tools not available during story generation"
     retry_count: 0
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

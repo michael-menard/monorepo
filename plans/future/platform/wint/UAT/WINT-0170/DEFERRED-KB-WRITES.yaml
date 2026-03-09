@@ -169,3 +169,7 @@ writes:
         - **Recommendation**: Post-MVP: enhance gate step to capture and display the SYNC-REPORT.md
           summary when exit code is 1. Requires doc-sync to write SYNC-REPORT.md in check-only
           mode and the gate prose to read it.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

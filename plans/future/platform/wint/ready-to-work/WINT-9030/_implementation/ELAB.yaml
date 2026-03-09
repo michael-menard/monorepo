@@ -1,0 +1,415 @@
+---
+story_id: WINT-9030
+analysis_date: "2026-03-08"
+analyst: elab-analyst
+---
+
+audit:
+  files_verified:
+    - path: "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      exists: true
+      notes: >
+        Gold standard pattern confirmed. However, a critical discrepancy exists: doc-sync.ts
+        declares GraphStateWithDocSync as a TypeScript interface (line 93: `export interface
+        GraphStateWithDocSync extends GraphState`), NOT as a z.object() Zod schema. This
+        contradicts AC-4's requirement. The story says to follow doc-sync.ts as the template
+        but also says to use z.object() — these two instructions are in conflict. The Zod-first
+        rule from CLAUDE.md takes precedence, but the implementer must be aware that the
+        gold standard file itself violates AC-4.
+
+    - path: "packages/backend/orchestrator/src/nodes/story/attack.ts"
+      exists: true
+      notes: >
+        Sibling node confirmed. Also uses TypeScript interface for GraphStateWithAttackAnalysis
+        (line 1388: `export interface GraphStateWithAttackAnalysis extends GraphStateWithStorySeed`).
+        createToolNode usage pattern confirmed: createToolNode('story_attack', async (state) => {...}).
+        The factory function pattern (createAttackNode) is confirmed at line 1462.
+
+    - path: "packages/backend/orchestrator/src/runner/node-factory.ts"
+      exists: true
+      notes: >
+        createToolNode confirmed at line 375. Actual signature: createToolNode(name: string,
+        implementation: NodeImplementation): NodeFunction. Sets maxAttempts: 2 and
+        timeoutMs: 10000 — matches "2 retries, 10s timeout" description in story. However,
+        the story's Architecture Notes code example shows the WRONG argument order:
+        `createToolNode(cohesionCheckImpl, defaultConfig)` — the real API takes (name, impl),
+        not (impl, config). This is a critical API mismatch in the story's example code.
+
+    - path: "packages/backend/orchestrator/src/runner/state-helpers.ts"
+      exists: true
+      notes: >
+        updateState() confirmed at line 55. Simple wrapper: returns {...updates}. Story's
+        description of it as "single cast point" is accurate. The function signature is
+        updateState(updates: StateUpdate): StateUpdate.
+
+    - path: "packages/backend/orchestrator/src/state/index.ts"
+      exists: true
+      notes: >
+        GraphStateSchema exported at line 53. The story's ST-1 calls for
+        `GraphStateSchema.extend({...})` — this requires importing GraphStateSchema directly
+        (not just the GraphState type). GraphStateSchema IS exported from this module.
+
+    - path: "packages/backend/sidecars/cohesion/src/compute-check.ts"
+      exists: true
+      notes: >
+        computeCheck(featureId: string, db: DrizzleDb): Promise<CohesionCheckResult> confirmed.
+        Injectable db pattern confirmed. DrizzleDb = NodePgDatabase<any> exported from this
+        file. Returns {featureId, status, violations, capabilityCoverage} matching the story's
+        expected shapes. Note: story's cohesionCheckImpl design takes a config object
+        ({featureId, db}) while the actual computeCheck takes (featureId, db) as positional
+        args — the wrapper will need to adapt this.
+
+    - path: "packages/backend/sidecars/cohesion/src/compute-audit.ts"
+      exists: true
+      notes: >
+        computeAudit(request: CohesionAuditRequest, db: DrizzleDb): Promise<CohesionAuditResult>
+        confirmed. Takes {packageName?: string | null} as first arg. Injectable db confirmed.
+        Note: packageName is optional AND nullable (z.string().optional().nullable()) in
+        CohesionAuditRequestSchema.
+
+    - path: "packages/backend/sidecars/cohesion/src/__types__/index.ts"
+      exists: true
+      notes: >
+        All required Zod schemas confirmed present: CohesionCheckResultSchema,
+        CohesionAuditResultSchema, CohesionStatusSchema, CapabilityCoverageSchema,
+        CohesionAuditRequestSchema, CohesionCheckRequestSchema. Also exports FrankenFeatureItemSchema
+        re-exported from @repo/mcp-tools. All are proper Zod schemas (z.object/z.enum/z.discriminatedUnion).
+        featureId is included in CohesionCheckResultSchema (not just in the request schema).
+
+    - path: "packages/backend/sidecars/cohesion/package.json"
+      exists: true
+      notes: >
+        exports field IS present. The main export (".") points to dist/index.js (types:
+        dist/index.d.ts). The src/index.ts explicitly exports computeCheck, computeAudit,
+        and all types. A library entry point exists. HOWEVER: the orchestrator's package.json
+        does NOT list @repo/cohesion-sidecar as a dependency. This must be added to
+        packages/backend/orchestrator/package.json before cross-package imports will work.
+        This is a missing prerequisite not mentioned in the story.
+
+    - path: "packages/backend/orchestrator/src/nodes/story/index.ts"
+      exists: true
+      notes: >
+        Barrel export file EXISTS. Contains extensive named exports for all 8 existing story
+        nodes (seed, fanout-pm, fanout-ux, fanout-qa, attack, gap-hygiene, readiness-score,
+        synthesize). AC-12 requires updating this file with cohesionCheckNode exports.
+        The pattern exports: node function, factory function, helper functions, all schemas,
+        and all types. The new cohesion-check node must follow this export pattern.
+
+  dependency_status:
+    WINT-4010:
+      current_state: "UAT"
+      story_stated_state: "failed-code-review"
+      risk: >
+        LOW. The story's baseline date was 2026-02-13 and stated WINT-4010 was in
+        failed-code-review. As of 2026-03-08, WINT-4010 is in UAT — the compute functions
+        computeCheck and computeAudit are confirmed stable in the codebase with their
+        current signatures. The dependency gate condition ("WINT-4010 must reach ready-for-qa")
+        has been surpassed. Direct import via @repo/cohesion-sidecar is the preferred
+        strategy and is now viable, pending package.json dependency addition.
+    WINT-9010:
+      current_state: "UAT"
+      story_stated_state: "in-qa"
+      risk: >
+        LOW. The story's baseline stated WINT-9010 was in-qa. As of 2026-03-08, WINT-9010
+        is also in UAT. @repo/workflow-logic is stable and available. However, the story's
+        own analysis notes that the cohesion node likely does not need any @repo/workflow-logic
+        imports — it only calls computeCheck/computeAudit with a Drizzle db. This dependency
+        risk is effectively resolved.
+
+  ac_coverage:
+    - ac_id: AC-1
+      subtask: ST-3
+      implementable: true
+      notes: >
+        Export cohesionCheckNode and createCohesionCheckNode is straightforward. Pattern
+        confirmed in attack.ts (storyAttackNode and createAttackNode). Name the default
+        node 'cohesion_check' (underscored per node naming convention in attack.ts:
+        'story_attack').
+
+    - ac_id: AC-2
+      subtask: ST-2
+      implementable: true
+      notes: >
+        cohesionCheckImpl wrapping computeCheck. Note the signature adaptation needed:
+        computeCheck(featureId, db) positional args vs the injectable config object pattern
+        {featureId, db} described in the story. The inner function design is fine — the
+        story's cohesionCheckImpl({featureId, db}) config-object API is the right wrapper
+        approach.
+
+    - ac_id: AC-3
+      subtask: ST-2
+      implementable: true
+      notes: >
+        cohesionAuditImpl wrapping computeAudit. CohesionAuditRequest type expects
+        {packageName?: string | null}. The inner function design matches.
+
+    - ac_id: AC-4
+      subtask: ST-1
+      implementable: true
+      notes: >
+        CONFLICT WITH GOLD STANDARD. AC-4 requires z.object() Zod schema for
+        GraphStateWithCohesionCheck, but the gold standard file (doc-sync.ts) and ALL
+        sibling story nodes (attack.ts, seed.ts, fanout-pm.ts, fanout-qa.ts) use TypeScript
+        interfaces. The CLAUDE.md rule "ALWAYS use Zod schemas for types — never use
+        TypeScript interfaces" takes clear precedence. The implementer should use z.object()
+        and document that this differs from the existing (non-conformant) pattern in sibling
+        files. GraphStateSchema.extend() IS available for import from state/index.ts.
+
+    - ac_id: AC-5
+      subtask: ST-3
+      implementable: true
+      notes: >
+        createToolNode confirmed to use maxAttempts: 2 and timeoutMs: 10000 internally.
+        Story description "2 retries, 10s timeout" is accurate for this preset.
+
+    - ac_id: AC-6
+      subtask: ST-1, ST-2
+      implementable: true
+      notes: >
+        computeCheck and computeAudit both accept injectable db. DrizzleDb type exported
+        from compute-check.ts. Pattern is fully established.
+
+    - ac_id: AC-7
+      subtask: ST-2, ST-4
+      implementable: true
+      notes: >
+        computeCheck already returns {status: 'unknown', violations: [], capabilityCoverage: {}}
+        for unknown featureId (no rows). The inner function can delegate directly — no
+        additional logic needed for this case.
+
+    - ac_id: AC-8
+      subtask: ST-2, ST-4
+      implementable: true
+      notes: >
+        computeCheck returns {status: 'complete', violations: [], capabilityCoverage:
+        {create: true, read: true, update: true, delete: true}} for all-CRUD-covered feature.
+
+    - ac_id: AC-9
+      subtask: ST-2, ST-4
+      implementable: true
+      notes: >
+        computeCheck returns {status: 'incomplete', violations: ['missing X capability'],
+        capabilityCoverage: {...}} for partial coverage. This is handled by the sidecar code.
+
+    - ac_id: AC-10
+      subtask: ST-4
+      implementable: true
+      notes: >
+        __tests__ directory exists at nodes/story/__tests__/ with 8 existing test files.
+        cohesion-check.test.ts will be added alongside them.
+
+    - ac_id: AC-11
+      subtask: ST-4
+      implementable: true
+      notes: >
+        45% global coverage threshold. New tests targeting inner functions will provide
+        coverage. No specific risk here given the existing test infrastructure.
+
+    - ac_id: AC-12
+      subtask: ST-3
+      implementable: true
+      notes: >
+        index.ts barrel file exists and MUST be updated. The story's AC-12 language says
+        "update ONLY if a barrel export pattern exists" — it does. The update is required.
+        Follow the existing pattern: export node, factory, helper functions, schemas, and types.
+
+    - ac_id: AC-13
+      subtask: ST-5
+      implementable: true
+      notes: >
+        Type-check and lint will pass once the dependency addition is made. The main risk
+        is the missing @repo/cohesion-sidecar in orchestrator package.json.
+
+    - ac_id: AC-14
+      subtask: ST-2, ST-5
+      implementable: true
+      notes: >
+        Parity is inherent: the node will call computeCheck/computeAudit directly (same
+        functions the sidecar HTTP routes call). As long as the same db and featureId are
+        used, identical output is guaranteed by construction.
+
+gaps:
+  - id: GAP-1
+    severity: blocking
+    category: missing-file
+    description: >
+      @repo/cohesion-sidecar is NOT listed as a dependency in
+      packages/backend/orchestrator/package.json. The preferred implementation strategy
+      (direct import of computeCheck, computeAudit, and Zod types from @repo/cohesion-sidecar)
+      will fail at build time without this dependency. The orchestrator currently depends on
+      @repo/database-schema, @repo/logger, @repo/mcp-tools, @repo/workflow-logic — but not
+      @repo/cohesion-sidecar.
+    recommendation: >
+      Add "@repo/cohesion-sidecar": "workspace:*" to the dependencies section of
+      packages/backend/orchestrator/package.json before beginning ST-2. This is a one-line
+      change but it gates all subsequent import work.
+
+  - id: GAP-2
+    severity: warning
+    category: api-mismatch
+    description: >
+      The Architecture Notes code example in the story shows the wrong argument order for
+      createToolNode: `export const cohesionCheckNode = createToolNode(cohesionCheckImpl,
+      defaultConfig)`. The actual API is createToolNode(name: string, implementation:
+      NodeImplementation). The implementation pattern in attack.ts confirms:
+      createToolNode('story_attack', async (state) => {...}). Using the story's example
+      code verbatim will cause a TypeScript compilation error.
+    recommendation: >
+      Use the correct signature: createToolNode('cohesion_check', async (state: GraphState)
+      => {...}). Disregard the story's architecture example code for the createToolNode call.
+      The factory function createCohesionCheckNode should follow attack.ts's createAttackNode
+      pattern exactly.
+
+  - id: GAP-3
+    severity: warning
+    category: schema-gap
+    description: >
+      AC-4 requires GraphStateWithCohesionCheck as a z.object() Zod schema, but the gold
+      standard reference (doc-sync.ts) and all sibling nodes (attack.ts, seed.ts,
+      fanout-pm.ts, fanout-qa.ts) use TypeScript interfaces for their GraphStateWith*
+      extension types. There is a codebase-wide pattern inconsistency. If code review
+      follows the same reviewers who approved attack.ts with an interface, a z.object()
+      approach might be flagged as inconsistent. However, CLAUDE.md is unambiguous: Zod
+      schemas, never interfaces.
+    recommendation: >
+      Implement GraphStateWithCohesionCheckSchema as z.object() per CLAUDE.md and AC-4.
+      Add a comment noting: "Using z.object() per CLAUDE.md Zod-first requirement (AC-4).
+      Sibling nodes use TypeScript interfaces but this story follows the correct pattern."
+      This also means the return type cast pattern used in attack.ts
+      (`as Partial<GraphStateWithAttackAnalysis>`) will need to use
+      `as Partial<z.infer<typeof GraphStateWithCohesionCheckSchema>>` or the inferred type
+      alias.
+
+  - id: GAP-4
+    severity: warning
+    category: api-mismatch
+    description: >
+      The story states WINT-4010 is in "failed-code-review" and WINT-9010 is "in-qa".
+      Both dependencies are actually in UAT as of 2026-03-08. The dependency gate condition
+      in the story ("WINT-4010 must reach ready-for-qa before finalizing import strategy")
+      has been surpassed. The story's fallback strategy (self-contained copy with TODO
+      comment) is no longer necessary. Using it anyway would introduce needless duplication.
+    recommendation: >
+      Use the direct import strategy: import computeCheck and computeAudit from
+      @repo/cohesion-sidecar. Import Zod types from the same package. Do NOT copy the
+      compute logic — WINT-4010 is stable in UAT.
+
+  - id: GAP-5
+    severity: info
+    category: test-gap
+    description: >
+      The parity test (AC-14, ST-5, ED-3/MC-1) requires the cohesion sidecar running
+      locally with a seeded graph DB. This is a manual verification step and is marked
+      as "may be flaky in CI without proper setup" in the story's own risk list. The
+      story counts AC-14 as covered by ST-5, but ST-5 has no automated test file — it
+      is a manual verification step.
+    recommendation: >
+      Document AC-14 as satisfied by construction (node calls same computeCheck function
+      as sidecar HTTP handler) and provide a manual test script or integration test that
+      can be run locally. Mark in EVIDENCE.yaml that parity is architectural rather than
+      requiring a live sidecar comparison in CI.
+
+  - id: GAP-6
+    severity: info
+    category: missing-file
+    description: >
+      The story's reuse plan says to import DrizzleDb type. DrizzleDb is currently exported
+      from both compute-check.ts and compute-audit.ts (both have their own `export type
+      DrizzleDb = NodePgDatabase<any>`). This duplication means the cohesion node will need
+      to import DrizzleDb from one of these files, or from drizzle-orm/node-postgres directly.
+      There is no central DrizzleDb type in @repo/cohesion-sidecar's index.ts re-export —
+      only the result types are re-exported, not DrizzleDb.
+    recommendation: >
+      Import DrizzleDb directly from drizzle-orm/node-postgres as NodePgDatabase<any> and
+      define a local `type DrizzleDb = NodePgDatabase<any>` in the cohesion-check.ts node
+      file. This avoids depending on an internal sidecar file path that bypasses the
+      package's public exports field.
+
+opportunities:
+  - id: OPP-1
+    category: reuse
+    description: >
+      Since WINT-4010 is in UAT and its index.ts explicitly exports computeCheck, computeAudit,
+      CohesionCheckResultSchema, CohesionAuditResultSchema, CohesionStatusSchema, and
+      CapabilityCoverageSchema, the implementation can be extremely clean: import everything
+      needed from '@repo/cohesion-sidecar' (once the dependency is added to package.json).
+      The inner compute functions become trivial wrappers adapting the calling convention.
+    recommendation: >
+      Keep the implementation minimal — the node's cohesionCheckImpl and cohesionAuditImpl
+      can be one-liners delegating to computeCheck/computeAudit respectively. The value
+      of this node is the LangGraph integration layer (state extension, createToolNode
+      wrapping, updateState return), not the compute logic itself.
+
+  - id: OPP-2
+    category: simplification
+    description: >
+      The story defines two separate inner functions (cohesionCheckImpl and cohesionAuditImpl)
+      but the story's GraphState extension puts both results in the same state object
+      (cohesionCheck and cohesionAudit fields). The node handler could dispatch to one or
+      the other based on whether featureId or packageName is present in config/state.
+      This single-node-two-mode design is clean and matches how computeCheck vs computeAudit
+      work in the sidecar.
+    recommendation: >
+      Implement the node with a single handler that inspects state/config: if featureId is
+      present, run cohesionCheckImpl; if packageName is present, run cohesionAuditImpl; if
+      both are absent, log a warning and return a no-op state update. This avoids needing
+      two separate node exports for essentially the same functionality.
+
+  - id: OPP-3
+    category: test-improvement
+    description: >
+      The existing __tests__ directory contains 8 test files already following the injectable
+      mock pattern. The cohesion-check test will be the first to use computeCheck/computeAudit
+      mocks specifically. Consider creating a shared mock helper for DrizzleDb that can be
+      reused by future tests in this directory.
+    recommendation: >
+      In cohesion-check.test.ts, define the mockDb factory clearly enough that it can serve
+      as a pattern reference. No shared fixture file needed — just clear inline mock setup
+      per test case, consistent with how the existing sibling test files work.
+
+autonomous_decisions:
+  - gap_id: GAP-1
+    action: added_as_ac
+    details: "Added AC-15: @repo/cohesion-sidecar must be added to orchestrator/package.json"
+  - gap_id: GAP-2
+    action: logged_to_kb
+    details: "Implementation note: use createToolNode('cohesion_check', impl) — not story's example code"
+  - gap_id: GAP-3
+    action: logged_to_kb
+    details: "CLAUDE.md Zod-first rule wins over sibling node pattern. AC-4 already covers this."
+  - gap_id: GAP-4
+    action: logged_to_kb
+    details: "Dependencies in UAT — use direct import strategy, discard copy-with-TODO fallback"
+  - gap_id: GAP-5
+    action: logged_to_kb
+    details: "AC-14 parity satisfied by construction — same compute functions called"
+  - gap_id: GAP-6
+    action: logged_to_kb
+    details: "Import NodePgDatabase from drizzle-orm directly, define local DrizzleDb alias"
+  kb_entry_id: "ae15ba37-fc08-45e8-9433-a79a729a480f"
+
+verdict: CONDITIONAL_PASS
+
+verdict_rationale: >
+  The story is implementable with high confidence. The two named dependencies (WINT-4010,
+  WINT-9010) are both in UAT — the dependency gate has been surpassed and the stable import
+  strategy is now viable. All referenced files exist and have been verified. The compute
+  functions (computeCheck, computeAudit), Zod schemas, createToolNode, and updateState all
+  exist and work as described.
+
+  Two gaps require action before implementation begins:
+  1. GAP-1 (blocking): @repo/cohesion-sidecar must be added to orchestrator/package.json.
+     This is a one-line prerequisite fix.
+  2. GAP-2 (warning): The story's architecture example code has the createToolNode arguments
+     reversed. The implementer must use the correct (name, impl) signature from attack.ts,
+     not the (impl, config) pattern shown in the story.
+
+  One architectural tension (GAP-3) exists between the CLAUDE.md Zod-first rule (AC-4) and
+  the interface-based pattern used in all existing nodes including the gold standard doc-sync.ts.
+  The implementer should follow CLAUDE.md (z.object() wins), document the deviation from
+  sibling nodes, and expect a potential code review discussion — but this is not a blocker.
+
+  The story's baseline information about WINT-4010 and WINT-9010 states is outdated (both
+  are in UAT, not failed-code-review/in-qa). The fallback "copy with TODO" strategy should
+  be discarded in favor of direct imports. Implementation can begin immediately after GAP-1
+  is resolved.

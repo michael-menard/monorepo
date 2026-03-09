@@ -22,3 +22,7 @@ pending_writes:
       touches_database: false
       touches_infra: false
     conflict_resolution: "ON CONFLICT (story_id) DO UPDATE SET title=EXCLUDED.title, state=EXCLUDED.state, story_dir=EXCLUDED.story_dir, story_file=EXCLUDED.story_file, story_type=EXCLUDED.story_type, points=EXCLUDED.points, priority=EXCLUDED.priority, touches_backend=EXCLUDED.touches_backend, touches_frontend=EXCLUDED.touches_frontend, touches_database=EXCLUDED.touches_database, touches_infra=EXCLUDED.touches_infra"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

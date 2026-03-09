@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-04T00:30:00Z"
+updated_at: "2026-03-09T05:08:00Z"
 ---
 
 # WINT Stories Index
@@ -16,19 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 22 |
-| in-qa | 2 |
-| ready-for-qa | 2 |
-| needs-code-review | 5 |
-| ready-for-code-review | 0 |
-| failed-code-review | 1 |
-| failed-qa | 0 |
-| elaboration | 0 |
-| created | 2 |
+| uat | 29 |
+| in-qa | 0 |
+| ready-for-qa | 1 |
+| needs-code-review | 3 |
+| ready-for-code-review | 3 |
+| failed-code-review | 0 |
+| failed-qa | 5 |
+| elaboration | 1 |
+| created | 4 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 7 |
-| pending | 88 |
+| ready-to-work | 5 |
+| pending | 78 |
 
 ---
 
@@ -240,7 +240,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0120: Create Telemetry MCP Tools
 
-**Status:** pending
+**Status:** Ready to Work
 **Depends On:** WINT-0040
 **Phase:** 0
 **Feature:** Add MCP tools: workflow_log_invocation, workflow_log_decision, workflow_log_outcome, workflow_get_story_telemetry
@@ -250,6 +250,9 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enable agents to log telemetry data for observability and ML training
 
 **Risk Notes:** High-frequency writes need batching or async strategy
+
+**Story File:** `ready-to-work/WINT-0120/WINT-0120.md`
+**Story Generated:** 2026-03-09
 
 ---
 
@@ -979,7 +982,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2010: Create Role Pack Sidecar
 
-**Status:** ready-for-code-review
+**Status:** uat
 **Depends On:** WINT-1120
 **Phase:** 2
 **Feature:** Create versioned role pack sidecar service at GET /role-pack?role=dev|po|qa|da&v=X returning 150-300 token role instructions
@@ -997,7 +1000,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2020: Create Context Pack Sidecar
 
-**Status:** created
+**Status:** failed-qa
 **Depends On:** WINT-2010
 **Phase:** 2
 **Feature:** Create context pack sidecar at POST /context-pack returning node-scoped context: story_brief, kb_facts, kb_rules, kb_links, repo_snippets
@@ -1009,14 +1012,14 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Must query KB efficiently, respect token budgets
 
-**Story File:** `created/WINT-2020/WINT-2020.md`
+**Story File:** `failed-qa/WINT-2020/WINT-2020.md`
 
 ---
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-2030/WINT-2030.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1031,7 +1034,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2040: Populate Agent Mission Cache
 
-**Status:** failed-code-review
+**Status:** uat
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Parse all 115 .agent.md files, extract mission/scope/signals, populate context_cache.agent_missions
@@ -1042,7 +1045,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Parser must handle various frontmatter formats
 
-**Story File:** `failed-code-review/WINT-2040/WINT-2040.md`
+**Story File:** `UAT/WINT-2040/WINT-2040.md`
 **Story Generated:** 2026-03-02
 
 ---
@@ -1064,7 +1067,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
@@ -1080,7 +1083,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2070: Implement Cache Warming Strategy
 
 **Status:** created
-**Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060
+**Depends On:** WINT-2050, WINT-2060
 **Phase:** 2
 **Feature:** Create cache-warm skill that pre-populates all caches before workflow starts
 **Infrastructure:**
@@ -1094,7 +1097,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2080: Create context-warmer Agent
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-2070
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that implements cache-warm skill
@@ -1141,8 +1144,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
-**Status:** ready-to-work
-**Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060, WINT-0100
+**Status:** ready-for-qa
+**Depends On:** WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache
 **Infrastructure:**
@@ -1155,7 +1158,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2120: Measure Token Reduction
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-2110
 **Phase:** 2
 **Feature:** Run benchmark comparing token usage before/after cache implementation, target 80% reduction
@@ -1174,7 +1177,7 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 ### WINT-3010: Create Gatekeeper Sidecar
 
-**Status:** pending
+**Status:** ready-for-code-review
 **Depends On:** WINT-2020
 **Phase:** 3
 **Feature:** Create gatekeeper sidecar at POST /gate/check for stages: POST_BOOTSTRAP, ELAB_COMPLETE, SCOPE_OK, PATCH_COMPLETE with "proof or it didn't happen" enforcement
@@ -1186,11 +1189,15 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Must not block legitimate completions
 
+**Story File:** `failed-code-review/WINT-3010/WINT-3010.md`
+**Story Generated:** 2026-03-08
+**Updated:** 2026-03-09 (fix cycle completed, ready for code review)
+
 ---
 
 ### WINT-3020: Implement Invocation Logging
 
-**Status:** pending
+*Status:* needs-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Create telemetry-log skill that logs every agent spawn with tokens, latency, success/failure to telemetry.agent_invocations
@@ -1201,11 +1208,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** High-frequency writes need batching
 
+**Story File:** `needs-code-review/WINT-3020/WINT-3020.md`
+**Story Generated:** 2026-03-08
+
 ---
 
 ### WINT-3030: Create telemetry-logger Agent
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-3010
 **Phase:** 3
 **Feature:** Create haiku-powered worker agent that implements telemetry logging
@@ -1216,11 +1226,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Must not add significant latency to workflows
 
+**Story File:** `needs-code-review/WINT-3030/WINT-3030.md`
+**Story Generated:** 2026-03-09
+
 ---
 
 ### WINT-3040: Implement Decision Logging with Embeddings
 
-**Status:** pending
+**Status:** In Elaboration
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Create telemetry-decision skill that logs HiTL decisions with context embeddings to telemetry.hitl_decisions
@@ -1232,11 +1245,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Embedding generation adds latency
 
+**Story Generated:** 2026-03-08
+**Story File:** `elaboration/WINT-3040/WINT-3040.md`
+
 ---
 
 ### WINT-3050: Implement Outcome Logging
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Add workflow_log_outcome calls at story completion to track quality_score, tokens, cost, churn
@@ -1246,11 +1262,15 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Quality scoring needs clear definition
 
+**Story Generated:** 2026-03-08
+**Story File:** `failed-code-review/WINT-3050/WINT-3050.md`
+**Fix Iteration Complete:** 2026-03-09 — Iteration 3 code review feedback resolved (Zod schema + logger.warn). Build PASS, type check PASS, lint PASS, tests 6/6 PASS. Ready for code review.
+
 ---
 
 ### WINT-3060: Create Telemetry Query Command
 
-**Status:** pending
+**Status:** Created
 **Depends On:** WINT-3010, WINT-3030, WINT-3040
 **Phase:** 3
 **Feature:** Create /telemetry command that shows story-level telemetry: agent invocations, decisions, outcomes
@@ -1260,12 +1280,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Goal:** Enable human review of telemetry data
 
 **Risk Notes:** Query performance needs optimization
+**Story Generated:** 2026-03-08
+**Story File:** `backlog/WINT-3060/WINT-3060.md`
 
 ---
 
 ### WINT-3070: Update 10 Core Workflow Agents with Telemetry
 
-**Status:** pending
+**Status:** elaboration
 **Depends On:** WINT-3020
 **Phase:** 3
 **Feature:** Add telemetry-log calls to workflow orchestrators: pm-bootstrap-workflow, elab-epic, elab-story, dev-implement-story, dev-fix-story, qa-verify-story, pm-refine-story, story-status, story-update, story-move
@@ -1274,6 +1296,8 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Goal:** Capture telemetry from primary workflow paths
 
 **Risk Notes:** Must not break existing workflows
+**Story Generated:** 2026-03-08
+**Story File:** `elaboration/WINT-3070/WINT-3070.md`
 
 ---
 
@@ -1330,7 +1354,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps
@@ -1346,7 +1370,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4020: Create Rules Registry Sidecar
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-2020
 **Phase:** 4
 **Feature:** Create rules registry sidecar at GET/POST /rules for enforceable rules from retros with propose/promote workflow
@@ -1360,24 +1384,28 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ---
 
-### WINT-4030: Populate Graph with Existing Features
+### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** pending
-**Depends On:** WINT-0060, WINT-0130
+**Status:** uat
+**Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
-**Feature:** Scan all existing features, populate graph.epics and graph.features tables
+**Points:** 5
+**Priority:** high
+**Feature:** Add graph.epics table (migration 0037), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
 **Infrastructure:**
-- graph population script
+- packages/backend/database-schema (migration 0037)
+- packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
+**Story File:** `UAT/WINT-4030/WINT-4030.md`
 
-**Goal:** Build initial graph from current codebase
+**Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
-**Risk Notes:** Feature extraction may need manual validation
+**Risk Notes:** Feature extraction may need manual validation; graph.epics table must be created by this story (new migration 0036)
 
 ---
 
 ### WINT-4040: Infer Existing Capabilities
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** WINT-4010
 **Phase:** 4
 **Feature:** Analyze existing stories to infer which capabilities (create/view/edit/delete/upload/replace/download) each feature has, populate graph.feature_capabilities
@@ -1392,7 +1420,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4050: Create Cohesion Rules
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-4020
 **Phase:** 4
 **Feature:** Define rules: features with 'create' need 'delete', features with 'upload' need 'replace', etc.
@@ -1422,7 +1450,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4070: Create cohesion-prosecutor Agent (PO Role)
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete
@@ -1487,7 +1515,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4110: Create Cohesion Check Command
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create /cohesion-check command that spawns graph-checker agent for a given feature
@@ -1516,7 +1544,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4130: Validate Graph & Cohesion System
 
-**Status:** pending
+**Status:** failed-qa
 **Depends On:** WINT-4100
 **Phase:** 4
 **Feature:** Test on existing franken-features (upload without replace, create without delete), verify detection and enforcement
@@ -1545,7 +1573,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4150: Standardize Elab Output Artifacts
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-4140
 **Phase:** 4
 **Feature:** Define and enforce standard elab output artifacts: story-brief.md, gaps.json (blocking/non-blocking split), user-flows.json (per schema), cohesion-findings.json (max 5/2 blocking), mvp-slice.json, scope-challenges.json (max 5), final-scope.json (+ followups), evidence-expectations.json. Add validation to elab-complete gate.
@@ -2313,7 +2341,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9040: Create scope-defender LangGraph Node
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-9010, WINT-4060
 **Phase:** 9
 **Feature:** Port scope-defender agent to LangGraph node at nodes/story/scope-defend.ts
@@ -2328,7 +2356,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9050: Create evidence-judge LangGraph Node
 
-**Status:** pending
+**Status:** failed-qa
 **Depends On:** WINT-9010, WINT-4070
 **Phase:** 9
 **Feature:** Port evidence-judge agent to LangGraph node at nodes/qa/evidence-judge.ts
@@ -2418,8 +2446,8 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9105: Define LangGraph Error Handling & Retry Strategy
 
-**Status:** ready-for-qa
-**Story File:** `wint/ready-for-qa/WINT-9105/WINT-9105.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9105/WINT-9105.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-9010
 **Phase:** 9

@@ -41,6 +41,12 @@ interface Phase {
   storyIds: string[]
 }
 
+interface Section {
+  heading: string
+  level: number
+  startLine: number
+}
+
 interface ParsedPlan {
   planSlug: string
   title: string
@@ -55,6 +61,8 @@ interface ParsedPlan {
   sourceFile: string
   contentHash: string
   mentionedStoryIds: string[]
+  sections: Section[]
+  formatVersion: string
 }
 
 interface MigrationStats {
@@ -62,6 +70,9 @@ interface MigrationStats {
   updated: number
   skipped: number
   linksCreated: number
+  revisionsCreated: number
+  eventsLogged: number
+  embeddingsGenerated: number
   errors: string[]
 }
 
@@ -211,6 +222,30 @@ function extractMentionedStoryIds(content: string): string[] {
   return [...new Set(content.match(/\b[A-Z]{2,10}-\d+\b/g) ?? [])]
 }
 
+function extractSections(content: string): Section[] {
+  const sections: Section[] = []
+  const lines = content.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(/^(#{1,6})\s+(.+)$/)
+    if (match) {
+      sections.push({
+        heading: match[2].trim(),
+        level: match[1].length,
+        startLine: i + 1,
+      })
+    }
+  }
+  return sections
+}
+
+function detectFormatVersion(content: string): string {
+  // Check for YAML frontmatter
+  if (content.trimStart().startsWith('---')) {
+    return 'yaml_frontmatter'
+  }
+  return 'inline_header'
+}
+
 function parsePlan(filePath: string, rawContent: string): ParsedPlan {
   const planSlug = path.basename(filePath, '.md')
   const contentHash = crypto.createHash('sha256').update(rawContent).digest('hex').slice(0, 16)
@@ -229,6 +264,8 @@ function parsePlan(filePath: string, rawContent: string): ParsedPlan {
     sourceFile: filePath,
     contentHash,
     mentionedStoryIds: extractMentionedStoryIds(rawContent),
+    sections: extractSections(rawContent),
+    formatVersion: detectFormatVersion(rawContent),
   }
 }
 
@@ -254,10 +291,14 @@ async function importPlan(
     return
   }
 
-  // Check for existing record
-  const existing = await pool.query('SELECT id, content_hash FROM plans WHERE plan_slug = $1', [
-    planSlug,
-  ])
+  // Check for existing record — content_hash is now in plan_details
+  const existing = await pool.query(
+    `SELECT p.id, pd.content_hash
+     FROM plans p
+     LEFT JOIN plan_details pd ON pd.plan_id = p.id
+     WHERE p.plan_slug = $1`,
+    [planSlug],
+  )
 
   if (existing.rows.length > 0) {
     if (existing.rows[0].content_hash === fields.contentHash) {
@@ -266,12 +307,12 @@ async function importPlan(
       return
     }
 
+    // Update plans header (no detail columns)
     await pool.query(
       `UPDATE plans SET
         title = $2, summary = $3, plan_type = $4, status = $5,
         feature_dir = $6, story_prefix = $7, estimated_stories = $8,
-        phases = $9, tags = $10, raw_content = $11, source_file = $12,
-        content_hash = $13, updated_at = NOW()
+        tags = $9, updated_at = NOW()
        WHERE plan_slug = $1`,
       [
         planSlug,
@@ -282,21 +323,55 @@ async function importPlan(
         fields.featureDir,
         fields.storyPrefix,
         fields.estimatedStories,
-        JSON.stringify(fields.phases),
         fields.tags,
-        fields.rawContent,
-        fields.sourceFile,
-        fields.contentHash,
       ],
     )
+
+    // Upsert plan_details (detail columns moved here)
+    await pool.query(
+      `INSERT INTO plan_details (plan_id, raw_content, phases, source_file, content_hash, sections, format_version, imported_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       ON CONFLICT (plan_id) DO UPDATE SET
+         raw_content = EXCLUDED.raw_content,
+         phases = EXCLUDED.phases,
+         source_file = EXCLUDED.source_file,
+         content_hash = EXCLUDED.content_hash,
+         sections = EXCLUDED.sections,
+         format_version = EXCLUDED.format_version,
+         updated_at = NOW()`,
+      [
+        existing.rows[0].id,
+        fields.rawContent,
+        JSON.stringify(fields.phases),
+        fields.sourceFile,
+        fields.contentHash,
+        JSON.stringify(fields.sections),
+        fields.formatVersion,
+      ],
+    )
+
+    // Create revision history entry
+    await createRevisionEntry(
+      pool,
+      existing.rows[0].id,
+      fields,
+      'Content update via migration',
+      stats,
+    )
+
+    // Log status_change event
+    await logExecutionEvent(pool, planSlug, 'status_change', 'Updated by migration script', stats)
+
     console.log(`  [UPD] ${planSlug}`)
     stats.updated++
   } else {
-    await pool.query(
+    // Insert plans header
+    const inserted = await pool.query(
       `INSERT INTO plans
         (plan_slug, title, summary, plan_type, status, feature_dir, story_prefix,
-         estimated_stories, phases, tags, raw_content, source_file, content_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+         estimated_stories, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
       [
         planSlug,
         fields.title,
@@ -306,13 +381,37 @@ async function importPlan(
         fields.featureDir,
         fields.storyPrefix,
         fields.estimatedStories,
-        JSON.stringify(fields.phases),
         fields.tags,
-        fields.rawContent,
-        fields.sourceFile,
-        fields.contentHash,
       ],
     )
+
+    // Insert plan_details
+    await pool.query(
+      `INSERT INTO plan_details (plan_id, raw_content, phases, source_file, content_hash, sections, format_version, imported_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [
+        inserted.rows[0].id,
+        fields.rawContent,
+        JSON.stringify(fields.phases),
+        fields.sourceFile,
+        fields.contentHash,
+        JSON.stringify(fields.sections),
+        fields.formatVersion,
+      ],
+    )
+
+    // Create initial revision history entry
+    await createRevisionEntry(pool, inserted.rows[0].id, fields, 'Initial import', stats)
+
+    // Log status_change event
+    await logExecutionEvent(
+      pool,
+      planSlug,
+      'status_change',
+      'Initial import by migration script',
+      stats,
+    )
+
     console.log(`  [NEW] ${planSlug}`)
     stats.imported++
   }
@@ -330,6 +429,121 @@ async function importPlan(
 }
 
 // ============================================================================
+// Revision History + Execution Log Helpers
+// ============================================================================
+
+async function createRevisionEntry(
+  pool: Pool,
+  planId: string,
+  fields: Omit<ParsedPlan, 'planSlug' | 'mentionedStoryIds'>,
+  changeReason: string,
+  stats: MigrationStats,
+): Promise<void> {
+  try {
+    // Get next revision number
+    const maxRev = await pool.query(
+      `SELECT COALESCE(MAX(revision_number), 0) as max_rev FROM plan_revision_history WHERE plan_id = $1`,
+      [planId],
+    )
+    const nextRev = (maxRev.rows[0]?.max_rev ?? 0) + 1
+
+    await pool.query(
+      `INSERT INTO plan_revision_history (plan_id, revision_number, raw_content, content_hash, sections, change_reason, changed_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        planId,
+        nextRev,
+        fields.rawContent,
+        fields.contentHash,
+        JSON.stringify(fields.sections),
+        changeReason,
+        'migration-script',
+      ],
+    )
+    stats.revisionsCreated++
+  } catch (e) {
+    // Non-fatal: log but don't fail the import
+    console.log(`    [WARN] Failed to create revision: ${e}`)
+  }
+}
+
+async function logExecutionEvent(
+  pool: Pool,
+  planSlug: string,
+  entryType: string,
+  message: string,
+  stats: MigrationStats,
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO plan_execution_log (plan_slug, entry_type, message)
+       VALUES ($1, $2, $3)`,
+      [planSlug, entryType, message],
+    )
+    stats.eventsLogged++
+  } catch (e) {
+    // Non-fatal: log but don't fail the import
+    console.log(`    [WARN] Failed to log event: ${e}`)
+  }
+}
+
+async function generateAndStoreEmbedding(
+  pool: Pool,
+  planSlug: string,
+  title: string,
+  summary: string | null,
+  tags: string[],
+  planType: string | null,
+  stats: MigrationStats,
+): Promise<void> {
+  try {
+    // Build embedding text
+    const parts = [title]
+    if (planType) parts.push(`Type: ${planType}`)
+    if (summary) parts.push(summary)
+    if (tags.length > 0) parts.push(`Tags: ${tags.join(', ')}`)
+    const text = parts.join('\n')
+
+    // Use OpenAI API directly for embeddings
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.log(`    [SKIP-EMB] No OPENAI_API_KEY set`)
+      return
+    }
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: text,
+      }),
+    })
+
+    if (!response.ok) {
+      console.log(`    [WARN] Embedding API error: ${response.status}`)
+      return
+    }
+
+    const data = (await response.json()) as { data: Array<{ embedding: number[] }> }
+    const embedding = data.data[0]?.embedding
+    if (!embedding) return
+
+    const embeddingStr = `[${embedding.join(',')}]`
+    await pool.query(`UPDATE plans SET embedding = $1::vector WHERE plan_slug = $2`, [
+      embeddingStr,
+      planSlug,
+    ])
+    stats.embeddingsGenerated++
+  } catch (e) {
+    console.log(`    [WARN] Failed to generate embedding: ${e}`)
+  }
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -337,6 +551,7 @@ async function main() {
   const args = process.argv.slice(2)
   const dryRun = args.includes('--dry-run')
   const verbose = args.includes('--verbose')
+  const withEmbeddings = args.includes('--with-embeddings')
 
   const plansDirArg = args.find(a => a.startsWith('--plans-dir='))?.split('=')[1]
   const plansDir = plansDirArg
@@ -376,7 +591,18 @@ async function main() {
     }
   }
 
-  const stats: MigrationStats = { imported: 0, updated: 0, skipped: 0, linksCreated: 0, errors: [] }
+  if (withEmbeddings) console.log('[EMBEDDINGS] Will generate embeddings for each plan\n')
+
+  const stats: MigrationStats = {
+    imported: 0,
+    updated: 0,
+    skipped: 0,
+    linksCreated: 0,
+    revisionsCreated: 0,
+    eventsLogged: 0,
+    embeddingsGenerated: 0,
+    errors: [],
+  }
 
   console.log('Processing plans:\n')
 
@@ -386,6 +612,19 @@ async function main() {
       const rawContent = await fs.readFile(filePath, 'utf-8')
       const parsed = parsePlan(filePath, rawContent)
       await importPlan(pool!, parsed, stats, dryRun)
+
+      // Generate embedding if requested and not dry run
+      if (withEmbeddings && !dryRun) {
+        await generateAndStoreEmbedding(
+          pool!,
+          parsed.planSlug,
+          parsed.title,
+          parsed.summary,
+          parsed.tags,
+          parsed.planType,
+          stats,
+        )
+      }
     } catch (e) {
       const msg = `${slug}: ${e}`
       stats.errors.push(msg)
@@ -403,6 +642,9 @@ async function main() {
   console.log(`Plans updated:   ${stats.updated}`)
   console.log(`Plans skipped:   ${stats.skipped}`)
   console.log(`Story links:     ${stats.linksCreated}`)
+  console.log(`Revisions:       ${stats.revisionsCreated}`)
+  console.log(`Events logged:   ${stats.eventsLogged}`)
+  console.log(`Embeddings:      ${stats.embeddingsGenerated}`)
   console.log(`Errors:          ${stats.errors.length}`)
 
   if (stats.errors.length > 0) {

@@ -1,0 +1,170 @@
+schema: 1
+story_id: "KBAR-0240"
+timestamp: "2026-03-03T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md KBAR-024 entry exactly. Index says
+      "Create regenerate:index CLI command and integrate into workflow"; story
+      delivers a thin CLI wrapper (regenerate-index.ts) around generateStoriesIndex()
+      registered as a pnpm script. The index "Risk Notes" mention pre-commit hook
+      integration, which the story addresses explicitly as a stretch goal (non-scope),
+      consistent with index intent. 4 files, 1 package, no endpoints, no UI, no DB
+      schema changes. No scope creep detected.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and Non-Goals are complementary and non-overlapping. Each AC maps
+      cleanly to stated goals: AC-1,2,3→delegation to generateStoriesIndex;
+      AC-4→Zod validation; AC-5→exit code 2 for DB failure; AC-6→unit tests;
+      AC-7→pnpm registration; AC-8→HELP_TEXT documentation. Non-goals
+      (generateStoriesIndex impl, Husky hook wiring, multi-epic parallel,
+      DB mutations) are all genuinely excluded from ACs. Test plan covers all 8
+      ACs: HP-1→AC-1/AC-8, HP-2→AC-2, HP-3→AC-3, HP-4→AC-7, HP-5→AC-4,
+      EC-1→AC-5, EC-2→AC-4, EC-3→AC-4, EC-4→AC-2, EC-5→AC-3,
+      ED-1→AC-2, ED-2→AC-2, ED-3→AC-2. One minor note: AC-6 (test file
+      existence) is verified by ST-4 but is not directly exercised by a named
+      test case in the test plan — this is acceptable since AC-6 is structural
+      rather than behavioral. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Verified against actual sync-epic.ts source. Story correctly identifies all
+      reuse patterns: HELP_TEXT inline constant (line 29), rethrowExitError helper
+      (lines 74-78), SyncEpicCLIOptionsSchema.safeParse before DB import (lines
+      336-344), dynamic import after validation (lines 359, 449). All named tooling
+      (tsx, zod, @repo/logger) confirmed as existing devDependencies/dependencies
+      in packages/backend/kbar-sync/package.json. No new shared packages proposed.
+      Pattern reuse scope is appropriate and precisely specified.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Architecture notes explicitly state CLI must contain zero business logic —
+      all index generation logic lives in generateStoriesIndex(). The 6 CLI
+      responsibilities enumerated (parse/validate, --help guard, call delegate,
+      handle return value, map exit codes, log via @repo/logger) are all adapter
+      concerns. The dynamic import guard (import after Zod validation) correctly
+      enforces the boundary that prevents DB module loading on --help. No endpoint
+      surface; docs/architecture/api-layer.md is N/A as confirmed by
+      frontend_impacted:false, database_impacted:false, endpoints:[]. Pattern is
+      identical to the verified sync-epic.ts adapter pattern.
+
+  - id: testability
+    status: PASS
+    note: >
+      Unit tests are concrete and executable: mock generateStoriesIndex (module
+      mock), mock process.exit via rethrowExitError pattern (verified pattern
+      exists in sync-epic.ts lines 74-78 and is used throughout). 6 unit test
+      cases named with specific setups and expectations. Integration test
+      references the exact mirror structure from sync-cli.integration.test.ts
+      (testcontainers, startKbarTestContainer helper, SKIP_TESTCONTAINERS guard).
+      Verification commands are runnable: ST-1 uses pnpm check-types, ST-2 uses
+      pnpm regenerate:index --help, ST-3 uses pnpm run regenerate:index --help,
+      ST-4 uses pnpm test. One gap: the unit test for the DB error path (AC-5,
+      EC-1) mocks generateStoriesIndex to throw a connection error, but the
+      story does not clarify whether the exit-2 detection relies on error message
+      string matching (as sync-epic.ts does: 'connection'|'ECONNREFUSED'|
+      'ENOTFOUND') or a different mechanism. This is implementation-detail
+      level and does not block testability — the pattern is available in the
+      canonical reference.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No TBDs or unresolved decisions found in the story. The single known unknown
+      (generateStoriesIndex() API surface) is explicitly documented with a concrete
+      mitigation: "Write against interface stub; update import when KBAR-0230
+      merges." The implementation gate is stated three times (frontmatter,
+      implementation_gate field, dev_feasibility section) for visibility.
+      Pre-commit hook integration path is fully documented as a stretch goal
+      reference with the specific conditional pattern noted. Dry-run exit-code
+      semantics (0=match, 1=differs) are specified in AC-3 and verified by HP-3
+      and EC-5. No ambiguous decision points remain.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks disclosed: (1) generateStoriesIndex() API surface unknown until
+      KBAR-0230 — mitigated by interface stub approach; (2) Docker/TestContainer
+      for UAT — inherent to the package's integration test pattern, already
+      established; (3) rethrowExitError pattern required for process.exit mocking
+      — mitigated by copy-verbatim instruction with line reference. All three risks
+      have concrete mitigations. No hidden risks identified: the story does not
+      touch DB schema, deployment, or multi-package boundaries. Risk level is
+      consistent with 2-point story classification.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      8 ACs at the upper limit, but behaviorally thin: 4 of the 8 ACs are
+      structural (AC-4 Zod schema, AC-6 test file, AC-7 pnpm registration,
+      AC-8 HELP_TEXT) rather than complex behavioral requirements. The remaining
+      4 behavioral ACs (AC-1 --help, AC-2 write path, AC-3 dry-run, AC-5 exit-2)
+      are direct delegations to one function. 4 files in 1 package with 0
+      endpoints and no frontend work. 4 subtasks with token estimates summing to
+      32,000 (4k+14k+2k+12k), consistent with 2 story points. No split indicators
+      triggered. 2-point estimate is appropriate.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      4 subtasks form a valid linear DAG: ST-1 (schema) → ST-2 (implementation)
+      → ST-3 (pnpm registration) → ST-4 (tests). AC coverage: ST-1→AC-4,
+      ST-2→AC-1,2,3,5,8, ST-3→AC-7, ST-4→AC-6. All 8 ACs covered exactly once.
+      File counts: ST-1 modifies 1 file, ST-2 creates 1 file (reads 2),
+      ST-3 modifies 1 file, ST-4 creates 1 file (reads 2). All within 3-file
+      limit. Each subtask has a concrete verification command. Canonical references
+      section has 4 entries covering all required lookup patterns. The ST-3→ST-4
+      dependency is slightly conservative (tests could be written before pnpm
+      script registration since the script can be invoked directly with tsx) but
+      is not incorrect — running tests via the registered script is cleaner.
+      No decomposition gaps found.
+
+gaps: []
+
+opportunities:
+  - id: OPP-1
+    category: implementation_guidance
+    finding: >
+      AC-5 specifies exit code 2 for DB connection failure, but the story does
+      not explicitly state the string-matching pattern from sync-epic.ts for
+      distinguishing DB errors. The implementing agent will discover this from
+      the canonical reference.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "30b7e425-ed0f-4a04-933b-f12fdc7bcebd"
+
+  - id: OPP-2
+    category: scope_clarity
+    finding: >
+      Integration test file not listed in dev_feasibility.change_surface.areas
+      or ST-4. Ambiguous whether integration test is in scope or deferred.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "f072f15c-4eb3-42e3-b31c-2846197432de"
+
+  - id: OPP-3
+    category: ux_polish
+    finding: >
+      --output flag default behavior not specified when omitted with --epic.
+      Should clarify if required or optional with derived default.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "e8bff665-fee0-4c3e-a5da-1e72608ea1c2"
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-03-03T00:05:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

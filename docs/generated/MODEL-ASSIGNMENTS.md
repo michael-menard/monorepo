@@ -23,6 +23,41 @@
 | `qa-verify-verification-leader` | sonnet |
 | `commitment-gate` | sonnet |
 | `dev-fix-fix-leader` | sonnet |
+| `architect-aggregation-leader` | sonnet |
+| `architect-api-leader` | sonnet |
+| `architect-frontend-leader` | sonnet |
+| `architect-packages-leader` | sonnet |
+| `architect-story-review` | sonnet |
+| `architect-types-leader` | sonnet |
+| `audit-aggregate-leader` | sonnet |
+| `audit-debt-map-leader` | sonnet |
+| `audit-devils-advocate` | sonnet |
+| `audit-moderator` | sonnet |
+| `audit-promote-leader` | sonnet |
+| `audit-trends-leader` | sonnet |
+| `dev-execute-leader` | sonnet |
+| `dev-plan-leader` | sonnet |
+| `dev-verification-leader` | sonnet |
+| `review-aggregate-leader` | sonnet |
+| `scrum-master-loop-leader` | sonnet |
+| `session-manager` | sonnet |
+| `uat-orchestrator` | sonnet |
+| `workflow-retro` | sonnet |
+| `confidence-calibrator` | sonnet |
+| `risk-predictor` | sonnet |
+| `scope-defender` | sonnet |
+| `elab-autonomous-decider` | sonnet |
+| `elab-delta-review-agent` | sonnet |
+| `elab-epic-reviews-leader` | sonnet |
+| `elab-escape-hatch-agent` | sonnet |
+| `elab-phase-contract-agent` | sonnet |
+| `evidence-judge` | sonnet |
+| `experiment-analyzer` | sonnet |
+| `heuristic-evolver` | sonnet |
+| `improvement-proposer` | sonnet |
+| `gap-analytics-agent` | sonnet |
+| `ui-ux-review-report-leader` | sonnet |
+| `ui-ux-review-reviewer` | sonnet |
 
 ## By Model
 
@@ -46,6 +81,41 @@ _No assignments_
 - `qa-verify-verification-leader`
 - `commitment-gate`
 - `dev-fix-fix-leader`
+- `architect-aggregation-leader`
+- `architect-api-leader`
+- `architect-frontend-leader`
+- `architect-packages-leader`
+- `architect-story-review`
+- `architect-types-leader`
+- `audit-aggregate-leader`
+- `audit-debt-map-leader`
+- `audit-devils-advocate`
+- `audit-moderator`
+- `audit-promote-leader`
+- `audit-trends-leader`
+- `dev-execute-leader`
+- `dev-plan-leader`
+- `dev-verification-leader`
+- `review-aggregate-leader`
+- `scrum-master-loop-leader`
+- `session-manager`
+- `uat-orchestrator`
+- `workflow-retro`
+- `confidence-calibrator`
+- `risk-predictor`
+- `scope-defender`
+- `elab-autonomous-decider`
+- `elab-delta-review-agent`
+- `elab-epic-reviews-leader`
+- `elab-escape-hatch-agent`
+- `elab-phase-contract-agent`
+- `evidence-judge`
+- `experiment-analyzer`
+- `heuristic-evolver`
+- `improvement-proposer`
+- `gap-analytics-agent`
+- `ui-ux-review-report-leader`
+- `ui-ux-review-reviewer`
 
 ### Opus (Complex Judgment)
 _No assignments_

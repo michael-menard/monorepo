@@ -1,0 +1,16 @@
+schema: 1
+story_id: WINT-4050
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-08T02:30:00Z'
+current_phase: done
+last_successful_phase: execute
+e2e_gate: exempt
+completed_at: '2026-03-08T02:30:00Z'
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - seeds/cohesion-rules.ts and seeds/__tests__/ already exist on filesystem — read before writing
+  - pnpm seed:cohesion-rules not yet registered in package.json (ST-3 outstanding)
+gen_mode: false

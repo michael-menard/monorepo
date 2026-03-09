@@ -30,7 +30,7 @@ Verify these exist before proceeding:
 
 | Check | Path | Required |
 |-------|------|----------|
-| Stories index | `{FEATURE_DIR}/stories.index.md` | Yes |
+| Stories index | **KB-first**: `kb_list_stories`. Fallback: `{FEATURE_DIR}/stories.index.md` | Yes |
 | Bootstrap context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Steps

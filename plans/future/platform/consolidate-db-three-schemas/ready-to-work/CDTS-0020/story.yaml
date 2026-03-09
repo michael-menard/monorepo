@@ -1,0 +1,39 @@
+id: CDTS-0020
+title: Audit Actual Table Locations and Produce Migration Manifest
+status: backlog
+priority: high
+phase: 0
+feature: "Query the live knowledgebase DB to produce ground-truth table inventory, FK edge map, and column definitions for wint-schema tables. Produce MANIFEST.md with actual vs. target schema assignments and define the test strategy template for all subsequent migration stories."
+goal: "Ground-truth table inventory verified against live DB, not bootstrap assumptions. MANIFEST.md documents every table's current location, target location, and any discrepancies. Test strategy template defined for all migration stories."
+depends_on:
+  - CDTS-0010
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Live inventory
+  - "Run SELECT table_schema, table_name FROM information_schema.tables WHERE table_catalog = 'knowledgebase' AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY table_schema, table_name"
+  - "Capture output as ground-truth inventory — do not rely on bootstrap assumptions"
+  - "Document any discrepancies between bootstrap AGENT-CONTEXT.md and actual table locations (e.g., model_experiments in wint vs public)"
+
+  # FK edge map
+  - "Run information_schema.table_constraints query to produce complete FK edge map"
+  - "Document all FK relationships with source table, target table, constraint name, on_delete behavior"
+  - "Flag any missing FKs that the plan expects to add (e.g., story_artifacts.story_id, work_state.story_id)"
+
+  # Wint table definitions
+  - "Capture column definitions for wint.model_experiments, wint.model_assignments, wint.change_telemetry (if they exist in wint)"
+  - "Document data types, constraints, defaults, and any indexes for these tables"
+
+  # MANIFEST.md
+  - "Produce MANIFEST.md with columns: table_name, current_schema, target_schema, action (stay/move/new), notes"
+  - "Target schema assignments: all existing tables stay in public EXCEPT story_token_usage (-> analytics); model_experiments, model_assignments, change_telemetry move from wint to analytics"
+  - "New tables listed: plan_details, story_details, plan_dependencies, story_knowledge_links, schema_migrations (all in public)"
+
+  # Test strategy template
+  - "Define test template that each migration story must follow: (a) idempotency — running migration twice must not error, (b) FK count check — information_schema constraint counts before/after, (c) Drizzle query smoke test — at least one read query per affected table"
+risk_notes: "ENG-001 blocker: bootstrap context lists model_experiments and model_assignments in public schema, but they may be in wint schema. This story resolves that discrepancy with ground-truth data."
+resolves_blockers:
+  - "ENG-001: Table inventory mismatch"
+  - "QA-001: No test strategy (template defined here)"
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

@@ -1,0 +1,72 @@
+schema_version: 1
+story_id: KFMB-2020
+iteration: 1
+status: PASS
+completed_at: "2026-03-07T12:52:00Z"
+
+code_review_findings:
+  total: 2
+  severity_breakdown:
+    high: 0
+    medium: 2
+    low: 0
+
+findings_resolved:
+  - id: REUSE-001
+    severity: medium
+    original: |
+      Collision detection logic in pm-bootstrap-setup-leader Step 4 (kb_list_stories call + fallback)
+      may be duplicated across multiple bootstrap agents. Consider extracting to shared pattern.
+    resolution: |
+      Created .claude/agents/_shared/collision-detection.md documenting the KB collision detection
+      pattern (kb_list_stories call with epic filter + filesystem fallback). Referenced by:
+      - pm-bootstrap-setup-leader.agent.md v4.1.0 (implemented)
+      - pm-bootstrap-generation-leader.agent.md (to be updated in KFMB-2010)
+      - pm-bootstrap-workflow.md Phase 1 (to be updated in KFMB-2030)
+    files_created:
+      - .claude/agents/_shared/collision-detection.md
+    verification: Documentation created and cross-references verified
+
+  - id: REUSE-002
+    severity: medium
+    original: |
+      Bootstrap context caching pattern (SETUP-CONTEXT YAML schema, field ordering, generation logic)
+      appears in multiple agents. Should be documented as reusable pattern.
+    resolution: |
+      Created .claude/agents/_shared/context-cache.md documenting the SETUP-CONTEXT schema, field
+      ordering, and generation pattern. Referenced by:
+      - pm-bootstrap-setup-leader.agent.md v4.1.0 (Output section)
+      - pm-bootstrap-generation-leader.agent.md (to be updated in KFMB-2010)
+      - Any future bootstrap-like workflow agents
+    files_created:
+      - .claude/agents/_shared/context-cache.md
+    verification: Documentation created with schema reference and usage examples
+
+artifacts_created:
+  - path: .claude/agents/_shared/collision-detection.md
+    description: Shared pattern for KB-native collision detection with filesystem fallback
+    type: pattern_documentation
+    size_bytes: ~2500
+    usage_count: 3
+
+  - path: .claude/agents/_shared/context-cache.md
+    description: Shared pattern for bootstrap context caching and SETUP-CONTEXT generation
+    type: pattern_documentation
+    size_bytes: ~1800
+    usage_count: 2
+
+implementation_changes: null
+backend_changes: null
+database_changes: null
+configuration_changes: null
+
+quality_metrics:
+  linting_status: PASS
+  type_checking: N/A
+  test_coverage: N/A
+  documentation_complete: true
+
+next_steps:
+  - KFMB-2010 (pm-bootstrap-generation-leader update) - import collision-detection and context-cache patterns
+  - KFMB-2030 (pm-bootstrap-workflow update) - import collision-detection pattern
+  - Re-run code review with pattern extraction documented

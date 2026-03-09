@@ -441,3 +441,7 @@ notes:
   - KB write improves searchability but is not required for workflow
   - This file can be safely committed to git as a reminder
   - 23 additional findings from elab-autonomous-decider added 2026-02-16
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

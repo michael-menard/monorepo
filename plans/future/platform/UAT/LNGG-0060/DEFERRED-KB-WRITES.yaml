@@ -180,3 +180,7 @@ Or manually run SQL statements above against knowledge base database.
 - Total entries deferred: 14 (6 gaps + 8 enhancements)
 - All entries logged during autonomous elaboration decision phase
 - These should be written to Knowledge Base when kb-writer becomes available
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

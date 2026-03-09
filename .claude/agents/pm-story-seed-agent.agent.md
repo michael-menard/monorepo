@@ -43,7 +43,7 @@ From orchestrator context:
 
 From filesystem:
 - Baseline reality file at `baseline_path`
-- Stories index at `index_path`
+- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` or `kb_list_stories` for authoritative story state. Fallback: stories index at `index_path`
 - Plan documents referenced in index (PLAN.meta.md, PLAN.exec.md)
 
 ---

@@ -6,14 +6,8 @@ Plan: [workflow-artifact-streamlining](../..)
 
 | Status | Count |
 |--------|-------|
-| Backlog | 4 |
-| Ready | 1 |
-| In Progress | 0 |
-| Ready for Review | 0 |
-| In Review | 0 |
 | Ready for QA | 1 |
-| In QA | 0 |
-| Completed | 0 |
+| UAT | 5 |
 | **Total** | **6** |
 
 ## Phase 1: P0 Critical Consolidations
@@ -22,8 +16,8 @@ Eliminate the highest-volume redundant artifacts: replace 4 ELAB artifacts with 
 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
-| AC-1010 | ELAB.yaml Consolidation | — | ready |
-| AC-1020 | Eliminate PROOF-{ID}.md | — | 🔍 ready-for-qa |
+| AC-1010 | ELAB.yaml Consolidation | — | ✅ uat |
+| AC-1020 | Eliminate PROOF-{ID}.md | — | ✅ uat |
 
 ## Phase 2: P1 Data Source Migrations
 
@@ -31,8 +25,8 @@ Move fix-cycle summaries into CHECKPOINT.yaml and move token logs from Markdown 
 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
-| AC-2010 | FIX-VERIFICATION-SUMMARY → CHECKPOINT.yaml | AC-1010, AC-1020 | backlog |
-| AC-2020 | TOKEN-LOG.md → KB | AC-1010 | backlog |
+| AC-2010 | FIX-VERIFICATION-SUMMARY → CHECKPOINT.yaml | AC-1010, AC-1020 | ✅ uat |
+| AC-2020 | TOKEN-LOG.md → KB | AC-1010 | ✅ uat |
 
 ## Phase 3: P2 Structural Cleanup
 
@@ -40,8 +34,8 @@ Fold _pm/ worker outputs into story.yaml and remove dead bootstrap artifacts tha
 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
-| AC-3010 | _pm/ Folder → story.yaml Sections | AC-1010, AC-2010, AC-2020 | backlog |
-| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010 | backlog |
+| AC-3010 | _pm/ Folder → story.yaml Sections | AC-1010, AC-2010, AC-2020 | ✅ uat |
+| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010, KFMB-5050, CDTS | 🔍 ready-for-qa |
 
 ## Metrics
 

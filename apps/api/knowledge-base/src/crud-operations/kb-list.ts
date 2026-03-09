@@ -9,9 +9,31 @@
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { desc, eq, sql, and, type SQL } from 'drizzle-orm'
+import { desc, eq, sql, and, isNull, type SQL } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import { KbListInputSchema, type KbListInput } from './schemas.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const keColumns = {
+  id: knowledgeEntries.id,
+  content: knowledgeEntries.content,
+  embedding: knowledgeEntries.embedding,
+  role: knowledgeEntries.role,
+  entryType: knowledgeEntries.entryType,
+  storyId: knowledgeEntries.storyId,
+  tags: knowledgeEntries.tags,
+  verified: knowledgeEntries.verified,
+  verifiedAt: knowledgeEntries.verifiedAt,
+  verifiedBy: knowledgeEntries.verifiedBy,
+  createdAt: knowledgeEntries.createdAt,
+  updatedAt: knowledgeEntries.updatedAt,
+  archived: knowledgeEntries.archived,
+  archivedAt: knowledgeEntries.archivedAt,
+  canonicalId: knowledgeEntries.canonicalId,
+  isCanonical: knowledgeEntries.isCanonical,
+  deletedAt: knowledgeEntries.deletedAt,
+  deletedBy: knowledgeEntries.deletedBy,
+} as const
 
 /**
  * Dependencies for kb_list operation.
@@ -92,8 +114,8 @@ export async function kb_list(input?: KbListInput, deps?: KbListDeps): Promise<K
   // Enforce maximum limit
   const effectiveLimit = Math.min(limit, MAX_LIMIT)
 
-  // Step 2: Build filter conditions
-  const conditions: SQL<unknown>[] = []
+  // Step 2: Build filter conditions (soft-deleted entries excluded by default)
+  const conditions: SQL<unknown>[] = [isNull(knowledgeEntries.deletedAt)]
 
   if (role !== undefined) {
     conditions.push(eq(knowledgeEntries.role, role))
@@ -111,7 +133,7 @@ export async function kb_list(input?: KbListInput, deps?: KbListDeps): Promise<K
   }
 
   // Step 3: Execute query
-  let query = db.select().from(knowledgeEntries)
+  let query = db.select(keColumns).from(knowledgeEntries)
 
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as typeof query

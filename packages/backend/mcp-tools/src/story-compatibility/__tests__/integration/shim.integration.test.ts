@@ -151,14 +151,14 @@ describe('Story Compatibility Shim — Integration Tests (real PostgreSQL)', () 
   it('AC-2: shimUpdateStoryStatus — DB write success (by UUID)', async () => {
     const result = await shimUpdateStoryStatus({
       storyId: testStoryUuid,
-      newState: 'ready_to_work',
+      newState: 'ready',
       reason: 'Shim integration test transition',
       triggeredBy: 'shim-integration-test',
     })
 
     expect(result).not.toBeNull()
     expect(result?.storyId).toBe(testStoryId)
-    expect(result?.state).toBe('ready_to_work')
+    expect(result?.state).toBe('ready')
 
     // AC-5: output conforms to StoryUpdateStatusOutputSchema
     const parsed = StoryUpdateStatusOutputSchema.safeParse(result)
@@ -173,7 +173,7 @@ describe('Story Compatibility Shim — Integration Tests (real PostgreSQL)', () 
     // Story does not exist in DB — storyUpdateStatus returns null
     const result = await shimUpdateStoryStatus({
       storyId: 'NOTINDB-9999',
-      newState: 'done',
+      newState: 'completed',
     })
 
     expect(result).toBeNull()
