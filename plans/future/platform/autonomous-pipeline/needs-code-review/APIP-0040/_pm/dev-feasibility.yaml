@@ -1,0 +1,142 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-0040 is well-scoped and builds directly on proven existing infrastructure.
+  The ModelRouter singleton, ILLMProvider interface, checkTokenBudget() enforcement,
+  and Drizzle ORM wint schema all exist and are production-ready. The new
+  PipelineModelRouter is an additive wrapper — no existing files in
+  packages/backend/orchestrator/src/models/ are modified. Token-bucket rate
+  limiting is a well-understood algorithm with no external dependencies beyond
+  in-memory state. DB migration follows the established numbered SQL file pattern.
+  Estimated implementation: 2-3 days for a developer familiar with the orchestrator codebase.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/pipeline/ (new directory)
+    - packages/backend/database-schema/src/schema/wint.ts (additive: new table reference)
+    - apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql (new file)
+  endpoints: []
+  deploy_touchpoints:
+    - "Run migration 016_wint_model_assignments.sql against wint schema before first pipeline dispatch"
+    - "Set ANTHROPIC_API_KEY and OPENROUTER_API_KEY environment variables on dedicated pipeline server"
+    - "Ensure Ollama is running locally on pipeline server (ADR-001 Decision 4)"
+
+risks:
+  - finding: "Token-bucket wait() using setTimeout must be compatible with vi.useFakeTimers() for deterministic testing"
+    mitigation: "Implement bucket wait via setTimeout (not setInterval or Date.now loop). Vitest fake timers advance setTimeout natively. Document this requirement in the TokenBucket implementation comment."
+  - finding: "BudgetExhaustedError prototype chain breaks across module boundaries in transpiled TypeScript"
+    mitigation: "Set error.name explicitly in constructor: `this.name = 'BudgetExhaustedError'`. Add instanceof test in unit tests to verify prototype chain survives ts->js transpilation."
+  - finding: "wint.model_assignments table must be idempotent (CREATE TABLE IF NOT EXISTS) so migration can be re-run safely"
+    mitigation: "Migration SQL 016 uses CREATE TABLE IF NOT EXISTS wint.model_assignments (...). Verified pattern from existing numbered migration files."
+  - finding: "Cache invalidation on write requires PipelineModelRouter to expose an invalidate() method or the DB write path must call it — coupling risk if DB writes happen from a different module"
+    mitigation: "Expose public invalidateAssignmentsCache() method on PipelineModelRouter. Document that any write to wint.model_assignments must call this. Phase 0: single-process server means this is sufficient without distributed cache coordination."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator passes with all new unit tests green"
+  - "pnpm check-types --filter @repo/orchestrator shows 0 type errors"
+  - "Migration 016_wint_model_assignments.sql runs without error on test DB"
+  - "PipelineModelRouterFactory.getInstance() === PipelineModelRouterFactory.getInstance() (singleton check)"
+  - "BudgetExhaustedError thrown at hardBudgetCap; error.storyId, error.tokensUsed, error.budgetCap all present"
+  - "Existing packages/backend/orchestrator/src/models/ files have no diff (AC-10)"
+
+subtasks:
+  - id: ST-1
+    title: "Create PipelineModelRouter types and error classes"
+    goal: "Define Zod schemas and typed error classes (BudgetExhaustedError, RateLimitExceededError, ProviderChainExhaustedError) with correct prototype chains."
+    files_to_read:
+      - packages/backend/orchestrator/src/models/__types__/task-contract.ts
+      - packages/backend/orchestrator/src/models/unified-interface.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts (new file)
+    acs: ["AC-4", "AC-5"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Implement TokenBucket rate limiter"
+    goal: "In-memory TokenBucket class with Zod-validated config, consume(), and async wait-or-throw logic compatible with vi.useFakeTimers()."
+    files_to_read:
+      - packages/backend/orchestrator/src/utils/token-budget.ts
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/token-bucket.ts (new file)
+    acs: ["AC-2"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- token-bucket"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Implement per-story budget accumulator"
+    goal: "In-memory Map<storyId, cumulativeTokens> with checkBudget() that calls checkTokenBudget() at hard_gate level and throws BudgetExhaustedError."
+    files_to_read:
+      - packages/backend/orchestrator/src/utils/token-budget.ts
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/budget-accumulator.ts (new file)
+    acs: ["AC-3", "AC-4"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- budget-accumulator"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Create wint.model_assignments migration and Drizzle schema"
+    goal: "SQL migration 016_wint_model_assignments.sql (idempotent CREATE TABLE IF NOT EXISTS). Drizzle table definition in wint.ts using existing wintSchema pattern. drizzle-zod createInsertSchema/createSelectSchema."
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+      - apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql (new file)
+      - packages/backend/database-schema/src/schema/wint.ts (additive: new table export)
+    acs: ["AC-6"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/database-schema"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Implement PipelineModelRouter core — escalation chain + DB config"
+    goal: "PipelineModelRouter class wrapping ModelRouterFactory.getInstance(). Escalation chain ['ollama','openrouter','anthropic'] with structured logging. DB-backed model_assignments query with TTL-invalidation-on-write cache. Reads API keys from env."
+    files_to_read:
+      - packages/backend/orchestrator/src/models/unified-interface.ts
+      - packages/backend/orchestrator/src/models/task-selector.ts
+      - packages/backend/orchestrator/src/providers/base.ts
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts (new file)
+    acs: ["AC-1", "AC-5", "AC-6", "AC-7", "AC-10"]
+    depends_on: ST-2, ST-3, ST-4
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- model-router"
+    estimated_tokens: 14000
+
+  - id: ST-6
+    title: "Write unit tests for all PipelineModelRouter behaviors"
+    goal: "Full Vitest unit tests: token-bucket fill/drain/refill, budget accumulation, BudgetExhaustedError at cap, escalation chain, ProviderChainExhaustedError, DB config override precedence. Use vi.useFakeTimers() for rate limit tests."
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/orchestrator/src/pipeline/token-bucket.ts
+      - packages/backend/orchestrator/src/pipeline/budget-accumulator.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts (new file)
+      - packages/backend/orchestrator/src/pipeline/__tests__/token-bucket.test.ts (new file)
+      - packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts (new file)
+    acs: ["AC-8", "AC-9"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-7
+    title: "Write integration test for full escalation chain with mock providers"
+    goal: "Integration test using ILLMProvider interface mocks to verify full Ollama->OpenRouter->Anthropic chain, including mid-chain failures and ProviderChainExhaustedError."
+    files_to_read:
+      - packages/backend/orchestrator/src/providers/base.ts
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__tests__/escalation-integration.test.ts (new file)
+    acs: ["AC-9"]
+    depends_on: ST-6
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 8000

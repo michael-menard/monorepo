@@ -12,6 +12,28 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import type { EmbeddingClient } from '../embedding-client/index.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const keColumns = {
+  id: knowledgeEntries.id,
+  content: knowledgeEntries.content,
+  embedding: knowledgeEntries.embedding,
+  role: knowledgeEntries.role,
+  entryType: knowledgeEntries.entryType,
+  storyId: knowledgeEntries.storyId,
+  tags: knowledgeEntries.tags,
+  verified: knowledgeEntries.verified,
+  verifiedAt: knowledgeEntries.verifiedAt,
+  verifiedBy: knowledgeEntries.verifiedBy,
+  createdAt: knowledgeEntries.createdAt,
+  updatedAt: knowledgeEntries.updatedAt,
+  archived: knowledgeEntries.archived,
+  archivedAt: knowledgeEntries.archivedAt,
+  canonicalId: knowledgeEntries.canonicalId,
+  isCanonical: knowledgeEntries.isCanonical,
+  deletedAt: knowledgeEntries.deletedAt,
+  deletedBy: knowledgeEntries.deletedBy,
+} as const
 import { computeContentHash } from '../embedding-client/cache-manager.js'
 import { KbUpdateInputSchema, type KbUpdateInput } from './schemas.js'
 import { NotFoundError } from './errors.js'
@@ -79,7 +101,7 @@ export async function kb_update(input: KbUpdateInput, deps: KbUpdateDeps): Promi
 
   // Step 2: Fetch existing entry BEFORE any expensive operations
   const existingResult = await db
-    .select()
+    .select(keColumns)
     .from(knowledgeEntries)
     .where(eq(knowledgeEntries.id, validatedInput.id))
     .limit(1)

@@ -60,10 +60,12 @@ status:
 
 ### 1. Locate Story
 
-Search stage directories for `{STORY-ID}/`:
+**KB-first (KSOT Phase 2)**: Call `kb_get_story({storyId: STORY_ID})` to get the story's current state. Use the state to determine which stage directory the story should be in. If KB is unavailable, fall back to directory scan.
+
+**Directory fallback**: Search stage directories for `{STORY-ID}/`:
 - backlog, elaboration, ready-to-work, in-progress, QA, UAT
 
-If not found and no `--path`: `INIT FAILED: Story not found`
+If not found via KB or directory and no `--path`: `INIT FAILED: Story not found`
 
 ### 2. Ensure Directories Exist
 

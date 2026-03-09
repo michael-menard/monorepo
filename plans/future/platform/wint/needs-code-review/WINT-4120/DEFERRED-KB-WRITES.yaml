@@ -1,0 +1,20 @@
+# Deferred KB Writes — WINT-4120
+# These writes should be applied when KB API is available
+
+deferred_at: "2026-03-08T00:00:00Z"
+reason: "KB API not running at time of execute phase"
+
+writes:
+  - artifact_type: evidence
+    story_id: WINT-4120
+    phase: implementation
+    iteration: 1
+    file_path: plans/future/platform/wint/in-progress/WINT-4120/_implementation/EVIDENCE.yaml
+    status: file_written_kb_pending
+
+  - artifact_type: checkpoint
+    story_id: WINT-4120
+    phase: implementation
+    iteration: 1
+    file_path: plans/future/platform/wint/in-progress/WINT-4120/_implementation/CHECKPOINT.yaml
+    status: file_written_kb_pending

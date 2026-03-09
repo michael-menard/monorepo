@@ -1,0 +1,46 @@
+{
+  "name": "@repo/cohesion-sidecar",
+  "version": "1.0.0",
+  "description": "Cohesion sidecar service — detects Franken-features and capability gaps via POST /cohesion/audit and POST /cohesion/check",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@repo/database-schema": "workspace:*",
+    "@repo/db": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "@repo/mcp-tools": "workspace:*",
+    "@repo/sidecar-http-utils": "workspace:*",
+    "drizzle-orm": "^0.44.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.1",
+    "@vitest/coverage-v8": "2.1.9",
+    "dotenv": "17.3.1",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "cohesion",
+    "sidecar",
+    "mcp"
+  ]
+}

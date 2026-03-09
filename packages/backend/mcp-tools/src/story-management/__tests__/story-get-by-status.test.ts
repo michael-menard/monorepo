@@ -119,7 +119,7 @@ describe('storyGetByStatus', () => {
     mockOffset.mockResolvedValue([])
 
     const input: StoryGetByStatusInput = {
-      state: 'ready_to_work',
+      state: 'ready',
       limit: 100,
       offset: 50,
     }

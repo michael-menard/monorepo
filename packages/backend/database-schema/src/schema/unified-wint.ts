@@ -71,23 +71,23 @@ export const wintSchema = pgSchema('wint')
  * Migration mapping from LangGraph:
  * - 'draft' → 'draft' (direct map)
  * - 'backlog' → 'backlog' (direct map)
- * - 'ready-to-work' → 'ready_to_work' (normalize hyphens)
+ * - 'ready-to-work' → 'ready' (KSOT: semantic mapping to match StoryStateSchema)
  * - 'in-progress' → 'in_progress' (normalize hyphens)
  * - 'ready-for-qa' → 'ready_for_qa' (normalize hyphens)
  * - 'uat' → 'in_qa' (semantic mapping)
- * - 'done' → 'done' (direct map)
+ * - 'done' → 'completed' (KSOT: semantic mapping to match StoryStateSchema)
  * - Add: 'blocked', 'cancelled' (new states from WINT)
  */
 export const storyStateEnum = pgEnum('story_state', [
   'draft',
   'backlog',
-  'ready_to_work',
+  'ready',
   'in_progress',
   'ready_for_review',
   'ready_for_qa',
   'in_qa',
   'blocked',
-  'done',
+  'completed',
   'cancelled',
   'failed_code_review',
   'failed_qa',

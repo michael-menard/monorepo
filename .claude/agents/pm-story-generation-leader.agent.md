@@ -47,7 +47,7 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`)
+- Index path (e.g., `plans/stories/WISH.stories.index.md`) -- Note: KB (`kb_get_story` / `kb_list_stories`) is the authoritative source for story state; index file is fallback.
 - Story ID
 - Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
 

@@ -68,6 +68,12 @@ Read final verdict from KB:
 kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")
 ```
 
+Log telemetry (fire-and-forget — never blocks workflow):
+```
+/telemetry-log null elab-epic execute success
+```
+If the call returns null or throws, log a warning and continue.
+
 **Next by verdict:**
 - `READY` → `/elab-story {PREFIX}-001`
 - `CONCERNS` → `/elab-story {PREFIX}-001` (with notes)

@@ -61,3 +61,7 @@ cat plans/future/repackag-app/backlog/REPA-020/_pm/DEFERRED-KB-WRITES.yaml | gre
 ```
 
 Or use the KB management tool when available.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

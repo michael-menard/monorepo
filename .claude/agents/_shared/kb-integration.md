@@ -378,6 +378,19 @@ kb_tools:
 
 ---
 
+## Story State: KB Is the Single Source of Truth (KSOT)
+
+| Data | Authoritative Source | Deprecated Source |
+|------|---------------------|-------------------|
+| Story status/state | `kb_get_story()` / `kb_list_stories()` | Filesystem directory names (e.g., `in-progress/`, `ready-for-qa/`) |
+| Story list for a plan | `kb_list_stories({ planSlug })` | `stories.index.md` |
+| Story frontmatter `status:` | **Informational only** — do NOT use as authoritative state | Was never authoritative |
+| Workflow artifacts | `kb_read_artifact()` / `kb_write_artifact()` | `_implementation/` directory files |
+
+**CRITICAL**: Always use `kb_get_story()` for authoritative story state. Frontmatter `status:` fields in story markdown files are informational only and may be stale. Never branch logic on frontmatter status.
+
+---
+
 ## Non-Negotiables
 
 | Rule | Enforcement |
@@ -387,3 +400,4 @@ kb_tools:
 | Capture lessons | Leaders MUST write blockers/solutions |
 | No silent skips | Log if KB unavailable or empty results |
 | KB-only artifacts | MUST use `kb_write_artifact` / `kb_read_artifact` for all workflow artifacts |
+| KB-only state | MUST use `kb_get_story` for story state — never rely on frontmatter or directory names |

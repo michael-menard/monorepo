@@ -27,7 +27,7 @@ From orchestrator context:
 From filesystem:
 - Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
 - Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
-- Stories index: `{FEATURE_DIR}/stories.index.md`
+- Stories index: **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 

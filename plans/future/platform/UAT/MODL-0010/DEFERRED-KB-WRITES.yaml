@@ -635,3 +635,7 @@ reason: KB unavailable during story generation and autonomous elaboration
 created_at: "2026-02-13T00:00:00Z"
 retry_after: "2026-02-14T00:00:00Z"
 total_deferred_entries: 22  # 1 story insert + 21 findings
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

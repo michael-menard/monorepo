@@ -18,3 +18,7 @@ writes:
       touches_database: false
       touches_infra: false
     conflict_action: "DO UPDATE SET title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -24,3 +24,7 @@ deferred_writes:
     conflict_strategy: "ON CONFLICT (story_id) DO UPDATE"
     retry_after: null
     notes: "Story generation complete - KB write deferred due to unavailable connection"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

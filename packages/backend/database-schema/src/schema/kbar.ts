@@ -142,7 +142,7 @@ export const stories = kbarSchema.table(
     currentPhase: kbarStoryPhaseEnum('current_phase').notNull().default('setup'),
 
     // Status
-    status: text('status').notNull().default('backlog'), // 'backlog', 'ready_to_work', 'in_progress', 'ready_for_qa', 'done'
+    status: text('status').notNull().default('backlog'), // 'backlog', 'ready', 'in_progress', 'ready_for_qa', 'completed'
 
     // Metadata
     metadata: jsonb('metadata').$type<{

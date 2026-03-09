@@ -1,0 +1,24 @@
+schema: 1
+story_id: WINT-9040
+timestamp: 2026-03-08T17:00:00Z
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - packages/backend/orchestrator/**
+  - apps/api/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: Create scope-defender LangGraph node to generate scope challenges for story verification
+elaboration: completed

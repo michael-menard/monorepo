@@ -49,3 +49,7 @@ deferred_opportunity_logs:
       effort: low
       blocking: false
       decision: "Log to KB as non-blocking edge_cases guidance for ST-7 implementer."
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

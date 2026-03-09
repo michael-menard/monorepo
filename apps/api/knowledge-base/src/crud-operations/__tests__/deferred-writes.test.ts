@@ -1,47 +1,85 @@
 /**
  * Unit tests for deferred-writes module (KBMEM-022)
  *
- * Tests the deferred KB writes queueing and processing functionality.
+ * Tests the DB-backed deferred KB writes queueing and processing functionality.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import * as fs from 'node:fs/promises'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   kb_queue_deferred_write,
   kb_list_deferred_writes,
   kb_process_deferred_writes,
   kb_clear_deferred_writes,
   withDeferredFallback,
-  readDeferredWritesFile,
-  writeDeferredWritesFile,
   DeferredOperationTypeSchema,
   DeferredWriteEntrySchema,
-  DeferredWritesFileSchema,
   KbQueueDeferredWriteInputSchema,
   KbListDeferredWritesInputSchema,
   KbProcessDeferredWritesInputSchema,
   MAX_RETRY_COUNT,
   type DeferredWriteEntry,
-  type DeferredWritesFile,
+  type DeferredWritesDeps,
 } from '../deferred-writes.js'
 
-// Mock file system
-vi.mock('node:fs/promises', () => ({
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-  access: vi.fn(),
-  mkdir: vi.fn(),
-}))
+// ============================================================================
+// Mock DB helpers
+// ============================================================================
+
+function createMockDb() {
+  const insertReturning = vi.fn()
+  const insertValues = vi.fn().mockReturnValue({ returning: insertReturning })
+  const insertFn = vi.fn().mockReturnValue({ values: insertValues })
+
+  const selectLimit = vi.fn()
+  const selectOrderBy = vi.fn().mockReturnValue({ limit: selectLimit })
+  const selectWhere = vi.fn().mockReturnValue({ orderBy: selectOrderBy })
+  const selectFrom = vi.fn().mockReturnValue({ where: selectWhere })
+  const selectFn = vi.fn().mockReturnValue({ from: selectFrom })
+
+  const updateWhere = vi.fn()
+  const updateSet = vi.fn().mockReturnValue({ where: updateWhere })
+  const updateFn = vi.fn().mockReturnValue({ set: updateSet })
+
+  const deleteReturning = vi.fn()
+  const deleteWhere = vi.fn().mockReturnValue({ returning: deleteReturning })
+  const deleteFn = vi.fn().mockReturnValue({ where: deleteWhere })
+
+  const executeFn = vi.fn()
+
+  return {
+    db: {
+      insert: insertFn,
+      select: selectFn,
+      update: updateFn,
+      delete: deleteFn,
+      execute: executeFn,
+    } as unknown as DeferredWritesDeps['db'],
+    mocks: {
+      insertReturning,
+      insertValues,
+      insertFn,
+      selectLimit,
+      selectOrderBy,
+      selectWhere,
+      selectFrom,
+      selectFn,
+      updateWhere,
+      updateSet,
+      updateFn,
+      deleteReturning,
+      deleteWhere,
+      deleteFn,
+      executeFn,
+    },
+  }
+}
 
 describe('Deferred Writes Module (KBMEM-022)', () => {
-  const testFilePath = '/test/DEFERRED-KB-WRITES.yaml'
+  let mockDb: ReturnType<typeof createMockDb>
 
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
+    mockDb = createMockDb()
   })
 
   describe('Schema Validation', () => {
@@ -70,7 +108,7 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         operation: 'kb_add',
         payload: { content: 'test' },
-        timestamp: new Date().toISOString(),
+        created_at: new Date(),
         error: 'Connection failed',
         retry_count: 0,
       }
@@ -83,22 +121,12 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
         id: 'not-a-uuid',
         operation: 'kb_add',
         payload: { content: 'test' },
-        timestamp: new Date().toISOString(),
+        created_at: new Date(),
         error: 'Connection failed',
         retry_count: 0,
       }
 
       expect(() => DeferredWriteEntrySchema.parse(invalidEntry)).toThrow()
-    })
-
-    it('should validate DeferredWritesFile schema', () => {
-      const validFile: DeferredWritesFile = {
-        version: '1.0',
-        writes: [],
-        updated_at: new Date().toISOString(),
-      }
-
-      expect(() => DeferredWritesFileSchema.parse(validFile)).not.toThrow()
     })
 
     it('should validate KbQueueDeferredWriteInput schema', () => {
@@ -125,14 +153,10 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
 
     it('should enforce limit constraints', () => {
       // Max 200
-      expect(() =>
-        KbListDeferredWritesInputSchema.parse({ limit: 201 }),
-      ).toThrow()
+      expect(() => KbListDeferredWritesInputSchema.parse({ limit: 201 })).toThrow()
 
       // Positive only
-      expect(() =>
-        KbListDeferredWritesInputSchema.parse({ limit: 0 }),
-      ).toThrow()
+      expect(() => KbListDeferredWritesInputSchema.parse({ limit: 0 })).toThrow()
     })
 
     it('should validate KbProcessDeferredWritesInput schema', () => {
@@ -147,70 +171,10 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
     })
   })
 
-  describe('readDeferredWritesFile', () => {
-    it('should return empty writes array when file does not exist', async () => {
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
-
-      const result = await readDeferredWritesFile(testFilePath)
-
-      expect(result.version).toBe('1.0')
-      expect(result.writes).toEqual([])
-      expect(result.updated_at).toBeDefined()
-    })
-
-    it('should parse existing file content', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174000',
-            operation: 'kb_add',
-            payload: { content: 'test' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Connection failed',
-            retry_count: 1,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
-
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-
-      const result = await readDeferredWritesFile(testFilePath)
-
-      expect(result.writes).toHaveLength(1)
-      expect(result.writes[0].operation).toBe('kb_add')
-    })
-  })
-
-  describe('writeDeferredWritesFile', () => {
-    it('should create directory and write file', async () => {
-      const data: DeferredWritesFile = {
-        version: '1.0',
-        writes: [],
-        updated_at: new Date().toISOString(),
-      }
-
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined)
-
-      await writeDeferredWritesFile(testFilePath, data)
-
-      expect(fs.mkdir).toHaveBeenCalledWith('/test', { recursive: true })
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        testFilePath,
-        JSON.stringify(data, null, 2),
-        'utf-8',
-      )
-    })
-  })
-
   describe('kb_queue_deferred_write', () => {
-    it('should queue a new write', async () => {
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    it('should insert a new row and return the id', async () => {
+      const testId = '123e4567-e89b-12d3-a456-426614174000'
+      mockDb.mocks.insertReturning.mockResolvedValue([{ id: testId }])
 
       const result = await kb_queue_deferred_write(
         {
@@ -219,83 +183,70 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
           error: 'Connection timeout',
           story_id: 'WISH-2045',
         },
-        testFilePath,
+        { db: mockDb.db },
       )
 
       expect(result.success).toBe(true)
-      expect(result.id).toBeDefined()
+      expect(result.id).toBe(testId)
       expect(result.message).toContain('kb_add_task')
-    })
-
-    it('should append to existing writes', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174000',
-            operation: 'kb_add',
-            payload: { content: 'existing' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
-
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-
-      let writtenData: DeferredWritesFile | null = null
-      vi.mocked(fs.writeFile).mockImplementation(async (_path, content) => {
-        writtenData = JSON.parse(content as string)
-      })
-
-      await kb_queue_deferred_write(
-        {
-          operation: 'kb_add_decision',
-          payload: { title: 'New decision' },
-          error: 'Timeout',
-        },
-        testFilePath,
-      )
-
-      expect(writtenData).not.toBeNull()
-      expect(writtenData!.writes).toHaveLength(2)
+      expect(mockDb.mocks.insertFn).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('kb_list_deferred_writes', () => {
-    it('should list all writes when no filter', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            operation: 'kb_add_task',
-            payload: { title: 'task' },
-            timestamp: '2026-02-04T10:01:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-            story_id: 'WISH-2045',
-          },
-        ],
-        updated_at: '2026-02-04T10:01:00.000Z',
-      }
+    it('should list unprocessed writes', async () => {
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+        {
+          id: '123e4567-e89b-12d3-a456-426614174002',
+          operation: 'kb_add_task',
+          payload: { title: 'task' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: 'WISH-2045',
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
+      // First select call returns rows, second returns count
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
+      mockDb.mocks.selectWhere.mockReturnValueOnce({ count: 2 })
 
-      const result = await kb_list_deferred_writes({}, testFilePath)
+      // Override for the count query - need a separate chain
+      const countFrom = vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([{ count: 2 }]),
+      })
+      const countSelect = mockDb.mocks.selectFn
+      // First call returns the rows chain, second call returns count chain
+      countSelect.mockReturnValueOnce({ from: mockDb.mocks.selectFrom })
+      countSelect.mockReturnValueOnce({ from: countFrom })
+
+      // Reset and reconfigure
+      mockDb = createMockDb()
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
+      // For count query, mock select().from().where() to return [{count: 2}]
+      const countWhere = vi.fn().mockResolvedValue([{ count: 2 }])
+      const countFrom2 = vi.fn().mockReturnValue({ where: countWhere })
+      mockDb.mocks.selectFn
+        .mockReturnValueOnce({ from: mockDb.mocks.selectFrom }) // first select (rows)
+        .mockReturnValueOnce({ from: countFrom2 }) // second select (count)
+
+      const result = await kb_list_deferred_writes({}, { db: mockDb.db })
 
       expect(result.success).toBe(true)
       expect(result.total).toBe(2)
@@ -303,102 +254,62 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
     })
 
     it('should filter by operation', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            operation: 'kb_add_task',
-            payload: { title: 'task' },
-            timestamp: '2026-02-04T10:01:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:01:00.000Z',
-      }
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174002',
+          operation: 'kb_add_task',
+          payload: { title: 'task' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
+      const countWhere = vi.fn().mockResolvedValue([{ count: 1 }])
+      const countFrom = vi.fn().mockReturnValue({ where: countWhere })
+      mockDb.mocks.selectFn
+        .mockReturnValueOnce({ from: mockDb.mocks.selectFrom })
+        .mockReturnValueOnce({ from: countFrom })
 
       const result = await kb_list_deferred_writes(
         { operation: 'kb_add_task' },
-        testFilePath,
+        { db: mockDb.db },
       )
 
       expect(result.writes).toHaveLength(1)
       expect(result.writes[0].operation).toBe('kb_add_task')
     })
-
-    it('should filter by story_id', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            operation: 'kb_add_task',
-            payload: { title: 'task' },
-            timestamp: '2026-02-04T10:01:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-            story_id: 'WISH-2045',
-          },
-        ],
-        updated_at: '2026-02-04T10:01:00.000Z',
-      }
-
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-
-      const result = await kb_list_deferred_writes(
-        { story_id: 'WISH-2045' },
-        testFilePath,
-      )
-
-      expect(result.writes).toHaveLength(1)
-      expect(result.writes[0].story_id).toBe('WISH-2045')
-    })
   })
 
   describe('kb_process_deferred_writes', () => {
     it('should return dry run results without processing', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
 
       const result = await kb_process_deferred_writes(
         { dry_run: true },
-        testFilePath,
+        { db: mockDb.db },
       )
 
       expect(result.success).toBe(true)
@@ -409,59 +320,58 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
     })
 
     it('should return error when no processor provided', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
 
       const result = await kb_process_deferred_writes(
         { dry_run: false },
-        testFilePath,
+        { db: mockDb.db },
       )
 
       expect(result.success).toBe(false)
       expect(result.message).toContain('No processor provided')
     })
 
-    it('should process writes with processor', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
+    it('should process writes with processor and mark as processed', async () => {
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 0,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
+      mockDb.mocks.updateWhere.mockResolvedValue(undefined)
 
       const processor = vi.fn().mockResolvedValue({ success: true })
 
       const result = await kb_process_deferred_writes(
         { dry_run: false },
-        testFilePath,
+        { db: mockDb.db },
         processor,
       )
 
@@ -469,34 +379,34 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
       expect(result.succeeded).toBe(1)
       expect(result.failed).toBe(0)
       expect(processor).toHaveBeenCalledTimes(1)
+      // Should have called update to set processed_at
+      expect(mockDb.mocks.updateFn).toHaveBeenCalledTimes(1)
     })
 
     it('should skip writes that exceed max retry count', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: MAX_RETRY_COUNT,
-          },
-        ],
-        updated_at: '2026-02-04T10:00:00.000Z',
-      }
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: MAX_RETRY_COUNT,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
 
       const processor = vi.fn()
 
       const result = await kb_process_deferred_writes(
         { dry_run: false },
-        testFilePath,
+        { db: mockDb.db },
         processor,
       )
 
@@ -504,47 +414,54 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
       expect(result.writes[0].error).toContain('Max retries')
       expect(processor).not.toHaveBeenCalled()
     })
+
+    it('should increment retry_count on failed processing', async () => {
+      const now = new Date()
+      const rows = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          operation: 'kb_add',
+          payload: { content: 'test1' },
+          createdAt: now,
+          error: 'Error',
+          retryCount: 1,
+          lastRetry: null,
+          storyId: null,
+          agent: null,
+          processedAt: null,
+        },
+      ]
+
+      mockDb.mocks.selectLimit.mockResolvedValueOnce(rows)
+      mockDb.mocks.updateWhere.mockResolvedValue(undefined)
+
+      const processor = vi.fn().mockResolvedValue({ success: false, error: 'Still broken' })
+
+      const result = await kb_process_deferred_writes(
+        { dry_run: false },
+        { db: mockDb.db },
+        processor,
+      )
+
+      expect(result.failed).toBe(1)
+      expect(result.writes[0].status).toBe('failed')
+      // Should have called update to increment retry_count
+      expect(mockDb.mocks.updateFn).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('kb_clear_deferred_writes', () => {
-    it('should clear all writes', async () => {
-      const existingData: DeferredWritesFile = {
-        version: '1.0',
-        writes: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            operation: 'kb_add',
-            payload: { content: 'test1' },
-            timestamp: '2026-02-04T10:00:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            operation: 'kb_add_task',
-            payload: { title: 'task' },
-            timestamp: '2026-02-04T10:01:00.000Z',
-            error: 'Error',
-            retry_count: 0,
-          },
-        ],
-        updated_at: '2026-02-04T10:01:00.000Z',
-      }
+    it('should delete all unprocessed writes', async () => {
+      mockDb.mocks.deleteReturning.mockResolvedValue([
+        { id: '123e4567-e89b-12d3-a456-426614174001' },
+        { id: '123e4567-e89b-12d3-a456-426614174002' },
+      ])
 
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingData))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-
-      let writtenData: DeferredWritesFile | null = null
-      vi.mocked(fs.writeFile).mockImplementation(async (_path, content) => {
-        writtenData = JSON.parse(content as string)
-      })
-
-      const result = await kb_clear_deferred_writes(testFilePath)
+      const result = await kb_clear_deferred_writes({ db: mockDb.db })
 
       expect(result.cleared).toBe(2)
       expect(result.message).toContain('2')
-      expect(writtenData!.writes).toHaveLength(0)
+      expect(mockDb.mocks.deleteFn).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -555,6 +472,7 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
       const result = await withDeferredFallback(operation, {
         operation: 'kb_add',
         payload: { content: 'test' },
+        deps: { db: mockDb.db },
       })
 
       expect(result.success).toBe(true)
@@ -565,21 +483,36 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
 
     it('should queue write on connection error', async () => {
       const operation = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
-
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+      const testId = '123e4567-e89b-12d3-a456-426614174999'
+      mockDb.mocks.insertReturning.mockResolvedValue([{ id: testId }])
 
       const result = await withDeferredFallback(operation, {
         operation: 'kb_add',
         payload: { content: 'test' },
         story_id: 'WISH-2045',
+        deps: { db: mockDb.db },
       })
 
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.queued).toBe(true)
-        expect(result.id).toBeDefined()
+        expect(result.id).toBe(testId)
+      }
+    })
+
+    it('should accept loss when DB queue also fails', async () => {
+      const operation = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
+      mockDb.mocks.insertReturning.mockRejectedValue(new Error('DB also down'))
+
+      const result = await withDeferredFallback(operation, {
+        operation: 'kb_add',
+        payload: { content: 'test' },
+        deps: { db: mockDb.db },
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.queued).toBe(false)
       }
     })
 
@@ -590,6 +523,7 @@ describe('Deferred Writes Module (KBMEM-022)', () => {
         withDeferredFallback(operation, {
           operation: 'kb_add',
           payload: { content: 'test' },
+          deps: { db: mockDb.db },
         }),
       ).rejects.toThrow('Validation failed')
     })

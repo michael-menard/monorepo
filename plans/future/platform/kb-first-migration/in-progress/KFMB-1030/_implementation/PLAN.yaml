@@ -1,0 +1,238 @@
+schema: 2
+story_id: KFMB-1030
+timestamp: '2026-03-06T22:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Read target files and confirm no hidden CHECK constraint on artifact_type column
+    files: []
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql
+      - apps/api/knowledge-base/src/db/migrations/018_add_parent_plan.sql
+      - apps/api/knowledge-base/src/db/schema.ts
+      - apps/api/knowledge-base/src/__types__/index.ts
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+      - apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts
+    dependencies: []
+    slice: backend
+    verification: >-
+      Confirm: artifact_type column is plain text with no CHECK constraint; all 5 extension points identified and line
+      numbers recorded
+    acs_covered: []
+  - id: 2
+    subtask_id: ST-2
+    description: Write SQL migration 019_pm_artifact_types.sql creating 4 new detail tables following migration 015 pattern
+    files:
+      - apps/api/knowledge-base/src/db/migrations/019_pm_artifact_types.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      File exists; SQL is syntactically valid; 4 CREATE TABLE statements with correct typed columns: artifact_test_plans
+      (strategy TEXT, scope_ui_touched BOOLEAN, scope_data_touched BOOLEAN), artifact_dev_feasibility (feasible BOOLEAN,
+      confidence TEXT, complexity TEXT), artifact_uiux_notes (has_ui_changes BOOLEAN, component_count INTEGER),
+      artifact_story_seeds (conflicts_found INTEGER, blocking_conflicts INTEGER, baseline_loaded BOOLEAN); each table
+      has id UUID PK, target_id TEXT NOT NULL, data JSONB, created_at, updated_at, indexes
+    acs_covered:
+      - AC-1
+  - id: 3
+    subtask_id: ST-3
+    description: Extend Drizzle schema.ts with 4 new table definitions following artifactReviews pattern
+    files:
+      - apps/api/knowledge-base/src/db/schema.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/db/schema.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      pnpm check-types --filter @repo/knowledge-base exits 0; 4 new exported table constants: artifactTestPlans,
+      artifactDevFeasibility, artifactUiuxNotes, artifactStorySeeds
+    acs_covered:
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: Extend ArtifactTypeSchema Zod enum in __types__/index.ts with 4 new values
+    files:
+      - apps/api/knowledge-base/src/__types__/index.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/__types__/index.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      pnpm check-types --filter @repo/knowledge-base exits 0; ArtifactTypeSchema z.enum includes 'test_plan',
+      'dev_feasibility', 'uiux_notes', 'story_seed' alongside existing 13 values
+    acs_covered:
+      - AC-2
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Extend artifact-operations.ts at all 5 locations: ARTIFACT_TYPES, ARTIFACT_TYPE_TO_TABLE,
+      mapContentToTypedColumns, getDetailTableRef, generateArtifactName
+    files:
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+      - apps/api/knowledge-base/src/db/schema.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: >-
+      pnpm check-types --filter @repo/knowledge-base exits 0; all 5 locations updated; new imports for 4 tables added at
+      top of file
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Write unit tests for 4 new PM artifact types in artifact-operations.integration.test.ts covering write+read+delete
+      round-trip and regression for existing types
+    files:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    dependencies:
+      - 5
+    slice: backend
+    verification: >-
+      pnpm test --filter @repo/knowledge-base exits 0; new tests cover write+read for test_plan type;
+      generateArtifactName returns correct display names for all 4 types; no regression in existing type tests
+    acs_covered:
+      - AC-9
+      - AC-10
+      - AC-11
+      - AC-12
+      - AC-14
+  - id: 7
+    subtask_id: ST-7
+    description: Final type check and full test run to confirm zero errors and full test suite green
+    files: []
+    files_to_read: []
+    dependencies:
+      - 6
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base exits 0; pnpm test --filter @repo/knowledge-base exits 0
+    acs_covered:
+      - AC-13
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/019_pm_artifact_types.sql
+    action: create
+    reason: >-
+      New SQL migration creating 4 PM artifact detail tables (artifact_test_plans, artifact_dev_feasibility,
+      artifact_uiux_notes, artifact_story_seeds) per AC-1. Named 019 because 017 and 018 are already taken in codebase.
+  - path: apps/api/knowledge-base/src/db/schema.ts
+    action: modify
+    reason: Add 4 Drizzle table definitions for new PM artifact types per AC-3
+  - path: apps/api/knowledge-base/src/__types__/index.ts
+    action: modify
+    reason: Extend ArtifactTypeSchema Zod enum with 4 new values per AC-2
+  - path: apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    action: modify
+    reason: >-
+      Extend 5 locations: ARTIFACT_TYPES, ARTIFACT_TYPE_TO_TABLE, mapContentToTypedColumns, getDetailTableRef,
+      generateArtifactName per AC-4 through AC-8
+  - path: apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts
+    action: modify
+    reason: >-
+      Add test coverage for 4 new PM artifact types (write+read+delete) and regression for existing types per AC-9
+      through AC-12, AC-14
+commands_to_run:
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after schema.ts and __types__/index.ts changes (step 4)
+    required: true
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after artifact-operations.ts changes (step 5)
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base
+    when: after all code changes (step 7)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      File exists: apps/api/knowledge-base/src/db/migrations/019_pm_artifact_types.sql with 4 CREATE TABLE statements
+      and correct typed columns
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: ArtifactTypeSchema in __types__/index.ts includes 'test_plan', 'dev_feasibility', 'uiux_notes', 'story_seed'
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      4 new Drizzle table exports in schema.ts: artifactTestPlans, artifactDevFeasibility, artifactUiuxNotes,
+      artifactStorySeeds
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: ARTIFACT_TYPES constant in artifact-operations.ts includes all 4 new type strings
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: ARTIFACT_TYPE_TO_TABLE map includes 4 new entries mapping to correct table names
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: mapContentToTypedColumns switch includes 4 new case blocks extracting typed summary columns
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: getDetailTableRef tableMap includes 4 new entries pointing to new Drizzle table refs
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      generateArtifactName typeNames map includes: test_plan → 'TEST-PLAN', dev_feasibility → 'DEV-FEASIBILITY',
+      uiux_notes → 'UIUX-NOTES', story_seed → 'STORY-SEED'
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: 'Integration test: kb_write_artifact with test_plan type succeeds without ''Unknown artifact type'' error'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: 'Integration test: kb_read_artifact returns full content for each new type'
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: 'Integration test or unit test: kb_list_artifacts with artifact_type filter for new types returns correct results'
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: 'Existing type tests unaffected: pnpm test --filter @repo/knowledge-base passes all pre-existing cases'
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: pnpm check-types --filter @repo/knowledge-base exits 0 after all changes
+    evidence_type: command
+  - ac_id: AC-14
+    planned_evidence: >-
+      Unit tests in artifact-operations.integration.test.ts cover write+read+delete round-trip for test_plan type and
+      generateArtifactName for all 4 new types
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Migration file naming: story specifies 017_pm_artifact_types.sql but 017 and 018 are already taken in the codebase
+      (017_add_plan_dependencies.sql, 017_change_telemetry_experiment_fk.sql, 018_add_parent_plan.sql)
+    decision: Use 019_pm_artifact_types.sql — next available sequence number in the migrations directory
+    rationale: >-
+      The story's Reality Baseline was written against an older codebase state. The codebase has since added migrations
+      017 (x2) and 018. Using 019 avoids filename collision. The migration approach is unchanged — purely additive 4
+      CREATE TABLE statements.
+    decided_by: auto
+    autonomy_tier: 1
+    autonomy_level: aggressive
+complexity: simple
+notes:
+  - >-
+    Migration numbered 019 (not 017 as story specifies) because 017 and 018 are already taken. Auto-accepted per
+    aggressive autonomy: Tier 1 clarification.
+  - >-
+    artifact-operations.test.ts does NOT exist as a separate file — the ELAB flagged this correctly (opp-2). The correct
+    target for new tests is artifact-operations.integration.test.ts which already covers artifact write/read patterns.
+  - All 5 extension locations in artifact-operations.ts are in lines 45-463. ST-5 touches only 1 file.
+  - No new npm packages required — drizzle-orm/pg-core, drizzle-zod, and zod are already in use.
+  - >-
+    KFMB-1010 dependency: story branch is based on main which does not yet include KFMB-1010 changes. Implementation
+    step ST-3 (Drizzle schema) will proceed as if KFMB-1010 is complete — if it is not merged, the PR will be rebased
+    before merging.
+  - >-
+    Per ELAB opp-2: story mentions extending 'artifact-operations.test.ts' but that file does not exist. Tests go into
+    artifact-operations.integration.test.ts.

@@ -296,3 +296,7 @@ Total: 18 findings
 - Low Priority: 10 (edge cases, research tasks, future stories)
 
 All findings are non-blocking for MVP. Story is ready to move to ready-to-work.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

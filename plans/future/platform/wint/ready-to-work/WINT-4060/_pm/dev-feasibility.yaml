@@ -1,0 +1,32 @@
+feasible: true
+confidence: high
+rationale: "All required infrastructure (graph MCP tools, rules registry, Zod types) is implemented and available. Deliverable is a single markdown file authored against existing exemplar (scope-defender.agent.md). No TypeScript code to write. Sole risk is WINT-4030 runtime instability, mitigated by graceful degradation in the agent spec."
+complexity: low
+change_surface:
+  areas:
+    - ".claude/agents/ (new file: graph-checker.agent.md)"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "WINT-4030 in failed-qa — graph.features/epics not yet stable at runtime"
+    mitigation: "Agent spec documents graceful degradation for empty graph. Story authoring is independent of runtime state — the dependency only matters when the agent is invoked, not when the spec is written."
+missing_requirements: []
+evidence_expectations:
+  - "File .claude/agents/graph-checker.agent.md exists and is readable"
+  - "YAML frontmatter is valid (parse with any YAML parser)"
+  - "All 10 ACs verifiable via file inspection (grep-based structural checks)"
+subtasks:
+  - id: ST-1
+    title: "Author .claude/agents/graph-checker.agent.md using scope-defender as structural template"
+    goal: "Produce the graph-checker worker agent file with all required sections: YAML frontmatter, inputs table, 4-phase workflow, graceful degradation, output schema, non-goals, LangGraph porting notes, canonical references, completion signals"
+    files_to_read:
+      - ".claude/agents/scope-defender.agent.md"
+      - "packages/backend/mcp-tools/src/graph-query/__types__/index.ts"
+      - "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+      - "packages/backend/mcp-tools/src/rules-registry/rules-registry-get.ts"
+    files_to_modify:
+      - ".claude/agents/graph-checker.agent.md (create new)"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10"]
+    depends_on: none
+    verification: "grep -c 'GRAPH-CHECKER' .claude/agents/graph-checker.agent.md"
+    estimated_tokens: 4000

@@ -1,0 +1,39 @@
+schema: 1
+story_id: WINT-4030
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-09T18:56:00Z'
+current_phase: qa-setup
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - 'Story sizing WARN from elab: 12 ACs, 5 happy paths — monitor token budget'
+  - 'Implementation files never merged to main in prior iteration — rebase on current main before implementing'
+gen_mode: false
+fix_cycles:
+  - schema_version: 1
+    iteration: 1
+    triggered_by: qa
+    started_at: '2026-03-09T17:50:00Z'
+    completed_at: '2026-03-09T18:02:00Z'
+    issues_fixed:
+      - file: packages/backend/database-schema/src/schema/wint.ts
+        line: 1440
+        issue: graph.epics table definition missing from wint.ts schema
+        severity: critical
+      - file: packages/backend/database-schema/src/migrations/app/0037_wint_4030_graph_epics.sql
+        line: 25
+        issue: Migration 0037 not present (0036 consumed by KSOT story); migration creates wint.epics table
+        severity: critical
+      - file: packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
+        line: 1
+        issue: Population script not merged to main; re-committed with injectable deps pattern
+        severity: critical
+      - file: packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts
+        line: 1
+        issue: Unit tests not merged to main; 17 tests added with 100% mocked DB calls
+        severity: critical
+    verification_result: PASS
+    notes: All 12 acceptance criteria verified as PASS. Build, type check, lint, and tests all pass. Implementation files properly structured and ready for merge to main.

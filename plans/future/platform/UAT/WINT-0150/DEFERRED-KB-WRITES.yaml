@@ -54,3 +54,7 @@ sql_insert: |
     story_dir = EXCLUDED.story_dir,
     story_file = EXCLUDED.story_file,
     updated_at = CURRENT_TIMESTAMP;
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

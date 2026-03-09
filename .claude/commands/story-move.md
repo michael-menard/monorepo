@@ -83,7 +83,9 @@ Look up `TO_STAGE` in the inline `SWIM_LANE_TO_STATE` table (sourced from `packa
 | Swim-lane directory (TO_STAGE) | DB newState |
 |-------------------------------|-------------|
 | `backlog` | `backlog` |
-| `ready-to-work` | `ready_to_work` |
+| `created` | `backlog` |
+| `elaboration` | `in_progress` |
+| `ready-to-work` | `ready` |
 | `in-progress` | `in_progress` |
 | `needs-code-review` | `ready_for_review` |
 | `failed-code-review` | `failed_code_review` |
@@ -109,7 +111,7 @@ else:
   db_updated = true
 ```
 
-**If TO_STAGE is NOT in the table** (e.g., `created`, `elaboration`):
+**If TO_STAGE is NOT in the table** (unlikely — all standard stages are now mapped):
 
 ```
 log warning: "No DB state for stage '{TO_STAGE}'. Skipping DB write."
@@ -137,7 +139,14 @@ Where `STAGE_STATUS` is the typical status for that stage (see table above).
 
 This updates both the story frontmatter and the index in one atomic step. The `/story-update` command handles its own DB write — no double-write occurs. `db_updated` is reported as `skipped` in the Step 5 return YAML when this delegation path is taken.
 
-### 5. Return Result
+### 5. Log Telemetry (fire-and-forget — never blocks workflow)
+
+```
+/telemetry-log {STORY_ID} story-move execute success
+```
+If the call returns null or throws, log a warning and continue.
+
+### 6. Return Result
 
 ```yaml
 feature_dir: {FEATURE_DIR}
