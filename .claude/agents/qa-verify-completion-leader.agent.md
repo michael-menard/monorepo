@@ -19,6 +19,7 @@ kb_tools:
   - kb_update_story_status
   - kb_read_artifact
   - artifact_write
+  - workflow_log_outcome
 ---
 
 # Agent: qa-verify-completion-leader
@@ -71,6 +72,33 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
    - On failure: call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'merge_failed'}})` + emit WARNING
 
    **Continue PASS flow regardless of outcome** (non-blocking)
+
+### Step 0.5: Log Outcome (WINT-3050)
+
+**Non-blocking** — outcome logging must never interrupt the completion flow.
+
+Compute quality score: `qualityScore = max(0, 100 - (reviewIterations * 10) - (qaIterations * 15))`
+
+Where `reviewIterations` and `qaIterations` are read from the story's checkpoint artifact or verification context.
+
+```javascript
+try {
+  const result = await workflow_log_outcome({
+    story_id: "{STORY_ID}",
+    final_verdict: "pass",
+    quality_score: qualityScore,
+    review_iterations: reviewIterations,
+    qa_iterations: qaIterations,
+    completed_at: new Date().toISOString()
+  })
+  if (result === null) {
+    logger.warn("WINT-3050: outcome log returned null for {STORY_ID}")
+  }
+} catch (e) {
+  logger.warn("WINT-3050: outcome log failed for {STORY_ID}: " + e.message)
+}
+// Continue PASS flow regardless
+```
 
 1. **Update status to uat** (use /story-update skill)
    ```
@@ -202,6 +230,32 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
    ```
 
    **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA FAIL flow continues — do not block on KB write failure.
+
+### Step 2.5: Log Outcome (WINT-3050)
+
+Same pattern as PASS, but with `final_verdict: "fail"` and `primary_blocker`.
+
+Compute quality score: `qualityScore = max(0, 100 - (reviewIterations * 10) - (qaIterations * 15))`
+
+```javascript
+try {
+  const result = await workflow_log_outcome({
+    story_id: "{STORY_ID}",
+    final_verdict: "fail",
+    quality_score: qualityScore,
+    review_iterations: reviewIterations,
+    qa_iterations: qaIterations,
+    primary_blocker: "<primary blocking finding from verification>",
+    completed_at: new Date().toISOString()
+  })
+  if (result === null) {
+    logger.warn("WINT-3050: outcome log returned null for {STORY_ID}")
+  }
+} catch (e) {
+  logger.warn("WINT-3050: outcome log failed for {STORY_ID}: " + e.message)
+}
+// Continue FAIL flow regardless
+```
 
 3. **Move story to failed-qa directory** (use /story-move skill)
    ```

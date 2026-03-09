@@ -12,6 +12,7 @@ tools: [Read, Grep, Glob, Bash, Task, TaskOutput, AskUserQuestion]
 kb_tools:
   - kb_search
   - kb_add_decision
+  - workflow_log_outcome
 shared:
   - _shared/decision-handling.md
   - _shared/autonomy-tiers.md
@@ -151,6 +152,32 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
 ```
 /token-log {STORY_ID} dev-implementation <input-tokens> <output-tokens>
+```
+
+---
+
+## Step 6.5: Log Outcome on Blocked/Cancelled (WINT-3050)
+
+**When emitting `IMPLEMENTATION BLOCKED`**: Before signaling, log the outcome.
+
+```javascript
+try {
+  const result = await workflow_log_outcome({
+    story_id: "{STORY_ID}",
+    final_verdict: "blocked",  // or "cancelled" if user-cancelled
+    quality_score: 0,
+    review_iterations: 0,  // populate from retry count if available
+    qa_iterations: 0,
+    primary_blocker: "<blocked reason from Step 3/4>",
+    completed_at: new Date().toISOString()
+  })
+  if (result === null) {
+    logger.warn("WINT-3050: outcome log returned null for {STORY_ID}")
+  }
+} catch (e) {
+  logger.warn("WINT-3050: outcome log failed for {STORY_ID}: " + e.message)
+}
+// Continue to emit BLOCKED signal regardless
 ```
 
 ---
