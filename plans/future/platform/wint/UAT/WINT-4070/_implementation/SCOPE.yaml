@@ -1,0 +1,22 @@
+schema: 1
+story_id: WINT-4070
+timestamp: "2026-03-08T00:00:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs: []
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Create cohesion-prosecutor Agent (PO Role) — Feature Completeness Enforcer"
+elaboration: "completed"

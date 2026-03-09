@@ -16,9 +16,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 28 |
+| uat | 29 |
 | in-qa | 0 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | needs-code-review | 3 |
 | ready-for-code-review | 3 |
 | failed-code-review | 0 |
@@ -1450,7 +1450,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4070: Create cohesion-prosecutor Agent (PO Role)
 
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete
