@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 62 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search + context_pack)', () => {
+    it('should return all 65 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search + story_similarity + story_context + context_pack + telemetry)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(62)
+      expect(tools).toHaveLength(65)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -153,8 +153,14 @@ describe('MCP Server Integration', () => {
         'kb_upsert_plan',
         // Artifact search tool (KBAR-0130)
         'artifact_search',
+        // Story similarity search (CDTS-2010)
+        'kb_find_similar_stories',
+        // Composite story context (CDTS-2020)
+        'kb_get_story_context',
         // Context pack tool (WINT-2020)
         'context_pack_get',
+        // Telemetry tool (WINT-3020)
+        'workflow_log_invocation',
       ])
     })
 
