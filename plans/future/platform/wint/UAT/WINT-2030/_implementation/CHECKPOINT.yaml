@@ -1,11 +1,11 @@
 schema: 1
 story_id: WINT-2030
-current_phase: fix
+current_phase: qa-setup
 last_successful_phase: code-review
 blocked: false
 blocked_reason: null
 iteration: 4
-timestamp: '2026-03-09T20:45:00Z'
+timestamp: '2026-03-09T21:30:00Z'
 verdict: PASS
 fail_reason: null
 fix_cycles:

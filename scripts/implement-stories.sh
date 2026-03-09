@@ -179,22 +179,21 @@ is_completed() {
   [[ -d "$FEATURE_DIR/UAT/${STORY_ID}" ]] || [[ -d "$FEATURE_DIR/done/${STORY_ID}" ]]
 }
 
-# Stages that are valid starting points for implementation
+# KSOT-2010: Check KB state values (not filesystem directory names).
+# KB states use underscores; filesystem dirs used hyphens (deprecated).
 is_ready_for_impl() {
-  local stage="$1"
-  [[ "$stage" == "ready-to-work" || "$stage" == "backlog" || "$stage" == "in-progress" ]]
+  local state="$1"
+  [[ "$state" == "ready" || "$state" == "backlog" || "$state" == "in_progress" ]]
 }
 
-# Stages that are valid for code review
 is_ready_for_review() {
-  local stage="$1"
-  [[ "$stage" == "needs-code-review" || "$stage" == "failed-code-review" ]]
+  local state="$1"
+  [[ "$state" == "ready_for_review" || "$state" == "failed_review" ]]
 }
 
-# Stages that are valid for QA
 is_ready_for_qa() {
-  local stage="$1"
-  [[ "$stage" == "ready-for-qa" || "$stage" == "failed-qa" ]]
+  local state="$1"
+  [[ "$state" == "ready_for_qa" || "$state" == "failed_qa" ]]
 }
 
 # check_log_for_failure, verify_stage_transition — sourced from scripts/lib/story-utils.sh

@@ -19,8 +19,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 27 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
-| needs-code-review | 4 |
-| ready-for-code-review | 3 |
+| needs-code-review | 3 |
+| ready-for-code-review | 4 |
 | failed-code-review | 0 |
 | failed-qa | 5 |
 | elaboration | 1 |
@@ -1018,8 +1018,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** needs-code-review
-**Story File:** `wint/in-progress/WINT-2030/WINT-2030.md`
+**Status:** ready-for-qa
+**Story File:** `wint/ready-for-qa/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1252,7 +1252,7 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 ### WINT-3050: Implement Outcome Logging
 
-**Status:** ready-for-code-review
+**Status:** failed-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Add workflow_log_outcome calls at story completion to track quality_score, tokens, cost, churn
@@ -1263,7 +1263,7 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Risk Notes:** Quality scoring needs clear definition
 
 **Story Generated:** 2026-03-08
-**Story File:** `in-progress/WINT-3050/WINT-3050.md`
+**Story File:** `failed-code-review/WINT-3050/WINT-3050.md`
 **Fix Iteration Complete:** 2026-03-09 — Iteration 3 code review feedback resolved (Zod schema + logger.warn). Build PASS, type check PASS, lint PASS, tests 6/6 PASS. Ready for code review.
 
 ---
@@ -1386,7 +1386,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** ready-for-qa
+**Status:** failed-qa
 **Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
 **Points:** 5
@@ -1395,7 +1395,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 **Infrastructure:**
 - packages/backend/database-schema (migration 0036)
 - packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
-**Story File:** `ready-for-qa/WINT-4030/WINT-4030.md`
+**Story File:** `failed-qa/WINT-4030/WINT-4030.md`
 
 **Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
@@ -1450,7 +1450,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4070: Create cohesion-prosecutor Agent (PO Role)
 
-**Status:** failed-qa
+**Status:** ready-for-code-review
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete

@@ -142,7 +142,7 @@ Task tool:
   prompt: |
     Read instructions: .claude/agents/pm-bootstrap-generation-leader.agent.md
 
-    Mode: KB (story files written to disk, stories inserted into KB stories table)
+    Mode: KB (no file IO — all story data written directly to DB)
     Setup context:
     {SETUP-CONTEXT from Phase 0}
 
@@ -175,23 +175,17 @@ Task tool:
 If `--dry-run` flag:
 - Run Phase 0 (Setup) and Phase 1 (Analysis) only
 - Output analysis summary to user
-- Do NOT generate story files
-- Report: "Dry run complete. {N} stories extracted. Run without --dry-run to generate files."
+- Do NOT write to DB or generate files
+- Report: "Dry run complete. {N} stories extracted. Run without --dry-run to insert into DB."
 
 ## Done
 
 On `GENERATION COMPLETE`:
 
 ### KB Mode
-1. Stories are already in the KB (Phase 2 generation leader inserts them via `kb_create_story` or `migrate:stories`).
+1. Stories and all FK data are already in the DB (Phase 2 inserts into stories, story_details, plan_story_links, story_dependencies, story_artifacts).
 
-2. Seed stories into KB if the generation leader wrote story.yaml files but didn't insert directly:
-   ```bash
-   pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
-   ```
-   (Idempotent, non-blocking if DB unavailable.)
-
-3. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
+2. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
    ```
    mcp__knowledge-base__kb_update_plan({
      plan_slug: "{plan_slug}",
@@ -199,12 +193,12 @@ On `GENERATION COMPLETE`:
    })
    ```
 
-4. Read `phases_completed` from the SUMMARY returned by Phase 2 to confirm all phases ran:
+3. Read `phases_completed` from the SUMMARY returned by Phase 2 to confirm all phases ran:
    - Expected: `[setup, analysis, generation]`
    - If `generation` is absent from `phases_completed`, treat as a partial failure and re-run Phase 2.
    - Note: `_bootstrap/CHECKPOINT.md` is no longer written. Phase state is carried exclusively in `phases_completed` within SUMMARY.yaml.
 
-5. Report to user.
+4. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:

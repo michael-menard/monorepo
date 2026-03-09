@@ -26,7 +26,7 @@ From orchestrator prompt:
 Required artifacts (all inside `{FEATURE_DIR}/`):
 | Artifact | Location | Required |
 |----------|----------|----------|
-| Stories Index | **KB-first**: `kb_list_stories`. Fallback: `{FEATURE_DIR}/stories.index.md` | Yes |
+| Stories Index | **KB-first**: `kb_list_stories` (authoritative). Fallback: `{FEATURE_DIR}/stories.index.md` (deprecated — KSOT-3040) | Yes |
 | Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Derive Prefix
@@ -63,7 +63,7 @@ phase: "setup"
 content:
   feature_dir: "{FEATURE_DIR}"
   prefix: "{PREFIX}"
-  stories_path: "{FEATURE_DIR}/stories.index.md"
+  stories_path: "{FEATURE_DIR}/stories.index.md"  # deprecated fallback; KB is authoritative
   story_count: N
   scope: "epic"
   timestamp: <ISO timestamp>
