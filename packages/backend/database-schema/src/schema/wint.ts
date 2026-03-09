@@ -1433,6 +1433,36 @@ export const cohesionRules = wintSchema.table(
 )
 
 /**
+ * Epics Table
+ * Tracks high-level project epics for feature grouping and cohesion analysis
+ * Related stories: WINT-4030
+ */
+export const epics = wintSchema.table(
+  'epics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Epic identification
+    epicName: text('epic_name').notNull().unique(),
+    epicPrefix: text('epic_prefix').notNull().unique(), // e.g. 'WINT', 'KBAR'
+
+    // Metadata
+    description: text('description'),
+
+    // Status
+    isActive: boolean('is_active').notNull().default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    epicNameIdx: uniqueIndex('epics_epic_name_idx').on(table.epicName),
+    epicPrefixIdx: uniqueIndex('epics_epic_prefix_idx').on(table.epicPrefix),
+    isActiveIdx: index('epics_is_active_idx').on(table.isActive),
+  }),
+)
+
+/**
  * Graph Relational Schema Relations
  * Defines relationships for graph traversal and queries
  */

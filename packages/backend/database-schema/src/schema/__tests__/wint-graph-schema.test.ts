@@ -19,6 +19,7 @@ import {
   capabilities,
   featureRelationships,
   cohesionRules,
+  epics,
   featureRelationshipTypeEnum,
 
   // Relations
@@ -349,6 +350,26 @@ describe('WINT-0060 Graph Relational Schema', () => {
         const result = insertFeatureRelationshipSchema.safeParse(validRelationship)
         expect(result.success).toBe(true)
       })
+    })
+  })
+
+  describe('Epics Table (WINT-4030)', () => {
+    it('HP-4: epics table export exists with required columns', () => {
+      expect(epics).toBeDefined()
+      const columns = Object.keys(epics)
+      expect(columns).toContain('id')
+      expect(columns).toContain('epicName')
+      expect(columns).toContain('epicPrefix')
+      expect(columns).toContain('description')
+      expect(columns).toContain('isActive')
+      expect(columns).toContain('createdAt')
+      expect(columns).toContain('updatedAt')
+    })
+
+    it('HP-4: epics table has unique epicName and epicPrefix', () => {
+      expect(epics.epicName).toBeDefined()
+      expect(epics.epicPrefix).toBeDefined()
+      expect(epics.isActive).toBeDefined()
     })
   })
 

@@ -904,6 +904,7 @@ export {
   capabilities,
   featureRelationships,
   cohesionRules,
+  epics,
 
   // Workflow Tracking tables
   workflowExecutions,
