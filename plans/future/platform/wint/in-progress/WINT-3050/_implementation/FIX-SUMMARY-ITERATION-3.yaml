@@ -1,0 +1,17 @@
+schema: 1
+story_id: WINT-3050
+timestamp: '2026-03-09T17:15:00.000Z'
+failure_source: code-review-failed
+iteration: 3
+issues_to_fix:
+  - id: 1
+    file: "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
+    line: 1
+    issue: "Code review feedback on iteration 2 fix: Address reviewer comments on test coverage, code style, or implementation approach"
+    severity: high
+    auto_fixable: false
+focus_files:
+  - "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
+  - "apps/api/knowledge-base/src/crud-operations/story-outcomes.ts"
+  - ".claude/agents/qa-verify-completion-leader.agent.md"
+  - ".claude/agents/dev-implement-implementation-leader.agent.md"

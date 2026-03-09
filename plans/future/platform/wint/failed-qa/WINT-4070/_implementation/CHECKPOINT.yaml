@@ -1,0 +1,20 @@
+schema: 1
+story_id: WINT-4070
+feature_dir: plans/future/platform/wint
+timestamp: "2026-03-08T15:30:00Z"
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+fix_cycles:
+  - schema_version: 1
+    iteration: 1
+    triggered_by: qa
+    started_at: "2026-03-09T05:04:46.914Z"
+    completed_at: "2026-03-09T05:15:00Z"
+    issues_fixed: []
+    verification_result: PASS

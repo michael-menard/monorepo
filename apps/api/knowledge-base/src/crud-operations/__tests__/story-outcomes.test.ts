@@ -19,6 +19,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { z } from 'zod'
+import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
 
 // ============================================================================
@@ -59,7 +61,7 @@ beforeAll(async () => {
   storyOutcomesTableExists = (result.rows as { table_name: string }[]).length > 0
 
   if (!storyOutcomesTableExists) {
-    console.warn(
+    logger.warn(
       'SKIP: wint.story_outcomes table not found — apply WINT-0040 migration before running these tests',
     )
   }
@@ -92,15 +94,17 @@ afterAll(async () => {
 // Helper: upsert a story outcome row (mirrors workflow_log_outcome internals)
 // ============================================================================
 
-interface UpsertStoryOutcomeInput {
-  storyId: string
-  finalVerdict: 'pass' | 'fail' | 'blocked' | 'cancelled'
-  qualityScore: number
-  reviewIterations?: number
-  qaIterations?: number
-  primaryBlocker?: string
-  completedAt?: Date
-}
+const UpsertStoryOutcomeInputSchema = z.object({
+  storyId: z.string(),
+  finalVerdict: z.enum(['pass', 'fail', 'blocked', 'cancelled']),
+  qualityScore: z.number().int().min(0).max(100),
+  reviewIterations: z.number().int().min(0).optional(),
+  qaIterations: z.number().int().min(0).optional(),
+  primaryBlocker: z.string().optional(),
+  completedAt: z.date().optional(),
+})
+
+type UpsertStoryOutcomeInput = z.infer<typeof UpsertStoryOutcomeInputSchema>
 
 async function upsertStoryOutcome(input: UpsertStoryOutcomeInput): Promise<{ id: string }> {
   const {
@@ -140,7 +144,7 @@ async function upsertStoryOutcome(input: UpsertStoryOutcomeInput): Promise<{ id:
 describe('WINT-3050: story outcome — PASS flow (HP-1)', () => {
   it('AC-7: PASS scenario inserts 1 row with correct final_verdict and quality_score', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP HP-1: wint.story_outcomes table not present')
+      logger.warn('SKIP HP-1: wint.story_outcomes table not present')
       return
     }
 
@@ -184,7 +188,7 @@ describe('WINT-3050: story outcome — PASS flow (HP-1)', () => {
 describe('WINT-3050: story outcome — FAIL flow (HP-2)', () => {
   it('AC-7: FAIL scenario inserts 1 row with final_verdict=fail and primary_blocker', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP HP-2: wint.story_outcomes table not present')
+      logger.warn('SKIP HP-2: wint.story_outcomes table not present')
       return
     }
 
@@ -229,7 +233,7 @@ describe('WINT-3050: story outcome — FAIL flow (HP-2)', () => {
 describe('WINT-3050: story outcome — upsert semantics (HP-3)', () => {
   it('AC-8: second call for same story_id updates existing row, no duplicate', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP HP-3: wint.story_outcomes table not present')
+      logger.warn('SKIP HP-3: wint.story_outcomes table not present')
       return
     }
 
@@ -283,7 +287,7 @@ describe('WINT-3050: story outcome — upsert semantics (HP-3)', () => {
 describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
   it('ED-1: quality_score clamped to 0 when iterations are very high', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP ED-1: wint.story_outcomes table not present')
+      logger.warn('SKIP ED-1: wint.story_outcomes table not present')
       return
     }
 
@@ -316,7 +320,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
 
   it('ED-2: quality_score = 100 when reviewIterations=0 and qaIterations=0', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP ED-2: wint.story_outcomes table not present')
+      logger.warn('SKIP ED-2: wint.story_outcomes table not present')
       return
     }
 
@@ -353,7 +357,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
 describe('WINT-3050: completedAt population (ED-3)', () => {
   it('ED-3: completed_at is non-null and approximately current time after upsert', async () => {
     if (!storyOutcomesTableExists) {
-      console.warn('SKIP ED-3: wint.story_outcomes table not present')
+      logger.warn('SKIP ED-3: wint.story_outcomes table not present')
       return
     }
 

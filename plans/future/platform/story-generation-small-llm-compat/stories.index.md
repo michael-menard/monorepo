@@ -15,13 +15,14 @@ All stories use `ST-{phase}{story}{variant}` format (e.g., `ST-1010` for Phase 1
 
 | Status | Count |
 |--------|-------|
-| uat | 1 |
+| uat | 4 |
 | completed | 0 |
 | generated | 0 |
 | in-progress | 0 |
-| ready-to-work | 1 |
-| ready-for-code-review | 1 |
-| pending | 4 |
+| ready-to-work | 0 |
+| needs-code-review | 2 |
+| ready-for-qa | 0 |
+| pending | 1 |
 | failed-qa | 0 |
 
 ---
@@ -52,7 +53,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-1020: Story Template: Add Goal / Examples / Edge Cases Required Sections
 
-**Status:** pending
+**Status:** uat
 **Depends On:** none
 **Phase:** 1
 **Feature:** Enforce four mandatory top-level sections (## Goal, ## Rules/ACs, ## Examples, ## Edge Cases) in every generated story file. Update pm-spawn-patterns.md story file structure and pm-story-generation-leader Phase 4 synthesis to include these sections. This is the structured clarity format for small-LLM anchoring.
@@ -65,7 +66,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-1030: Dev Feasibility Worker: Add Subtask Proposal to Output
 
-**Status:** completed
+**Status:** uat
 **Depends On:** none
 **Phase:** 1
 **Feature:** Extend pm-dev-feasibility-review.agent.md to produce a subtasks[] array in dev-feasibility.yaml. Each subtask covers 1-3 files, maps to 1-3 ACs, has a depends_on chain, a verification command, and an estimated_tokens field. Sizing: 1-pt story → 1-2 subtasks, 3-pt → 3-5, 5-pt → 5-8.
@@ -92,7 +93,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-2010: Dev-Feasibility Worker — Subtask Proposal Output
 
-**Status:** ready-for-code-review
+**Status:** uat
 **Depends On:** ST-1020
 **Phase:** 2
 **Feature:** Add Audit Check #9 (Subtask Decomposition) to elab-analyst.agent.md. Validates: every AC covered by a subtask, no subtask >3 files, dependencies form a DAG, each subtask has a verification command and a canonical reference. Result status: PASS | CONDITIONAL | FAIL. CONDITIONAL PASS if decomposition missing or inadequate.
@@ -105,7 +106,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-2020: Elab Analyst: Add Story Clarity Format Audit Check
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** ST-1020, ST-2010
 **Phase:** 2
 **Feature:** Extend the elab-analyst audit to check for the story clarity format: ## Goal (one sentence), ## Examples (2+ input/output pairs), ## Edge Cases (2+ scenarios). If any are missing → CONDITIONAL PASS with note. This extends Check #9 or becomes Check #10 in the 9-point (now 10-point) checklist.
@@ -118,7 +119,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-3010: Dev Plan Leader: Map Story Subtasks 1:1 to PLAN.yaml Steps
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** ST-1040
 **Phase:** 3
 **Feature:** Update dev-plan-leader.agent.md Step 3 to read ## Subtasks and ## Canonical References from the story file and Step 4 to emit schema: 2 PLAN.yaml when subtasks are present. Each story subtask (ST-1, ST-2, etc.) maps 1:1 to a PLAN.yaml step with subtask_id, files_to_read (canonical reference + prior outputs), and verification field.

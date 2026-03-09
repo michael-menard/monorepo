@@ -1,0 +1,21 @@
+id: WINT-3050
+title: "Implement Outcome Logging: Add workflow_log_outcome Calls at Story Completion Points"
+status: ready-for-code-review
+priority: P2
+points: 3
+phase: 3
+epic: wint
+story_type: feature
+experiment_variant: "control"
+created: "2026-03-08"
+updated_at: "2026-03-09T17:10:00Z"
+depends_on:
+  - WINT-0120
+surfaces:
+  - backend
+touches_backend: true
+touches_frontend: false
+touches_database: false
+touches_infra: false
+story_dir: "plans/future/platform/wint/in-progress/WINT-3050"
+story_file: "plans/future/platform/wint/in-progress/WINT-3050/WINT-3050.md"

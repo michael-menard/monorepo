@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-4030 has no user-facing UI. The deliverable is a CLI-runnable backend script (populate-graph-features.ts) and a database migration. There are no React components, routes, forms, or interactive elements. UI/UX review is not applicable."

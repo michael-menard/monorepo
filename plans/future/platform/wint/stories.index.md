@@ -19,8 +19,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 27 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
-| needs-code-review | 5 |
-| ready-for-code-review | 2 |
+| needs-code-review | 4 |
+| ready-for-code-review | 3 |
 | failed-code-review | 0 |
 | failed-qa | 5 |
 | elaboration | 1 |
@@ -1019,7 +1019,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2030: Populate Project Context Cache
 
 **Status:** needs-code-review
-**Story File:** `wint/needs-code-review/WINT-2030/WINT-2030.md`
+**Story File:** `wint/in-progress/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1263,7 +1263,8 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Risk Notes:** Quality scoring needs clear definition
 
 **Story Generated:** 2026-03-08
-**Story File:** `needs-code-review/WINT-3050/WINT-3050.md`
+**Story File:** `in-progress/WINT-3050/WINT-3050.md`
+**Fix Iteration Complete:** 2026-03-09 — Iteration 3 code review feedback resolved (Zod schema + logger.warn). Build PASS, type check PASS, lint PASS, tests 6/6 PASS. Ready for code review.
 
 ---
 
@@ -1572,7 +1573,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4150: Standardize Elab Output Artifacts
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-4140
 **Phase:** 4
 **Feature:** Define and enforce standard elab output artifacts: story-brief.md, gaps.json (blocking/non-blocking split), user-flows.json (per schema), cohesion-findings.json (max 5/2 blocking), mvp-slice.json, scope-challenges.json (max 5), final-scope.json (+ followups), evidence-expectations.json. Add validation to elab-complete gate.

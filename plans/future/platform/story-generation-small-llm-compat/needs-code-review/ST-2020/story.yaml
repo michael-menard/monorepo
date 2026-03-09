@@ -1,7 +1,7 @@
 id: "ST-2020"
 title: "Elab Analyst: Add Story Clarity Format Audit Check"
 status: needs-code-review
-updated_at: "2026-03-03T00:00:00Z"
+updated_at: "2026-03-09T05:08:11Z"
 priority: medium
 phase: 2
 feature: "Extend elab-analyst.agent.md to audit stories for the presence of ## Goal, ## Examples, and ## Edge Cases sections"

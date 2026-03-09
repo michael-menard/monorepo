@@ -40,12 +40,9 @@
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
 │ 99  │ WINT-2020             │ Create Context Pack Sidecar      │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2020           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
-│ 100 │ WINT-2030             │ Populate Project Context Cache   │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2030           │
+│ 100 │ WINT-2030             │ Populate Project Context Cache   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2030         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
 │ 103 │ WINT-2060             │ Populate Library Cache           │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2060           │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
-│ 106 │ WINT-2110             │ Update 5 High-Volume Agents to   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2110         │
-│     │                       │ Use Cache                        │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
 │ 107 │ WINT-2120             │ Measure Token Reduction          │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2120         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
@@ -53,8 +50,8 @@
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
 │ 109 │ WINT-4020             │ Create Rules Registry Sidecar    │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-4020     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 110 │ WINT-4030             │ Populate Graph with Existing     │ backlog               │ /elab-story plans/future/platform/wint WINT-4030              │
- │     │                       │ Features                         │                       │                                                              │
+│ 110 │ WINT-4030             │ Populate Graph with Existing     │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4030         │
+│     │                       │ Features                         │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 11 — Graph &     │                                  │                       │                                                              │
  │     │ Cohesion              │                                  │                       │                                                              │
@@ -65,21 +62,21 @@
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 113 │ WINT-4060             │ Create graph-checker Agent       │ backlog               │ /elab-story plans/future/platform/wint WINT-4060              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 114 │ WINT-4070             │ Create cohesion-prosecutor Agent │ backlog               │ /elab-story plans/future/platform/wint WINT-4070              │
- │     │                       │  (PO)                            │                       │                                                              │
+│ 114 │ WINT-4070             │ Create cohesion-prosecutor Agent │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-4070           │
+│     │                       │  (PO)                            │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 115 │ WINT-4100             │ Create backlog-curator Agent     │ backlog               │ /elab-story plans/future/platform/wint WINT-4100              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 116 │ WINT-4110             │ Create Cohesion Check Command    │ backlog               │ /elab-story plans/future/platform/wint WINT-4110              │
+│ 116 │ WINT-4110             │ Create Cohesion Check Command    │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4110         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 117 │ WINT-4120             │ Integrate Cohesion into Workflow │ backlog               │ /elab-story plans/future/platform/wint WINT-4120              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 118 │ WINT-4130             │ Validate Graph & Cohesion System │ backlog               │ /elab-story plans/future/platform/wint WINT-4130              │
+│ 118 │ WINT-4130             │ Validate Graph & Cohesion System │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-4130           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 119 │ WINT-4140             │ Create Round Table Agent         │ backlog               │ /elab-story plans/future/platform/wint WINT-4140              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 120 │ WINT-4150             │ Standardize Elab Output          │ backlog               │ /elab-story plans/future/platform/wint WINT-4150              │
- │     │                       │ Artifacts                        │                       │                                                              │
+│ 120 │ WINT-4150             │ Standardize Elab Output          │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4150         │
+│     │                       │ Artifacts                        │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 12 — Additional  │                                  │                       │                                                              │
  │     │ LangGraph Nodes       │                                  │                       │                                                              │
@@ -90,7 +87,7 @@
 │ 122 │ WINT-9040             │ Create scope-defender LangGraph  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9040         │
 │     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
-│ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9050         │
+│ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-9050           │
 │     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 124 │ WINT-9060             │ Create batch-coordinator         │ backlog               │ /elab-story plans/future/platform/wint WINT-9060              │
