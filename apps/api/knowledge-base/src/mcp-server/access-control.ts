@@ -76,6 +76,11 @@ export const ToolNameSchema = z.enum([
   'artifact_write',
   // Context pack tool (WINT-2020)
   'context_pack_get',
+  // Telemetry tools (WINT-0120)
+  'workflow_log_invocation',
+  'workflow_log_decision',
+  'workflow_log_outcome',
+  'workflow_get_story_telemetry',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -161,6 +166,11 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   artifact_write: new Set(['pm', 'dev', 'qa', 'all']),
   // Context pack tool (WINT-2020) - available to all roles
   context_pack_get: new Set(['pm', 'dev', 'qa', 'all']),
+  // Telemetry tools (WINT-0120) - available to all roles
+  workflow_log_invocation: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_log_decision: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_log_outcome: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_get_story_telemetry: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

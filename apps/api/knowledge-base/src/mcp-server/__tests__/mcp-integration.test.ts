@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 65 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search + story_similarity + story_context + context_pack + telemetry)', () => {
+    it('should return all 73 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + pdbm-plans + artifact_search + story_similarity + story_context + context_pack + telemetry)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(65)
+      expect(tools).toHaveLength(73)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -151,6 +151,12 @@ describe('MCP Server Integration', () => {
         'kb_get_roadmap',
         'kb_update_plan',
         'kb_upsert_plan',
+        // PDBM Phase 0 plan tools
+        'kb_search_plans',
+        'kb_get_plan_dashboard',
+        'kb_get_plan_revisions',
+        'kb_log_plan_event',
+        'kb_get_plan_events',
         // Artifact search tool (KBAR-0130)
         'artifact_search',
         // Story similarity search (CDTS-2010)
@@ -161,6 +167,10 @@ describe('MCP Server Integration', () => {
         'context_pack_get',
         // Telemetry tool (WINT-3020)
         'workflow_log_invocation',
+        // Telemetry tools (WINT-0120)
+        'workflow_log_decision',
+        'workflow_log_outcome',
+        'workflow_get_story_telemetry',
       ])
     })
 
@@ -266,7 +276,7 @@ describe('MCP Server Integration', () => {
 
       expect(config.SHUTDOWN_TIMEOUT_MS).toBe(30000)
       expect(config.LOG_LEVEL).toBe('info')
-      expect(config.DB_POOL_SIZE).toBe(5)
+      expect(config.DB_POOL_SIZE).toBe(3)
     })
 
     it('should parse custom shutdown timeout', () => {

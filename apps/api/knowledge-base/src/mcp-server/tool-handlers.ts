@@ -142,6 +142,14 @@ import {
   KbGetChurnAnalysisInputSchema,
 } from '../crud-operations/analytics-operations.js'
 import {
+  workflow_log_decision,
+  workflow_log_outcome,
+  workflow_get_story_telemetry,
+  WorkflowLogDecisionInputSchema,
+  WorkflowLogOutcomeInputSchema,
+  WorkflowGetStoryTelemetryInputSchema,
+} from '../crud-operations/telemetry-operations.js'
+import {
   kb_sync_working_set,
   KbSyncWorkingSetInputSchema,
   kb_generate_working_set,
@@ -4966,6 +4974,135 @@ async function handleKbGetPlanEvents(
   }
 }
 
+// ============================================================================
+// Telemetry Handlers (WINT-0120)
+// ============================================================================
+
+/**
+ * Handle workflow_log_decision tool call.
+ * Inserts one row to wint.hitl_decisions.
+ */
+async function handleWorkflowLogDecision(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_decision tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    decision_type: inputObj?.decision_type,
+    operator_id: inputObj?.operator_id,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_decision' as ToolName, context)
+    const validated = WorkflowLogDecisionInputSchema.parse(input)
+    const result = await workflow_log_decision({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_log_decision succeeded', {
+      correlation_id: correlationId,
+      id: result.id,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_decision failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle workflow_log_outcome tool call.
+ * Upserts one row to wint.story_outcomes.
+ */
+async function handleWorkflowLogOutcome(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_outcome tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    final_verdict: inputObj?.final_verdict,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_outcome' as ToolName, context)
+    const validated = WorkflowLogOutcomeInputSchema.parse(input)
+    const result = await workflow_log_outcome({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_log_outcome succeeded', {
+      correlation_id: correlationId,
+      id: result.id,
+      story_id: result.story_id,
+      final_verdict: result.final_verdict,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_outcome failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle workflow_get_story_telemetry tool call.
+ * Reads all 3 telemetry tables for a story.
+ */
+async function handleWorkflowGetStoryTelemetry(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_get_story_telemetry tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    enforceAuthorization('workflow_get_story_telemetry' as ToolName, context)
+    const validated = WorkflowGetStoryTelemetryInputSchema.parse(input)
+    const result = await workflow_get_story_telemetry({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_get_story_telemetry succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      invocation_count: result.invocations.length,
+      decision_count: result.decisions.length,
+      has_outcome: result.outcome !== null,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_get_story_telemetry failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -5070,6 +5207,11 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_find_similar_stories: handleKbFindSimilarStories,
   // Composite story context (CDTS-2020)
   kb_get_story_context: handleKbGetStoryContext,
+  // Telemetry tools (WINT-0120)
+  workflow_log_invocation: handleWorkflowLogInvocation,
+  workflow_log_decision: handleWorkflowLogDecision,
+  workflow_log_outcome: handleWorkflowLogOutcome,
+  workflow_get_story_telemetry: handleWorkflowGetStoryTelemetry,
 }
 
 /**
