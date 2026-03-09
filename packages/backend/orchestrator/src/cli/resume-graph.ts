@@ -123,10 +123,10 @@ async function resumeGraph(threadId: string, pool: DbPool): Promise<void> {
     return
   }
 
-  const { payload, nodeName, phase } = checkpoint
+  const { payload, nodeName, phase, reachedAt } = checkpoint
 
   process.stdout.write(
-    `[resume-graph] checkpoint_timestamp: ${new Date().toISOString()}\n` +
+    `[resume-graph] checkpoint_timestamp: ${reachedAt.toISOString()}\n` +
       `[resume-graph] phase: ${phase}\n` +
       `[resume-graph] last_completed_node: ${nodeName}\n` +
       `[resume-graph] state_snapshot_keys: ${Object.keys(payload.state_snapshot).join(', ')}\n`,

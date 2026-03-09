@@ -65,7 +65,7 @@ All 3 issues identified in iteration 4 code review have been properly resolved:
 
 **Result:** PASS
 
-```
+```text
 Test Files  19 passed (19)
      Tests  437 passed (437)
    Duration: 1.76s

@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { ZodError } from 'zod'
+import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
 import { stories } from '../../db/schema.js'
 import {
@@ -43,8 +44,6 @@ function makeStoryId(suffix: string): string {
 // Pre-check: Verify content columns exist
 // ============================================================================
 
-let contentColumnsExist = false
-
 beforeAll(async () => {
   // Check that the content columns exist in the stories table
   // (KFMB-1020 adds description, acceptance_criteria, non_goals, packages)
@@ -54,11 +53,16 @@ beforeAll(async () => {
        AND column_name IN ('description', 'acceptance_criteria', 'non_goals', 'packages')` as any,
   )
   const found = (result.rows as { column_name: string }[]).map(r => r.column_name)
-  contentColumnsExist =
-    found.includes('description') &&
-    found.includes('acceptance_criteria') &&
-    found.includes('non_goals') &&
-    found.includes('packages')
+  const requiredColumns = ['description', 'acceptance_criteria', 'non_goals', 'packages']
+  const missingColumns = requiredColumns.filter(col => !found.includes(col))
+  if (missingColumns.length > 0) {
+    logger.error('Required content columns missing from stories table — migration not applied', {
+      missingColumns,
+    })
+    throw new Error(
+      `stories table is missing required content columns: ${missingColumns.join(', ')}. Run KFMB-1020 migration first.`,
+    )
+  }
 })
 
 afterEach(async () => {
@@ -121,11 +125,6 @@ describe('kb_create_story — happy path', () => {
   })
 
   it('HP-3: content fields round-trip through create → get', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP HP-3: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('HP-3')
     testStoryIds.push(storyId)
 
@@ -190,11 +189,6 @@ describe('kb_create_story — happy path', () => {
   })
 
   it('HP-5: null content fields are stored and retrieved correctly', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP HP-5: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('HP-5')
     testStoryIds.push(storyId)
 
@@ -349,14 +343,12 @@ describe('kb_create_story — edge cases', () => {
     const result = await kb_create_story(deps, {
       story_id: storyId,
       title: 'ED-3 Story',
-      story_dir: 'plans/future/platform/kb-first-migration/in-progress/KFMB-1020',
-      story_file: 'story.yaml',
+      story_dir: '',
+      story_file: '',
     })
 
-    expect(result.story.storyDir).toBe(
-      'plans/future/platform/kb-first-migration/in-progress/KFMB-1020',
-    )
-    expect(result.story.storyFile).toBe('story.yaml')
+    expect(result.story.storyDir).toBe('')
+    expect(result.story.storyFile).toBe('')
   })
 
   it('ED-4: multiple sequential upserts are idempotent', async () => {
@@ -396,11 +388,6 @@ describe('kb_update_story — content field support', () => {
   })
 
   it('AC-5: kb_update_story updates content fields without touching others', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP AC-5: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('AC-5')
     testStoryIds.push(storyId)
 
