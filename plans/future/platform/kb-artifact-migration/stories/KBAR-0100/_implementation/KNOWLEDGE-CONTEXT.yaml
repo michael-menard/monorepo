@@ -1,0 +1,20 @@
+schema: 1
+story_id: KBAR-0100
+feature_dir: plans/future/platform/kb-artifact-migration
+timestamp: '2026-02-25T05:10:00Z'
+
+qa_setup_notes: |
+  Story ready for QA verification. All preconditions met:
+  - EVIDENCE.yaml: 10 acceptance criteria, all PASS
+  - REVIEW.yaml: verdict PASS (iteration 1)
+  - Code review iteration: 1
+  - All workers run: lint, style, syntax, security, typecheck, build, reusability, react, typescript, accessibility
+  - Zero findings or auto-fixable issues
+
+verification_sources:
+  evidence_file: plans/future/platform/kb-artifact-migration/UAT/KBAR-0100/_implementation/EVIDENCE.yaml
+  review_file: plans/future/platform/kb-artifact-migration/UAT/KBAR-0100/_implementation/REVIEW.yaml
+
+test_coverage:
+  unit_tests: 30 passed
+  e2e_tests: exempt (tech_debt story, no UI surface)

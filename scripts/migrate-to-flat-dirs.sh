@@ -74,11 +74,8 @@ migrate_plan() {
         cp -a "$story_path" "$target"
         echo "  COPY: $stage/$sid → stories/$sid"
 
-        # Update KB story_dir if possible (non-blocking)
-        timeout 15 env -u CLAUDECODE claude -p \
-          "Call kb_update_story with story_id='${sid}', updates={\"story_dir\":\"${target}\"}. Output ONLY: OK or ERROR." \
-          --allowedTools "mcp__knowledge-base__kb_update_story" \
-          --output-format text >/dev/null 2>&1 || true
+        # KB story_dir update deferred — too slow for bulk migration.
+        # Run a separate KB batch update after migration completes.
       fi
       ((moved++))
     done < <(find "$stage_dir" -maxdepth 1 -mindepth 1 -type d -print0 2>/dev/null)
@@ -98,7 +95,6 @@ if $ALL_PLANS; then
   # Also check for plans that have stage dirs but no index file
   for stage in "${STAGE_DIRS[@]}"; do
     while IFS= read -r stage_dir; do
-      local plan_dir
       plan_dir=$(dirname "$stage_dir")
       # Skip if already processed (has stories.index.md)
       [[ -f "${plan_dir}/stories.index.md" ]] && continue

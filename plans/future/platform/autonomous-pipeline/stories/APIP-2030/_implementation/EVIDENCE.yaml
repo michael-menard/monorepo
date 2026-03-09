@@ -1,0 +1,80 @@
+schema: 1
+story_id: "APIP-2030"
+timestamp: "2026-03-01T03:00:00Z"
+type_check:
+  status: pass
+  errors: 0
+build:
+  status: pass
+tests:
+  unit:
+    files: 5
+    tests_total: 61
+    tests_passed: 61
+    tests_failed: 0
+  integration:
+    files: 1
+    tests_total: 5
+    tests_passed: 5
+    tests_failed: 0
+  e2e:
+    status: exempt
+    reason: "ADR-006: frontend_impacted=false, backend+infra only"
+e2e_gate:
+  status: exempt
+  reason: "ADR-006 E2E exemption — frontend_impacted=false, backend+infra only story"
+touched_files:
+  - apps/api/pipeline/src/supervisor/health/__types__/index.ts
+  - apps/api/pipeline/src/supervisor/health/services.ts
+  - apps/api/pipeline/src/supervisor/health/server.ts
+  - apps/api/pipeline/src/supervisor/drain/index.ts
+  - apps/api/pipeline/src/supervisor/index.ts
+  - apps/api/pipeline/src/supervisor/__types__/index.ts
+  - apps/api/pipeline/src/supervisor/dispatch-router.ts
+  - infra/langgraph-server/compose.langgraph-server.yaml
+  - infra/langgraph-server/README.md
+  - infra/prometheus/prometheus.yml
+new_files:
+  - apps/api/pipeline/src/supervisor/health/__types__/index.ts
+  - apps/api/pipeline/src/supervisor/health/services.ts
+  - apps/api/pipeline/src/supervisor/health/server.ts
+  - apps/api/pipeline/src/supervisor/drain/index.ts
+  - apps/api/pipeline/src/supervisor/__tests__/drain.test.ts
+  - apps/api/pipeline/src/supervisor/__tests__/health.services.test.ts
+  - apps/api/pipeline/src/supervisor/__tests__/integration/drain.integration.test.ts
+  - infra/langgraph-server/compose.langgraph-server.yaml
+  - infra/langgraph-server/README.md
+acceptance_criteria:
+  AC-1:
+    status: met
+    evidence: "SIGTERM/SIGINT triggers drain mode via registerDrainHandlers() in drain/index.ts, calls Worker.pause(), logs drain_started event"
+  AC-2:
+    status: met
+    evidence: "drainTimeoutMs configurable (default 600_000ms), hard timeout with process.exit(1) via setTimeout, clean exit with process.exit(0)"
+  AC-3:
+    status: met
+    evidence: "GET /health endpoint on configurable port (default 9091) returns SupervisorHealth JSON with status, activeJobs, circuitBreakerState, draining, uptimeMs"
+  AC-4:
+    status: met
+    evidence: "HTTP 200 for healthy/draining, HTTP 503 for unhealthy. Draining status returns 200 with draining:true"
+  AC-5:
+    status: met
+    evidence: "Health server starts before BullMQ Worker in supervisor.start(), stops after Worker.close() in drain sequence. GET /live always returns 200"
+  AC-6:
+    status: met
+    evidence: "Module-level _handlersRegistered guard prevents duplicate registration. Unit test HP-8 verifies process.listenerCount('SIGTERM')===1 after multiple calls"
+  AC-7:
+    status: met
+    evidence: "HEALTHCHECK in compose.langgraph-server.yaml: CMD-SHELL curl -f http://localhost:9091/live || exit 1, interval:30s, timeout:5s, retries:3, start_period:10s"
+  AC-8:
+    status: met
+    evidence: "Rolling restart runbook documented in infra/langgraph-server/README.md with 6-step procedure"
+  AC-9:
+    status: met
+    evidence: "10 drain tests + 13 health service tests. Coverage target >=80% for drain module"
+  AC-10:
+    status: met
+    evidence: "5 integration tests with real HTTP server: health endpoint responses, drain state transitions"
+  AC-11:
+    status: met
+    evidence: "stop_grace_period: 630s in compose.langgraph-server.yaml (600s drain + 30s buffer)"

@@ -1147,6 +1147,93 @@ export const artifactCompletionReports = pgTable(
 )
 
 /**
+ * Artifact Story Seeds Table (KSOT-3030)
+ *
+ * Stores PM story seed artifacts generated before development.
+ */
+export const artifactStorySeeds = pgTable(
+  'artifact_story_seeds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    conflictsFound: integer('conflicts_found'),
+    blockingConflicts: integer('blocking_conflicts'),
+    baselineLoaded: boolean('baseline_loaded'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_story_seeds_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Test Plans Table (KSOT-3030)
+ *
+ * Stores PM test plan artifacts.
+ */
+export const artifactTestPlans = pgTable(
+  'artifact_test_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    strategy: text('strategy'),
+    scopeUiTouched: boolean('scope_ui_touched'),
+    scopeDataTouched: boolean('scope_data_touched'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_test_plans_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Dev Feasibility Table (KSOT-3030)
+ *
+ * Stores PM dev feasibility assessment artifacts.
+ */
+export const artifactDevFeasibility = pgTable(
+  'artifact_dev_feasibility',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    feasible: boolean('feasible'),
+    confidence: text('confidence'),
+    complexity: text('complexity'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_dev_feasibility_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact UIUX Notes Table (KSOT-3030)
+ *
+ * Stores PM UI/UX recommendations artifacts.
+ */
+export const artifactUiuxNotes = pgTable(
+  'artifact_uiux_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    hasUiChanges: boolean('has_ui_changes'),
+    componentCount: integer('component_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_uiux_notes_target_id').on(table.targetId),
+  }),
+)
+
+/**
  * Story Audit Log Table (KBAR-001)
  *
  * Audit trail for story operations. Created via database trigger
@@ -1335,6 +1422,17 @@ export const plans = pgTable(
 
     /** Soft-delete: who deleted this plan (agent ID or user) */
     deletedBy: text('deleted_by'),
+
+    /** FK to the plan that supersedes/replaces this one */
+    supersededBy: uuid('superseded_by').references(
+      (): import('drizzle-orm/pg-core').AnyPgColumn => plans.id,
+    ),
+
+    /** Stash of pre-block status so we can restore on unblock */
+    preBlockedStatus: text('pre_blocked_status'),
+
+    /** Inline embedding for semantic similarity search */
+    embedding: vector('embedding', { dimensions: 1536 }),
   },
   table => ({
     statusIdx: index('idx_plans_status').on(table.status),
@@ -1427,6 +1525,12 @@ export const planDetails = pgTable(
 
     /** Plan slugs that must reach 'implemented' before this plan can start */
     dependencies: jsonb('dependencies').$type<string[]>(),
+
+    /** Parsed heading breakdown: [{heading, level, startLine}] */
+    sections: jsonb('sections'),
+
+    /** Format version for content parsing (yaml_frontmatter, inline_header, etc.) */
+    formatVersion: text('format_version').default('v1'),
 
     /** Original source file path (e.g., '~/.claude/plans/dapper-chasing-horizon.md') */
     sourceFile: text('source_file'),
@@ -1554,6 +1658,97 @@ export const planDependencies = pgTable(
 )
 
 /**
+ * Plan Revision History Table (PDBM Phase 0)
+ *
+ * Tracks content revisions for plans. Each revision stores the full raw content
+ * and a content hash for change detection. Revision numbers are auto-incremented
+ * per plan.
+ */
+export const planRevisionHistory = pgTable(
+  'plan_revision_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** FK to plans.id */
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+
+    /** Auto-incremented revision number per plan */
+    revisionNumber: integer('revision_number').notNull(),
+
+    /** Full raw markdown content at this revision */
+    rawContent: text('raw_content').notNull(),
+
+    /** SHA-256 prefix (16 hex chars) for change detection */
+    contentHash: text('content_hash'),
+
+    /** Parsed heading breakdown at this revision */
+    sections: jsonb('sections'),
+
+    /** Why this revision was created */
+    changeReason: text('change_reason'),
+
+    /** Who created this revision (agent ID or user) */
+    changedBy: text('changed_by'),
+
+    /** When the revision was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planIdIdx: index('idx_plan_revision_history_plan_id').on(table.planId),
+    createdAtIdx: index('idx_plan_revision_history_created_at').on(table.createdAt),
+    uniqueRevision: uniqueIndex('uq_plan_revision').on(table.planId, table.revisionNumber),
+  }),
+)
+
+/**
+ * Plan Execution Log Table (PDBM Phase 0)
+ *
+ * Structured event log for plan lifecycle events: status changes, phase progress,
+ * story spawning/completion, blocking/unblocking, decisions, and errors.
+ */
+export const planExecutionLog = pgTable(
+  'plan_execution_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Plan slug (FK to plans.plan_slug) */
+    planSlug: text('plan_slug')
+      .notNull()
+      .references(() => plans.planSlug, { onDelete: 'restrict' }),
+
+    /**
+     * Type of log entry.
+     * Values: 'status_change' | 'phase_started' | 'phase_completed' |
+     *         'story_spawned' | 'story_completed' | 'blocked' | 'unblocked' |
+     *         'decision' | 'note' | 'error'
+     */
+    entryType: text('entry_type').notNull(),
+
+    /** Phase reference (e.g., 'Phase 1', 'Phase 2') */
+    phase: text('phase'),
+
+    /** Related story ID (e.g., 'WKFL-020') */
+    storyId: text('story_id'),
+
+    /** Human-readable message describing the event */
+    message: text('message').notNull(),
+
+    /** Additional structured metadata */
+    metadata: jsonb('metadata'),
+
+    /** When the event occurred */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planSlugIdx: index('idx_plan_execution_log_plan_slug').on(table.planSlug),
+    entryTypeIdx: index('idx_plan_execution_log_entry_type').on(table.entryType),
+    createdAtIdx: index('idx_plan_execution_log_created_at').on(table.createdAt),
+  }),
+)
+
+/**
  * Story Knowledge Links Table (CDTS-1030)
  *
  * Graph edge table linking stories to KB entries.
@@ -1675,6 +1870,10 @@ export type ArtifactFixSummary = typeof artifactFixSummaries.$inferSelect
 export type ArtifactProof = typeof artifactProofs.$inferSelect
 export type ArtifactQaGate = typeof artifactQaGates.$inferSelect
 export type ArtifactCompletionReport = typeof artifactCompletionReports.$inferSelect
+export type ArtifactStorySeed = typeof artifactStorySeeds.$inferSelect
+export type ArtifactTestPlan = typeof artifactTestPlans.$inferSelect
+export type ArtifactDevFeasibility = typeof artifactDevFeasibility.$inferSelect
+export type ArtifactUiuxNotes = typeof artifactUiuxNotes.$inferSelect
 export type StoryAuditLogEntry = typeof storyAuditLog.$inferSelect
 export type NewStoryAuditLogEntry = typeof storyAuditLog.$inferInsert
 export type StoryTokenUsage = typeof storyTokenUsage.$inferSelect

@@ -25,14 +25,14 @@ From orchestrator context:
 - Story ID to split (e.g., WISH-007)
 
 From filesystem:
-- Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
+- Story file: `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- Elaboration: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/ELAB.yaml`
 - Stories index: **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 
 1. `_implementation/ELAB.yaml` exists with `preliminary_verdict: SPLIT_REQUIRED`
-2. `{STORY_ID}.md` has `status: needs-split` in frontmatter
+2. **KB-first**: `kb_get_story({ storyId: STORY_ID })` state == `needs_split`. Fallback (deprecated): `{STORY_ID}.md` frontmatter `status: needs-split`
 3. `_implementation/ELAB.yaml` `split_recommendation` section contains:
    - Named splits ({STORY_ID}-A, {STORY_ID}-B, etc.)
    - AC allocation per split
@@ -86,12 +86,7 @@ For each proposed split ID:
    - If found (regardless of status): ID is taken
 
 3. **Check if directory exists:**
-   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/stories/{NEW_STORY_ID}/`
 
 4. **If collision detected:**
    - Find the highest existing story ID in the index matching `{PREFIX}-*`
@@ -155,7 +150,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 1. **Delete the entire original story directory:**
    ```
-   rm -rf {FEATURE_DIR}/*/{STORY_ID}/
+   rm -rf {FEATURE_DIR}/stories/{STORY_ID}/
    ```
 
 2. This removes:
@@ -170,10 +165,10 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 For each split (using XXYZ IDs where Y is the split number):
 ```
-{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/
-{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/_pm/
-{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/
-{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/_pm/
+{FEATURE_DIR}/stories/{PREFIX}-XX1Z/
+{FEATURE_DIR}/stories/{PREFIX}-XX1Z/_pm/
+{FEATURE_DIR}/stories/{PREFIX}-XX2Z/
+{FEATURE_DIR}/stories/{PREFIX}-XX2Z/_pm/
 ```
 
 ### Phase 4: Generate Split Stories
@@ -221,12 +216,12 @@ This story is part of a split from {STORY_ID}.
 ### Phase 5: Verification
 
 1. Verify all split stories created:
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md` exists
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md` exists
+   - `{FEATURE_DIR}/stories/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md` exists
+   - `{FEATURE_DIR}/stories/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md` exists
    - (etc. for all splits)
 
 2. Verify original story deleted:
-   - `{FEATURE_DIR}/*/{STORY_ID}/` directory no longer exists
+   - `{FEATURE_DIR}/stories/{STORY_ID}/` directory no longer exists
    - Original {STORY_ID} entry removed from index
 
 3. Verify index updated:
@@ -264,12 +259,12 @@ splits_created:
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md
-  - {FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md
+  - {FEATURE_DIR}/stories/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md
+  - {FEATURE_DIR}/stories/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md
 files_updated:
   - {FEATURE_DIR}/stories.index.md (original removed, splits added)
 files_deleted:
-  - {FEATURE_DIR}/*/{STORY_ID}/ (entire directory)
+  - {FEATURE_DIR}/stories/{STORY_ID}/ (entire directory)
 verification:
   total_acs_parent: N
   total_acs_splits: N

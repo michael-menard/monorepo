@@ -1,0 +1,300 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "Two concurrent stories dispatch and complete without interference"
+    setup: >
+      Real Redis instance running. Real git repo with two distinct story directories.
+      ConcurrencyConfig with maxWorktrees: 2. Two BullMQ jobs enqueued with non-overlapping
+      file path sets.
+    action: >
+      Enqueue two jobs simultaneously. BullMQ Worker (concurrency: 2) picks up both.
+      Each creates an isolated git worktree at .worktrees/<storyId>-<timestamp>/.
+      Both proceed to their first checkpoint independently.
+    expected: >
+      Both jobs complete successfully. Each worktree has a distinct checkpoint file.
+      No file conflicts. Both worktrees removed after completion. Supervisor slot
+      count returns to 0.
+    evidence: >
+      Integration test asserts: two distinct worktree paths created, two checkpoint
+      files written (different storyIds), both BullMQ jobs in 'completed' state,
+      ConcurrencyController.activeSlots() === 0 after both complete.
+
+  - id: HP-2
+    title: "maxWorktrees: 1 produces single-story serial behavior (APIP-0020 regression)"
+    setup: >
+      ConcurrencyConfig with maxWorktrees: 1. Two BullMQ jobs enqueued. Real Redis.
+    action: >
+      Enqueue two jobs. Observe dispatch order: first job acquires slot, second job
+      waits until first completes.
+    expected: >
+      Jobs processed serially. At no point are two worktrees active simultaneously.
+      ConcurrencyController.activeSlots() never exceeds 1.
+    evidence: >
+      Integration test records slot acquisition timestamps. Gap between job1-complete
+      and job2-start is >= 0 (sequential). activeSlots peak === 1.
+
+  - id: HP-3
+    title: "Worktree created at dispatch time and removed on completion"
+    setup: >
+      Single story job with ConcurrencyConfig maxWorktrees: 1. Real git repo.
+    action: >
+      Dispatch job. Record filesystem state at job start (worktree created) and
+      at job completion (worktree removed).
+    expected: >
+      Path `.worktrees/<storyId>-<timestamp>/` exists during processing, absent
+      after completion. `git worktree list` confirms cleanup.
+    evidence: >
+      Integration test uses fs.existsSync() before and after. `git worktree list`
+      output asserted to not contain the storyId path.
+
+  - id: HP-4
+    title: "PipelineModelRouter singleton shared across concurrent workers"
+    setup: >
+      ConcurrencyConfig maxWorktrees: 2. Two jobs dispatched simultaneously.
+      Spy/observer on PipelineModelRouter instance reference.
+    action: >
+      Both worker callbacks execute; each retrieves the router via singleton accessor.
+    expected: >
+      Both callbacks reference the same PipelineModelRouter instance (same object
+      reference). TokenBucket.consume() calls are serialized correctly — no
+      double-spend observed in budget tracking.
+    evidence: >
+      Integration test asserts router1 === router2 (same reference). Budget
+      accounting: two dispatch calls each consuming N tokens results in exactly
+      2*N total consumed (not less due to race).
+
+  - id: HP-5
+    title: "ConcurrencyController.tryAcquireSlot returns true when slot available"
+    setup: >
+      ConcurrencyController with maxWorktrees: 2. No active slots.
+    action: >
+      Call tryAcquireSlot('APIP-TEST-001').
+    expected: >
+      Returns true. activeSlots() === 1. Slot registered with storyId key.
+    evidence: >
+      Unit test: assert return value true, assert activeSlots() === 1.
+
+  - id: HP-6
+    title: "WorktreeConflictDetector returns empty array for non-overlapping stories"
+    setup: >
+      Active story with file paths: ['packages/backend/orchestrator/src/supervisor.ts'].
+      Incoming story with file paths: ['packages/core/app-component-library/src/Button/index.tsx'].
+    action: >
+      Call checkConflict(incomingStory, activeStories).
+    expected: >
+      Returns empty array [].
+    evidence: >
+      Unit test asserting result.length === 0.
+
+error_cases:
+  - id: EC-1
+    title: "tryAcquireSlot returns false when all slots occupied"
+    setup: >
+      ConcurrencyController with maxWorktrees: 2. Two slots already acquired
+      (APIP-TEST-001 and APIP-TEST-002 registered).
+    action: >
+      Call tryAcquireSlot('APIP-TEST-003').
+    expected: >
+      Returns false. activeSlots() remains 2. APIP-TEST-003 not registered.
+    evidence: >
+      Unit test: assert return value false, assert activeSlots() === 2.
+
+  - id: EC-2
+    title: "conflictPolicy: reject causes overlapping job to be nacked and requeued"
+    setup: >
+      ConcurrencyConfig with conflictPolicy: 'reject'. Active story touching
+      'packages/backend/orchestrator/src/runner/supervisor.ts'. Incoming story
+      also touching 'packages/backend/orchestrator/src/runner/supervisor.ts'.
+      Real Redis BullMQ.
+    action: >
+      Enqueue incoming story job. Worker receives it, conflict detected.
+    expected: >
+      Job is nacked (not completed). Requeued with delay. Warning logged containing
+      conflicting story IDs. Original active story continues uninterrupted.
+    evidence: >
+      Integration test: BullMQ job transitions to delayed state. @repo/logger
+      warning captured with conflicting storyIds. Active story checkpoint unaffected.
+
+  - id: EC-3
+    title: "Worktree cleanup failure does not block story completion"
+    setup: >
+      Story job completing. git worktree remove command fails (e.g., worktree
+      directory already deleted or git error simulated).
+    action: >
+      Story reaches completion state. Cleanup invoked. Cleanup returns error.
+    expected: >
+      Supervisor logs cleanup failure. Story marked complete. Slot released.
+      Next job can be dispatched. No crash or stall.
+    evidence: >
+      Integration test simulates cleanup failure (mock git worktree remove to throw).
+      Assert story status === 'completed', activeSlots() === 0, next job dispatched.
+
+  - id: EC-4
+    title: "Per-worktree circuit breaker open does not affect other active worktrees"
+    setup: >
+      ConcurrencyConfig with maxWorktrees: 2. failureThreshold: 2.
+      Story-A in slot 1 causing repeated provider failures (2 failures).
+      Story-B in slot 2 proceeding normally.
+    action: >
+      Story-A circuit breaker opens after 2 failures.
+    expected: >
+      Story-A breaker opens; Story-A dispatch halted. Story-B breaker remains
+      closed; Story-B continues dispatching normally.
+    evidence: >
+      Integration test: after 2 failures on story-A slot, storyA.circuitBreaker.state
+      === 'open'. storyB.circuitBreaker.state === 'closed'. StoryB completes.
+
+  - id: EC-5
+    title: "TokenBucket.consume() is safe under true concurrent BullMQ workers"
+    setup: >
+      maxWorktrees: 3. Three jobs dispatched simultaneously. Each job calls
+      router.dispatch() consuming N tokens. Budget cap = 3*N tokens.
+    action: >
+      All three workers invoke router.dispatch() concurrently in real BullMQ
+      parallel execution (not Promise.all mock).
+    expected: >
+      Total consumed tokens = exactly 3*N. No double-spend (consumed < 3*N
+      impossible). No silent bypass (consumed > 3*N budget error detected).
+    evidence: >
+      Integration test: assert tokenBucket.consumed === 3*N after all three
+      dispatches complete. Budget-exceeded error raised if cap is set to 2*N.
+
+edge_cases:
+  - id: ED-1
+    title: "Slot released after worktree cleanup failure"
+    setup: >
+      ConcurrencyController with maxWorktrees: 1. Job completes. Cleanup throws.
+    action: >
+      Observe ConcurrencyController state after cleanup error handled.
+    expected: >
+      Slot is released (releaseSlot called in finally block or equivalent).
+      activeSlots() === 0 even when cleanup fails.
+    evidence: >
+      Unit test with mock cleanup throwing. Assert activeSlots() === 0.
+
+  - id: ED-2
+    title: "Circuit breaker recovery after recoveryTimeoutMs elapses"
+    setup: >
+      Per-worktree NodeCircuitBreaker with failureThreshold: 2, recoveryTimeoutMs: 100ms.
+      Two failures recorded. Breaker opens.
+    action: >
+      Use vi.useFakeTimers() to advance time by 101ms.
+    expected: >
+      Circuit breaker transitions to half-open state. Next dispatch attempt
+      succeeds → breaker closes.
+    evidence: >
+      Unit test: advance fake timers. Assert circuitBreaker.state === 'half-open'
+      after timeout. Assert state === 'closed' after successful dispatch.
+
+  - id: ED-3
+    title: "Stale worktree path collision prevented by timestamp suffix"
+    setup: >
+      .worktrees/APIP-TEST-001-<old_timestamp>/ already exists (leftover from
+      failed previous run).
+    action: >
+      Dispatch new job for APIP-TEST-001.
+    expected: >
+      New worktree created at .worktrees/APIP-TEST-001-<new_timestamp>/.
+      No collision with stale path. Job proceeds normally.
+    evidence: >
+      Integration test: assert new worktree path !== stale path. Both paths
+      distinct. Git worktree creation succeeds.
+
+  - id: ED-4
+    title: "WorktreeConflictDetector returns conflicting story IDs for overlapping paths"
+    setup: >
+      Active story APIP-A touching ['packages/backend/orchestrator/src/runner/supervisor.ts'].
+      Incoming story APIP-B touching ['packages/backend/orchestrator/src/runner/supervisor.ts',
+      'packages/backend/orchestrator/src/utils/parallel-executor.ts'].
+    action: >
+      Call checkConflict(storyB, [storyA]).
+    expected: >
+      Returns ['APIP-A']. Overlap detected on the shared file path.
+    evidence: >
+      Unit test: assert result deepEqual ['APIP-A'].
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "BullMQ job state transitions: waiting → active → completed/failed"
+      - "git worktree list output: contains path during processing, absent after cleanup"
+      - "ConcurrencyController.activeSlots() count at key moments"
+      - "TokenBucket.consumed value after concurrent dispatches"
+      - "NodeCircuitBreaker.state transitions: closed → open → half-open → closed"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Observe concurrent story dispatch logs in real pipeline run"
+    steps:
+      - "Set maxWorktrees: 2 in ConcurrencyConfig"
+      - "Enqueue two distinct backlog stories via BullMQ"
+      - "Observe @repo/logger structured output for dispatch events"
+      - "Verify two distinct worktree paths in .worktrees/ directory"
+      - "Confirm both stories reach first checkpoint"
+      - "Verify cleanup log events after each completion"
+    expected: >
+      Structured log events confirm concurrent dispatch. Both story checkpoints
+      written. No error logs for cleanup. activeSlots returns to 0.
+
+fixture_definitions:
+  - name: ConcurrencyConfigFixture
+    type: "ConcurrencyConfig Zod schema object"
+    description: >
+      Default fixture with maxWorktrees: 2, conflictPolicy: 'reject',
+      worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 }
+  - name: MockStoryFileSet
+    type: "string[] (file path arrays)"
+    description: >
+      Non-overlapping: ['packages/backend/orchestrator/src/supervisor.ts'] vs
+      ['packages/core/app-component-library/src/Button/index.tsx'].
+      Overlapping: both contain 'packages/backend/orchestrator/src/runner/supervisor.ts'.
+  - name: RealRedisConnection
+    type: "BullMQ connection config"
+    description: >
+      Points to test Redis instance. Required for all BullMQ integration tests.
+      Use REDIS_TEST_URL env variable. afterEach must flush test queues.
+  - name: RealGitRepo
+    type: "git repository"
+    description: >
+      Test uses the actual monorepo git repo. afterEach must run
+      `git worktree remove --force <path>` for all test worktrees. Use try/catch.
+
+risks:
+  - id: RISK-1
+    description: >
+      True concurrent BullMQ worker execution is harder to test than Promise.all.
+      Real BullMQ with concurrency: N may not exercise true parallelism if test
+      jobs complete too quickly (serialized by event loop).
+    mitigation: >
+      Add artificial delay (sleep) in test job handlers to force overlap.
+      Assert overlapping timestamps of job processing.
+  - id: RISK-2
+    description: >
+      git worktree creation in CI may fail if git is not configured with
+      user.email/user.name or if the repo has uncommitted changes.
+    mitigation: >
+      Integration test setup: ensure clean git state, configure git identity
+      in CI environment, use --detach flag for worktree creation.
+  - id: RISK-3
+    description: >
+      TokenBucket race condition may not manifest in tests if Node.js event
+      loop serializes microtasks. True concurrency requires CPU-bound or
+      I/O-bound operations.
+    mitigation: >
+      Use real network I/O (Redis calls) as concurrency forcing function.
+      Verify with high iteration count (50+ concurrent invocations) to
+      statistically surface races.
+  - id: RISK-4
+    description: >
+      afterEach cleanup of real git worktrees may fail silently if worktree
+      creation failed mid-test, leaving stale entries in .worktrees/.
+    mitigation: >
+      afterEach must use try/catch for each worktree removal. Additionally,
+      a beforeAll cleanup pass should remove any .worktrees/APIP-TEST-* paths.

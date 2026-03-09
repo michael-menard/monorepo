@@ -1,0 +1,2 @@
+skipped: true
+reason: "No UI surface — this story modifies only internal command orchestrator files (.claude/commands/*.md) and shell scripts (scripts/*.sh) used by AI agents and the pipeline automation. No user-facing interface changes are included."

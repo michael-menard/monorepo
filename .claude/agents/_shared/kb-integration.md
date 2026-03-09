@@ -340,6 +340,10 @@ const phase = artifact.content.current_phase
 | ELAB.yaml (audit + gaps + opportunities + verdict) | `analysis` | `analysis` | elab-analyst |
 | QA-VERIFY.yaml / VERIFICATION.yaml | `verification` | `qa_verification` | qa-verify-verification-leader |
 | EVIDENCE.yaml (AC evidence) | `evidence` | `completion` | dev-execute-leader |
+| STORY-SEED.md | `story_seed` | `analysis` | pm-story-seed-agent |
+| TEST-PLAN.md | `test_plan` | `analysis` | pm-draft-test-plan |
+| UIUX-NOTES.md / UIUX-NOTES.yaml | `uiux_notes` | `analysis` | pm-uiux-recommendations |
+| DEV-FEASIBILITY.md | `dev_feasibility` | `analysis` | pm-dev-feasibility-review |
 
 Valid `phase` values: `setup`, `analysis`, `planning`, `implementation`, `code_review`, `qa_verification`, `completion`
 
@@ -378,6 +382,20 @@ kb_tools:
 
 ---
 
+## Story State: KB Is the Single Source of Truth (KSOT)
+
+| Data | Authoritative Source | Deprecated Source |
+|------|---------------------|-------------------|
+| Story status/state | `kb_get_story()` / `kb_list_stories()` | ~~Filesystem directory names~~ (KSOT-3010: stories now live in flat `stories/` dir) |
+| Story filesystem path | `{FEATURE_DIR}/stories/{STORY_ID}/` | ~~Stage-based dirs~~ (`in-progress/`, `ready-for-qa/`, etc.) — removed by KSOT-3010 |
+| Story list for a plan | `kb_list_stories({ planSlug })` | `stories.index.md` |
+| Story frontmatter `status:` | **Informational only** — do NOT use as authoritative state | Was never authoritative |
+| Workflow artifacts | `kb_read_artifact()` / `kb_write_artifact()` | `_implementation/` directory files |
+
+**CRITICAL**: Always use `kb_get_story()` for authoritative story state. Frontmatter `status:` fields in story markdown files are informational only and may be stale. Never branch logic on frontmatter status.
+
+---
+
 ## Non-Negotiables
 
 | Rule | Enforcement |
@@ -387,3 +405,5 @@ kb_tools:
 | Capture lessons | Leaders MUST write blockers/solutions |
 | No silent skips | Log if KB unavailable or empty results |
 | KB-only artifacts | MUST use `kb_write_artifact` / `kb_read_artifact` for all workflow artifacts |
+| KB-only state | MUST use `kb_get_story` for story state — never rely on frontmatter or directory names |
+| KB-only PM artifacts | NEVER write PM artifact files to `_pm/` without also writing to KB via `kb_write_artifact` |

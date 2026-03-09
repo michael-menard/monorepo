@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-25
-version: 8.2.0
+updated: 2026-03-08
+version: 8.3.0
 agents:
   - dev-setup-leader.agent.md
   - dev-plan-leader.agent.md
@@ -10,6 +10,7 @@ agents:
   - knowledge-context-loader.agent.md
   - code-review-*.agent.md
   - dev-fix-fix-leader.agent.md
+  - graph-checker.agent.md
 kb_artifacts:
   - checkpoint (phase: setup)
   - scope (phase: setup)
@@ -41,6 +42,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 /dev-implement-story plans/future/wishlist WISH-001 --max-iterations=5
 /dev-implement-story plans/future/wishlist WISH-001 --force-continue
 /dev-implement-story plans/future/wishlist WISH-001 --skip-worktree
+/dev-implement-story plans/future/wishlist WISH-001 --skip-cohesion
 ```
 
 ## Flags
@@ -53,32 +55,28 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 | `--force-continue` | false | Proceed with warnings |
 | `--autonomous=LEVEL` | conservative | Escalation level (see below) |
 | `--skip-worktree` | false | Skip worktree verification (Step 1.3); proceed without worktree context |
+| `--skip-cohesion` | false | Skip Phase 2.5 cohesion check (advisory only; does not affect story completion) |
 
 ### --gen Flag (Story Generation)
 
 When `--gen` is specified, the command will:
 
-1. **Generate minimal story structure** - Creates basic `story.yaml` with provided context
+1. **Create minimal story in KB** - Calls `kb_create_story` with provided context; no files written
 2. **Skip elab phase** - Bypasses story elaboration and elab KB artifacts (analysis, elaboration)
 3. **Move directly to implementation** - Starts Phase 0 (dev-setup-leader) immediately
 
-**Story Structure Generated:**
+**KB Record Created:**
 
-```yaml
----
-story_id: "{STORY_ID}"
-title: "{provided or generated title}"
-status: "in-progress"
-created: "{ISO timestamp}"
-updated: "{ISO timestamp}"
-tags: []
-acceptance_criteria: []
-technical_notes: []
----
-
-# {STORY_ID}: {Title}
-
-[Story description provided by user or minimal placeholder]
+```javascript
+kb_create_story({
+  story_id: "{STORY_ID}",
+  title: "{provided or generated title}",
+  description: "[Story description provided by user or minimal placeholder]",
+  status: "in_progress",
+  phase: "implementation",
+  tags: [],
+  acceptance_criteria: [],
+})
 ```
 
 **When to use --gen:**
@@ -149,6 +147,12 @@ Phase 2: dev-execute-leader (sonnet)
     → KB: evidence artifact ← SOURCE OF TRUTH
     │
     ▼
+Phase 2.5: Cohesion Check (haiku — ADVISORY)
+    → graph-checker: detects franken-features + rule violations
+    → cohesion-prosecutor: adversarial prosecution (if agent available)
+    → Output: graph-check-results.json (advisory only, never blocks)
+    │
+    ▼
 REVIEW/FIX LOOP (max 3 iterations)
     → Review workers (haiku, parallel)
     → KB: review artifact
@@ -182,23 +186,23 @@ If the file or story row doesn't exist, skip silently.
 ```
 feature_dir = "{FEATURE_DIR}"
 story_id = "{STORY_ID}"
-story_path = f"{feature_dir}/in-progress/{story_id}/"
-# Note: artifacts stored in KB — no _implementation/ directory needed
+# Note: story data and artifacts stored in KB — no filesystem paths needed
 autonomy_level = flags.autonomous || "conservative"
 batch_mode = false  # true only when called from /workflow-batch
 gen_mode = flags.gen || false
 skip_worktree = flags.skip_worktree || false
+skip_cohesion = flags.skip_cohesion || false
 ```
 
 ### Step 1.5: Generate Story (if --gen flag)
 
 **IF `--gen` flag is present:**
 
-1. **Check if story already exists**
-   ```bash
-   # Check for existing story in any stage
-   if exists({feature_dir}/*/{ story_id}/):
-       STOP: "Story {STORY_ID} already exists. Remove --gen flag or use different ID."
+1. **Check if story already exists in KB**
+   ```javascript
+   const existing = await kb_get_story({ story_id: "{STORY_ID}" })
+   if (existing !== null):
+       STOP: "Story {STORY_ID} already exists in KB. Remove --gen flag or use different ID."
    ```
 
 2. **Prompt user for story context** (if not in batch mode)
@@ -209,43 +213,22 @@ skip_worktree = flags.skip_worktree || false
    - Tags (optional, comma-separated)
    ```
 
-3. **Create story directory structure**
-   ```bash
-   mkdir -p {feature_dir}/in-progress/{story_id}
+3. **Create story in KB**
+   ```javascript
+   kb_create_story({
+     story_id: "{STORY_ID}",
+     title: "{user_provided_title or 'Generated Story'}",
+     description: "{user_provided_description or 'Auto-generated story for implementation.'}",
+     status: "in_progress",
+     phase: "implementation",
+     tags: [{user_provided_tags or []}],
+     acceptance_criteria: [],
+   })
    ```
 
-4. **Generate minimal story.yaml**
-   ```yaml
-   ---
-   story_id: "{STORY_ID}"
-   title: "{user_provided_title or 'Generated Story'}"
-   status: "in-progress"
-   created: "{ISO_TIMESTAMP}"
-   updated: "{ISO_TIMESTAMP}"
-   tags: [{user_provided_tags or []}]
-   acceptance_criteria: []
-   technical_notes: []
-   ---
-
-   # {STORY_ID}: {title}
-
-   {user_provided_description or 'Auto-generated story for implementation.'}
-
-   ## Implementation Notes
-
-   This story was generated using `--gen` flag and bypassed elaboration.
-   Add acceptance criteria and details as needed during implementation.
+4. **Report story generation**
    ```
-
-5. **Update feature index** (if exists)
-   ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=in-progress
-   ```
-
-6. **Report story generation**
-   ```
-   Story generated: {STORY_ID}
-   Location: {feature_dir}/in-progress/{STORY_ID}/
+   Story generated: {STORY_ID} (KB record created)
    Elaboration: SKIPPED (--gen mode)
 
    Proceeding to Phase 0 (setup)...
@@ -254,8 +237,8 @@ skip_worktree = flags.skip_worktree || false
 **IF `--gen` flag NOT present:**
 
 - Skip story generation
-- Expect story to exist in `ready-to-work/` stage (standard flow)
-- Validate story exists with elab artifacts
+- Expect story to exist in KB with state `ready` (standard flow)
+- Validate `kb_get_story({ story_id: "{STORY_ID}" })` returns non-null with elaboration artifact
 
 ### Step 1.3: Verify Worktree Context
 
@@ -454,6 +437,90 @@ coders in dev-execute-leader) write to the same worktree simultaneously.
 ### Step 4-8: Execute Phases
 For spawn patterns, read: `.claude/agents/_reference/patterns/dev-workflow-spawn.md`
 
+### Step 2.5: Cohesion Check (Phase 4 — Advisory)
+
+> **Advisory only.** This phase NEVER blocks story completion. All signals route to: log + continue.
+
+**Pre-check: `--skip-cohesion` flag**
+
+If `--skip-cohesion` is set:
+```
+WARN: Cohesion check skipped (--skip-cohesion flag). Phase 2.5 advisory step bypassed.
+```
+Skip the rest of Step 2.5 and proceed to Step 8 (Review/Fix Loop).
+
+**Step 2.5a: graph-checker**
+
+Spawn the graph-checker agent (haiku model):
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: haiku
+  description: "Phase 2.5a graph-checker {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/graph-checker.agent.md
+    Story ID: {STORY_ID}
+    Feature directory: {FEATURE_DIR}
+    Story path: {story_path}
+
+    Output graph-check-results.json to: {story_path}/_implementation/
+
+    Signal when done: GRAPH-CHECKER COMPLETE, GRAPH-CHECKER COMPLETE WITH WARNINGS, or GRAPH-CHECKER BLOCKED
+```
+
+Wait for signal:
+
+- `GRAPH-CHECKER BLOCKED` → Log warning: `"Cohesion Advisory: graph-checker BLOCKED — skipping Phase 2.5"`. Proceed to Step 8.
+- `graph-check-results.json` absent after completion → Log warning: `"Cohesion Advisory: graph-check-results.json not found — skipping Phase 2.5"`. Proceed to Step 8.
+- `GRAPH-CHECKER COMPLETE` or `GRAPH-CHECKER COMPLETE WITH WARNINGS` → Proceed to Step 2.5b.
+
+**Step 2.5b: cohesion-prosecutor**
+
+Gate check: verify both conditions before spawning:
+1. graph-checker did NOT signal BLOCKED
+2. `cohesion-prosecutor.agent.md` file exists at `.claude/agents/cohesion-prosecutor.agent.md`
+
+If either condition fails:
+```
+WARN: Cohesion Advisory: cohesion-prosecutor.agent.md not found (WINT-4070 not yet merged). Skipping prosecution step.
+```
+Proceed to Step 8.
+
+If both conditions are met, spawn cohesion-prosecutor (haiku model):
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  model: haiku
+  description: "Phase 2.5b cohesion-prosecutor {STORY_ID}"
+  prompt: |
+    Read instructions: .claude/agents/cohesion-prosecutor.agent.md
+    Story ID: {STORY_ID}
+    Feature directory: {FEATURE_DIR}
+    Story path: {story_path}
+    graph-check-results.json: {story_path}/_implementation/graph-check-results.json
+
+    Signal when done: PROSECUTION COMPLETE or PROSECUTION BLOCKED
+```
+
+Wait for signal:
+
+- `PROSECUTION BLOCKED` → Log warning: `"Cohesion Advisory: prosecution BLOCKED — continuing to review"`. Proceed to Step 8.
+- `PROSECUTION COMPLETE` → Read `prosecution-verdict.json` from `{story_path}/_implementation/prosecution-verdict.json`.
+  - If `overall_verdict == "INCOMPLETE-BLOCKED"`: Surface advisory note in the evidence artifact:
+    ```
+    Cohesion Advisory [WINT-4120 Phase 2.5]: {details from prosecution-verdict.json}
+    ```
+  - All other verdicts: log result, no action required.
+  - Proceed to Step 8 in all cases.
+
+**Key rules for Phase 2.5:**
+- ALL verdicts are ADVISORY — NEVER hard-block story completion
+- BLOCKED signals always route to: log warning + continue
+- Pre-Phase-4 stories (no graph data) complete normally via graceful degradation in graph-checker
+- Advisory notes are informational only and do not affect review/fix loop
+
 ### Step 8: Review/Fix Loop
 ```
 while iteration < max_iterations:
@@ -492,8 +559,13 @@ If gate fails → BLOCKED, do not proceed.
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
-5. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
-6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+5. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log {STORY_ID} dev-implement-story execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
+6. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
+7. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ### Forced Continue
 1. Update checkpoint artifact in KB: `forced: true`, `warnings: [...]`
@@ -509,8 +581,40 @@ If gate fails → BLOCKED, do not proceed.
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
-5. Report with warnings
-6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+5. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log {STORY_ID} dev-implement-story execute partial
+   ```
+   If the call returns null or throws, log a warning and continue.
+6. Report with warnings
+7. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+
+---
+
+## Phase 4 Reference
+
+### Cohesion Check (Phase 2.5)
+
+| Component | Agent file | Model | Output file | Signal |
+|-----------|------------|-------|-------------|--------|
+| graph-checker | `graph-checker.agent.md` | haiku | `graph-check-results.json` | `GRAPH-CHECKER COMPLETE` / `COMPLETE WITH WARNINGS` / `BLOCKED` |
+| cohesion-prosecutor | `cohesion-prosecutor.agent.md` | haiku | `prosecution-verdict.json` | `PROSECUTION COMPLETE` / `PROSECUTION BLOCKED` |
+
+**Signal routing (all paths are advisory — never block):**
+
+| Signal | Route |
+|--------|-------|
+| `GRAPH-CHECKER BLOCKED` | Log warning, skip Phase 2.5 entirely |
+| `graph-check-results.json` absent | Log warning, skip Phase 2.5 entirely |
+| `GRAPH-CHECKER COMPLETE [WITH WARNINGS]` | Proceed to Step 2.5b |
+| `cohesion-prosecutor.agent.md` missing | Log warning about WINT-4070, skip prosecution |
+| `PROSECUTION BLOCKED` | Log warning, continue to Step 8 |
+| `PROSECUTION COMPLETE` (verdict: INCOMPLETE-BLOCKED) | Surface advisory note, continue |
+| `PROSECUTION COMPLETE` (other verdicts) | Log result, continue |
+
+**Graceful degradation:** Stories without graph data (pre-Phase-4 infra) complete normally. graph-checker emits `COMPLETE WITH WARNINGS` for empty graph, which is handled by the signal routing table above.
+
+**Skip flag:** Use `--skip-cohesion` to bypass Phase 2.5 entirely. Useful for docs/infra stories where cohesion checks are not meaningful.
 
 ---
 

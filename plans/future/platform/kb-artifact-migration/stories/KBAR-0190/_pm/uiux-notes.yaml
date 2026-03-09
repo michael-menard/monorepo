@@ -1,0 +1,2 @@
+skipped: true
+reason: "This story modifies agent markdown files only (qa-verify-*.agent.md, dev-fix-fix-leader.agent.md). No UI components, no frontend changes, no user-facing interface touched. frontend_impacted: false."

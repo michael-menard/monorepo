@@ -24,7 +24,3 @@ writes:
       touches_infra: false
     status: pending
     reason: "MCP tools not available during pm-story-generation-leader execution"
-
-# TTL stamp — added by import-deferred-writes
-processed_at: "2026-03-08T23:55:28.324Z"
-imported: true

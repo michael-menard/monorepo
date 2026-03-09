@@ -1,0 +1,27 @@
+---
+deferred_at: "2026-02-16T00:00:00Z"
+reason: "KB write tool unavailable during PM story generation"
+retry_after: "first available dev session"
+
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: "KBAR-0040"
+      feature: "platform"
+      title: "Artifact Sync Functions"
+      story_dir: "plans/future/platform/backlog/KBAR-0040"
+      story_file: "plans/future/platform/backlog/KBAR-0040/KBAR-0040.md"
+      story_type: "feature"
+      points: "M"
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    conflict_action: "DO UPDATE SET title=EXCLUDED.title, story_dir=EXCLUDED.story_dir, story_file=EXCLUDED.story_file, state=EXCLUDED.state"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

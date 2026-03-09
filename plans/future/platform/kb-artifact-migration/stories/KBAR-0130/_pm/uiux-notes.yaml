@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  KBAR-0130 implements a backend MCP tool (artifact_search) exposed via stdio transport.
+  There is no UI surface, no React components, no frontend code, and no Playwright
+  test surface. UI/UX review is not applicable.

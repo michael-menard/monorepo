@@ -1,0 +1,53 @@
+schema: 1
+story_id: WISH-2014
+date: 2026-01-28
+verdict: pass
+audit:
+  scope_alignment:
+    status: pass
+    note: 'Scope matches stories.index.md exactly: "Add three smart sorting modes" to extend GET /api/wishlist. No extra
+      endpoints created.'
+  internal_consistency:
+    status: pass
+    note: Goals align with Non-goals. All 18 ACs map to scope. Test plan covers all ACs with concrete scenarios.
+  reuse-first:
+    status: pass
+    note: "Reuses: existing endpoint, RTK Query hook, Select primitive, database fields (price, pieceCount, releaseDate,
+      priority), error handling patterns"
+  ports_&_adapters:
+    status: pass
+    note: Story correctly identifies service layer (`application/wishlist-service.ts`), repository layer
+      (`adapters/wishlist-repository.ts`), and port layer (`types.ts`). Hexagonal architecture compliance verified.
+  local_testability:
+    status: pass
+    note: "Backend: `.http` file specified (`__http__/wishlist-smart-sorting.http`). Frontend: Playwright E2E test specified
+      with concrete scenarios in TEST-PLAN.md"
+  decision_completeness:
+    status: pass
+    note: All algorithms fully specified (formulas in AC2-AC4). Null handling strategy documented (AC15). No blocking TBDs
+      or open questions.
+  risk_disclosure:
+    status: pass
+    note: 5 MVP-critical risks documented with mitigations (DEV-FEASIBILITY.md). Non-MVP risks tracked separately
+      (FUTURE-RISKS.md).
+  story_sizing:
+    status: pass
+    note: 18 ACs, 0 new endpoints, frontend + backend moderate work, 3 sort algorithms, touches 3 packages. No split
+      indicators (< 8 ACs threshold).
+gaps:
+  - id: GAP-—
+    category: requirements
+    severity: important
+    finding: None
+    recommendation: ""
+split_required: false
+follow_ups:
+  - finding: "WISH-2015: Sort Mode Persistence (localStorage) - Phase 5 UX Polish"
+    story_id: null
+  - finding: "WISH-2016: Multi-Currency Best Value Algorithm - Phase 6 Internationalization"
+    story_id: null
+  - finding: "WISH-2017: Advanced Multi-Sort Filtering - Phase 6 Advanced Features"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

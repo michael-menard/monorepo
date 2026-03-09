@@ -1,0 +1,38 @@
+schema: 1
+id: WISH-2016
+feature: wish
+type: feature
+state: uat
+title: Image Optimization - Automatic Resizing, Compression, and Watermarking
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2013
+follow_up_from: WISH-2013
+scope:
+  packages:
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+    - apps/web/app
+    - apps/web/app
+    - packages/backend/database
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Automatically optimize uploaded images to reduce storage costs, improve page load performance, and enhance mobile
+  user experience. Provide multiple image sizes for responsive display and apply subtle watermarking for copyright
+  protection.
+non_goals:
+  - "**CDN Integration:** CloudFront or image CDN setup is out of scope (defer to WISH-2018)"
+  - "**Advanced Image Processing:** AI-based upscaling, background removal, or smart cropping is out of scope"
+  - "**Video Processing:** Video thumbnail generation or video optimization is out of scope"
+  - "**Real-time Processing:** Synchronous image optimization during upload is out of scope (async only)"
+  - "**Custom Watermark Upload:** User-uploaded watermark images is out of scope (use default logo)"
+  - "**Image Editing UI:** User-facing image editing tools (crop, rotate, filters) is out of scope"
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.273Z
+updated_at: 2026-01-31

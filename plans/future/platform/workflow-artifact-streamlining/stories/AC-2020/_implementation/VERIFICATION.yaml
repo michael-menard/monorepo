@@ -1,0 +1,94 @@
+schema: 1
+story_id: AC-2020
+timestamp: '2026-03-07T23:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+  note: >-
+    Story modifies .md agent instruction files only — no application code, no test suite applicable. E2E exempt per
+    EVIDENCE.yaml.
+coverage: n/a
+coverage_meets_threshold: true
+coverage_note: No application code changed — coverage threshold not applicable for agent instruction .md files.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: No tests to review. No anti-patterns applicable to documentation-only changes.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-1
+    verification_method: Direct file inspection on main branch
+    notes: >-
+      Verified: .claude/agents/_token-logging.md line 17 reads 'Token data MUST be logged to the KB via the /token-log
+      skill, which calls kb_log_tokens. Do NOT write to a TOKEN-LOG.md file.' The /token-log SKILL.md (unchanged by this
+      story, pre-existing) calls kb_log_tokens exclusively with no TOKEN-LOG.md writes. Active-path instructions
+      unambiguously prohibit TOKEN-LOG.md file creation.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-2
+    verification_method: Inspection of /token-log skill and workflow-retro agent
+    notes: >-
+      Verified: .claude/skills/token-log/SKILL.md description reads 'Writes to the storyTokenUsage table via
+      kb_log_tokens MCP tool.' The skill calls kb_log_tokens at line 46+. workflow-retro.agent.md queries KB
+      storyTokenUsage as primary data source (line 113). No TOKEN-LOG.md writes anywhere in the /token-log skill. Token
+      data is queryable by story_id via KB storyTokenUsage after /token-log is invoked.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-3
+    verification_method: grep of .claude/ tree on main branch for TOKEN-LOG.md references
+    notes: >-
+      Verified: grep of .claude/ finds exactly 6 TOKEN-LOG.md references across 3 files. Breakdown: (1)
+      _token-logging.md:17 — 'Do NOT write to a TOKEN-LOG.md file' (prohibition instruction); (2)
+      workflow-retro.agent.md:110 — '[BACKWARD-COMPAT ONLY] legacy per-phase token counts for stories predating KB
+      migration; only read if KB storyTokenUsage returns no entries'; (3) workflow-retro.agent.md:226 — TOKEN-LOG.md
+      listed as 'legacy-only last resort' in fallback chain; (4) workflow-retro.agent.md:427 — 'TOKEN-LOG.md is
+      legacy-only last resort for pre-KB stories'; (5) workflow-retro.md:52 — 'TOKEN-LOG.md as legacy-only last resort
+      for pre-KB stories'; (6) workflow-retro.md:68 — 'TOKEN-LOG.md as legacy-only last resort'. Zero active-path
+      references remain — all are explicit backward-compat/legacy markers or prohibition statements.
+architecture_compliant: true
+architecture_notes: >-
+  Story is documentation-only (.md files in .claude/). No architecture decisions from ADR-001 through ADR-005 are
+  applicable. Pattern is correct: KB as primary store, legacy fallback clearly labeled.
+issues: []
+cache_context:
+  test_patterns: >-
+    cache_miss — no packType/packKey API available; context_pack_get uses story_id+node_type+role. Proceeding without
+    cache.
+  lessons_learned: cache_miss — same reason.
+  architecture: cache_miss — same reason.
+lessons_to_record:
+  - lesson: >-
+      For documentation-only stories (.md agent instructions), standard test suite steps (pnpm test, coverage checks)
+      are not applicable and should be explicitly exempted rather than skipped silently. The evidence should state
+      'e2e_exempt: true' with a clear rationale.
+    category: pattern
+    tags:
+      - qa
+      - documentation
+      - agent-instructions
+  - lesson: >-
+      Backward-compat legacy fallback paths in agent instructions are a valid AC-3 exclusion mechanism — label with
+      [BACKWARD-COMPAT ONLY] or 'legacy-only last resort' to distinguish from active-path references during grep
+      verification.
+    category: pattern
+    tags:
+      - qa
+      - agent-instructions
+      - migration
+      - backward-compat
+tokens:
+  in: 12000
+  out: 1800

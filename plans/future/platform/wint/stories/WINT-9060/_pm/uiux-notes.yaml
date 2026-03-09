@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-9060 is a pure backend LangGraph orchestrator graph with no UI surface. The batch-process.ts file is invoked programmatically via runBatchProcess() — no React components, no Tailwind, no shadcn primitives, no Playwright E2E tests. UI/UX review is not applicable."

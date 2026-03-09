@@ -17,6 +17,7 @@ import {
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
+  WorkflowLogInvocationInputSchema,
   type WorktreeRegisterInput,
   type WorktreeGetByStoryInput,
   type WorktreeListActiveInput,
@@ -62,6 +63,16 @@ import {
   type KbGetRoadmapInput,
   type KbUpsertPlanInput,
 } from '../crud-operations/plan-operations.js'
+import {
+  KbGetPlanRevisionsInputSchema,
+  type KbGetPlanRevisionsInput,
+} from '../crud-operations/plan-revision-operations.js'
+import {
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
+  type KbLogPlanEventInput,
+  type KbGetPlanEventsInput,
+} from '../crud-operations/plan-execution-log-operations.js'
 import {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
@@ -3391,6 +3402,169 @@ Example (update tags):
   inputSchema: zodToMcpSchema(KbUpdatePlanInputSchema),
 }
 
+// ============================================================================
+// Plan Semantic Search (PDBM Phase 0)
+// ============================================================================
+
+export const KbSearchPlansInputSchema = z.object({
+  /** Natural language query to find similar plans */
+  query: z.string().min(1).max(2000),
+  /** Maximum number of results (default 5, max 20) */
+  limit: z.number().int().positive().max(20).default(5),
+  /** Optional plan_type filter to narrow results */
+  type_filter: z.string().optional(),
+})
+
+export type KbSearchPlansInput = z.infer<typeof KbSearchPlansInputSchema>
+
+export const kbSearchPlansToolDefinition: McpToolDefinition = {
+  name: 'kb_search_plans',
+  description: `Find plans similar to a given query using semantic similarity.
+
+Uses pgvector cosine similarity on plan embeddings (text-embedding-3-small).
+Returns plans ranked by similarity score with their current status.
+
+Parameters:
+- query (required): Natural language query to find similar plans
+- limit (optional): Maximum results (1-20, default 5)
+- type_filter (optional): Filter by plan type (e.g., 'feature', 'workflow')
+
+Returns: Array of {plan_slug, title, plan_type, status, similarity_score}
+
+Example:
+{
+  "query": "database schema migration and consolidation",
+  "limit": 5
+}`,
+  inputSchema: zodToMcpSchema(KbSearchPlansInputSchema),
+}
+
+// ============================================================================
+// Plan Dashboard (PDBM Phase 0)
+// ============================================================================
+
+export const KbGetPlanDashboardInputSchema = z.object({
+  /** Filter by plan status */
+  status: z.string().optional(),
+  /** Filter by plan type */
+  plan_type: z.string().optional(),
+  /** Maximum results (1-100, default 50) */
+  limit: z.number().int().min(1).max(100).optional().default(50),
+  /** Offset for pagination (default 0) */
+  offset: z.number().int().min(0).optional().default(0),
+})
+
+export type KbGetPlanDashboardInput = z.infer<typeof KbGetPlanDashboardInputSchema>
+
+export const kbGetPlanDashboardToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_dashboard',
+  description: `Get a summary dashboard of plans with story progress and dependency status.
+
+Queries the plan_summary_view which joins plans, stories, and dependencies
+to provide progress percentages and blocking information.
+
+Parameters:
+- status (optional): Filter by plan status
+- plan_type (optional): Filter by plan type
+- limit (optional): Maximum results (1-100, default 50)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of plan summaries with stories_total, stories_completed, stories_in_progress,
+progress_pct, blocking_plans, and is_blocked fields.
+
+Example:
+{
+  "status": "in-progress",
+  "limit": 20
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanDashboardInputSchema),
+}
+
+// ============================================================================
+// Plan Revision History (PDBM Phase 0)
+// ============================================================================
+
+export const kbGetPlanRevisionsToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_revisions',
+  description: `List revision history for a plan.
+
+Returns revisions ordered by revision_number DESC (most recent first).
+Each revision includes the full raw_content and content_hash.
+
+Parameters:
+- plan_slug (required): Plan slug to list revisions for
+- limit (optional): Maximum results (1-100, default 20)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of revisions with revision_number, raw_content, content_hash,
+sections, change_reason, changed_by, created_at.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "limit": 5
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanRevisionsInputSchema),
+}
+
+// ============================================================================
+// Plan Execution Log (PDBM Phase 0)
+// ============================================================================
+
+export const kbLogPlanEventToolDefinition: McpToolDefinition = {
+  name: 'kb_log_plan_event',
+  description: `Log a structured execution event for a plan.
+
+Records lifecycle events like status changes, phase progress, story spawning,
+blocking/unblocking, decisions, and errors.
+
+Parameters:
+- plan_slug (required): Plan slug to log event for
+- entry_type (required): One of: status_change, phase_started, phase_completed,
+  story_spawned, story_completed, blocked, unblocked, decision, note, error
+- phase (optional): Phase reference (e.g., 'Phase 1')
+- story_id (optional): Related story ID (e.g., 'WKFL-020')
+- message (required): Human-readable message
+- metadata (optional): Additional structured data
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "entry_type": "phase_started",
+  "phase": "Phase 1",
+  "message": "Starting Phase 1: Foundation"
+}`,
+  inputSchema: zodToMcpSchema(KbLogPlanEventInputSchema),
+}
+
+export const kbGetPlanEventsToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_events',
+  description: `List execution events for a plan.
+
+Returns events ordered by created_at DESC (most recent first).
+Can filter by entry_type to see only specific event types.
+
+Parameters:
+- plan_slug (required): Plan slug to list events for
+- entry_type (optional): Filter by event type
+- limit (optional): Maximum results (1-200, default 50)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of events with entry_type, phase, story_id, message, metadata, created_at.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "entry_type": "status_change"
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanEventsInputSchema),
+}
+
+// Re-export new schemas for handler imports
+export { KbGetPlanRevisionsInputSchema, KbLogPlanEventInputSchema, KbGetPlanEventsInputSchema }
+
+export type { KbGetPlanRevisionsInput, KbLogPlanEventInput, KbGetPlanEventsInput }
+
 /**
  * All MCP tool definitions.
  */
@@ -3545,6 +3719,147 @@ Example:
   inputSchema: zodToMcpSchema(KbGetStoryContextInputSchema),
 }
 
+// ============================================================================
+// Telemetry MCP Tools (WINT-0120)
+// ============================================================================
+
+/**
+ * Input schema for workflow_log_decision tool.
+ * Inserts one row to wint.hitl_decisions.
+ */
+export const WorkflowLogDecisionInputSchema = z.object({
+  invocation_id: z.string().uuid().optional(),
+  decision_type: z.string().min(1),
+  decision_text: z.string().min(1),
+  context: z.record(z.unknown()).optional(),
+  embedding: z.array(z.number()).optional(),
+  operator_id: z.string().min(1),
+  story_id: z.string().min(1),
+})
+export type WorkflowLogDecisionInput = z.infer<typeof WorkflowLogDecisionInputSchema>
+
+export const workflowLogDecisionToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_decision',
+  description: `Record a HITL (Human-In-The-Loop) decision in wint.hitl_decisions.
+
+Inserts one row capturing a human or agent decision during story execution.
+Supports semantic search via optional 1536-dim embedding of decision_text.
+
+Parameters:
+- decision_type (required): Category (e.g., "approve", "reject", "defer", "override")
+- decision_text (required): Human-readable description of the decision
+- operator_id (required): Operator/user who made the decision
+- story_id (required): Story this decision is associated with
+- invocation_id (optional): UUID FK to agent_invocations.id (nullable)
+- context (optional): Structured JSON context at time of decision
+- embedding (optional): 1536-dimensional number array for semantic similarity search
+
+Returns: { logged: true, id: uuid, message: string }
+
+Example:
+{
+  "decision_type": "approve",
+  "decision_text": "Approved implementation plan after reviewing scope",
+  "operator_id": "user-michael",
+  "story_id": "WINT-0120",
+  "context": { "iteration": 1, "phase": "plan" }
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogDecisionInputSchema),
+}
+
+/**
+ * Input schema for workflow_log_outcome tool.
+ * Upserts one row in wint.story_outcomes (unique on story_id).
+ */
+export const WorkflowLogOutcomeInputSchema = z.object({
+  story_id: z.string().min(1),
+  final_verdict: z.enum(['pass', 'fail', 'blocked', 'cancelled']),
+  quality_score: z.number().int().min(0).max(100).optional().default(0),
+  total_input_tokens: z.number().int().min(0).optional().default(0),
+  total_output_tokens: z.number().int().min(0).optional().default(0),
+  total_cached_tokens: z.number().int().min(0).optional().default(0),
+  estimated_total_cost: z.string().optional().default('0.0000'),
+  review_iterations: z.number().int().min(0).optional().default(0),
+  qa_iterations: z.number().int().min(0).optional().default(0),
+  duration_ms: z.number().int().min(0).optional().default(0),
+  primary_blocker: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  completed_at: z.coerce.date().optional(),
+})
+export type WorkflowLogOutcomeInput = z.infer<typeof WorkflowLogOutcomeInputSchema>
+
+export const workflowLogOutcomeToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_outcome',
+  description: `Upsert the final outcome for a story in wint.story_outcomes.
+
+One row per story (unique on story_id). Updates existing row if story already has an outcome.
+Tracks cumulative token usage, cost, quality scores, and iteration counts.
+
+Parameters:
+- story_id (required): Story identifier (e.g., "WINT-0040")
+- final_verdict (required): "pass" | "fail" | "blocked" | "cancelled"
+- quality_score (optional): 0-100 quality score (default 0)
+- total_input_tokens (optional): Cumulative input tokens (default 0)
+- total_output_tokens (optional): Cumulative output tokens (default 0)
+- total_cached_tokens (optional): Cumulative cached tokens (default 0)
+- estimated_total_cost (optional): Total cost in USD as string (default "0.0000")
+- review_iterations (optional): Review cycle count (default 0)
+- qa_iterations (optional): QA cycle count (default 0)
+- duration_ms (optional): Total wall-clock duration in milliseconds (default 0)
+- primary_blocker (optional): Primary failure/block reason
+- metadata (optional): Arbitrary JSON metadata
+- completed_at (optional): ISO timestamp of completion
+
+Returns: { logged: true, id: uuid, story_id: string, final_verdict: string, message: string }
+
+Example:
+{
+  "story_id": "WINT-0120",
+  "final_verdict": "pass",
+  "quality_score": 85,
+  "total_input_tokens": 45000,
+  "total_output_tokens": 12000,
+  "review_iterations": 1,
+  "duration_ms": 180000
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogOutcomeInputSchema),
+}
+
+/**
+ * Input schema for workflow_get_story_telemetry tool.
+ * Reads all 3 telemetry tables for a story.
+ */
+export const WorkflowGetStoryTelemetryInputSchema = z.object({
+  story_id: z.string().min(1),
+})
+export type WorkflowGetStoryTelemetryInput = z.infer<typeof WorkflowGetStoryTelemetryInputSchema>
+
+export const workflowGetStoryTelemetryToolDefinition: McpToolDefinition = {
+  name: 'workflow_get_story_telemetry',
+  description: `Retrieve all telemetry data for a story from the 3 telemetry tables.
+
+Queries wint.agent_invocations, wint.hitl_decisions, and wint.story_outcomes
+in parallel and returns all rows grouped by table.
+
+Parameters:
+- story_id (required): Story ID to query (e.g., "WINT-0120")
+
+Returns:
+{
+  story_id: string,
+  invocations: AgentInvocation[],  // all rows from wint.agent_invocations
+  decisions: HitlDecision[],        // all rows from wint.hitl_decisions
+  outcome: StoryOutcome | null,     // single row from wint.story_outcomes (or null)
+  message: string
+}
+
+Example:
+{
+  "story_id": "WINT-0120"
+}`,
+  inputSchema: zodToMcpSchema(WorkflowGetStoryTelemetryInputSchema),
+}
+
 export const toolDefinitions: McpToolDefinition[] = [
   kbAddToolDefinition,
   kbGetToolDefinition,
@@ -3626,6 +3941,12 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetRoadmapToolDefinition,
   kbUpdatePlanToolDefinition,
   kbUpsertPlanToolDefinition,
+  // PDBM Phase 0 plan tools
+  kbSearchPlansToolDefinition,
+  kbGetPlanDashboardToolDefinition,
+  kbGetPlanRevisionsToolDefinition,
+  kbLogPlanEventToolDefinition,
+  kbGetPlanEventsToolDefinition,
   // Artifact search tool (KBAR-0130)
   artifactSearchToolDefinition,
   // Story similarity search (CDTS-2010)
@@ -3698,4 +4019,67 @@ Example:
 toolDefinitions.push(
   // Context pack tool (WINT-2020)
   contextPackGetToolDefinition,
+)
+
+// ============================================================================
+// Telemetry Tool (WINT-3020)
+// ============================================================================
+
+/**
+ * workflow_log_invocation tool definition.
+ * WINT-3020: Invocation Logging Skill (telemetry-log)
+ */
+export const workflowLogInvocationToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_invocation',
+  description: `Log an agent invocation record to wint.agent_invocations.
+
+Fire-and-forget telemetry skill for WINT workflow agents.
+Inserts exactly one row per call. Returns the inserted row, or null if the DB write fails.
+Null return must NOT block the calling workflow — telemetry is a side-effect, not a gate.
+
+Required parameters:
+- agentName: Name of the calling agent (e.g., 'dev-execute-leader')
+- status: Invocation outcome — 'success', 'failure', or 'partial'
+
+Optional parameters:
+- invocationId: Unique ID (UUID recommended). Auto-generated if not provided.
+  Recommend format: {agentName}-{storyId}-{isoTimestamp} for idempotency.
+- storyId: Story ID this invocation is associated with
+- phase: Workflow phase — 'setup', 'plan', 'execute', 'review', 'qa'
+- inputTokens: Input token count (non-negative integer)
+- outputTokens: Output token count (non-negative integer)
+- cachedTokens: Cached/prompt-hit token count (default: 0)
+- durationMs: Wall-clock duration in milliseconds
+- modelName: LLM model name (e.g., 'claude-sonnet-4-6')
+- errorMessage: Error message if status is 'failure'
+
+Returns: Inserted row object or null (on DB failure — workflow continues either way)
+
+Example:
+{
+  "agentName": "dev-execute-leader",
+  "storyId": "WINT-3020",
+  "phase": "execute",
+  "status": "success",
+  "inputTokens": 1200,
+  "outputTokens": 400,
+  "cachedTokens": 0,
+  "durationMs": 4200,
+  "modelName": "claude-sonnet-4-6"
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogInvocationInputSchema),
+}
+
+// Append workflow_log_invocation to toolDefinitions
+toolDefinitions.push(
+  // Telemetry tool (WINT-3020)
+  workflowLogInvocationToolDefinition,
+)
+
+// Append WINT-0120 telemetry tools to toolDefinitions (after WINT-3020)
+toolDefinitions.push(
+  // Telemetry tools (WINT-0120)
+  workflowLogDecisionToolDefinition,
+  workflowLogOutcomeToolDefinition,
+  workflowGetStoryTelemetryToolDefinition,
 )

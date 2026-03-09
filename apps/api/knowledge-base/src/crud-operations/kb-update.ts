@@ -12,6 +12,9 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import type { EmbeddingClient } from '../embedding-client/index.js'
+import { computeContentHash } from '../embedding-client/cache-manager.js'
+import { KbUpdateInputSchema, type KbUpdateInput } from './schemas.js'
+import { NotFoundError } from './errors.js'
 
 // Explicit column selector — guard against schema-vs-DB drift
 const keColumns = {
@@ -34,9 +37,6 @@ const keColumns = {
   deletedAt: knowledgeEntries.deletedAt,
   deletedBy: knowledgeEntries.deletedBy,
 } as const
-import { computeContentHash } from '../embedding-client/cache-manager.js'
-import { KbUpdateInputSchema, type KbUpdateInput } from './schemas.js'
-import { NotFoundError } from './errors.js'
 
 /**
  * Dependencies for kb_update operation.

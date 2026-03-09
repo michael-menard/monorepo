@@ -1,0 +1,447 @@
+# Deferred KB Writes: WINT-0080
+# Generated: 2026-02-16
+# Reason: KB write tools not available during story generation
+# Retry: These writes should be retried when KB MCP tools are accessible
+
+deferred_writes:
+  - timestamp: "2026-02-16T00:00:00Z"
+    operation: "INSERT INTO stories"
+    table: "stories"
+    data:
+      story_id: "WINT-0080"
+      feature: "wint"
+      title: "Seed Initial Workflow Data"
+      story_dir: "plans/future/platform/wint/WINT-0080"
+      story_file: "plans/future/platform/wint/WINT-0080/WINT-0080.md"
+      story_type: "feature"
+      points: 8
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+      phase: 0
+      epic: "wint"
+      experiment_variant: "control"
+      created_at: "2026-02-16T00:00:00Z"
+      depends_on:
+        - "WINT-0070"
+        - "WINT-0060"
+      tags:
+        - "database"
+        - "seed-data"
+        - "reference-data"
+        - "workflow"
+        - "graph"
+      description_preview: "Create idempotent seed data scripts that populate foundational reference tables with current workflow inventory: phases, CRUD capabilities, agent metadata, command metadata, and skill metadata."
+
+    sql_equivalent: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra, phase, epic, experiment_variant,
+        created_at, depends_on, tags, description_preview
+      ) VALUES (
+        'WINT-0080',
+        'wint',
+        'Seed Initial Workflow Data',
+        'plans/future/platform/wint/WINT-0080',
+        'plans/future/platform/wint/WINT-0080/WINT-0080.md',
+        'feature',
+        8,
+        'high',
+        'backlog',
+        true,
+        false,
+        true,
+        false,
+        0,
+        'wint',
+        'control',
+        '2026-02-16T00:00:00Z',
+        ARRAY['WINT-0070', 'WINT-0060'],
+        ARRAY['database', 'seed-data', 'reference-data', 'workflow', 'graph'],
+        'Create idempotent seed data scripts that populate foundational reference tables with current workflow inventory: phases, CRUD capabilities, agent metadata, command metadata, and skill metadata.'
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        updated_at = NOW();
+
+retry_instructions: |
+  To retry these deferred KB writes:
+
+  1. Ensure postgres-knowledgebase MCP server is running
+  2. Verify 'stories' table exists with required schema
+  3. Execute SQL equivalent or use MCP tool equivalent:
+
+     mcp__postgres-knowledgebase__execute({
+       query: <sql_equivalent>,
+       params: <data>
+     })
+
+  4. Verify insertion:
+
+     SELECT story_id, title, state FROM stories WHERE story_id = 'WINT-0080';
+
+  5. Delete this DEFERRED-KB-WRITES.yaml file after successful write
+
+  # Future Opportunities / Non-Blocking Findings (from elab-autonomous-decider)
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "inventory-discrepancy"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "gap"
+      title: "Inventory count discrepancy: agents (115 vs 143)"
+      description: "stories.index.md lists 115 agents, but reality baseline shows 143 agent files. Story description is correct (143), index is outdated."
+      impact: "High"
+      effort: "Low"
+      recommendation: "Update stories.index.md reality baseline section (lines 47-56) with current agent count."
+      tags: ["inventory", "documentation", "non-blocking"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "inventory-discrepancy"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "gap"
+      title: "Inventory count discrepancy: commands (28 vs 33)"
+      description: "stories.index.md lists 28 commands, but reality baseline shows 33 command files. Story description is correct (33), index is outdated."
+      impact: "High"
+      effort: "Low"
+      recommendation: "Update stories.index.md reality baseline section with current command count."
+      tags: ["inventory", "documentation", "non-blocking"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "inventory-discrepancy"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "gap"
+      title: "Inventory count discrepancy: skills (13 vs 14)"
+      description: "stories.index.md lists 13 skills, but reality baseline shows 14 skill directories. Story description is correct (14), index is outdated."
+      impact: "Medium"
+      effort: "Low"
+      recommendation: "Update stories.index.md reality baseline section with current skill count."
+      tags: ["inventory", "documentation", "non-blocking"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Agent version history not tracked"
+      description: "Seed script does not handle agent version history. Future story: Track agent version changes over time for telemetry/ML training."
+      impact: "Low"
+      effort: "Medium"
+      recommendation: "Create follow-up story to add version tracking for agents."
+      tags: ["observability", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "edge-case"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "No frontmatter schema validation"
+      description: "No validation of agent frontmatter against expected Zod schema during parsing."
+      impact: "Low"
+      effort: "Low"
+      recommendation: "Add Zod schema for agent frontmatter and validate during parsing."
+      tags: ["validation", "edge-case", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "edge-case"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "No deduplication for duplicate entries"
+      description: "No deduplication if same agent/command/skill appears in multiple locations."
+      impact: "Low"
+      effort: "Low"
+      recommendation: "Add uniqueness check by name before insert."
+      tags: ["edge-case", "data-quality", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Command metadata extraction strategy undefined"
+      description: "Command metadata extraction strategy not specified. Need to define what metadata to extract from command files (triggers, description, permissions)."
+      impact: "Medium"
+      effort: "Medium"
+      recommendation: "Define command metadata schema and extraction strategy."
+      tags: ["metadata", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Skill metadata extraction strategy undefined"
+      description: "Skill metadata extraction strategy not specified. Need to define what metadata to extract from skill directories (capabilities, dependencies)."
+      impact: "Medium"
+      effort: "Medium"
+      recommendation: "Define skill metadata schema and extraction strategy."
+      tags: ["metadata", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "performance"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "No performance benchmarking for bulk inserts"
+      description: "No performance benchmarking for 205+ inserts in single transaction."
+      impact: "Low"
+      effort: "Low"
+      recommendation: "Add timing metrics to seed script, optimize if > 5 seconds."
+      tags: ["performance", "observability", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "No rollback/undo mechanism for seed data"
+      description: "No rollback/undo mechanism for seed data. Would be useful for testing and development."
+      impact: "Low"
+      effort: "Medium"
+      recommendation: "Add `pnpm seed:wint:reset` command to truncate seeded tables."
+      tags: ["developer-experience", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "observability"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Seed data versioning not addressed"
+      description: "Seed data versioning not addressed. Cannot track which version of seed data is in database."
+      impact: "Low"
+      effort: "Medium"
+      recommendation: "Track seed data version in database (e.g., `wint.seed_metadata` table)."
+      tags: ["versioning", "observability", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "No incremental seed updates (delta mode)"
+      description: "No incremental seed updates (delta mode). Must re-seed entire dataset even for small changes."
+      impact: "Medium"
+      effort: "High"
+      recommendation: "Future story WINT-0087: Add delta update capability for new/changed files only."
+      tags: ["performance", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Hardcoded capabilities may diverge from schema"
+      description: "Hardcoded capabilities list may diverge from user-flows.schema.json over time."
+      impact: "Medium"
+      effort: "Low"
+      recommendation: "Generate capabilities from schema file instead of hardcoding."
+      tags: ["schema-driven", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "enhancement"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could generate TypeScript types from seeded data"
+      description: "Seed script could generate TypeScript types from parsed data for type-safe references."
+      impact: "Medium"
+      effort: "Medium"
+      recommendation: "Export seeded data as const arrays for type-safe references in code."
+      tags: ["type-safety", "developer-experience", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add agent dependency graph"
+      description: "Could add agent dependency graph (spawned_by relationships) for workflow analysis."
+      impact: "High"
+      effort: "High"
+      recommendation: "Future story: Build agent dependency graph from spawned_by metadata."
+      tags: ["graph", "analytics", "future-work"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add agent→skill→command relationship tracking"
+      description: "Could add agent→skill→command relationship tracking for complete workflow graph."
+      impact: "High"
+      effort: "High"
+      recommendation: "Future story: Build full relationship graph for workflow analysis."
+      tags: ["graph", "analytics", "future-work"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "observability"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add agent permission level analytics"
+      description: "Could add agent permission level analytics dashboard showing permission distribution."
+      impact: "Medium"
+      effort: "Low"
+      recommendation: "Dashboard showing permission level distribution (docs-only vs admin)."
+      tags: ["analytics", "observability", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "observability"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add model usage analytics"
+      description: "Could add model usage analytics showing which models are used by which agent types."
+      impact: "Medium"
+      effort: "Low"
+      recommendation: "Dashboard showing model usage distribution by agent type."
+      tags: ["analytics", "observability", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could validate agent triggers against command inventory"
+      description: "Could validate agent triggers against actual command names to find broken references."
+      impact: "High"
+      effort: "Medium"
+      recommendation: "Cross-reference agent triggers with command inventory for broken references."
+      tags: ["validation", "data-quality", "future-work"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "observability"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add agent test coverage metrics"
+      description: "Could add agent test coverage metrics to track which agents have test files."
+      impact: "Medium"
+      effort: "High"
+      recommendation: "Track which agents have test files, report coverage gaps."
+      tags: ["testing", "observability", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "future-work"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could add agent last-used timestamp"
+      description: "Could add agent last-used timestamp for deprecation analysis."
+      impact: "Medium"
+      effort: "Medium"
+      recommendation: "Future story: Track agent invocation timestamps for deprecation analysis."
+      tags: ["observability", "future-work", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "enhancement"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could export seed data to JSON for documentation"
+      description: "Could add seed data export to JSON for documentation purposes."
+      impact: "Low"
+      effort: "Low"
+      recommendation: "Generate agent/command/skill inventory docs from database."
+      tags: ["documentation", "enhancement"]
+
+  - timestamp: "2026-02-16T17:30:00Z"
+    operation: "INSERT INTO findings"
+    table: "findings"
+    source_stage: "elab"
+    category: "observability"
+    data:
+      story_id: "WINT-0080"
+      finding_type: "enhancement"
+      title: "Could validate seed data against reality baseline"
+      description: "Could add seed data validation against reality baseline to detect drift."
+      impact: "High"
+      effort: "Medium"
+      recommendation: "Compare seeded counts against BASELINE-REALITY-*.md files for drift detection."
+      tags: ["validation", "observability", "enhancement"]
+
+notes:
+  - KB persistence is non-blocking for story generation
+  - Story file is the source of truth
+  - KB write improves searchability but is not required for workflow
+  - This file can be safely committed to git as a reminder
+  - 23 additional findings from elab-autonomous-decider added 2026-02-16
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

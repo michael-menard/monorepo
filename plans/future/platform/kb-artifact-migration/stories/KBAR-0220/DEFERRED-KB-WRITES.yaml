@@ -1,0 +1,24 @@
+deferred_at: "2026-03-02"
+reason: "KB unavailable at story generation time — psql not found, KB container not running"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: KBAR-0220
+      feature: kb-artifact-migration
+      title: "Agent Migration Testing — End-to-End Canary Story Workflow Validation for KBAR Phase 5"
+      story_dir: plans/future/platform/kb-artifact-migration/backlog/KBAR-0220
+      story_file: plans/future/platform/kb-artifact-migration/backlog/KBAR-0220/KBAR-0220.md
+      story_type: spike
+      points: 3
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    conflict_action: "ON CONFLICT (story_id) DO UPDATE SET title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

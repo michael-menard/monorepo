@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WKFL-005"
+feature_dir: "plans/future/workflow-learning"
+timestamp: "2026-02-07T19:30:00Z"
+
+current_phase: completion
+last_successful_phase: qa-verify
+
+iteration: 0
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings: []
+
+completed_at: 2026-02-07T19:30:00Z
+e2e_gate: exempt
+
+implementation_completed: true
+review_verdict: PASS
+qa_verify_verdict: PASS
+
+completion_phase_status: complete
+status_updated_to: uat
+index_updated: true
+gate_decision_written: true

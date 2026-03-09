@@ -1,0 +1,24 @@
+# Deferred KB writes — to be retried when KB is available
+deferred_at: "2026-02-25T00:00:00Z"
+reason: "KB persistence attempted during story generation; deferring for retry"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: APIP-3020
+      feature: autonomous-pipeline
+      title: "Model Affinity Profiles Table and Pattern Miner Cron"
+      story_dir: plans/future/platform/autonomous-pipeline/backlog/APIP-3020
+      story_file: plans/future/platform/autonomous-pipeline/backlog/APIP-3020/APIP-3020.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

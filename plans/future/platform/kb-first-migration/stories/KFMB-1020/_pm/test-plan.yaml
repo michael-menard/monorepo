@@ -1,0 +1,145 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  e2e: not_applicable
+  notes: "MCP server communicates over stdio; no HTTP endpoints. E2E not applicable per ADR-006 (no frontend ACs). UAT requires real KB database at port 5433 with KFMB-1010 migration applied."
+
+happy_path_tests:
+  - id: HP-1
+    title: "Fresh insert via kb_create_story"
+    setup: "Real KB database (port 5433) with KFMB-1010 migration applied. No existing story with target story_id."
+    action: "Call kb_create_story({ story_id: 'TEST-001', title: 'Test Story', feature: 'test', priority: 'medium', state: 'backlog' })"
+    expected: "Response includes created: true, story row exists in DB with all provided fields set correctly, omitted optional fields are null."
+    evidence: "Query stories table directly: SELECT * FROM stories WHERE story_id = 'TEST-001'. Assert created: true in MCP response."
+
+  - id: HP-2
+    title: "Idempotent re-upsert with partial fields (partial merge)"
+    setup: "Story 'TEST-001' already exists in DB with description = 'Original description'."
+    action: "Call kb_create_story({ story_id: 'TEST-001', title: 'Updated Title' }) — omitting description field."
+    expected: "Response includes created: false. DB row has title = 'Updated Title' AND description = 'Original description' (not overwritten to null)."
+    evidence: "Query stories table: assert title changed but description preserved. Assert created: false in MCP response."
+
+  - id: HP-3
+    title: "Content field round-trip — write via kb_create_story, read via kb_get_story"
+    setup: "Empty test story slot in DB."
+    action: "Call kb_create_story({ story_id: 'TEST-002', title: 'Content Test', description: 'Full description', acceptance_criteria: 'AC-1: thing works', non_goals: 'Not doing X', packages: ['@repo/logger'] }). Then call kb_get_story({ story_id: 'TEST-002' })."
+    expected: "kb_get_story response includes description, acceptance_criteria, non_goals, packages matching the values written."
+    evidence: "Assert each content field in kb_get_story response equals the value passed to kb_create_story."
+
+  - id: HP-4
+    title: "Content field update via kb_update_story"
+    setup: "Story 'TEST-003' exists in DB with no content fields set (all null)."
+    action: "Call kb_update_story({ story_id: 'TEST-003', description: 'New description', acceptance_criteria: 'AC-1: works', non_goals: 'N/A', packages: ['drizzle-orm'] })"
+    expected: "DB row has all four content fields updated. Existing metadata fields (title, priority, state) unchanged."
+    evidence: "Query stories table: assert content fields set, metadata fields unchanged."
+
+  - id: HP-5
+    title: "kb_get_story returns content fields as null when not set"
+    setup: "Story 'TEST-004' exists with only metadata (no content fields)."
+    action: "Call kb_get_story({ story_id: 'TEST-004' })"
+    expected: "Response includes description: null, acceptance_criteria: null, non_goals: null, packages: null."
+    evidence: "Assert each content field is null in response."
+
+  - id: HP-6
+    title: "Access control — all roles can call kb_create_story"
+    setup: "Story ID 'TEST-005' does not exist."
+    action: "Call kb_create_story with each role in ACCESS_MATRIX (pm, dev, orchestrator, etc.)."
+    expected: "All roles succeed with 200-equivalent response, no authorization error."
+    evidence: "Assert no AccessDenied error returned for any role."
+
+error_cases:
+  - id: EC-1
+    title: "kb_create_story called without required story_id"
+    setup: "Real KB database available."
+    action: "Call kb_create_story({ title: 'Missing ID Story' }) — omitting story_id."
+    expected: "Zod parse error returned, no DB write attempted. Error message indicates story_id is required."
+    evidence: "Assert MCP tool response contains error. DB unchanged."
+
+  - id: EC-2
+    title: "kb_create_story called without required title"
+    setup: "Real KB database available."
+    action: "Call kb_create_story({ story_id: 'TEST-006' }) — omitting title."
+    expected: "Zod parse error returned, no DB write attempted. Error message indicates title is required."
+    evidence: "Assert MCP tool response contains error."
+
+  - id: EC-3
+    title: "kb_get_story for non-existent story_id"
+    setup: "Real KB database, story 'NONEXISTENT-999' does not exist."
+    action: "Call kb_get_story({ story_id: 'NONEXISTENT-999' })"
+    expected: "Response indicates story not found (null or not_found error). No crash."
+    evidence: "Assert response structure indicates missing story, no 500 error."
+
+  - id: EC-4
+    title: "kb_update_story with content fields on non-existent story"
+    setup: "Real KB database, story 'NONEXISTENT-888' does not exist."
+    action: "Call kb_update_story({ story_id: 'NONEXISTENT-888', description: 'Should fail' })"
+    expected: "Response indicates story not found. No phantom row created."
+    evidence: "Assert error response. Query DB to confirm no row created."
+
+edge_cases:
+  - id: ED-1
+    title: "Upsert clobber guard — re-upsert with undefined description does NOT overwrite existing value"
+    setup: "Story 'TEST-007' exists with description = 'Keep me'."
+    action: "Call kb_create_story({ story_id: 'TEST-007', title: 'New Title' }) — description intentionally omitted (undefined)."
+    expected: "DB row description = 'Keep me' preserved. Only title updated."
+    evidence: "Query stories table: assert description = 'Keep me'. This is the critical partial-merge guard test."
+
+  - id: ED-2
+    title: "Upsert with all content fields simultaneously"
+    setup: "Empty story slot."
+    action: "Call kb_create_story with story_id, title, AND all four content fields in a single call."
+    expected: "All fields written in one round-trip. Response created: true."
+    evidence: "Query DB: assert all seven fields (id, title, description, acceptance_criteria, non_goals, packages) present."
+
+  - id: ED-3
+    title: "Existing kb_get_story / kb_update_story_status / kb_list_stories tests do not regress"
+    setup: "Full test suite run after KFMB-1020 changes applied."
+    action: "Run pnpm test --filter knowledge-base (unit + integration tests)"
+    expected: "All pre-existing tests pass. No regressions in kb_get_story, kb_update_story_status, kb_list_stories handlers."
+    evidence: "CI green. Test output shows 0 new failures."
+
+  - id: ED-4
+    title: "packages field accepts array of strings"
+    setup: "Empty story slot."
+    action: "Call kb_create_story({ story_id: 'TEST-008', title: 'Pkg Test', packages: ['@repo/logger', 'drizzle-orm', 'zod'] })"
+    expected: "packages stored as array. kb_get_story returns ['@repo/logger', 'drizzle-orm', 'zod']."
+    evidence: "Assert packages array in get response matches input array."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "MCP tool response: { content: [{ type: 'text', text: JSON.stringify({...}) }] }"
+      - "created: true on first insert, created: false on upsert"
+      - "Partial merge: omitted fields in upsert must not overwrite existing DB values"
+      - "All four content fields (description, acceptance_criteria, non_goals, packages) readable via kb_get_story"
+      - "No AccessDenied error for any role in ACCESS_MATRIX"
+  mcp:
+    tool_calls:
+      - "kb_create_story({ story_id, title, ...optional_fields })"
+      - "kb_get_story({ story_id })"
+      - "kb_update_story({ story_id, ...content_fields })"
+    assertions:
+      - "kb_create_story returns { ...story_row, created: boolean }"
+      - "All MCP handlers follow correlation ID + timing + structured logging pattern"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: "test_story_metadata_only"
+    type: "db_row"
+    description: "stories table row with story_id, title, priority, state set but all content fields null"
+  - name: "test_story_with_content"
+    type: "db_row"
+    description: "stories table row with all metadata AND description, acceptance_criteria, non_goals, packages populated"
+  - name: "test_kb_database"
+    type: "infrastructure"
+    description: "Real KB database at port 5433 with KFMB-1010 migration applied (content columns exist)"
+
+risks:
+  - "Tests will fail with column-not-found error if run before KFMB-1010 migration is applied — gate test run on migration check"
+  - "Partial-merge upsert correctness is critical and subtle — ED-1 edge case is the highest-value test; must not be skipped"
+  - "Access control matrix coverage depends on having test utilities for each role — verify test-helpers.ts supports role injection"
+  - "packages column type (text[] vs jsonb) depends on KFMB-1010 implementation — Zod schema for this field must match actual column type"

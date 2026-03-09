@@ -1,0 +1,17 @@
+schema: 1
+story_id: WINT-4130
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-09T05:10:00Z'
+current_phase: fix
+last_successful_phase: code_review
+iteration: 3
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - wint schema absent — environment preconditions not met, validation ran in degraded mode
+  - 'DEV-001: wint schema not present in dev PostgreSQL (WINT-4030 and WINT-4050 not applied)'
+  - 'DEV-002: graph-checker.agent.md tool-to-function mismatch (ARCH-001 incompatibility with WINT-4060)'
+  - 'DEV-003: upload/replace not in CRUD_STAGES constant (WINT-4060 scope mismatch)'
+  - 'DEV-004: haiku model quality for rule evaluation'
+gen_mode: false

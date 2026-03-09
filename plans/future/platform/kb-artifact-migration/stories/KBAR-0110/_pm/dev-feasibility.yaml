@@ -1,0 +1,107 @@
+feasible: true
+confidence: high
+rationale: "The story has a clear, well-bounded scope: one new MCP tool handler, one schema entry in tool-schemas.ts, and a set of unit + integration test updates. The dual-write pattern (file primary, KB secondary) is established in the codebase via WINT-1150 lessons. All reuse candidates are identified. Primary unknowns are YAML serialization library availability and exact tool count at implementation time — both are resolvable in ST-1 before any code is written."
+complexity: medium
+
+change_surface:
+  areas:
+    - "apps/api/knowledge-base/src/mcp-server/ — handler and schema"
+    - "apps/api/knowledge-base/src/crud-operations/ — possibly extend artifact-operations.ts or add new function"
+    - "apps/api/knowledge-base/src/mcp-server/__tests__/ — unit tests and integration test update"
+  endpoints: []
+  deploy_touchpoints:
+    - "No new infrastructure required. MCP server redeployed as part of normal Lambda deployment."
+
+risks:
+  - finding: "KBAR-0090 (in UAT) and KBAR-010 (Created) both modify mcp-integration.test.ts and tool-schemas.ts. If either is not merged before KBAR-0110 starts, merge conflicts on tool count assertion and tool list are guaranteed."
+    mitigation: "Dependency gate in story: implementation cannot begin until both KBAR-0090 and KBAR-010 are merged to main. At ST-1 start, run getToolDefinitions().length to get ground-truth count."
+  - finding: "KB write failure must not propagate as an error. If the try/catch around kb_write_artifact is missing or incorrect, tool callers will receive error responses when only the KB write fails."
+    mitigation: "AC-4 explicitly requires try/catch with warning return. Unit test EC-2 validates this path. Code review gate must verify the isolation pattern."
+  - finding: "File path canonicalization: the tool accepts an optional file_path override. If the canonical path convention (how it is computed from story_id + artifact_type when file_path is omitted) is not defined, the implementation will be ambiguous."
+    mitigation: "ST-1 pre-implementation task: define canonical path convention in the story. Recommend: plans/future/{epic}/{story_id}/_implementation/{ARTIFACT_TYPE}.yaml or as provided by caller."
+
+missing_requirements:
+  - "Canonical file path computation rule when file_path is not provided: how is the path derived from story_id + artifact_type? This must be specified before implementation."
+  - "YAML serialization: is js-yaml already a dependency of apps/api/knowledge-base? If not, is JSON.stringify acceptable for file output, or does js-yaml need to be added?"
+
+evidence_expectations:
+  - "Unit test suite passes for handleArtifactWrite covering HP-1, EC-1, EC-2, HP-2 paths"
+  - "mcp-integration.test.ts tool count assertion passes with correct N+1 count"
+  - "mcp-integration.test.ts tool name list assertion includes 'artifact_write'"
+  - "pnpm check-types --filter @repo/knowledge-base passes with zero errors"
+  - "No console.log in any new/modified files (only @repo/logger)"
+  - "No TypeScript interfaces in any new/modified files (only Zod schemas)"
+
+subtasks:
+  - id: ST-1
+    title: "Pre-implementation: verify tool count, YAML lib, and canonical path convention"
+    goal: "Establish ground-truth tool count, confirm js-yaml availability, and define canonical file path convention before writing any code. Prevents CI failures from wrong count assertion and avoids mid-story scope additions."
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+      - "apps/api/knowledge-base/package.json"
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: "Document in ELAB.yaml: actual tool count from getToolDefinitions().length, js-yaml availability (boolean), canonical path formula."
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Add ArtifactWriteInputSchema Zod schema and extend artifact-operations.ts if needed"
+    goal: "Define the Zod input schema for artifact_write. Extend or wrap KbWriteArtifactInputSchema from artifact-operations.ts to add file_path, skip_kb fields. Covers AC-2."
+    files_to_read:
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+    acs: ["AC-2"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/knowledge-base. No TypeScript interfaces in diff."
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Implement handleArtifactWrite handler in tool-handlers.ts"
+    goal: "Add the handleArtifactWrite function following the handleKbWriteArtifact pattern: parse input → validate → writeFile (primary) → try kb_write_artifact (secondary, best-effort) → return structured response. Covers AC-3, AC-4, AC-5, AC-6."
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    acs: ["AC-3", "AC-4", "AC-5", "AC-6"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/knowledge-base. Handler function present. No console.log in diff."
+    estimated_tokens: 12000
+
+  - id: ST-4
+    title: "Register artifact_write in tool-schemas.ts and toolHandlers registry"
+    goal: "Add artifact_write tool definition to getToolDefinitions() in tool-schemas.ts and register handleArtifactWrite in the toolHandlers map. Covers AC-1."
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    acs: ["AC-1"]
+    depends_on: ST-3
+    verification: "pnpm check-types --filter @repo/knowledge-base. getToolDefinitions() includes artifact_write entry."
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Write unit tests for handleArtifactWrite using vi.hoisted mock pattern"
+    goal: "Create artifact-write-handler.test.ts (or similar) following story-tools.test.ts vi.hoisted pattern. Cover HP-1 (happy path), EC-1 (file write failure), EC-2 (KB write failure → warning), HP-2 (skip_kb:true). Covers AC-7."
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-write-handler.test.ts"
+    acs: ["AC-7"]
+    depends_on: ST-4
+    verification: "pnpm test --filter @repo/knowledge-base. All new test cases pass. No real DB calls in unit tests."
+    estimated_tokens: 15000
+
+  - id: ST-6
+    title: "Update mcp-integration.test.ts tool count and name list assertions"
+    goal: "Increment tool count assertion by 1 (using verified count from ST-1). Add 'artifact_write' to tool names list. Covers AC-8, AC-9."
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    acs: ["AC-8", "AC-9"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/knowledge-base. mcp-integration.test.ts passes. Tool count assertion uses value from ST-1 verification."
+    estimated_tokens: 4000

@@ -1,0 +1,348 @@
+# Deferred KB Writes: WINT-0100
+# Story persistence operations that should be retried when KB becomes available
+
+deferred_writes:
+  - type: story_persistence
+    timestamp: "2026-02-16T16:40:00Z"
+    operation: INSERT_OR_UPDATE
+    table: wint.stories
+    data:
+      story_id: WINT-0100
+      title: "Create Context Cache MCP Tools"
+      description: "Create 4 MCP tools (context_cache_get, context_cache_put, context_cache_invalidate, context_cache_stats) for type-safe database access to wint.contextPacks table. Enables context caching to reduce token consumption."
+      story_type: feature
+      epic: WINT
+      wave: null
+      priority: P2
+      complexity: medium
+      story_points: 5
+      state: backlog
+      metadata:
+        surfaces:
+          backend: true
+          frontend: false
+          database: true
+          infra: false
+        tags:
+          - mcp-tools
+          - context-cache
+          - database
+          - drizzle-orm
+          - zod-validation
+        experiment_variant: control
+        blocked_by: []
+        blocks: []
+    reason: "KB persistence attempted during story generation (Phase 4.5), fallback to deferred write"
+    retry_command: "Manual INSERT via @repo/db or MCP tool when available"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [future-work, cache-warming]
+    content: |
+      **No automatic cache warming on story start**
+      - Impact: Medium | Effort: Medium
+      - Current: Manual cache population required
+      - Recommendation: Deferred to WINT-2070 (Cache Warming Strategy) - automatic pre-population before workflow starts
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [future-work, observability]
+    content: |
+      **No cache eviction policy (manual cleanup only)**
+      - Impact: Low | Effort: Medium
+      - Current: No automatic eviction when storage limits reached
+      - Recommendation: Deferred to future observability story - LRU or TTL-based eviction
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [future-work, frontend, ui]
+    content: |
+      **No real-time cache monitoring UI**
+      - Impact: Low | Effort: High
+      - Current: Backend-only story by design
+      - Recommendation: UI tracking deferred to separate frontend story
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [future-work, observability, automation]
+    content: |
+      **No automatic cache invalidation triggers on dependency changes**
+      - Impact: Medium | Effort: High
+      - Current: Manual invalidation required
+      - Recommendation: Deferred to future observability story - detect when cached codebase summaries become stale
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [enhancement, validation]
+    content: |
+      **No validation of JSONB content structure in cache_put**
+      - Impact: Low | Effort: Low
+      - Current: Input validation uses z.record(z.unknown()) - accepts any JSONB
+      - Recommendation: Future story could add schema validation per packType
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [enhancement, scalability]
+    content: |
+      **No pagination for cache_stats when result set is large**
+      - Impact: Low | Effort: Low
+      - Current: Aggregates return single row
+      - Recommendation: Consider pagination if per-pack stats needed
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [enhancement, batch-operations]
+    content: |
+      **No bulk invalidation API (batch delete)**
+      - Impact: Low | Effort: Medium
+      - Current: AC-3 supports filters but not bulk operations
+      - Recommendation: Could add context_cache_bulk_invalidate in future
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [observability, monitoring]
+    content: |
+      **No cache hit rate alerting**
+      - Impact: Low | Effort: Medium
+      - Current: No alerting on cache effectiveness
+      - Recommendation: Token reduction measurement (WINT-2120) will track effectiveness; alerting can be added later
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [performance, optimization]
+    content: |
+      **No content compression for large JSONB payloads**
+      - Impact: Low | Effort: Medium
+      - Current: PostgreSQL JSONB is already compressed
+      - Recommendation: Explicit compression (gzip) could reduce storage further
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: future-opportunities
+    tags: [enhancement, testing]
+    content: |
+      **No cache warming dry-run mode**
+      - Impact: Low | Effort: Low
+      - Current: No dry-run preview
+      - Recommendation: Testing utility to preview cache warm without writing; low priority given dryRun pattern exists in WINT-0110
+    reason: "Non-blocking gap identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, metrics]
+    content: |
+      **Add cache hit ratio calculation to stats tool**
+      - Impact: Medium | Effort: Low
+      - Enhancement: AC-4 could include hitRatio: hitCount / (hitCount + missCount) metric
+      - Benefit: Better cache effectiveness measurement
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, invalidation]
+    content: |
+      **Add tag-based cache invalidation**
+      - Impact: Medium | Effort: Medium
+      - Enhancement: Extend schema to support tags array in content; invalidate by tag filter
+      - Benefit: More flexible invalidation strategies
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, debugging]
+    content: |
+      **Add cache diff tool for version comparison**
+      - Impact: Low | Effort: Medium
+      - Enhancement: Compare two versions of same pack
+      - Benefit: Useful for debugging cache staleness
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, backup]
+    content: |
+      **Add cache export/import for backup**
+      - Impact: Low | Effort: Medium
+      - Enhancement: Serialize cache to YAML/JSON for version control or disaster recovery
+      - Benefit: Cache portability and backup
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, token-tracking]
+    content: |
+      **Add content tokenCount auto-calculation on put**
+      - Impact: Medium | Effort: Low
+      - Enhancement: Use tiktoken library to estimate token count when caching content
+      - Benefit: Useful for token budget planning
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, dependency-tracking]
+    content: |
+      **Add cache dependency tracking**
+      - Impact: High | Effort: High
+      - Enhancement: Track which packs depend on others; cascade invalidation when dependencies change
+      - Benefit: Automatic cache consistency
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, analytics]
+    content: |
+      **Add cache access patterns analysis**
+      - Impact: Low | Effort: Medium
+      - Enhancement: Track which agents use which packs
+      - Benefit: Identify optimization opportunities
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, cache-warming, priority-queue]
+    content: |
+      **Add cache warming priority queue**
+      - Impact: Medium | Effort: High
+      - Enhancement: Prioritize warming based on pack usage frequency; integrate with WINT-2070
+      - Benefit: Optimize cache warming efficiency
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, revalidation]
+    content: |
+      **Add cache revalidation endpoint**
+      - Impact: Medium | Effort: Medium
+      - Enhancement: Force refresh of expired cache without invalidating
+      - Benefit: Useful for long-running sessions
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+  - type: finding
+    timestamp: "2026-02-16T17:00:00Z"
+    operation: INSERT
+    table: wint.knowledge_entries
+    source_stage: elab
+    story_id: WINT-0100
+    category: enhancements
+    tags: [enhancement, search]
+    content: |
+      **Add cache content search**
+      - Impact: Low | Effort: High
+      - Enhancement: Full-text search across cached content
+      - Benefit: Requires PostgreSQL tsvector or external search index
+    reason: "Enhancement opportunity identified during autonomous elaboration"
+
+notes:
+  - Story file successfully created at WINT-0100/WINT-0100.md
+  - Index updated with status=created
+  - Worker artifacts generated (TEST-PLAN.md, DEV-FEASIBILITY.md, RISK-PREDICTIONS.yaml)
+  - KB write deferred due to PM agent not having direct database access
+  - Retry when story-creation MCP tool or database migration script becomes available
+  - Autonomous elaboration: 20 non-blocking findings deferred to KB (10 gaps + 10 enhancements)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,35 @@
+schema: 1
+id: WISH-2012
+feature: wish
+type: feature
+state: uat
+title: Accessibility Testing Harness Setup
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2001
+follow_up_from: null
+scope:
+  packages:
+    - apps/web/app
+    - apps/web/app
+    - apps/web/app
+    - packages/core/accessibility/
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Establish a comprehensive accessibility testing infrastructure that enables WISH-2006 implementation and provides
+  automated WCAG AA compliance checking for the entire wishlist feature.
+non_goals:
+  - "**Actual Accessibility Fixes:** This story sets up testing only; WISH-2006 implements fixes"
+  - "**Third-Party Tools:** Integration with paid accessibility testing services (e.g., Accessibility Insights, Deque
+    axe Pro)"
+  - "**Internationalization Testing:** Language/locale-specific accessibility concerns defer to future stories"
+  - "**Mobile Accessibility:** Touch and mobile-specific a11y patterns defer to future stories"
+  - "**Advanced Testing:** Automated screen reader testing beyond mock utilities (complex infrastructure)"
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.263Z
+updated_at: 2026-01-31

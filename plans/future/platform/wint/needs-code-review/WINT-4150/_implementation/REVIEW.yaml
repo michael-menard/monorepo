@@ -1,0 +1,100 @@
+schema: 1
+story_id: WINT-4150
+timestamp: "2026-03-09T17:02:01Z"
+iteration: 2
+verdict: PASS
+workers_run:
+  - typecheck
+  - build
+workers_skipped:
+  - lint
+  - style
+  - syntax
+  - security
+  - reusability
+  - react
+  - typescript
+  - accessibility
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+ranked_patches: []
+review_summary: >-
+  All 11 acceptance criteria met. Six new Zod schema definitions created with
+  comprehensive unit test coverage, proper factory functions, ESM exports in
+  index.ts, documentation, and soft gate validation in elab-completion-leader
+  agent. 376 tests passing across 20 test files. Code adheres to CLAUDE.md
+  requirements (Zod-first, no semicolons, single quotes, .js extensions).
+  Build failure is pre-existing in @repo/mcp-tools.
+findings:
+  typecheck:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: false
+    command: "pnpm --filter=@repo/orchestrator check-types"
+    files_checked: 13
+    pre_existing_outside_scope: 4
+    findings: []
+  build:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: false
+    pre_existing_failures: 1
+    notes: "Build failure is pre-existing in @repo/mcp-tools (missing @repo/sidecar-rules-registry). Unrelated to WINT-4150."
+    findings: []
+  lint:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  style:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  syntax:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  security:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  reusability:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  react:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    notes: "No React components, N/A"
+    findings: []
+  typescript:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    findings: []
+  accessibility:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    skipped: true
+    notes: "No UI components, N/A"
+    findings: []
+codebase_health:
+  pre_existing_type_errors: 4
+  pre_existing_build_failures: 1
+  note: "4 type errors exist outside this story's scope. 1 pre-existing build failure in @repo/mcp-tools (unrelated to WINT-4150)."

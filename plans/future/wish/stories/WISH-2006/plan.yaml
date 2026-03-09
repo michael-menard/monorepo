@@ -1,0 +1,49 @@
+schema: 1
+story_id: WISH-2006
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Create useAnnouncer Hook
+    acs: []
+    files: []
+  - id: 2
+    name: Create useKeyboardShortcuts Hook
+    acs: []
+    files: []
+  - id: 3
+    name: Create useRovingTabIndex Hook
+    acs: []
+    files: []
+  - id: 4
+    name: Create Accessibility Utilities
+    acs: []
+    files: []
+  - id: 5
+    name: Enhance WishlistCard with Accessibility
+    acs: []
+    files: []
+  - id: 6
+    name: Enhance DraggableWishlistGallery with Keyboard Navigation
+    acs: []
+    files: []
+  - id: 7
+    name: Enhance Main Page with Keyboard Shortcuts
+    acs: []
+    files: []
+  - id: 8
+    name: Verify Modal Accessibility
+    acs: []
+    files: []
+  - id: 9
+    name: Create Unit Tests for Hooks
+    acs: []
+    files: []
+  - id: 10
+    name: Playwright E2E Tests for Keyboard Navigation
+    acs: []
+    files: []
+reuse: []

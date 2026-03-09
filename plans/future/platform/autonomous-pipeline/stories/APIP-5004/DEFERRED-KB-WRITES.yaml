@@ -1,0 +1,24 @@
+deferred_at: "2026-02-25T00:00:00Z"
+reason: "KB unavailable at story generation time"
+writes:
+  - operation: upsert
+    table: stories
+    data:
+      story_id: APIP-5004
+      feature: autonomous-pipeline
+      title: "Secrets Engine and API Key Management for Autonomous Pipeline"
+      story_dir: plans/future/platform/autonomous-pipeline/backlog/APIP-5004
+      story_file: plans/future/platform/autonomous-pipeline/backlog/APIP-5004/APIP-5004.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: true
+    on_conflict: "ON CONFLICT (story_id) DO UPDATE SET ..."
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

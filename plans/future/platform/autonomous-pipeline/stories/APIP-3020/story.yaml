@@ -1,0 +1,30 @@
+id: APIP-3020
+title: "Model Affinity Profiles Table and Pattern Miner Cron"
+status: uat
+priority: high
+experiment_variant: "control"
+epic: autonomous-pipeline
+phase: 3
+story_points: 5
+dependencies:
+  - APIP-3010
+downstream:
+  - APIP-3030
+  - APIP-3040
+  - APIP-3050
+  - APIP-3060
+  - APIP-3090
+surfaces:
+  backend: true
+  frontend: false
+  database: true
+  infra: false
+generated: "2026-02-25"
+seed_date: "2026-02-25"
+baseline_date: "2026-02-13"
+story_type: feature
+state: ready
+touches_backend: true
+touches_frontend: false
+touches_database: true
+touches_infra: false

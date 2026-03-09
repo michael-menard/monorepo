@@ -1,0 +1,24 @@
+deferred_at: "2026-03-02"
+reason: "KB MCP tools not available during story generation"
+retry_when: "Next story session with KB access"
+writes:
+  - table: stories
+    operation: "INSERT ON CONFLICT DO UPDATE"
+    data:
+      story_id: "AUDT-0030"
+      feature: "code-audit"
+      title: "End-to-End Integration Tests for 6 Audit Orchestration Nodes"
+      story_dir: "plans/future/platform/code-audit/backlog/AUDT-0030"
+      story_file: "plans/future/platform/code-audit/backlog/AUDT-0030/AUDT-0030.md"
+      story_type: "feature"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

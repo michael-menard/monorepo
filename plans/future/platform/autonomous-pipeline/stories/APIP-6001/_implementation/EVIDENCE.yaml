@@ -1,0 +1,100 @@
+schema: 1
+story_id: APIP-6001
+timestamp: '2026-03-04T00:00:00Z'
+iteration: 1
+overall_status: pass
+touched_files:
+  - scripts/implement-stories.sh
+  - scripts/implement-dispatcher.sh
+  - scripts/lib/story-utils.sh
+commands_run:
+  - command: "bash -n scripts/implement-stories.sh"
+    status: pass
+    output: "No syntax errors"
+  - command: "bash -n scripts/implement-dispatcher.sh"
+    status: pass
+    output: "No syntax errors"
+  - command: "bash -n scripts/lib/story-utils.sh"
+    status: pass
+    output: "No syntax errors"
+acceptance_criteria:
+  - ac_id: AC-1
+    status: pass
+    evidence: >-
+      validate_phase_gate() function defined in scripts/lib/story-utils.sh, accepting
+      (IMPL_DIR, STORY_ID, FROM_STAGE, TO_STAGE) and returning 0 on pass, 1 on fail.
+      Sourced into implement-stories.sh and implement-dispatcher.sh via story-utils.sh.
+    file: scripts/lib/story-utils.sh
+  - ac_id: AC-2
+    status: pass
+    evidence: >-
+      5 gate transitions implemented in validate_phase_gate() in story-utils.sh:
+      impl->needs-code-review (EVIDENCE.yaml + touched_files + commands_run),
+      needs-code-review->ready-for-qa (REVIEW.yaml + verdict=pass|conditional-pass),
+      needs-code-review->failed-code-review (REVIEW.yaml + verdict=fail|concerns),
+      ready-for-qa->UAT (VERIFICATION.yaml + verdict=pass),
+      ready-for-qa->failed-qa (VERIFICATION.yaml + verdict=fail)
+    file: scripts/lib/story-utils.sh
+  - ac_id: AC-3
+    status: pass
+    evidence: >-
+      validate_phase_gate() called before all phase-advancing move_story_to() calls in process_story()
+      in implement-stories.sh. Gate failure triggers FINAL_RESULT=fail with GATE-FAILURE.yaml written.
+    file: scripts/implement-stories.sh
+  - ac_id: AC-4
+    status: pass
+    evidence: "MAX_RETRIES=1 at line 94 (changed from 0)"
+    file: scripts/implement-stories.sh
+  - ac_id: AC-5
+    status: pass
+    evidence: >-
+      Structured GATE FAIL log entries emitted in validate_phase_gate() in story-utils.sh using format
+      'GATE FAIL: {story_id} ({from} -> {to}): {reason} in {artifact}'
+    file: scripts/lib/story-utils.sh
+  - ac_id: AC-6
+    status: pass
+    evidence: >-
+      GATE-FAILURE.yaml written to story _implementation/ dir on impl and QA gate exhaustion
+      in implement-stories.sh, with schema/story_id/timestamp/gate/reason fields.
+      Story then set to FINAL_RESULT=fail.
+    file: scripts/implement-stories.sh
+  - ac_id: AC-7
+    status: pass
+    evidence: >-
+      Backward compatibility maintained: validate_phase_gate() only fires on explicit phase-advancing
+      move_story_to() calls. Recovery/fallback moves are not gated.
+    evidence_type: manual
+  - ac_id: AC-8
+    status: pass
+    evidence: >-
+      validate_artifact_schema() and validate_phase_gate() functions defined in story-utils.sh and
+      sourced into implement-dispatcher.sh. Gate validation called in process_story() before accepting
+      impl, review, and QA transitions via verify_stage_transition().
+    file: scripts/implement-dispatcher.sh
+  - ac_id: REUSE-1
+    status: pass
+    evidence: >-
+      Extracted shared functions to scripts/lib/story-utils.sh:
+      find_story_dir, get_story_stage, is_elaborated, verify_stage_transition,
+      check_log_for_failure, validate_artifact_schema, validate_phase_gate.
+      Both implement-stories.sh and implement-dispatcher.sh source this file.
+      All 8 reusability findings from iteration-2 review resolved.
+    file: scripts/lib/story-utils.sh
+fix_cycles:
+  - iteration: 1
+    triggered_by: code_review
+    completed_at: '2026-03-04T00:00:00Z'
+    issues_fixed:
+      - file: scripts/lib/story-utils.sh
+        issue: "Created new shared function library to eliminate code duplication"
+        severity: medium
+        context: "8 reusability findings from code review - extracted 7 shared bash functions (find_story_dir, get_story_stage, is_elaborated, verify_stage_transition, check_log_for_failure, validate_artifact_schema, validate_phase_gate)"
+      - file: scripts/implement-stories.sh
+        issue: "Removed duplicate implementations of shared functions"
+        severity: medium
+        context: "Added source statement to import story-utils.sh library at top of script"
+      - file: scripts/implement-dispatcher.sh
+        issue: "Removed duplicate implementations of shared functions"
+        severity: medium
+        context: "Added source statement to import story-utils.sh library at top of script"
+    verification_result: PASS

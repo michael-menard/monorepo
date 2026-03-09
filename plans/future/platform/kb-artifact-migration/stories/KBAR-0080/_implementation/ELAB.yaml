@@ -1,0 +1,187 @@
+schema: 1
+story_id: "KBAR-0080"
+timestamp: "2026-02-23T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      stories.index.md KBAR-008 describes "Implement MCP tools for listing stories with filters
+      and updating status/phase" — but the tools are already implemented. The story's actual scope
+      is narrower: fix stale integration test (AC-1), write unit tests (AC-2 through AC-9), and
+      add a terminal-state guard (AC-8). The index description is stale and aspirational rather
+      than strictly conflicting. No extra endpoints, infrastructure, or packages are introduced.
+      Assessed as WARN rather than FAIL because the index entry is high-level and the story
+      correctly scopes to three discrete gaps against what already exists.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, Non-goals, Acceptance Criteria, Subtasks, and Architecture Notes are fully consistent.
+      The state lifecycle in AC-8 (backlog → ready → in_progress → ready_for_review → in_review
+      → ready_for_qa → in_qa → completed | cancelled | deferred | failed_code_review | failed_qa)
+      matches the StoryStateSchema enum values confirmed in
+      apps/api/knowledge-base/src/__types__/index.ts (lines 780-793). The terminal-state guard
+      Non-goal ("do NOT implement a full FSM") is consistent with the AC-8 guard spec. The
+      Architecture Notes clarify the guard return shape (soft-return pattern matching the not-found
+      branch, lines 284-290 of story-crud-operations.ts), which is internally consistent with AC-8.
+      The "blocked: false clears blockedReason and blockedByStory" behavior in AC-5 is confirmed
+      already implemented in story-crud-operations.ts lines 317-324. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan explicitly identifies all five existing operations in story-crud-operations.ts.
+      The vi.hoisted mock pattern is reused from tool-handlers.test.ts (canonical reference confirmed
+      as an existing file). The mcp-integration.test.ts is updated (not replaced). StoryStateSchema
+      is reused from __types__/index.ts for terminal-state constants. No new shared packages
+      introduced. No per-story one-off utilities proposed. Architecture Notes explicitly state
+      no barrel imports — import directly from story-crud-operations.ts or __types__/index.ts.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Backend-only story with no HTTP/REST endpoints. The terminal-state guard is placed inline in
+      the DB operations layer (story-crud-operations.ts), which is appropriate — it is a data-layer
+      business rule, not transport-specific logic. All three tool handlers already follow the correct
+      pattern: enforceAuthorization → Zod parse → DB operation → log → return JSON. No HTTP types
+      in the service layer. docs/architecture/api-layer.md check not applicable — no new API
+      endpoints are added or modified.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test commands are concrete and executable: `pnpm test --filter @repo/knowledge-base --
+      mcp-integration` (ST-1 verification), `pnpm test --filter @repo/knowledge-base -- story-tools`
+      (ST-3/4/5 verification), and `pnpm check-types --filter @repo/knowledge-base` (ST-2/6
+      verification). Each subtask has a specific verification command. The vi.hoisted mock pattern
+      reference (tool-handlers.test.ts) is a confirmed real file. ADR-005 requirement (real
+      PostgreSQL for integration tests) is documented. No .http file tests required — this is an
+      MCP protocol story with no REST endpoints; Vitest unit+integration strategy is appropriate
+      per ADR-006 (no E2E tests for backend-only stories).
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      The terminal-state guard return shape is fully specified in the Architecture Notes. The story
+      explicitly states (Architecture Notes, AC-8 clarification block): the guard MUST use the
+      soft-return pattern consistent with the not-found branch (lines 284-290 of
+      story-crud-operations.ts), returning { story: null, updated: false, message: "Cannot
+      transition from terminal state '${currentState}' to '${targetState}'..." }. The story
+      explicitly states "Do NOT throw — the guard is a business rule soft-rejection, not an
+      exceptional error" and further specifies that ST-4 test assertions must verify updated: false
+      and message field presence, not isError. No blocking TBDs or unresolved design decisions
+      remain.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Four explicit risks disclosed in pm_artifacts.dev_feasibility.risks: tool count drift
+      (concurrent stories), state transition same-state edge case, vi.hoisted mock ordering, and
+      real PostgreSQL requirement for integration tests. The Reality Baseline explicitly states the
+      stale count discrepancy (integration test asserts 52; story claims verified actual count of
+      54 on 2026-02-23; source audit at elaboration time counts 53 entries in toolDefinitions in
+      tool-schemas.ts — count must be re-verified at implementation time per the story's own risk
+      disclosure). The missing state guard is the core code-change risk and is well-identified.
+      No hidden dependencies. Dependency on KBAR-0070 is declared and all handlers are confirmed
+      already registered in tool-handlers.ts.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      10 ACs exceeds the 8-AC threshold (1 sizing indicator). All other indicators are absent:
+      only 2-3 files modified/created (well under the 5-endpoint threshold), no frontend work,
+      no new infrastructure, no multiple independent features bundled — the three gaps (stale
+      test, unit tests, state guard) address a single cohesive concern (validating story tools).
+      Touches 1 package (apps/api/knowledge-base). Token estimate is 37,000 across 6 subtasks.
+      Only 1 of 7 sizing indicators triggered. SPLIT NOT RECOMMENDED — the story is cohesive
+      with a natural dependency chain (ST-3 → ST-4 → ST-5) that would not benefit from
+      splitting.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      6 subtasks covering all 10 ACs. Coverage verified: AC-1 (ST-1), AC-2/3/9 (ST-3),
+      AC-4/5/6/8/9 (ST-4), AC-7/9 (ST-5), AC-8 guard implementation (ST-2), AC-10 (ST-6).
+      Dependency DAG: {ST-1, ST-2, ST-3} can run in parallel; ST-3 → ST-4 → ST-5 → ST-6;
+      ST-1 + ST-2 both gate ST-6. No cycles. Each subtask has a verification command. Files per
+      subtask: ST-1 reads 2/modifies 1; ST-2 reads 2/modifies 1; ST-3 reads 3/creates 1;
+      ST-4 reads 2/modifies 1; ST-5 reads 2/modifies 1; ST-6 reads 2/modifies 0 — all within
+      the 3-file guideline. Canonical References section is present with 4 entries.
+
+gaps: []
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      The state lifecycle in AC-8 implicitly assumes only states defined in StoryStateSchema are
+      valid in existing rows, but there is no test covering the case where existing[0].state is
+      not a recognized terminal or non-terminal value (e.g., a legacy or corrupted row with an
+      unexpected state string). The Zod schema prevents writing invalid states but does not protect
+      against reading legacy data. An additional test scenario in ST-4 could explicitly assert
+      guard behavior when existing state is outside the known terminal list.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "41cefe28-8d64-4c4c-9a09-0038bd0ab147"
+
+  - id: opp-2
+    category: observability
+    finding: >
+      The handleKbUpdateStoryStatus handler logs state and phase on invocation but does not log
+      the previous state before the transition. Adding previous_state to the success log entry
+      would make audit trails for state transitions debuggable without requiring a separate DB
+      query to reconstruct the before/after pair.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "0638488d-bcdf-468e-8f95-8ba2a2dedf67"
+
+  - id: opp-3
+    category: edge_cases
+    finding: >
+      AC-4 says startedAt is set "only if not already set" (idempotent) and completedAt similarly.
+      The test plan mentions startedAt idempotency but does not include a dedicated test for the
+      idempotent second-call scenario for completedAt (transitioning to 'completed' a second time
+      must not overwrite the original completedAt timestamp). The implementation correctly handles
+      this (story-crud-operations.ts lines 304-306) but the test coverage for completedAt
+      idempotency should be explicitly verified in ST-4.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "9eff82eb-7e3f-40a2-a4c0-63f8e390e1ae"
+
+  - id: opp-4
+    category: edge_cases
+    finding: >
+      The mcp-integration.test.ts mock covers only crud-operations/index.js (kb_add, kb_get,
+      kb_update, kb_delete, kb_list). story-crud-operations are NOT mocked in the integration
+      test. If any future tool invocation test for story tools is added to mcp-integration.test.ts,
+      a separate mock for story-crud-operations.js will be required. Not a gap for this story's
+      scope but relevant for KBAR-0090 and the KBAR-010 integration test story.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "a5f62305-b8de-4b1d-8f3d-c385004328e5"
+
+  - id: opp-5
+    category: edge_cases
+    finding: >
+      Tool count must be re-verified at implementation time before updating the assertion in
+      mcp-integration.test.ts. The story claims a verified count of 54 (2026-02-23) and instructs
+      updating 52→54, but source audit at elaboration time counts 53 entries in the toolDefinitions
+      array in tool-schemas.ts. The story correctly warns "tool count may drift if concurrent
+      stories add tools — verify at implementation time." The implementation team must run
+      getToolDefinitions().length before setting the assertion value.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "5721d886-aa7f-4820-aaab-a3c622947d11"
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-02-23T00:00:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 0

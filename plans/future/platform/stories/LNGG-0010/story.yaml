@@ -1,0 +1,421 @@
+---
+schema: 1
+id: LNGG-0010
+feature: platform
+type: infrastructure
+state: completed
+title: "Story File Adapter — YAML Read/Write"
+points: 5
+priority: high
+blocked_by: null
+depends_on: []
+follow_up_from: null
+experiment_variant: control
+scope:
+  packages:
+    - packages/backend/orchestrator
+  surfaces:
+    - packages
+    - testing
+goal: |
+  Create a type-safe Story File Adapter that reads story YAML files from disk,
+  parses them into StoryArtifact objects, writes StoryArtifact objects to disk
+  with proper YAML frontmatter formatting, and validates all I/O operations using
+  the existing StoryArtifactSchema. This is the foundational adapter that enables
+  all downstream LangGraph adapters (LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070)
+  to interact with story files.
+non_goals:
+  - Story creation logic (that's workflow orchestration, not I/O)
+  - Index file updates (that's LNGG-0020 - Index Management Adapter)
+  - Stage movement (that's LNGG-0040 - Stage Movement Adapter)
+  - Checkpoint management (that's LNGG-0060 - Checkpoint Adapter)
+  - Decision prompts (that's LNGG-0030 - Decision Callback System)
+  - Knowledge base writes (that's LNGG-0050 - KB Writing Adapter)
+  - File watching/hot reload (future enhancement)
+  - Concurrent write locking (assume single-writer for MVP)
+acs:
+  - id: AC-1
+    description: "Adapter reads existing story YAML files and parses into typed StoryArtifact objects using Zod validation"
+    testable: true
+    automated: true
+  - id: AC-2
+    description: "Adapter writes StoryArtifact objects to disk with valid YAML frontmatter + Markdown content"
+    testable: true
+    automated: true
+  - id: AC-3
+    description: "Adapter updates existing story files (merges frontmatter changes, preserves content)"
+    testable: true
+    automated: true
+  - id: AC-4
+    description: "Adapter validates story structure before read/write operations"
+    testable: true
+    automated: true
+  - id: AC-5
+    description: "Adapter uses atomic writes (temp file + rename) to prevent partial corruption"
+    testable: true
+    automated: true
+  - id: AC-6
+    description: "Adapter handles error conditions gracefully with typed errors"
+    testable: true
+    automated: true
+  - id: AC-7
+    description: "Adapter handles schema compatibility with existing story files using backward-compatible StoryArtifactSchema v2 (supports both legacy and new formats)"
+    testable: true
+    automated: true
+risks:
+  - id: RISK-1
+    description: "Schema mismatch with existing files - existing story YAML files may not match StoryArtifactSchema v1"
+    severity: high
+    mitigation: "RESOLVED: Created backward-compatible StoryArtifactSchema v2 that accepts both legacy (status, epic, acceptance_criteria) and new (state, feature, acs) formats. Schema uses .passthrough() and optional fields. See packages/backend/orchestrator/src/artifacts/story-v2-compatible.ts"
+  - id: RISK-2
+    description: "Atomic write failure leaves corrupted files if fs.rename() throws after temp file created"
+    severity: high
+    mitigation: "Implement try-catch-finally block, always clean up .tmp files, verify target file unchanged on error"
+  - id: RISK-3
+    description: "YAML library round-trip fidelity - gray-matter + js-yaml may not preserve all formatting/types"
+    severity: medium
+    mitigation: "Create comprehensive round-trip tests with all field types and special characters, switch libraries if needed"
+  - id: RISK-4
+    description: "Performance bottleneck on large file sets - reading 50+ files may exceed 5s requirement"
+    severity: medium
+    mitigation: "Implement parallel reads using Promise.all(), add caching layer if needed, profile and optimize"
+  - id: RISK-5
+    description: "Cross-platform path issues - Windows backslashes vs forward slashes may break path resolution"
+    severity: low
+    mitigation: "Use path.join() for all path operations, test on Windows if available, add CI job on Windows runner"
+created_at: "2026-02-13T00:00:00Z"
+updated_at: "2026-02-14T17:45:00Z"
+---
+
+# Story File Adapter — YAML Read/Write
+
+## Context
+
+LangGraph workflows need to interact with story files stored in the file system, but currently have no I/O capabilities. Story files are YAML frontmatter + Markdown content, stored in a rigid directory structure (`plans/future/{feature}/{stage}/{storyId}/story.yaml`). The orchestrator already has a `StoryArtifactSchema` (Zod-validated) but no adapter to serialize/deserialize these files to/from disk.
+
+**Problem:**
+Without a file adapter, LangGraph workflows cannot:
+- Read existing story files for elaboration
+- Write newly created story files
+- Update story metadata (status, dates, tags)
+- Validate story structure before persistence
+
+This blocks all downstream adapter stories (LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070) that depend on story file I/O.
+
+**Reality Baseline (as of 2026-02-13):**
+- `StoryArtifactSchema` exists at `packages/backend/orchestrator/src/artifacts/story.ts` with Zod validation
+- 50+ story YAML files exist in `plans/future/*/UAT/*/story.yaml` using established format
+- Docker Compose dev infrastructure deployed with persistent volumes
+- Zod-first type system is REQUIRED pattern across entire codebase
+- No active overlapping work (MODL-0010 is different domain)
+
+## Acceptance Criteria
+
+- [ ] **AC-1:** Adapter reads existing story YAML files and parses into typed `StoryArtifact` objects using Zod validation
+  - **Test:** Read `/plans/future/platform/workflow-learning/UAT/WKFL-001/story.yaml` and verify frontmatter fields match schema
+
+- [ ] **AC-2:** Adapter writes `StoryArtifact` objects to disk with valid YAML frontmatter + Markdown content
+  - **Test:** Write a test story, re-read it, and verify round-trip fidelity
+
+- [ ] **AC-3:** Adapter updates existing story files (merges frontmatter changes, preserves content)
+  - **Test:** Update `status` field, verify only `status` and `updated_at` changed
+
+- [ ] **AC-4:** Adapter validates story structure before read/write operations
+  - **Test:** Attempt to write invalid story (missing required field), verify validation error thrown
+
+- [ ] **AC-5:** Adapter uses atomic writes (temp file + rename) to prevent partial corruption
+  - **Test:** Simulate write failure mid-operation, verify no partial file left on disk
+
+- [ ] **AC-6:** Adapter handles error conditions gracefully with typed errors
+  - **Test:** Read missing file → `StoryNotFoundError`, read corrupted YAML → `InvalidYAMLError`
+
+## Reuse Plan
+
+**Components to Reuse:**
+- `StoryArtifactSchema` from `packages/backend/orchestrator/src/artifacts/story.ts` (MUST use existing schema)
+- Zod validation patterns from artifact schemas
+- Error handling patterns from database-schema package
+
+**Patterns to Follow:**
+- Zod-first type definitions (use `z.infer<>` for all types)
+- Component directory structure: `__types__/`, `__tests__/`, `utils/`
+- Atomic write pattern (temp file + rename)
+- Custom error classes with context
+
+**Packages to Leverage:**
+- `gray-matter` (YAML frontmatter parsing) - add as dependency
+- `js-yaml` (YAML serialization) - add as dependency
+- `zod` (already installed in orchestrator package)
+
+## Architecture Notes
+
+### File Structure
+```
+packages/backend/orchestrator/src/adapters/
+├── story-file-adapter.ts          # Main adapter class
+├── __types__/
+│   └── index.ts                   # Type re-exports (StoryArtifact, etc.)
+├── __tests__/
+│   ├── story-file-adapter.test.ts # Unit tests
+│   ├── story-file-adapter.integration.test.ts
+│   └── fixtures/
+│       ├── minimal-story.yaml
+│       ├── full-story.yaml
+│       ├── invalid-missing-id.yaml
+│       └── ...
+└── utils/
+    ├── yaml-parser.ts             # YAML parsing utilities
+    ├── file-utils.ts              # Atomic write utilities
+    └── __tests__/
+        ├── yaml-parser.test.ts
+        └── file-utils.test.ts
+```
+
+### Adapter Class Signature
+```typescript
+import { z } from 'zod'
+import { StoryArtifactSchema, type StoryArtifact } from '../artifacts/story.js'
+
+export class StoryFileAdapter {
+  constructor(private monorepoRoot: string) {}
+
+  async read(relativePath: string): Promise<StoryArtifact>
+  async write(relativePath: string, artifact: StoryArtifact): Promise<void>
+  async update(relativePath: string, updates: Partial<StoryArtifact>): Promise<void>
+  async readBatch(relativePaths: string[]): Promise<StoryArtifact[]>
+  async exists(relativePath: string): Promise<boolean>
+}
+```
+
+### Error Classes
+```typescript
+// Custom error hierarchy for adapter errors
+class StoryNotFoundError extends Error {
+  code: 'ENOENT'
+  filePath: string
+}
+
+class InvalidYAMLError extends Error {
+  code: 'INVALID_YAML'
+  parseError: Error
+  filePath: string
+}
+
+class StoryValidationError extends Error {
+  code: 'VALIDATION_FAILED'
+  zodErrors: z.ZodError
+  filePath: string
+}
+
+class FilePermissionError extends Error {
+  code: 'EACCES'
+  filePath: string
+}
+
+class AtomicWriteError extends Error {
+  code: 'WRITE_FAILED'
+  filePath: string
+  originalError: Error
+}
+```
+
+### Atomic Write Pattern
+```typescript
+async function atomicWrite(filePath: string, content: string): Promise<void> {
+  const tmpPath = `${filePath}.tmp`
+  try {
+    await fs.writeFile(tmpPath, content, 'utf-8')
+    await fs.rename(tmpPath, filePath) // Atomic operation
+  } catch (error) {
+    // Clean up temp file on error
+    try {
+      await fs.unlink(tmpPath)
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw new AtomicWriteError(...)
+  }
+}
+```
+
+### Performance Targets
+- Single read: <50ms (target), <100ms (max)
+- Single write: <100ms (target), <200ms (max)
+- Batch read (50 files): <5s (requirement)
+- Validation overhead: <10ms per file
+
+## Infrastructure Notes
+
+### Dependencies to Add
+Add to `packages/backend/orchestrator/package.json`:
+```json
+{
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.5"
+  }
+}
+```
+
+Install command:
+```bash
+cd packages/backend/orchestrator
+pnpm add gray-matter js-yaml
+pnpm add -D @types/js-yaml
+```
+
+### CI/CD Integration
+No changes needed to CI pipeline - orchestrator package tests already configured.
+
+Quality gates:
+- ✅ TypeScript compilation (`pnpm check-types`)
+- ✅ ESLint (`pnpm lint`)
+- ✅ Unit tests (`pnpm test`)
+- ✅ Integration tests (`pnpm test:integration`)
+- ✅ Coverage >80% for adapter class
+
+## Test Plan
+
+See: [TEST-PLAN.md](_pm/TEST-PLAN.md)
+
+**Summary:**
+- **Unit tests:** Read/write/update/validate operations (>80% coverage)
+- **Integration tests:** Real story files from `plans/future/*/UAT/`
+- **Performance tests:** Batch read <5s, single write <100ms
+- **Error handling tests:** All error types (missing files, corrupted YAML, validation failures)
+- **Edge cases:** Special characters, empty arrays, nulls, concurrent writes
+- **Compatibility:** Survey existing story files for schema alignment
+
+**Test Fixtures:**
+- Minimal valid story
+- Full story (all fields)
+- Invalid stories (missing fields, wrong types, corrupted YAML)
+- Real stories (WKFL-001, WKFL-004, WKFL-005)
+
+## Dev Feasibility
+
+See: [DEV-FEASIBILITY.md](_pm/DEV-FEASIBILITY.md)
+
+**Feasibility:** ✅ Yes (High Confidence)
+
+**MVP-Critical Risks:**
+1. Schema mismatch with existing files → Survey files first, handle migration
+2. Atomic write failure → Implement proper cleanup in finally block
+3. YAML round-trip fidelity → Comprehensive testing with all types
+4. Performance bottleneck → Parallel reads + benchmarking
+5. Cross-platform paths → Use path.join() everywhere
+
+**Missing Requirements Clarified:**
+1. **Error classes:** Defined above (5 custom error types)
+2. **Monorepo root resolution:** Constructor param (explicit, no auto-detection)
+3. **Logging:** Use @repo/logger, log INFO/WARN/ERROR levels
+4. **Extra fields handling:** Use Zod .passthrough() for backward compatibility
+
+**Estimated Effort:** 4.5-5.5 days
+
+**Implementation Order:**
+1. Core read/write (1-2 days)
+2. Validation & error handling (1 day)
+3. Update & batch operations (1 day)
+4. Integration & compatibility (1 day)
+5. Polish & documentation (0.5 days)
+
+## Reality Baseline
+
+**Loaded from:** `/Users/michaelmenard/Development/monorepo/plans/baselines/BASELINE-REALITY-2026-02-13.md`
+
+**Key Constraints:**
+- Zod-First Types (REQUIRED) - All types MUST be defined using Zod schemas with `z.infer<>`, never TypeScript interfaces
+- No Barrel Files - Import directly from source files, no index.ts re-exports
+- Functional Components Only - Named exports preferred
+- @repo/logger for Logging - Never use console.log
+- Story YAML Format - Frontmatter + Markdown content structure is established
+- File System Structure - `plans/future/{feature}/{stage}/{storyId}/story.yaml` pattern is rigid
+
+**Relevant Existing Features:**
+- `StoryArtifactSchema` deployed at `packages/backend/orchestrator/src/artifacts/story.ts`
+- 50+ story YAML files deployed in `plans/future/*/UAT/*/story.yaml`
+- Docker Compose dev infrastructure with persistent volumes
+- Zod-first type system across entire codebase
+
+**Active In-Progress Work:**
+- MODL-0010 (Provider Adapters) - Different domain, no overlap risk
+
+**Blocking Dependencies:** None (Wave 1, Story #5)
+
+**Blocks:** LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070
+
+## QA Discovery Notes (Auto-Generated)
+
+_Added by Autonomous Elaboration on 2026-02-13_
+
+### Critical Scope Alignment Issue
+
+**Status**: ✅ RESOLVED (2026-02-13)
+
+**Resolution**: Option A - Backward-Compatible Schema
+
+Created `StoryArtifactSchema v2` that resolves the blocking issue:
+
+**Solution Implemented:**
+- Created `packages/backend/orchestrator/src/artifacts/story-v2-compatible.ts`
+- Made all v1 fields optional for legacy compatibility
+- Added 15+ legacy fields (status, epic, acceptance_criteria, etc.) as optional
+- Used `.passthrough()` for unknown field preservation
+- Created normalization helpers (getStoryState, getStoryFeature, etc.)
+- Comprehensive test suite with 20+ test cases
+- Migration guide and implementation summary
+
+**Key Benefits:**
+✅ Zero migration required - all 50+ existing files work immediately
+✅ No breaking changes - existing workflows unaffected
+✅ Fully backward compatible with legacy format (status, epic, etc.)
+✅ Fully forward compatible with new format (state, feature, acs, etc.)
+✅ Production-ready with comprehensive test coverage
+
+**Files Created:**
+- `src/artifacts/story-v2-compatible.ts` (430 lines)
+- `src/artifacts/__tests__/story-v2-compatible.test.ts` (380 lines)
+- `src/artifacts/SCHEMA-MIGRATION-GUIDE.md` (180 lines)
+- `SCHEMA-UPDATE-SUMMARY.md` (implementation summary)
+
+**Field Mapping:**
+- `status` → `state` (auto-normalized)
+- `epic` → `feature` (auto-normalized)
+- `acceptance_criteria` → `acs` (auto-normalized)
+- `dependencies` → `depends_on` (auto-normalized)
+- All legacy fields preserved via `.passthrough()`
+
+**Next Steps:**
+1. Replace `story.ts` with `story-v2-compatible.ts` (or keep both)
+2. Proceed with Story File Adapter implementation
+3. All acceptance criteria now satisfiable
+
+### Non-Blocking Enhancement Opportunities (KB-Logged)
+
+20 non-blocking gaps and enhancement opportunities identified and filed for future consideration:
+- File locking for concurrent writes
+- Caching layer for repeated reads
+- Schema migration utilities
+- Path injection validation
+- Telemetry/metrics
+- Retry logic for transient failures
+- Backup/rollback mechanism
+- Batch write support
+- Diff/patch API
+- Watch mode for file changes
+- Dry-run mode, validation reports, formatting options
+- Field filtering, sorting, compression
+- YAML comment preservation
+- Schema inference
+
+### Summary
+
+- **ACs Reviewed**: 7 (1 added for schema compatibility)
+- **Blocking Issues**: 1 critical (schema mismatch) → ✅ RESOLVED
+- **Non-Blocking Findings**: 20 (all logged to KB)
+- **Mode**: autonomous
+- **Verdict**: ✅ PASS - Ready for implementation (blocking issue resolved with backward-compatible schema)

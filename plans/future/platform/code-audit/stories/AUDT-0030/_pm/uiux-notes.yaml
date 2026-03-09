@@ -1,0 +1,2 @@
+skipped: true
+reason: "No UI surface. This story is entirely within packages/backend/orchestrator — test files only. frontend_impacted: false."

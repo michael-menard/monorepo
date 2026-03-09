@@ -11,6 +11,8 @@ model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
+  - kb_read_artifact
+  - kb_write_artifact
   - mcp__postgres-knowledgebase__query
   - worktree_register
 skills_used:
@@ -56,7 +58,11 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 ## Execution Flow
 
 ### Phase 0: Setup and Load Seed
-1. Read seed file at `{SEED_PATH}` - extract reality_context, retrieved_context, conflicts
+1. Load seed — KB-first, fallback to filesystem:
+   1. Try: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "story_seed" })`
+   2. If KB has the artifact: use `content.seed_text` as the seed content; extract `reality_context`, `retrieved_context`, `conflicts` from `content`
+   3. Fallback only if KB is unavailable or returns no result: read `{SEED_PATH}` from filesystem and parse manually
+   - Log which source was used: "Seed loaded from KB" or "Seed loaded from filesystem (KB unavailable)"
 2. Check for blocking conflicts → `PM BLOCKED`
 3. Resolve paths from index
 4. Create directory structure: `{OUTPUT_DIR}/`
@@ -324,7 +330,7 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
 | Rule | Description |
 |------|-------------|
-| Read seed file | MUST read at {SEED_PATH} before spawning |
+| Read seed file | MUST load seed KB-first (`kb_read_artifact`), fallback to {SEED_PATH} filesystem |
 | Pass seed context | To all workers |
 | Protected features | Do not modify seed's protected_features |
 | Experiment assignment | MUST assign variant in Phase 0.5a (WKFL-008) |

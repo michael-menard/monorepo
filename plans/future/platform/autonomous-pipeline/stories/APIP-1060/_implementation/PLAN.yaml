@@ -1,0 +1,352 @@
+schema: 2
+story_id: APIP-1060
+timestamp: '2026-03-01T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Create QAGraphConfigSchema and QAGraphStateAnnotation — define config Zod schema with all defaults (AC-1, AC-17)
+      and LangGraph state annotation with all required fields (AC-2). This establishes the type foundation for all
+      nodes.
+    files:
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/review.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-17
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement check-preconditions node — reads review and evidence from state; sets BLOCKED verdict if review.verdict
+      === 'FAIL' or evidence null/invalid (safeParse); uses createToolNode factory; emits qa_preconditions_check
+      structured log.
+    files:
+      - packages/backend/orchestrator/src/nodes/qa/check-preconditions.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/review.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- check-preconditions
+    acs_covered:
+      - AC-3
+      - AC-16
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement run-unit-tests and run-e2e-tests nodes — both use child_process.spawn wrapped in Promise.race with
+      wall-clock timeout. run-unit-tests: retry up to testTimeoutRetries on timeout, record CommandRun. run-e2e-tests:
+      retry up to playwrightMaxRetries, only FAIL if all attempts fail, record per-attempt playwrightAttempts. Both use
+      createNode (not createToolNode) with overridden timeoutMs to accommodate 5-minute subprocess timeout. Emit
+      qa_unit_tests_started, qa_unit_tests_complete, qa_e2e_started, qa_e2e_attempt, qa_e2e_complete lifecycle logs.
+    files:
+      - packages/backend/orchestrator/src/nodes/qa/run-unit-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-e2e-tests.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- run-unit-tests run-e2e-tests
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-16
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement verify-acs node — iterates evidence.acceptance_criteria; for each AC calls ModelClient.callModel() with
+      AC_VERIFICATION_PROMPT_V1 constant (named export, contains anti-hallucination instruction); parses structured JSON
+      response { status, cited_evidence, reasoning }; model failure per AC → BLOCKED (not FAIL), continues remaining
+      ACs; uses createToolNode factory; logs qa_ac_verification_started and qa_ac_verified per AC.
+    files:
+      - packages/backend/orchestrator/src/nodes/qa/verify-acs.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- verify-acs
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-16
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Implement gate-decision node — aggregates acVerifications and testResults; calls Claude (gate model) via
+      ModelClient with structured QA state summary; parses { verdict, blocking_issues, reasoning }; sets state.qaVerdict
+      and state.gateDecision; model failure → BLOCKED; uses createToolNode factory with NodeCircuitBreaker for gate
+      model calls; calls qaPassedSuccessfully() before returning PASS; logs qa_gate_decision.
+    files:
+      - packages/backend/orchestrator/src/nodes/qa/gate-decision.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- gate-decision
+    acs_covered:
+      - AC-8
+      - AC-12
+      - AC-16
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Implement write-qa-artifact node — constructs QaVerify via createQaVerify() + helpers; persists QA-VERIFY.yaml
+      under plans/future/platform/autonomous-pipeline/in-progress/{storyId}/; conditionally writes lessons_to_record to
+      KB via MCP tool when kbWriteBackEnabled; sets state.qaComplete = true; uses createToolNode factory; logs
+      qa_artifact_written.
+    files:
+      - packages/backend/orchestrator/src/nodes/qa/write-qa-artifact.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    dependencies:
+      - 5
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- write-qa-artifact
+    acs_covered:
+      - AC-9
+      - AC-15
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Wire QA graph StateGraph and implement runQA() entry function — compose all 6 nodes into StateGraph with edges:
+      START→check-preconditions→[run-unit-tests|END(BLOCKED)]; run-unit-tests→[run-e2e-tests(if enableE2e)|verify-acs];
+      run-e2e-tests→verify-acs; verify-acs→gate-decision; gate-decision→write-qa-artifact→END. Export runQA(evidence,
+      review, config) returning QAGraphResult. All conditional edges use Zod-validated routing functions.
+      createQAGraph(config, {modelClient}) injection pattern.
+    files:
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/nodes/qa/check-preconditions.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-unit-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-e2e-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/verify-acs.ts
+      - packages/backend/orchestrator/src/nodes/qa/gate-decision.ts
+      - packages/backend/orchestrator/src/nodes/qa/write-qa-artifact.ts
+    dependencies:
+      - 6
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- qa.test.ts
+    acs_covered:
+      - AC-10
+      - AC-11
+  - id: 8
+    subtask_id: ST-8
+    description: >-
+      Write graph-level and node-level unit tests — graph tests (qa.test.ts): 10 scenarios covering all AC-13 cases
+      (preconditions BLOCKED, happy path PASS, unit test FAIL, AC verify FAIL, E2E retry paths, gate model failure
+      BLOCKED, enableE2e:false routing, graph.compile() success). Node tests (nodes/qa/__tests__/): 6 test files
+      covering all AC-14 cases. All using vi.mock('child_process') and mock ModelClient. Verify
+      AC_VERIFICATION_PROMPT_V1 anti-hallucination instruction text. Verify @repo/logger lifecycle events (AC-16).
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/qa.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/check-preconditions.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/run-unit-tests.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/run-e2e-tests.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/verify-acs.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/gate-decision.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/write-qa-artifact.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+      - packages/backend/orchestrator/src/nodes/qa/check-preconditions.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-unit-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-e2e-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/verify-acs.ts
+      - packages/backend/orchestrator/src/nodes/qa/gate-decision.ts
+      - packages/backend/orchestrator/src/nodes/qa/write-qa-artifact.ts
+    dependencies:
+      - 7
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- qa
+    acs_covered:
+      - AC-13
+      - AC-14
+      - AC-16
+files_to_change:
+  - path: packages/backend/orchestrator/src/graphs/qa.ts
+    action: create
+    reason: >-
+      New QA graph entry file: QAGraphConfigSchema (AC-1, AC-17), QAGraphStateAnnotation (AC-2), StateGraph wiring
+      (AC-10), createQAGraph(), runQA() entry function (AC-11)
+  - path: packages/backend/orchestrator/src/nodes/qa/check-preconditions.ts
+    action: create
+    reason: 'check-preconditions node: review+evidence gate with BLOCKED verdict on failure (AC-3)'
+  - path: packages/backend/orchestrator/src/nodes/qa/run-unit-tests.ts
+    action: create
+    reason: 'run-unit-tests node: pnpm test subprocess with timeout retry (AC-4)'
+  - path: packages/backend/orchestrator/src/nodes/qa/run-e2e-tests.ts
+    action: create
+    reason: 'run-e2e-tests node: Playwright subprocess with per-attempt retry (AC-5)'
+  - path: packages/backend/orchestrator/src/nodes/qa/verify-acs.ts
+    action: create
+    reason: 'verify-acs node: per-AC model call with AC_VERIFICATION_PROMPT_V1 anti-hallucination constant (AC-6, AC-7)'
+  - path: packages/backend/orchestrator/src/nodes/qa/gate-decision.ts
+    action: create
+    reason: 'gate-decision node: Claude gate model aggregation with qaPassedSuccessfully() check (AC-8, AC-12)'
+  - path: packages/backend/orchestrator/src/nodes/qa/write-qa-artifact.ts
+    action: create
+    reason: 'write-qa-artifact node: YAML persistence + conditional KB write-back (AC-9, AC-15)'
+  - path: packages/backend/orchestrator/src/graphs/__tests__/qa.test.ts
+    action: create
+    reason: 'Graph-level tests: 10 scenarios covering AC-13 (compile, happy path, all failure branches, E2E routing)'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/check-preconditions.test.ts
+    action: create
+    reason: 'Node tests: AC-14 check-preconditions scenarios'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/run-unit-tests.test.ts
+    action: create
+    reason: 'Node tests: AC-14 run-unit-tests timeout, retry, success paths'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/run-e2e-tests.test.ts
+    action: create
+    reason: 'Node tests: AC-14 run-e2e-tests retry logic and all-fail path'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/verify-acs.test.ts
+    action: create
+    reason: 'Node tests: AC-14 verify-acs PASS/FAIL/BLOCKED paths, prompt structure check'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/gate-decision.test.ts
+    action: create
+    reason: 'Node tests: AC-14 gate-decision PASS/FAIL/BLOCKED paths'
+  - path: packages/backend/orchestrator/src/nodes/qa/__tests__/write-qa-artifact.test.ts
+    action: create
+    reason: 'Node tests: AC-14 YAML persistence and conditional KB write-back'
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-1 and after ST-7
+    required: true
+  - command: pnpm test --filter @repo/orchestrator -- qa
+    when: after all code changes (ST-8)
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: TypeScript compilation of QAGraphConfigSchema with all required fields in qa.ts
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: QAGraphStateAnnotation in qa.ts with all fields; pnpm check-types passes
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: 'Unit test: check-preconditions.test.ts — BLOCKED when review FAIL, BLOCKED when evidence null/invalid'
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test: run-unit-tests.test.ts — timeout path, retry path, success path with stdout capture, FAIL on non-zero
+      exit
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit test: run-e2e-tests.test.ts — attempt 1 fail + attempt 2 succeed = PASS; all attempts fail = FAIL;
+      enableE2e:false skips node
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test: verify-acs.test.ts — PASS path, FAIL path, model failure per AC = BLOCKED (not FAIL), continues
+      remaining ACs
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      Unit test: verify-acs.test.ts — static string check on AC_VERIFICATION_PROMPT_V1 contains anti-hallucination
+      instruction
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: 'Unit test: gate-decision.test.ts — PASS aggregate, FAIL aggregate, model failure = BLOCKED'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: 'Unit test: write-qa-artifact.test.ts — QA-VERIFY.yaml path check, KB write-back conditional on kbWriteBackEnabled'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: 'Unit test: qa.test.ts — graph.compile() succeeds; edge routing tests for all conditional edges'
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: 'Unit test: qa.test.ts — runQA() returns QAGraphResult with verdict and QaVerify artifact'
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: 'Unit test: gate-decision.test.ts — qaPassedSuccessfully() invoked before PASS returned; all checks encoded'
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      qa.test.ts with 10 scenarios: (a)preconditions BLOCKED review, (b)preconditions BLOCKED evidence, (c)happy path
+      PASS, (d)unit test FAIL, (e)AC verify FAIL, (f)E2E retry success, (g)E2E all fail, (h)gate model failure BLOCKED,
+      (i)enableE2e:false skips E2E, (j)graph.compile() succeeds
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: 6 node test files in nodes/qa/__tests__/ covering all node scenarios from story test plan
+    evidence_type: test
+  - ac_id: AC-15
+    planned_evidence: >-
+      qa-verify.ts not modified in breaking way; all new fields use z.optional() or z.nullable().default(null);
+      write-qa-artifact.test.ts verifies compat
+    evidence_type: file
+  - ac_id: AC-16
+    planned_evidence: >-
+      Unit tests verify @repo/logger called with correct event names and required fields (storyId, stage:'qa',
+      durationMs) at every lifecycle transition
+    evidence_type: test
+  - ac_id: AC-17
+    planned_evidence: >-
+      worktreeDir: z.string().min(1) present in QAGraphConfigSchema (no default, required); pnpm check-types confirms it
+      in qa.ts
+    evidence_type: command
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should run-unit-tests and run-e2e-tests use createToolNode (10s timeout) or createNode with overridden timeoutMs
+      for the 5-minute subprocess?
+    decision: >-
+      Use createNode directly with timeoutMs set to testTimeoutMs + buffer (e.g., testTimeoutMs + 30000) for
+      run-unit-tests and run-e2e-tests. The application-layer Promise.race handles the subprocess timeout; the
+      node-factory timeout is a safety wrapper only. createToolNode's hardcoded 10s would preempt the application
+      timeout.
+    rationale: >-
+      OPP-003 from ELAB.yaml explicitly flags this: createToolNode has a hard-coded 10-second timeout that would preempt
+      the 5-minute testTimeoutMs. Using createNode directly with a configured timeoutMs resolves this correctness risk.
+      The story says 'uses createToolNode factory' (AC-4, AC-5) but this is a clarification/fix to avoid a runtime bug —
+      the node still uses the createNode infrastructure.
+    decided_by: auto
+    tier: 1
+    autonomy_note: >-
+      Tier 1 clarification auto-accepted at conservative level. The story says createToolNode but the elaboration
+      explicitly flags that createToolNode's 10s timeout will preempt the 5-minute subprocess timeout. Using createNode
+      directly is the correct implementation.
+complexity: complex
+notes:
+  - 'Subtask source: story — 8 subtasks map 1:1 to PLAN steps ST-1 through ST-8'
+  - AC-17 was added by autonomous elaboration (GAP-001 resolved) — worktreeDir required field in QAGraphConfigSchema
+  - >-
+    ELAB OPP-003: createToolNode has 10s hard timeout — run-unit-tests and run-e2e-tests MUST use createNode with
+    overridden timeoutMs (auto-decided, ARCH-001)
+  - >-
+    ELAB OPP-004: gate reasoning/blocking_issues stored as string in state.gateDecision — structured data lost before
+    artifact. Out of scope per AC-15 backward-compat constraint; logged as deferred
+  - ST-8 touches 7 files (exceeds 3-file guideline) — acceptable for test-only subtask per ELAB conditional
+  - ModelClient abstraction enables unit testing without APIP-0040 dependency (injected at createQAGraph)
+  - No barrel files — all imports direct from source files per project conventions
+  - No TypeScript interfaces — all types via Zod schemas with z.infer<>
+  - E2E tests exempt for this story (infra/backend only, no UI) — story's own test suite uses vi.mock for subprocess
+  - Split recommendation in ELAB (APIP-1060-A/B) is advisory — implementing as single story per CONDITIONAL_PASS verdict

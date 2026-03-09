@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-9040 is a backend-only LangGraph node (packages/backend/orchestrator/src/nodes/story/scope-defend.ts). No user-facing interface, no frontend components, no API endpoints. UI/UX review is not applicable."

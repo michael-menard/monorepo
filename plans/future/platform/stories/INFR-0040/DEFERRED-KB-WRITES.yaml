@@ -1,0 +1,26 @@
+---
+deferred_at: "2026-02-13T00:00:00Z"
+reason: "KB tools not available in PM leader context, queuing for manual retry"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: INFR-0040
+      feature: platform
+      title: "Workflow Events Table + Ingestion"
+      story_dir: plans/future/platform/backlog/INFR-0040
+      story_file: plans/future/platform/backlog/INFR-0040/INFR-0040.md
+      story_type: tech_debt
+      points: 1
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: true
+      created_at: "2026-02-13T00:00:00Z"
+---
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

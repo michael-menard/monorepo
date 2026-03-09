@@ -1,0 +1,54 @@
+reusability:
+  verdict: PASS
+  files_checked: 5
+  errors: 0
+  warnings: 1
+  findings:
+    - severity: warning
+      file: packages/backend/mcp-tools/src/index.ts
+      line: 1
+      message: "Tool re-exports are well-organized but could benefit from documented export strategy. Currently re-exporting from 6+ submodules with distinct purposes (session, story, context-cache, graph-query, worktree, context-pack, story-compatibility). Consider documenting export boundaries."
+      rule: export-documentation
+      auto_fixable: false
+      recommendation: "Add JSDoc comment documenting the module's export strategy and which tools belong to which category (session mgmt, story mgmt, etc.)"
+
+  positive_findings:
+    - Finding: "Strong pattern reuse in tool-handlers.ts"
+      description: "Handler functions follow consistent pattern: validation -> authorization -> operation -> audit -> response. This is properly extracted and reused across all 100+ tool handlers. No duplication detected."
+
+    - Finding: "Zod schema consolidation in tool-schemas.ts"
+      description: "All input schemas are centralized in tool-schemas.ts and re-exported from CRUD operations. Single source of truth for validation. No duplicate schema definitions found across apps."
+
+    - Finding: "Authorization/error handling utilities are shared"
+      description: "checkAccess(), enforceAuthorization(), errorToToolResult(), AuthorizationError are all shared via access-control.ts and error-handling.ts. No reimplementation in individual tool handlers."
+
+    - Finding: "Timeout handling abstraction"
+      description: "withTimeout<T>() and ToolTimeoutError are properly extracted and reused. Not reimplemented in individual search tools."
+
+    - Finding: "Correlation ID threading"
+      description: "Consistent correlation ID pattern via ToolCallContext. Used across all handlers for observability. No ad-hoc logging patterns."
+
+    - Finding: "CRUD operation extraction"
+      description: "kb_add, kb_get, kb_update, kb_delete, kb_list, kb_search, kb_get_related all imported from dedicated crud-operations/ and search/ packages. No handler implements business logic directly."
+
+  cross_package_analysis:
+    - package: "@repo/mcp-tools"
+      exports: ["worktreeRegister", "worktreeGetByStory", "worktreeListActive", "worktreeMarkComplete", "contextPackGet"]
+      reuse_status: "properly_imported"
+      location: "tool-handlers.ts line 17-22"
+
+    - package: "@repo/context-pack-sidecar"
+      exports: ["ContextPackRequestSchema"]
+      reuse_status: "properly_imported"
+      location: "tool-handlers.ts line 23"
+
+  audit_findings: "Audit logging pattern in handleKbAdd (lines 420-428), handleKbUpdate (lines 602-608), handleKbDelete (lines 691-697) is duplicated 3 times. Consider extracting into auditLogOperation(entryId, operation, before?, after?) utility."
+
+  dependency_analysis:
+    - High reuse of @repo/mcp-tools exports. Proper boundary between knowledge-base MCP server and backend mcp-tools package.
+    - Clear separation between schema definition (tool-schemas.ts) and handler implementation (tool-handlers.ts).
+    - No circular dependencies detected.
+
+  tokens:
+    in: 15000
+    out: 800

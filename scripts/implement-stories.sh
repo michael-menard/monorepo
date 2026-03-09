@@ -147,23 +147,15 @@ ALL_STORIES=("${DISCOVERED_STORIES[@]}")
 
 is_implemented() {
   local STORY_DIR="$1"
-  # Require EVIDENCE.yaml — the definitive proof of implementation
+  # KSOT-3050: Check EVIDENCE.yaml presence (still a valid artifact signal).
+  # For KB-first state, callers should cross-reference with kb_get_story state:
+  # "ready_for_review", "in_review", "ready_for_qa", "in_qa", "completed".
   [[ -f "${STORY_DIR}/_implementation/EVIDENCE.yaml" ]]
 }
 
-# Check if the story is past implementation (already in a later stage)
-is_past_implementation() {
-  local STORY_ID="$1"
-  # If the story is already in needs-code-review, ready-for-qa, failed-code-review, UAT, done
-  # AND has EVIDENCE.yaml, it's past implementation
-  for stage in needs-code-review ready-for-qa failed-code-review failed-qa UAT done; do
-    local dir="$FEATURE_DIR/${stage}/${STORY_ID}"
-    if [[ -d "$dir" ]] && [[ -f "$dir/_implementation/EVIDENCE.yaml" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
+# KSOT-3050: is_past_implementation() removed.
+# Use KB state check instead: story state "ready_for_review", "in_review",
+# "ready_for_qa", "in_qa", or "completed" means past implementation.
 
 is_reviewed() {
   local STORY_DIR="$1"
@@ -179,25 +171,24 @@ is_completed() {
   [[ -d "$FEATURE_DIR/UAT/${STORY_ID}" ]] || [[ -d "$FEATURE_DIR/done/${STORY_ID}" ]]
 }
 
-# Stages that are valid starting points for implementation
+# KSOT-2010: Check KB state values (not filesystem directory names).
+# KB states use underscores; filesystem dirs used hyphens (deprecated).
 is_ready_for_impl() {
-  local stage="$1"
-  [[ "$stage" == "ready-to-work" || "$stage" == "backlog" || "$stage" == "in-progress" ]]
+  local state="$1"
+  [[ "$state" == "ready" || "$state" == "backlog" || "$state" == "in_progress" ]]
 }
 
-# Stages that are valid for code review
 is_ready_for_review() {
-  local stage="$1"
-  [[ "$stage" == "needs-code-review" || "$stage" == "failed-code-review" ]]
+  local state="$1"
+  [[ "$state" == "ready_for_review" || "$state" == "failed_review" ]]
 }
 
-# Stages that are valid for QA
 is_ready_for_qa() {
-  local stage="$1"
-  [[ "$stage" == "ready-for-qa" || "$stage" == "failed-qa" ]]
+  local state="$1"
+  [[ "$state" == "ready_for_qa" || "$state" == "failed_qa" ]]
 }
 
-# check_log_for_failure, verify_stage_transition — sourced from scripts/lib/story-utils.sh
+# check_log_for_failure — sourced from scripts/lib/story-utils.sh (verify_stage_transition removed KSOT-3050)
 
 # ── Git lifecycle helpers ────────────────────────────────────────────
 
@@ -635,57 +626,9 @@ check_dependencies_met() {
   return 0
 }
 
-# ── Clean up duplicate stage directories ──────────────────────────────
-# If a story exists in multiple stage dirs, keep only the most-progressed one
-STAGE_ORDER=(elaboration backlog ready-to-work in-progress needs-code-review failed-code-review ready-for-qa failed-qa UAT done)
-
-cleanup_duplicate_stages() {
-  local STORY_ID="$1"
-  local found_stages=()
-  for stage in "${STAGE_ORDER[@]}"; do
-    if [[ -d "$FEATURE_DIR/${stage}/${STORY_ID}" ]]; then
-      found_stages+=("$stage")
-    fi
-  done
-  if [[ ${#found_stages[@]} -le 1 ]]; then
-    return 0
-  fi
-  # Keep the last one (most progressed) — but validate: if a later stage
-  # has no EVIDENCE.yaml and an earlier one does, prefer the one with evidence
-  local best_stage="${found_stages[${#found_stages[@]}-1]}"
-  local best_has_evidence=false
-  [[ -f "$FEATURE_DIR/${best_stage}/${STORY_ID}/_implementation/EVIDENCE.yaml" ]] && best_has_evidence=true
-
-  # If the "most progressed" stage has no evidence but a less-progressed one does,
-  # the most-progressed copy is a ghost — remove it and keep the one with evidence
-  if ! $best_has_evidence; then
-    for stage in "${found_stages[@]}"; do
-      if [[ -f "$FEATURE_DIR/${stage}/${STORY_ID}/_implementation/EVIDENCE.yaml" ]]; then
-        best_stage="$stage"
-        best_has_evidence=true
-        break
-      fi
-    done
-  fi
-
-  for stage in "${found_stages[@]}"; do
-    if [[ "$stage" != "$best_stage" ]]; then
-      echo "  DEDUP: Removing $stage/$STORY_ID (keeping $best_stage)"
-      rm -rf "$FEATURE_DIR/${stage}/${STORY_ID}"
-    fi
-  done
-}
-
-# Run dedup for all discovered stories
-DEDUP_COUNT=0
-for STORY_ID in "${ALL_STORIES[@]}"; do
-  output=$(cleanup_duplicate_stages "$STORY_ID" 2>&1)
-  if [[ -n "$output" ]]; then
-    echo "$output"
-    ((DEDUP_COUNT++))
-  fi
-done
-[[ $DEDUP_COUNT -gt 0 ]] && echo "Cleaned up $DEDUP_COUNT stories with duplicate stage directories."
+# KSOT-3050: cleanup_duplicate_stages() removed.
+# With flat layout (stories/ dir), stories don't move between stage directories.
+# Deduplication is no longer needed — the stories/ directory is the sole location.
 # ── KB-Filesystem Reconciliation ──────────────────────────────────────
 #
 # Scans all pipeline stage directories and compares with KB story state.
@@ -753,7 +696,9 @@ fs_stage_rank() {
 scan_filesystem_state() {
   local out_file="$1"
   > "$out_file"  # clear
-  for stage in elaboration backlog ready-to-work in-progress needs-code-review failed-code-review ready-for-qa failed-qa UAT done; do
+  # KSOT-3050: Only scan flat layout (stories/) and completion dirs (done/, UAT/).
+  # Legacy stage dirs (in-progress, needs-code-review, etc.) removed from scan.
+  for stage in stories UAT done; do
     local stage_dir="$FEATURE_DIR/${stage}"
     if [[ ! -d "$stage_dir" ]]; then
       continue
@@ -977,8 +922,9 @@ update_stories_index() {
       local sid
       sid=$(echo "$line" | grep -oE '[A-Z]+-[0-9]+' | head -1)
       # Find actual FS stage
+      # KSOT-3050: Only flat layout and completion dirs.
       local actual_stage=""
-      for stage in done UAT failed-qa ready-for-qa failed-code-review needs-code-review in-progress ready-to-work backlog elaboration; do
+      for stage in stories UAT done; do
         if [[ -d "$FEATURE_DIR/${stage}/${sid}" ]]; then
           actual_stage="$stage"
           break
@@ -1362,16 +1308,20 @@ move_story_to() {
   if [[ "$FROM_STAGE" == "$TO_STAGE" ]]; then
     return 0
   fi
-  if [[ -d "$FEATURE_DIR/$TO_STAGE/$STORY_ID" ]]; then
-    # Already there — remove the old one
-    rm -rf "$FEATURE_DIR/$FROM_STAGE/$STORY_ID"
+
+  # KSOT-3010: Flat layout — no filesystem moves needed.
+  # Stories live in stories/ permanently; state is tracked in KB only.
+  if [[ -d "$FEATURE_DIR/stories/$STORY_ID" ]]; then
+    echo "$TAG STATE:       $STORY_ID → $TO_STAGE (KB only)"
+    local kb_state
+    kb_state=$(fs_stage_to_kb_state "$TO_STAGE")
+    update_kb_state "$STORY_ID" "$kb_state" "$TAG"
     return 0
   fi
-  mkdir -p "$FEATURE_DIR/$TO_STAGE"
-  mv "$FEATURE_DIR/$FROM_STAGE/$STORY_ID" "$FEATURE_DIR/$TO_STAGE/$STORY_ID"
-  echo "$TAG MOVE:        $STORY_ID → $TO_STAGE/"
 
-  # Sync KB state after successful filesystem move
+  # KSOT-3050: Legacy filesystem mv fallback removed. Stories live in stories/ permanently.
+  # If story not in flat layout, log a warning and update KB only.
+  echo "$TAG STATE WARN:  $STORY_ID not found in stories/ — KB state updated to $TO_STAGE only"
   local kb_state
   kb_state=$(fs_stage_to_kb_state "$TO_STAGE")
   update_kb_state "$STORY_ID" "$kb_state" "$TAG"
@@ -1503,8 +1453,10 @@ process_story() {
           break
         fi
 
-        # Verify implementation produced evidence and moved stage
-        if ! has_evidence && ! verify_stage_transition "$STORY_ID" needs-code-review; then
+        # Verify implementation produced evidence
+        # KSOT-3050: verify_stage_transition removed — flat layout means stories stay in stories/.
+        # Meaningful check is EVIDENCE.yaml presence only.
+        if ! has_evidence; then
           FINAL_RESULT="fail"
           echo "$TAG IMPL FAIL:   $STORY_ID (no EVIDENCE.yaml produced, still in $CURRENT_STAGE) (see $IMPL_LOG)"
           break

@@ -1,0 +1,42 @@
+schema: 1
+story_id: WISH-2010
+date: 2026-01-28
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Scope matches stories.index.md entry. Story creates shared schemas only, no endpoints or infrastructure.
+  internal_consistency:
+    status: pass
+    note: Goals align with Non-goals. Story focuses on schema definitions, excludes implementation details.
+  reuse-first:
+    status: pass
+    note: Creates schemas in shared `@repo/api-client` package for reuse across frontend/backend. No one-off utilities.
+  ports_&_adapters:
+    status: pass
+    note: Story is schema-only, no endpoint implementation. Backend will import schemas (AC8 confirms).
+  local_testability:
+    status: pass
+    note: "AC10-12: 20+ unit tests for schema validation. No .http tests needed (schema-only story)."
+  decision_completeness:
+    status: fail
+    note: "Missing decision on schema field drift vs Drizzle database schema (see Issue #1)."
+  risk_disclosure:
+    status: pass
+    note: "Three risks disclosed: circular dependency, schema drift, build order. All have mitigations."
+  story_sizing:
+    status: pass
+    note: 2 points estimated. 14 ACs, schema definitions only. Well-sized for foundation work.
+gaps:
+  - id: GAP-1
+    category: requirements
+    severity: important
+    finding: Schema drift from database
+    recommendation: ""
+split_required: false
+follow_ups:
+  - finding: "WISH-XXXX: Custom"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

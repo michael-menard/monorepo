@@ -1,0 +1,54 @@
+schema: 1
+id: WISH-20180
+feature: wish
+type: feature
+state: uat
+title: CI Job to Validate Schema Changes Against Policy
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2057
+follow_up_from: WISH-2057
+scope:
+  packages:
+    - .github/workflows/
+    - packages/backend/database
+    - packages/backend/database
+  surfaces:
+    - backend
+    - infra
+goal: Implement automated CI validation of database schema changes against schema evolution policies from WISH-2057.
+  Provide developers with immediate feedback on policy violations during PR submission, reducing manual review burden
+  and preventing policy violations from reaching production.
+non_goals:
+  - Implementing schema migration generation tools (handled by Drizzle)
+  - Automated migration rollback testing (future enhancement)
+  - Schema change approval workflow automation (future enhancement)
+  - Database backup/restore automation (separate infrastructure concern)
+  - Policy enforcement beyond schema changes (e.g., code style, API design)
+acs:
+  - id: AC1
+    text: GitHub Actions workflow triggers on PRs touching `packages/backend/database-schema/src/`
+    type: functional
+  - id: AC2
+    text: Workflow runs `pnpm --filter @repo/database-schema validate:schema` command
+    type: functional
+  - id: AC3
+    text: Workflow posts validation results as PR comment (violations, warnings, approvals)
+    type: functional
+  - id: AC4
+    text: Workflow fails CI if critical violations detected (breaking changes without policy compliance)
+    type: functional
+  - id: AC5
+    text: Workflow passes CI if only warnings or no violations (non-blocking for non-breaking changes)
+    type: functional
+risks:
+  - risk: False Positives Block Valid Changes
+    mitigation: "Provide escape hatch (comment `<!-- schema-validation: skip -->` with justification)"
+  - risk: SQL Parsing Complexity
+    mitigation: Use well-tested SQL parser (pg-query-parser), graceful fallback for unparseable SQL
+  - risk: CI Performance Impact
+    mitigation: Optimize script to run in < 30 seconds, cache dependencies
+created_at: 2026-01-29T19:00:00-07:00
+updated_at: 2026-01-31T23:00:00Z

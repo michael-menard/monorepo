@@ -57,8 +57,8 @@ If story ID not provided:
 ### Phase 2: Create Directory Structure
 
 ```
-{FEATURE_DIR}/backlog/{STORY_ID}/
-{FEATURE_DIR}/backlog/{STORY_ID}/_pm/
+{FEATURE_DIR}/stories/{STORY_ID}/
+{FEATURE_DIR}/stories/{STORY_ID}/_pm/
 ```
 
 ### Phase 3: Generate Story
@@ -130,8 +130,8 @@ type: ad-hoc
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md
-  - {FEATURE_DIR}/backlog/{STORY_ID}/_pm/BLOCKERS.md
+  - {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+  - {FEATURE_DIR}/stories/{STORY_ID}/_pm/BLOCKERS.md
 index_update_needed: true | false
 ```
 

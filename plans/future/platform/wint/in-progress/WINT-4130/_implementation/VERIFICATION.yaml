@@ -1,0 +1,220 @@
+schema: 1
+story_id: WINT-4130
+timestamp: '2026-03-08T22:45:00Z'
+verdict: FAIL
+spike_story: true
+e2e_exempt: true
+e2e_exempt_reason: >-
+  Spike/validation story with no code changes. Structural verification and live agent invocation serve as the validation
+  run per ADR-006.
+tests_executed: true
+test_results:
+  unit:
+    pass: 405
+    fail: 3
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+test_failures_pre_existing: true
+test_failures_note: >-
+  3 failing tests in @repo/mcp-tools are pre-existing failures unrelated to WINT-4130 (zero source code changes in this
+  story). Failures are in: wint-1120-foundation-validation.test.ts, story-management/integration.test.ts,
+  story-compatibility/shim.integration.test.ts — all failing due to invalid story_state enum value 'ready' introduced by
+  an earlier story. These failures exist on main and are not caused by WINT-4130.
+coverage: null
+coverage_meets_threshold: true
+coverage_note: Spike story with zero source code changes. No coverage delta introduced. Existing package coverage unaffected.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: Spike story — no new tests written. Existing test suite checked for anti-patterns; none introduced by this story.
+acs_verified:
+  - ac_id: AC-1
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:pre_conditions
+    notes: >-
+      Pre-flight FAIL: wint schema absent from dev PostgreSQL. graph.features count: 0 (table does not exist).
+      active_rules_count: 0 (wint.rules absent). feature_capabilities_count: 0 (table absent). DEV-001 documents this as
+      an expected environment gap — WINT-4030 and WINT-4050 have not been applied. Documentation requirement of AC-1 is
+      met; the data threshold requirement (>= 1 row each) fails.
+  - ac_id: AC-2
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:fixture_features.upload_without_replace_fixture
+    notes: >-
+      Cannot identify upload-without-replace fixture: graph.feature_capabilities table does not exist. Additionally,
+      'upload' and 'replace' are not in CRUD_STAGES=['create','read','update','delete'] — a fundamental detection gap
+      documented as DEV-003. This AC cannot be satisfied until both DEV-001 (schema absent) and DEV-003 (CRUD_STAGES
+      mismatch) are resolved.
+  - ac_id: AC-3
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:fixture_features.create_without_delete_fixture
+    notes: >-
+      Cannot identify create-without-delete fixture: graph.features and graph.feature_capabilities tables do not exist
+      (DEV-001). 'create' and 'delete' ARE in CRUD_STAGES — this AC would be testable once WINT-4030 populates graph
+      data.
+  - ac_id: AC-4
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:e2e_tests[0].ac_coverage.AC-4
+    notes: >-
+      Graph-checker agent successfully invoked and produced schema-valid output (graph-check-results.json).
+      franken_features_found=0 and violations=[] because all pre-flight conditions failed (DEV-001). Agent ran correctly
+      in degraded mode. AC requires franken_features_found > 0 which was not achieved. Root cause is environment
+      pre-conditions, not a bug in the agent.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:e2e_tests[0].schema_check
+    notes: >-
+      graph-check-results.json schema conformance verified against graph-checker.agent.md Output section. All 6 required
+      fields present and correctly typed: story_id (string), generated_at (ISO 8601), franken_features_found (integer:
+      0), violations (array: []), warnings (array: 2 entries), warning_count (integer: 2). Schema check PASS.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:e2e_tests[0].rule_ids_found
+    notes: >-
+      N/A — no violations produced (empty graph/rules). Agent spec confirms BUILTIN-CRUD-COMPLETENESS would be used as
+      fallback rule_id when violations are present. Treated as PASS per EVIDENCE.yaml (N/A status). No violations to
+      validate means AC-6 is not falsifiable in this run.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:e2e_tests[1]
+    notes: >-
+      Live-confirmed: primary graph-checker invocation IS the empty-graph case. Warning produced: 'graph.features empty
+      — WINT-4030 may not have run'. violations: []. Completion signal matches expected format. EC-1 verified live via
+      primary invocation.
+  - ac_id: AC-8
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:e2e_tests[2]
+    notes: >-
+      Empty-rules warning 'No active cohesion rules found — WINT-4050 may not have run' confirmed in
+      graph-checker.agent.md Graceful Degradation section. BUILTIN-CRUD-COMPLETENESS fallback confirmed in Phase 3 Apply
+      Rules spec. Primary invocation also produced this warning (wint.rules absent). Live isolation of empty-rules path
+      not possible without a populated graph. Structural verification accepted per ST-3 scope.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:e2e_tests[0].completion_signal
+    notes: >-
+      Completion signal 'GRAPH-CHECKER COMPLETE WITH WARNINGS: 2 warnings' emitted as final output. Matches defined
+      signal format exactly. Exactly one signal emitted.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml
+    notes: >-
+      All required EVIDENCE.yaml sections present: pre_conditions (with per-condition counts and pass/fail),
+      fixture_features (status MISSING with explanations), e2e_tests (3 entries covering HP-4, EC-1, EC-2),
+      known_deviations (4 entries DEV-001 through DEV-004). ADR-006 compliance confirmed.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:known_deviations
+    notes: >-
+      4 known_deviations documented with owner stories: DEV-001 (critical — wint schema absent, owner:
+      WINT-4030/WINT-4050), DEV-002 (high — graph-checker tool-to-function mismatch, owner: WINT-4060), DEV-003 (medium
+      — upload/replace not in CRUD_STAGES, owner: WINT-4060), DEV-004 (low — haiku model quality, owner: WINT-4060). All
+      have recommended owner and blocking: false.
+architecture_compliant: true
+architecture_notes: >-
+  Spike story with no source code changes. Architecture compliance checked against deliverables only. EVIDENCE.yaml
+  follows ADR-006 schema. graph-check-results.json follows graph-checker.agent.md output schema. No new infrastructure,
+  no DB mutations, read-only validation. DEV-002 documents an architecture concern in graph-checker.agent.md (ARCH-001
+  direct-call pattern incompatible with tools:[Read,Grep,Glob]) to be fixed in WINT-4060.
+issues:
+  - id: ISSUE-1
+    ac_id: AC-1
+    severity: critical
+    description: >-
+      Pre-flight FAIL: wint schema entirely absent from dev PostgreSQL. WINT-4030 and WINT-4050 have not been applied.
+      Graph, rules, and capability tables all have 0 rows.
+    owner: WINT-4030 (schema+data), WINT-4050 (rules)
+    blocking: true
+    resolution: Apply WINT-4030 migration and population script, then WINT-4050 rules seeding. Re-run WINT-4130.
+  - id: ISSUE-2
+    ac_id: AC-2
+    severity: high
+    description: >-
+      'upload' and 'replace' not in CRUD_STAGES=['create','read','update','delete']. Upload-without-replace fixture
+      cannot be detected by graph_get_franken_features.
+    owner: WINT-4060
+    blocking: false
+    resolution: Extend CRUD_STAGES to include 'upload'/'replace' or redefine AC-2 fixture to use CRUD-based stages.
+  - id: ISSUE-3
+    ac_id: AC-4
+    severity: high
+    description: >-
+      graph-checker.agent.md specifies tools:[Read,Grep,Glob] but requires TypeScript DB function calls (ARCH-001).
+      Filesystem-only agent cannot query PostgreSQL. In populated environment would produce fictitious results.
+    owner: WINT-4060
+    blocking: false
+    resolution: Add Bash tool to agent spec to invoke a TypeScript runner script, or implement as LangGraph node with DB access.
+  - id: ISSUE-4
+    ac_id: AC-3
+    severity: critical
+    description: >-
+      Create-without-delete fixture cannot be identified — graph data absent (DEV-001). Will be testable once WINT-4030
+      applied.
+    owner: WINT-4030
+    blocking: true
+    resolution: Apply WINT-4030 and re-run validation.
+verdict_rationale: >-
+  FAIL: AC-1, AC-2, and AC-3 have status FAIL/MISSING (treated as FAIL) per fail conditions. Root cause is environment
+  pre-conditions: wint schema not present in dev PostgreSQL (WINT-4030 and WINT-4050 not applied). Story deliverables
+  are structurally complete and correct — EVIDENCE.yaml, VERIFICATION.md, and graph-check-results.json are all written
+  with full defect triage. The story should be re-run after WINT-4030 and WINT-4050 are applied and DEV-002/DEV-003 in
+  WINT-4060 are resolved.
+pre_existing_test_failures:
+  - src/__tests__/integration/wint-1120-foundation-validation.test.ts — story_state enum 'ready' invalid
+  - src/story-management/__tests__/integration.test.ts — story lifecycle test, same root cause
+  - src/story-compatibility/__tests__/integration/shim.integration.test.ts — shimUpdateStoryStatus, same root cause
+lessons_to_record:
+  - lesson: >-
+      Spike stories that validate multi-layer dependency chains (A depends on B depends on C) need explicit environment
+      readiness gates. WINT-4130 was gated on WINT-4030+WINT-4050+WINT-4060 all being applied in the same dev
+      environment. When any upstream story is in needs-code-review or failed-code-review, the validation story will fail
+      its pre-flight regardless of its own correctness.
+    category: blocker
+    tags:
+      - spike
+      - integration-validation
+      - environment-readiness
+      - dependency-chain
+  - lesson: >-
+      Agent tool declarations must be consistent with the agent's execution contract. graph-checker.agent.md declares
+      tools:[Read,Grep,Glob] but its Phase 2 requires calling TypeScript DB functions (ARCH-001 direct-call pattern).
+      This inconsistency is masked in empty-graph environments but becomes a critical correctness gap when data exists.
+      Always verify that agent tool declarations can actually satisfy the agent's data access requirements.
+    category: anti_pattern
+    tags:
+      - agents
+      - tool-declarations
+      - arch-001
+      - graph-checker
+      - WINT-4060
+  - lesson: >-
+      CRUD_STAGES constant defines detection scope. When a story's fixture definitions reference stage names not in
+      CRUD_STAGES (e.g., 'upload', 'replace'), the primary detection tool will silently miss those fixtures. Stage name
+      alignment between fixture requirements and the detection constant must be validated before writing ACs.
+    category: blocker
+    tags:
+      - graph-checker
+      - CRUD_STAGES
+      - fixture-definitions
+      - AC-design
+      - WINT-4060
+  - lesson: >-
+      For validation/spike stories, the QA-verify step must clearly distinguish between 'the story produced correct
+      deliverables' and 'the acceptance criteria were satisfied'. WINT-4130 produced complete, correct deliverables
+      (EVIDENCE.yaml, VERIFICATION.md, graph-check-results.json) but AC-1/2/3 FAIL because environment pre-conditions
+      were not met. These are fundamentally different failure modes.
+    category: pattern
+    tags:
+      - qa-verify
+      - spike
+      - validation-story
+      - deliverable-vs-AC
+tokens:
+  in: 38000
+  out: 4500

@@ -6,6 +6,8 @@ type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [pm-story-generation-leader]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: pm-draft-test-plan
@@ -76,3 +78,32 @@ manual_cases: []                 # { id, title, steps, expected } for manual-onl
 fixture_definitions: []          # { name, type, description }
 risks: []                        # test fragility, ambiguity, missing prereqs
 ```
+
+
+## KB Write (Dual-Write)
+
+After returning the inline YAML to the leader, **also** write the artifact to the KB:
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "test_plan",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    strategy: "<overall test strategy from the YAML>",
+    scope_ui_touched: true | false,
+    scope_data_touched: true | false,
+    // Full test plan content as structured data
+    plan_text: "<serialized YAML content returned inline>"
+  },
+  summary: {
+    strategy: "<brief strategy>",
+    scope_ui_touched: true | false,
+    scope_data_touched: true | false
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the inline return to the leader is sufficient.

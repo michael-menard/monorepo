@@ -1,0 +1,214 @@
+deferred_at: "2026-02-20T00:00:00Z"
+reason: "KB INSERT not available in current context"
+writes:
+  - table: stories
+    operation: INSERT
+    on_conflict: "story_id DO UPDATE SET title=EXCLUDED.title, state=EXCLUDED.state, points=EXCLUDED.points, priority=EXCLUDED.priority, story_type=EXCLUDED.story_type, touches_backend=EXCLUDED.touches_backend, touches_frontend=EXCLUDED.touches_frontend, touches_database=EXCLUDED.touches_database, touches_infra=EXCLUDED.touches_infra, updated_at=NOW()"
+    data:
+      story_id: "WINT-1120"
+      feature: "wint"
+      title: "Validate Foundation Phase — Story CRUD, Shim, Commands, Unified Schema, and Worktree Integration"
+      story_dir: "plans/future/platform/wint/backlog/WINT-1120"
+      story_file: "plans/future/platform/wint/backlog/WINT-1120/WINT-1120.md"
+      story_type: "spike"
+      points: 5
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+kb_entries:
+  - entry_id: kb-wint-1120-gap-1
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Edge Cases**
+
+      - **Bulk shim functions unverified**: `shimGetStoriesByStatus` and `shimGetStoriesByFeature` are listed in the tool table but have no dedicated ACs in WINT-1120 — only `shimGetStoryStatus` and `shimUpdateStoryStatus` are verified
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add AC coverage for bulk shim functions in a follow-on validation story or fold into WINT-7100 (shim removal) acceptance criteria
+
+  - entry_id: kb-wint-1120-gap-2
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Edge Cases**
+
+      - **EVIDENCE.yaml schema drift risk**: The schema at `packages/backend/orchestrator/src/artifacts/evidence.ts` is referenced but not verified as part of this story — if it has drifted, the artifact output may be malformed
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Verify evidence.ts schema against current EVIDENCE.yaml format in ST-1; file a fix story if drift detected
+
+  - entry_id: kb-wint-1120-gap-3
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Edge Cases**
+
+      - **worktree_list_active not exercised**: The `worktree_list_active` MCP tool is listed in the seed tool table but no AC exercises it — only `worktree_register`, `worktree_get_by_story`, and `worktree_mark_complete` are tested
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add `worktree_list_active` round-trip check in ST-4 or dedicate a future story to verifying bulk worktree query tools
+
+  - entry_id: kb-wint-1120-gap-4
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Edge Cases**
+
+      - **Fragile revert procedure in AC-7**: The story-move test revert step is described only as "story reverted post-test" in the checklist — this is fragile if the test session is interrupted mid-verification
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add an explicit rollback checklist item to ST-3 with the exact reversal command to run; pattern to adopt in future validation stories
+
+  - entry_id: kb-wint-1120-enh-1
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - performance
+      - optimization
+    content: |
+      **[WINT-1120] Future Opportunities — Performance**
+
+      - **EVIDENCE.yaml timing metrics**: Adding `duration_ms` per AC entry would provide a baseline for future performance regression detection
+      - **Impact**: Medium | **Effort**: Low
+      - **Recommendation**: Extend EVIDENCE.yaml schema to include `duration_ms` per AC entry; useful for WINT-3000s telemetry phase
+
+  - entry_id: kb-wint-1120-enh-2
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - observability
+      - monitoring
+    content: |
+      **[WINT-1120] Future Opportunities — Observability**
+
+      - **Smoke test CI gate**: The integration test file (`wint-1120-foundation-validation.test.ts`) could be tagged `@smoke` and added to a CI gate on every `mcp-tools` deploy — currently it will only run on demand
+      - **Impact**: High | **Effort**: Low
+      - **Recommendation**: Add Vitest tag `@smoke` to the test file and configure Turborepo to run tagged smoke tests on deploy; defer to WINT-3080 (Validate Telemetry Collection) or a CI hardening story
+
+  - entry_id: kb-wint-1120-enh-3
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - observability
+      - monitoring
+    content: |
+      **[WINT-1120] Future Opportunities — Observability**
+
+      - **AC-11 conflict dialog integration test**: The three-option dialog when active worktree exists (AC-11) is currently verified manually via `dev-implement-story` — a future story could capture this as an integration test with structured output assertions
+      - **Impact**: Medium | **Effort**: Medium
+      - **Recommendation**: File as a follow-on story in Phase 7 (WINT-7030 or WINT-7050) when agent migration adds testable structured outputs
+
+  - entry_id: kb-wint-1120-enh-4
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - integration
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Integrations**
+
+      - **Expanded parity field coverage**: The unified schema parity check (AC-8, AC-9) compares only three fields (`storyId`, `state`, `title`) — a more comprehensive check covering all columns would give higher confidence
+      - **Impact**: Medium | **Effort**: Low
+      - **Recommendation**: Expand field comparison list in ST-2 to include `priority`, `created_at`, `updated_at`; low effort within existing test structure
+
+  - entry_id: kb-wint-1120-enh-5
+    entry_type: finding
+    source_stage: elab
+    story_id: "WINT-1120"
+    category: "future-opportunities"
+    tags:
+      - finding
+      - story:wint-1120
+      - category:future-opportunities
+      - date:2026-02
+      - stage:elab
+      - non-blocking
+      - integration
+      - future-work
+    content: |
+      **[WINT-1120] Future Opportunities — Integrations**
+
+      - **Zod schema assertions on CRUD results**: No negative path is specified for AC-1 — if a tool returns an unexpected shape, the test passes as long as it does not throw. Adding `StorySchema.parse(result)` assertions would strengthen the test.
+      - **Impact**: Medium | **Effort**: Low
+      - **Recommendation**: Add `StorySchema.parse(result)` assertions in ST-2 integration tests for all four CRUD tools; use shared Zod types from WINT-1100
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,180 @@
+schema: 1
+story_id: APIP-1070
+timestamp: '2026-03-01T21:33:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 45
+    fail: 0
+  integration:
+    pass: 13
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+coverage: 83.26
+coverage_scope: >-
+  src/nodes/merge (8 files) — merge-specific files only; full-package 3.27% is inflated by non-merge files not under
+  test
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Injectable runners (gitRunner, ghRunner, sleepFn) used throughout. All success/failure/edge-case paths covered. No
+    setTimeout anti-patterns found.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    notes: >-
+      MergeGraphConfigSchema Zod schema verified in merge.ts with all required fields and correct defaults:
+      mainBranch='main', ciTimeoutMs=1800000, ciPollIntervalMs=30000, ciPollMaxIntervalMs=300000,
+      kbWriteBackEnabled=true, nodeTimeoutMs=60000, featureDir='plans/future/platform/autonomous-pipeline'
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: >-
+      MergeGraphStateAnnotation verified in merge.ts with Annotation.Root(). All required fields present with correct
+      reducers: append for errors/warnings, overwrite for all scalars.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: 9 unit tests passing for check-preconditions. QA artifact loading, verdict check, and gh auth check all covered.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: 4 unit tests passing for rebase-branch. All failure paths emit MERGE_BLOCKED.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: 5 unit tests passing for create-or-update-pr. New PR vs update, gh failure paths covered.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: >-
+      7 unit tests passing for poll-ci. Exponential back-off (injectable sleepFn), timeout path, pass after multiple
+      polls verified.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: 4 unit tests passing for squash-merge. mergeCommitSha extraction via gh pr view --json mergeCommit verified.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: >-
+      6 unit tests passing for cleanup-worktree. Non-fatal error paths (warnings not errors), force-delete on
+      fail/blocked paths, -D fallback all verified.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: >-
+      5 unit tests passing for extract-learnings. QA lessons category mapping, kbWriteBackEnabled=false skip,
+      MERGE_BLOCKED operational learning path verified.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: >-
+      MergeArtifactSchema verified in artifacts/merge.ts with all required fields. createMergeArtifact() helper uses
+      MergeArtifactSchema.parse() for runtime validation.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+    notes: >-
+      5 unit tests passing for write-merge-artifact. MERGE_COMPLETE/FAIL/BLOCKED artifact field mapping, atomic write
+      pattern, write error handling all verified.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[11]
+    notes: >-
+      Graph wiring verified in merge.ts source and confirmed by 13 integration tests. All 4 conditional edge functions
+      (afterCheckPreconditions, afterRebaseBranch, afterCreateOrUpdatePr, afterPollCi) present. Routing matches spec
+      exactly.
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[12]
+    notes: >-
+      createMergeGraph() and runMerge() verified in merge.ts. Thread ID convention storyId:merge:attempt confirmed.
+      runMerge() accepts both QaVerify object and file path string.
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[13]
+    notes: >-
+      13 graph integration tests pass (scenarios a-l). All failure paths (BLOCKED, FAIL, COMPLETE, CI timeout, cleanup
+      fail) exercised. compile() scenario verified.
+  - ac_id: AC-15
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[14]
+    notes: 8 per-node test files, 45 unit tests all passing. Injectable runners used throughout.
+  - ac_id: AC-16
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[15]
+    notes: artifacts/merge.ts is newly created (no modification to qa-verify.ts confirmed by evidence).
+  - ac_id: AC-17
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[16]
+    notes: >-
+      All 13 log event types present using @repo/logger. No console.log usage found in any merge node file. All events
+      include storyId, stage:'merge', durationMs.
+  - ac_id: AC-18
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[17]
+    notes: >-
+      Spot-checked write-merge-artifact.ts: uses fs.writeFile() to MERGE.yaml.tmp.{timestamp} then fs.rename() to final
+      path. No YamlArtifactWriter import present.
+  - ac_id: AC-19
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[18]
+    notes: >-
+      extract-learnings.ts imports persistLearnings() directly from completion/persist-learnings.js. No
+      createPersistLearningsNode import present.
+  - ac_id: AC-20
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[19]
+    notes: >-
+      Spot-checked poll-ci.ts: returns plain async function (state) => Promise<Partial<MergeGraphState>>. No
+      createToolNode() import or call anywhere in the file. Internal polling loop uses injectable sleepFn.
+architecture_compliant: true
+architecture_notes:
+  zod_first: All types use z.infer<typeof Schema> — no TypeScript interfaces found
+  logger: '@repo/logger used throughout — no console.log violations'
+  no_barrel_files: Direct imports from source files
+  e2e_exempt: Backend-only story (headless pipeline graph) — E2E exempt
+  pre_existing_build_errors: 4 pre-existing TS errors in elaboration files outside APIP-1070 scope — treated as PASS per code review verdict
+issues: []
+http_files:
+  found: false
+  executed: false
+  note: No .http files exist in packages/backend/orchestrator — HTTP test execution not applicable
+lessons_to_record:
+  - lesson: >-
+      Injectable runner pattern (gitRunner, ghRunner, sleepFn) enables thorough unit testing of subprocess-dependent
+      nodes without needing real git/gh CLIs. All 8 merge nodes used this pattern consistently.
+    category: pattern
+    tags:
+      - backend
+      - testing
+      - langgraph
+      - subprocess
+  - lesson: >-
+      LangGraph integration tests in a worktree context require @langchain/langgraph alias in vitest config. The same
+      limitation exists for elaboration.test.ts — this is a known worktree constraint, not a code defect.
+    category: blocker
+    tags:
+      - langgraph
+      - worktree
+      - vitest
+      - alias
+  - lesson: >-
+      Coverage reporting against filtered test runs (only merge files) gives 83% for the merge scope vs 3.27% for the
+      full package. When reporting coverage for a scoped story, scope the metric to the story's touched files.
+    category: pattern
+    tags:
+      - coverage
+      - vitest
+      - scoped-testing
+tokens:
+  in: 18000
+  out: 3500

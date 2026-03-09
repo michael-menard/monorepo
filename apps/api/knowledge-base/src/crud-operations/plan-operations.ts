@@ -11,7 +11,8 @@ import { z } from 'zod'
 import { eq, sql, and, ne, isNotNull, isNull, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { plans, planDetails } from '../db/schema.js'
+import { plans, planDetails, planDependencies, planExecutionLog } from '../db/schema.js'
+import { kb_create_plan_revision } from './plan-revision-operations.js'
 
 // ============================================================================
 // Explicit column selectors — guard against schema-vs-DB drift
@@ -30,6 +31,8 @@ const planColumns = {
   priority: plans.priority,
   parentPlanId: plans.parentPlanId,
   tags: plans.tags,
+  supersededBy: plans.supersededBy,
+  preBlockedStatus: plans.preBlockedStatus,
   createdAt: plans.createdAt,
   updatedAt: plans.updatedAt,
   deletedAt: plans.deletedAt,
@@ -124,6 +127,7 @@ export const KbUpsertPlanInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional()
     .default('draft'),
@@ -151,6 +155,12 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan) */
   parent_plan_slug: z.string().optional(),
+
+  /** Parsed heading breakdown [{heading, level, startLine}] */
+  sections: z.array(z.record(z.unknown())).optional(),
+
+  /** Format version for content parsing (yaml_frontmatter, inline_header, etc.) */
+  format_version: z.string().optional(),
 })
 
 export type KbUpsertPlanInput = z.infer<typeof KbUpsertPlanInputSchema>
@@ -180,6 +190,7 @@ export const KbUpdatePlanInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional(),
 
@@ -208,6 +219,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** Parent plan slug (null to clear, string to set) */
   parent_plan_slug: z.string().optional().nullable(),
+
+  /** UUID of the plan that supersedes/replaces this one */
+  superseded_by: z.string().uuid().optional().nullable(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -240,6 +254,7 @@ export const KbListPlansInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional(),
 
@@ -355,6 +370,8 @@ export async function kb_get_plan(
                 phases: detail.phases,
                 dependencies: detail.dependencies,
                 sourceFile: detail.sourceFile,
+                sections: detail.sections,
+                formatVersion: detail.formatVersion,
               }
             : {}),
         }
@@ -487,6 +504,8 @@ export async function kb_upsert_plan(
       dependencies: validated.dependencies ?? null,
       sourceFile: validated.source_file ?? null,
       contentHash: null,
+      sections: validated.sections ?? null,
+      formatVersion: validated.format_version ?? 'v1',
       importedAt: now,
       updatedAt: now,
     })
@@ -496,9 +515,24 @@ export async function kb_upsert_plan(
         rawContent: validated.raw_content,
         dependencies: validated.dependencies ?? null,
         sourceFile: validated.source_file ?? null,
+        sections: validated.sections ?? null,
+        formatVersion: validated.format_version ?? 'v1',
         updatedAt: now,
       },
     })
+
+  // Create revision history entry
+  try {
+    await kb_create_plan_revision(deps, {
+      plan_slug: validated.plan_slug,
+      raw_content: validated.raw_content,
+      sections: validated.sections,
+      change_reason: created ? 'Initial import' : 'Content update via upsert',
+      changed_by: 'kb_upsert_plan',
+    })
+  } catch {
+    // Non-fatal: revision history is best-effort
+  }
 
   return {
     plan,
@@ -557,6 +591,7 @@ export async function kb_update_plan(
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
   if (validated.estimated_stories !== undefined)
     updates.estimatedStories = validated.estimated_stories
+  if (validated.superseded_by !== undefined) updates.supersededBy = validated.superseded_by
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null
@@ -591,11 +626,130 @@ export async function kb_update_plan(
       })
   }
 
+  // Auto-unblock: when status changes to 'implemented', check dependent plans
+  if (plan && validated.status === 'implemented') {
+    await handlePlanImplemented(deps.db, validated.plan_slug)
+  }
+
   return {
     plan,
     updated: true,
     message: `Plan '${validated.plan_slug}' updated successfully`,
   }
+}
+
+// ============================================================================
+// Auto-Block / Auto-Unblock Helpers
+// ============================================================================
+
+/**
+ * When a plan reaches 'implemented', mark the dependency as satisfied
+ * and unblock any dependent plans whose deps are now all satisfied.
+ */
+async function handlePlanImplemented(
+  db: NodePgDatabase<typeof schema>,
+  implementedSlug: string,
+): Promise<void> {
+  // Mark all dependencies on this plan as satisfied
+  await db
+    .update(planDependencies)
+    .set({ satisfied: true })
+    .where(eq(planDependencies.dependsOnSlug, implementedSlug))
+
+  // Find all plans that depend on this one
+  const dependentSlugs = await db
+    .select({ planSlug: planDependencies.planSlug })
+    .from(planDependencies)
+    .where(eq(planDependencies.dependsOnSlug, implementedSlug))
+
+  // For each dependent plan, check if ALL its deps are now satisfied
+  for (const { planSlug } of dependentSlugs) {
+    const unsatisfied = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(planDependencies)
+      .where(and(eq(planDependencies.planSlug, planSlug), eq(planDependencies.satisfied, false)))
+
+    if ((unsatisfied[0]?.count ?? 0) === 0) {
+      // All deps satisfied — unblock the plan (restore pre_blocked_status)
+      const blocked = await db
+        .select({ preBlockedStatus: plans.preBlockedStatus, status: plans.status })
+        .from(plans)
+        .where(eq(plans.planSlug, planSlug))
+        .limit(1)
+
+      if (blocked[0]?.status === 'blocked' && blocked[0]?.preBlockedStatus) {
+        await db
+          .update(plans)
+          .set({
+            status: blocked[0].preBlockedStatus,
+            preBlockedStatus: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(plans.planSlug, planSlug))
+
+        // Log the unblock event
+        try {
+          await db.insert(planExecutionLog).values({
+            planSlug,
+            entryType: 'unblocked',
+            message: `Auto-unblocked: dependency '${implementedSlug}' reached implemented`,
+            metadata: { trigger: implementedSlug },
+          })
+        } catch {
+          // Non-fatal
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Auto-block a plan when it has unsatisfied dependencies.
+ * Saves current status to pre_blocked_status and sets status to 'blocked'.
+ */
+export async function autoBlockPlanIfNeeded(
+  db: NodePgDatabase<typeof schema>,
+  planSlug: string,
+): Promise<boolean> {
+  // Check for unsatisfied dependencies
+  const unsatisfied = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(planDependencies)
+    .where(and(eq(planDependencies.planSlug, planSlug), eq(planDependencies.satisfied, false)))
+
+  if ((unsatisfied[0]?.count ?? 0) === 0) return false
+
+  // Check current status — don't re-block if already blocked
+  const current = await db
+    .select({ status: plans.status })
+    .from(plans)
+    .where(eq(plans.planSlug, planSlug))
+    .limit(1)
+
+  if (!current[0] || current[0].status === 'blocked') return false
+
+  // Block the plan
+  await db
+    .update(plans)
+    .set({
+      preBlockedStatus: current[0].status,
+      status: 'blocked',
+      updatedAt: new Date(),
+    })
+    .where(eq(plans.planSlug, planSlug))
+
+  // Log the block event
+  try {
+    await db.insert(planExecutionLog).values({
+      planSlug,
+      entryType: 'blocked',
+      message: `Auto-blocked: has unsatisfied dependencies`,
+    })
+  } catch {
+    // Non-fatal
+  }
+
+  return true
 }
 
 /**

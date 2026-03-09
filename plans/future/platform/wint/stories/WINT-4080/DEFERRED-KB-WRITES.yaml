@@ -1,0 +1,27 @@
+deferred_at: "2026-02-18T00:00:00Z"
+reason: "KB MCP tools not available during story generation"
+retry_after: "next agent session with postgres-knowledgebase MCP available"
+
+writes:
+  - table: stories
+    operation: INSERT
+    on_conflict: "DO UPDATE SET updated_at = NOW(), title = EXCLUDED.title, state = EXCLUDED.state"
+    data:
+      story_id: "WINT-4080"
+      feature: "wint"
+      title: "Create scope-defender Agent (Devil's Advocate)"
+      story_dir: "plans/future/platform/wint/backlog/WINT-4080"
+      story_file: "plans/future/platform/wint/backlog/WINT-4080/WINT-4080.md"
+      story_type: "feature"
+      points: 2
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      touches_agents: true
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

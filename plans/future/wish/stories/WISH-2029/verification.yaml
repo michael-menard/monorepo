@@ -1,0 +1,78 @@
+schema: 1
+story_id: WISH-2029
+updated: 2026-01-31T19:30:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:44-87 - Complete tree with application/, adapters/, ports/, routes.ts,
+      types.ts, __tests__/
+  - id: AC2
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:89-285 - Detailed explanation of application/, adapters/, ports/, routes.ts,
+      types.ts layers
+  - id: AC3
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:287-358 - Pattern explanation, dependency rule, benefits (testability,
+      flexibility, maintainability)
+  - id: AC4
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:343-509 - Health domain (simple) and Wishlist domain (complex with cross-domain
+      deps)
+  - id: AC5
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:484-687 - 8 detailed steps with code examples and checklist
+  - id: AC6
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:649-777 - Route definition, Zod validation, response formatting, error handling
+      patterns
+  - id: AC7
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:726-818 - Backend owns Zod schemas, frontend imports via @repo/api-client,
+      versioning considerations
+  - id: AC8
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:907-1012 - Old pattern marked DEPRECATED (line 968), new pattern canonical,
+      migration steps provided
+  - id: AC9
+    verdict: pass
+    evidence: docs/architecture/api-layer.md:767-891 - Service injection pattern with wishlist -> sets example
+  - id: AC10
+    verdict: pass
+    evidence: "Verified via filesystem: gallery, wishlist, health, instructions, sets, parts-lists, config all exist with
+      expected structure"
+  - id: AC11
+    verdict: pass
+    evidence: Code examples match real files - health/types.ts (lines 21-25 match doc line 284-288), wishlist/ports/index.ts
+      matches doc examples
+  - id: AC12
+    verdict: pass
+    evidence: All examples use Zod-first (z.infer<>), no barrel file patterns, named exports, @repo/logger mentioned
+      appropriately
+  - id: AC13
+    verdict: pass
+    evidence: "docs/architecture/api-layer.md:3 - 'Last Verified: 2026-01-28'"
+  - id: AC14
+    verdict: pass
+    evidence: grep results show only 1 reference at line 968 in migration section, clearly marked DEPRECATED
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.291Z
+  blocking_issues: []

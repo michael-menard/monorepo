@@ -6,6 +6,8 @@ type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [pm-story-generation-leader]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: pm-uiux-recommendations
@@ -60,3 +62,29 @@ playwright_evidence:
 ```
 
 MVP-critical only — polish and enhancements are out of scope.
+
+
+## KB Write (Dual-Write)
+
+After returning the inline YAML to the leader, **also** write the artifact to the KB:
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "uiux_notes",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    has_ui_changes: true | false,    // false if skipped: true
+    component_count: <N>,            // 0 if skipped: true
+    notes_text: "<serialized YAML content returned inline>"
+  },
+  summary: {
+    has_ui_changes: true | false,
+    component_count: <N>
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the inline return to the leader is sufficient.

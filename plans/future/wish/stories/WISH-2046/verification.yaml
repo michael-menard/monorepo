@@ -1,0 +1,78 @@
+schema: 1
+story_id: WISH-2046
+updated: 2026-01-31T17:45:00-07:00
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 1
+    note: ""
+tests:
+  unit:
+    pass: 102
+    fail: 0
+    details: 41 imageCompression tests (19 new for presets), 40 useS3Upload tests (8 new for presets), 21 WishlistForm tests
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    pass: 11
+    fail: 0
+    details: compression-presets.spec.ts - 11 test cases covering AC5-13
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: imageCompression.ts:46-86 - COMPRESSION_PRESETS array with 3 presets, imageCompression.test.ts:354-426
+  - id: AC2
+    verdict: pass
+    evidence: "imageCompression.ts:51-58 - maxSizeMB: 0.5, maxWidthOrHeight: 1200, initialQuality: 0.6, estimatedSize:
+      ~300KB, imageCompression.test.ts:366-383"
+  - id: AC3
+    verdict: pass
+    evidence: "imageCompression.ts:64-71 - maxSizeMB: 1, maxWidthOrHeight: 1920, initialQuality: 0.8, estimatedSize: ~800KB,
+      imageCompression.test.ts:385-406"
+  - id: AC4
+    verdict: pass
+    evidence: "imageCompression.ts:77-84 - maxSizeMB: 2, maxWidthOrHeight: 2400, initialQuality: 0.9, estimatedSize: ~1.5MB,
+      imageCompression.test.ts:408-425"
+  - id: AC5
+    verdict: pass
+    evidence: WishlistForm/index.tsx:607-638 - Select dropdown with all 3 presets, compression-presets.spec.ts:24-40
+  - id: AC6
+    verdict: pass
+    evidence: WishlistForm/index.tsx:629 - Shows estimatedSize in SelectItem, compression-presets.spec.ts:42-54
+  - id: AC7
+    verdict: pass
+    evidence: WishlistForm/index.tsx:149-152 - useLocalStorage hook with COMPRESSION_PRESET_KEY,
+      compression-presets.spec.ts:79-113
+  - id: AC8
+    verdict: pass
+    evidence: WishlistForm/index.tsx:151 - Default 'balanced', imageCompression.ts:105 - DEFAULT_COMPRESSION_CONFIG uses
+      balanced, compression-presets.spec.ts:56-63
+  - id: AC9
+    verdict: pass
+    evidence: useS3Upload.ts:196-203 - getPresetByName(preset) and passes to compressImage, useS3Upload.test.ts:1011-1034
+  - id: AC10
+    verdict: pass
+    evidence: WishlistForm/index.tsx:180-199 - Toast with preset.label and file size reduction, manual verification in
+      PROOF-WISH-2046.md
+  - id: AC11
+    verdict: pass
+    evidence: WishlistForm/index.tsx:641-651 - Checkbox disables preset selector when checked,
+      compression-presets.spec.ts:115-156
+  - id: AC12
+    verdict: pass
+    evidence: imageCompression.test.ts:354-508 - 19 new preset tests, useS3Upload.test.ts:984-1165 - 8 new preset
+      integration tests
+  - id: AC13
+    verdict: pass
+    evidence: compression-presets.spec.ts - 11 test cases covering AC5-13 (UI, localStorage, skip compression interaction)
+  - id: AC14
+    verdict: pass
+    evidence: imageCompression.ts:41-45 - Inline comments describe each preset's purpose and settings
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.309Z
+  blocking_issues: []

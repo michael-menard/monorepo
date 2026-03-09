@@ -1,0 +1,22 @@
+schema: 1
+story_id: AUDT-0030
+timestamp: '2026-03-03T16:00:00Z'
+current_phase: qa-verify
+last_successful_phase: qa-setup
+blocked: false
+blocked_reason: null
+forced: false
+iteration: 0
+max_iterations: 3
+feature_dir: plans/future/platform/code-audit
+completed_at: null
+e2e_gate: exempt
+qa_verdict: FAIL
+warnings:
+  - Pre-existing build errors in elaboration module (drizzle-orm, AffinityConfigSchema) are unrelated to AUDT-0030
+  - >-
+    Pre-existing test failures in structurer-affinity.test.ts, integration.test.ts, and health-gate.integration.test.ts
+    are unrelated to AUDT-0030
+  - >-
+    ISSUE-1: Flaky tmpdir naming in persist-findings.test.ts, persist-trends.test.ts, deduplicate.test.ts - requires fix
+    before PASS

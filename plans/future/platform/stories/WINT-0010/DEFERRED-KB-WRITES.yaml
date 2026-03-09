@@ -1,0 +1,80 @@
+---
+generated_at: "2026-02-13"
+reason: "KB tools unavailable during story generation"
+retry_after: "KB MCP tools available"
+---
+
+# Deferred Knowledge Base Writes - WINT-0010
+
+## Story Metadata
+
+```yaml
+story_id: WINT-0010
+feature: platform
+title: "Create Core Database Schemas (6 schemas)"
+story_dir: plans/future/platform/backlog/WINT-0010
+story_file: plans/future/platform/backlog/WINT-0010/WINT-0010.md
+story_type: infrastructure
+points: 13
+priority: high
+state: backlog
+touches_backend: true
+touches_frontend: false
+touches_database: true
+touches_infra: true
+epic: WINT
+wave: 1
+blocks:
+  - WINT-0020
+  - WINT-0030
+  - WINT-0040
+  - WINT-0050
+  - WINT-0060
+  - WINT-0070
+  - AUTO-0010
+  - AUTO-0020
+tags:
+  - database
+  - infrastructure
+  - foundational
+  - drizzle-orm
+```
+
+## SQL Statement (When KB Available)
+
+```sql
+INSERT INTO stories (
+  story_id, feature, title, story_dir, story_file, story_type,
+  points, priority, state, touches_backend, touches_frontend,
+  touches_database, touches_infra
+) VALUES (
+  'WINT-0010',
+  'platform',
+  'Create Core Database Schemas (6 schemas)',
+  'plans/future/platform/backlog/WINT-0010',
+  'plans/future/platform/backlog/WINT-0010/WINT-0010.md',
+  'infrastructure',
+  13,
+  'high',
+  'backlog',
+  true,
+  false,
+  true,
+  true
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_type = EXCLUDED.story_type,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  touches_backend = EXCLUDED.touches_backend,
+  touches_frontend = EXCLUDED.touches_frontend,
+  touches_database = EXCLUDED.touches_database,
+  touches_infra = EXCLUDED.touches_infra,
+  updated_at = NOW();
+```
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

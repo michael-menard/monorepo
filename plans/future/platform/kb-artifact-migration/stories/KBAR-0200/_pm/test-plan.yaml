@@ -1,0 +1,145 @@
+strategy: unit+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "Agent markdown documents Pattern Discovery phase with domain-scoped queries"
+    setup: "knowledge-context-loader.agent.md updated with new Phase 1.5 or Phase 3.5"
+    action: "Read the agent markdown file and verify Phase N.5 'Pattern Discovery' section exists with at least two example queries"
+    expected: "Phase contains artifact_search call block with artifact_type: 'evidence' and one with artifact_type: 'plan'; both use {story_domain} and {story_scope} as query terms"
+    evidence: "Manual diff review of knowledge-context-loader.agent.md against AC-1 and AC-2"
+
+  - id: HP-2
+    title: "kb_tools frontmatter includes artifact_search"
+    setup: "knowledge-context-loader.agent.md updated"
+    action: "Read the frontmatter kb_tools list"
+    expected: "kb_tools contains kb_search, kb_write_artifact, and artifact_search"
+    evidence: "Manual review of YAML frontmatter block"
+
+  - id: HP-3
+    title: "Existing kb_search lesson-learned phases unchanged"
+    setup: "knowledge-context-loader.agent.md updated"
+    action: "Read Phase 1 lesson query blocks and compare with pre-KBAR-0200 state"
+    expected: "Three kb_search call blocks from v2.1.0 are intact, unmodified. Only the new Pattern Discovery phase is added."
+    evidence: "Manual diff — no deletions to existing Phase 1/2/3 blocks"
+
+  - id: HP-4
+    title: "TypeScript node: artifactSearchFn provided and returns results"
+    setup: |
+      load-knowledge-context.ts updated with optional artifactSearchFn.
+      Mock artifactSearchFn returns [{artifact_type: 'evidence', content: '...', relevance_score: 0.85}]
+    action: "Call loadKnowledgeContext with kbDeps including valid artifactSearchFn"
+    expected: "Returned knowledgeContext includes patternDiscovery (or similar field) with the artifact results; no warnings about artifact_search"
+    evidence: "Unit test HP-4 in knowledge-context.test.ts passes"
+
+  - id: HP-5
+    title: "TypeScript node: artifactSearchFn not provided — existing behavior unchanged"
+    setup: "Call loadKnowledgeContext WITHOUT artifactSearchFn in kbDeps"
+    action: "Run loadKnowledgeContext with standard kbDeps (db, embeddingClient, kbSearchFn only)"
+    expected: "Function returns successfully; knowledgeContext.loaded = true; no artifact_search errors; patternDiscovery is empty array or omitted"
+    evidence: "Unit test HP-5 in knowledge-context.test.ts passes; existing tests not broken"
+
+  - id: HP-6
+    title: "Functional canary: pm-story-seed-agent runs knowledge-context-loader with artifact_search"
+    setup: "All KBAR-0200 changes landed; KBAR-0130 (artifact_search tool) is stable"
+    action: "Trigger pm-story-seed-agent for a new story in the kb-artifact-migration epic"
+    expected: "Agent logs show artifact_search tool calls with domain-scoped query strings; knowledge context YAML output includes patternDiscovery section (may be empty if KB lacks artifacts)"
+    evidence: "Agent run logs; output KNOWLEDGE-CONTEXT.yaml shows new section"
+
+error_cases:
+  - id: EC-1
+    title: "artifact_search tool unavailable — graceful fallback"
+    setup: "KB service offline or artifact_search handler errors; artifactSearchFn throws"
+    action: "Call loadKnowledgeContext with artifactSearchFn that throws 'KB unavailable'"
+    expected: "knowledgeContext.loaded = true; knowledgeContext.warnings includes message about artifact_search failure; patternDiscovery = []"
+    evidence: "Unit test EC-1 in knowledge-context.test.ts passes"
+
+  - id: EC-2
+    title: "artifact_search returns empty results — warning added, not blocked"
+    setup: "artifactSearchFn resolves with { results: [] }"
+    action: "Call loadKnowledgeContext with artifactSearchFn returning empty results"
+    expected: "knowledgeContext.loaded = true; warnings includes 'artifact_search returned no results'; patternDiscovery = []"
+    evidence: "Unit test EC-2 in knowledge-context.test.ts passes (AC-8b)"
+
+  - id: EC-3
+    title: "Generic query without domain context rejected by agent documentation"
+    setup: "Review agent markdown Pattern Discovery phase"
+    action: "Verify the agent docs explicitly prohibit domain-agnostic queries like { query: 'patterns' }"
+    expected: "Agent markdown explicitly states domain-scoped queries are required; generic examples are absent"
+    evidence: "Manual review of Pattern Discovery phase wording against AC-2"
+
+  - id: EC-4
+    title: "KnowledgeContextConfigSchema extension does not use TypeScript interface"
+    setup: "Review updated load-knowledge-context.ts"
+    action: "Check that artifactSearchFn is added as a Zod schema field (z.function().optional()), not a TypeScript interface"
+    expected: "No 'interface' keyword used for the extension; Zod z.object() or .extend() pattern used"
+    evidence: "Code review + pnpm check-types --filter @repo/orchestrator passes"
+
+edge_cases:
+  - id: ED-1
+    title: "Existing callers pass only kbSearchFn — no artifactSearchFn — continue working"
+    setup: "Existing callers of loadKnowledgeContext that only provide {db, embeddingClient, kbSearchFn}"
+    action: "Run existing unit tests without providing artifactSearchFn"
+    expected: "All existing tests pass; no TypeScript errors due to optional field"
+    evidence: "pnpm test --filter @repo/orchestrator; all previously passing tests remain green"
+
+  - id: ED-2
+    title: "artifact_search with min_confidence filter specified in agent docs"
+    setup: "Agent markdown Pattern Discovery phase"
+    action: "Verify query examples in agent docs use min_confidence appropriately (or note it's optional)"
+    expected: "At least one example shows min_confidence: 0.6 or similar to filter low-quality matches"
+    evidence: "Manual review of Pattern Discovery phase examples"
+
+  - id: ED-3
+    title: "patternDiscovery output documented as distinct from lessonsLearned"
+    setup: "Review updated KnowledgeContext output schema / agent output section"
+    action: "Verify AC-9: output documents that artifact_search results are actual implementation content, not authored lesson summaries"
+    expected: "Agent markdown or TypeScript schema comment distinguishes artifact results from lesson entries"
+    evidence: "Manual review of agent markdown Phase 4 output structure or schema comments"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "pnpm check-types --filter @repo/orchestrator passes with zero errors"
+      - "pnpm test --filter @repo/orchestrator passes; existing coverage not regressed below 45%"
+      - "knowledge-context.test.ts: 3 new test cases for artifactSearchFn (AC-8)"
+  frontend:
+    # ui_touched: false — omitted
+
+manual_cases:
+  - id: MC-1
+    title: "Full diff review of knowledge-context-loader.agent.md against all ACs"
+    steps:
+      - "Read updated .claude/agents/knowledge-context-loader.agent.md"
+      - "Verify AC-1: Pattern Discovery phase exists with >= 2 query examples (evidence + plan types)"
+      - "Verify AC-2: query strings use {story_domain} and {story_scope} variables"
+      - "Verify AC-3: fallback documented — empty results or tool unavailable returns [] with warning"
+      - "Verify AC-4: kb_tools frontmatter includes artifact_search"
+      - "Verify AC-5: existing kb_search lesson phases are unmodified"
+      - "Verify AC-9: output section distinguishes artifact results from lesson entries"
+    expected: "All ACs verified as satisfied in the agent markdown"
+
+  - id: MC-2
+    title: "TypeScript scope decision documented in implementation notes"
+    steps:
+      - "Review dev-feasibility.yaml or implementation notes for scope decision (Option A vs B)"
+      - "If TypeScript in scope: verify load-knowledge-context.ts diff covers AC-6 and AC-7"
+      - "If markdown-only: verify implementation note explains why TypeScript scope was deferred"
+    expected: "Clear documented rationale for scope decision"
+
+fixture_definitions:
+  - name: mockArtifactSearchFn
+    type: "vitest vi.fn()"
+    description: "Mock function matching the artifact_search signature; returns { results: ArtifactSearchResult[] }. Three variants: results, empty, throws."
+  - name: mockKbSearchFn
+    type: "vitest vi.fn()"
+    description: "Existing mock already in knowledge-context.test.ts — must continue to work after changes"
+
+risks:
+  - "KBAR-0130 (artifact_search tool) must be in UAT or completed state before functional testing (HP-6) can run"
+  - "TypeScript scope (Option A vs B) affects the number of unit tests required — confirm early in elaboration"
+  - "If KnowledgeContext output schema gains a new field, consumers (dev-execute-leader, dev-proof-leader, qa-verify-verification-leader) must tolerate the optional field — verify backward compatibility"
+  - "Coverage gate: adding new paths without tests could reduce coverage; new unit tests (AC-8) must be written if TypeScript node is updated"

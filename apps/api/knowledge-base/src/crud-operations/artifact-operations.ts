@@ -30,6 +30,10 @@ import {
   artifactProofs,
   artifactQaGates,
   artifactCompletionReports,
+  artifactStorySeeds,
+  artifactTestPlans,
+  artifactDevFeasibility,
+  artifactUiuxNotes,
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
@@ -72,6 +76,10 @@ export const ARTIFACT_TYPES = [
   'review',
   'qa_gate',
   'completion_report',
+  'story_seed',
+  'test_plan',
+  'dev_feasibility',
+  'uiux_notes',
 ] as const
 
 /**
@@ -104,6 +112,10 @@ const ARTIFACT_TYPE_TO_TABLE: Record<string, string> = {
   proof: 'artifact_proofs',
   qa_gate: 'artifact_qa_gates',
   completion_report: 'artifact_completion_reports',
+  story_seed: 'artifact_story_seeds',
+  test_plan: 'artifact_test_plans',
+  dev_feasibility: 'artifact_dev_feasibility',
+  uiux_notes: 'artifact_uiux_notes',
 }
 
 // ============================================================================
@@ -440,6 +452,10 @@ function getDetailTableRef(detailTable: string): DetailTableRef | null {
     artifact_proofs: artifactProofs,
     artifact_qa_gates: artifactQaGates,
     artifact_completion_reports: artifactCompletionReports,
+    artifact_story_seeds: artifactStorySeeds,
+    artifact_test_plans: artifactTestPlans,
+    artifact_dev_feasibility: artifactDevFeasibility,
+    artifact_uiux_notes: artifactUiuxNotes,
   }
   return tableMap[detailTable] ?? null
 }
@@ -472,6 +488,10 @@ function generateArtifactName(artifactType: string, iteration: number): string {
     review: 'REVIEW',
     qa_gate: 'QA-GATE',
     completion_report: 'COMPLETION-REPORT',
+    story_seed: 'STORY-SEED',
+    test_plan: 'TEST-PLAN',
+    dev_feasibility: 'DEV-FEASIBILITY',
+    uiux_notes: 'UIUX-NOTES',
   }
 
   const baseName = typeNames[artifactType] ?? artifactType.toUpperCase()

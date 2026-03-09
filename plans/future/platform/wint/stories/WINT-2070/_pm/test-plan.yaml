@@ -1,0 +1,122 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "Full cache warm — all 4 scripts succeed"
+    setup: "Clean state: wint.context_packs is empty or stale. DATABASE_URL=postgres://...@localhost:5432/lego_dev set. KB_DATABASE_URL=postgres://...@localhost:5433/kb set."
+    action: "Invoke /cache-warm (no flags)"
+    expected: "All 4 scripts run sequentially. Summary reports '4/4 scripts succeeded'. wint.context_packs has >= 15 rows total (5 project-context + 6+ domain-kb + 4 library-cache + 1+ agent-missions)."
+    evidence: "SELECT pack_type, count(*) FROM wint.context_packs GROUP BY pack_type; — all 4 pack types present with expected row counts"
+
+  - id: HP-2
+    title: "Cache warm with --skip=agent-missions (WINT-2040 workaround)"
+    setup: "Clean context_packs state. DATABASE_URL and KB_DATABASE_URL set."
+    action: "Invoke /cache-warm --skip=agent-missions"
+    expected: "3/4 scripts run (project-context, domain-kb, library-cache). agent-mission-cache-populator.ts is skipped. Summary reports '3/4 scripts succeeded (1 skipped)'. context_packs has >= 15 rows for the 3 packs."
+    evidence: "SELECT pack_type, count(*) FROM wint.context_packs WHERE pack_type != 'agent_missions' GROUP BY pack_type; — 3 pack types present"
+
+  - id: HP-3
+    title: "Skill frontmatter is valid"
+    setup: "Skill file exists at .claude/skills/cache-warm/SKILL.md"
+    action: "Read .claude/skills/cache-warm/SKILL.md and inspect frontmatter"
+    expected: "YAML frontmatter contains name: cache-warm and description fields; format matches .claude/skills/lint-fix/SKILL.md structure"
+    evidence: "Manual inspection of .claude/skills/cache-warm/SKILL.md frontmatter block"
+
+error_cases:
+  - id: EC-1
+    title: "DATABASE_URL missing — skill aborts precondition check"
+    setup: "Unset DATABASE_URL environment variable"
+    action: "Invoke /cache-warm"
+    expected: "Skill detects missing DATABASE_URL in Phase 1 precondition check, emits clear error message, does not proceed to invoke populate scripts"
+    evidence: "Skill output shows precondition failure for DATABASE_URL; no pnpm tsx commands attempted"
+
+  - id: EC-2
+    title: "KB_DATABASE_URL missing — domain-kb script skipped with warning, others continue"
+    setup: "DATABASE_URL set to port 5432. KB_DATABASE_URL unset."
+    action: "Invoke /cache-warm"
+    expected: "Skill warns about missing KB_DATABASE_URL. populate-domain-kb.ts is skipped. Other 3 scripts (project-context, library-cache, agent-missions) proceed normally. Summary: '3/4 scripts succeeded (1 skipped: KB_DATABASE_URL not set)'."
+    evidence: "wint.context_packs has rows for architecture, codebase, agent_missions types but not lessons_learned/blockers_known; skill output shows warning"
+
+  - id: EC-3
+    title: "Individual script fails — skill continues to remaining scripts"
+    setup: "DATABASE_URL and KB_DATABASE_URL set. Temporarily break populate-project-context.ts invocation (e.g., point to non-existent file)."
+    action: "Invoke /cache-warm"
+    expected: "populate-project-context.ts fails. Skill logs the failure and continues invoking remaining 3 scripts. Final summary shows '3/4 scripts succeeded, 1 failed: populate-project-context'."
+    evidence: "Skill output summary block shows per-script pass/fail status; remaining scripts complete successfully"
+
+  - id: EC-4
+    title: "DATABASE_URL points to wrong port (5433 instead of 5432)"
+    setup: "DATABASE_URL=postgres://...@localhost:5433/lego_dev (wrong port). KB_DATABASE_URL=...@localhost:5433 (correct)."
+    action: "Invoke /cache-warm"
+    expected: "Skill precondition check detects port mismatch (or warns); scripts that write to lego_dev fail with connection error. Summary reports failures. Skill documents this as known port confusion risk."
+    evidence: "Skill output shows connection error from populate scripts; skill documentation mentions port 5432 requirement"
+
+edge_cases:
+  - id: ED-1
+    title: "All scripts already fresh — upsert behavior"
+    setup: "wint.context_packs already populated with fresh data (TTL not expired)"
+    action: "Invoke /cache-warm"
+    expected: "All 4 scripts run and upsert existing rows (contextCachePut uses upsert on (packType, packKey)). Summary shows '4/4 scripts succeeded'. No duplicate rows created."
+    evidence: "Row count in wint.context_packs unchanged after second warm run; updated_at timestamps refreshed"
+
+  - id: ED-2
+    title: "cache-warm invoked by agent (LLM-executable)"
+    setup: "context-warmer agent (WINT-2080) is configured to call /cache-warm"
+    action: "Agent parses and executes /cache-warm skill instructions"
+    expected: "Skill instructions are unambiguous, phase-by-phase, and executable by an LLM agent without human intervention. Each phase has a clear termination condition."
+    evidence: "Agent successfully executes all phases of /cache-warm without requesting clarification; summary block emitted in parseable format"
+
+  - id: ED-3
+    title: "Partial --skip flags — multiple scripts skipped"
+    setup: "DATABASE_URL and KB_DATABASE_URL set"
+    action: "Invoke /cache-warm --skip=agent-missions --skip=domain-kb (or equivalent multi-skip syntax)"
+    expected: "Only project-context and library-cache scripts run. Summary: '2/4 scripts succeeded (2 skipped)'."
+    evidence: "wint.context_packs only has architecture and codebase pack types after run"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "SELECT count(*) FROM wint.context_packs WHERE pack_type = 'architecture' -- expects >= 5 rows"
+      - "SELECT count(*) FROM wint.context_packs WHERE pack_type = 'lessons_learned' -- expects >= 6 rows"
+      - "SELECT count(*) FROM wint.context_packs WHERE pack_type = 'codebase' -- expects 4 rows"
+      - "SELECT count(*) FROM wint.context_packs WHERE pack_type = 'agent_missions' -- expects >= 1 row (when WINT-2040 available)"
+      - "SELECT count(distinct pack_type) FROM wint.context_packs -- expects 4 types on full warm"
+manual_cases:
+  - id: MC-1
+    title: "Smoke test: clean warm produces minimum 13 packs"
+    steps:
+      - "Truncate wint.context_packs"
+      - "Set DATABASE_URL=postgres://...@localhost:5432/lego_dev"
+      - "Set KB_DATABASE_URL=postgres://...@localhost:5433/kb"
+      - "From monorepo root, invoke /cache-warm"
+      - "Run: SELECT pack_type, count(*) FROM wint.context_packs GROUP BY pack_type"
+    expected: "At least 13 total rows (5 architecture + 6 lessons_learned/blockers + 4 codebase; agent_missions count conditional on WINT-2040 state)"
+
+  - id: MC-2
+    title: "Skill file format compliance check"
+    steps:
+      - "Open .claude/skills/cache-warm/SKILL.md"
+      - "Verify frontmatter: name, description fields present"
+      - "Verify phased execution sections (Phase 1 preconditions through Phase 6 summary)"
+      - "Verify --skip option documented"
+      - "Verify environment variable section lists DATABASE_URL (port 5432) and KB_DATABASE_URL (port 5433)"
+      - "Compare structure against .claude/skills/lint-fix/SKILL.md"
+    expected: "cache-warm/SKILL.md follows the same structural conventions as lint-fix/SKILL.md: frontmatter, description, usage, parameters, phases"
+
+fixture_definitions:
+  - name: clean_context_packs
+    type: database
+    description: "wint.context_packs table truncated to empty state for smoke test baseline"
+  - name: partial_env_no_kb
+    type: environment
+    description: "DATABASE_URL set to port 5432, KB_DATABASE_URL unset — tests graceful skip of domain-kb populate"
+
+risks:
+  - "WINT-2040 (agent-mission-cache-populator.ts) is failed-code-review — HP-1 full warm test may not reach 4/4 until WINT-2040 resolves; use --skip=agent-missions for baseline verification"
+  - "Port confusion (5432 vs 5433) is historically the #1 failure mode — EC-4 is critical to verify"
+  - "Skill is a markdown instruction file, not TypeScript — standard Vitest coverage metrics do not apply; quality gate is documentation correctness and smoke test passage"
+  - "Real database required for smoke tests — CI cannot run these without DB provisioning"

@@ -1,0 +1,23 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "KB unavailable during story generation (mcp__postgres-knowledgebase__query failed)"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: KFMB-3030
+      feature: kb-first-migration
+      title: "Eliminate stories.index.md — Script Updates"
+      story_dir: plans/future/platform/kb-first-migration/backlog/KFMB-3030
+      story_file: plans/future/platform/kb-first-migration/backlog/KFMB-3030/KFMB-3030.md
+      story_type: tech_debt
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

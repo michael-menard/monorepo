@@ -159,7 +159,7 @@ artifact_write({
   artifact_type: "verification",
   phase: "qa_verification",
   iteration: 0,
-  file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
+  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/QA-VERIFY.yaml",
   content: { /* QA-VERIFY structure below */ }
 })
 ```

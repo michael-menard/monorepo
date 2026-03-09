@@ -1,0 +1,166 @@
+schema: 1
+story_id: WINT-0210
+timestamp: '2026-03-02T22:30:00Z'
+steps:
+  - id: 1
+    description: >-
+      Create .claude/prompts/role-packs/dev.md — Dev role pack with Patch Queue, Reuse Shared Packages, and Repair Loop
+      patterns (150-300 tokens, 2 positive + 1 negative example)
+    files:
+      - .claude/prompts/role-packs/dev.md
+    files_to_read:
+      - .claude/prompts/role-packs/_specs/patch-queue-pattern.md
+      - .claude/prompts/role-packs/_specs/repair-loop-pattern.md
+      - .claude/prompts/role-packs/FRAMEWORK.md
+      - .claude/agents/_shared/expert-personas.md
+    dependencies: []
+    slice: packages
+  - id: 2
+    description: >-
+      Create .claude/prompts/role-packs/po.md — PO role pack with cohesion checks, hard caps (max 5 findings, max 2
+      blocking), cohesion-findings.json pattern skeleton (150-300 tokens)
+    files:
+      - .claude/prompts/role-packs/po.md
+    files_to_read:
+      - .claude/prompts/role-packs/FRAMEWORK.md
+      - .claude/agents/_shared/expert-personas.md
+    dependencies: []
+    slice: packages
+  - id: 3
+    description: >-
+      Create .claude/prompts/role-packs/da.md — DA role pack with scope defense, hard caps (max 5 challenges, cannot
+      challenge blocking items), scope-challenges.json pattern skeleton (150-300 tokens)
+    files:
+      - .claude/prompts/role-packs/da.md
+    files_to_read:
+      - .claude/prompts/role-packs/FRAMEWORK.md
+      - .claude/agents/_shared/expert-personas.md
+    dependencies: []
+    slice: packages
+  - id: 4
+    description: >-
+      Create .claude/prompts/role-packs/qa.md — QA role pack with AC-to-Evidence trace pattern, ac-trace.json pattern
+      skeleton (150-300 tokens, 2 positive + 1 negative example)
+    files:
+      - .claude/prompts/role-packs/qa.md
+    files_to_read:
+      - .claude/prompts/role-packs/FRAMEWORK.md
+      - .claude/agents/_shared/expert-personas.md
+    dependencies: []
+    slice: packages
+  - id: 5
+    description: >-
+      Create .claude/prompts/role-packs/README.md — integration documentation covering consumption patterns, dependency
+      links, versioning strategy
+    files:
+      - .claude/prompts/role-packs/README.md
+    files_to_read:
+      - .claude/prompts/role-packs/FRAMEWORK.md
+    dependencies:
+      - 1
+      - 2
+      - 3
+      - 4
+    slice: packages
+  - id: 6
+    description: >-
+      Validate token budgets: measure all 4 role packs using line-count proxy (framework fallback), confirm each is
+      150-300 tokens, combined <= 1200 tokens. Adjust content if any exceed budget.
+    files: []
+    files_to_read:
+      - .claude/prompts/role-packs/dev.md
+      - .claude/prompts/role-packs/po.md
+      - .claude/prompts/role-packs/da.md
+      - .claude/prompts/role-packs/qa.md
+      - .claude/prompts/role-packs/FRAMEWORK.md
+    dependencies:
+      - 1
+      - 2
+      - 3
+      - 4
+    slice: packages
+files_to_change:
+  - path: .claude/prompts/role-packs/dev.md
+    action: create
+    reason: 'AC-1: Dev role pack with Patch Queue, Reuse Shared Packages, Repair Loop patterns'
+  - path: .claude/prompts/role-packs/po.md
+    action: create
+    reason: 'AC-2: PO role pack with cohesion check hard caps and cohesion-findings.json skeleton'
+  - path: .claude/prompts/role-packs/da.md
+    action: create
+    reason: 'AC-3: DA role pack with scope defense hard caps and scope-challenges.json skeleton'
+  - path: .claude/prompts/role-packs/qa.md
+    action: create
+    reason: 'AC-4: QA role pack with AC-to-Evidence trace and ac-trace.json skeleton'
+  - path: .claude/prompts/role-packs/README.md
+    action: create
+    reason: 'AC-5: Integration documentation for role pack consumption'
+commands_to_run:
+  - command: >-
+      wc -l .claude/prompts/role-packs/dev.md .claude/prompts/role-packs/po.md .claude/prompts/role-packs/da.md
+      .claude/prompts/role-packs/qa.md
+    when: after all role pack files created
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      File .claude/prompts/role-packs/dev.md created; contains Patch Queue ordering (types→API→UI→tests→cleanup), Reuse
+      Shared Packages heuristic, Repair Loop pattern, 2 positive + 1 negative example, 10-25 line pattern skeleton, YAML
+      frontmatter
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      File .claude/prompts/role-packs/po.md created; hard cap max 5 findings / max 2 blocking documented,
+      cohesion-findings.json skeleton present, 2 positive + 1 negative example, YAML frontmatter
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      File .claude/prompts/role-packs/da.md created; hard cap max 5 challenges / cannot challenge blocking items
+      documented, scope-challenges.json skeleton present, 2 positive + 1 negative example, YAML frontmatter
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      File .claude/prompts/role-packs/qa.md created; AC→Evidence trace pattern documented, ac-trace.json skeleton
+      present, 2 positive + 1 negative example, YAML frontmatter
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      File .claude/prompts/role-packs/README.md created; links to WINT-0180/0190/0200, consumption patterns (file-based
+      injection, KB MCP, context-pack sidecar) documented, versioning strategy documented
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      Line-count proxy validation per FRAMEWORK.md (1 line ≈ 7 tokens midpoint); all 4 role packs within 150-300 token
+      budget; combined <= 1200 tokens; token_count in each file's YAML frontmatter
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: >-
+      Example JSON outputs embedded inline in each role pack's pattern skeleton (patch-plan.json,
+      cohesion-findings.json, scope-challenges.json, ac-trace.json); WINT-0190/0200 schemas not yet available so manual
+      structural review applies per story test plan
+    evidence_type: manual
+architectural_decisions: []
+complexity: simple
+notes:
+  - >-
+    WINT-0180 (UAT) is complete — FRAMEWORK.md and _specs/ directory exist; storage location confirmed as
+    .claude/prompts/role-packs/
+  - >-
+    WINT-0190 (UAT) is complete — patch-queue-pattern.md and repair-loop-pattern.md are canonical source material for
+    Dev role pack
+  - >-
+    WINT-0200 (backlog/created status) is NOT yet implemented — PO role pack cannot reference user-flows.schema.json;
+    note this limitation in po.md and README.md; AC-7 schema validation falls back to manual review per story test plan
+  - >-
+    Steps 1-4 are independent and can be executed in any order (no cross-dependencies); step 5 (README) and step 6
+    (validation) depend on all 4 role packs being created
+  - >-
+    Token counting: use line-count proxy from FRAMEWORK.md (~1 line = 7 tokens midpoint) since tiktoken is not available
+    in this environment; document methodology in each file's frontmatter
+  - No code, no tests, no database — pure documentation/prompt work; E2E gate is exempt
+  - >-
+    FRAMEWORK.md Grandfathered Gap note: _specs files are full expanded documents; the role pack .md files (dev, po, da,
+    qa) are the 150-300 token injection-time files per FRAMEWORK.md path table
+  - >-
+    Pattern skeleton in each role pack references the relevant _specs/ file by name rather than inlining the full spec —
+    this keeps token budget within range

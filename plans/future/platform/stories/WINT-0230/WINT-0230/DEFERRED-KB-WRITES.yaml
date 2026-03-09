@@ -1,0 +1,308 @@
+# Deferred Knowledge Base Writes - WINT-0230
+# Generated: 2026-02-14
+# Reason: KB persistence attempted during story generation Phase 4.5
+
+deferred_writes:
+  - write_type: "story_insert"
+    timestamp: "2026-02-14T23:00:00Z"
+    table: "stories"
+    data:
+      story_id: "WINT-0230"
+      feature: "platform"
+      title: "Create Unified Model Interface"
+      story_dir: "plans/future/platform/backlog/WINT-0230"
+      story_file: "plans/future/platform/backlog/WINT-0230/WINT-0230.md"
+      story_type: "feature"
+      points: 9
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      epic: "WINT"
+      wave: 2
+      experiment_variant: "control"
+    conflict_resolution: "ON CONFLICT (story_id) DO UPDATE SET feature = EXCLUDED.feature, title = EXCLUDED.title, story_type = EXCLUDED.story_type, points = EXCLUDED.points, priority = EXCLUDED.priority, state = EXCLUDED.state"
+
+  - write_type: "artifact_insert"
+    timestamp: "2026-02-14T23:00:00Z"
+    table: "artifacts"
+    data:
+      story_id: "WINT-0230"
+      phase: "pm-generate"
+      artifact_type: "story"
+      file_path: "plans/future/platform/backlog/WINT-0230/WINT-0230.md"
+      created_at: "2026-02-14T23:00:00Z"
+    conflict_resolution: "ON CONFLICT (story_id, phase, artifact_type) DO UPDATE SET file_path = EXCLUDED.file_path"
+
+  - write_type: "artifact_insert"
+    timestamp: "2026-02-14T23:00:00Z"
+    table: "artifacts"
+    data:
+      story_id: "WINT-0230"
+      phase: "pm-generate"
+      artifact_type: "test-plan"
+      file_path: "plans/future/platform/backlog/WINT-0230/_pm/TEST-PLAN.md"
+      created_at: "2026-02-14T23:00:00Z"
+    conflict_resolution: "ON CONFLICT (story_id, phase, artifact_type) DO UPDATE SET file_path = EXCLUDED.file_path"
+
+  - write_type: "artifact_insert"
+    timestamp: "2026-02-14T23:00:00Z"
+    table: "artifacts"
+    data:
+      story_id: "WINT-0230"
+      phase: "pm-generate"
+      artifact_type: "dev-feasibility"
+      file_path: "plans/future/platform/backlog/WINT-0230/_pm/DEV-FEASIBILITY.md"
+      created_at: "2026-02-14T23:00:00Z"
+    conflict_resolution: "ON CONFLICT (story_id, phase, artifact_type) DO UPDATE SET file_path = EXCLUDED.file_path"
+
+  - write_type: "artifact_insert"
+    timestamp: "2026-02-14T23:00:00Z"
+    table: "artifacts"
+    data:
+      story_id: "WINT-0230"
+      phase: "pm-generate"
+      artifact_type: "risk-predictions"
+      file_path: "plans/future/platform/backlog/WINT-0230/_pm/RISK-PREDICTIONS.yaml"
+      created_at: "2026-02-14T23:00:00Z"
+    conflict_resolution: "ON CONFLICT (story_id, phase, artifact_type) DO UPDATE SET file_path = EXCLUDED.file_path"
+
+  # Future Opportunities from Autonomous Decision Phase
+  # Generated: 2026-02-14T21:15:00Z by elab-autonomous-decider
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "gap"
+      title: "No runtime hot-reload for strategy configuration"
+      description: "Add file watcher to reload strategy YAML on change without process restart (WINT-5xxx ML pipeline scope)"
+      impact: "low"
+      effort: "medium"
+      tags: ["edge-case", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "gap"
+      title: "Cache TTL hardcoded at 30s (no configuration)"
+      description: "Make cache TTL configurable via strategy YAML (add cache_ttl_ms field)"
+      impact: "low"
+      effort: "low"
+      tags: ["performance", "optimization", "non-blocking", "quick-win"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "gap"
+      title: "No metrics/telemetry for model selection decisions"
+      description: "Add structured logging hooks for WINT-0260 (model cost tracking) to consume"
+      impact: "medium"
+      effort: "medium"
+      tags: ["observability", "monitoring", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "gap"
+      title: "Escalation trigger priority order not documented visually"
+      description: "Add Mermaid diagram showing escalation priority order (human > failure > quality > cost)"
+      impact: "low"
+      effort: "low"
+      tags: ["ux-polish", "enhancement", "non-blocking", "quick-win"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "gap"
+      title: "No validation for circular escalation at runtime"
+      description: "Add runtime cycle detection in EscalationManager (currently only max depth enforcement)"
+      impact: "medium"
+      effort: "medium"
+      tags: ["edge-case", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Context-aware escalation (file count, complexity scoring)"
+      description: "ML-based complexity scoring (WINT-5xxx scope) - foundation laid with optional context parameter"
+      impact: "high"
+      effort: "high"
+      tags: ["integration", "future-work", "non-blocking", "strategic-bet"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Multi-tenant strategy support (different strategies per workflow)"
+      description: "Add strategy profile selection API (future scalability, not MVP requirement)"
+      impact: "medium"
+      effort: "high"
+      tags: ["integration", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "A/B testing for tier assignments"
+      description: "Experiment framework to test tier assignments against quality/cost metrics (MODL-0030/0040 integration)"
+      impact: "high"
+      effort: "medium"
+      tags: ["observability", "monitoring", "non-blocking", "quick-win"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Dynamic tier adjustment based on telemetry"
+      description: "Feedback loop from WINT-0260 telemetry to auto-adjust tier assignments (ML pipeline scope)"
+      impact: "high"
+      effort: "high"
+      tags: ["observability", "monitoring", "non-blocking", "strategic-bet"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Provider-specific fallback chains (not just Ollama → Claude)"
+      description: "Add fallback chains for OpenRouter, Anthropic Direct (currently assumes Ollama primary, Claude fallback)"
+      impact: "medium"
+      effort: "medium"
+      tags: ["edge-case", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Graceful degradation UI (notify user when fallback used)"
+      description: "Frontend notification when Ollama unavailable and falling back to Claude (UX enhancement)"
+      impact: "low"
+      effort: "medium"
+      tags: ["ux-polish", "enhancement", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Cost budget enforcement at strategy level"
+      description: "Add budget thresholds in strategy YAML, enforce in EscalationManager (WINT-0260 integration point)"
+      impact: "high"
+      effort: "medium"
+      tags: ["integration", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Model warmup/pre-loading for critical tiers"
+      description: "Pre-load Tier 0/1 models on orchestrator startup to reduce first-call latency (optimization)"
+      impact: "low"
+      effort: "high"
+      tags: ["performance", "optimization", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Strategy versioning with migration support"
+      description: "Add version migration logic when strategy schema changes (currently assumes single version)"
+      impact: "medium"
+      effort: "high"
+      tags: ["edge-case", "future-work", "non-blocking", "strategic-bet"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+  - write_type: "finding_insert"
+    timestamp: "2026-02-14T21:15:00Z"
+    table: "findings"
+    data:
+      story_id: "WINT-0230"
+      source_stage: "elab"
+      category: "future-opportunities"
+      finding_type: "enhancement"
+      title: "Agent-level escalation override (per-agent configuration)"
+      description: "Allow agents to specify custom escalation rules in frontmatter (advanced use case)"
+      impact: "medium"
+      effort: "medium"
+      tags: ["integration", "future-work", "non-blocking"]
+    conflict_resolution: "ON CONFLICT (story_id, title) DO UPDATE SET description = EXCLUDED.description"
+
+retry_instructions:
+  - "Run: /kb-sync WINT-0230 --from-deferred"
+  - "Or manually execute SQL inserts from this file"
+  - "Verify story appears in stories table: SELECT * FROM stories WHERE story_id = 'WINT-0230'"
+  - "Verify findings appear in findings table: SELECT COUNT(*) FROM findings WHERE story_id = 'WINT-0230' AND source_stage = 'elab'"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -86,17 +86,9 @@ The MCP tools (`worktree_get_by_story`, `worktree_mark_complete`) are called by 
 
 **KB-first (KSOT Phase 2)**: Try `kb_get_story({storyId: STORY_ID})` to get the story's current state. If found, use the state to determine which stage directory the story should be in. If KB is unavailable, fall back to directory scan.
 
+<!-- KSOT-3010: Flat stories/ layout — no stage-based directories -->
 **Directory fallback** — search within `{FEATURE_DIR}`:
-1. `{FEATURE_DIR}/backlog/{STORY_ID}/`
-2. `{FEATURE_DIR}/created/{STORY_ID}/`
-3. `{FEATURE_DIR}/elaboration/{STORY_ID}/`
-4. `{FEATURE_DIR}/ready-to-work/{STORY_ID}/`
-5. `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-6. `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
-7. `{FEATURE_DIR}/failed-code-review/{STORY_ID}/`
-8. `{FEATURE_DIR}/failed-qa/{STORY_ID}/`
-9. `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
-10. `{FEATURE_DIR}/UAT/{STORY_ID}/`
+1. `{FEATURE_DIR}/stories/{STORY_ID}/`
 
 If not found via KB or directory: `UPDATE FAILED: Story not found`
 
@@ -164,14 +156,21 @@ In `{FEATURE_DIR}/stories.index.md`:
 2. Change `**Status:** <old>` to `**Status:** <NEW_STATUS>`
 3. Update Progress Summary counts
 
-### 5. Return Result
+### 5. Log Telemetry (fire-and-forget — never blocks workflow)
+
+```
+/telemetry-log {STORY_ID} story-update execute success
+```
+If the call returns null or throws, log a warning and continue.
+
+### 6. Return Result
 
 ```yaml
 feature_dir: {FEATURE_DIR}
 story: {STORY_ID}
 old_status: <previous>
 new_status: <NEW_STATUS>
-file_updated: {FEATURE_DIR}/<stage>/{STORY_ID}/{STORY_ID}.md
+file_updated: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
 index_updated: true | false | skipped
 db_updated: true | false
 # db_updated values:

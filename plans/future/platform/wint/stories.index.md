@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-08T14:00:00Z"
+updated_at: "2026-03-09T05:08:00Z"
 ---
 
 # WINT Stories Index
@@ -16,19 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 26 |
-| in-qa | 1 |
-| ready-for-qa | 0 |
-| needs-code-review | 7 |
-| ready-for-code-review | 1 |
+| uat | 29 |
+| in-qa | 0 |
+| ready-for-qa | 1 |
+| needs-code-review | 3 |
+| ready-for-code-review | 3 |
 | failed-code-review | 0 |
-| failed-qa | 4 |
+| failed-qa | 5 |
 | elaboration | 1 |
 | created | 4 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
-| pending | 79 |
+| pending | 78 |
 
 ---
 
@@ -1018,8 +1018,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** needs-code-review
-**Story File:** `wint/needs-code-review/WINT-2030/WINT-2030.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1083,7 +1083,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2070: Implement Cache Warming Strategy
 
 **Status:** created
-**Depends On:** WINT-2030, WINT-2050, WINT-2060
+**Depends On:** WINT-2050, WINT-2060
 **Phase:** 2
 **Feature:** Create cache-warm skill that pre-populates all caches before workflow starts
 **Infrastructure:**
@@ -1145,7 +1145,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
 **Status:** ready-for-qa
-**Depends On:** WINT-2030, WINT-2050, WINT-2060, WINT-0100
+**Depends On:** WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache
 **Infrastructure:**
@@ -1252,7 +1252,7 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 ### WINT-3050: Implement Outcome Logging
 
-**Status:** ready-for-code-review
+**Status:** failed-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Add workflow_log_outcome calls at story completion to track quality_score, tokens, cost, churn
@@ -1263,7 +1263,8 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Risk Notes:** Quality scoring needs clear definition
 
 **Story Generated:** 2026-03-08
-**Story File:** `needs-code-review/WINT-3050/WINT-3050.md`
+**Story File:** `failed-code-review/WINT-3050/WINT-3050.md`
+**Fix Iteration Complete:** 2026-03-09 — Iteration 3 code review feedback resolved (Zod schema + logger.warn). Build PASS, type check PASS, lint PASS, tests 6/6 PASS. Ready for code review.
 
 ---
 
@@ -1385,16 +1386,16 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** needs-code-review
+**Status:** uat
 **Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
 **Points:** 5
 **Priority:** high
-**Feature:** Add graph.epics table (migration 0036), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
+**Feature:** Add graph.epics table (migration 0037), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
 **Infrastructure:**
-- packages/backend/database-schema (migration 0036)
+- packages/backend/database-schema (migration 0037)
 - packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
-**Story File:** `needs-code-review/WINT-4030/WINT-4030.md`
+**Story File:** `UAT/WINT-4030/WINT-4030.md`
 
 **Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
@@ -1449,7 +1450,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4070: Create cohesion-prosecutor Agent (PO Role)
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete
@@ -1514,7 +1515,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4110: Create Cohesion Check Command
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create /cohesion-check command that spawns graph-checker agent for a given feature
@@ -1543,7 +1544,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4130: Validate Graph & Cohesion System
 
-**Status:** pending
+**Status:** failed-qa
 **Depends On:** WINT-4100
 **Phase:** 4
 **Feature:** Test on existing franken-features (upload without replace, create without delete), verify detection and enforcement
@@ -1572,7 +1573,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4150: Standardize Elab Output Artifacts
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-4140
 **Phase:** 4
 **Feature:** Define and enforce standard elab output artifacts: story-brief.md, gaps.json (blocking/non-blocking split), user-flows.json (per schema), cohesion-findings.json (max 5/2 blocking), mvp-slice.json, scope-challenges.json (max 5), final-scope.json (+ followups), evidence-expectations.json. Add validation to elab-complete gate.
@@ -2355,7 +2356,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9050: Create evidence-judge LangGraph Node
 
-**Status:** pending
+**Status:** failed-qa
 **Depends On:** WINT-9010, WINT-4070
 **Phase:** 9
 **Feature:** Port evidence-judge agent to LangGraph node at nodes/qa/evidence-judge.ts
@@ -2445,8 +2446,8 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9105: Define LangGraph Error Handling & Retry Strategy
 
-**Status:** ready-for-qa
-**Story File:** `wint/ready-for-qa/WINT-9105/WINT-9105.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9105/WINT-9105.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-9010
 **Phase:** 9

@@ -19,6 +19,8 @@ import {
   worktreeListActive,
   worktreeMarkComplete,
   contextPackGet,
+  logInvocation,
+  WorkflowLogInvocationInputSchema,
 } from '@repo/mcp-tools'
 import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
 import {
@@ -47,6 +49,12 @@ import {
   type KbGetRelatedDeps,
 } from '../search/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
+import { findSimilarPlans } from '../search/plan-similarity.js'
+import { kb_get_plan_revisions } from '../crud-operations/plan-revision-operations.js'
+import {
+  kb_log_plan_event,
+  kb_get_plan_events,
+} from '../crud-operations/plan-execution-log-operations.js'
 import { kb_get_story_context } from '../crud-operations/story-context.js'
 import {
   AuditLogger,
@@ -134,6 +142,14 @@ import {
   KbGetChurnAnalysisInputSchema,
 } from '../crud-operations/analytics-operations.js'
 import {
+  workflow_log_decision,
+  workflow_log_outcome,
+  workflow_get_story_telemetry,
+  WorkflowLogDecisionInputSchema,
+  WorkflowLogOutcomeInputSchema,
+  WorkflowGetStoryTelemetryInputSchema,
+} from '../crud-operations/telemetry-operations.js'
+import {
   kb_sync_working_set,
   KbSyncWorkingSetInputSchema,
   kb_generate_working_set,
@@ -176,6 +192,12 @@ import {
   KbFindSimilarStoriesInputSchema,
   // Composite story context (CDTS-2020)
   KbGetStoryContextInputSchema,
+  // PDBM Phase 0 plan tools
+  KbSearchPlansInputSchema,
+  KbGetPlanDashboardInputSchema,
+  KbGetPlanRevisionsInputSchema,
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
@@ -4779,6 +4801,308 @@ async function handleKbGetStoryContext(
   }
 }
 
+// ============================================================================
+// PDBM Phase 0 — Plan Tools
+// ============================================================================
+
+/**
+ * Handle kb_search_plans tool invocation.
+ */
+async function handleKbSearchPlans(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_search_plans' as ToolName, context)
+    const validated = KbSearchPlansInputSchema.parse(input)
+
+    // Generate query embedding
+    const queryEmbedding = await deps.embeddingClient.generateEmbedding(validated.query)
+
+    // Find similar plans
+    const results = await findSimilarPlans(
+      deps.db,
+      queryEmbedding,
+      validated.limit,
+      validated.type_filter,
+    )
+
+    logger.info('kb_search_plans succeeded', {
+      correlation_id: correlationId,
+      count: results.length,
+      type_filter: validated.type_filter,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_search_plans failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_dashboard tool invocation.
+ */
+async function handleKbGetPlanDashboard(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_dashboard' as ToolName, context)
+    const validated = KbGetPlanDashboardInputSchema.parse(input)
+
+    // Query the plan_summary_view directly using Drizzle sql template
+    const result = await deps.db.execute(sql`
+      SELECT * FROM public.plan_summary_view
+      WHERE 1=1
+        ${validated.status ? sql`AND status = ${validated.status}` : sql``}
+        ${validated.plan_type ? sql`AND plan_type = ${validated.plan_type}` : sql``}
+      ORDER BY priority ASC, status ASC
+      LIMIT ${validated.limit}
+      OFFSET ${validated.offset}
+    `)
+
+    logger.info('kb_get_plan_dashboard succeeded', {
+      correlation_id: correlationId,
+      count: result.rows.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result.rows, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_dashboard failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_revisions tool invocation.
+ */
+async function handleKbGetPlanRevisions(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_revisions' as ToolName, context)
+    const validated = KbGetPlanRevisionsInputSchema.parse(input)
+    const result = await kb_get_plan_revisions({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_revisions succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      count: result.revisions.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_revisions failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_log_plan_event tool invocation.
+ */
+async function handleKbLogPlanEvent(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_log_plan_event' as ToolName, context)
+    const validated = KbLogPlanEventInputSchema.parse(input)
+    const result = await kb_log_plan_event({ db: deps.db }, validated)
+
+    logger.info('kb_log_plan_event succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      entry_type: validated.entry_type,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_log_plan_event failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_events tool invocation.
+ */
+async function handleKbGetPlanEvents(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_events' as ToolName, context)
+    const validated = KbGetPlanEventsInputSchema.parse(input)
+    const result = await kb_get_plan_events({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_events succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      count: result.events.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_events failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Telemetry Handlers (WINT-0120)
+// ============================================================================
+
+/**
+ * Handle workflow_log_decision tool call.
+ * Inserts one row to wint.hitl_decisions.
+ */
+async function handleWorkflowLogDecision(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_decision tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    decision_type: inputObj?.decision_type,
+    operator_id: inputObj?.operator_id,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_decision' as ToolName, context)
+    const validated = WorkflowLogDecisionInputSchema.parse(input)
+    const result = await workflow_log_decision({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_log_decision succeeded', {
+      correlation_id: correlationId,
+      id: result.id,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_decision failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle workflow_log_outcome tool call.
+ * Upserts one row to wint.story_outcomes.
+ */
+async function handleWorkflowLogOutcome(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_outcome tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    final_verdict: inputObj?.final_verdict,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_outcome' as ToolName, context)
+    const validated = WorkflowLogOutcomeInputSchema.parse(input)
+    const result = await workflow_log_outcome({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_log_outcome succeeded', {
+      correlation_id: correlationId,
+      id: result.id,
+      story_id: result.story_id,
+      final_verdict: result.final_verdict,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_outcome failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle workflow_get_story_telemetry tool call.
+ * Reads all 3 telemetry tables for a story.
+ */
+async function handleWorkflowGetStoryTelemetry(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_get_story_telemetry tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    enforceAuthorization('workflow_get_story_telemetry' as ToolName, context)
+    const validated = WorkflowGetStoryTelemetryInputSchema.parse(input)
+    const result = await workflow_get_story_telemetry({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('workflow_get_story_telemetry succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      invocation_count: result.invocations.length,
+      decision_count: result.decisions.length,
+      has_outcome: result.outcome !== null,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_get_story_telemetry failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -4871,12 +5195,23 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_roadmap: handleKbGetRoadmap,
   kb_update_plan: handleKbUpdatePlan,
   kb_upsert_plan: handleKbUpsertPlan,
+  // PDBM Phase 0 plan tools
+  kb_search_plans: handleKbSearchPlans,
+  kb_get_plan_dashboard: handleKbGetPlanDashboard,
+  kb_get_plan_revisions: handleKbGetPlanRevisions,
+  kb_log_plan_event: handleKbLogPlanEvent,
+  kb_get_plan_events: handleKbGetPlanEvents,
   // Artifact search tool (KBAR-0130)
   artifact_search: handleArtifactSearch,
   // Story similarity search (CDTS-2010)
   kb_find_similar_stories: handleKbFindSimilarStories,
   // Composite story context (CDTS-2020)
   kb_get_story_context: handleKbGetStoryContext,
+  // Telemetry tools (WINT-0120)
+  workflow_log_invocation: handleWorkflowLogInvocation,
+  workflow_log_decision: handleWorkflowLogDecision,
+  workflow_log_outcome: handleWorkflowLogOutcome,
+  workflow_get_story_telemetry: handleWorkflowGetStoryTelemetry,
 }
 
 /**
@@ -5018,3 +5353,49 @@ export async function handleContextPackGet(
 
 // Register in toolHandlers map
 toolHandlers['context_pack_get'] = handleContextPackGet
+
+// ============================================================================
+// Telemetry Tool Handler (WINT-3020)
+// ============================================================================
+
+/**
+ * Handle workflow_log_invocation tool invocation.
+ * WINT-3020: Invocation Logging Skill (telemetry-log)
+ */
+export async function handleWorkflowLogInvocation(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_invocation tool invoked', {
+    correlation_id: correlationId,
+    agent_name: inputObj?.agentName,
+    story_id: inputObj?.storyId,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_invocation' as ToolName, context)
+    const validated = WorkflowLogInvocationInputSchema.parse(input)
+    const result = await logInvocation(validated)
+
+    logger.info('workflow_log_invocation succeeded', {
+      correlation_id: correlationId,
+      agent_name: validated.agentName,
+      invocation_id: validated.invocationId,
+      inserted: result !== null,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_invocation failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// Register in toolHandlers map
+toolHandlers['workflow_log_invocation'] = handleWorkflowLogInvocation

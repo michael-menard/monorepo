@@ -1,0 +1,25 @@
+id: "APIP-5002"
+title: "E2E Test Plan and Playwright Framework Setup"
+status: uat
+priority: medium
+phase: 1
+feature: "Define E2E test plan for queue->supervisor->graphs->merge critical path; establish Playwright framework configuration and test scaffold"
+goal: "Validate end-to-end critical path (work enqueued -> supervisor dispatches -> implementation loop -> review -> QA -> merge) before Phase 0 completion."
+depends_on:
+  - "APIP-0010"
+  - "APIP-0020"
+  - "APIP-1010"
+  - "APIP-1020"
+  - "APIP-1030"
+  - "APIP-1050"
+  - "APIP-1060"
+  - "APIP-1070"
+endpoints: []
+infrastructure:
+  - "Playwright framework configuration"
+  - "E2E test scaffold for critical path"
+  - "Test environment setup (staging LangGraph instance)"
+risk_notes: "E2E test brittleness; synchronization across async graph executions."
+sizing_warning: false
+created: "2026-02-25T14:30:00Z"
+source: "Epic Elaboration - QA perspective"
