@@ -1386,16 +1386,16 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** in-progress
+**Status:** uat
 **Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
 **Points:** 5
 **Priority:** high
-**Feature:** Add graph.epics table (migration 0036), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
+**Feature:** Add graph.epics table (migration 0037), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
 **Infrastructure:**
-- packages/backend/database-schema (migration 0036)
+- packages/backend/database-schema (migration 0037)
 - packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
-**Story File:** `in-progress/WINT-4030/WINT-4030.md`
+**Story File:** `UAT/WINT-4030/WINT-4030.md`
 
 **Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
