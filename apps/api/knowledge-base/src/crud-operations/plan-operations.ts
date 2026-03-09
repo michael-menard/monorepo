@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, and, ne, isNotNull, notInArray, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, isNull, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans, planDetails } from '../db/schema.js'
@@ -329,13 +329,36 @@ export async function kb_get_plan(
   const result = await deps.db
     .select(planColumns)
     .from(plans)
-    .where(eq(plans.planSlug, validated.plan_slug))
+    .where(and(eq(plans.planSlug, validated.plan_slug), isNull(plans.deletedAt)))
     .limit(1)
 
   const plan = result[0] ?? null
 
+  // Fetch plan details (1:1 detail table — cold columns like raw_content)
+  let detail: typeof planDetails.$inferSelect | null = null
+  if (plan) {
+    const detailResult = await deps.db
+      .select()
+      .from(planDetails)
+      .where(eq(planDetails.planId, plan.id))
+      .limit(1)
+    detail = detailResult[0] ?? null
+  }
+
   return {
-    plan,
+    plan: plan
+      ? {
+          ...plan,
+          ...(detail
+            ? {
+                rawContent: detail.rawContent,
+                phases: detail.phases,
+                dependencies: detail.dependencies,
+                sourceFile: detail.sourceFile,
+              }
+            : {}),
+        }
+      : null,
     message: plan
       ? `Found plan: ${plan.title}`
       : `No plan found with slug '${validated.plan_slug}'`,
@@ -358,7 +381,7 @@ export async function kb_list_plans(
 }> {
   const validated = KbListPlansInputSchema.parse(input)
 
-  const conditions: SQL[] = []
+  const conditions: SQL[] = [isNull(plans.deletedAt)]
 
   if (validated.status) {
     conditions.push(eq(plans.status, validated.status))
@@ -374,7 +397,7 @@ export async function kb_list_plans(
   }
   if (validated.parent_plan_slug) {
     conditions.push(
-      sql`${plans.parentPlanId} = (SELECT id FROM plans WHERE plan_slug = ${validated.parent_plan_slug})`,
+      sql`${plans.parentPlanId} = (SELECT id FROM public.plans WHERE plan_slug = ${validated.parent_plan_slug})`,
     )
   }
 
@@ -534,7 +557,6 @@ export async function kb_update_plan(
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
   if (validated.estimated_stories !== undefined)
     updates.estimatedStories = validated.estimated_stories
-  // Note: dependencies moved to planDetails table (CDTS-1030) — not updatable via this endpoint
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null
@@ -549,6 +571,25 @@ export async function kb_update_plan(
     .returning()
 
   const plan = result[0] ?? null
+
+  // Upsert dependencies to planDetails when provided
+  if (plan && validated.dependencies !== undefined) {
+    await deps.db
+      .insert(planDetails)
+      .values({
+        planId: plan.id,
+        rawContent: '',
+        dependencies: validated.dependencies,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: planDetails.planId,
+        set: {
+          dependencies: validated.dependencies,
+          updatedAt: new Date(),
+        },
+      })
+  }
 
   return {
     plan,
@@ -602,17 +643,24 @@ export async function kb_get_roadmap(
 
   const orderBy = [plans.priority, plans.status, plans.planSlug]
 
-  // Always use explicit columns
+  // Always use explicit columns; left-join planDetails for dependencies
   const result = await deps.db
-    .select(planColumns)
+    .select({
+      ...planColumns,
+      dependencies: planDetails.dependencies,
+    })
     .from(plans)
+    .leftJoin(planDetails, eq(plans.id, planDetails.planId))
     .where(whereClause)
     .limit(validated.limit)
     .offset(validated.offset)
     .orderBy(...orderBy)
 
   return {
-    plans: result,
+    plans: result.map(r => ({
+      ...r,
+      dependencies: (r.dependencies as string[] | null) ?? [],
+    })),
     total,
     message: `Roadmap: ${result.length} active plans (${total} total)`,
   }

@@ -1,0 +1,11 @@
+story_id: WINT-3010
+package: '@repo/gatekeeper-sidecar'
+timestamp: '2026-03-08T18:00:00Z'
+e2e_gate: skipped_no_ui_surface
+reason: >-
+  Gatekeeper sidecar exposes no browser UI surface. E2E browser tests (Playwright)
+  are not applicable. Sidecar is tested via unit tests (vitest, >=80% coverage)
+  and HTTP integration test file (gate.integration.http). Per WINT-3010 AC-15.
+coverage_gate: unit_tests_passing
+unit_test_coverage: '>= 80% on gate-check.ts (all 4 stages, pass+fail paths)'
+http_integration: gate.integration.http exists with all stage + error case tests

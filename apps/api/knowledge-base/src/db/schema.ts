@@ -709,6 +709,9 @@ export const stories = pgTable(
 
     /** Packages touched by this story (text array) */
     packages: text('packages').array(),
+
+    /** Embedding vector for semantic similarity search (text-embedding-3-small, 1536 dims) */
+    embedding: vector('embedding', { dimensions: 1536 }),
   },
   table => ({
     featureIdx: index('idx_stories_feature').on(table.feature),

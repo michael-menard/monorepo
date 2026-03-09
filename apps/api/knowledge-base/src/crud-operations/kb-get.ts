@@ -9,7 +9,7 @@
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { eq } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import { KbGetInputSchema, type KbGetInput } from './schemas.js'
 
@@ -83,7 +83,7 @@ export async function kb_get(input: KbGetInput, deps: KbGetDeps): Promise<Knowle
   const result = await db
     .select(keColumns)
     .from(knowledgeEntries)
-    .where(eq(knowledgeEntries.id, validatedInput.id))
+    .where(and(eq(knowledgeEntries.id, validatedInput.id), isNull(knowledgeEntries.deletedAt)))
     .limit(1)
 
   const entry = result[0] ?? null
