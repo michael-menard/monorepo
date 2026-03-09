@@ -198,7 +198,13 @@ On `GENERATION COMPLETE`:
    - If `generation` is absent from `phases_completed`, treat as a partial failure and re-run Phase 2.
    - Note: `_bootstrap/CHECKPOINT.md` is no longer written. Phase state is carried exclusively in `phases_completed` within SUMMARY.yaml.
 
-4. Report to user.
+4. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log null pm-bootstrap-workflow execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
+
+5. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:

@@ -169,3 +169,11 @@ Status: in-progress
 Location: plans/future/wishlist/in-progress/WISH-001/
 Depends On: none
 ```
+
+---
+
+## Telemetry
+
+**Telemetry not applicable for this command.**
+
+`story-status` is a read-only status check utility with no state transitions. It produces no workflow outputs and does not advance any story phase. Logging a telemetry record for every status query would generate noise without observability value. This exemption is documented explicitly per WINT-3070 AC-8.
