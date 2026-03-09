@@ -45,7 +45,9 @@ import {
  * }
  * ```
  */
-export async function gateCheckTool(input: GateCheckRequest): Promise<GateCheckHttpResponse | null> {
+export async function gateCheckTool(
+  input: GateCheckRequest,
+): Promise<GateCheckHttpResponse | null> {
   try {
     const validated = GateCheckRequestSchema.parse(input)
 
