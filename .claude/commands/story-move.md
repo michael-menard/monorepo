@@ -139,7 +139,14 @@ Where `STAGE_STATUS` is the typical status for that stage (see table above).
 
 This updates both the story frontmatter and the index in one atomic step. The `/story-update` command handles its own DB write — no double-write occurs. `db_updated` is reported as `skipped` in the Step 5 return YAML when this delegation path is taken.
 
-### 5. Return Result
+### 5. Log Telemetry (fire-and-forget — never blocks workflow)
+
+```
+/telemetry-log {STORY_ID} story-move execute success
+```
+If the call returns null or throws, log a warning and continue.
+
+### 6. Return Result
 
 ```yaml
 feature_dir: {FEATURE_DIR}

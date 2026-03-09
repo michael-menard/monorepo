@@ -150,7 +150,12 @@ After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CON
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
    ```
-3. Report:
+3. Log telemetry (fire-and-forget — never blocks workflow; covers both interactive and autonomous mode):
+   ```
+   /telemetry-log {STORY_ID} elab-story execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
+4. Report:
    ```
    ELABORATION COMPLETE: PASS
    Story: {STORY_ID} ready for implementation
@@ -170,7 +175,12 @@ After Phase 2 returns `ELABORATION COMPLETE: FAIL`:
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/backlog/{STORY_ID}
    ```
-3. Report:
+3. Log telemetry (fire-and-forget — never blocks workflow; covers both interactive and autonomous mode):
+   ```
+   /telemetry-log {STORY_ID} elab-story execute failure
+   ```
+   If the call returns null or throws, log a warning and continue.
+4. Report:
    ```
    ELABORATION COMPLETE: FAIL
    Story: {STORY_ID} returned to backlog — address gaps and re-run /elab-story

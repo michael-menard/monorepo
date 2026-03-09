@@ -164,7 +164,14 @@ In `{FEATURE_DIR}/stories.index.md`:
 2. Change `**Status:** <old>` to `**Status:** <NEW_STATUS>`
 3. Update Progress Summary counts
 
-### 5. Return Result
+### 5. Log Telemetry (fire-and-forget — never blocks workflow)
+
+```
+/telemetry-log {STORY_ID} story-update execute success
+```
+If the call returns null or throws, log a warning and continue.
+
+### 6. Return Result
 
 ```yaml
 feature_dir: {FEATURE_DIR}
