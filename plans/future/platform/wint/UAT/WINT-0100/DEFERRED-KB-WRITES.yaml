@@ -342,3 +342,7 @@ notes:
   - KB write deferred due to PM agent not having direct database access
   - Retry when story-creation MCP tool or database migration script becomes available
   - Autonomous elaboration: 20 non-blocking findings deferred to KB (10 gaps + 10 enhancements)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

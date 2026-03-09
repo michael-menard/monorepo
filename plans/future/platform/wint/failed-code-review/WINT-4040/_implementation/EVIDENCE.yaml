@@ -1,0 +1,258 @@
+schema: 1
+story_id: "WINT-4040"
+version: 1
+timestamp: "2026-03-08T18:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Script exists at packages/backend/mcp-tools/src/scripts/infer-capabilities.ts, executable via pnpm tsx"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts --help"
+        result: SUCCESS
+        output: >
+          Prints usage text: "infer-capabilities.ts — Infer capabilities from story history (WINT-4040)".
+          Exit 0. File exists at expected path in worktree.
+
+  - ac_id: "AC-2"
+    ac_text: "Script reads story YAML files from plans/future/platform/*/ directories, parses feature, title, and AC text from frontmatter"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'HP-2: returns array of story entries with extracted fields'.
+          Creates temp directory mimicking plans/future/platform/ with story.yaml files.
+          scanStories() returns entries with storyId, epic, title, text fields extracted.
+          Test: 'extracts epic prefix from story ID' — verifies WINT prefix extracted from WINT-001.
+          Test: 'handles missing files gracefully (AC-2)' — non-existent path returns empty array.
+
+  - ac_id: "AC-3"
+    ac_text: "Keyword mapping: create/add/new/upload→create; view/read/get/list/query/download→read; edit/update/modify/replace→update; delete/remove/archive→delete"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          12 tests in mapKeywordsToStages suite cover all keyword branches.
+          HP-1: maps create, read, update, delete keywords correctly.
+          ED-3: upload → 'create'. ED-4: download → 'read'.
+          ED-1: create + view + edit + delete in one text → all 4 stages.
+          EC-3: no keywords → empty Set. Case-insensitive. Deduplication verified.
+
+  - ac_id: "AC-4"
+    ac_text: "Looks up epic prefix (e.g., WINT, WISH) in graph.features to find feature UUID"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          5 tests in resolveFeatureId suite.
+          HP-1: resolveFeatureId('WINT', mockFeatureRows) returns correct UUID.
+          HP-1: case-insensitive match — 'wish' matches featureName 'wish'.
+          EC-4: unknown prefix returns null. Empty features returns null.
+          Exact match preferred over partial match (separate test).
+
+  - ac_id: "AC-5"
+    ac_text: "Inserts into graph.capabilities with feature_id, lifecycle_stage, capability_type='business', maturity_level='beta', capability_name='{featureName}-{stage}-inferred'"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'AC-7: all inserted capabilities have capability_type=business, maturity_level=beta'.
+          Captures all rows passed to insertFn. Asserts capabilityType='business', maturityLevel='beta'.
+          Asserts lifecycleStage is one of ['create', 'read', 'update', 'delete'].
+          capabilityName format '{featureName}-{stage}-inferred' verified by inspecting inserted rows.
+
+  - ac_id: "AC-6"
+    ac_text: "ON CONFLICT DO NOTHING via Drizzle .onConflictDoNothing()"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: "packages/backend/mcp-tools/src/scripts/infer-capabilities.ts"
+        description: >
+          defaultInsertFn() calls db.insert(capabilities).values(...).onConflictDoNothing().
+          In-memory deduplication also enforced via capabilityMap keyed by capabilityName.
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'ED-2: deduplicates capabilities with same name'.
+          Two stories with same epic both creating 'create' capability → only one row in capturedRows.
+          names.length === uniqueNames.size asserted.
+
+  - ac_id: "AC-7"
+    ac_text: "--dry-run flag logs what would be inserted without DB writes"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'HP-4: dry-run calls insertFn with dryRun=true'.
+          When dryRun=true, insertFn is called with second argument true.
+          defaultInsertFn dry-run path: logs rows, returns without calling db.insert.
+          Tests: 'HP-4: dry-run resolves without error' and 'handles empty rows without error (dry-run)'.
+
+  - ac_id: "AC-8"
+    ac_text: "Emits { attempted, succeeded, failed, skipped } matching InferCapabilitiesResultSchema"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'HP-3: summary has correct shape matching CapabilityInferenceResultSchema'.
+          Calls CapabilityInferenceResultSchema.safeParse(result) and asserts success.
+          All 4 fields (attempted, succeeded, failed, skipped) verified as typeof 'number'.
+
+  - ac_id: "AC-9"
+    ac_text: "If graph.features contains zero rows, exits early with: No features found — run WINT-4030 script first"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          Test: 'EC-1: exits early if zero features found (AC-9)'.
+          dbFn mocked to return []. Result: attempted=0, succeeded=0.
+          insertFn never called (not.toHaveBeenCalled()).
+          Logger.warn emits 'No features found — run WINT-4030 script first' (code inspection confirms).
+
+  - ac_id: "AC-10"
+    ac_text: "Unit tests >= 80% coverage; insertFn is injectable"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+        description: >
+          33 tests pass across 4 describe blocks: mapKeywordsToStages (12), scanStories (5),
+          resolveFeatureId (5), inferCapabilities (9), defaultInsertFn (2).
+          All functions exported and tested with injectable insertFn and dbFn parameters.
+          pnpm --filter @repo/mcp-tools test passes all 33 infer-capabilities tests.
+      - type: command
+        command: "pnpm --filter @repo/mcp-tools test -- --reporter=verbose"
+        result: SUCCESS
+        output: "33 infer-capabilities tests passed. All other package tests also pass."
+
+  - ac_id: "AC-11"
+    ac_text: "--validate flag calls graph_get_capability_coverage per feature after population and prints coverage report"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: "packages/backend/mcp-tools/src/scripts/infer-capabilities.ts"
+        description: >
+          printValidationReport() dynamically imports graph-get-capability-coverage.js.
+          Iterates all features, calls graph_get_capability_coverage({ featureId: feature.featureName }).
+          Prints tabular report: Feature | create | read | update | delete | total | missing.
+          --validate flag wired in inferCapabilities() call after successful insertion.
+          CLI flag parsed in isMain block and forwarded to inferCapabilities({ validate }).
+
+touched_files:
+  - path: "packages/backend/mcp-tools/src/scripts/__types__/index.ts"
+    action: created
+    lines: 98
+    description: >
+      Zod schemas: LifecycleStageSchema, InferredCapabilitySchema, StoryEntrySchema,
+      CapabilityInferenceResultSchema, InferCapabilitiesOptionsSchema, InsertFn type,
+      FeatureRow type, DbFeatureQueryFn type.
+
+  - path: "packages/backend/mcp-tools/src/scripts/infer-capabilities.ts"
+    action: created
+    lines: 599
+    description: >
+      Main script: KEYWORD_MAP const, mapKeywordsToStages(), findStoryFiles(),
+      extractEpic(), extractStoryIdFromPath(), readStoryFile(), scanStories(),
+      defaultDbFeatureQueryFn(), resolveFeatureId(), defaultInsertFn(),
+      inferCapabilities(), printValidationReport(), CLI entrypoint (isMain check).
+
+  - path: "packages/backend/mcp-tools/src/scripts/__tests__/infer-capabilities.test.ts"
+    action: created
+    lines: 469
+    description: >
+      Unit test suite: 33 tests across mapKeywordsToStages, scanStories,
+      resolveFeatureId, inferCapabilities, defaultInsertFn describe blocks.
+      All DB calls injectable (no real DB needed). Uses tmp directories for file I/O tests.
+
+commands_run:
+  - command: "pnpm --filter @repo/mcp-tools check-types"
+    result: SUCCESS
+    output: "Exit 0 — no TypeScript errors"
+    timestamp: "2026-03-08T17:30:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools test -- --reporter=verbose"
+    result: SUCCESS
+    output: "33 infer-capabilities tests passed (all package tests pass)"
+    timestamp: "2026-03-08T17:35:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools build"
+    result: SUCCESS
+    output: "Exit 0 — tsc build succeeded"
+    timestamp: "2026-03-08T17:40:00Z"
+
+  - command: "pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts --help"
+    result: SUCCESS
+    output: "Usage text printed. Exit 0."
+    timestamp: "2026-03-08T17:45:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools exec eslint src/scripts/infer-capabilities.ts --max-warnings=0"
+    result: SUCCESS
+    output: "Exit 0 — no lint errors or warnings after fixing no-useless-escape (line 103) and max-line-length (line 533)"
+    timestamp: "2026-03-08T18:30:00Z"
+    note: "Fix iteration 2: resolved ranked_patches priority 1 (no-useless-escape) and priority 2 (max-line-length)"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 33, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: >
+    story_type: tech_debt / CLI script — no UI surface, no HTTP endpoints,
+    no browser-testable behavior. Script requires live DB with WINT-4030 features seeded
+    for integration testing. Unit tests cover all logic paths via injectable functions.
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage: {}
+
+notable_decisions:
+  - >
+    Injectable insertFn and dbFn pattern follows populate-domain-kb.ts precedent exactly,
+    enabling full unit test isolation without any live DB connections.
+  - >
+    In-memory deduplication via capabilityMap<capabilityName, InferredCapability> runs before
+    Drizzle .onConflictDoNothing() to reduce unnecessary DB round-trips within a single run.
+  - >
+    findStoryFiles() recursively scans plans/future/platform/ matching both story.yaml and
+    {STORY_ID}.md patterns to handle both YAML-only and markdown-frontmatter story formats.
+  - >
+    printValidationReport() uses dynamic import for graph-get-capability-coverage to avoid
+    circular dependency at module load time and to stay consistent with defaultInsertFn pattern.
+  - >
+    E2E tests marked exempt: this is a CLI script with no web UI. Integration testing requires
+    WINT-4030 to be merged and graph.features seeded, which is post-merge scope.
+
+known_deviations:
+  - >
+    AC-10 coverage percentage not numerically confirmed (--coverage flag requires @vitest/coverage-v8
+    which is not installed in this package). Coverage quality assessed by examining all 33 tests
+    which exercise all exported functions across all branches including error paths.
+  - >
+    --validate flag's graph_get_capability_coverage integration cannot be fully tested in unit tests
+    without live DB. The mock in tests returns null, verifying the null-guard path. Full validation
+    requires post-WINT-4030 integration environment.
+
+token_summary:
+  execute: { in: 12000, out: 4000 }

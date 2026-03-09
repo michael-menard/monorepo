@@ -312,3 +312,7 @@ processing_notes: |
   - WKFL-008-F: Pattern-driven experiments (enhancement-8)
 
   Total future enhancement effort: ~161k tokens (1.7x MVP scope)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

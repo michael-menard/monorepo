@@ -287,3 +287,7 @@ notes: |
   All findings are non-blocking enhancements or phase-2+ work.
   KB writes should be executed by orchestrator when kb-writer is available.
   Each entry includes source reference, impact/effort ratings, and actionable recommendations.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

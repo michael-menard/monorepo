@@ -80,6 +80,7 @@ import {
   KbListDeferredWritesInputSchema,
   KbProcessDeferredWritesInputSchema,
 } from '../crud-operations/index.js'
+import { createDeferredWriteProcessor } from '../crud-operations/deferred-write-processor.js'
 import {
   kb_get_work_state,
   kb_update_work_state,
@@ -142,6 +143,7 @@ import {
   kb_archive_working_set,
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
+import { withRetry } from '../db/client.js'
 import {
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
@@ -177,7 +179,6 @@ import {
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
-import { withRetry } from '../db/client.js'
 import { createMcpLogger } from './logger.js'
 import {
   type ToolCallContext,
@@ -1740,6 +1741,18 @@ export async function handleKbHealth(
       overallStatus = 'degraded'
     }
 
+    // Run deferred writes TTL cleanup (fire-and-forget, non-blocking)
+    if (checks.db.status === 'pass') {
+      try {
+        await db.execute(sql`SELECT public.cleanup_deferred_writes(30)`)
+      } catch (cleanupError) {
+        logger.warn('Deferred writes cleanup failed during health check', {
+          correlation_id: correlationId,
+          error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+        })
+      }
+    }
+
     const uptimeMs = getServerUptimeMs()
     const queryTimeMs = Date.now() - startTime
 
@@ -2913,7 +2926,7 @@ export async function handleKbCleanupStaleTasks(
  */
 export async function handleKbQueueDeferredWrite(
   input: unknown,
-  _deps: ToolHandlerDeps,
+  deps: ToolHandlerDeps,
   context?: ToolCallContext,
 ): Promise<McpToolResult> {
   const startTime = Date.now()
@@ -2929,7 +2942,7 @@ export async function handleKbQueueDeferredWrite(
   try {
     const validated = KbQueueDeferredWriteInputSchema.parse(input)
 
-    const result = await kb_queue_deferred_write(validated)
+    const result = await kb_queue_deferred_write(validated, { db: deps.db })
 
     const totalTimeMs = Date.now() - startTime
 
@@ -2969,7 +2982,7 @@ export async function handleKbQueueDeferredWrite(
  */
 export async function handleKbListDeferredWrites(
   input: unknown,
-  _deps: ToolHandlerDeps,
+  deps: ToolHandlerDeps,
   context?: ToolCallContext,
 ): Promise<McpToolResult> {
   const startTime = Date.now()
@@ -2986,7 +2999,7 @@ export async function handleKbListDeferredWrites(
   try {
     const validated = KbListDeferredWritesInputSchema.parse(input)
 
-    const result = await kb_list_deferred_writes(validated)
+    const result = await kb_list_deferred_writes(validated, { db: deps.db })
 
     const totalTimeMs = Date.now() - startTime
 
@@ -3027,7 +3040,7 @@ export async function handleKbListDeferredWrites(
  */
 export async function handleKbProcessDeferredWrites(
   input: unknown,
-  _deps: ToolHandlerDeps,
+  deps: ToolHandlerDeps,
   context?: ToolCallContext,
 ): Promise<McpToolResult> {
   const startTime = Date.now()
@@ -3045,10 +3058,8 @@ export async function handleKbProcessDeferredWrites(
   try {
     const validated = KbProcessDeferredWritesInputSchema.parse(input)
 
-    // Note: This handler doesn't have access to a processor callback
-    // since we can't inject the KB operations dynamically.
-    // In practice, a separate CLI command or scheduled job would handle processing.
-    const result = await kb_process_deferred_writes(validated)
+    const processor = createDeferredWriteProcessor(deps)
+    const result = await kb_process_deferred_writes(validated, { db: deps.db }, processor)
 
     const totalTimeMs = Date.now() - startTime
 
@@ -4675,10 +4686,7 @@ async function generateAndSaveStoryEmbedding(
     if (!text.trim()) return
 
     const embedding = await deps.embeddingClient.generateEmbedding(text)
-    await deps.db
-      .update(stories)
-      .set({ embedding })
-      .where(eq(stories.storyId, storyId))
+    await deps.db.update(stories).set({ embedding }).where(eq(stories.storyId, storyId))
 
     logger.debug('Story embedding generated', {
       correlation_id: correlationId,

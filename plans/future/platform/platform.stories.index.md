@@ -277,14 +277,14 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic |
 |---|---|-------|-------|---------------|------|
-| 125 | | WINT-0120 | Create Telemetry MCP Tools | ← WINT-0040 | WINT |
-| 126 | | WINT-3010 | Create Gatekeeper Sidecar | ← WINT-2020 | WINT |
-| 127 | | WINT-3020 | Implement Invocation Logging | ← WINT-0120 | WINT |
-| 128 | | WINT-3030 | Create telemetry-logger Agent | ← WINT-3010 | WINT |
-| 129 | | WINT-3040 | Decision Logging with Embeddings | ← WINT-0120 | WINT |
-| 130 | | WINT-3050 | Implement Outcome Logging | ← WINT-0120 | WINT |
-| 131 | | WINT-3060 | Create Telemetry Query Command | ← WINT-3010, 3030, 3040 | WINT |
-| 132 | | WINT-3070 | Update 10 Core Agents with Telemetry | ← WINT-3020 | WINT |
+| 125 | x | WINT-0120 | Create Telemetry MCP Tools **created** | ← WINT-0040 | WINT |
+| 126 | x | WINT-3010 | Create Gatekeeper Sidecar **created** | ← WINT-2020 | WINT |
+| 127 | x | WINT-3020 | Implement Invocation Logging **created** | ← WINT-0120 | WINT |
+| 128 | x | WINT-3030 | Create telemetry-logger Agent **created** | ← WINT-3010 | WINT |
+| 129 | x | WINT-3040 | Decision Logging with Embeddings **created** | ← WINT-0120 | WINT |
+| 130 | x | WINT-3050 | Implement Outcome Logging **created** | ← WINT-0120 | WINT |
+| 131 | x | WINT-3060 | Create Telemetry Query Command **created** | ← WINT-3010, 3030, 3040 | WINT |
+| 132 | x | WINT-3070 | Update 10 Core Agents with Telemetry **created** | ← WINT-3020 | WINT |
 | 133 | | WINT-3080 | Validate Telemetry Collection | ← WINT-3060 | WINT |
 | 134 | | WINT-3090 | Add Scoreboard Metrics | ← WINT-3020, 3050 | WINT |
 | 135 | | WINT-3100 | Create State Transition Event Log | ← WINT-0040 | WINT |

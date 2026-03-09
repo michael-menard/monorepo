@@ -256,7 +256,11 @@ export async function kb_get_task(
   const validatedInput = KbGetTaskInputSchema.parse(input)
   const { db } = deps
 
-  const result = await db.select(taskColumns).from(tasks).where(and(eq(tasks.id, validatedInput.id), isNull(tasks.deletedAt))).limit(1)
+  const result = await db
+    .select(taskColumns)
+    .from(tasks)
+    .where(and(eq(tasks.id, validatedInput.id), isNull(tasks.deletedAt)))
+    .limit(1)
 
   return result[0] ?? null
 }
@@ -354,7 +358,9 @@ export async function kb_list_tasks(
   }
   const { db } = deps
 
-  const conditions: (ReturnType<typeof eq> | ReturnType<typeof isNull>)[] = [isNull(tasks.deletedAt)]
+  const conditions: (ReturnType<typeof eq> | ReturnType<typeof isNull>)[] = [
+    isNull(tasks.deletedAt),
+  ]
 
   if (validatedInput.status) {
     conditions.push(eq(tasks.status, validatedInput.status))

@@ -1606,6 +1606,41 @@ export const storyKnowledgeLinks = pgTable(
   }),
 )
 
+// ============================================================================
+// Deferred Writes Table (migration 028)
+// ============================================================================
+
+/**
+ * Tracks deferred KB writes for retry when the DB was temporarily unavailable.
+ * Replaces the old YAML-file-based deferred writes system.
+ */
+export const deferredWrites = pgTable(
+  'deferred_writes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    operation: text('operation').notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    error: text('error'),
+    retryCount: integer('retry_count').notNull().default(0),
+    lastRetry: timestamp('last_retry', { withTimezone: true }),
+    storyId: text('story_id'),
+    agent: text('agent'),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    unprocessedIdx: index('idx_deferred_writes_unprocessed')
+      .on(table.createdAt)
+      .where(sql`processed_at IS NULL`),
+    unprocessedOperationIdx: index('idx_deferred_writes_unprocessed_operation')
+      .on(table.operation)
+      .where(sql`processed_at IS NULL`),
+    unprocessedStoryIdx: index('idx_deferred_writes_unprocessed_story')
+      .on(table.storyId)
+      .where(sql`processed_at IS NULL AND story_id IS NOT NULL`),
+  }),
+)
+
 // Export table types for use in queries
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert
@@ -1656,3 +1691,5 @@ export type PlanDependency = typeof planDependencies.$inferSelect
 export type NewPlanDependency = typeof planDependencies.$inferInsert
 export type StoryKnowledgeLink = typeof storyKnowledgeLinks.$inferSelect
 export type NewStoryKnowledgeLink = typeof storyKnowledgeLinks.$inferInsert
+export type DeferredWrite = typeof deferredWrites.$inferSelect
+export type NewDeferredWrite = typeof deferredWrites.$inferInsert

@@ -172,3 +172,7 @@ Retry this KB write during next KB sync operation or via manual retry command.
 - No MVP-critical gaps found - story can proceed to ready-to-work
 - Process these KB entries via batch job or manual kb-writer invocation
 - Story ready for completion phase without AC additions
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

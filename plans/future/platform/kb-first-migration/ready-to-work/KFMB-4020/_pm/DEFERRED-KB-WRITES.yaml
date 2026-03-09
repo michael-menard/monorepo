@@ -33,3 +33,7 @@ retry_query: |
     touches_database = EXCLUDED.touches_database,
     touches_infra = EXCLUDED.touches_infra;
 connection: "postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

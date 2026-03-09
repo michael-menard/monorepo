@@ -1,0 +1,101 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "Command file exists with valid YAML frontmatter"
+    setup: "Story WINT-4110 delivered .claude/commands/cohesion-check.md"
+    action: "Read file; parse YAML frontmatter block"
+    expected: "Frontmatter contains created, updated, version, type: orchestrator, agents: [graph-checker.agent.md]"
+    evidence: "File read + YAML parse succeeds with required keys present"
+  - id: HP-2
+    title: "Usage line is correct"
+    setup: "File exists"
+    action: "Grep for usage line pattern"
+    expected: "Line matches: /cohesion-check {FEATURE_DIR} {STORY_ID} [--package <name>]"
+    evidence: "grep for cohesion-check.*FEATURE_DIR.*STORY_ID.*--package returns match"
+  - id: HP-3
+    title: "Phase table lists graph-checker phase with haiku model"
+    setup: "File exists"
+    action: "Read Phases section"
+    expected: "Table row with graph-checker.agent.md, model haiku, signal GRAPH-CHECKER COMPLETE"
+    evidence: "grep for graph-checker.agent.md and haiku in Phases table"
+  - id: HP-4
+    title: "Execution section shows correct Task tool invocation"
+    setup: "File exists"
+    action: "Read Execution section"
+    expected: "subagent_type: general-purpose, model: haiku, prompt includes 'Read instructions: .claude/agents/graph-checker.agent.md' and story directory path"
+    evidence: "grep for subagent_type general-purpose in Execution section"
+  - id: HP-5
+    title: "Output section documents graph-check-results.json location and fields"
+    setup: "File exists"
+    action: "Read Output/Done section"
+    expected: "Documents {STORY_DIR}/_implementation/graph-check-results.json; describes franken_features_found, violations, warning_count"
+    evidence: "grep for graph-check-results.json and field names in Done section"
+  - id: HP-6
+    title: "All three completion signals documented with guidance"
+    setup: "File exists"
+    action: "Read completion signals section"
+    expected: "GRAPH-CHECKER COMPLETE, GRAPH-CHECKER COMPLETE WITH WARNINGS: {N}, GRAPH-CHECKER BLOCKED: {reason} all present"
+    evidence: "grep for each signal string returns match"
+  - id: HP-7
+    title: "Non-Goals section present with WINT-4120 deferral"
+    setup: "File exists"
+    action: "Read Non-Goals section"
+    expected: "States auto-run at story completion deferred to WINT-4120"
+    evidence: "grep for WINT-4120 in Non-Goals section"
+  - id: HP-8
+    title: "--package flag documented as optional with packageName forwarding"
+    setup: "File exists"
+    action: "Read parameters / usage section"
+    expected: "--package documented as optional; states it is forwarded to graph-checker as packageName filter"
+    evidence: "grep for --package and packageName"
+error_cases:
+  - id: EC-1
+    title: "Missing frontmatter fields detected"
+    setup: "N/A (structural verification)"
+    action: "Parse frontmatter and check each required key"
+    expected: "All of: created, updated, version, type, agents present"
+    evidence: "Structural check of YAML frontmatter keys"
+  - id: EC-2
+    title: "Execution section missing story directory path forwarding"
+    setup: "File exists"
+    action: "Read execution section; verify story directory path is passed to graph-checker"
+    expected: "Story directory path appears in prompt template passed to graph-checker"
+    evidence: "grep for STORY_DIR or story_dir in execution block"
+edge_cases:
+  - id: ED-1
+    title: "WINT-4040 runtime degradation note present"
+    setup: "File exists"
+    action: "Read Output/Done section for degradation note"
+    expected: "Note present that graph-checker degrades gracefully when capability data absent"
+    evidence: "grep for degradation or warning_count in output/done section"
+manual_cases:
+  - id: MC-1
+    title: "Full structural review of cohesion-check.md"
+    steps:
+      - "Read .claude/commands/cohesion-check.md"
+      - "Verify YAML frontmatter: created, updated, version, type: orchestrator, agents list"
+      - "Verify usage line with all parameters"
+      - "Verify phase table has graph-checker entry with haiku model"
+      - "Verify execution section Task tool pattern"
+      - "Verify output location and field descriptions"
+      - "Verify all three completion signals with guidance"
+      - "Verify Non-Goals section mentions WINT-4120"
+      - "Verify --package flag documented as optional with packageName forwarding"
+    expected: "All checks pass; file is well-structured and complete"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+fixture_definitions: []
+risks:
+  - "No automated test runner for markdown command files; all verification is structural/manual"
+  - "YAML frontmatter validity must be checked manually or via YAML parser"
+known_deviations:
+  - "Unit tests exempt: no TypeScript source files (WKFL-010)"
+  - "Integration tests exempt: no HTTP endpoints or database interactions"
+  - "E2E tests exempt: no UI surface (WKFL-010)"
+  - "Code review waived per WKFL-001/WKFL-006 for documentation-only stories; substitute documentation quality check"

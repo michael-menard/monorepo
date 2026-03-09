@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-08T12:00:00Z"
+updated_at: "2026-03-08T14:00:00Z"
 ---
 
 # WINT Stories Index
@@ -20,15 +20,15 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | in-qa | 1 |
 | ready-for-qa | 0 |
 | needs-code-review | 7 |
-| ready-for-code-review | 0 |
-| failed-code-review | 1 |
+| ready-for-code-review | 1 |
+| failed-code-review | 0 |
 | failed-qa | 4 |
-| elaboration | 0 |
-| created | 0 |
+| elaboration | 1 |
+| created | 4 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
-| pending | 84 |
+| pending | 79 |
 
 ---
 
@@ -240,7 +240,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0120: Create Telemetry MCP Tools
 
-**Status:** pending
+**Status:** Ready to Work
 **Depends On:** WINT-0040
 **Phase:** 0
 **Feature:** Add MCP tools: workflow_log_invocation, workflow_log_decision, workflow_log_outcome, workflow_get_story_telemetry
@@ -250,6 +250,9 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enable agents to log telemetry data for observability and ML training
 
 **Risk Notes:** High-frequency writes need batching or async strategy
+
+**Story File:** `ready-to-work/WINT-0120/WINT-0120.md`
+**Story Generated:** 2026-03-09
 
 ---
 
@@ -1174,7 +1177,7 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 ### WINT-3010: Create Gatekeeper Sidecar
 
-**Status:** pending
+**Status:** ready-for-code-review
 **Depends On:** WINT-2020
 **Phase:** 3
 **Feature:** Create gatekeeper sidecar at POST /gate/check for stages: POST_BOOTSTRAP, ELAB_COMPLETE, SCOPE_OK, PATCH_COMPLETE with "proof or it didn't happen" enforcement
@@ -1186,11 +1189,15 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Must not block legitimate completions
 
+**Story File:** `failed-code-review/WINT-3010/WINT-3010.md`
+**Story Generated:** 2026-03-08
+**Updated:** 2026-03-09 (fix cycle completed, ready for code review)
+
 ---
 
 ### WINT-3020: Implement Invocation Logging
 
-**Status:** pending
+*Status:* needs-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Create telemetry-log skill that logs every agent spawn with tokens, latency, success/failure to telemetry.agent_invocations
@@ -1201,11 +1208,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** High-frequency writes need batching
 
+**Story File:** `needs-code-review/WINT-3020/WINT-3020.md`
+**Story Generated:** 2026-03-08
+
 ---
 
 ### WINT-3030: Create telemetry-logger Agent
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-3010
 **Phase:** 3
 **Feature:** Create haiku-powered worker agent that implements telemetry logging
@@ -1216,11 +1226,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Must not add significant latency to workflows
 
+**Story File:** `needs-code-review/WINT-3030/WINT-3030.md`
+**Story Generated:** 2026-03-09
+
 ---
 
 ### WINT-3040: Implement Decision Logging with Embeddings
 
-**Status:** pending
+**Status:** In Elaboration
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Create telemetry-decision skill that logs HiTL decisions with context embeddings to telemetry.hitl_decisions
@@ -1232,11 +1245,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Embedding generation adds latency
 
+**Story Generated:** 2026-03-08
+**Story File:** `elaboration/WINT-3040/WINT-3040.md`
+
 ---
 
 ### WINT-3050: Implement Outcome Logging
 
-**Status:** pending
+**Status:** ready-for-code-review
 **Depends On:** WINT-0120
 **Phase:** 3
 **Feature:** Add workflow_log_outcome calls at story completion to track quality_score, tokens, cost, churn
@@ -1246,11 +1262,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 
 **Risk Notes:** Quality scoring needs clear definition
 
+**Story Generated:** 2026-03-08
+**Story File:** `needs-code-review/WINT-3050/WINT-3050.md`
+
 ---
 
 ### WINT-3060: Create Telemetry Query Command
 
-**Status:** pending
+**Status:** Created
 **Depends On:** WINT-3010, WINT-3030, WINT-3040
 **Phase:** 3
 **Feature:** Create /telemetry command that shows story-level telemetry: agent invocations, decisions, outcomes
@@ -1260,12 +1279,14 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Goal:** Enable human review of telemetry data
 
 **Risk Notes:** Query performance needs optimization
+**Story Generated:** 2026-03-08
+**Story File:** `backlog/WINT-3060/WINT-3060.md`
 
 ---
 
 ### WINT-3070: Update 10 Core Workflow Agents with Telemetry
 
-**Status:** pending
+**Status:** elaboration
 **Depends On:** WINT-3020
 **Phase:** 3
 **Feature:** Add telemetry-log calls to workflow orchestrators: pm-bootstrap-workflow, elab-epic, elab-story, dev-implement-story, dev-fix-story, qa-verify-story, pm-refine-story, story-status, story-update, story-move
@@ -1274,6 +1295,8 @@ Telemetry phase - Gatekeeper sidecar, invocation logging, HiTL capture, full obs
 **Goal:** Capture telemetry from primary workflow paths
 
 **Risk Notes:** Must not break existing workflows
+**Story Generated:** 2026-03-08
+**Story File:** `elaboration/WINT-3070/WINT-3070.md`
 
 ---
 
@@ -2317,7 +2340,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9040: Create scope-defender LangGraph Node
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-9010, WINT-4060
 **Phase:** 9
 **Feature:** Port scope-defender agent to LangGraph node at nodes/story/scope-defend.ts

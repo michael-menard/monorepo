@@ -97,7 +97,8 @@ export function buildStoryEmbeddingText(
       const acText = ac
         .map(item => {
           if (typeof item === 'string') return item
-          if (typeof item === 'object' && item !== null && 'text' in item) return (item as { text: string }).text
+          if (typeof item === 'object' && item !== null && 'text' in item)
+            return (item as { text: string }).text
           return JSON.stringify(item)
         })
         .join(' ')

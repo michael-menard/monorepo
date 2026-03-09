@@ -87,30 +87,30 @@
  │ 121 │ WINT-9030             │ Create cohesion-prosecutor       │ backlog               │ /elab-story plans/future/platform/wint WINT-9030              │
  │     │                       │ LangGraph Node                   │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 122 │ WINT-9040             │ Create scope-defender LangGraph  │ backlog               │ /elab-story plans/future/platform/wint WINT-9040              │
- │     │                       │ Node                             │                       │                                                              │
+│ 122 │ WINT-9040             │ Create scope-defender LangGraph  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9040         │
+│     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ backlog               │ /elab-story plans/future/platform/wint WINT-9050              │
- │     │                       │ Node                             │                       │                                                              │
+│ 123 │ WINT-9050             │ Create evidence-judge LangGraph  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9050         │
+│     │                       │ Node                             │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 124 │ WINT-9060             │ Create batch-coordinator         │ backlog               │ /elab-story plans/future/platform/wint WINT-9060              │
  │     │                       │ LangGraph Graph                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 13 — Telemetry   │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 125 │ WINT-0120             │ Create Telemetry MCP Tools       │ backlog               │ /elab-story plans/future/platform/wint WINT-0120              │
+│ 125 │ WINT-0120             │ Create Telemetry MCP Tools       │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-0120     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 126 │ WINT-3010             │ Create Gatekeeper Sidecar        │ backlog               │ /elab-story plans/future/platform/wint WINT-3010              │
+│ 126 │ WINT-3010             │ Create Gatekeeper Sidecar        │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-3010           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 127 │ WINT-3020             │ Implement Invocation Logging     │ backlog               │ /elab-story plans/future/platform/wint WINT-3020              │
+│ 127 │ WINT-3020             │ Implement Invocation Logging     │ needs-code-review    │ /dev-code-review plans/future/platform/wint WINT-3020         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 128 │ WINT-3030             │ Create telemetry-logger Agent    │ backlog               │ /elab-story plans/future/platform/wint WINT-3030              │
+│ 128 │ WINT-3030             │ Create telemetry-logger Agent    │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-3030         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 129 │ WINT-3040             │ Decision Logging with Embeddings │ backlog               │ /elab-story plans/future/platform/wint WINT-3040              │
+│ 129 │ WINT-3040             │ Decision Logging with Embeddings │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-3040     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 130 │ WINT-3050             │ Implement Outcome Logging        │ backlog               │ /elab-story plans/future/platform/wint WINT-3050              │
+│ 130 │ WINT-3050             │ Implement Outcome Logging        │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-3050           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 131 │ WINT-3060             │ Create Telemetry Query Command   │ backlog               │ /elab-story plans/future/platform/wint WINT-3060              │
+│ 131 │ WINT-3060             │ Create Telemetry Query Command   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-3060         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 132 │ WINT-3070             │ Update 10 Core Agents with       │ backlog               │ /elab-story plans/future/platform/wint WINT-3070              │
  │     │                       │ Telemetry                        │                       │                                                              │

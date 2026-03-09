@@ -1,0 +1,12 @@
+schema: 1
+story_id: WINT-4070
+feature_dir: plans/future/platform/wint
+timestamp: "2026-03-08T15:30:00Z"
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false

@@ -268,3 +268,7 @@ notes: |
   These represent future opportunities, performance optimizations, and edge case handling
   that are not MVP-critical but should be tracked for future iterations.
 ---
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

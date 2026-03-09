@@ -208,3 +208,7 @@ When KB integration is available:
 1. For each entry above, invoke kb-writer agent with the `kb_write_request` block
 2. Record returned `entry_id` in `_implementation/DECISIONS.yaml` under the corresponding enhancement entry
 3. Delete this DEFERRED-KB-WRITES.yaml after all 9 writes succeed
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

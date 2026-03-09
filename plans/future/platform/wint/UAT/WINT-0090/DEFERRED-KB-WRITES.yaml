@@ -58,3 +58,7 @@ When KB MCP tools become available:
 ## Fallback
 
 If MCP persistence continues to fail, story is still valid and searchable via filesystem (grep, glob).
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true
