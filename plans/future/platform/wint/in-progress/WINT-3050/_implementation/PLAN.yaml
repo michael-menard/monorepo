@@ -1,0 +1,130 @@
+schema: 2
+story_id: WINT-3050
+timestamp: '2026-03-08T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-3
+    description: >-
+      Update qa-verify-completion-leader.agent.md to add workflow_log_outcome calls in both PASS and FAIL completion
+      flows. Inject as a non-blocking fire-and-forget step after verdict determination and before the story-update skill
+      call. Compute qualityScore = max(0, 100 - (reviewIterations * 10) - (qaIterations * 15)). Populate primaryBlocker
+      on FAIL; omit on PASS. Wrap in try/catch with logger.warn.
+    files:
+      - .claude/agents/qa-verify-completion-leader.agent.md
+    files_to_read:
+      - .claude/agents/qa-verify-completion-leader.agent.md
+      - .claude/skills/token-log/SKILL.md
+    dependencies: []
+    slice: backend
+    verification: grep -c 'workflow_log_outcome' .claude/agents/qa-verify-completion-leader.agent.md
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-4
+  - id: 2
+    subtask_id: ST-4
+    description: >-
+      Update dev-implement-implementation-leader.agent.md to add a secondary workflow_log_outcome injection point at the
+      IMPLEMENTATION BLOCKED path (after retry exhaustion or unrecoverable worker block). Call with
+      final_verdict='blocked' or 'cancelled' as appropriate. Same fire-and-forget pattern: try/catch with logger.warn,
+      never propagate.
+    files:
+      - .claude/agents/dev-implement-implementation-leader.agent.md
+    files_to_read:
+      - .claude/agents/dev-implement-implementation-leader.agent.md
+      - .claude/skills/token-log/SKILL.md
+    dependencies:
+      - 1
+    slice: backend
+    verification: grep -c 'workflow_log_outcome' .claude/agents/dev-implement-implementation-leader.agent.md
+    acs_covered:
+      - AC-5
+  - id: 3
+    subtask_id: ST-5
+    description: >-
+      Write integration test file apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts. Tests
+      invoke workflow_log_outcome directly against real postgres-knowledgebase on port 5433 (ADR-005). AC-7: PASS
+      scenario writes one row with final_verdict='pass'. AC-8: FAIL scenario writes one row with final_verdict='fail'
+      and primary_blocker populated; upsert verified by calling twice and asserting COUNT(*) = 1. Also cover:
+      quality_score clamp (floor=0), completedAt auto-populated. Clean up rows in afterEach using storyId unique
+      constraint.
+    files:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts
+      - tree/story/WINT-0120/apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/knowledge-base -- story-outcomes
+    acs_covered:
+      - AC-7
+      - AC-8
+files_to_change:
+  - path: .claude/agents/qa-verify-completion-leader.agent.md
+    action: modify
+    reason: Inject workflow_log_outcome in PASS and FAIL verdict flows (AC-2, AC-3, AC-4)
+  - path: .claude/agents/dev-implement-implementation-leader.agent.md
+    action: modify
+    reason: Inject workflow_log_outcome at IMPLEMENTATION BLOCKED completion path (AC-5)
+  - path: apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts
+    action: create
+    reason: Integration tests for PASS and FAIL outcome logging flows (AC-7, AC-8)
+commands_to_run:
+  - command: pnpm test --filter @repo/knowledge-base -- story-outcomes
+    when: after writing story-outcomes.test.ts (step 3)
+    required: true
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: Formula already documented in story file; pre-satisfied (ST-2 pre-complete)
+    evidence_type: manual
+  - ac_id: AC-2
+    planned_evidence: diff of qa-verify-completion-leader.agent.md shows workflow_log_outcome in PASS and FAIL flows
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      qa-verify-completion-leader.agent.md call populates storyId, finalVerdict, qualityScore, reviewIterations,
+      qaIterations, completedAt, primaryBlocker (FAIL only)
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: Try/catch block with logger.warn present; no exception propagation from outcome logging step
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: diff of dev-implement-implementation-leader.agent.md shows workflow_log_outcome at BLOCKED path
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      No new MCP registrations, DDL, or Lambda deployments in diff; confirmed by story scope (touches_database: false,
+      touches_infra: false)
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: 'Integration test TC-001 in story-outcomes.test.ts: PASS scenario produces 1 row with final_verdict=''pass'''
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      Integration test TC-002 in story-outcomes.test.ts: FAIL scenario produces 1 row with final_verdict='fail',
+      primary_blocker populated; upsert TC-003 confirms COUNT(*) = 1 after two calls
+    evidence_type: test
+architectural_decisions: []
+complexity: simple
+notes:
+  - >-
+    ST-1 (read WINT-0120 contract) is pre-satisfied: workflow_log_outcome confirmed registered in WINT-0120 worktree
+    tool-handlers.ts at line 5056 with snake_case params matching AC-3 spec
+  - >-
+    ST-2 (quality score formula) is pre-satisfied: formula max(0, 100 - (reviewIterations * 10) - (qaIterations * 15))
+    is documented in story file
+  - Step 1 and Step 3 are independent (both depend on pre-satisfied ST-1); run in parallel if possible
+  - >-
+    AC-6 is verified by inspection: story frontmatter shows touches_database: false, touches_infra: false; no TypeScript
+    impl changes
+  - Integration test must target real postgres-knowledgebase on port 5433 per ADR-005 (no mocks)
+  - workflow_log_outcome uses ON CONFLICT (story_id) DO UPDATE internally — no app-level dedup needed in tests
+  - >-
+    Outcome logging calls in agent files use pseudocode/markdown instruction style (not TypeScript) — agent files are
+    .md not .ts
+  - The worktree agent files are at .claude/agents/ (root-relative from worktree path tree/story/WINT-3050/)
