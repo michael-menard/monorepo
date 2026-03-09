@@ -11,11 +11,7 @@ import { logger } from '@repo/logger'
 import { eq, and, isNull, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { z } from 'zod'
-import {
-  stories,
-  storyDetails,
-  storyArtifacts,
-} from '../db/schema.js'
+import { stories, storyDetails, storyArtifacts } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import type { EmbeddingClient } from '../embedding-client/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
@@ -53,10 +49,7 @@ export interface StoryContextDeps {
 // Implementation
 // ============================================================================
 
-export async function kb_get_story_context(
-  input: KbGetStoryContextInput,
-  deps: StoryContextDeps,
-) {
+export async function kb_get_story_context(input: KbGetStoryContextInput, deps: StoryContextDeps) {
   const validated = KbGetStoryContextInputSchema.parse(input)
   const { db, embeddingClient } = deps
   const startTime = Date.now()
@@ -85,11 +78,7 @@ export async function kb_get_story_context(
   const [detailResult, artifactsResult, linkedKnowledgeResult, constraintsResult] =
     await Promise.all([
       // Story details
-      db
-        .select()
-        .from(storyDetails)
-        .where(eq(storyDetails.storyId, validated.story_id))
-        .limit(1),
+      db.select().from(storyDetails).where(eq(storyDetails.storyId, validated.story_id)).limit(1),
 
       // Story artifacts
       db
@@ -168,11 +157,7 @@ export async function kb_get_story_context(
       const text = buildStoryEmbeddingText(story.title, story.feature, story.acceptanceCriteria)
       if (text.trim()) {
         const embedding = await embeddingClient.generateEmbedding(text)
-        similarStories = await findSimilarStories(
-          db,
-          embedding,
-          validated.max_similar_stories,
-        )
+        similarStories = await findSimilarStories(db, embedding, validated.max_similar_stories)
         similarStories = similarStories.filter(s => s.story_id !== validated.story_id)
 
         // Save embedding for future queries (fire-and-forget)

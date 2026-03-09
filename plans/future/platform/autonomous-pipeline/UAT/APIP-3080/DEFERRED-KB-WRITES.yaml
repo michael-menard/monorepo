@@ -50,3 +50,7 @@ writes:
       ## Testing Strategy
       Integration tests with real Redis (BullMQ) and real git worktrees. No Playwright.
       Key: TokenBucket concurrent safety test with real BullMQ concurrency (not Promise.all).
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

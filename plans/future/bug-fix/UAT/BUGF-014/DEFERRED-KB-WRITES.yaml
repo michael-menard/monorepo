@@ -262,3 +262,7 @@ notes: |
   Low ROI (Consider skipping):
   - Performance testing with 100+ items (unlikely to reveal issues)
   - ModuleLayout nested routing (trivial component, low value)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

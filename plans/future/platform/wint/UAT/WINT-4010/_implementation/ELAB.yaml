@@ -1,0 +1,256 @@
+schema_version: 1
+story_id: "WINT-4010"
+timestamp: "2026-03-07T12:00:00Z"
+
+# ============================================================
+# AUDIT RESULTS
+# ============================================================
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope precisely matches stories.index.md summary. Two endpoints
+      (POST /cohesion/audit, POST /cohesion/check), infrastructure at
+      packages/backend/sidecars/cohesion/, MCP tool wrappers, Phase 4, depends
+      on WINT-2020 + WINT-1080 — all consistent. Non-goals explicitly exclude
+      graph population (WINT-4030), capability inference (WINT-4040), and rule
+      definition (WINT-4050), keeping this story boundary clean.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and non-goals are complementary with no contradictions. ACs map
+      cleanly to scope sections: AC-1/AC-13 (package structure), AC-2 (HTTP
+      server), AC-3/AC-4 (endpoints), AC-5 (error handling), AC-6 (DI pattern),
+      AC-7 (Zod types), AC-8 (empty graph), AC-9 (MCP wrappers), AC-10/AC-11
+      (tests), AC-12 (logging). HTTP contract section is fully consistent with
+      AC-3/AC-4 response shapes. The Reality Baseline note that WINT-1080
+      "affects core.stories not graph schema" and "WINT-4010 is likely safe to
+      implement" is a slight concern — see risk_disclosure — but the dependency
+      is declared and the reasoning is sound.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan is explicit and well-structured. Confirmed: context-pack
+      reference files all exist at the canonical paths listed:
+        - packages/backend/sidecars/context-pack/src/server.ts (verified)
+        - packages/backend/sidecars/context-pack/src/routes/context-pack.ts (verified)
+        - packages/backend/sidecars/context-pack/src/__types__/index.ts (verified)
+        - packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts (verified)
+      Confirmed: FrankenFeatureItem and CapabilityCoverageOutput ARE exported from
+      @repo/mcp-tools (via graph-query/index.ts re-exporting __types__/index.ts, and
+      mcp-tools/src/index.ts exporting from graph-query/index.ts). The dev_feasibility
+      risk about types not being exported is now a known-safe false alarm — implementor
+      can import directly from @repo/mcp-tools.
+      Cross-sidecar copy policy for sendJson/readBody is correct per established pattern.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Architecture notes explicitly mandate pure compute functions (computeAudit,
+      computeCheck) with injectable DB dependency — confirmed by AC-6, ST-3, ST-4,
+      and test plan mock fixtures (MockDbWithPopulatedGraph, MockDbEmpty,
+      MockDbThrowsOnQuery). Route handlers are thin adapters that call compute
+      functions. No business logic in server.ts. Pattern matches the role-pack and
+      context-pack implementations which were verified in source. HTTP contract is
+      transport-agnostic from the domain computation perspective.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test plan is concrete and executable. Happy path tests (HP-1 through HP-6),
+      error cases (EC-1 through EC-5), and edge cases (ED-1 through ED-4) are all
+      specified with setup/action/expected/evidence. Mock DB fixtures are named
+      (MockDbWithPopulatedGraph, MockDbEmpty, MockDbThrowsOnQuery). Integration
+      tests follow the --config /dev/null pattern established by prior sidecars.
+      Coverage target of 80% branch is explicit (AC-10). Integration test port
+      conflict is noted as a risk. AC-11 specifies HTTP server integration test
+      separate from unit tests per sidecar pattern.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs found. All architectural decisions are resolved:
+      - HTTP framework: node:http (non-negotiable per WINT-2010/2020)
+      - PORT: 3092 (sequential allocation documented)
+      - Auth: deferred (internal VPC, per WINT-2020 precedent)
+      - Type source: @repo/mcp-tools confirmed exportable (risk resolved)
+      - Graph schema: features/capabilities confirmed exported from @repo/database-schema
+        (wint.ts lines 1262, 1309) and used successfully in graph-get-franken-features.ts
+      - Empty graph handling: explicit (AC-8, ED-1)
+      - packageName filter: applied in TypeScript post-query (matching existing
+        graph_get_franken_features.ts approach, consistent with story)
+      Note: The reality baseline flags WINT-2020 as "created" (not yet delivered),
+      which is a dependency concern but not an internal decision gap — WINT-2020
+      patterns are available in source even if the story is not formally done.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks disclosed in dev_feasibility with mitigations:
+      (1) graph view accessibility — mitigated; features/capabilities ARE in
+          @repo/database-schema and the existing mcp-tools query proves the pattern.
+          Note: The story mentions "graph.franken_features view" and
+          "graph.capability_coverage view" — these are NOT Drizzle pg views in the
+          schema (no pgView definitions found). The compute functions will use direct
+          Drizzle queries against features + capabilities tables (same pattern as
+          graph-get-franken-features.ts), not a pre-built SQL view. This is low risk
+          since the query pattern is proven, but the story wording is mildly imprecise.
+      (2) FrankenFeatureItem/CapabilityCoverageOutput not exported — risk confirmed
+          as false alarm; types ARE exported via @repo/mcp-tools.
+      (3) Empty graph state graceful handling — covered by AC-8, ED-1, test fixtures.
+      PORT conflict risk is disclosed in test_plan risks. Integration test vitest
+      config isolation risk is also documented.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      Sizing indicators checked:
+        - AC count: 13 (above 8 threshold — flagged)
+        - Endpoints: 2 (below 5 threshold — OK)
+        - Both FE+BE: No (backend only — OK)
+        - Multiple distinct features: No (single sidecar, single cohesion domain — OK)
+        - Test scenarios: >3 distinct (HP-6 + EC-5 + ED-4 = 15 scenarios — flagged)
+        - Packages touched: 1 new + 3 read-only deps (packages modified = 1 — OK)
+      Only 1 of the 2-indicator split threshold is clearly met (AC count). The test
+      scenario count is high but all scenarios test the same two endpoints. The
+      risk_predictions section explicitly assesses split_risk as LOW with rationale:
+      "all follow a single well-established pattern (sidecar); subtask decomposition
+      is clear and linear." This assessment is correct — the 13 ACs decompose linearly
+      across ST-1 through ST-9 with no branching concern. Story should proceed as-is.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      9 subtasks (ST-1 through ST-9) with full AC coverage verified in the
+      "AC-Subtask Coverage Check" table — all 13 ACs are covered by at least one
+      subtask. Dependencies form a valid DAG:
+        ST-1 → ST-2 → ST-3 → ST-5 → ST-6 → ST-9
+                     → ST-4 → ST-5
+                     ST-3, ST-4 → ST-7
+                     ST-3, ST-4, ST-5 → ST-8
+      No cycles. Canonical references section present with 4 file references, all
+      verified to exist. Estimated token budget totals 59,000 (ST-1:6k + ST-2:5k +
+      ST-3:8k + ST-4:8k + ST-5:7k + ST-6:5k + ST-7:4k + ST-8:10k + ST-9:6k).
+
+# ============================================================
+# GAPS (MVP-blocking only)
+# ============================================================
+
+gaps:
+  - id: GAP-01
+    severity: low
+    title: "Graph view terminology vs. actual Drizzle query pattern"
+    description: >
+      The story refers to "graph.franken_features view" and "graph.capability_coverage
+      view" in the Context section and Reality Baseline. However, no Drizzle pgView
+      definitions for these names exist in packages/backend/database-schema/src/ —
+      the codebase uses direct Drizzle ORM queries against the features and
+      capabilities tables (as demonstrated in graph-get-franken-features.ts).
+      If an implementor expects a pre-built SQL view called franken_features in the
+      wint schema and queries it directly, they will hit a runtime error.
+    resolution: >
+      Implementor must follow the graph-get-franken-features.ts pattern: query
+      features + capabilities tables directly via Drizzle ORM, apply TypeScript-level
+      grouping. The canonical reference file (ST-3, ST-4 guidance) makes this clear.
+      The risk is low because ST-3 and ST-4 explicitly reference graph-get-franken-features.ts
+      as the canonical pattern. No AC changes required; a comment in computeAudit.ts
+      and computeCheck.ts clarifying this distinction would prevent future confusion.
+    ac_impact: none
+    blocks_happy_path: false
+    decision: >
+      acknowledge — GAP-01 is low severity, blocks_happy_path: false, and has a clear
+      resolution path documented via the canonical reference (graph-get-franken-features.ts).
+      The canonical reference files cited in ST-3 and ST-4 make the correct query pattern
+      explicit. No AC changes required. Story proceeds to implementation as-is.
+
+# ============================================================
+# OPPORTUNITIES (Non-blocking)
+# ============================================================
+
+opportunities:
+  - id: OPP-01
+    title: "Import FrankenFeatureItem / CapabilityCoverageOutput from @repo/mcp-tools"
+    description: >
+      The dev_feasibility mitigation says "if not present, define parallel Zod schemas
+      in __types__/index.ts". Both types ARE exported from @repo/mcp-tools via the
+      graph-query/index.ts re-export chain. The implementor should import these directly
+      rather than duplicating schema definitions, reducing type drift risk.
+    suggestion: >
+      In ST-2 (Zod schemas), import FrankenFeatureItemSchema and CapabilityCoverageOutputSchema
+      from @repo/mcp-tools and compose them into the sidecar-specific response schemas
+      (CohesionAuditResult, CohesionCheckResult) rather than redeclaring the inner types.
+    decision: log_to_kb
+    kb_entry_id: "0424737e-7b74-46c9-aa84-ff49dbdb0cc1"
+
+  - id: OPP-02
+    title: "SEC-002 comment should be added to cohesion route handlers"
+    description: >
+      The context-pack route handler includes a SEC-002 comment explicitly documenting
+      the intentional omission of authentication. The cohesion sidecar should follow
+      the same convention for consistency and audit trail purposes.
+    suggestion: >
+      In ST-5 (route handlers), add SEC-002 comment referencing WINT-4010 non-goals
+      and WINT-2020 precedent — same pattern as context-pack.ts line 61-65.
+    decision: log_to_kb
+    kb_entry_id: "77357b4a-335a-4855-ad2c-993e437919a8"
+
+  - id: OPP-03
+    title: "PORT 3092 should be documented in a central sidecar port registry"
+    description: >
+      The server.ts comment for context-pack mentions its own port but there is no
+      central registry of sidecar port assignments (role-pack=3090, context-pack=3091,
+      cohesion=3092). As more Phase 4 sidecars are added, port conflicts will become
+      harder to detect.
+    suggestion: >
+      Consider adding a comment block in server.ts referencing the full port table,
+      or track port assignments in a docs/ file. Low priority — relevant for WINT-4060+.
+    decision: log_to_kb
+    kb_entry_id: "b06ee591-ea19-43c1-b08e-fd4e008150e7"
+
+  - id: OPP-04
+    title: "MCP wrapper call strategy: HTTP vs. direct function call"
+    description: >
+      AC-9 says MCP wrappers "call the sidecar HTTP endpoint (or computation function
+      directly)". The context-pack MCP wrapper (contextPackGet) calls the computation
+      function directly. The "or HTTP endpoint" option introduces a runtime dependency
+      on the server being available, which complicates testing.
+    suggestion: >
+      In ST-7, prefer calling computeAudit/computeCheck directly (same pattern as
+      context-pack-get.ts) rather than making an HTTP fetch to localhost:3092. This
+      avoids a hard runtime coupling and is consistent with established pattern.
+    decision: log_to_kb
+    kb_entry_id: "ab5aa97e-9375-4ed6-b99e-85ed2a2df13f"
+
+# ============================================================
+# SPLIT RECOMMENDATION
+# ============================================================
+
+split_recommendation: null
+
+# ============================================================
+# VERDICT
+# ============================================================
+
+preliminary_verdict: CONDITIONAL_PASS
+# Condition: GAP-01 is low severity and has a clear resolution path (follow the
+# canonical reference file). The story can proceed to implementation. Implementor
+# must be aware that "graph views" in story prose = direct Drizzle queries per
+# the canonical pattern, not pre-built SQL views. OPP-01 (import from @repo/mcp-tools)
+# is strongly recommended to be acted on in ST-2.
+
+verdict: PASS
+decided_at: "2026-03-07T12:10:00Z"
+# Decision rationale: GAP-01 is low severity, blocks_happy_path: false, and has a
+# clear resolution path via the canonical reference file (graph-get-franken-features.ts).
+# All four opportunities are non-blocking and have been logged to the KB.
+# No ACs need to be added. Story proceeds to implementation.
+
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0

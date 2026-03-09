@@ -68,3 +68,7 @@ INSERT INTO stories (
 - Provider factory for dynamic adapter selection
 - Backward compatibility with existing Ollama usage
 - Integration tests with real provider connections
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,214 @@
+schema: 1
+story_id: "WINT-2020"
+timestamp: "2026-03-03T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      Story scope (POST /context-pack, new sidecar package, MCP tool wrapper) matches the
+      stories.index.md feature description exactly. One discrepancy: the stories.index.md
+      lists the story file path as 'created/WINT-2020/WINT-2020.md' and status as 'created',
+      but the story frontmatter shows status 'elaboration' and the file lives under
+      'elaboration/WINT-2020/'. This path/status mismatch is a metadata inconsistency but
+      does not affect scope. No extra endpoints, infrastructure, or features are introduced
+      beyond what is described in the index.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, Non-Goals, ACs, and Test Plan are internally consistent. Non-Goals explicitly
+      exclude HTTP server infrastructure, DB schema changes, downstream population stories
+      (WINT-2030 through WINT-2060), auth, frontend UI, and streaming — none of which appear
+      in ACs. AC-12 timing assertions (cache hit <100ms, cache miss <2000ms) are matched
+      directly in Test Plan scenarios ED-4 and ED-5. Token budget enforcement (AC-5) is
+      reflected in ST-2 (constants), ST-3 (logic), ST-6 (unit tests), and edge cases ED-1
+      and ED-2. No contradictions found between goals and non-goals.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      All six canonical references verified to exist on disk:
+      contextCacheGet (packages/backend/mcp-tools/src/context-cache/context-cache-get.ts),
+      contextCachePut (packages/backend/mcp-tools/src/context-cache/context-cache-put.ts),
+      kb_search (apps/api/knowledge-base/src/search/kb-search.ts),
+      storyGetStatus (packages/backend/mcp-tools/src/story-management/story-get-status.ts),
+      session-query (packages/backend/mcp-tools/src/session-management/session-query.ts),
+      __types__ pattern (packages/backend/mcp-tools/src/context-cache/__types__/index.ts).
+      @repo/db, @repo/logger, @repo/database-schema all confirmed as shared packages.
+      No per-story one-off utilities introduced. The new estimateTokens utility is placed in
+      __types__/index.ts of the new package (appropriate), not as a shared package (not
+      needed at shared level for this story).
+
+  - id: ports_adapters
+    status: WARN
+    note: >
+      The story is a standalone sidecar service (packages/backend/sidecars/), not a
+      lego-api domain, so the hexagonal architecture prescribed in docs/architecture/api-layer.md
+      for apps/api/lego-api/domains/ does not strictly apply. However, the sidecar architecture
+      as described conflates assembly logic (assembleContextPack) with the HTTP route layer
+      without defining explicit ports/interfaces. The transport-agnostic core (assembleContextPack
+      in assemble-context-pack.ts) is correctly separated from the HTTP handler (ST-4),
+      satisfying the spirit of ports & adapters. The MCP tool wrapper (ST-5) calls
+      assembleContextPack directly, demonstrating transport-agnosticism. The primary gap:
+      no explicit port interface is defined for the KB search or cache dependencies within
+      the sidecar — they are called directly. This is acceptable given the sidecar pattern
+      established by WINT-2010 and the simpler scope, but is a minor deviation from strict
+      hexagonal compliance. No platform-specific logic leaks identified.
+
+  - id: testability
+    status: PASS
+    note: >
+      Unit tests (ST-6) cover Zod validation, token budget enforcement, cache key generation,
+      section trimming, and empty array behavior — all pure logic, no infrastructure required.
+      Integration tests (ST-7) require real postgres-knowledgebase on port 5433 per ADR-005.
+      Three test fixtures are defined (validContextPacksRow, mockKbSearchResult,
+      oversizedContextPack) with sufficient specificity to implement. All 7 subtasks have
+      concrete verification commands. The test plan risk notes the concurrent race condition
+      test may be flaky — this is disclosed but not resolved. One gap: HP-3 (MCP tool
+      context_pack_get shape verification) appears in the test plan but no subtask explicitly
+      covers testing the MCP tool output — ST-5 only verifies type-check passes and tool
+      appears in tool list.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      Two unresolved design decisions found:
+      (1) ST-5 description says the MCP tool wrapper 'calls assembleContextPack directly
+      (or HTTP internally)' — the 'or HTTP internally' is an open design choice with no
+      resolution criteria. If the MCP tool calls assembleContextPack directly, it requires
+      the sidecar package as a dependency of mcp-tools, which may introduce circular or
+      unexpected package-level coupling. This should be resolved before dev picks up ST-5.
+      (2) The HTTP server framework/pattern for the sidecar is deferred to reviewing WINT-2010
+      before implementation — this is acceptable as a dependency gate, but the story has no
+      fallback decision documented if WINT-2010's pattern is significantly different than
+      assumed. Both decisions are blocked on WINT-2010 reaching UAT, which is explicitly
+      documented as a dependency gate. Not blocking for elaboration sign-off, but dev should
+      resolve (1) before starting ST-5.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks explicitly disclosed: WINT-2010 dependency gate (critical path blocker),
+      kb_search initialization requiring db+embeddingClient injection at startup,
+      concurrent cache-miss race condition (mitigated by ON CONFLICT DO UPDATE),
+      token estimation approximation (char-count/4 with tolerance margin guidance),
+      packTypeEnum 'story' verified to exist in contextPacks table (confirmed in
+      context-cache/__types__/index.ts line 15-22). Integration test infrastructure risk
+      (port 5433 requirement) is disclosed in both test-plan.yaml and Risk Predictions.
+      No hidden auth, upload, or infra risks identified. Auth explicitly deferred to later
+      phase (Non-Goals). No DB migration required.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Sizing indicators triggering review: 12 ACs (threshold: 8), 7 test scenarios
+      (threshold: 3), touches 3 packages (new sidecars/context-pack + modified mcp-tools +
+      modified apps/api/knowledge-base). Story self-flags split_risk: medium. However,
+      all 12 ACs form a single coherent capability (cache-first context assembly) — they
+      are not independent features bundled together. The story explicitly identifies a natural
+      split point at ST-5 (MCP tool) if token budget runs out. Estimated token floor is
+      200,000 with 4-6x multiplier. At 5 story points, the sizing is aggressive but not
+      immediately requiring a forced split. Recommend monitor token usage during ST-1 through
+      ST-4; if budget exhausted before ST-5, split ST-5 (MCP tool wrapper) into WINT-2020b.
+      Verdict: WARN rather than SPLIT — story is coherent and split point is documented.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      All 12 ACs are covered by at least one subtask (verified above). DAG is valid with
+      no cycles: ST-1 → ST-2 → ST-3 → {ST-4, ST-5, ST-6}; ST-4 → ST-7. No subtask
+      creates/modifies more than 3 files (ST-4 creates 2 new files; ST-5 creates 1 new file
+      and modifies 1 existing). Conditions required:
+      (1) ST-5 verification command 'pnpm check-types && MCP tool appears in tool list' is
+      not fully executable as written — 'MCP tool appears in tool list' requires manual MCP
+      session inspection. Replace with a concrete alternative such as
+      'pnpm check-types --filter @repo/mcp-tools && grep -r context_pack_get apps/api/knowledge-base/src/'.
+      (2) HP-3 (MCP tool returns same shape as HTTP endpoint) from test-plan.yaml has no
+      corresponding subtask test coverage — ST-6 or ST-7 should explicitly include MCP tool
+      response shape assertion.
+      These are minor and do not block dev pickup, but should be addressed during ST-5 planning.
+
+gaps:
+  - id: GAP-001
+    severity: MEDIUM
+    category: decision_completeness
+    description: >
+      ST-5 has an unresolved architectural decision: 'context_pack_get MCP tool calls
+      assembleContextPack directly (or HTTP internally)'. The direct-call option requires
+      packages/backend/mcp-tools to depend on packages/backend/sidecars/context-pack, creating
+      an unusual cross-package dependency (mcp-tools depending on sidecars rather than the reverse).
+      The HTTP-internally option avoids the coupling but adds network overhead and requires the
+      sidecar to be running when the MCP tool is invoked. This decision affects package boundaries
+      and deployment assumptions. Must be resolved before ST-5 dev pickup.
+    recommendation: >
+      Extract the core assembleContextPack logic into a standalone, importable function in
+      packages/backend/mcp-tools/src/context-pack/ (not in the sidecar), and have both
+      the HTTP route handler and the MCP tool import it directly. This avoids the bidirectional
+      dependency entirely. Alternatively, document explicitly that the MCP tool calls the
+      sidecar via HTTP and specify the port/config convention.
+    decision: resolved_with_default
+    resolution: >
+      Resolved during autonomous elaboration: MCP tool imports assembleContextPack directly
+      from sidecar package (uni-directional dependency mcp-tools → sidecars/context-pack).
+      Architecture decision note added to ST-5 in story.
+
+  - id: GAP-002
+    severity: LOW
+    category: testability
+    description: >
+      HP-3 from test-plan.yaml ('MCP tool context_pack_get returns same shape as HTTP endpoint')
+      is listed in the test plan but no subtask covers writing this test. ST-5 only has a
+      type-check verification. The AC-6 requirement ('returning the same response shape') is
+      not covered by any integration or unit test subtask.
+    recommendation: >
+      Add an assertion to ST-7 (integration tests) or create a minimal test in ST-5 that
+      calls the MCP tool function directly and asserts ContextPackResponseSchema.safeParse()
+      passes on the result.
+    decision: resolved_with_default
+    resolution: >
+      Added HP-3 MCP tool response shape test to ST-7 integration tests. Updated ST-7 ACs
+      covered to include AC-6.
+
+opportunities:
+  - id: OPP-001
+    category: observability
+    description: >
+      The story specifies logging cache write failures (AC-11) but no structured telemetry
+      for cache hit/miss ratio, assembly latency, or KB query result counts. Given that
+      token reduction is the primary Phase 2 KPI, instrumenting the context pack assembly
+      with hit/miss counters and token-before/after-trimming metrics would enable measuring
+      actual token savings.
+    track_for: WINT-2030 or a dedicated telemetry story
+    decision: log_to_kb
+
+  - id: OPP-002
+    category: performance
+    description: >
+      The token budget trimming (AC-5) removes items from the end of arrays (lowest priority
+      first). Future optimization: rank KB results by relevance score before storing, so
+      trimming removes lowest-relevance items rather than last-inserted items. This requires
+      kb_search to return relevance scores, which it may already support given the hybrid
+      RRF search implementation.
+    track_for: Post-WINT-2020 iteration
+    decision: log_to_kb
+
+  - id: OPP-003
+    category: resilience
+    description: >
+      The story defers auth to a later phase (Non-Goal). For local/CI operation this is
+      fine, but if the sidecar HTTP endpoint is ever exposed beyond localhost, the absence
+      of auth is a security gap. Adding an explicit note in the sidecar README or a
+      localhost-only binding in the server config would document this assumption formally.
+    track_for: Phase 3 security hardening
+    decision: log_to_kb
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-03T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

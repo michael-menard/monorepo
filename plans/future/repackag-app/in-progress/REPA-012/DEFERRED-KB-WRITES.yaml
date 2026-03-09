@@ -24,3 +24,7 @@ pending_writes:
       touches_infra: false
     reason: KB database not available at generation time
     attempted_at: 2026-02-10T00:00:00Z
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

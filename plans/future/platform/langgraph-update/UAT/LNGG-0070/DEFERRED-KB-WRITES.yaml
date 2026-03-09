@@ -185,3 +185,7 @@ notes: |
   All 12 enhancement opportunities from FUTURE-OPPORTUNITIES.md logged to KB.
   Future stories identified: LNGG-0071 (Performance Regression Detection),
   LNGG-0072 (Property-Based Testing), LNGG-0075 (Mutation Testing).
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

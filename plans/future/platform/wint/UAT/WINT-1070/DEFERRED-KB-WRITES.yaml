@@ -169,3 +169,7 @@ writes:
       - Finding: 143+ stories with YAML fallback reads could produce 10-30 seconds of silence; no progress indicator during manual runs.
       - Impact: Low | Effort: Low
       - Recommendation: Post-MVP — add optional --verbose flag (consistent with populate-story-status.ts) that logs each story as it is processed.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

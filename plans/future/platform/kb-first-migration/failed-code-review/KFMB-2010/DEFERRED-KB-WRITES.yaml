@@ -27,3 +27,7 @@ deferred_writes:
       touches_database: false
       touches_infra: false
     conflict_action: "ON CONFLICT (story_id) DO UPDATE SET title, story_dir, story_file, story_type, points, priority, state, phase, blocked, blocked_reason, blocked_by_story, updated_at"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

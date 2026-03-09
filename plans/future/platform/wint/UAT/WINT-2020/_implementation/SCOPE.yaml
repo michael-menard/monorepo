@@ -1,0 +1,26 @@
+schema: 1
+story_id: WINT-2020
+timestamp: "2026-03-03T17:15:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/sidecars/context-pack/**"
+  - "packages/backend/mcp-tools/**"
+  - "apps/api/knowledge-base/**"
+  - "packages/backend/database-schema/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+summary: "Create context pack sidecar with cache-first assembly and MCP tool wrapper to optimize token usage"
+elaboration: "completed"

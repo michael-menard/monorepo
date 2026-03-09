@@ -302,3 +302,7 @@ retry_instructions:
   - "Or manually execute SQL inserts from this file"
   - "Verify story appears in stories table: SELECT * FROM stories WHERE story_id = 'WINT-0230'"
   - "Verify findings appear in findings table: SELECT COUNT(*) FROM findings WHERE story_id = 'WINT-0230' AND source_stage = 'elab'"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

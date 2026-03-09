@@ -30,3 +30,7 @@ retry_instructions: |
   When KB becomes available, retry these writes in order.
   After successful write, remove the entry from this file.
   If all entries are processed, delete this file.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

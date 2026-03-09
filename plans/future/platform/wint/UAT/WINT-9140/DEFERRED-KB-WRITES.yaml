@@ -26,3 +26,7 @@ writes:
       path: "tree/story/WINT-9140"
       status: "active"
     conflict_action: "ON CONFLICT (story_id) DO UPDATE SET branch_name=EXCLUDED.branch_name, path=EXCLUDED.path, status=EXCLUDED.status"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

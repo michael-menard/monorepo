@@ -32,3 +32,7 @@ writes:
       pr_number: 369
       pr_url: "https://github.com/michael-menard/monorepo/pull/369"
     on_conflict: "story_id DO UPDATE SET branch_name=EXCLUDED.branch_name, worktree_path=EXCLUDED.worktree_path, status=EXCLUDED.status"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

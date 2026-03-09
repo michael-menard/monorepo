@@ -24,3 +24,7 @@ story_record:
 
 reason: "KB write deferred - story generation completed successfully without KB dependency"
 retry_after: "2026-02-10T00:00:00Z"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

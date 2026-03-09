@@ -30,3 +30,7 @@ deferred_writes:
 # Retry Instructions:
 # When KB is available, run:
 # INSERT INTO stories (...) VALUES (...) ON CONFLICT (story_id) DO UPDATE SET ...
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true
