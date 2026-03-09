@@ -15,9 +15,9 @@ Content-Type: application/json
   "stage": "POST_BOOTSTRAP",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "setup_complete": true,
-    "worktree_path": "/tree/story/WINT-3010"
+    "checkpoint": {
+      "phase": "setup_complete"
+    }
   }
 }
 
@@ -25,7 +25,7 @@ Content-Type: application/json
 # POST_BOOTSTRAP stage — FAIL (missing proofs)
 ###############################################################################
 
-### POST_BOOTSTRAP — setup_complete=false (expect 422 ok:false with missing_proofs)
+### POST_BOOTSTRAP — missing checkpoint.phase (expect 422 ok:false with missing_proofs)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -33,9 +33,7 @@ Content-Type: application/json
   "stage": "POST_BOOTSTRAP",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "setup_complete": false,
-    "worktree_path": ""
+    "checkpoint": {}
   }
 }
 
@@ -51,9 +49,10 @@ Content-Type: application/json
   "stage": "ELAB_COMPLETE",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "elab_verdict": "PASS",
-    "gaps_resolved": true
+    "elab": {
+      "verdict": "PASS",
+      "findings": ["AC coverage complete", "No gaps found"]
+    }
   }
 }
 
@@ -65,9 +64,10 @@ Content-Type: application/json
   "stage": "ELAB_COMPLETE",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "elab_verdict": "CONDITIONAL_PASS",
-    "gaps_resolved": true
+    "elab": {
+      "verdict": "CONDITIONAL_PASS",
+      "findings": ["Minor gaps noted but non-blocking"]
+    }
   }
 }
 
@@ -83,9 +83,25 @@ Content-Type: application/json
   "stage": "ELAB_COMPLETE",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "elab_verdict": "FAIL",
-    "gaps_resolved": false
+    "elab": {
+      "verdict": "FAIL",
+      "findings": ["Critical gaps"]
+    }
+  }
+}
+
+### ELAB_COMPLETE — empty findings (expect 422 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "ELAB_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "elab": {
+      "verdict": "PASS",
+      "findings": []
+    }
   }
 }
 
@@ -93,7 +109,7 @@ Content-Type: application/json
 # SCOPE_OK stage — PASS
 ###############################################################################
 
-### SCOPE_OK — normal scope with touched files (expect 200 ok:true)
+### SCOPE_OK — non-empty included_files (expect 200 ok:true)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -101,13 +117,16 @@ Content-Type: application/json
   "stage": "SCOPE_OK",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "touched_files": 8,
-    "no_scope_files": false
+    "scope": {
+      "included_files": [
+        "packages/backend/sidecars/gatekeeper/src/gate-check.ts",
+        "packages/backend/sidecars/gatekeeper/src/server.ts"
+      ]
+    }
   }
 }
 
-### SCOPE_OK — empty scope (no_scope_files=true, touched_files=0, boundary condition, expect 200 ok:true)
+### SCOPE_OK — no_scope_files:true escape hatch (expect 200 ok:true)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -115,9 +134,9 @@ Content-Type: application/json
   "stage": "SCOPE_OK",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "touched_files": 0,
-    "no_scope_files": true
+    "scope": {
+      "no_scope_files": true
+    }
   }
 }
 
@@ -125,7 +144,7 @@ Content-Type: application/json
 # SCOPE_OK stage — FAIL
 ###############################################################################
 
-### SCOPE_OK — no_scope_files=false, touched_files=0 (expect 422 ok:false)
+### SCOPE_OK — empty included_files and no_scope_files:false (expect 422 ok:false)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -133,9 +152,10 @@ Content-Type: application/json
   "stage": "SCOPE_OK",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "touched_files": 0,
-    "no_scope_files": false
+    "scope": {
+      "included_files": [],
+      "no_scope_files": false
+    }
   }
 }
 
@@ -143,7 +163,7 @@ Content-Type: application/json
 # PATCH_COMPLETE stage — PASS
 ###############################################################################
 
-### PATCH_COMPLETE — all passing at 80% coverage boundary (expect 200 ok:true)
+### PATCH_COMPLETE — touched_files > 0 (expect 200 ok:true)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -151,10 +171,9 @@ Content-Type: application/json
   "stage": "PATCH_COMPLETE",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "build_passed": true,
-    "tests_passed": true,
-    "coverage_pct": 80
+    "evidence": {
+      "touched_files": 8
+    }
   }
 }
 
@@ -162,7 +181,7 @@ Content-Type: application/json
 # PATCH_COMPLETE stage — FAIL
 ###############################################################################
 
-### PATCH_COMPLETE — coverage_pct=79 (below boundary, expect 422 ok:false)
+### PATCH_COMPLETE — touched_files=0 (expect 422 ok:false)
 POST http://localhost:3094/gate/check
 Content-Type: application/json
 
@@ -170,10 +189,9 @@ Content-Type: application/json
   "stage": "PATCH_COMPLETE",
   "story_id": "WINT-3010",
   "proof": {
-    "story_id": "WINT-3010",
-    "build_passed": true,
-    "tests_passed": true,
-    "coverage_pct": 79
+    "evidence": {
+      "touched_files": 0
+    }
   }
 }
 
@@ -209,9 +227,9 @@ Content-Type: application/json
 {
   "stage": "POST_BOOTSTRAP",
   "proof": {
-    "story_id": "WINT-3010",
-    "setup_complete": true,
-    "worktree_path": "/path"
+    "checkpoint": {
+      "phase": "setup_complete"
+    }
   }
 }
 
