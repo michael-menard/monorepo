@@ -2690,6 +2690,7 @@ Parameters:
 - acceptance_criteria (optional): JSONB structure of acceptance criteria
 - non_goals (optional): Array of non-goals
 - packages (optional): Array of packages touched
+- plan_slug (optional): If provided, creates a 'spawned_from' row in plan_story_links linking this story to the plan
 
 Returns: The upserted story record and whether it was newly created.
 
@@ -2706,6 +2707,15 @@ Example (partial update — only merges supplied fields):
   "story_id": "KFMB-1020",
   "description": "Adds upsert-by-story_id semantics to KB",
   "non_goals": ["No UI changes"]
+}
+
+Example (create with plan link):
+{
+  "story_id": "LNGG-0010",
+  "title": "LangGraph adapter base class",
+  "epic": "platform",
+  "feature": "lngg",
+  "plan_slug": "langgraph-integration-adapters"
 }`,
   inputSchema: zodToMcpSchema(KbCreateStoryInputSchema),
 }
@@ -2767,6 +2777,7 @@ Parameters:
 - priority (optional): Filter by priority (critical, high, medium, low)
 - plan_tag (optional): Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui', 'testing')
 - plan_status (optional): Filter stories linked to plans with this status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
+- plan_slug (optional): Filter stories linked to this specific plan slug via plan_story_links (e.g., 'langgraph-integration-adapters')
 - limit (optional): Maximum results (1-100, default 20)
 - offset (optional): Offset for pagination (default 0)
 
@@ -2803,6 +2814,12 @@ Example (list stories from in-progress plans targeting the UI):
 {
   "plan_tag": "lego-ui",
   "plan_status": "in-progress"
+}
+
+Example (list all stories for a specific plan):
+{
+  "plan_slug": "langgraph-integration-adapters",
+  "limit": 100
 }`,
   inputSchema: zodToMcpSchema(KbListStoriesInputSchema),
 }

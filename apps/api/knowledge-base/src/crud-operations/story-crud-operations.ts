@@ -200,6 +200,9 @@ export const KbListStoriesInputSchema = z.object({
     ])
     .optional(),
 
+  /** Filter stories linked to this specific plan slug via plan_story_links */
+  plan_slug: z.string().optional(),
+
   /** Maximum results (1-100, default 20) */
   limit: z.number().int().min(1).max(100).optional().default(20),
 
@@ -396,6 +399,9 @@ export const KbCreateStoryInputSchema = z.object({
 
   /** Packages touched by this story (text array) */
   packages: z.array(z.string()).optional().nullable(),
+
+  /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
+  plan_slug: z.string().optional().nullable(),
 })
 
 export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>
@@ -526,6 +532,17 @@ export async function kb_list_stories(
   }
   if (validated.priority) {
     conditions.push(eq(stories.priority, validated.priority))
+  }
+
+  // Filter by plan slug (direct match on plan_story_links)
+  if (validated.plan_slug) {
+    conditions.push(
+      sql`${stories.storyId} IN (
+        SELECT ${planStoryLinks.storyId}
+        FROM ${planStoryLinks}
+        WHERE ${eq(planStoryLinks.planSlug, validated.plan_slug)}
+      )`,
+    )
   }
 
   // Filter by plan tag or plan status via plan_story_links join
@@ -1082,6 +1099,17 @@ export async function kb_create_story(
           })
       }
 
+      if (validated.plan_slug) {
+        await tx
+          .insert(planStoryLinks)
+          .values({
+            planSlug: validated.plan_slug,
+            storyId: validated.story_id,
+            linkType: 'spawned_from',
+          })
+          .onConflictDoNothing()
+      }
+
       return { row: insertResult[0]!, isNew: true }
     }
 
@@ -1157,6 +1185,17 @@ export async function kb_create_story(
         .insert(storyDetails)
         .values({ storyId: validated.story_id, ...detailUpdates })
         .onConflictDoUpdate({ target: storyDetails.storyId, set: detailUpdates })
+    }
+
+    if (validated.plan_slug) {
+      await tx
+        .insert(planStoryLinks)
+        .values({
+          planSlug: validated.plan_slug,
+          storyId: validated.story_id,
+          linkType: 'spawned_from',
+        })
+        .onConflictDoNothing()
     }
 
     return { row: updateResult[0]!, isNew: false }

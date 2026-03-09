@@ -12,14 +12,15 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { ZodError } from 'zod'
 import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
-import { stories } from '../../db/schema.js'
+import { stories, planStoryLinks } from '../../db/schema.js'
 import {
   kb_create_story,
   kb_get_story,
+  kb_list_stories,
   kb_update_story,
   KbCreateStoryInputSchema,
   KbUpdateStoryInputSchema,
@@ -66,8 +67,9 @@ beforeAll(async () => {
 })
 
 afterEach(async () => {
-  // Clean up all test stories created during test
+  // Clean up all test stories created during test (plan links first due to FK)
   for (const id of testStoryIds) {
+    await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
   testStoryIds.length = 0
@@ -76,6 +78,7 @@ afterEach(async () => {
 afterAll(async () => {
   // Final safety cleanup
   for (const id of testStoryIds) {
+    await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
 })
@@ -460,5 +463,98 @@ describe('KbCreateStoryInputSchema — schema validation', () => {
   it('AC-3: story_id cannot be empty string', () => {
     const result = KbCreateStoryInputSchema.safeParse({ story_id: '', title: 'Has title' })
     expect(result.success).toBe(false)
+  })
+})
+
+// ============================================================================
+// plan_slug — plan_story_links FK wiring
+// ============================================================================
+
+describe('kb_create_story — plan_slug wiring', () => {
+  // Use a plan slug that must exist in the plans table for the FK to succeed.
+  // These tests skip gracefully if no plan with that slug exists.
+  const PLAN_SLUG = 'knowledge-base-operations'
+
+  it('PSL-1: creates a plan_story_links row when plan_slug is provided', async () => {
+    const storyId = makeStoryId('PSL-1')
+    testStoryIds.push(storyId)
+
+    // Check plan exists — skip if not
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-1: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    await kb_create_story(deps, {
+      story_id: storyId,
+      title: 'PSL-1 Test Story',
+      plan_slug: PLAN_SLUG,
+    })
+
+    const links = await db
+      .select()
+      .from(planStoryLinks)
+      .where(and(eq(planStoryLinks.storyId, storyId), eq(planStoryLinks.planSlug, PLAN_SLUG)))
+
+    expect(links).toHaveLength(1)
+    expect(links[0]!.linkType).toBe('spawned_from')
+  })
+
+  it('PSL-2: calling kb_create_story twice with same plan_slug is idempotent', async () => {
+    const storyId = makeStoryId('PSL-2')
+    testStoryIds.push(storyId)
+
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-2: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    await kb_create_story(deps, { story_id: storyId, title: 'PSL-2 Test Story', plan_slug: PLAN_SLUG })
+    // Second call — should not throw a unique constraint error
+    await expect(
+      kb_create_story(deps, { story_id: storyId, title: 'PSL-2 Updated', plan_slug: PLAN_SLUG }),
+    ).resolves.not.toThrow()
+
+    const links = await db
+      .select()
+      .from(planStoryLinks)
+      .where(and(eq(planStoryLinks.storyId, storyId), eq(planStoryLinks.planSlug, PLAN_SLUG)))
+
+    expect(links).toHaveLength(1)
+  })
+})
+
+describe('kb_list_stories — plan_slug filter', () => {
+  const PLAN_SLUG = 'knowledge-base-operations'
+
+  it('PSL-3: plan_slug filter returns only stories linked to that plan', async () => {
+    const linkedId = makeStoryId('PSL-3A')
+    const unlinkedId = makeStoryId('PSL-3B')
+    testStoryIds.push(linkedId, unlinkedId)
+
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-3: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    // Create linked story (with plan_slug)
+    await kb_create_story(deps, { story_id: linkedId, title: 'PSL-3A linked', plan_slug: PLAN_SLUG })
+    // Create unlinked story (no plan_slug)
+    await kb_create_story(deps, { story_id: unlinkedId, title: 'PSL-3B unlinked' })
+
+    const result = await kb_list_stories(deps, { plan_slug: PLAN_SLUG, limit: 100 })
+
+    const returnedIds = result.stories.map(s => s.storyId)
+    expect(returnedIds).toContain(linkedId)
+    expect(returnedIds).not.toContain(unlinkedId)
   })
 })
