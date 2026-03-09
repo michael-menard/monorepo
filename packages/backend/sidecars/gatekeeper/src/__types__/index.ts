@@ -25,58 +25,72 @@ export type GateStage = z.infer<typeof GateStageSchema>
 
 // ============================================================================
 // Per-stage proof schemas
-// AC-5: Each stage has its own required proof fields
+// AC-5: Each stage has its own required proof fields matching artifact structures
 // ARCH-001: Use .passthrough() on proof sub-objects to allow extra fields
 // ============================================================================
 
 /**
- * POST_BOOTSTRAP proof — confirms bootstrap phase completed
+ * POST_BOOTSTRAP proof — mirrors CHECKPOINT artifact structure
+ * AC-5: { proof: { checkpoint: { phase: "setup_complete" } } }
  */
 export const PostBootstrapProofSchema = z
   .object({
-    story_id: z.string().min(1, 'story_id is required'),
-    setup_complete: z.boolean(),
-    worktree_path: z.string().min(1, 'worktree_path is required'),
+    checkpoint: z
+      .object({
+        phase: z.string().min(1, 'checkpoint.phase is required'),
+      })
+      .passthrough(),
   })
   .passthrough()
 
 export type PostBootstrapProof = z.infer<typeof PostBootstrapProofSchema>
 
 /**
- * ELAB_COMPLETE proof — confirms elaboration phase completed
+ * ELAB_COMPLETE proof — mirrors ELAB artifact structure
+ * AC-5: { proof: { elab: { verdict: "PASS"|"CONDITIONAL_PASS", findings: string[] } } }
  */
 export const ElabCompleteProofSchema = z
   .object({
-    story_id: z.string().min(1, 'story_id is required'),
-    elab_verdict: z.enum(['PASS', 'CONDITIONAL_PASS', 'FAIL']),
-    gaps_resolved: z.boolean(),
+    elab: z
+      .object({
+        verdict: z.enum(['PASS', 'CONDITIONAL_PASS', 'FAIL']),
+        findings: z.array(z.string()),
+      })
+      .passthrough(),
   })
   .passthrough()
 
 export type ElabCompleteProof = z.infer<typeof ElabCompleteProofSchema>
 
 /**
- * SCOPE_OK proof — confirms scope has been validated
+ * SCOPE_OK proof — mirrors SCOPE artifact structure
+ * AC-5: { proof: { scope: { included_files: string[] } } }
+ *    OR { proof: { scope: { no_scope_files: true } } }
  */
 export const ScopeOkProofSchema = z
   .object({
-    story_id: z.string().min(1, 'story_id is required'),
-    touched_files: z.number().int().min(0),
-    no_scope_files: z.boolean(),
+    scope: z
+      .object({
+        included_files: z.array(z.string()).optional(),
+        no_scope_files: z.boolean().optional(),
+      })
+      .passthrough(),
   })
   .passthrough()
 
 export type ScopeOkProof = z.infer<typeof ScopeOkProofSchema>
 
 /**
- * PATCH_COMPLETE proof — confirms implementation patch is complete
+ * PATCH_COMPLETE proof — mirrors EVIDENCE artifact structure
+ * AC-5: { proof: { evidence: { touched_files: number > 0 } } }
  */
 export const PatchCompleteProofSchema = z
   .object({
-    story_id: z.string().min(1, 'story_id is required'),
-    build_passed: z.boolean(),
-    tests_passed: z.boolean(),
-    coverage_pct: z.number().min(0).max(100),
+    evidence: z
+      .object({
+        touched_files: z.number().int().min(0),
+      })
+      .passthrough(),
   })
   .passthrough()
 

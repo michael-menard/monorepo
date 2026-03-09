@@ -35,13 +35,13 @@ import {
  *   stage: 'POST_BOOTSTRAP',
  *   story_id: 'WINT-3010',
  *   proof: {
- *     story_id: 'WINT-3010',
- *     setup_complete: true,
- *     worktree_path: '/path/to/worktree',
+ *     checkpoint: {
+ *       phase: 'setup_complete',
+ *     },
  *   },
  * })
  * if (result?.ok) {
- *   console.log(result.data.passed) // true
+ *   logger.info(result.data.passed) // true
  * }
  * ```
  */

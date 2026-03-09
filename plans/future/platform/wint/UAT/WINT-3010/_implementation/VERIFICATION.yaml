@@ -1,0 +1,136 @@
+schema: 1
+story_id: WINT-3010
+timestamp: '2026-03-09T21:34:00.000Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 20
+    fail: 0
+  integration:
+    pass: 8
+    fail: 0
+  e2e: skipped_no_ui_surface
+  http:
+    pass: 0
+    fail: 0
+    note: .http file exists but sidecar not running during QA — cannot execute live
+coverage: 97.14
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_created[packages/backend/sidecars/gatekeeper/package.json]
+    notes: Package name @repo/gatekeeper-sidecar confirmed in package.json
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/server.ts:19-23
+    notes: node:http createServer, PORT from process.env.PORT ?? '3094'
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/routes/gate.ts:41-92
+    notes: POST /gate/check with Zod validation; 400 returned for invalid JSON, empty body, unknown stage
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/__types__/index.ts:17-22
+    notes: GateStageSchema z.enum with POST_BOOTSTRAP | ELAB_COMPLETE | SCOPE_OK | PATCH_COMPLETE
+  - ac_id: AC-5
+    status: FAIL
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/__types__/index.ts:35-111
+    notes: >-
+      PROOF SCHEMA MISMATCH: AC-5 mandates proof fields matching artifact structures
+      ({checkpoint:{phase:'setup_complete'}}, {elab:{verdict,findings}}, {scope:{included_files}},
+      {evidence:{touched_files}}). Implementation uses flat custom fields (setup_complete:boolean, worktree_path,
+      elab_verdict, gaps_resolved, touched_files:number, build_passed, tests_passed, coverage_pct). The POST_BOOTSTRAP
+      proof requires checkpoint.phase not setup_complete. ELAB_COMPLETE requires elab.verdict + non-empty elab.findings
+      not elab_verdict + gaps_resolved. SCOPE_OK requires scope.included_files (array) not touched_files (number).
+      PATCH_COMPLETE requires evidence.touched_files > 0 not build_passed/tests_passed/coverage_pct. Story test plan
+      HP-1 through HP-6 confirm nested proof structures. This is a breaking contract divergence.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/gate-check.ts:117-125
+    notes: 'ok:true returns { passed: true, stage, story_id, timestamp } confirmed in tests'
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/gate-check.ts:107-114
+    notes: 'ok:false returns { error: ''Gate check failed'', missing_proofs: [...] } on 422'
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/routes/gate.ts:21
+    notes: sendJson and readBody imported from @repo/sidecar-http-utils
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: packages/backend/mcp-tools/src/gatekeeper/gate-check.ts:13-18
+    notes: gateCheckTool imports gateCheck directly from @repo/gatekeeper-sidecar — no HTTP fetch
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/__types__/index.ts
+    notes: All types via Zod schemas, no interface keywords found
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/__types__/index.ts:135-147
+    notes: >-
+      GateCheckHttpResponseSchema discriminates on ok; missing_proofs?: z.array(z.string()).optional() on ok:false
+      variant
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/routes/gate.ts:12-17
+    notes: SEC-002 auth-deferral comment present at file header and in handleGateCheckRequest JSDoc
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/src/server.ts:8-16
+    notes: 'Port comment block lists all 5 sidecar ports: 3090-3094 including gatekeeper at 3094'
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: vitest run --coverage output
+    notes: >-
+      100% statements, 97.14% branches, 100% functions. 28 tests pass across gate-check.test.ts (20) and
+      gate-route.test.ts (8)
+  - ac_id: AC-15
+    status: PASS
+    evidence_ref: packages/backend/sidecars/gatekeeper/CHECKPOINT.yaml:4
+    notes: >-
+      e2e_gate: skipped_no_ui_surface documented in CHECKPOINT.yaml; gate.integration.http file exists with all stage +
+      error cases
+architecture_compliant: true
+issues:
+  - id: ISSUE-001
+    ac: AC-5
+    severity: critical
+    description: >-
+      Proof schema fields diverge from AC-5 specification. AC-5 mandates per-stage proof objects that mirror artifact
+      structures: POST_BOOTSTRAP requires {checkpoint:{phase:'setup_complete'}}, ELAB_COMPLETE requires
+      {elab:{verdict:'PASS'|'CONDITIONAL_PASS', findings:[...]}}, SCOPE_OK requires {scope:{included_files:[...]} |
+      scope:{no_scope_files:true}}, PATCH_COMPLETE requires {evidence:{touched_files:>0}}. The implementation uses flat,
+      custom fields (setup_complete, worktree_path, elab_verdict, gaps_resolved, touched_files:number, build_passed,
+      tests_passed, coverage_pct) which do not match the story's defined HTTP contract or test plan examples (HP-1
+      through HP-6, EC-1 through EC-4).
+    fix_required: >-
+      Redefine proof schemas in src/__types__/index.ts and update gate-check.ts validation logic to use the nested
+      structures mandated by AC-5. Update all tests accordingly.
+lessons_to_record:
+  - lesson: >-
+      Proof schema drift: implementation teams may design intuitive flat schemas that diverge from AC-mandated
+      artifact-mirroring structures. ACs describing nested proof structures (e.g. {checkpoint:{phase}}) must be taken
+      literally — the gatekeeper's value is that it validates real artifact fields, not invented booleans.
+    category: anti_pattern
+    tags:
+      - gatekeeper
+      - proof-schema
+      - ac-compliance
+      - backend
+  - lesson: >-
+      AC-5 proof schemas should be reviewed early in implementation planning — the schema design affects both the HTTP
+      contract and the compute logic. A mismatch between AC field names and implementation field names surfaces late and
+      requires rework of types, compute function, route handler, and all tests.
+    category: time_sink
+    tags:
+      - gatekeeper
+      - backend
+      - schema-design
+tokens:
+  in: 42000
+  out: 4500
