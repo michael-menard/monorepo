@@ -3699,3 +3699,60 @@ toolDefinitions.push(
   // Context pack tool (WINT-2020)
   contextPackGetToolDefinition,
 )
+
+// ============================================================================
+// Telemetry Tool (WINT-3020)
+// ============================================================================
+
+import { WorkflowLogInvocationInputSchema } from '@repo/mcp-tools'
+
+/**
+ * workflow_log_invocation tool definition.
+ * WINT-3020: Invocation Logging Skill (telemetry-log)
+ */
+export const workflowLogInvocationToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_invocation',
+  description: `Log an agent invocation record to wint.agent_invocations.
+
+Fire-and-forget telemetry skill for WINT workflow agents.
+Inserts exactly one row per call. Returns the inserted row, or null if the DB write fails.
+Null return must NOT block the calling workflow — telemetry is a side-effect, not a gate.
+
+Required parameters:
+- agentName: Name of the calling agent (e.g., 'dev-execute-leader')
+- status: Invocation outcome — 'success', 'failure', or 'partial'
+
+Optional parameters:
+- invocationId: Unique ID (UUID recommended). Auto-generated if not provided.
+  Recommend format: {agentName}-{storyId}-{isoTimestamp} for idempotency.
+- storyId: Story ID this invocation is associated with
+- phase: Workflow phase — 'setup', 'plan', 'execute', 'review', 'qa'
+- inputTokens: Input token count (non-negative integer)
+- outputTokens: Output token count (non-negative integer)
+- cachedTokens: Cached/prompt-hit token count (default: 0)
+- durationMs: Wall-clock duration in milliseconds
+- modelName: LLM model name (e.g., 'claude-sonnet-4-6')
+- errorMessage: Error message if status is 'failure'
+
+Returns: Inserted row object or null (on DB failure — workflow continues either way)
+
+Example:
+{
+  "agentName": "dev-execute-leader",
+  "storyId": "WINT-3020",
+  "phase": "execute",
+  "status": "success",
+  "inputTokens": 1200,
+  "outputTokens": 400,
+  "cachedTokens": 0,
+  "durationMs": 4200,
+  "modelName": "claude-sonnet-4-6"
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogInvocationInputSchema),
+}
+
+// Append workflow_log_invocation to toolDefinitions
+toolDefinitions.push(
+  // Telemetry tool (WINT-3020)
+  workflowLogInvocationToolDefinition,
+)

@@ -5010,3 +5010,51 @@ export async function handleContextPackGet(
 
 // Register in toolHandlers map
 toolHandlers['context_pack_get'] = handleContextPackGet
+
+// ============================================================================
+// Telemetry Tool Handler (WINT-3020)
+// ============================================================================
+
+import { logInvocation, WorkflowLogInvocationInputSchema } from '@repo/mcp-tools'
+
+/**
+ * Handle workflow_log_invocation tool invocation.
+ * WINT-3020: Invocation Logging Skill (telemetry-log)
+ */
+export async function handleWorkflowLogInvocation(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('workflow_log_invocation tool invoked', {
+    correlation_id: correlationId,
+    agent_name: inputObj?.agentName,
+    story_id: inputObj?.storyId,
+  })
+
+  try {
+    enforceAuthorization('workflow_log_invocation' as ToolName, context)
+    const validated = WorkflowLogInvocationInputSchema.parse(input)
+    const result = await logInvocation(validated)
+
+    logger.info('workflow_log_invocation succeeded', {
+      correlation_id: correlationId,
+      agent_name: validated.agentName,
+      invocation_id: validated.invocationId,
+      inserted: result !== null,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('workflow_log_invocation failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// Register in toolHandlers map
+toolHandlers['workflow_log_invocation'] = handleWorkflowLogInvocation
