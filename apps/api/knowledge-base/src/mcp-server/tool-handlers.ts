@@ -47,6 +47,12 @@ import {
   type KbGetRelatedDeps,
 } from '../search/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
+import { findSimilarPlans } from '../search/plan-similarity.js'
+import { kb_get_plan_revisions } from '../crud-operations/plan-revision-operations.js'
+import {
+  kb_log_plan_event,
+  kb_get_plan_events,
+} from '../crud-operations/plan-execution-log-operations.js'
 import { kb_get_story_context } from '../crud-operations/story-context.js'
 import {
   AuditLogger,
@@ -176,6 +182,12 @@ import {
   KbFindSimilarStoriesInputSchema,
   // Composite story context (CDTS-2020)
   KbGetStoryContextInputSchema,
+  // PDBM Phase 0 plan tools
+  KbSearchPlansInputSchema,
+  KbGetPlanDashboardInputSchema,
+  KbGetPlanRevisionsInputSchema,
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
@@ -4779,6 +4791,179 @@ async function handleKbGetStoryContext(
   }
 }
 
+// ============================================================================
+// PDBM Phase 0 — Plan Tools
+// ============================================================================
+
+/**
+ * Handle kb_search_plans tool invocation.
+ */
+async function handleKbSearchPlans(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_search_plans' as ToolName, context)
+    const validated = KbSearchPlansInputSchema.parse(input)
+
+    // Generate query embedding
+    const queryEmbedding = await deps.embeddingClient.generateEmbedding(validated.query)
+
+    // Find similar plans
+    const results = await findSimilarPlans(
+      deps.db,
+      queryEmbedding,
+      validated.limit,
+      validated.type_filter,
+    )
+
+    logger.info('kb_search_plans succeeded', {
+      correlation_id: correlationId,
+      count: results.length,
+      type_filter: validated.type_filter,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_search_plans failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_dashboard tool invocation.
+ */
+async function handleKbGetPlanDashboard(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_dashboard' as ToolName, context)
+    const validated = KbGetPlanDashboardInputSchema.parse(input)
+
+    // Query the plan_summary_view directly using Drizzle sql template
+    const result = await deps.db.execute(sql`
+      SELECT * FROM public.plan_summary_view
+      WHERE 1=1
+        ${validated.status ? sql`AND status = ${validated.status}` : sql``}
+        ${validated.plan_type ? sql`AND plan_type = ${validated.plan_type}` : sql``}
+      ORDER BY priority ASC, status ASC
+      LIMIT ${validated.limit}
+      OFFSET ${validated.offset}
+    `)
+
+    logger.info('kb_get_plan_dashboard succeeded', {
+      correlation_id: correlationId,
+      count: result.rows.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result.rows, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_dashboard failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_revisions tool invocation.
+ */
+async function handleKbGetPlanRevisions(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_revisions' as ToolName, context)
+    const validated = KbGetPlanRevisionsInputSchema.parse(input)
+    const result = await kb_get_plan_revisions({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_revisions succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      count: result.revisions.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_revisions failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_log_plan_event tool invocation.
+ */
+async function handleKbLogPlanEvent(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_log_plan_event' as ToolName, context)
+    const validated = KbLogPlanEventInputSchema.parse(input)
+    const result = await kb_log_plan_event({ db: deps.db }, validated)
+
+    logger.info('kb_log_plan_event succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      entry_type: validated.entry_type,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_log_plan_event failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_plan_events tool invocation.
+ */
+async function handleKbGetPlanEvents(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_events' as ToolName, context)
+    const validated = KbGetPlanEventsInputSchema.parse(input)
+    const result = await kb_get_plan_events({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_events succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      count: result.events.length,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_events failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -4871,6 +5056,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_roadmap: handleKbGetRoadmap,
   kb_update_plan: handleKbUpdatePlan,
   kb_upsert_plan: handleKbUpsertPlan,
+  // PDBM Phase 0 plan tools
+  kb_search_plans: handleKbSearchPlans,
+  kb_get_plan_dashboard: handleKbGetPlanDashboard,
+  kb_get_plan_revisions: handleKbGetPlanRevisions,
+  kb_log_plan_event: handleKbLogPlanEvent,
+  kb_get_plan_events: handleKbGetPlanEvents,
   // Artifact search tool (KBAR-0130)
   artifact_search: handleArtifactSearch,
   // Story similarity search (CDTS-2010)

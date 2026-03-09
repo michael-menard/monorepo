@@ -1335,6 +1335,17 @@ export const plans = pgTable(
 
     /** Soft-delete: who deleted this plan (agent ID or user) */
     deletedBy: text('deleted_by'),
+
+    /** FK to the plan that supersedes/replaces this one */
+    supersededBy: uuid('superseded_by').references(
+      (): import('drizzle-orm/pg-core').AnyPgColumn => plans.id,
+    ),
+
+    /** Stash of pre-block status so we can restore on unblock */
+    preBlockedStatus: text('pre_blocked_status'),
+
+    /** Inline embedding for semantic similarity search */
+    embedding: vector('embedding', { dimensions: 1536 }),
   },
   table => ({
     statusIdx: index('idx_plans_status').on(table.status),
@@ -1427,6 +1438,12 @@ export const planDetails = pgTable(
 
     /** Plan slugs that must reach 'implemented' before this plan can start */
     dependencies: jsonb('dependencies').$type<string[]>(),
+
+    /** Parsed heading breakdown: [{heading, level, startLine}] */
+    sections: jsonb('sections'),
+
+    /** Format version for content parsing (yaml_frontmatter, inline_header, etc.) */
+    formatVersion: text('format_version').default('v1'),
 
     /** Original source file path (e.g., '~/.claude/plans/dapper-chasing-horizon.md') */
     sourceFile: text('source_file'),
@@ -1550,6 +1567,97 @@ export const planDependencies = pgTable(
     ),
     planSlugIdx: index('idx_plan_dependencies_plan_slug').on(table.planSlug),
     dependsOnIdx: index('idx_plan_dependencies_depends_on').on(table.dependsOnSlug),
+  }),
+)
+
+/**
+ * Plan Revision History Table (PDBM Phase 0)
+ *
+ * Tracks content revisions for plans. Each revision stores the full raw content
+ * and a content hash for change detection. Revision numbers are auto-incremented
+ * per plan.
+ */
+export const planRevisionHistory = pgTable(
+  'plan_revision_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** FK to plans.id */
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+
+    /** Auto-incremented revision number per plan */
+    revisionNumber: integer('revision_number').notNull(),
+
+    /** Full raw markdown content at this revision */
+    rawContent: text('raw_content').notNull(),
+
+    /** SHA-256 prefix (16 hex chars) for change detection */
+    contentHash: text('content_hash'),
+
+    /** Parsed heading breakdown at this revision */
+    sections: jsonb('sections'),
+
+    /** Why this revision was created */
+    changeReason: text('change_reason'),
+
+    /** Who created this revision (agent ID or user) */
+    changedBy: text('changed_by'),
+
+    /** When the revision was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planIdIdx: index('idx_plan_revision_history_plan_id').on(table.planId),
+    createdAtIdx: index('idx_plan_revision_history_created_at').on(table.createdAt),
+    uniqueRevision: uniqueIndex('uq_plan_revision').on(table.planId, table.revisionNumber),
+  }),
+)
+
+/**
+ * Plan Execution Log Table (PDBM Phase 0)
+ *
+ * Structured event log for plan lifecycle events: status changes, phase progress,
+ * story spawning/completion, blocking/unblocking, decisions, and errors.
+ */
+export const planExecutionLog = pgTable(
+  'plan_execution_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Plan slug (FK to plans.plan_slug) */
+    planSlug: text('plan_slug')
+      .notNull()
+      .references(() => plans.planSlug, { onDelete: 'restrict' }),
+
+    /**
+     * Type of log entry.
+     * Values: 'status_change' | 'phase_started' | 'phase_completed' |
+     *         'story_spawned' | 'story_completed' | 'blocked' | 'unblocked' |
+     *         'decision' | 'note' | 'error'
+     */
+    entryType: text('entry_type').notNull(),
+
+    /** Phase reference (e.g., 'Phase 1', 'Phase 2') */
+    phase: text('phase'),
+
+    /** Related story ID (e.g., 'WKFL-020') */
+    storyId: text('story_id'),
+
+    /** Human-readable message describing the event */
+    message: text('message').notNull(),
+
+    /** Additional structured metadata */
+    metadata: jsonb('metadata'),
+
+    /** When the event occurred */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planSlugIdx: index('idx_plan_execution_log_plan_slug').on(table.planSlug),
+    entryTypeIdx: index('idx_plan_execution_log_entry_type').on(table.entryType),
+    createdAtIdx: index('idx_plan_execution_log_created_at').on(table.createdAt),
   }),
 )
 

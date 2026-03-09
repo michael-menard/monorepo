@@ -63,6 +63,16 @@ import {
   type KbUpsertPlanInput,
 } from '../crud-operations/plan-operations.js'
 import {
+  KbGetPlanRevisionsInputSchema,
+  type KbGetPlanRevisionsInput,
+} from '../crud-operations/plan-revision-operations.js'
+import {
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
+  type KbLogPlanEventInput,
+  type KbGetPlanEventsInput,
+} from '../crud-operations/plan-execution-log-operations.js'
+import {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
@@ -3391,6 +3401,169 @@ Example (update tags):
   inputSchema: zodToMcpSchema(KbUpdatePlanInputSchema),
 }
 
+// ============================================================================
+// Plan Semantic Search (PDBM Phase 0)
+// ============================================================================
+
+export const KbSearchPlansInputSchema = z.object({
+  /** Natural language query to find similar plans */
+  query: z.string().min(1).max(2000),
+  /** Maximum number of results (default 5, max 20) */
+  limit: z.number().int().positive().max(20).default(5),
+  /** Optional plan_type filter to narrow results */
+  type_filter: z.string().optional(),
+})
+
+export type KbSearchPlansInput = z.infer<typeof KbSearchPlansInputSchema>
+
+export const kbSearchPlansToolDefinition: McpToolDefinition = {
+  name: 'kb_search_plans',
+  description: `Find plans similar to a given query using semantic similarity.
+
+Uses pgvector cosine similarity on plan embeddings (text-embedding-3-small).
+Returns plans ranked by similarity score with their current status.
+
+Parameters:
+- query (required): Natural language query to find similar plans
+- limit (optional): Maximum results (1-20, default 5)
+- type_filter (optional): Filter by plan type (e.g., 'feature', 'workflow')
+
+Returns: Array of {plan_slug, title, plan_type, status, similarity_score}
+
+Example:
+{
+  "query": "database schema migration and consolidation",
+  "limit": 5
+}`,
+  inputSchema: zodToMcpSchema(KbSearchPlansInputSchema),
+}
+
+// ============================================================================
+// Plan Dashboard (PDBM Phase 0)
+// ============================================================================
+
+export const KbGetPlanDashboardInputSchema = z.object({
+  /** Filter by plan status */
+  status: z.string().optional(),
+  /** Filter by plan type */
+  plan_type: z.string().optional(),
+  /** Maximum results (1-100, default 50) */
+  limit: z.number().int().min(1).max(100).optional().default(50),
+  /** Offset for pagination (default 0) */
+  offset: z.number().int().min(0).optional().default(0),
+})
+
+export type KbGetPlanDashboardInput = z.infer<typeof KbGetPlanDashboardInputSchema>
+
+export const kbGetPlanDashboardToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_dashboard',
+  description: `Get a summary dashboard of plans with story progress and dependency status.
+
+Queries the plan_summary_view which joins plans, stories, and dependencies
+to provide progress percentages and blocking information.
+
+Parameters:
+- status (optional): Filter by plan status
+- plan_type (optional): Filter by plan type
+- limit (optional): Maximum results (1-100, default 50)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of plan summaries with stories_total, stories_completed, stories_in_progress,
+progress_pct, blocking_plans, and is_blocked fields.
+
+Example:
+{
+  "status": "in-progress",
+  "limit": 20
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanDashboardInputSchema),
+}
+
+// ============================================================================
+// Plan Revision History (PDBM Phase 0)
+// ============================================================================
+
+export const kbGetPlanRevisionsToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_revisions',
+  description: `List revision history for a plan.
+
+Returns revisions ordered by revision_number DESC (most recent first).
+Each revision includes the full raw_content and content_hash.
+
+Parameters:
+- plan_slug (required): Plan slug to list revisions for
+- limit (optional): Maximum results (1-100, default 20)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of revisions with revision_number, raw_content, content_hash,
+sections, change_reason, changed_by, created_at.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "limit": 5
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanRevisionsInputSchema),
+}
+
+// ============================================================================
+// Plan Execution Log (PDBM Phase 0)
+// ============================================================================
+
+export const kbLogPlanEventToolDefinition: McpToolDefinition = {
+  name: 'kb_log_plan_event',
+  description: `Log a structured execution event for a plan.
+
+Records lifecycle events like status changes, phase progress, story spawning,
+blocking/unblocking, decisions, and errors.
+
+Parameters:
+- plan_slug (required): Plan slug to log event for
+- entry_type (required): One of: status_change, phase_started, phase_completed,
+  story_spawned, story_completed, blocked, unblocked, decision, note, error
+- phase (optional): Phase reference (e.g., 'Phase 1')
+- story_id (optional): Related story ID (e.g., 'WKFL-020')
+- message (required): Human-readable message
+- metadata (optional): Additional structured data
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "entry_type": "phase_started",
+  "phase": "Phase 1",
+  "message": "Starting Phase 1: Foundation"
+}`,
+  inputSchema: zodToMcpSchema(KbLogPlanEventInputSchema),
+}
+
+export const kbGetPlanEventsToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_events',
+  description: `List execution events for a plan.
+
+Returns events ordered by created_at DESC (most recent first).
+Can filter by entry_type to see only specific event types.
+
+Parameters:
+- plan_slug (required): Plan slug to list events for
+- entry_type (optional): Filter by event type
+- limit (optional): Maximum results (1-200, default 50)
+- offset (optional): Offset for pagination (default 0)
+
+Returns: Array of events with entry_type, phase, story_id, message, metadata, created_at.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "entry_type": "status_change"
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanEventsInputSchema),
+}
+
+// Re-export new schemas for handler imports
+export { KbGetPlanRevisionsInputSchema, KbLogPlanEventInputSchema, KbGetPlanEventsInputSchema }
+
+export type { KbGetPlanRevisionsInput, KbLogPlanEventInput, KbGetPlanEventsInput }
+
 /**
  * All MCP tool definitions.
  */
@@ -3626,6 +3799,12 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetRoadmapToolDefinition,
   kbUpdatePlanToolDefinition,
   kbUpsertPlanToolDefinition,
+  // PDBM Phase 0 plan tools
+  kbSearchPlansToolDefinition,
+  kbGetPlanDashboardToolDefinition,
+  kbGetPlanRevisionsToolDefinition,
+  kbLogPlanEventToolDefinition,
+  kbGetPlanEventsToolDefinition,
   // Artifact search tool (KBAR-0130)
   artifactSearchToolDefinition,
   // Story similarity search (CDTS-2010)
