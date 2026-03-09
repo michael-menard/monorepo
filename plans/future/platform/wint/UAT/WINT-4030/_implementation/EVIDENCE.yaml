@@ -1,0 +1,233 @@
+schema: 1
+story_id: "WINT-4030"
+version: 2
+timestamp: "2026-03-09T17:55:00Z"
+iteration: 1
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "A graph.epics table is defined in packages/backend/database-schema/src/schema/wint.ts with correct columns"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "epics table exported with id (uuid PK defaultRandom), epicName (text unique not null), epicPrefix (text unique not null), description (text nullable), isActive (boolean not null default true), createdAt/updatedAt timestamp with timezone not null defaultNow"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-graph-schema.test.ts"
+        description: "HP-4 schema tests assert all required columns present — 2 new tests pass (38 total)"
+      - type: command
+        command: "pnpm --filter @repo/database-schema build"
+        result: SUCCESS
+
+  - ac_id: "AC-2"
+    ac_text: "Migration file created and applied to dev DB"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0037_wint_4030_graph_epics.sql"
+        description: "Migration creates wint.epics table with id, epic_name UNIQUE, epic_prefix UNIQUE, description, is_active, created_at, updated_at columns and 3 indexes. Slot 0037 used because 0036 was consumed by KSOT story."
+      - type: command
+        command: "pnpm --filter @repo/database-schema build"
+        result: SUCCESS
+        output: "tsc -p tsconfig.build.json exits 0"
+
+  - ac_id: "AC-3"
+    ac_text: "Population script exists at packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "New script file created with exports: populateGraphFeatures, discoverFeatures, KNOWN_EPICS, PopulateGraphResultSchema and related types/schemas"
+      - type: command
+        command: "pnpm --filter @repo/mcp-tools exec tsc --noEmit"
+        result: SUCCESS
+        output: "0 errors on populate-graph-features.ts"
+
+  - ac_id: "AC-4"
+    ac_text: "Script accepts injectable dbInsertEpicFn and dbInsertFeatureFn for testability"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "populateGraphFeatures() accepts PopulateGraphFeaturesOpts with optional dbInsertEpicFn and dbInsertFeatureFn. main() wires real Drizzle deps via dynamic import. ADR-005 compliant."
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "AC-9 and AC-4 tests use vi.fn() mocks — no live DB required; 17 tests pass"
+
+  - ac_id: "AC-5"
+    ac_text: "Script scans apps/api/*/src/handlers/, apps/web/*/src/components/, packages/backend/*/src/, packages/core/*/src/"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "HP-2 tests use real monorepo root — discoverFeatures discovers service (packages/backend) and utility (packages/core) features, confirms featureType values are in accepted set"
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "discoverFeatures() scans all 4 path patterns via listSubdirs/listEntries helpers"
+
+  - ac_id: "AC-6"
+    ac_text: "Features inserted into graph.features with featureName, featureType, packageName, filePath; duplicates skipped via onConflictDoNothing"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "AC-6 tests assert correct featureType values, required fields, and mockFeatureFn called N times"
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "defaultDbInsertFeatureFn uses db.insert(features).values(...).onConflictDoNothing()"
+
+  - ac_id: "AC-7"
+    ac_text: "Known epics WINT, KBAR, WISH, BUGF inserted into graph.epics via onConflictDoNothing"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "HP-1 test asserts dbInsertEpicFn called KNOWN_EPICS.length times; all 4 prefixes (WINT/KBAR/WISH/BUGF) confirmed in called args"
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "KNOWN_EPICS constant defines 4 epics; defaultDbInsertEpicFn uses db.insert(epics).onConflictDoNothing()"
+
+  - ac_id: "AC-8"
+    ac_text: "Script returns { epics: { attempted, succeeded, failed }, features: { attempted, succeeded, failed } } matching Zod schema"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "HP-3 test validates returned object against PopulateGraphResultSchema via .safeParse(); all 3 numeric fields confirmed for both categories"
+      - type: file
+        path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+        description: "PopulateGraphResultSchema = z.object({ epics: CategoryResultSchema, features: CategoryResultSchema })"
+
+  - ac_id: "AC-9"
+    ac_text: "Unit tests exist at populate-graph-features.test.ts with 100% mocked DB calls — CI-safe"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "17 new tests, all pass with vi.fn() mocks; no DATABASE_URL needed. Total mcp-tools suite: 425 tests (422 pass, 3 pre-existing integration failures unrelated to WINT-4030)"
+      - type: command
+        command: "pnpm --filter @repo/mcp-tools test -- src/scripts/__tests__/populate-graph-features.test.ts"
+        result: SUCCESS
+        output: "17 passed (17)"
+
+  - ac_id: "AC-10"
+    ac_text: "Running script twice produces identical row counts — idempotency via onConflictDoNothing"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+        description: "ED-1 unit test: calls populateGraphFeatures twice with a Set-backed idempotent mock; asserts Set.size identical after both runs"
+
+  - ac_id: "AC-11"
+    ac_text: "TypeScript compiles with zero errors (pnpm check-types)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm check-types"
+        result: SUCCESS
+        output: "Zero TypeScript errors across the whole monorepo on all new/changed files"
+      - type: command
+        command: "pnpm --filter @repo/database-schema build"
+        result: SUCCESS
+        output: "tsc -p tsconfig.build.json exits 0"
+
+  - ac_id: "AC-12"
+    ac_text: "ESLint passes on all new/changed files"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm exec eslint packages/backend/mcp-tools/src/scripts/populate-graph-features.ts packages/backend/database-schema/src/schema/wint.ts --fix"
+        result: SUCCESS
+        output: "0 errors, 0 warnings on new/changed files"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modified
+    description: "Added graph.epics table definition after cohesionRules table in Graph Relational section"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0037_wint_4030_graph_epics.sql"
+    action: created
+    description: "Migration to create wint.epics table (slot 0037 — 0036 was consumed by KSOT story)"
+
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modified
+    description: "Added epics to wint re-exports block"
+
+  - path: "packages/backend/mcp-tools/src/scripts/populate-graph-features.ts"
+    action: created
+    description: "CLI population script for graph.epics and graph.features with injectable deps"
+
+  - path: "packages/backend/mcp-tools/src/scripts/__tests__/populate-graph-features.test.ts"
+    action: created
+    description: "17 unit tests with 100% mocked DB calls covering HP-1, HP-2, HP-3, AC-5, AC-6, AC-8, EC-1, EC-2, EC-3, ED-1"
+
+  - path: "packages/backend/database-schema/src/schema/__tests__/wint-graph-schema.test.ts"
+    action: modified
+    description: "Added HP-4 epics schema tests asserting all required columns (2 new tests)"
+
+commands_run:
+  - command: "pnpm --filter @repo/database-schema build"
+    result: SUCCESS
+    timestamp: "2026-03-09T17:52:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools exec tsc --noEmit"
+    result: SUCCESS
+    timestamp: "2026-03-09T17:53:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools test -- src/scripts/__tests__/populate-graph-features.test.ts"
+    result: SUCCESS
+    output: "17 passed (17)"
+    timestamp: "2026-03-09T17:54:00Z"
+
+  - command: "pnpm --filter @repo/database-schema test"
+    result: SUCCESS
+    output: "19 test files passed, 444 tests passed"
+    timestamp: "2026-03-09T17:54:00Z"
+
+  - command: "pnpm check-types"
+    result: SUCCESS
+    output: "0 errors"
+    timestamp: "2026-03-09T17:55:00Z"
+
+  - command: "pnpm exec eslint packages/backend/mcp-tools/src/scripts/populate-graph-features.ts packages/backend/database-schema/src/schema/wint.ts"
+    result: SUCCESS
+    output: "0 errors, 0 warnings"
+    timestamp: "2026-03-09T17:55:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 17, fail: 0 }
+  schema: { pass: 444, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "CLI script — no HTTP endpoints, no frontend, no browser interaction. Story test plan explicitly states e2e: not_applicable."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: null
+  branches: null
+  notes: "17 unit tests cover all exported functions and edge cases; no live DB required in CI"
+
+notable_decisions:
+  - "Migration slot 0036 was consumed by KSOT story — using 0037_wint_4030_graph_epics.sql instead"
+  - "onConflictDoNothing chosen over onConflictDoUpdate — epics and features are stable identifiers"
+  - "epics table added to wint.ts (not unified-wint.ts) following existing graph table precedent"
+  - "index.ts updated to re-export epics — enables import from @repo/database-schema directly"
+  - "wint-graph-schema.test.ts extended with HP-4 epics schema tests (2 new tests) rather than creating new test file"
+  - "Dynamic imports used in defaultDb...Fn for @repo/db and @repo/database-schema — avoids circular imports and keeps main() as the only wiring point"
+
+known_deviations:
+  - "AC-2 migration applied manually to dev DB for UAT only — CI does not run migrations"
+  - "AC-10 idempotency verified at unit level via Set-backed mock; live DB idempotency is MC-1 manual UAT"
+  - "3 pre-existing integration test failures in mcp-tools remain (shim/story-management/wint-1120) — unrelated to WINT-4030"

@@ -187,8 +187,10 @@ High Priority Patterns:
 Medium Priority Patterns:
 3. Agent Correlation: backend-coder → security-review at 75%
 
-Pending deferred KB writes found (run /kb-flush to process):
-- WISH-2045/_implementation/DEFERRED-KB-WRITES.yaml: 3 entries (status: pending)
+Deferred KB writes stamped:
+- WISH-2045/_implementation/DEFERRED-KB-WRITES.yaml: 3 entries (stamped processed_at)
+
+TTL cleanup: deleted 2 stale deferred write files (>30 days old)
 
 WORKFLOW-RECOMMENDATIONS.md updated with proposals.
 ```

@@ -25,3 +25,7 @@ writes:
       INSERT INTO stories (story_id, feature, title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra)
       VALUES ('WINT-2060', 'wint', 'Populate Library Cache — Cache Common Library Patterns (React 19, Tailwind, Zod, Vitest) from Docs', 'plans/future/platform/wint/created/WINT-2060', 'plans/future/platform/wint/created/WINT-2060/WINT-2060.md', 'feature', 3, 'medium', 'backlog', true, false, true, false)
       ON CONFLICT (story_id) DO UPDATE SET title = EXCLUDED.title, story_dir = EXCLUDED.story_dir, story_file = EXCLUDED.story_file, story_type = EXCLUDED.story_type, points = EXCLUDED.points, priority = EXCLUDED.priority, state = EXCLUDED.state, touches_backend = EXCLUDED.touches_backend, touches_frontend = EXCLUDED.touches_frontend, touches_database = EXCLUDED.touches_database, touches_infra = EXCLUDED.touches_infra;
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

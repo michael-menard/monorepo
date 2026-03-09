@@ -492,8 +492,13 @@ If gate fails → BLOCKED, do not proceed.
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
-5. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
-6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+5. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log {STORY_ID} dev-implement-story execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
+6. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
+7. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ### Forced Continue
 1. Update checkpoint artifact in KB: `forced: true`, `warnings: [...]`
@@ -509,8 +514,13 @@ If gate fails → BLOCKED, do not proceed.
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
-5. Report with warnings
-6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
+5. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log {STORY_ID} dev-implement-story execute partial
+   ```
+   If the call returns null or throws, log a warning and continue.
+6. Report with warnings
+7. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ---
 

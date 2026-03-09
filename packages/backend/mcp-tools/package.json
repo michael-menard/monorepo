@@ -68,7 +68,8 @@
     "@repo/logger": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
     "drizzle-orm": "^0.44.3",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@repo/sidecar-rules-registry": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.2.1",

@@ -230,3 +230,7 @@ notes: |
   All 17 findings are non-blocking and appropriate for future iterations.
   High-priority items have dependent stories already planned (WINT-1160, WINT-0260).
   Story WINT-0110 is ready for implementation with no MVP gaps.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

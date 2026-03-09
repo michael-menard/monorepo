@@ -49,3 +49,7 @@ sql: |
     touches_frontend = EXCLUDED.touches_frontend,
     touches_database = EXCLUDED.touches_database,
     touches_infra = EXCLUDED.touches_infra;
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

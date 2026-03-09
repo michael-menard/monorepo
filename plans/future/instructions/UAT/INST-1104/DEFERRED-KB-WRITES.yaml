@@ -55,3 +55,7 @@ story_write:
 reason: MCP CLI not available (typer dependency missing)
 timestamp: 2026-02-06T23:00:00-07:00
 retry_count: 0
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,6 +1,6 @@
 id: "ST-1030"
 title: "Dev Feasibility Worker: Add Subtask Proposal to Output"
-status: backlog
+status: uat
 priority: medium
 phase: 1
 feature: "Extend pm-dev-feasibility-review.agent.md to produce a subtasks[] array in dev-feasibility.yaml. Each subtask covers 1-3 files, maps to 1-3 ACs, has a depends_on chain, a verification command, and an estimated_tokens field. Sizing: 1-pt story → 1-2 subtasks, 3-pt → 3-5, 5-pt → 5-8."

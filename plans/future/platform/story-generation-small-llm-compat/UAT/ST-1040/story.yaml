@@ -1,6 +1,6 @@
 id: "ST-1040"
 title: "Generation Leader Phase 4: Include Subtasks and Canonical References in Story"
-status: ready-for-qa
+status: uat
 priority: medium
 phase: 1
 feature: "Update pm-story-generation-leader Phase 4 synthesis to read subtasks[] from dev-feasibility.yaml and ## Canonical References from STORY-SEED.md, then include both as required sections in the generated story file. Also enforce the Goal/Examples/Edge Cases clarity format. Cross-reference: every AC must be covered by at least one subtask."

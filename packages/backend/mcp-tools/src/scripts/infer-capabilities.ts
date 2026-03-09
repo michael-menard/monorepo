@@ -249,7 +249,9 @@ export async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
   const { db } = await import('@repo/db')
   const { features } = await import('@repo/database-schema')
 
-  const rows = await db.select({ id: features.id, featureName: features.featureName }).from(features)
+  const rows = await db
+    .select({ id: features.id, featureName: features.featureName })
+    .from(features)
 
   return rows.map(row => FeatureRowSchema.parse({ id: row.id, featureName: row.featureName }))
 }
@@ -491,9 +493,8 @@ async function printValidationReport(featureRows: FeatureRow[]): Promise<void> {
   logger.info('[infer-capabilities] Running validation coverage report...')
 
   // Dynamic import to avoid circular dependency at module load time
-  const { graph_get_capability_coverage } = await import(
-    '../graph-query/graph-get-capability-coverage.js'
-  )
+  const { graph_get_capability_coverage } =
+    await import('../graph-query/graph-get-capability-coverage.js')
 
   const CRUD_STAGES: LifecycleStage[] = ['create', 'read', 'update', 'delete']
 
@@ -552,8 +553,11 @@ async function printValidationReport(featureRows: FeatureRow[]): Promise<void> {
   // Print table
   logger.info('[infer-capabilities] CRUD coverage report', { features: rows.length })
   for (const row of rows) {
-    const status = row.missing.length === 0 ? 'COMPLETE' : `INCOMPLETE (missing: ${row.missing.join(', ')})`
-    logger.info(`  ${row.feature}: create=${row.create} read=${row.read} update=${row.update} delete=${row.delete} total=${row.total} [${status}]`)
+    const status =
+      row.missing.length === 0 ? 'COMPLETE' : `INCOMPLETE (missing: ${row.missing.join(', ')})`
+    logger.info(
+      `  ${row.feature}: create=${row.create} read=${row.read} update=${row.update} delete=${row.delete} total=${row.total} [${status}]`,
+    )
   }
 }
 

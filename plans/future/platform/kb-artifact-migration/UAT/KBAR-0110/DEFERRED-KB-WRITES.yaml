@@ -22,3 +22,7 @@ deferred_writes:
       touches_database: true
       touches_infra: false
     on_conflict: "ON CONFLICT (story_id) DO UPDATE SET title = EXCLUDED.title, story_dir = EXCLUDED.story_dir, story_file = EXCLUDED.story_file, points = EXCLUDED.points, priority = EXCLUDED.priority, state = EXCLUDED.state"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

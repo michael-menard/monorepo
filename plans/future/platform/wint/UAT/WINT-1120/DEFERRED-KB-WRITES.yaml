@@ -208,3 +208,7 @@ kb_entries:
       - **Zod schema assertions on CRUD results**: No negative path is specified for AC-1 — if a tool returns an unexpected shape, the test passes as long as it does not throw. Adding `StorySchema.parse(result)` assertions would strengthen the test.
       - **Impact**: Medium | **Effort**: Low
       - **Recommendation**: Add `StorySchema.parse(result)` assertions in ST-2 integration tests for all four CRUD tools; use shared Zod types from WINT-1100
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

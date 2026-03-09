@@ -1,0 +1,48 @@
+schema: 1
+story_id: WINT-4010
+iteration: 2
+timestamp: '2026-03-08T14:45:00Z'
+verdict: PENDING_REVIEW
+note: Fix iteration 2 complete. All 7 ranked patches from iteration 1 review applied. Ready for re-review.
+ranked_patches: []
+total_errors: 0
+total_warnings: 0
+workers_run: []
+workers_skipped: []
+auto_fixable_count: 0
+fixes_applied:
+  - patch_priority: 1
+    file: packages/backend/sidecars/cohesion/src/routes/cohesion.ts
+    issue: Duplicated sendJson — extracted to @repo/sidecar-http-utils
+    status: FIXED
+  - patch_priority: 2
+    file: packages/backend/sidecars/cohesion/src/routes/cohesion.ts
+    issue: Duplicated readBody + MAX_BODY_SIZE_BYTES — extracted to @repo/sidecar-http-utils
+    status: FIXED
+  - patch_priority: 3
+    file: packages/backend/sidecars/cohesion/src/compute-audit.ts
+    issue: DrizzleDb structural type alias replaced with NodePgDatabase<any>
+    status: FIXED
+  - patch_priority: 4
+    file: packages/backend/sidecars/cohesion/src/compute-audit.ts
+    issue: Explicit db.select({...}) column selection added — eliminates any-typed row access
+    status: FIXED
+  - patch_priority: 5
+    file: packages/backend/sidecars/cohesion/src/routes/cohesion.ts
+    issue: as-any casts removed — CohesionRouteDeps.db now typed NodePgDatabase<any>
+    status: FIXED
+  - patch_priority: 6
+    file: packages/backend/sidecars/cohesion/src/compute-audit.ts
+    issue: Non-null assertion justification comment added at featureMap.get(featureId)!
+    status: FIXED
+  - patch_priority: 7
+    file: packages/backend/sidecars/cohesion/src/routes/cohesion.ts
+    issue: SEC-002 inline JSDoc added to handleCohesionAuditRequest and handleCohesionCheckRequest
+    status: FIXED
+new_package_created:
+  name: '@repo/sidecar-http-utils'
+  path: packages/backend/sidecars/http-utils
+  exports:
+    - sendJson
+    - readBody
+    - MAX_BODY_SIZE_BYTES

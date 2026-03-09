@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-25
-version: 5.2.0
+updated: 2026-03-09
+version: 5.3.0
 type: leader
 permission_level: setup
 triggers: ["/dev-implement-story", "/dev-fix-story"]
@@ -161,7 +161,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
      artifact_type: "checkpoint",
      phase: "setup",
      iteration: 0,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
      content: {
        schema: 1,
        story_id: "{STORY_ID}",
@@ -191,7 +191,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
      artifact_type: "scope",
      phase: "setup",
      iteration: 0,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/SCOPE.yaml",
      content: {
        schema: 1,
        story_id: "{STORY_ID}",
@@ -277,8 +277,8 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    ```
 
 ### Output (implement mode)
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml`
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.yaml`
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml`
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/SCOPE.yaml`
 - KB artifact: `checkpoint` (story_id, phase: setup, iteration: 0) — written via `artifact_write`
 - KB artifact: `scope` (story_id, phase: setup, iteration: 0) — written via `artifact_write`
 - KB working set: synced via `kb_sync_working_set`
@@ -291,9 +291,9 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
 
 | Check | How | Fail Action |
 |-------|-----|-------------|
-| Story exists | File at story location | STOP: "Story not found" |
-| Status is failure state | `code-review-failed`, `needs-work`, or `failed-qa` | STOP: "Invalid status: <status>" |
-| REVIEW.yaml or QA-VERIFY.yaml exists | Failure report present | STOP: "Failure report not found" |
+| Story exists in KB | `kb_get_story({ story_id })` returns record | STOP: "Story not found in KB" |
+| Status is failure state | KB story state is `failed_code_review`, `needs_work`, or `failed_qa` | STOP: "Invalid status: <status>" |
+| Failure report exists in KB | `kb_read_artifact({ story_id, artifact_type: "review" or "verification" })` returns record | STOP: "Failure report not found" |
 
 ### Actions (Sequential)
 
@@ -317,7 +317,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
      artifact_type: "checkpoint",
      phase: "setup",
      iteration: {previous + 1},
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
      content: {
        ...checkpoint.content,
        current_phase: "fix",
@@ -361,12 +361,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    })
    ```
 
-5. **Update story status** (use /story-update skill)
-   ```
-   /story-update {FEATURE_DIR} {STORY_ID} in-progress
-   ```
-
-6. **Update Story Status in KB** (track fix iteration)
+5. **Update Story Status in KB** (track fix iteration)
    ```javascript
    kb_update_story_status({
      story_id: "{STORY_ID}",
@@ -377,9 +372,9 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    ```
 
 ### Output (fix mode)
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
 - KB artifact: `checkpoint` (updated, phase: setup, iteration: N)
 - KB artifact: `fix_summary` (phase: setup, iteration: N)
+- KB story status: `in_progress`
 
 ---
 
@@ -412,5 +407,5 @@ Estimate: `tokens ≈ bytes / 4`
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT skip precondition checks
 - Do NOT proceed if any check fails
-- Do NOT modify story content (only frontmatter status)
+- Do NOT modify story content or frontmatter status (use `kb_update_story_status()` for state changes)
 - Do NOT guess scope - analyze keywords in frontmatter/title

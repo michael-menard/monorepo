@@ -34,9 +34,9 @@ From orchestrator context:
 - Final verdict: PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED
 - User decisions from interactive discussion (JSON or structured) - OR - auto-decisions from DECISIONS.yaml
 
-From filesystem:
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story file
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` - full elaboration record (audit, gaps, opportunities, verdict)
+From KB (preferred) or filesystem (fallback):
+- Story data: `kb_get_story({ story_id: "{STORY_ID}" })` — or fall back to `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` if story has an on-disk file
+- ELAB artifact: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })` — or fall back to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml`
 
 ### Decision Source
 
@@ -80,9 +80,22 @@ qa_notes:
   opportunities_logged: N
 ```
 
-### Step 3: Update Story Status (use /story-update skill)
+### Step 3: Update KB State (PRIMARY — always run)
 
-Based on verdict, use the skill to update status:
+Based on verdict:
+
+| Verdict | KB State |
+|---------|----------|
+| PASS | `kb_update_story_status({ story_id, state: "ready", phase: "planning" })` |
+| CONDITIONAL PASS | `kb_update_story_status({ story_id, state: "ready", phase: "planning" })` |
+| FAIL | `kb_update_story_status({ story_id, state: "backlog", phase: "planning" })` |
+| SPLIT REQUIRED | `kb_update_story_status({ story_id, state: "backlog", phase: "planning" })` |
+
+If KB unavailable: log warning, continue.
+
+### Step 4: Update Story File Status (best-effort — only if story file exists on disk)
+
+Skip silently if `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` does not exist.
 
 | Verdict | Command |
 |---------|---------|
@@ -91,9 +104,9 @@ Based on verdict, use the skill to update status:
 | FAIL | `/story-update {FEATURE_DIR} {STORY_ID} needs-refinement` |
 | SPLIT REQUIRED | `/story-update {FEATURE_DIR} {STORY_ID} needs-split` |
 
-### Step 4: Move Story Directory (use /story-move skill)
+### Step 5: Move Story Directory (best-effort — only if directory exists on disk)
 
-Based on verdict:
+Skip silently if `{FEATURE_DIR}/elaboration/{STORY_ID}/` does not exist.
 
 **If PASS or CONDITIONAL PASS:**
 ```
@@ -103,26 +116,30 @@ Based on verdict:
 **If FAIL or SPLIT REQUIRED:**
 Story stays in `{FEATURE_DIR}/elaboration/` for PM to address. No move needed.
 
-### Step 5: Update Story Index (use /index-update skill)
+### Step 6: Update Story Index (best-effort — only if index file exists)
+
+Skip silently if index file does not exist.
 
 ```
 /index-update {FEATURE_DIR} {STORY_ID} --status=<new-status>
 ```
 
-Use the appropriate status from Step 3.
-
-### Step 6: Verify Final State
+### Step 7: Verify Final State
 
 Confirm:
-- `_implementation/ELAB.yaml` exists with `verdict` and `decided_at` set
-- Story status updated (frontmatter + index)
-- Directory in correct location
+- ELAB artifact written (KB artifact or `_implementation/ELAB.yaml`) with `verdict` and `decided_at` set
+- KB story state updated (authoritative)
+- Filesystem directory moved if it existed on disk
 
 ---
 
 ## Output
 
-Write exactly:
+Always:
+- Update KB story state (Step 3)
+- Write elaboration verdict as KB artifact: `kb_write_artifact({ story_id, artifact_type: "elaboration", ... })`
+
+If on-disk story file exists:
 - Update `_implementation/ELAB.yaml` - finalize verdict + summary
 - Append `qa_notes` block to `{STORY_ID}.md`
 
@@ -157,8 +174,10 @@ Estimate: `tokens ≈ bytes / 4`
 
 ## Non-Negotiables
 
+- MUST update KB story state before reporting completion signal (Step 3)
+- MUST write elaboration verdict as KB artifact
 - MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents
-- Do NOT modify story content except to append QA Notes and update status
-- Do NOT skip directory move for PASS/CONDITIONAL PASS
+- Do NOT modify story content except to append QA Notes and update status (only if file exists)
+- Filesystem directory moves and index updates are best-effort — skip if no directory/file
 - MUST verify final state before completion

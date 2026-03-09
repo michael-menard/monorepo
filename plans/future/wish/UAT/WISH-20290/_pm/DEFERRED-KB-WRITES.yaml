@@ -65,3 +65,7 @@ retry_instructions: |
   1. Ensure KB MCP server is running (node apps/api/knowledge-base/dist/mcp-server/index.js)
   2. Use kb_add_story or execute SQL template above
   3. Delete this file after successful persistence
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

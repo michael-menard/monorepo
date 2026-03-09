@@ -18,3 +18,7 @@ writes:
       touches_frontend: false
       touches_database: false
       touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

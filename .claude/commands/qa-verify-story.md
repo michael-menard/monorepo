@@ -63,12 +63,22 @@ On `QA PASS`:
 - Story status: ✅ `uat`
 - Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/UAT/{STORY_ID}`
 - Index updated with `--status=uat --clear-deps`
+- Log telemetry (fire-and-forget — never blocks workflow):
+  ```
+  /telemetry-log {STORY_ID} qa-verify-story qa success
+  ```
+  If the call returns null or throws, log a warning and continue.
 
 On `QA FAIL`:
 - Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_qa", phase: "qa_verification" })`
 - Story status: ⚠️ `failed-qa`
 - Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/failed-qa/{STORY_ID}`
 - Index updated with `--status=failed-qa`
+- Log telemetry (fire-and-forget — never blocks workflow):
+  ```
+  /telemetry-log {STORY_ID} qa-verify-story qa failure
+  ```
+  If the call returns null or throws, log a warning and continue.
 
 **Next (on FAIL)**: `/dev-fix-story {FEATURE_DIR} {STORY_ID}`
 
