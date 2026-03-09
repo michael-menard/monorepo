@@ -21,55 +21,36 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { features, capabilities } from '@repo/database-schema'
+import {
+  CapabilityCoverageSchema,
+  CohesionStatusSchema,
+  CohesionCheckResultSchema,
+  FrankenFeatureItemSchema,
+  CohesionAuditResultSchema,
+} from '@repo/mcp-tools'
 import type { GraphState } from '../../state/index.js'
 import { createToolNode } from '../../runner/node-factory.js'
 import { updateState } from '../../runner/state-helpers.js'
 
 // ============================================================================
-// Zod schemas — mirrored from @repo/cohesion-sidecar/__types__/index.ts
-// TODO: Import directly from @repo/cohesion-sidecar once build chain stable
+// Re-export canonical schemas from @repo/mcp-tools
 // ============================================================================
 
-export const CapabilityCoverageSchema = z.object({
-  create: z.boolean().optional(),
-  read: z.boolean().optional(),
-  update: z.boolean().optional(),
-  delete: z.boolean().optional(),
-})
+export {
+  CapabilityCoverageSchema,
+  CohesionStatusSchema,
+  CohesionCheckResultSchema,
+  FrankenFeatureItemSchema,
+  CohesionAuditResultSchema,
+}
 
 export type CapabilityCoverage = z.infer<typeof CapabilityCoverageSchema>
 
-export const CohesionStatusSchema = z.enum(['complete', 'incomplete', 'unknown'])
-
 export type CohesionStatus = z.infer<typeof CohesionStatusSchema>
-
-export const CohesionCheckResultSchema = z.object({
-  featureId: z.string(),
-  status: CohesionStatusSchema,
-  violations: z.array(z.string()),
-  capabilityCoverage: CapabilityCoverageSchema,
-})
 
 export type CohesionCheckResult = z.infer<typeof CohesionCheckResultSchema>
 
-export const FrankenFeatureItemSchema = z.object({
-  featureId: z.string(),
-  featureName: z.string(),
-  missingCapabilities: z.array(z.string()),
-})
-
 export type FrankenFeatureItem = z.infer<typeof FrankenFeatureItemSchema>
-
-const CoverageSummarySchema = z.object({
-  totalFeatures: z.number().int().min(0),
-  completeCount: z.number().int().min(0),
-  incompleteCount: z.number().int().min(0),
-})
-
-export const CohesionAuditResultSchema = z.object({
-  frankenFeatures: z.array(FrankenFeatureItemSchema),
-  coverageSummary: CoverageSummarySchema,
-})
 
 export type CohesionAuditResult = z.infer<typeof CohesionAuditResultSchema>
 
