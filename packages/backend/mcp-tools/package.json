@@ -65,6 +65,7 @@
     "@repo/context-pack-sidecar": "workspace:*",
     "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
+    "@repo/gatekeeper-sidecar": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
     "drizzle-orm": "^0.44.3",
