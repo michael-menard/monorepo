@@ -1,0 +1,209 @@
+schema: 1
+story_id: "KFMB-5020"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title, dependency (KFMB-5010), phase (4), and scope exactly match the
+      stories.index.md entry. The 19 agents listed are a concrete, bounded set.
+      No extra endpoints, packages, or infrastructure introduced. Non-goals
+      explicitly exclude writers (KFMB-5010), _pm/ migration (KFMB-5040/5050),
+      command orchestrators (KFMB-5030), and cleanup (KFMB-6020). No scope
+      mismatch detected.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      WARN (minor): Goals, Non-goals, and most ACs are well-aligned. However one
+      inconsistency found: the story's Inputs section in dev-verification-leader
+      (the CURRENT agent file, as of audit) still reads from filesystem paths
+      (_implementation/SCOPE.md, _implementation/AGENT-CONTEXT.md) and has no
+      kb_tools frontmatter — confirming it genuinely needs migration per AC-1.
+      No contradiction between goals and non-goals.
+      Minor gap: AC-9 smoke test is conditioned on KFMB-5010 being complete OR
+      a test fixture existing, but no story-level task creates that fixture.
+      ST-7 says "smoke test and regression grep" but does not specify who creates
+      the KB fixture. This is a dependency ambiguity, not a blocker, since the
+      grep-based regression (HP-7) can complete without the fixture.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Pattern reuse is the entire point of this story. The story explicitly
+      designates dev-execute-leader (parallel Promise.all read) and
+      qa-verify-verification-leader (null-check precondition) as gold standards
+      to be replicated across 19 agents. The artifact type mapping table is
+      centralized in _shared/kb-integration.md rather than duplicated per agent.
+      No per-story one-off utilities introduced. kb_read_artifact and
+      kb_list_artifacts are already registered MCP tools — no new packages
+      required.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      N/A for agent markdown files — no TypeScript service/route layer involved.
+      No AWS resources, Lambda, or DB changes. This check is architecturally
+      non-applicable. Marking PASS as the story correctly identifies its scope
+      as .claude/agents/ markdown only, with no backend code changes.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test strategy is concrete and appropriate for the story type (infra/agents).
+      HP-1 through HP-5 cover the five highest-priority migrated agents with
+      specific setup/action/expected/evidence descriptions. HP-6 and HP-7 provide
+      grep-based static verification (zero deprecated paths, all frontmatter
+      present). EC-1 and EC-2 cover null-artifact error paths. The story correctly
+      identifies that Vitest and Playwright are inapplicable (no TypeScript code
+      modified). AC-9 smoke test is deferred on KFMB-5010 but has a clear
+      fallback (KB test fixture). ADR-006 E2E exemption is explicitly cited.
+      The grep command in HP-7 is executable as written.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs found. The one open concern (smoke test requires KFMB-5010
+      or a fixture) is explicitly acknowledged as deferred — not a TBD. The
+      artifact type mapping table is complete and authoritative in
+      _shared/kb-integration.md. The read/write boundary is clearly defined.
+      Agents that both read AND write are explicitly called out with a coordination
+      note. No unresolved design choices remain.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks are disclosed in dev_feasibility.risks: (1) hard dependency on
+      KFMB-5010 with concrete mitigation (do not begin until KFMB-5010 is
+      ready-for-qa), (2) incorrect artifact_type string mapping with mitigation
+      (use _shared/kb-integration.md table), (3) agents that both read and write
+      with mitigation (coordinate with KFMB-5010). The pm_artifacts.risks section
+      adds grep false-positive risk and the absence of automated tests. These are
+      complete and honest disclosures. No hidden dependencies identified.
+      One additional risk noted by auditor (see gaps): the vague "References
+      _implementation/ artifacts" description for 14 of the 19 agents means the
+      implementor must read each file before knowing exactly what to change —
+      scoped as an opportunity rather than a blocker since the pattern is
+      mechanical.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      WARN — split risk is real but borderline. Assessment: 19 files, 9 ACs, 7
+      subtasks. Sizing indicators triggered: (1) more than 8 ACs (9 ACs). Only
+      1 of the canonical "too large" indicators fires — the others do not apply
+      (no frontend/backend code, no endpoints, no multiple packages). The story's
+      own predictions.split_risk is 0.6 and sizing_warning: true. However, the
+      pattern is highly mechanical: add kb_read_artifact to frontmatter, swap
+      file reads for kb_read_artifact calls, remove deprecated paths. The
+      subtask breakdown (ST-1 through ST-6 parallelizable, ST-7 dependent) is
+      sensible and each batch is 3–5 agents. Estimated 46,000 tokens across all
+      subtasks is within normal range for an agent-heavy chore. On balance,
+      keeping as one story is acceptable given the mechanical nature and the
+      existing subtask DAG. A split at the ST-4/ST-5/ST-6 boundary is viable if
+      implementation context overflows, but is not required now.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      7 subtasks covering all 9 ACs. AC-subtask coverage map is explicit and
+      complete. ST-1 through ST-6 have no inter-dependencies (all list "none")
+      and can be parallelized. ST-7 correctly depends on ST-6 (last batch must
+      finish before regression grep is run). No cycles detected — the dependency
+      graph is a valid DAG. Estimated tokens per subtask are provided. The only
+      subtask gap: individual subtasks do not list verification commands (e.g.,
+      grep commands) — but for agent markdown migration this is expected; the
+      verification is at story level (AC-9, HP-7) rather than per-file. This is
+      acceptable given the story type. No AC is left uncovered.
+
+gaps:
+  - id: gap-1
+    check: internal_consistency
+    finding: >
+      AC-9 smoke test fixture ownership is unspecified. ST-7 says "AC-9 smoke test
+      and regression grep" but does not define who creates the KB test fixture if
+      KFMB-5010 is not yet complete. If KFMB-5010 is delayed, ST-7 has no
+      fallback path to produce a valid story_id with KB artifacts for smoke
+      testing. The grep portion of ST-7 (HP-7) can proceed independently, but
+      the smoke test cannot.
+    severity: low
+    decision: log_to_kb
+    kb_entry_id: "1e9dac7f-2d2e-471d-a4f1-23dd3aa929ad"
+    ac_added: false
+    rationale: >
+      Non-MVP-blocking. The story already acknowledges the dependency (AC-9 is
+      conditioned on KFMB-5010 or a fixture). The grep regression (HP-7) works
+      without the fixture. Logged to KB for implementor awareness during ST-7.
+
+  - id: gap-2
+    check: subtask_decomposition
+    finding: >
+      14 of 19 agents in the scope table have vague current behavior descriptions
+      ("References _implementation/ artifacts") without specifying which artifact
+      files they reference. This forces the implementor to read each agent file
+      before knowing what to change, adding discovery work not reflected in the
+      subtask token estimates. For ST-4 (5 agents) and ST-5 (5 agents) especially,
+      actual effort could exceed the 10,000 token estimate if agents have
+      complex or multi-file read patterns.
+    severity: low
+    decision: log_to_kb
+    kb_entry_id: "6c6cc191-96e9-44de-a7f8-3b2ea197258c"
+    ac_added: false
+    rationale: >
+      Informational only. The implementor will discover the details when reading
+      each file. The pattern is mechanical. Logged as a lesson learned for future
+      KFMB-style story authors to include specific file paths in scope tables.
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: >
+      The story verifies absence of deprecated paths via grep (HP-7), but does not
+      add any positive assertion that migrated agents actually invoke kb_read_artifact
+      correctly (e.g., a lint rule or a test that reads frontmatter and cross-checks
+      kb_tools declarations against known patterns). A future KFMB story could add
+      a static analysis check that validates kb_tools frontmatter completeness
+      across all agents.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "02163244-0e1d-44b0-84d6-ceeb8931d39c"
+
+  - id: opp-2
+    category: integrations
+    finding: >
+      evidence-judge.agent.md has a LangGraph porting note (WINT-9050) that expects
+      to replace filesystem reads with a future DB-based evidence retrieval call.
+      The current KFMB-5020 migration to kb_read_artifact is a necessary interim
+      step. It would be worth recording this coordination point as an ADR/lesson
+      in the KB to prevent WINT-9050 from re-introducing filesystem reads during
+      the LangGraph port.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "88489562-a7d7-4f3a-baff-5b48da55028d"
+
+  - id: opp-3
+    category: edge_cases
+    finding: >
+      leakage-metrics-agent reads from CHECKPOINT.md (note: .md, not .yaml) and
+      EVENTS.yaml in its Inputs section. The scope table maps this agent to
+      evidence and checkpoint artifact types only. If this agent reads CHECKPOINT.md
+      as a markdown file rather than the checkpoint artifact, the migration may
+      require handling a slightly different read pattern than the standard
+      kb_read_artifact({ artifact_type: "checkpoint" }) call. This should be
+      confirmed during ST-6 implementation.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "1e3d5ea6-e8d0-4fa1-ac1c-2680f4e1799f"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

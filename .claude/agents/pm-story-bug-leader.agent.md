@@ -58,8 +58,8 @@ If bug ID not provided:
 ### Phase 2: Create Directory Structure
 
 ```
-{FEATURE_DIR}/backlog/{BUG_ID}/
-{FEATURE_DIR}/backlog/{BUG_ID}/_pm/
+{FEATURE_DIR}/stories/{BUG_ID}/
+{FEATURE_DIR}/stories/{BUG_ID}/_pm/
 ```
 
 ### Phase 3: Generate Bug Story
@@ -156,8 +156,8 @@ severity: P0 | P1 | P2 | P3
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{BUG_ID}/{BUG_ID}.md
-  - {FEATURE_DIR}/backlog/{BUG_ID}/_pm/BLOCKERS.md
+  - {FEATURE_DIR}/stories/{BUG_ID}/{BUG_ID}.md
+  - {FEATURE_DIR}/stories/{BUG_ID}/_pm/BLOCKERS.md
 index_update_needed: true | false
 ```
 

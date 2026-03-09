@@ -1,0 +1,42 @@
+---
+deferred_at: "2026-03-02"
+reason: "psql not available in PATH during story generation — KB write deferred for manual retry"
+retry_command: |
+  psql postgresql://postgres:postgres@localhost:5433/postgres -c "
+  INSERT INTO stories (
+    story_id, feature, title, story_dir, story_file, story_type,
+    points, priority, state, touches_backend, touches_frontend,
+    touches_database, touches_infra
+  ) VALUES (
+    'WINT-0040',
+    'wint',
+    'Create Telemetry Tables — hitl_decisions and story_outcomes',
+    'plans/future/platform/wint/backlog/WINT-0040',
+    'plans/future/platform/wint/backlog/WINT-0040/WINT-0040.md',
+    'feature',
+    2,
+    'high',
+    'backlog',
+    true,
+    false,
+    true,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    story_type = EXCLUDED.story_type,
+    points = EXCLUDED.points,
+    priority = EXCLUDED.priority,
+    state = EXCLUDED.state,
+    touches_backend = EXCLUDED.touches_backend,
+    touches_frontend = EXCLUDED.touches_frontend,
+    touches_database = EXCLUDED.touches_database,
+    touches_infra = EXCLUDED.touches_infra;
+  "
+---
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,35 @@
+id: "ST-1040"
+title: "Generation Leader Phase 4: Include Subtasks and Canonical References in Story"
+status: uat
+priority: medium
+phase: 1
+feature: "Update pm-story-generation-leader Phase 4 synthesis to read subtasks[] from dev-feasibility.yaml and ## Canonical References from STORY-SEED.md, then include both as required sections in the generated story file. Also enforce the Goal/Examples/Edge Cases clarity format. Cross-reference: every AC must be covered by at least one subtask."
+goal: "Phase 4 synthesis must produce story files that contain all five new sections (Goal, Examples, Edge Cases, Subtasks, Canonical References) and must warn when any AC is not covered by a subtask."
+depends_on:
+  - "ST-1010"
+  - "ST-1020"
+  - "ST-1030"
+endpoints: []
+infrastructure: []
+risk_notes: "pm-story-generation-leader.agent.md v4.3.0 already has the Canonical References and Subtasks integration in Phase 4 synthesis, and the quality gates table already includes checks for both. The generation leader currently reads ## Canonical References from STORY-SEED.md and subtasks[] from dev-feasibility.yaml. The missing piece is the Goal/Examples/Edge Cases format enforcement. Low additional risk — this is an additive change to an already-updated Phase 4 block."
+sizing_warning: false
+created: "2026-02-28T00:00:00Z"
+
+acceptance_criteria:
+  - id: "AC-1"
+    title: "Verification: Phase 4 output includes all required sections"
+    description: >
+      After editing pm-story-generation-leader.agent.md and pm-spawn-patterns.md, run
+      /pm-story generate with a known STORY-SEED.md and verify the output story file
+      contains ## Goal (1 sentence), ## Examples (2+ input/output pairs), and ## Edge Cases
+      (2+ scenarios) sections positioned before the ## Acceptance Criteria block. All three
+      sections must appear in the generated story file for the change to be considered complete.
+    added_by: "autonomous elaboration (gap-1 resolution)"
+
+qa_notes:
+  verdict: PASS
+  decided_at: "2026-03-04T00:00:00Z"
+  mode: autonomous
+  acs_added: 1
+  gaps_resolved: 2
+  opportunities_logged: 4

@@ -1,0 +1,158 @@
+schema: 1
+story_id: "KBAR-0190"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md KBAR-019 entry exactly. Three agent markdown
+      files (qa-verify-verification-leader, qa-verify-completion-leader, dev-fix-fix-leader)
+      are the stated targets. qa-verify-setup-leader non-goal is explicitly documented in
+      both stories.index.md and the story body. No extra files, endpoints, or infrastructure
+      are introduced. Phase 5 migration pattern is consistent with KBAR-016 through KBAR-018.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and Non-Goals do not contradict each other. AC-8 (kb_read_artifact unchanged)
+      is consistent with the Non-Goal of "Changing kb_read_artifact usage." AC-9 explicitly
+      mirrors the Non-Goal of not touching qa-verify-setup-leader. Architecture Notes dual-write
+      pattern matches the acceptance criteria call shapes. Canonical path table in Reuse Plan
+      aligns with per-AC file_path values. Test plan happy paths HP-1 through HP-5 correspond
+      directly to ACs 1–5. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Story explicitly calls out KBAR-0160's dev-setup-leader.agent.md as the canonical
+      migration shape reference. Artifact type table from _shared/kb-integration.md provides
+      canonical paths. No new utilities are being created — this is pure text substitution
+      in existing agent markdown files. No packages are added or modified.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Not applicable as a primary concern: this story modifies agent markdown files only —
+      no TypeScript source, no HTTP handlers, no service layer. The artifact_write tool
+      itself (KBAR-0110) already implements the dual-write pattern correctly with proper
+      separation of file-write (primary) and KB-write (secondary). Agent markdown files
+      are configuration/instruction documents, not code modules.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test strategy (manual diff + functional E2E) is appropriate for agent markdown
+      migration. The test plan defines 5 happy-path tests (HP-1 through HP-5), 3 error
+      cases (EC-1 through EC-3), and 4 manual checklist items (MC-1 through MC-4 implied
+      by the "human review of all diffs" subtask ST-6). Manual diff review is executable
+      and concrete. E2E validation paths are specified with setup, action, expected output,
+      and evidence fields. Given that automated unit testing of agent markdown behavior
+      is outside the standard toolchain, the manual+E2E strategy is the correct approach.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      The key open question at story creation — whether qa-verify-setup-leader is in scope
+      (AC-9) — is fully resolved as Option B (non-goal) with rationale documented in Dev
+      Feasibility. The dependency gate (KBAR-0170 and KBAR-0180 must be merged first) is
+      explicit. artifact_write input schema is available for verification from KBAR-0110
+      Architecture Notes (confirmed present in UAT/KBAR-0110/KBAR-0110.md). No blocking
+      TBDs or unresolved design decisions remain.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks are disclosed: (1) dependency chain not yet complete, (2) KB write failure
+      simulation difficulty, (3) artifact_write schema must be verified from KBAR-0110.
+      The FIX-CONTEXT.yaml downstream filesystem dependency (dev-documentation-leader,
+      dev-verification-leader) is explicitly called out as "Critical" in Architecture Notes.
+      The story does not touch auth, DB schema, uploads, caching, or infrastructure — those
+      risk categories are correctly absent.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      AC count: 9. Just over the 8-AC threshold by 1, but AC-9 is a non-goal confirmation
+      (zero implementation work) and AC-8 is a read-only diff check — not new implementation.
+      Effective implementation ACs are 6 (AC-1 through AC-7 minus AC-9). Files touched: 3
+      agent markdown files only. No frontend/backend split. No new packages. No new
+      endpoints. No infrastructure changes. 3 points. Token estimate: 150,000. Only 1 of
+      the 8 oversizing indicators is borderline (AC count at 9). Story is appropriately
+      sized — no split required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      Story has a Subtasks section with 6 subtasks (ST-1 through ST-6). AC coverage: ST-1
+      is prerequisite for all ACs; ST-2 covers AC-4 and AC-5 prerequisites; ST-3 covers
+      AC-1, AC-6, AC-7, AC-8; ST-4 covers AC-2, AC-3, AC-6, AC-7, AC-8; ST-5 covers
+      AC-4, AC-5, AC-6, AC-7, AC-8; ST-6 covers AC-9. AC-6 and AC-7 appear across all
+      three implementation subtasks (ST-3, ST-4, ST-5), providing thorough coverage. File
+      counts: ST-1 reads 3 files (exactly at threshold); ST-3, ST-4, ST-5 each modify 1
+      file; ST-6 reads 1 file. All subtasks have verification commands or statements. DAG
+      is clean: ST-1 → ST-3, ST-4; ST-2 → ST-5; ST-3+ST-4+ST-5 → ST-6. No cycles.
+      Canonical References section present with 4 entries. Decomposition is adequate for
+      small-context LLM execution.
+
+gaps: []
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      dev-fix-fix-leader Step 7 increments the review artifact iteration but does not
+      include a file_path for a FIX-CONTEXT.yaml / fix_summary artifact. The Architecture
+      Notes mention "dev-fix-fix-leader's fix_summary artifact write (if any)" but the
+      current agent (v5.0.0) has no Step that explicitly writes a fix_summary artifact
+      with kb_write_artifact. AC-4 and AC-5 cover evidence and review writes. If a future
+      story adds a fix_summary write step to dev-fix-fix-leader, that step must also
+      use artifact_write with file_path pointing to _implementation/FIX-CONTEXT.yaml.
+      Worth tracking — not MVP-blocking since the current agent has no fix_summary write.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "47e6eab6-0126-4727-98ca-0a8bb4623770"
+
+  - id: opp-2
+    category: observability
+    finding: >
+      The graceful failure documentation required by AC-7 specifies that kb_write_warning
+      must not cause rollback of the QA verdict. However, the story does not specify whether
+      agents should log the kb_write_warning to token-log or to a structured output field.
+      Adding a note in the graceful failure section about surfacing kb_write_warning in the
+      agent's output format (e.g., in the QA-VERIFY.yaml or the completion-leader output
+      YAML) would improve observability without changing the migration scope.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "84ef2ff2-6192-43b1-9705-4acee0c9b026"
+
+  - id: opp-3
+    category: integrations
+    finding: >
+      qa-verify-completion-leader (v3.3.0) lists kb_write_artifact in kb_tools but also
+      has kb_add_lesson, kb_add_task, kb_sync_working_set, kb_archive_working_set, and
+      kb_update_story_status. The migration only touches the kb_write_artifact calls for
+      verification artifact updates. The overall kb_tools frontmatter update (AC-6) needs
+      to add artifact_write while keeping kb_write_artifact listed only if there are
+      remaining kb_write_artifact call sites. Based on the current agent, the two
+      verification artifact writes (PASS Step 2, FAIL Step 2) are the only kb_write_artifact
+      sites — so kb_write_artifact can be removed from frontmatter entirely after migration.
+      This is already implied by AC-6 but worth flagging as an opportunity to clean up
+      the frontmatter rather than only appending artifact_write.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "a02b635f-3869-49a6-90c9-640d27106770"
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+
+verdict: PASS
+decided_at: "2026-02-25T00:00:00Z"
+
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

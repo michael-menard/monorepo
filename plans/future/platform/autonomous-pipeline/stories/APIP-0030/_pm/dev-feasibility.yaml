@@ -1,0 +1,95 @@
+feasible: true
+confidence: high
+rationale: "APIP-0030 is a pure infrastructure story delivering Docker Compose configuration and documentation. All patterns are established and directly reusable from infra/compose.lego-app.yaml. The primary risk is the hard dependency on APIP-5006 completion (server must be provisioned, Docker installed, base compose file present). Given that dependency is satisfied, implementation complexity is low: copy service definition patterns, adapt for LangGraph Platform images, configure checkpoint-postgres init container, bind Studio UI to 127.0.0.1. No TypeScript code changes. No monorepo package modifications."
+complexity: low
+change_surface:
+  areas:
+    - "infra/langgraph-server/ (new compose service definitions)"
+    - "infra/prometheus/prometheus.yml (extend scrape targets)"
+    - "infra/langgraph-server/README.md (new documentation)"
+  endpoints: []
+  deploy_touchpoints:
+    - "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d on dedicated server"
+    - "scp updated compose file to server (manual procedure)"
+    - "Aurora: CREATE DATABASE langgraph_checkpoint + CREATE USER langgraph_checkpoint_user"
+risks:
+  - finding: "APIP-5006 not yet complete — infra/langgraph-server/compose.langgraph-server.yaml does not exist yet"
+    mitigation: "Gate this story on APIP-5006 handoff checklist: server provisioned, Docker v2 installed, base compose file present and validates, ports 8123/8124 confirmed free. Do not begin implementation until handoff confirmed."
+  - finding: "LangGraph Platform Docker image name and checkpoint schema init command are not yet confirmed"
+    mitigation: "Pin to a specific released version (e.g. langchain/langgraph-api:0.0.9). Review langgraph-checkpoint-postgres image docs for schema init SQL/command before writing init container. Do not use 'latest'."
+  - finding: "Aurora max_connections exhaustion if checkpoint pool uses wrong credentials or shares @repo/db pool"
+    mitigation: "Dedicated pg.Pool instance (max 3), dedicated Aurora service account (langgraph_checkpoint_user), separate from @repo/db. Document connection string template explicitly in README.md."
+missing_requirements:
+  - "LangGraph Platform Docker image name and exact version tag must be confirmed before implementation"
+  - "Aurora hostname/endpoint for langgraph_checkpoint database must be provided (APIP-5006 or infrastructure team)"
+evidence_expectations:
+  - "docker compose config exits 0"
+  - "curl http://localhost:8123/ok returns HTTP 200 within 60s"
+  - "ss -tlnp shows 127.0.0.1:8124 (not 0.0.0.0)"
+  - "psql $LANGGRAPH_CHECKPOINT_DATABASE_URL shows checkpoint schema tables"
+subtasks:
+  - id: ST-1
+    title: "Verify APIP-5006 handoff checklist and confirm infra prerequisites"
+    goal: "Confirm server is provisioned, Docker v2 installed, base compose file exists, ports 8123/8124 free, Aurora langgraph_checkpoint DB and dedicated user exist"
+    files_to_read:
+      - "infra/langgraph-server/README.md (from APIP-5006)"
+      - "infra/langgraph-server/compose.langgraph-server.yaml (from APIP-5006)"
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: "Manual checklist verification — server accessible, docker --version shows v2, compose file validates"
+    estimated_tokens: 3000
+  - id: ST-2
+    title: "Add langgraph-platform and langgraph-checkpoint-postgres service definitions to compose file"
+    goal: "Extend infra/langgraph-server/compose.langgraph-server.yaml with langgraph-platform service (port 8123, Studio UI 127.0.0.1:8124, named volumes, healthcheck, restart: unless-stopped) and langgraph-checkpoint-postgres service (Aurora connection, pg.Pool max 3)"
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    acs: ["AC-1", "AC-3", "AC-5"]
+    depends_on: ST-1
+    verification: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config exits 0"
+    estimated_tokens: 8000
+  - id: ST-3
+    title: "Add langgraph-checkpoint-init one-shot init container for Aurora schema initialization"
+    goal: "Add init container service using minio-init pattern (restart: no, depends_on: condition: service_healthy) to run langgraph-checkpoint-postgres schema migrations against Aurora langgraph_checkpoint database"
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    acs: ["AC-2"]
+    depends_on: ST-2
+    verification: "docker compose up -d; docker compose logs langgraph-checkpoint-init shows successful schema init and exit 0"
+    estimated_tokens: 6000
+  - id: ST-4
+    title: "Extend Prometheus scrape config with LangGraph Platform metrics endpoint"
+    goal: "Add LangGraph Platform metrics scrape target to infra/prometheus/prometheus.yml if LangGraph Platform exposes a Prometheus-compatible metrics endpoint"
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/infra/prometheus/prometheus.yml"
+    files_to_modify:
+      - "infra/prometheus/prometheus.yml"
+    acs: []
+    depends_on: ST-2
+    verification: "docker compose restart prometheus; prometheus targets page shows langgraph scrape target"
+    estimated_tokens: 3000
+  - id: ST-5
+    title: "Write infra/langgraph-server/README.md with deployment procedure and checkpoint schema docs"
+    goal: "Document Aurora langgraph_checkpoint schema, connection pool spec (max 3, dedicated credentials, separate from @repo/db), deployment procedure (scp + docker compose pull && up -d), Studio UI access instructions, and APIP-0020 connection config (http://langgraph-platform:8123 internal, http://localhost:8123 host)"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/README.md"
+    acs: ["AC-7", "AC-8"]
+    depends_on: ST-3
+    verification: "README.md exists; all required sections present; numbered deployment steps; connection config documented"
+    estimated_tokens: 5000
+  - id: ST-6
+    title: "Smoke test: verify end-to-end deployment health on server"
+    goal: "Run smoke tests on actual server: compose config validates, all services healthy, API responds on 8123, Studio UI on 8124 (localhost only), restart safety, checkpoint recovery"
+    files_to_read:
+      - "infra/langgraph-server/README.md"
+    files_to_modify: []
+    acs: ["AC-4", "AC-5", "AC-6"]
+    depends_on: ST-5
+    verification: "All HP-1 through HP-7 manual checks pass; smoke test results logged"
+    estimated_tokens: 4000

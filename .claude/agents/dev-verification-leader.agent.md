@@ -47,8 +47,8 @@ From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 - Mode: `implement` or `fix`
-- Base path: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-- Artifacts path: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
+- Base path: `{FEATURE_DIR}/stories/{STORY_ID}/`
+- Artifacts path: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/`
 
 From filesystem:
 - `{STORY_ID}/{STORY_ID}.md` - story definition
@@ -85,8 +85,8 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Output file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
 ```
 
 **If frontend_impacted OR backend_impacted = true (same message):**
@@ -103,8 +103,8 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Append to: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Append to: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
 
     SCOPE FLAGS:
     frontend_impacted: {true/false}
@@ -201,8 +201,8 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Append to: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Append to: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
 
     SCOPE FLAGS:
     frontend_impacted: {true/false}

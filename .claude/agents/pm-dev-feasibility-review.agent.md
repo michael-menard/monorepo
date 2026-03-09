@@ -6,6 +6,8 @@ type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [pm-story-generation-leader]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: pm-dev-feasibility-review
@@ -78,3 +80,31 @@ subtasks:
 - Sizing: 1-point → 1-2 subtasks, 3-point → 3-5, 5-point → 5-8
 
 Non-MVP risks and future scope are **omitted** — out of scope for this output.
+
+
+## KB Write (Dual-Write)
+
+After returning the inline YAML to the leader, **also** write the artifact to the KB:
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "dev_feasibility",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    feasible: true | false,
+    confidence: "high | medium | low",
+    complexity: "low | medium | high",
+    feasibility_text: "<serialized YAML content returned inline>"
+  },
+  summary: {
+    feasible: true | false,
+    confidence: "high | medium | low",
+    complexity: "low | medium | high"
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the inline return to the leader is sufficient.

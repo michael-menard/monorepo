@@ -1,0 +1,262 @@
+schema: 2
+story_id: WINT-3070
+timestamp: '2026-03-09T21:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Read telemetry-log SKILL.md and establish invocation block template — confirm exact workflow_log_invocation call
+      signature, standard phase vocabulary (setup, plan, execute, review, qa), and fire-and-forget error handling
+      pattern
+    files: []
+    files_to_read:
+      - .claude/skills/telemetry-log/SKILL.md
+      - .claude/skills/token-log/SKILL.md
+    dependencies: []
+    slice: packages
+    verification: >-
+      Template documented; phase values confirmed as: setup, plan, execute, review, qa; invocation block pattern
+      established
+    acs_covered:
+      - AC-11
+      - AC-13
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Instrument pm-bootstrap-workflow.md and elab-epic.md — locate phase completion boundaries (Done section for
+      pm-bootstrap-workflow; completion signal for elab-epic) and insert telemetry-log invocation blocks immediately
+      after or alongside existing token-log calls
+    files:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/commands/elab-epic.md
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/commands/elab-epic.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: Re-read each file; confirm telemetry block present at phase completion boundary; confirm no existing logic removed
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Instrument elab-story.md with dual-mode coverage — verify whether interactive and autonomous paths share a common
+      completion boundary; if they do, place single telemetry block there; if paths diverge before completion, add
+      mode-specific blocks for both
+    files:
+      - .claude/commands/elab-story.md
+    files_to_read:
+      - .claude/commands/elab-story.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: Both interactive and autonomous mode paths confirmed covered by telemetry block(s); existing logic untouched
+    acs_covered:
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Instrument dev-implement-story.md and dev-fix-story.md — locate implementation-phase completion boundaries (Done
+      section for dev-implement-story; completion signal for dev-fix-story) and insert telemetry-log invocation blocks
+    files:
+      - .claude/commands/dev-implement-story.md
+      - .claude/commands/dev-fix-story.md
+    files_to_read:
+      - .claude/commands/dev-implement-story.md
+      - .claude/commands/dev-fix-story.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: Telemetry blocks present at implementation phase completion; additive-only changes confirmed via re-read
+    acs_covered:
+      - AC-4
+      - AC-5
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Instrument qa-verify-story.md (phase: qa) and pm-refine-story.md (phase: review) — locate respective phase
+      completion boundaries and insert telemetry-log invocation blocks
+    files:
+      - .claude/commands/qa-verify-story.md
+      - .claude/commands/pm-refine-story.md
+    files_to_read:
+      - .claude/commands/qa-verify-story.md
+      - .claude/commands/pm-refine-story.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: >-
+      Telemetry blocks present; phase values from standard set (qa for qa-verify, review for pm-refine); no existing
+      logic altered
+    acs_covered:
+      - AC-6
+      - AC-7
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Instrument story-status.md with explicit AC-8 disposition — assess whether the read-only utility warrants a
+      telemetry block; either add block (phase: execute, status: success) or add a clearly documented comment explaining
+      why telemetry is not applicable for this read-only command
+    files:
+      - .claude/commands/story-status.md
+    files_to_read:
+      - .claude/commands/story-status.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: File contains telemetry block OR clear documented rationale for exemption — silent omission is not acceptable
+    acs_covered:
+      - AC-8
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Instrument story-update.md and story-move.md — locate completion boundaries and insert telemetry-log invocation
+      blocks (phase: execute for both)
+    files:
+      - .claude/commands/story-update.md
+      - .claude/commands/story-move.md
+    files_to_read:
+      - .claude/commands/story-update.md
+      - .claude/commands/story-move.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: Telemetry blocks present at completion; additive-only changes confirmed
+    acs_covered:
+      - AC-9
+      - AC-10
+  - id: 8
+    subtask_id: ST-8
+    description: >-
+      Cross-file validation — re-read all 10 modified command files; verify all phase values are from the standard set
+      {setup, plan, execute, review, qa}; run git diff to confirm zero deletions of existing logic lines
+    files: []
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/commands/elab-epic.md
+      - .claude/commands/elab-story.md
+      - .claude/commands/dev-implement-story.md
+      - .claude/commands/dev-fix-story.md
+      - .claude/commands/qa-verify-story.md
+      - .claude/commands/pm-refine-story.md
+      - .claude/commands/story-status.md
+      - .claude/commands/story-update.md
+      - .claude/commands/story-move.md
+    dependencies:
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+    slice: packages
+    verification: All phase values in {setup,plan,execute,review,qa}; git diff shows zero deletions of existing logic lines
+    acs_covered:
+      - AC-11
+      - AC-12
+      - AC-13
+files_to_change:
+  - path: .claude/commands/pm-bootstrap-workflow.md
+    action: modify
+    reason: 'AC-1: Add telemetry-log invocation at Done phase completion'
+  - path: .claude/commands/elab-epic.md
+    action: modify
+    reason: 'AC-2: Add telemetry-log invocation at execution phase completion'
+  - path: .claude/commands/elab-story.md
+    action: modify
+    reason: 'AC-3: Add telemetry-log invocation covering both interactive and autonomous modes'
+  - path: .claude/commands/dev-implement-story.md
+    action: modify
+    reason: 'AC-4: Add telemetry-log invocation at implementation phase completion'
+  - path: .claude/commands/dev-fix-story.md
+    action: modify
+    reason: 'AC-5: Add telemetry-log invocation at fix phase completion'
+  - path: .claude/commands/qa-verify-story.md
+    action: modify
+    reason: 'AC-6: Add telemetry-log invocation at QA phase completion'
+  - path: .claude/commands/pm-refine-story.md
+    action: modify
+    reason: 'AC-7: Add telemetry-log invocation at review phase completion'
+  - path: .claude/commands/story-status.md
+    action: modify
+    reason: 'AC-8: Add telemetry block or document explicit exemption rationale'
+  - path: .claude/commands/story-update.md
+    action: modify
+    reason: 'AC-9: Add telemetry-log invocation at completion'
+  - path: .claude/commands/story-move.md
+    action: modify
+    reason: 'AC-10: Add telemetry-log invocation at completion'
+commands_to_run:
+  - command: git diff HEAD -- .claude/commands/
+    when: after all Markdown edits (ST-8 validation step)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: 'Manual review: re-read pm-bootstrap-workflow.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: 'Manual review: re-read elab-epic.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: 'Manual review: re-read elab-story.md and confirm dual-mode coverage'
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: 'Manual review: re-read dev-implement-story.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: 'Manual review: re-read dev-fix-story.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: 'Manual review: re-read qa-verify-story.md and confirm telemetry block with phase=qa'
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: 'Manual review: re-read pm-refine-story.md and confirm telemetry block with phase=review'
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: 'Manual review: re-read story-status.md and confirm telemetry block OR explicit documented exemption rationale'
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: 'Manual review: re-read story-update.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: 'Manual review: re-read story-move.md and confirm telemetry block present'
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: 'ST-8 validation: grep all 10 files; only values from {setup, plan, execute, review, qa} found'
+    evidence_type: command
+  - ac_id: AC-12
+    planned_evidence: 'ST-8 validation: git diff .claude/commands/ shows zero deletions of existing logic lines'
+    evidence_type: command
+  - ac_id: AC-13
+    planned_evidence: 'ST-1 template review + ST-8 cross-file validation: each block passes agentName, storyId, phase, and status'
+    evidence_type: file
+  - ac_id: AC-14
+    planned_evidence: 'UAT (deferred — requires WINT-3020 merge): run any instrumented command; confirm row in wint.agent_invocations'
+    evidence_type: manual
+architectural_decisions: []
+complexity: simple
+notes:
+  - This is a docs-only story — all changes are purely additive Markdown edits to .claude/commands/*.md files
+  - No TypeScript code, no compilation, no test runners, no build steps required
+  - telemetry-log skill exists at .claude/skills/telemetry-log/SKILL.md (WINT-3020 already merged)
+  - >-
+    Insertion pattern: locate phase completion boundary (often where token-log appears or where completion signal is
+    emitted), insert telemetry-log block immediately after token-log (or at same boundary if token-log is absent)
+  - >-
+    Fire-and-forget constraint: telemetry call result must never block workflow — null or error from
+    workflow_log_invocation is silently swallowed
+  - >-
+    Elaboration note (ELAB-OPP-1): token-log and telemetry-log use different phase vocabularies — do NOT use token-log
+    phase names in telemetry calls; use only the WINT-3020 vocabulary: setup, plan, execute, review, qa
+  - >-
+    AC-14 (UAT) is gated on WINT-3020 merge — implementation can proceed and be verified structurally; runtime
+    validation requires merged WINT-3020
+  - >-
+    Steps 2-7 are all independent of each other (each only depends on ST-1); they can be run in any order after ST-1 is
+    complete
+  - >-
+    story-status.md is read-only — the decision on whether to add telemetry (or document exemption) should be made by
+    re-reading the file during ST-6 execution

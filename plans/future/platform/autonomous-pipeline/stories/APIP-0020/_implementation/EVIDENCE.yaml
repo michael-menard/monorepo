@@ -1,0 +1,157 @@
+schema: 1
+story_id: "APIP-0020"
+timestamp: "2026-02-25T17:10:00Z"
+phase: execute
+verdict: PASS
+
+summary: >
+  Implemented APIP-0020 "Supervisor Loop (Plain TypeScript)" — a new apps/api/pipeline/ app
+  providing a BullMQ-based supervisor process that dispatches pipeline jobs to LangGraph worker
+  graphs (elaboration and story-creation). All acceptance criteria verified via unit tests (38/38
+  passing) and orchestrator regression guard (133/133 test files passing).
+
+acceptance_criteria:
+  AC-1:
+    description: "New app apps/api/pipeline/ with package.json named @repo/pipeline"
+    status: PASS
+    evidence: "apps/api/pipeline/package.json created with name: @repo/pipeline"
+
+  AC-2:
+    description: "BullMQ Worker with concurrency: 1 (Phase 0 single-story-at-a-time)"
+    status: PASS
+    evidence: "PipelineSupervisor creates Worker with concurrency: 1 in supervisor/index.ts"
+
+  AC-3:
+    description: "Thread ID derivation: {storyId}:{stage}:{attemptNumber} — IRREVERSIBLE ADR"
+    status: PASS
+    evidence: "dispatch-router.ts line 110: const threadId = `${data.storyId}:${data.stage}:${data.attemptNumber}`"
+
+  AC-4:
+    description: "Elaboration stage routes to runElaboration(payload as SynthesizedStory, null, {})"
+    status: PASS
+    evidence: "dispatch-router.ts line 170: graphRunners.runElaboration(data.payload as SynthesizedStory, null, {})"
+
+  AC-5:
+    description: "Story-creation stage routes to runStoryCreation(payload as StoryRequest, null, {})"
+    status: PASS
+    evidence: "dispatch-router.ts line 174: graphRunners.runStoryCreation(data.payload as StoryRequest, null, {})"
+
+  AC-6:
+    description: "Wall clock timeout via Promise.race() with configurable stageTimeoutMs (default 10min)"
+    status: PASS
+    evidence: >
+      wall-clock-timeout.ts implements withWallClockTimeout(). Default stageTimeoutMs: 600_000.
+      Test: HP-3 in dispatch-router.test.ts verifies timeout throws wall_clock_timeout error.
+
+  AC-7:
+    description: "Error classification: PERMANENT → immediate fail, TRANSIENT → BullMQ retry"
+    status: PASS
+    evidence: >
+      dispatch-router.ts uses isRetryableNodeError() from @repo/orchestrator.
+      Tests EC-1 through EC-4 in dispatch-router.test.ts verify PERMANENT/TRANSIENT classification.
+
+  AC-8:
+    description: "Per-graph circuit breaker check — OPEN state re-queues as delayed (not failed)"
+    status: PASS
+    evidence: >
+      graph-circuit-breakers.ts creates two NodeCircuitBreaker instances (elaboration, storyCreation).
+      dispatch-router.ts calls job.moveToDelayed() when !circuitBreaker.canExecute().
+      Test: AC-8 in dispatch-router.test.ts verifies moveToDelayed called with correct delay.
+
+  AC-9:
+    description: "Structured lifecycle event logging with required fields"
+    status: PASS
+    evidence: >
+      dispatch-router.ts logs: job_received, dispatching, completed, timeout, failed, circuit_open.
+      All events include: event, storyId, stage, threadId, attemptNumber, durationMs.
+      Test: ED-3 in dispatch-router.test.ts verifies all required fields present.
+
+  AC-12:
+    description: "Orchestrator regression guard: existing orchestrator tests still pass"
+    status: PASS
+    evidence: "pnpm test --filter @repo/orchestrator: 133 test files passed, 3334 tests passed, 0 failures"
+
+  AC-13:
+    description: "Zod-validated job payload schema discriminated on stage field"
+    status: PASS
+    evidence: "supervisor/__types__/index.ts: PipelineJobDataSchema z.discriminatedUnion('stage', [...])"
+
+  AC-14:
+    description: "NodeCircuitBreaker imported from @repo/orchestrator — NOT re-implemented"
+    status: PASS
+    evidence: "graph-circuit-breakers.ts: import { NodeCircuitBreaker } from '@repo/orchestrator'"
+
+  AC-15:
+    description: "Two-catch pattern: WallClockTimeoutError caught BEFORE error classification"
+    status: PASS
+    evidence: >
+      dispatch-router.ts: single catch block, checks instanceof WallClockTimeoutError FIRST before
+      calling isRetryableNodeError(). Test: AC-15 in dispatch-router.test.ts verifies WallClockTimeoutError
+      bypasses isRetryableNodeError entirely.
+
+files_created:
+  - path: "apps/api/pipeline/package.json"
+    description: "Package manifest — @repo/pipeline, dependencies: bullmq, ioredis, @repo/orchestrator, @repo/logger, zod"
+  - path: "apps/api/pipeline/tsconfig.json"
+    description: "TypeScript config — ES2022, NodeNext, noEmit, types:[] to avoid axe-core leak"
+  - path: "apps/api/pipeline/vitest.config.ts"
+    description: "Vitest config — excludes integration tests from default run"
+  - path: "apps/api/pipeline/src/supervisor/__types__/index.ts"
+    description: "Zod-first discriminated union job payload schema and supervisor config schema"
+  - path: "apps/api/pipeline/src/supervisor/index.ts"
+    description: "PipelineSupervisor class — BullMQ Worker lifecycle (start/stop), Redis client factory"
+  - path: "apps/api/pipeline/src/supervisor/dispatch-router.ts"
+    description: "Core dispatcher — thread ID, circuit check, graph routing, wall clock timeout, error classification"
+  - path: "apps/api/pipeline/src/supervisor/wall-clock-timeout.ts"
+    description: "WallClockTimeoutError and withWallClockTimeout() via Promise.race()"
+  - path: "apps/api/pipeline/src/supervisor/graph-circuit-breakers.ts"
+    description: "Per-graph NodeCircuitBreaker factory (elaboration + storyCreation)"
+  - path: "apps/api/pipeline/src/supervisor/graph-types.ts"
+    description: "Local type aliases for graph types not in orchestrator main exports"
+  - path: "apps/api/pipeline/src/supervisor/graph-loader.ts"
+    description: "Production graph runner loader — dynamic import seam to bypass Vite static analysis"
+  - path: "apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts"
+    description: "20 unit tests — HP-1/2/3 happy paths, EC-1/2/3/4 error cases, AC-8, AC-15, ED-3"
+  - path: "apps/api/pipeline/src/supervisor/__tests__/wall-clock-timeout.test.ts"
+    description: "9 unit tests — WallClockTimeoutError class, withWallClockTimeout behavior with fake timers"
+  - path: "apps/api/pipeline/src/supervisor/__tests__/circuit-breakers.test.ts"
+    description: "9 unit tests — circuit state transitions, elaboration/storyCreation independence"
+  - path: "apps/api/pipeline/src/supervisor/__tests__/integration/supervisor.integration.test.ts"
+    description: "Integration tests — skipped without REDIS_URL, tests BullMQ job lifecycle with real Redis"
+
+test_results:
+  unit_tests:
+    command: "pnpm test --filter @repo/pipeline"
+    result: "3 test files passed, 38/38 tests passed"
+    files:
+      - "wall-clock-timeout.test.ts: 9/9"
+      - "circuit-breakers.test.ts: 9/9"
+      - "dispatch-router.test.ts: 20/20"
+
+  regression_guard:
+    command: "pnpm test --filter @repo/orchestrator"
+    result: "134 test files (133 passed, 1 skipped), 3352 tests (3334 passed, 18 skipped), 0 failures"
+
+  type_check:
+    command: "pnpm run type-check --filter @repo/pipeline"
+    result: "0 TypeScript errors"
+
+adr_decisions:
+  - id: "ADR-001 Decision 2"
+    decision: "Plain TypeScript supervisor, not LangGraph graph"
+    rationale: "Simpler debugging, no LangGraph overhead for orchestration logic"
+
+  - id: "Thread ID Convention (APIP-0020)"
+    decision: "Format: {storyId}:{stage}:{attemptNumber}"
+    irreversible: true
+    rationale: "Changing post-Phase 0 requires LangGraph checkpoint data migration"
+
+notable_fixes:
+  - issue: "ioredis version mismatch (5.9.2 vs 5.9.3 from BullMQ)"
+    fix: "Used 'as any' cast on connection parameter in Worker constructor"
+
+  - issue: "Dynamic import @repo/orchestrator sub-path not in exports map"
+    fix: "Created graph-loader.ts seam using require.resolve() + path manipulation to load dist/graphs/index.js at runtime, bypassing Vite static export validation"
+
+  - issue: "vi.mock() hoisting error with external variable reference"
+    fix: "Used inline vi.fn() inside factory + importOriginal pattern for partial module mock"

@@ -1,0 +1,82 @@
+schema: 1
+story_id: WISH-2002
+updated: 2026-01-28T03:45:00Z
+code_review:
+  verdict: pass
+  iterations: 3
+  final_issues:
+    errors: 0
+    warnings: 3
+    note: ""
+tests:
+  unit:
+    pass: 157
+    fail: 0
+    notes: "Backend: 100% pass rate. All domains passing including wishlist storage adapter (22), wishlist service (20),
+      health (9), parts-lists (26), gallery (24), sets (24), instructions (32)"
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC?
+    verdict: pass
+    evidence: "apps/api/lego-api/domains/wishlist/routes.ts:151-179 (POST / endpoint with validation), test:
+      services.test.ts createItem tests"
+  - id: AC?
+    verdict: pass
+    evidence: "apps/api/lego-api/domains/wishlist/routes.ts:121-146, test: storage.test.ts generateUploadUrl (22 tests)"
+  - id: AC?
+    verdict: pass
+    evidence: apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx,
+      apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx:50-350
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:110-125 (Select with 5 store options)
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:298-315 (Select with 0-5 options)
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:317-450 (image upload section), hooks/useS3Upload.ts (upload logic with presign)
+  - id: AC?
+    verdict: pass
+    evidence: "Client: WishlistForm uses CreateWishlistItemInputSchema. Server: routes.ts:157 validates with
+      CreateWishlistItemInputSchema"
+  - id: AC?
+    verdict: pass
+    evidence: packages/core/api-client/src/rtk/wishlist-gallery-api.ts:37-48 exports useAddWishlistItemMutation,
+      AddItemPage.tsx:14,20 uses it
+  - id: AC?
+    verdict: pass
+    evidence: "AddItemPage.tsx:28 showSuccessToast after successful submission, test: AddItemPage.test.tsx 'displays success
+      toast after submission'"
+  - id: AC?
+    verdict: pass
+    evidence: "AddItemPage.tsx:33 catch block with showErrorToast, test: AddItemPage.test.tsx 'displays error toast on failure'"
+  - id: AC?
+    verdict: pass
+    evidence: "hooks/useS3Upload.ts:17 MAX_FILE_SIZE=10MB, validateFile checks file.size, test: useS3Upload.test.ts
+      'validates file size'"
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:355-380 handleDrop event handler
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:430-435 Progress component shows uploadProgress state, useS3Upload.ts:145 tracks progress
+  - id: AC?
+    verdict: pass
+    evidence: "components/TagInput/index.tsx chip-based UI with Badge components, test: TagInput.test.tsx (20 tests)"
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:82-92 handleKeyDown checks Cmd/Ctrl+Enter
+  - id: AC?
+    verdict: pass
+    evidence: WishlistForm/index.tsx:178-195 shows $ prefix in input
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.240Z
+  blocking_issues: []

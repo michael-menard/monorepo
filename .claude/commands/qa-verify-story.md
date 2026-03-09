@@ -103,8 +103,10 @@ Report: "{STORY_ID} blocked at Phase N: <reason>"
 ## Done
 
 On `QA PASS`:
+<!-- KSOT-3010: KB state update only — no filesystem move. Story stays in stories/ -->
+- Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_qa", phase: "qa_verification" })`
 - Story status: ✅ `uat`
-- Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/UAT/{STORY_ID}`
+- Story remains at: `{FEATURE_DIR}/stories/{STORY_ID}/`
 - Index updated with `--status=uat --clear-deps`
 - Log telemetry (fire-and-forget — never blocks workflow):
   ```
@@ -113,9 +115,10 @@ On `QA PASS`:
   If the call returns null or throws, log a warning and continue.
 
 On `QA FAIL`:
+<!-- KSOT-3010: KB state update only — no filesystem move -->
 - Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_qa", phase: "qa_verification" })`
 - Story status: ⚠️ `failed-qa`
-- Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/failed-qa/{STORY_ID}`
+- Story remains at: `{FEATURE_DIR}/stories/{STORY_ID}/`
 - Index updated with `--status=failed-qa`
 - Log telemetry (fire-and-forget — never blocks workflow):
   ```

@@ -1,0 +1,67 @@
+schema: 1
+story_id: WINT-1160
+generated_at: "2026-02-18T12:00:00Z"
+generated_by: dev-plan-leader (inline)
+
+domain: cli
+scope: "Markdown skill file and command orchestrator enhancement — no TypeScript changes"
+
+lessons:
+  - id: L-1
+    source: WINT-1130
+    summary: "MCP tools return null on failure (not exceptions). All callers must null-check before using result."
+    applies_to: "worktree_list_active call in wt-status; worktree_mark_complete call in take-over path"
+
+  - id: L-2
+    source: WINT-1140
+    summary: "Step 1.3 of dev-implement-story was inserted as a structured block. Enhancement should extend that block, not rewrite it. WINT-1140 owns the 3-option prompt UX; WINT-1160 adds take-over hardening only."
+    applies_to: "ST-3 (hardening Step 1.3)"
+
+  - id: L-3
+    source: WINT-1150
+    summary: "worktree_mark_complete is used by wt-finish for merged status. WINT-1160 uses it for abandoned status in take-over path only. Do not modify the tool — call it with status: 'abandoned'."
+    applies_to: "AC-6 take-over sequence"
+
+  - id: L-4
+    source: project-cli-style
+    summary: "CLI output uses no emoji. Section headers use '---' delimiter style. Indicators are ALL-CAPS bracketed: [ORPHANED], [UNTRACKED]. Empty state uses sentence ending with period."
+    applies_to: "wt-status output format"
+
+adrs:
+  - id: ADR-005
+    summary: "No mocking in integration test scenarios — live MCP tools required for IT-1/IT-2/IT-3."
+    applies_to: "AC-9 integration test documentation"
+
+  - id: ADR-006
+    summary: "E2E tests exempt for CLI/infrastructure stories. No Playwright tests needed."
+    applies_to: "WINT-1160 (CLI-only story)"
+
+patterns:
+  - id: P-1
+    name: "Null-check resilience pattern (MCP tools)"
+    description: |
+      Call MCP tool → if null/error: render fallback, return early.
+      Applied in wt-status DB section: null from worktree_list_active → warning message, git-only view.
+    canonical_file: "packages/backend/mcp-tools/src/worktree-management/worktree-get-by-story.ts"
+
+  - id: P-2
+    name: "Option (b) take-over hardening — ALWAYS prompt"
+    description: |
+      Decision-handling protocol: take-over is a Tier 4 (Destructive) action.
+      Tier 4 always escalates regardless of autonomy level.
+      Per decision-handling.md: "Will this delete or destroy something? → Tier 4 (ALWAYS escalate)"
+      This is NOT an autonomy-tier override — it IS consistent with Tier 4 behavior.
+    canonical_file: ".claude/agents/_shared/decision-handling.md"
+
+  - id: P-3
+    name: "Skill file structure"
+    description: |
+      SKILL.md files have YAML frontmatter (name, description, version) and structured sections.
+      wt-status currently lacks a version field — AC-8 adds version: 2.0.0 to frontmatter.
+      New section follows existing "What It Does" + "Information Displayed" format.
+    canonical_file: ".claude/skills/wt-status/SKILL.md"
+
+risks:
+  - "The wt-status SKILL.md currently has no version field in frontmatter — adding one is safe (AC-8 requirement)"
+  - "Path existence check uses Bash tool 'ls {path}' — documented in SKILL.md as explicit mechanism"
+  - "UNTRACKED detection requires cross-referencing DB records vs git worktrees — logic must be clearly documented"

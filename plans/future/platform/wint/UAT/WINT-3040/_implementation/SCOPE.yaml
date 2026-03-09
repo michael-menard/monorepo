@@ -1,0 +1,23 @@
+schema: 1
+story_id: WINT-3040
+timestamp: "2026-03-09T14:00:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - ".claude/skills/telemetry-decision/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: Create telemetry-decision MCP skill documentation with embedding generation decision tree
+elaboration: completed

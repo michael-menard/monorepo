@@ -45,8 +45,8 @@ Check story existence **KB-first**, then fall back to filesystem:
    → null: Fall back to filesystem check
 
 2. Filesystem fallback (only if KB returns null):
-   → File at {FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md: Proceed
-   → File at {FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md: Already staged → COMPLETE
+   → File at {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md: Proceed
+   → File at {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md: Already staged → COMPLETE
    → Neither: STOP: "Story {STORY_ID} not found in KB or filesystem"
 ```
 
@@ -64,7 +64,7 @@ If KB unavailable: log warning and continue — filesystem move below serves as 
 
 ### 2. Move Story Directory (best-effort — only if directory exists)
 
-Skip silently if `{FEATURE_DIR}/backlog/{STORY_ID}/` does not exist on disk.
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/` does not exist on disk.
 
 ```
 /story-move {FEATURE_DIR} {STORY_ID} elaboration
@@ -72,7 +72,7 @@ Skip silently if `{FEATURE_DIR}/backlog/{STORY_ID}/` does not exist on disk.
 
 ### 3. Update Story Status in File (best-effort — only if story file exists)
 
-Skip silently if `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` does not exist.
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` does not exist.
 
 ```
 /story-update {FEATURE_DIR} {STORY_ID} elaboration

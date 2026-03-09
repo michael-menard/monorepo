@@ -1147,6 +1147,93 @@ export const artifactCompletionReports = pgTable(
 )
 
 /**
+ * Artifact Story Seeds Table (KSOT-3030)
+ *
+ * Stores PM story seed artifacts generated before development.
+ */
+export const artifactStorySeeds = pgTable(
+  'artifact_story_seeds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    conflictsFound: integer('conflicts_found'),
+    blockingConflicts: integer('blocking_conflicts'),
+    baselineLoaded: boolean('baseline_loaded'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_story_seeds_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Test Plans Table (KSOT-3030)
+ *
+ * Stores PM test plan artifacts.
+ */
+export const artifactTestPlans = pgTable(
+  'artifact_test_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    strategy: text('strategy'),
+    scopeUiTouched: boolean('scope_ui_touched'),
+    scopeDataTouched: boolean('scope_data_touched'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_test_plans_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Dev Feasibility Table (KSOT-3030)
+ *
+ * Stores PM dev feasibility assessment artifacts.
+ */
+export const artifactDevFeasibility = pgTable(
+  'artifact_dev_feasibility',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    feasible: boolean('feasible'),
+    confidence: text('confidence'),
+    complexity: text('complexity'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_dev_feasibility_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact UIUX Notes Table (KSOT-3030)
+ *
+ * Stores PM UI/UX recommendations artifacts.
+ */
+export const artifactUiuxNotes = pgTable(
+  'artifact_uiux_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    hasUiChanges: boolean('has_ui_changes'),
+    componentCount: integer('component_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_uiux_notes_target_id').on(table.targetId),
+  }),
+)
+
+/**
  * Story Audit Log Table (KBAR-001)
  *
  * Audit trail for story operations. Created via database trigger
@@ -1783,6 +1870,10 @@ export type ArtifactFixSummary = typeof artifactFixSummaries.$inferSelect
 export type ArtifactProof = typeof artifactProofs.$inferSelect
 export type ArtifactQaGate = typeof artifactQaGates.$inferSelect
 export type ArtifactCompletionReport = typeof artifactCompletionReports.$inferSelect
+export type ArtifactStorySeed = typeof artifactStorySeeds.$inferSelect
+export type ArtifactTestPlan = typeof artifactTestPlans.$inferSelect
+export type ArtifactDevFeasibility = typeof artifactDevFeasibility.$inferSelect
+export type ArtifactUiuxNotes = typeof artifactUiuxNotes.$inferSelect
 export type StoryAuditLogEntry = typeof storyAuditLog.$inferSelect
 export type NewStoryAuditLogEntry = typeof storyAuditLog.$inferInsert
 export type StoryTokenUsage = typeof storyTokenUsage.$inferSelect

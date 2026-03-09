@@ -1,0 +1,187 @@
+schema: 1
+story_id: "WKFL-007"
+timestamp: "2026-02-23T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title "Story Risk Predictor" matches stories.index.md exactly.
+      scope.in (risk-predictor.agent.md, prediction schema, similar story finder,
+      /pm-story integration, accuracy tracking) is well-bounded. scope.out
+      (pattern mining, blocking workflow) correctly defers to WKFL-006 and
+      respects the non-blocking non-goal.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goal states 4 prediction outputs; AC-1..4 map 1:1 to each. AC-5 (accuracy
+      tracking) is consistent with the technical_notes OUTCOME.yaml extension.
+      Non-goal "no blocking based on predictions" is not contradicted by any AC
+      or decision. Heuristic formulas in technical_notes are internally coherent.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      reuse_plan.must_reuse explicitly calls out WKFL-006 pattern data,
+      WKFL-001 OUTCOME.yaml schema, and KB search — all pre-existing components.
+      reuse_plan.may_create is scoped to net-new artifacts (risk-predictor.agent.md,
+      prediction schema, accuracy tracking fields) that have no existing counterpart.
+      No per-story one-off utilities introduced.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints planned. Prediction logic is purely heuristic/code-first
+      (Tier 0 per PLAN.meta.md principles). The KB search adapter is correctly
+      identified in reuse_plan. Agent file is a transport-agnostic prototype
+      mapping to a LangGraph node. No business logic in transport handlers.
+
+  - id: testability
+    status: WARN
+    note: >
+      AC verifications describe output-field checks ("Story output includes
+      predictions.split_risk field") but no concrete runnable test is specified.
+      No test file paths, no Vitest fixtures, no example input/output YAML
+      for the heuristic functions, and no verification command per AC. The
+      heuristic formulas in technical_notes are deterministic and easily unit-
+      testable but no plan to do so is stated. This is a gap for executor
+      confidence but is not MVP-blocking given the simplicity of the heuristics.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs found. Heuristics are fully specified with concrete
+      formulas, fallback values (token default: 150000), and confidence levels.
+      The model_version field (1.0.0) is defined. OUTCOME.yaml extension schema
+      is fully specified. No open questions section present, and none are needed.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      The dependency on WKFL-006 data quality is not explicitly disclosed as a
+      risk. If WKFL-006 has produced few or no completed stories with OUTCOME.yaml
+      data in the KB, the similar_stories array will be sparse and prediction
+      confidence will be systematically low at launch. The fallback (default
+      150000 tokens) mitigates the token_estimate path, but split_risk and
+      review_cycles have no explicit fallback when similar_stories is empty.
+      Additionally, WKFL-001 OUTCOME.yaml schema stability is assumed without
+      a versioning guard.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      5 ACs (well under 8), 0 new HTTP endpoints, backend-only scope, single
+      focused feature (prediction), ~2-3 files touched (risk-predictor.agent.md,
+      prediction schema extension, OUTCOME.yaml extension). Zero sizing
+      overage indicators triggered.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      Subtask decomposition is entirely absent from story.yaml. There is no
+      ## Subtasks section, no ## Canonical References section, no per-AC subtask
+      coverage, and no verification commands. All 5 ACs are uncovered by
+      subtasks. Estimated work (agent file + 2 schema extensions + KB query
+      integration) is straightforward but without decomposition, small-context
+      LLM executors will lack the step-by-step anchor needed for reliable
+      execution. Recommend adding 4-5 subtasks before execution.
+
+gaps:
+  - id: gap-1
+    check: risk_disclosure
+    finding: >
+      split_risk and review_cycles heuristics have no explicit fallback when
+      similar_stories is empty (WKFL-006 data unavailable or sparse). The
+      review_cycles formula references "similar_story_avg_cycles" without
+      defining a default value when that average cannot be computed. This
+      could produce NaN or undefined outputs in the first weeks of use before
+      WKFL-006 data accumulates.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-6: All three heuristic functions define explicit fallback values when similar_stories is empty (no undefined/NaN outputs at cold-start)"
+    notes: "Auto-resolved: blocks correct heuristic output at cold-start; undefined/NaN in prediction fields would break downstream consumers"
+
+  - id: gap-2
+    check: testability
+    finding: >
+      No runnable test plan is specified. The heuristic functions (split_risk,
+      review_cycles, token_estimate) are pure deterministic logic and require
+      at least a Vitest unit test fixture with known inputs and expected outputs
+      to be verifiable. Without this, AC-1..5 cannot be automatically confirmed.
+    severity: medium
+    decision: add_ac
+    ac_added: "AC-7: Vitest unit tests cover all three heuristic functions with at least: (a) cold-start case (empty similar_stories), (b) normal case with similar_stories data, (c) boundary values (ac_count=5, ac_count=8, files>5)"
+    notes: "Auto-resolved: deterministic heuristics are easily unit-testable; without tests, AC-1..5 verification cannot be automated"
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      Define explicit fallback values for all three heuristics when
+      similar_stories is empty (e.g., review_cycles default: 1.5,
+      split_risk: formula-only with no similar-story weighting).
+      Document this as v1 behavior with a note that accuracy improves
+      after N completed stories with OUTCOME.yaml data.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "11e582c3-29cc-453d-b34a-f4010f4176e6"
+
+  - id: opp-2
+    category: observability
+    finding: >
+      Add a confidence degradation signal: when similar_stories.length == 0,
+      set predictions.confidence = "low" regardless of heuristic output.
+      This helps consumers (e.g., /pm-story) surface a visual indicator that
+      predictions are cold-start estimates.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "af400090-aab4-470a-97f0-aa0f095a94a6"
+
+  - id: opp-3
+    category: ux_polish
+    finding: >
+      The prediction schema uses float values for review_cycles (e.g., 2.3)
+      but OUTCOME.yaml actuals tracks integer review_cycles. Define whether
+      prediction accuracy for review_cycles uses rounding or a tolerance band
+      (e.g., ±0.5 = "close enough") to avoid misleading accuracy scores in
+      prediction_accuracy.review_cycles.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "1a8399b9-2ffc-4ce5-bcab-151f5c0f64a8"
+
+  - id: opp-4
+    category: performance
+    finding: >
+      The similar_stories KB query uses a broad text search on title + scope.
+      As the KB grows, this may return noisy matches. Consider adding a
+      tag filter (e.g., tags: ["outcome", "completed"]) to pre-filter to
+      only stories with actuals. Already partially implied in technical_notes
+      but worth making explicit in the agent prompt spec.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "7699958e-05cb-4bb5-8141-031b235d9098"
+
+  - id: opp-5
+    category: integrations
+    finding: >
+      AC-5 ties prediction accuracy to OUTCOME.yaml (written at story close by
+      WKFL-001 Retro Agent). Consider whether the risk-predictor agent should
+      also write a KB entry at prediction time (tagging predictions vs. actuals
+      for later LERN-epic mining), enabling WKFL-006 to correlate prediction
+      quality with story outcomes.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "2dd1696b-ca57-4f4a-916f-4e3e3a70f42f"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-23T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 2

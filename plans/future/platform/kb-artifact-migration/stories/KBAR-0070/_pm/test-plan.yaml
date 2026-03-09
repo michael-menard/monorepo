@@ -1,0 +1,180 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  notes: >
+    Backend-only MCP tool extension. No HTTP endpoints. Data layer touches
+    story_artifacts and story_dependencies tables via secondary SELECT queries.
+    Per ADR-005: integration tests use real PostgreSQL (testcontainers/dev-pg).
+    Per ADR-006: frontend_impacted=false, no Playwright E2E required.
+
+happy_path_tests:
+  - id: HP-1
+    title: "kb_get_story with include_artifacts:true returns artifact records"
+    setup: >
+      Seed story record in stories table. Seed 2 artifact records in story_artifacts
+      with matching story_id. Call kb_get_story with { story_id, include_artifacts: true }.
+    action: "Call handleKbGetStory with { story_id: 'TEST-001', include_artifacts: true }"
+    expected: >
+      Response contains { story: {...}, artifacts: [artifact1, artifact2], message: 'Found story TEST-001' }.
+      artifacts array has exactly 2 elements matching seeded data.
+    evidence: "JSON.stringify(result) includes 'artifacts' key with 2-element array"
+
+  - id: HP-2
+    title: "kb_get_story with include_dependencies:true returns dependency edges"
+    setup: >
+      Seed story record. Seed 1 outbound dependency (storyId=TEST-001, targetStoryId=TEST-002)
+      and 1 inbound dependency (storyId=TEST-003, targetStoryId=TEST-001).
+      Call with { story_id: 'TEST-001', include_dependencies: true }.
+    action: "Call handleKbGetStory with { story_id: 'TEST-001', include_dependencies: true }"
+    expected: >
+      Response contains { story: {...}, dependencies: [dep1, dep2], message: 'Found story TEST-001' }.
+      Both inbound and outbound edges are included (2 total).
+    evidence: "dependencies array has 2 elements: one where storyId=TEST-001, one where targetStoryId=TEST-001"
+
+  - id: HP-3
+    title: "kb_get_story with both flags true returns complete context"
+    setup: >
+      Seed story, 2 artifact records, 1 dependency record.
+      Call with { story_id, include_artifacts: true, include_dependencies: true }.
+    action: "Call handleKbGetStory with all three parameters"
+    expected: >
+      Response contains { story: {...}, artifacts: [2 records], dependencies: [1 record], message: '...' }.
+    evidence: "Result object has all four keys present with correct lengths"
+
+  - id: HP-4
+    title: "Backward compatibility: no flags returns existing shape"
+    setup: >
+      Seed story record with artifacts in DB.
+      Call with only { story_id } (no include_artifacts, no include_dependencies).
+    action: "Call handleKbGetStory with { story_id: 'TEST-001' }"
+    expected: >
+      Response shape matches the pre-KBAR-0070 contract: { story: {...}, message: '...' }.
+      artifacts and dependencies keys are either absent or empty arrays — not populated.
+    evidence: >
+      Verify artifacts table is NOT queried (spy on deps.db or assert response has no artifact data).
+
+  - id: HP-5
+    title: "include_artifacts:true with no artifacts returns empty array"
+    setup: "Seed story with no artifact records. Call with include_artifacts: true."
+    action: "Call handleKbGetStory with { story_id: 'TEST-002', include_artifacts: true }"
+    expected: "Response contains artifacts: [] (empty array, not null or undefined)"
+    evidence: "artifacts key present, Array.isArray(result.artifacts) === true, length === 0"
+
+  - id: HP-6
+    title: "include_dependencies:true with no dependencies returns empty array"
+    setup: "Seed story with no dependency records. Call with include_dependencies: true."
+    action: "Call handleKbGetStory with { story_id: 'TEST-002', include_dependencies: true }"
+    expected: "Response contains dependencies: [] (empty array, not null or undefined)"
+    evidence: "dependencies key present, Array.isArray(result.dependencies) === true, length === 0"
+
+  - id: HP-7
+    title: "MCP tool schema exposes new parameters to clients"
+    setup: "Call getToolDefinitions() and find the kb_get_story entry"
+    action: "Inspect kbGetStoryToolDefinition.inputSchema.properties"
+    expected: >
+      Schema contains include_artifacts (type: boolean, optional) and
+      include_dependencies (type: boolean, optional) with descriptive strings.
+    evidence: "Object.keys(inputSchema.properties) includes 'include_artifacts' and 'include_dependencies'"
+
+error_cases:
+  - id: EC-1
+    title: "Missing story with both flags true returns null story and empty arrays"
+    setup: "No story record for 'NONEXISTENT-999' in DB."
+    action: "Call handleKbGetStory with { story_id: 'NONEXISTENT-999', include_artifacts: true, include_dependencies: true }"
+    expected: >
+      Returns { story: null, artifacts: [], dependencies: [], message: 'Story NONEXISTENT-999 not found' }.
+      Does NOT throw. Does NOT execute secondary queries (DB not called for artifact/dependency selects).
+    evidence: >
+      result.story === null, result.artifacts.length === 0, result.dependencies.length === 0.
+      Spy on deps.db.select — only called ONCE (for primary story query), not 3 times.
+
+  - id: EC-2
+    title: "Empty story_id rejected by Zod schema"
+    setup: "Pass empty string as story_id"
+    action: "Call handleKbGetStory with { story_id: '' }"
+    expected: "Returns errorToToolResult response with ZodError. isError: true."
+    evidence: "result.isError === true, result.content[0].text contains 'Story ID cannot be empty'"
+
+  - id: EC-3
+    title: "Missing story_id field rejected"
+    setup: "Pass input without story_id"
+    action: "Call handleKbGetStory with {}"
+    expected: "Returns errorToToolResult response with ZodError."
+    evidence: "result.isError === true"
+
+  - id: EC-4
+    title: "DB error during secondary artifact query surfaces correctly"
+    setup: "Story exists. Mock deps.db second SELECT to throw DB error."
+    action: "Call with include_artifacts: true where DB throws on second query"
+    expected: "Returns errorToToolResult response. Does not crash process."
+    evidence: "result.isError === true, error logged with correlation_id"
+
+edge_cases:
+  - id: ED-1
+    title: "include_artifacts: false on story with artifact records — table NOT queried"
+    setup: "Seed story and artifact records. Call with include_artifacts: false (explicit)."
+    action: "Call handleKbGetStory with { story_id, include_artifacts: false }"
+    expected: >
+      story_artifacts table is not queried. Response does NOT include populated artifacts array.
+    evidence: >
+      Spy on DB: select().from(storyArtifacts) is never called.
+      Token efficiency preserved.
+
+  - id: ED-2
+    title: "Dependency query returns both inbound and outbound in single query"
+    setup: >
+      Seed story TEST-001 with: 2 outbound deps (TEST-001 → TEST-002, TEST-001 → TEST-003)
+      and 1 inbound dep (TEST-004 → TEST-001). Call with include_dependencies: true.
+    action: "Call handleKbGetStory with { story_id: 'TEST-001', include_dependencies: true }"
+    expected: "dependencies array has 3 elements. DB queried at most once for dependencies (OR condition)."
+    evidence: "result.dependencies.length === 3. DB select called max 2 times total (story + deps)."
+
+  - id: ED-3
+    title: "Correlation ID and flag values logged for observability"
+    setup: "Mock logger.info spy. Call with both flags true."
+    action: "Call handleKbGetStory with { story_id, include_artifacts: true, include_dependencies: true }"
+    expected: >
+      logger.info called with include_artifacts: true, include_dependencies: true in timing log.
+    evidence: "logger.info spy called with object containing include_artifacts and include_dependencies"
+
+  - id: ED-4
+    title: "Return type is always JSON-serializable"
+    setup: "Seed story with artifacts containing special characters or null fields."
+    action: "Call with both flags true"
+    expected: "JSON.stringify(result) does not throw. result can be round-tripped through JSON."
+    evidence: "JSON.parse(JSON.stringify(result)) is deep-equal to result"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "result.story is typeof stories.$inferSelect or null"
+      - "result.artifacts is StoryArtifact[] when flag true, [] when story null"
+      - "result.dependencies is StoryDependency[] when flag true, [] when story null"
+      - "result.message is string in all cases"
+      - "Secondary queries NOT executed when story is null (AC-4)"
+      - "MCP tool schema includes include_artifacts and include_dependencies parameters"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: seeded_story
+    type: stories record
+    description: "Standard story row in stories table: { storyId: 'TEST-001', title: '...', state: 'backlog', ... }"
+  - name: seeded_artifact_records
+    type: story_artifacts rows
+    description: "2 artifact rows with storyId='TEST-001', artifactType in ('checkpoint','plan'), filePath set"
+  - name: seeded_dependency_records
+    type: story_dependencies rows
+    description: "Outbound: { storyId: 'TEST-001', targetStoryId: 'TEST-002', dependencyType: 'depends_on' }. Inbound: { storyId: 'TEST-003', targetStoryId: 'TEST-001', dependencyType: 'depends_on' }"
+  - name: mock_db_deps
+    type: ToolHandlerDeps
+    description: "Mock deps with db: {} and embeddingClient from createMockEmbeddingClient(). Follows tool-handlers.test.ts pattern."
+
+risks:
+  - "Integration test requires real PostgreSQL — test must run in CI with testcontainers or dev-pg; ensure POSTGRES_URL env var is available"
+  - "Backward compatibility test (HP-4) is critical — callers relying on existing response shape must not break"
+  - "EC-1 secondary query guard: implementation must short-circuit before executing artifact/dependency queries when story is null — test must verify via spy"
+  - "OR condition for dependency query (both inbound and outbound) — ensure query returns both directions"

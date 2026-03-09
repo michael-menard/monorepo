@@ -1,0 +1,57 @@
+schema: 1
+story_id: WINT-4080
+phase: implementation
+iteration: 0
+generated_at: "2026-02-24T00:00:00Z"
+
+summary:
+  verdict: PASS
+  total_acs: 8
+  acs_passed: 8
+  acs_failed: 0
+
+touched_files:
+  - path: .claude/agents/scope-defender.agent.md
+    operation: created
+    description: "Scope-defender haiku worker agent — Devil's Advocate for elaboration scope defense"
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Agent file created with valid WINT standard frontmatter"
+    verdict: PASS
+    evidence: "File exists at .claude/agents/scope-defender.agent.md with required frontmatter fields: created, updated, version, type, name, description, model, tools. model=haiku, type=worker, version=1.0.0, description ≤80 chars."
+
+  - id: AC-2
+    description: "Inputs defined with graceful degradation"
+    verdict: PASS
+    evidence: "Agent documents required inputs (story brief, proposed ACs) and optional inputs (gap analysis, DA role pack). Graceful degradation documented for missing optional inputs with warning count in output."
+
+  - id: AC-3
+    description: "Execution phases defined"
+    verdict: PASS
+    evidence: "4 sequential phases defined: Phase 1 Load inputs, Phase 2 Identify challenge candidates, Phase 3 Apply DA challenges, Phase 4 Produce scope-challenges.json + human summary."
+
+  - id: AC-4
+    description: "Hard cap enforcement"
+    verdict: PASS
+    evidence: "Agent enforces max 5 challenges. Blocking/MVP-critical items from gap analysis are never challenged. Truncation noted in output when >5 items qualify."
+
+  - id: AC-5
+    description: "scope-challenges.json schema defined and documented"
+    verdict: PASS
+    evidence: "Schema documented inline with all required fields: story_id, generated_at, challenges (max 5, each with id/target/challenge/recommendation/deferral_note/risk_if_deferred), total_candidates_reviewed, truncated. Output path documented."
+
+  - id: AC-6
+    description: "Completion signals defined"
+    verdict: PASS
+    evidence: "Three signals documented: SCOPE-DEFENDER COMPLETE, SCOPE-DEFENDER COMPLETE WITH WARNINGS: {N} warnings, SCOPE-DEFENDER BLOCKED: {reason}."
+
+  - id: AC-7
+    description: "LangGraph porting interface contract"
+    verdict: PASS
+    evidence: "LangGraph Porting Notes section documents canonical input contract, 4-phase workflow, output path, and notes no MCP tools required in v1.0."
+
+  - id: AC-8
+    description: "Non-goals documented"
+    verdict: PASS
+    evidence: "Non-Goals section lists: no backlog writes, no MVP-critical challenge, no new ACs, no cohesion-sidecar/graph-checker, no backlog MCP tools."

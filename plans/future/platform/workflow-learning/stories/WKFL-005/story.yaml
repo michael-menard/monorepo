@@ -1,0 +1,193 @@
+id: WKFL-005
+title: "Doc Sync Agent"
+status: in-qa
+priority: P0
+phase: foundation
+created_at: 2026-02-06T17:00:00-07:00
+setup_completed_at: 2026-02-07T14:47:00Z
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies: []
+blocks: []
+
+owner: null
+estimated_tokens: 40000
+
+tags:
+  - foundation
+  - documentation
+  - automation
+
+summary: |
+  Create an agent that automatically updates FULL_WORKFLOW.md when agents
+  or commands change, preventing documentation drift from reality.
+
+goal: |
+  Keep documentation in sync with code by:
+  1. Detecting changes to agent and command files
+  2. Updating relevant sections in FULL_WORKFLOW.md
+  3. Regenerating Mermaid diagrams
+  4. Drafting changelog entries
+  5. Creating PRs with documentation updates
+
+non_goals:
+  - Full documentation generation from scratch
+  - Documentation for non-workflow files
+  - Semantic understanding of code changes
+
+scope:
+  in:
+    - doc-sync.agent.md creation
+    - /doc-sync command
+    - File change detection for .claude/agents/ and .claude/commands/
+    - FULL_WORKFLOW.md section updates
+    - Mermaid diagram regeneration
+    - Changelog entry drafting
+    - SYNC-REPORT.md output
+
+  out:
+    - Other documentation files
+    - Code documentation (JSDoc, etc.)
+    - README updates
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Adding new agent updates 'Agents & Sub-Agents' sections in FULL_WORKFLOW.md"
+    verification: "Add test agent, run /doc-sync, verify section updated"
+
+  - id: AC-2
+    description: "Changing agent frontmatter updates relevant tables"
+    verification: "Change agent model, run /doc-sync, verify Model Assignments table updated"
+
+  - id: AC-3
+    description: "Mermaid diagrams regenerated on structure change"
+    verification: "Add agent to spawn chain, verify diagram updated"
+
+  - id: AC-4
+    description: "Changelog entry drafted with correct version bump"
+    verification: "Changelog section has new entry with [DRAFT] tag"
+
+  - id: AC-5
+    description: "SYNC-REPORT.md shows what changed"
+    verification: "File lists sections updated, files changed, diagrams regenerated"
+
+  - id: AC-6
+    description: "Runs via command or optionally as pre-commit hook"
+    verification: "/doc-sync works; optional hook documented"
+
+technical_notes: |
+  ## Agent Frontmatter Parsing
+
+  Parse agent files for:
+  ```yaml
+  ---
+  name: workflow-retro
+  version: 1.0.0
+  description: Analyzes story outcomes
+  model: sonnet
+  spawns:
+    - kb-writer
+  triggers:
+    - story_completed
+  inputs:
+    - OUTCOME.yaml
+  outputs:
+    - RETRO-{story-id}.yaml
+  ---
+  ```
+
+  ## Section Mapping
+
+  | Agent Pattern | FULL_WORKFLOW.md Section |
+  |---------------|--------------------------|
+  | pm-*.agent.md | Phase 2: PM Story Generation |
+  | elab-*.agent.md | Phase 3: QA Elaboration |
+  | dev-*.agent.md | Phase 4: Dev Implementation |
+  | code-review-*.agent.md | Phase 5: Code Review |
+  | qa-*.agent.md | Phase 6/7: QA Verify/Gate |
+  | workflow-*.agent.md | New section or cross-cutting |
+
+  ## Diagram Generation
+
+  Parse `spawns:` fields to build Mermaid:
+
+  ```mermaid
+  graph TD
+      pm-story-generation-leader --> pm-story-seed-agent
+      pm-story-generation-leader --> pm-draft-test-plan
+      pm-story-seed-agent --> knowledge-context-loader
+  ```
+
+  ## Sync Algorithm
+
+  1. Scan .claude/agents/*.agent.md for changes (git diff or mtime)
+  2. Parse frontmatter from changed files
+  3. Find sections in FULL_WORKFLOW.md that reference these agents
+  4. Update tables, diagrams, agent lists
+  5. If structure changed significantly, regenerate full section
+  6. Draft changelog entry
+  7. Write SYNC-REPORT.md
+
+  ## SYNC-REPORT.md
+
+  ```yaml
+  sync_run_at: 2026-02-06T15:30:00Z
+  trigger: manual  # or file_change
+
+  files_changed:
+    - .claude/agents/workflow-retro.agent.md (added)
+    - .claude/agents/dev-documentation-leader.agent.md (modified)
+
+  sections_updated:
+    - "## Phase 4: Dev Implementation" (agent list)
+    - "## Model Assignments" (table row)
+    - "## Changelog" (new entry drafted)
+
+  diagrams_regenerated:
+    - "### Multi-Agent Pipeline" (dev-implement-story)
+
+  manual_review_needed:
+    - "New agent workflow-retro.agent.md may need new section"
+
+  changelog_entry:
+    version: 2.26.0
+    type: Added
+    description: "workflow-retro agent for story outcome analysis"
+  ```
+
+  ## Pre-commit Hook (Optional)
+
+  ```bash
+  # .git/hooks/pre-commit
+  if git diff --cached --name-only | grep -q ".claude/agents/"; then
+    claude /doc-sync --check-only
+    if [ $? -ne 0 ]; then
+      echo "Documentation out of sync. Run /doc-sync first."
+      exit 1
+    fi
+  fi
+  ```
+
+reuse_plan:
+  must_reuse:
+    - Existing FULL_WORKFLOW.md structure
+    - Agent frontmatter standard from FRONTMATTER.md
+    - Mermaid diagram patterns
+
+  may_create:
+    - doc-sync.agent.md
+    - /doc-sync command
+    - SYNC-REPORT.md schema
+
+local_testing:
+  - Add test agent file
+  - Run /doc-sync
+  - Verify FULL_WORKFLOW.md updated
+  - Verify SYNC-REPORT.md generated
+  - Clean up test agent
+
+token_budget:
+  estimated: 40000
+  enforcement: warning

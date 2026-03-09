@@ -1,0 +1,179 @@
+schema: 2
+story_id: "KBAR-0080"
+timestamp: "2026-02-24T20:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Fix stale mcp-integration.test.ts tool count and names list"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- mcp-integration"
+    acs_covered: ["AC-1"]
+    notes: "CRITICAL: Run getToolDefinitions().length to get actual count BEFORE updating assertion. Current source count is 53 (verified 2026-02-24). Story says 54 but ELAB identified 53. Do NOT assume 54 — verify at implementation time."
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Add terminal-state guard to kb_update_story_status"
+    files:
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base"
+    acs_covered: ["AC-8"]
+    notes: "Add TERMINAL_STATES constant from StoryStateSchema values. Insert guard after existing[0] fetch (line 284) and before 'Build update object' (line 292). Use soft-return pattern matching lines 284-290: return { story: null, updated: false, message: \"Cannot transition from terminal state '${currentState}' to '${targetState}'...\" }. Allow same-state transitions."
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Write unit tests for handleKbListStories handler"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/tool-handlers.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- story-tools"
+    acs_covered: ["AC-2", "AC-3", "AC-9"]
+    notes: "Create new file. Use vi.hoisted + vi.mock pattern. Mock story-crud-operations.js (not index.js). Import handlers from tool-handlers.js. Cover filter combinations (feature, epic, state, states[], phase, blocked, priority), states[] precedence over state, total count in response, ordering (updatedAt DESC), and authorization enforcement."
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Write unit tests for handleKbUpdateStoryStatus handler"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    dependencies: [3]
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- story-tools"
+    acs_covered: ["AC-4", "AC-5", "AC-6", "AC-8", "AC-9"]
+    notes: "Extend story-tools.test.ts. Cover: startedAt auto-set on in_progress (idempotent on 2nd call), completedAt auto-set on completed (idempotent), blocked:false clears blockedReason and blockedByStory, non-existent story returns {updated: false, story: null}, terminal-state guard returns {updated: false, message: '...'} NOT isError, same-state transition allowed, authorization enforcement."
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write unit tests for handleKbUpdateStory handler"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    dependencies: [4]
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- story-tools"
+    acs_covered: ["AC-7", "AC-9"]
+    notes: "Extend story-tools.test.ts. Cover: partial updates (only supplied fields changed), omitted fields unchanged, non-existent story returns {updated: false, story: null}, authorization enforcement."
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Final verification — all tests pass, TypeScript clean"
+    files: []
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    dependencies: [1, 2, 5]
+    slice: backend
+    verification: "pnpm test:all --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base"
+    acs_covered: ["AC-10"]
+    notes: "Run full test suite to ensure existing tests not broken by state guard addition. Verify no TypeScript errors."
+
+files_to_change:
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    action: modify
+    reason: "Update tool count assertion (52→actual count, verify at runtime) and add 'kb_update_story' to expected tool names array per AC-1"
+
+  - path: "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    action: modify
+    reason: "Add TERMINAL_STATES constant and inline state transition guard in kb_update_story_status() to enforce terminal-state protection per AC-8"
+
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    action: create
+    reason: "New unit test file for handleKbListStories, handleKbUpdateStoryStatus, and handleKbUpdateStory handlers using vi.hoisted mock pattern per AC-2 through AC-9"
+
+commands_to_run:
+  - command: "pnpm test --filter @repo/knowledge-base -- mcp-integration"
+    when: "after ST-1 changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/knowledge-base"
+    when: "after ST-2 changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/knowledge-base -- story-tools"
+    when: "after each ST-3/ST-4/ST-5 iteration"
+    required: true
+
+  - command: "pnpm test:all --filter @repo/knowledge-base"
+    when: "after all code changes (ST-6)"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/knowledge-base"
+    when: "after all code changes (ST-6)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "mcp-integration.test.ts passes with correct tool count and kb_update_story in expected names"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests in story-tools.test.ts: each filter (feature, epic, state, states[], phase, blocked, priority) independently tested via mockKbListStories"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests in story-tools.test.ts: verify response includes total count and stories array"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests in story-tools.test.ts: startedAt set on in_progress transition, idempotent on 2nd call; completedAt set on completed transition, idempotent on 2nd call"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests in story-tools.test.ts: blocked:false clears blockedReason and blockedByStory"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit tests in story-tools.test.ts: non-existent story_id returns {updated: false, story: null}"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests in story-tools.test.ts: partial update only modifies supplied fields, non-existent story returns {updated: false, story: null}"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Code: TERMINAL_STATES constant + guard in story-crud-operations.ts. Tests: terminal→non-terminal returns {updated: false, message: '...'}, same-state allowed"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit tests in story-tools.test.ts: enforceAuthorization() called for all three handlers, unauthorized role throws AuthorizationError"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm test:all --filter @repo/knowledge-base passes, pnpm check-types --filter @repo/knowledge-base passes"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "CRITICAL: Tool count in mcp-integration.test.ts must be verified at implementation time via getToolDefinitions().length. Current dist count is 53 (verified 2026-02-24). Story claims 54, ELAB claims 53. Implement-time verification is required per risk disclosure in story."
+  - "story-crud-operations.ts already has: auto-timestamps for in_progress/completed, blocked:false clearing, not-found soft-return — confirmed at lines 284-349. Only the terminal-state guard is missing."
+  - "The vi.mock path for story handlers is '../../crud-operations/story-crud-operations.js' (not crud-operations/index.js which is for CRUD tools)."
+  - "Terminal-state guard return shape: { story: null, updated: false, message: \"Cannot transition from terminal state '${currentState}' to '${targetState}'...\" } — do NOT throw, do NOT use isError: true."
+  - "ST-1 and ST-2 can run in parallel. ST-3 can also run in parallel with ST-1/ST-2. ST-4 depends on ST-3. ST-5 depends on ST-4. ST-6 depends on ST-1+ST-2+ST-5."
+  - "Per ADR-005: integration tests must use real PostgreSQL. Unit tests (story-tools.test.ts) use vi.mock — no testcontainers needed for unit tests."
+  - "Per ADR-006: no E2E tests required for this backend-only story."
+  - "No barrel file imports — import directly from story-crud-operations.ts or __types__/index.ts."
+  - "Use createMcpLogger() from mcp-server/logger.ts — never console.log."

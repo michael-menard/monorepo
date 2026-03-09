@@ -1,0 +1,232 @@
+---
+schema: 1
+story_id: "APIP-4060"
+title: "KB Freshness Check and Stale Entry Archival"
+timestamp: "2026-02-25T00:00:00Z"
+
+# ============================================================================
+# AUDIT CHECKLIST (9 checks)
+# ============================================================================
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: |
+      story.yaml feature description matches the story body and ACs exactly. The
+      Non-Goals section is tightly scoped and correctly excludes cron registration
+      (APIP-3090), semantic contradiction detection, and hard deletion. No extra
+      endpoints, infra changes, or new packages introduced beyond what the index
+      entry implies.
+
+  - id: internal_consistency
+    status: PASS_WITH_MINOR_GAPS
+    note: |
+      Goals and Non-Goals do not contradict. ACs match the scope section and are
+      covered by the test plan (7 happy-path, 3 error-case, 3 edge-case tests).
+      Minor gap: AC-7 field list omitted `truncated` introduced by AC-13 — resolved
+      by editing AC-7 to include `truncated`. HP-2 test implies AuditLogger.logUpdate
+      requires KnowledgeEntry objects; resolved by AC-15 (batch entry as previousEntry).
+
+  - id: reuse_first
+    status: PASS
+    note: |
+      All four canonical references verified as existing. retention-policy.ts batch loop
+      pattern confirmed. kb-update.ts archival fields confirmed. audit-logger.ts soft-fail
+      confirmed. Gap: kb_list cannot serve batch scan (no offset pagination, max limit 100,
+      no compound staleness filter) — resolved by adding AC-14 clarifying direct Drizzle
+      usage. Architecture Notes batch loop pseudocode is authoritative.
+
+  - id: ports_and_adapters
+    status: PASS
+    note: |
+      runKbFreshnessCheck(deps, config) is fully transport-agnostic. Injectable deps
+      include { db, fs?, embeddingClient? }. No LangGraph imports required. No API
+      endpoints introduced. APIP-3090 adapter wrapper is APIP-3090's responsibility.
+      fs dep defaults to node:fs in production but is injectable for testing.
+
+  - id: local_testability
+    status: PASS_WITH_MINOR_GAPS
+    note: |
+      All deps are injectable. Test file location specified. Mocked Drizzle + mocked fs
+      pattern consistent with existing orchestrator tests. Informational gap: AuditLogger
+      requires parseAuditConfig() — test should construct with explicit config overrides
+      (enabled: true, softFail: true) to exercise soft-fail path reliably.
+
+  - id: decision_completeness
+    status: PASS_WITH_MINOR_GAPS
+    note: |
+      No unresolved TBDs found. Multiple file path match strategy documented (first
+      confirmed non-existent path wins). Default config values all specified. ED-2 test
+      phrasing slightly ambiguous but Architecture Notes resolve it deterministically.
+
+  - id: risk_disclosure
+    status: PASS
+    note: |
+      Both key risks documented: file path regex false positives (conservative regex +
+      mitigation) and APIP-3090 interface contract (pure-function design). Time truncation
+      flakiness in CI and Drizzle mock complexity both noted in pm_artifacts.risks.
+      Additional non-blocking risk noted: AuditLogger soft-fail config may be disabled in
+      test environments — tests should set explicit config overrides.
+
+  - id: story_sizing
+    status: WARN
+    note: |
+      15 ACs (after additions) — exceeds 8-AC threshold. However: backend-only, single
+      package touch, 4 coherent subtasks (~38K total tokens), narrow change surface (no
+      frontend, no endpoints, no infra). split_risk: 0.9 noted in pm_artifacts but the
+      4-subtask decomposition makes this manageable without formal split. Proceed as-is.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: |
+      All 15 ACs mapped to exactly one subtask — no gaps, no overlaps. Depends-on chain
+      is correctly linear: none → ST-1 → ST-2 → ST-3 → ST-4. ST-2 updated to include
+      AC-14. ST-3 updated to include AC-15. AC-to-subtask coverage matrix verified.
+
+# ============================================================================
+# GAPS
+# ============================================================================
+
+gaps:
+  - id: gap-1
+    check: reuse_first
+    finding: |
+      kb_list cannot serve batch scan. The Reuse Plan table references kb_list for
+      candidate enumeration but kb_list does not support offset-based pagination or the
+      compound createdAt < cutoff AND archived = false filter. Max limit is 100. An
+      implementer following the Reuse Plan table literally would be fundamentally blocked.
+      The Architecture Notes batch loop pseudocode correctly uses direct db.select() with
+      offset — it is the authoritative reference.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-14: Batch scan uses direct Drizzle queries, not kb_list. Architecture Notes batch loop pseudocode is authoritative."
+
+  - id: gap-2
+    check: subtask_decomposition
+    finding: |
+      AuditLogger.logUpdate requires full KnowledgeEntry objects for both previousEntry
+      and newEntry. ST-3 description did not explicitly state the pattern for obtaining
+      the pre-mutation entry. The story as written implied a separate per-entry fetch
+      (N+1 queries), which is unnecessary because the batch db.select() already returns
+      full KnowledgeEntry rows that can serve as previousEntry.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-15: In-memory batch entry serves as previousEntry for AuditLogger.logUpdate. No separate pre-mutation fetch required."
+
+  - id: gap-3
+    check: internal_consistency
+    finding: |
+      AC-7 field list omitted the `truncated` boolean flag introduced by AC-13. The
+      KbFreshnessResultSchema (AC-8) would need to include it, and ED-1 validates it,
+      but the AC-7 prose was misleading — listing only 7 fields without truncated.
+    severity: medium
+    decision: edit_ac
+    ac_edited: "AC-7: Updated field list to include `truncated` boolean (default false)."
+
+  - id: find-1
+    check: ports_and_adapters
+    finding: |
+      kb_update requires embeddingClient in deps even for non-content updates (archival
+      and tag-only mutations). KbFreshnessCheckDeps was documented as { db, fs? } with
+      no mention of embeddingClient. An implementer calling kb_update would encounter a
+      type error or runtime failure without this dep.
+    severity: medium
+    decision: edit_ac
+    ac_edited: "AC-1: Updated deps type to { db, fs?, embeddingClient? } with note that a no-op mock is acceptable in tests."
+
+# ============================================================================
+# OPPORTUNITIES
+# ============================================================================
+
+opportunities:
+  - id: opp-1
+    category: architecture
+    finding: |
+      The batch db.select() returns full KnowledgeEntry rows. These in-memory objects ARE
+      the pre-mutation entries needed for AuditLogger.logUpdate as previousEntry. No extra
+      per-entry fetch is needed. This eliminates the N+1 query concern from gap-2 entirely.
+    effort: none
+    decision: resolved_gap
+    resolves_gap: gap-2
+    ac_added: "AC-15"
+    kb_entry_id: null
+    kb_note: "KB write tool returned INTERNAL_ERROR — not persisted to KB."
+
+  - id: opp-2
+    category: schema_completeness
+    finding: |
+      maxDurationMs is referenced in AC-13 and Architecture Notes (default 5 min = 300000ms)
+      but not listed in AC-1 or AC-9's config field enumeration. Should be declared in
+      KbFreshnessConfigSchema as z.number().positive().default(300000).
+    effort: low
+    decision: implement_note
+    implementation_note: |
+      In __types__/index.ts, add maxDurationMs: z.number().positive().default(300000) to
+      KbFreshnessConfigSchema. This is implied by AC-13 but should be explicit for clarity.
+      No new AC required — the implementer can derive this from AC-9 + AC-13 combined.
+    kb_entry_id: null
+    kb_note: "KB write tool returned INTERNAL_ERROR — not persisted to KB."
+
+  - id: opp-3
+    category: observability
+    finding: |
+      The function counts skipped_count but the story does not specify debug-level logging
+      per batch. The canonical reference retention-policy.ts logs batch context at debug
+      level (batch N: X archived, Y flagged, Z skipped). Adding this improves operator
+      visibility for cron runs reviewed by APIP-4070.
+    effort: low
+    decision: implement_note
+    implementation_note: |
+      Add logger.debug('KB freshness batch complete', { batch, archived, flagged, skipped })
+      after each batch loop iteration. Pattern matches retention-policy.ts. No AC needed.
+    kb_entry_id: null
+    kb_note: "KB write tool returned INTERNAL_ERROR — not persisted to KB."
+
+  - id: opp-4
+    category: documentation
+    finding: |
+      KB entries frequently contain file paths in YAML/Markdown code blocks (illustrative
+      paths, not real references). These will match FILE_PATH_REGEX. The story acknowledges
+      this risk but does not explicitly document that code-block paths are an acceptable
+      false-positive class — operators may be confused when they see archival attempts for
+      illustrative paths in code examples within KB entries.
+    effort: low
+    decision: implement_note
+    implementation_note: |
+      Add a comment near FILE_PATH_REGEX declaration noting that paths in code blocks are
+      an acceptable false-positive class. The conservative archival policy (archive ONLY
+      confirmed non-existent paths) provides adequate protection — over-engineering the
+      regex to strip code blocks would add complexity without meaningful safety improvement.
+    kb_entry_id: null
+    kb_note: "KB write tool returned INTERNAL_ERROR — not persisted to KB."
+
+# ============================================================================
+# VERDICT
+# ============================================================================
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+
+summary:
+  gaps_found: 4
+  gaps_resolved: 4
+  opportunities_found: 4
+  opportunities_logged: 0
+  kb_write_errors: 4
+  kb_write_error_reason: "mcp__knowledge-base__kb_write_artifact returned INTERNAL_ERROR for all writes"
+  acs_added: 2
+  acs_edited: 2
+  total_acs_after: 15
+  split_required: false
+  split_rationale: "4-subtask decomposition and narrow change surface make 15 ACs manageable without formal split."
+
+notes: |
+  All 4 MVP gaps resolved through AC additions and edits:
+  - gap-1 (kb_list limitation) → AC-14 added, ST-2 updated
+  - gap-2 (AuditLogger previousEntry) → AC-15 added, ST-3 updated
+  - gap-3 (truncated omitted from AC-7) → AC-7 edited
+  - find-1 (embeddingClient missing from deps) → AC-1 edited
+  Opportunities 2-4 are implementation notes for the implementer — no separate stories
+  or AC additions required. story.yaml status corrected from Created to elaboration.
+---

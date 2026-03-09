@@ -64,11 +64,9 @@ From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 
-From filesystem:
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story to audit
-- **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` or `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` for scope alignment.
-- `{FEATURE_DIR}/PLAN.exec.md` - for execution plan alignment (if exists)
-- `{FEATURE_DIR}/PLAN.meta.md` - for plan metadata (if exists)
+From KB (authoritative):
+- `kb_get_story({ story_id: "{STORY_ID}" })` — story content, acceptance criteria, scope
+- `kb_get_plan({ planSlug: PLAN_SLUG })` — plan metadata and execution notes (if available)
 - `.claude/agents/qa.agent.md` - for QA role context
 - `docs/architecture/api-layer.md` - **AUTHORITATIVE** for API layer architecture (if story involves API)
 
@@ -205,9 +203,11 @@ Track for later (write to `ELAB.yaml` `opportunities[]`):
 
 ## Output
 
-### Primary Output: ELAB.yaml
+### Primary Output: elaboration KB artifact
 
-Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml`:
+Write via `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration", phase: "planning", content: { ... } })`:
+
+The `content` object matches the ELAB schema below:
 
 ```yaml
 schema_version: 1
@@ -289,7 +289,7 @@ Leave all `decision` fields as `null` — downstream agents fill them.
 ## Completion Signal
 
 End with exactly one of:
-- `ANALYSIS COMPLETE` - ELAB.yaml written to `_implementation/`
+- `ANALYSIS COMPLETE` - elaboration artifact written to KB via kb_write_artifact
 - `ANALYSIS BLOCKED: <reason>` - cannot complete analysis
 
 ---
@@ -300,8 +300,8 @@ End with exactly one of:
 - Do NOT redesign the system
 - Do NOT modify {STORY_ID}.md
 - Do NOT provide implementation advice
-- MUST write `_implementation/ELAB.yaml` before completion
-- MUST set `preliminary_verdict` in ELAB.yaml
+- MUST write elaboration artifact to KB via `kb_write_artifact` before completion
+- MUST set `preliminary_verdict` in elaboration artifact
 
 ---
 

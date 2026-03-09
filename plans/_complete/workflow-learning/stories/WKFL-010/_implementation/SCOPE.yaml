@@ -1,0 +1,28 @@
+schema: 1
+story_id: WKFL-010
+timestamp: 2026-02-07T23:50:00Z
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/agents/*.agent.md"
+  - ".claude/commands/*.md"
+  - ".claude/schemas/*.md"
+  - "packages/backend/orchestrator/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create improvement-proposer agent and /improvement-proposals command to generate actionable workflow improvement proposals from learning system outputs"

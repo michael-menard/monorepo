@@ -1,0 +1,412 @@
+schema: 1
+story_id: WKFL-008
+timestamp: '2026-02-07T22:00:00Z'
+
+steps:
+  - id: 1
+    description: "Create experiments.yaml schema definition with Zod validation"
+    files:
+      - ".claude/schemas/experiment-schema.md"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Define ExperimentSchema, ExperimentEligibilitySchema, ExperimentMetricsSchema"
+      - "Define ExperimentReportSchema for analysis output"
+      - "Traffic field validation: 0.0-1.0 range"
+      - "Status enum: active | paused | complete"
+      - "Metrics must be valid OUTCOME.yaml field names"
+
+  - id: 2
+    description: "Create initial experiments.yaml config file template"
+    files:
+      - ".claude/config/experiments.yaml"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Empty experiments array initially"
+      - "Include commented example experiment definition"
+      - "Document eligibility criteria options (ac_count_max, complexity, domain, all)"
+      - "Document metrics options (gate_pass_rate, cycle_time, token_cost, review_cycles)"
+
+  - id: 3
+    description: "Extend OUTCOME.yaml schema with experiment_variant field"
+    files:
+      - ".claude/schemas/outcome-schema.md"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Add experiment_variant: string | null to schema definition"
+      - "Nullable for backward compatibility with legacy files"
+      - "Document that null means predates experiment tracking (not control)"
+      - "Update example OUTCOME.yaml to show field"
+
+  - id: 4
+    description: "Add traffic routing logic to pm-story-generation-leader"
+    files:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+    dependencies: [1, 2]
+    slice: packages
+    notes:
+      - "Insert Phase 0.5a: Experiment Variant Assignment (after seed generation, before story.yaml write)"
+      - "Load and validate experiments.yaml with Zod"
+      - "Filter to active experiments only"
+      - "Implement eligibility checking function"
+      - "Implement random traffic routing (Math.random() < traffic)"
+      - "First match wins logic (break after first assignment)"
+      - "Default to 'control' if no experiment matches or experiments.yaml missing"
+      - "Graceful degradation: log warning if experiments.yaml malformed"
+
+  - id: 5
+    description: "Define eligibility checking logic inline in pm-story-generation-leader"
+    files:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+    dependencies: [4]
+    slice: packages
+    notes:
+      - "Check ac_count_max: story AC count <= threshold"
+      - "Check ac_count_min: story AC count >= threshold"
+      - "Check complexity: heuristic based on scope keywords"
+      - "Check domain: story epic matches domain array"
+      - "Special case: eligibility.all = true matches all stories"
+      - "Document complexity heuristic: simple (<=2 ACs), complex (>=5 ACs or auth/security), medium otherwise"
+
+  - id: 6
+    description: "Extend story.yaml schema to include experiment_variant field"
+    files:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+    dependencies: [4]
+    slice: packages
+    notes:
+      - "Add experiment_variant: string | null to story frontmatter"
+      - "Write variant to story.yaml after assignment"
+      - "Value is experiment ID (e.g., 'exp-fast-track') or 'control'"
+
+  - id: 7
+    description: "Modify dev-documentation-leader to propagate experiment_variant to OUTCOME.yaml"
+    files:
+      - ".claude/agents/dev-documentation-leader.agent.md"
+    dependencies: [3]
+    slice: packages
+    notes:
+      - "Read story.yaml to extract experiment_variant field"
+      - "Include experiment_variant in OUTCOME.yaml generation"
+      - "Handle missing field gracefully (legacy stories without experiments)"
+      - "Preserve exact variant value from story.yaml"
+
+  - id: 8
+    description: "Create experiment-analyzer agent for statistical analysis"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Model: sonnet (complex cross-story analysis)"
+      - "Input: experiment_id from command invocation"
+      - "Load experiments.yaml to get experiment definition"
+      - "Query treatment stories: experiment_variant = {experiment_id}"
+      - "Query control stories: experiment_variant = 'control' from same calendar period"
+      - "Control period: experiment.created_at to present"
+      - "Group metrics by variant"
+      - "Extract metrics from OUTCOME.yaml: gate_pass_rate, cycle_time, token_cost, review_cycles"
+
+  - id: 9
+    description: "Implement Welch's t-test for statistical comparison"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Implement two-sample Welch's t-test for unequal variances"
+      - "Formula: t = (mean2 - mean1) / sqrt((var1/n1) + (var2/n2))"
+      - "Degrees of freedom: Welch-Satterthwaite equation"
+      - "Compute two-tailed p-value from t-distribution"
+      - "Handle edge cases: zero variance, identical distributions"
+      - "Document formula and assumptions in agent file"
+      - "CRITICAL: Test against known datasets with expected p-values"
+
+  - id: 10
+    description: "Implement sample size checking and insufficient data handling"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Check sample sizes before statistical analysis"
+      - "Minimum: both variants must have >= min_sample_size (default 10)"
+      - "If insufficient: return recommendation 'continue' with low confidence"
+      - "Rationale: 'Insufficient data: {n_treatment} treatment, {n_control} control (need {min}+ each)'"
+      - "Never make statistical claims with insufficient samples"
+
+  - id: 11
+    description: "Implement rollout recommendation logic"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [9, 10]
+    slice: packages
+    notes:
+      - "Decision tree for recommendation.action:"
+      - "  - rollout: primary_improved && primary_significant (p < 0.05)"
+      - "  - expand_traffic: primary_maintained && secondary_improvements >= 1"
+      - "  - stop: primary_degraded && primary_significant"
+      - "  - continue: insufficient data OR no significant differences"
+      - "Confidence levels:"
+      - "  - high: p < 0.01, sample_size >= 20 per variant"
+      - "  - medium: p < 0.05, sample_size >= 10 per variant"
+      - "  - low: p >= 0.05 or sample_size < 10"
+      - "Safety: rollout/expand_traffic require minimum 'medium' confidence"
+
+  - id: 12
+    description: "Generate EXPERIMENT-REPORT.yaml output"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [11]
+    slice: packages
+    notes:
+      - "Write to: plans/future/workflow-learning/experiments/EXPERIMENT-REPORT-{exp_id}-{date}.yaml"
+      - "Schema: report_date, experiment_id, variants (control/treatment), analysis, secondary_metrics, recommendation"
+      - "Include sample sizes, means, p-values, confidence levels"
+      - "Rationale explains metric deltas and statistical significance"
+
+  - id: 13
+    description: "Create /experiment-report command"
+    files:
+      - ".claude/commands/experiment-report.md"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Command syntax: /experiment-report {experiment_id}"
+      - "Spawns experiment-analyzer agent with experiment_id parameter"
+      - "Output: EXPERIMENT-REPORT.yaml path and summary"
+      - "Display recommendation action to console"
+
+  - id: 14
+    description: "Add error handling for missing OUTCOME.yaml files"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Wrap OUTCOME.yaml load in try/catch for each story"
+      - "Log skipped stories: 'OUTCOME.yaml not found for {STORY_ID}, skipping'"
+      - "Proceed with analysis using available stories only"
+      - "Include skip count in report summary"
+
+  - id: 15
+    description: "Add backward compatibility handling for legacy OUTCOME.yaml"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Check if experiment_variant field exists in OUTCOME.yaml"
+      - "If missing: treat as null (predates experiment tracking)"
+      - "Exclude legacy stories from experiment analysis (not control, not treatment)"
+      - "Log: 'Story {STORY_ID} predates experiment tracking, excluding'"
+
+  - id: 16
+    description: "Create example experiments.yaml with realistic scenarios"
+    files:
+      - ".claude/config/experiments.yaml"
+    dependencies: [2]
+    slice: packages
+    notes:
+      - "Example 1: exp-fast-track (skip elaboration for simple stories)"
+      - "Example 2: exp-parallel-review (QA + code review in parallel)"
+      - "Set status to 'paused' initially (not active)"
+      - "Document how to activate experiments (change status to 'active')"
+
+  - id: 17
+    description: "Write unit tests for Zod schema validation"
+    files:
+      - ".claude/schemas/__tests__/experiment-schema.test.ts"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Test valid experiment definitions"
+      - "Test invalid traffic values (< 0.0, > 1.0)"
+      - "Test invalid status values"
+      - "Test missing required fields"
+      - "Test valid and invalid eligibility criteria"
+
+  - id: 18
+    description: "Create mock data for testing (20+ stories with variants)"
+    files:
+      - "plans/future/workflow-learning/experiments/__tests__/mock-data/"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Generate 10+ mock treatment stories with OUTCOME.yaml"
+      - "Generate 10+ mock control stories with OUTCOME.yaml"
+      - "Vary metrics: gate_pass_rate (0.6-1.0), cycle_time (2-6 hours), tokens (100k-250k)"
+      - "Include edge cases: zero variance, outliers, identical distributions"
+      - "Include statistical scenarios: significant improvement, degradation, no difference"
+
+  - id: 19
+    description: "Test traffic routing with deterministic scenarios"
+    files:
+      - ".claude/agents/__tests__/pm-story-generation-leader-experiments.test.ts"
+    dependencies: [4, 5, 6]
+    slice: packages
+    notes:
+      - "Mock Math.random() for deterministic tests"
+      - "Test HP-2: Math.random() < traffic → treatment assignment"
+      - "Test HP-3: Math.random() >= traffic → control assignment"
+      - "Test EC-3: Overlapping eligibility → first match wins"
+      - "Test E-1: Missing experiments.yaml → default to control"
+      - "Test E-2: Malformed experiments.yaml → default to control"
+
+  - id: 20
+    description: "Test statistical analysis with known datasets"
+    files:
+      - ".claude/agents/__tests__/experiment-analyzer-stats.test.ts"
+    dependencies: [9, 10, 11]
+    slice: packages
+    notes:
+      - "Test scenario 1: Significant improvement (p < 0.05) → rollout recommendation"
+      - "Test scenario 2: Significant degradation (p < 0.05) → stop recommendation"
+      - "Test scenario 3: No difference (p > 0.05) → continue recommendation"
+      - "Test scenario 4: Maintained primary + improved secondary → expand_traffic"
+      - "Test edge case: Insufficient samples (< 10) → continue with low confidence"
+      - "Validate p-values against known test datasets (e.g., t-test calculators)"
+
+files_to_change:
+  - path: ".claude/schemas/experiment-schema.md"
+    action: create
+    reason: "AC-1: Define Zod schemas for experiments.yaml and EXPERIMENT-REPORT.yaml"
+
+  - path: ".claude/config/experiments.yaml"
+    action: create
+    reason: "AC-1: Configuration file for experiment definitions"
+
+  - path: ".claude/schemas/outcome-schema.md"
+    action: modify
+    reason: "AC-3: Extend OUTCOME.yaml schema with experiment_variant field"
+
+  - path: ".claude/agents/pm-story-generation-leader.agent.md"
+    action: modify
+    reason: "AC-2: Add traffic routing logic and variant assignment"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modify
+    reason: "AC-3: Propagate experiment_variant from story.yaml to OUTCOME.yaml"
+
+  - path: ".claude/agents/experiment-analyzer.agent.md"
+    action: create
+    reason: "AC-4, AC-5: Sonnet agent for statistical analysis and rollout recommendations"
+
+  - path: ".claude/commands/experiment-report.md"
+    action: create
+    reason: "AC-5: Command to trigger experiment analysis"
+
+  - path: ".claude/schemas/__tests__/experiment-schema.test.ts"
+    action: create
+    reason: "Test coverage for Zod schema validation"
+
+  - path: ".claude/agents/__tests__/pm-story-generation-leader-experiments.test.ts"
+    action: create
+    reason: "Test coverage for traffic routing logic"
+
+  - path: ".claude/agents/__tests__/experiment-analyzer-stats.test.ts"
+    action: create
+    reason: "Test coverage for statistical analysis correctness"
+
+  - path: "plans/future/workflow-learning/experiments/__tests__/mock-data/"
+    action: create
+    reason: "Mock OUTCOME.yaml files for testing (directory with fixtures)"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @claude/schemas"
+    when: "after schema changes"
+    required: true
+
+  - command: "pnpm test --filter @claude/agents"
+    when: "after agent changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Zod schema validation tests (experiment-schema.test.ts)"
+    evidence_type: test
+    steps: [1, 2, 17]
+
+  - ac_id: "AC-1"
+    planned_evidence: "experiments.yaml file accepts valid configurations"
+    evidence_type: file
+    steps: [2, 16]
+
+  - ac_id: "AC-2"
+    planned_evidence: "Traffic routing tests (pm-story-generation-leader-experiments.test.ts)"
+    evidence_type: test
+    steps: [4, 5, 6, 19]
+
+  - ac_id: "AC-2"
+    planned_evidence: "story.yaml with experiment_variant field"
+    evidence_type: file
+    steps: [6]
+
+  - ac_id: "AC-3"
+    planned_evidence: "OUTCOME.yaml schema extension (outcome-schema.md)"
+    evidence_type: file
+    steps: [3]
+
+  - ac_id: "AC-3"
+    planned_evidence: "Variant propagation in dev-documentation-leader"
+    evidence_type: file
+    steps: [7]
+
+  - ac_id: "AC-4"
+    planned_evidence: "Statistical analysis tests with known datasets (experiment-analyzer-stats.test.ts)"
+    evidence_type: test
+    steps: [9, 10, 20]
+
+  - ac_id: "AC-4"
+    planned_evidence: "Sample size checking logic in experiment-analyzer"
+    evidence_type: file
+    steps: [10]
+
+  - ac_id: "AC-5"
+    planned_evidence: "Rollout recommendation logic in experiment-analyzer"
+    evidence_type: file
+    steps: [11]
+
+  - ac_id: "AC-5"
+    planned_evidence: "EXPERIMENT-REPORT.yaml output schema"
+    evidence_type: file
+    steps: [12]
+
+  - ac_id: "AC-5"
+    planned_evidence: "/experiment-report command"
+    evidence_type: command
+    steps: [13]
+
+architectural_decisions: []
+  # No unresolved architectural decisions - all design questions answered in DEV-FEASIBILITY.md:
+  # - Control group selection: same calendar period (experiment.created_at to present)
+  # - Confidence threshold for rollout: minimum 'medium' confidence (p < 0.05, n >= 10)
+  # - Experiment lifecycle transitions: manual only (no auto-progression)
+
+complexity: moderate
+
+notes:
+  - "Statistical correctness is MVP-critical: must test t-test implementation against known datasets"
+  - "First match wins logic strictly enforced to prevent variant pollution"
+  - "Graceful degradation required: workflow continues if experiments.yaml missing or malformed"
+  - "Backward compatibility: legacy OUTCOME.yaml files without experiment_variant handled gracefully"
+  - "Control group selection: same calendar period as experiment (experiment.created_at to present)"
+  - "Rollout safety: only 'medium' or 'high' confidence allows rollout/expand_traffic recommendations"
+  - "Sample size enforcement: never make statistical claims with < 10 samples per variant"
+  - "Error handling: missing OUTCOME.yaml files skipped with logging (in-progress stories)"
+  - "Integration points are non-blocking: pm-story-generation-leader defaults to control if experiments unavailable"
+  - "Mock data required for testing: 20+ stories (10 treatment, 10 control) with varying metrics"
+  - "Test coverage includes: schema validation, traffic routing, statistical correctness, edge cases"
+  - "Per SCOPE.yaml: touches packages and contracts, no backend/frontend/db/ui changes"
+  - "Per DEV-FEASIBILITY.md: 95k tokens estimated (85k core + 10k risk mitigation)"
+  - "Per TEST-PLAN.md: 8 happy paths, 10 error cases, 14 edge cases documented"

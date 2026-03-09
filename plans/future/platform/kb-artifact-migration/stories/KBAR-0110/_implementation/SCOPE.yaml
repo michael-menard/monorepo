@@ -1,0 +1,47 @@
+schema: 1
+story_id: KBAR-0110
+timestamp: "2026-02-25T04:39:41Z"
+gen_mode: false
+
+touches:
+  backend: true        # New MCP tool handler in apps/api/knowledge-base
+  frontend: false      # No UI changes
+  packages: true       # Modifies apps/api/knowledge-base package
+  db: true             # Calls kb_write_artifact CRUD operation
+  contracts: true      # New Zod schema for artifact_write input
+  ui: false            # No UI components
+  infra: false         # No infrastructure changes
+
+touched_paths_globs:
+  - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+  - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+  - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+  - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+  - "apps/api/knowledge-base/src/mcp-server/__tests__/tool-handlers.test.ts"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false    # No DB schema changes
+  external_apis: false
+  security: false      # Inherits security from existing KB write patterns
+  performance: false   # No performance-critical operations added
+
+summary: "artifact_write MCP tool — dual-write to file + KB with graceful KB failure isolation"
+elaboration: "completed"
+
+dependencies:
+  blocking_on:
+    - KBAR-010         # Foundation MCP tools
+    - KBAR-0090        # Prior tool definitions merge
+  will_block:
+    - KBAR-0120        # Downstream artifact read tool
+    - KBAR-0130        # Artifact search tool
+
+subtasks:
+  - ST-1: "Verify canonical file_path computation rule"
+  - ST-2: "Add artifact_write schema to tool-schemas.ts"
+  - ST-3: "Implement handleArtifactWrite in tool-handlers.ts"
+  - ST-4: "Register tool in getToolDefinitions() and update mcp-integration.test.ts"
+  - ST-5: "Write comprehensive unit tests in tool-handlers.test.ts"
+  - ST-6: "Verify integration in mcp-integration.test.ts"

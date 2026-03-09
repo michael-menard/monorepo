@@ -19,6 +19,12 @@ import {
   planStoryLinks,
   storyDetails,
 } from '../db/schema.js'
+import {
+  StoryStateSchema,
+  StoryPhaseSchema,
+  StoryPrioritySchema,
+  StoryTypeSchema,
+} from '../__types__/index.js'
 
 // ============================================================================
 // Explicit column selectors — guard against schema-vs-DB drift
@@ -92,12 +98,6 @@ const storyDetailColumns = {
   fileHash: storyDetails.fileHash,
   updatedAt: storyDetails.updatedAt,
 } as const
-import {
-  StoryStateSchema,
-  StoryPhaseSchema,
-  StoryPrioritySchema,
-  StoryTypeSchema,
-} from '../__types__/index.js'
 
 // ============================================================================
 // Input Schemas

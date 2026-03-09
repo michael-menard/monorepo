@@ -14,6 +14,12 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { workState, workStateHistory } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
+import {
+  WorkPhaseSchema,
+  WorkConstraintSchema,
+  RecentActionSchema,
+  BlockerSchema,
+} from '../__types__/index.js'
 
 // Explicit column selectors — guard against schema-vs-DB drift
 const workStateColumns = {
@@ -36,12 +42,6 @@ const workStateHistoryColumns = {
   stateSnapshot: workStateHistory.stateSnapshot,
   archivedAt: workStateHistory.archivedAt,
 } as const
-import {
-  WorkPhaseSchema,
-  WorkConstraintSchema,
-  RecentActionSchema,
-  BlockerSchema,
-} from '../__types__/index.js'
 
 // ============================================================================
 // Input Schemas

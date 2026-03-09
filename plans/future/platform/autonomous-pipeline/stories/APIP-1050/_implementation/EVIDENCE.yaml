@@ -1,0 +1,385 @@
+schema: 1
+story_id: APIP-1050
+version: 1
+timestamp: "2026-02-25T19:20:00Z"
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: ReviewWorkerNameSchema z.enum with 10 worker names, ALL_REVIEW_WORKERS constant exported
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/types.ts
+        description: "ReviewWorkerNameSchema z.enum(['lint','style','syntax','typecheck','build','react','typescript','reusability','accessibility','security']), ALL_REVIEW_WORKERS constant, ReviewWorkerInputSchema, WorkerStateEntrySchema"
+
+  - ac_id: AC-2
+    ac_text: 10 workers each with ConfigSchema, factory function, WorkerResult return type
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-lint.ts
+        description: "ReviewLintConfigSchema, createReviewLintNode factory, WorkerResult return"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-style.ts
+        description: "ReviewStyleConfigSchema, createReviewStyleNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-syntax.ts
+        description: "ReviewSyntaxConfigSchema, createReviewSyntaxNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-typecheck.ts
+        description: "ReviewTypecheckConfigSchema, createReviewTypecheckNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-build.ts
+        description: "ReviewBuildConfigSchema, createReviewBuildNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-react.ts
+        description: "ReviewReactConfigSchema, createReviewReactNode factory with modelRouterOverride"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-typescript.ts
+        description: "ReviewTypescriptConfigSchema, createReviewTypescriptNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-reusability.ts
+        description: "ReviewReusabilityConfigSchema, createReviewReusabilityNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-accessibility.ts
+        description: "ReviewAccessibilityConfigSchema, createReviewAccessibilityNode factory"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-security.ts
+        description: "ReviewSecurityConfigSchema, createReviewSecurityNode factory with NodeCircuitBreaker"
+
+  - ac_id: AC-3
+    ac_text: Unit tests for static workers (lint/style/syntax/typecheck/build) with mock toolRunner injection
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-lint.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config validation"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-style.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config validation"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-syntax.test.ts
+        description: "8 tests including TSC error output parsing"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typecheck.test.ts
+        description: "7 tests: PASS/FAIL/timeout/disabled/mock injection/TSC parsing/config"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-build.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config validation"
+
+  - ac_id: AC-4
+    ac_text: Unit tests for LLM workers (react/typescript/reusability/accessibility) with mock modelRouterOverride
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-react.test.ts
+        description: "8 tests: PASS/FAIL/empty-response/timeout/disabled/mock injection/config/warnings"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typescript.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-reusability.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-accessibility.test.ts
+        description: "6 tests: PASS/FAIL/timeout/disabled/mock injection/config"
+
+  - ac_id: AC-5
+    ac_text: Security worker with NodeCircuitBreaker, token budget check, graceful FAIL on budget exceeded or circuit open
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-security.test.ts
+        description: "11 tests: budget-exceeded FAIL (not throw), circuit-breaker-open FAIL (not throw), happy path, timeout, disabled, mock injection, circuit success/failure recording, budget check failure graceful handling"
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/review/workers/review-security.ts
+        description: "TokenBudgetChecker runs before circuit breaker; both return FAIL WorkerResult (not throw); NodeCircuitBreaker imported from runner/circuit-breaker"
+
+  - ac_id: AC-6
+    ac_text: ReviewGraphStateAnnotation with workerResults/workerNames append reducers
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/review.ts
+        description: "ReviewGraphStateAnnotation uses Annotation.Root with append reducer for workerResults and workerNames, overwrite for all other fields"
+
+  - ac_id: AC-7
+    ac_text: Dispatcher uses Send API — all 10 workers reachable via addConditionalEdges(START, ...)
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "dispatcher fan-out tests: fans out to 10 workers, skips workersToSkip, returns Send instances (AC-7)"
+
+  - ac_id: AC-8
+    ac_text: Each worker has timeout test returning FAIL finding with timeout message
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-lint.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-style.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-syntax.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typecheck.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-build.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-react.test.ts
+        description: "Timeout test with real Promise.race; FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typescript.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-reusability.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-accessibility.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-security.test.ts
+        description: "Timeout test: FAIL verdict, findings[0].message contains 'timed out'"
+
+  - ac_id: AC-9
+    ac_text: Fan-in calls createReview, addWorkerResult, generateRankedPatches
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "fan-in aggregation tests: aggregates worker results, generates ranked_patches from FAIL findings, includes security ranked_patches"
+
+  - ac_id: AC-10
+    ac_text: RankedPatchSchema extended with changeSpecId field (nullable); fan-in maps by file-path matching
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/artifacts/review.ts
+        description: "RankedPatchSchema extended with changeSpecId: z.string().nullable().default(null)"
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "changeSpecId mapping tests: maps 'src/foo.ts' to matching changeSpecId, sets null when no match"
+
+  - ac_id: AC-11
+    ac_text: REVIEW.yaml written to featureDir/in-progress/storyId/_implementation/REVIEW.yaml after runReview completes
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "REVIEW.yaml write test: reviewYamlPath matches expected path, file exists on disk with story_id content"
+
+  - ac_id: AC-12
+    ac_text: createReviewGraph() compiles — pnpm check-types passes; integration test calls graph.compile()
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "npx tsc --noEmit (from orchestrator package dir)"
+        result: SUCCESS
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "createReviewGraph compiles without errors; returns compiled graph with invoke method"
+
+  - ac_id: AC-13
+    ac_text: runReview() exported from review.ts; returns ReviewGraphResult shape
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "runReview returns ReviewGraphResultSchema-valid result; storyId, verdict, durationMs, completedAt all present"
+
+  - ac_id: AC-14
+    ac_text: All-PASS → PASS verdict; one-FAIL → FAIL verdict
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "verdict logic tests: allPassWorkers → PASS; lint FAIL worker → FAIL; fan-in FAIL via direct state injection"
+
+  - ac_id: AC-15
+    ac_text: 10 worker test files each covering happy/fail/timeout/disabled/mock injection
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/
+        description: "10 test files, 60+ tests total across all workers, each covering: PASS, FAIL, timeout (AC-8), disabled/skipped, mock injection, config schema validation"
+
+  - ac_id: AC-16
+    ac_text: review.test.ts: compile, 10-worker reachability, fan-in, PASS/FAIL, disabled workers_skipped
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "22 integration tests: compile, 10 workers run, workers_skipped recorded, fan-in aggregation, FAIL propagates from 1/10 workers, changeSpecId mapping"
+
+  - ac_id: AC-17
+    ac_text: Thread ID convention per APIP ADR-001 — const threadId = storyId:review:attempt
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/review.ts
+        description: "const threadId = storyId:review:attempt — used in graph.invoke configurable thread_id"
+
+  - ac_id: AC-18
+    ac_text: ReviewGraphResultSchema exported from review.ts; runReview returns z.infer<typeof ReviewGraphResultSchema>
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/review.ts
+        description: "ReviewGraphResultSchema exported as z.object; ReviewGraphResult type exported; runReview return type is Promise<ReviewGraphResult>"
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+        description: "ReviewGraphResultSchema is valid Zod schema; validates correct result shape"
+
+touched_files:
+  - path: packages/backend/orchestrator/src/nodes/review/types.ts
+    action: created
+    description: "ReviewWorkerNameSchema (10-worker enum), ALL_REVIEW_WORKERS, ReviewWorkerInputSchema, WorkerStateEntrySchema"
+
+  - path: packages/backend/orchestrator/src/graphs/review.ts
+    action: created
+    description: "ReviewGraphStateAnnotation, createDispatcherNode (Send API), createFanInNode, createReviewGraph (real worker injection), runReview, ReviewGraphResultSchema"
+
+  - path: packages/backend/orchestrator/src/artifacts/review.ts
+    action: modified
+    description: "Extended RankedPatchSchema with changeSpecId: z.string().nullable().default(null); added changeSpecId: null to generateRankedPatches"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-lint.ts
+    action: created
+    description: "ESLint static analysis worker with LintToolRunner injection"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-style.ts
+    action: created
+    description: "Prettier check static analysis worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-syntax.ts
+    action: created
+    description: "TypeScript syntax check (tsc --noEmit) worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-typecheck.ts
+    action: created
+    description: "Full typecheck (pnpm check-types:all) worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-build.ts
+    action: created
+    description: "pnpm build static analysis worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-react.ts
+    action: created
+    description: "React patterns LLM review worker with modelRouterOverride"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-typescript.ts
+    action: created
+    description: "TypeScript idioms LLM review worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-reusability.ts
+    action: created
+    description: "Component reusability LLM review worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-accessibility.ts
+    action: created
+    description: "Accessibility (ARIA, keyboard nav) LLM review worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/review-security.ts
+    action: created
+    description: "Claude-tier security LLM review worker with NodeCircuitBreaker and token budget gate"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-lint.test.ts
+    action: created
+    description: "6 unit tests for lint worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-style.test.ts
+    action: created
+    description: "6 unit tests for style worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-syntax.test.ts
+    action: created
+    description: "8 unit tests for syntax worker (includes TSC output parsing)"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typecheck.test.ts
+    action: created
+    description: "7 unit tests for typecheck worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-build.test.ts
+    action: created
+    description: "6 unit tests for build worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-react.test.ts
+    action: created
+    description: "8 unit tests for react LLM worker (includes warnings test)"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-typescript.test.ts
+    action: created
+    description: "6 unit tests for typescript LLM worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-reusability.test.ts
+    action: created
+    description: "6 unit tests for reusability LLM worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-accessibility.test.ts
+    action: created
+    description: "6 unit tests for accessibility LLM worker"
+
+  - path: packages/backend/orchestrator/src/nodes/review/workers/__tests__/review-security.test.ts
+    action: created
+    description: "11 unit tests for security worker — budget exceeded, circuit breaker open, happy path, timeout, disabled, circuit recording"
+
+  - path: packages/backend/orchestrator/src/graphs/__tests__/review.test.ts
+    action: created
+    description: "22 integration tests covering all ACs — compile, fan-out, fan-in, PASS/FAIL verdict, REVIEW.yaml write, changeSpecId mapping, workers_skipped"
+
+commands_run:
+  - command: "npx turbo run test --filter @repo/orchestrator -- --reporter=verbose --run src/graphs/__tests__/review.test.ts"
+    result: SUCCESS
+    output: "22 passed (22)"
+    timestamp: "2026-02-25T19:15:30Z"
+
+  - command: "npx turbo run test --filter @repo/orchestrator -- --run (full suite)"
+    result: SUCCESS
+    output: "Test Files 144 passed | 1 skipped (145); Tests 3425 passed | 18 skipped (3443)"
+    timestamp: "2026-02-25T19:17:00Z"
+
+  - command: "npx tsc --noEmit (from orchestrator package dir)"
+    result: SUCCESS
+    output: "No errors"
+    timestamp: "2026-02-25T19:14:00Z"
+
+  - command: "npx turbo run build --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "7 successful, 7 total"
+    timestamp: "2026-02-25T19:18:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 3425
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "Backend-only story — no frontend surface touched, no browser-testable endpoints. Story implements LangGraph review graph nodes and workers (pure TypeScript orchestrator code)."
+  tests_written: false
+
+coverage:
+  note: "Coverage not measured separately; full suite 3425/3443 passing (18 pre-existing skips)"
+
+notable_decisions:
+  - "ARCH-001: REVIEW.yaml written via direct fs/yaml atomic write (temp→rename), NOT via YamlArtifactWriter — review artifact type not supported by persistence layer"
+  - "ARCH-002: changeSpecIds typed as string[] (opaque IDs per APIP-1020 not yet implemented)"
+  - "LangGraph Send API: dispatcher uses addConditionalEdges(START, fn) returning Send[], NOT addNode — nodes cannot return Send[] in LangGraph 0.2.74"
+  - "createReviewGraph() accepts optional workerOverrides for test injection without requiring process execution"
+  - "NodeCircuitBreaker for security worker: budget check runs first (fast), then circuit breaker gates the Claude call"
+  - "Thread ID convention: storyId:review:attempt per APIP ADR-001"
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 0, out: 0 }

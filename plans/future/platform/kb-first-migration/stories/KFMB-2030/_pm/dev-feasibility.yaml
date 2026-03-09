@@ -1,0 +1,94 @@
+feasible: true
+confidence: high
+rationale: >
+  This is a documentation-only story touching two markdown files:
+  .claude/commands/pm-bootstrap-workflow.md and .claude/docs/pm-bootstrap-workflow-reference.md.
+  No TypeScript, no build, no tests, no infrastructure changes required.
+  The edits are targeted and well-scoped: update phase prompts, remove stale filesystem references,
+  update the completion report, and update the kb_tools frontmatter list.
+  The primary risk is a dependency gate — this story must not be elaborated or implemented
+  until KFMB-2010 and KFMB-2020 are merged, as the command must accurately reflect the
+  post-migration agent contracts.
+complexity: low
+change_surface:
+  areas:
+    - .claude/commands/
+    - .claude/docs/
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: "Hard dependency on KFMB-2010 and KFMB-2020 — implementing before those stories merge means describing agent behavior that does not yet exist."
+    mitigation: "Gate elaboration and implementation on KFMB-2010 and KFMB-2020 reaching needs-code-review or later. Use their final agent files as the authoritative input for what the command prompts need to say."
+  - finding: "Overlap with KFMB-3010 on reference doc edits — both stories update stories.index.md references, but KFMB-2030 owns the bootstrap command and reference doc while KFMB-3010 owns other agents."
+    mitigation: "Coordinate scope explicitly: KFMB-2030 owns .claude/commands/pm-bootstrap-workflow.md and .claude/docs/pm-bootstrap-workflow-reference.md only. KFMB-3010 does not touch those files."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "Diff of .claude/commands/pm-bootstrap-workflow.md showing: Phase 0 prompt updated (kb_list_stories), Phase 2 prompt updated (kb_create_story, no stories.index.md), Done section updated, completion report updated, frontmatter kb_tools updated"
+  - "Diff of .claude/docs/pm-bootstrap-workflow-reference.md showing Artifacts table updated (stories.index.md row removed or annotated as File Mode only)"
+  - "File Mode sections in both files unchanged (verified by diff)"
+
+subtasks:
+  - id: ST-1
+    title: "Update pm-bootstrap-workflow.md frontmatter kb_tools list"
+    goal: "Add kb_create_story and kb_list_stories to the frontmatter kb_tools array"
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_modify:
+      - .claude/commands/pm-bootstrap-workflow.md
+    acs: ["AC-5"]
+    depends_on: none
+    verification: "Read frontmatter — kb_create_story and kb_list_stories present in kb_tools list"
+    estimated_tokens: 2000
+
+  - id: ST-2
+    title: "Update Phase 0 KB Mode prompt — collision detection via kb_list_stories"
+    goal: "Replace any reference to stories.index.md disk check in the Phase 0 KB Mode prompt with kb_list_stories"
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/agents/pm-bootstrap-setup-leader.agent.md
+    files_to_modify:
+      - .claude/commands/pm-bootstrap-workflow.md
+    acs: ["AC-1"]
+    depends_on: ST-1
+    verification: "Phase 0 KB Mode prompt describes kb_list_stories; no stories.index.md reference remains"
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: "Update Phase 2 KB Mode prompt — story insertion via kb_create_story"
+    goal: "Update Phase 2 prompt to reflect that stories are inserted via kb_create_story and no stories.index.md is written"
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/agents/pm-bootstrap-generation-leader.agent.md
+    files_to_modify:
+      - .claude/commands/pm-bootstrap-workflow.md
+    acs: ["AC-2"]
+    depends_on: ST-2
+    verification: "Phase 2 KB Mode prompt mentions kb_create_story; stories.index.md not listed as output"
+    estimated_tokens: 3000
+
+  - id: ST-4
+    title: "Update Done section and Completion Report in pm-bootstrap-workflow.md"
+    goal: "Remove pnpm migrate:stories as primary seeding mechanism from Done—KB Mode; remove stories.index.md from Files Created in KB Mode completion report"
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_modify:
+      - .claude/commands/pm-bootstrap-workflow.md
+    acs: ["AC-3", "AC-4"]
+    depends_on: ST-3
+    verification: "Done—KB Mode section and completion report no longer list stories.index.md or migrate:stories as primary; File Mode completion report unchanged"
+    estimated_tokens: 3000
+
+  - id: ST-5
+    title: "Update pm-bootstrap-workflow-reference.md Artifacts table"
+    goal: "Remove or annotate the stories.index.md row in the Artifacts table as File Mode only; update Troubleshooting if collision check wording changed"
+    files_to_read:
+      - .claude/docs/pm-bootstrap-workflow-reference.md
+    files_to_modify:
+      - .claude/docs/pm-bootstrap-workflow-reference.md
+    acs: ["AC-7"]
+    depends_on: ST-4
+    verification: "Artifacts table no longer lists stories.index.md unconditionally; row removed or annotated (File Mode only)"
+    estimated_tokens: 2500

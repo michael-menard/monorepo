@@ -1,0 +1,13 @@
+id: "KFMB-2040"
+title: "KB-Native Story Generation Pipeline"
+status: ready-for-qa
+priority: medium
+phase: 2
+feature: "Update story generation leader to discover stories via kb_list_stories, seed agent to write story_seed artifacts, update story rows with description/AC/non_goals via kb_update_story"
+goal: "The full story generation pipeline operates exclusively against the KB."
+depends_on: ["KFMB-1020", "KFMB-1030"]
+endpoints: []
+infrastructure: ["MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "Multiple agents involved; partial migration risks."
+sizing_warning: true
+created: "2026-02-26T00:00:00Z"

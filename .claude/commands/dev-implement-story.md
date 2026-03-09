@@ -61,27 +61,22 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 
 When `--gen` is specified, the command will:
 
-1. **Generate minimal story structure** - Creates basic `story.yaml` with provided context
+1. **Create minimal story in KB** - Calls `kb_create_story` with provided context; no files written
 2. **Skip elab phase** - Bypasses story elaboration and elab KB artifacts (analysis, elaboration)
 3. **Move directly to implementation** - Starts Phase 0 (dev-setup-leader) immediately
 
-**Story Structure Generated:**
+**KB Record Created:**
 
-```yaml
----
-story_id: "{STORY_ID}"
-title: "{provided or generated title}"
-status: "in-progress"
-created: "{ISO timestamp}"
-updated: "{ISO timestamp}"
-tags: []
-acceptance_criteria: []
-technical_notes: []
----
-
-# {STORY_ID}: {Title}
-
-[Story description provided by user or minimal placeholder]
+```javascript
+kb_create_story({
+  story_id: "{STORY_ID}",
+  title: "{provided or generated title}",
+  description: "[Story description provided by user or minimal placeholder]",
+  status: "in_progress",
+  phase: "implementation",
+  tags: [],
+  acceptance_criteria: [],
+})
 ```
 
 **When to use --gen:**
@@ -191,8 +186,7 @@ If the file or story row doesn't exist, skip silently.
 ```
 feature_dir = "{FEATURE_DIR}"
 story_id = "{STORY_ID}"
-story_path = f"{feature_dir}/in-progress/{story_id}/"
-# Note: artifacts stored in KB — no _implementation/ directory needed
+# Note: story data and artifacts stored in KB — no filesystem paths needed
 autonomy_level = flags.autonomous || "conservative"
 batch_mode = false  # true only when called from /workflow-batch
 gen_mode = flags.gen || false
@@ -204,11 +198,11 @@ skip_cohesion = flags.skip_cohesion || false
 
 **IF `--gen` flag is present:**
 
-1. **Check if story already exists**
-   ```bash
-   # Check for existing story in any stage
-   if exists({feature_dir}/*/{ story_id}/):
-       STOP: "Story {STORY_ID} already exists. Remove --gen flag or use different ID."
+1. **Check if story already exists in KB**
+   ```javascript
+   const existing = await kb_get_story({ story_id: "{STORY_ID}" })
+   if (existing !== null):
+       STOP: "Story {STORY_ID} already exists in KB. Remove --gen flag or use different ID."
    ```
 
 2. **Prompt user for story context** (if not in batch mode)
@@ -219,43 +213,22 @@ skip_cohesion = flags.skip_cohesion || false
    - Tags (optional, comma-separated)
    ```
 
-3. **Create story directory structure**
-   ```bash
-   mkdir -p {feature_dir}/in-progress/{story_id}
+3. **Create story in KB**
+   ```javascript
+   kb_create_story({
+     story_id: "{STORY_ID}",
+     title: "{user_provided_title or 'Generated Story'}",
+     description: "{user_provided_description or 'Auto-generated story for implementation.'}",
+     status: "in_progress",
+     phase: "implementation",
+     tags: [{user_provided_tags or []}],
+     acceptance_criteria: [],
+   })
    ```
 
-4. **Generate minimal story.yaml**
-   ```yaml
-   ---
-   story_id: "{STORY_ID}"
-   title: "{user_provided_title or 'Generated Story'}"
-   status: "in-progress"
-   created: "{ISO_TIMESTAMP}"
-   updated: "{ISO_TIMESTAMP}"
-   tags: [{user_provided_tags or []}]
-   acceptance_criteria: []
-   technical_notes: []
-   ---
-
-   # {STORY_ID}: {title}
-
-   {user_provided_description or 'Auto-generated story for implementation.'}
-
-   ## Implementation Notes
-
-   This story was generated using `--gen` flag and bypassed elaboration.
-   Add acceptance criteria and details as needed during implementation.
+4. **Report story generation**
    ```
-
-5. **Update feature index** (if exists)
-   ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=in-progress
-   ```
-
-6. **Report story generation**
-   ```
-   Story generated: {STORY_ID}
-   Location: {feature_dir}/in-progress/{STORY_ID}/
+   Story generated: {STORY_ID} (KB record created)
    Elaboration: SKIPPED (--gen mode)
 
    Proceeding to Phase 0 (setup)...
@@ -264,8 +237,8 @@ skip_cohesion = flags.skip_cohesion || false
 **IF `--gen` flag NOT present:**
 
 - Skip story generation
-- Expect story to exist in `ready-to-work/` stage (standard flow)
-- Validate story exists with elab artifacts
+- Expect story to exist in KB with state `ready` (standard flow)
+- Validate `kb_get_story({ story_id: "{STORY_ID}" })` returns non-null with elaboration artifact
 
 ### Step 1.3: Verify Worktree Context
 

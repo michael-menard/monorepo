@@ -1,0 +1,166 @@
+schema: 1
+story_id: "APIP-1020"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      Story scope is internally consistent and aligns with ADR-001 Decision 3 (which explicitly
+      documents the rewrite of APIP-1020 from "Diff Planner Node" to a research spike). However,
+      the stories.index.md still lists APIP-1020 as "Diff Planner Node in Implementation Graph" —
+      a stale title that mismatches the story file's "ChangeSpec Schema Design and Validation Spike".
+      The index description is a discoverability issue, not a scope mismatch in the story itself.
+      Dependencies (APIP-1010), gates (APIP-1030), phase (1), and status (In Elaboration) all match.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (validate ChangeSpec schema on 10+ stories, produce ADR-002) map cleanly to all 8 ACs.
+      Non-goals explicitly exclude integration code; AC-8 enforces this as a hard failing criterion.
+      Test plan covers all ACs: HP-1/HP-2/HP-3 cover AC-1; HP-4 covers AC-2; EC-1/EC-2/EC-3 and
+      ED-1/ED-2 cover AC-1/AC-5; HP-5/HP-6/MC-3 cover AC-6/AC-7; MC-1/MC-2 cover AC-2/AC-3/AC-4.
+      Minor: edge case numbering jumps from ED-2 to ED-4 (ED-3 is absent) — cosmetic gap only.
+      AC-8 is attributed to ST-6 in subtask decomposition, but AC-8 is a negative constraint ("no
+      integration code written"), not a deliverable produced by ST-6. This is a tagging issue only.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      All six canonical reuse references are verified against actual codebase files.
+      (1) FileChangeSchema and PlanStepSchema confirmed in packages/backend/orchestrator/src/artifacts/plan.ts.
+      (2) PlanSchema with z.literal(1) versioning confirmed in same file — exact pattern to copy.
+      (3) z.discriminatedUnion confirmed in packages/backend/orchestrator/src/runner/error-classification.ts
+      (uses instanceof dispatch pattern; discriminated union pattern is in the architecture notes as the
+      design goal, not a direct import — correctly noted as inspiration only).
+      (4) yaml-artifact-bridge.ts confirmed at packages/backend/orchestrator/src/persistence/yaml-artifact-bridge.ts.
+      (5) plan.test.ts confirmed at packages/backend/orchestrator/src/artifacts/__tests__/plan.test.ts.
+      (6) story.ts confirmed with StoryAcceptanceCriterionSchema for primary decomposition inputs.
+      Story correctly states "Do not import as-is" for FileChangeSchema — proper reuse discipline.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      N/A for spike. This story produces no transport layer: no Lambda handlers, no APIGW endpoints,
+      no API routes, no HTTP layer. The ChangeSpecSchema Zod artifact is inherently transport-agnostic.
+      Core schema logic (pure Zod) is fully decoupled from any future integration layer, which is the
+      correct preparation for downstream APIP-1030 integration stories.
+
+  - id: testability
+    status: PASS
+    note: >
+      All unit tests are concrete and executable. HP-1 through HP-3, EC-1 through EC-3, and ED-1
+      through ED-2 each specify setup/action/expected/evidence with a specific Vitest file target.
+      HP-4 (glob-read of decompositions/) correctly sequences after ST-4 creates the YAML files.
+      Run command is unambiguous: pnpm test --filter @repo/orchestrator -- change-spec.
+      Type-check command is unambiguous: pnpm check-types --filter @repo/orchestrator.
+      Manual cases (MC-1 through MC-3) have concrete step-by-step instructions and expected outputs.
+      HP-5/HP-6 and MC-1/MC-2/MC-3 cover spike deliverables (ADR existence, quality metrics) via
+      manual inspection — appropriate for a spike with documentation deliverables.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs in the story. The key open question — "APIP-1010 change_outline format is
+      undefined" — is explicitly identified in dev_feasibility.risks with a concrete mitigation:
+      document the assumption in ADR-002 and re-validate before APIP-1030 elaboration begins.
+      ADR-001 Decision 3 resolves the meta-question of why this story is a spike. The discriminated
+      union variant list (file_change, migration_change, config_change, test_change) is enumerated
+      in Architecture Notes, though framed as "evaluate variants" — the variants are already declared,
+      making this a minor wording ambiguity rather than a blocking decision gap.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Five distinct risks are documented across test_plan.risks (3) and dev_feasibility.risks (2),
+      covering: (1) subjective decomposition quality with rubric mitigation, (2) unit-only coverage
+      by design per ADR-001 Decision 3, (3) token cost estimation requiring live model calls,
+      (4) discriminated union design gating AC-1/AC-2 with "flat first, refactor to union" mitigation,
+      (5) APIP-1010 placeholder dependency with schema re-validation gate before APIP-1030.
+      RISK-002 from the epic index (poor ChangeSpec decompositions) is directly addressed by this
+      spike's existence and quality metrics deliverable. Risk coverage is thorough for a spike.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      8 ACs at the split_risk=0.5 boundary (predictions.split_risk=0.5, notes confirm this is
+      from ac_count=8). The model itself flags this. However, all 8 ACs are cohesive deliverables
+      of a single spike workflow: schema design (AC-1, AC-5), decompositions (AC-2, AC-3, AC-4),
+      and ADR publication (AC-6, AC-7, AC-8). Manual decomposition of 10+ stories is time-intensive
+      (~30 min each = ~5 hours minimum) but is timeboxed by design. Spike nature (3 points,
+      documentation-heavy, no implementation) justifies keeping together. Splitting would fragment
+      the research feedback loop. WARN is warranted but SPLIT is not required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      Six subtasks form a clean linear DAG: ST-1 (AC-1, AC-5) → ST-2 (AC-1, AC-5 tests) →
+      ST-3 (AC-2, AC-3 templates) → ST-4 (AC-2, AC-3, AC-4 decompositions) →
+      ST-5 (AC-4 consumer validation) → ST-6 (AC-5, AC-6, AC-7, AC-8 ADR).
+      All ACs are covered. Each subtask has files-to-read, files-to-create, ACs covered,
+      depends-on, verification command, and token estimate. Verification commands are runnable.
+      Minor: AC-8 ("no integration code written") is a project-wide negative constraint, not an
+      output of ST-6. Its assignment to ST-6 is acceptable as the final gate check but is
+      semantically a constraint, not a deliverable. Non-blocking.
+
+gaps: []
+
+opportunities:
+  - id: OPP-1
+    title: "Update stories.index.md APIP-1020 title to match story file"
+    description: >
+      The index lists APIP-1020 as "Diff Planner Node in Implementation Graph" but the story
+      is "ChangeSpec Schema Design and Validation Spike". While ADR-001 Decision 3 documents
+      the rewrite, the stale index title creates discoverability confusion for anyone scanning
+      the index. A one-line title update in stories.index.md would eliminate the mismatch.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "9b568bbd-4be3-4215-9140-754939064288"
+
+  - id: OPP-2
+    title: "Clarify AC-8 as a project-level constraint rather than ST-6 deliverable"
+    description: >
+      AC-8 ("spike does NOT produce any integration code") is a negative constraint enforced
+      throughout the spike, not something produced in ST-6. Annotating it as a cross-cutting
+      constraint (or attaching it to ST-1 where the schema file is created) would make subtask
+      AC coverage mapping more semantically precise.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "e2e96213-b6ee-455a-aa86-9132f5d2e0d3"
+
+  - id: OPP-3
+    title: "Fix ED-3 numbering gap in edge cases"
+    description: >
+      Edge case numbering jumps from ED-2 to ED-4 with no ED-3 defined. This is cosmetic but
+      can cause confusion in review comments referencing case IDs. Either add ED-3 or renumber
+      ED-4 to ED-3.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "dfdd3328-dd9e-46c8-a1d5-e63e54e93ddf"
+
+  - id: OPP-4
+    title: "Clarify 'evaluate variants' wording in Architecture Notes discriminated union section"
+    description: >
+      Architecture Notes says to 'Evaluate variants: file_change, migration_change, config_change,
+      test_change' but then immediately declares the four variants. The word 'evaluate' implies
+      the variant list is open, but ST-1 and AC-1 should treat these four as the starting set to
+      validate during decomposition. Changing 'evaluate variants' to 'design with variants' would
+      prevent an implementer from over-interpreting this as permission to invent new variants
+      before validating the four against real stories.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "7f86994c-e668-42da-be25-f38fafeb9907"
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-02-25T00:00:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0

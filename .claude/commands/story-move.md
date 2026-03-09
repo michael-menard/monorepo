@@ -21,18 +21,20 @@ Move a story directory to a different workflow stage within a feature directory.
 
 ## Valid Stages
 
-| Stage | Directory | Emoji | Typical Status |
-|-------|-----------|-------|----------------|
-| `backlog` | `{FEATURE_DIR}/backlog/` | ⏸️ | `backlog` |
-| `created` | `{FEATURE_DIR}/created/` | 🆕 | `created` |
-| `elaboration` | `{FEATURE_DIR}/elaboration/` | 📝 | `elaboration` |
-| `ready-to-work` | `{FEATURE_DIR}/ready-to-work/` | ⏳ | `ready-to-work` |
-| `in-progress` | `{FEATURE_DIR}/in-progress/` | 🚧 | `in-progress` |
-| `needs-code-review` | `{FEATURE_DIR}/needs-code-review/` | 👀 | `needs-code-review` |
-| `failed-code-review` | `{FEATURE_DIR}/failed-code-review/` | 🔴 | `failed-code-review` |
-| `ready-for-qa` | `{FEATURE_DIR}/ready-for-qa/` | 🔍 | `ready-for-qa` |
-| `failed-qa` | `{FEATURE_DIR}/failed-qa/` | ⚠️ | `failed-qa` |
-| `UAT` | `{FEATURE_DIR}/UAT/` | ✅ | `uat` |
+<!-- KSOT-3010: Stages are KB state values only — no stage-based directories -->
+
+| Stage | KB State | Emoji | Typical Status |
+|-------|----------|-------|----------------|
+| `backlog` | `backlog` | ⏸️ | `backlog` |
+| `created` | `backlog` | 🆕 | `created` |
+| `elaboration` | `in_progress` | 📝 | `elaboration` |
+| `ready-to-work` | `ready` | ⏳ | `ready-to-work` |
+| `in-progress` | `in_progress` | 🚧 | `in-progress` |
+| `needs-code-review` | `ready_for_review` | 👀 | `needs-code-review` |
+| `failed-code-review` | `failed_code_review` | 🔴 | `failed-code-review` |
+| `ready-for-qa` | `ready_for_qa` | 🔍 | `ready-for-qa` |
+| `failed-qa` | `failed_qa` | ⚠️ | `failed-qa` |
+| `UAT` | `in_qa` | ✅ | `uat` |
 
 ## Execution Steps
 
@@ -49,28 +51,19 @@ result = shimGetStoryStatus({ storyId: STORY_ID })
 
 **Directory fallback** (when shimGetStoryStatus returns null):
 
-Search all stage directories within `{FEATURE_DIR}` for `{STORY_ID}/`:
-- `{FEATURE_DIR}/backlog/{STORY_ID}/`
-- `{FEATURE_DIR}/created/{STORY_ID}/`
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/`
-- `{FEATURE_DIR}/ready-to-work/{STORY_ID}/`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-- `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
-- `{FEATURE_DIR}/failed-code-review/{STORY_ID}/`
-- `{FEATURE_DIR}/failed-qa/{STORY_ID}/`
-- `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
-- `{FEATURE_DIR}/UAT/{STORY_ID}/`
+<!-- KSOT-3010: Flat stories/ layout — no stage-based directories -->
+Search for the story in the flat stories directory:
+- `{FEATURE_DIR}/stories/{STORY_ID}/`
 
 If not found (neither DB nor directory): `MOVE FAILED: Story directory not found`
 
 ### 2. Validate Move
 
-Check target doesn't already exist:
-```
-{FEATURE_DIR}/{TO_STAGE}/{STORY_ID}/
-```
+<!-- KSOT-3010: No directory validation needed — story stays in stories/ dir.
+     Validate that the story isn't already in the target KB state. -->
+Check KB state: if story is already in the target state, skip.
 
-If exists: `MOVE FAILED: Story already exists in {TO_STAGE}`
+If already in target state: `MOVE SKIPPED: Already in {TO_STAGE}`
 
 ### 2.5. DB Write via shimUpdateStoryStatus (WINT-1060)
 
@@ -118,15 +111,14 @@ log warning: "No DB state for stage '{TO_STAGE}'. Skipping DB write."
 db_updated = skipped
 ```
 
-Proceed with directory mv regardless of DB outcome — the move is never blocked by DB availability.
+Proceed with KB state update — this is the authoritative state change.
 
-### 3. Execute Move
+### 3. Confirm State Change
 
-```bash
-mv {FEATURE_DIR}/{FROM_STAGE}/{STORY_ID} {FEATURE_DIR}/{TO_STAGE}/{STORY_ID}
-```
-
-This step executes unconditionally regardless of DB outcome in Step 2.5 (AC-2).
+<!-- KSOT-3010: No filesystem mv — stage transitions are KB state changes only.
+     Story directory remains at {FEATURE_DIR}/stories/{STORY_ID}/ -->
+No filesystem move is performed. The story directory stays at `{FEATURE_DIR}/stories/{STORY_ID}/`.
+The KB state update in Step 2.5 is the authoritative stage transition.
 
 ### 4. Update Status (if --update-status)
 
@@ -153,13 +145,13 @@ feature_dir: {FEATURE_DIR}
 story: {STORY_ID}
 from_stage: {FROM_STAGE}
 to_stage: {TO_STAGE}
-from_path: {FEATURE_DIR}/{FROM_STAGE}/{STORY_ID}/
-to_path: {FEATURE_DIR}/{TO_STAGE}/{STORY_ID}/
+# KSOT-3010: Story stays in flat stories/ dir — no filesystem move
+story_path: {FEATURE_DIR}/stories/{STORY_ID}/
 status_updated: true | false
 db_updated: true | false | skipped
 # db_updated values:
 #   true    - shimUpdateStoryStatus returned non-null (DB write succeeded)
-#   false   - shimUpdateStoryStatus returned null (DB unavailable); mv proceeded
+#   false   - shimUpdateStoryStatus returned null (DB unavailable)
 #   skipped - TO_STAGE has no DB state mapping (unmapped stage), OR --update-status was provided (DB write delegated to /story-update in Step 4)
 ```
 
@@ -192,14 +184,15 @@ backlog → created → elaboration → ready-to-work → in-progress → needs-
 
 ## Example Usage
 
+<!-- KSOT-3010: /story-move is now a KB state update — no filesystem move occurs -->
 ```bash
-# Move to in-progress for development
+# Transition to in-progress (KB state update only, story stays in stories/)
 /story-move plans/future/wishlist WISH-001 in-progress
 
-# Move to UAT and update status
+# Transition to UAT and update frontmatter status
 /story-move plans/future/wishlist WISH-001 UAT --update-status
 
-# Move to failed-qa after QA verification failure
+# Transition to failed-qa after QA verification failure
 /story-move plans/future/wishlist WISH-001 failed-qa --update-status
 ```
 

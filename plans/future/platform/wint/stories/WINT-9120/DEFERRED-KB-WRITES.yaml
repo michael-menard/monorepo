@@ -1,0 +1,24 @@
+deferred_at: "2026-03-02"
+reason: "KB MCP not available during story generation session"
+retry_after: "next-session"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-9120
+      feature: wint
+      title: "Create Workflow Parity Test Suite — Prove Functional Equivalence Between Claude Code and LangGraph Execution Paths"
+      story_dir: plans/future/platform/wint/backlog/WINT-9120
+      story_file: plans/future/platform/wint/backlog/WINT-9120/WINT-9120.md
+      story_type: feature
+      points: 5
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

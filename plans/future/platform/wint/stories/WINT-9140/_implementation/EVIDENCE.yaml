@@ -1,0 +1,139 @@
+schema: 1
+story_id: WINT-9140
+phase: implementation
+iteration: 1
+timestamp: '2026-03-03T21:15:00Z'
+summary: >-
+  Phase 9 parity validation complete. 18 it.todo() stubs replaced with executable tests.
+  51/51 parity tests passing. Zero blocking gaps. Sign-off document written.
+
+ac_evidence:
+  - ac_id: AC-1
+    status: passing
+    evidence_type: command
+    description: >-
+      Full parity suite run: 51 tests passing across 5 test files.
+      All 6 WINT-9110 workflow graphs (bootstrap, elab-epic, elab-story,
+      dev-implement, qa-verify, backlog-review) have matching/divergent/error
+      verdict tests with input/output comparison artifacts.
+    command: pnpm test --filter @repo/orchestrator -- --reporter=verbose src/__tests__/parity/
+    result: '5 test files passed, 51 tests passed, 0 failing'
+
+  - ac_id: AC-2
+    status: passing
+    evidence_type: command
+    description: >-
+      Baseline (pre-ST-2): 33 passing, 18 todo stubs.
+      Post-ST-2: 51 passing, 0 todo stubs.
+      Zero regressions: all 33 baseline tests still pass.
+    baseline_count: 33
+    post_count: 51
+    delta: +18
+    regressions: 0
+
+  - ac_id: AC-3
+    status: passing
+    evidence_type: file
+    description: >-
+      Deviation register in WINT-9140-PHASE9-SIGNOFF.md Section 2.
+      Zero blocking gaps found. Three acceptable deviations (DEV-001,
+      DEV-002, DEV-003) are pre-existing and documented in
+      known-divergences.parity.test.ts.
+    file: packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+  - ac_id: AC-4
+    status: passing
+    evidence_type: file
+    description: >-
+      Deviation register shows 0 open blocking gaps. All 3 acceptable
+      deviations are pre-existing (WINT-9120-era) with no new follow-up
+      stories required. Phase 9 WINT-9110 stub behaviors are not gaps
+      but intended injectable-stub design per WINT-9060/9070/9080.
+    file: packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+  - ac_id: AC-5
+    status: passing
+    evidence_type: file
+    description: >-
+      Sign-off document created at
+      packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md.
+      Contains: workflow matrix (Section 1), deviation register (Section 2),
+      migration doc spot-check (Section 3), formal sign-off statement (Section 4).
+    file: packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+  - ac_id: AC-6
+    status: pending
+    evidence_type: manual
+    description: >-
+      HiTL gate pending human operator review of WINT-9140-PHASE9-SIGNOFF.md.
+      Human must: (1) verify workflow matrix covers all Phase 9 workflows,
+      (2) verify deviation register is complete, (3) provide explicit confirmation.
+    file: packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+  - ac_id: AC-7
+    status: pending
+    evidence_type: manual
+    description: >-
+      KB entry for Phase 9 completion pending post-HiTL KB write.
+      entry_type: decision, tags: [langgraph, phase-9, sign-off, wint]
+
+  - ac_id: AC-8
+    status: pending
+    evidence_type: file
+    description: >-
+      stories.index.md WINT-9140 status update pending HiTL sign-off completion.
+
+  - ac_id: AC-9
+    status: passing
+    evidence_type: file
+    description: >-
+      Sign-off document Section 3 "Migration Documentation Spot-Check" reviews
+      docs/workflow/langgraph-migration.md. One material inaccuracy found:
+      Feature Comparison Table shows 6 WINT-9110 workflows as "Pending WINT-9120"
+      — these are now passing. Non-blocking; doc update recommended as follow-up.
+    file: packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+  - ac_id: AC-10
+    status: passing
+    evidence_type: command
+    description: >-
+      Confirmed: all 18 it.todo() stubs in wint9110-workflows.parity.test.ts
+      replaced before parity run. Zero todo stubs remain. ST-1 checklist met.
+    command: pnpm test --filter @repo/orchestrator -- --reporter=verbose src/__tests__/parity/wint9110-workflows.parity.test.ts
+    result: '18 tests passing, 0 todo'
+
+  - ac_id: AC-11
+    status: passing
+    evidence_type: command
+    description: >-
+      Baseline established before ST-2 run: 33 passing tests, 18 todo stubs.
+      Baseline scenario IDs: all tests in doc-sync, elaboration, story-creation,
+      known-divergences parity files. Recorded as pre-ST-2 activation baseline.
+    baseline_count: 33
+    baseline_todo: 18
+
+e2e_status: exempt
+e2e_exemption_reason: backend-only story (ADR-006)
+
+files_created:
+  - packages/backend/orchestrator/src/__tests__/parity/wint9110-workflows.parity.test.ts
+  - packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md
+
+files_modified: []
+
+blocking_issues: []
+
+notes:
+  - >-
+    All 18 it.todo() stubs replaced with executable tests following
+    doc-sync.parity.test.ts canonical pattern. Each of 6 graphs gets
+    matching/divergent/error verdict tests.
+  - >-
+    No blocking parity gaps found. Injectable stub pattern (WINT-9060/9070/9080)
+    produces expected null/stub outputs — these are correct behavior, not gaps.
+  - >-
+    langgraph-migration.md Feature Comparison Table needs update for 6 WINT-9110
+    rows (still shows "Pending WINT-9120"). Non-blocking doc cleanup recommended.
+  - >-
+    AC-6/AC-7/AC-8 remain pending HiTL confirmation and post-sign-off KB writes.
+    These are handled by the orchestrator after human review.

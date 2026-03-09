@@ -1,0 +1,87 @@
+schema: 1
+story_id: AC-2010
+timestamp: '2026-03-07T00:00:00Z'
+verdict: PASS
+branch_verified: story/AC-2010
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+    note: n/a — agent config files only
+  integration:
+    pass: 0
+    fail: 0
+    note: n/a — agent config files only
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt — agent config files only, no application code changed
+  http:
+    pass: 0
+    fail: 0
+    note: n/a — no endpoints touched
+coverage: null
+coverage_meets_threshold: true
+coverage_note: No application code changed; coverage threshold not applicable.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-1
+    verification_method: grep on story/AC-2010 branch
+    notes: >-
+      schema_version: 1 confirmed at line 222 of .claude/agents/dev-verification-leader.agent.md in fix_cycles entry
+      template. git show story/AC-2010:.claude/agents/dev-verification-leader.agent.md | grep -n 'schema_version' =>
+      '222:  - schema_version: 1'
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-2
+    verification_method: grep on story/AC-2010 branch
+    notes: >-
+      dev-documentation-leader no longer contains write instructions for fix_cycles. References are read-only notes
+      attributing canonical write to dev-verification-leader. Grep for 'Append to.*fix_cycles|MUST update
+      CHECKPOINT.*fix_cycles' returns 0 matches. Confirmed 4 occurrences of 'fix_cycles' are all read-only notes.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-3
+    verification_method: git ls-tree comparison between main and story/AC-2010
+    notes: >-
+      All 6 dev-documentation-leader backup files deleted on story branch (bak, bak2, backup2-5). One pre-existing
+      pm-story-generation-leader.agent.md.bak remains but it contains zero references to FIX-VERIFICATION-SUMMARY and is
+      out of scope for this story. AC-3 specifies dev-documentation-leader backups.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-4
+    verification_method: git diff main...story/AC-2010 on .claude/agents/
+    notes: >-
+      All FIX-VERIFICATION-SUMMARY references are removals (- lines) in the diff. Zero added (+ lines) references.
+      Confirmed grep across all active (non-backup) .md files in .claude/agents/ on story branch returns 0 matches.
+architecture_compliant: true
+architecture_notes: >-
+  Changes are limited to agent configuration markdown files. No application code, schema, or infrastructure was
+  modified. CHECKPOINT.yaml schema extension (fix_cycles with schema_version) is backward-compatible per story risk
+  notes.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      When deleting backup files (.bak, .backup*) as part of a story, pre-existing backup files for OTHER agents do not
+      need to be cleaned up — scope AC-3 language carefully to avoid ambiguity.
+    category: pattern
+    tags:
+      - agent-config
+      - cleanup
+      - scope
+  - lesson: >-
+      For agent-config-only changes, CI failures can still occur if regenerated doc files (e.g. MODEL-ASSIGNMENTS.md)
+      diverge from main. Always regenerate docs as a final step before code review.
+    category: time_sink
+    tags:
+      - ci
+      - documentation
+      - agent-config
+tokens:
+  in: 12000
+  out: 3000

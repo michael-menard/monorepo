@@ -1,5 +1,7 @@
 # Worktree Resolution Protocol
 
+> **See also:** `_shared/git-operations.md` — canonical source for all git conventions (branch naming, commit format, PR strategy, command reference, error handling principles).
+
 When stories are developed in git worktrees (e.g., `tree/story/WINT-1160/`), agents spawned via the Task tool run in the main repo root and cannot find story artifacts unless given the worktree path explicitly.
 
 ---
@@ -44,10 +46,10 @@ When `worktree_root` is provided (not null), agents MUST prefix all file paths w
 
 ```
 # Instead of:
-{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
+{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml
 
 # Use:
-{worktree_root}/{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
+{worktree_root}/{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml
 ```
 
 When running shell commands (`pnpm test`, `pnpm build`, `git`), `cd {worktree_root}` first.

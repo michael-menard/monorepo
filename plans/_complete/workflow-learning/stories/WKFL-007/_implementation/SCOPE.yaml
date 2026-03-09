@@ -1,0 +1,28 @@
+schema: 1
+story_id: WKFL-007
+timestamp: 2026-02-07T18:55:00Z
+
+touches:
+  backend: true         # Agent implementation, pattern loading, KB queries
+  frontend: false       # No UI changes
+  packages: true        # Zod schemas for prediction output
+  db: false             # No database changes
+  contracts: true       # Zod schemas for predictions
+  ui: false             # No UI components
+  infra: true           # PM pipeline integration
+
+touched_paths_globs:
+  - ".claude/agents/pm-story-risk-predictor.agent.md"
+  - ".claude/agents/_shared/**"
+  - "packages/backend/**"
+  - "plans/future/workflow-learning/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true    # KB MCP Server dependency, WKFL-006 dependency
+  security: false
+  performance: true      # Prediction latency affects PM pipeline UX
+
+summary: "Build a story risk predictor agent that runs during PM story generation and outputs split risk, review cycles, token estimates, and similar story references"

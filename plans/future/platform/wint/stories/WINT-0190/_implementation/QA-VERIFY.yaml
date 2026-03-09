@@ -1,0 +1,67 @@
+schema: 1
+story_id: "WINT-0190"
+timestamp: "2026-02-20T12:30:00.000Z"
+
+verdict: PASS
+
+tests_executed: false
+test_exempt: true
+test_exempt_reason: "story_type: docs/chore — pure schema and documentation artifacts, no runtime code"
+
+test_results:
+  unit: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true  # exempt - no runtime code
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Schema file confirmed at packages/backend/orchestrator/src/schemas/patch-plan.schema.json. Valid JSON. Uses $schema draft 2020-12, $id set to https://lego-moc-platform.com/schemas/patch-plan.schema.json, schema_version with pattern ^\\d+\\.\\d+\\.\\d+$, patches array maxItems:10, PatchStep in $defs with patch_type enum (types_schema/api/ui/tests/cleanup), max_files maximum:10, max_diff_lines maximum:300. All structural requirements met."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "RepairLoop in $defs confirmed with fix_only_referenced_errors (boolean), max_iterations (integer min:1 max:5), rerun_command (string). PatchStep required array is exactly [patch_type, description, max_files, max_diff_lines] — repair_loop absent from required array, confirming it is optional."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Example file confirmed at packages/backend/orchestrator/src/schemas/examples/patch-plan.example.json. Valid JSON, 11 lines (within 10-25 constraint). Demonstrates all 5 patch types in correct order: types_schema → api → ui → tests → cleanup. First step (types_schema) includes repair_loop with fix_only_referenced_errors:true, max_iterations:3."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "patch-queue-pattern.md confirmed at .claude/prompts/role-packs/_specs/patch-queue-pattern.md. Decision rule present (>1 layer or >1 concern). 2 positive examples present: (1) correctly ordered 3-step plan (types_schema→api→tests), (2) repair loop scoped to referenced errors — each well within 25 lines. 1 negative example present (mega-patch with max_files:25 and max_diff_lines:900). Default limit rationale documented in table. AJV validation command documented with exact schema path. Cross-reference to repair-loop-pattern.md present in header (line 6) and inline (line 137)."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "repair-loop-pattern.md confirmed at .claude/prompts/role-packs/_specs/repair-loop-pattern.md. Activation trigger documented (verification_command non-zero exit). fix_only_referenced_errors constraint clearly documented with explicit list of prohibited agent actions. Minimal changes requirement present. Rerun-until-green sequence documented with max_iterations guardrail (stop and escalate). 2 positive examples + 1 negative example present. Cross-reference to patch-queue-pattern.md present in header (line 6) and inline (line 113)."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Schema path matches WINT-0210 reference exactly: packages/backend/orchestrator/src/schemas/patch-plan.schema.json. Example is 11 lines (10-25 constraint satisfied). All 5 patch types demonstrated in types_schema→api→ui→tests→cleanup order. AJV validation steps documented in patch-queue-pattern.md with exact npx ajv validate command including schema path and data path reference."
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record: []
+
+tokens:
+  in: 0
+  out: 0
+
+gate:
+  decision: PASS
+  reason: "All 6 ACs verified, all touched files spot-checked, architecture compliant, test exempt (docs/chore)"
+  blocking_issues: []

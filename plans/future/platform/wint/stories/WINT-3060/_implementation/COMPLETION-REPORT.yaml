@@ -1,0 +1,73 @@
+schema: 1
+story_id: WINT-3060
+title: "Create Telemetry Query Command (/telemetry)"
+phase: qa_verification
+status: complete
+completed_at: '2026-03-09T21:30:00.000Z'
+
+verdict: PASS
+reason: QA verification completed successfully. All 9 acceptance criteria verified, all test cases passed. Telemetry command file is production-ready.
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    notes: Frontmatter with type=utility, permission_level=docs-only, created, updated, version validated
+  - ac_id: AC-2
+    status: PASS
+    notes: workflow_get_story_telemetry MCP call with formatted table output verified
+  - ac_id: AC-3
+    status: PASS
+    notes: Empty result handling validated (graceful message, no raw null)
+  - ac_id: AC-4
+    status: PASS
+    notes: Connection error handling with port 5433 reference verified
+  - ac_id: AC-5
+    status: PASS
+    notes: Required --story flag validation and usage hint verified
+  - ac_id: AC-6
+    status: PASS
+    notes: Invocations table format (agent_name, status, duration_ms, model_name, 20-row cap) validated
+  - ac_id: AC-7
+    status: PASS
+    notes: Decisions table format (decision_type, decision_text 80-char truncation, operator_id) verified
+  - ac_id: AC-8
+    status: PASS
+    notes: --limit N flag documentation verified
+  - ac_id: AC-9
+    status: PASS
+    notes: Three completion signals (TELEMETRY RENDERED/EMPTY/ERROR) defined and verified
+
+delivery_checklist:
+  - item: Command file exists at .claude/commands/telemetry.md
+    status: PASS
+    verified: '2026-03-09'
+  - item: Frontmatter schema valid
+    status: PASS
+    verified: '2026-03-09'
+  - item: All 9 ACs verified
+    status: PASS
+    verified: '2026-03-09'
+  - item: Error handling paths complete
+    status: PASS
+    verified: '2026-03-09'
+  - item: Architecture compliant
+    status: PASS
+    verified: '2026-03-09'
+
+pr_link: "https://github.com/michael-menard/monorepo/pull/508"
+pr_status: merged
+
+notes: |
+  WINT-3060 is a docs-only story. The entire deliverable is a single markdown file
+  (.claude/commands/telemetry.md) that serves as a utility command specification.
+
+  QA verification consisted of:
+  - Static file content inspection against all 9 acceptance criteria
+  - Architecture compliance check (no barrel files, docs-only, valid frontmatter)
+  - Error handling path verification
+  - Completion signal documentation validation
+
+  All verifications PASS. Story is production-ready and moves to UAT completion.
+
+verified_by: qa-verify-completion-leader
+verification_timestamp: '2026-03-09T21:30:00.000Z'

@@ -1,0 +1,84 @@
+schema: 1
+story_id: WINT-4070
+timestamp: "2026-03-09T17:36:46Z"
+iteration: 2
+verdict: PASS
+workers_run:
+  - typecheck
+  - build
+  - lint
+  - style
+  - syntax
+  - security
+  - reusability
+  - react
+  - typescript
+  - accessibility
+workers_skipped: []
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+ranked_patches: []
+findings:
+  lint:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  style:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  syntax:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  security:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  typecheck:
+    verdict: PASS
+    exempt: true
+    reason: "docs-only story - no .ts/.tsx files in touched_files"
+    errors: 0
+    warnings: 0
+    findings: []
+  build:
+    verdict: PASS
+    exempt: true
+    reason: "docs-only story - no compilable code"
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  react:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  typescript:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true
+  accessibility:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    carried_forward: true

@@ -30,9 +30,9 @@ From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 
-From filesystem:
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` — written by elab-analyst (audit, gaps, opportunities, preliminary_verdict)
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md`
+From KB (authoritative):
+- `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })` — written by elab-analyst (audit, gaps, opportunities, preliminary_verdict)
+- `kb_get_story({ story_id: "{STORY_ID}" })` — story data including acceptance criteria
 
 ---
 
@@ -93,7 +93,7 @@ If `ELAB.yaml` `preliminary_verdict` is `SPLIT_REQUIRED`:
 
 ### Step 1: Parse Analysis
 
-Read `_implementation/ELAB.yaml`. Extract:
+Read elaboration artifact from KB: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })`. Extract from `content`:
 
 ```yaml
 audit:       # array of {id, status, note}
@@ -143,13 +143,11 @@ decisions:
 
 For each `action: add_ac`:
 
-1. Read current `{STORY_ID}.md`
-2. Find highest AC number in `## Acceptance Criteria`
-3. Append new AC:
-   ```markdown
-   ### AC {N}: {Gap Title}
-   - [ ] {Required fix from gap}
-   _Added by autonomous elaboration_
+1. Read current story from KB: `kb_get_story({ story_id: "{STORY_ID}" })`
+2. Find highest AC number in `acceptance_criteria`
+3. Call `kb_update_story` (or equivalent KB mutation) to append the new AC:
+   ```
+   AC {N}: {Gap Title} — {Required fix from gap} (Added by autonomous elaboration)
    ```
 
 ### Step 5: Execute KB Writes
@@ -184,9 +182,9 @@ Based on decisions made:
 | Unresolvable audit failures (Scope, Consistency) | FAIL |
 | Story sizing triggered split | SPLIT REQUIRED |
 
-### Step 7: Write Decisions Back to ELAB.yaml
+### Step 7: Write Decisions Back to KB elaboration artifact
 
-Update `_implementation/ELAB.yaml` with decision outcomes:
+Update the elaboration KB artifact via `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration", phase: "planning", content: { ...original, ...decisions } })` with decision outcomes:
 
 For each gap: set `gaps[].decision` to `add_ac` or `out_of_scope`; set `gaps[].ac_added` to `"AC-N: description"` if added.
 For each opportunity: set `opportunities[].decision` to `log_to_kb`, `defer`, or `out_of_scope`; set `opportunities[].kb_entry_id` to the returned KB entry ID.
@@ -209,9 +207,9 @@ summary:
 ## Output
 
 Primary outputs:
-- Updated `_implementation/ELAB.yaml` — verdict, decided_at, summary, and decision fields on each gap/opportunity
-- Modified `{STORY_ID}.md` - with added ACs (if any)
-- KB entries - for non-blocking opportunities
+- Updated elaboration KB artifact (via `kb_write_artifact`) — verdict, decided_at, summary, and decision fields on each gap/opportunity
+- Updated story KB record (via `kb_update_story` or equivalent) — with added ACs (if any)
+- KB entries (via `kb_add`) — for non-blocking opportunities
 
 ---
 
@@ -258,7 +256,7 @@ If ELAB.yaml `gaps[]` and `opportunities[]` are both empty:
 - Do NOT skip KB writes for non-blocking items
 - Do NOT modify story scope - only add ACs for MVP gaps
 - Do NOT auto-resolve Scope Alignment or Internal Consistency failures
-- MUST update `_implementation/ELAB.yaml` with verdict + decisions before completion signal
+- MUST update elaboration KB artifact via `kb_write_artifact` with verdict + decisions before completion signal
 - MUST spawn kb-writer for each non-blocking opportunity
 
 ---

@@ -1,0 +1,109 @@
+schema: 1
+story_id: WINT-0240
+iteration: 1
+timestamp: "2026-02-21T05:14:37Z"
+verdict: PASS
+summary: "WINT-0240 implementation PASSES code quality review. All 9 ACs verified. Shell scripts are well-structured POSIX bash with proper error handling (set -e, exit codes, command -v checks). Documentation is comprehensive with VRAM table, reconciled discrepancies (ARCH-001/002/003), environment variables section, and Recommended Minimum Hardware. No blocking issues."
+
+findings:
+  - id: F-001
+    severity: info
+    file: "scripts/setup-ollama-models.sh"
+    issue: "Script correctly uses set -e and POSIX conventions throughout. check_ollama_installed() and check_ollama_server() follow pattern from canonical reference (packages/backend/orchestrator/setup-ollama.sh)."
+    suggestion: "No action needed."
+    auto_fixable: false
+
+  - id: F-002
+    severity: info
+    file: "scripts/check-ollama-health.sh"
+    issue: "Health check correctly mirrors OllamaProvider.checkAvailability() GET /api/tags pattern. REQUIRED_MODELS list aligned with model-assignments.yaml. Exit codes strictly POSIX (0/1 only)."
+    suggestion: "No action needed."
+    auto_fixable: false
+
+  - id: F-003
+    severity: info
+    file: "docs/tech-stack/ollama-model-fleet.md"
+    issue: "Documentation comprehensive: VRAM table with 7 models (all model-assignments.yaml Ollama entries covered), tier assignments, reconciled discrepancies (ARCH-001/002/003), Recommended Minimum Hardware, Environment Variables section with all 4 vars."
+    suggestion: "No action needed."
+    auto_fixable: false
+
+  - id: F-004
+    severity: info
+    file: "packages/backend/orchestrator/setup-ollama.sh"
+    issue: "Deprecation notice added at top of file. Points to scripts/setup-ollama-models.sh. No model pull logic duplication."
+    suggestion: "No action needed."
+    auto_fixable: false
+
+ranked_patches: []
+
+qa_checklist:
+  - item: "TypeScript compilation"
+    status: PASS
+    notes: "Not applicable — scripting/infra story. No TypeScript files created or modified."
+
+  - item: "Shell script syntax"
+    status: PASS
+    notes: "Scripts use POSIX bash conventions. set -e, proper quoting, no eval/dynamic execution. Follows architecture notes from story spec."
+
+  - item: "Executability"
+    status: PASS
+    notes: "Both scripts have -rwxr-xr-x permissions (chmod +x). Verified via ls -la."
+
+  - item: "Shebang lines"
+    status: PASS
+    notes: "#!/usr/bin/env bash on both scripts per AC-1."
+
+  - item: "Env var handling"
+    status: PASS
+    notes: "${OLLAMA_BASE_URL:-http://127.0.0.1:11434} pattern used throughout. No hardcoded URLs without fallback."
+
+  - item: "Exit codes"
+    status: PASS
+    notes: "Strictly POSIX: exit 0 (success/healthy), exit 1 (failure/unhealthy). No other exit codes used."
+
+  - item: "Documentation completeness"
+    status: PASS
+    notes: "All 4 env vars documented in --help and ollama-model-fleet.md. VRAM table covers all 7 models. Reconciled discrepancies documented."
+
+  - item: "Acceptance criteria coverage"
+    status: PASS
+    notes: "All 9 ACs verified per EVIDENCE.yaml: AC-1 through AC-9 all PASS."
+
+  - item: "Security"
+    status: PASS
+    notes: "No eval/dynamic execution. Static model arrays only. No secrets or credentials. curl -sf (silent + fail on error) used correctly."
+
+  - item: "Model alignment with WINT-0220-STRATEGY.yaml"
+    status: PASS
+    notes: "All Tier 2/3 models included. ARCH-001/002/003 discrepancies documented in both script comments and docs."
+
+evidence_summary:
+  files_reviewed: 4
+  files_passing: 4
+  critical_issues: 0
+  high_issues: 0
+  medium_issues: 0
+  low_issues: 0
+  info_items: 4
+
+decision: |
+  WINT-0240 implementation PASSES code review and quality gates.
+
+  Rationale:
+  - All 9 acceptance criteria satisfied (EVIDENCE.yaml)
+  - Shell scripts follow POSIX conventions with proper error handling
+  - Model fleet aligned with WINT-0220-STRATEGY.yaml; discrepancies documented
+  - Documentation comprehensive: VRAM table, env vars, reconciled discrepancies, hardware recommendations
+  - Existing setup-ollama.sh superseded with deprecation notice
+  - No TypeScript, no linting required — scripting/infra story
+  - PR #374 merged to main 2026-02-21
+
+  Implementation is ready for QA verification.
+
+metadata:
+  reviewer: "Claude Code"
+  review_date: "2026-02-21"
+  compliance: "CLAUDE.md"
+  story_type: "chore/infra"
+  iteration_count: 1
+  pr_number: 374

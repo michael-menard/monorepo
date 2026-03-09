@@ -1,0 +1,26 @@
+schema: 1
+story_id: WKFL-006
+timestamp: '2026-02-07T20:50:00-07:00'
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - '.claude/agents/**'
+  - 'packages/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: 'Create pattern-miner agent for cross-story analysis and output PATTERNS-{month}.yaml, ANTI-PATTERNS.md, AGENT-HINTS.yaml'

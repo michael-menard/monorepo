@@ -1,0 +1,123 @@
+schema: 1
+story_id: WINT-3040
+timestamp: '2026-03-09T22:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 1247
+    fail: 15
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+test_notes: >-
+  15 individual test failures across 4 test files — all pre-existing on main branch before WINT-3040. Confirmed
+  identical failure set to EVIDENCE.yaml baseline. Zero regressions introduced. Docs-only story touches no code.
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: >-
+  Docs-only story (single SKILL.md deliverable). No code added or modified. Coverage threshold does not apply;
+  pre-existing coverage unaffected.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[0]
+    notes: >-
+      SKILL.md confirmed at .claude/skills/telemetry-decision/SKILL.md on branch story/WINT-3040. Frontmatter contains:
+      created, updated, version, name, description, kb_tools. Sections present: Usage, Arguments, Task, Output, Error
+      Handling, Examples. Verified by direct git show read.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[1]
+    notes: >-
+      Arguments table documents all 6 fields: decisionType (required, enum approve/reject/request_changes/escalate),
+      decisionText (required), storyId (required), operatorId (required), invocationId (optional UUID), context
+      (optional JSON object). Verified by reading SKILL.md Arguments section.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[2]
+    notes: >-
+      Task section Step 2 explicitly calls text-embedding-3-small with dimensions: 1536 BEFORE calling the MCP tool
+      (Step 3). Embedding input is decisionText concatenated with JSON.stringify(context). Verified by grep on SKILL.md.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[3]
+    notes: >-
+      Task section Step 4 documents fallback: if OpenAI unavailable or returns error, call workflow_log_decision WITHOUT
+      embedding field, then report warning to operator. Decision is not blocked. Verified by reading SKILL.md Task
+      section.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[4]
+    notes: >-
+      Error Handling section specifies: 'Report the full error text to the operator. Do NOT silently fail.' Example
+      error format shown. Verified by grep on SKILL.md.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[5]
+    notes: >-
+      Two worked examples present: Example 1 (approve with full context + embedding, happy path), Example 2
+      (request_changes, OpenAI unavailable, degraded path with embedding=NULL). Both examples include execution trace
+      and SQL verification queries.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[6]
+    notes: >-
+      Error Handling section 'DB not running (lego_dev on port 5432)' explicitly states hitl_decisions is in lego_dev on
+      port 5432, NOT the KB database (port 5433). Verified by grep on SKILL.md.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[7]
+    notes: >-
+      Frontmatter kb_tools field lists mcp__knowledge-base__workflow_log_decision as sole entry. Verified by reading
+      frontmatter.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence[8]
+    notes: >-
+      pnpm test --filter @repo/knowledge-base executed: 4 test files failed / 50 passed (54 total), 15 individual test
+      cases failed / 1247 passed. All 15 failures are pre-existing (connection-pooling, story-crud-operations,
+      mcp-integration, mcp-protocol-errors) and match the baseline from EVIDENCE.yaml. Docs-only story introduces zero
+      code changes.
+architecture_compliant: true
+architecture_notes: >-
+  Docs-only story. Single SKILL.md deliverable. Correctly delegates to existing
+  mcp__knowledge-base__workflow_log_decision MCP tool. No new MCP tools, no Lambda changes, no DB schema changes.
+  Embedding generated at skill/Claude layer (not MCP handler layer) per architecture note in story file.
+issues: []
+e2e_exempt: true
+e2e_exempt_reason: >-
+  Docs-only story — no UI, no Lambda, no API routes touched. Story type is feature but delivers only a SKILL.md
+  documentation file.
+lessons_to_record:
+  - lesson: >-
+      For docs-only stories delivering SKILL.md files, the deliverable lives on the feature branch and is not visible
+      from main. QA verification must use git show <branch>:<path> to read the file rather than reading from the working
+      tree.
+    category: pattern
+    tags:
+      - qa
+      - docs-only
+      - skill-files
+      - git
+  - lesson: >-
+      EVIDENCE.yaml test counts for @repo/knowledge-base use test file counts (15 files failed, 39 files passed) while
+      vitest output shows individual test case counts (15 tests failed, 1247 passed). Both representations are
+      consistent — 54 total test files, 15 pre-existing failures.
+    category: pattern
+    tags:
+      - testing
+      - knowledge-base
+      - pre-existing-failures
+tokens:
+  in: 18000
+  out: 3000

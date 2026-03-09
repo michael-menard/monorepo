@@ -1,0 +1,124 @@
+schema: 1
+story_id: WISH-2019
+updated: 2026-02-01T20:52:37.284Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 377
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    notes: No dedicated integration tests - infrastructure story uses unit tests with mocks
+  e2e:
+    pass: 0
+    fail: 0
+    notes: N/A - no UI changes
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: |
+      - package.json includes ioredis@5.4.2 (apps/api/lego-api/package.json:23)
+      - Redis client in apps/api/lego-api/core/cache/redis-client.ts
+      - Connection pooling (ioredis default), 2s timeout (line 36), auto-reconnect (line 46-51)
+      - Tests verify config: redis-client.test.ts lines 39-53
+  - id: AC2
+    verdict: pass
+    evidence: |
+      - Full implementation: apps/api/lego-api/domains/config/adapters/redis-cache.ts
+      - get() method: lines 86-113
+      - set() method: lines 119-146
+      - delete() via invalidate(): lines 182-198
+      - Tests verify operations: redis-cache.test.ts lines 117-229
+  - id: AC3
+    verdict: pass
+    evidence: |
+      - All Redis operations wrapped in try-catch (redis-cache.ts lines 91-112, 124-146, 157-176, 186-197)
+      - Returns null on error for get() (line 111), silently fails for set()/delete()
+      - Uses @repo/logger for structured error logging (lines 107-110, 141-144, 191-196)
+      - Error handling tests: redis-cache.test.ts lines 232-274 (4 error tests pass)
+  - id: AC4
+    verdict: pass
+    evidence: |
+      - Service layer loadFlags() function: services.ts lines 57-78
+      - Awaits cache.get() (line 59), falls back to DB on null (line 65)
+      - Populates cache after DB read (line 69 - fire-and-forget)
+      - Tests verify cache miss returns null triggering DB fallback: redis-cache.test.ts lines 152-154
+  - id: AC5
+    verdict: pass
+    evidence: |
+      - lazyConnect: false in redis-client.ts line 37 (eager connection)
+      - Test verifies config: redis-client.test.ts line 49
+      - getRedisClient() singleton pattern: redis-client.ts lines 93-106
+  - id: AC6
+    verdict: pass
+    evidence: |
+      - retryStrategy with exponential backoff: redis-client.ts lines 46-51
+      - 100ms base delay, max 2000ms
+      - Test verifies backoff calculation: redis-client.test.ts lines 75-89
+      - maxRetriesPerRequest: 3 (line 35)
+  - id: AC7
+    verdict: pass
+    evidence: |
+      - TTL conversion ms to seconds: redis-cache.ts line 130 (Math.ceil(ttlMs / 1000))
+      - Uses Redis SETEX command with TTL (line 131)
+      - Test verifies TTL: redis-cache.test.ts lines 118-126 (300000ms = 300s)
+      - Service layer uses 5-minute TTL: services.ts line 23
+  - id: AC8
+    verdict: pass
+    evidence: |
+      - updateFlag() calls cache.invalidate() after DB update: services.ts line 228
+      - invalidate() uses Redis DEL: redis-cache.ts lines 182-198
+      - Tests verify invalidation: redis-cache.test.ts lines 198-217
+      - invalidateAll() uses SCAN pattern: redis-cache.ts lines 205-238
+  - id: AC9
+    verdict: deferred
+    evidence: Infrastructure AC - requires AWS deployment. Out of MVP scope per story notes.
+  - id: AC10
+    verdict: deferred
+    evidence: Load testing AC - requires production environment. Out of MVP scope per story notes.
+  - id: AC11
+    verdict: pass
+    evidence: |
+      - docker-compose.yml created: apps/api/lego-api/docker-compose.yml
+      - Redis 7.2-alpine image (line 19)
+      - Port 6379 exposed (line 22)
+      - Health check configured (lines 26-30)
+      - Volume for persistence (line 24)
+  - id: AC12
+    verdict: deferred
+    evidence: AWS billing AC - requires production deployment. Out of MVP scope per story notes.
+  - id: AC13
+    verdict: deferred
+    evidence: Deployment AC - requires production pipeline. Out of MVP scope per story notes.
+  - id: AC14
+    verdict: pass
+    evidence: |
+      - routes.ts lines 32-33: getRedisClient() then createRedisCacheAdapter() or createInMemoryCache()
+      - Service instantiation with cache: routes.ts line 42
+      - Constructor injection: services.ts lines 27-38 (receives cache via deps)
+      - Tests verify DI pattern works: services.test.ts uses both cache types
+  - id: AC15
+    verdict: pass
+    evidence: |
+      - Key pattern function: redis-cache.ts lines 26-28 (feature_flags:{environment})
+      - Test verifies pattern: redis-cache.test.ts lines 118-126 (expects 'feature_flags:production')
+      - Matches WISH-2009 spec per story requirements
+  - id: AC16
+    verdict: pass
+    evidence: |
+      - .env.local exists (verified via file check)
+      - getRedisClient() reads process.env.REDIS_URL: redis-client.ts line 94
+      - Returns null if not set (graceful fallback): lines 96-99
+      - Tests verify null handling: redis-client.test.ts lines 120-126
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.284Z
+  blocking_issues: []

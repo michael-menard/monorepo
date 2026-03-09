@@ -315,8 +315,8 @@ From orchestrator:
 - `story_id`: Story ID (e.g., WISH-001)
 
 Read from:
-- `{feature_dir}/elaboration/{story_id}/{story_id}.md` - Story document
-- `{feature_dir}/elaboration/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
+- `{feature_dir}/stories/{story_id}/{story_id}.md` - Story document
+- `{feature_dir}/stories/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
 - `docs/architecture/api-layer.md` - Architecture rules
 - `docs/architecture/ARCHITECTURE-REVIEW.md` - If exists (recent review)
 
@@ -365,7 +365,7 @@ For any code changes:
 
 ## Output
 
-Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.md`
+Write to: `{feature_dir}/stories/{story_id}/_implementation/ARCHITECT-NOTES.md`
 
 ```markdown
 # Architectural Review - {STORY_ID}

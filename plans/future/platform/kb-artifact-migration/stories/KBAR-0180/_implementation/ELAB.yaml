@@ -1,0 +1,174 @@
+schema: 1
+story_id: "KBAR-0180"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      Story scope — one file (review-aggregate-leader.agent.md) — is narrower than what
+      stories.index.md KBAR-018 states: "Update all code-review-*.agent.md files to use
+      artifact_write for REVIEW artifacts." The story justifies this narrowing with direct
+      grep evidence: only review-aggregate-leader.agent.md calls kb_write_artifact in the
+      code review agent family; the 10 worker agents do not write REVIEW artifacts. The
+      narrowing is empirically correct and explicitly documented in the story's Scope section,
+      Non-Goals, and dev_feasibility.scope_confirmation. The index entry description is
+      imprecise but does not reflect a scope expansion — the story's analysis is correct.
+      WARN (not FAIL): index description should be updated to reflect the actual file scope
+      at story completion, but this does not block implementation.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals do not contradict Non-goals. Non-goals explicitly exclude migrating the 10
+      worker agents, migrating dev-execute-leader/QA agents, implementing artifact_write
+      itself, changing REVIEW content structure, removing kb_search/kb_add_lesson/
+      kb_add_decision from code-review-security, removing kb_write_artifact from MCP server,
+      adding unit tests, and touching any TypeScript files. AC-1 through AC-7 are fully
+      consistent with the stated Goal (dual-write REVIEW artifact persistence). AC-5 and
+      AC-6 directly mirror Non-goals. Architecture Notes dual-write semantics match AC-1
+      (file_path), AC-3 (graceful failure), and AC-7 (artifact_search). Local Testing Plan
+      in pm_artifacts maps exactly to ACs. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan identifies KBAR-0160's migrated dev-setup-leader.agent.md as the canonical
+      template — same artifact_write call shape, same explicit file_path convention (Option A:
+      overwrite each iteration), same dual-write failure semantics documentation. The existing
+      kb_write_artifact call block in Step 5 is the starting point for the swap. No new
+      shared packages. No per-story one-off utilities. Only agent markdown is modified —
+      no TypeScript, no packages touched.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Story is agent-docs only — no HTTP endpoints, no service layer, no transport concerns.
+      Ports & adapters compliance is not applicable in the traditional sense. The relevant
+      architectural concern is tool call shape: artifact_write is the outbound tool call
+      (adapter), and the REVIEW content structure remains transport-agnostic (unchanged).
+      Architecture Notes confirm file write is primary (blocking), KB write is secondary
+      (best-effort) — this mirrors the dual-write design from KBAR-0110 and is consistent
+      with the established adapter pattern in this codebase.
+
+  - id: testability
+    status: PASS
+    note: >
+      Manual test strategy is appropriate and well-justified — agent markdown cannot be
+      unit tested. Four happy-path tests (HP-1 through HP-4), two error cases (EC-1, EC-2),
+      three edge cases (ED-1, ED-2, ED-3), and two manual validation cases (MC-1, MC-2)
+      are defined with concrete setup, action, expected, and evidence fields. Verification
+      commands in ST-2 (grep-based) are executable and precise. Functional validation
+      (MC-2) requires KBAR-0110 and KBAR-0160 to be merged first — this dependency is
+      explicitly gated in ST-3 and Risk Notes. No .http files needed (agent markdown
+      change, not a REST endpoint).
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. The one design decision (Option A vs Option B for REVIEW.yaml
+      naming) is resolved: Option A (overwrite each iteration, _implementation/REVIEW.yaml)
+      is documented in iteration_naming_resolution and the Architecture Notes file_path
+      template. The tool contract (artifact_write input shape) is gated behind ST-1
+      pre-implementation verification against landed KBAR-0110 — this is appropriate
+      defensive practice, not an unresolved blocker. The KB records the iteration field
+      for per-iteration history even with Option A (documented in Architecture Notes).
+      All open questions are resolved with clear rationale.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Hard dependencies on KBAR-0110 (artifact_write tool, in UAT) and KBAR-0160 (Setup &
+      Plan Leaders migration, needs-code-review, must merge before KBAR-0180 implementation)
+      are explicitly disclosed in Context, Dependencies, Reality Baseline, dev_feasibility,
+      and subtask dependencies. The risk that artifact_write input schema must be verified
+      at ST-1 is called out with a concrete mitigation. The risk that functional testing
+      requires both dependencies merged is called out in test_plan.risks. No auth, DB,
+      upload, caching, or infra risks apply. No hidden dependencies identified.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      Extremely small story: 1 file modified, 7 ACs (under threshold of 8), 3 subtasks,
+      agent-docs only, 0 new HTTP endpoints, 0 frontend work, 0 TypeScript changes, 1
+      package touched (none — .claude/agents is not a compiled package). points=1,
+      complexity=low, confidence=low (due to dependency state, not scope complexity).
+      No size indicators triggered. Split not required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      3 subtasks form a clean linear DAG: ST-1 (read-only verification) → ST-2 (write
+      review-aggregate-leader.agent.md) → ST-3 (human review + canary validation).
+      No cycles. AC coverage: ST-2 covers AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7
+      (all ACs); ST-3 validates all 7 ACs. ST-1 is a prerequisite gate with no AC
+      assignment — this is correct (it's a pre-flight check, not an AC deliverable).
+      File counts: ST-1=reads only (0 writes, 4 reads), ST-2=1 file modified,
+      ST-3=1 file read (0 writes). All within 3-file limit. Each subtask has a
+      verification step (grep commands in ST-2, artifact_search confirmation in ST-3).
+      Canonical References section present with 4 entries covering current usage,
+      sibling migration pattern, artifact_write contract, and out-of-scope worker
+      reference. Well-formed and executable.
+
+gaps: []  # No MVP-blocking gaps identified
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      stories.index.md KBAR-018 entry description says "Update all code-review-*.agent.md
+      files" which is inaccurate — only the aggregator is in scope. A follow-up index
+      description correction at story completion would prevent future confusion for
+      developers reading the index.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "4deae7af-4d5c-4b61-b201-9b022673d798"
+
+  - id: opp-2
+    category: observability
+    finding: >
+      The REVIEW artifact content includes a tokens field (tokens.in, tokens.out) for
+      the aggregator's own token usage. After migration to artifact_write, each dual-write
+      will also generate KB indexing tokens. If future analysis of total workflow cost per
+      review iteration is needed, capturing kb_write_tokens in the REVIEW artifact's
+      tokens field (or in a separate cost_metadata field) would enable it. Not MVP-blocking.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "ee59ab2a-7947-4191-8190-11e639e636ff"
+
+  - id: opp-3
+    category: integrations
+    finding: >
+      Once REVIEW artifacts are written to _implementation/REVIEW.yaml via dual-write,
+      KBAR-0020 (KB-Driven Index Generation) and KBAR-0025 (Lesson Extraction from Evidence)
+      could be extended to also scan REVIEW artifacts for recurring patterns (e.g. which
+      workers most frequently FAIL across stories). This cross-story review analytics use
+      case is enabled by the dual-write but not in scope for KBAR-0180.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "351750cc-060c-4f42-b4a8-b8a049b73f95"
+
+split_recommendation: null  # story_sizing=PASS, no split required
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-02-25T00:00:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+
+analyst_notes: >
+  KB search not invoked — story is a well-scoped documentation-only migration with no
+  ambiguous design decisions. Standard checklist audit sufficient.
+  Key observation: stories.index.md KBAR-018 description ("Update all code-review-*.agent.md
+  files") is imprecise but the story's scope narrowing to review-aggregate-leader.agent.md
+  only is empirically correct and grep-verified. WARN raised on scope_alignment but does
+  not block implementation.
+  Dependency gate is critical: KBAR-0160 must merge before ST-2 can begin (ST-1 reads
+  the post-merge dev-setup-leader.agent.md as template). KBAR-0110 must be in UAT/merged
+  for artifact_write tool contract to be stable (ST-1 verification target).
+  Story is immediately executable once dependency gates clear. No design ambiguity,
+  no missing ACs, no sizing concerns. PASS.

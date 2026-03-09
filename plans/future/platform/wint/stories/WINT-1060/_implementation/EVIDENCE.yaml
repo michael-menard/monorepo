@@ -1,0 +1,129 @@
+schema: 1
+story_id: WINT-1060
+version: 1
+timestamp: '2026-02-18T14:00:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: "shimUpdateStoryStatus is called before the directory mv in Step 2.5"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 'DB Write via shimUpdateStoryStatus' is inserted between Step 2 and Step 3. The shimUpdateStoryStatus call block appears at lines 96-107, before the mv bash block in Step 3 (line 121)."
+
+  - ac_id: AC-2
+    ac_text: "Directory mv executes unconditionally regardless of DB outcome"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 3 prose explicitly states: 'This step executes unconditionally regardless of DB outcome in Step 2.5 (AC-2).' Step 2.5 also states: 'Proceed with directory mv regardless of DB outcome — the move is never blocked by DB availability.'"
+
+  - ac_id: AC-3
+    ac_text: "shimUpdateStoryStatus null return logs warning and proceeds with mv"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 null-return branch: 'log warning via @repo/logger: DB write failed for {STORY_ID}. Proceeding with directory mv.' sets db_updated = false, then execution continues to Step 3 directory mv."
+
+  - ac_id: AC-4
+    ac_text: "Inline SWIM_LANE_TO_STATE table present in Step 2.5 referencing the constant from __types__/index.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 contains inline SWIM_LANE_TO_STATE table with source attribution to 'packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts'. Table covers 8 mapped stages (backlog, ready-to-work, in-progress, needs-code-review, failed-code-review, ready-for-qa, failed-qa, UAT) with their DB newState values. No hardcoded state strings in logic prose. Note: prior evidence incorrectly stated '5 mapped stages'; actual count is 8."
+
+  - ac_id: AC-5
+    ac_text: "Unmapped stages skip DB write with warning; mv proceeds normally"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 unmapped-stage branch: 'log warning: No DB state for stage {TO_STAGE}. Skipping DB write. db_updated = skipped'. Execution then continues to Step 3 directory mv. Unmapped examples listed: created, elaboration. Note: needs-code-review, failed-code-review, and failed-qa are mapped stages per canonical SWIM_LANE_TO_STATE and will trigger DB writes."
+
+  - ac_id: AC-6
+    ac_text: "Step 5 return YAML includes db_updated: true | false | skipped with all 3 values documented"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 5 return YAML block includes 'db_updated: true | false | skipped' with inline comments documenting all 3 trigger conditions: true=write succeeded, false=DB unavailable (mv proceeded), skipped=unmapped stage OR --update-status flag provided."
+
+  - ac_id: AC-7
+    ac_text: "--update-status flag causes db_updated: skipped and delegates DB write to /story-update; no double-write"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 opens with guard clause (AC-7): 'If --update-status was provided, skip this step entirely — set db_updated: skipped and proceed to Step 3. The DB write will be handled by /story-update in Step 4 (no double-write).' Step 4 also clarifies: 'The /story-update command handles its own DB write — no double-write occurs. db_updated is reported as skipped in the Step 5 return YAML when this delegation path is taken.' Guard clause is at top of Step 2.5, before independence prose."
+
+  - ac_id: AC-8
+    ac_text: "All existing signals (MOVE COMPLETE, MOVE SKIPPED, MOVE FAILED) are preserved with unchanged semantics"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Signal section at end of file is unchanged: MOVE COMPLETE, MOVE SKIPPED: <reason>, MOVE FAILED: <reason>. Error Handling table is fully preserved. No new signals added."
+
+  - ac_id: AC-9
+    ac_text: "Step 1 shows shimGetStoryStatus call first, directory scan as fallback on null return"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 1 starts with 'DB-first lookup' section calling shimGetStoryStatus. Non-null result uses DB state. Null result triggers 'Directory fallback' section which performs the full directory scan. 'MOVE FAILED: Story directory not found' only triggered when neither DB nor directory finds the story."
+
+  - ac_id: AC-10
+    ac_text: "Step 2.5 contains explicit independence prose: locate-null does not suppress write path"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/story-move.md
+        description: "Step 2.5 contains verbatim AC-10 independence prose: 'If shimGetStoryStatus returned null during Step 1 (DB-miss or DB-error), still proceed with shimUpdateStoryStatus for mapped stages — the write path is independent of the read path. A DB read miss does not suppress the DB write attempt.'"
+
+touched_files:
+  - path: .claude/commands/story-move.md
+    action: modified
+    lines: 224
+    description: "Augmented Step 1 with shimGetStoryStatus DB-first lookup + directory fallback; inserted Step 2.5 with shimUpdateStoryStatus call, inline SWIM_LANE_TO_STATE table, AC-10 independence prose, --update-status skip logic, unmapped-stage warning; extended Step 5 return YAML with db_updated field (true/false/skipped); bumped version 2.0.0 → 2.1.0, updated date to 2026-02-18."
+
+commands_run:
+  - command: "Read .claude/commands/story-move.md — ST-1 verification"
+    result: SUCCESS
+    output: "Step 1 confirmed: shimGetStoryStatus called before directory scan; directory fallback on null; MOVE FAILED signal unchanged."
+    timestamp: '2026-02-18T13:50:00Z'
+  - command: "Read .claude/commands/story-move.md — ST-2 verification"
+    result: SUCCESS
+    output: "Step 2.5 confirmed: between Step 2 and Step 3; SWIM_LANE_TO_STATE table complete (5 entries + done exclusion); shimUpdateStoryStatus called before mv; null-return warning + proceed (AC-3); unmapped skip with warning (AC-5); AC-10 independence prose present; all signals preserved (AC-8)."
+    timestamp: '2026-02-18T13:55:00Z'
+  - command: "Read .claude/commands/story-move.md — ST-3 verification"
+    result: SUCCESS
+    output: "Step 5 confirmed: db_updated: true | false | skipped with all 3 conditions documented; --update-status delegation documented (AC-7); Step 3 unconditional (AC-2); frontmatter version=2.1.0, updated=2026-02-18."
+    timestamp: '2026-02-18T14:00:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: docs — markdown-only deliverable, no TypeScript code introduced, no frontend impact"
+  tests_written: false
+
+coverage: {}
+
+notable_decisions:
+  - "Applied all three subtasks (ST-1, ST-2, ST-3) directly rather than via subagent spawning — single markdown file with well-understood requirements, no spawning overhead needed."
+  - "SWIM_LANE_TO_STATE table in Step 2.5 sourced directly from __types__/index.ts constant (5 entries: backlog, ready-to-work, in-progress, ready-for-qa, UAT). done excluded per PLAN.yaml note."
+  - "AC-10 independence prose placed at top of Step 2.5 (before the shim call block) to ensure executors see it before the conditional logic."
+  - "--update-status skip logic placed at the very top of Step 2.5 as a guard clause, consistent with the early-return pattern used in story-update.md."
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 45000, out: 8000 }

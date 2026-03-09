@@ -1,0 +1,64 @@
+feasible: true
+confidence: high
+rationale: "The primary deliverable (user-flows.schema.json) already exists and is fully implemented. This story requires verification against spec, creation of a canonical example JSON file, and AJV CLI validation evidence. No TypeScript compilation, no pnpm build steps, no package changes. Scope is tightly bounded and the pattern is identical to WINT-0190."
+complexity: low
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/schemas/ (read + verify user-flows.schema.json)"
+    - "packages/backend/orchestrator/src/schemas/examples/ (create user-flows.example.json)"
+    - "plans/future/platform/wint/backlog/WINT-0200/ (story document)"
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: "AJV v8 strict mode may reject JSON Schema draft 2020-12 meta-schema validation without --strict=false flag"
+    mitigation: "Follow precedent from WINT-0190 verification commands. If AJV strict mode causes issues, add --strict=false. This is documented in the seed as a known risk."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "Terminal output showing npx ajv validate exits 0 for meta-schema validation (AC-2)"
+  - "Terminal output showing npx ajv validate exits 0 for example-against-schema validation (AC-4)"
+  - "Terminal output showing 2 negative AJV validation failures: 6-item flows array and 8-item steps array (AC-5)"
+  - "wc -l output showing user-flows.example.json is 10-25 lines (AC-3)"
+  - "File listing showing user-flows.example.json exists in examples/ directory (AC-3)"
+  - "File content comparison showing WINT-0210 references the correct schema path (AC-6)"
+
+subtasks:
+  - id: ST-1
+    title: "Audit user-flows.schema.json against AC-1 spec"
+    goal: "Read the existing schema file and verify every field required by AC-1 is present with correct constraints: schema_version (semver pattern), flows (maxItems:5), UserFlowState enum (5 values), UserFlowCapability enum (7 values), UserFlowStep.capabilities (maxItems:7), UserFlow.steps (maxItems:7), JSON Schema draft 2020-12 compliance"
+    files_to_read:
+      - "packages/backend/orchestrator/src/schemas/user-flows.schema.json"
+      - "packages/backend/orchestrator/src/schemas/patch-plan.schema.json"
+    files_to_modify: []
+    acs: ["AC-1"]
+    depends_on: "none"
+    verification: "Manual checklist — all AC-1 fields present and match spec. No code changes expected; if gap found, minimal edit to user-flows.schema.json."
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: "Create user-flows.example.json and run AJV validation evidence"
+    goal: "Create packages/backend/orchestrator/src/schemas/examples/user-flows.example.json following the patch-plan.example.json format (10-25 lines). Run AJV CLI to: (a) validate schema against meta-schema, (b) validate example against schema, (c) produce 2 negative test cases with 6-item flows and 8-item steps arrays. Document all command outputs as evidence."
+    files_to_read:
+      - "packages/backend/orchestrator/src/schemas/examples/patch-plan.example.json"
+      - "packages/backend/orchestrator/src/schemas/user-flows.schema.json"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/schemas/examples/user-flows.example.json"
+    acs: ["AC-2", "AC-3", "AC-4", "AC-5"]
+    depends_on: "ST-1"
+    verification: "npx ajv validate -s packages/backend/orchestrator/src/schemas/user-flows.schema.json -d packages/backend/orchestrator/src/schemas/examples/user-flows.example.json exits 0; wc -l shows 10-25 lines"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Verify WINT-0210 path compatibility and produce story document"
+    goal: "Locate the current WINT-0210.md file, verify AC-7 and PO role pack scope reference the exact path packages/backend/orchestrator/src/schemas/user-flows.schema.json. Then ensure the WINT-0200 story document (WINT-0200.md) is complete with all required sections per pm-spawn-patterns.md."
+    files_to_read:
+      - "plans/future/platform/wint/ready-to-work/WINT-0210/WINT-0210.md"
+      - "plans/future/platform/wint/UAT/WINT-0190/WINT-0190.md"
+    files_to_modify:
+      - "plans/future/platform/wint/backlog/WINT-0200/WINT-0200.md"
+    acs: ["AC-6", "AC-7"]
+    depends_on: "ST-2"
+    verification: "WINT-0210.md path reference matches actual schema path; WINT-0200.md exists with all required sections"
+    estimated_tokens: 6000

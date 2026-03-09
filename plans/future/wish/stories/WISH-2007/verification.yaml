@@ -1,0 +1,71 @@
+schema: 1
+story_id: WISH-2007
+updated: 2026-01-28T21:30:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 26
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: "File exists: 0007_round_master_mold.sql, PROOF:line 15"
+  - id: AC2
+    verdict: pass
+    evidence: Journal entry 7, meta/0007_snapshot.json exists, PROOF:line 18-19
+  - id: AC3
+    verdict: pass
+    evidence: Migration SQL reviewed, creates enums/indexes/constraints, PROOF:line 21-22
+  - id: AC4
+    verdict: pass
+    evidence: PROOF:line 27-29 shows successful migration
+  - id: AC5
+    verdict: pass
+    evidence: PROOF:line 33-35 confirms 19 columns via \d command
+  - id: AC6
+    verdict: pass
+    evidence: PROOF:line 38-44 lists 6 indexes (5 user + 1 primary key)
+  - id: AC7
+    verdict: pass
+    evidence: PROOF:line 46-49 confirms both enums with correct values
+  - id: AC8
+    verdict: pass
+    evidence: PROOF:line 52-54 shows INSERT priority=10 fails, priority=3 succeeds
+  - id: AC9
+    verdict: pass
+    evidence: PROOF:line 57-59 shows second migration run succeeds
+  - id: AC10
+    verdict: pass
+    evidence: PROOF:line 64-66 confirms ROLLBACK-SCRIPT.sql exists
+  - id: AC11
+    verdict: deferred
+    evidence: PROOF:line 68-70 explicitly defers rollback testing to avoid data loss
+  - id: AC12
+    verdict: n/a
+    evidence: No staging environment configured, PROOF:line 74-75
+  - id: AC13
+    verdict: n/a
+    evidence: Local development only, deferred to deployment, PROOF:line 77-78
+  - id: AC14
+    verdict: pass
+    evidence: PROOF:line 82-84 confirms all 19 columns with correct types
+  - id: AC15
+    verdict: pass
+    evidence: PROOF:line 86-88 confirms exact enum values
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.249Z
+  blocking_issues: []

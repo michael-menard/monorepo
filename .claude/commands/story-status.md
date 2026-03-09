@@ -141,19 +141,22 @@ Check `_implementation/CHECKPOINT.md`:
 
 ### Swimlane Mapping
 
-| Directory | Emoji | Column |
-|-----------|-------|--------|
-| `backlog/` | ⏸️ | BACKLOG |
-| `created/` | 🆕 | CREATED |
-| `elaboration/` | 📝 | ELABORATION |
-| `ready-to-work/` | ⏳ | READY |
-| `in-progress/` | 🚧 | IN-PROGRESS |
-| `needs-code-review/` | 👀 | CODE-REVIEW |
-| `failed-code-review/` | 🔴 | REVIEW-FAIL |
-| `ready-for-qa/` | 🔍 | READY-QA |
-| `failed-qa/` | ⚠️ | QA-FAIL |
-| `UAT/` | ✅ | DONE |
-| `completed/` | ✅ | DONE |
+<!-- KSOT-3010: Stories live in flat {FEATURE_DIR}/stories/{STORY_ID}/ directory.
+     Swimlane column is derived from KB state, not directory name. -->
+
+| KB State | Emoji | Column |
+|----------|-------|--------|
+| `backlog` | ⏸️ | BACKLOG |
+| `backlog` (created) | 🆕 | CREATED |
+| `in_progress` (elab) | 📝 | ELABORATION |
+| `ready` | ⏳ | READY |
+| `in_progress` | 🚧 | IN-PROGRESS |
+| `ready_for_review` | 👀 | CODE-REVIEW |
+| `failed_code_review` | 🔴 | REVIEW-FAIL |
+| `ready_for_qa` | 🔍 | READY-QA |
+| `failed_qa` | ⚠️ | QA-FAIL |
+| `in_qa` | ✅ | DONE |
+| `completed` | ✅ | DONE |
 
 ---
 
@@ -166,7 +169,7 @@ Single story output format:
 Feature: plans/future/wishlist
 Story: WISH-001
 Status: in-progress
-Location: plans/future/wishlist/in-progress/WISH-001/
+Location: plans/future/wishlist/stories/WISH-001/
 Depends On: none
 ```
 

@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2057
+feature: wish
+state: UAT
+paths:
+  story: plans/future/wish/UAT/WISH-2057/
+  artifacts: plans/future/wish/UAT/WISH-2057/_implementation/
+files:
+  story: story.yaml
+  plan: plan.yaml
+  verification: verification.yaml
+implementation: []
+notes: []

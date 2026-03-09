@@ -1,0 +1,2 @@
+skipped: true
+reason: "Backend MCP server story only — no UI surface. No frontend components touched."

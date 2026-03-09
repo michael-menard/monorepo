@@ -1,0 +1,129 @@
+schema: 1
+id: "APIP-4010"
+feature: "autonomous-pipeline"
+type: "feature"
+title: "Codebase Health Gate — Snapshot, Drift Detection, and CLEANUP Story Auto-Generation"
+state: ready-to-work
+status: ready-to-work
+priority: P3
+points: 8
+experiment_variant: "control"
+blocked_by: null
+depends_on:
+  - APIP-1070
+  - APIP-3090
+  - APIP-5007
+follow_up_from: null
+scope:
+  packages:
+    - packages/backend/database-schema
+    - packages/backend/orchestrator
+  surfaces:
+    - database
+    - packages
+tags:
+  - health-gate
+  - cron
+  - quality
+  - phase-4
+created_at: "2026-02-25T00:00:00Z"
+updated_at: "2026-02-25T00:00:00Z"
+goal: >
+  Build the Codebase Health Gate as three integrated components — a wint.codebase_health DB table,
+  a captureHealthSnapshot() fire-and-forget helper, and a detectDriftAndGenerateCleanup() pure
+  function — plus a LangGraph cron task registration (deferred to APIP-3090). After every 5th
+  merge, the gate captures 8 codebase quality metrics, compares against a stored baseline, and
+  auto-generates CLEANUP stories for any metrics that have drifted beyond their configured
+  threshold delta.
+non_goals:
+  - "UI dashboard for health metrics (deferred to APIP-4070 or APIP-2020)"
+  - "Auto-remediating detected issues (CLEANUP stories are advisory only)"
+  - "Distributed/multi-process cron (single-server per ADR-001)"
+  - "CLEANUP story workflow implementation (existing pipeline handles that)"
+  - "Automatic baseline promotion logic (manual operator process only)"
+  - "Modifying any existing wint tables"
+acs:
+  - id: AC-1
+    description: >
+      wint.codebase_health table exists after migration. Columns: id (UUID PK),
+      merge_number (integer, not null), captured_at (timestamp, not null, default now()),
+      is_baseline (boolean, not null, default false), lint_warnings (integer),
+      type_errors (integer), any_count (integer), test_coverage (numeric 5,2),
+      circular_deps (integer), bundle_size (integer), dead_exports (integer),
+      eslint_disable_count (integer). Indexes on captured_at, merge_number, is_baseline.
+    testable: true
+    automated: true
+  - id: AC-2
+    description: "drizzle-kit check passes with no schema drift after migration and Drizzle schema definition both applied."
+    testable: true
+    automated: true
+  - id: AC-3
+    description: "CodebaseHealthSnapshotSchema exported, auto-generated via drizzle-zod. parse() succeeds for a valid snapshot row."
+    testable: true
+    automated: true
+  - id: AC-4
+    description: "captureHealthSnapshot(config, db) captures all 8 metrics via injectable execFn and inserts a row into wint.codebase_health. Returns inserted snapshot."
+    testable: true
+    automated: true
+  - id: AC-5
+    description: "captureHealthSnapshot() is fire-and-forget — on DB insert failure, logs warning via @repo/logger and resolves without throwing."
+    testable: true
+    automated: true
+  - id: AC-6
+    description: "HealthGateThresholdsSchema defines configurable delta thresholds for all 8 metrics. Thresholds loaded from config object with documented defaults — NOT hardcoded constants."
+    testable: true
+    automated: true
+  - id: AC-7
+    description: "detectDriftAndGenerateCleanup(snapshot, baseline, thresholds) returns non-empty array when any metric exceeds threshold delta; empty array when all within tolerance; empty array + logger.warn when baseline is null."
+    testable: true
+    automated: true
+  - id: AC-8
+    description: "Each auto-generated CLEANUP story (a) has unique id in APIP-CLEANUP-NNNN format, (b) is written to plans/future/platform/autonomous-pipeline/backlog/APIP-CLEANUP-NNNN/story.yaml, (c) passes StoryArtifactSchema.parse()."
+    testable: true
+    automated: true
+  - id: AC-9
+    description: "CLEANUP story YAML includes: drifted metrics list (with delta amounts), triggering merge_number, human-readable remediation description."
+    testable: true
+    automated: true
+  - id: AC-10
+    description: "Health gate cron task registered with APIP-3090 infrastructure, fires after every 5th merge. Merge-count tracking agreed with APIP-1070. [Deferred until APIP-3090 stable.]"
+    testable: true
+    automated: false
+  - id: AC-11
+    description: "Unit tests cover: captureHealthSnapshot() happy path and error path; detectDriftAndGenerateCleanup() all-within-threshold, one-over, multiple-over, boundary, null-baseline; merge-count gate logic."
+    testable: true
+    automated: true
+  - id: AC-12
+    description: "Integration test: migration applies cleanly; insert + read-back confirms all columns round-trip; CodebaseHealthSnapshotSchema.parse() succeeds. Uses port 5432 (lego_dev), NOT 5433."
+    testable: true
+    automated: true
+  - id: AC-13
+    description: "pnpm check-types and pnpm lint pass with no errors or warnings introduced by this story's TypeScript files."
+    testable: true
+    automated: true
+risks:
+  - id: RISK-001
+    severity: high
+    description: "Merge-count tracking dependency on APIP-1070. If APIP-1070 does not add mergeCount to MergeArtifactSchema, implement standalone wint.merge_runs table."
+    mitigation: "Design wint.merge_runs as a self-contained fallback. Document both Option A (APIP-1070 coordination) and Option B (standalone table) in ST-08."
+  - id: RISK-002
+    severity: high
+    description: "APIP-3090 cron infrastructure not yet available. Long dependency chain (APIP-0030 + APIP-3020 + APIP-3090)."
+    mitigation: "Decouple: implement DB schema + helpers + detection logic independently. Defer AC-10 cron wiring until APIP-3090 is stable."
+  - id: RISK-003
+    severity: medium
+    description: "8-metric capture complexity — heterogeneous collection methods (CLI stdout parsing, JSON report, build output, external tools)."
+    mitigation: "Decompose into 8 small injectable functions. Failure of one does not block others (partial capture + logger.warn)."
+  - id: RISK-004
+    severity: medium
+    description: "Threshold calibration is empirical — no historical data to reference for initial values."
+    mitigation: "Use HealthGateThresholdsSchema with documented defaults and calibration guidance. Thresholds configurable, not hardcoded."
+infrastructure:
+  - "Aurora PostgreSQL migration: wint.codebase_health table (APIP-5007 runner, 0NN_codebase_health.sql)"
+  - "drizzle-kit check verification in CI"
+  - "LangGraph cron task registration (deferred to APIP-3090)"
+risk_notes: >
+  Threshold calibration is empirical — wrong thresholds generate noisy or missed cleanup stories.
+  Baseline management (when to promote a snapshot to baseline) is manual and requires operator judgment.
+  Merge-count tracking coordination with APIP-1070 is the highest-risk dependency.
+sizing_warning: false

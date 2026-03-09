@@ -173,7 +173,7 @@ actual: backlog
 
 ### 3. Check Status (if --status)
 
-If KB returned a result in Step 1, use its `state` field (mapped to display label) for status comparison. Otherwise, read frontmatter and verify status matches.
+Use the KB `state` field (mapped to display label) from Step 1 for status comparison. KB is **required** — if KB lookup failed in Step 1, FAIL the precondition check with "KB unavailable for story state". Do NOT fall back to frontmatter status.
 
 ```yaml
 # If --status=ready-to-work but status is backlog

@@ -1,0 +1,77 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-07T19:45:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WRKF-1020"
+        lesson: "Run scoped lint after each file creation - unused import/variable errors caught incrementally"
+        category: pattern
+        applies_because: "Story involves creating new TypeScript files with schemas"
+      - story_id: "WRKF-1010"
+        lesson: "StateSnapshot circular reference handling with z.lazy() caused TypeScript strict mode errors. Fixed by creating separate schema that excludes recursive field."
+        category: blocker
+        applies_because: "FeedbackContentSchema may have complex Zod validation with refinements"
+      - story_id: "WRKF-1020"
+        lesson: "Prettier formatting on multiline patterns - 10 errors for import groupings and Zod schema chains. Running eslint --fix resolved all automatically."
+        category: time_sink
+        applies_because: "Story involves Zod schema definitions with multiline chains"
+
+    blockers_to_avoid:
+      - "Circular reference handling in Zod schemas - use separate schemas for nested types"
+      - "TypeScript strict mode errors with z.lazy() for recursive types"
+
+    patterns_to_follow:
+      - "Run scoped lint after each file creation (pnpm eslint <file>)"
+      - "Use discriminated union result types for core functions"
+      - "Zod refine() for cross-field validation (e.g., severity_wrong requires suggested_severity)"
+
+    patterns_to_avoid:
+      - "Using z.lazy() for simple self-referential types (causes strict mode issues)"
+      - "Accumulating lint errors across files - fix incrementally"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT tests must use real Knowledge Base MCP Server, not mocks"
+        applies_to: ["testing", "kb-integration"]
+
+    constraints:
+      api_paths: "N/A - CLI command only, no API endpoints"
+      testing: "UAT must use real KB MCP Server (kb_add, kb_search) not mocks"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read full story file (WKFL-004.md)"
+        typical_tokens: 8000
+        mitigation: "Only read Acceptance Criteria section for planning"
+      - operation: "Read full ADR-LOG.md"
+        typical_tokens: 5000
+        mitigation: "Extract only relevant ADRs (already done)"
+
+    recommended_patterns:
+      - "Targeted file reads over full files"
+      - "Grep before Read for large files"
+      - "Inline knowledge context generation (don't spawn worker for simple contexts)"
+
+  kb_integration_notes:
+    - "KB schema uses entry_type (not type) column in knowledge_entries table"
+    - "Tags stored as text[] array, indexed for fast filtering"
+    - "MCP tools (kb_add, kb_search) already available - reuse, don't create new tools"
+    - "Command pattern established in .claude/commands/ with frontmatter"
+    - "VERIFICATION.yaml parsing: findings appear in multiple sections (security, architecture, qa)"
+
+  warnings: []
+
+  tokens:
+    in: 2000
+    out: 600

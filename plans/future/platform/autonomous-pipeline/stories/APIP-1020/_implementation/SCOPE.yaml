@@ -1,0 +1,24 @@
+schema: 1
+story_id: "APIP-1020"
+timestamp: "2026-02-26T00:00:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/orchestrator/src/artifacts/**"
+  - "plans/future/platform/autonomous-pipeline/_spike-output/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Design and validate ChangeSpec schema (Zod) and decompose 10+ real stories into YAML; publish ADR"
+elaboration: "completed"

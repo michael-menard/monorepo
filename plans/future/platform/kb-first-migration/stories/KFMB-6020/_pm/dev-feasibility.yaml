@@ -1,0 +1,150 @@
+feasible: true
+confidence: high
+rationale: >
+  KFMB-6020 is a pure documentation and comment cleanup story with no functional code changes.
+  The change surface is well-defined: shell script usage comments, a Python module docstring,
+  agent .md Output section prose, and reference .md documentation files. The highest uncertainty
+  is the agent Output section scope (AC-3), which depends on the AC-1 audit. All other ACs
+  have clearly bounded file lists. No TypeScript, no pnpm build, no deployment, no DB migrations.
+  Story is implementable as specified — pending KFMB-6010 completion.
+complexity: low
+change_surface:
+  areas:
+    - scripts/ (comment and docstring changes only)
+    - .claude/agents/ (Output section prose updates — count TBD by AC-1 audit)
+    - docs/workflow/ (reference doc updates and new migration guide)
+    - docs/COMMANDS.md (artifact description updates)
+    - docs/elab-story-reference.md (audit and update if stale references found)
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: >
+      AC-3 agent Output section scope is unknown until AC-1 audit. The agents/ directory has 80+
+      files. If > 10 agents need Output section updates, the story sizing may need adjustment and
+      AC-3 should be split into KFMB-6030.
+    mitigation: >
+      Execute AC-1 as first subtask (ST-1). Time-box to 20 minutes. If audit reveals > 10 agents
+      or estimated token cost > 30,000 tokens for AC-3, surface a sizing warning and create a
+      KFMB-6030 stub before proceeding. Proceed with AC-3 only if scope is bounded.
+  - finding: >
+      KFMB-6010 dependency: KFMB-6020 cannot begin until KFMB-6010 is at needs-code-review or
+      later. The final state of generate-stories.sh, implement-stories.sh, and resolve-plan.sh
+      after KFMB-6010 must be known before the dead code audit is meaningful.
+    mitigation: >
+      Enforce precondition in story: check KFMB-6010 status before starting ST-1. If KFMB-6010
+      is not yet at needs-code-review, block with appropriate signal. This is an expected
+      sequencing constraint, not a design flaw.
+missing_requirements: []
+evidence_expectations:
+  - "EVIDENCE artifact contains inventory from AC-1 audit listing every file examined, stale references found, and line ranges"
+  - "bash -n output showing exit code 0 for all modified shell scripts"
+  - "python3 -m py_compile output showing exit code 0 for sync-work-order.py"
+  - "Direct file reads of updated agent Output sections confirming KB-based prose (not grep patterns due to EVIDENCE label drift risk)"
+  - "docs/workflow/kb-first-migration-guide.md content read directly confirming all 6 AC-6 sections present"
+  - "docs/workflow/README.md (or equivalent) content read directly confirming migration guide link present"
+subtasks:
+  - id: ST-1
+    title: "AC-1 — Scope audit: grep inventory of all stale filesystem-era references"
+    goal: >
+      Produce a complete dead code inventory listing every file with stale references to
+      _implementation/, _pm/, stories.index.md, stage directories, and old artifact file paths.
+      Inventory covers: scripts/generate-stories.sh, scripts/implement-stories.sh,
+      scripts/implement-dispatcher.sh, scripts/sync-work-order.py, scripts/lib/resolve-plan.sh,
+      all .claude/agents/*.agent.md files, docs/workflow/*.md, docs/COMMANDS.md,
+      docs/elab-story-reference.md. Write inventory to EVIDENCE artifact in KB.
+    files_to_read:
+      - scripts/generate-stories.sh
+      - scripts/implement-stories.sh
+      - scripts/implement-dispatcher.sh
+      - scripts/sync-work-order.py
+      - scripts/lib/resolve-plan.sh
+    files_to_modify: []
+    acs: ["AC-1"]
+    depends_on: none
+    verification: "EVIDENCE artifact written to KB; inventory accounts for all in-scope files"
+    estimated_tokens: 15000
+
+  - id: ST-2
+    title: "AC-2 — Script comment and docstring cleanup"
+    goal: >
+      Update usage comments in generate-stories.sh (lines 13, 26) and implement-stories.sh
+      (lines 30, 32) to describe KB-based story discovery instead of stories.index.md.
+      Update sync-work-order.py module docstring to remove stories.index.md from listed
+      data sources and describe current KB + filesystem hybrid model accurately.
+      Update resolve-plan.sh inline comments if any reference old fallback rationale (audit result from ST-1).
+      Verify bash -n and python3 -m py_compile pass after changes.
+    files_to_read:
+      - scripts/generate-stories.sh
+      - scripts/implement-stories.sh
+      - scripts/sync-work-order.py
+    files_to_modify:
+      - scripts/generate-stories.sh
+      - scripts/implement-stories.sh
+      - scripts/sync-work-order.py
+    acs: ["AC-2", "AC-7"]
+    depends_on: ST-1
+    verification: "bash -n scripts/generate-stories.sh && bash -n scripts/implement-stories.sh && python3 -m py_compile scripts/sync-work-order.py"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "AC-3 — Agent Output section cleanup (bounded by ST-1 inventory)"
+    goal: >
+      For each agent file identified in ST-1 inventory as having stale _implementation/ or _pm/
+      filesystem paths in Output sections, update the prose to describe artifact writes as KB tool
+      calls (e.g., kb_write_artifact with artifact_type evidence) rather than filesystem paths.
+      If ST-1 inventory reveals > 10 agent files, surface sizing warning and propose KFMB-6030
+      split before proceeding.
+    files_to_read:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    files_to_modify:
+      - "(agent files identified by ST-1 audit — list TBD)"
+    acs: ["AC-3"]
+    depends_on: ST-1
+    verification: "For each updated agent: grep for _implementation/ in Output section returns no results"
+    estimated_tokens: 20000
+
+  - id: ST-4
+    title: "AC-4, AC-5 — Workflow documentation updates"
+    goal: >
+      Update docs/COMMANDS.md sections referencing _implementation/ANALYSIS.md,
+      _implementation/VERIFICATION.md, _pm/*.md, and plans/stories/{PREFIX}.stories.index.md
+      to describe the KB-first output model.
+      Update docs/workflow/story-directory-structure.md to reflect that _implementation/ and _pm/
+      artifact files are no longer written during normal workflow execution; preserve Before/After
+      historical migration context.
+      Audit and update docs/workflow/phases.md, docs/workflow/orchestration.md, and
+      docs/elab-story-reference.md for any remaining stale artifact path references.
+    files_to_read:
+      - docs/COMMANDS.md
+      - docs/workflow/story-directory-structure.md
+    files_to_modify:
+      - docs/COMMANDS.md
+      - docs/workflow/story-directory-structure.md
+    acs: ["AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "Direct read of each updated file confirms stale paths removed or updated; historical context preserved in story-directory-structure.md"
+    estimated_tokens: 18000
+
+  - id: ST-5
+    title: "AC-6, AC-7, AC-8 — Migration guide authorship, syntax checks, discovery link"
+    goal: >
+      Create docs/workflow/kb-first-migration-guide.md with all 6 required sections:
+      (1) What the KB-First Migration was and why,
+      (2) Phase-by-phase summary (5 phases),
+      (3) Current architecture (KB as sole source of truth for story state and artifacts;
+          filesystem retained only for worktree directories and PROOF files),
+      (4) Field ownership table (kb_update_story content fields vs migrate:stories script structural fields),
+      (5) How to use the new system (key MCP tools, resolve-plan.sh KB-first discovery pattern, script usage examples).
+      Run bash -n on all modified shell scripts and python3 -m py_compile on sync-work-order.py
+      (confirming no regressions from ST-2).
+      Add link to migration guide from docs/workflow/README.md (or equivalent index file).
+    files_to_read:
+      - docs/workflow/story-directory-structure.md
+      - docs/workflow/README.md
+    files_to_modify:
+      - docs/workflow/kb-first-migration-guide.md
+      - docs/workflow/README.md
+    acs: ["AC-6", "AC-7", "AC-8"]
+    depends_on: ST-4
+    verification: "Direct read of kb-first-migration-guide.md confirms all 6 sections; link present in README.md; syntax checks pass"
+    estimated_tokens: 20000

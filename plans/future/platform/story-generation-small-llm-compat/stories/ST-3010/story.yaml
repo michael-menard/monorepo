@@ -1,0 +1,29 @@
+id: "ST-3010"
+title: "Elaboration Analyst — Subtask and Clarity Format Audit"
+status: needs-code-review
+priority: medium
+phase: 3
+feature: "Add subtask audit check and clarity format audit check to the elaboration analyst"
+goal: "Elaboration blocks or corrects stories that lack well-formed subtasks or clarity sections before they reach dev-plan."
+depends_on: ["ST-2020"]
+endpoints: []
+infrastructure: []
+risk_notes: "Audit logic must distinguish between missing sections (hard block) and low-quality content (soft warning)."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+qa_notes:
+  verdict: FAIL
+  decided_at: "2026-03-03T00:00:00Z"
+  mode: autonomous
+  acs_added: 0
+  gaps_resolved: 0
+  opportunities_logged: 0
+  fail_reasons:
+    - "Scope mismatch: story.yaml diverges from stories.index.md (different title, feature, dependencies)"
+    - "Scope overlap: duplicates ST-2010 (subtask audit, already implemented) and ST-2020 (clarity format)"
+    - "No acceptance criteria, subtasks, or test plan — minimal YAML stub"
+    - "Unresolved design decision: hard block vs soft warning threshold"
+  recommended_actions:
+    - "Reconcile or renumber conflicting ST-3010 definitions"
+    - "Confirm scope is distinct from ST-2010 and ST-2020, or close and fold into ST-2020"
+    - "Write full story file with Goal, ACs, Examples, Edge Cases, Subtasks, Test Plan"

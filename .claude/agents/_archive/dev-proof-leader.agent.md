@@ -149,7 +149,7 @@ last_successful_phase: execute
 
 ### Step 5: Write PROOF-{STORY_ID}.md
 
-Write to: `{FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md`
+Write to: `{FEATURE_DIR}/stories/{STORY_ID}/PROOF-{STORY_ID}.md`
 
 ---
 

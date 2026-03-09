@@ -14,21 +14,6 @@
 #   3. Fallback: grep for **Plan Slug** in plans/ (transitional)
 #
 
-# Helper: extract STORY_PREFIX from a stories.index.md file
-_extract_prefix_from_index() {
-  local idx="$1"
-  local pfx
-  # Try markdown format: **Prefix**: WINT or **Story Prefix**: WINT
-  pfx=$(sed -n 's/^\*\*\(Story \)\{0,1\}Prefix\*\*: //p' "$idx" | head -1) || true
-  if [[ -z "$pfx" ]]; then
-    # Try YAML frontmatter format: story_prefix: "WINT"
-    pfx=$(sed -n 's/^story_prefix: *"\{0,1\}\([A-Z][A-Z0-9]*\)"\{0,1\} *$/\1/p' "$idx" | head -1) || true
-  fi
-  if [[ -n "$pfx" ]]; then
-    STORY_PREFIX="$pfx"
-  fi
-}
-
 resolve_plan() {
   local slug="$1"
 
@@ -76,7 +61,7 @@ resolve_plan() {
   if [[ -n "$index_file" ]]; then
     FEATURE_DIR=$(dirname "$index_file")
     PLAN_SLUG=$(basename "$FEATURE_DIR")
-    _extract_prefix_from_index "$index_file"
+    STORY_PREFIX=""
     return 0
   fi
 
@@ -87,10 +72,7 @@ resolve_plan() {
     if [[ -n "$dir_match" ]]; then
       FEATURE_DIR="$dir_match"
       PLAN_SLUG=$(basename "$FEATURE_DIR")
-      # Try to extract prefix from stories.index.md if present
-      if [[ -f "$FEATURE_DIR/stories.index.md" ]]; then
-        _extract_prefix_from_index "$FEATURE_DIR/stories.index.md"
-      fi
+      STORY_PREFIX=""
       return 0
     fi
   done
@@ -99,25 +81,15 @@ resolve_plan() {
   exit 1
 }
 
-# Discover stories from KB (primary) or stories.index.md (fallback).
+# Discover stories from KB (primary source of truth).
 #
 # After calling, STORY_PREFIX and DISCOVERED_STORIES (array) are set.
-# Requires FEATURE_DIR and optionally STORY_PREFIX to be set first.
+# Requires FEATURE_DIR and STORY_PREFIX to be set first (via resolve_plan).
 #
-# KSOT-2010: KB is the primary source of truth for story discovery.
-# stories.index.md is kept as a fallback for when KB is unavailable.
+# KSOT-3040: KB is the sole source of truth for story discovery.
+# stories.index.md fallback has been removed.
 #
 discover_stories() {
-  local index_file="$FEATURE_DIR/stories.index.md"
-
-  # ── Extract STORY_PREFIX from index if not already set ─────────────
-  if [[ -z "${STORY_PREFIX:-}" ]] && [[ -f "$index_file" ]]; then
-    STORY_PREFIX=$(sed -n 's/^\*\*\(Story \)\{0,1\}Prefix\*\*: //p' "$index_file" | head -1) || true
-    if [[ -z "${STORY_PREFIX:-}" ]]; then
-      STORY_PREFIX=$(sed -n 's/^story_prefix: *"\{0,1\}\([A-Z][A-Z0-9]*\)"\{0,1\} *$/\1/p' "$index_file" | head -1) || true
-    fi
-  fi
-
   # ── KB-first: try kb_list_stories as primary source ────────────────
   if [[ -n "${STORY_PREFIX:-}" ]]; then
     local raw_result
@@ -141,34 +113,12 @@ discover_stories() {
         fi
       fi
     fi
+
+    echo "Error: KB returned no stories for prefix '${STORY_PREFIX}' (KB may be unavailable)"
+    exit 1
   fi
 
-  # ── Fallback: stories.index.md ─────────────────────────────────────
-  if [[ -f "$index_file" ]]; then
-    echo "WARNING: KB discovery failed or returned empty. Falling back to stories.index.md"
-
-    if [[ -z "${STORY_PREFIX:-}" ]]; then
-      echo "Error: No prefix found in $index_file (checked **Prefix** and story_prefix frontmatter)"
-      exit 1
-    fi
-
-    DISCOVERED_STORIES=()
-    while IFS= read -r story_id; do
-      DISCOVERED_STORIES+=("$story_id")
-    done < <(grep -oE "^\| ${STORY_PREFIX}-[0-9]+ \|" "$index_file" | grep -oE "${STORY_PREFIX}-[0-9]+")
-
-    if [[ ${#DISCOVERED_STORIES[@]} -eq 0 ]]; then
-      echo "Error: No stories found in $index_file"
-      exit 1
-    fi
-    return 0
-  fi
-
-  # ── Neither KB nor filesystem had stories ──────────────────────────
-  if [[ -z "${STORY_PREFIX:-}" ]]; then
-    echo "Error: No stories.index.md in $FEATURE_DIR and no STORY_PREFIX from KB"
-  else
-    echo "Error: No stories found for prefix '$STORY_PREFIX' in KB or filesystem"
-  fi
+  # ── No STORY_PREFIX available ──────────────────────────────────────
+  echo "Error: No STORY_PREFIX set — resolve_plan must be called first and KB must provide the prefix"
   exit 1
 }

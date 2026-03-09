@@ -1,0 +1,167 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "Docker Compose v2 installed and functional on target server"
+    setup: "SSH into provisioned server with Docker Engine installed"
+    action: "Run `docker compose version` on the server"
+    expected: "Output shows Docker Compose version 2.x (e.g., Docker Compose version v2.24.0)"
+    evidence: "Command output captured in terminal; version string begins with 'v2'"
+
+  - id: HP-2
+    title: "Base compose file exists with required structure"
+    setup: "Repo cloned or synced to server; infra/langgraph-server/ directory present"
+    action: "Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config` to validate file syntax"
+    expected: "Docker Compose validates the file without errors; placeholder service, named volumes, and restart policies are present"
+    evidence: "No errors from compose config command; output YAML contains volumes section and restart: unless-stopped on services"
+
+  - id: HP-3
+    title: "Smoke test: all defined services come up healthy within 60 seconds"
+    setup: "Server provisioned; compose file present at infra/langgraph-server/compose.langgraph-server.yaml"
+    action: "Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d` then `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml ps` after 60 seconds"
+    expected: "All defined services show status 'healthy' or 'running' in the ps output"
+    evidence: "docker compose ps output showing no services in 'unhealthy' or 'exit' state after 60s"
+
+  - id: HP-4
+    title: "Network connectivity: server can reach Redis on port 6379"
+    setup: "Server provisioned; existing Redis running at documented host:port"
+    action: "From within a container in the LangGraph server Compose network, run `redis-cli -h <redis_host> -p 6379 ping`"
+    expected: "Response: PONG"
+    evidence: "redis-cli ping command returns PONG from within the Docker network"
+
+  - id: HP-5
+    title: "Network connectivity: server can reach Aurora PostgreSQL"
+    setup: "Server provisioned; Aurora PostgreSQL endpoint available and checkpoint DB connection config documented"
+    action: "From within a container, run `pg_isready -h <aurora_host> -p 5432 -U <checkpoint_user>`"
+    expected: "pg_isready returns 'accepting connections'"
+    evidence: "pg_isready exit code 0; output shows 'accepting connections'"
+
+  - id: HP-6
+    title: "Resource limits documented and applied in compose file"
+    setup: "Server running with compose up"
+    action: "Run `docker stats --no-stream` to observe container resource usage; compare against documented limits in README.md"
+    expected: "Each container's CPU and memory limits match what is documented in infra/langgraph-server/README.md"
+    evidence: "docker stats output; README.md resource table; limits match"
+
+  - id: HP-7
+    title: "Deployment procedure is repeatable"
+    setup: "Server provisioned; README.md deployment procedure documented"
+    action: "Follow the deployment procedure in infra/langgraph-server/README.md step-by-step from scratch (fresh operator)"
+    expected: "Procedure completes within the documented time; no undocumented commands required; server reaches healthy state"
+    evidence: "Operator confirms each step succeeds; no supplementary steps needed beyond README"
+
+  - id: HP-8
+    title: "APIP-0030 readiness checklist is complete and signed off"
+    setup: "All prior ACs passing"
+    action: "Review infra/langgraph-server/README.md server readiness checklist; verify each item is checkable"
+    expected: "All checklist items in the APIP-0030 handoff section are verifiable against the provisioned server"
+    evidence: "Checklist items are concrete and actionable (not vague); APIP-0030 team confirms they can begin work"
+
+error_cases:
+  - id: EC-1
+    title: "Docker Compose v1 installed instead of v2"
+    setup: "Server with Docker Compose v1 (legacy docker-compose binary)"
+    action: "Run `docker compose version`"
+    expected: "v1 output (e.g., 'docker-compose version 1.x') is recognized as failure; AC-1 blocked until v2 is installed"
+    evidence: "Version string does not begin with 'v2'; dev flags this as blocker before proceeding"
+
+  - id: EC-2
+    title: "Port conflict with existing local dev services"
+    setup: "Server where one of the reserved ports (5432, 5433, 6379, 9090, 3003, 4317, 4318, 9000, 9001) is exposed"
+    action: "Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d`"
+    expected: "Compose fails with port conflict error if any service attempts to bind a reserved port"
+    evidence: "Error message explicitly names conflicting port; compose file uses non-conflicting port assignments (e.g., 8123, 8124)"
+
+  - id: EC-3
+    title: "Compose file references missing volume or network"
+    setup: "compose.langgraph-server.yaml with a volume or network name not declared in the volumes/networks section"
+    action: "Run `docker compose config` to validate"
+    expected: "Validation error indicating missing volume/network declaration"
+    evidence: "docker compose config exits with non-zero status; error message names the missing resource"
+
+  - id: EC-4
+    title: "Checkpoint DB connection uses @repo/db pool instead of isolated pool"
+    setup: "Code or config review of checkpoint connection configuration"
+    action: "Inspect documented checkpoint connection config in README.md; verify it uses a separate connection instance, not the @repo/db export"
+    expected: "README explicitly states the checkpoint pool is separate, with max: 3, and does not import from @repo/db"
+    evidence: "README.md documents the separate pool; no import of @repo/db in any checkpoint connection docs"
+
+edge_cases:
+  - id: ED-1
+    title: "Server hardware not yet provisioned"
+    setup: "AC-1 requires physical or VM server to exist"
+    action: "Attempt to verify Docker installation"
+    expected: "Dev immediately flags as blocker if no server is available; story is blocked until hardware/VM is provisioned"
+    evidence: "BLOCKERS.md entry created if server unavailable; story does not proceed"
+
+  - id: ED-2
+    title: "Compose up succeeds but a service exits immediately after start"
+    setup: "compose.langgraph-server.yaml with a service that has a misconfigured entrypoint or missing dependency"
+    action: "Run compose up; wait 60 seconds; run docker compose ps"
+    expected: "Service shows 'exit 1' or similar non-healthy status; smoke test FAILS"
+    evidence: "docker compose ps output shows non-running state; smoke test is considered failed until all services are healthy"
+
+  - id: ED-3
+    title: "README.md deployment procedure exceeds 15 minutes for fresh operator"
+    setup: "Fresh operator with only README.md as guide"
+    action: "Time the deployment procedure from start to healthy server state"
+    expected: "Procedure completes in under 15 minutes per operator ergonomics requirement from seed"
+    evidence: "Operator notes completion time; if over 15 minutes, README.md must be simplified before AC-6 passes"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "docker compose version output contains 'v2'"
+      - "docker compose ps shows all services as 'healthy' or 'running'"
+      - "redis-cli ping returns PONG from within Docker network"
+      - "pg_isready exits 0 (accepting connections)"
+      - "docker stats --no-stream shows CPU/mem within documented limits"
+manual_cases:
+  - id: MC-1
+    title: "Full operator runbook walkthrough"
+    steps:
+      - "1. SSH into target server"
+      - "2. Run `docker compose version` — verify v2.x output"
+      - "3. Clone or sync repo to server"
+      - "4. Navigate to project root"
+      - "5. Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config` — verify no errors"
+      - "6. Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d`"
+      - "7. Wait 60 seconds"
+      - "8. Run `docker compose -f infra/langgraph-server/compose.langgraph-server.yaml ps` — verify all healthy"
+      - "9. Run connectivity checks for Redis and Aurora PostgreSQL per README"
+      - "10. Review resource limits via docker stats"
+      - "11. Verify port assignments do not conflict with documented reserved ports"
+      - "12. Review README.md APIP-0030 readiness checklist — confirm all items checkable"
+    expected: "All steps succeed without modification; server ready for APIP-0030 to begin"
+
+  - id: MC-2
+    title: "APIP-0030 team handoff validation"
+    steps:
+      - "1. APIP-0030 dev reads infra/langgraph-server/README.md handoff section"
+      - "2. Confirms server has Docker v2, compose file exists at correct path"
+      - "3. Confirms can reach server and run docker compose commands"
+      - "4. Confirms ports 8123 and 8124 are available for LangGraph Platform deployment"
+      - "5. Signs off that APIP-0030 can proceed"
+    expected: "APIP-0030 team confirms they can begin work without additional provisioning"
+
+fixture_definitions:
+  - name: target-server
+    type: infrastructure
+    description: "Provisioned dedicated local server (hardware or VM) with network access to Redis and Aurora PostgreSQL; must exist before AC-1 can be verified"
+  - name: compose-langgraph-server-yaml
+    type: file
+    description: "infra/langgraph-server/compose.langgraph-server.yaml — the base compose file with placeholder service, named volumes, and restart policies"
+  - name: langgraph-server-readme
+    type: file
+    description: "infra/langgraph-server/README.md — resource limits, network config, checkpoint DB config, deployment procedure, and APIP-0030 readiness checklist"
+
+risks:
+  - "Server hardware availability: AC-1 is blocked if no dedicated server exists — this is the highest-risk prerequisite. Flag immediately if hardware not available."
+  - "Port conflict detection requires auditing actual running services on the server, not just the local dev environment — the server may have different services running."
+  - "Smoke test depends on all defined services having correct healthcheck configurations in compose file — missing or misconfigured healthchecks will cause false PASS/FAIL readings."
+  - "Coverage threshold (45%) waiver applies per KB lesson — this is a pure infrastructure story with no business logic. QA gate is: compose health + connectivity + smoke test pass. Do not apply code coverage gates."
+  - "Manual test cases require actual server access — cannot be fully automated in CI without a dedicated CI runner on the target server."

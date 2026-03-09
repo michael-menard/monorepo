@@ -1,0 +1,43 @@
+deferred_at: "2026-02-25T00:00:00Z"
+reason: "psql not available in PATH during story generation"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: "APIP-4070"
+      feature: "autonomous-pipeline"
+      title: "Weekly Pipeline Health Report — Sunday Cron Aggregation and Slack Notification"
+      story_dir: "plans/future/platform/autonomous-pipeline/backlog/APIP-4070"
+      story_file: "plans/future/platform/autonomous-pipeline/backlog/APIP-4070/APIP-4070.md"
+      story_type: "feature"
+      points: 5
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    sql: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra
+      ) VALUES (
+        'APIP-4070', 'autonomous-pipeline',
+        'Weekly Pipeline Health Report — Sunday Cron Aggregation and Slack Notification',
+        'plans/future/platform/autonomous-pipeline/backlog/APIP-4070',
+        'plans/future/platform/autonomous-pipeline/backlog/APIP-4070/APIP-4070.md',
+        'feature', 5, 'medium', 'backlog', true, false, true, false
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title, story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file, story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points, priority = EXCLUDED.priority,
+        state = EXCLUDED.state, touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra;
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

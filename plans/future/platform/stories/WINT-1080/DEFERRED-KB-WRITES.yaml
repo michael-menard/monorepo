@@ -1,0 +1,93 @@
+# Deferred KB Writes: WINT-1080
+# Generated: 2026-02-14
+# Reason: KB unavailable during story generation
+
+---
+
+# Story Persistence
+
+story_id: WINT-1080
+operation: INSERT_OR_UPDATE
+table: stories
+data:
+  story_id: WINT-1080
+  feature: platform
+  title: "Reconcile WINT Schema with LangGraph"
+  story_dir: plans/future/platform/backlog/WINT-1080
+  story_file: plans/future/platform/backlog/WINT-1080/WINT-1080.md
+  story_type: spike
+  points: 13
+  priority: critical
+  state: backlog
+  touches_backend: true
+  touches_frontend: false
+  touches_database: true
+  touches_infra: false
+  epic: platform
+  wave: 2
+  story_number: 18
+  experiment_variant: control
+  created_at: "2026-02-14"
+  depends_on:
+    - WINT-0010
+  blocks:
+    - WINT-1090
+    - WINT-1100
+  tags:
+    - schema-design
+    - database-migration
+    - langgraph-integration
+    - critical-path
+
+retry_after: "2026-02-15T00:00:00Z"
+retry_count: 0
+max_retries: 3
+
+---
+
+# Notes
+
+This story was generated successfully but KB persistence was unavailable.
+The story file exists at: plans/future/platform/backlog/WINT-1080/WINT-1080.md
+Index has been updated with "created" status.
+
+Manual KB write SQL (for reference):
+```sql
+INSERT INTO stories (
+  story_id, feature, title, story_dir, story_file, story_type,
+  points, priority, state, touches_backend, touches_frontend,
+  touches_database, touches_infra, epic, wave, story_number,
+  experiment_variant, created_at
+) VALUES (
+  'WINT-1080',
+  'platform',
+  'Reconcile WINT Schema with LangGraph',
+  'plans/future/platform/backlog/WINT-1080',
+  'plans/future/platform/backlog/WINT-1080/WINT-1080.md',
+  'spike',
+  13,
+  'critical',
+  'backlog',
+  true,
+  false,
+  true,
+  false,
+  'platform',
+  2,
+  18,
+  'control',
+  '2026-02-14'
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_dir = EXCLUDED.story_dir,
+  story_file = EXCLUDED.story_file,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  updated_at = NOW();
+```
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

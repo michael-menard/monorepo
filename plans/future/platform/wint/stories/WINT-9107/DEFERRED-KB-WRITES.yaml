@@ -1,0 +1,23 @@
+deferred_at: "2026-03-02"
+reason: "KB not directly accessible (psql/pg not available in generation session)"
+writes:
+  - table: core.stories
+    operation: INSERT ON CONFLICT DO UPDATE
+    data:
+      story_id: "WINT-9107"
+      feature: "wint"
+      title: "Implement Node-Level Retry & Circuit Breaker Middleware for LangGraph Nodes"
+      story_dir: "plans/future/platform/wint/backlog/WINT-9107"
+      story_file: "plans/future/platform/wint/backlog/WINT-9107/WINT-9107.md"
+      story_type: "feature"
+      points: 2
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

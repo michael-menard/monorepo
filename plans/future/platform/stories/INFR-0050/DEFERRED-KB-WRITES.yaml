@@ -1,0 +1,45 @@
+---
+# Deferred Knowledge Base Writes - INFR-0050
+# Stories table entry queued for retry when KB available
+
+story_id: INFR-0050
+timestamp: "2026-02-15T00:00:00Z"
+reason: "KB unavailable during story generation"
+
+deferred_writes:
+  - type: story_metadata
+    table: stories
+    operation: upsert
+    data:
+      story_id: INFR-0050
+      feature: platform
+      title: "Event SDK (Shared Telemetry Hooks)"
+      story_dir: plans/future/platform/backlog/INFR-0050
+      story_file: plans/future/platform/backlog/INFR-0050/INFR-0050.md
+      story_type: feature
+      points: 5
+      priority: high  # P3 maps to 'medium' in enum
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+      epic: INFR
+      created_at: "2026-02-15T00:00:00Z"
+      updated_at: "2026-02-15T00:00:00Z"
+
+retry_instructions: |
+  When KB becomes available, run:
+  INSERT INTO stories (story_id, feature, title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra, epic, created_at, updated_at)
+  VALUES ('INFR-0050', 'platform', 'Event SDK (Shared Telemetry Hooks)', 'plans/future/platform/backlog/INFR-0050', 'plans/future/platform/backlog/INFR-0050/INFR-0050.md', 'feature', 5, 'medium', 'backlog', true, false, true, false, 'INFR', '2026-02-15T00:00:00Z', '2026-02-15T00:00:00Z')
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    updated_at = EXCLUDED.updated_at;
+
+---
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

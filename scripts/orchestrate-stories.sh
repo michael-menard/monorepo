@@ -1092,6 +1092,8 @@ sync_status_after_transition() {
 }
 
 # ── Move story directory between stages ──────────────────────────────
+# KSOT-3010: With flat layout (stories/), no filesystem moves needed.
+# KB state is updated by the caller. This function is a no-op for flat layout.
 move_story_to() {
   local STORY_ID="$1"
   local FROM_STAGE="$2"
@@ -1102,6 +1104,14 @@ move_story_to() {
   if [[ "$FROM_STAGE" == "$TO_STAGE" ]]; then
     return 0
   fi
+
+  # KSOT-3010: Flat layout — no filesystem move needed
+  if [[ -d "$FEAT_DIR/stories/$STORY_ID" ]]; then
+    echo "$TAG STATE:       $STORY_ID → $TO_STAGE (KB only)"
+    return 0
+  fi
+
+  # Legacy fallback for unmigrated plans
   if [[ -d "$FEAT_DIR/$TO_STAGE/$STORY_ID" ]]; then
     echo "$TAG MOVE:        $STORY_ID ($FROM_STAGE → $TO_STAGE already exists, removing stale $FROM_STAGE copy)"
     rm -rf "$FEAT_DIR/$FROM_STAGE/$STORY_ID"

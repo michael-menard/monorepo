@@ -1,0 +1,112 @@
+schema: 1
+story_id: WINT-2120
+timestamp: '2026-03-07T23:50:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 6
+    fail: 0
+  integration:
+    pass: 1
+    fail: 0
+  e2e: exempt — backend-only benchmark, no frontend or endpoints
+coverage: 87.78
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-1
+    notes: >-
+      HARDCODED_BASELINES with 7 agents; BASELINE-TOKENS.yaml fallback reader implemented. BENCHMARK-RESULTS.yaml shows
+      baseline_source: hardcoded_ac6_fallback.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-2
+    notes: >-
+      context_cache_stats() loop over all 8 packTypeValues confirmed in code. Pack stats output in
+      BENCHMARK-RESULTS.yaml matches all 8 pack types.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-3
+    notes: Drizzle ORM query on contextPacks table; tokenCount preferred, char/4 fallback implemented at line 441-443.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-4
+    notes: >-
+      calculateTokenReduction pure function defined at line 208-229. Formula documented in JSDoc. BENCHMARK-RESULTS.yaml
+      methodology section contains formula and limitations.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-5
+    notes: >-
+      BENCHMARK-RESULTS.yaml exists with per_agent_results (7 agents), aggregate, methodology, pack_stats, and
+      NEEDS-TUNING verdict. All required sections present.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-6
+    notes: tuning_recommendations present when NEEDS-TUNING. Top 3 recommendations capped. Code at line 641-673.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-7
+    notes: >-
+      Zero-hit packs report as 'not yet populated' and are excluded from aggregate. Zero-content guard returns null
+      (line 215). Both guards confirmed via unit tests.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-8
+    notes: >-
+      isDatabaseAvailable() guard at line 280. Integration test self-skips gracefully when DB unavailable. Test ran and
+      passed (7/7 tests, 0 failures).
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-9
+    notes: Grep confirms no console.log usage. All output uses @repo/logger (imported at line 31).
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results.AC-10
+    notes: >-
+      Type errors are only in pre-existing files (elaboration.ts, affinity-reader.ts, elaboration/index.ts) — confirmed
+      by code review REVIEW.yaml and tsc output. Token-reduction-benchmark.integration.test.ts has 0 type errors.
+architecture_compliant: true
+architecture_notes: >-
+  ADR-005 (real PostgreSQL, no mocking) followed. @repo/logger used exclusively. Zod schemas used for all types (no
+  interfaces). No barrel files. No console.log. Pre-existing build/type errors are out of scope (3 errors documented in
+  REVIEW.yaml codebase_health).
+issues: []
+pre_existing_failures:
+  type_errors: 4
+  test_failures: 13
+  affected_files:
+    - src/nodes/elaboration/affinity-reader.ts
+    - src/graphs/elaboration.ts
+    - src/nodes/elaboration/index.ts
+    - src/nodes/elaboration/__tests__/structurer-affinity.test.ts
+    - src/models/__tests__/integration.test.ts
+    - src/nodes/health/__tests__/health-gate.integration.test.ts
+  note: All pre-existing from APIP-4010, WKFL-007, APIP-3050 commits. None introduced by WINT-2120.
+lessons_to_record:
+  - lesson: >-
+      Benchmark integration tests that self-skip on DB unavailability are a clean pattern — the isDatabaseAvailable()
+      guard lets unit tests run in CI without a live DB while integration coverage is preserved for local/DB-provisioned
+      runs.
+    category: pattern
+    tags:
+      - backend
+      - testing
+      - integration
+      - benchmark
+  - lesson: >-
+      When a story's only touched file is a test file, type-check errors in the overall package can be pre-existing and
+      should be scoped by file path during QA rather than blocking a PASS verdict on unrelated failures.
+    category: pattern
+    tags:
+      - qa
+      - typecheck
+      - pre-existing
+tokens:
+  in: 18500
+  out: 2800

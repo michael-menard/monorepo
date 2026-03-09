@@ -1,0 +1,55 @@
+schema: 1
+story_id: WISH-2019
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Add ioredis Dependency (AC 1)
+    acs: []
+    files: []
+  - id: 2
+    name: Create Redis Client Singleton (AC 1, AC 5, AC 6)
+    acs: []
+    files: []
+  - id: 3
+    name: Update FeatureFlagCache Interface for Async (AC 2)
+    acs: []
+    files: []
+  - id: 4
+    name: Create RedisCacheAdapter (AC 2, AC 3, AC 7, AC 8, AC 15)
+    acs:
+      - AC 15
+    files: []
+  - id: 5
+    name: Update InMemoryCache for Async Compatibility
+    acs: []
+    files: []
+  - id: 6
+    name: Update Service Layer for Async Cache (AC 4, AC 14)
+    acs:
+      - AC 4
+    files: []
+  - id: 7
+    name: Wire RedisCacheAdapter in Routes (AC 14)
+    acs: []
+    files: []
+  - id: 8
+    name: Create Docker Compose (AC 11)
+    acs: []
+    files: []
+  - id: 9
+    name: Create Environment Configuration (AC 16)
+    acs: []
+    files: []
+  - id: 10
+    name: Update Adapters Index Export
+    acs: []
+    files: []
+  - id: 11
+    name: Create Tests
+    acs: []
+    files: []
+reuse: []

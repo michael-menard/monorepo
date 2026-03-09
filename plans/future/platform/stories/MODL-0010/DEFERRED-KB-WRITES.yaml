@@ -1,0 +1,641 @@
+---
+# Deferred KB writes for MODL-0010
+# These should be persisted to knowledge base when KB is available
+
+deferred_writes:
+  - operation: insert_story
+    table: stories
+    data:
+      story_id: MODL-0010
+      feature: platform
+      title: "Provider Adapters (OpenRouter/Ollama/Anthropic)"
+      story_dir: plans/future/platform/MODL-0010
+      story_file: plans/future/platform/MODL-0010/MODL-0010.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: true
+      epic: MODL
+      wave: 1
+      position: 3
+      experiment_variant: control
+      created_at: "2026-02-13T00:00:00Z"
+    on_conflict:
+      strategy: update
+      conflict_key: story_id
+
+  # Elaboration findings - 21 knowledge base entries
+  # Added by elab-autonomous-decider
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: technical-investigation
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "OpenRouter LangChain Compatibility"
+      content: |
+        **[MODL-0010] OpenRouter LangChain Compatibility**
+
+        - Investigation needed: Determine if @langchain/openai is required for OpenRouter integration
+        - OpenRouter uses OpenAI-compatible API format but hosted at openrouter.ai/api/v1
+        - Alternatives: Native LangChain support, custom adapter, or OpenAI adapter with custom baseURL
+        - Decision point during implementation: Test with ChatOpenAI + custom baseURL first
+        - Fallback: Create custom OpenRouter adapter if needed
+        - Document outcome in implementation learnings for future provider integrations
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:technical-investigation
+        - openrouter
+        - langchain
+        - implementation-detail
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Health Monitoring"
+      content: |
+        **[MODL-0010] Provider Health Monitoring**
+
+        - No continuous health checks beyond initial availability check
+        - Impact: Medium | Effort: Medium
+        - Current: checkAvailability() only called at initialization
+        - Future: Background health checking with automatic provider switching
+        - Recommendation: Add to MODL-0020 (Model Selector) with availability-aware routing
+        - Pattern: Periodic health checks with circuit breaker pattern
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - observability
+        - health-checks
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Rate Limit Handling"
+      content: |
+        **[MODL-0010] Rate Limit Handling**
+
+        - No explicit rate limit detection/retry logic
+        - Impact: Medium | Effort: Low
+        - Current: API errors propagated directly to caller
+        - Future: Exponential backoff with rate limit header parsing
+        - Recommendation: Implement in MODL-0020 when integrating with model selector
+        - Pattern: Detect 429 status, parse Retry-After header, exponential backoff
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - edge-case
+        - rate-limits
+        - retry-logic
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Model Catalog Caching"
+      content: |
+        **[MODL-0010] Model Catalog Caching**
+
+        - OpenRouter model list fetched on-demand, not cached
+        - Impact: Low | Effort: Low
+        - Current: Each model lookup may call OpenRouter API
+        - Future: Cache model catalog with TTL (e.g., 1 hour)
+        - Recommendation: Add in MODL-0040 (Leaderboards) when displaying model options
+        - Pattern: In-memory cache with timestamp-based invalidation
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - performance
+        - caching
+        - openrouter
+        - modl-0040
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Configuration Hot-Reload"
+      content: |
+        **[MODL-0010] Configuration Hot-Reload**
+
+        - Requires process restart for config changes
+        - Impact: Low | Effort: Medium
+        - Current: Provider configs loaded at startup from environment variables
+        - Future: File watcher for config changes with cache invalidation
+        - Recommendation: Add in MODL-0020 if needed for dev experience
+        - Pattern: chokidar file watcher + cache.clear() on config change
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - future-proofing
+        - developer-experience
+        - config-management
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Metrics Tracking"
+      content: |
+        **[MODL-0010] Provider Metrics Tracking**
+
+        - No latency/cost/error tracking per provider
+        - Impact: Medium | Effort: Medium
+        - Current: Basic logging only via @repo/logger
+        - Future: Structured metrics collection for observability
+        - Recommendation: Defer to MODL-0030 (Quality Evaluator) and MODL-0040 (Leaderboards)
+        - Metrics: Response latency, token usage, error rates, cost per request
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - observability
+        - metrics
+        - modl-0030
+        - modl-0040
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Streaming Support Validation"
+      content: |
+        **[MODL-0010] Streaming Support Validation**
+
+        - Test plan doesn't verify streaming completions
+        - Impact: Low | Effort: Low
+        - Current: Assumes all providers support streaming via LangChain BaseChatModel
+        - Future: Explicit streaming tests for each provider
+        - Recommendation: Add in MODL-0020 when implementing model selector
+        - Test pattern: Verify stream chunks received, validate complete response
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - performance
+        - streaming
+        - testing
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Tool/Function Calling Validation"
+      content: |
+        **[MODL-0010] Tool/Function Calling Validation**
+
+        - Not verified for all providers in test plan
+        - Impact: Medium | Effort: Low
+        - Current: Assumes all providers support function calling via LangChain
+        - Future: Validate function calling works for OpenRouter, Anthropic, Ollama
+        - Recommendation: Add tests when integrating with existing nodes in MODL-0020
+        - Test pattern: Define tool schema, call model, verify tool invocation structure
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - edge-case
+        - function-calling
+        - testing
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Fallback Chain"
+      content: |
+        **[MODL-0010] Provider Fallback Chain**
+
+        - Only single fallback (Ollama → Claude) currently
+        - Impact: Low | Effort: Medium
+        - Current: Binary fallback logic in existing system
+        - Future: Multi-provider fallback chain (e.g., Primary → Secondary → Tertiary)
+        - Recommendation: Add in MODL-0020 with availability-aware routing
+        - Pattern: Ordered list of providers, automatic failover on error/unavailability
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - edge-case
+        - resilience
+        - failover
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "API Key Rotation Support"
+      content: |
+        **[MODL-0010] API Key Rotation Support**
+
+        - No mechanism for live key rotation
+        - Impact: Low | Effort: High
+        - Current: API keys loaded at startup, immutable during process lifetime
+        - Future: Support runtime key rotation without downtime
+        - Recommendation: Defer to production deployment (ops concern, not dev)
+        - Pattern: Secrets manager integration with periodic refresh
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - future-proofing
+        - security
+        - ops-concern
+        - non-blocking
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Cross-Provider Model Aliasing"
+      content: |
+        **[MODL-0010] Cross-Provider Model Aliasing**
+
+        - No way to define model aliases (e.g., "claude-3-5-sonnet" → "openrouter/anthropic/claude-3.5-sonnet")
+        - Impact: Medium | Effort: Medium
+        - Current: Explicit prefix required in model name
+        - Future: Alias system for common models across providers
+        - Recommendation: Add in MODL-0020 (Task Contracts) as part of model selection
+        - Pattern: Config file with alias mappings, resolve at runtime
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - integration
+        - model-selection
+        - developer-experience
+        - modl-0020
+        - non-blocking
+        - date:2026-02
+
+  # Enhancement opportunities (11-21)
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Cost Tracking"
+      content: |
+        **[MODL-0010] Provider Cost Tracking**
+
+        - Integrate with pricing APIs to estimate costs per invocation
+        - Impact: High | Effort: High
+        - Current: No cost tracking or estimation
+        - Future: Real-time cost calculation based on token usage + provider pricing
+        - Recommendation: Defer to MODL-0040 (Leaderboards) - track alongside quality metrics
+        - Data sources: OpenRouter pricing API, Anthropic pricing page, Ollama = free
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - observability
+        - cost-tracking
+        - modl-0040
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Model Context Window Validation"
+      content: |
+        **[MODL-0010] Model Context Window Validation**
+
+        - No checks for token limits before sending requests
+        - Impact: Medium | Effort: Medium
+        - Current: Requests may fail if context exceeds model limits
+        - Future: Pre-flight token estimation, automatic model selection for large contexts
+        - Recommendation: Add in MODL-0020 with task contracts (estimate tokens, select appropriate model)
+        - Pattern: tiktoken for token counting, model registry with context limits
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - performance
+        - validation
+        - modl-0020
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider-Specific Optimizations"
+      content: |
+        **[MODL-0010] Provider-Specific Optimizations**
+
+        - Each provider may have unique features (e.g., OpenRouter's fallback models)
+        - Impact: Medium | Effort: Medium
+        - Current: Unified interface ignores provider-specific capabilities
+        - Future: Expose provider-specific features through optional config
+        - Recommendation: Explore in MODL-0020 after baseline implementation
+        - Examples: OpenRouter fallbacks, Anthropic prompt caching, Ollama keep_alive
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - integration
+        - optimization
+        - modl-0020
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Configuration UI"
+      content: |
+        **[MODL-0010] Configuration UI**
+
+        - CLI or web UI for managing provider configs
+        - Impact: High | Effort: High
+        - Current: Manual environment variable editing
+        - Future: Web dashboard for provider configuration and testing
+        - Recommendation: Defer to AUTO epic (dashboard)
+        - Features: Add/remove providers, test connectivity, view API key status
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - ux-polish
+        - dashboard
+        - auto-epic
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Playground"
+      content: |
+        **[MODL-0010] Provider Playground**
+
+        - Interactive testing of providers/models
+        - Impact: Medium | Effort: Medium
+        - Current: Manual testing via code or REPL
+        - Future: Web-based playground for testing prompts across providers
+        - Recommendation: Defer to TELE epic (telemetry dashboards)
+        - Features: Side-by-side comparison, response timing, cost estimation
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - ux-polish
+        - developer-experience
+        - tele-epic
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Batch Request Optimization"
+      content: |
+        **[MODL-0010] Batch Request Optimization**
+
+        - Some providers support batch APIs for parallel requests
+        - Impact: Low | Effort: High
+        - Current: Sequential request handling only
+        - Future: Batch API support for improved throughput
+        - Recommendation: Investigate in MODL-0020 for parallel task execution
+        - Providers: OpenRouter batch support, Anthropic Batch API
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - performance
+        - batching
+        - modl-0020
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider Feature Matrix Documentation"
+      content: |
+        **[MODL-0010] Provider Feature Matrix Documentation**
+
+        - Document capabilities per provider (streaming, tools, vision, etc.)
+        - Impact: Medium | Effort: Low
+        - Current: No centralized documentation of provider capabilities
+        - Future: Markdown table in docs with feature support matrix
+        - Recommendation: Create in MODL-0020 documentation phase
+        - Features to document: Streaming, function calling, vision, multimodal, pricing
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - ux-polish
+        - documentation
+        - modl-0020
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Prompt Caching"
+      content: |
+        **[MODL-0010] Prompt Caching**
+
+        - Providers like Anthropic support prompt caching for cost/latency reduction
+        - Impact: Medium | Effort: Medium
+        - Current: No prompt caching utilization
+        - Future: Automatic prompt caching for repeated system prompts
+        - Recommendation: Explore in MODL-0030 (Quality Evaluator) when optimizing performance
+        - Savings: ~90% cost reduction on cached tokens, ~85% latency reduction
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - performance
+        - caching
+        - anthropic
+        - modl-0030
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Provider-Agnostic Retry Logic"
+      content: |
+        **[MODL-0010] Provider-Agnostic Retry Logic**
+
+        - Unified retry mechanism across all providers
+        - Impact: Medium | Effort: Low
+        - Current: No standardized retry handling in base interface
+        - Future: Retry logic in base provider with exponential backoff
+        - Recommendation: Add to base provider interface in MODL-0020
+        - Pattern: Configurable max retries, backoff multiplier, timeout
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - integration
+        - resilience
+        - retry-logic
+        - modl-0020
+        - enhancement
+        - date:2026-02
+
+  - operation: insert_finding
+    table: knowledge_entries
+    category: future-opportunities
+    data:
+      entry_type: finding
+      source_stage: elab
+      story_id: MODL-0010
+      title: "Environment-Specific Provider Routing"
+      content: |
+        **[MODL-0010] Environment-Specific Provider Routing**
+
+        - Dev uses Ollama, prod uses OpenRouter
+        - Impact: Medium | Effort: Medium
+        - Current: Same provider selection across all environments
+        - Future: Environment-based provider routing (dev/staging/prod)
+        - Recommendation: Defer to deployment configuration (ops concern)
+        - Pattern: Environment variable mappings, fallback chains per environment
+      tags:
+        - finding
+        - elab
+        - story:modl-0010
+        - category:future-opportunities
+        - integration
+        - deployment
+        - ops-concern
+        - enhancement
+        - date:2026-02
+
+reason: KB unavailable during story generation and autonomous elaboration
+created_at: "2026-02-13T00:00:00Z"
+retry_after: "2026-02-14T00:00:00Z"
+total_deferred_entries: 22  # 1 story insert + 21 findings
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

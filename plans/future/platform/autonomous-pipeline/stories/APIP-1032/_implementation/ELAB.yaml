@@ -1,0 +1,553 @@
+---
+story_id: APIP-1032
+title: "Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits"
+elab_phase: phase_1_audit_and_discovery
+analyst: elab-analyst
+date: "2026-03-03"
+preliminary_verdict: READY_WITH_NOTES
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLAN FILE CHECK
+# ─────────────────────────────────────────────────────────────────────────────
+plan_files:
+  PLAN_exec_md: NOT_FOUND
+  PLAN_meta_md: NOT_FOUND
+  note: "No PLAN.exec.md or PLAN.meta.md found in the feature directory. This is expected — plan files are generated at a later pipeline stage."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEPENDENCY GATE STATUS (verified via filesystem)
+# ─────────────────────────────────────────────────────────────────────────────
+dependency_gate_status:
+  APIP_1031:
+    status: READY_TO_WORK
+    note: >
+      APIP-1031 is in Ready to Work status per stories.index.md. Its declared
+      outputs (graphs/implementation.ts skeleton, nodes/load-story.ts,
+      nodes/create-worktree.ts, nodes/evidence-production.ts,
+      pipeline/i-model-dispatch.ts, graphs/change-spec-schema.ts,
+      CommitRecordSchema) do NOT yet exist in the filesystem. This is expected
+      since APIP-1031 has not been implemented yet. APIP-1032 MUST NOT begin
+      implementation until APIP-1031 is marked Completed and those files are
+      present.
+    blocking: true
+    blocking_acs: [AC-1, AC-5, AC-6, AC-7, AC-8, AC-11, AC-12, AC-13]
+
+  APIP_1020:
+    status: UAT
+    note: >
+      APIP-1020 is in UAT (final acceptance), not yet closed. ChangeSpec Zod
+      schema is not yet published. Story correctly gates AC-5 through AC-8 on
+      APIP-1020 completion. This gate is properly enforced by AC-1's HARD GATE
+      language. ST-6 must not begin until APIP-1020 publishes the ADR output.
+    blocking: true
+    blocking_acs: [AC-1, AC-5, AC-6, AC-7, AC-8]
+
+  APIP_0040:
+    status: UAT
+    note: >
+      APIP-0040 is in UAT. PipelineModelRouter exists in the filesystem
+      (src/pipeline/model-router.ts) and BudgetExhaustedError is defined in
+      src/pipeline/__types__/index.ts. The IModelDispatch interface injection
+      pattern correctly allows unit test isolation without APIP-0040 being
+      fully accepted. Unit tests can mock at the IModelDispatch boundary.
+      However, i-model-dispatch.ts is not yet created — it is an output of
+      APIP-1031, not APIP-0040.
+    blocking: false
+    note_on_unblocking: "Unit tests use IModelDispatch mock; real dispatch available when APIP-0040 closes."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILESYSTEM VERIFICATION: REFERENCED READ-ONLY FILES
+# ─────────────────────────────────────────────────────────────────────────────
+referenced_file_verification:
+  verified_present:
+    - path: packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      exports: NodeCircuitBreaker
+      status: VERIFIED
+    - path: packages/backend/orchestrator/src/runner/error-classification.ts
+      exports: "isRetryableNodeError(), ErrorCategory"
+      status: VERIFIED
+    - path: packages/backend/orchestrator/src/runner/node-factory.ts
+      exports: createToolNode, createNode
+      status: VERIFIED
+    - path: packages/backend/orchestrator/src/artifacts/evidence.ts
+      exports: "EvidenceItemSchema, CommandRunSchema, TouchedFileSchema, AcceptanceCriteriaEvidenceSchema"
+      status: VERIFIED
+    - path: packages/backend/orchestrator/src/graphs/elaboration.ts
+      note: "Canonical graph pattern — confirmed present for reuse reference"
+      status: VERIFIED
+    - path: packages/backend/orchestrator/src/pipeline/__types__/index.ts
+      exports: "BudgetExhaustedError, BudgetExhaustedErrorSchema, RateLimitExceededError"
+      status: VERIFIED
+
+  not_yet_present_expected_from_APIP_1031:
+    - path: packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      reason: "APIP-1031 output — will exist when APIP-1031 completes"
+    - path: packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+      reason: "APIP-1031 output (placeholder) — replaced by APIP-1020 ADR when published"
+    - path: packages/backend/orchestrator/src/graphs/implementation.ts
+      reason: "APIP-1031 output (skeleton) — this story adds change-loop and full wiring"
+    - path: packages/backend/orchestrator/src/nodes/load-story.ts
+      reason: "APIP-1031 output"
+    - path: packages/backend/orchestrator/src/nodes/create-worktree.ts
+      reason: "APIP-1031 output"
+    - path: packages/backend/orchestrator/src/nodes/evidence-production.ts
+      reason: "APIP-1031 output"
+
+  discovery_note_yaml_artifact_writer:
+    referenced_in_story: "yaml-artifact-writer (reuse package for EVIDENCE.yaml write assertions)"
+    actual_location: packages/backend/orchestrator/src/persistence/yaml-artifact-bridge.ts
+    status: >
+      The story references yaml-artifact-writer as a mock boundary. The actual
+      implementation is yaml-artifact-bridge.ts in persistence/. Implementer
+      should use the actual module path for vi.mock(). This is a naming
+      inconsistency — not a gap, but a clarification needed for ST-8.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUBPROCESS EXECUTION PATTERN DISCOVERY
+# ─────────────────────────────────────────────────────────────────────────────
+subprocess_execution_pattern:
+  story_proposes: "child_process.execSync or execa with cwd: worktreePath"
+  existing_orchestrator_pattern: >
+    The QA graph nodes (run-unit-tests.ts, run-e2e-tests.ts) use
+    child_process.spawn wrapped in Promise.race with wall-clock timeout. This
+    is the established async, non-blocking pattern in the orchestrator. The
+    story's use of execSync is synchronous/blocking and differs from the
+    established pattern.
+  execa_dependency: NOT_IN_PACKAGE_JSON
+  recommendation: >
+    GAP-1 (see below): The story specifies execSync (synchronous) but the
+    established codebase pattern is spawn wrapped in Promise (async). The
+    implementer must choose one approach and be consistent. execSync blocks
+    the event loop during micro-verify runs (which can be minutes). The spawn
+    pattern is preferred for production but acceptable to use execSync for
+    simplicity in this story given the LangGraph server context (non-Lambda).
+    Document the choice as an accepted trade-off if execSync is used.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9-POINT AUDIT CHECKLIST
+# ─────────────────────────────────────────────────────────────────────────────
+audit:
+
+  # 1. SCOPE ALIGNMENT
+  scope_alignment:
+    verdict: PASS
+    notes:
+      - "Story is split_part 2 of 2 from APIP-1030, scope is clearly delineated from APIP-1031."
+      - "Non-goals explicitly exclude all APIP-1031 deliverables, upstream ADR work (APIP-1020), and downstream graph integration (APIP-1050/1060/1070)."
+      - "Single package touched: packages/backend/orchestrator. Consistent with scope."
+      - "No HTTP endpoints — pure server-side LangGraph process. Confirmed correct."
+      - "The stories.index.md correctly records APIP-1032 as 'In Elaboration' and APIP-1031 as 'Ready to Work'."
+      - "Critical path position (story 5b of 12) is accurately described; APIP-1040 and APIP-1050 are both marked Completed in the index, which is correct since they are listed as unblocked after APIP-1032."
+
+  # 2. INTERNAL CONSISTENCY
+  internal_consistency:
+    verdict: PASS_WITH_NOTES
+    notes:
+      - "AC numbering gap: ACs are numbered 1, 5, 6, 7, 8, 11, 12, 13. ACs 2, 3, 4, 9, 10 are absent. This is expected — they belong to APIP-1031. The AC-Subtask Coverage Check correctly maps all 8 ACs."
+      - "Subtask table references AC-2 and AC-10 as '(complete)' in ST-7 without those ACs appearing in the AC list. This is cosmetically confusing — ST-7 should simply say it completes the graph wiring without referencing APIP-1031 AC numbers."
+      - "BudgetExhaustedError propagation is consistent throughout: Architecture Notes, AC-6, Risk Summary, and Infrastructure Notes all agree on the propagation-not-swallow behavior."
+      - "Idempotent resume pattern (AC-8) is consistent with the code snippet in Architecture Notes."
+      - "The change-loop conditional edge structure diagram is consistent with AC-5's retry logic description."
+      - "OPP-2 (microVerifyTimeoutMs) appears in both Non-Goals and the OPP-2 Consideration section. The non-goals section defers it but the Architecture Notes say 'consider adding as an explicit AC'. This is not contradictory but creates ambiguity — see GAP-2 below."
+
+  # 3. REUSE-FIRST ENFORCEMENT
+  reuse_first:
+    verdict: PASS
+    notes:
+      - "NodeCircuitBreaker from runner/circuit-breaker.ts: reuse specified, file verified present."
+      - "isRetryableNodeError() + ErrorCategory from runner/error-classification.ts: reuse specified, file verified present."
+      - "IModelDispatch injectable interface from APIP-1031: correct interface injection pattern, aligns with existing PipelineModelRouter dispatch pattern."
+      - "CommitRecordSchema from APIP-1031: correct reuse, avoids duplication."
+      - "createEvidence/addTouchedFile/addCommandRun from artifacts/evidence.ts: verified present with EvidenceItemSchema, CommandRunSchema, TouchedFileSchema schemas."
+      - "elaboration.ts as canonical graph pattern: verified present."
+      - "createToolNode explicitly excluded from change-loop node (per GAP-3 resolution from APIP-1031). Correct."
+      - "BudgetExhaustedError imported from pipeline/__types__/index.ts — verified present, no re-implementation required."
+      - "No new packages proposed — only existing orchestrator utilities. Good."
+
+  # 4. PORTS_AND_ADAPTERS_COMPLIANCE
+  ports_and_adapters:
+    verdict: PASS
+    notes:
+      - "IModelDispatch is the correct port boundary for model dispatch. Unit tests mock at this interface, not at PipelineModelRouter implementation level."
+      - "git subprocess calls (execSync/spawn) are side effects that should be injectable in unit tests — the story correctly specifies mocking child_process.execSync / execa in unit tier (Test Plan, Mock Boundaries section)."
+      - "yaml-artifact-writer (persistence) is identified as a mock boundary for unit tests — correct adapter boundary."
+      - "No Lambda usage — LangGraph server context is correct per ADR-001 Decision 4 and Infrastructure Notes."
+      - "BudgetExhaustedError propagated to BullMQ job processor — correct adapter boundary (change loop does not own BullMQ integration)."
+
+  # 5. LOCAL_TESTABILITY
+  local_testability:
+    verdict: PASS_WITH_NOTES
+    notes:
+      - "Unit tests: IModelDispatch mock, child_process mock, yaml-artifact-writer mock — all appropriate for local isolation."
+      - "Integration tests: os.tmpdir() fixture (TempGitRepo) is the correct isolation pattern. AC-12 explicitly mandates no real monorepo traversal."
+      - "No integration test __tests__/integration/ directory currently exists in the orchestrator. The story creates it as new. This is expected."
+      - "KB search found the lesson: 'LangGraph node handler index.ts files are not unit-testable in isolation via createToolNode'. The change-loop node explicitly does NOT use createToolNode (confirmed by story), so direct unit testing of change-loop.ts functions is feasible."
+      - "AC-12 integration test includes micro-verify running pnpm check-types against a real file change in a temp fixture. This is potentially slow in CI. The OPP-2 timeout guard (microVerifyTimeoutMs) would protect against hangs but is not an AC."
+      - "KB search found EC-4 timeout test CI performance lesson: if integration test runs real pnpm check-types without timeout, CI wall time is unbounded. See GAP-2."
+
+  # 6. DECISION_COMPLETENESS
+  decision_completeness:
+    verdict: PASS_WITH_NOTES
+    notes:
+      - "execSync vs spawn: Story specifies 'child_process.execSync or execa' without committing to one. The existing codebase uses spawn (async). This is an undecided choice — see GAP-1."
+      - "microVerifyTimeoutMs: OPP-2 is listed in Non-Goals as deferred but the Architecture Notes say 'consider adding as explicit AC'. The decision is not made — it is recommended that the elaboration decisively defer this to a follow-up story and document it as an accepted risk. See GAP-2."
+      - "Commit message format: defined ('feat({storyId}): {changeSpec.id} — {changeSpec.summary}'). Decision is complete."
+      - "maxRetries default (2): decision complete."
+      - "completedChanges updated ONLY after exit 0: decision complete, enforces atomicity."
+      - "BudgetExhaustedError = PERMANENT abort, no retry: decision complete."
+      - "RISK-001 (micro-verify as necessary but not sufficient gate): acknowledged. Decision complete."
+      - "change-loop NOT wrapped in createToolNode: decision complete (from APIP-1031 GAP-3 resolution)."
+
+  # 7. RISK_DISCLOSURE
+  risk_disclosure:
+    verdict: PASS
+    notes:
+      - "Risk table is comprehensive: 8 risks with severity and mitigation."
+      - "RISK-001 (cheap model passes micro-verify but fails QA) is properly acknowledged."
+      - "Non-atomic git commit risk is addressed (execSync per ChangeSpec, completedChanges after exit 0)."
+      - "createToolNode wrapping risk is explicit and mitigation is clear."
+      - "OPP-2 (micro-verify hang) listed as MEDIUM with accepted risk note — appropriate for this scope."
+      - "Integration test isolation risk covered by AC-12 mandate."
+      - "One risk not explicitly in table: execSync blocking the event loop during micro-verify. See GAP-1."
+
+  # 8. STORY_SIZING
+  story_sizing:
+    verdict: PASS_WITH_NOTES
+    points: 5
+    ac_count: 8
+    notes:
+      - "8 ACs is at the upper threshold for a 5-point story. The story itself notes this in the instructions ('8 ACs at the sizing threshold')."
+      - "4 subtasks with estimates totaling 39,000 tokens is substantial but reasonable for a core infrastructure story."
+      - "The story is backend-only with no UI work, which reduces scope vs a full-stack story."
+      - "The dependency on APIP-1031 (which provides the skeleton) significantly reduces scope — this story does not start from scratch."
+      - "KB lesson confirms code stories exceed token estimates by 4-8x. At 39,000 tokens estimated, actual consumption could reach 120,000-300,000 tokens. This is within budget expectations for a Phase 1 infrastructure story."
+      - "Verdict: sizing is appropriate given the natural seam from the APIP-1030 split and the APIP-1031 dependency reducing scope."
+
+  # 9. SUBTASK_DECOMPOSITION
+  subtask_decomposition:
+    verdict: PASS_WITH_NOTES
+    notes:
+      - "4 subtasks (ST-6, ST-7, ST-8, ST-9) with explicit dependency ordering (ST-6 → ST-7 → ST-8 → ST-9). Correct sequencing."
+      - "AC-Subtask Coverage Check is present and all 8 ACs are covered by at least one subtask."
+      - "ST-7 references AC-2 and AC-10 as '(complete)' — these are APIP-1031 ACs. Minor cosmetic issue (see internal_consistency note)."
+      - "Token estimates: ST-6 (12k), ST-7 (8k), ST-8 (10k), ST-9 (9k). Reasonable distribution; ST-6 heaviest as it is the core node implementation."
+      - "ST-8 and ST-9 are test-only subtasks with no production code — appropriate separation."
+      - "Files to modify are clearly specified per subtask. No ambiguity about which files each subtask owns."
+      - "The integration test subtask (ST-9) depends on ST-8 — this dependency is logical (unit tests should pass before integration tests are written) but could be relaxed. Not a defect."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MVP-CRITICAL GAPS (blocking or high-risk for implementation success)
+# ─────────────────────────────────────────────────────────────────────────────
+mvp_critical_gaps:
+
+  GAP-1:
+    title: "execSync vs spawn: subprocess execution strategy undecided"
+    severity: MEDIUM
+    blocking: false
+    description: >
+      The story specifies "child_process.execSync or execa" without committing
+      to one approach. The existing orchestrator pattern (run-unit-tests.ts,
+      run-e2e-tests.ts) uses child_process.spawn wrapped in Promise.race with
+      a wall-clock timeout. execSync is synchronous/blocking and will hold the
+      Node.js event loop for the full duration of pnpm check-types and pnpm
+      test runs (potentially minutes per ChangeSpec). In a LangGraph server
+      context this is less critical than in Lambda, but it is still a
+      suboptimal pattern.
+    recommendation: >
+      Clarify in the story or PLAN.exec.md: use child_process.spawn with
+      stdout/stderr capture (matching the qa/run-unit-tests.ts pattern) OR
+      explicitly accept execSync as a simplification trade-off for this story
+      and document it. Do NOT use execa unless it is added as a package
+      dependency — it is not currently in the orchestrator package.json.
+    affected_acs: [AC-7, AC-12]
+    affected_subtasks: [ST-6, ST-9]
+
+  GAP-2:
+    title: "OPP-2 micro-verify timeout: decision left open between Non-Goals and Architecture Notes"
+    severity: LOW
+    blocking: false
+    description: >
+      The Non-Goals section lists "Micro-verify timeout guard (OPP-2)" as
+      deferred. The Architecture Notes section says "consider adding to AC-7
+      or as a follow-up AC." This creates ambiguity — the implementer may feel
+      compelled to add a timeout or skip it based on conflicting guidance.
+      Additionally, AC-12 requires micro-verify to run real pnpm commands in a
+      tmp fixture, which has unbounded wall time without a timeout guard. A
+      runaway micro-verify during integration tests could hang CI indefinitely.
+    recommendation: >
+      Make a definitive decision: either (a) add microVerifyTimeoutMs as a
+      configurable parameter with a default of 120,000ms in AC-7, or (b)
+      explicitly accept the risk and document it. The KB entry for OPP-2
+      (from APIP-1030 elaboration) recommends option (a). Given that the
+      integration tests run real pnpm commands, at minimum add a timeout to
+      the integration test TempGitRepo fixture to prevent CI hangs.
+    affected_acs: [AC-7, AC-12]
+    affected_subtasks: [ST-6, ST-9]
+    kb_reference: "OPP-2 KB entry: 'Future Opportunity: Micro-Verify Timeout Guard Missing in AC-7'"
+
+  GAP-3:
+    title: "yaml-artifact-writer mock path: naming mismatch with actual module"
+    severity: LOW
+    blocking: false
+    description: >
+      The Test Plan references "yaml-artifact-writer" as a mock boundary for
+      EVIDENCE.yaml write assertions. The actual module in the codebase is
+      packages/backend/orchestrator/src/persistence/yaml-artifact-bridge.ts.
+      The mock in ST-8 must target the exact import path used by the
+      implementation (per KB lesson on vi.mock() import path matching).
+      Using the wrong path in vi.mock() will silently fail to intercept calls.
+    recommendation: >
+      When writing ST-8 unit tests, use:
+        vi.mock('../../persistence/yaml-artifact-bridge.js', ...)
+      or whatever relative path the change-loop node actually imports from.
+      Do NOT use 'yaml-artifact-writer' as the mock path.
+    affected_acs: [AC-11]
+    affected_subtasks: [ST-8]
+
+  GAP-4:
+    title: "IModelDispatch interface does not yet exist in filesystem"
+    severity: LOW
+    blocking: false
+    description: >
+      i-model-dispatch.ts is an APIP-1031 output that does not yet exist.
+      The story correctly acknowledges this dependency, but it is worth
+      flagging that the IModelDispatch interface must be defined in APIP-1031
+      before ST-6 can begin. The story should not define its own IModelDispatch
+      — it must reuse the one from APIP-1031. This is correctly stated in the
+      story but is a coordination risk if APIP-1031 defines the interface
+      differently than expected.
+    recommendation: >
+      When APIP-1031 completes, verify that IModelDispatch.dispatch() signature
+      accepts (storyId, agentId, messages/context) matching AC-5's call pattern
+      before starting ST-6. If there is a mismatch, raise a blocker immediately
+      rather than adapting the change-loop implementation.
+    affected_acs: [AC-5, AC-6]
+    affected_subtasks: [ST-6]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUTURE OPPORTUNITIES (non-blocking, post-MVP)
+# ─────────────────────────────────────────────────────────────────────────────
+future_opportunities:
+
+  OPP-1:
+    title: "Promote execSync to async spawn pattern in a follow-up refactor"
+    category: code-quality
+    effort: LOW
+    impact: LOW
+    description: >
+      If execSync is chosen for this story (simplicity), a future refactor to
+      child_process.spawn (matching run-unit-tests.ts pattern) would eliminate
+      event loop blocking and make the change-loop node consistent with
+      established orchestrator node patterns.
+    story_suggestion: "Add as a tech-debt note in change-loop.ts with a TODO comment referencing OPP-1."
+
+  OPP-2:
+    title: "microVerifyTimeoutMs configurable timeout guard"
+    category: resilience
+    effort: LOW
+    impact: MEDIUM
+    description: >
+      Already identified in APIP-1030 elaboration KB entry. A configurable
+      timeout (default: 120,000ms) wrapping micro-verify commands prevents
+      indefinite hang on runaway test suites. TIMEOUT result treated as
+      micro-verify FAIL, increments retry counter.
+    story_suggestion: >
+      If not added as an AC in this story, create a follow-up story after
+      APIP-1032 completes. References: KB entry 'Future Opportunity:
+      Micro-Verify Timeout Guard Missing in AC-7'.
+
+  OPP-3:
+    title: "toStateUpdate helper pattern for change-loop node return values"
+    category: code-quality
+    effort: LOW
+    impact: LOW
+    description: >
+      KB lesson recommends a toStateUpdate helper to consolidate the single
+      cast point for node return values to Partial<GraphState>. The change-loop
+      node should adopt this pattern when implemented to maintain consistency
+      with other nodes.
+    kb_reference: "Lesson: Single cast point pattern for LangGraph node return values"
+
+  OPP-4:
+    title: "Idempotency contract documentation for atomic commit side effect"
+    category: documentation
+    effort: LOW
+    impact: LOW
+    description: >
+      The atomic commit (execSync git commit) is a side-effecting operation.
+      Per WINT-9105 ADR (error handling strategy), side-effecting nodes must
+      have documented idempotency contracts. The completedChanges check (AC-8)
+      provides idempotency but this contract should be explicitly documented
+      in change-loop.ts as a code comment, not just in the story.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KB PATTERN FINDINGS APPLIED
+# ─────────────────────────────────────────────────────────────────────────────
+kb_patterns_applied:
+  - pattern: "LangGraph node handler index.ts files are not unit-testable in isolation via createToolNode"
+    application: >
+      Change-loop explicitly does NOT use createToolNode. Direct unit testing
+      of change-loop.ts functions is feasible. ST-8 should test the node
+      function directly, not through graph runtime.
+
+  - pattern: "Single cast point pattern for LangGraph node return values"
+    application: "OPP-3 — recommend toStateUpdate helper in change-loop.ts implementation."
+
+  - pattern: "vi.hoisted() required for mocking modules before import resolution in Vitest"
+    application: >
+      ST-8 unit tests mocking child_process.execSync and IModelDispatch must
+      use vi.hoisted() for mock factory variables to avoid temporal dead zone
+      errors.
+
+  - pattern: "ESM module mocking in Vitest requires vi.mock() at module level"
+    application: >
+      child_process mock in change-loop.test.ts must use vi.mock('child_process')
+      at module level (not inside test functions).
+
+  - pattern: "Test mocks must target the actual import path used by the implementation"
+    application: "GAP-3 — yaml-artifact-bridge.ts is the actual module, not 'yaml-artifact-writer'."
+
+  - pattern: "Injectable dispatch pattern for notification testing"
+    application: >
+      IModelDispatch injection is already planned. Unit tests can pass a vi.fn()
+      as the dispatch function without module-level mocking, keeping tests clean.
+
+  - pattern: "Code stories exceed token estimates by 4-8x"
+    application: >
+      Total estimated 39,000 tokens; actual consumption likely 120,000-300,000.
+      This is expected and within project norms for Phase 1 infrastructure stories.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRELIMINARY VERDICT SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+preliminary_verdict: READY_WITH_NOTES
+verdict_rationale: >
+  APIP-1032 is a well-structured story with clear scope, explicit dependency
+  gates, comprehensive test coverage, and proper reuse of existing orchestrator
+  infrastructure. All referenced read-only files (circuit-breaker.ts,
+  error-classification.ts, node-factory.ts, evidence.ts, BudgetExhaustedError)
+  are verified present in the filesystem.
+
+  The story cannot begin implementation until APIP-1031 is Completed (all its
+  outputs must exist), and AC-5 through AC-8 must wait for APIP-1020 to
+  publish the ChangeSpec schema ADR. These gates are properly enforced by the
+  story's own AC-1 HARD GATE language.
+
+  Four gaps were identified — none are blocking for elaboration to proceed:
+  GAP-1 (execSync vs spawn strategy) should be resolved at PLAN.exec.md
+  authoring time. GAP-2 (OPP-2 timeout decision) should be decisively deferred
+  with a risk acknowledgment. GAP-3 (yaml-artifact-bridge path) is an
+  implementation-time clarification. GAP-4 (IModelDispatch interface) is a
+  coordination risk addressed at ST-6 start time.
+
+  The story is READY to advance to the next elaboration phase.
+
+verdict_conditions:
+  - "Implementer must verify APIP-1031 Completed status and all its output files exist before starting ST-6"
+  - "Implementer must verify APIP-1020 ChangeSpec ADR is published before starting AC-5 through AC-8"
+  - "GAP-1: Decide execSync vs spawn before ST-6 begins; document choice in PLAN.exec.md"
+  - "GAP-2: Make definitive OPP-2 decision (defer or add AC); either way document as accepted risk"
+  - "GAP-3: Use yaml-artifact-bridge.ts import path (not 'yaml-artifact-writer') in vi.mock() for ST-8"
+  - "GAP-4: Verify IModelDispatch.dispatch() signature from APIP-1031 before ST-6 implementation"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PHASE 1.5 — AUTONOMOUS DECIDER RESULTS
+# ─────────────────────────────────────────────────────────────────────────────
+autonomous_decider:
+  decided_at: "2026-03-03T00:00:00Z"
+  decided_by: elab-autonomous-decider
+  final_verdict: CONDITIONAL_PASS
+  story_modified: false
+  new_acs_added: 0
+  rationale: >
+    All four MVP-critical gaps are implementation-time clarifications or
+    coordination notes — none block the core user journey or require new
+    acceptance criteria. The story's existing HARD GATE language (AC-1)
+    already enforces the dependency gates for APIP-1031 and APIP-1020.
+    All decisions have been persisted to the Knowledge Base for implementer
+    reference. The story advances to READY_TO_WORK pending dependency
+    completion.
+
+  gap_decisions:
+
+    GAP-1:
+      title: "execSync vs spawn subprocess execution strategy"
+      decision: RESOLVED_AS_IMPLEMENTATION_CHOICE
+      resolution: >
+        Decided: use child_process.spawn wrapped in Promise (matching the
+        established run-unit-tests.ts pattern). If execSync is chosen for
+        MVP simplicity, the implementer MUST document the trade-off in
+        PLAN.exec.md and add a TODO OPP-1 comment in change-loop.ts.
+        execa must NOT be used — not in package.json.
+      ac_added: false
+      kb_entry_id: "7deeab2e-9b54-4816-9a69-283471e47f1d"
+
+    GAP-2:
+      title: "OPP-2 micro-verify timeout: conflicting guidance resolved"
+      decision: DECISIVELY_DEFERRED
+      resolution: >
+        OPP-2 is deferred to a follow-up story. The ambiguity between
+        Non-Goals and Architecture Notes is resolved in favor of deferral.
+        The risk is accepted. ST-9 integration tests MUST configure Vitest
+        test timeout to 180,000ms as a CI safety net (not a full fix, but
+        provides bounded wall time for real pnpm commands).
+      ac_added: false
+      accepted_risk: true
+      integration_test_mitigation: "test('...', async () => { ... }, 180_000)"
+      kb_entry_id: "fa443d1a-8d9e-47ca-be78-c1590a4f2234"
+
+    GAP-3:
+      title: "yaml-artifact-writer mock path naming mismatch"
+      decision: RESOLVED_AS_CLARIFICATION_NOTE
+      resolution: >
+        Implementation-time clarification only. The actual module is
+        yaml-artifact-bridge.ts in persistence/. ST-8 must use the actual
+        relative import path in vi.mock() — not 'yaml-artifact-writer'.
+        Persisted to KB for implementer reference.
+      ac_added: false
+      kb_entry_id: "8946c6b9-3e3f-4a0e-b2da-1e3d0b6d97c7"
+
+    GAP-4:
+      title: "IModelDispatch interface does not yet exist"
+      decision: RESOLVED_AS_COORDINATION_NOTE
+      resolution: >
+        Dependency coordination risk already covered by existing HARD GATE
+        language. No new AC required. ST-6 implementer must verify
+        IModelDispatch.dispatch() signature from APIP-1031 before starting,
+        and raise a blocker immediately if signature mismatches rather than
+        adapting around it.
+      ac_added: false
+      kb_entry_id: "7c0a3e7e-8cfa-4894-af11-9ba9a019ae61"
+
+  opportunity_decisions:
+
+    OPP-1:
+      title: "Promote execSync to async spawn pattern in follow-up refactor"
+      decision: DEFERRED_WITH_TODO_COMMENT
+      kb_entry_id: "4bf01776-eab2-4450-bf25-ca46a18995e7"
+
+    OPP-2:
+      title: "microVerifyTimeoutMs configurable timeout guard"
+      decision: DEFERRED_TO_FOLLOW_UP_STORY
+      kb_entry_id: "fa443d1a-8d9e-47ca-be78-c1590a4f2234"
+
+    OPP-3:
+      title: "toStateUpdate helper pattern for change-loop node return values"
+      decision: RECOMMEND_IMPLEMENT_IN_ST6_NO_AC
+      kb_entry_id: "505fe2a6-68ff-4b3a-9592-7d5f0cc76fa7"
+
+    OPP-4:
+      title: "Idempotency contract documentation for atomic commit side effect"
+      decision: RECOMMEND_IMPLEMENT_IN_ST6_NO_AC
+      kb_entry_id: "ef2a69a1-58d8-4947-87e2-74f7e639a9c1"
+
+  summary:
+    gaps_total: 4
+    gaps_requiring_new_ac: 0
+    gaps_deferred: 2
+    gaps_resolved_as_implementation_notes: 2
+    opportunities_total: 4
+    opportunities_deferred: 2
+    opportunities_recommended_for_implementation: 2
+    story_file_modified: false
+    kb_entries_written: 6
