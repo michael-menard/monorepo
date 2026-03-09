@@ -16,11 +16,11 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 27 |
+| uat | 28 |
 | in-qa | 0 |
-| ready-for-qa | 1 |
+| ready-for-qa | 2 |
 | needs-code-review | 3 |
-| ready-for-code-review | 4 |
+| ready-for-code-review | 3 |
 | failed-code-review | 0 |
 | failed-qa | 5 |
 | elaboration | 1 |
@@ -1018,8 +1018,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** ready-for-qa
-**Story File:** `wint/ready-for-qa/WINT-2030/WINT-2030.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1083,7 +1083,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2070: Implement Cache Warming Strategy
 
 **Status:** created
-**Depends On:** WINT-2030, WINT-2050, WINT-2060
+**Depends On:** WINT-2050, WINT-2060
 **Phase:** 2
 **Feature:** Create cache-warm skill that pre-populates all caches before workflow starts
 **Infrastructure:**
@@ -1145,7 +1145,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
 **Status:** ready-for-qa
-**Depends On:** WINT-2030, WINT-2050, WINT-2060, WINT-0100
+**Depends On:** WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache
 **Infrastructure:**
@@ -1450,7 +1450,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4070: Create cohesion-prosecutor Agent (PO Role)
 
-**Status:** ready-for-code-review
+**Status:** ready-for-qa
 **Depends On:** WINT-4040
 **Phase:** 4
 **Feature:** Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete
