@@ -293,3 +293,30 @@ export {
   type SynthesizeResult,
   type GraphStateWithSynthesizedStory,
 } from './synthesize.js'
+
+export {
+  // Main node (WINT-9030)
+  cohesionCheckNode,
+  createCohesionCheckNode,
+  // Helper functions (for testing and direct use)
+  cohesionCheckImpl,
+  cohesionAuditImpl,
+  // Schemas
+  CohesionCheckConfigSchema,
+  CohesionCheckNodeResultSchema,
+  CohesionCheckStateSchema,
+  CohesionCheckResultSchema,
+  CohesionAuditResultSchema,
+  CapabilityCoverageSchema,
+  CohesionStatusSchema,
+  FrankenFeatureItemSchema,
+  // Types
+  type CohesionCheckConfig,
+  type CohesionCheckNodeResult,
+  type CohesionCheckResult,
+  type CohesionAuditResult,
+  type CohesionStatus,
+  type CapabilityCoverage,
+  type FrankenFeatureItem,
+  type GraphStateWithCohesionCheck,
+} from './cohesion-check.js'
