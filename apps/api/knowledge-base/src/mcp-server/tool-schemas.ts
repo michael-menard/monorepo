@@ -17,6 +17,7 @@ import {
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
+  WorkflowLogInvocationInputSchema,
   type WorktreeRegisterInput,
   type WorktreeGetByStoryInput,
   type WorktreeListActiveInput,
@@ -3723,72 +3724,6 @@ Example:
 // ============================================================================
 
 /**
- * Input schema for workflow_log_invocation tool.
- * Inserts one row to wint.agent_invocations.
- */
-export const WorkflowLogInvocationInputSchema = z.object({
-  invocation_id: z.string().min(1),
-  agent_name: z.string().min(1),
-  story_id: z.string().optional(),
-  phase: z.string().optional(),
-  input_payload: z.record(z.unknown()).optional(),
-  output_payload: z.record(z.unknown()).optional(),
-  duration_ms: z.number().int().min(0).optional(),
-  input_tokens: z.number().int().min(0).optional(),
-  output_tokens: z.number().int().min(0).optional(),
-  cached_tokens: z.number().int().min(0).optional().default(0),
-  total_tokens: z.number().int().min(0).optional().default(0),
-  estimated_cost: z.string().optional().default('0.0000'),
-  model_name: z.string().optional(),
-  status: z.enum(['success', 'failure', 'partial']),
-  error_message: z.string().optional(),
-  started_at: z.coerce.date().optional(),
-  completed_at: z.coerce.date().optional(),
-})
-export type WorkflowLogInvocationInput = z.infer<typeof WorkflowLogInvocationInputSchema>
-
-export const workflowLogInvocationToolDefinition: McpToolDefinition = {
-  name: 'workflow_log_invocation',
-  description: `Record an agent invocation in wint.agent_invocations for telemetry.
-
-Inserts one row tracking agent execution: timing, token usage, cost, and status.
-Used by all WINT agents to record invocation telemetry for observability.
-
-Parameters:
-- invocation_id (required): Unique identifier (caller-generated, e.g. UUID or {agentName}-{timestamp})
-- agent_name (required): Agent name (e.g., "dev-execute-leader")
-- status (required): "success" | "failure" | "partial"
-- story_id (optional): Story ID (e.g., "WINT-0120")
-- phase (optional): Workflow phase (e.g., "plan", "execute")
-- duration_ms (optional): Wall-clock duration in milliseconds
-- input_tokens (optional): Input token count
-- output_tokens (optional): Output token count
-- cached_tokens (optional): Cached token count (default 0)
-- total_tokens (optional): Total tokens (input + output + cached, default 0)
-- estimated_cost (optional): Estimated cost in USD as string (default "0.0000")
-- model_name (optional): LLM model name (e.g., "claude-sonnet-4-6")
-- error_message (optional): Error message if status is "failure"
-- started_at (optional): ISO timestamp when invocation started (default now)
-- completed_at (optional): ISO timestamp when invocation completed
-
-Returns: { logged: true, id: uuid, invocation_id: string, message: string }
-
-Example:
-{
-  "invocation_id": "dev-execute-leader-1741449600000",
-  "agent_name": "dev-execute-leader",
-  "story_id": "WINT-0120",
-  "phase": "execute",
-  "status": "success",
-  "input_tokens": 12000,
-  "output_tokens": 3000,
-  "total_tokens": 15000,
-  "duration_ms": 45000
-}`,
-  inputSchema: zodToMcpSchema(WorkflowLogInvocationInputSchema),
-}
-
-/**
  * Input schema for workflow_log_decision tool.
  * Inserts one row to wint.hitl_decisions.
  */
@@ -4018,11 +3953,6 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbFindSimilarStoriesToolDefinition,
   // Composite story context (CDTS-2020)
   kbGetStoryContextToolDefinition,
-  // Telemetry tools (WINT-0120)
-  workflowLogInvocationToolDefinition,
-  workflowLogDecisionToolDefinition,
-  workflowLogOutcomeToolDefinition,
-  workflowGetStoryTelemetryToolDefinition,
 ]
 
 /**
@@ -4095,8 +4025,6 @@ toolDefinitions.push(
 // Telemetry Tool (WINT-3020)
 // ============================================================================
 
-import { WorkflowLogInvocationInputSchema } from '@repo/mcp-tools'
-
 /**
  * workflow_log_invocation tool definition.
  * WINT-3020: Invocation Logging Skill (telemetry-log)
@@ -4146,4 +4074,12 @@ Example:
 toolDefinitions.push(
   // Telemetry tool (WINT-3020)
   workflowLogInvocationToolDefinition,
+)
+
+// Append WINT-0120 telemetry tools to toolDefinitions (after WINT-3020)
+toolDefinitions.push(
+  // Telemetry tools (WINT-0120)
+  workflowLogDecisionToolDefinition,
+  workflowLogOutcomeToolDefinition,
+  workflowGetStoryTelemetryToolDefinition,
 )
