@@ -3718,6 +3718,213 @@ Example:
   inputSchema: zodToMcpSchema(KbGetStoryContextInputSchema),
 }
 
+// ============================================================================
+// Telemetry MCP Tools (WINT-0120)
+// ============================================================================
+
+/**
+ * Input schema for workflow_log_invocation tool.
+ * Inserts one row to wint.agent_invocations.
+ */
+export const WorkflowLogInvocationInputSchema = z.object({
+  invocation_id: z.string().min(1),
+  agent_name: z.string().min(1),
+  story_id: z.string().optional(),
+  phase: z.string().optional(),
+  input_payload: z.record(z.unknown()).optional(),
+  output_payload: z.record(z.unknown()).optional(),
+  duration_ms: z.number().int().min(0).optional(),
+  input_tokens: z.number().int().min(0).optional(),
+  output_tokens: z.number().int().min(0).optional(),
+  cached_tokens: z.number().int().min(0).optional().default(0),
+  total_tokens: z.number().int().min(0).optional().default(0),
+  estimated_cost: z.string().optional().default('0.0000'),
+  model_name: z.string().optional(),
+  status: z.enum(['success', 'failure', 'partial']),
+  error_message: z.string().optional(),
+  started_at: z.coerce.date().optional(),
+  completed_at: z.coerce.date().optional(),
+})
+export type WorkflowLogInvocationInput = z.infer<typeof WorkflowLogInvocationInputSchema>
+
+export const workflowLogInvocationToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_invocation',
+  description: `Record an agent invocation in wint.agent_invocations for telemetry.
+
+Inserts one row tracking agent execution: timing, token usage, cost, and status.
+Used by all WINT agents to record invocation telemetry for observability.
+
+Parameters:
+- invocation_id (required): Unique identifier (caller-generated, e.g. UUID or {agentName}-{timestamp})
+- agent_name (required): Agent name (e.g., "dev-execute-leader")
+- status (required): "success" | "failure" | "partial"
+- story_id (optional): Story ID (e.g., "WINT-0120")
+- phase (optional): Workflow phase (e.g., "plan", "execute")
+- duration_ms (optional): Wall-clock duration in milliseconds
+- input_tokens (optional): Input token count
+- output_tokens (optional): Output token count
+- cached_tokens (optional): Cached token count (default 0)
+- total_tokens (optional): Total tokens (input + output + cached, default 0)
+- estimated_cost (optional): Estimated cost in USD as string (default "0.0000")
+- model_name (optional): LLM model name (e.g., "claude-sonnet-4-6")
+- error_message (optional): Error message if status is "failure"
+- started_at (optional): ISO timestamp when invocation started (default now)
+- completed_at (optional): ISO timestamp when invocation completed
+
+Returns: { logged: true, id: uuid, invocation_id: string, message: string }
+
+Example:
+{
+  "invocation_id": "dev-execute-leader-1741449600000",
+  "agent_name": "dev-execute-leader",
+  "story_id": "WINT-0120",
+  "phase": "execute",
+  "status": "success",
+  "input_tokens": 12000,
+  "output_tokens": 3000,
+  "total_tokens": 15000,
+  "duration_ms": 45000
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogInvocationInputSchema),
+}
+
+/**
+ * Input schema for workflow_log_decision tool.
+ * Inserts one row to wint.hitl_decisions.
+ */
+export const WorkflowLogDecisionInputSchema = z.object({
+  invocation_id: z.string().uuid().optional(),
+  decision_type: z.string().min(1),
+  decision_text: z.string().min(1),
+  context: z.record(z.unknown()).optional(),
+  embedding: z.array(z.number()).optional(),
+  operator_id: z.string().min(1),
+  story_id: z.string().min(1),
+})
+export type WorkflowLogDecisionInput = z.infer<typeof WorkflowLogDecisionInputSchema>
+
+export const workflowLogDecisionToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_decision',
+  description: `Record a HITL (Human-In-The-Loop) decision in wint.hitl_decisions.
+
+Inserts one row capturing a human or agent decision during story execution.
+Supports semantic search via optional 1536-dim embedding of decision_text.
+
+Parameters:
+- decision_type (required): Category (e.g., "approve", "reject", "defer", "override")
+- decision_text (required): Human-readable description of the decision
+- operator_id (required): Operator/user who made the decision
+- story_id (required): Story this decision is associated with
+- invocation_id (optional): UUID FK to agent_invocations.id (nullable)
+- context (optional): Structured JSON context at time of decision
+- embedding (optional): 1536-dimensional number array for semantic similarity search
+
+Returns: { logged: true, id: uuid, message: string }
+
+Example:
+{
+  "decision_type": "approve",
+  "decision_text": "Approved implementation plan after reviewing scope",
+  "operator_id": "user-michael",
+  "story_id": "WINT-0120",
+  "context": { "iteration": 1, "phase": "plan" }
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogDecisionInputSchema),
+}
+
+/**
+ * Input schema for workflow_log_outcome tool.
+ * Upserts one row in wint.story_outcomes (unique on story_id).
+ */
+export const WorkflowLogOutcomeInputSchema = z.object({
+  story_id: z.string().min(1),
+  final_verdict: z.enum(['pass', 'fail', 'blocked', 'cancelled']),
+  quality_score: z.number().int().min(0).max(100).optional().default(0),
+  total_input_tokens: z.number().int().min(0).optional().default(0),
+  total_output_tokens: z.number().int().min(0).optional().default(0),
+  total_cached_tokens: z.number().int().min(0).optional().default(0),
+  estimated_total_cost: z.string().optional().default('0.0000'),
+  review_iterations: z.number().int().min(0).optional().default(0),
+  qa_iterations: z.number().int().min(0).optional().default(0),
+  duration_ms: z.number().int().min(0).optional().default(0),
+  primary_blocker: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  completed_at: z.coerce.date().optional(),
+})
+export type WorkflowLogOutcomeInput = z.infer<typeof WorkflowLogOutcomeInputSchema>
+
+export const workflowLogOutcomeToolDefinition: McpToolDefinition = {
+  name: 'workflow_log_outcome',
+  description: `Upsert the final outcome for a story in wint.story_outcomes.
+
+One row per story (unique on story_id). Updates existing row if story already has an outcome.
+Tracks cumulative token usage, cost, quality scores, and iteration counts.
+
+Parameters:
+- story_id (required): Story identifier (e.g., "WINT-0040")
+- final_verdict (required): "pass" | "fail" | "blocked" | "cancelled"
+- quality_score (optional): 0-100 quality score (default 0)
+- total_input_tokens (optional): Cumulative input tokens (default 0)
+- total_output_tokens (optional): Cumulative output tokens (default 0)
+- total_cached_tokens (optional): Cumulative cached tokens (default 0)
+- estimated_total_cost (optional): Total cost in USD as string (default "0.0000")
+- review_iterations (optional): Review cycle count (default 0)
+- qa_iterations (optional): QA cycle count (default 0)
+- duration_ms (optional): Total wall-clock duration in milliseconds (default 0)
+- primary_blocker (optional): Primary failure/block reason
+- metadata (optional): Arbitrary JSON metadata
+- completed_at (optional): ISO timestamp of completion
+
+Returns: { logged: true, id: uuid, story_id: string, final_verdict: string, message: string }
+
+Example:
+{
+  "story_id": "WINT-0120",
+  "final_verdict": "pass",
+  "quality_score": 85,
+  "total_input_tokens": 45000,
+  "total_output_tokens": 12000,
+  "review_iterations": 1,
+  "duration_ms": 180000
+}`,
+  inputSchema: zodToMcpSchema(WorkflowLogOutcomeInputSchema),
+}
+
+/**
+ * Input schema for workflow_get_story_telemetry tool.
+ * Reads all 3 telemetry tables for a story.
+ */
+export const WorkflowGetStoryTelemetryInputSchema = z.object({
+  story_id: z.string().min(1),
+})
+export type WorkflowGetStoryTelemetryInput = z.infer<typeof WorkflowGetStoryTelemetryInputSchema>
+
+export const workflowGetStoryTelemetryToolDefinition: McpToolDefinition = {
+  name: 'workflow_get_story_telemetry',
+  description: `Retrieve all telemetry data for a story from the 3 telemetry tables.
+
+Queries wint.agent_invocations, wint.hitl_decisions, and wint.story_outcomes
+in parallel and returns all rows grouped by table.
+
+Parameters:
+- story_id (required): Story ID to query (e.g., "WINT-0120")
+
+Returns:
+{
+  story_id: string,
+  invocations: AgentInvocation[],  // all rows from wint.agent_invocations
+  decisions: HitlDecision[],        // all rows from wint.hitl_decisions
+  outcome: StoryOutcome | null,     // single row from wint.story_outcomes (or null)
+  message: string
+}
+
+Example:
+{
+  "story_id": "WINT-0120"
+}`,
+  inputSchema: zodToMcpSchema(WorkflowGetStoryTelemetryInputSchema),
+}
+
 export const toolDefinitions: McpToolDefinition[] = [
   kbAddToolDefinition,
   kbGetToolDefinition,
@@ -3811,6 +4018,11 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbFindSimilarStoriesToolDefinition,
   // Composite story context (CDTS-2020)
   kbGetStoryContextToolDefinition,
+  // Telemetry tools (WINT-0120)
+  workflowLogInvocationToolDefinition,
+  workflowLogDecisionToolDefinition,
+  workflowLogOutcomeToolDefinition,
+  workflowGetStoryTelemetryToolDefinition,
 ]
 
 /**
