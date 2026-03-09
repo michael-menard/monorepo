@@ -47,7 +47,7 @@ export async function handleGateCheckRequest(
     rawBody = await readBody(req)
   } catch (error) {
     logger.warn('[gatekeeper] Failed to read gate check request body', {
-      error: error instanceof Error ? error.message : String(error),
+      error: (error as Error)?.message ?? String(error),
     })
     sendJson(res, 400, { ok: false, error: 'Failed to read request body' })
     return

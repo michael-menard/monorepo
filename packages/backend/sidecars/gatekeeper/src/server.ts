@@ -23,7 +23,7 @@ import { handleGateCheckRequest } from './routes/gate.js'
 const PORT = parseInt(process.env.PORT ?? '3094', 10)
 
 const server = createServer((req, res) => {
-  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+  const url = new URL(req.url ?? '/', `http://${req.headers?.host ?? 'localhost'}`)
   const method = req.method?.toUpperCase() ?? 'GET'
   const path = url.pathname
 
