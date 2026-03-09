@@ -69,7 +69,7 @@ Signal: ELAB-SETUP COMPLETE
 ```
 
 ### Phase 1: Analysis
-Move story: `backlog/{STORY_ID}` → `elaboration/{STORY_ID}`
+Move story (if `{FEATURE_DIR}/backlog/{STORY_ID}/` exists on disk): `backlog/{STORY_ID}` → `elaboration/{STORY_ID}`. Skip move silently if no directory — KB state update in elab-setup-leader is the authoritative state change.
 
 ```
 Task: sonnet, "Phase 1 Analysis {STORY_ID}"
@@ -141,12 +141,12 @@ Signal: ELABORATION COMPLETE: <verdict>
 
 After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CONDITIONAL PASS`:
 
-1. Update DB state:
+1. Update DB state (PRIMARY — always run):
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "ready", phase: "planning" })
    ```
-   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
-2. Move story directory:
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID}` and continue.
+2. Move story directory (best-effort — only if `{FEATURE_DIR}/elaboration/{STORY_ID}/` exists):
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
    ```
@@ -161,12 +161,12 @@ After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CON
 
 After Phase 2 returns `ELABORATION COMPLETE: FAIL`:
 
-1. Update DB state:
+1. Update DB state (PRIMARY — always run):
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "backlog", phase: "planning" })
    ```
-   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
-2. Move story directory:
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID}` and continue.
+2. Move story directory (best-effort — only if `{FEATURE_DIR}/elaboration/{STORY_ID}/` exists):
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/backlog/{STORY_ID}
    ```
