@@ -1,0 +1,114 @@
+schema: 1
+story_id: WINT-2030
+timestamp: '2026-03-09T17:30:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 9
+    fail: 0
+  integration:
+    pass: 9
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+coverage: not_measured
+coverage_meets_threshold: true
+test_quality:
+  verdict: FAIL
+  anti_patterns:
+    - >-
+      EC-1 test does not actually mock contextCachePut to throw — runs happy path only, claims resilience 'structurally
+      guaranteed' via code comments
+    - >-
+      EC-2 test does not actually mock readFileSync to throw ENOENT — runs happy path only, does not inject a missing
+      file failure
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    notes: HP-1, HP-2 verify 5 entries written including project-conventions from CLAUDE.md
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: HP-1 verifies tech-stack-backend entry written with packType architecture
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: HP-1 verifies tech-stack-frontend entry written with packType architecture
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: HP-1 verifies tech-stack-monorepo entry written with packType architecture
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: HP-1 verifies testing-strategy entry written with packType test_patterns
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: HP-3 verifies ttl=2592000 (30 days) on all 5 entries; ED-1 verifies idempotency
+  - ac_id: AC-7
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: >-
+      AC-7 requires verifying individual pack write failures are logged and do not abort. EC-1 and EC-2 tests do NOT
+      inject failures — they only run the happy path and comment that resilience is 'structurally guaranteed'. The fix
+      described in FIX-SUMMARY (iteration 1) was never written to disk. File on disk at
+      packages/backend/mcp-tools/src/scripts/__tests__/populate-project-context.test.ts has no vi.mock, no
+      mockImplementationOnce. AC-7 is unverified by test.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: Script has JSDoc with run command and isMain guard for direct tsx execution
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: HP-1 and ED-1 verify 5 entries exist after first run and still 5 after second run (idempotency)
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: HP-2 verifies structured JSONB with summary field; ED-2 verifies content < 8000 chars
+architecture_compliant: true
+issues:
+  - id: QA-ISSUE-1
+    severity: FAIL
+    description: >-
+      EC-1 and EC-2 tests do not use vi.mock or mockImplementationOnce. The FIX-SUMMARY (iteration 1) artifact claimed
+      these tests were fixed to inject actual failures, but the test file on disk contains the original weak
+      implementations. No vi.mock, no mockImplementationOnce, no mockedPut, no mockedReadFileSync present in the test
+      file.
+    file: packages/backend/mcp-tools/src/scripts/__tests__/populate-project-context.test.ts
+    lines: 146-207
+    ac_affected: AC-7
+    required_fix: >-
+      EC-1 must use vi.mock('../../context-cache/context-cache-put.js') and mockImplementationOnce() to throw on the
+      first call, then verify result.failed===1 and result.succeeded===4 with 4 DB rows written. EC-2 must use
+      vi.mock('node:fs') and mockImplementationOnce() to throw ENOENT for CLAUDE.md, then verify result.failed===1 and
+      result.succeeded===4.
+lessons_to_record:
+  - lesson: >-
+      Fix summary artifacts can describe changes that were never written to disk. During QA verification, always read
+      the actual source files to confirm the described fix was applied — do not trust artifact-level claims alone.
+    category: anti_pattern
+    tags:
+      - qa
+      - testing
+      - evidence
+      - artifacts
+  - lesson: >-
+      EC tests that only verify the happy path and claim resilience is 'structurally guaranteed' by code comments are
+      not evidence of correct error handling. Resilience tests must inject actual failures via mocking to be meaningful.
+    category: testing
+    tags:
+      - testing
+      - mocking
+      - resilience
+      - error-handling
+tokens:
+  in: 28000
+  out: 2500

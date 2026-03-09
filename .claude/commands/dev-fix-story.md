@@ -67,6 +67,11 @@ Phase 3 complete:
 2. Confirm `pr_action: updated`
 3. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
 4. Status: `ready-for-code-review`
+5. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log {STORY_ID} dev-fix-story execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
 
 **Next**: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 

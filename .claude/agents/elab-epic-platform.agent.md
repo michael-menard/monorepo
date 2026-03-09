@@ -28,9 +28,8 @@ Everything else is a **future improvement** (observability, optimization, scalin
 
 Read from `{FEATURE_DIR}/`:
 
-**KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: if KB is unavailable, read from the files listed below.
+**KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` for scope alignment (deprecated — KSOT-3040).
 
-- `stories.index.md`
 - `PLAN.meta.md`
 - `PLAN.exec.md`
 - `roadmap.md`

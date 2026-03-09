@@ -1,0 +1,1 @@
+{"version":3,"file":"config.d.ts","sourceRoot":"","sources":["../../src/telemetry-sdk/config.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAA4B,KAAK,kBAAkB,EAAE,MAAM,sBAAsB,CAAA;AAExF;;;GAGG;AACH,eAAO,MAAM,kBAAkB,EAAE,OAAO,CAAC,kBAAkB,CAK1D,CAAA;AAED;;;;;;;GAOG;AACH,wBAAgB,cAAc,CAC5B,MAAM,EAAE,OAAO,CAAC,kBAAkB,CAAC,GAAG,IAAI,CAAC,kBAAkB,EAAE,QAAQ,CAAC,GACvE,kBAAkB,CAMpB"}

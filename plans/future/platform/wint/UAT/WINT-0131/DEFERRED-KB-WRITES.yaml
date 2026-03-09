@@ -50,3 +50,7 @@ writes:
         WINT-0131; implementer and QA should reference Architecture Notes for this context.
     reason: "KB MCP server not accessible during elab-autonomous-decider phase"
     retry_after: "KB persistence tooling available"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

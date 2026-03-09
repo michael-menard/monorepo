@@ -55,7 +55,7 @@ Display results as a markdown table:
 - **Plan Slug**: backtick-wrapped slug
 - **Description**: use `summary` field from KB response, truncate to 80 chars if needed (append "...")
 - **Prefix**: story_prefix or `--`
-- **Stories**: If the plan has stories (status is `stories-created` or `in-progress`), call `kb_list_stories` with the plan's `story_prefix` to get total and completed counts, then display as `completed/total` (e.g., `3/20`). Count a story as "completed" if its status is `UAT`, `done`, or `implemented`. If no stories exist yet, show `estimated_stories` or `--`.
+- **Stories**: If the plan has stories (status is `stories-created` or `in-progress`), call `kb_list_stories` using the basename of the plan's `featureDir` as the `feature` filter (e.g., `featureDir: "plans/future/platform/autonomous-pipeline"` → `feature: "autonomous-pipeline"`). Get total and completed counts, then display as `completed/total` (e.g., `3/20`). Count a story as "completed" if its `state` is `completed`. If no stories exist yet, show `estimated_stories` or `--`.
 - **Updated**: relative date (e.g., "2h ago", "3d ago")
 
 ### Step 4 — Summary Line

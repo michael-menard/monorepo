@@ -150,6 +150,9 @@ importers:
       '@repo/context-pack-sidecar':
         specifier: workspace:*
         version: link:../../../packages/backend/sidecars/context-pack
+      '@repo/database-schema':
+        specifier: workspace:*
+        version: link:../../../packages/backend/database-schema
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
@@ -1851,6 +1854,9 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../core/logger
+      '@repo/sidecar-rules-registry':
+        specifier: workspace:*
+        version: link:../sidecars/rules-registry
       '@repo/workflow-logic':
         specifier: workspace:*
         version: link:../workflow-logic

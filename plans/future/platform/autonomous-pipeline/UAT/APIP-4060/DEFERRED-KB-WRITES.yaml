@@ -19,3 +19,7 @@ writes:
       touches_database: true
       touches_infra: false
 retry_after: "next-kb-available"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

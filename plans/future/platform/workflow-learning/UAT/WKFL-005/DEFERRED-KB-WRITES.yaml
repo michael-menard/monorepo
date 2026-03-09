@@ -7,3 +7,7 @@ deferred_writes:
       cd apps/api/knowledge-base && \
       docker-compose exec -T postgres psql -U kb_user -d knowledge_base < /tmp/kb-insert-wkfl-005.sql
     status: pending
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

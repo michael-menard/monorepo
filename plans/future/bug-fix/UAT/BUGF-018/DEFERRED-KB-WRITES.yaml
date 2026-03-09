@@ -208,3 +208,7 @@ kb_write_summary:
   high_priority: 1  # KB-008: Document in CLAUDE.md
   medium_priority: 3  # KB-002, KB-005, KB-009
   low_priority: 9
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

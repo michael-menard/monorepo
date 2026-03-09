@@ -64,12 +64,23 @@ export const ToolNameSchema = z.enum([
   'kb_list_plans',
   'kb_update_plan',
   'kb_upsert_plan',
+  // PDBM Phase 0 plan tools
+  'kb_search_plans',
+  'kb_get_plan_dashboard',
+  'kb_get_plan_revisions',
+  'kb_log_plan_event',
+  'kb_get_plan_events',
   // Artifact search tool (KBAR-0130)
   'artifact_search',
   // Dual-write artifact tool (KBAR-0110)
   'artifact_write',
   // Context pack tool (WINT-2020)
   'context_pack_get',
+  // Telemetry tools (WINT-0120)
+  'workflow_log_invocation',
+  'workflow_log_decision',
+  'workflow_log_outcome',
+  'workflow_get_story_telemetry',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -143,12 +154,23 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_list_plans: new Set(['pm', 'dev', 'qa', 'all']),
   kb_update_plan: new Set(['pm', 'dev', 'all']),
   kb_upsert_plan: new Set(['pm', 'dev', 'all']),
+  // PDBM Phase 0 plan tools
+  kb_search_plans: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_plan_dashboard: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_plan_revisions: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_log_plan_event: new Set(['pm', 'dev']),
+  kb_get_plan_events: new Set(['pm', 'dev', 'qa', 'all']),
   // Artifact search tool (KBAR-0130) - available to all roles
   artifact_search: new Set(['pm', 'dev', 'qa', 'all']),
   // Dual-write artifact tool (KBAR-0110)
   artifact_write: new Set(['pm', 'dev', 'qa', 'all']),
   // Context pack tool (WINT-2020) - available to all roles
   context_pack_get: new Set(['pm', 'dev', 'qa', 'all']),
+  // Telemetry tools (WINT-0120) - available to all roles
+  workflow_log_invocation: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_log_decision: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_log_outcome: new Set(['pm', 'dev', 'qa', 'all']),
+  workflow_get_story_telemetry: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

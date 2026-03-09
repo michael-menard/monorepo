@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
+import { eq, and, or, sql, desc, asc, inArray, notInArray, isNull, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import {
@@ -48,6 +48,7 @@ const storyColumns = {
   acceptanceCriteria: stories.acceptanceCriteria,
   nonGoals: stories.nonGoals,
   packages: stories.packages,
+  embedding: stories.embedding,
 } as const
 
 const storyArtifactColumns = {
@@ -130,6 +131,7 @@ export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
  */
 export const KbGetStoryResultSchema = z.object({
   story: z.custom<typeof stories.$inferSelect>().nullable(),
+  detail: z.custom<typeof storyDetails.$inferSelect>().nullable().optional(),
   artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
   dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
   message: z.string(),
@@ -406,7 +408,7 @@ export async function kb_get_story(
   const result = await deps.db
     .select(storyColumns)
     .from(stories)
-    .where(eq(stories.storyId, validated.story_id))
+    .where(and(eq(stories.storyId, validated.story_id), isNull(stories.deletedAt)))
     .limit(1)
 
   const story = result[0] ?? null
@@ -417,9 +419,19 @@ export async function kb_get_story(
       story: null,
       artifacts: [],
       dependencies: [],
+      detail: null,
       message: `Story ${validated.story_id} not found`,
     }
   }
+
+  // Fetch story details (1:1 detail table — cold columns)
+  const detailResult = await deps.db
+    .select(storyDetailColumns)
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const detail = detailResult[0] ?? null
 
   // Conditionally fetch artifacts (single SELECT, not N+1)
   let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
@@ -446,6 +458,7 @@ export async function kb_get_story(
 
   return {
     story,
+    detail,
     ...(artifacts !== undefined ? { artifacts } : {}),
     ...(dependencies !== undefined ? { dependencies } : {}),
     message: `Found story ${validated.story_id}`,
@@ -472,7 +485,7 @@ export async function kb_list_stories(
   // Build WHERE condition
   let whereCondition: SQL<unknown> | undefined
 
-  const conditions: SQL<unknown>[] = []
+  const conditions: SQL<unknown>[] = [isNull(stories.deletedAt)]
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
@@ -712,6 +725,7 @@ export async function kb_get_next_story(
 
   // Build base conditions
   const conditions: SQL<unknown>[] = [
+    isNull(stories.deletedAt),
     eq(stories.epic, validated.epic),
     eq(stories.blocked, false),
     inArray(stories.state, validStates),

@@ -67,3 +67,7 @@ When KB integration is available:
 1. Run SQL statement above to insert story entry
 2. Verify story is queryable: `SELECT * FROM stories WHERE story_id = 'WKFL-010'`
 3. Delete this DEFERRED-KB-WRITES.yaml file after successful write
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

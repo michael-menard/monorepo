@@ -1,0 +1,78 @@
+schema_version: 1
+story_id: "WINT-9050"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Scope is tightly bounded to three file areas (orchestrator/nodes/qa/, orchestrator/__tests__/, workflow-logic/src/evidence-judge/). Non-goals explicitly exclude routing integration (WINT-4120/4140), DB writes, model calls, and artifact schema changes. No extra endpoints or features introduced."
+
+  - id: internal_consistency
+    status: PASS
+    note: "Goal, ACs, Non-Goals, and Scope are mutually consistent. ACs 1-8 implement the node and classifiers, AC-9/10 cover tests, AC-11/12 are quality gates. No contradictions between goal ('port evidence-judge agent to TypeScript LangGraph node') and AC content."
+
+  - id: reuse_first
+    status: PASS
+    note: "Explicit reuse table covers: createToolNode, EvidenceItemSchema/AcceptanceCriteriaEvidenceSchema, QAGraphState, @repo/logger, verify-acs.ts skeleton, workflow-logic package module layout. Canonical references table present and populated. No one-off utilities introduced."
+
+  - id: ports_adapters
+    status: PASS
+    note: "No API endpoints. Core classifiers (classifyEvidenceStrength, deriveAcVerdict, deriveOverallVerdict) are pure functions extracted to workflow-logic — fully transport-agnostic. LangGraph is the adapter boundary. Node middleware selection (createToolNode vs createNode) is documented and justified."
+
+  - id: testability
+    status: PASS
+    note: "AC-9 enumerates 5 concrete, executable test scenarios: (a) all-ACCEPT, (b) mixed, (c) zero-evidence REJECT, (d) subjective language downgrade, (e) null state. Fixture factories (makeEvidenceState, makeEvidenceItem) are named and pattern-referenced from verify-acs.test.ts. File write mocking strategy is addressed. Verification commands are runnable."
+
+  - id: decision_completeness
+    status: PASS
+    note: "WINT-9010 dependency risk has documented workaround (inline-first, extract-later). Node middleware choice is resolved (createToolNode). Required Zod schemas are named explicitly (AcVerdictSchema, EvidenceJudgeResultSchema, EvidenceJudgeOutputSchema). No blocking TBDs remain."
+
+  - id: risk_disclosure
+    status: PASS
+    note: "WINT-9010 concurrent write risk documented with mitigation. File write path dependency on storyFilePath in state is flagged. WINT-4070 listed as dependency. review_cycles_predicted and token_estimate provided. Main gap: WINT-4070's relationship to this story is not explained anywhere in the story body (see opportunities)."
+
+  - id: story_sizing
+    status: WARN
+    note: "12 ACs nominally exceeds the 8-AC threshold but is defensible: ACs 10-12 are lightweight verification ACs (existing tests pass, type-check, lint). Effective implementation ACs are 9. 4 subtasks, linear DAG, no endpoints, 28k token estimate. Not SPLIT_REQUIRED — the node is cohesive and the verification ACs do not add meaningful complexity."
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: "Linear DAG (ST-1→ST-2→ST-3→ST-4) is correct and all 12 ACs are covered. Concern: ST-2 goal states 'extend with evidenceJudge output fields' for QAGraphState, and files_to_read includes qa.ts, but qa.ts is absent from files_to_modify. If QAGraphState needs a new evidenceJudge field, this is a missing modify entry. Condition: implementation agent must confirm whether qa.ts requires modification and update files_to_modify accordingly before starting ST-2."
+
+  - id: clarity_format
+    status: PASS
+    note: "Sections present: Goal, Examples (2 concrete input/output examples), Edge Cases (2 cases), Non-Goals, Scope, Reuse Plan, Architecture Notes, Canonical References, Subtasks, Test Plan. Well-structured and unambiguous."
+
+gaps:
+  - id: GAP-1
+    severity: MVP_BLOCKING
+    description: "ST-2 files_to_modify list omits qa.ts despite ST-2 goal explicitly stating 'extend with evidenceJudge output fields' for QAGraphState. If the graph state type definition in packages/backend/orchestrator/src/graphs/qa.ts must be modified to add evidence-judge output fields, the subtask's modification scope is incomplete. Implementation agent may miss this change, causing type errors downstream."
+    recommendation: "Before starting ST-2, confirm whether qa.ts needs modification. If yes, add 'packages/backend/orchestrator/src/graphs/qa.ts' to files_to_modify in ST-2. If no (output returned as state patch without extending the type), update ST-2 goal to remove the ambiguous 'extend with' language."
+    decision: "add_ac_clarification"
+    resolution: "Added 'packages/backend/orchestrator/src/graphs/qa.ts (if QAGraphState needs evidenceJudge output fields — confirm before starting)' to ST-2 files_to_modify list in story file."
+
+opportunities:
+  - id: OPP-1
+    severity: NON_BLOCKING
+    description: "WINT-4070 is listed in depends_on but its relationship to this story is never explained anywhere in the story body. The implementation agent has no context for what WINT-4070 provides or why it must complete before WINT-9050 can proceed."
+    recommendation: "Add a one-sentence note to Architecture Notes or Reality Baseline explaining what WINT-4070 delivers and why it is a prerequisite for WINT-9050."
+    decision: "deferred"
+    resolution: "Non-blocking. WINT-4070 dependency is indirect (per STORY-SEED: 'runtime coupling is indirect — evidence-judge does not call cohesion-prosecutor'). Implementation can proceed without this clarification."
+
+  - id: OPP-2
+    severity: NON_BLOCKING
+    description: "The WINT-9010 inline-first / extract-later two-commit strategy is described in Architecture Notes and ST-1 note, but AC-2/AC-3/AC-4 unconditionally require classifiers in workflow-logic/. If WINT-9010 is still in-qa when work starts, the agent must hold AC-2/AC-3/AC-4 incomplete until WINT-9010 merges. This ordering constraint is implicit, not stated in the ACs or subtasks."
+    recommendation: "Add a conditional note to AC-2/AC-3/AC-4 (or a ST-1 precondition block) clarifying that these ACs cannot be verified until WINT-9010 reaches UAT or completed, and that the inline-first approach is a valid interim state during implementation."
+    decision: "deferred"
+    resolution: "Non-blocking. The Architecture Notes section already documents the two-step strategy with sufficient detail. The implementation agent has enough context to navigate the dependency ordering."
+
+split_recommendation: null
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 2
+  opportunities_logged: 2
+  acs_added: 0

@@ -17,7 +17,13 @@
  *   DB_POOL_SIZE - Database connection pool size (default: 3)
  */
 
-import { getDbClient, closeDbClient, testConnection, startHealthCheck, stopHealthCheck } from '../db/client.js'
+import {
+  getDbClient,
+  closeDbClient,
+  testConnection,
+  startHealthCheck,
+  stopHealthCheck,
+} from '../db/client.js'
 import { createEmbeddingClient } from '../embedding-client/index.js'
 import { createMcpLogger } from './logger.js'
 import {

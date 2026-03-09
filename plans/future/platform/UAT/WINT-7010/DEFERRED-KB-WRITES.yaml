@@ -364,3 +364,7 @@ notes:
   - 18 non-blocking findings from elaboration deferred to KB
   - Run /kb-sync or kb-artifact-migration command to retry
   - Story is fully functional without KB persistence (KB is index optimization)
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

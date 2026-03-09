@@ -28,3 +28,7 @@ writes:
       status: active
     conflict_action: "ON CONFLICT (story_id) DO UPDATE SET status = 'active', branch_name = EXCLUDED.branch_name"
     note: "Worktree created successfully at tree/story/WINT-2090 — DB registration deferred"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

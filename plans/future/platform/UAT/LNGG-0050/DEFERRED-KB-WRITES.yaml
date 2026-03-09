@@ -386,3 +386,7 @@ deferred_writes:
         - "date:2026-02"
     reason: "KB MCP tools not available during elaboration"
     timestamp: "2026-02-14T00:00:00Z"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

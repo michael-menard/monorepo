@@ -224,3 +224,7 @@ notes:
   - "When KB becomes available, import these entries for future reference and story planning"
   - "All findings extracted from FUTURE-OPPORTUNITIES.md during Phase 1 analysis"
   - "Related story IDs (INST-3080 through INST-3089) are already referenced in story Non-Goals and Future Opportunities sections"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

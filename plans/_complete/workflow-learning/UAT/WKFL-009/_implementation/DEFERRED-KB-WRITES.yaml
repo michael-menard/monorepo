@@ -340,3 +340,7 @@ notes: |
   All non-blocking findings from FUTURE-OPPORTUNITIES.md logged for KB write during completion phase.
   These items were not MVP-critical and do not block story implementation.
   KB writer will process these entries with appropriate tags and metadata.
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

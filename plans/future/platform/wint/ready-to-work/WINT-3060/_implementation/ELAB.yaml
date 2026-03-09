@@ -1,0 +1,299 @@
+schema: elab/1.0
+story_id: WINT-3060
+title: "Create Telemetry Query Command (/telemetry)"
+analyst: elab-analyst
+date: "2026-03-08"
+preliminary_verdict: PASS
+
+---
+
+audit_checklist:
+
+  - id: AC-CHECK-1
+    title: Scope Alignment
+    result: PASS
+    notes: >
+      Story scope is precisely bounded to a single markdown file at
+      .claude/commands/telemetry.md. touches_backend: false,
+      touches_frontend: false, touches_database: false, touches_infra: false
+      are all correctly set. The Scope section and Non-Goals section both
+      explicitly protect apps/api/knowledge-base/ and all DB migration files.
+      No endpoint creation, no infrastructure provisioning. Scope alignment
+      is complete and unambiguous.
+
+  - id: AC-CHECK-2
+    title: Internal Consistency
+    result: PASS
+    notes: >
+      Goal ("read-only /telemetry command with --story STORY_ID filter,
+      formatted summary via workflow_get_story_telemetry") maps 1:1 to all
+      9 ACs. Non-Goals are explicit and well-bounded (no new MCP tool, no
+      aggregate analytics, no state_transitions table, no model cost, no
+      subagent spawn, no write capability). Test plan (HP-1, HP-2, EC-1,
+      EC-2, ED-1, ED-2, MC-1) covers every AC path. dev_feasibility and
+      risk_predictions are consistent with docs-only complexity assessment.
+      No contradictions detected between sections.
+
+  - id: AC-CHECK-3
+    title: Reuse-First
+    result: PASS
+    notes: >
+      Story explicitly references four pattern sources in the Reuse Plan and
+      Canonical References table:
+        - model-leaderboard.md: --flag VALUE style, graceful empty-state,
+          RENDERED/EMPTY/ERROR signal pattern (confirmed present in that file,
+          type: utility-skill, permission_level: docs-only)
+        - calibration-report.md: frontmatter pattern, type: utility,
+          permission_level: docs-only (confirmed present)
+        - story-status.md: MCP call → handle null/empty → degrade gracefully
+          DB-first routing pattern (confirmed present)
+        - cohesion-check.md: COMPLETE/BLOCKED signal handling reference
+      ST-1 and ST-2 explicitly list files_to_read pointing to these patterns.
+      Reuse discipline is thorough.
+
+  - id: AC-CHECK-4
+    title: Ports and Adapters
+    result: PASS
+    notes: >
+      MCP-only read path is explicitly specified in Architecture Notes:
+      "The command calls workflow_get_story_telemetry({ storyId }) exclusively.
+      No raw SQL, no direct DB connection from command file." The MCP tool
+      (WINT-0120) is the sole adapter boundary. Docs-only story has no code
+      paths to evaluate beyond this constraint. Inline execution (no subagent
+      spawn) is explicitly stated. Port contract is clear.
+
+  - id: AC-CHECK-5
+    title: Testability
+    result: PASS
+    notes: >
+      Manual verification strategy is correctly chosen for a docs-only story.
+      tests_exempt: true is specified for QA-VERIFY.yaml. Evidence path is
+      concrete: commands_run[] entries in EVIDENCE.yaml plus MC-1 static
+      read-verify against all 9 ACs. Test matrix includes 2 happy path
+      (HP-1, HP-2), 2 error cases (EC-1, EC-2), 2 edge cases (ED-1, ED-2),
+      and 1 manual read case (MC-1). Fixture definitions (SQL seeds) are
+      specified for UAT data setup. ADR-005 (no mocks in UAT) acknowledged
+      explicitly. Testability is well-specified for this story type.
+
+  - id: AC-CHECK-6
+    title: Decision Completeness
+    result: PASS
+    notes: >
+      No blocking TBDs found. One intentional open item exists and is handled
+      correctly: ST-2 requires reading WINT-0120 story file before drafting
+      the Implementation section to confirm final tool interface. This is
+      not a TBD — it is an explicit read-before-write gate in the subtask
+      definition. The story acknowledges WINT-0120 parameter/return schema
+      may not be finalized (feasibility risk), and mitigates by directing
+      the implementer to read the story. Missing_requirements array is
+      explicitly empty. No unresolved architectural decisions.
+
+  - id: AC-CHECK-7
+    title: Risk Disclosure
+    result: PASS
+    notes: >
+      Dependencies explicitly listed in depends_on: WINT-3010, WINT-3030,
+      WINT-3040, WINT-0120. Current dependency states verified:
+        - WINT-3010: failed-code-review (hard gate — gatekeeper sidecar)
+        - WINT-3030: needs-code-review (telemetry-logger agent)
+        - WINT-3040: ready-to-work (Decision Logging Skill; soft gate)
+        - WINT-0120: in-progress (Telemetry MCP Tools; hard UAT gate)
+      Story correctly identifies WINT-0120 as the hard UAT gate and
+      WINT-3040 as soft-dependency (empty decisions is valid behavior).
+      Reality Baseline section is honest about all four being unresolved.
+      Risk of WINT-3010 interface changes is correctly assessed as low
+      because the command reads via MCP tool, not gatekeeper directly.
+      Two feasibility risks are documented with concrete mitigations.
+
+  - id: AC-CHECK-8
+    title: Story Sizing
+    result: PASS
+    notes: >
+      9 ACs is one over the 8-AC threshold heuristic, but this is a docs-only
+      story where all 9 ACs describe properties of a single markdown file.
+      The ACs are not independent deliverables — they are facets of one
+      artifact. 0.5 points is appropriate. risk_predictions.split_risk: low
+      is correctly assessed. No split is warranted: splitting would produce
+      two partial command files with no independent value, increasing
+      coordination overhead without reducing risk. The 9-AC count is
+      acceptable given the docs-only, single-file scope.
+
+  - id: AC-CHECK-9
+    title: Subtask Decomposition
+    result: PASS
+    notes: >
+      4 subtasks form a clean linear DAG: ST-1 → ST-2 → ST-3 → ST-4.
+      AC coverage check embedded in the story confirms all 9 ACs are covered:
+        - AC-1: ST-1, ST-4
+        - AC-2: ST-2, ST-4
+        - AC-3: ST-3, ST-4
+        - AC-4: ST-3, ST-4
+        - AC-5: ST-1, ST-4
+        - AC-6: ST-2, ST-4
+        - AC-7: ST-2, ST-4
+        - AC-8: ST-1, ST-4
+        - AC-9: ST-3, ST-4
+      All 4 subtasks modify only .claude/commands/telemetry.md (one file).
+      No file limit violations. Token estimates are reasonable (4K, 6K, 3K,
+      2K = 15K total). ST-4 is a complete self-review pass covering all 9
+      ACs — appropriate quality gate before marking ready-to-work.
+
+  - id: AC-CHECK-10
+    title: Clarity and Format
+    result: PASS
+    notes: >
+      Story has all required sections: Goal, Examples (2), Edge Cases (4),
+      Non-Goals, Scope, Acceptance Criteria, Reuse Plan, Architecture Notes,
+      Infrastructure Notes, Test Plan, Reality Baseline, Canonical References,
+      Subtasks. Examples are concrete with specific inputs, outputs, and
+      signals. Edge cases cover the no-flag path, empty-data path, volume
+      cap path, and service-down path. Signals are defined with exact string
+      formats (TELEMETRY RENDERED, TELEMETRY EMPTY: {storyId},
+      TELEMETRY ERROR: {reason}). Command parameter schema is fully specified
+      (--story STORY_ID required, --limit N optional, default 20-row cap).
+      Column names for both tables are enumerated precisely.
+
+---
+
+discovery_analysis:
+
+  mvp_critical_gaps:
+    - id: GAP-1
+      severity: minor
+      title: "WINT-0120 interface read is subtask-gated but not story-gated"
+      finding: >
+        ST-2 directs the implementer to read WINT-0120.md before writing the
+        Implementation section, which is the correct approach. However, WINT-0120
+        is currently in-progress and its tool interface (parameter names,
+        return shape) may change before WINT-3060 reaches ready-to-work.
+        The story correctly gates UAT on WINT-0120 reaching UAT, but does not
+        gate implementation start on WINT-0120 reaching a stable interface
+        (e.g., needs-code-review). If WINT-3060 moves to ready-to-work before
+        WINT-0120 is stable, ST-2 could produce an incorrect Implementation
+        section that must be revised during UAT.
+      recommendation: >
+        No story change required. The feasibility risk mitigation already states:
+        "Gate implementation start on WINT-0120 reaching ready-for-code-review
+        at minimum." This is adequate as a documented constraint. Implementer
+        must honor this gate.
+      blocking: false
+      decision: defer
+      decision_notes: "Already documented in feasibility risk mitigation. No AC needed."
+
+    - id: GAP-2
+      severity: minor
+      title: "ST-4 file path references backlog/ not elaboration/"
+      finding: >
+        ST-4 files_to_read includes:
+        "plans/future/platform/wint/backlog/WINT-3060/WINT-3060.md"
+        The story is currently in elaboration/, not backlog/. This path will
+        be stale by the time ST-4 executes (story will have moved to
+        ready-to-work). A 404 on this read will not block ST-4 since the
+        story file is also accessible from the final location, but it is a
+        navigational inaccuracy in the subtask spec.
+      recommendation: >
+        During implementation, the implementer should read the story from its
+        actual location rather than the stale backlog/ path. This is a minor
+        navigational issue that does not affect deliverable quality.
+      blocking: false
+      decision: defer
+      decision_notes: "Implementer will resolve at execution time. No story modification needed."
+
+  non_blocking_opportunities:
+    - id: OPP-1
+      title: "Consider documenting --limit 0 behavior (show all rows)"
+      finding: >
+        The story documents --limit N overrides the 20-row default cap, but
+        does not specify what --limit 0 means (show all, or error, or no-op).
+        High-volume stories (50+ invocations) may prompt power users to attempt
+        --limit 0 as a "show all" shorthand.
+      recommendation: >
+        Implementer can address this in the command file inline by documenting
+        that --limit 0 is treated as "no limit" (show all rows) or "invalid input"
+        per their judgment. Not required to unblock UAT.
+      decision: log_to_kb
+      decision_notes: "Non-blocking polish item. Logged for implementer awareness."
+
+    - id: OPP-2
+      title: "Signal format uses {reason} placeholder in TELEMETRY ERROR — should clarify valid reasons"
+      finding: >
+        AC-9 specifies TELEMETRY ERROR: {reason} as the error signal. EC-1 and
+        ED-1 show specific reason values (service_unavailable). The command file
+        could enumerate the known reason strings (service_unavailable,
+        invalid_story_id, etc.) to make parsing by downstream tooling consistent.
+      recommendation: >
+        Implementer can document an enum of known reason values in the Error
+        Handling section. Not a blocking gap — one known reason (service_unavailable)
+        is already specified verbatim in AC-4 and EC-1.
+      decision: log_to_kb
+      decision_notes: "Non-blocking enhancement. One reason value already specified in ACs."
+
+    - id: OPP-3
+      title: "model-leaderboard.md uses type: utility-skill not type: utility"
+      finding: >
+        The story's Reuse Plan cites model-leaderboard.md for the frontmatter
+        pattern, but model-leaderboard.md uses type: utility-skill while the
+        story specifies type: utility for the new command (matching
+        calibration-report.md). This is not an inconsistency in the story —
+        type: utility is the correct choice as specified in AC-1 — but the
+        implementer referencing model-leaderboard.md as the frontmatter pattern
+        source should not copy its type field verbatim.
+      recommendation: >
+        ST-1 correctly lists both model-leaderboard.md and calibration-report.md
+        as pattern sources. Implementer should take permission_level: docs-only
+        from model-leaderboard.md and type: utility from calibration-report.md.
+        This is a minor implementation-time note, not a story defect.
+      decision: log_to_kb
+      decision_notes: "Implementer awareness note. Story AC-1 already specifies correct type: utility."
+
+---
+
+autonomous_decisions:
+  decided_at: "2026-03-08T19:15:00Z"
+  decided_by: elab-autonomous-decider
+  gaps_resolved: 2
+  acs_added: 0
+  opportunities_logged: 3
+  follow_ups_created: 0
+  verdict_rationale: >
+    All 10 audit checks PASS. Both gaps are non-blocking (severity: minor)
+    with existing mitigations documented in the story. No ACs need to be added.
+    Three opportunities logged for implementer awareness. Story is ready for
+    implementation.
+
+verdict: PASS
+decided_at: "2026-03-08T19:15:00Z"
+
+summary:
+  checklist_score: "10 / 10 PASS"
+  mvp_critical_gaps_count: 2
+  mvp_critical_gaps_blocking: 0
+  non_blocking_opportunities_count: 3
+  gaps_resolved: 2
+  acs_added: 0
+  opportunities_logged: 3
+  pattern_alignment: CONFIRMED
+  pattern_sources_verified:
+    - file: ".claude/commands/model-leaderboard.md"
+      status: EXISTS
+      relevant_patterns: ["--flag VALUE optional args", "RENDERED/EMPTY/ERROR signals", "graceful empty-state"]
+    - file: ".claude/commands/calibration-report.md"
+      status: EXISTS
+      relevant_patterns: ["type: utility frontmatter", "permission_level: docs-only", "Error Handling table structure"]
+    - file: ".claude/commands/story-status.md"
+      status: EXISTS
+      relevant_patterns: ["MCP call → null/empty handling → graceful degrade", "DB-first routing pattern"]
+  dependency_state_snapshot:
+    WINT-0120: "in-progress (hard UAT gate — workflow_get_story_telemetry MCP tool)"
+    WINT-3010: "failed-code-review (hard gate — gatekeeper sidecar)"
+    WINT-3030: "needs-code-review (telemetry-logger agent)"
+    WINT-3040: "ready-to-work (soft gate — Decision Logging Skill)"
+  notes: >
+    WINT-3060 is a well-constructed docs-only story. All 10 audit checklist
+    points pass without conditions. The two discovery gaps are minor and
+    non-blocking: one is a known dependency timing constraint already
+    documented in the story's feasibility risk section; the other is a stale
+    file path in ST-4 that will not affect deliverable quality. The story can
+    proceed to ready-to-work once WINT-0120 reaches needs-code-review (stable
+    interface). UAT must be gated on WINT-0120 reaching UAT. No story
+    modifications are required.

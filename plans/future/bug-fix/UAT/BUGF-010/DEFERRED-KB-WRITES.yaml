@@ -46,3 +46,7 @@ story_record:
 #   touches_test = EXCLUDED.touches_test,
 #   created_at = EXCLUDED.created_at,
 #   experiment_variant = EXCLUDED.experiment_variant
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -22,3 +22,7 @@ pending_writes:
       touches_infra: false
     timestamp: "2026-02-11T00:00:00Z"
     reason: "KB tools not available in current session"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true
