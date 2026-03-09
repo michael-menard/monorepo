@@ -211,6 +211,33 @@ On `GENERATION COMPLETE`:
 
 ### Completion Report
 
+#### KB Mode
+
+```
+## Bootstrap Complete: {PREFIX}
+
+| Metric | Value |
+|--------|-------|
+| Plan | {plan_slug} |
+| Total Stories | {N} |
+| Ready to Start | {N} |
+| Critical Path | {N} stories |
+| Max Parallel | {N} |
+| Phases | {N} |
+
+### DB Rows Inserted
+| Table                | Count |
+|----------------------|-------|
+| Stories Inserted     | N |
+| Plan Links (spawned) | N |
+| Dependencies Inserted| N |
+| Analysis Artifacts   | N |
+
+**Next**: `/elab-epic {PREFIX}`
+```
+
+#### File Mode (legacy)
+
 ```
 ## Bootstrap Complete: {PREFIX}
 
@@ -227,7 +254,7 @@ On `GENERATION COMPLETE`:
 - {feature_dir}/stories.index.md
 - {feature_dir}/{PREFIX}-*/story.yaml ({N} files)
 
-**Next**: `/elab-epic {PREFIX}` (recommended) or `/elab-story {PREFIX}-1010`
+**Next**: `/elab-epic {PREFIX}`
 ```
 
 ## Error Handling

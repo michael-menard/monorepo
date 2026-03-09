@@ -1386,7 +1386,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** failed-qa
+**Status:** in-progress
 **Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
 **Points:** 5
@@ -1395,7 +1395,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 **Infrastructure:**
 - packages/backend/database-schema (migration 0036)
 - packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
-**Story File:** `failed-qa/WINT-4030/WINT-4030.md`
+**Story File:** `in-progress/WINT-4030/WINT-4030.md`
 
 **Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 

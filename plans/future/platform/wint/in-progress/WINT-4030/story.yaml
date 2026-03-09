@@ -1,6 +1,6 @@
 id: WINT-4030
 title: "Populate Graph with Existing Features and Epics"
-status: failed-qa
+status: in-progress
 priority: high
 points: 5
 phase: 4
@@ -8,7 +8,7 @@ epic: WINT
 story_type: feature
 experiment_variant: "control"
 created: "2026-03-08"
-updated_at: "2026-03-08T07:47:00Z"
+updated_at: "2026-03-09T17:35:00Z"
 depends_on:
   - WINT-0060
   - WINT-0130
@@ -22,5 +22,5 @@ touches_backend: true
 touches_frontend: false
 touches_database: true
 touches_infra: false
-story_dir: "plans/future/platform/wint/failed-qa/WINT-4030"
-story_file: "plans/future/platform/wint/failed-qa/WINT-4030/WINT-4030.md"
+story_dir: "plans/future/platform/wint/in-progress/WINT-4030"
+story_file: "plans/future/platform/wint/in-progress/WINT-4030/WINT-4030.md"

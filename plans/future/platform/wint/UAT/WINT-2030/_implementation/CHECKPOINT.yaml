@@ -1,11 +1,11 @@
 schema: 1
 story_id: WINT-2030
-current_phase: qa-setup
-last_successful_phase: code-review
+current_phase: qa-verify
+last_successful_phase: qa-setup
 blocked: false
 blocked_reason: null
 iteration: 4
-timestamp: '2026-03-09T21:30:00Z'
+timestamp: '2026-03-09T23:10:00Z'
 verdict: PASS
 fail_reason: null
 fix_cycles:
@@ -17,7 +17,9 @@ fix_cycles:
     issues_fixed:
       - file: packages/backend/mcp-tools/src/scripts/__tests__/populate-project-context.test.ts
         line_range: 146-207
-        issue: 'EC-1 and EC-2 tests did not use vi.mock or mockImplementationOnce. They only ran happy path and claimed resilience was structurally guaranteed by code comments. No actual failure injection was present.'
+        issue: >-
+          EC-1 and EC-2 tests did not use vi.mock or mockImplementationOnce. They only ran happy path and claimed
+          resilience was structurally guaranteed by code comments. No actual failure injection was present.
         severity: high
     verification_result: PASS
     evidence_summary:
