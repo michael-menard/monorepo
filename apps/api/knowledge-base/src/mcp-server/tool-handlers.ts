@@ -19,6 +19,8 @@ import {
   worktreeListActive,
   worktreeMarkComplete,
   contextPackGet,
+  logInvocation,
+  WorkflowLogInvocationInputSchema,
 } from '@repo/mcp-tools'
 import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
 import {
@@ -142,6 +144,7 @@ import {
   kb_archive_working_set,
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
+import { withRetry } from '../db/client.js'
 import {
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
@@ -177,7 +180,6 @@ import {
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
-import { withRetry } from '../db/client.js'
 import { createMcpLogger } from './logger.js'
 import {
   type ToolCallContext,
@@ -4675,10 +4677,7 @@ async function generateAndSaveStoryEmbedding(
     if (!text.trim()) return
 
     const embedding = await deps.embeddingClient.generateEmbedding(text)
-    await deps.db
-      .update(stories)
-      .set({ embedding })
-      .where(eq(stories.storyId, storyId))
+    await deps.db.update(stories).set({ embedding }).where(eq(stories.storyId, storyId))
 
     logger.debug('Story embedding generated', {
       correlation_id: correlationId,
@@ -5014,8 +5013,6 @@ toolHandlers['context_pack_get'] = handleContextPackGet
 // ============================================================================
 // Telemetry Tool Handler (WINT-3020)
 // ============================================================================
-
-import { logInvocation, WorkflowLogInvocationInputSchema } from '@repo/mcp-tools'
 
 /**
  * Handle workflow_log_invocation tool invocation.
