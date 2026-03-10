@@ -1,0 +1,225 @@
+schema: 2
+story_id: KFMB-2040
+timestamp: '2026-03-07T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Audit caller agents and grep index_path references across all pm-story caller files
+    files: []
+    files_to_read:
+      - .claude/commands/pm-story.md
+      - .claude/agents/pm-story-adhoc-leader.agent.md
+      - .claude/agents/pm-story-followup-leader.agent.md
+      - .claude/agents/pm-story-split-leader.agent.md
+    dependencies: []
+    slice: packages
+    verification: >-
+      Audit confirms: seed agent is only spawned from pm-story.md Step 2; sibling leaders (adhoc, followup, split) do
+      not directly spawn seed agent; index_path is passed solely by pm-story.md orchestrator; safe to make index_path
+      optional in seed agent signature
+    acs_covered:
+      - AC-5
+      - AC-7
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Update pm-story-seed-agent to write story_seed artifact via kb_write_artifact (dual-write: KB + filesystem
+      fallback); update kb_tools frontmatter; add DEFERRED-KB-WRITES.yaml fallback pattern; add kb_get_story identity
+      precondition
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-seed-agent.agent.md
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: >-
+      File updated: Inputs section has story_id as primary key; Preconditions section replaces 'Index exists' with
+      'Story exists in KB' via kb_get_story; Output section adds kb_write_artifact call with artifact_type='story_seed'
+      before filesystem write; fallback block writes STORY-SEED.md and DEFERRED-KB-WRITES.yaml entry on KB failure;
+      kb_tools frontmatter includes kb_write_artifact, kb_get_story, kb_search
+    acs_covered:
+      - AC-2
+      - AC-6
+      - AC-8
+      - AC-9
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Update pm-story-generation-leader Phase 0 to read seed from KB via kb_read_artifact with filesystem fallback;
+      update kb_tools frontmatter
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-generation-leader.agent.md
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: >-
+      Phase 0 reads seed via kb_read_artifact({ story_id, artifact_type: 'story_seed' }) first; falls back to reading
+      STORY-SEED.md from disk if artifact not found or KB unavailable; kb_tools frontmatter updated to include
+      kb_read_artifact
+    acs_covered:
+      - AC-3
+      - AC-6
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Update pm-story-generation-leader to discover stories via kb_list_stories instead of reading stories.index.md;
+      update kb_tools frontmatter
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    dependencies:
+      - 3
+    slice: packages
+    verification: >-
+      Leader Inputs section and story discovery logic use kb_list_stories with feature/state filters instead of reading
+      stories.index.md; kb_tools frontmatter includes kb_list_stories; no remaining reference to reading
+      stories.index.md as the discovery mechanism
+    acs_covered:
+      - AC-1
+      - AC-6
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Update pm-story-generation-leader Phase 4.5 to use kb_update_story for content persistence; replace raw SQL INSERT
+      with kb_update_story call writing description/acceptance_criteria/non_goals; maintain DEFERRED-KB-WRITES.yaml
+      fallback; update kb_tools frontmatter
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-generation-leader.agent.md
+      - apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: >-
+      Phase 4.5 uses kb_update_story with description/acceptance_criteria/non_goals fields (gated on KFMB-1020); raw SQL
+      INSERT removed or replaced; DEFERRED-KB-WRITES.yaml fallback documented for when KB is unavailable or content
+      columns missing; kb_tools frontmatter includes kb_update_story
+    acs_covered:
+      - AC-4
+      - AC-6
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Update pm-story command to pass story_id as primary context key to seed agent in Step 2c spawn block; make
+      index_path optional per ST-1 audit; ensure backward compatibility for sibling leaders
+    files:
+      - .claude/commands/pm-story.md
+    files_to_read:
+      - .claude/commands/pm-story.md
+    dependencies:
+      - 1
+      - 2
+    slice: packages
+    verification: >-
+      Step 2c spawn prompt includes Story ID as explicit context field at top; index_path retained but marked optional
+      in seed agent call; sibling leader routes (followup, split, adhoc) pass compatible context; Step 2d seed_path
+      derivation path still valid as filesystem fallback
+    acs_covered:
+      - AC-5
+      - AC-7
+files_to_change:
+  - path: .claude/agents/pm-story-seed-agent.agent.md
+    action: modify
+    reason: >-
+      Add kb_write_artifact call for seed output (AC-2); add kb_get_story identity precondition replacing index file
+      check (AC-9); add DEFERRED-KB-WRITES.yaml fallback pattern (AC-8); update kb_tools frontmatter (AC-6)
+  - path: .claude/agents/pm-story-generation-leader.agent.md
+    action: modify
+    reason: >-
+      Add kb_read_artifact in Phase 0 for seed read with filesystem fallback (AC-3); add kb_list_stories for story
+      discovery (AC-1); replace raw SQL INSERT in Phase 4.5 with kb_update_story (AC-4); update kb_tools frontmatter
+      (AC-6)
+  - path: .claude/commands/pm-story.md
+    action: modify
+    reason: >-
+      Pass story_id as primary context key in Step 2c seed agent spawn block (AC-5); ensure index_path becomes optional
+      (AC-7)
+commands_to_run:
+  - command: grep -r 'index_path' .claude/agents/ .claude/commands/
+    when: after ST-1 audit
+    required: true
+  - command: >-
+      grep -r 'kb_write_artifact\|kb_read_artifact\|kb_update_story\|kb_list_stories\|kb_get_story'
+      .claude/agents/pm-story-seed-agent.agent.md .claude/agents/pm-story-generation-leader.agent.md
+      .claude/commands/pm-story.md
+    when: after all changes — verify kb_tools frontmatter accuracy (AC-6 / ED-3)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Manual review: pm-story-generation-leader.agent.md story discovery section uses kb_list_stories with feature/state
+      filters; no stories.index.md read as discovery mechanism
+    evidence_type: manual
+  - ac_id: AC-2
+    planned_evidence: >-
+      Manual review: pm-story-seed-agent.agent.md Output section has kb_write_artifact call with
+      artifact_type='story_seed' before filesystem write
+    evidence_type: manual
+  - ac_id: AC-3
+    planned_evidence: >-
+      Manual review: pm-story-generation-leader.agent.md Phase 0 calls kb_read_artifact({ story_id, artifact_type:
+      'story_seed' }) as primary; STORY-SEED.md read as fallback
+    evidence_type: manual
+  - ac_id: AC-4
+    planned_evidence: >-
+      Manual review: pm-story-generation-leader.agent.md Phase 4.5 calls kb_update_story with
+      description/acceptance_criteria/non_goals; SQL INSERT removed or replaced; DEFERRED-KB-WRITES.yaml fallback
+      present
+    evidence_type: manual
+  - ac_id: AC-5
+    planned_evidence: >-
+      Manual review: pm-story.md Step 2c spawn block contains explicit 'Story ID: {STORY_ID}' field; seed agent
+      Inputs/Preconditions treat story_id as primary
+    evidence_type: manual
+  - ac_id: AC-6
+    planned_evidence: >-
+      Command: grep both agent files for all kb_tool call sites; cross-check against frontmatter kb_tools list — exact
+      match, no stale entries, no missing entries
+    evidence_type: command
+  - ac_id: AC-7
+    planned_evidence: >-
+      Manual review: sibling leaders (adhoc, followup, split) do not pass index_path directly to seed agent — that is
+      pm-story.md's responsibility; pm-story.md retains index_path as optional parameter ensuring no breaking change
+    evidence_type: manual
+  - ac_id: AC-8
+    planned_evidence: >-
+      Manual review: pm-story-seed-agent.agent.md Output section has try/catch or conditional: on kb_write_artifact
+      failure, writes STORY-SEED.md to filesystem and appends DEFERRED-KB-WRITES.yaml entry
+    evidence_type: manual
+  - ac_id: AC-9
+    planned_evidence: >-
+      Manual review: pm-story-seed-agent.agent.md Preconditions table replaces 'Index exists / Story in index' with
+      'Story exists in KB' checked via kb_get_story({ story_id }) returning non-null; index_path listed as optional
+      parameter
+    evidence_type: manual
+architectural_decisions: []
+complexity: simple
+notes:
+  - Docs-only story — no TypeScript compilation, no build step, no schema migrations required.
+  - >-
+    ST-1 audit is foundational: confirms sibling leaders (adhoc, followup, split) spawn seed agent only through
+    pm-story.md, not directly. This allows index_path to be made optional safely.
+  - >-
+    ST-2 and ST-3 must be implemented atomically (same commit) per Architecture Notes — dual-write (seed agent) +
+    dual-read (generation leader) eliminates silent pipeline break during rollout.
+  - >-
+    ST-5 (Phase 4.5 kb_update_story) is gated on KFMB-1020 delivering content columns. The instruction text should note
+    this gate explicitly and document the DEFERRED-KB-WRITES.yaml fallback for when columns are not yet present.
+  - >-
+    ARTIFACT_TYPES constant in artifact-operations.ts does NOT yet include 'story_seed' — that is KFMB-1030. The agent
+    instructions should note this dependency but still document the kb_write_artifact call pattern correctly.
+  - >-
+    current KbUpdateStoryInputSchema (story-crud-operations.ts line 142) does not have
+    description/acceptance_criteria/non_goals — KFMB-1020 adds these. Phase 4.5 instructions must gate on this.
+  - >-
+    Sibling leaders confirmed to not directly reference index_path or spawn seed agent — all seed spawning flows through
+    pm-story.md Step 2.
+  - 'Lesson KBAR-0190 applies: kb_tools frontmatter must be updated in the same commit as call-site migration.'
