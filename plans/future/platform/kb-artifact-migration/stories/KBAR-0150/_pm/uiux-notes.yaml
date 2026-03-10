@@ -1,0 +1,2 @@
+skipped: true
+reason: "Backend-only story with no user-facing components, UI changes, or design requirements. The four artifact MCP tools (kb_write_artifact, kb_read_artifact, kb_list_artifacts, kb_delete_artifact) are exposed via the MCP stdio transport only. No React components, no Tailwind, no accessibility concerns."

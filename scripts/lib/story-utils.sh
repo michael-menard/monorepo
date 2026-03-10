@@ -8,38 +8,30 @@
 # Functions provided:
 #   find_story_dir STORY_ID           — find story dir across all pipeline stages
 #   is_elaborated STORY_DIR           — check if story has elaboration artifacts
-#   verify_stage_transition STORY_ID STAGE...  — check if story landed in one of the given stages
+# KSOT-3050: verify_stage_transition removed — use KB state checks instead
 #   check_log_for_failure LOG_FILE PHASE       — inspect a claude log for failure signals
 #   validate_artifact_schema FILE FIELD...     — validate YAML artifact fields
 #   validate_phase_gate IMPL_DIR STORY_ID FROM TO  — gate check before phase transition
 #
 
-# Find the filesystem directory for a story across all known pipeline stages.
-# Searches in most-progressed-first order so the authoritative location is returned
-# when a story appears in multiple places (e.g., due to a partial move).
+# Find the filesystem directory for a story.
+# KSOT-3050: Flat stories/ layout only. Legacy stage dir fallback removed.
 # Returns: prints the path and exits 0, or exits 1 if not found.
 find_story_dir() {
   local STORY_ID="$1"
-  for stage_dir in \
-    "$FEATURE_DIR"/done \
-    "$FEATURE_DIR"/UAT \
-    "$FEATURE_DIR"/failed-qa \
-    "$FEATURE_DIR"/ready-for-qa \
-    "$FEATURE_DIR"/failed-code-review \
-    "$FEATURE_DIR"/needs-code-review \
-    "$FEATURE_DIR"/in-progress \
-    "$FEATURE_DIR"/ready-to-work \
-    "$FEATURE_DIR"/backlog \
-    "$FEATURE_DIR"/elaboration; do
-    if [[ -d "${stage_dir}/${STORY_ID}" ]]; then
-      echo "${stage_dir}/${STORY_ID}"
-      return 0
-    fi
-  done
+
+  # Flat layout (KSOT-3010) — only supported layout
+  if [[ -d "$FEATURE_DIR/stories/${STORY_ID}" ]]; then
+    echo "$FEATURE_DIR/stories/${STORY_ID}"
+    return 0
+  fi
+
+  # KSOT-3050: removed legacy stage-based fallback (needs-code-review, in-progress, etc.)
   return 1
 }
 
 # Returns the stage name (directory basename) for a story directory.
+# KSOT-3010: With flat layout, returns "stories" — callers should use KB state instead.
 get_story_stage() {
   local STORY_DIR="$1"
   basename "$(dirname "$STORY_DIR")"
@@ -51,18 +43,8 @@ is_elaborated() {
   [[ -d "${STORY_DIR}/_implementation" ]] || [[ -f "${STORY_DIR}/_implementation/ELAB.yaml" ]]
 }
 
-# Check if a story advanced to one of the listed stage directories.
-# Usage: verify_stage_transition STORY_ID STAGE1 [STAGE2 ...]
-verify_stage_transition() {
-  local STORY_ID="$1"
-  shift
-  for stage in "$@"; do
-    if [[ -d "$FEATURE_DIR/${stage}/${STORY_ID}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
+# KSOT-3050: verify_stage_transition() removed.
+# Callers must use KB state checks (kb_get_story / kb_update_story_status).
 
 # Inspect a claude output log for failure signals.
 # Returns a string: "OK" or "FAIL:<category>:<match>"
@@ -170,15 +152,9 @@ validate_phase_gate() {
 
   local GATE_RESULT VERDICT_VALUE
 
+  # KSOT-3050: Legacy stage transition gates (in-progress→needs-code-review, etc.) removed.
+  # validate_phase_gate now only validates artifact content, not directory names.
   case "${FROM_STAGE}→${TO_STAGE}" in
-
-    "in-progress→needs-code-review"|"ready-to-work→needs-code-review"|"backlog→needs-code-review")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/EVIDENCE.yaml" "touched_files" "commands_run")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (${FROM_STAGE} -> needs-code-review): ${GATE_RESULT} in EVIDENCE.yaml"
-        return 1
-      fi
-      ;;
 
     "needs-code-review→ready-for-qa")
       GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/REVIEW.yaml" "verdict")

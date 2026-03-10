@@ -1,0 +1,240 @@
+schema: 1
+story_id: "WINT-2040"
+version: 1
+timestamp: "2026-03-03T18:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "A population script exists that discovers all non-archived .agent.md files from .claude/agents/ using glob (excluding _archive/ directory)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "populateAgentMissionCache() uses glob('**/*.agent.md', { ignore: ['**/_archive/**'] })"
+      - type: command
+        command: "POSTGRES_HOST=localhost POSTGRES_PORT=5432 ... tsx agent-mission-cache-populator.ts"
+        result: "totalFound: 142, confirming 142 non-archived agent files discovered"
+
+  - ac_id: "AC-2"
+    ac_text: "The script extracts per agent: name, type, permission_level, model, spawned_by, triggers, skills_used (from frontmatter), plus mission summary and scope extracted from body Markdown content"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "Calls parseFrontmatter + extractAgentMetadata + extractMissionSummary"
+      - type: file
+        path: "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+        description: "extractMissionSummary() extracts mission, role, scope, triggers from body using section-based regex"
+
+  - ac_id: "AC-3"
+    ac_text: "Each agent mission is stored in wint.context_packs with packType: 'agent_missions', deterministic packKey (agent name without .agent.md), content JSONB with mission/role/scope/triggers/model/permissionLevel/spawnedBy"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "SELECT COUNT(*) FROM wint.context_packs WHERE pack_type = 'agent_missions'"
+        result: "138 rows written to wint.context_packs"
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "Upsert uses packType='agent_missions', packKey=path.basename(file, '.agent.md'), AgentMissionContentSchema JSONB"
+
+  - ac_id: "AC-4"
+    ac_text: "The script is idempotent — running it twice does not create duplicate entries (upsert via onConflictDoUpdate on packType + packKey)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "Run script twice; SELECT COUNT(*) FROM wint.context_packs WHERE pack_type = 'agent_missions'"
+        result: "138 rows before and after second run — no duplicates created"
+
+  - ac_id: "AC-5"
+    ac_text: "Agents that fail to parse (malformed frontmatter, missing required fields) are skipped with a warning logged; the script continues processing remaining agents"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "Live run output"
+        result: "4 agents skipped (scope-defender, experiment-analyzer, evidence-judge, doc-sync) due to missing type/permission_level; script continued to process remaining 138"
+      - type: test
+        path: "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+        description: "EC-1, EC-3 tests verify skip+continue behavior"
+
+  - ac_id: "AC-6"
+    ac_text: "_archive/ directory is explicitly excluded from processing"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "glob uses ignore: ['**/_archive/**']"
+      - type: test
+        path: "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+        description: "ED-1 test verifies archived-agent.agent.md is excluded from processing"
+
+  - ac_id: "AC-7"
+    ac_text: "All input/output types are Zod-validated schemas (no TypeScript interfaces)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+        description: "MissionSummarySchema defined with z.object(); extractMissionSummary returns MissionSummarySchema.parse()"
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "PopulateResultSchema, AgentMissionContentSchema defined with z.object()"
+
+  - ac_id: "AC-8"
+    ac_text: "The script produces a summary result: { totalFound, cached, skipped, warnings }"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "PopulateResultSchema.parse() applied to { totalFound, cached, skipped, warnings }"
+      - type: command
+        command: "Live run"
+        result: "{ totalFound: 142, cached: 138, skipped: 4, warningCount: 29 }"
+
+  - ac_id: "AC-9"
+    ac_text: "At least 130 of 142+ agent files are successfully cached when the script runs against live .claude/agents/ directory (>=90% success rate)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "Live run against monorepo postgres"
+        result: "cached=138/totalFound=142 = 97.2% — exceeds 90% threshold"
+
+  - ac_id: "AC-10"
+    ac_text: "Unit tests cover: frontmatter extraction, body content mission parsing, upsert behavior (mock DB), error handling for malformed files, archive exclusion"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+        description: "19 test file passes; 437 tests total pass in @repo/database-schema"
+      - type: command
+        command: "pnpm --filter @repo/database-schema test"
+        result: "Test Files 19 passed (19), Tests 437 passed (437)"
+
+  - ac_id: "AC-11"
+    ac_text: "A database migration is created that adds agent_missions to contextPackTypeEnum"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0033_wint_2040_agent_missions_enum.sql"
+        description: "ALTER TYPE public.context_pack_type ADD VALUE IF NOT EXISTS 'agent_missions'"
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "contextPackTypeEnum updated to include 'agent_missions' in values array"
+      - type: command
+        command: "Applied to monorepo-postgres; SELECT enum_range(NULL::public.context_pack_type)"
+        result: "{codebase,story,feature,epic,architecture,lessons_learned,test_patterns,agent_missions}"
+
+  - ac_id: "AC-12"
+    ac_text: "The contextPacks table content column TypeScript type in wint.ts is widened to accommodate agent mission JSONB shape without TypeScript compilation errors"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "content column already uses .$type<unknown>() from WINT-2030 — accepts any JSONB shape including AgentMissionContentSchema"
+      - type: file
+        path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+        description: "AgentMissionContentSchema defines { mission, role, scope, triggers, model, permissionLevel, spawnedBy } for runtime validation"
+      - type: command
+        command: "pnpm --filter @repo/database-schema exec tsc --noEmit"
+        result: "No type errors from our changes (only pre-existing seed/index.ts @repo/db issue)"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modified
+    description: "Added 'agent_missions' to contextPackTypeEnum values array"
+  - path: "packages/backend/database-schema/src/migrations/app/0033_wint_2040_agent_missions_enum.sql"
+    action: created
+    description: "Migration to ALTER TYPE public.context_pack_type ADD VALUE 'agent_missions'"
+  - path: "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+    action: created
+    lines: 155
+    description: "Section-based regex extractor for Mission/Role/Scope from .agent.md body content"
+  - path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+    action: created
+    lines: 220
+    description: "Main population script: glob discovery, parse+extract, upsert to wint.context_packs"
+  - path: "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+    action: modified
+    lines: 360
+    description: "Removed unused 'beforeEach' from vitest import (TS6133 fix — iteration 1)"
+  - path: "packages/backend/database-schema/src/seed/__fixtures__/mission-agent.agent.md"
+    action: created
+    description: "Test fixture with Mission/Role/Scope sections"
+  - path: "packages/backend/database-schema/src/seed/__fixtures__/no-mission-agent.agent.md"
+    action: created
+    description: "Test fixture with no Mission section"
+  - path: "packages/backend/database-schema/src/seed/__fixtures__/_archive/archived-agent.agent.md"
+    action: created
+    description: "Test fixture for archive exclusion test"
+  - path: "packages/backend/mcp-tools/package.json"
+    action: modified
+    description: "Pre-existing modification (not from this story)"
+
+commands_run:
+  - command: "pnpm --filter @repo/database-schema test"
+    result: SUCCESS
+    output: "Test Files 19 passed (19), Tests 437 passed (437)"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "pnpm --filter @repo/database-schema build"
+    result: SUCCESS
+    output: "tsc -p tsconfig.build.json — no errors"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "pnpm --filter @repo/database-schema exec tsc --noEmit"
+    result: SUCCESS
+    output: "Only pre-existing seed/index.ts @repo/db error — no errors from WINT-2040 changes"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "ALTER TYPE public.context_pack_type ADD VALUE IF NOT EXISTS 'agent_missions'"
+    result: SUCCESS
+    output: "ALTER TYPE — applied to monorepo-postgres"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "tsx agent-mission-cache-populator.ts (run 1)"
+    result: SUCCESS
+    output: "totalFound=142, cached=138, skipped=4, successRate=97.2%"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "tsx agent-mission-cache-populator.ts (run 2 — idempotency)"
+    result: SUCCESS
+    output: "Row count unchanged at 138 — no duplicates"
+    timestamp: "2026-03-03T18:00:00Z"
+
+  - command: "fix-iteration-1: removed 'beforeEach' from vitest import in agent-mission-cache-populator.test.ts"
+    result: SUCCESS
+    output: "TS6133 resolved — 'beforeEach' was declared but never read; import line 11 updated"
+    timestamp: "2026-03-04T14:35:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 437, fail: 0 }
+  integration: { pass: 2, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "No frontend or HTTP API surface — backend-only seed script with no browser-testable workflow"
+  config: playwright.legacy.config.ts
+  project: null
+  mode: "live"
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  notes: "437 tests pass across 19 test files in @repo/database-schema"
+
+notable_decisions:
+  - "Used direct Drizzle upsert (not contextCachePut MCP tool) for independence from WINT-0100 UAT status"
+  - "content column already widened to unknown in WINT-2030 — AC-12 satisfied without additional wint.ts changes"
+  - "97.2% success rate (138/142) exceeds AC-9 threshold of 90%"
+  - "4 skipped agents missing type/permission_level frontmatter fields (scope-defender, experiment-analyzer, evidence-judge, doc-sync)"
+  - "29 agents written with null mission (no Mission/Role/Scope section) per EC-2 spec"
+  - "Fix iteration 1: removed unused 'beforeEach' from vitest import (TS6133 auto-fixable)"
+
+known_deviations:
+  - "E2E tests exempt: story_type=feature but no frontend/API surface to browser-test"
+  - "pre-existing seed/index.ts @repo/db import error not part of WINT-2040 scope"

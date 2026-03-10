@@ -1,0 +1,228 @@
+schema: 1
+story_id: WKFL-010
+timestamp: 2026-02-07T23:56:00Z
+generated_by: dev-plan-leader
+
+steps:
+  - id: 1
+    description: "Create ProposalEntrySchema in KB types"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: []
+    slice: packages
+    rationale: "Schema must exist before agent can persist proposals to KB. Follow CalibrationEntrySchema pattern."
+    acceptance_criteria: [AC-4]
+
+  - id: 2
+    description: "Create improvement-proposer.agent.md with multi-source aggregation"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: [1]
+    slice: packages
+    rationale: "Core agent implementation. Requires ProposalEntrySchema for KB persistence. ~450 lines, Sonnet model."
+    acceptance_criteria: [AC-1, AC-2, AC-3, AC-4, AC-5]
+
+  - id: 3
+    description: "Create /improvement-proposals command"
+    files:
+      - ".claude/commands/improvement-proposals.md"
+    dependencies: [2]
+    slice: packages
+    rationale: "CLI interface to spawn improvement-proposer agent. ~120 lines. Handles argument parsing and agent orchestration."
+    acceptance_criteria: [AC-1]
+
+  - id: 4
+    description: "Write tests for ROI calculation logic"
+    files:
+      - ".claude/agents/__tests__/improvement-proposer-roi.test.ts"
+    dependencies: [2]
+    slice: packages
+    rationale: "ROI formula is critical business logic. Must verify: (impact/effort) * (10/9) scaling is correct."
+    acceptance_criteria: [AC-2]
+
+  - id: 5
+    description: "Write tests for proposal deduplication"
+    files:
+      - ".claude/agents/__tests__/improvement-proposer-dedup.test.ts"
+    dependencies: [2]
+    slice: packages
+    rationale: "Deduplication threshold 0.85 must be validated. Test similar proposals from different sources merge correctly."
+    acceptance_criteria: [AC-2]
+
+  - id: 6
+    description: "Write integration test for multi-source aggregation"
+    files:
+      - ".claude/agents/__tests__/improvement-proposer-integration.test.ts"
+    dependencies: [2]
+    slice: packages
+    rationale: "End-to-end test with all 4 data sources (calibration, patterns, heuristics, retro). Verify graceful degradation."
+    acceptance_criteria: [AC-1]
+
+files_to_change:
+  - path: "apps/api/knowledge-base/src/__types__/index.ts"
+    action: modify
+    reason: "Add ProposalEntrySchema (Zod schema) to KB types. ~50 lines. Extends existing KB schema patterns."
+    lines_estimate: 50
+
+  - path: ".claude/agents/improvement-proposer.agent.md"
+    action: create
+    reason: "Core agent for WKFL-010. Multi-source aggregation, ROI calculation, deduplication, meta-learning. Sonnet model. ~450 lines."
+    lines_estimate: 450
+
+  - path: ".claude/commands/improvement-proposals.md"
+    action: create
+    reason: "CLI command to invoke improvement-proposer. Argument parsing (--days, --start, --end, --dry-run, --no-dedup). ~120 lines."
+    lines_estimate: 120
+
+  - path: ".claude/agents/__tests__/improvement-proposer-roi.test.ts"
+    action: create
+    reason: "Unit tests for ROI calculation logic. Verify formula correctness and edge cases. ~80 lines."
+    lines_estimate: 80
+
+  - path: ".claude/agents/__tests__/improvement-proposer-dedup.test.ts"
+    action: create
+    reason: "Unit tests for deduplication logic. Verify threshold 0.85 behavior and multi-source merging. ~100 lines."
+    lines_estimate: 100
+
+  - path: ".claude/agents/__tests__/improvement-proposer-integration.test.ts"
+    action: create
+    reason: "Integration test for end-to-end workflow. Mock all 4 data sources, verify output structure and KB writes. ~150 lines."
+    lines_estimate: 150
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after KB schema change (step 1)"
+    required: true
+    reason: "Verify ProposalEntrySchema compiles and exports correctly"
+
+  - command: "pnpm test --filter @api/knowledge-base"
+    when: "after KB schema change (step 1)"
+    required: true
+    reason: "Verify KB schema changes don't break existing tests"
+
+  - command: "pnpm test --filter .claude/agents/__tests__"
+    when: "after test creation (steps 4-6)"
+    required: true
+    reason: "Verify all improvement-proposer tests pass"
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+    reason: "Verify code style compliance"
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript compilation"
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "Integration test: improvement-proposer-integration.test.ts verifies all 4 data sources queried with date filter"
+    evidence_type: test
+    notes: "Test mocks KB (calibration entries), reads PATTERNS-{month}.yaml, HEURISTIC-PROPOSALS.yaml, WORKFLOW-RECOMMENDATIONS.md. Asserts sources_used array in output frontmatter."
+
+  - ac_id: AC-1
+    planned_evidence: "Command test: /improvement-proposals --days 30 generates report with sources_used field"
+    evidence_type: command
+    notes: "Manual verification: Run command, inspect IMPROVEMENT-PROPOSALS-{date}.md frontmatter for sources_used: ['calibration', 'patterns', 'heuristics', 'retro']"
+
+  - ac_id: AC-2
+    planned_evidence: "Unit test: improvement-proposer-roi.test.ts verifies ROI formula correctness"
+    evidence_type: test
+    notes: "Test cases: High impact + low effort → ROI 10.0, Medium impact + medium effort → ROI 5.5, Low impact + high effort → ROI 2.2. Verify formula: (impact/effort) * (10/9)"
+
+  - ac_id: AC-2
+    planned_evidence: "Output inspection: Proposals include sample count in evidence field"
+    evidence_type: manual
+    notes: "Verify evidence field format: '15 samples', '3 samples (minimum)', '2 samples (low confidence)'. Spot check 3 proposals for sample count ≥ 3."
+
+  - ac_id: AC-3
+    planned_evidence: "Output inspection: Proposals sorted by ROI descending within priority sections"
+    evidence_type: manual
+    notes: "Parse IMPROVEMENT-PROPOSALS-{date}.md, extract ROI scores per section (High/Medium/Low), assert descending order within each section. Verify no ROI overlap between sections."
+
+  - ac_id: AC-4
+    planned_evidence: "KB query after generation returns proposals with correct schema"
+    evidence_type: manual
+    notes: "Run: kb_search({ tags: ['proposal', 'status:proposed'] }). Verify each entry has: id, title, source, status, impact, effort, roi_score, tags. Assert tags match proposal attributes."
+
+  - ac_id: AC-4
+    planned_evidence: "Unit test: ProposalEntrySchema validates all required fields"
+    evidence_type: test
+    notes: "Test schema validation: valid entry passes, missing required fields fail, invalid enum values fail. Verify z.infer<typeof ProposalEntrySchema> exports correct TypeScript type."
+
+  - ac_id: AC-5
+    planned_evidence: "Meta-learning section in output shows acceptance rates by source"
+    evidence_type: manual
+    notes: "After 2+ runs with accepted/rejected proposals: Parse meta-learning section, verify acceptance rate calculations match KB query results. First run shows 'No historical data' message."
+
+  - ac_id: AC-5
+    planned_evidence: "Integration test: Meta-learning adjusts priority for high-effort proposals"
+    evidence_type: test
+    notes: "Mock historical proposals with 40% rejection rate for high-effort. Assert output includes warning: 'High-effort proposals have 40% historical acceptance rate'."
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should WKFL-010 be split into 3 phases (Core 40K, Dedup 10K, Meta-Learning 10K)?"
+    decision: "Proceed unsplit for MVP (conditional pass per ELAB-WKFL-010.md)"
+    rationale: "Story is cohesive (single agent, single output). Deduplication and meta-learning are core features, not add-ons. Mark deduplication as 'best-effort' with --no-dedup override. Document AC-5 will show 'No historical data' on first run."
+    decided_by: user
+    constraints:
+      - "Deduplication threshold 0.85 (conservative)"
+      - "Add --no-dedup flag for manual override"
+      - "Document expected 'No historical data' message for AC-5 on first run"
+      - "Log warnings when sample size < 3, historical proposals < 50, or pattern files stale"
+    alternatives_considered:
+      - "Split into WKFL-010-A (Core), WKFL-010-B (Dedup), WKFL-010-C (Meta-Learning)"
+      - "Defer AC-5 to Phase 2"
+      - "Remove deduplication from MVP"
+
+  - id: ARCH-002
+    question: "Which text similarity algorithm for deduplication (Levenshtein vs embeddings)?"
+    decision: "Levenshtein distance with threshold 0.85 for MVP, document upgrade path to embeddings"
+    rationale: "Levenshtein is simple, deterministic, no external dependencies. Embeddings require OpenAI API (cost + latency). MVP should validate deduplication value before investing in embeddings."
+    decided_by: auto
+    constraints:
+      - "Normalize Levenshtein distance: similarity = 1 - (distance / max_length)"
+      - "Threshold: 0.85 (calibrated to approximate embedding similarity)"
+      - "Document upgrade path: WKFL-010-B (embeddings integration)"
+      - "Short-circuit if similarity < 0.5 (performance optimization)"
+    alternatives_considered:
+      - "OpenAI embeddings (cosine similarity, threshold 0.90)"
+      - "Anthropic embeddings (when available)"
+      - "No deduplication (out-of-scope)"
+
+  - id: ARCH-003
+    question: "How to handle missing data sources (PATTERNS-{month}.yaml, HEURISTIC-PROPOSALS.yaml)?"
+    decision: "Graceful degradation with Promise.allSettled() - continue if at least 1 source succeeds"
+    rationale: "Data sources may be unavailable (WKFL-006 not run yet, pattern file missing). Agent should generate proposals from available sources rather than fail entirely."
+    decided_by: auto
+    constraints:
+      - "Use Promise.allSettled() for parallel source loading (not Promise.all())"
+      - "Track success/failure per source in sources_used array"
+      - "Log warning for each failed source with actionable suggestion (e.g., 'Run /pattern-mine to refresh patterns')"
+      - "Minimum viable threshold: At least 1 source must succeed, otherwise fail with error"
+    alternatives_considered:
+      - "Fail fast if any source missing (too rigid)"
+      - "Continue even if 0 sources succeed (no data = no proposals)"
+      - "Mock missing sources with placeholder data (misleading)"
+
+complexity: moderate
+
+notes:
+  - "Story estimated at 60K tokens (WKFL-007: 48K + complexity adjustment for meta-learning)"
+  - "3 review cycles predicted (per pm-story-risk-predictor)"
+  - "Split risk 0.6 (medium-high) due to multi-source aggregation + deduplication complexity"
+  - "WKFL-006 dependency in ready-for-qa status (not completed) - graceful degradation implemented"
+  - "WKFL-008 (experiments) out of scope - deferred to Phase 3 (WKFL-010-D)"
+  - "Meta-learning (AC-5) requires historical data - will show 'No historical data' on first run"
+  - "Deduplication (AC-2) marked as 'best-effort' with --no-dedup override flag"
+  - "ProposalEntrySchema follows CalibrationEntrySchema pattern (~50 lines Zod schema)"
+  - "Total estimated lines: ~950 (620 production + 330 tests)"
+  - "Sonnet model per story spec (cost-effective for complex aggregation)"
+
+warnings:
+  - "KB dependency is critical path - agent will fail fast if KB unavailable (no fallback)"
+  - "Deduplication threshold 0.85 is unvalidated - may need adjustment after production use"
+  - "Meta-learning accuracy depends on sample size (≥50 historical proposals recommended)"
+  - "Date range filtering defaults to 30 days - may be too short for sufficient pattern data"

@@ -1,0 +1,180 @@
+schema_version: 1
+story_id: "WINT-4040"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      stories.index.md entry says "populate graph.feature_capabilities" but the deployed table is
+      graph.capabilities (confirmed in packages/backend/database-schema/src/schema/wint.ts line 1309).
+      The story body correctly targets graph.capabilities throughout. The index title uses an older
+      name that predates WINT-0131. Non-blocking — implementation direction is unambiguous — but
+      the stories.index.md entry title should be updated to say graph.capabilities to avoid
+      confusing implementing agents.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, Non-goals, ACs, Reuse Plan, Architecture Notes, and Test Plan are mutually consistent.
+      Non-goal "Do NOT create new rows in graph.features" is correctly reflected in AC-4.
+      Non-goal "Do NOT add database schema migrations" aligns with Reality Baseline confirming
+      graph.capabilities is already deployed. No contradictions found across 11 ACs and 7 subtasks.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Explicit Reuse Plan table covers all shared dependencies: populate-domain-kb.ts pattern,
+      @repo/database-schema InsertCapability type, @repo/db client, @repo/logger, and the
+      graph_get_capability_coverage oracle. No per-story one-off utilities planned. Story
+      explicitly checks for WINT-4030 populate-utils.ts before copying any shared utilities.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No API endpoints or HTTP adapters involved. Core inferCapabilities() function accepts
+      injectable insertFn for testability (dependency injection pattern established in WINT-2030/2050/2060).
+      Business logic (keyword mapping, story scanning, dedup) is fully transport-agnostic.
+      DB write is isolated behind injectable function boundary. No HTTP types in core logic.
+      No service/route layer concerns — standalone CLI script scope.
+
+  - id: testability
+    status: PASS
+    note: >
+      No .http files required (no endpoints). No Playwright required (no frontend). Unit tests
+      cover all core logic paths via injectable insertFn mock (AC-10, ST-7). Integration tests
+      gated on WINT-4030 merge with explicit DB assertions. Manual test cases (MC-1, MC-2) cover
+      output readability. Coverage requirement (>=80%) is concrete and enforceable via
+      "pnpm test --filter @repo/mcp-tools -- infer-capabilities --coverage". Fixture definitions
+      are explicit. No abstract or unverifiable test scenarios.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs or unresolved design decisions. WINT-4030 dependency is explicitly acknowledged
+      as non-blocking: AC-9 early-exit guard prevents silent zero-result runs; unit tests use
+      injected mocks and require no live DB. Execution gate is documented in Seed Requirements.
+      Keyword mapping table design (Zod-validated lookup object, not switch statement) is decided.
+      Drizzle .onConflictDoNothing() approach for dedup is decided. Promise.allSettled() for
+      parallelization is decided.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      All material risks disclosed: (1) keyword heuristic approximation with maturity_level='beta'
+      mitigation and --validate flag coverage report; (2) WINT-4030 dependency risk with AC-9 guard
+      mitigation and unit test independence via DI; (3) capability_name UNIQUE constraint risk with
+      ON CONFLICT DO NOTHING mitigation via Drizzle .onConflictDoNothing(). Integration test pollution
+      risk (capability_name unique constraint between test runs) also noted in test plan risks.
+      No hidden dependencies or undisclosed infrastructure risks.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      11 ACs exceeds the 8 AC threshold (one sizing indicator). All other sizing checks pass:
+      0 endpoints, backend-only (no significant frontend work), single coherent feature (capability
+      inference script), 3 distinct happy path test scenarios, touches 2 packages
+      (mcp-tools + database-schema for reads only). One indicator does not trigger split recommendation.
+      Story is appropriately scoped as a medium-complexity standalone CLI script.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      7 subtasks with explicit DAG: ST-1 (none) -> ST-2,ST-3,ST-4 (ST-1) -> ST-5 (ST-2,3,4) ->
+      ST-6 (ST-5) -> ST-7 (ST-5,ST-6). No cycles. All 11 ACs are covered (explicit AC-subtask
+      coverage table in story). Each subtask touches <=3 files. Each subtask has a verification
+      command. Canonical References section present with 3 entries covering populate pattern,
+      Drizzle insert pattern, and coverage oracle. The scripts/__types__/index.ts listed in
+      ST-1 files_to_modify does not currently exist — implementer must create it (non-blocking,
+      standard pattern).
+
+  - id: clarity_format
+    status: PASS
+    note: >
+      Goal section present (creates capability inference script, seeds graph.capabilities).
+      Examples section present (2 concrete examples: happy-path keyword inference and --dry-run mode).
+      Edge Cases section present (4 distinct edge cases: zero features, duplicate lifecycle stage,
+      unknown epic prefix, no capability keywords in story text). All three required sections
+      complete. Story is executable by small-context LLMs.
+
+gaps:  # MVP-blocking only
+  []
+
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      packages/backend/mcp-tools/src/scripts/__types__/index.ts does not currently exist on the
+      filesystem (confirmed: no __types__ directory under scripts/). ST-1 lists it as
+      "files_to_modify" but it must be created. The story's Scope section says "new files" includes
+      this path but under a different label. The subtask goal says "Create InferredCapabilitySchema"
+      which implies creation. The implementing agent for ST-1 should treat this as a create, not
+      modify. Low risk — implementer will discover this immediately — but noting it prevents confusion.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "43f81a24-5193-45da-9b34-f357cbcea528"
+
+  - id: opp-2
+    category: edge_cases
+    finding: >
+      The capabilities.lifecycle_stage column is a plain text field (not a pgEnum) enforced at the
+      application level (see wint.ts line 1325 comment: "app-enforced"). The keyword mapping table
+      must produce exactly 'create' | 'read' | 'update' | 'delete' strings. If a keyword lookup
+      bug introduces a typo (e.g., 'reads' instead of 'read'), graph_get_capability_coverage will
+      silently miss those rows in its CRUD aggregation (it checks stage === 'create' etc. explicitly).
+      Per KB entry b78c01db (WINT-4030 opp): analogous enum mismatch risk exists for graph inserts.
+      Recommendation: ST-2's Zod lookup table should use z.enum(['create','read','update','delete'])
+      as the value type, providing compile-time enforcement of valid stage values.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "efa816ca-4049-46a6-a674-7b1762470f62"
+
+  - id: opp-3
+    category: observability
+    finding: >
+      Per KB entry f7f59027 (WINT-2040 opp-2 pattern): populate scripts could emit structured
+      telemetry to wint.telemetry_events tracking run success rate, inference count, and execution
+      time. The inferCapabilities() orchestrator already emits a PopulateResultSchema summary to
+      stdout — adding a telemetry_events INSERT at the end of a successful run would enable
+      monitoring inference freshness over time without changing the CLI API surface.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "27f15f93-4cf7-4321-b740-69a8d33644d0"
+
+  - id: opp-4
+    category: integrations
+    finding: >
+      WINT-4060 (graph-checker agent) depends on WINT-4040 and is the primary consumer of
+      graph.capabilities data this story produces. The --validate flag output format (coverage
+      report distinguishing complete vs. incomplete CRUD coverage per feature) could be structured
+      to also serve as a quick manual QA proxy for WINT-4060's acceptance criteria before the agent
+      is built. If the --validate output is machine-parseable (e.g., JSON), WINT-4060's test plan
+      could reference it directly. Current story only requires human-readable output (MC-1) —
+      adding a --validate --json flag variant would be a future enhancement.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "462e955d-ee18-4c14-b9bb-55478018c522"
+
+  - id: opp-5
+    category: edge_cases
+    finding: >
+      stories.index.md entry for WINT-4040 references "graph.feature_capabilities" in its Feature
+      field, but the deployed table is graph.capabilities. This title discrepancy predates the story
+      and reflects WINT-0131's renaming. The index entry title should be updated to reference
+      graph.capabilities to prevent implementing agents from confusion. This is a documentation
+      maintenance item, not a story implementation concern.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "f5b2fb18-4559-4528-b085-622d70130d2d"
+
+split_recommendation: null  # story_sizing=PASS; no split required
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 0

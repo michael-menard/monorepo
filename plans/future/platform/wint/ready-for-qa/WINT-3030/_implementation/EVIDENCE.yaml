@@ -1,0 +1,43 @@
+story_id: WINT-3030
+story_type: docs
+timestamp: "2026-03-09T00:39:00Z"
+
+tests:
+  unit:
+    status: exempt
+    reason: "docs-only story, no TypeScript deliverable"
+  integration:
+    status: exempt
+    reason: "docs-only story"
+  e2e:
+    status: exempt
+    reason: "docs-only story, agent file verified by structural review"
+
+touched_files:
+  - .claude/agents/telemetry-logger.agent.md
+
+ac_verification:
+  AC-1:
+    status: pass
+    evidence: "Frontmatter: type=worker, model=haiku, permission_level=read-only"
+  AC-2:
+    status: pass
+    evidence: "Mission section documents single responsibility"
+  AC-3:
+    status: pass
+    evidence: "Input schema: 4 required + 7 optional fields documented"
+  AC-4:
+    status: pass
+    evidence: "Phase 2 implements fire-and-forget with null/error handling"
+  AC-5:
+    status: pass
+    evidence: "LangGraph Porting Notes with Input/Execution/Output/Tool contracts"
+  AC-6:
+    status: pass
+    evidence: "spawned_by in frontmatter"
+  AC-7:
+    status: pass
+    evidence: "Non-Negotiables: never add latency, never throw/re-throw"
+  AC-8:
+    status: pass
+    evidence: "Graceful degradation documented in Phase 2 and Non-Negotiables"

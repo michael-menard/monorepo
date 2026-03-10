@@ -1,0 +1,168 @@
+schema: 1
+story_id: "KBAR-0070"
+timestamp: "2026-02-23T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md KBAR-007 entry exactly: "MCP tool to retrieve story with
+      optional artifacts and dependencies." No extra endpoints, tables, or infrastructure introduced.
+      Non-goals explicitly exclude list-stories eager loading, new DB tables, artifact content JSONB,
+      and transitive dependency traversal. All in-scope changes are confined to 4 files in
+      apps/api/knowledge-base.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, Non-goals, ACs, and Test Plan are tightly aligned. Non-goal "no new DB tables" is
+      consistent with AC-1 (schema extension only). Non-goal "no artifact content JSONB" is
+      consistent with AC-2 (metadata rows only). Non-goal "1-hop edges only" is consistent with
+      AC-3 (single OR query, no traversal). Backward-compat non-goal is reflected in AC-1, AC-4,
+      HP-4. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan is well-specified. Extends existing kb_get_story service function in-place. Reuses
+      storyArtifacts and storyDependencies Drizzle tables already in db/schema.ts. Reuses
+      KbListStoriesInputSchema pattern for optional boolean fields. Reuses vi.hoisted + vi.mock
+      test pattern from tool-handlers.test.ts. No new shared packages created.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Architecture follows ports & adapters correctly. Business logic (conditional queries,
+      short-circuit null guard) is in service layer (story-crud-operations.ts). Handler
+      (tool-handlers.ts) is thin: parse input, call service, return JSON. No HTTP types in service
+      layer. Story does not involve REST endpoints — MCP tool only. Checked docs/architecture/api-layer.md:
+      this is a Lambda-direct MCP handler, not API Gateway, so route file constraint does not apply.
+
+  - id: testability
+    status: WARN
+    note: >
+      Unit tests (7 paths via vi.mock) and integration tests (real PostgreSQL per ADR-005) are
+      specified and concrete. Test plan is executable. Minor: story references ".http runnable tests"
+      concept from checklist but this is an MCP tool (not REST), so HTTP test files are not
+      applicable — this is not a defect, just a checklist item that does not apply to MCP-only
+      stories. Integration test seed/assert plan (HP-1 through HP-6, EC-1, EC-2) is well-specified
+      with evidence criteria. WARN only: no explicit call out that .http tests are N/A for MCP tools.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      All design decisions are resolved: return type shape (optional keys with Zod schema),
+      query strategy (max 3 DB round-trips), short-circuit guard (return early when story is null),
+      tool schema update strategy (zodToMcpSchema auto-reflects new fields). No blocking TBDs.
+      Architecture Notes section provides explicit implementation guidance.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      One inaccurate claim in Reuse Plan: story states "`or`, `eq` from `drizzle-orm` — Already
+      imported in story-crud-operations.ts." Verification shows the actual import line is
+      "import { eq, and, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'" —
+      `or` is NOT currently imported. This will require adding `or` to the import. Similarly,
+      `storyArtifacts` is not currently imported from db/schema.ts (only `storyDependencies` is
+      imported). These are implementation-level inaccuracies in the Reuse Plan table, not
+      architectural risks, but they could cause a compile error if an implementer follows the
+      Reuse Plan literally. Risk note about CI requiring POSTGRES_URL is present. Backward compat
+      risk is documented. WARN (not FAIL) because these are minor claims, not missing risks.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      8 ACs (at checklist boundary of 8, not over). 0 new endpoints. Backend-only (touches_frontend:
+      false). 4 files modified, all within apps/api/knowledge-base — single package. No independent
+      features bundled; all changes are cohesive extensions to a single service function and its
+      handler. Happy path test scenarios: 3 core scenarios (HP-1 artifacts, HP-2 dependencies,
+      HP-3 both). Story is appropriately sized. No split required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      7 subtasks (ST-1 through ST-7). All 8 ACs are covered: AC-1 by ST-1, AC-2+AC-4 by ST-2,
+      AC-3+AC-4 by ST-3, AC-6 by ST-4, AC-5 by ST-5, AC-7 by ST-6, AC-8 by ST-7. Each subtask
+      touches ≤3 files (ST-1,ST-2,ST-3,ST-4,ST-5 touch 1-2 files; ST-6,ST-7 touch 2 files).
+      Dependencies form a valid DAG: ST-1→{ST-2,ST-4,ST-5}, ST-2→ST-3, ST-3→ST-7, ST-4→ST-6.
+      No cycles. Verification commands present for all subtasks. Canonical References section has
+      4 entries covering handler pattern, service function pattern, schema pattern, and unit test
+      pattern. Decomposition is complete and executable.
+
+gaps:  # MVP-blocking only
+  - id: gap-1
+    check: risk_disclosure
+    finding: >
+      `or` from drizzle-orm is NOT currently imported in story-crud-operations.ts. The Reuse Plan
+      incorrectly states it is "already imported." The dependency query in ST-3 uses `or()` from
+      drizzle-orm for the OR condition on storyId / targetStoryId. Without adding `or` to the
+      import, ST-3 will fail to compile. Implementation must add `or` to the existing drizzle-orm
+      import line.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-9: Add `or` to drizzle-orm import in story-crud-operations.ts"
+    notes: "Auto-resolved: missing import blocks core journey (ST-3 compile failure)"
+
+  - id: gap-2
+    check: risk_disclosure
+    finding: >
+      `storyArtifacts` is not currently imported in story-crud-operations.ts. The file imports
+      `{ stories, storyDependencies }` from db/schema.ts but not `storyArtifacts`. ST-2 requires
+      this import to query the story_artifacts table. Implementation must add `storyArtifacts` to
+      the db/schema.ts import line in story-crud-operations.ts.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-10: Add `storyArtifacts` to db/schema.ts import in story-crud-operations.ts"
+    notes: "Auto-resolved: missing import blocks core journey (ST-2 compile failure)"
+
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      Return type design (Architecture Notes) uses optional keys (artifacts?, dependencies?) but
+      AC-4 specifies that missing-story case returns populated empty arrays: artifacts: [],
+      dependencies: []. The Zod result schema should clarify whether arrays are optional (absent
+      when flags are false) vs. always present as empty arrays. Consider using conditional
+      population: when flag=false, key is absent; when flag=true, key is always an array (even if
+      empty). This distinction should be explicit in KbGetStoryResultSchema to avoid consumer
+      confusion.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "14f6f35e-6653-42db-b44e-998e8540f13e"
+
+  - id: opp-2
+    category: observability
+    finding: >
+      EC-1 test relies on a DB spy to verify secondary queries are NOT executed when story is null.
+      The story specifies "spy on deps.db.select" but the handler currently uses
+      enforceAuthorization and passes deps.db directly to the service. For unit tests, the mock
+      pattern (vi.mock on service layer) would naturally prevent any secondary queries from
+      executing. For integration tests, a DB spy would require intercepting the Drizzle client.
+      Consider documenting the spy mechanism more concretely in ST-7 to avoid test implementation
+      ambiguity.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "02f35032-8c01-47d3-8eb2-0f5faee9b117"
+
+  - id: opp-3
+    category: performance
+    finding: >
+      When both include_artifacts and include_dependencies are true, the implementation makes 3
+      sequential DB round-trips. For a future optimization, these two secondary queries could be
+      issued in parallel via Promise.all() since they are independent. Not needed for MVP but would
+      reduce latency for the common "full context" use case.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "78b97163-fe99-40fa-91a5-1dbf879a4105"
+
+split_recommendation: null  # story_sizing=PASS, no split required
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-02-23T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 2

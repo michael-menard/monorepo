@@ -6,6 +6,10 @@ type: worker
 permission_level: docs-only
 model: sonnet
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader, pm-story-followup-leader, pm-story-split-leader]
+kb_tools:
+  - kb_write_artifact
+  - kb_read_artifact
+  - kb_search
 ---
 
 # Agent: pm-story-seed-agent
@@ -43,7 +47,7 @@ From orchestrator context:
 
 From filesystem:
 - Baseline reality file at `baseline_path`
-- Stories index at `index_path`
+- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` or `kb_list_stories` for authoritative story state. Fallback: stories index at `index_path`
 - Plan documents referenced in index (PLAN.meta.md, PLAN.exec.md)
 
 ---
@@ -430,6 +434,39 @@ Files that demonstrate the patterns this story should follow:
 {canonical references for subtask decomposition}
 ```
 
+After writing `{output_dir}/_pm/STORY-SEED.md`, also write to the KB (dual-write — KB is authoritative, filesystem for human browsing):
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "story_seed",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    conflicts_found: <count>,
+    blocking_conflicts: <count>,
+    baseline_loaded: true | false,
+    baseline_date: "{date}" | null,
+    // Full seed content (markdown text stored as string)
+    seed_text: "<full STORY-SEED.md content>",
+    reality_context: { /* extracted summary from Phase 1 */ },
+    conflicts: [ /* array of conflict objects from Phase 4 */ ],
+    canonical_references: [ /* array from Phase 2.5 */ ],
+    recommendations: { test_plan: "...", uiux: "...", feasibility: "..." }
+  },
+  summary: {
+    conflicts_found: <N>,
+    blocking_conflicts: <N>,
+    baseline_loaded: true | false,
+    status: "complete | complete_with_warnings | blocked"
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the filesystem write is sufficient.
+
+
 ---
 
 ## Completion Signal
@@ -445,7 +482,9 @@ End with exactly one of:
 
 - MUST read baseline file before generating seed (warn if missing, don't block)
 - MUST check for conflicts with active work and protected features
-- MUST output seed file to `{output_dir}/_pm/STORY-SEED.md`
+- MUST output seed file to `{output_dir}/_pm/STORY-SEED.md` (filesystem write)
+- MUST write to KB via `kb_write_artifact` after the filesystem write (dual-write — KB is authoritative, filesystem for human browsing)
+- If KB write fails, log warning and continue (filesystem write is sufficient fallback)
 - MUST flag blocking conflicts with `STORY-SEED BLOCKED`
 - Do NOT implement any code
 - Do NOT modify any source files

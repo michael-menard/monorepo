@@ -1,0 +1,24 @@
+# Deferred KB writes for WINT-3040
+# Written by pm-story-generation-leader on 2026-03-08
+# These writes were deferred because KB MCP server was not invoked inline during story synthesis.
+# Retry with: kb_upsert_story tool or kb_create_story tool.
+
+writes:
+  - table: stories
+    operation: upsert
+    payload:
+      story_id: WINT-3040
+      feature: wint
+      title: "Implement Decision Logging Skill (telemetry-decision) with Embedding Generation"
+      story_dir: "plans/future/platform/wint/backlog/WINT-3040"
+      story_file: "plans/future/platform/wint/backlog/WINT-3040/WINT-3040.md"
+      story_type: feature
+      points: 1
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    created_at: "2026-03-08T00:00:00Z"
+    retries: 0

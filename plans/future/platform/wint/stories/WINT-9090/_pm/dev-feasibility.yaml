@@ -1,0 +1,125 @@
+feasible: true
+confidence: high
+rationale: >
+  All business logic source exists and is QA-passing in the MCP tools
+  (packages/backend/mcp-tools/src/context-cache/ and session-management/).
+  The porting pattern is well-established via WINT-9020 (doc-sync.ts) and the
+  load-knowledge-context.ts state extension pattern. The createToolNode factory,
+  updateState helper, and injectable DB pattern from load-from-db.ts provide
+  clear implementation guides. Primary risk is the WINT-9010 dependency gate
+  (workflow-logic package must be QA-passing before implementation begins) and
+  the WINT-2100 source ambiguity (session-manager agent not yet implemented —
+  use MCP tools as authoritative source). No schema changes, no new packages,
+  no MCP tool modifications required. Story is correctly scoped and implementable.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/nodes/context/ (new directory)
+    - packages/backend/orchestrator/src/nodes/context/context-warmer.ts (new file)
+    - packages/backend/orchestrator/src/nodes/context/session-manager.ts (new file)
+    - packages/backend/orchestrator/src/nodes/context/index.ts (new file)
+    - packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts (new file)
+    - packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts (new file)
+  endpoints: []
+  deploy_touchpoints:
+    - "No deployment changes required — internal orchestrator package, nodes not yet wired into graphs (WINT-9110 scope)"
+
+risks:
+  - finding: "WINT-9010 (@repo/workflow-logic) is in-qa. If context-warmer.ts imports shared types from workflow-logic and WINT-9010 fails QA or changes its API surface, implementation will need rework."
+    mitigation: "Gate implementation start on WINT-9010 reaching uat or completed status. During elaboration, confirm whether workflow-logic exports are actually needed — MCP tool __types__/ may be sufficient and avoid the dependency entirely."
+
+  - finding: "WINT-2100 (session-manager agent) is ready-to-work (not implemented). If session-manager.ts is meant to port the agent logic and not the MCP tool logic, the behavioral source of truth is undefined."
+    mitigation: "During elaboration, formally clarify: port MCP tool behavior (QA-passing, available now) OR port the yet-to-be-written agent. Story as seeded targets MCP tool behavior — confirm and document this decision before implementation."
+
+  - finding: "nodes/context/ directory does not exist. Path must be established before any file creation to avoid the WINT-9020 lesson (path discrepancy discovered mid-implementation)."
+    mitigation: "First subtask creates the directory structure. Confirm nodes/context/ path convention in elaboration by referencing nodes/sync/ and nodes/reality/ as precedent."
+
+missing_requirements:
+  - "Formal decision on WINT-2100 dependency scope: should session-manager.ts port MCP tool logic or wait for agent spec?"
+  - "Explicit confirmation that @repo/workflow-logic exports are or are not required (affects WINT-9010 gate strictness)"
+
+evidence_expectations:
+  - "pnpm check-types --filter @repo/orchestrator passes after node files created"
+  - "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ shows >= 80% coverage"
+  - "contextWarmerNode and sessionManagerNode are importable from nodes/context/index.ts without TypeScript errors"
+  - "Injected db mock tests confirm no hard-wired DB at module scope"
+  - "DB failure tests confirm graceful null return without thrown exceptions"
+
+subtasks:
+  - id: ST-1
+    title: "Create nodes/context/ directory structure and index file"
+    goal: "Establish the new nodes/context/ directory with index.ts re-export stub, consistent with nodes/sync/ and nodes/reality/ conventions."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/sync/index.ts
+      - packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/context/index.ts (create)
+    acs: ["AC-3"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: "Implement context-warmer.ts node (cache read + write)"
+    goal: "Create context-warmer.ts with ConfigSchema, ResultSchema, extended GraphStateWithContextCache, createContextWarmerNode factory, and contextWarmerNode default export. Port contextCacheGet and contextCachePut business logic."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
+      - packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts
+      - packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/context/context-warmer.ts (create)
+      - packages/backend/orchestrator/src/nodes/context/index.ts (update re-export)
+    acs: ["AC-1", "AC-4", "AC-5", "AC-8", "AC-9", "AC-10", "AC-11", "AC-14"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 14000
+
+  - id: ST-3
+    title: "Implement cache invalidation in context-warmer.ts"
+    goal: "Port contextCacheInvalidate business logic as an operation mode or companion utility accessible through the context-warmer node, ensuring AC-13 is satisfied."
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/context/context-warmer.ts (extend)
+    acs: ["AC-13"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: "Implement session-manager.ts node (create, update, complete, cleanup)"
+    goal: "Create session-manager.ts with ConfigSchema, ResultSchema, extended GraphStateWithSession, createSessionManagerNode factory, and sessionManagerNode default export. Port sessionCreate, sessionUpdate, sessionComplete, sessionCleanup business logic."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
+      - packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts
+      - packages/backend/mcp-tools/src/session-management/session-create.ts
+      - packages/backend/mcp-tools/src/session-management/session-update.ts
+      - packages/backend/mcp-tools/src/session-management/session-complete.ts
+      - packages/backend/mcp-tools/src/session-management/session-cleanup.ts
+      - packages/backend/mcp-tools/src/session-management/__types__/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/context/session-manager.ts (create)
+      - packages/backend/orchestrator/src/nodes/context/index.ts (update re-export)
+    acs: ["AC-2", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10", "AC-11", "AC-14"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 14000
+
+  - id: ST-5
+    title: "Write unit tests for context-warmer.ts and session-manager.ts"
+    goal: "Create nodes/context/__tests__/context-warmer.test.ts and session-manager.test.ts covering all happy path, error case, and edge case scenarios using injectable mock db. Achieve >= 80% coverage."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+      - packages/backend/mcp-tools/src/session-management/__tests__/integration.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts (create)
+      - packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts (create)
+    acs: ["AC-12"]
+    depends_on: ST-3, ST-4
+    verification: "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage"
+    estimated_tokens: 16000

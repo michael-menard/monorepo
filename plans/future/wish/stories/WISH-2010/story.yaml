@@ -1,0 +1,29 @@
+schema: 1
+id: WISH-2010
+feature: wish
+type: feature
+state: uat
+title: Shared Zod schemas and types setup
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2007
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Ensure consistency in type definitions and validation rules across frontend and backend by creating a shared
+  schema package.
+non_goals:
+  - API endpoint implementation (covered by WISH-2001, WISH-2002, etc.)
+  - Database schema changes (covered by WISH-2000)
+  - Runtime validation middleware (implementation detail of endpoints)
+  - OpenAPI spec generation (future enhancement)
+acs: []
+risks: []
+created_at: 2026-01-28T00:00:00Z
+updated_at: 2026-01-30T22:25:00Z

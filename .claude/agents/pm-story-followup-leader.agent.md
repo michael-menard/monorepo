@@ -27,9 +27,9 @@ From orchestrator context:
 - **Pre-allocated story ID** (optional, provided when spawned in parallel)
 
 From filesystem:
-- Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
-- Stories index: `{FEATURE_DIR}/stories.index.md`
+- Source story: `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- Elaboration: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/ELAB.yaml`
+- Stories index: **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 
@@ -131,12 +131,7 @@ For the proposed follow-up ID:
    - If found (regardless of status): ID is taken
 
 3. **Check if directory exists:**
-   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+   - `{FEATURE_DIR}/stories/{NEW_STORY_ID}/`
 
 4. **If collision detected:**
    - Find the highest existing story ID in the index matching `{PREFIX}-*`
@@ -162,8 +157,8 @@ For each selected follow-up:
 
 1. Create directory:
    ```
-   {FEATURE_DIR}/backlog/{NEW_STORY_ID}/
-   {FEATURE_DIR}/backlog/{NEW_STORY_ID}/_pm/
+   {FEATURE_DIR}/stories/{NEW_STORY_ID}/
+   {FEATURE_DIR}/stories/{NEW_STORY_ID}/_pm/
    ```
 
 2. Write `{NEW_STORY_ID}.md`:
@@ -263,7 +258,7 @@ follow_ups_created:
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{NEW_STORY_ID}/{NEW_STORY_ID}.md
+  - {FEATURE_DIR}/stories/{NEW_STORY_ID}/{NEW_STORY_ID}.md
 files_updated:
   - {FEATURE_DIR}/stories.index.md
   - {STORY_ID}.md (checkbox marked)

@@ -11,6 +11,8 @@ model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
+  - kb_read_artifact
+  - kb_write_artifact
   - mcp__postgres-knowledgebase__query
   - worktree_register
 skills_used:
@@ -38,16 +40,16 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
-| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/test-plan.yaml` | Always |
-| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/uiux-notes.yaml` | Always (skipped:true if no UI) |
-| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/dev-feasibility.yaml` | Always |
+| Test Plan Writer | `pm-draft-test-plan.agent.md` | (inline) | Always |
+| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | (inline) | Always (skipped:true if no UI) |
+| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | (inline) | Always |
 | Risk Predictor | `pm-story-risk-predictor.agent.md` | predictions YAML (inline) | Always (WKFL-007) |
 
 ---
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`)
+- Index path (e.g., `plans/stories/WISH.stories.index.md`) -- Note: KB (`kb_get_story` / `kb_list_stories`) is the authoritative source for story state; index file is fallback.
 - Story ID
 - Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
 
@@ -56,10 +58,14 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 ## Execution Flow
 
 ### Phase 0: Setup and Load Seed
-1. Read seed file at `{SEED_PATH}` - extract reality_context, retrieved_context, conflicts
+1. Load seed — KB-first, fallback to filesystem:
+   1. Try: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "story_seed" })`
+   2. If KB has the artifact: use `content.seed_text` as the seed content; extract `reality_context`, `retrieved_context`, `conflicts` from `content`
+   3. Fallback only if KB is unavailable or returns no result: read `{SEED_PATH}` from filesystem and parse manually
+   - Log which source was used: "Seed loaded from KB" or "Seed loaded from filesystem (KB unavailable)"
 2. Check for blocking conflicts → `PM BLOCKED`
 3. Resolve paths from index
-4. Create directory structure: `{OUTPUT_DIR}/`, `{OUTPUT_DIR}/_pm/`
+4. Create directory structure: `{OUTPUT_DIR}/`
 
 ### Phase 0.5: Collision Detection
 Check if story directory already exists. If collision:
@@ -179,7 +185,7 @@ function isEligible(story, eligibility) {
 ### Phase 1-3: Spawn Workers (PARALLEL)
 Spawn all workers in SINGLE message. For patterns, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
 
-Wait for workers with TaskOutput. Check for blockers in `_pm/BLOCKERS.md`.
+Wait for workers with TaskOutput. Check each worker output for blockers.
 
 ### Phase 4: Synthesize Story
 Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
@@ -198,7 +204,7 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 - These references flow into each subtask for dev agent context
 
 **Subtask Decomposition** (from dev-feasibility worker):
-- Read `subtasks[]` from `_pm/dev-feasibility.yaml`
+- Read `subtasks[]` from Dev Feasibility worker TaskOutput
 - Include as `## Subtasks` section in story file
 - Cross-reference: every AC must be covered by at least one subtask
 - Cross-reference: each subtask's canonical reference should come from the seed's references
@@ -206,9 +212,9 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
 **PM Artifacts (pm_artifacts section)**:
 Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
-- Read `_pm/test-plan.yaml` → `pm_artifacts.test_plan`
-- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
-- Read `_pm/uiux-notes.yaml` → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
+- Read Test Plan Writer TaskOutput → `pm_artifacts.test_plan`
+- Read Dev Feasibility worker TaskOutput → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
+- Read UI/UX Advisor TaskOutput → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
 
 **Experiment Variant in Story Frontmatter** (WKFL-008):
 Include `experiment_variant` field in story.yaml frontmatter:
@@ -324,7 +330,7 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
 | Rule | Description |
 |------|-------------|
-| Read seed file | MUST read at {SEED_PATH} before spawning |
+| Read seed file | MUST load seed KB-first (`kb_read_artifact`), fallback to {SEED_PATH} filesystem |
 | Pass seed context | To all workers |
 | Protected features | Do not modify seed's protected_features |
 | Experiment assignment | MUST assign variant in Phase 0.5a (WKFL-008) |

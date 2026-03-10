@@ -64,7 +64,7 @@ const result = artifact_write({
   artifact_type: "review",
   phase: "code_review",
   iteration: {iteration},
-  file_path: "{feature_dir}/in-progress/{story_id}/_implementation/REVIEW.yaml",
+  file_path: "{feature_dir}/stories/{story_id}/_implementation/REVIEW.yaml",
   content: { /* REVIEW structure below */ }
 })
 

@@ -38,7 +38,7 @@ const StoryMetadataSchema = z
     blocks: z.array(z.string()).optional(),
     feature_dir: z.string().optional(),
   })
-  .strict()
+  .passthrough()
 
 type StoryMetadata = z.infer<typeof StoryMetadataSchema>
 
@@ -163,7 +163,7 @@ function renderProgressSummary(statusCounts: Map<string, number>): string {
 /** Statuses that represent stories not yet being worked on */
 const WORKABLE_STATUSES = new Set([
   'created',
-  'ready-to-work',
+  'ready_to_work',
   'elaboration',
   'pending',
   'generated',

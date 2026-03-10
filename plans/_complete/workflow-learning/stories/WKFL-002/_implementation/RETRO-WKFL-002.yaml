@@ -1,0 +1,54 @@
+schema_version: 1
+story_id: WKFL-002
+retro_generated_at: "2026-02-22T00:00:00Z"
+retro_scope: batch
+
+story_analysis:
+  story_id: WKFL-002
+  title: "Confidence Calibration"
+  completed_at: "2026-02-07T21:27:00Z"
+  status: uat
+
+  token_metrics:
+    estimated: 50000
+    actual: 57212
+    variance_percent: +14.4
+    rating: over_budget
+    note: "Actual from TOKEN-LOG.md (PM generation phase only - 57,212 tokens). Full implementation tokens not logged separately. PM generation alone exceeded 50k estimate."
+
+  review_metrics:
+    cycles: 1
+    baseline: 2
+    above_baseline: false
+    failure_breakdown:
+      lint: 0
+      typecheck: 0
+      security: 0
+      build: 0
+    findings_count: 0
+    note: "REVIEW.yaml shows 0 findings, PASS on first iteration"
+
+  phase_metrics:
+    slowest_phase: pm-generate
+    token_heaviest_phase: pm-generate
+    failure_phases: []
+
+  decision_metrics:
+    auto_accepted: null
+    escalated: null
+    escalation_rate: null
+    note: "DECISIONS.yaml not parsed in this retro run"
+
+  ac_metrics:
+    total_acs: 7
+    passed_first_try: 7
+    failed_first_try: 0
+    ac_pass_rate: 100
+
+  observations:
+    - "PM generation exceeded estimate by 14.4% - workers increased token usage"
+    - "Task tool unavailable during PM generation; synthesized directly from seed (viable fallback)"
+    - "KB tools unavailable during PM; deferred write pattern used successfully"
+    - "Clean review with 0 findings - schema design was well-structured"
+    - "25 new tests + 122 existing tests passing - strong test coverage"
+    - "Workers not spawned due to Task tool unavailability - increased token cost per lesson"

@@ -1,0 +1,16 @@
+schema: 1
+story_id: WISH-2046
+total:
+  input: 68000
+  output: 22500
+phases:
+  - phase: elab-setup
+    input: 8500
+    output: 12000
+  - phase: elab-completion
+    input: 44500
+    output: 2500
+  - phase: qa-verify-completion
+    input: 15000
+    output: 8000
+high_cost: []

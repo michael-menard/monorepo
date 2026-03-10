@@ -1,0 +1,403 @@
+schema: 1
+story_id: WKFL-002
+timestamp: '2026-02-07T00:00:00Z'
+
+# Knowledge context for Confidence Calibration implementation
+
+# Relevant patterns from similar implementations
+patterns:
+  kb_schema_extensions:
+    - source: apps/api/knowledge-base/src/__types__/index.ts
+      pattern: |
+        - Zod-first types: Always define schema with z.object(), infer type with z.infer<>
+        - Entry type enums: KnowledgeEntryTypeSchema = z.enum([...])
+        - Specialized schemas: FeedbackContentSchema, CalibrationEntrySchema
+        - Field validation: z.string().min(1), z.string().regex(), z.enum()
+        - Documentation: JSDoc comments above each schema explaining purpose and usage
+        - Exports: Both schema and inferred type (export const Schema, export type Type)
+      notes: |
+        CalibrationEntrySchema follows same pattern as FeedbackContentSchema.
+        Add after FeedbackContentSchema in file for logical grouping.
+
+  kb_tool_handlers:
+    - source: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      pattern: |
+        - Thin wrappers around CRUD operations
+        - Logging with correlation IDs
+        - Error sanitization with errorToToolResult()
+        - Performance measurement
+        - Access control via checkAccess(agentRole, toolName)
+        - Zod validation before database operations
+      notes: |
+        If kb_add needs calibration-specific validation, add in tool-handlers.ts.
+        Otherwise, generic entry_type validation may be sufficient.
+
+  agent_patterns:
+    - source: .claude/agents/workflow-retro.agent.md
+      pattern: |
+        Frontmatter:
+          model: sonnet (for complex analysis) or haiku (for simple aggregation)
+          type: leader | worker
+          kb_tools: [kb_search, kb_add_lesson]
+          triggers: ["/command-name"]
+          
+        Structure:
+          - Mission: Single-sentence purpose
+          - Knowledge Base Integration: When to query/write
+          - Inputs: Required/optional args
+          - Execution Flow: Phase-by-phase breakdown
+          - Output Files: What gets written where
+          - Completion Signal: Exact completion message format
+          - Non-Negotiables: Rules that must be followed
+      notes: |
+        confidence-calibrator.agent.md follows workflow-retro pattern.
+        Uses haiku model (simple aggregation), worker type, kb_search + kb_add_lesson tools.
+
+  command_patterns:
+    - source: .claude/commands/feedback.md
+      pattern: |
+        Structure:
+          - Command signature: /command {ARGS} [--flags]
+          - Usage examples: Multiple real-world examples
+          - Arguments table: Required/optional, descriptions
+          - Implementation: Step-by-step pseudo-code
+          - Error handling: All error scenarios with messages
+          - Integration points: How command interacts with other systems
+        
+        Key sections:
+          1. Validate Arguments
+          2. Parse/read context (VERIFICATION.yaml, etc.)
+          3. Extract metadata
+          4. Build entry (validate with Zod)
+          5. Create KB entry (kb_add)
+          6. Confirm to user
+      notes: |
+        /calibration-report follows same structure.
+        Key difference: Spawns agent instead of direct KB write.
+
+# Lessons learned from prior implementations
+lessons:
+  - id: WKFL-001
+    category: kb-integration
+    lesson: |
+      KB tools (kb_search, kb_add_lesson) must be declared in agent frontmatter.
+      Query KB before analysis to avoid duplicating existing patterns.
+      Log significant patterns (3+ occurrences) to KB for future reference.
+      Fallback: If KB unavailable, continue with degraded functionality.
+
+  - id: WKFL-004
+    category: feedback-schema
+    lesson: |
+      Feedback entries use entry_type='feedback' with structured FeedbackContentSchema.
+      Tags enable efficient querying: ['feedback', 'agent:{name}', 'type:{type}'].
+      All feedback is role='dev' since it's for agent calibration.
+      Finding IDs must be unique within a story's VERIFICATION.yaml.
+
+  - id: KNOW-0051
+    category: mcp-tools
+    lesson: |
+      MCP tool handlers follow strict pattern:
+        - Logging with createMcpLogger('tool-name')
+        - Error handling with errorToToolResult()
+        - Performance measurement (query timing)
+        - Access control via checkAccess()
+        - Zod validation before operations
+      Never skip these patterns - they're non-negotiable for KB operations.
+
+  - id: KNOW-0052
+    category: kb-search
+    lesson: |
+      kb_search supports:
+        - entry_type filtering
+        - tag filtering (AND logic for multiple tags)
+        - date range filtering
+        - role filtering
+        - limit (default 10, max 100)
+      Tag format: 'category', 'category:value' (e.g., 'agent:code-review-security')
+      Timeout: KB_SEARCH_TIMEOUT_MS (default 5000ms)
+
+  - id: token-optimization
+    category: efficiency
+    lesson: |
+      Token optimization patterns:
+        - Read only relevant sections of large files (use offset/limit)
+        - Use Grep to find files before reading
+        - Reference existing patterns by file path instead of re-reading
+        - Skip reading files already in conversation context
+
+# Architectural decisions from prior stories
+adrs:
+  - id: ADR-ZODS-001
+    title: Zod-First Types Strategy
+    decision: |
+      All types must be inferred from Zod schemas. Never use TypeScript
+      interfaces or type aliases without corresponding Zod schema.
+    rationale: |
+      Provides runtime validation, self-documenting constraints, and
+      automatic type inference.
+    applies_to: [WKFL-002, all stories]
+
+  - id: ADR-KB-001
+    title: Knowledge Base Entry Type Strategy
+    decision: |
+      New entry types (calibration, feedback, etc.) should be added to
+      KnowledgeEntryTypeSchema enum rather than using tags on generic 'note' type.
+    rationale: |
+      Explicit entry types enable easier querying, schema validation,
+      and clear separation of concerns.
+    applies_to: [WKFL-002, WKFL-004]
+
+  - id: ADR-WKFL-001
+    title: Workflow Learning Data Flow
+    decision: |
+      Workflow learning data flows: VERIFICATION.yaml → feedback → calibration → analysis → KB lessons.
+      Each stage writes structured data to KB for downstream consumption.
+    rationale: |
+      Structured data enables automated analysis and pattern detection.
+      KB acts as single source of truth for workflow metadata.
+    applies_to: [WKFL-001, WKFL-002, WKFL-003, WKFL-004]
+
+# File patterns and imports
+import_patterns:
+  zod:
+    correct: |
+      import { z } from 'zod'
+      const Schema = z.object({ ... })
+      type Type = z.infer<typeof Schema>
+    notes: Always infer types from schemas, never define types separately
+
+  kb_crud:
+    correct: |
+      import { kb_add, kb_search, kb_add_lesson } from '../crud-operations'
+      import { CalibrationEntrySchema } from '../__types__'
+    notes: Import CRUD operations from crud-operations, types from __types__
+
+  logger:
+    correct: |
+      import { logger } from '@repo/logger'
+      logger.info('message', undefined, { context })
+    incorrect: |
+      console.log('message')
+    notes: Never use console.log - always use @repo/logger
+
+# Schema references
+schemas:
+  feedback:
+    location: apps/api/knowledge-base/src/__types__/index.ts
+    key_schemas:
+      - FeedbackTypeSchema: z.enum(['false_positive', 'helpful', 'missing', 'severity_wrong'])
+      - FindingSeveritySchema: z.enum(['critical', 'high', 'medium', 'low'])
+      - FeedbackContentSchema: Full feedback entry with finding_id, agent_id, etc.
+    notes: |
+      FeedbackContentSchema is the pattern to follow for CalibrationEntrySchema.
+      Same field naming conventions, same validation patterns.
+
+  calibration:
+    location: apps/api/knowledge-base/src/__types__/index.ts
+    key_schemas:
+      - CalibrationEntrySchema: To be added in WKFL-002
+    notes: |
+      Fields: agent_id, finding_id, story_id, stated_confidence, actual_outcome, timestamp
+      Validation: regex for finding_id/story_id, enum for confidence/outcome
+
+# Agent behavior patterns
+agent_patterns:
+  calibration_analysis:
+    pattern: |
+      Phase 1: Setup
+        - Parse command args (--since=YYYY-MM-DD, --agent=NAME)
+        - Validate date range
+        - Set defaults: since = 7 days ago, agent = all
+      
+      Phase 2: Query
+        - kb_search({ entry_type: 'calibration', tags: [...], since: ... })
+        - Group results by (agent_id, stated_confidence)
+        - Count: correct, false_positive, severity_wrong
+      
+      Phase 3: Analyze
+        - Accuracy = correct / total for each group
+        - Alert if high confidence < 0.90 AND sample_size >= 10
+        - Recommendation if accuracy below target
+        - Detect systemic patterns (3+ stories with same issue)
+      
+      Phase 4: Report
+        - Write CALIBRATION-{date}.yaml with:
+          - summary: Total findings, agents, date range
+          - accuracy: By agent by confidence level
+          - alerts: Agents below threshold
+          - recommendations: Threshold adjustments
+          - kb_entries: IDs of KB lessons logged
+        - kb_add_lesson if systemic issue detected
+        - Output completion signal
+    notes: |
+      Haiku model sufficient for this aggregation logic.
+      No complex reasoning needed - just group, count, compute percentages.
+
+# Test patterns
+test_patterns:
+  zod_schema_tests:
+    pattern: |
+      describe('SchemaName', () => {
+        it('accepts valid entry', () => {
+          const valid = { ... }
+          expect(() => Schema.parse(valid)).not.toThrow()
+        })
+        
+        it('rejects missing required field', () => {
+          const invalid = { ... }
+          expect(() => Schema.parse(invalid)).toThrow()
+        })
+        
+        it('rejects invalid enum value', () => {
+          const invalid = { field: 'invalid' }
+          expect(() => Schema.parse(invalid)).toThrow()
+        })
+      })
+    example_file: apps/api/knowledge-base/src/__types__/__tests__/schemas.test.ts
+
+  kb_integration_tests:
+    pattern: |
+      describe('Calibration KB Operations', () => {
+        it('kb_add writes calibration entry', async () => {
+          const entry = { ... }
+          const result = await kb_add({ entry_type: 'calibration', content: JSON.stringify(entry), ... })
+          expect(result.id).toBeDefined()
+        })
+        
+        it('kb_search retrieves by entry_type', async () => {
+          const results = await kb_search({ entry_type: 'calibration', limit: 10 })
+          expect(results.every(r => r.entry_type === 'calibration')).toBe(true)
+        })
+        
+        it('kb_search filters by tags', async () => {
+          const results = await kb_search({ tags: ['agent:code-review-security'], ... })
+          expect(results.every(r => r.tags.includes('agent:code-review-security'))).toBe(true)
+        })
+      })
+    notes: |
+      Mock database or use test database.
+      Seed with varied calibration entries for aggregation tests.
+
+# Outcome mapping (feedback to calibration)
+outcome_mapping:
+  false_positive: false_positive
+  severity_wrong: severity_wrong
+  helpful: correct
+  missing: skip  # No calibration entry for 'missing' feedback type
+  notes: |
+    Missing feedback type indicates agent should have caught more,
+    but doesn't provide calibration data on stated confidence accuracy.
+
+# Tag conventions
+tag_conventions:
+  calibration_tags:
+    - 'calibration'  # Entry type marker
+    - 'agent:{agent_id}'  # e.g., 'agent:code-review-security'
+    - 'confidence:{level}'  # e.g., 'confidence:high'
+    - 'outcome:{result}'  # e.g., 'outcome:false_positive'
+    - 'date:{YYYY-MM}'  # e.g., 'date:2026-02'
+  notes: |
+    Tags enable efficient querying and aggregation.
+    Date tag allows time-series analysis.
+
+# Threshold values
+thresholds:
+  high_confidence_accuracy: 0.90  # 90%
+  min_sample_for_reporting: 5
+  min_sample_for_alerts: 10
+  min_pattern_occurrences: 3  # For KB lesson logging
+  notes: |
+    High confidence should be >90% accurate to maintain trust.
+    10 samples ensures statistical stability for alerts.
+    3+ occurrences indicates systemic pattern worth logging.
+
+# Report format
+report_format:
+  sections:
+    - summary:
+        fields: [total_findings, agents_analyzed, date_range, completion_timestamp]
+    - accuracy:
+        structure: |
+          agents:
+            {agent_id}:
+              {confidence_level}:
+                accuracy: 0.0-1.0
+                sample_size: N
+                breakdown:
+                  correct: N
+                  false_positive: N
+                  severity_wrong: N
+    - alerts:
+        structure: |
+          - agent: {agent_id}
+            confidence_level: {level}
+            accuracy: {score}
+            threshold: 0.90
+            sample_size: N
+            message: "High confidence accuracy below threshold"
+    - recommendations:
+        structure: |
+          - agent: {agent_id}
+            current_state:
+              confidence_level: {level}
+              accuracy: {score}
+              sample_size: N
+            recommendation: "{action description}"
+            rationale: "{reasoning}"
+            priority: high | medium | low
+    - kb_entries:
+        structure: |
+          - id: {kb_entry_id}
+            pattern: "{pattern description}"
+            tags: [...]
+
+# Performance considerations
+performance:
+  - kb_search has 5s timeout (KB_SEARCH_TIMEOUT_MS)
+  - Expected volume: ~225 calibration entries/month (50 stories * 3 agents * 5 findings * 30% feedback rate)
+  - Tag indexing already exists - no special indexing needed for MVP
+  - Consider composite index if dataset grows: (entry_type, tags, timestamp)
+
+# Accessibility for reports (if UI added later)
+accessibility:
+  - Report files are YAML (human-readable, diffable)
+  - Include summary section with totals for quick scan
+  - Alert section clearly separates critical issues
+  - Recommendations prioritized (high/medium/low)
+
+# Reality baseline notes
+reality_check:
+  existing_infrastructure:
+    - Knowledge Base MCP Server exists (KNOW-001 through KNOW-007)
+    - kb_add and kb_search tools fully functional
+    - FeedbackContentSchema pattern established in WKFL-004
+    - Agent frontmatter with kb_tools declaration pattern established
+    - Tag-based querying works and is indexed
+
+  dependencies:
+    - WKFL-004 (/feedback command) required for Step 7 (integration)
+    - WKFL-001 (OUTCOME.yaml) optional, not used in MVP
+    - Steps 1-6 can proceed independently
+
+  protected_features:
+    - Do not modify Severity Calibration Framework (.claude/agents/_shared/severity-calibration.md)
+    - Do not modify VERIFICATION.yaml schema (other stories depend on it)
+    - Do not modify existing entry types or schemas (backward compatibility)
+    - Do not modify KB MCP tool handler pattern (established convention)
+
+# Integration points
+integration_points:
+  wkfl_004_feedback:
+    when: "After /feedback command writes feedback entry"
+    action: "Also write calibration entry with outcome mapping"
+    data_flow: "VERIFICATION.yaml → /feedback → feedback entry + calibration entry → KB"
+
+  wkfl_003_heuristics:
+    when: "WKFL-003 queries calibration data"
+    action: "kb_search({ entry_type: 'calibration', ... })"
+    data_flow: "calibration entries → WKFL-003 → heuristic adjustments"
+
+  wkfl_010_proposals:
+    when: "WKFL-010 detects calibration gaps"
+    action: "kb_search for low-accuracy patterns"
+    data_flow: "calibration entries → WKFL-010 → improvement proposals"

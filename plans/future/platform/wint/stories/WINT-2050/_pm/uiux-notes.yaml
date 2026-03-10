@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-2050 is a backend populate script with no UI surface. No frontend components, HTTP endpoints, or user-facing interfaces are involved. Developer experience is addressed via inline JSDoc run command documentation in the script file itself, consistent with WINT-2030 precedent."

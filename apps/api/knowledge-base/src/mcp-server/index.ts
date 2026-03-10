@@ -14,10 +14,16 @@
  *   OPENAI_API_KEY - OpenAI API key for embeddings (required)
  *   SHUTDOWN_TIMEOUT_MS - Graceful shutdown timeout (default: 30000)
  *   LOG_LEVEL - Log level: debug, info, warn, error (default: info)
- *   DB_POOL_SIZE - Database connection pool size (default: 5)
+ *   DB_POOL_SIZE - Database connection pool size (default: 3)
  */
 
-import { getDbClient, closeDbClient, testConnection } from '../db/client.js'
+import {
+  getDbClient,
+  closeDbClient,
+  testConnection,
+  startHealthCheck,
+  stopHealthCheck,
+} from '../db/client.js'
 import { createEmbeddingClient } from '../embedding-client/index.js'
 import { createMcpLogger } from './logger.js'
 import {
@@ -92,15 +98,19 @@ async function main(): Promise<void> {
   // Step 4: Create MCP server
   const mcpServer = createMcpServer({ db, embeddingClient })
 
-  // Step 5: Setup shutdown handlers
+  // Step 5: Start periodic health check
+  startHealthCheck()
+
+  // Step 6: Setup shutdown handlers
   const cleanup = async (): Promise<void> => {
-    logger.info('Closing database connections')
+    logger.info('Stopping health check and closing database connections')
+    stopHealthCheck()
     await closeDbClient()
   }
 
   setupShutdownHandlers(mcpServer, cleanup, env.SHUTDOWN_TIMEOUT_MS)
 
-  // Step 6: Start server
+  // Step 7: Start server
   await mcpServer.start()
 
   logger.info('Knowledge Base MCP Server ready', {

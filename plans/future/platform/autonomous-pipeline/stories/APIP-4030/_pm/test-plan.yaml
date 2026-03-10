@@ -1,0 +1,203 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "detectNewPackages returns correct add/update/remove diff"
+    setup: "Two package.json snapshots: before (lodash@4.0.0, date-fns@2.0.0) and after (lodash@4.17.21, date-fns@2.0.0, dayjs@1.11.0)"
+    action: "Call detectNewPackages(prevSnapshot, currentSnapshot)"
+    expected: "Returns PackageChangeSummary with added=['dayjs@1.11.0'], updated=['lodash@4.17.21'], removed=[]"
+    evidence: "Zod parse of returned PackageChangeSummary passes without error"
+
+  - id: HP-2
+    title: "checkOverlap flags a new package with known functional equivalent"
+    setup: "Equivalence config has { 'dayjs': ['date-fns', 'moment'] }; monorepo already has date-fns installed"
+    action: "Call checkOverlap(['dayjs'], equivalenceConfig)"
+    expected: "Returns flagged entry: { package: 'dayjs', overlaps_with: 'date-fns', severity: 'high' }"
+    evidence: "Returned array is non-empty; overlap detail matches equivalence config entry"
+
+  - id: HP-3
+    title: "checkOverlap returns empty when no overlap exists"
+    setup: "Equivalence config does not list 'zod'; monorepo doesn't have any equivalent"
+    action: "Call checkOverlap(['zod'], equivalenceConfig)"
+    expected: "Returns empty array"
+    evidence: "Array.length === 0"
+
+  - id: HP-4
+    title: "runPnpmAudit parses valid JSON output correctly"
+    setup: "toolRunner mock returns well-formed pnpm audit --json output with one high-severity vulnerability"
+    action: "Call runPnpmAudit(workspaceRoot, { toolRunner: mockRunner })"
+    expected: "Returns array with one VulnerabilityFinding: { package: 'lodash', severity: 'high', cve: '...', fixAvailable: true }"
+    evidence: "PnpmAuditOutputSchema.parse(output) succeeds; finding count matches mock data"
+
+  - id: HP-5
+    title: "detectUnmaintained flags a package with no releases in 12+ months"
+    setup: "fetchFn mock returns npm registry data for 'old-package' with latest publish date 2+ years ago"
+    action: "Call detectUnmaintained(['old-package'], { fetchFn: mockFetch })"
+    expected: "Returns flagged entry: { package: 'old-package', lastPublished: '<date>', daysSincePublish: >365 }"
+    evidence: "Returned flag has daysSincePublish exceeding unmaintainedAgeDays threshold"
+
+  - id: HP-6
+    title: "runDepAudit happy path: all findings persisted, blocked queue called for high-severity"
+    setup: "Mock db; checkOverlap returns one high-severity overlap; runPnpmAudit returns one high-severity vuln; blocked queue mock (APIP-2010 API)"
+    action: "Call runDepAudit(config, mockDb)"
+    expected: "Two dep_audit_findings rows inserted; one blocked queue item created; DepAuditResultSchema parses result"
+    evidence: "mockDb.insert called twice for findings; blockedQueue.create called once with correct deduplication key"
+
+  - id: HP-7
+    title: "SQL migration applies cleanly to APIP-5001 test database"
+    setup: "APIP-5001 test database running with existing wint schema"
+    action: "Apply dep_audit migration SQL files via migration runner"
+    expected: "wint.dep_audit_runs and wint.dep_audit_findings tables exist; drizzle-kit check passes with no drift"
+    evidence: "SELECT table_name FROM information_schema.tables WHERE table_schema='wint' includes both new tables"
+
+  - id: HP-8
+    title: "Round-trip insert and read of dep_audit_runs row"
+    setup: "APIP-5001 test database with migrations applied"
+    action: "Insert a dep_audit_runs row via DepAuditRunInsertSchema; read back via SELECT"
+    expected: "All columns round-trip correctly; DepAuditRunSelectSchema.parse passes on returned row"
+    evidence: "No Zod parse errors; values match inserted data"
+
+  - id: HP-9
+    title: "Round-trip insert and read of dep_audit_findings row"
+    setup: "APIP-5001 test database; dep_audit_runs row exists as FK parent"
+    action: "Insert a dep_audit_findings row via DepAuditFindingInsertSchema; read back via SELECT"
+    expected: "All columns round-trip; run_id FK resolves; DepAuditFindingSelectSchema.parse passes"
+    evidence: "No Zod parse errors; finding_type and severity are valid enum values"
+
+error_cases:
+  - id: EC-1
+    title: "runDepAudit DB insert failure — warns and resolves without throwing"
+    setup: "mockDb.insert throws a connection error"
+    action: "Call runDepAudit(config, failingMockDb)"
+    expected: "Function resolves without throwing; logger.warn called with failure context; result has findings_count > 0 but indicates DB save failed"
+    evidence: "No unhandled rejection; logger.warn spy called once"
+
+  - id: EC-2
+    title: "runPnpmAudit handles malformed/empty JSON output gracefully"
+    setup: "toolRunner mock returns malformed JSON string ('{invalid')"
+    action: "Call runPnpmAudit(workspaceRoot, { toolRunner: malformedMock })"
+    expected: "Returns empty findings array; logger.warn called; function does not throw"
+    evidence: "Returned array is empty; logger.warn spy called once with parse error context"
+
+  - id: EC-3
+    title: "checkOverlap with missing equivalence config file — graceful fallback"
+    setup: "Equivalence config file path does not exist on disk"
+    action: "Call checkOverlap(newPackages, { configPath: '/nonexistent/path.yaml' })"
+    expected: "Returns empty array (no false positives); logger.warn called once about missing config"
+    evidence: "Array.length === 0; warn spy triggered"
+
+  - id: EC-4
+    title: "estimateBundleImpact returns null for each package on network error"
+    setup: "fetchFn mock throws a network error for all requests"
+    action: "Call estimateBundleImpact(['lodash'], { fetchFn: failingFetch })"
+    expected: "Returns [{ package: 'lodash', estimatedBytes: null }]; function does not throw"
+    evidence: "estimatedBytes is null; no unhandled rejection"
+
+  - id: EC-5
+    title: "detectUnmaintained gracefully handles npm registry 404"
+    setup: "fetchFn mock returns 404 for npm registry lookup"
+    action: "Call detectUnmaintained(['private-pkg'], { fetchFn: mock404Fetch })"
+    expected: "Returns empty findings for that package; no throw; logger.warn called"
+    evidence: "No exception propagated; warn spy called"
+
+  - id: EC-6
+    title: "Blocked queue deduplication prevents duplicate item creation"
+    setup: "First runDepAudit call for storyId='STORY-1', package='lodash', findingType='vulnerability' creates item; second call with same key"
+    action: "Call blocked queue routing twice with same deduplication key"
+    expected: "Second call is a no-op; blocked_queue_items_created=0 on second run"
+    evidence: "APIP-2010 blockedQueue.create called exactly once total; dedup key check returns false on second attempt"
+
+  - id: EC-7
+    title: "pg_try_advisory_lock prevents concurrent audit runs"
+    setup: "Two concurrent runDepAudit calls on same trigger commit"
+    action: "Simulate two simultaneous invocations"
+    expected: "Second invocation exits early (lock not acquired); only one dep_audit_runs row inserted"
+    evidence: "Database has exactly one run row; second call returns early without inserting"
+
+edge_cases:
+  - id: ED-1
+    title: "detectNewPackages with no package changes returns empty diff"
+    setup: "Identical before/after package.json snapshots"
+    action: "Call detectNewPackages(sameSnapshot, sameSnapshot)"
+    expected: "Returns PackageChangeSummary with added=[], updated=[], removed=[]"
+    evidence: "All three arrays empty; Zod parse passes"
+
+  - id: ED-2
+    title: "runDepAudit with no high-severity findings creates no blocked queue items"
+    setup: "All findings are medium/low/info severity; blockingThreshold=high"
+    action: "Call runDepAudit(config, mockDb)"
+    expected: "dep_audit_runs.blocked_queue_items_created = 0; APIP-2010 API never called"
+    evidence: "blockedQueue.create spy call count = 0"
+
+  - id: ED-3
+    title: "DepAuditThresholdsSchema validates all configurable threshold fields"
+    setup: "Valid threshold config object: { blockingThreshold: 'high', maxBundleDeltaBytes: 50000, unmaintainedAgeDays: 365 }"
+    action: "Call DepAuditThresholdsSchema.parse(validConfig)"
+    expected: "Parse succeeds; typed object returned"
+    evidence: "No Zod error thrown"
+
+  - id: ED-4
+    title: "pnpm audit --json integration test against real monorepo"
+    setup: "Real monorepo workspace root; actual pnpm version pinned in repo"
+    action: "Call runPnpmAudit(actualWorkspaceRoot) with real CLI execution (integration test only)"
+    expected: "Returns array of VulnerabilityFindings (may be empty if no vulns); PnpmAuditOutputSchema.parse succeeds"
+    evidence: "Function completes without throwing; output conforms to schema"
+
+  - id: ED-5
+    title: "Blocked queue item includes sufficient human-readable context"
+    setup: "High-severity finding for package 'lodash' with CVE-2021-12345"
+    action: "Inspect blocked queue item payload created by runDepAudit"
+    expected: "Payload includes: packageName, version, findingType='vulnerability', severity='high', cve='CVE-2021-12345', npmLink, and storyId"
+    evidence: "All required fields present in blocked queue item JSON payload"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "DepAuditRunSchema.parse(row) succeeds on DB read-back"
+      - "DepAuditFindingSchema.parse(row) succeeds on DB read-back"
+      - "PnpmAuditOutputSchema.parse(output) succeeds on well-formed JSON"
+      - "logger.warn spy called on DB failure"
+      - "blockedQueue.create spy call count matches expected dedup behavior"
+      - "pg_try_advisory_lock guard test: only one run row per trigger"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Real blocked queue item appears in operator notification (post-APIP-2010)"
+    steps:
+      - "Merge a branch that adds a package with a known npm vulnerability"
+      - "Confirm post-merge cron triggers dep audit"
+      - "Verify blocked queue item appears in APIP-2010 operator interface"
+    expected: "Operator receives notification with package name, CVE, severity, and npm link"
+
+fixture_definitions:
+  - name: "mockPnpmAuditOutput"
+    type: "JSON string"
+    description: "Well-formed pnpm audit --json output with one high-severity vulnerability"
+  - name: "mockEquivalenceConfig"
+    type: "YAML object"
+    description: "Equivalence map: { 'dayjs': ['date-fns', 'moment'], 'ramda': ['lodash'] }"
+  - name: "mockPackageJsonSnapshot"
+    type: "Record<string, string>"
+    description: "Simple name→version map representing a workspace package.json before state"
+  - name: "mockNpmRegistryResponse"
+    type: "JSON object"
+    description: "Minimal npm registry metadata: { 'dist-tags': { latest: '1.0.0' }, time: { '1.0.0': '<date>' } }"
+  - name: "depAuditRunInsertFixture"
+    type: "DepAuditRunInsert Zod object"
+    description: "Valid insert row for wint.dep_audit_runs with all required columns populated"
+  - name: "depAuditFindingInsertFixture"
+    type: "DepAuditFindingInsert Zod object"
+    description: "Valid insert row for wint.dep_audit_findings referencing depAuditRunInsertFixture"
+
+risks:
+  - "Integration tests require APIP-5001 test database and real pnpm; must be tagged and excluded from unit-only CI runs"
+  - "runPnpmAudit output format differs across pnpm major versions — test against pinned pnpm version only"
+  - "Blocked queue API (APIP-2010) not yet stable; dedup and routing tests may need interface stub until APIP-2010 ships"
+  - "estimateBundleImpact depends on bundlephobia public API (rate-limited) — must be mocked in unit tests; only real call in manual testing"
+  - "pg_try_advisory_lock concurrency test requires two simultaneous DB connections; may be difficult to simulate in unit tests — mark as integration"

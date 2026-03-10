@@ -154,9 +154,11 @@ Checks:
 
 ### 1. Find Story
 
-Search all stage directories for `{STORY-ID}/`.
+**KB-first (KSOT Phase 2)**: Call `kb_get_story({storyId: STORY_ID})` to get authoritative state. If the KB returns a result, use its `state` field to derive the current stage. If KB is unavailable or returns null, fall back to directory scan.
 
-If not found: `FAIL: Story not found`
+**Directory fallback**: Search all stage directories for `{STORY-ID}/`.
+
+If not found via KB or directory: `FAIL: Story not found`
 
 ### 2. Check Stage (if --in-stage)
 
@@ -171,7 +173,7 @@ actual: backlog
 
 ### 3. Check Status (if --status)
 
-Read frontmatter, verify status matches.
+Use the KB `state` field (mapped to display label) from Step 1 for status comparison. KB is **required** — if KB lookup failed in Step 1, FAIL the precondition check with "KB unavailable for story state". Do NOT fall back to frontmatter status.
 
 ```yaml
 # If --status=ready-to-work but status is backlog

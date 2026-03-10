@@ -1,0 +1,141 @@
+schema: 1
+story_id: "KFMB-3030"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope exactly matches the index entry. Title, dependency (KFMB-3010), phase (3), and
+      status (In Elaboration) all align. The five scripts listed in the scope match what the index
+      describes. The Non-Goals section explicitly delineates the boundary from KFMB-6020, KFMB-3010,
+      KFMB-4010, and KFMB-4020, preventing scope creep.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, Non-Goals, ACs, and Test Plan are mutually consistent throughout. All eight ACs map
+      directly to at least one happy-path test (HP-1 through HP-6), error case (EC-1 through EC-3),
+      or manual case (MC-1, MC-2). The architecture notes confirm the "invert primary/secondary path"
+      approach stated in the goal. The Reality Baseline confirms the current state that the ACs are
+      correcting. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      The Reuse Plan section is explicit and correct. ST-1 extends the existing KB-query subshell
+      pattern in resolve-plan.sh (lines 28-56) rather than introducing a new pattern. ST-3 adopts
+      the generate-stories.sh integration model (source + delegate) rather than duplicating logic.
+      ST-4 uses the subprocess.run(['claude', '-p', ...]) pattern already present elsewhere in the
+      codebase. No new patterns are invented where existing ones serve.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      N/A for script-only changes. The story explicitly states no TypeScript, no API endpoints, no
+      frontend changes. Transport-agnostic architecture constraints do not apply.
+
+  - id: testability
+    status: WARN
+    note: >
+      Most tests are concrete and executable. HP-1 through HP-4 and HP-6 are dry-run verifiable.
+      EC-1 through EC-3 are reproducible by removing stories.index.md. However, HP-5, EC- scenarios
+      for sync-work-order.py, and MC-2 require a live KB instance and cannot be automated in CI
+      (ADR-005 noted in the test plan). The story appropriately acknowledges this via the
+      'sync-work-order.py has no --dry-run; ADR-005 requires real KB for UAT' risk. This is a
+      known constraint, not a gap, but means full test coverage requires manual UAT execution.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. The most critical decision — whether to retain the filesystem fallback in
+      discover_stories() — is explicitly resolved: retain as secondary until KFMB-3010 completes.
+      The bash 3.2 compatibility constraint is documented in Architecture Notes. The KB query
+      caching strategy for sync-work-order.py is addressed in dev_feasibility.risks with a concrete
+      mitigation (cache at startup, refresh every N cycles).
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Seven risk statements spread across pm_artifacts.test_plan.risks (4) and
+      dev_feasibility.risks (3). Each has a concrete mitigation. The highest-risk change
+      (implement-dispatcher.sh refactor) is called out explicitly with a regression strategy.
+      The latency risk for KB round-trips and the backward-compatibility verification requirement
+      are both documented.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      8 ACs (at the threshold but not over). 5 subtasks (at limit). Script-only — no FE+BE split,
+      no endpoints. 3 key test scenarios. 2–3 files modified (resolve-plan.sh, implement-
+      dispatcher.sh, sync-work-order.py) plus 2 audit-only files. Only one borderline indicator
+      (ACs at exactly 8). The 3-point estimate and 'medium' complexity rating are consistent with
+      the actual scope observed in the scripts. No split required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      5 subtasks with complete metadata: files to read, files to modify, ACs covered, depends-on,
+      verification commands, and token estimates. DAG is correct: ST-2, ST-3, ST-4 all depend on
+      ST-1; ST-5 depends on ST-4 (full chain). Files per subtask: ST-1=1, ST-2=2, ST-3=2, ST-4=1,
+      ST-5=4 reads/0 writes — all within the 3-file-modified limit. Verification commands are
+      concrete grep/dry-run commands, not vague assertions. All 8 ACs are covered by at least one
+      subtask.
+
+gaps:
+  - id: GAP-1
+    title: "sync-work-order.py check_untracked_stories() becomes silent no-op after index removal"
+    severity: low
+    blocking: false
+    description: >
+      After ST-4 removes the *stories.index.md glob from discover_files(), the index_file variable
+      will always be None for plans that have no stories.index.md. The check_untracked_stories()
+      function (line 732) and scan_all_index_stories() function (line 688) are guarded by
+      'if not index_file: return stories/[]' so they silently become no-ops — no crash, but the
+      untracked-story warning feature is silently disabled. AC-5 says to remove *stories.index.md
+      from discover_files() but does not explicitly address whether check_untracked_stories() should
+      be updated, converted to a KB query, or documented as intentionally dormant until KFMB-6020.
+    recommendation: >
+      ST-4 should explicitly note that check_untracked_stories() and scan_all_index_stories() will
+      become no-ops and this is intentional (deferred to KFMB-6020 dead code removal). A comment
+      in the code or a note in ST-4's verification instructions would prevent ambiguity during
+      code review. This is low severity since the graceful no-op is safe and the behavior is
+      consistent with the story's non-goals (no write-path changes).
+    decision: log_to_kb
+    kb_entry_id: "1ef272ff-9648-4c45-82e2-c616f466df4c"
+
+opportunities:
+  - id: OPP-1
+    title: "scan_all_index_stories() and check_untracked_stories() are cleanup candidates for KFMB-6020"
+    description: >
+      Once stories.index.md is gone, these two functions in sync-work-order.py become dead code.
+      They could be replaced with a KB query for story list membership checks, but that work is
+      explicitly deferred to KFMB-6020 (Dead Code Removal and Documentation Updates). No action
+      needed in this story.
+    suggested_story: "KFMB-6020"
+    decision: log_to_kb
+    kb_entry_id: "1ef272ff-9648-4c45-82e2-c616f466df4c"
+
+  - id: OPP-2
+    title: "Stale 'resolved via stories.index.md' comments in generate-stories.sh and implement-stories.sh"
+    description: >
+      generate-stories.sh (lines 13, 26) and implement-stories.sh (lines 30, 32) contain
+      usage-comment references to stories.index.md. AC-2/AC-3 explicitly exclude comments from
+      the 'no direct reads' requirement, so these are not blocking. However, they will become
+      misleading once KB-first is the norm. Updating them is a quality-of-life improvement for
+      KFMB-6020 or a trivial add-on to ST-2.
+    suggested_story: "KFMB-6020 or ST-2 optional cleanup"
+    decision: log_to_kb
+    kb_entry_id: "d3311b90-8b29-482d-8528-67c5108d0e77"
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-02-26T00:01:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 2
+  opportunities_logged: 2
+  acs_added: 0

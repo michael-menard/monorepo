@@ -1,0 +1,25 @@
+schema: 1
+story_id: WINT-4130
+timestamp: 2026-03-08T16:15:00Z
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/mcp-tools/src/**"
+  - ".claude/agents/graph-checker.agent.md"
+  - ".claude/commands/cohesion-check.md"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Validate Graph & Cohesion System — Detection Verification Against Known Franken-Features (spike story testing graph-checker detection capabilities)"
+elaboration: completed

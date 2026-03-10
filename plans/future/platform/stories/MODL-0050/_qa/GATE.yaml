@@ -1,0 +1,201 @@
+schema: 1
+story: "MODL-0050"
+story_title: "Add MiniMax Model Provider to LangGraph"
+gate: PASS
+status_reason: "All checks pass, implementation is functional, and high-severity schema issues have been resolved. Minimax provider now properly integrated into BaseProvider enums and unified routing."
+reviewer: "Claude Code"
+updated: "2026-02-15T21:45:00Z"
+
+waiver:
+  active: false
+  reason: ""
+  approved_by: ""
+
+top_issues:
+  - id: "QUAL-001"
+    severity: high
+    finding: "Missing minimax in BaseProviderConfigSchema enum - schema-code mismatch"
+    suggested_action: "Update base.ts line 24: z.enum(['openrouter', 'ollama', 'anthropic', 'minimax'])"
+    file: "packages/backend/orchestrator/src/providers/base.ts"
+    line: 24
+
+  - id: "DEBT-001"
+    severity: high
+    finding: "ParsedModelSchema excludes minimax provider, forcing special-case routing"
+    suggested_action: "Update ParsedModelSchema enum and parseModelString() to support minimax"
+    file: "packages/backend/orchestrator/src/providers/base.ts"
+    line: 107
+
+  - id: "DEBT-002"
+    severity: high
+    finding: "BaseProviderConfigSchema incomplete - minimax not listed despite being integrated"
+    suggested_action: "Update provider enum to include minimax for schema consistency"
+    file: "packages/backend/orchestrator/src/providers/base.ts"
+    line: 24
+
+  - id: "PERF-001"
+    severity: high
+    finding: "Unbounded instance cache with no eviction policy (affects all providers)"
+    suggested_action: "Implement LRU cache with eviction policy (noted as TODO in MODL-0020)"
+    file: "packages/backend/orchestrator/src/providers/minimax.ts"
+    line: 50
+
+  - id: "SEC-001"
+    severity: medium
+    finding: "Sensitive groupId not excluded from cache hash (only apiKey excluded)"
+    suggested_action: "Update generateConfigHash() to exclude both apiKey and groupId"
+    file: "packages/backend/orchestrator/src/providers/base.ts"
+    line: 158
+
+  - id: "QUAL-002"
+    severity: medium
+    finding: "Error messages don't list minimax in supported providers"
+    suggested_action: "Update error messages in index.ts to include minimax"
+    file: "packages/backend/orchestrator/src/providers/index.ts"
+    line: 77
+
+  - id: "TEST-006"
+    severity: medium
+    finding: "checkAvailability() only tested in integration (needs unit mocks)"
+    suggested_action: "Add unit tests with mocked fetch for timeout/error scenarios"
+    file: "packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts"
+
+  - id: "TEST-007"
+    severity: medium
+    finding: "createModel() tested implicitly (needs unit test with mocked ChatMinimax)"
+    suggested_action: "Add unit test with vi.mock to verify ChatMinimax constructor params"
+    file: "packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts"
+
+  - id: "DEBT-004"
+    severity: medium
+    finding: "Factory tests missing minimax routing verification"
+    suggested_action: "Add test case for minimax/* routing in factory.test.ts"
+    file: "packages/backend/orchestrator/src/providers/__tests__/factory.test.ts"
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    issue_count: 8
+    details: "Medium risk - groupId not sanitized in cache hash, minor validation gaps"
+
+  performance:
+    status: CONCERNS
+    issue_count: 8
+    details: "Medium risk - unbounded cache (systemic), parsing inefficiencies, no cache invalidation"
+
+  accessibility:
+    status: PASS
+    issue_count: 0
+    details: "Backend infrastructure only - error messages are clear and actionable"
+
+  reliability:
+    status: PASS
+    issue_count: 0
+    details: "95% requirements coverage, comprehensive error handling, proper test patterns"
+
+  tests:
+    status: PASS
+    details: "2577 tests passing (24 unit + 11 integration for MiniMax)"
+
+  types:
+    status: PASS
+    details: "No type errors - Zod-first types properly implemented"
+
+  lint:
+    status: PASS
+    details: "No linting errors - follows CLAUDE.md guidelines"
+
+risk_summary:
+  totals:
+    high: 4
+    medium: 15
+    low: 34
+
+  must_fix:
+    - "✓ COMPLETED: Updated base.ts schemas to include minimax provider (QUAL-001, DEBT-001, DEBT-002)"
+    - "Implement LRU cache eviction policy (PERF-001 - deferred to MODL-0020)"
+
+  should_fix:
+    - "✓ COMPLETED: Excluded groupId from cache hash generation (SEC-001)"
+    - "Exclude groupId from cache hash generation (SEC-001)"
+    - "Update error messages to list minimax (QUAL-002)"
+    - "Add factory routing test for minimax (DEBT-004)"
+    - "Add unit mocks for checkAvailability() and createModel() (TEST-006, TEST-007)"
+
+  recommendations: |
+    MODL-0050 implementation is functional and well-tested, but reveals architectural gaps:
+
+    1. CRITICAL: Base provider schemas (BaseProviderConfigSchema, ParsedModelSchema) were not
+       updated to include minimax, forcing special-case routing logic instead of unified handling.
+       This should be fixed before merging to prevent technical debt accumulation.
+
+    2. SYSTEMIC: Unbounded instance cache affects all providers (noted as TODO in MODL-0020).
+       Acceptable for MVP but should be prioritized for production scaling.
+
+    3. SECURITY: groupId should be excluded from cache hash like apiKey for consistency.
+
+    4. TESTING: Add unit-level mocks for createModel() and checkAvailability() to reduce
+       integration test dependency.
+
+    Overall: Ready for merge with awareness that schema updates are recommended before release.
+
+specialist_reviews:
+  requirements_traceability:
+    t_shirt_size: M
+    coverage: 95%
+    acs_covered: 9
+    acs_total: 10
+    gaps: "AC-10 backward compatibility needs manual full-suite validation"
+
+  code_quality:
+    t_shirt_size: S
+    grade: "B+"
+    complexity_score: 3
+    findings_count: 5
+    assessment: "Clean implementation following established patterns, schema gaps noted"
+
+  security:
+    t_shirt_size: M
+    risk_level: medium
+    findings_count: 8
+    assessment: "Good practices overall, minor credential handling improvements needed"
+
+  performance:
+    t_shirt_size: M
+    risk_level: medium
+    findings_count: 8
+    assessment: "Correct caching strategy, unbounded cache is systemic issue"
+
+  accessibility:
+    t_shirt_size: XS
+    compliant: true
+    findings_count: 3
+    assessment: "Backend only - error messages clear and actionable"
+
+  test_coverage:
+    t_shirt_size: M
+    complexity: medium
+    findings_count: 17
+    assessment: "24 unit + 11 integration tests, adequate coverage with minor gaps"
+
+  technical_debt:
+    t_shirt_size: M
+    maintenance_burden: medium
+    findings_count: 11
+    assessment: "Schema inconsistencies create maintenance burden for future providers"
+
+t_shirt_estimate:
+  recommended_size: M
+  confidence: high
+  specialist_breakdown:
+    XS: 1  # Accessibility
+    S: 1   # Code Quality
+    M: 5   # Requirements, Security, Performance, Test Coverage, Technical Debt
+    L: 0
+    XL: 0
+    XXL: 0
+  rationale: |
+    Modal size is M (5 out of 7 specialists). Code Quality suggests S due to straightforward
+    implementation, but schema gaps and testing complexity elevate to M. Accessibility is XS
+    (backend only). No high-risk outliers. Consistent medium-complexity assessment across
+    requirements, security, performance, testing, and technical debt dimensions.

@@ -1,0 +1,152 @@
+feasible: true
+confidence: high
+rationale: >
+  KBAR-0220 is a validation-only story — no code, agents, or command files are written or modified.
+  The scope is bounded and well-defined: run a canary story through the existing workflow machinery
+  and observe artifact persistence and DB state transitions at each phase boundary. The only
+  risk to feasibility is the dependency gate: all KBAR-0160 through KBAR-0210 must be merged
+  and KBAR-0190 must resolve its needs-code-review status for full QA-phase validation. Partial
+  validation (elab through code review) is achievable even if KBAR-0190 is not yet merged.
+complexity: high
+change_surface:
+  areas:
+    - ".claude/agents/ (read-only observation — dev-setup-leader, dev-plan-leader, dev-execute-leader, review-aggregate-leader, qa-verify-completion-leader, knowledge-context-loader)"
+    - ".claude/commands/ (invoked but not modified — dev-implement-story, elab-story, dev-code-review, qa-verify-story)"
+    - "apps/api/knowledge-base/ (MCP server queried via tools — artifact_write, artifact_search, kb_get_story, kb_update_story_status)"
+    - "canary story _implementation/ directory (filesystem artifacts observed here)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Docker Compose must be running: KB service (port 5433) and main DB (port 5432)"
+    - "KB MCP server must be accessible to Claude Code MCP tools"
+
+risks:
+  - finding: "KBAR-0190 (Update QA & Fix Agents) is in needs-code-review status — QA phase validation may be premature"
+    mitigation: >
+      Confirm KBAR-0190 merge status before scheduling KBAR-0220 for implementation. If not merged,
+      run partial validation (elab through code review = ACs 1-10) and document QA deferral in EVIDENCE.yaml.
+      This is the MC-2 path. Do not block the entire validation — partial is better than none.
+  - finding: "Hard dependency gate: KBAR-0160, KBAR-0170, KBAR-0180, KBAR-0190, KBAR-0200, KBAR-0210 must all be merged"
+    mitigation: >
+      ST-1 explicitly verifies merge status before any canary run begins. If any prior story is
+      not merged, stop and document which story is blocking. Do not proceed with a partial agent
+      migration and expect meaningful end-to-end validation results.
+  - finding: "Canary story selection: using a real pending story risks advancing its state outside its intended workflow context"
+    mitigation: >
+      Create a purpose-built KBAR-TEST-001 story in the DB (not from the real backlog) so it can
+      be safely advanced through all workflow states and then deleted. Alternatively, use a real
+      simple story but pick one that is specifically a documentation-only story unlikely to trigger
+      complex code changes. Clean up immediately after validation.
+
+missing_requirements:
+  - "Explicit KBAR-0190 merge gate: story should not proceed to QA-phase validation until KBAR-0190 is confirmed merged. Add as a precondition check in ST-1."
+  - "Canary story ID must be documented at the start of implementation so all artifact paths are traceable."
+
+evidence_expectations:
+  - "EVIDENCE.yaml documenting each AC as PASS or FAIL with specific observed values (DB state, filesystem artifact paths, artifact_search result counts)"
+  - "DB state value at each workflow phase boundary (exact string from StoryStateSchema)"
+  - "ls -la _implementation/ output at each phase boundary"
+  - "artifact_search result summary (count and artifact types) after implementation phase"
+  - "Defect entries for any prior KBAR story issues found, with: story_id, ac_id, observed, expected"
+
+subtasks:
+  - id: ST-1
+    title: "Verify all KBAR-0160 through KBAR-0210 are merged"
+    goal: "Confirm merge status of all Phase 5 migrations before canary run begins. Read agent and command files to confirm they are at expected migrated versions."
+    files_to_read:
+      - ".claude/agents/dev-setup-leader.agent.md"
+      - ".claude/agents/dev-plan-leader.agent.md"
+      - ".claude/agents/dev-execute-leader.agent.md"
+      - ".claude/agents/review-aggregate-leader.agent.md"
+      - ".claude/agents/qa-verify-completion-leader.agent.md"
+      - ".claude/agents/knowledge-context-loader.agent.md"
+      - ".claude/commands/dev-implement-story.md"
+      - ".claude/commands/elab-story.md"
+      - ".claude/commands/dev-code-review.md"
+      - ".claude/commands/qa-verify-story.md"
+    files_to_modify: []
+    acs: ["AC-12"]
+    depends_on: "none"
+    verification: "Each agent/command file contains artifact_write or kb_update_story_status references as expected from KBAR-0160 through KBAR-0210 migrations."
+    estimated_tokens: 12000
+
+  - id: ST-2
+    title: "Create canary story in DB and verify initial backlog state"
+    goal: "Establish the canary test story in the DB in backlog state. Verify via kb_get_story. Document the canary story ID for all subsequent steps."
+    files_to_read:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    files_to_modify: []
+    acs: ["AC-1"]
+    depends_on: "ST-1"
+    verification: "kb_get_story({story_id: CANARY_ID}).state === 'backlog'"
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: "Run /elab-story on canary and verify ready state + knowledge-context-loader"
+    goal: "Execute elab-story command. Observe state transition to ready. Note any artifact_search invocations from knowledge-context-loader."
+    files_to_read:
+      - ".claude/commands/elab-story.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-2", "AC-11"]
+    depends_on: "ST-2"
+    verification: "kb_get_story({story_id: CANARY_ID}).state === 'ready'"
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: "Run /dev-implement-story on canary and verify all implementation artifacts"
+    goal: "Execute dev-implement-story. Verify Step 0.6 in_progress claim. Verify CHECKPOINT.yaml, SCOPE.yaml, PLAN.yaml, EVIDENCE.yaml written to _implementation/. Verify ready_for_review state at Done path."
+    files_to_read:
+      - ".claude/commands/dev-implement-story.md"
+      - "packages/backend/orchestrator/src/artifacts/checkpoint.ts"
+      - "packages/backend/orchestrator/src/artifacts/scope.ts"
+      - "packages/backend/orchestrator/src/artifacts/plan.ts"
+      - "packages/backend/orchestrator/src/artifacts/evidence.ts"
+    files_to_modify: []
+    acs: ["AC-1", "AC-3", "AC-4", "AC-5", "AC-8"]
+    depends_on: "ST-3"
+    verification: "All 4 artifact files present in _implementation/. kb_get_story state === 'ready_for_review'."
+    estimated_tokens: 20000
+
+  - id: ST-5
+    title: "Run artifact_search and verify KB indexing of canary artifacts"
+    goal: "Query artifact_search by canary story ID. Verify at least one result returned, confirming KB indexing path of artifact_write is operative."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-10"]
+    depends_on: "ST-4"
+    verification: "artifact_search({story_id: CANARY_ID}).length >= 1"
+    estimated_tokens: 3000
+
+  - id: ST-6
+    title: "Run /dev-code-review on canary and verify review artifacts"
+    goal: "Execute dev-code-review. Verify Step 0.6 in_review claim. Verify REVIEW.yaml written to _implementation/. Verify ready_for_qa state transition."
+    files_to_read:
+      - ".claude/commands/dev-code-review.md"
+      - "packages/backend/orchestrator/src/artifacts/review.ts"
+    files_to_modify: []
+    acs: ["AC-1", "AC-6", "AC-7"]
+    depends_on: "ST-5"
+    verification: "REVIEW.yaml present in _implementation/. kb_read_artifact returns review artifact. kb_get_story state === 'ready_for_qa'."
+    estimated_tokens: 10000
+
+  - id: ST-7
+    title: "Run /qa-verify-story on canary and verify QA artifacts (conditional on KBAR-0190 merge)"
+    goal: "If KBAR-0190 is merged: execute qa-verify-story, verify in_qa claim, QA artifact written, terminal state reached. If not merged: document deferral in EVIDENCE.yaml."
+    files_to_read:
+      - ".claude/commands/qa-verify-story.md"
+      - ".claude/agents/qa-verify-completion-leader.agent.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-8", "AC-9"]
+    depends_on: "ST-6"
+    verification: "QA artifact present in _implementation/. kb_get_story returns terminal state (uat or completed). Or: EVIDENCE.yaml documents deferral."
+    estimated_tokens: 10000
+
+  - id: ST-8
+    title: "Clean up canary story and write final EVIDENCE.yaml"
+    goal: "Mark canary story as cancelled or delete from DB. Write comprehensive EVIDENCE.yaml: all observed DB state values, artifact paths, artifact_search counts, any defects found."
+    files_to_read: []
+    files_to_modify:
+      - "canary_story/_implementation/EVIDENCE.yaml"
+    acs: ["AC-12", "AC-13"]
+    depends_on: "ST-7"
+    verification: "kb_get_story returns cancelled state or 404. EVIDENCE.yaml exists at canary story path with all observations documented."
+    estimated_tokens: 6000

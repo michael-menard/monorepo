@@ -1,0 +1,43 @@
+schema: 1
+story_id: WISH-2042
+total:
+  input: 283500
+  output: 95500
+phases:
+  - phase: elab-setup
+    input: 2500
+    output: 1800
+  - phase: elab-completion
+    input: 32500
+    output: 15500
+  - phase: dev-implementation
+    input: 45000
+    output: 18000
+  - phase: dev-setup
+    input: 12000
+    output: 8500
+  - phase: dev-verification
+    input: 8500
+    output: 4200
+  - phase: dev-fix-documentation
+    input: 8500
+    output: 4200
+  - phase: code-review
+    input: 85000
+    output: 4500
+  - phase: dev-setup (fix)
+    input: 18500
+    output: 12000
+  - phase: dev-verification (fix)
+    input: 4500
+    output: 2800
+  - phase: dev-fix-documentation
+    input: 23000
+    output: 4000
+  - phase: code-review (iteration 5)
+    input: 35000
+    output: 8000
+  - phase: qa-verify
+    input: 8500
+    output: 12000
+high_cost: []

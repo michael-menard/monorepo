@@ -1,0 +1,96 @@
+schema: 1
+story_id: WINT-1050
+generated_at: "2026-02-20"
+
+touched_files:
+  - path: ".claude/commands/story-update.md"
+    action: modified
+    reason: "DB integration via shimUpdateStoryStatus — Step 3a insert, Step 3→3b rename, result YAML extension, Integration Test Scenarios, version bump to v3.0.0"
+
+ac_verdicts:
+  AC-1:
+    status: pass
+    evidence: >
+      Step 3a section inserted between Step 2 (Worktree Cleanup) and Step 3b (Update Frontmatter).
+      Verified by grep: '### 3a. DB Write via shimUpdateStoryStatus' at line 105,
+      '### 3b. Update Frontmatter' at line 152, with Step 2 content unchanged above line 105.
+
+  AC-2:
+    status: pass
+    evidence: >
+      14-row inline mapping table present in Step 3a. 8 mapped rows: backlog→backlog,
+      ready-to-work→ready_to_work, in-progress→in_progress, ready-for-qa→ready_for_qa,
+      uat→in_qa, completed→done, BLOCKED→blocked, superseded→cancelled.
+      6 skip rows: created, elaboration, needs-code-review, failed-code-review, failed-qa,
+      needs-split. All 14 statuses from Valid Status Values table are represented.
+
+  AC-3:
+    status: pass
+    evidence: >
+      WARNING format at line 136 matches AC-3 exactly:
+      "WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with
+      filesystem update only."
+      Also reproduced verbatim in Scenario B of Integration Test Scenarios.
+
+  AC-4:
+    status: pass
+    evidence: >
+      Step 3a pseudocode block shows: if result is null → db_updated = false; else →
+      db_updated = true. If NEW_STATUS is unmapped → db_updated = false. Only two values
+      (true, false) are used. The word 'skipped' does not appear in the db_updated field
+      or comments. Confirmed by grep: 'skipped' only in index_updated and worktree_cleanup
+      fields (which legitimately use it).
+
+  AC-5:
+    status: pass
+    evidence: >
+      Step 3a Notes section explicitly states: "The DB write is never blocking — Step 3b
+      (frontmatter update) proceeds regardless of DB outcome." Step 3b follows Step 3a
+      unconditionally. Error handling section does not list DB failure as a blocking error.
+
+  AC-6:
+    status: pass
+    evidence: >
+      Step 3a Notes section explicitly states: "The --no-index flag does NOT suppress this
+      step. Step 3a always executes for mapped statuses." The --no-index flag continues to
+      suppress only Step 4 (Update Index), as before.
+
+  AC-7:
+    status: pass
+    evidence: >
+      Step 5 result YAML now contains 'db_updated: true | false' with comment block
+      documenting both values. The existing fields (feature_dir, story, old_status, new_status,
+      file_updated, index_updated, worktree_cleanup) are all present and unmodified.
+
+  AC-8:
+    status: pass
+    evidence: >
+      Frontmatter shows version: 3.0.0 and updated: 2026-02-20. Version History section at
+      bottom of file documents v3.0.0 as "DB integration — breaking behavioral change" with
+      full description of the behavioral change introduced by WINT-1050.
+
+  AC-9:
+    status: pass
+    evidence: >
+      '## Integration Test Scenarios' section appended after Signal section. Contains exactly
+      6 scenarios labelled A through F in a consistent table format. ADR-005 compliance note
+      present: "Scenarios A, B, and F require a live postgres-knowledgebase MCP server."
+
+  AC-10:
+    status: pass
+    evidence: >
+      shimUpdateStoryStatus call uses triggeredBy: 'story-update-command' (not 'agent' or
+      'story-update'). Confirmed at line 133 in the pseudocode block within Step 3a.
+
+unit_tests:
+  status: exempt
+  reason: "Docs-only story — no TypeScript source files"
+
+build:
+  status: exempt
+  reason: "Docs-only story — no build artifacts"
+
+e2e_tests:
+  status: exempt
+  mode: n/a
+  reason: "Docs-only story — UAT verification via manual command execution against live postgres-knowledgebase"

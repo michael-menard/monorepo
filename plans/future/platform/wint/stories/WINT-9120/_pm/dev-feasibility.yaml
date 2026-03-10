@@ -1,0 +1,140 @@
+feasible: true
+confidence: high
+rationale: >
+  The parity test harness is technically straightforward: it wraps two callable runners and compares their
+  Zod-validated outputs. The key patterns (dependency injection, graph compilation tests, fixture factories,
+  vi.mock for logger) are all proven in existing orchestrator tests. The main risk is timing — WINT-9010
+  and WINT-9110 must reach stable states before full parity assertions can be finalized. The doc-sync and
+  story-creation/elaboration parity tests (AC-1 through AC-4) can be scaffolded immediately against existing
+  graphs. AC-5 (WINT-9110 workflows) must wait for WINT-9110. The @langchain/langgraph vitest alias needs
+  verification but is a one-line config change if missing.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/__tests__/parity/
+    - packages/backend/orchestrator/vitest.config.ts
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: "WINT-9110 graphs do not yet exist — AC-5 parity tests cannot be written until WINT-9110 is at least ready-for-qa"
+    mitigation: "Scaffold parity-harness.ts and doc-sync/story-creation/elaboration parity tests first; add WINT-9110 workflow tests when graphs are available. Story must not enter dev-implement until WINT-9110 is in ready-for-qa."
+  - finding: "@langchain/langgraph vitest alias may be missing in packages/backend/orchestrator/vitest.config.ts"
+    mitigation: "ST-1 explicitly verifies and adds the alias as first action. This is a one-line fix if absent. Reference: APIP-3030 lesson."
+  - finding: "WINT-9010 (@repo/workflow-logic) QA not complete — shared Zod types used by parity harness may shift"
+    mitigation: "Do not import @repo/workflow-logic types in parity harness until WINT-9010 QA passes. Use local type copies or defer type-based assertions to after WINT-9010 completes."
+  - finding: "Existing graphs may have hardcoded external dependencies (non-injectable toolRunners) that prevent deterministic parity testing"
+    mitigation: "ST-2 audits each graph for injection boundaries before writing parity tests. If injection gaps found, raise a blocker note — fixing those graphs is out of scope for WINT-9120."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator passes the full parity suite with exit code 0"
+  - "Coverage report shows >= 80% branch coverage within packages/backend/orchestrator/src/__tests__/parity/"
+  - "ParityResult schema Zod validation passes for at least one 'matching' and one 'divergent' result per workflow"
+  - "No real network calls in unit parity tests (verified by mocking all external dependencies)"
+  - "README.md present in parity/ directory"
+
+subtasks:
+  - id: ST-1
+    title: "Verify/add @langchain/langgraph vitest alias and create parity directory scaffold"
+    goal: "Ensure module resolution works for LangGraph imports in parity tests; create directory structure and parity-harness.ts skeleton"
+    files_to_read:
+      - packages/backend/orchestrator/vitest.config.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/story-creation.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/vitest.config.ts
+      - packages/backend/orchestrator/src/__tests__/parity/parity-harness.ts
+    acs: ["AC-1", "AC-10"]
+    depends_on: "none"
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator src/__tests__/parity/parity-harness"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Design and implement ParityResult Zod schema with structured diff support"
+    goal: "Define ParityResult Zod schema (verdict: matching|divergent|error, diff array with fieldPath/actual/expected, optional knownDivergences); wire into parity-harness.ts"
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/
+      - packages/backend/orchestrator/src/__tests__/parity/parity-harness.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/parity/parity-harness.ts
+      - packages/backend/orchestrator/src/__tests__/parity/parity-result.schema.ts
+    acs: ["AC-1", "AC-7"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-3
+    title: "Write doc-sync parity test (AC-2)"
+    goal: "Test both nodes/workflow/doc-sync.ts (Claude Code path) and nodes/sync/doc-sync.ts (LangGraph path) with same DocSyncInput fixture; compare via DocSyncResultSchema"
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts
+      - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
+      - packages/backend/orchestrator/src/artifacts/
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/parity/doc-sync.parity.test.ts
+    acs: ["AC-2", "AC-6"]
+    depends_on: "ST-2"
+    verification: "pnpm test --filter @repo/orchestrator src/__tests__/parity/doc-sync.parity.test.ts"
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: "Write story-creation and elaboration parity tests (AC-3, AC-4)"
+    goal: "Test runStoryCreation() and runElaboration() LangGraph graph paths vs Claude Code agent paths using createTestStoryRequest/createTestState fixtures; validate with SynthesizedStorySchema and ElaborationResultSchema"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/story-creation.test.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - packages/backend/orchestrator/src/graphs/story-creation.ts
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/parity/story-creation.parity.test.ts
+      - packages/backend/orchestrator/src/__tests__/parity/elaboration.parity.test.ts
+    acs: ["AC-3", "AC-4", "AC-6"]
+    depends_on: "ST-3"
+    verification: "pnpm test --filter @repo/orchestrator src/__tests__/parity/"
+    estimated_tokens: 10000
+
+  - id: ST-5
+    title: "Write parity tests for WINT-9110 workflows (AC-5)"
+    goal: "Once WINT-9110 is in ready-for-qa, write one parity test per new workflow (bootstrap, elab-epic, elab-story, dev-implement, qa-verify, backlog-review) following same pattern as ST-4"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/bootstrap.ts
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+      - packages/backend/orchestrator/src/graphs/qa-verify.ts
+      - packages/backend/orchestrator/src/graphs/backlog-review.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/parity/bootstrap.parity.test.ts
+      - packages/backend/orchestrator/src/__tests__/parity/elab-epic.parity.test.ts
+      - packages/backend/orchestrator/src/__tests__/parity/dev-implement.parity.test.ts
+    acs: ["AC-5", "AC-6", "AC-8"]
+    depends_on: "ST-4"
+    verification: "pnpm test --filter @repo/orchestrator src/__tests__/parity/"
+    estimated_tokens: 14000
+
+  - id: ST-6
+    title: "Write known-divergence test and parity README.md (AC-8, AC-11)"
+    goal: "Document at least one known/acceptable behavioral difference; write README.md covering parity definition, how to add tests, and cutover PASS criteria"
+    files_to_read:
+      - packages/backend/orchestrator/src/__tests__/parity/
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/parity/known-divergences.parity.test.ts
+      - packages/backend/orchestrator/src/__tests__/parity/README.md
+    acs: ["AC-8", "AC-11"]
+    depends_on: "ST-4"
+    verification: "pnpm test --filter @repo/orchestrator src/__tests__/parity/known-divergences.parity.test.ts"
+    estimated_tokens: 5000
+
+  - id: ST-7
+    title: "CI wiring and coverage gate verification (AC-9, AC-10)"
+    goal: "Ensure parity suite runs in CI, all tests pass without real services, and branch coverage >= 80% within parity/ directory"
+    files_to_read:
+      - packages/backend/orchestrator/vitest.config.ts
+      - packages/backend/orchestrator/src/__tests__/parity/
+    files_to_modify:
+      - packages/backend/orchestrator/vitest.config.ts
+    acs: ["AC-9", "AC-10"]
+    depends_on: "ST-5"
+    verification: "pnpm test:all --filter @repo/orchestrator -- --coverage"
+    estimated_tokens: 4000

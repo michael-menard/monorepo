@@ -1,0 +1,351 @@
+schema: 1
+story_id: "WINT-9106"
+timestamp: "2026-03-02T14:00:00Z"
+
+# ────────────────────────────────────────────────────────────────────────────
+# PHASE 1 ANALYSIS — elab-analyst agent
+# ────────────────────────────────────────────────────────────────────────────
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md exactly. Index entry reads: "PostgreSQL-backed
+      checkpointer for LangGraph graphs with crash-safe state recovery, resume-graph CLI,
+      checkpoint TTL/cleanup, and integration tests." All 8 ACs and 5 infrastructure touch
+      points are consistent with the index description. Phase 9 (LangGraph Parity) is the
+      correct phase — checkpointing is a direct prerequisite for WINT-9110 (Full Workflow
+      LangGraph Graphs). No extra endpoints or unscoped features introduced. Non-goals
+      explicitly exclude API routes, frontend, multi-graph isolation, and circuit breaker
+      state — these align with the Phase 9 boundary.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals do not contradict non-goals. The goal is "replace file-based CHECKPOINT.yaml
+      with DB-backed LangGraph thread persistence"; the non-goals correctly carve out
+      compensating transaction execution (AC-004 only records intent), loadFromDb/saveToDb
+      persistence nodes, and circuit breaker state (WINT-9107). All 8 ACs are within scope.
+      Test plan ACs map cleanly: HP-1→AC-002, HP-2→AC-001/AC-002, HP-3→AC-002, HP-4→AC-005,
+      HP-5→AC-006, HP-6→AC-008. Error cases EC-1→AC-005, EC-2→AC-001, EC-3→AC-002, EC-4→AC-004.
+      One minor internal tension: AC-003 requires "retry counts per node" in the checkpoint
+      payload, and ED-3 verifies this. However, the story's non-goal explicitly excludes
+      modifying `@repo/db` connection pooling. AC-003 retry_counts are written inside the
+      JSONB state column, which is consistent with the Architecture Notes. No contradiction.
+      Minor: AC-006 specifies "auto-archive (not deleted) to a cold store" but no archive
+      table is defined in the existing schema (wint.ts) and no cold-store table is mentioned
+      in non-goals or scope. This is an implementation gap (see gaps below), not a
+      goal/non-goal contradiction.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan is explicit and correct. @repo/db getPool() mandated for all DB connections —
+      story explicitly prohibits separate pg pools. @repo/logger mandated for all logging.
+      @langchain/langgraph (existing ^0.2.0) reused. WorkflowRepository class pattern
+      referenced with canonical file. Zod-first pattern referenced with delta-detect.ts as
+      canonical example. The only potential one-off risk is the custom BaseCheckpointSaver
+      path (~300 LOC stub) — but the story explicitly scopes this with notImplemented()
+      stubs for non-critical methods and documents it as tech debt. WorkflowRepository
+      uses `client.query()` raw SQL, not getPool() directly — this is the established
+      pattern (constructor injects DbClient), so a custom checkpointer repository using
+      the same constructor-injection pattern is consistent. No unnecessary one-offs found.
+
+  - id: ports_and_adapters
+    status: PASS
+    note: >
+      No API endpoints introduced — story is backend infrastructure only. The checkpointer
+      module in packages/backend/orchestrator/src/checkpointer/ is transport-agnostic and
+      not coupled to Lambda handlers or API Gateway. The resume-graph CLI is a developer
+      tool (npx tsx), not an API endpoint. The checkpointer is injected into graph.compile()
+      as a dependency — this is the correct ports/adapters pattern (graph compilation accepts
+      a checkpointer interface, not a concrete implementation). The PHASE_TO_CHECKPOINT_MAP
+      export is a pure data mapping with no transport coupling. Compliant.
+
+  - id: local_testability
+    status: WARN
+    note: >
+      Tests are mostly concrete and executable, but there are two concerns. (1) Integration
+      tests (HP-2, HP-3, HP-4, HP-5, AC-007) require the lego_dev DB with WINT-0070
+      migration applied. This is a hard external dependency — tests cannot run in a pure
+      local unit context without a live DB on port 5432. The story acknowledges this risk
+      but there is no documented test-skip mechanism (e.g., `if (!process.env.DATABASE_URL)
+      skip`) to allow CI runs without a live DB. This is a WARN, not FAIL: the integration
+      test DB requirement is appropriate for this type of infrastructure story, but the
+      story should explicitly state whether the integration tests are run in CI or only
+      locally. (2) ED-1 "benchmark" test (p50/p99 checkpoint write latency) is specified as
+      a test but benchmarks are not standard Vitest tests — this needs a concrete test
+      strategy (e.g., a timing assertion in a Vitest test, or a separate benchmark script
+      with a documented result format). Currently described as "run benchmark" without
+      specifying how it integrates with `pnpm test`. This does not block MVP but needs
+      clarification at implementation time.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      The native PostgresSaver vs. custom BaseCheckpointSaver decision is explicitly deferred
+      to WINT-9105 ADR. This is a known, acknowledged dependency with a hard implementation
+      gate, not an unresolved TBD within this story. The story provides full implementation
+      guidance for BOTH paths (Architecture Notes section covers both approaches), so the
+      implementer will not be blocked regardless of which path WINT-9105 selects. All other
+      decisions are resolved: connection pooling strategy (getPool(), max:1), state column
+      layout (JSONB for retry/error context), archive strategy (AC-006 archive not delete),
+      env var config (CHECKPOINT_TTL_DAYS=7 default), CLI interface (--thread-id flag),
+      migration numbering (0033), and phase mapping structure (PHASE_TO_CHECKPOINT_MAP
+      Record<number, string>).
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks are well-disclosed. DB dependency (WINT-0070 not applied, tables may not exist)
+      is explicit. Connection pool constraint (max:1 per Lambda, p99 > 50ms mitigation path
+      documented) is explicit. Dependency compatibility risk (@langchain/langgraph-checkpoint-
+      postgres version compatibility) is explicit with mitigation path. AbortError test hook
+      complexity for AC-007 is disclosed. Migration numbering verification is noted. Parallel
+      test flakiness from max=1 pool is disclosed. BaseCheckpointSaver LOC (~300) if custom
+      approach is disclosed. The dev_feasibility block carries a split_risk: high rating with
+      rationale. One undisclosed risk (see gaps below): the archive cold-store table does not
+      exist in the current schema, so AC-006's "archive to cold store" implementation path is
+      ambiguous.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Sizing indicators checked against 8-point story:
+      (1) AC count: exactly 8 — at threshold, not over.
+      (2) Endpoints: 0 — clear.
+      (3) Frontend+Backend split: backend only — clear.
+      (4) Multiple independent features: BORDERLINE. The story contains 4 logically distinct
+          deliverables: (a) checkpointer module + DB persistence, (b) resume-graph CLI,
+          (c) TTL/cleanup job, (d) legacy phase mapping. These are coupled by the checkpointer
+          module but could theoretically be staged. The story author has evaluated this
+          (split_risk: high in dev_feasibility) and chose to keep them together on the basis
+          that the CLI and cleanup job are lightweight wrappers around the core module. This
+          is a reasonable call given the module coupling.
+      (5) Happy path tests: 6 HP tests — over the 3-test threshold indicator.
+      (6) Packages touched: 2 packages (orchestrator + database-schema) — at threshold.
+      VERDICT: 2 sizing indicators triggered (6 HP tests, borderline independent features).
+      However, split is NOT recommended because: all 4 deliverables depend on the core
+      checkpointer module (ST-2); splitting would require ST-2 to land first anyway, making
+      the split illusory in practice. The story is dense but coherent. The 8-point estimate
+      and split_risk: high disclosure are appropriate. WARN (not SPLIT_REQUIRED).
+
+  - id: subtask_decomposition
+    status: WARN
+    note: >
+      AC coverage check passes — all 8 ACs covered by at least one subtask. Subtask
+      dependencies form a valid DAG (ST-1→ST-2→{ST-3,ST-4,ST-6,ST-7}; ST-3→ST-5→ST-8).
+      No cycles. Issues found:
+      (1) File touch count: ST-2 ("Implement Checkpointer module — serialize/restore +
+          checkpoint write per node", 18,000 tokens) almost certainly touches >3 files.
+          The checkpointer/ module will require at minimum: index.ts (factory/entry),
+          postgres-saver.ts or custom-saver.ts (implementation), serializer.ts (serde),
+          types.ts (Zod schemas). That is 4+ files, exceeding the "no subtask touches
+          more than 3 files" guideline. ST-2 should be split into ST-2a (types/schemas)
+          and ST-2b (implementation), or the guideline waived with explicit rationale.
+          This is a WARN, not FAIL — the guideline is advisory and the token estimate
+          (18,000) acknowledges the scope.
+      (2) Verification commands: most subtasks lack a concrete `pnpm test --filter`
+          command. The story's evidence_expectations block covers aggregate verification
+          but individual subtask verification commands would improve implementer clarity.
+          This is a low-severity finding.
+      (3) ST-1 ("Verify/install and decide checkpointer approach") is essentially a
+          spike/decision task, not an implementation task. It has no code output and
+          cannot be verified via test. The canonical reference for ST-1 output should
+          be the WINT-9105 ADR, but that ADR doesn't exist yet. This is acceptable
+          given the acknowledged dependency gate, but ST-1 should have an explicit
+          output artifact (e.g., a brief decision note in the checkpointer/ module
+          README or inline comment) as verification.
+
+# ────────────────────────────────────────────────────────────────────────────
+# GAPS — MVP-blocking only
+# ────────────────────────────────────────────────────────────────────────────
+
+gaps:
+  - id: GAP-001
+    title: "Cold-store archive table undefined — AC-006 archive destination does not exist"
+    severity: MVP_CRITICAL
+    ac_affected: "AC-006"
+    description: >
+      AC-006 states: "checkpoints older than 7 days are auto-archived (not deleted) to a
+      cold store." HP-5 verifies: "Old rows archived (not deleted); no rows older than 7
+      days in active table; archive table: rows present." However, no archive/cold-store
+      table exists in the current wint.ts schema, and the WINT-0070 migration (which
+      provides the active tables) does not include an archive table. The story architecture
+      notes describe the implementation for the active `wint.workflow_checkpoints` table
+      but make no mention of an archive table name, schema, or migration for it.
+      Without an archive destination, AC-006 and HP-5 cannot be implemented as written.
+      Options: (a) add a `wint.workflow_checkpoints_archive` table in migration 0033
+      (if custom approach) or define it separately; (b) redefine "archive" as a status
+      column value on the active table (status='archived') and update AC-006/HP-5
+      accordingly; (c) archive to a separate partition or JSONB cold_store table.
+      Decision required before implementation begins.
+    proposed_resolution: >
+      Add AC language clarifying the archive destination. Preferred approach: add a
+      `wint.workflow_checkpoints_archive` table (identical structure to
+      wint.workflow_checkpoints) in migration 0033 alongside any custom checkpointer
+      columns. HP-5 evidence query should reference this specific table. If native
+      PostgresSaver is chosen (which manages its own tables), define an archive table
+      separately under the wint schema for TTL migration. Update AC-006 with the
+      table name.
+    decision: null
+    decided_at: null
+
+  - id: GAP-002
+    title: "resume_from phase mapping is incomplete — PHASE_TO_CHECKPOINT_MAP has no defined entries"
+    severity: MVP_CRITICAL
+    ac_affected: "AC-008"
+    description: >
+      AC-008 requires: "resume_from phase number from legacy CHECKPOINT.yaml semantics
+      translates to a LangGraph thread checkpoint at the equivalent graph phase — documented
+      mapping exported from the module." The Architecture Notes show the map structure but
+      leave the actual entries as a comment: "// ... map phase integers to LangGraph node
+      names." HP-6 verifies the map with "known inputs/outputs" but the known inputs/outputs
+      are not specified in the story. The legacy CHECKPOINT.yaml schema (confirmed in
+      packages/backend/orchestrator/src/artifacts/checkpoint.ts) uses phase strings
+      ('setup', 'plan', 'execute', 'proof', 'review', 'fix', 'qa-setup', 'qa-verify',
+      'qa-complete', 'done') — not integer phase numbers. The story's Architecture Notes
+      show "1: 'seed-generation', 2: 'elaboration', 3: 'feasibility-review'" as examples,
+      but these LangGraph node names are not verified against the actual nodes in
+      story-creation.ts (which uses its own internal node naming). This gap means:
+      (a) the integer-to-phase mapping is ungrounded in the actual CHECKPOINT.yaml schema;
+      (b) the LangGraph node names cited in the map stub may not match deployed node IDs.
+      An implementer cannot write HP-6 "unit tested with known inputs/outputs" without
+      the actual mapping being defined.
+    proposed_resolution: >
+      Before implementation, derive PHASE_TO_CHECKPOINT_MAP entries by: (1) auditing
+      the actual node names in packages/backend/orchestrator/src/graphs/story-creation.ts
+      (which is 1354 lines and has the full node list); (2) cross-referencing the legacy
+      CheckpointSchema phase enum ('setup','plan','execute','proof','review','fix',
+      'qa-setup','qa-verify','qa-complete','done') to determine the integer→string→node
+      mapping. The mapping should be defined in the story as a table, not left to the
+      implementer. Add an implementation note to AC-008 with the canonical node names
+      from story-creation.ts.
+    decision: null
+    decided_at: null
+
+# ────────────────────────────────────────────────────────────────────────────
+# OPPORTUNITIES — Non-blocking
+# ────────────────────────────────────────────────────────────────────────────
+
+opportunities:
+  - id: OPP-001
+    title: "Integration test skip guard — allow CI runs without live DB"
+    description: >
+      Integration tests (HP-2, HP-3, HP-4, HP-5, AC-007) require a live lego_dev DB on
+      port 5432. If run in CI without a DB, they will throw connection errors rather than
+      skip gracefully. Adding a Vitest `beforeAll` skip guard (e.g.,
+      `if (!process.env.DATABASE_URL) { skip('requires live DB') }`) allows the test
+      suite to run in unit-only mode. This also improves the developer experience for
+      contributors who haven't applied the WINT-0070 migration. Not MVP-blocking because
+      the story explicitly documents the DB requirement and the real DB path is necessary
+      for AC-007 proof.
+    decision: null
+    decided_at: null
+
+  - id: OPP-002
+    title: "Replace ED-1 benchmark with a concrete Vitest timing assertion"
+    description: >
+      ED-1 specifies "run benchmark measuring p50/p99 write latency" with "Benchmark
+      output; no error logs" as evidence. Benchmarks are not standard Vitest tests and
+      `pnpm test` will not run them automatically. Options: (a) implement ED-1 as a
+      Vitest test with a timing assertion (`expect(elapsed).toBeLessThan(50)` for p99
+      approximation over 10 sequential writes); (b) implement as a standalone benchmark
+      script (e.g., packages/backend/orchestrator/scripts/benchmark-checkpoint.ts) with
+      results committed as evidence. Option (a) is preferred as it keeps CI coverage.
+      This is non-blocking because the performance data is informational (informs the
+      async checkpointing decision) rather than a hard correctness gate.
+    decision: null
+    decided_at: null
+
+  - id: OPP-003
+    title: "ST-2 file decomposition — split into types/serde subtask and implementation subtask"
+    description: >
+      ST-2 covers serialize/restore + checkpoint write per node and is estimated at
+      18,000 tokens. At this size it will likely touch 4+ files (types.ts, serializer.ts,
+      postgres-saver.ts or custom-saver.ts, index.ts) which exceeds the 3-file subtask
+      guideline. Splitting into ST-2a (Zod schemas + serde layer, ~6,000 tokens) and
+      ST-2b (checkpoint write implementation, ~12,000 tokens) would produce a cleaner
+      review surface and reduce rework if the WINT-9105 decision changes the persistence
+      layer. Non-blocking because this is a subtask decomposition preference, not a
+      correctness gap.
+    decision: null
+    decided_at: null
+
+  - id: OPP-004
+    title: "ST-1 output artifact — document decision in checkpointer module entry comment"
+    description: >
+      ST-1 (Verify/install and decide checkpointer approach) produces no code artifact and
+      has no machine-verifiable output. Adding a requirement that ST-1 produce a brief
+      decision record (e.g., a DECISION.md or inline module header comment in
+      src/checkpointer/index.ts documenting which path was taken and why) provides
+      an audit trail and prevents the decision from living only in an agent's execution
+      context. This is low-priority but improves maintainability.
+    decision: null
+    decided_at: null
+
+  - id: OPP-005
+    title: "Async fire-and-forget checkpoint path — formalize the opt-in API in ST-2"
+    description: >
+      The Architecture Notes describe "configurable async checkpointing (fire-and-forget
+      Promise queue) for non-critical nodes" as a mitigation if p99 > 50ms. This is
+      referenced but not surfaced in any AC, subtask, or Zod schema. If the async path
+      is implemented, it needs a typed API (e.g., `{ async?: boolean }` option on the
+      checkpoint write call) and at least one unit test verifying the fire-and-forget
+      behavior doesn't swallow errors. Formalizing this in AC-001 or as a separate
+      sub-note would prevent ad-hoc implementation. Non-blocking because it's only
+      triggered if ED-1 benchmark fails.
+    decision: null
+    decided_at: null
+
+  - id: OPP-006
+    title: "Native PostgresSaver.setup() migration collision risk — document mitigation"
+    description: >
+      If the native PostgresSaver approach is chosen, PostgresSaver.setup() manages its
+      own tables via an internal `checkpoint_migrations` table. The story notes this but
+      does not document what happens if setup() is called against a DB that already has
+      the wint.workflow_checkpoints table. If native PostgresSaver creates its own tables
+      (e.g., checkpoints, checkpoint_writes) in the public schema, these may conflict with
+      or duplicate wint.workflow_checkpoints. A clarifying note in the Architecture Notes
+      about schema isolation (native tables in public vs wint schema) would help the
+      implementer avoid a migration conflict. Non-blocking since WINT-9105 ADR will
+      specify the path, but the risk is worth logging.
+    decision: null
+    decided_at: null
+
+# ────────────────────────────────────────────────────────────────────────────
+# SPLIT RECOMMENDATION
+# ────────────────────────────────────────────────────────────────────────────
+
+split_recommendation: null
+# Rationale for no split: 2 sizing indicators triggered (6 HP tests, borderline
+# independent features), but split is not warranted because: (a) all deliverables
+# depend on the core checkpointer module (ST-2); (b) CLI (ST-5) and cleanup (ST-6)
+# are lightweight wrappers at ~10K and ~8K tokens respectively; (c) splitting would
+# require ST-2 to land first as a prerequisite story, creating more coordination
+# overhead than value. The story is dense but architecturally coherent.
+# The 8-point estimate and split_risk: high disclosure are appropriate.
+
+# ────────────────────────────────────────────────────────────────────────────
+# VERDICT
+# ────────────────────────────────────────────────────────────────────────────
+
+preliminary_verdict: CONDITIONAL_PASS
+# Rationale: Story is well-constructed with excellent reality baseline, explicit
+# reuse plan, thorough test coverage, and acknowledged dependency gates. Two
+# MVP-critical gaps found:
+# - GAP-001: Archive table undefined (AC-006 cannot be implemented as written)
+# - GAP-002: PHASE_TO_CHECKPOINT_MAP entries ungrounded (AC-008 HP-6 cannot be
+#   verified without the actual mapping)
+# Both gaps are resolvable by decision rather than rework. No structural flaws.
+# The story can proceed to PASS once both gaps are resolved by the deciding agent.
+
+verdict: null
+decided_at: null
+
+summary:
+  gaps_found: 2
+  gaps_resolved: 0
+  opportunities_found: 6
+  opportunities_logged: 0
+  acs_added: 0

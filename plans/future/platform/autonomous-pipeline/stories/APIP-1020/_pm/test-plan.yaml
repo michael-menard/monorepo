@@ -1,0 +1,181 @@
+strategy: unit+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "ChangeSpecSchema parses a valid file_change ChangeSpec"
+    setup: "Import ChangeSpecSchema from packages/backend/orchestrator/src/artifacts/change-spec.ts"
+    action: "Call ChangeSpecSchema.parse() with a valid file_change object containing all required fields"
+    expected: "Parse succeeds; returned object matches input with correct types"
+    evidence: "Vitest test in packages/backend/orchestrator/src/artifacts/__tests__/change-spec.test.ts"
+
+  - id: HP-2
+    title: "ChangeSpecSchema parses each of the discriminated union variants (file_change, migration_change, config_change, test_change)"
+    setup: "Prepare one valid sample object per change_type variant"
+    action: "Call ChangeSpecSchema.parse() on each variant sample"
+    expected: "All four parse calls succeed without throwing"
+    evidence: "Parameterized Vitest test iterating over variant fixtures"
+
+  - id: HP-3
+    title: "ChangeSpecSchema includes schema version field pinned to literal(1)"
+    setup: "Import ChangeSpecSchema"
+    action: "Inspect schema shape; parse an object with schema: 1"
+    expected: "schema field is z.literal(1) and parse succeeds"
+    evidence: "Vitest test asserting result.schema === 1"
+
+  - id: HP-4
+    title: "All 10+ decomposition YAML files parse against ChangeSpecSchema without errors"
+    setup: "Read all YAML files from plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decompositions/"
+    action: "Load each YAML file and call ChangeSpecSchema.parse() on each ChangeSpec entry"
+    expected: "Zero parse errors across all decomposition files"
+    evidence: "Vitest test that glob-reads the decompositions directory and validates each file"
+
+  - id: HP-5
+    title: "Schema ADR is published with one of three valid verdicts"
+    setup: "Read plans/future/platform/autonomous-pipeline/_epic-elab/ADR-002-changespec-schema.md"
+    action: "Check that the verdict field is one of: APPROVED, APPROVED WITH CONSTRAINTS, REVISION REQUIRED"
+    expected: "File exists and contains a valid verdict"
+    evidence: "Manual inspection (documented in spike quality metrics)"
+
+  - id: HP-6
+    title: "ADR cost model section includes median token count and USD estimate per story"
+    setup: "Read ADR-002-changespec-schema.md"
+    action: "Check for cost_model section with median_tokens and usd_estimate fields"
+    expected: "Both fields are present and contain numeric values"
+    evidence: "Manual inspection during spike execution"
+
+error_cases:
+  - id: EC-1
+    title: "ChangeSpecSchema rejects ChangeSpec missing required fields"
+    setup: "Create an object missing file_path (for file_change variant)"
+    action: "Call ChangeSpecSchema.parse() — expect it to throw ZodError"
+    expected: "ZodError thrown; error path includes 'file_path'"
+    evidence: "Vitest test asserting expect(() => ...).toThrow(ZodError)"
+
+  - id: EC-2
+    title: "ChangeSpecSchema rejects unknown change_type discriminant"
+    setup: "Create an object with change_type: 'unknown_type'"
+    action: "Call ChangeSpecSchema.parse()"
+    expected: "ZodError thrown indicating invalid discriminant value"
+    evidence: "Vitest test on discriminated union exhaustiveness"
+
+  - id: EC-3
+    title: "ChangeSpecSchema rejects schema version mismatch (schema: 2)"
+    setup: "Create otherwise valid object with schema: 2"
+    action: "Call ChangeSpecSchema.parse()"
+    expected: "ZodError thrown on schema field (expected literal 1)"
+    evidence: "Vitest test asserting ZodError on schema field"
+
+  - id: EC-4
+    title: "Decomposition YAML with a malformed entry is caught during spike validation"
+    setup: "Intentionally craft one malformed YAML decomposition entry"
+    action: "Run ChangeSpecSchema.parse() on the malformed entry"
+    expected: "ZodError surfaces the specific invalid field"
+    evidence: "Manual test during spike to confirm error reporting clarity"
+
+edge_cases:
+  - id: ED-1
+    title: "ChangeSpec with all optional fields omitted parses correctly"
+    setup: "Create minimal ChangeSpec with only required fields per variant"
+    action: "Call ChangeSpecSchema.parse()"
+    expected: "Parse succeeds; optional fields have correct default values or are undefined"
+    evidence: "Vitest test asserting minimal parse"
+
+  - id: ED-2
+    title: "ChangeSpec change_type discriminated union is exhaustively checked at compile time"
+    setup: "Write a TypeScript switch on change_type; add a default branch calling assertNever()"
+    action: "Run pnpm check-types"
+    expected: "No type error — TypeScript confirms exhaustive handling"
+    evidence: "Type-check output in CI"
+
+  - id: ED-3
+    title: "ChangeSpec with maximum field values (long strings, large arrays) parses without truncation"
+    setup: "Create ChangeSpec with description > 1000 chars, affected_patterns array with 20 items"
+    action: "Call ChangeSpecSchema.parse()"
+    expected: "Parse succeeds without data loss"
+    evidence: "Vitest test with large fixture"
+
+  - id: ED-4
+    title: "Each of the 6 consuming system perspectives can find their required fields in the schema"
+    setup: "For each system (implementation, review, QA, telemetry, affinity, merge) list expected fields from seed AC-4"
+    action: "Inspect ChangeSpecSchema shape for presence of each expected field"
+    expected: "All 6 systems have all required fields present in schema"
+    evidence: "Manual review table in ADR-002; unit test asserting field keys via keyof"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "ChangeSpecSchema.parse(validFileChange) does not throw"
+      - "ChangeSpecSchema.parse(invalidObject) throws ZodError"
+      - "ChangeSpecSchema.parse(wrongSchemaVersion) throws ZodError on schema field"
+      - "All decomposition YAMLs parse without ZodError"
+      - "result.schema === 1"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Decompose APIP-0010 story into ChangeSpecs using draft schema"
+    steps:
+      - "Read APIP-0010 acceptance criteria from plans/future/platform/autonomous-pipeline/backlog/APIP-0010/"
+      - "Manually identify atomic changes required"
+      - "Fill in ChangeSpec fields for each atomic change"
+      - "Write YAML to _spike-output/APIP-1020/decompositions/APIP-0010.yaml"
+      - "Record quality metrics: AC count, ambiguous fields, token cost estimate"
+    expected: "Decomposition YAML file written and parseable against ChangeSpecSchema"
+
+  - id: MC-2
+    title: "Simulate reading ChangeSpec from each of 6 consuming system perspectives"
+    steps:
+      - "Take one completed decomposition (e.g. APIP-0020)"
+      - "For each system: implementation, review, QA, telemetry, affinity, merge"
+      - "List expected fields and confirm each is present in the ChangeSpec"
+      - "Document any missing fields in ADR-002"
+    expected: "All 6 perspectives satisfied or gaps documented in ADR"
+
+  - id: MC-3
+    title: "Publish ADR-002 with final schema verdict"
+    steps:
+      - "Aggregate quality metrics from all 10+ decompositions"
+      - "Record median token count and USD estimate"
+      - "Determine schema verdict: APPROVED / APPROVED WITH CONSTRAINTS / REVISION REQUIRED"
+      - "Write ADR-002 to plans/future/platform/autonomous-pipeline/_epic-elab/ADR-002-changespec-schema.md"
+    expected: "ADR file published with verdict, cost model, and any field restrictions"
+
+fixture_definitions:
+  - name: validFileChangeSpec
+    type: ChangeSpec (file_change variant)
+    description: "Minimal valid ChangeSpec with change_type: file_change, all required fields populated"
+
+  - name: validMigrationChangeSpec
+    type: ChangeSpec (migration_change variant)
+    description: "Valid migration_change ChangeSpec with schema: 1, all required fields"
+
+  - name: validConfigChangeSpec
+    type: ChangeSpec (config_change variant)
+    description: "Valid config_change ChangeSpec"
+
+  - name: validTestChangeSpec
+    type: ChangeSpec (test_change variant)
+    description: "Valid test_change ChangeSpec"
+
+  - name: missingFieldSpec
+    type: partial object
+    description: "ChangeSpec missing file_path — used for EC-1"
+
+  - name: wrongDiscriminantSpec
+    type: partial object
+    description: "ChangeSpec with change_type: 'unknown_type' — used for EC-2"
+
+  - name: wrongSchemaVersionSpec
+    type: partial object
+    description: "Otherwise valid ChangeSpec with schema: 2 — used for EC-3"
+
+risks:
+  - "Decomposition quality is subjective — MC-1 through MC-10 require human judgment for 'accurate' verdict in AC-3(d). Establish a rubric before starting."
+  - "The spike includes no runnable integration tests (by design per ADR-001 Decision 3). Test coverage is unit-only for the schema itself."
+  - "YAML files in _spike-output/ are not managed by a migration system; the HP-4 test assumes the directory exists before running."
+  - "Token cost estimates in AC-7 depend on actual model calls during the spike; these cannot be pre-computed and must be recorded manually."

@@ -1,0 +1,9 @@
+schema: 1
+story_id: WISH-2016
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks: []
+reuse: []

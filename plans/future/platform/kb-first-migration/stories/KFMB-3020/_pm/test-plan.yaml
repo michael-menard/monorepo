@@ -1,0 +1,301 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  files_in_scope:
+    - .claude/commands/story-update.md
+    - .claude/commands/pm-story.md
+    - .claude/commands/story-status.md
+    - .claude/commands/code-audit.md
+    - .claude/commands/elab-epic.md
+    - .claude/commands/index-update.md
+
+happy_path_tests:
+  - id: HP-1
+    title: "story-update.md Step 4 removal: no index write under any condition"
+    setup: >
+      story-update.md has been updated per AC-1: Step 4 (index write) is removed.
+      A live postgres-knowledgebase MCP server is available with a test story record.
+    action: >
+      Review story-update.md execution sequence. Confirm no mention of
+      stories.index.md remains in the step-by-step flow (Steps 1 through result).
+      Confirm execution order is: locate → worktree cleanup → DB write (Step 3a) →
+      frontmatter update (Step 3b) → result.
+    expected: >
+      No Step 4 present. No reference to stories.index.md in the execution flow.
+      Result YAML does not include index_updated field.
+    evidence: >
+      grep -n "stories.index.md\|Step 4\|index_updated" .claude/commands/story-update.md
+      returns only deprecated notices or version history — no live references.
+
+  - id: HP-2
+    title: "story-update.md --no-index deprecation: flag accepted as no-op"
+    setup: >
+      story-update.md has been updated per AC-2.
+      --no-index is documented as deprecated.
+    action: >
+      Review Arguments table in story-update.md. Confirm --no-index is marked
+      deprecated with a note that it is accepted as a no-op for backward compatibility.
+    expected: >
+      --no-index remains in the Arguments table but is annotated as
+      "DEPRECATED — accepted as no-op; there is no index to skip."
+    evidence: >
+      Read story-update.md Arguments section. Confirm deprecation note present.
+
+  - id: HP-3
+    title: "pm-story.md Collision Detection: uses kb_list_stories instead of index"
+    setup: >
+      pm-story.md has been updated per AC-4.
+      KB MCP tools are available (postgres-knowledgebase connected).
+    action: >
+      Review Collision Detection section. Confirm the index check (read stories.index.md
+      for entry) is replaced with kb_list_stories({feature: PREFIX, limit: 100}) query.
+      Confirm directory check (filesystem) is still present.
+    expected: >
+      Collision Detection has: (1) directory check via filesystem, and (2) KB query
+      via kb_list_stories. No mention of stories.index.md as a live check.
+    evidence: >
+      grep -n "stories.index.md" .claude/commands/pm-story.md returns no live-check references.
+      "kb_list_stories" appears in the Collision Detection section.
+
+  - id: HP-4
+    title: "pm-story.md Step 3: Index path removed from leader context"
+    setup: >
+      pm-story.md has been updated per AC-5.
+    action: >
+      Review Step 3 (Spawn Leader) prompt template in pm-story.md.
+      Confirm "Index path: {INDEX_PATH}" is no longer present.
+      Confirm feature or epic identifier is passed instead.
+    expected: >
+      Step 3 prompt template passes feature: or epic: identifier.
+      No "Index path:" field referencing stories.index.md.
+    evidence: >
+      Read pm-story.md Step 3. Confirm "Index path:" absent from leader prompt context.
+
+  - id: HP-5
+    title: "pm-story.md Step 4.5: KB seed migration remains intact"
+    setup: >
+      pm-story.md has been updated.
+    action: >
+      Review Step 4.5 (Seed Story into KB Database). Confirm the migration script
+      invocation is present and unchanged: pnpm --filter @repo/knowledge-base run migrate:stories
+    expected: >
+      Step 4.5 is intact with the correct migrate:stories script invocation.
+      No regression in this step from the AC-4/AC-5 edits.
+    evidence: >
+      Read pm-story.md Step 4.5. Confirm pnpm migrate:stories call present.
+
+  - id: HP-6
+    title: "code-audit.md promote: uses KB tools for dedup, not stories.index.md"
+    setup: >
+      code-audit.md has been updated per AC-7.
+    action: >
+      Review /code-audit promote description. Confirm the three-step promote workflow
+      no longer mentions stories.index.md. Confirm kb_search or kb_list_stories
+      is referenced for dedup.
+    expected: >
+      promote subcommand description references kb_search/kb_list_stories for dedup.
+      No mention of plans/future/*/stories.index.md files.
+    evidence: >
+      grep -n "stories.index.md" .claude/commands/code-audit.md returns no live references.
+      "kb_search\|kb_list_stories" appears in promote section.
+
+  - id: HP-7
+    title: "elab-epic.md context-init: stories_index field removed"
+    setup: >
+      elab-epic.md has been updated per AC-8.
+    action: >
+      Review elab-epic.md Execution section and any context-init template.
+      Confirm stories_index field is absent. Confirm only feature_dir is passed.
+    expected: >
+      No stories_index field in context passed to setup leader.
+      feature_dir is the only path identifier passed.
+    evidence: >
+      grep -n "stories_index\|stories.index.md" .claude/commands/elab-epic.md
+      returns no live references.
+
+  - id: HP-8
+    title: "index-update.md: deprecation header present"
+    setup: >
+      index-update.md has been updated per AC-9.
+    action: >
+      Read index-update.md. Confirm a deprecation header notice is present at the top
+      of the file body with the exact text: "DEPRECATED as of KFMB-3020. All callers
+      have been migrated to KB tools. This command will be deleted in KFMB-6020."
+    expected: >
+      Deprecation header is the first non-frontmatter section.
+      File body is preserved for reference.
+    evidence: >
+      Read first 20 lines of index-update.md after frontmatter.
+
+  - id: HP-9
+    title: "story-status.md Feature Only: notes kb_list_stories for story counts"
+    setup: >
+      story-status.md has been updated per AC-10.
+    action: >
+      Review Feature Only mode description. Confirm it references kb_list_stories
+      for story counts. Confirm the WINT-1070 deferral note is updated to reflect
+      the KFMB migration path.
+    expected: >
+      Feature Only description mentions kb_list_stories as the data source.
+      WINT-1070 reference updated or replaced with KFMB context.
+    evidence: >
+      grep -n "kb_list_stories" .claude/commands/story-status.md returns match in Feature Only section.
+
+  - id: HP-10
+    title: "story-status.md --depth and --deps-order: use kb_list_stories"
+    setup: >
+      story-status.md has been updated per AC-11.
+    action: >
+      Review --depth and --deps-order mode descriptions. Confirm both replace
+      stories.index.md reads with kb_list_stories({feature: PREFIX}) call.
+      Confirm depends_on field from KB records is used for dependency graph.
+    expected: >
+      Both modes reference kb_list_stories in their step-by-step description.
+      No mention of reading stories.index.md in these mode steps.
+    evidence: >
+      grep -n "stories.index.md" .claude/commands/story-status.md returns no live-step references.
+
+  - id: HP-11
+    title: "Final grep audit: no live stories.index.md references in commands"
+    setup: >
+      All six command files have been updated.
+    action: >
+      Run: grep -rn "stories\.index\.md" .claude/commands/
+    expected: >
+      Zero results for live references. Any results must be in deprecated notices,
+      version history entries, or example comments only.
+    evidence: >
+      Output of grep command shows only deprecated/historical references (if any).
+
+error_cases:
+  - id: EC-1
+    title: "story-update.md --no-index passed: deprecation warning emitted, update succeeds"
+    setup: >
+      post-migration story-update.md with --no-index marked as deprecated no-op.
+    action: >
+      Review story-update.md documentation for --no-index behavior post-migration.
+      Confirm a deprecation warning is specified in the execution logic.
+    expected: >
+      The execution instructions note: when --no-index is passed, emit deprecation
+      warning "WARNING: --no-index is deprecated and has no effect. The stories.index.md
+      is no longer updated under any condition." Story update proceeds normally.
+    evidence: >
+      Read story-update.md. Confirm deprecation warning text present in execution instructions.
+
+  - id: EC-2
+    title: "pm-story.md Collision Detection: kb_list_stories unavailable — fallback behavior"
+    setup: >
+      pm-story.md Collision Detection updated to use kb_list_stories.
+      KB is unavailable.
+    action: >
+      Review Collision Detection section for fallback when kb_list_stories fails.
+    expected: >
+      Collision detection documents: if kb_list_stories fails, fall back to directory
+      scan only (filesystem collision check). Log warning about KB unavailability.
+    evidence: >
+      Read pm-story.md Collision Detection. Confirm fallback path documented.
+
+  - id: EC-3
+    title: "story-status.md kb_list_stories call signature matches MCP tool schema"
+    setup: >
+      story-status.md updated with kb_list_stories calls.
+    action: >
+      Manually verify that the kb_list_stories call signatures in story-status.md
+      (Feature Only, --depth, --deps-order modes) match the actual MCP tool schema:
+      kb_list_stories({ feature: string, limit?: number })
+    expected: >
+      All kb_list_stories calls in story-status.md use correct parameter names and types.
+    evidence: >
+      Compare call signatures in story-status.md against MCP tool registration
+      in apps/api/knowledge-base/ or mcp-tools/ package.
+
+edge_cases:
+  - id: ED-1
+    title: "pm-story.md has TWO collision detection points — both must be updated"
+    setup: >
+      Per seed: pm-story.md has inline Collision Detection section AND logic in
+      Step 1c/1c-platform.
+    action: >
+      Search pm-story.md for all occurrences of collision detection logic.
+      Confirm BOTH locations are updated (Collision Detection section AND Step 1c/1c-platform).
+    expected: >
+      Both collision detection locations use KB-first checks.
+      No orphaned index references in either location.
+    evidence: >
+      grep -n "stories.index.md\|collision" .claude/commands/pm-story.md shows
+      consistent KB-first pattern in all instances.
+
+  - id: ED-2
+    title: "platform.stories.index.md Step 5 in pm-story.md is NOT migrated"
+    setup: >
+      Per seed non-goals: platform.stories.index.md Step 5 should NOT be migrated in this story.
+    action: >
+      Review pm-story.md Step 5. Confirm it still uses Edit tool for platform.stories.index.md.
+      Confirm this is explicitly noted as out of scope in the command or comments.
+    expected: >
+      Step 5 retains its Edit tool call for platform.stories.index.md.
+      This is structural navigation metadata, not story state.
+    evidence: >
+      Read pm-story.md Step 5. platform.stories.index.md update logic is unchanged.
+
+  - id: ED-3
+    title: "story-update.md Integration Test Scenario F updated for post-migration behavior"
+    setup: >
+      story-update.md Integration Test Scenarios table updated per AC-3.
+    action: >
+      Read Integration Test Scenarios table in story-update.md.
+      Confirm Scenario F now reflects that stories.index.md is not updated under any condition
+      (not just when --no-index is passed).
+    expected: >
+      Scenario F expected outcome no longer says "stories.index.md NOT updated" as
+      the exceptional case — it now reflects general post-migration behavior (index never updated).
+    evidence: >
+      Read Scenario F row in Integration Test Scenarios table.
+
+manual_cases:
+  - id: MC-1
+    title: "ADR-005 compliance: KB tool calls use real postgres-knowledgebase instance"
+    steps:
+      - "Ensure postgres-knowledgebase MCP server is running (port 5433)"
+      - "Run /story-status plans/future/platform/kb-first-migration with updated command"
+      - "Observe that Feature Only mode calls kb_list_stories (not reads index file)"
+      - "Run /pm-story generate and observe Collision Detection uses kb_list_stories"
+    expected: >
+      Both commands complete successfully using live KB queries.
+      No filesystem reads of stories.index.md for state data.
+
+fixture_definitions:
+  - name: test_story_record
+    type: database
+    description: >
+      A story record in core.stories table on postgres-knowledgebase (port 5433)
+      with a valid story_id, feature, state, and depends_on values.
+      Required for story-status Feature+StoryID mode and story-update DB write tests.
+
+risks:
+  - id: R-1
+    description: >
+      kb_list_stories call signature mismatch — if story-status.md or pm-story.md
+      uses incorrect parameter names (e.g., "prefix" instead of "feature"), the MCP
+      call will fail silently or return empty results.
+    mitigation: >
+      Verify call signatures against MCP tool registration before finalizing command updates.
+
+  - id: R-2
+    description: >
+      KFMB-4010 coordination — story-update.md is also modified by KFMB-4010. If both
+      stories edit the same sections concurrently, git merge conflicts may produce
+      inconsistent results.
+    mitigation: >
+      Review KFMB-4010's diff before finalizing KFMB-3020 edits to story-update.md.
+      Ensure edits target different sections (Step 4 removal vs. stage-directory changes).
+
+  - id: R-3
+    description: >
+      pm-story.md has two collision detection locations. Missing one location leaves
+      a partial migration that fails the AC-12 grep audit.
+    mitigation: >
+      Use grep to enumerate all stories.index.md references in pm-story.md before
+      and after editing. Confirm all live references are removed.

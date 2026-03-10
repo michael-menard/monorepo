@@ -1,0 +1,42 @@
+schema: checkpoint/1.0
+story_id: WINT-3060
+phase: qa-setup
+current_phase: qa-setup
+last_successful_phase: review
+
+timestamp: 2026-03-09T00:00:00Z
+completed_by: qa-verify-setup-leader
+
+# Precondition validation
+preconditions_validated:
+  - story_exists: true
+    path: /Users/michaelmenard/Development/monorepo/plans/future/platform/wint/stories/WINT-3060
+  - status_ready_for_qa: true
+    value: ready-for-qa
+  - evidence_exists_in_kb: true
+    artifact_type: evidence
+    ac_count: 9
+    ac_passing: 9
+  - review_exists_in_kb: true
+    artifact_type: review
+    verdict: PASS
+  - code_review_passed: true
+    verdict: PASS
+
+# Evidence summary from KB
+evidence_summary:
+  version: 1.0
+  ac_count: 9
+  ac_passing: 9
+  ac_failing: 0
+  status: all_pass
+  evidence_type: docs-only
+
+# Review summary from KB
+review_summary:
+  verdict: PASS
+  iteration: 1
+
+# Next phase
+next_phase: qa-verification
+ready_for_verification: true

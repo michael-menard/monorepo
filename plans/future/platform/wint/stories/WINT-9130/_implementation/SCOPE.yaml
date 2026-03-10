@@ -1,0 +1,24 @@
+schema: 1
+story_id: WINT-9130
+timestamp: "2026-03-03T10:15:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "docs/workflow/langgraph-migration.md"
+  - "plans/future/platform/wint/stories.index.md"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Document LangGraph migration path with feature comparison, decision guide, and migration walkthrough"
+elaboration: "completed"

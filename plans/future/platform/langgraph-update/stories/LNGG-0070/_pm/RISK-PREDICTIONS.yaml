@@ -1,0 +1,150 @@
+# Risk Predictions: LNGG-0070
+# Generated: 2026-02-15
+# Story: Integration Test Suite - End-to-End Validation
+# Predictor: PM Risk Predictor Agent (Advisory Mode)
+
+story_id: LNGG-0070
+epic: langgraph-update
+title: Integration Test Suite - End-to-End Validation
+ac_count: 8
+size: large
+complexity: high
+priority: P0
+
+# Advisory Mode: Degraded gracefully (KB/WKFL-006 unavailable)
+# Using fallback predictions based on story metadata and heuristics
+
+predictions:
+  split_risk:
+    score: 0.15
+    confidence: medium
+    reasoning: |
+      Low split risk despite high complexity and 8 ACs. This is an infrastructure
+      testing story with clear test scenarios. Integration tests are naturally
+      modular (one test file per AC/scenario). If story exceeds 8 hours, can
+      defer performance benchmarking (AC-6) or quality comparison (AC-8) to
+      follow-up stories.
+
+    risk_factors:
+      - "8 ACs may be ambitious for single story"
+      - "High complexity (multiple adapter orchestration)"
+      - "Performance measurement adds scope"
+
+    mitigating_factors:
+      - "Clear test scenarios with 1:1 AC mapping"
+      - "Existing test patterns provide structure"
+      - "Can defer non-critical ACs (benchmarking, quality comparison)"
+      - "Integration tests are naturally modular"
+
+  review_cycles:
+    estimate: 1.2
+    confidence: medium
+    reasoning: |
+      Likely 1-2 review cycles. Testing infrastructure stories typically have
+      fewer review iterations than feature stories because:
+      - Clear pass/fail criteria (tests pass or don't)
+      - No subjective UI/UX decisions
+      - Test patterns are well-established
+
+      May need one revision for:
+      - Performance measurement methodology
+      - Error path coverage completeness
+
+    factors:
+      positive:
+        - "Clear acceptance criteria (tests must pass)"
+        - "Established test patterns from LNGG-0010 through LNGG-0060"
+        - "No UI/UX subjectivity"
+        - "Backend infrastructure (no user-facing changes)"
+
+      negative:
+        - "Performance benchmarking methodology may need refinement"
+        - "Quality comparison criteria may be questioned"
+        - "First comprehensive integration test suite (no prior examples)"
+
+  token_estimate:
+    total_tokens: 85000
+    confidence: low
+    breakdown:
+      planning: 15000
+      implementation: 55000
+      review: 10000
+      qa: 5000
+    reasoning: |
+      Fallback estimate based on story size (large = 8 hours) and complexity (high).
+
+      Estimation approach:
+      - Large story baseline: 60-100k tokens
+      - High complexity multiplier: 1.2x
+      - Testing stories tend toward lower end (less code, more structure)
+
+      Actual token usage may vary significantly based on:
+      - Number of test fixtures created
+      - Debugging iterations for flaky tests
+      - Performance measurement implementation complexity
+
+    assumptions:
+      - "Using existing test patterns reduces token overhead"
+      - "Test fixtures can be largely reused (60%)"
+      - "No major refactoring of adapter APIs needed"
+      - "Performance benchmarking uses simple percentile calculation"
+
+  technical_risks:
+    - risk: Test pollution from shared state
+      severity: medium
+      mitigation: Use temp directories and afterEach cleanup
+      likelihood: medium
+
+    - risk: Performance measurement variability
+      severity: medium
+      mitigation: Large sample sizes, document environment
+      likelihood: high
+
+    - risk: Adapter API changes during implementation
+      severity: high
+      mitigation: Review adapter interfaces first, coordinate with LNGG team
+      likelihood: low
+
+    - risk: Flaky tests due to timing issues
+      severity: medium
+      mitigation: Use vi.useFakeTimers() where appropriate
+      likelihood: low
+
+    - risk: Quality comparison subjectivity
+      severity: low
+      mitigation: Use concrete checklist, compare multiple samples
+      likelihood: medium
+
+  opportunities:
+    - description: Establish reusable integration test patterns for future stories
+      impact: high
+      effort: low
+
+    - description: Performance baseline enables regression detection
+      impact: high
+      effort: medium
+
+    - description: Quality comparison methodology can be used for other adapters
+      impact: medium
+      effort: low
+
+    - description: Integration tests may reveal adapter edge cases for follow-up fixes
+      impact: medium
+      effort: zero (documentation only)
+
+metadata:
+  prediction_mode: fallback
+  kb_available: false
+  wkfl_006_available: false
+  fallback_reason: "KB or WKFL-006 historical data unavailable"
+  generated_at: "2026-02-15T09:01:00Z"
+  predictor_version: "1.0.0"
+
+notes: |
+  These predictions use fallback heuristics due to KB/WKFL-006 unavailability.
+  Confidence levels are lower than ideal. When KB becomes available, predictions
+  can be refined with historical data from similar testing infrastructure stories.
+
+  Split risk is low because integration tests are naturally modular. Review cycles
+  estimate is conservative (1-2 cycles). Token estimate uses baseline for large/high
+  complexity stories.

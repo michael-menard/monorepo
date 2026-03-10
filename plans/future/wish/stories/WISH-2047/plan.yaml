@@ -1,0 +1,33 @@
+schema: 1
+story_id: WISH-2047
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Shared IP Extraction Utility (AC1, AC9)
+    acs: []
+    files: []
+  - id: 2
+    name: Geolocation Service with MaxMind (AC2, AC6, AC7, AC8)
+    acs: []
+    files: []
+  - id: 3
+    name: Logger Enrichment for Authorization Failures (AC3, AC4)
+    acs: []
+    files: []
+  - id: 4
+    name: Request Context IP Extraction (AC1, AC4)
+    acs: []
+    files: []
+  - id: 5
+    name: Integration Tests (AC11)
+    acs: []
+    files: []
+  - id: 6
+    name: Security Policy Documentation (AC5, AC12)
+    acs: []
+    files: []
+reuse: []

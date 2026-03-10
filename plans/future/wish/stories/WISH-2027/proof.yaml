@@ -1,0 +1,9 @@
+schema: 1
+story_id: WISH-2027
+completed_at: 2026-02-01T20:52:37.289Z
+summary: []
+deliverables: []
+verification:
+  tests_passed: 15
+  all_acs_verified: true
+limitations: []

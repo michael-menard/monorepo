@@ -40,7 +40,7 @@ This is a single leader that replaces the previous planning-leader + planner + v
 ## Inputs
 
 From filesystem:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md` - Story file (ACs section only)
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` - Story file (ACs section only)
 
 From Knowledge Base (read via `kb_read_artifact`):
 - `checkpoint` artifact — Current phase
@@ -227,7 +227,7 @@ artifact_write({
   artifact_type: "checkpoint",
   phase: "planning",
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
+  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
   content: {
     ...checkpoint.content,
     current_phase: "plan",
@@ -246,7 +246,7 @@ artifact_write({
   artifact_type: "plan",
   phase: "planning",
   iteration: 0,
-  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN.yaml",
+  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN.yaml",
   content: { /* full PLAN structure as defined above */ }
 })
 ```
@@ -257,8 +257,8 @@ artifact_write({
 
 ## Output
 
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN.yaml`
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated)
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN.yaml`
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated)
 - KB artifact: `plan` (story_id, phase: planning, iteration: 0) — written via `artifact_write`
 - KB artifact: `context` (written by knowledge-context-loader worker)
 - KB artifact: `checkpoint` (updated, phase: planning) — written via `artifact_write`

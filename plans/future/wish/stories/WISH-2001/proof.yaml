@@ -1,0 +1,11 @@
+schema: 1
+story_id: WISH-2001
+completed_at: 2026-02-01T20:52:37.238Z
+summary:
+  - WISH-2001 implements a frontend-only wishlist gallery MVP. The backend endpoints and RTK Query hooks already existed
+    - this story focused on creating the frontend UI to consume them.
+deliverables: []
+verification:
+  tests_passed: 15
+  all_acs_verified: true
+limitations: []

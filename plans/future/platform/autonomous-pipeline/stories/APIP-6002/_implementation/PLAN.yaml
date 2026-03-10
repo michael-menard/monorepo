@@ -1,0 +1,315 @@
+schema: 1
+story_id: APIP-6002
+timestamp: "2026-03-05T00:00:00Z"
+re_implementation: true
+re_implementation_reason: "Previous implementation (2112 lines inline) passed AC-1..10 but failed QA: zero tests. Re-elaboration added AC-11 (test harness), AC-12 (graceful degradation), AC-13 (activity-based detection). Architecture changed: extract to scripts/lib/stuck-recovery.sh per user decision."
+
+steps:
+  - id: 1
+    description: >-
+      Create scripts/lib/stuck-recovery.sh with helper functions: get_mtime_epoch(),
+      minutes_since_modified(), has_recent_worktree_commits() (30-min window, AC-13),
+      and the detect_stuck_stories() scanner that emits STORY_ID<TAB>STAGE<TAB>PATTERN<TAB>MINUTES
+      per stuck story. Patterns: exhausted-retries, no-evidence-no-commits,
+      missing-review-bouncing, stale. Requires FEATURE_DIR and WORKTREE_BASE passed
+      as env or params. macOS bash 3.2 compatible (no declare -A, no readarray).
+    files:
+      - scripts/lib/stuck-recovery.sh
+    dependencies: []
+    slice: backend
+
+  - id: 2
+    description: >-
+      Add recover_story() and run_stuck_recovery_sweep() to scripts/lib/stuck-recovery.sh.
+      recover_story() takes STORY_ID, STAGE, PATTERN, MINUTES, TAG; applies pattern-matched
+      recovery: exhausted-retries→reset+move, no-evidence-no-commits→worktree-cleanup+ready-to-work,
+      missing-review-bouncing→RECOVERY-NOTE.yaml+needs-code-review. Idempotency guard: check
+      for existing STUCK-RECOVERY.yaml before writing (AC-9). Structured log: RECOVERY: {id}
+      pattern={p} action={a} (AC-10). STUCK-ALERT.yaml for >8hr stories (AC-6).
+      AC-12: guard each gate-dependent check with 'declare -f validate_phase_gate > /dev/null'
+      before calling — gracefully skip if APIP-6001 functions absent.
+    files:
+      - scripts/lib/stuck-recovery.sh
+    dependencies:
+      - 1
+    slice: backend
+
+  - id: 3
+    description: >-
+      Wire stuck-recovery into scripts/implement-stories.sh: add
+      'source "$(dirname "$0")/lib/stuck-recovery.sh"' alongside existing lib sources.
+      Add --detect-stuck flag to the arg parser. Add standalone mode block that exits
+      before story processing (AC-8). Add post-batch sweep call after 'wait' and before
+      collect-results (AC-7). Add DETECT_STUCK=false, MAX_RECOVERY_ATTEMPTS=1,
+      STUCK_THRESHOLD_SECONDS=14400, STUCK_ALERT_SECONDS=28800 variables.
+    files:
+      - scripts/implement-stories.sh
+    dependencies:
+      - 1
+      - 2
+    slice: backend
+
+  - id: 4
+    description: >-
+      Create scripts/test-stuck-recovery.sh — the AC-11 test harness. Three test scenarios:
+      (1) DETECT: set up temp FEATURE_DIR with a mock story in failed-code-review whose
+          _implementation/ mtime is >4hr old; run detect_stuck_stories(); assert output
+          contains the story ID with pattern=exhausted-retries.
+      (2) RECOVER: run recover_story() on the mock story; assert STUCK-RECOVERY.yaml
+          written to _implementation/ with correct schema fields; assert story directory
+          moved to needs-code-review.
+      (3) IDEMPOTENCY: run recover_story() again on same story; assert STUCK-RECOVERY.yaml
+          not rewritten (mtime unchanged); assert "RECOVERY SKIP" in output.
+      Script uses mktemp -d for isolation, cleans up on EXIT trap, exits 0 on pass / 1 on fail.
+      macOS bash 3.2 compatible.
+    files:
+      - scripts/test-stuck-recovery.sh
+    dependencies:
+      - 1
+      - 2
+    slice: backend
+
+  - id: 5
+    description: >-
+      Verify the full implementation: bash -n on both scripts/implement-stories.sh and
+      scripts/lib/stuck-recovery.sh (syntax check). Run scripts/test-stuck-recovery.sh and
+      confirm all 3 test scenarios pass (exit 0). Manually trace the --detect-stuck
+      standalone code path to confirm it exits before story processing. Confirm
+      AC-12 graceful degradation: source stuck-recovery.sh in a shell without
+      validate_phase_gate defined; call run_stuck_recovery_sweep; verify no error.
+    files:
+      - scripts/implement-stories.sh
+      - scripts/lib/stuck-recovery.sh
+      - scripts/test-stuck-recovery.sh
+    dependencies:
+      - 3
+      - 4
+    slice: backend
+
+files_to_change:
+  - path: scripts/lib/stuck-recovery.sh
+    action: create
+    reason: >-
+      Extract stuck detection and recovery functions to dedicated lib file.
+      Consistent with existing scripts/lib/ pattern (story-utils.sh, resolve-plan.sh, etc.).
+      Keeps implement-stories.sh from doubling in size (previous inline approach
+      added 2112 lines — maintainability risk flagged in ELAB opp-2).
+  - path: scripts/implement-stories.sh
+    action: modify
+    reason: >-
+      Add source line for stuck-recovery.sh, add --detect-stuck arg, add DETECT_STUCK
+      variable, add standalone mode block, add post-batch sweep call. Net addition
+      ~40-60 lines (vs 2112 lines inline in previous attempt).
+  - path: scripts/test-stuck-recovery.sh
+    action: create
+    reason: "AC-11 test harness — 3 test scenarios: detect, recover, idempotency"
+
+commands_to_run:
+  - command: bash -n scripts/lib/stuck-recovery.sh
+    when: after creating stuck-recovery.sh
+    required: true
+  - command: bash -n scripts/implement-stories.sh
+    when: after modifying implement-stories.sh
+    required: true
+  - command: bash scripts/test-stuck-recovery.sh
+    when: after creating test-stuck-recovery.sh
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      detect_stuck_stories() function in scripts/lib/stuck-recovery.sh scans all stage
+      dirs and emits STORY_ID<TAB>STAGE<TAB>PATTERN<TAB>MINUTES per stuck story.
+      Verified by test scenario 1 in scripts/test-stuck-recovery.sh (detect finds
+      mock stuck story with correct pattern in output).
+    evidence_type: test
+
+  - ac_id: AC-2
+    planned_evidence: >-
+      recover_story() in scripts/lib/stuck-recovery.sh takes story_id, stage, pattern,
+      minutes, tag; writes STUCK-RECOVERY.yaml. Verified by test scenario 2 in
+      scripts/test-stuck-recovery.sh (STUCK-RECOVERY.yaml exists with correct fields
+      after recover_story() call).
+    evidence_type: test
+
+  - ac_id: AC-3
+    planned_evidence: >-
+      exhausted-retries case in recover_story(): moves failed-code-review→needs-code-review
+      and failed-qa→ready-for-qa. MAX_RECOVERY_ATTEMPTS cap in run_stuck_recovery_sweep().
+      Verified by code inspection of stuck-recovery.sh exhausted-retries branch and
+      MAX_RECOVERY_ATTEMPTS guard.
+    evidence_type: manual
+
+  - ac_id: AC-4
+    planned_evidence: >-
+      no-evidence-no-commits case in recover_story(): calls git worktree remove --force
+      on WORKTREE_BASE/STORY_ID if present, then move_story_to ready-to-work.
+      Verified by code inspection of stuck-recovery.sh no-evidence-no-commits branch.
+    evidence_type: manual
+
+  - ac_id: AC-5
+    planned_evidence: >-
+      missing-review-bouncing case in recover_story(): writes RECOVERY-NOTE.yaml with
+      diagnosis and force_review=true, then moves to needs-code-review. Verified by
+      code inspection of stuck-recovery.sh missing-review-bouncing branch.
+    evidence_type: manual
+
+  - ac_id: AC-6
+    planned_evidence: >-
+      STUCK_ALERT_SECONDS=28800 (8hr). When SECONDS_STUCK >= threshold, recover_story()
+      writes STUCK-ALERT.yaml with full diagnosis fields (stage, pattern, minutes_stuck,
+      missing_artifacts, human_review_recommended=true). Verified by code inspection of
+      stuck-recovery.sh alert block.
+    evidence_type: manual
+
+  - ac_id: AC-7
+    planned_evidence: >-
+      run_stuck_recovery_sweep() called in implement-stories.sh after 'wait' and before
+      collect-results section (post-batch). Verified by code inspection of
+      implement-stories.sh main batch loop showing call site with comment.
+    evidence_type: manual
+
+  - ac_id: AC-8
+    planned_evidence: >-
+      --detect-stuck flag in implement-stories.sh arg parser sets DETECT_STUCK=true.
+      Standalone mode block at top of main execution (before story loop) checks
+      DETECT_STUCK and exits 0 after sweep. Verified by code inspection confirming
+      exit before FILTERED_STORIES loop.
+    evidence_type: manual
+
+  - ac_id: AC-9
+    planned_evidence: >-
+      Idempotency verified by test scenario 3 in scripts/test-stuck-recovery.sh:
+      second recover_story() call on same story returns "RECOVERY SKIP" and does not
+      rewrite STUCK-RECOVERY.yaml (mtime unchanged). recover_story() guard checks
+      [[ -f "$RECOVERY_FILE" ]] before writing.
+    evidence_type: test
+
+  - ac_id: AC-10
+    planned_evidence: >-
+      Every recovery code path in recover_story() emits:
+      'echo "$TAG RECOVERY: $STORY_ID pattern=${PATTERN} action=${ACTION}"'
+      Verified by code inspection tracing all pattern branches in stuck-recovery.sh.
+    evidence_type: manual
+
+  - ac_id: AC-11
+    planned_evidence: >-
+      scripts/test-stuck-recovery.sh runs 3 test scenarios using mktemp -d temp dirs:
+      (1) detect finds stuck story with exhausted-retries pattern,
+      (2) recover_story() writes STUCK-RECOVERY.yaml and moves story dir,
+      (3) second recover_story() is a no-op (RECOVERY SKIP).
+      'bash scripts/test-stuck-recovery.sh' exits 0 with all 3 PASS.
+    evidence_type: test
+
+  - ac_id: AC-12
+    planned_evidence: >-
+      stuck-recovery.sh guards every call to validate_phase_gate (or other APIP-6001
+      functions) with: 'if declare -f validate_phase_gate > /dev/null 2>&1; then ...'
+      When APIP-6001 functions are absent, recovery proceeds without gate checks and
+      logs a warning. Verified by manual test: source stuck-recovery.sh in a clean
+      shell, call run_stuck_recovery_sweep, confirm no unbound function errors.
+    evidence_type: manual
+
+  - ac_id: AC-13
+    planned_evidence: >-
+      has_recent_worktree_commits() in stuck-recovery.sh checks git log --since=30minutes
+      (or epoch arithmetic) on WORKTREE_BASE/STORY_ID. detect_stuck_stories() calls it
+      for in-progress and needs-code-review stories; if recent activity found, emits
+      'RECOVERY SKIP: active worktree' and excludes story from stuck list. Verified by
+      code inspection of detect_stuck_stories() activity-check branch.
+    evidence_type: manual
+
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should stuck-recovery logic be extracted to scripts/lib/stuck-recovery.sh, or
+      added inline to implement-stories.sh?
+    decision: Extract to scripts/lib/stuck-recovery.sh
+    rationale: >-
+      User explicitly chose Option B. Previous inline approach doubled script from
+      2001 to ~4113 lines (ELAB opp-2 flagged as maintainability risk) and still
+      failed QA. The scripts/lib/ pattern is established in the codebase
+      (story-utils.sh, resolve-plan.sh, detect-state.sh, kb-cache.sh,
+      work-order-parser.sh). Key variables (FEATURE_DIR, WORKTREE_BASE, WORKTREE_BASE,
+      move_story_to) are available because stuck-recovery.sh is sourced into the same
+      shell — same scope as inline, zero coupling overhead. Test harness (AC-11) is
+      cleanly testable by sourcing stuck-recovery.sh directly in a temp environment.
+    decided_by: user
+    tier: 2
+
+  - id: ARCH-002
+    question: How to detect 'stuck for >N hours' without associative arrays (macOS bash 3.2)?
+    decision: >-
+      get_mtime_epoch() wrapper: tries 'stat -f %m' (macOS) first, falls back to
+      'stat -c %Y' (Linux). minutes_since_modified() subtracts mtime from
+      $(date +%s) and divides by 60. Both helpers defined in stuck-recovery.sh.
+    rationale: >-
+      This is the exact pattern already used in the existing implement-stories.sh
+      worktree timestamp checks. No new technique required.
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-003
+    question: Where should STUCK-RECOVERY.yaml, STUCK-ALERT.yaml, RECOVERY-NOTE.yaml be written?
+    decision: >-
+      Write to {STORY_DIR}/_implementation/STUCK-RECOVERY.yaml, _implementation/STUCK-ALERT.yaml,
+      and _implementation/RECOVERY-NOTE.yaml.
+    rationale: >-
+      Consistent with all other pipeline artifacts (EVIDENCE.yaml, REVIEW.yaml,
+      VERIFICATION.yaml, GATE-FAILURE.yaml). Makes audit trail discoverable alongside
+      other story state artifacts.
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-004
+    question: How does stuck-recovery.sh access move_story_to() defined in implement-stories.sh?
+    decision: >-
+      stuck-recovery.sh is sourced into implement-stories.sh (same shell process).
+      move_story_to() is already defined before the source line executes — sourcing
+      is done after all function definitions. Therefore recover_story() calls
+      move_story_to() directly with no wrapper needed.
+    rationale: >-
+      Same mechanism used by story-utils.sh (which references FEATURE_DIR defined in
+      the parent script). The sourced file shares the parent's function namespace.
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-005
+    question: >-
+      How to implement the 30-minute recent-activity check (AC-13) without
+      declare -A or readarray on macOS bash 3.2?
+    decision: >-
+      has_recent_worktree_commits() uses:
+        git -C "$WT_PATH" log --oneline --since="30 minutes ago" HEAD 2>/dev/null
+      If output is non-empty, the worktree has recent commits. Falls back to epoch
+      arithmetic (date +%s minus git log --format=%ct HEAD~0 2>/dev/null) if
+      --since is not supported. The git --since flag works in git 2.x which is
+      always present on macOS.
+    rationale: >-
+      git log --since is simpler and more portable than stat-based mtime tricks for
+      commit activity. No arrays needed — just check if output is empty or not.
+    decided_by: auto
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - >-
+    This is a RE-IMPLEMENTATION. The previous implementation (March 3) added 2112 lines
+    inline to implement-stories.sh and passed AC-1..10 code review but failed QA due
+    to zero tests. This plan fixes all 3 QA gaps: AC-11 (test harness), AC-12
+    (APIP-6001 graceful degradation), AC-13 (activity-based detection).
+  - >-
+    The current implement-stories.sh is at 2001 lines (clean — previous inline code
+    was never merged). This plan adds ~300-400 lines to it (source + wiring), not 2112.
+  - macOS bash 3.2 compatibility required throughout — no declare -A, no readarray
+  - >-
+    APIP-6001 status: still in failed-code-review, not on main. AC-12 guards all
+    APIP-6001 function calls with 'declare -f <func> > /dev/null 2>&1' checks.
+  - >-
+    The test harness (scripts/test-stuck-recovery.sh) uses mktemp -d for temp dirs,
+    sources stuck-recovery.sh directly with TEST_FEATURE_DIR set, and uses an EXIT
+    trap for cleanup. No external test frameworks needed — pure bash assertions.
+  - >-
+    Step 5 verification must confirm scripts/test-stuck-recovery.sh exits 0 (all 3
+    tests pass) — this is the primary QA gate that the previous implementation failed.

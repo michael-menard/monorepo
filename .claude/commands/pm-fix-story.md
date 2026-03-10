@@ -1,7 +1,7 @@
 ---
 created: 2026-01-20
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-03-09
+version: 3.1.0
 type: orchestrator
 agents: ["pm-story-fix-leader.agent.md"]
 ---
@@ -35,8 +35,12 @@ Task tool:
     CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md
-    QA audit: {FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml
+
+    Read story location and status from KB:
+      kb_get_story({ story_id: "{STORY_ID}" })
+
+    Read QA/elab feedback from KB artifact:
+      kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elab" })
 
     OUTPUT: Follow lean-docs.md, structured summary
 ```
@@ -51,8 +55,10 @@ Report: "{STORY_ID} blocked at PM Fix: <reason>"
 
 ## Done
 
-Story status changed from `needs-refinement` to `backlog`.
-Move story back to backlog: `{FEATURE_DIR}/elaboration/{STORY_ID}` → `{FEATURE_DIR}/backlog/{STORY_ID}`
+Update KB story status to `backlog`:
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "backlog", phase: "pm_fix" })
+```
 
 **Next**: `/elab-story {FEATURE_DIR} {STORY_ID}`
 

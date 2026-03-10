@@ -1,0 +1,33 @@
+schema: 1
+story_id: "APIP-3010"
+timestamp: "2026-03-01T00:00:00Z"
+failure_source: "code-review-failed"
+iteration: 1
+issues_to_fix:
+  - id: 1
+    file: "packages/backend/database-schema/src/schema/change-telemetry.ts"
+    line: 17
+    issue: "TypeCheck error TS2724: '_pgSchema' not exported from drizzle-orm/pg-core (should be 'pgSchema')"
+    severity: "critical"
+    auto_fixable: true
+  - id: 2
+    file: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+    line: 37
+    issue: "Reusability error: Duplicated Zod schema, should import from @repo/database-schema instead"
+    severity: "high"
+    auto_fixable: true
+  - id: 3
+    file: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+    line: 92
+    issue: "Reusability warning: DbQueryableSchema custom duck-type"
+    severity: "medium"
+    auto_fixable: false
+  - id: 4
+    file: "packages/backend/orchestrator/src/telemetry/change-telemetry.test.ts"
+    issue: "TypeScript warning: test file uses 'as any'"
+    severity: "low"
+    auto_fixable: true
+focus_files:
+  - "packages/backend/database-schema/src/schema/change-telemetry.ts"
+  - "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+  - "packages/backend/orchestrator/src/telemetry/change-telemetry.test.ts"

@@ -1,0 +1,24 @@
+schema: 1
+story_id: KFMB-2030
+timestamp: 2026-03-06T22:43:00Z
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - .claude/commands/pm-bootstrap-workflow.md
+  - .claude/docs/pm-bootstrap-workflow-reference.md
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Update /pm-bootstrap-workflow command documentation to reflect KB-native bootstrap (no filesystem stories.index.md)"
+elaboration: "completed"

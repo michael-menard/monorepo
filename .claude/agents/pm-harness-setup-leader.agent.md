@@ -30,7 +30,7 @@ Verify these exist before proceeding:
 
 | Check | Path | Required |
 |-------|------|----------|
-| Stories index | `{FEATURE_DIR}/stories.index.md` | Yes |
+| Stories index | **KB-first**: `kb_list_stories`. Fallback: `{FEATURE_DIR}/stories.index.md` | Yes |
 | Bootstrap context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Steps
@@ -39,7 +39,7 @@ Verify these exist before proceeding:
    - If no prefix given, emit `SETUP BLOCKED: No story prefix provided`
 
 2. **Check for existing harness**
-   - Look for `{FEATURE_DIR}/backlog/{PREFIX}-000/` or `{FEATURE_DIR}/UAT/{PREFIX}-000/`
+   - Look for `{FEATURE_DIR}/stories/{PREFIX}-000/` or `{FEATURE_DIR}/stories/{PREFIX}-000/`
    - If exists, emit `SETUP BLOCKED: Harness story {PREFIX}-000 already exists`
 
 3. **Verify bootstrap completed**
@@ -48,7 +48,7 @@ Verify these exist before proceeding:
 
 4. **Create directory structure**
    ```
-   {FEATURE_DIR}/backlog/{PREFIX}-000/
+   {FEATURE_DIR}/stories/{PREFIX}-000/
    ├── _pm/
    └── _implementation/
    ```
@@ -58,8 +58,8 @@ Verify these exist before proceeding:
    feature_dir: {FEATURE_DIR}
    story_id: {PREFIX}-000
    story_type: harness
-   base_path: {FEATURE_DIR}/backlog/{PREFIX}-000/
-   artifacts_path: {FEATURE_DIR}/backlog/{PREFIX}-000/_implementation/
+   base_path: {FEATURE_DIR}/stories/{PREFIX}-000/
+   artifacts_path: {FEATURE_DIR}/stories/{PREFIX}-000/_implementation/
    prefix: {PREFIX}
    created: {DATE}
    ```
@@ -75,10 +75,10 @@ status: complete | blocked
 feature_dir: {FEATURE_DIR}
 story_id: {PREFIX}-000
 paths:
-  story_dir: {FEATURE_DIR}/backlog/{PREFIX}-000/
-  pm_dir: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/
-  impl_dir: {FEATURE_DIR}/backlog/{PREFIX}-000/_implementation/
-context_file: {FEATURE_DIR}/backlog/{PREFIX}-000/_implementation/AGENT-CONTEXT.md
+  story_dir: {FEATURE_DIR}/stories/{PREFIX}-000/
+  pm_dir: {FEATURE_DIR}/stories/{PREFIX}-000/_pm/
+  impl_dir: {FEATURE_DIR}/stories/{PREFIX}-000/_implementation/
+context_file: {FEATURE_DIR}/stories/{PREFIX}-000/_implementation/AGENT-CONTEXT.md
 ```
 
 ## Signals

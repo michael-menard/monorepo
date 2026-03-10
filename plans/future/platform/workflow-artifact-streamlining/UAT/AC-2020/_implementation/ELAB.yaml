@@ -1,0 +1,257 @@
+schema_version: 1
+story_id: "AC-2020"
+timestamp: "2026-03-06T00:00:00Z"
+
+kb_context:
+  status: "unavailable"
+  note: "KB MCP returned INTERNAL_ERROR during search queries. Context cache also returned empty pack. Audit proceeds using standard checklist only."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRE-AUDIT DISCOVERY NOTES
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Key finding before audit: The token-log SKILL already writes to KB via
+# kb_log_tokens (SKILL.md v2.0.0). The dev-documentation-leader.agent.md
+# already queries KB storyTokenUsage and sets sources.token_log = "kb:token_usage".
+# The outcome-schema.md already specifies token_log: "kb:token_usage".
+#
+# TOKEN-LOG.md references remaining in .claude/ tree:
+#   - .claude/agents/workflow-retro.agent.md  (fallback read path for legacy stories)
+#   - .claude/commands/workflow-retro.md       (same fallback references)
+#   - .claude/agents/_token-logging.md         (still shows MD table as "Required Log Format")
+#   - .claude/patterns/2026-02/ANTI-PATTERNS.md (stale: "Log actual vs estimated in TOKEN-LOG.md")
+#
+# The story's goal ("no TOKEN-LOG.md file is created or read") has a nuance:
+# workflow-retro uses TOKEN-LOG.md as an intentional FALLBACK for legacy stories
+# that predate OUTCOME.yaml. Scoping decision needed: does AC-2020 require removing
+# that fallback path, or only removing the write side and active-story read path?
+# ─────────────────────────────────────────────────────────────────────────────
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      story.yaml feature field lists three tasks: (1) update token-log skill to write to KB,
+      (2) update dev-documentation-leader and _token-logging.md to query KB, (3) update
+      OUTCOME.yaml sources map. Research shows tasks (1), (2), and (3) are ALREADY DONE
+      in the current codebase: token-log SKILL.md v2.0.0 uses kb_log_tokens exclusively;
+      dev-documentation-leader.agent.md Step 4 queries KB storyTokenUsage and writes
+      sources.token_log = "kb:token_usage"; outcome-schema.md already specifies the same.
+      The actual remaining work is (a) updating _token-logging.md shared instructions which
+      still show the markdown table format as "Required Log Format" alongside the KB note,
+      (b) updating workflow-retro.agent.md and workflow-retro.md which still reference
+      TOKEN-LOG.md as a fallback read path, and (c) removing the stale
+      ANTI-PATTERNS.md cross-reference. The story scope as written is partially misleading —
+      it implies more work than exists, while also potentially missing the workflow-retro
+      fallback path question. Scope needs clarification before implementation.
+
+  - id: internal_consistency
+    status: FAIL
+    note: >
+      The story has NO acceptance criteria defined (story.yaml has no `acceptance_criteria`
+      field). The goal statement ("no TOKEN-LOG.md file is created or read during story
+      execution") cannot be verified without measurable ACs. Additionally, the goal conflicts
+      with workflow-retro.agent.md's intentional fallback: that agent explicitly reads
+      TOKEN-LOG.md for legacy stories that predate OUTCOME.yaml. The goal is either too
+      broad (it should exclude backward-compat legacy reads) or the scope must explicitly
+      include removing the workflow-retro fallback path. This internal inconsistency between
+      goal and implied scope must be resolved.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      No new packages or utilities needed. The story makes changes to agent instructions
+      (.md files) and one skill (SKILL.md). All changes are to documentation/instruction
+      layer only. kb_log_tokens MCP tool already exists and is already used.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No API endpoints, no service layer, no route files. This story modifies agent
+      instruction files and skill definitions only. Ports & Adapters compliance is not
+      applicable; the concern does not apply to this story type.
+
+  - id: testability
+    status: FAIL
+    note: >
+      No acceptance criteria are defined, so there is nothing to test against. No local
+      testing plan exists. For this story type (agent instruction changes), testability
+      would require: (1) running /token-log and verifying KB entry created (not a file),
+      (2) running /workflow-retro and verifying it reads from KB storyTokenUsage when
+      OUTCOME.yaml is absent rather than reading TOKEN-LOG.md, (3) grepping the .claude/
+      tree for TOKEN-LOG.md references post-commit and asserting count = 0 (or = expected
+      backward-compat only). None of these test scenarios are documented.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      One open scoping decision is unresolved: should workflow-retro.agent.md's fallback
+      path (reading TOKEN-LOG.md for legacy stories that predate OUTCOME.yaml) be removed
+      as part of this story? The story goal says "no TOKEN-LOG.md file is created or read"
+      but workflow-retro's fallback is intentional for backward compatibility with completed
+      stories. The action_item ENG-REC-002 (grep checklist) is accepted. No other blocking
+      TBDs identified, but the workflow-retro scope question is unresolved and must be
+      decided before implementation planning.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      story.yaml risk_notes mention OUTCOME.yaml source coupling (already addressed in
+      current codebase) and KB write schema (already defined and in use). However, two
+      risks are NOT disclosed: (1) RISK-001 from stories.index.md — missed cross-references
+      in .claude/ tree. The grep checklist partially mitigates this but the ANTI-PATTERNS.md
+      stale reference is a concrete known instance. (2) The workflow-retro fallback removal
+      risk — if the legacy TOKEN-LOG.md fallback in workflow-retro is removed, any in-flight
+      or recently-completed stories that used the old write path and lack OUTCOME.yaml will
+      silently produce incomplete retro data. stories.index.md documents RISK-001 (HIGH)
+      but story.yaml does not carry it.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      Scope is small: 2-4 agent instruction files to update (.claude/agents/_token-logging.md,
+      workflow-retro.agent.md, workflow-retro.md, possibly ANTI-PATTERNS.md). No code changes.
+      No endpoints. No packages. Well within sizing bounds. No split required.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      No subtasks defined. Story may not be executable by small-context LLMs without
+      decomposition. Based on the actual remaining work identified in scope_alignment,
+      suggested subtasks would be: ST-1: Audit TOKEN-LOG.md references via grep and
+      document the complete list; ST-2: Update _token-logging.md to remove the markdown
+      table as primary format, replace with KB-write description; ST-3: Decide and
+      update workflow-retro.agent.md and workflow-retro.md (either remove fallback or
+      scope-exclude it with a comment); ST-4: Remove/update stale ANTI-PATTERNS.md
+      cross-reference; ST-5: Verify with grep that no unintended TOKEN-LOG.md references
+      remain. Each subtask touches 1-2 files. All are independently verifiable.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GAPS (MVP-BLOCKING)
+# ─────────────────────────────────────────────────────────────────────────────
+
+gaps:
+  - id: gap-1
+    check: internal_consistency
+    finding: >
+      No acceptance criteria defined. The story cannot be verified as complete without
+      measurable ACs. At minimum, the story needs: AC-1 (no agent writes TOKEN-LOG.md
+      during active story execution), AC-2 (token data queryable from KB by story_id),
+      AC-3 (grep of .claude/ tree finds zero active-path TOKEN-LOG.md references post-commit).
+    severity: critical
+    decision: add_ac
+    ac_added: "AC-1: No agent writes TOKEN-LOG.md during active story execution; AC-2: Token data queryable from KB by story_id; AC-3: grep .claude/ finds zero active-path TOKEN-LOG.md references post-commit"
+    notes: "Auto-resolved: gap was the missing ACs themselves. Three ACs added to story.yaml acceptance_criteria field."
+
+  - id: gap-2
+    check: scope_alignment
+    finding: >
+      Scope ambiguity: the workflow-retro fallback read path (TOKEN-LOG.md for legacy
+      stories without OUTCOME.yaml) is not addressed in the story. The story goal says
+      "no TOKEN-LOG.md file is created or read" which would require removing this
+      fallback. But removing it is a backward-compat breaking change for old completed
+      stories. A scoping decision is required: (a) remove the fallback and accept the
+      break, (b) keep the fallback but add a code comment marking it as legacy-only,
+      or (c) explicitly scope out the fallback by narrowing the goal to "during active
+      story execution." This must be resolved before implementation.
+    severity: high
+    decision: flagged_for_pm
+    ac_added: null
+    notes: "Cannot auto-resolve. Scope Alignment audit failure requires PM judgment on backward-compat tradeoff. Three options presented in finding. Contributes to FAIL verdict."
+
+  - id: gap-3
+    check: internal_consistency
+    finding: >
+      Scope as written implies more work than actually remains. The token-log SKILL write
+      path (kb_log_tokens), dev-documentation-leader's KB query, and OUTCOME.yaml sources
+      map are already updated in the codebase. The story's feature description does not
+      reflect current state. If a developer reads the story without doing a pre-investigation,
+      they may do redundant work or miss the actual remaining changes. Story description
+      needs to be updated to reflect what actually needs to change: _token-logging.md
+      shared instructions, workflow-retro fallback path, and ANTI-PATTERNS.md stale ref.
+    severity: high
+    decision: flagged_for_pm
+    ac_added: null
+    notes: "Cannot auto-resolve. Internal Consistency audit failure requires PM to update the story feature description to reflect current codebase state. Contributes to FAIL verdict."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPPORTUNITIES (NON-BLOCKING)
+# ─────────────────────────────────────────────────────────────────────────────
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: >
+      The _token-logging.md "Story-Level Aggregation" section already says "no TOKEN-LOG.md
+      file needed" but the file still leads with the markdown table format as "Required Log
+      Format." Rewriting _token-logging.md to lead with KB-write as the primary format and
+      demote or remove the table spec would reduce agent confusion. This is a UX-of-instructions
+      improvement beyond the minimum fix.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "8f399e45-0f4d-42e4-ba9f-afcdf15bc803"
+
+  - id: opp-2
+    category: edge_cases
+    finding: >
+      If KB is unavailable when /token-log is called, the SKILL.md currently says "Report
+      the error message / Suggest checking KB MCP server." There is no fallback write path
+      (e.g., write to a temp file and defer). Given the story's goal of eliminating
+      TOKEN-LOG.md entirely, it may be worth adding a deferred-write fallback (DEFERRED-KB-WRITES.yaml)
+      for KB-unavailable scenarios so token data is not silently lost.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "3048ff3c-96fa-4574-85e8-7183280ba89d"
+
+  - id: opp-3
+    category: integrations
+    finding: >
+      workflow-retro.agent.md already has the KB query as "preferred over TOKEN-LOG.md"
+      (line 113). If the TOKEN-LOG.md fallback is removed as part of this story, the
+      workflow-retro data_source field in RETRO output should be updated: the "fallback"
+      source would become "kb_only" rather than the file list. This would be a small schema
+      improvement opportunity during the same commit.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "5e78b51d-cd44-405d-9784-bc3dbc247884"
+
+  - id: opp-4
+    category: edge_cases
+    finding: >
+      ANTI-PATTERNS.md (2026-02/ANTI-PATTERNS.md line 145) contains "Log actual vs estimated
+      in TOKEN-LOG.md" as a recommendation. This is a stale cross-reference that would
+      confuse any agent reading it. Updating it to "Log actual vs estimated via /token-log
+      skill (KB-backed)" is a 1-line fix that should be included in the grep checklist step.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "1b0909a0-5e7b-42ae-a520-450590c4906f"
+
+split_recommendation: null   # story_sizing=PASS, no split required
+
+preliminary_verdict: CONDITIONAL_PASS
+# Rationale: The story is appropriately sized and technically sound, but has two
+# critical gaps that must be resolved before it can be implemented:
+# (1) No acceptance criteria — cannot verify completion without them.
+# (2) Scope ambiguity on the workflow-retro fallback path — unresolved scoping
+# decision that affects what files are actually changed and whether a
+# backward-compat break is introduced.
+# The story is NOT a FAIL because the core direction is correct and the
+# remaining work is small. With ACs added and the workflow-retro scope decision
+# made, this story is ready to implement.
+
+verdict: FAIL
+decided_at: "2026-03-06T00:00:00Z"
+verdict_rationale: >
+  gap-1 (missing ACs) was auto-resolved by adding 3 ACs to story.yaml.
+  gap-2 (scope_alignment: workflow-retro fallback path unresolved) and gap-3
+  (internal_consistency: story feature description misleading vs current codebase state)
+  are unresolvable by autonomous agent — both require PM judgment before implementation
+  can proceed. Per decision rules, unresolvable Scope Alignment and Internal Consistency
+  audit failures → FAIL. All 4 opportunities logged to KB.
+summary:
+  gaps_found: 3
+  gaps_resolved: 1
+  gaps_flagged_for_pm: 2
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 3

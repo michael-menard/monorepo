@@ -1,0 +1,183 @@
+schema: 1
+story_id: APIP-5003
+timestamp: '2026-03-01T23:30:00Z'
+iteration: 2
+note: >-
+  RE-VERIFICATION. First run (iteration 1) failed because implementation branch story/APIP-5003 had
+  not been merged to main. Branch has now been merged (commit 269f5212). All 3 implementation files
+  confirmed present on main and verified against all 9 ACs.
+
+verdict: PASS
+
+tests_executed: false
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+coverage: 'N/A - pure infra/documentation story, coverage waiver declared'
+coverage_meets_threshold: true
+test_quality:
+  verdict: N/A
+  anti_patterns: []
+  notes: >-
+    Pure infrastructure/documentation story — no TypeScript code or tests produced. E2E exemption
+    and coverage waiver declared per story type (infra/config/documentation). No test files to
+    evaluate for anti-patterns.
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[0]'
+    notes: >-
+      infra/langgraph-server/SECURITY.md confirmed present (316 lines). Section 1 declares network
+      boundary: 127.0.0.1-only binding, no external access, Supervisor Graph as sole authorized
+      caller on port 8123. Section 2 has full port inventory table with columns Service / Internal
+      Port / External Binding / Protocol / Access Scope. Section 7 'Phase 2: Authentication and
+      Authorization' has deferral placeholder with FOLLOW-UPS SEC-001-full-auth reference.
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[1]'
+    notes: >-
+      compose.langgraph-server.yaml lines 52-53 confirmed: '127.0.0.1:8123:8123' and
+      '127.0.0.1:8124:8124' — both ports bound to localhost only. SECURITY.md Section 3.2
+      documents the port binding pattern with correct/incorrect YAML examples and explains that
+      binding without 127.0.0.1 prefix exposes services on all interfaces (security boundary
+      violation).
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[2]'
+    notes: >-
+      langgraph-platform service (lines 63-68): read_only: true, tmpfs: [/tmp, /var/run], cap_drop:
+      [ALL] — all present. langgraph-postgres service (lines 113-120): cap_drop: [ALL] with
+      cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID] for PostgreSQL initialization
+      requirements. Non-root user directive not applied to langgraph-platform — gap is documented in
+      SECURITY.md Section 3.5 for Phase 2 remediation. AC allows documented gap per its wording.
+      SECURITY.md Sections 3.3-3.5 document all three hardening directives and Section 6 covers
+      image compatibility findings.
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[3]'
+    notes: >-
+      compose.langgraph-server.yaml line 55: './langgraph.json:/app/langgraph.json:ro' — config
+      file mounted read-only with :ro suffix. langgraph_postgres_data named volume (line 112) is
+      read-write for persistent checkpoint data. SECURITY.md Section 3.6 documents the read-only
+      volume mount pattern with :ro suffix and distinguishes config mounts from persistent state
+      volumes.
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[4]'
+    notes: >-
+      No :latest tags found in compose file (grep confirmed empty output). Both images are pinned:
+      langchain/langgraph-api:0.0.9 and postgres:16. Note: evidence states langchain/langgraph-api:0.2.10
+      but actual file has 0.0.9 — minor evidence inaccuracy in version number, but the AC requirement
+      (pinned versions, no :latest) is fully satisfied. SECURITY.md Section 3.1 documents the image
+      pinning requirement with supply chain integrity rationale and correct/incorrect examples.
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[5]'
+    notes: >-
+      SECURITY.md Section 4 documents the full secret injection mechanism: ${VAR_NAME} pattern, 3
+      rules (no hardcoding, .env in .gitignore, APIP-5004 provides values), env var inventory table,
+      and explicit APIP-5004 cross-reference. compose.langgraph-server.yaml environment stanza uses
+      ${ANTHROPIC_API_KEY}, ${OPENROUTER_API_KEY}, ${LANGGRAPH_POSTGRES_URL}, ${LANGSMITH_API_KEY:-}
+      — all variable references, no hardcoded secrets. .gitignore (4 lines) excludes .env and .env.*
+      while preserving .env.example. Hardcoded secret grep confirmed no violations — all
+      credential-named env vars use ${VAR_NAME} pattern.
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[6]'
+    notes: >-
+      SECURITY.md Section 5 contains an 8-step numbered operational verification checklist: (1)
+      compose config validation, (2) port binding with ss -tlnp + netstat fallback, (3) dropped
+      capabilities via docker inspect CapDrop, (4) security options via docker inspect SecurityOpt,
+      (5) volume mount RO status, (6) image tag verification, (7) secret hardcoding check, (8) .env
+      git status. Each step includes command, expected output, and PASS/FAIL table. AC requires ss
+      -tlnp, docker inspect SecurityOpt, docker inspect CapDrop — all three present.
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[7]'
+    notes: >-
+      compose.langgraph-server.yaml is valid YAML with correct Docker Compose v2 structure: services,
+      volumes, healthchecks, depends_on with condition. All hardening directives (read_only, tmpfs,
+      cap_drop, cap_add, :ro volume mounts) use correct compose v2 syntax. Docker runtime not
+      available in this environment — operational test exemption per ADR-005 applies (runtime
+      verification requires deployed server). File structure fully valid.
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[8]'
+    notes: >-
+      SECURITY.md Section 7 'Phase 2: Authentication and Authorization' contains all 4 deferred
+      items: (1) LangGraph Platform API Authentication — bearer token or mTLS, (2) Studio UI Access
+      Control — user authentication for remote operator access, (3) Network Policy Enforcement —
+      iptables/ufw rules or Docker network driver policies, (4) Estimated Prerequisites — external
+      access requirement, identity provider, network topology. Section references FOLLOW-UPS
+      SEC-001-full-auth and explicitly marks all items as not implemented in Phase 1.
+
+architecture_compliant: true
+
+issues:
+  - id: QA-WARN-001
+    severity: info
+    description: >-
+      Minor evidence inaccuracy in AC-5: EVIDENCE.yaml states langchain/langgraph-api:0.2.10 but
+      the actual compose file uses langchain/langgraph-api:0.0.9. AC requirement is satisfied
+      (pinned version, no :latest) but the evidence version number is incorrect. Not a blocking
+      issue — image is still pinned to a specific version.
+
+lessons_to_record:
+  - lesson: >-
+      Re-verification after branch merge succeeded cleanly. All 9 ACs passed on the second run.
+      The previous failure was entirely due to the implementation branch not being merged to main —
+      the implementation itself was complete and correct. Merge verification should be a pre-condition
+      check in QA setup, not discovered during AC verification.
+    category: pattern
+    tags:
+      - qa
+      - worktree
+      - merge
+      - re-verification
+  - lesson: >-
+      For pure infra/documentation stories with no TypeScript code, test execution and coverage
+      thresholds are not applicable. Evidence waiver declarations (E2E exemption, coverage waiver)
+      are valid and should be accepted when story type is infra/config/documentation. QA should
+      confirm the waiver is appropriate rather than failing for missing tests.
+    category: pattern
+    tags:
+      - qa
+      - infra
+      - documentation
+      - coverage-waiver
+  - lesson: >-
+      Container hardening patterns for Docker Compose: read_only: true + tmpfs for writable paths,
+      cap_drop: [ALL] with selective cap_add for services that need specific capabilities (e.g.,
+      PostgreSQL needs CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID for initialization), port binding
+      to 127.0.0.1, :ro volume mounts for config files, ${VAR_NAME} references for secrets,
+      .gitignore for .env files. These patterns are now documented in SECURITY.md as a reusable
+      reference.
+    category: reuse
+    tags:
+      - docker
+      - security
+      - container-hardening
+      - infra
+
+tokens:
+  in: 12000
+  out: 2000

@@ -1,0 +1,49 @@
+id: CDTS-1050
+title: Apply Phase 1 Migrations and Verify
+status: backlog
+priority: medium
+phase: 1
+feature: "Deploy updated code (Drizzle + tool updates) first, then run migrations 020-022 against knowledgebase DB. Verify FK count delta, row counts preserved, plan_details/story_details 1:1, analytics tables exist, wint has 0 tables. MCP server restarts successfully."
+goal: "Phase 1 complete: all migrations applied, all tests green, database matches target architecture."
+depends_on:
+  - CDTS-1040
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Deployment sequence
+  - "Deploy code changes first (Drizzle schema.ts + MCP tool updates)"
+  - "Run migrations in order: 020_cdts_safety_preamble.sql, 021_cdts_create_analytics_schema.sql, 022_cdts_structural_ddl.sql"
+  - "Each migration recorded in schema_migrations table"
+
+  # FK verification
+  - "Capture information_schema.table_constraints FK count BEFORE migrations"
+  - "Capture information_schema.table_constraints FK count AFTER migrations"
+  - "FK count delta matches exactly the number of new FKs added in CDTS-1020"
+
+  # Data integrity
+  - "Row counts preserved: plans, stories, tasks, knowledge_entries unchanged"
+  - "plan_details has exactly same row count as plans (1:1 verified)"
+  - "story_details has exactly same row count as stories (1:1 verified)"
+
+  # Schema verification
+  - "analytics schema has exactly 4 tables: model_experiments, model_assignments, change_telemetry, story_token_usage"
+  - "wint schema has 0 tables"
+  - "public schema has all expected tables (knowledge_entries, embedding_cache, audit_log, plans, plan_details, stories, story_details, plan_story_links, plan_dependencies, story_dependencies, story_artifacts, story_audit_log, story_knowledge_links, tasks, task_audit_log, work_state, work_state_history, schema_migrations, plus all 13 artifact type tables)"
+
+  # Functional verification
+  - "MCP server starts and responds to kb_health"
+  - "pnpm test:all passes"
+  - "pnpm check-types passes"
+  - "All 67+ MCP tools respond without error"
+
+  # Rollback readiness
+  - "Rollback procedure documented and tested (022_rollback.sql verified)"
+risk_notes: "Code must deploy BEFORE migrations run — if migrations run against old code, Drizzle queries will fail. Rollback scripts from CDTS-1020 must be ready for immediate execution if any verification fails."
+resolves_blockers:
+  - "ENG-003: Atomic deployment"
+  - "QA-001: Test strategy execution"
+  - "QA-002: FK verification"
+  - "PLAT-001: Migration runner proven"
+  - "PLAT-002: Safety guardrails enforced"
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

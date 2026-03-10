@@ -49,19 +49,19 @@ describe('Story Management Integration Tests', () => {
     expect(initialStatus).not.toBeNull()
     expect(initialStatus?.state).toBe('backlog')
 
-    // 2. Update status to ready_to_work
+    // 2. Update status to ready
     const updated1 = await storyUpdateStatus({
       storyId: testStoryId,
-      newState: 'ready_to_work',
+      newState: 'ready',
       reason: 'Integration test transition 1',
       triggeredBy: 'integration-test',
     })
     expect(updated1).not.toBeNull()
-    expect(updated1?.state).toBe('ready_to_work')
+    expect(updated1?.state).toBe('ready')
 
     // 3. Verify state change persisted
     const status1 = await storyGetStatus({ storyId: testStoryId })
-    expect(status1?.state).toBe('ready_to_work')
+    expect(status1?.state).toBe('ready')
 
     // 4. Update status to in_progress
     const updated2 = await storyUpdateStatus({

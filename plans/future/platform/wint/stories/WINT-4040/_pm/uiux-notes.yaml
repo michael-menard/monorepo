@@ -1,0 +1,5 @@
+skipped: true
+reason: "WINT-4040 is a backend CLI script with no UI surface. All human-facing output is terminal logging and structured summary objects. No React components, no Tailwind, no shadcn primitives involved."
+cli_ux_notes:
+  - "--dry-run output should be formatted as a readable table or JSON showing { featureName, inferredStage, keyword, wouldInsert: true } per entry for human validation"
+  - "--validate output should clearly distinguish complete features (4/4 CRUD stages) vs. incomplete features and list which stages are missing"

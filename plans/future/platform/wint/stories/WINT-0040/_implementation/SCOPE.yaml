@@ -1,0 +1,25 @@
+schema: 1
+story_id: WINT-0040
+timestamp: "2026-03-02T18:50:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - packages/backend/database-schema/src/schema/wint.ts
+  - packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts
+  - packages/backend/database-schema/src/migrations/app/
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+summary: Add hitl_decisions and story_outcomes tables to wint telemetry schema with Zod exports and comprehensive tests
+elaboration: completed

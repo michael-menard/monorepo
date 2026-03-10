@@ -1,0 +1,42 @@
+schema: 1
+story_id: KFMB-1040
+timestamp: "2026-03-07T19:30:00Z"
+failure_source: code-review-failed
+iteration: 3
+
+issues_to_fix:
+  - id: 1
+    file: apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+    line: null
+    issue: "Missing EC-11 authorization test for kb_delete_artifact (AC-6 requirement)"
+    description: >-
+      Branch is missing EC-11 authorization test (AC-6 requirement) for kb_delete_artifact.
+      The test exists on main (lines 427-445) but the KFMB-1040 branch has not been rebased
+      since iteration 1. Merging would remove the only authorization enforcement test.
+    severity: critical
+    auto_fixable: false
+    fix_approach: "Rebase the branch on main to incorporate the EC-11 test addition"
+
+focus_files:
+  - apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+  - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+  - apps/api/knowledge-base/src/mcp-server/access-control.ts
+
+review_context:
+  verdict: FAIL
+  total_errors: 1
+  total_warnings: 0
+  workers_run: [syntax, typecheck, build]
+  workers_skipped: [lint, style, security, reusability, react, typescript, accessibility]
+
+fix_strategy: |
+  1. Switch to KFMB-1040 branch
+  2. Rebase on main to incorporate EC-11 test changes
+  3. Verify no conflicts during rebase
+  4. Confirm test file now contains EC-11 test (lines 427-445)
+  5. Run tests to verify all pass
+  6. Re-submit for code review
+
+estimated_effort: "Low - rebase only, no new code needed"

@@ -1,0 +1,70 @@
+schema: 1
+story_id: WISH-2022
+updated: 2026-01-31T12:30:00-07:00
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 54
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    note: No integration tests required for this frontend-only story
+  e2e:
+    pass: 0
+    fail: 0
+    note: E2E tests deferred to follow-up story per PROOF-WISH-2022
+acs:
+  - id: AC?
+    verdict: pass
+    evidence: "src/hooks/useS3Upload.ts:171-177, test: useS3Upload.test.ts:679-727"
+  - id: AC?
+    verdict: pass
+    evidence: "src/utils/imageCompression.ts:25-31, test: imageCompression.test.ts:327-335"
+  - id: AC?
+    verdict: pass
+    evidence: "src/components/WishlistForm/index.tsx:329-332, test: useS3Upload.test.ts:842-874"
+  - id: AC?
+    verdict: pass
+    evidence: "src/utils/imageCompression.ts:158-161, test: imageCompression.test.ts:204-213"
+  - id: AC?
+    verdict: pass
+    evidence: "src/utils/imageCompression.ts:82-104, test: imageCompression.test.ts:139-185"
+  - id: AC?
+    verdict: pass
+    evidence: "src/utils/imageCompression.ts:170-182, test: imageCompression.test.ts:241-251"
+  - id: AC?
+    verdict: pass
+    evidence: src/components/WishlistForm/index.tsx:570-581
+  - id: AC?
+    verdict: pass
+    evidence: "src/hooks/useS3Upload.ts:171-184, test: useS3Upload.test.ts:679-727"
+  - id: AC?
+    verdict: pass
+    evidence: src/components/WishlistForm/index.tsx:154-165
+  - id: AC?
+    verdict: pass
+    evidence: src/components/WishlistForm/index.tsx:244-248
+  - id: AC?
+    verdict: pass
+    evidence: Unit tests provided, E2E deferred per PROOF-WISH-2022.md
+  - id: AC?
+    verdict: pass
+    evidence: "imageCompression.ts: 100% coverage, useS3Upload.ts: 95.39% coverage"
+  - id: AC?
+    verdict: pass
+    evidence: src/components/WishlistForm/index.tsx:39, COMPRESSION_PREFERENCE_KEY
+  - id: AC?
+    verdict: pass
+    evidence: "src/components/WishlistForm/index.tsx:329-340, test: useS3Upload.test.ts:758-806"
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.286Z
+  blocking_issues: []

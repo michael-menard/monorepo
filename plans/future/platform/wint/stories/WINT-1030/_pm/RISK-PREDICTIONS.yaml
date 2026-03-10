@@ -1,0 +1,125 @@
+# Risk Predictions: WINT-1030
+# Generated: 2026-02-16
+# Mode: Advisory (graceful degradation)
+
+predictions:
+  split_risk:
+    score: 0.15
+    confidence: medium
+    reasoning: |
+      This is a focused migration script with clear boundaries. Single responsibility:
+      scan directories → infer status → populate database. No API changes, no UI work,
+      minimal cross-package dependencies. Script is self-contained in orchestrator package.
+      Only split risk would be if performance testing reveals need for separate optimization story.
+
+  review_cycles:
+    estimated: 1
+    confidence: high
+    reasoning: |
+      Straightforward implementation reusing proven patterns from WINT-1020. Clear acceptance
+      criteria with testable outcomes. Main review point will be error handling robustness
+      and dry-run accuracy. Low complexity reduces back-and-forth.
+
+  token_estimate:
+    implementation: 45000
+    testing: 25000
+    review: 15000
+    total: 85000
+    confidence: medium
+    reasoning: |
+      Implementation tokens:
+      - Script scaffolding: 10k
+      - Status inference logic: 8k
+      - Directory scanning: 7k (reuse pattern)
+      - Error handling: 6k
+      - Dry-run/verify modes: 8k
+      - Logging: 6k
+
+      Testing tokens:
+      - Unit tests: 12k
+      - Integration tests: 8k
+      - Performance test: 5k
+
+      Review tokens:
+      - Code review: 10k
+      - Test review: 5k
+
+  complexity_factors:
+    - name: status_inference_logic
+      impact: low
+      note: Clear priority rules (frontmatter > directory), well-defined enum mapping
+
+    - name: error_handling
+      impact: medium
+      note: Multiple failure modes (malformed YAML, duplicate IDs, DB errors) require comprehensive handling
+
+    - name: duplicate_resolution
+      impact: low
+      note: Priority hierarchy for stories in multiple directories is straightforward
+
+    - name: performance_optimization
+      impact: low
+      note: Expected throughput adequate for story counts, batch inserts sufficient
+
+    - name: reuse_integration
+      impact: very_low
+      note: StoryFileAdapter and StoryRepository already production-proven
+
+  risk_factors:
+    - name: database_schema_dependency
+      severity: low
+      mitigation: wint.stories table already exists (WINT-0010), schema is stable
+
+    - name: wint1020_completion
+      severity: medium
+      mitigation: WINT-1020 is ready-to-work, must complete before WINT-1030 execution
+
+    - name: data_corruption
+      severity: low
+      mitigation: Dry-run mode + verification mode + idempotent re-run capability
+
+    - name: partial_population
+      severity: low
+      mitigation: Epic-level transactions, safe re-run with unique constraint protection
+
+  quality_gates:
+    - gate: test_coverage
+      threshold: "≥80% for core functions"
+      rationale: Status inference and enum mapping are critical paths
+
+    - gate: dry_run_validation
+      threshold: "Dry-run plan matches expected story count ±5%"
+      rationale: Ensures discovery logic is accurate before execution
+
+    - gate: performance
+      threshold: "100 stories in <60 seconds"
+      rationale: Large epic processing must be practical
+
+    - gate: error_handling
+      threshold: "Malformed YAML, duplicates, missing fields handled without script failure"
+      rationale: Fail-soft behavior is critical for production migration
+
+  success_indicators:
+    - All stories discovered and processed
+    - Status inference accuracy: 100% (frontmatter explicit, directory inferred)
+    - Zero script failures on malformed data
+    - Database verification queries pass
+    - Migration log captures all operations
+    - Performance within expected bounds
+
+  failure_indicators:
+    - Script fails on malformed YAML (should skip and continue)
+    - Duplicate story IDs cause script termination
+    - Database state inconsistent with dry-run plan
+    - Performance >60s for 100 stories
+    - Missing stories in database after population
+
+  kb_availability: unavailable
+  wkfl006_features: unavailable
+  fallback_mode: true
+
+notes: |
+  Advisory mode predictions generated without KB or WKFL-006 historical data.
+  Predictions based on story seed analysis, reuse candidate assessment, and
+  pattern matching with WINT-1020 (similar migration script). Confidence levels
+  are conservative due to lack of historical training data.

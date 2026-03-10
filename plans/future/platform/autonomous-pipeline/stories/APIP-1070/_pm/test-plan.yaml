@@ -1,0 +1,306 @@
+story_id: APIP-1070
+generated: "2026-02-25"
+frontend_impacted: false
+e2e_required: false
+uat_required: false
+
+summary: >
+  Merge Graph with Learnings Extraction is a headless LangGraph worker graph.
+  All tests are unit/integration using Vitest with injectable runners. No
+  Playwright E2E (no UI), no UAT (internal pipeline tooling). The critical
+  invariant is that cleanup-worktree and write-merge-artifact run on ALL
+  terminal paths including MERGE_BLOCKED from preconditions failure.
+
+coverage_targets:
+  check_preconditions: "100% branch (critical safety gate)"
+  per_node_files: ">85% branch each"
+  graph_routing: ">80% branch"
+  overall: ">80%"
+
+test_tiers:
+  - tier: unit
+    framework: vitest
+    location: packages/backend/orchestrator/src/nodes/merge/__tests__/
+    description: >
+      Per-node unit tests using injectable gitRunner and ghRunner mocks.
+      Each node is tested in isolation with controlled subprocess outputs.
+    files:
+      - check-preconditions.test.ts
+      - rebase-branch.test.ts
+      - create-or-update-pr.test.ts
+      - poll-ci.test.ts
+      - squash-merge.test.ts
+      - cleanup-worktree.test.ts
+      - extract-learnings.test.ts
+      - write-merge-artifact.test.ts
+
+  - tier: graph_integration
+    framework: vitest
+    location: packages/backend/orchestrator/src/graphs/__tests__/merge.test.ts
+    description: >
+      Graph-level tests exercising the full StateGraph routing. Uses real
+      LangGraph graph.compile() but mocks all node implementations via
+      injectable runners. Verifies all conditional edge paths are reachable.
+
+scenarios:
+  graph_level:
+    - id: T-G01
+      name: "QA verdict not PASS → MERGE_BLOCKED, no gh calls"
+      acs: [AC-3, AC-12, AC-14]
+      setup: "qaVerify.verdict = 'FAIL'"
+      expect: "mergeVerdict = MERGE_BLOCKED, ghRunner never called, cleanup runs, MERGE.yaml written"
+
+    - id: T-G02
+      name: "QA artifact missing or invalid → MERGE_BLOCKED"
+      acs: [AC-3, AC-12, AC-14]
+      setup: "QA-VERIFY.yaml absent; safeParse fails"
+      expect: "mergeVerdict = MERGE_BLOCKED with descriptive error, cleanup runs, MERGE.yaml written"
+
+    - id: T-G03
+      name: "gh auth status failure → MERGE_BLOCKED"
+      acs: [AC-3, AC-12, AC-14]
+      setup: "gh auth status exits non-zero"
+      expect: "mergeVerdict = MERGE_BLOCKED, block_reason contains 'GitHub CLI not authenticated', cleanup runs"
+
+    - id: T-G04
+      name: "Rebase conflict → MERGE_BLOCKED, cleanup runs"
+      acs: [AC-4, AC-12, AC-14]
+      setup: "git rebase exits non-zero with conflict output"
+      expect: "mergeVerdict = MERGE_BLOCKED, rebaseSuccess = false, git rebase --abort called, cleanup runs"
+
+    - id: T-G05
+      name: "PR creation failure → MERGE_FAIL, cleanup runs"
+      acs: [AC-5, AC-12, AC-14]
+      setup: "gh pr create exits non-zero"
+      expect: "mergeVerdict = MERGE_FAIL, cleanup runs, MERGE.yaml written with verdict MERGE_FAIL"
+
+    - id: T-G06
+      name: "CI check failure → MERGE_FAIL, cleanup runs"
+      acs: [AC-6, AC-12, AC-14]
+      setup: "gh pr checks returns conclusion = 'failure'"
+      expect: "mergeVerdict = MERGE_FAIL, ciStatus = 'fail', cleanup runs"
+
+    - id: T-G07
+      name: "CI timeout → MERGE_BLOCKED, cleanup runs"
+      acs: [AC-6, AC-12, AC-14]
+      setup: "ciTimeoutMs elapsed without conclusive CI result"
+      expect: "mergeVerdict = MERGE_BLOCKED, ciStatus = 'timeout', block_reason = 'CI timeout'"
+
+    - id: T-G08
+      name: "Squash-merge failure → MERGE_FAIL, cleanup runs"
+      acs: [AC-7, AC-12, AC-14]
+      setup: "gh pr merge exits non-zero"
+      expect: "mergeVerdict = MERGE_FAIL, cleanup runs, MERGE.yaml written"
+
+    - id: T-G09
+      name: "Happy path: all steps pass → MERGE_COMPLETE"
+      acs: [AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11, AC-12, AC-14]
+      setup: "All subprocess calls succeed; CI passes on first poll"
+      expect: >
+        mergeVerdict = MERGE_COMPLETE, prNumber set, mergeCommitSha set,
+        worktreeCleanedUp = true, learningsPersisted = true, MERGE.yaml written with
+        verdict MERGE_COMPLETE
+
+    - id: T-G10
+      name: "Cleanup failure on happy path → MERGE_COMPLETE with worktreeCleanedUp=false"
+      acs: [AC-8, AC-14]
+      setup: "git worktree remove exits non-zero after successful squash-merge"
+      expect: "mergeVerdict = MERGE_COMPLETE unchanged, worktreeCleanedUp = false, logger.warn called"
+
+    - id: T-G11
+      name: "graph.compile() succeeds"
+      acs: [AC-12, AC-13, AC-14]
+      setup: "createMergeGraph() called with default config"
+      expect: "No exception thrown during compile()"
+
+    - id: T-G12
+      name: "All conditional edges reachable from START"
+      acs: [AC-12, AC-14]
+      setup: "Graph routing functions tested with each possible state"
+      expect: "Every edge target node is reachable; no dead branches"
+
+  node_level:
+    check_preconditions:
+      - id: T-N-CP01
+        name: "QA PASS + gh auth OK → routes to rebase-branch"
+        setup: "qaPassedSuccessfully returns true; gh auth status exits 0"
+        expect: "qaVerify set in state, routes continue"
+
+      - id: T-N-CP02
+        name: "QA verdict FAIL → MERGE_BLOCKED"
+        setup: "qaPassedSuccessfully returns false"
+        expect: "mergeVerdict = MERGE_BLOCKED, block_reason includes verdict"
+
+      - id: T-N-CP03
+        name: "QA artifact parse failure → MERGE_BLOCKED"
+        setup: "QaVerifySchema.safeParse fails on malformed YAML"
+        expect: "mergeVerdict = MERGE_BLOCKED, block_reason includes 'QA artifact invalid'"
+
+      - id: T-N-CP04
+        name: "gh auth status non-zero → MERGE_BLOCKED with operator instructions"
+        setup: "ghRunner returns exitCode 1"
+        expect: "mergeVerdict = MERGE_BLOCKED, block_reason contains 'GitHub CLI not authenticated'"
+
+    rebase_branch:
+      - id: T-N-RB01
+        name: "Successful rebase and push → rebaseSuccess=true"
+        setup: "git fetch, git rebase, git push all exit 0"
+        expect: "rebaseSuccess = true"
+
+      - id: T-N-RB02
+        name: "Rebase conflict → abort called, mergeVerdict=MERGE_BLOCKED"
+        setup: "git rebase exits non-zero; git rebase --abort exits 0"
+        expect: "rebaseSuccess = false, mergeVerdict = MERGE_BLOCKED, abort called"
+
+      - id: T-N-RB03
+        name: "Push failure after successful rebase → mergeVerdict=MERGE_FAIL"
+        setup: "git push --force-with-lease exits non-zero"
+        expect: "rebaseSuccess = false, mergeVerdict = MERGE_FAIL"
+
+    create_or_update_pr:
+      - id: T-N-PR01
+        name: "No existing PR → gh pr create called, prNumber and prUrl recorded"
+        setup: "gh pr list returns empty; gh pr create exits 0 with prNumber in stdout"
+        expect: "prNumber and prUrl set in state"
+
+      - id: T-N-PR02
+        name: "Existing PR → gh pr edit called"
+        setup: "gh pr list returns existing PR number"
+        expect: "gh pr edit called, not gh pr create; prNumber set"
+
+      - id: T-N-PR03
+        name: "gh failure → mergeVerdict=MERGE_FAIL with stderr"
+        setup: "gh pr create exits non-zero with stderr message"
+        expect: "mergeVerdict = MERGE_FAIL, error includes stderr"
+
+    poll_ci:
+      - id: T-N-CI01
+        name: "CI pass on first poll → ciStatus=pass"
+        setup: "gh pr checks returns all conclusion=success on first call"
+        expect: "ciStatus = 'pass', ciPollCount = 1"
+
+      - id: T-N-CI02
+        name: "CI pass after 3 polls → ciPollCount=3"
+        setup: "First 2 polls state=IN_PROGRESS; third = success"
+        expect: "ciStatus = 'pass', ciPollCount = 3"
+
+      - id: T-N-CI03
+        name: "CI fail conclusion → ciStatus=fail, mergeVerdict=MERGE_FAIL"
+        setup: "gh pr checks returns conclusion=failure"
+        expect: "ciStatus = 'fail', mergeVerdict = MERGE_FAIL"
+
+      - id: T-N-CI04
+        name: "CI timeout → ciStatus=timeout, mergeVerdict=MERGE_BLOCKED"
+        setup: "sleepFn advances time past ciTimeoutMs; CI still IN_PROGRESS"
+        expect: "ciStatus = 'timeout', mergeVerdict = MERGE_BLOCKED"
+
+      - id: T-N-CI05
+        name: "Exponential back-off schedule verified"
+        setup: >
+          ciPollIntervalMs=1000, ciPollMaxIntervalMs=8000; record all sleepFn call args
+        expect: >
+          Sleep calls: ~1000ms, ~2000ms, ~4000ms, ~8000ms (max), subsequent at ~8000ms.
+          Jitter within ±10% on each. Verified via sleepFn mock capture.
+
+    squash_merge:
+      - id: T-N-SM01
+        name: "Successful squash merge → mergeCommitSha set, mergeVerdict=MERGE_COMPLETE"
+        setup: "gh pr merge exits 0; gh pr view returns mergeCommit"
+        expect: "mergeCommitSha set, mergeVerdict = MERGE_COMPLETE"
+
+      - id: T-N-SM02
+        name: "gh pr merge failure → mergeVerdict=MERGE_FAIL"
+        setup: "gh pr merge exits non-zero with error message"
+        expect: "mergeVerdict = MERGE_FAIL, error captured"
+
+    cleanup_worktree:
+      - id: T-N-CW01
+        name: "Successful cleanup → worktreeCleanedUp=true"
+        setup: "git worktree remove and git branch -d both exit 0"
+        expect: "worktreeCleanedUp = true, mergeVerdict unchanged"
+
+      - id: T-N-CW02
+        name: "git worktree remove fails → worktreeCleanedUp=false, logger.warn called, no verdict change"
+        setup: "git worktree remove exits non-zero"
+        expect: "worktreeCleanedUp = false, no exception thrown, logger.warn called"
+
+      - id: T-N-CW03
+        name: "On MERGE_FAIL path, git branch -D used (force delete)"
+        setup: "mergeVerdict = MERGE_FAIL; git branch -d exits non-zero; git branch -D exits 0"
+        expect: "git branch -D called as fallback"
+
+    extract_learnings:
+      - id: T-N-EL01
+        name: "QA lessons extracted and mapped to Learning[] format"
+        setup: >
+          qaVerify.lessons_to_record has 2 entries with categories time_sink and anti_pattern
+        expect: >
+          Learning[] contains 2 entries with categories time-sink and pattern (mapped),
+          plus operational learning entry. persistLearnings called with correct args.
+
+      - id: T-N-EL02
+        name: "kbWriteBackEnabled=false → KB write skipped, learningsPersisted=false"
+        setup: "kbWriteBackEnabled = false"
+        expect: "persistLearnings not called, learningsPersisted = false"
+
+      - id: T-N-EL03
+        name: "extract-learnings runs on MERGE_BLOCKED path"
+        setup: "mergeVerdict = MERGE_BLOCKED (from preconditions failure)"
+        expect: "extract-learnings node executes, KB write attempted"
+
+    write_merge_artifact:
+      - id: T-N-WA01
+        name: "MERGE.yaml written correctly for MERGE_COMPLETE"
+        setup: "mergeVerdict = MERGE_COMPLETE with prNumber, mergeCommitSha set"
+        expect: >
+          MERGE.yaml written to correct path with all required fields;
+          verdict = MERGE_COMPLETE, mergeComplete = true
+
+      - id: T-N-WA02
+        name: "MERGE.yaml written correctly for MERGE_FAIL"
+        setup: "mergeVerdict = MERGE_FAIL with error message"
+        expect: "MERGE.yaml written with verdict = MERGE_FAIL, error field set"
+
+      - id: T-N-WA03
+        name: "MERGE.yaml written correctly for MERGE_BLOCKED"
+        setup: "mergeVerdict = MERGE_BLOCKED with block_reason"
+        expect: "MERGE.yaml written with verdict = MERGE_BLOCKED, block_reason set"
+
+mocks_required:
+  - name: gitRunner
+    type: "injectable function"
+    signature: "(cmd: string, cwd: string) => Promise<{exitCode: number; stdout: string; stderr: string}>"
+    used_by: [rebase-branch, cleanup-worktree]
+
+  - name: ghRunner
+    type: "injectable function"
+    signature: "(args: string[], opts: SpawnOptions) => Promise<{exitCode: number; stdout: string; stderr: string}>"
+    used_by: [check-preconditions, create-or-update-pr, poll-ci, squash-merge]
+
+  - name: sleepFn
+    type: "injectable function"
+    signature: "(ms: number) => Promise<void>"
+    used_by: [poll-ci]
+    notes: "Capture call arguments to verify exponential back-off schedule"
+
+  - name: persistLearnings
+    type: "vi.mock"
+    target: "packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts"
+    used_by: [extract-learnings]
+
+  - name: yamlArtifactWriter
+    type: "vi.mock"
+    target: "packages/backend/orchestrator/src/persistence/yaml-artifact-writer.ts"
+    used_by: [write-merge-artifact]
+
+  - name: yamlArtifactReader
+    type: "vi.mock"
+    target: "packages/backend/orchestrator/src/persistence/yaml-artifact-reader.ts"
+    used_by: [check-preconditions]
+
+critical_invariant: >
+  Every test scenario — including MERGE_BLOCKED triggered at preconditions —
+  MUST verify that cleanup-worktree and write-merge-artifact nodes are reached.
+  This is the most important correctness invariant. Dangling worktrees are an
+  operational hazard. Verify via mock call assertions on gitRunner (for cleanup)
+  and yamlArtifactWriter (for MERGE.yaml).

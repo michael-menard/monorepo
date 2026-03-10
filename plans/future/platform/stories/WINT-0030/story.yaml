@@ -1,0 +1,52 @@
+---
+id: WINT-0030
+title: "Create Context Cache Tables"
+status: ready-to-work
+priority: P2
+epic: WINT
+feature: platform
+story_type: tech_debt
+points: 0
+experiment_variant: control
+
+created_at: "2026-02-14"
+updated_at: "2026-02-14T20:30:00Z"
+elaboration_completed_at: "2026-02-14T20:30:00Z"
+duplicate_of: WINT-0010
+
+surfaces:
+  backend: true
+  frontend: false
+  database: true
+  infra: false
+
+packages:
+  - "@repo/database-schema"
+  - "@repo/db"
+
+endpoints: []
+
+dependencies:
+  blocks:
+    - WINT-0100
+    - WINT-0110
+  blocked_by:
+    - WINT-0010
+
+tags:
+  - wint
+  - context-cache
+  - duplicate
+  - database-schema
+
+resolution:
+  type: duplicate
+  reason: "Context cache tables fully implemented in WINT-0010"
+  evidence:
+    - file: "packages/backend/database-schema/src/schema/wint.ts"
+      lines: "223-343"
+      description: "Complete context cache schema implementation"
+    - file: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+      description: "Test coverage for context cache tables (AC-003)"
+    - migration: "0015_messy_sugar_man.sql"
+      description: "Database migration creating context cache tables"

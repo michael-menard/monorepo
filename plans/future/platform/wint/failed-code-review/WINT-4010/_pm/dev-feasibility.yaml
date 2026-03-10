@@ -1,0 +1,163 @@
+feasible: true
+confidence: high
+rationale: |
+  WINT-4010 follows a well-established pattern — two prior sidecars (role-pack WINT-2010, context-pack WINT-2020)
+  demonstrate the exact Node.js node:http server structure, Zod validation approach, and injectable dependency
+  pattern required. The graph schema views (franken_features, capability_coverage) are already live from
+  WINT-0060/WINT-0131. The pnpm workspace glob auto-covers the new package. No new architecture decisions are
+  required — this is a pattern application story.
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/sidecars/cohesion/ (new package)"
+    - "packages/backend/mcp-tools/src/graph-query/__types__/ (read-only reference for type shapes)"
+  endpoints:
+    - "POST /cohesion/audit"
+    - "POST /cohesion/check"
+  deploy_touchpoints:
+    - "New sidecar package must be built and deployed alongside role-pack and context-pack"
+    - "PORT 3092 must be allocated in deployment environment (no conflict with 3090/3091)"
+
+risks:
+  - finding: "graph.franken_features and graph.capability_coverage views may not be accessible via @repo/database-schema if schema package doesn't export the view definitions"
+    mitigation: "Check packages/backend/database-schema/src/schema/wint.ts for view exports before implementing Drizzle queries; if views not exported, define Drizzle view references directly in sidecar's compute functions using schema import pattern from mcp-tools"
+
+  - finding: "FrankenFeatureItem and CapabilityCoverageOutput types from @repo/mcp-tools may not be exported from the package index"
+    mitigation: "Check packages/backend/mcp-tools/src/index.ts for exported types; if not present, define parallel Zod schemas in __types__/index.ts (do not add to mcp-tools package index in this story)"
+
+  - finding: "Empty graph state (before WINT-4030) must return graceful empty results not errors; AC-8 requirement"
+    mitigation: "computeAudit and computeCheck MUST handle empty Drizzle result sets; unit test with MockDbEmpty fixture is required before integration"
+
+missing_requirements: []
+
+evidence_expectations:
+  - "Unit tests for computeAudit with MockDbWithPopulatedGraph showing Franken-feature detection"
+  - "Unit tests for computeCheck showing complete/incomplete/unknown status branches all covered"
+  - "Unit tests for computeAudit with MockDbEmpty showing AC-8 graceful empty response"
+  - "Integration test: POST /cohesion/audit → HTTP 200 with valid JSON"
+  - "Integration test: POST /cohesion/check with valid featureId → HTTP 200 with valid JSON"
+  - "Integration test: POST /cohesion/check with missing featureId → HTTP 400"
+  - "Coverage report showing ≥80% branch coverage"
+  - "No console.log in source (grep or ESLint rule)"
+
+subtasks:
+  - id: ST-1
+    title: "Initialize cohesion sidecar package structure"
+    goal: "Create the package scaffold at packages/backend/sidecars/cohesion/ matching role-pack and context-pack structure"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/package.json"
+      - "packages/backend/sidecars/context-pack/tsconfig.json"
+      - "packages/backend/sidecars/context-pack/vitest.config.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/package.json (new)"
+      - "packages/backend/sidecars/cohesion/tsconfig.json (new)"
+      - "packages/backend/sidecars/cohesion/vitest.config.ts (new)"
+    acs: ["AC-1", "AC-13"]
+    depends_on: "none"
+    verification: "pnpm install --filter packages/backend/sidecars/cohesion && pnpm check-types --filter @repo/cohesion"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Define Zod schemas in src/__types__/index.ts"
+    goal: "Define all request/response schemas using Zod: CohesionAuditRequestSchema, CohesionAuditResultSchema, CohesionCheckRequestSchema, CohesionCheckResultSchema, and discriminated union HTTP response schemas"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/__types__/index.ts"
+      - "packages/backend/mcp-tools/src/graph-query/__types__/index.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/__types__/index.ts (new)"
+    acs: ["AC-7"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/cohesion"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Implement computeAudit pure function"
+    goal: "Create src/compute-audit.ts with computeAudit(db: DbDep): Promise<CohesionAuditResult> — queries graph.franken_features and graph.capability_coverage views via Drizzle; handles empty graph gracefully"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+      - "packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/compute-audit.ts (new)"
+    acs: ["AC-3", "AC-6", "AC-8"]
+    depends_on: "ST-2"
+    verification: "pnpm test --filter @repo/cohesion -- compute-audit"
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: "Implement computeCheck pure function"
+    goal: "Create src/compute-check.ts with computeCheck(db: DbDep, featureId: string): Promise<CohesionCheckResult> — queries feature-specific capability coverage, returns complete/incomplete/unknown status with violations array"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/graph-query/graph-check-cohesion.ts"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/compute-check.ts (new)"
+    acs: ["AC-4", "AC-6", "AC-8"]
+    depends_on: "ST-2"
+    verification: "pnpm test --filter @repo/cohesion -- compute-check"
+    estimated_tokens: 8000
+
+  - id: ST-5
+    title: "Implement HTTP route handlers"
+    goal: "Create src/routes/cohesion.ts with POST /cohesion/audit and POST /cohesion/check handlers — readBody, Zod validate, call compute functions, sendJson; both routes handle errors with { ok: false, error } pattern"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/routes/context-pack.ts"
+      - "packages/backend/sidecars/role-pack/src/http-handler.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/routes/cohesion.ts (new)"
+    acs: ["AC-3", "AC-4", "AC-5"]
+    depends_on: "ST-3, ST-4"
+    verification: "pnpm check-types --filter @repo/cohesion"
+    estimated_tokens: 7000
+
+  - id: ST-6
+    title: "Implement HTTP server (server.ts)"
+    goal: "Create src/server.ts using Node.js node:http — route dispatch to cohesion handlers, PORT from process.env.PORT defaulting to 3092, graceful error handling for unmatched routes (404)"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/server.ts"
+      - "packages/backend/sidecars/role-pack/src/server.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/server.ts (new)"
+    acs: ["AC-2", "AC-5"]
+    depends_on: "ST-5"
+    verification: "pnpm check-types --filter @repo/cohesion"
+    estimated_tokens: 5000
+
+  - id: ST-7
+    title: "Implement MCP tool wrappers and package entry point"
+    goal: "Create src/index.ts exporting cohesion_audit and cohesion_check MCP wrappers — each calls computeAudit/computeCheck (or HTTP endpoint) and returns typed results"
+    files_to_read:
+      - "packages/backend/sidecars/role-pack/src/index.ts"
+      - "packages/backend/sidecars/context-pack/src/index.ts"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/index.ts (new)"
+    acs: ["AC-9", "AC-12"]
+    depends_on: "ST-3, ST-4"
+    verification: "pnpm check-types --filter @repo/cohesion"
+    estimated_tokens: 4000
+
+  - id: ST-8
+    title: "Write unit tests for compute functions and route handlers"
+    goal: "Achieve ≥80% branch coverage — test computeAudit (populated graph, empty graph, packageName filter, DB error), computeCheck (complete/incomplete/unknown, DB error), route handlers (valid input, Zod failure, internal error)"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/__tests__/"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/__tests__/compute-audit.test.ts (new)"
+      - "packages/backend/sidecars/cohesion/src/__tests__/compute-check.test.ts (new)"
+      - "packages/backend/sidecars/cohesion/src/__tests__/routes.test.ts (new)"
+    acs: ["AC-10", "AC-12"]
+    depends_on: "ST-3, ST-4, ST-5"
+    verification: "pnpm test --filter @repo/cohesion --coverage"
+    estimated_tokens: 10000
+
+  - id: ST-9
+    title: "Write integration test for HTTP server"
+    goal: "Verify HTTP server starts on port 3092, accepts POST to /cohesion/audit and /cohesion/check with real node:http client, returns valid JSON — run with separate vitest config per --config /dev/null pattern"
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/__tests__/integration/"
+    files_to_modify:
+      - "packages/backend/sidecars/cohesion/src/__tests__/integration/server.integration.test.ts (new)"
+    acs: ["AC-11"]
+    depends_on: "ST-6"
+    verification: "node --test packages/backend/sidecars/cohesion/src/__tests__/integration/server.integration.test.ts or equivalent --config /dev/null pattern"
+    estimated_tokens: 6000

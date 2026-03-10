@@ -1,0 +1,9 @@
+reusability:
+  verdict: PASS
+  files_checked: 7
+  errors: 0
+  warnings: 0
+  findings: []
+  tokens:
+    in: 8500
+    out: 240

@@ -1,0 +1,75 @@
+feasible: true
+confidence: high
+rationale: "WINT-2070 delivers a single markdown skill file (.claude/skills/cache-warm/SKILL.md). No TypeScript, no migrations, no new packages. The four populate scripts already exist (or are in-flight); the skill only documents how to invoke them. Primary risk is WINT-2040's failed-code-review status, which is explicitly handled via the --skip option (AC-9). Complexity is low."
+complexity: low
+change_surface:
+  areas:
+    - ".claude/skills/cache-warm/ (new directory and SKILL.md)"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "WINT-2040 (agent-mission-cache-populator.ts) is failed-code-review; the script lives at packages/backend/database-schema/src/seed/ (not mcp-tools/src/scripts/), introducing a path inconsistency"
+    mitigation: "Skill must use the correct absolute path: pnpm tsx packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts. Document the path discrepancy in the skill. Implement --skip=agent-missions so the skill is fully usable before WINT-2040 resolves."
+  - finding: "Database port confusion (5432 vs 5433) is the #1 historical failure mode in WINT populate scripts"
+    mitigation: "AC-2 and AC-11 directly address this: skill must document DATABASE_URL (port 5432) and KB_DATABASE_URL (port 5433) with explicit precondition check. Port numbers must appear verbatim in the skill."
+missing_requirements: []
+evidence_expectations:
+  - "Skill file exists at .claude/skills/cache-warm/SKILL.md with valid frontmatter (name: cache-warm, description)"
+  - "Smoke test: run /cache-warm from clean context_packs state; SELECT count(*) FROM wint.context_packs >= 13 rows"
+  - "Manual verification: --skip=agent-missions flag works; 3/4 scripts complete successfully"
+  - "Manual verification: skill instructions are parseable and executable by an LLM agent (test by reading and following)"
+subtasks:
+  - id: ST-1
+    title: "Read canonical skill format references"
+    goal: "Understand the established .claude/skills/*/SKILL.md format before authoring cache-warm"
+    files_to_read:
+      - ".claude/skills/lint-fix/SKILL.md"
+      - ".claude/skills/session-create/SKILL.md"
+      - ".claude/skills/next-actions/SKILL.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-10"]
+    depends_on: none
+    verification: "No output — read-only orientation step"
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Verify populate script paths and invocation commands"
+    goal: "Confirm exact pnpm tsx paths for all 4 populate scripts before writing skill"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+      - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+      - "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+      - "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+    files_to_modify: []
+    acs: ["AC-3", "AC-4", "AC-5", "AC-6"]
+    depends_on: none
+    verification: "All 4 script paths confirmed; agent-mission path at database-schema/src/seed/ (not mcp-tools) documented"
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: "Create .claude/skills/cache-warm/SKILL.md"
+    goal: "Author the cache-warm skill file following the lint-fix/SKILL.md format with all 11 ACs addressed"
+    files_to_read:
+      - ".claude/skills/lint-fix/SKILL.md"
+      - ".claude/skills/session-create/SKILL.md"
+    files_to_modify:
+      - ".claude/skills/cache-warm/SKILL.md"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10", "AC-11"]
+    depends_on: "ST-1, ST-2"
+    verification: "File exists at .claude/skills/cache-warm/SKILL.md; frontmatter valid; all 6 phases present; --skip option documented; env vars documented with port numbers"
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: "Smoke test: run /cache-warm in dev environment"
+    goal: "Verify skill instructions are executable and produce expected cache state"
+    files_to_read:
+      - ".claude/skills/cache-warm/SKILL.md"
+    files_to_modify: []
+    acs: ["AC-7", "AC-8", "AC-10", "AC-11"]
+    depends_on: "ST-3"
+    verification: "SELECT count(*) FROM wint.context_packs >= 13 after full warm; --skip=agent-missions produces 3/4 summary; precondition check detects missing DATABASE_URL"
+    estimated_tokens: 5000
+
+follow_on_opportunities:
+  - "Extract shared populate-utils.ts module (readDoc, extractSections, PopulateResultSchema) from 4 populate scripts — 4 scripts now exist, threshold reached per WINT-2060 lesson"
+  - "WINT-2080 (context-warmer agent) will consume this skill — ensure skill's summary output format is machine-parseable before WINT-2080 authoring"

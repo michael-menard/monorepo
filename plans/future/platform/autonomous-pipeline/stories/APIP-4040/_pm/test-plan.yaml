@@ -1,0 +1,211 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "AssertionDensityCollector returns correct ratio for fixture test files"
+    setup: "Create __tests__/fixtures/density/ with 2 test files: one containing 3 test cases and 9 assertion calls, another with 2 test cases and 4 assertion calls"
+    action: "Call AssertionDensityCollector pointing to the fixture directory"
+    expected: "Returns { assertionCount: 13, testCount: 5, densityRatio: 2.6 } as Zod-validated object"
+    evidence: "vitest unit test asserting exact counts and densityRatio value; schema parse must succeed"
+
+  - id: HP-2
+    title: "OrphanedTestDetector identifies orphaned test file"
+    setup: "Create __tests__/fixtures/orphan/ with a test file (foo.test.ts) that has no corresponding source file foo.ts in the same directory tree"
+    action: "Call OrphanedTestDetector pointing to the fixture directory"
+    expected: "Returns { orphanedFiles: ['...foo.test.ts'], count: 1 } as Zod-validated object"
+    evidence: "vitest unit test asserting orphanedFiles contains the expected path and count === 1"
+
+  - id: HP-3
+    title: "OrphanedTestDetector does not flag test files with valid source counterparts"
+    setup: "Create __tests__/fixtures/orphan/ with test file bar.test.ts AND corresponding source file bar.ts"
+    action: "Call OrphanedTestDetector pointing to the fixture directory"
+    expected: "Returns { orphanedFiles: [], count: 0 }"
+    evidence: "vitest unit test asserting empty orphanedFiles array"
+
+  - id: HP-4
+    title: "decayDetector reports no decay when all metrics above threshold"
+    setup: "Create previousSnapshot with assertionDensity=2.5, mutationScore=0.70, criticalPathCoverageMin=0.85, orphanedTestCount=0; currentSnapshot with assertionDensity=2.4, mutationScore=0.65, criticalPathCoverageMin=0.82, orphanedTestCount=1"
+    action: "Call decayDetector with both snapshots and default config thresholds"
+    expected: "Returns { decayed: false, regressions: [] } — all metrics still above thresholds"
+    evidence: "vitest unit test asserting decayed===false and regressions array is empty"
+
+  - id: HP-5
+    title: "decayDetector reports decay when mutation score drops below threshold"
+    setup: "Create previousSnapshot with mutationScore=0.65; currentSnapshot with mutationScore=0.50; threshold configured at 0.60"
+    action: "Call decayDetector with the snapshot pair"
+    expected: "Returns { decayed: true, regressions: [{ metric: 'mutationScore', previous: 0.65, current: 0.50, threshold: 0.60 }] }"
+    evidence: "vitest unit test asserting decayed===true and regressions contains the mutation score entry"
+
+  - id: HP-6
+    title: "generateTestImprovementStory produces StoryArtifactSchema-valid YAML"
+    setup: "Prepare regression details: [{ metric: 'mutationScore', previous: 0.65, current: 0.50, threshold: 0.60 }]"
+    action: "Call generateTestImprovementStory with the regression details"
+    expected: "Returns YAML string that parses successfully against StoryArtifactSchema; title contains 'Test Quality Decay: Mutation Score'"
+    evidence: "vitest unit test: parse output with StoryArtifactSchema.parse(), assert no ZodError thrown, assert title field matches expected pattern"
+
+  - id: HP-7
+    title: "TestQualityMonitorConfigSchema applies correct default values"
+    setup: "No environment variables set"
+    action: "Parse empty config object with TestQualityMonitorConfigSchema using .default() or safeparse with empty input"
+    expected: "assertionDensityThreshold=2.0, mutationScoreTarget=0.60, criticalPathCoverageFloor=0.80, mutationTimeoutMs=300000, weeklyScheduleExpression='0 3 * * 1'"
+    evidence: "vitest unit test asserting each default field value"
+
+  - id: HP-8
+    title: "CronRunResult is logged with correct fields on successful run"
+    setup: "vi.mock('@repo/logger'); set up test quality monitor cron job with mocked collectors returning healthy metrics"
+    action: "Invoke cron job handler directly"
+    expected: "logger.info called with object containing jobName:'test-quality-monitor', status:'success', startedAt, completedAt, durationMs fields"
+    evidence: "vitest unit test asserting logger.info was called with matching CronRunResultSchema fields"
+
+  - id: HP-9
+    title: "MutationScoreCollector falls back to 0.0 when no prior score and timeout occurs"
+    setup: "vi.useFakeTimers(); configure mutationTimeoutMs=100; no prior snapshot in store"
+    action: "Call MutationScoreCollector for a sampled package; advance timers to trigger timeout"
+    expected: "Returns { packageResults: [{ package: '...', score: 0.0, timeoutOccurred: true }], aggregateScore: 0.0 }; does not throw"
+    evidence: "vitest unit test using vi.useFakeTimers() and vi.advanceTimersByTime(), assert timeoutOccurred===true and no exception propagated"
+
+error_cases:
+  - id: EC-1
+    title: "AssertionDensityCollector handles empty fixture directory (no test files)"
+    setup: "Create empty __tests__/fixtures/empty-density/ with no .test.ts files"
+    action: "Call AssertionDensityCollector pointing to the empty directory"
+    expected: "Returns { assertionCount: 0, testCount: 0, densityRatio: 0 } without throwing"
+    evidence: "vitest unit test asserting all counts are zero and no exception thrown"
+
+  - id: EC-2
+    title: "decayDetector handles missing previous snapshot (first run)"
+    setup: "Provide currentSnapshot only; previousSnapshot is null or undefined"
+    action: "Call decayDetector with no previousSnapshot"
+    expected: "Returns { decayed: false, regressions: [] } — no comparison possible on first run"
+    evidence: "vitest unit test asserting decayed===false and no exception thrown"
+
+  - id: EC-3
+    title: "MutationScoreCollector uses last known score from snapshot store on timeout"
+    setup: "vi.useFakeTimers(); prior snapshot in store has mutationScore=0.65 for the package; configure mutationTimeoutMs=100"
+    action: "Call MutationScoreCollector; advance timers to trigger timeout"
+    expected: "Returns timeoutOccurred:true, score:0.65 (from prior snapshot); does not throw"
+    evidence: "vitest unit test asserting score matches prior snapshot value and timeoutOccurred===true"
+
+  - id: EC-4
+    title: "CronRunResult is logged with status:failure when collector throws"
+    setup: "vi.mock('@repo/logger'); mock AssertionDensityCollector to throw an Error"
+    action: "Invoke cron job handler"
+    expected: "logger.error or logger.warn called with status:'failure' and error field populated; cron job does not crash process"
+    evidence: "vitest unit test asserting logger call with status===failure and error field non-null"
+
+  - id: EC-5
+    title: "Snapshot insert failure does not block cron run (fire-and-forget)"
+    setup: "Mock DB insert to reject with an error"
+    action: "Invoke cron job handler; DB insert throws"
+    expected: "Warning logged via @repo/logger; CronRunResult status:'success' (cron run still completes); no exception propagated"
+    evidence: "vitest unit test asserting logger.warn called and returned status===success"
+
+  - id: EC-6
+    title: "generateTestImprovementStory does not produce invalid YAML on empty regressions"
+    setup: "Pass empty regressions array to generateTestImprovementStory"
+    action: "Call generateTestImprovementStory with empty input"
+    expected: "Returns valid YAML string that parses against StoryArtifactSchema, even if minimal content"
+    evidence: "vitest unit test: StoryArtifactSchema.parse() succeeds without throwing ZodError"
+
+edge_cases:
+  - id: ED-1
+    title: "AssertionDensityCollector counts nested assertion patterns correctly"
+    setup: "Create fixture test file with assertions inside beforeEach, nested describe blocks, and custom assertion wrappers using expect()"
+    action: "Call AssertionDensityCollector on the fixture"
+    expected: "All expect( invocations are counted regardless of nesting depth"
+    evidence: "vitest unit test asserting total assertionCount matches sum of all expect() calls in fixture"
+
+  - id: ED-2
+    title: "OrphanedTestDetector ignores files in fixtures/ and __types__/ directories"
+    setup: "Create fixture directory with test files inside __tests__/fixtures/ subdirectory (these are fixture files, not real tests)"
+    action: "Call OrphanedTestDetector"
+    expected: "Files inside fixtures/ and __types__/ subdirectories are not flagged as orphaned"
+    evidence: "vitest unit test asserting orphanedFiles does not include any path containing /fixtures/ or /__types__/"
+
+  - id: ED-3
+    title: "decayDetector detects multiple simultaneous regressions"
+    setup: "currentSnapshot has both mutationScore and assertionDensity below thresholds"
+    action: "Call decayDetector"
+    expected: "Returns { decayed: true, regressions: [...] } with 2 entries — one per regressed metric"
+    evidence: "vitest unit test asserting regressions.length === 2 and both metrics present"
+
+  - id: ED-4
+    title: "TestQualityMonitorConfigSchema env var DISABLE_CRON_JOB_TEST_QUALITY_MONITOR=true skips run"
+    setup: "Set process.env.DISABLE_CRON_JOB_TEST_QUALITY_MONITOR = 'true'"
+    action: "Invoke cron job handler"
+    expected: "Returns CronRunResult with status:'skipped'; no collectors are invoked"
+    evidence: "vitest unit test asserting status===skipped and collector mocks are never called"
+
+  - id: ED-5
+    title: "criticalPathCoverageFloor regression triggers improvement story generation"
+    setup: "currentSnapshot has belowFloorModules: ['src/auth/index.ts'] with lineCoverage: 0.72 (below default floor of 0.80)"
+    action: "Call decayDetector then conditionally call generateTestImprovementStory on decay"
+    expected: "Decay is detected; generated story YAML references the specific module and coverage floor breach"
+    evidence: "vitest unit test asserting story title contains 'Coverage' or 'critical path'; StoryArtifactSchema parse succeeds"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "AssertionDensityResultSchema.parse(result) — no ZodError"
+      - "OrphanedTestResultSchema.parse(result) — no ZodError"
+      - "DecayResultSchema.parse(result) — no ZodError"
+      - "CronRunResultSchema.parse(loggedPayload) — no ZodError"
+      - "StoryArtifactSchema.parse(generatedYaml) — no ZodError"
+      - "TestQualitySnapshotSchema.parse(snapshot) — no ZodError"
+  frontend: ~
+
+manual_cases:
+  - id: MC-1
+    title: "DB migration creates wint.test_quality_snapshots table"
+    steps:
+      - "Run APIP-5007 migration runner against test database"
+      - "Verify wint.test_quality_snapshots table exists with correct columns (id, snapshotAt, assertionDensityRatio, mutationScore, orphanedTestCount, criticalPathCoverageMin, belowFloorModules, status, createdAt)"
+      - "Verify column types (uuid, timestamp, numeric, numeric, integer, numeric, jsonb, varchar, timestamp)"
+    expected: "Table exists with correct schema; insert of a valid TestQualitySnapshot row succeeds"
+  - id: MC-2
+    title: "Cron job integration with APIP-3090 CronJobRegistry"
+    steps:
+      - "After APIP-3090 is merged, import registerCronJobs and buildCronRegistry"
+      - "Verify test-quality-monitor appears in the registered job list"
+      - "Verify scheduleExpression is '0 3 * * 1'"
+      - "Verify timeoutMs is 1800000"
+    expected: "Job registered and visible in cron registry; schedule expression correct"
+  - id: MC-3
+    title: "MutationScoreCollector integration against real vitest package (manual, compute-expensive)"
+    steps:
+      - "Configure MUTATION_TEST_PACKAGES to target a single small package"
+      - "Run MutationScoreCollector with real vitest-stryker or equivalent"
+      - "Observe score output and timeout behavior"
+    expected: "Collector returns valid score; timeoutMs enforced; no process hang"
+
+fixture_definitions:
+  - name: "density-fixture-files"
+    type: "directory"
+    description: "__tests__/fixtures/density/ containing 2 synthetic .test.ts files with known assertion and test case counts for AssertionDensityCollector unit tests"
+  - name: "orphan-fixture-files"
+    type: "directory"
+    description: "__tests__/fixtures/orphan/ containing one orphaned .test.ts (no source file) and one paired .test.ts with source, for OrphanedTestDetector unit tests"
+  - name: "snapshot-pair-healthy"
+    type: "object"
+    description: "Pair of TestQualitySnapshot objects where all metrics are above thresholds — used for decayDetector no-decay path"
+  - name: "snapshot-pair-mutation-decay"
+    type: "object"
+    description: "Pair of TestQualitySnapshot objects where mutationScore drops from 0.65 to 0.50 — used for decayDetector decay path"
+  - name: "regression-details-mutation"
+    type: "object"
+    description: "Array of regression detail objects for generateTestImprovementStory schema validation tests"
+  - name: "mock-logger"
+    type: "vi.mock"
+    description: "vi.mock('@repo/logger') setup — captures all logger.info / logger.warn / logger.error calls for CronRunResult assertion tests"
+
+risks:
+  - "MutationScoreCollector timeout tests depend on vi.useFakeTimers() cooperating with withTimeout implementation — if withTimeout uses real Date.now internally, fake timers may not apply; verify withTimeout is compatible with vitest fake timers"
+  - "AssertionDensityCollector regex-based counting may over- or under-count if custom assertion wrappers are used; fixture files must reflect real orchestrator test patterns to avoid false baselines"
+  - "AC-9 (DB migration) cannot be unit-tested; integration test is manual-only until APIP-5007 runner is available"
+  - "AC-10 (cron registration) cannot be integration-tested until APIP-3090 merges; InMemoryCronAdapter covers unit path only"
+  - "StoryArtifactSchema may change if a sibling story modifies the artifact schema — tests must import schema from the canonical location to stay in sync"

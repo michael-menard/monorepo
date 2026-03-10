@@ -59,6 +59,7 @@ From orchestrator context:
 
 1. **Scan Feature Directories**
    ```
+   **KB-first**: Call `kb_list_stories({ feature: FEATURE_NAME })` for authoritative story states. Fallback: if KB is unavailable, scan filesystem:
    plans/future/*/stories.index.md
    ```
    - Identify stories with `status: completed` or `status: uat`

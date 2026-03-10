@@ -1,0 +1,56 @@
+schema: 1
+story_id: APIP-5000
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "apps/api/autonomous-pipeline/**"
+  - "packages/backend/orchestrator/src/artifacts/**"
+  - "apps/api/knowledge-base/vitest.config.ts"
+  - "packages/tools/rate-limit/src/__tests__/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Create test infrastructure for autonomous-pipeline: vitest config, BullMQ/supervisor fixture factories with Zod validation, vi.fn() mocks, and integration smoke test"
+
+elaboration: "completed"
+
+technical_scope:
+  - "apps/api/autonomous-pipeline package scaffold (if not from APIP-0010)"
+  - "vitest.config.ts with v8 coverage and 45% global thresholds"
+  - "createMockBullMQJob(overrides?) fixture factory with Zod validation"
+  - "createMockBullMQWorker() and createMockQueue() vi.fn() mock factories"
+  - "createSupervisorStateFixture(overrides?) with Zod validation"
+  - "supervisor-smoke.test.ts integration test with mocked BullMQ"
+  - "Zod-first types, no barrel files, JSDoc comments required"
+
+dependencies:
+  - APIP-0010
+  - APIP-0020
+
+acceptance_criteria_count: 10
+
+constraints:
+  - "Use Zod schemas for all types (z.infer<> return types required)"
+  - "No barrel files in __fixtures__/ or __mocks__/"
+  - "Use @repo/logger, not console"
+  - "Minimum 45% test coverage globally"
+  - "Named exports preferred"
+  - "Import schemas from APIP-0010/APIP-0020 production packages, not local copies"
+  - "No LangGraph mocking (deferred to Phase 1)"
+  - "TypeScript strict mode required"
