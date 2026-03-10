@@ -267,7 +267,6 @@ kb_get_story({ story_id: "{STORY_ID}" })
 kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
 ```
 
-**Platform index note:** When `platform_index_path` is provided in context (i.e., the story was auto-picked from the platform index), the **orchestrator** (pm-story.md Step 5) handles updating `platform.stories.index.md` after the leader returns `PM COMPLETE`. The leader does NOT need to update the platform index.
 
 ### Phase 5.5: Create Worktree (Pre-provision for Dev)
 
