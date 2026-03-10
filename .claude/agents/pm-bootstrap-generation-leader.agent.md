@@ -70,15 +70,6 @@ created: "{ISO timestamp}"
 
 Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
 
-### Stories Index (File Mode only)
-
-File: `{feature_dir}/stories.index.md`
-
-Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md`. Populate:
-- Progress Summary table
-- Per-phase story listing with IDs, titles, dependencies, status
-- Metrics summary
-
 ## KB Stories Insert (Full)
 
 Insert all story data into **5 tables** in order. Run all steps as a single `psql` invocation writing to a temp SQL file, wrapped in a transaction. Non-blocking — if DB is unavailable, log a warning and continue.
@@ -147,7 +138,7 @@ The `summary` JSONB stores per-story analysis fields from Phase 1: `goal`, `feat
 
 ## No Stage Directories
 
-Do NOT create `backlog/`, `elaboration/`, `ready-to-work/`, `in-progress/`, or `UAT/` directories, `story.yaml` files, or `stories.index.md`. All story data is written to the DB in KB Mode.
+Do NOT create `backlog/`, `elaboration/`, `ready-to-work/`, `in-progress/`, or `UAT/` directories, `story.yaml` files, `stories.index.md`, or any other status-tracking artifacts. All story data is written to the DB in KB Mode. File Mode creates story scaffold files only in flat `{feature_dir}/{story_id}/` directories.
 
 ## Output
 

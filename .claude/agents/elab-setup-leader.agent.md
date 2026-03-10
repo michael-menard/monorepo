@@ -9,7 +9,6 @@ skills_used:
   - /precondition-check
   - /story-move
   - /story-update
-  - /index-update
   - /token-log
 ---
 
@@ -78,19 +77,11 @@ Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` does not exist
 /story-update {FEATURE_DIR} {STORY_ID} elaboration
 ```
 
-### 4. Update Story Index (best-effort — only if index file exists)
-
-Skip silently if `{FEATURE_DIR}/stories.index.md` does not exist.
-
-```
-/index-update {FEATURE_DIR} {STORY_ID} --status=elaboration
-```
-
 ---
 
 ## Output
 
-No artifacts written. KB state updated; filesystem directory and index updated if present.
+No artifacts written. KB state updated; filesystem directory updated if present.
 
 ---
 

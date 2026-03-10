@@ -4,16 +4,16 @@ updated: 2026-03-05
 version: 4.4.0
 type: leader
 permission_level: orchestrator
-triggers: ["/pm-story generate"]
+triggers: ['/pm-story generate']
 name: pm-story-generation-leader
 description: Orchestrate workers to produce complete, implementable stories
 model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
-  - kb_search
+  - kb_list_stories
   - kb_read_artifact
+  - kb_update_story
   - kb_write_artifact
-  - mcp__postgres-knowledgebase__query
   - worktree_register
 skills_used:
   - /wt:new
@@ -29,27 +29,27 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 ## Knowledge Base Integration
 
-| Trigger | Query Pattern |
-|---------|--------------|
-| Starting story | `kb_search({ query: "story generation patterns", role: "pm", limit: 3 })` |
+| Trigger           | Query Pattern                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Starting story    | `kb_search({ query: "story generation patterns", role: "pm", limit: 3 })`                    |
 | Sizing estimation | `kb_search({ query: "{domain} story sizing lessons", tags: ["sizing-insights"], limit: 3 })` |
 
 ---
 
 ## Workers
 
-| Worker | Agent File | Output | Condition |
-|--------|------------|--------|-----------|
-| Test Plan Writer | `pm-draft-test-plan.agent.md` | (inline) | Always |
-| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | (inline) | Always (skipped:true if no UI) |
-| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | (inline) | Always |
-| Risk Predictor | `pm-story-risk-predictor.agent.md` | predictions YAML (inline) | Always (WKFL-007) |
+| Worker           | Agent File                           | Output                    | Condition                      |
+| ---------------- | ------------------------------------ | ------------------------- | ------------------------------ |
+| Test Plan Writer | `pm-draft-test-plan.agent.md`        | (inline)                  | Always                         |
+| UI/UX Advisor    | `pm-uiux-recommendations.agent.md`   | (inline)                  | Always (skipped:true if no UI) |
+| Dev Feasibility  | `pm-dev-feasibility-review.agent.md` | (inline)                  | Always                         |
+| Risk Predictor   | `pm-story-risk-predictor.agent.md`   | predictions YAML (inline) | Always (WKFL-007)              |
 
 ---
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`) -- Note: KB (`kb_get_story` / `kb_list_stories`) is the authoritative source for story state; index file is fallback.
+- Story ID (used to query KB via `kb_get_story` / `kb_list_stories`)
 - Story ID
 - Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
 
@@ -57,7 +57,24 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 ## Execution Flow
 
-### Phase 0: Setup and Load Seed
+### Phase 0: Story Discovery (KB-First)
+
+If no `story_id` is provided in context, discover stories awaiting generation via `kb_list_stories`:
+
+```javascript
+const candidates = await kb_list_stories({
+  feature: '{FEATURE_FILTER}', // e.g., "wish", "kb-first-migration"
+  state: 'Pending', // stories waiting for generation
+  limit: 10,
+})
+```
+
+Select the first candidate story. If multiple stories available, pick the oldest (lowest created_at).
+
+If `story_id` IS provided, skip discovery and load directly.
+
+### Phase 0.1: Load Seed
+
 1. Load seed — KB-first, fallback to filesystem:
    1. Try: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "story_seed" })`
    2. If KB has the artifact: use `content.seed_text` as the seed content; extract `reality_context`, `retrieved_context`, `conflicts` from `content`
@@ -68,23 +85,37 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 4. Create directory structure: `{OUTPUT_DIR}/`
 
 ### Phase 0.5: Collision Detection
-Check if story directory already exists. If collision:
+
+Check if story already exists in KB. If collision:
+
 - Auto-resolved "next": skip to next eligible
 - Explicit ID: `PM FAILED: Story ID already exists`
 
-### Phase 0.6: Claim Story in Index (REQUIRED — FIRST WRITE)
-
-Immediately update the index to prevent parallel generation windows from picking up the same story.
-
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Created
+```javascript
+const existing = await kb_get_story({ story_id: STORY_ID })
+if (existing) → collision
 ```
 
-This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken and skip to the next eligible story.
+### Phase 0.6: Claim Story in KB (REQUIRED — FIRST WRITE)
 
-If story generation later fails (PM BLOCKED / PM FAILED), the status should be reverted:
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+Immediately create a KB stub record to prevent parallel generation windows from picking up the same story.
+
+```javascript
+kb_create_story({
+  story_id: STORY_ID,
+  title: '{provisional title}',
+  state: 'backlog',
+  phase: 'planning',
+  description: 'Story generation in progress — do not pick up',
+})
+```
+
+This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken (via `kb_get_story`) and skip to the next eligible story.
+
+If story generation later fails (PM BLOCKED / PM FAILED), update the KB state:
+
+```javascript
+kb_update_story_status({ story_id: STORY_ID, state: 'cancelled' })
 ```
 
 ### Phase 0.5a: Experiment Variant Assignment (WKFL-008)
@@ -92,6 +123,7 @@ If story generation later fails (PM BLOCKED / PM FAILED), the status should be r
 Assign story to experiment variant based on active experiments.
 
 **Algorithm**:
+
 ```
 1. Try to load and parse .claude/config/experiments.yaml
 2. If file missing or malformed:
@@ -119,11 +151,12 @@ Assign story to experiment variant based on active experiments.
 ```
 
 **Complexity Heuristic**:
+
 ```javascript
 function matchComplexity(story, targetComplexity) {
   const acCount = story.acceptance_criteria.length
   const scope = story.scope_description.toLowerCase()
-  
+
   // Determine actual complexity
   let actualComplexity
   if (acCount <= 2) {
@@ -133,19 +166,20 @@ function matchComplexity(story, targetComplexity) {
   } else {
     actualComplexity = 'medium'
   }
-  
+
   return actualComplexity === targetComplexity
 }
 ```
 
 **Eligibility Checking**:
+
 ```javascript
 function isEligible(story, eligibility) {
   // Special case: match all
   if (eligibility.all === true) return true
-  
+
   const acCount = story.acceptance_criteria.length
-  
+
   // AC count filters
   if (eligibility.ac_count_max && acCount > eligibility.ac_count_max) {
     return false
@@ -153,24 +187,25 @@ function isEligible(story, eligibility) {
   if (eligibility.ac_count_min && acCount < eligibility.ac_count_min) {
     return false
   }
-  
+
   // Complexity filter
   if (eligibility.complexity && !matchComplexity(story, eligibility.complexity)) {
     return false
   }
-  
+
   // Domain filter
   if (eligibility.domain && eligibility.domain.length > 0) {
     if (!eligibility.domain.includes(story.epic)) {
       return false
     }
   }
-  
+
   return true
 }
 ```
 
 **Error Handling**:
+
 - experiments.yaml missing → default to "control", log warning
 - experiments.yaml malformed → default to "control", log error
 - No active experiments → default to "control"
@@ -178,19 +213,23 @@ function isEligible(story, eligibility) {
 - Story assigned to first matching experiment only (no double-assignment)
 
 **Output**:
+
 - `experiment_variant` variable set to experiment.id or "control"
 - This value will be included in story.yaml frontmatter in Phase 4
 - Cross-reference: dev-documentation-leader.agent.md Step 5 reads this value from story.yaml and propagates it to OUTCOME.yaml
 
 ### Phase 1-3: Spawn Workers (PARALLEL)
+
 Spawn all workers in SINGLE message. For patterns, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
 
 Wait for workers with TaskOutput. Check each worker output for blockers.
 
 ### Phase 4: Synthesize Story
+
 Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
 **Goal / Examples / Edge Cases** (clarity format — REQUIRED):
+
 - Write `## Goal` section: one sentence describing what the feature/change accomplishes from a user or system perspective
 - Write `## Examples` section: 2+ concrete input/output pairs (e.g., "Given X, the system produces Y") that illustrate the happy path
 - Write `## Edge Cases` section: 2+ scenarios covering boundary or failure conditions (e.g., missing input, invalid state, empty results)
@@ -199,11 +238,13 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 - If content cannot be synthesized (e.g., seed is ambiguous), log a warning and write placeholder text — do NOT block story generation
 
 **Canonical References** (from seed Phase 2.5):
+
 - Read `## Canonical References` from STORY-SEED.md
 - Include as `## Canonical References` section in story file
 - These references flow into each subtask for dev agent context
 
 **Subtask Decomposition** (from dev-feasibility worker):
+
 - Read `subtasks[]` from Dev Feasibility worker TaskOutput
 - Include as `## Subtasks` section in story file
 - Cross-reference: every AC must be covered by at least one subtask
@@ -212,6 +253,7 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
 **PM Artifacts (pm_artifacts section)**:
 Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
+
 - Read Test Plan Writer TaskOutput → `pm_artifacts.test_plan`
 - Read Dev Feasibility worker TaskOutput → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
 - Read UI/UX Advisor TaskOutput → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
@@ -222,10 +264,10 @@ Include `experiment_variant` field in story.yaml frontmatter:
 ```yaml
 ---
 id: WISH-2068
-title: "Story title"
+title: 'Story title'
 status: backlog
 priority: P2
-experiment_variant: "exp-fast-track"  # or "control"
+experiment_variant: 'exp-fast-track' # or "control"
 ...
 ---
 ```
@@ -238,34 +280,36 @@ For required sections, read: `.claude/agents/_reference/patterns/pm-spawn-patter
 
 After story file is written, persist to knowledge base for searchability.
 
-**Write to stories table:**
-```sql
-INSERT INTO stories (
-  story_id, feature, title, story_dir, story_file, story_type,
-  points, priority, state, touches_backend, touches_frontend,
-  touches_database, touches_infra
-) VALUES (...)
-ON CONFLICT (story_id) DO UPDATE SET ...
+**Write to stories table via kb_update_story:**
+
+```javascript
+await kb_update_story({
+  story_id: '{STORY_ID}',
+  description: '{story description extracted from story file}',
+  acceptance_criteria: {
+    /* extracted ACs as JSON object */
+  },
+  non_goals: ['{non-goal 1}', '{non-goal 2}'],
+  // Note: kb_update_story performs upsert - creates if not exists, updates if exists
+})
 ```
 
 **Fields to extract from story:**
+
 - `story_id`: From story file (e.g., WISH-2068)
-- `feature`: From index path (e.g., "wish" from plans/future/wish/)
-- `title`: Story title
-- `story_dir`: Relative path to story directory
-- `story_type`: "feature" | "bug" | "spike" | "chore" | "tech_debt"
-- `points`: Story points estimate
-- `priority`: "critical" | "high" | "medium" | "low"
-- `state`: "backlog" (initial state)
-- `touches_*`: Derive from story scope/surfaces
+- `description`: Story description section
+- `acceptance_criteria`: Acceptance criteria as JSON object
+- `non_goals`: Array of non-goal strings
 
 **Fallback behavior:**
+
 - If KB unavailable: Log warning, continue without KB write
 - Queue failed writes to `DEFERRED-KB-WRITES.yaml` in story dir for later retry
 
 ### Phase 5: Verify Index Status
 
 Index was already claimed in Phase 0.6. Verify the status is still `Created`. If story generation failed and was not caught earlier, revert:
+
 ```bash
 /index-update {INDEX_PATH} {STORY_ID} --status=Pending
 ```
@@ -285,22 +329,22 @@ Pre-create the worktree so it's ready when dev starts implementation.
 
 ## Quality Gates
 
-| Gate | Check |
-|------|-------|
-| Seed integrated | Story incorporates seed context |
-| No blocking conflicts | All conflicts resolved |
-| Index fidelity | Scope matches index exactly |
-| Reuse-first | Existing packages preferred |
-| Test plan present | Synthesized into story |
-| ACs verifiable | Every AC can be tested |
-| Experiment variant assigned | Field present in story frontmatter (WKFL-008) |
-| Goal section present | Story includes `## Goal` (1 sentence) before `## Acceptance Criteria` (SHOULD — warn if missing) |
-| Examples section present | Story includes `## Examples` (2+ input/output pairs) before `## Acceptance Criteria` (SHOULD — warn if missing) |
-| Edge Cases section present | Story includes `## Edge Cases` (2+ scenarios) before `## Acceptance Criteria` (SHOULD — warn if missing) |
-| Canonical references present | Story includes `## Canonical References` from seed (SHOULD — non-blocking) |
-| Subtasks present | Story includes `## Subtasks` from dev-feasibility (SHOULD — non-blocking) |
-| AC-subtask coverage | Every AC is covered by at least one subtask (SHOULD — warn if gaps) |
-| Worktree pre-provisioned | Worktree created and registered for dev (SHOULD — non-blocking) |
+| Gate                         | Check                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Seed integrated              | Story incorporates seed context                                                                                 |
+| No blocking conflicts        | All conflicts resolved                                                                                          |
+| Index fidelity               | Scope matches index exactly                                                                                     |
+| Reuse-first                  | Existing packages preferred                                                                                     |
+| Test plan present            | Synthesized into story                                                                                          |
+| ACs verifiable               | Every AC can be tested                                                                                          |
+| Experiment variant assigned  | Field present in story frontmatter (WKFL-008)                                                                   |
+| Goal section present         | Story includes `## Goal` (1 sentence) before `## Acceptance Criteria` (SHOULD — warn if missing)                |
+| Examples section present     | Story includes `## Examples` (2+ input/output pairs) before `## Acceptance Criteria` (SHOULD — warn if missing) |
+| Edge Cases section present   | Story includes `## Edge Cases` (2+ scenarios) before `## Acceptance Criteria` (SHOULD — warn if missing)        |
+| Canonical references present | Story includes `## Canonical References` from seed (SHOULD — non-blocking)                                      |
+| Subtasks present             | Story includes `## Subtasks` from dev-feasibility (SHOULD — non-blocking)                                       |
+| AC-subtask coverage          | Every AC is covered by at least one subtask (SHOULD — warn if gaps)                                             |
+| Worktree pre-provisioned     | Worktree created and registered for dev (SHOULD — non-blocking)                                                 |
 
 ---
 
@@ -328,18 +372,18 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
 ## Non-Negotiables
 
-| Rule | Description |
-|------|-------------|
-| Read seed file | MUST load seed KB-first (`kb_read_artifact`), fallback to {SEED_PATH} filesystem |
-| Pass seed context | To all workers |
-| Protected features | Do not modify seed's protected_features |
-| Experiment assignment | MUST assign variant in Phase 0.5a (WKFL-008) |
-| First match wins | Story in ONE experiment only (WKFL-008) |
-| Graceful degradation | Workflow continues if experiments.yaml unavailable (WKFL-008) |
-| KB persistence | MUST write story to KB after synthesis (Phase 4.5) |
-| Claim early | MUST call /index-update --status=Created in Phase 0.6 before workers |
-| Revert on failure | MUST revert index to Pending if generation fails |
-| Token log | MUST call before completion |
-| Parallel spawn | Single message for all workers |
-| Quality gates | Verify all before emitting story |
-| Worktree pre-provision | SHOULD create worktree in Phase 5.5 (failure does not block story generation) |
+| Rule                   | Description                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| Read seed file         | MUST load seed KB-first (`kb_read_artifact`), fallback to {SEED_PATH} filesystem |
+| Pass seed context      | To all workers                                                                   |
+| Protected features     | Do not modify seed's protected_features                                          |
+| Experiment assignment  | MUST assign variant in Phase 0.5a (WKFL-008)                                     |
+| First match wins       | Story in ONE experiment only (WKFL-008)                                          |
+| Graceful degradation   | Workflow continues if experiments.yaml unavailable (WKFL-008)                    |
+| KB persistence         | MUST write story to KB after synthesis (Phase 4.5)                               |
+| Claim early            | MUST call /index-update --status=Created in Phase 0.6 before workers             |
+| Revert on failure      | MUST revert index to Pending if generation fails                                 |
+| Token log              | MUST call before completion                                                      |
+| Parallel spawn         | Single message for all workers                                                   |
+| Quality gates          | Verify all before emitting story                                                 |
+| Worktree pre-provision | SHOULD create worktree in Phase 5.5 (failure does not block story generation)    |

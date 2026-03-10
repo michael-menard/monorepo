@@ -257,7 +257,6 @@ On `GENERATION COMPLETE`:
 | Phases | {N} |
 
 ### Files Created
-- {feature_dir}/stories.index.md
 - {feature_dir}/{PREFIX}-*/story.yaml ({N} files)
 
 **Next**: `/elab-epic {PREFIX}`
