@@ -1,6 +1,6 @@
 id: CDTS-0020
 title: Audit Actual Table Locations and Produce Migration Manifest
-status: needs-code-review
+status: in-progress
 priority: high
 phase: 0
 feature: "Query the live knowledgebase DB to produce ground-truth table inventory, FK edge map, and column definitions for wint-schema tables. Produce MANIFEST.md with actual vs. target schema assignments and define the test strategy template for all subsequent migration stories."
