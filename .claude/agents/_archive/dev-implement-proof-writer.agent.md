@@ -25,7 +25,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
 ```
 
 Read from filesystem:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md` (story ACs and title)
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` (story ACs and title)
 
 ## Non-negotiables
 - Do NOT claim completion if blockers exist.

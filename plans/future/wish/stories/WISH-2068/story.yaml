@@ -1,0 +1,35 @@
+schema: 1
+id: WISH-2068
+feature: wish
+type: feature
+state: ready-to-work
+title: Browser Compatibility & Fallback for WebP
+points: 1
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2058
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Detect browsers without WebP support and provide graceful fallback to JPEG compression with clear user messaging.
+non_goals:
+  - Not re-implementing core WebP conversion (handled by WISH-2058)
+  - Not implementing lossless WebP compression (lossy is sufficient)
+  - Not implementing server-side browser detection (client-side only)
+  - Not implementing polyfills or shims for WebP support
+acs:
+  - id: AC9
+    text: "Browser compatibility check: Warn users on browsers without WebP support (Safari < 14, IE11)"
+    type: functional
+  - id: AC10
+    text: "Compression fallback: If WebP compression fails or browser doesn't support WebP, fall back to JPEG compression
+      with distinct toast notification"
+    type: functional
+risks: []
+created_at: 2026-01-31T10:00:00-07:00
+updated_at: 2026-01-31T17:00:00-07:00

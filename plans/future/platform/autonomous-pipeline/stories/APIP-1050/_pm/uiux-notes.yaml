@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-1050 is a headless LangGraph worker graph with no user-facing UI surface. Output is REVIEW.yaml artifact written to the story feature directory. Operator visibility is deferred to APIP-5005. ADR-006 Playwright requirement does not apply (frontend_impacted: false)."

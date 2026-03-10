@@ -1,0 +1,29 @@
+schema: 1
+story_id: "WKFL-002"
+timestamp: "2026-02-07T18:22:00Z"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/knowledge-base/**"
+  - "packages/backend/**"
+  - ".claude/agents/**"
+  - ".claude/commands/**"
+  - ".claude/agents/_shared/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Build confidence calibration tracking system with accuracy metrics and threshold adjustment recommendations per agent per confidence level"

@@ -1,0 +1,2 @@
+skipped: true
+reason: "artifact_write is a backend MCP tool with no UI surface. No frontend components, no user-facing interface, no UX review required. The tool is exposed via MCP stdio transport only."

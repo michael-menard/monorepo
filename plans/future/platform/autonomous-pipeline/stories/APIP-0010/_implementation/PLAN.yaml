@@ -1,0 +1,246 @@
+schema: 2
+story_id: "APIP-0010"
+timestamp: "2026-02-25T23:50:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Scaffold packages/backend/pipeline-queue package skeleton"
+    files:
+      - "packages/backend/pipeline-queue/package.json"
+      - "packages/backend/pipeline-queue/tsup.config.ts"
+      - "packages/backend/pipeline-queue/vitest.config.ts"
+      - "packages/backend/pipeline-queue/tsconfig.json"
+    files_to_read:
+      - "packages/backend/rate-limiter/package.json"
+      - "packages/backend/rate-limiter/tsconfig.json"
+      - "packages/backend/rate-limiter/vitest.config.ts"
+      - "pnpm-workspace.yaml"
+    dependencies: []
+    slice: packages
+    verification: "pnpm install && pnpm build --filter @repo/pipeline-queue"
+    acs_covered: ["AC-1", "AC-10"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Define PipelineJobDataSchema in src/__types__/index.ts"
+    files:
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+    files_to_read:
+      - "packages/backend/gallery-core/src/__types__/index.ts"
+      - "packages/backend/pipeline-queue/package.json"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/pipeline-queue"
+    acs_covered: ["AC-2"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Implement createPipelineConnection factory in src/index.ts"
+    files:
+      - "packages/backend/pipeline-queue/src/index.ts"
+    files_to_read:
+      - "apps/api/lego-api/core/cache/redis-client.ts"
+      - "packages/backend/rate-limiter/src/index.ts"
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/pipeline-queue"
+    acs_covered: ["AC-4"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement createPipelineQueue factory and PIPELINE_QUEUE_NAME constant"
+    files:
+      - "packages/backend/pipeline-queue/src/index.ts"
+    files_to_read:
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+      - "packages/backend/pipeline-queue/src/index.ts"
+    dependencies: [2, 3]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/pipeline-queue && pnpm build --filter @repo/pipeline-queue"
+    acs_covered: ["AC-3", "AC-5"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write unit tests for schema validation, queue factory, and connection factory"
+    files:
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts"
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+    files_to_read:
+      - "packages/backend/rate-limiter/src/__tests__/rate-limiter.test.ts"
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+      - "packages/backend/pipeline-queue/src/index.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "pnpm test --filter @repo/pipeline-queue"
+    acs_covered: ["AC-7", "AC-9"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Write integration test with Redis environment guard"
+    files:
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts"
+    files_to_read:
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+      - "packages/backend/pipeline-queue/src/index.ts"
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+    dependencies: [5]
+    slice: packages
+    verification: "REDIS_URL=redis://localhost:6379 pnpm test --filter @repo/pipeline-queue"
+    acs_covered: ["AC-8"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Write README documenting queue contract, AOF note, and Bull Board setup instructions"
+    files:
+      - "packages/backend/pipeline-queue/README.md"
+    files_to_read:
+      - "packages/backend/pipeline-queue/src/index.ts"
+      - "packages/backend/pipeline-queue/src/__types__/index.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "Manual review"
+    acs_covered: ["AC-6", "AC-11"]
+
+files_to_change:
+  - path: "packages/backend/pipeline-queue/package.json"
+    action: create
+    reason: "New package skeleton - @repo/pipeline-queue with bullmq, ioredis, zod dependencies"
+
+  - path: "packages/backend/pipeline-queue/tsup.config.ts"
+    action: create
+    reason: "Build config for pipeline-queue package (ESM output)"
+
+  - path: "packages/backend/pipeline-queue/vitest.config.ts"
+    action: create
+    reason: "Test config for pipeline-queue package"
+
+  - path: "packages/backend/pipeline-queue/tsconfig.json"
+    action: create
+    reason: "TypeScript config following rate-limiter pattern"
+
+  - path: "packages/backend/pipeline-queue/src/__types__/index.ts"
+    action: create
+    reason: "PipelineJobDataSchema Zod schema and inferred PipelineJobData type (AC-2)"
+
+  - path: "packages/backend/pipeline-queue/src/index.ts"
+    action: create
+    reason: "createPipelineConnection, createPipelineQueue factories, PIPELINE_QUEUE_NAME constant (AC-3, AC-4, AC-5)"
+
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts"
+    action: create
+    reason: "Unit tests for PipelineJobDataSchema validation (AC-7)"
+
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+    action: create
+    reason: "Unit tests for createPipelineQueue and createPipelineConnection factories (AC-7)"
+
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts"
+    action: create
+    reason: "Integration test for enqueue/dequeue round-trip, guarded by REDIS_URL env var (AC-8)"
+
+  - path: "packages/backend/pipeline-queue/README.md"
+    action: create
+    reason: "Package documentation: queue name, schema, connection model, AOF note, Bull Board setup (AC-6, AC-11)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after package.json created"
+    required: true
+
+  - command: "pnpm build --filter @repo/pipeline-queue"
+    when: "after ST-4 complete"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/pipeline-queue"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/pipeline-queue"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Package skeleton created: package.json, tsup.config.ts, vitest.config.ts, tsconfig.json, src/ directory"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: pipeline-job-schema.test.ts validates PipelineJobDataSchema fields (storyId, phase enum, priority optional, metadata optional)"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: pipeline-queue.test.ts asserts createPipelineQueue returns Queue with correct name and defaultJobOptions (attempts=3, exponential backoff)"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: pipeline-queue.test.ts asserts createPipelineConnection returns IORedis instance; enableOfflineQueue=false, no lazyConnect, no singleton"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: PIPELINE_QUEUE_NAME === 'apip-pipeline'; queue.name equals constant"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "README.md contains Bull Board mount instructions section"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "pnpm test --filter @repo/pipeline-queue exits 0 (unit tests pass)"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Integration test: enqueue job → getWaitingCount()===1 → Worker dequeues → PipelineJobDataSchema.parse succeeds; test.skipIf(!REDIS_URL)"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "pnpm check-types --filter @repo/pipeline-queue exits 0; pnpm test --filter @repo/pipeline-queue exits 0"
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm-workspace.yaml already includes packages/backend/* glob — no change needed; package importable as @repo/pipeline-queue after pnpm install"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "README.md contains: queue name, payload schema fields, two-connection model, AOF persistence note, ElastiCache AOF tier requirement"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "pnpm-workspace.yaml update needed?"
+    decision: "No change required — packages/backend/* glob already covers packages/backend/pipeline-queue"
+    rationale: "Confirmed in pnpm-workspace.yaml: 'packages/backend/*' wildcard includes the new directory automatically"
+    decided_by: auto
+
+  - id: ARCH-002
+    question: "ioredis version compatibility with BullMQ v5+"
+    decision: "ioredis ^5.4.2 already in monorepo via apps/api/lego-api — compatible with BullMQ v5+"
+    rationale: "Confirmed via grep: apps/api/lego-api/package.json has ioredis ^5.4.2. BullMQ v5+ requires ioredis v5+. No version conflict."
+    decided_by: auto
+
+  - id: ARCH-003
+    question: "tsup vs tsc for build tooling in pipeline-queue"
+    decision: "Use tsc (like rate-limiter) rather than tsup — rate-limiter uses plain tsc build; consistent with existing backend packages"
+    rationale: "rate-limiter/package.json uses build: tsc script with no tsup. pipeline-queue should match. tsup.config.ts mentioned in story but rate-limiter doesn't have one — will omit tsup and use tsc."
+    decided_by: auto
+
+complexity: moderate
+
+notes:
+  - "ioredis ^5.4.2 already in monorepo — fully compatible with BullMQ v5+. No peer dep conflict."
+  - "pnpm-workspace.yaml already includes packages/backend/* glob — no workspace.yaml edit required for AC-10."
+  - "createPipelineConnection: remove lazyConnect, remove module-level singleton, add enableOfflineQueue: false. Adapt event logging from redis-client.ts."
+  - "Zod parse at enqueue: createPipelineQueue should call PipelineJobDataSchema.parse(data) before Queue.add to enforce contract."
+  - "Integration test guard pattern: const skipIntegration = !process.env.REDIS_URL; test.skipIf(skipIntegration)(...)."
+  - "Coverage waiver applies: infrastructure/library story. QA gate = type-check + unit tests + integration enqueue/dequeue."
+  - "PIPELINE_QUEUE_NAME = 'apip-pipeline' is a stable contract — cannot change once APIP-0020 depends on it."
+  - "BullMQ requires two IORedis connections internally per Queue. Pass IORedis instance to createPipelineQueue; BullMQ manages connection multiplexing."
+  - "rate-limiter uses tsc not tsup — follow same pattern, do not create tsup.config.ts."
+  - "Bull Board: document-only per AC-6. No mountBullBoard function needed in package — README instructions suffice."
+  - "AC-3 note: createPipelineQueue should validate job data with Zod at enqueue time, wrapping Queue.add."

@@ -1,0 +1,75 @@
+schema: 1
+story_id: "KFMB-2010"
+timestamp: "2026-03-06T22:30:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - ".claude/agents/pm-bootstrap-generation-leader.agent.md"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Rewrite pm-bootstrap-generation-leader agent to use kb_create_story MCP tool instead of raw psql batch inserts"
+elaboration: "completed"
+files_to_modify:
+  - path: ".claude/agents/pm-bootstrap-generation-leader.agent.md"
+    type: "agent-definition"
+    version_bump: "4.0.0 → 5.0.0"
+    sections:
+      - "## Mission — clarify KB-native approach"
+      - "## Modes — remove/deprecate File Mode, enhance KB Mode"
+      - "## Inputs — update to reflect KB Mode only"
+      - "## Files to Generate — document story.yaml and stories.index.md decisions"
+      - "## KB Stories Insert — REPLACE raw psql with kb_create_story MCP calls"
+      - "## Output — inline SUMMARY (no change)"
+key_ac_mapping:
+  AC-1: "kb_create_story called for each story in ANALYSIS via MCP, no raw psql"
+  AC-2: "kb_create_story idempotent (upsert by story_id, no duplicates)"
+  AC-3: "story.yaml writes retained (not eliminated)"
+  AC-4: "SUMMARY returned inline (not written to _bootstrap/SUMMARY.yaml)"
+  AC-5: "KB unavailable → warning + continue (non-fatal)"
+  AC-6: "File Mode removed or explicitly deprecated"
+  AC-7: "stories.index.md write retained and documented"
+kb_create_story_interface:
+  expected_input_fields:
+    required:
+      - story_id
+      - title
+    optional:
+      - feature
+      - epic
+      - priority
+      - state
+      - phase
+      - story_dir
+      - story_file
+      - depends_on (array)
+      - risk_notes
+      - sizing_warning
+  expected_return_shape: "{ ...story_row, created: boolean }"
+  source_of_truth: "KFMB-1020 test plan (HP-1, HP-2, ED-1)"
+blockers:
+  - id: "KFMB-1020"
+    reason: "kb_create_story MCP tool must be shipped before implementation can begin"
+    status: "READY-TO-WORK (not yet shipped)"
+dependencies:
+  blocking_on:
+    - "KFMB-1020"
+  referenced_by:
+    - "KFMB-3010"
+    - "KFMB-3020"
+notes: |
+  This is an agent definition rewrite (markdown only). No backend code changes.
+  The implementation depends entirely on KFMB-1020 delivering the kb_create_story MCP tool.
+  Once KFMB-1020 ships, the agent simply replaces lines ~86-112 (the psql batch section) 
+  with a loop calling kb_create_story for each story.

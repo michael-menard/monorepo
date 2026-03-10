@@ -1,0 +1,153 @@
+schema: 1
+story_id: WINT-1050
+timestamp: "2026-02-23T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: >
+  Docs-only story — only touched file is .claude/commands/story-update.md (markdown).
+  No TypeScript source files modified. No test packages applicable.
+test_results:
+  unit: { pass: 0, fail: 0, exempt: true }
+  integration: { pass: 0, fail: 0, exempt: true }
+  e2e: { pass: 0, fail: 0, exempt: true }
+
+coverage: null
+coverage_meets_threshold: true
+coverage_exempt_reason: "Docs-only story — no TypeScript source files"
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "Docs-only story — test quality check not applicable. Integration Test Scenarios section present and correctly structured."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-1"
+    notes: >
+      Step 3a ('### 3a. DB Write via shimUpdateStoryStatus') at line 105.
+      Step 3b ('### 3b. Update Frontmatter') at line 152.
+      Step 2 ('### 2. Worktree Cleanup') at line 101.
+      Ordering confirmed: DB write before frontmatter update.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-2"
+    notes: >
+      14-row inline mapping table at lines 109-124.
+      8 mapped rows: backlog→backlog, ready-to-work→ready_to_work, in-progress→in_progress,
+      ready-for-qa→ready_for_qa, uat→in_qa, completed→done, BLOCKED→blocked, superseded→cancelled.
+      6 skip rows with reasons: created, elaboration, needs-code-review, failed-code-review,
+      failed-qa, needs-split. All 14 valid statuses covered with explicit decisions.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-3"
+    notes: >
+      WARNING format at line 136 matches AC-3 specification exactly:
+      "WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with
+      filesystem update only."
+      Scenario B in Integration Test Scenarios also reproduces the WARNING verbatim.
+      db_updated=false set on null return. Step 3b proceeds regardless.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-4"
+    notes: >
+      Result YAML at lines 180-184 contains db_updated: true | false with inline comment block
+      documenting both values. 'skipped' does not appear as a db_updated value (confirmed
+      to Non-goal constraint). Only two values: true (DB write succeeded) and false
+      (null return OR unmapped status).
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-5"
+    notes: >
+      Execution order verified in file: Step 1 (line 85) → Step 2 (line 101) → Step 3a (line 105)
+      → Step 3b (line 152) → Step 4 (line 163) → Step 5 (line 171).
+      Line 149 explicitly states: "The DB write is never blocking — Step 3b (frontmatter update)
+      proceeds regardless of DB outcome."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-6"
+    notes: >
+      Status Transition Rules table at lines 188-204 and Error Handling table at lines 208-215
+      both document that invalid transitions emit UPDATE FAILED before execution steps.
+      Transition validation logically precedes Step 1 (locate) and Step 3a (DB write).
+      No DB write is possible on invalid transition.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-7"
+    notes: >
+      Line 150 explicitly states: "The --no-index flag does NOT suppress this step. Step 3a always
+      executes for mapped statuses." Scenario F in Integration Test Scenarios confirms:
+      --no-index with mapped status, DB available → db_updated: true, frontmatter updated,
+      stories.index.md NOT updated.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-8"
+    notes: >
+      Frontmatter at lines 3-4: version: 3.0.0, updated: 2026-02-20.
+      Version History at line 251: "v3.0.0 (2026-02-20): DB integration — breaking behavioral change.
+      Adds Step 3a (DB write via shimUpdateStoryStatus)...".
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-9"
+    notes: >
+      '## Integration Test Scenarios' section at lines 221-234. Exactly 6 scenarios A through F
+      in consistent table format (Scenario | Name | Precondition | Action | Expected Outcome).
+      ADR-005 compliance note present at line 225:
+      "Scenarios A, B, and F require a live postgres-knowledgebase MCP server."
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:ac_verdicts.AC-10"
+    notes: >
+      triggeredBy: 'story-update-command' confirmed at line 132.
+      Mapping table includes explicit Action column for all 14 rows: skip rows include documented
+      reasons (pre-tracking phase, transient review state, transient QA state, administrative state).
+      BLOCKED→blocked and superseded→cancelled are explicit decisions in the mapped rows.
+
+architecture_compliant: true
+architecture_notes: >
+  permission_level: docs-only preserved (line 6). Pattern follows WINT-1060/story-move.md
+  exactly: inline mapping table, shimUpdateStoryStatus call with correct triggeredBy value,
+  null-return → WARNING + proceed, db_updated in result YAML. Step renaming pattern (3a/3b)
+  preserves Steps 4/5 numbering. No TypeScript files modified. No shim API changes.
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Docs-only command versioning: inserting a new sub-step (3a) between existing steps
+      without renumbering downstream steps (4, 5) minimises diff noise and preserves external
+      references. This is the preferred pattern for docs-only command spec augmentation.
+    category: pattern
+    tags: ["docs-only", "command-spec", "wint", "story-update"]
+
+  - lesson: >
+      For DB integration in command specs, the db_updated field should use only true/false
+      (not a third 'skipped' value) when both null-return and unmapped-status cases should
+      be treated identically by downstream consumers. The 'skipped' third value is deferred
+      observability — good for UAT tooling but creates complexity for Phase 1 consumers.
+    category: pattern
+    tags: ["db-integration", "command-spec", "wint", "result-yaml"]
+
+  - lesson: >
+      Sibling story references (WINT-1060/story-move.md) are highly effective as parallel
+      pattern sources for docs-only stories. Reading the sibling's implementation first
+      reduces ambiguity in mapping table format, pseudocode style, and WARNING format
+      without requiring story file re-reads.
+    category: reuse
+    tags: ["docs-only", "sibling-pattern", "wint"]
+
+tokens:
+  in: 12000
+  out: 3000

@@ -1,0 +1,42 @@
+schema: 1
+id: KNOW-017
+feature: know
+type: feature
+state: backlog
+title: Complete Parent/Sibling Entry Relationships in kb_get_related
+points: 2
+priority: medium
+blocked_by: null
+depends_on: []
+follow_up_from: null
+scope:
+  packages:
+    - apps/api/knowledge-base
+  surfaces:
+    - backend
+goal: Add a parent_id column to knowledge_entries, implement parent and sibling relationship queries in kb_get_related, and expose parent_id as a settable field on kb_add and kb_update to enable hierarchical knowledge modeling.
+non_goals:
+  - Multi-level hierarchy beyond parent/children (no grandparent traversal in v1)
+  - Graph visualization
+  - Automatic parent inference from tags
+acs:
+  - id: AC1
+    text: parent_id column exists on knowledge_entries and is settable via kb_add and kb_update
+    type: functional
+  - id: AC2
+    text: kb_get_related with relationship_type parent returns the parent entry
+    type: functional
+  - id: AC3
+    text: kb_get_related with relationship_type sibling returns entries sharing the same parent_id
+    type: functional
+  - id: AC4
+    text: Existing tag_overlap relationship type is unchanged
+    type: functional
+  - id: AC5
+    text: Entry with no parent_id returns empty result for parent relationship without error
+    type: functional
+risks:
+  - risk: Circular references where an entry is set as its own parent
+    mitigation: Add application-level guard rejecting self-referential parent_id
+created_at: 2026-02-22T00:00:00-07:00
+updated_at: 2026-02-22T00:00:00-07:00

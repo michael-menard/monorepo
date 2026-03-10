@@ -1,0 +1,15 @@
+schema: 1
+story_id: "WINT-9130"
+timestamp: "2026-03-03T18:30:00Z"
+current_phase: "execute"
+last_successful_phase: "plan"
+iteration: 0
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+e2e_gate: exempt
+completed_at: null
+feature_dir: "plans/future/platform/wint"
+warnings:
+  - "WINT-9120 dependency in_progress — feature comparison verdicts marked Pending WINT-9120 for WINT-9110 graphs"

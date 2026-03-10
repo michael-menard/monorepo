@@ -1,0 +1,58 @@
+schema: 1
+story_id: WINT-4130
+timestamp: 2026-03-08T22:50:00Z
+failure_source: failed-qa
+iteration: 2
+issues_to_fix:
+  - id: ISSUE-1
+    ac_id: AC-1
+    severity: critical
+    description: >-
+      Pre-flight FAIL: wint schema entirely absent from dev PostgreSQL. WINT-4030 and WINT-4050 have not been applied.
+      Graph, rules, and capability tables all have 0 rows.
+    owner: WINT-4030 (schema+data), WINT-4050 (rules)
+    blocking: true
+    resolution: Apply WINT-4030 migration and population script, then WINT-4050 rules seeding. Re-run WINT-4130.
+    auto_fixable: false
+  - id: ISSUE-2
+    ac_id: AC-2
+    severity: high
+    description: >-
+      'upload' and 'replace' not in CRUD_STAGES=['create','read','update','delete']. Upload-without-replace fixture
+      cannot be detected by graph_get_franken_features.
+    owner: WINT-4060
+    blocking: false
+    resolution: Extend CRUD_STAGES to include 'upload'/'replace' or redefine AC-2 fixture to use CRUD-based stages.
+    auto_fixable: false
+  - id: ISSUE-3
+    ac_id: AC-4
+    severity: high
+    description: >-
+      graph-checker.agent.md specifies tools:[Read,Grep,Glob] but requires TypeScript DB function calls (ARCH-001).
+      Filesystem-only agent cannot query PostgreSQL. In populated environment would produce fictitious results.
+    owner: WINT-4060
+    blocking: false
+    resolution: Add Bash tool to agent spec to invoke a TypeScript runner script, or implement as LangGraph node with DB access.
+    auto_fixable: false
+  - id: ISSUE-4
+    ac_id: AC-3
+    severity: critical
+    description: >-
+      Create-without-delete fixture cannot be identified — graph data absent (DEV-001). Will be testable once WINT-4030
+      applied.
+    owner: WINT-4030
+    blocking: true
+    resolution: Apply WINT-4030 and re-run validation.
+    auto_fixable: false
+focus_files:
+  - packages/backend/orchestrator/src/schema/graph/features.ts
+  - packages/backend/orchestrator/src/schema/graph/feature-capabilities.ts
+  - packages/backend/orchestrator/src/schema/graph/rules.ts
+  - .claude/agents/graph-checker.agent.md
+  - packages/backend/orchestrator/src/constants/crud-stages.ts
+notes: >-
+  Root cause analysis from VERIFICATION.yaml shows that WINT-4130 is a validation/spike story with no source code
+  changes. It has zero blocking issues in its own code. All 4 critical/high issues are environment pre-conditions
+  or dependency blockers owned by upstream stories (WINT-4030, WINT-4050, WINT-4060). The story should be re-run
+  after those upstream stories are applied. The deliverables (EVIDENCE.yaml, VERIFICATION.md, graph-check-results.json)
+  are structurally complete and correct per AC-5/10.

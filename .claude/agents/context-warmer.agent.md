@@ -1,6 +1,6 @@
 ---
-created: 2026-03-03
-updated: 2026-03-03
+created: 2026-03-07
+updated: 2026-03-07
 version: 1.0.0
 type: worker
 name: context-warmer
@@ -166,19 +166,19 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
 - Log the failure message
 - Increment failed counter
 - **Continue warming remaining caches**
-- End with `CACHE-WARM COMPLETE WITH WARNINGS: {N} failed`
+- End with `CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings`
 
 ### When All Caches Fail
 
 - Still produce warm-result with `{ attempted: N, succeeded: 0, failed: N }`
-- Emit `CACHE-WARM COMPLETE WITH WARNINGS: N failed` (not BLOCKED)
+- Emit `CACHE-WARM COMPLETE WITH WARNINGS: N warnings` (not BLOCKED)
 - This allows downstream workflows to detect partial success vs. total failure
 
 ### Warm-Result Schema (PopulateResultSchema Compatible)
 
 ```yaml
 warm-result:
-  timestamp: "2026-03-03T12:00:00Z"
+  timestamp: "2026-03-07T12:00:00Z"
   attempted: 4
   succeeded: 3
   failed: 1
@@ -204,12 +204,12 @@ The agent ends with exactly one of the following signals as its final output lin
 | Signal | Meaning | Example |
 |--------|---------|---------|
 | `CACHE-WARM COMPLETE` | All caches warmed successfully; no warnings | `CACHE-WARM COMPLETE` |
-| `CACHE-WARM COMPLETE WITH WARNINGS: {N} failed` | Partial success; N caches failed but others succeeded | `CACHE-WARM COMPLETE WITH WARNINGS: 1 failed` |
+| `CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings` | Some caches failed; N warnings recorded | `CACHE-WARM COMPLETE WITH WARNINGS: 1 warnings` |
 | `CACHE-WARM BLOCKED: {reason}` | Unrecoverable failure; caching did not proceed | `CACHE-WARM BLOCKED: cache-warm skill unavailable` |
 
 **Reachability:**
 - `CACHE-WARM COMPLETE`: All cache operations succeeded
-- `CACHE-WARM COMPLETE WITH WARNINGS`: Phase 3 returns `failed > 0` but `succeeded > 0`
+- `CACHE-WARM COMPLETE WITH WARNINGS`: Phase 3 returns `failed > 0` (regardless of succeeded count)
 - `CACHE-WARM BLOCKED`: Phase 1 detects missing skill OR Phase 2 retry fails
 
 ---
@@ -264,24 +264,19 @@ The 4-phase workflow defined in this agent file is the logical execution contrac
 - **v1.0:** Invokes `/cache-warm` skill (MCP tool abstraction). No direct database access.
 - **LangGraph port:** Node should call skill via state.emit_tool_call() pattern; skill returns structured response; node aggregates and returns to state.
 
-### Skill API Contract (Placeholder — TBD in WINT-2070)
+### Skill API Reference
+
+The `/cache-warm` skill is defined in `.claude/skills/cache-warm/SKILL.md` (delivered by WINT-2070).
 
 ```
-Skill: /cache-warm
-Input: { cache_types: string[], feature_dir?: string, skip_unavailable?: boolean }
-Output: {
-  timestamp: string (ISO 8601),
-  results: Array<{
-    cache_type: string,
-    attempted: boolean,
-    succeeded: boolean,
-    record_count?: number,
-    error?: string
-  }>,
-  summary: { attempted: number, succeeded: number, failed: number }
-}
-Error: throws { code, message } on total failure (not per-cache)
+Skill: /cache-warm [--skip={script}]
+Scripts: project-context, domain-kb, library-cache, agent-missions
+Output: Summary block with per-script PASS/FAIL/SKIP status and counts
+Blocking: Only DATABASE_URL missing blocks all scripts
 ```
+
+The skill runs four populate scripts in sequence. Individual failures are non-fatal.
+The agent parses the skill's summary block to produce its warm-result.
 
 ---
 

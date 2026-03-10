@@ -1,0 +1,225 @@
+story_id: KFMB-5010
+analysis_date: "2026-02-26"
+analyst: elab-analyst
+
+audit:
+  ac_count: 12
+  subtask_count: 9
+  call_sites_claimed: 13
+  call_sites_verified: 13
+  files_in_scope: 7
+  files_verified: 3
+  # Verified call counts per file (grep -c 'artifact_write(' against all 7 agents):
+  #   dev-setup-leader:              3  (matches story claim: checkpoint-setup, scope, fix_summary)
+  #   dev-plan-leader:               2  (matches story claim: checkpoint-planning, plan)
+  #   dev-execute-leader:            2  (matches story claim: evidence, checkpoint-implementation)
+  #   dev-fix-fix-leader:            2  (matches story claim: evidence, review)
+  #   review-aggregate-leader:       1  (matches story claim: review)
+  #   qa-verify-verification-leader: 1  (matches story claim: verification)
+  #   qa-verify-completion-leader:   2  (matches story claim: verification PASS + FAIL)
+  #   Total: 13  -- exact match with story scope table
+
+gaps:
+  - id: GAP-1
+    severity: non-blocking
+    category: inaccurate_scope
+    description: >
+      dev-setup-leader already uses kb_write_artifact directly for the fix_summary call
+      (line 335 of dev-setup-leader.agent.md). The story scope table lists fix_summary as
+      one of the 3 artifact_write call replacements for dev-setup-leader, but it is already
+      migrated. The actual migration work for dev-setup-leader is 2 artifact_write calls
+      (checkpoint-setup and scope), not 3. The total artifact_write call count of 13 is
+      still accurate (grep confirms 3 artifact_write( calls in dev-setup-leader), because the
+      fix_summary call uses kb_write_artifact and is NOT counted by the grep that verifies
+      artifact_write( call sites. However, the scope table's description of "3 (checkpoint-setup,
+      scope, fix_summary)" is misleading: fix_summary is already done and the 3rd artifact_write
+      in dev-setup-leader is actually the fix-mode checkpoint (fix mode, Step 3), not fix_summary.
+      ST-2 verification will still pass (3 artifact_write removals), but the per-call labeling
+      in the scope table is inaccurate. The implementing agent must be aware that fix_summary
+      already calls kb_write_artifact and must not duplicate or regress it.
+    recommendation: >
+      Clarify the scope table entry for dev-setup-leader. The 3 artifact_write calls to replace
+      are: (1) checkpoint in implement-mode step 4, (2) scope in implement-mode step 5, and
+      (3) checkpoint in fix-mode step 3. The fix_summary call is already using kb_write_artifact
+      and only needs frontmatter cleanup. Update the scope table to accurately label the 3 calls.
+      Also note: the Non-Negotiables section of dev-setup-leader (line 411) contains a contradictory
+      rule "MUST write artifacts via artifact_write (not direct file writes or kb_write_artifact)"
+      which must be deleted as part of this migration — this should be added as an explicit
+      checklist item in ST-2 or AC-1.
+
+  - id: GAP-2
+    severity: non-blocking
+    category: missing_ac
+    description: >
+      The story has no AC explicitly targeting the contradictory Non-Negotiables rule in
+      dev-setup-leader (line 411: "MUST write artifacts via artifact_write (not direct file writes
+      or kb_write_artifact)"). This rule directly conflicts with the migration goal. An implementing
+      agent following this Non-Negotiable literally would be blocked from completing the migration.
+      AC-1 and AC-8 cover the call sites and frontmatter, but neither explicitly requires deletion
+      of contradictory prose instructions in the agent body.
+    recommendation: >
+      Add a check to ST-2 (or AC-1) requiring that conflicting Non-Negotiables prose be updated
+      or deleted. The implementing agent should search for "artifact_write" in prose/non-negotiables
+      sections and update them to reference kb_write_artifact. This is low effort but easy to miss.
+
+  - id: GAP-3
+    severity: non-blocking
+    category: missing_ac
+    description: >
+      The kb_write_artifact tool schema (tool-schemas.ts line 2323) includes an optional
+      artifact_name parameter not mentioned in the story's migration pattern or architecture notes.
+      The story correctly identifies the required parameters (story_id, artifact_type, phase,
+      iteration, content), but does not address whether artifact_name should be set explicitly
+      during migration or left to auto-generation. For the reference implementation
+      (knowledge-context-loader.agent.md), artifact_name is not set, which means it is
+      auto-generated. This is consistent behavior and poses no risk, but the story's architecture
+      notes could be more complete to avoid confusion during implementation.
+    recommendation: >
+      No AC change needed. Consider adding a note in the architecture section that artifact_name
+      is optional and should be omitted (auto-generated) in all migrated call sites, consistent
+      with knowledge-context-loader.agent.md. This is documentation-level clarification only.
+
+  - id: GAP-4
+    severity: non-blocking
+    category: missing_test
+    description: >
+      EC-1 (KB write failure — pipeline phase continues gracefully) requires manually stopping
+      the KB server. The test plan does not describe how to verify graceful failure at the
+      individual-call level vs. full-server-down. For docs-only agent files, there is no automated
+      harness — graceful failure behavior depends entirely on the agent reading and following the
+      prose instructions. The test plan relies on the agent runtime interpreting the failure
+      handling text. There is no way to unit-test agent markdown behavior. This is inherent to
+      the docs-only nature of the story and is acknowledged in WKFL-010 (no runnable unit tests
+      for agent instruction files). The gap is that EC-1 is effectively unverifiable in isolation
+      without a running pipeline.
+    recommendation: >
+      Accept as a known limitation. Add a note in the test plan that EC-1 is best-effort
+      verification dependent on runtime behavior. The grep-based static checks (HP-7, MC-1) are
+      the strongest verifiable gates for this story.
+
+opportunities:
+  - id: OPP-1
+    severity: non-blocking
+    category: clarification
+    description: >
+      The Artifact Type Reference table in _shared/kb-integration.md (lines 331-343) does not
+      include a row for fix_summary with the fix-mode checkpoint. The table shows
+      "FIX-CONTEXT.yaml -> fix_summary -> implementation -> dev-setup-leader (fix mode)" but
+      the phase listed is "implementation" while the actual call in dev-setup-leader uses
+      phase: "setup". This minor discrepancy in the reference table could cause an implementing
+      agent to set the wrong phase value when migrating the fix-mode checkpoint call.
+    recommendation: >
+      No AC change needed, but note the discrepancy in ST-1 audit output. The agent should
+      use the actual call sites in the target files as ground truth for phase values, not the
+      reference table.
+
+  - id: OPP-2
+    severity: non-blocking
+    category: enhancement
+    description: >
+      The story's output section in dev-setup-leader (lines 280-283) references both
+      "File: .../_implementation/CHECKPOINT.yaml" and "KB artifact: checkpoint — written via
+      artifact_write". After migration, these output bullets need updating too — the filesystem
+      file paths should be removed from the Output section. No AC currently covers updating the
+      Output section comments; AC-11 covers only artifact write paths in call bodies, not
+      documentation prose within the Output sections of each agent.
+    recommendation: >
+      Expand AC-11 or add a note to each per-agent subtask (ST-2 through ST-8) to also clean
+      up the Output section bullet points that reference _implementation/ file paths and
+      "written via artifact_write" descriptions. This is a documentation hygiene item.
+
+  - id: OPP-3
+    severity: non-blocking
+    category: clarification
+    description: >
+      The story claims split_risk: 0.9 (very high) in predictions, but the implementation work
+      is 7 straightforward find-and-replace edits on markdown files with no compilation or
+      dependency chain. The high split_risk appears to be a model confidence artifact from
+      predicting docs-only stories as similar to code stories, not a true implementation risk.
+      The atomicity requirement (all 7 files in one story) is correctly stated and appropriate.
+      Splitting would introduce more risk (inconsistent pipeline state) not less.
+    recommendation: >
+      No action needed. The split_risk: 0.9 prediction should be understood as a model
+      calibration artifact. The story is correctly scoped as atomic. Proceed without splitting.
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict_rationale: >
+  The story is well-scoped, accurate in its call counts (13 artifact_write replacements across
+  7 files, fully verified), and has clear ACs and subtasks. The Non-Goals boundaries are
+  well-defined. The dependency rationale for KFMB-1030 and KFMB-2040 is sound.
+
+  The CONDITIONAL flag is due to two non-blocking gaps that the implementing agent must handle:
+
+  1. GAP-1: The scope table description for dev-setup-leader is misleading — the fix_summary
+     call is already using kb_write_artifact. The 3 artifact_write calls to replace are the two
+     implement-mode writes (checkpoint-setup, scope) and the fix-mode checkpoint. The implementing
+     agent must not accidentally duplicate the already-migrated fix_summary call or miss the
+     fix-mode checkpoint.
+
+  2. GAP-2: The contradictory Non-Negotiables rule in dev-setup-leader (line 411) must be
+     deleted as part of ST-2. If left in place it will cause agent confusion in future sessions.
+
+  These are low-effort corrections. No AC additions are required — they can be handled as
+  implementation notes in ST-1 and ST-2. The test plan is appropriate for a docs-only story.
+  The split_risk: 0.9 prediction should NOT trigger a split — atomicity is the correct strategy.
+
+split_recommendation: null
+
+# --- Autonomous Decisions (Phase 1.5) ---
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+decider: elab-autonomous-decider
+
+summary:
+  gaps_found: 4
+  gaps_resolved: 4
+  opportunities_found: 3
+  opportunities_logged: 2
+  acs_added: 1
+
+decisions:
+  gaps:
+    - id: GAP-1
+      decision: log_to_kb
+      notes: "Non-blocking scope table inaccuracy — implementing agent uses grep as ground truth"
+      action: kb_write
+      kb_entry_id: "05169e9f-27ff-4f25-80ff-565ef3ff1c08"
+
+    - id: GAP-2
+      decision: add_ac
+      notes: "Contradictory Non-Negotiables prose could block implementing agent"
+      action: add_ac
+      ac_added: "AC-13: Non-Negotiables and prose referencing artifact_write updated/removed in all 7 agents"
+
+    - id: GAP-3
+      decision: log_to_kb
+      notes: "Documentation clarification only — artifact_name is optional, omit per reference impl"
+      action: kb_write
+      kb_entry_id: "98f76ef6-b97c-4403-a656-39fa4bd2af25"
+
+    - id: GAP-4
+      decision: log_to_kb
+      notes: "WKFL-010 limitation — EC-1 is best-effort runtime verification"
+      action: kb_write
+      kb_entry_id: "68604014-2d65-46c6-971c-04c6caf9a341"
+
+  opportunities:
+    - id: OPP-1
+      decision: log_to_kb
+      notes: "Phase discrepancy in reference table — use agent files as ground truth"
+      action: kb_write
+      kb_entry_id: "223f9ad3-4e63-4d8e-9cd8-2d15b1c88470"
+
+    - id: OPP-2
+      decision: log_to_kb
+      notes: "Output section cleanup — covered by AC-11 intent, logged for implementation awareness"
+      action: kb_write
+      kb_entry_id: "fac0d1b6-522d-4765-b3fb-169d35379a48"
+
+    - id: OPP-3
+      decision: no_action
+      notes: "Informational only — split_risk:0.9 is a model calibration artifact, no split needed"
+
+  follow_ups: []
+  out_of_scope: []

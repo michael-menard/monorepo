@@ -1,0 +1,32 @@
+schema: 1
+id: WISH-2039
+feature: wish
+type: feature
+state: uat
+title: User-level targeting for feature flags
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2009
+follow_up_from: WISH-2009
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable targeted feature flag rollout to specific users through explicit inclusion/exclusion lists, complementing
+  the existing percentage-based rollout system.
+non_goals:
+  - "**Complex targeting rules** (e.g., user attributes, segments, conditions) - simple include/exclude lists only"
+  - "**Real-time targeting updates** - rely on existing 5-minute cache TTL"
+  - "**Targeting UI** - admin API only (defer UI to future story)"
+  - "**Targeting analytics** - defer metrics to future story"
+  - "**Third-party targeting services** - in-house implementation only"
+  - "**Organization/team-level targeting** - user-level only for MVP"
+  - "**Geo-targeting or device-targeting** - user-level only"
+acs: []
+risks: []
+created_at: 2026-01-29T00:00:00-07:00
+updated_at: 2026-01-31T20:45:00Z

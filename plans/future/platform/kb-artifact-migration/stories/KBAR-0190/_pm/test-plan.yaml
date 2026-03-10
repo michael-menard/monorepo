@@ -1,0 +1,156 @@
+strategy: manual+e2e
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  agent_files_touched:
+    - .claude/agents/qa-verify-verification-leader.agent.md
+    - .claude/agents/qa-verify-completion-leader.agent.md
+    - .claude/agents/dev-fix-fix-leader.agent.md
+    - .claude/agents/qa-verify-setup-leader.agent.md  # scope to be confirmed by Dev Feasibility (AC-9)
+
+happy_path_tests:
+  - id: HP-1
+    title: "qa-verify-verification-leader writes QA-VERIFY.yaml to filesystem after migration"
+    setup: "KBAR-0110 and KBAR-0190 both merged; run a story through qa-verify-story workflow"
+    action: "Trigger qa-verify-verification-leader on a story in UAT; it reaches Step 9"
+    expected: "QA-VERIFY.yaml file written to {FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml on filesystem; kb_write_warning may appear but does not block flow"
+    evidence: "File exists at canonical path; artifact retrievable via kb_read_artifact({ story_id, artifact_type: 'verification' })"
+
+  - id: HP-2
+    title: "qa-verify-completion-leader PASS path writes gate decision to filesystem"
+    setup: "qa-verify-verification-leader has run (HP-1 passed); completion leader PASS path executes"
+    action: "qa-verify-completion-leader PASS path Step 2 calls artifact_write with gate decision PASS"
+    expected: "QA-VERIFY.yaml at canonical UAT path updated with gate: { decision: PASS, ... }; file timestamp updated; KB entry also updated"
+    evidence: "QA-VERIFY.yaml file contains gate block with decision: PASS"
+
+  - id: HP-3
+    title: "dev-fix-fix-leader Step 6 writes EVIDENCE.yaml to filesystem after migration"
+    setup: "KBAR-0190 merged; story in fix iteration with active review artifact"
+    action: "dev-fix-fix-leader executes Step 6 after coders complete fixes"
+    expected: "EVIDENCE.yaml written to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml with updated touched_files and commands_run"
+    evidence: "File exists at canonical path; kb_read_artifact('evidence') returns updated content"
+
+  - id: HP-4
+    title: "dev-fix-fix-leader Step 7 writes REVIEW.yaml to filesystem after migration"
+    setup: "Step 6 complete (HP-3 passed)"
+    action: "dev-fix-fix-leader executes Step 7 — increments review iteration"
+    expected: "REVIEW.yaml written to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml with incremented iteration number"
+    evidence: "File exists at canonical path; iteration number matches review.content.iteration + 1"
+
+  - id: HP-5
+    title: "dev-documentation-leader can read FIX-CONTEXT.yaml after dev-fix-fix-leader migration"
+    setup: "KBAR-0190 merged; fix iteration completed using updated dev-fix-fix-leader"
+    action: "dev-documentation-leader reads FIX-CONTEXT.yaml from filesystem"
+    expected: "FIX-CONTEXT.yaml accessible at {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FIX-CONTEXT.yaml"
+    evidence: "dev-documentation-leader completes without filesystem read error; OUTCOME.yaml generated successfully"
+
+error_cases:
+  - id: EC-1
+    title: "KB write failure does not block QA verdict recording"
+    setup: "KB unavailable (simulated); qa-verify-verification-leader runs Step 9"
+    action: "artifact_write called with skip_kb omitted; KB write fails"
+    expected: "file_written: true returned; kb_write_warning present in response; QA flow continues normally; QA-VERIFY.yaml exists on filesystem"
+    evidence: "QA-VERIFY.yaml file written; no QA BLOCKED signal emitted; next step proceeds"
+
+  - id: EC-2
+    title: "qa-verify-completion-leader FAIL path writes gate decision to filesystem"
+    setup: "qa-verify-verification-leader has run with FAIL verdict; completion FAIL path executes"
+    action: "qa-verify-completion-leader FAIL path Step 2 calls artifact_write with gate decision FAIL"
+    expected: "QA-VERIFY.yaml at canonical UAT path updated with gate: { decision: FAIL, blocking_issues: [...] }; story proceeds to failed-qa"
+    evidence: "QA-VERIFY.yaml file contains gate block with decision: FAIL; story moved to failed-qa directory"
+
+  - id: EC-3
+    title: "kb_read_artifact calls in migrated agents remain unchanged"
+    setup: "KBAR-0190 merged; story in qa-verify flow"
+    action: "qa-verify-verification-leader reads evidence, context, review artifacts at startup"
+    expected: "All kb_read_artifact calls function identically to pre-migration; no file-system read substitutions"
+    evidence: "Agent reads evidence artifact successfully; no broken KB read calls in logs"
+
+edge_cases:
+  - id: ED-1
+    title: "artifact_write called with explicit file_path for QA-VERIFY canonical location"
+    setup: "Inspect updated qa-verify-verification-leader.agent.md after migration"
+    action: "Code review of Step 9: verify file_path parameter is explicitly set to {FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml"
+    expected: "file_path parameter present in artifact_write call; not relying on canonical path computation inside artifact_write"
+    evidence: "Manual diff of agent file shows explicit file_path argument in Step 9 call"
+
+  - id: ED-2
+    title: "EVIDENCE.yaml file_path in dev-fix-fix-leader uses in-progress directory"
+    setup: "Inspect updated dev-fix-fix-leader.agent.md after migration"
+    action: "Code review of Step 6: verify file_path uses {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml"
+    expected: "file_path explicitly set to in-progress location, not UAT or backlog"
+    evidence: "Manual diff shows correct path in Step 6 call"
+
+  - id: ED-3
+    title: "fix_summary artifact (FIX-CONTEXT.yaml) file_path correctly set if written by dev-fix-fix-leader"
+    setup: "Inspect updated dev-fix-fix-leader.agent.md for any fix_summary writes"
+    action: "Code review confirms file_path for fix_summary is {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FIX-CONTEXT.yaml"
+    expected: "dev-documentation-leader and dev-verification-leader downstream reads continue to work"
+    evidence: "Manual diff; downstream agents read FIX-CONTEXT.yaml successfully in E2E test"
+
+  - id: ED-4
+    title: "qa-verify-setup-leader scope correctly resolved per AC-9"
+    setup: "Dev Feasibility has resolved AC-9 scope question"
+    action: "Inspect qa-verify-setup-leader.agent.md post-migration (or confirm it is explicitly out of scope)"
+    expected: "Either: setup leader updated with artifact_write for CHECKPOINT, OR AC-9 documents non-goal explicitly in story"
+    evidence: "Story ACs reflect Dev Feasibility resolution; no ambiguity in scope"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  manual_cases:
+    - id: MC-1
+      title: "Agent diff review — qa-verify-verification-leader Step 9"
+      steps:
+        - "Read .claude/agents/qa-verify-verification-leader.agent.md before and after KBAR-0190 implementation"
+        - "Confirm kb_write_artifact replaced by artifact_write in Step 9"
+        - "Confirm file_path parameter present pointing to {FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml"
+        - "Confirm kb_read_artifact calls at inputs section are unchanged"
+        - "Confirm kb_tools frontmatter updated to include artifact_write"
+        - "Confirm graceful failure semantics documented (kb_write_warning does not block)"
+      expected: "All checklist items confirmed"
+
+    - id: MC-2
+      title: "Agent diff review — qa-verify-completion-leader PASS and FAIL paths"
+      steps:
+        - "Read .claude/agents/qa-verify-completion-leader.agent.md before and after"
+        - "Confirm PASS path Step 2 uses artifact_write with file_path"
+        - "Confirm FAIL path Step 2 uses artifact_write with file_path"
+        - "Confirm kb_tools frontmatter updated"
+        - "Confirm graceful failure semantics present"
+      expected: "All checklist items confirmed"
+
+    - id: MC-3
+      title: "Agent diff review — dev-fix-fix-leader Steps 6 and 7"
+      steps:
+        - "Read .claude/agents/dev-fix-fix-leader.agent.md before and after"
+        - "Confirm Step 6 evidence artifact uses artifact_write with file_path to EVIDENCE.yaml"
+        - "Confirm Step 7 review artifact uses artifact_write with file_path to REVIEW.yaml"
+        - "Confirm kb_tools frontmatter updated"
+        - "Confirm kb_read_artifact calls at inputs unchanged"
+      expected: "All checklist items confirmed"
+
+    - id: MC-4
+      title: "FIX-CONTEXT.yaml downstream read validation"
+      steps:
+        - "Run full story through fix iteration workflow using updated agents"
+        - "Confirm FIX-CONTEXT.yaml written to filesystem at expected path"
+        - "Run dev-documentation-leader on same story"
+        - "Confirm it reads FIX-CONTEXT.yaml without error"
+      expected: "dev-documentation-leader completes without FIX-CONTEXT read failure"
+
+fixture_definitions:
+  - name: "test-story-in-uat"
+    type: "story"
+    description: "A completed story in UAT state usable for qa-verify workflow functional validation"
+  - name: "test-story-in-fix-iteration"
+    type: "story"
+    description: "A story in in-progress state with review artifact for dev-fix-fix-leader functional validation"
+
+risks:
+  - "KBAR-0190 depends on KBAR-0170 and KBAR-0180 — functional E2E tests cannot run until those land"
+  - "KB write failure scenario is difficult to simulate in real MCP environment — manual review of graceful failure documentation is the primary validation"
+  - "artifact_write tool input schema must be verified from landed KBAR-0110 before implementation; test assertions depend on exact parameter names"
+  - "qa-verify-setup-leader scope (AC-9) is unresolved — test plan may need to add MC-5 for setup leader review if scope is confirmed"

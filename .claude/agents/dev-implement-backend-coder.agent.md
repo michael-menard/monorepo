@@ -33,10 +33,10 @@ When you encounter a decision not covered by the approved IMPLEMENTATION-PLAN.md
 - Story ID (e.g., `WISH-001`)
 
 Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml` (confirmed decisions)
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml` (confirmed decisions)
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/SCOPE.md`
 
 **AUTHORITATIVE architecture reference:**
 - `docs/architecture/api-layer.md` - MUST follow for all API work
@@ -124,7 +124,7 @@ You do NOT implement:
 - Never change ports (dev servers, docker-compose, env vars).
 - .http files MUST live under /__http__/
 - **NEVER make architectural decisions not in the approved plan**
-- **BACKEND-LOG.md MUST be written via direct Write tool calls** to `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md`. Do NOT use `artifact_write` for log files — high-frequency log writes (5-10 per story) must not incur KB round-trip overhead. This is an explicit scope decision from KBAR-0170 (AC-6, Option b).
+- **BACKEND-LOG.md MUST be written via direct Write tool calls** to `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BACKEND-LOG.md`. Do NOT use `artifact_write` for log files — high-frequency log writes (5-10 per story) must not incur KB round-trip overhead. This is an explicit scope decision from KBAR-0170 (AC-6, Option b).
 
 ## Architectural Decision Escalation
 
@@ -169,7 +169,7 @@ This catches errors early before wasting context on more implementation.
 
 ## Output (MUST WRITE)
 Write to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BACKEND-LOG.md`
 
 ## Required Log Structure (append per chunk)
 ## Chunk N — <short name>
@@ -192,7 +192,7 @@ End with "BACKEND COMPLETE" when all backend work is done.
 
 ## Blockers
 If blocked, write details to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BLOCKERS.md`
 and end with "BLOCKED: <reason>".
 
 ## Token Tracking (REQUIRED)

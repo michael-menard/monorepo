@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  WINT-9130 is a documentation-only story that creates a single markdown file
+  (docs/workflow/langgraph-migration.md). There are no UI components, no React
+  components, no frontend changes, and no user-facing interface changes. UI/UX
+  review does not apply.

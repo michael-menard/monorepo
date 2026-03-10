@@ -1,0 +1,184 @@
+schema: 1
+story_id: "WINT-9090"
+timestamp: "2026-02-24T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md exactly. Index entry: "Port context-warmer,
+      session-manager to LangGraph nodes" with infrastructure
+      `packages/backend/orchestrator/src/nodes/context/`. Story scope section matches
+      identically — 5 new files, no existing files modified, same infrastructure path.
+      No extra endpoints, packages, or features introduced.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and Non-goals are consistent. Non-goals explicitly exclude modifying MCP
+      tools, creating agents, implementing cache warming skill logic, and wiring into
+      graphs — none of which appear in ACs or scope. All 14 ACs map directly to the
+      stated goal of producing two LangGraph-compatible nodes. Local testing plan
+      (HP-1 through HP-8, EC-1 through EC-4, ED-1 through ED-4) maps to ACs without
+      contradiction. The implementation gate (WINT-9010 must reach uat/completed) is
+      noted in Context and Reality Baseline consistently. WINT-2100 source ambiguity
+      is raised and resolved within the story: "behavioral source is the MCP tools in
+      packages/backend/mcp-tools/src/session-management/" — confirmed by file existence
+      (session-create.ts, session-update.ts, session-complete.ts, session-cleanup.ts
+      all confirmed present via filesystem check).
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan is comprehensive and explicit. Uses createToolNode from node-factory.ts,
+      updateState from state-helpers.ts, GraphStateWithContext from retrieve-context.ts,
+      Zod schemas from MCP tool __types__/ (not duplicated), Drizzle schemas from
+      @repo/database-schema, @repo/db injectable client, @repo/logger. AC-14 explicitly
+      prohibits schema duplication. No per-story one-off utilities. No new packages
+      added.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints — Ports & Adapters API layer check not applicable. Core logic
+      is transport-agnostic (LangGraph nodes accept/return GraphState, not HTTP types).
+      DB client is explicitly injectable (AC-10, factory pattern). Platform-specific
+      logic (Drizzle queries) is isolated behind injectable db config. Graceful
+      degradation contract explicitly defined in Architecture Notes.
+
+  - id: testability
+    status: PASS
+    note: >
+      Backend-only story — Playwright not required. Unit tests with injectable mock DB
+      cover all error cases (EC-1 through EC-4). Integration tests against live
+      postgres-knowledgebase cover all happy paths (HP-1 through HP-8). Manual case
+      MC-1 provides end-to-end integration step. Test files explicitly named in scope.
+      Verification commands specified per subtask. Coverage target of >= 80% stated and
+      verifiable via `pnpm test --filter @repo/orchestrator -- --coverage`.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      One open question remains unresolved: whether @repo/workflow-logic exports are
+      needed by context-warmer.ts or session-manager.ts. The story acknowledges this
+      ("Confirm in elaboration whether workflow-logic is actually needed") but does not
+      make a formal decision. The doc-sync.ts canonical reference imports
+      isValidStoryId from @repo/workflow-logic, but context/session nodes have no
+      obvious need for story ID validation utilities. This is a low-risk implementation
+      detail that can be resolved by the implementer inspecting @repo/workflow-logic
+      exports at implementation start — it does not block elaboration or design. No
+      other blocking TBDs exist. The WINT-2100 source ambiguity is fully resolved.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      All major risks disclosed: WINT-9010 dependency gate (in-qa, implementation gated
+      on uat/completed), WINT-2100 source ambiguity (resolved — MCP tool behavior is
+      the source), CI DB accessibility requirement for integration tests, clock skew
+      risk in TTL tests (mitigation: explicit timestamps), concurrent write test
+      fragility under Vitest parallel execution (mitigation: serial grouping). No hidden
+      dependencies detected. DB tables (context_cache.contextPacks,
+      context_cache.contextSessions) confirmed established by WINT-0030.
+      context_cache MCP tools confirmed present and QA: PASS.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Two sizing indicators triggered: (1) 14 ACs exceeds the 8-AC threshold;
+      (2) more than 3 distinct happy-path test scenarios (8 HP tests). However, the
+      story's own predictions note correctly: "High raw split_risk is mechanical from
+      ac_count; story is actually well-bounded by the porting pattern." Both nodes
+      implement the same structural pattern (Config schema, Result schema, extended
+      GraphState, factory, default export) with business logic ported from existing
+      MCP tools. The 14 ACs decompose cleanly into 5 sequential subtasks touching a
+      single new package directory. No significant frontend work, no new packages,
+      no endpoints. A split would increase coordination overhead without meaningful
+      risk reduction. WARN (not SPLIT) — story is executable as written.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      5 subtasks with explicit goals, file lists, AC coverage, dependency declarations,
+      verification commands, and token estimates. AC coverage: ST-1=AC-3,
+      ST-2=AC-1/4/5/8/9/10/11/14, ST-3=AC-13, ST-4=AC-2/6/7/8/9/10/11/14,
+      ST-5=AC-12. All 14 ACs covered. File counts: ST-1 creates 1, ST-2 creates/modifies
+      2, ST-3 modifies 1, ST-4 creates/modifies 2, ST-5 creates 2 — all within 3-file
+      limit. Dependency DAG: ST-1 → ST-2 → ST-3; ST-1 → ST-4; (ST-3 + ST-4) → ST-5.
+      No cycles. Canonical References section present with 4 entries covering all key
+      patterns (Phase 9 porting, state extension, DB injection, MCP tool business logic).
+      Each subtask references specific files to read and create.
+
+gaps: []
+
+opportunities:
+  - id: opp-1
+    category: edge_cases
+    finding: >
+      session-query.ts exists in packages/backend/mcp-tools/src/session-management/
+      (confirmed via filesystem) but is not included in the session-manager node's
+      operation dispatch table. The node supports create/update/complete/cleanup but
+      not query/read operations. Depending on downstream graph requirements
+      (WINT-9110), a query operation may be needed to retrieve session state for
+      conditional routing decisions.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "4ba2979f-a4f7-4b1d-9cc1-a57898595a5f"
+
+  - id: opp-2
+    category: edge_cases
+    finding: >
+      AC-13 and ST-3 specify cache invalidation as accessible "via the context-warmer
+      node or a companion utility" — the implementation approach (operation mode vs
+      separate export vs utility function) is left to the implementer. Documenting
+      the chosen approach in the index.ts re-export surface would aid WINT-9110
+      integration discovery.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "c4b19448-879e-479b-ab7a-60b014033d7a"
+
+  - id: opp-3
+    category: observability
+    finding: >
+      No structured metrics or telemetry are specified for the context nodes (cache hit
+      rate, session creation latency, TTL expiry frequency). These would complement
+      the telemetry nodes being built in WINT-9100 and would make operational
+      monitoring of the LangGraph execution path practical.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "cae969fc-6665-49e1-a9e9-bfb76e2a0ac7"
+
+  - id: opp-4
+    category: performance
+    finding: >
+      ED-1 tests concurrent reads on the same cache key but does not specify a
+      database-level concurrency control mechanism (e.g., SELECT FOR UPDATE, advisory
+      locks, or optimistic locking via version column). Without explicit locking,
+      concurrent cache misses could produce race conditions on the INSERT path.
+      This is a test coverage gap for an edge case scenario, not an MVP blocker.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "d6470d30-38d6-4829-bb1f-3f496b832e98"
+
+  - id: opp-5
+    category: ux_polish
+    finding: >
+      The @repo/workflow-logic ambiguity (whether it is needed) could be resolved
+      by adding a single line to the story confirming "workflow-logic exports are
+      NOT required for context/session nodes — MCP __types__/ imports are sufficient."
+      This would eliminate the decision_completeness WARN for implementers and reduce
+      their discovery overhead.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "d4134991-53ad-43f0-9255-58e5ddb21757"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-02-24T12:15:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 0

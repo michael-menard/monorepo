@@ -1,0 +1,34 @@
+id: CDTS-2020
+title: Implement Composite Story Context Tool
+status: backlog
+priority: medium
+phase: 2
+feature: "Create new MCP tool kb_get_story_context that returns a complete graph traversal for a story in one call: story + details + artifacts + linked knowledge (via story_knowledge_links) + similar stories (via embedding) + applicable constraints. Single DB round-trip, <500ms target."
+goal: "Agents can get full story context in one tool call instead of 5+ separate calls, enabling efficient graph-style navigation of the KB."
+depends_on:
+  - CDTS-2010
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # New MCP tool
+  - "Register kb_get_story_context tool in tool-handlers.ts and tool-schemas.ts"
+  - "Parameters: story_id (required), include_similar (boolean, default true), max_kb_entries (integer, default 10), max_similar_stories (integer, default 5)"
+
+  # Response shape
+  - "Returns story header + story_details (joined)"
+  - "Returns story_artifacts array for the story"
+  - "Returns linked_knowledge array from story_knowledge_links JOIN knowledge_entries, with link_type and confidence"
+  - "Returns similar_stories array from embedding cosine similarity (if include_similar=true)"
+  - "Returns applicable_constraints from knowledge_entries WHERE entry_type = 'constraint' AND (story_id matches OR is global)"
+
+  # Performance
+  - "Single DB round-trip using CTE or parallel queries — NOT N+1 queries"
+  - "Response time target: <500ms for a story with 10 linked KB entries"
+  - "Soft-deleted entries excluded from all result sets"
+
+  # Error handling
+  - "Returns 404-style error if story_id not found"
+  - "Returns partial results if some sections have no data (e.g., no similar stories yet)"
+risk_notes: "CTE-based query may be complex to maintain. Consider parallel Promise.all queries as an alternative if CTE readability becomes an issue. Embedding similarity requires stories to have embeddings — stories without embeddings are excluded from similar_stories results."
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

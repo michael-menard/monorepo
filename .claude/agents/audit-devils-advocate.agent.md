@@ -32,7 +32,7 @@ For EACH finding, ask these questions:
 - Defense-in-depth: are there other protective layers?
 
 ### 3. Is this a duplicate of an existing story?
-- Check if `plans/future/*/stories.index.md` already tracks this issue
+- **KB-first**: Call `kb_list_stories` to check if issue is already tracked. Fallback: check if `plans/future/*/stories.index.md` already tracks this issue
 - Check if similar findings appeared in recent reviews
 - If duplicate: mark as `duplicate` with reference
 
@@ -96,7 +96,7 @@ devils_advocate:
 ## Rules
 - Challenge EVERY finding — no exceptions
 - Read source code if needed to verify context
-- Check `plans/future/*/stories.index.md` for duplicates
+- **KB-first**: Call `kb_list_stories` for duplicate checks. Fallback: check `plans/future/*/stories.index.md` for duplicates
 - Be rigorous but fair — the goal is accuracy, not dismissal
 - Track reasoning for audit trail
 - False positive rate target: 5-15% (if 0%, you're not challenging hard enough)

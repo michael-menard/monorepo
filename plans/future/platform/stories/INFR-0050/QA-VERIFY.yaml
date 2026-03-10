@@ -1,0 +1,107 @@
+schema: 1
+story_id: "INFR-0050"
+timestamp: "2026-02-23T18:07:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 118, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+# Note: 5 failures noted in EVIDENCE.yaml (fixture/mocking issues) are now resolved.
+# All 118 tests pass in the current run.
+
+coverage: ">80% on SDK modules"
+coverage_meets_threshold: true  # Evidence states >80% on SDK modules (exceeds 45% global threshold)
+# Note: @vitest/coverage-v8 not installed in this workspace; coverage figure accepted from EVIDENCE.yaml
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "withStepTracking in hooks.ts lines 71-134; HOOK-001 through HOOK-004 pass"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "withStateTracking in hooks.ts lines 136-169; immediate emission bypasses buffer; HOOK-005 through HOOK-007 pass"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "buffer.ts and flush-timer.ts; BUF-001 through BUF-009 pass (9 tests with vi.useFakeTimers)"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "batch-insert.ts and batch-chunker.ts; BATCH-001 through BATCH-005 pass"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "extractCorrelationId() in hooks.ts lines 22-45; dynamic require of @repo/observability with graceful fallback; OTEL-001 through OTEL-003 pass"
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "shutdown() in init.ts lines 72-94, registerShutdownHandlers() lines 96-113; SHUT-001 through SHUT-004 pass"
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "TelemetrySdkConfigSchema in __types__/index.ts; validateConfig() in config.ts; CFG-001 through CFG-006 pass"
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "initTelemetrySdk() in init.ts lines 115-188; re-exported in index.ts and src/index.ts; INIT-001, INIT-003, INIT-004 pass"
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "buffer.test.ts 9 tests; vi.useFakeTimers() used for timer control; verified via test run"
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "hooks.test.ts (7), otel-integration.test.ts (3), batch-insert.test.ts (5); all pass"
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "telemetry-sdk/README.md 400+ lines: Quick Start, API reference, migration guide, troubleshooting"
+
+architecture_compliant: true
+# - No React/UI components (backend SDK story) - accessibility/react checks exempt
+# - Zod schemas used for all public/config types (TelemetrySdkConfigSchema, StepTrackingOptionsSchema, StateTrackingOptionsSchema)
+# - Internal structural types (BufferedEvent, BufferState, TelemetrySdk) use interfaces — advisory only, not a blocker
+# - @repo/logger used (no console.log)
+# - Drizzle ORM with onConflictDoNothing (no SQL injection vectors)
+# - Dynamic require pattern for @repo/observability provides graceful degradation
+# - No barrel files created (SDK exports from its own index.ts within the module boundary)
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Dynamic require() with graceful fallback is a valid pattern for optional peer dependencies in backend SDKs. Allows the SDK to work even when @repo/observability is not initialized."
+    category: pattern
+    tags: ["backend", "sdk", "observability", "infra"]
+
+  - lesson: "Internal structural types for an SDK (BufferedEvent, BufferState, SDK instance interface) can reasonably use TypeScript interfaces rather than Zod schemas since they are not externally validated — the Zod-first rule applies to externally-facing configuration and data types."
+    category: pattern
+    tags: ["typescript", "zod", "sdk", "backend"]
+
+  - lesson: "vi.useFakeTimers() is the correct pattern for testing flush-interval behavior in buffered systems. Buffer tests for timed flush operations should always use fake timers to avoid flaky CI behavior."
+    category: pattern
+    tags: ["testing", "vitest", "backend", "sdk"]
+
+tokens:
+  in: 12000
+  out: 2500

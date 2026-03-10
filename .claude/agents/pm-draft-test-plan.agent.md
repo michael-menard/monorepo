@@ -6,6 +6,8 @@ type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [pm-story-generation-leader]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: pm-draft-test-plan
@@ -22,7 +24,7 @@ Do not write implementation code.
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry).
 - `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 
@@ -31,8 +33,12 @@ Read from:
 - Do NOT invent endpoints beyond the index/story scope.
 - Tests must be locally runnable and evidence-based.
 
-## Output (MUST WRITE)
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
+## Output (MUST RETURN INLINE)
+Return the test plan YAML content inline in a code block. Do NOT write to any file.
+
+The leader reads your TaskOutput and embeds it as `pm_artifacts.test_plan` in story.yaml.
+
+Return your output in this exact format:
 
 ```yaml
 strategy: unit+integration+e2e   # unit | integration | e2e | manual
@@ -73,4 +79,31 @@ fixture_definitions: []          # { name, type, description }
 risks: []                        # test fragility, ambiguity, missing prereqs
 ```
 
-The leader reads this file and embeds it as `pm_artifacts.test_plan` in story.yaml.
+
+## KB Write (Dual-Write)
+
+After returning the inline YAML to the leader, **also** write the artifact to the KB:
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "test_plan",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    strategy: "<overall test strategy from the YAML>",
+    scope_ui_touched: true | false,
+    scope_data_touched: true | false,
+    // Full test plan content as structured data
+    plan_text: "<serialized YAML content returned inline>"
+  },
+  summary: {
+    strategy: "<brief strategy>",
+    scope_ui_touched: true | false,
+    scope_data_touched: true | false
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the inline return to the leader is sufficient.

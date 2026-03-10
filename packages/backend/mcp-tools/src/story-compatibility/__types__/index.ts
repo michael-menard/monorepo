@@ -29,14 +29,16 @@ export { isValidStoryId }
  */
 export const SWIM_LANE_TO_STATE = {
   backlog: 'backlog',
-  'ready-to-work': 'ready_to_work',
+  created: 'backlog',
+  elaboration: 'in_progress',
+  'ready-to-work': 'ready',
   'in-progress': 'in_progress',
   'needs-code-review': 'ready_for_review',
   'failed-code-review': 'failed_code_review',
   'ready-for-qa': 'ready_for_qa',
   'failed-qa': 'failed_qa',
   UAT: 'in_qa',
-  done: 'done',
+  done: 'completed',
 } as const
 
 export type SwimLaneDir = keyof typeof SWIM_LANE_TO_STATE

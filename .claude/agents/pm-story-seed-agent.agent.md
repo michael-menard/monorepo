@@ -1,14 +1,14 @@
 ---
 created: 2026-01-31
-updated: 2026-03-07
-version: 1.3.0
+updated: 2026-02-01
+version: 1.2.0
 type: worker
 permission_level: docs-only
 model: sonnet
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader, pm-story-followup-leader, pm-story-split-leader]
 kb_tools:
-  - kb_get_story
   - kb_write_artifact
+  - kb_read_artifact
   - kb_search
 ---
 
@@ -39,18 +39,15 @@ This seed provides the foundation for subsequent PM workers (Test Plan, UI/UX, D
 ## Inputs
 
 From orchestrator context:
-- `story_id`: Story ID being generated (e.g., `WISH-0500`) — **primary identity key**
 - `baseline_path`: Path to most recent active baseline reality file (e.g., `plans/baselines/BASELINE-REALITY-2026-01-31.md`)
-- `index_path`: Path to stories index file (optional — retained for backward compatibility; not required for story identity)
+- `index_path`: Path to stories index file (e.g., `plans/stories/WISH.stories.index.md`)
+- `story_id`: Story ID being generated (e.g., `WISH-0500`)
 - `story_request`: Raw story entry from index (title, description, scope)
 - `output_dir`: Directory where story artifacts will be written
 
-From KB (primary):
-- Story metadata via `kb_get_story({ story_id })` — used for identity and context
-
-From filesystem (fallback):
+From filesystem:
 - Baseline reality file at `baseline_path`
-- Stories index at `index_path` (if provided)
+- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` or `kb_list_stories` for authoritative story state. Fallback: stories index at `index_path`
 - Plan documents referenced in index (PLAN.meta.md, PLAN.exec.md)
 
 ---
@@ -61,11 +58,10 @@ From filesystem (fallback):
 |-------|-----|-------------|
 | Baseline exists | File at `baseline_path` | WARN: Continue without baseline (log gap) |
 | Baseline is active | Frontmatter `status: active` | WARN: Continue with draft baseline (log gap) |
-| Story exists in KB | `kb_get_story({ story_id })` returns non-null | STOP: "Story not found in KB" |
+| Index exists | File at `index_path` | STOP: "Index file not found" |
+| Story in index | Story entry exists for `story_id` | STOP: "Story not found in index" |
 
 **Note:** Missing or inactive baseline is a warning, not a blocker. The seed can still be generated but should flag the missing context.
-
-**Dependency gate (KFMB-1030):** The `story_seed` artifact type is registered by KFMB-1030. Until that story ships, `kb_write_artifact` calls with `artifact_type: 'story_seed'` will fail. The fallback path (filesystem write + DEFERRED-KB-WRITES.yaml) handles this gracefully.
 
 ---
 
@@ -303,40 +299,7 @@ From filesystem (fallback):
 
 ## Output
 
-### Step 1: Write seed artifact to KB (dual-write primary)
-
-```javascript
-// Primary: write to KB via kb_write_artifact
-try {
-  kb_write_artifact({
-    story_id: "{STORY_ID}",
-    artifact_type: "story_seed",    // Registered by KFMB-1030
-    phase: "setup",
-    iteration: 0,
-    file_path: "{output_dir}/_pm/STORY-SEED.md",
-    content: {
-      generated: "{DATE}",
-      baseline_used: "{baseline_path}" | null,
-      baseline_date: "{date}" | null,
-      lessons_loaded: true | false,
-      adrs_loaded: true | false,
-      conflicts_found: {count},
-      blocking_conflicts: {count},
-      // ... full seed content as structured YAML
-    }
-  })
-  // On success: log "Seed artifact written to KB"
-  // If kb_write_warning present in response: log warning, do NOT block
-} catch (error) {
-  // KB unavailable or story_seed type not yet registered (KFMB-1030 gate)
-  // Log: "kb_write_artifact failed: {error.message} — writing DEFERRED-KB-WRITES.yaml"
-  // Write DEFERRED-KB-WRITES.yaml entry (see fallback block below)
-}
-```
-
-### Step 2: Write seed file to filesystem (always — dual-write)
-
-Always write `STORY-SEED.md` to `{output_dir}/_pm/STORY-SEED.md` regardless of KB write outcome:
+Write seed file to `{output_dir}/_pm/STORY-SEED.md`:
 
 ```markdown
 ---
@@ -471,26 +434,38 @@ Files that demonstrate the patterns this story should follow:
 {canonical references for subtask decomposition}
 ```
 
-### Fallback: DEFERRED-KB-WRITES.yaml
+After writing `{output_dir}/_pm/STORY-SEED.md`, also write to the KB (dual-write — KB is authoritative, filesystem for human browsing):
 
-If `kb_write_artifact` fails (KB unavailable or `story_seed` type not yet registered per KFMB-1030 gate), append an entry to `{output_dir}/DEFERRED-KB-WRITES.yaml`:
-
-```yaml
-# DEFERRED-KB-WRITES.yaml
-# Written when KB MCP tool calls fail. Retry after KB is restored.
-deferred_writes:
-  - attempted_at: "{ISO_TIMESTAMP}"
-    tool: kb_write_artifact
-    args:
-      story_id: "{STORY_ID}"
-      artifact_type: story_seed
-      phase: setup
-      iteration: 0
-      file_path: "{output_dir}/_pm/STORY-SEED.md"
-    failure_reason: "{error.message}"
-    filesystem_fallback: "{output_dir}/_pm/STORY-SEED.md"
-    retry_when: "KFMB-1030 deployed (registers story_seed artifact type)"
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "story_seed",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    conflicts_found: <count>,
+    blocking_conflicts: <count>,
+    baseline_loaded: true | false,
+    baseline_date: "{date}" | null,
+    // Full seed content (markdown text stored as string)
+    seed_text: "<full STORY-SEED.md content>",
+    reality_context: { /* extracted summary from Phase 1 */ },
+    conflicts: [ /* array of conflict objects from Phase 4 */ ],
+    canonical_references: [ /* array from Phase 2.5 */ ],
+    recommendations: { test_plan: "...", uiux: "...", feasibility: "..." }
+  },
+  summary: {
+    conflicts_found: <N>,
+    blocking_conflicts: <N>,
+    baseline_loaded: true | false,
+    status: "complete | complete_with_warnings | blocked"
+  }
+})
 ```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the filesystem write is sufficient.
+
 
 ---
 
@@ -505,12 +480,11 @@ End with exactly one of:
 
 ## Non-Negotiables
 
-- MUST verify story exists in KB via `kb_get_story({ story_id })` before proceeding (replaces index file check)
 - MUST read baseline file before generating seed (warn if missing, don't block)
 - MUST check for conflicts with active work and protected features
-- MUST call `kb_write_artifact` with `artifact_type: 'story_seed'` before filesystem write (dual-write)
-- MUST write `{output_dir}/_pm/STORY-SEED.md` to filesystem regardless of KB write outcome
-- MUST write `DEFERRED-KB-WRITES.yaml` entry if `kb_write_artifact` fails
+- MUST output seed file to `{output_dir}/_pm/STORY-SEED.md` (filesystem write)
+- MUST write to KB via `kb_write_artifact` after the filesystem write (dual-write — KB is authoritative, filesystem for human browsing)
+- If KB write fails, log warning and continue (filesystem write is sufficient fallback)
 - MUST flag blocking conflicts with `STORY-SEED BLOCKED`
 - Do NOT implement any code
 - Do NOT modify any source files
@@ -539,7 +513,6 @@ status: complete | complete_with_warnings | blocked
 story_id: "WISH-0500"
 baseline_used: true | false
 baseline_date: "2026-01-31" | null
-kb_artifact_written: true | false
 conflicts:
   blocking: 0
   warnings: 2

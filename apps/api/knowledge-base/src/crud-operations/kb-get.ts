@@ -9,9 +9,31 @@
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { eq } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import { KbGetInputSchema, type KbGetInput } from './schemas.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const keColumns = {
+  id: knowledgeEntries.id,
+  content: knowledgeEntries.content,
+  embedding: knowledgeEntries.embedding,
+  role: knowledgeEntries.role,
+  entryType: knowledgeEntries.entryType,
+  storyId: knowledgeEntries.storyId,
+  tags: knowledgeEntries.tags,
+  verified: knowledgeEntries.verified,
+  verifiedAt: knowledgeEntries.verifiedAt,
+  verifiedBy: knowledgeEntries.verifiedBy,
+  createdAt: knowledgeEntries.createdAt,
+  updatedAt: knowledgeEntries.updatedAt,
+  archived: knowledgeEntries.archived,
+  archivedAt: knowledgeEntries.archivedAt,
+  canonicalId: knowledgeEntries.canonicalId,
+  isCanonical: knowledgeEntries.isCanonical,
+  deletedAt: knowledgeEntries.deletedAt,
+  deletedBy: knowledgeEntries.deletedBy,
+} as const
 
 /**
  * Dependencies for kb_get operation.
@@ -59,9 +81,9 @@ export async function kb_get(input: KbGetInput, deps: KbGetDeps): Promise<Knowle
 
   // Step 2: Query database
   const result = await db
-    .select()
+    .select(keColumns)
     .from(knowledgeEntries)
-    .where(eq(knowledgeEntries.id, validatedInput.id))
+    .where(and(eq(knowledgeEntries.id, validatedInput.id), isNull(knowledgeEntries.deletedAt)))
     .limit(1)
 
   const entry = result[0] ?? null

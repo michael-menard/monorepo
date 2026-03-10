@@ -1,0 +1,25 @@
+schema: 1
+story_id: KFMB-2040
+timestamp: '2026-03-06T23:00:00Z'
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - '.claude/commands/pm-story.md'
+  - '.claude/agents/pm-story-seed-agent.agent.md'
+  - '.claude/agents/pm-story-generation-leader.agent.md'
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: 'Migrate /pm-story pipeline to KB-first by adding kb_list_stories, kb_write_artifact, kb_read_artifact, and kb_update_story tool calls to generation leader and seed agent'
+elaboration: completed

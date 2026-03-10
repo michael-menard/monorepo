@@ -1,0 +1,42 @@
+schema: 1
+story_id: INFR-0120
+timestamp: "2026-02-15T21:25:00.000Z"
+iteration: 1
+
+verdict: PASS
+
+workers_run:
+  - build
+  - typecheck
+  - test
+
+workers_skipped: []
+
+ranked_patches: []
+
+findings:
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  test:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings:
+      - description: "34 unit tests pass for review-qa-artifacts-schema, 276 total tests pass"
+
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+
+note: "Synthesized from PROOF-INFR-0120.md (pre-evidence-first workflow)"

@@ -1,0 +1,30 @@
+schema: 1
+story_id: KBAR-0060
+timestamp: "2026-02-23T21:00:00Z"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/scripts/refresh-work-queue.ts"
+  - "packages/backend/kbar-sync/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Sync Integration Tests - fix stage population and buildStageMap wiring in work queue script"
+elaboration: "completed"
+
+frontend_impacted: false
+backend_impacted: true

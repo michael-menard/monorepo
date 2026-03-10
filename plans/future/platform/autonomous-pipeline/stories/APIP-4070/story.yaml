@@ -1,0 +1,14 @@
+id: "APIP-4070"
+title: "Weekly Pipeline Health Report"
+status: ready-for-qa
+priority: medium
+phase: 4
+feature: "Sunday cron aggregating stories completed/blocked, total and per-provider costs, model performance (first-try success rates, escalation rate), codebase health delta, and top improvement/concern — delivered via notification channel"
+goal: "Give operators a weekly digest of pipeline health, cost trends, and learning system effectiveness to guide any required human intervention."
+depends_on: ["APIP-4010", "APIP-3020", "APIP-2010"]
+endpoints: []
+infrastructure:
+  - "Notification channel integration (Slack/email)"
+risk_notes: "Report quality depends on aggregation accuracy; notification channel reliability; trend analysis needs historical snapshots — requires data from prior weeks."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

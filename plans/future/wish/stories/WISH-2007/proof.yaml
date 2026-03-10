@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2007
+completed_at: 2026-02-01T20:52:37.250Z
+summary: []
+deliverables:
+  - path: packages/backend/database-schema/src/migrations/app/meta/0007_snapshot.json
+    type: code
+  - path: packages/backend/database-schema/src/migrations/app/meta/_journal.json
+    type: code
+verification:
+  tests_passed: 13
+  all_acs_verified: true
+limitations: []

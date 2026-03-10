@@ -1,0 +1,134 @@
+---
+story_id: KBAR-0140
+generated_by: pm-dev-feasibility-review
+version: "1.0"
+---
+
+verdict: feasible
+confidence: high
+estimated_points: 3
+complexity: medium
+
+summary: >
+  Straightforward lift-and-refine task: port the existing extractSummary() prototype from
+  migrate-artifacts-simple.ts into a shared, importable module, expand to all 13 artifact types,
+  and wire the result into artifact_write. The prototype already covers 9 of 13 types; the 4
+  missing types (fix_summary, qa_gate, completion_report, analysis) can be derived from
+  mapContentToTypedColumns() with minimal effort. No DB migration needed; the summary jsonb
+  column already exists. The only coupling point is the ArtifactWriteInputSchema — a summary
+  optional field must be added to expose the opt-out mechanism.
+
+risk_flags:
+  - flag: "ArtifactWriteInputSchema lacks summary field"
+    severity: low
+    detail: >
+      artifact_write does not currently expose a summary parameter to callers. Adding
+      summary?: z.record(z.unknown()).optional() to ArtifactWriteInputSchema is required
+      for AC-6 (caller override). This is a backward-compatible change (optional field).
+  - flag: "4 artifact types must be reverse-engineered"
+    severity: low
+    detail: >
+      fix_summary, qa_gate, completion_report, and analysis are not in the prototype.
+      All four are already handled by mapContentToTypedColumns() — use those typed columns
+      as the signal fields for the summary extractor.
+
+reuse_plan:
+  - candidate: "Prototype extractSummary()"
+    location: "apps/api/knowledge-base/src/scripts/migrate-artifacts-simple.ts lines 100-203"
+    action: "Lift-and-refine into new module; expand to 13 types"
+  - candidate: "mapContentToTypedColumns() switch"
+    location: "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts lines 240-395"
+    action: "Reference for 4 missing types (fix_summary, qa_gate, completion_report, analysis)"
+  - candidate: "ARTIFACT_TYPES constant"
+    location: "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts line 44"
+    action: "Import for exhaustiveness validation in new module"
+  - candidate: "ArtifactTypeSchema"
+    location: "apps/api/knowledge-base/src/mcp-server/__types__/index.ts"
+    action: "Use for Zod input validation of artifactType parameter"
+  - candidate: "chunking/index.ts module pattern"
+    location: "apps/api/knowledge-base/src/chunking/index.ts"
+    action: "Follow for __types__/ and __tests__/ co-location pattern"
+
+integration_point:
+  file: "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+  function: "artifact_write"
+  lines: "1037-1116"
+  change: >
+    1. Add summary?: z.record(z.unknown()).optional() to ArtifactWriteInputSchema
+    2. Inside artifact_write, before the kb_write call, compute:
+       const resolvedSummary = validatedInput.summary ?? extractArtifactSummary(validatedInput.artifact_type, validatedInput.content)
+    3. Pass resolvedSummary as summary to kb_write_artifact
+
+module_placement:
+  recommended: "apps/api/knowledge-base/src/crud-operations/artifact-summary.ts"
+  alternative: "apps/api/knowledge-base/src/artifact-summary/index.ts"
+  rationale: >
+    Co-locating with artifact-operations.ts (same directory) minimizes import path complexity
+    and aligns with the pattern of related operations living together. The chunking-style
+    subdirectory is also valid if a __types__/ subdirectory is needed, but the extractor's
+    type needs are minimal (just ArtifactTypeSchema re-export).
+
+subtasks:
+  - id: ST-1
+    title: "Create extractArtifactSummary shared utility module"
+    description: >
+      Create apps/api/knowledge-base/src/crud-operations/artifact-summary.ts.
+      Port extractSummary() from migrate-artifacts-simple.ts. Rename to extractArtifactSummary.
+      Add cases for fix_summary, qa_gate, completion_report, analysis (derived from
+      mapContentToTypedColumns). Validate input artifactType via ArtifactTypeSchema (or accept
+      string with runtime dispatch). Use ARTIFACT_TYPES for exhaustiveness awareness.
+      Export the function as a named export. No barrel files.
+    acceptance_criteria: [AC-1, AC-2, AC-3, AC-4]
+    canonical_references:
+      - "apps/api/knowledge-base/src/scripts/migrate-artifacts-simple.ts (lines 100-203)"
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts (lines 240-395)"
+    estimated_tokens: 3000
+    touches_backend: true
+    touches_frontend: false
+    touches_database: false
+
+  - id: ST-2
+    title: "Write Vitest unit tests for extractArtifactSummary"
+    description: >
+      Create apps/api/knowledge-base/src/crud-operations/__tests__/artifact-summary.test.ts.
+      Write one test per artifact type (13 total) using representative inline fixture objects.
+      Add fallback/default case test with unknown artifact type.
+      Add edge-case tests: empty content {}, missing fields, all-null fields, unexpected types.
+      Follow the mock/fixture pattern from artifact-tools.test.ts.
+    acceptance_criteria: [AC-7]
+    canonical_references:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts"
+    estimated_tokens: 4000
+    touches_backend: true
+    touches_frontend: false
+    touches_database: false
+
+  - id: ST-3
+    title: "Integrate extractArtifactSummary into artifact_write + regression verification"
+    description: >
+      1. Add summary optional field to ArtifactWriteInputSchema.
+      2. Inside artifact_write, compute resolvedSummary = validatedInput.summary ?? extractArtifactSummary(type, content).
+      3. Pass resolvedSummary to kb_write_artifact as the summary parameter.
+      4. Run artifact-tools.test.ts and artifact-tools-integration.test.ts to verify no regression.
+      5. Run pnpm check-types and /lint-fix on all changed files.
+    acceptance_criteria: [AC-5, AC-6, AC-8, AC-9]
+    canonical_references:
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts (lines 973-1116)"
+    estimated_tokens: 2000
+    touches_backend: true
+    touches_frontend: false
+    touches_database: false
+
+no_migration_required: true
+no_new_mcp_tools: true
+no_schema_changes: false
+schema_change_detail: >
+  ArtifactWriteInputSchema gains one optional field: summary?: z.record(z.unknown()).optional()
+  This is backward-compatible — no callers are broken by adding an optional parameter.
+
+downstream_impact:
+  - story: KBAR-0150
+    note: >
+      Artifact Tools Integration Tests (KBAR-0150) depends on KBAR-0140. No tool count
+      changes (no new MCP tools), so mcp-integration.test.ts tool count is unaffected.
+      KBAR-0150 will benefit from populated summaries in integration test assertions.

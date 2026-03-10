@@ -51,12 +51,12 @@ dry_run: <boolean>
 
 ### 2. Validate Story Exists
 
-Check `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md` exists.
+Check `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` exists.
 If not: `SETUP FAILED: Story not found`
 
 ### 3. Check for Existing State
 
-Read `{FEATURE_DIR}/*/{STORY_ID}/_workflow/STATE.md`:
+Read `{FEATURE_DIR}/stories/{STORY_ID}/_workflow/STATE.md`:
 
 **If exists (resume mode):**
 - Parse current_phase
@@ -147,13 +147,13 @@ resume_from: <current_phase>
 
 ### 7. Write AGENT-CONTEXT.md
 
-Write to `{FEATURE_DIR}/*/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
+Write to `{FEATURE_DIR}/stories/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
 ```yaml
 feature_dir: {FEATURE_DIR}
 story_id: {STORY_ID}
-story_path: {FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md
-workflow_path: {FEATURE_DIR}/*/{STORY_ID}/_workflow/
-state_path: {FEATURE_DIR}/*/{STORY_ID}/_workflow/STATE.md
+story_path: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+workflow_path: {FEATURE_DIR}/stories/{STORY_ID}/_workflow/
+state_path: {FEATURE_DIR}/stories/{STORY_ID}/_workflow/STATE.md
 current_phase: <N>
 from_phase: <N>
 to_phase: <N>

@@ -1,0 +1,2 @@
+skipped: true
+reason: "KBAR-0240 is a CLI-only story with no frontend or UI surface. ADR-006 E2E exemption applies (frontend_impacted: false)."

@@ -1,0 +1,155 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "writeTelemetry() inserts a valid row for outcome=pass"
+    setup: "Mock Drizzle db.insert().values() to resolve successfully. Construct a ChangeTelemetrySchema-conformant record with outcome='pass', escalated_to=null."
+    action: "Call writeTelemetry(record, mockDb). Await resolution."
+    expected: "db.insert called once with the correct record. Function resolves without throwing. logger.warn not called."
+    evidence: "Vitest spy on mockDb.insert; assert called once with matching record shape."
+
+  - id: HP-2
+    title: "writeTelemetry() inserts a valid row for outcome=budget_exhausted with escalated_to populated"
+    setup: "Mock Drizzle db to resolve. Construct record with outcome='budget_exhausted', escalated_to='claude', all token and cost fields populated."
+    action: "Call writeTelemetry(record, mockDb). Await resolution."
+    expected: "db.insert called once. escalated_to='claude' in inserted values. Function resolves without throwing."
+    evidence: "Vitest spy asserting values argument contains escalated_to='claude'."
+
+  - id: HP-3
+    title: "Migration applies cleanly to a fresh wint schema (integration)"
+    setup: "APIP-5001 test database with wint schema pre-existing. No change_telemetry table present."
+    action: "Run the APIP-3010 SQL migration via migration runner."
+    expected: "wint.change_telemetry table created with all required columns. All three indexes created. No errors."
+    evidence: "SELECT column_name FROM information_schema.columns WHERE table_schema='wint' AND table_name='change_telemetry'; returns all 14 columns."
+
+  - id: HP-4
+    title: "Round-trip: insert and read back a telemetry row with all required fields"
+    setup: "APIP-5001 test database with migration applied."
+    action: "INSERT a row with story_id='TEST-001', change_spec_id='cs-1', change_type='unknown', file_type='unknown', model='ollama/mistral', outcome='pass', attempts=1, escalated_to=null, tokens_input=1200, tokens_output=400, cost_usd=0.000100, duration_ms=3200, created_at=NOW(). SELECT it back."
+    expected: "All 14 fields match inserted values. escalated_to IS NULL. created_at is a valid TIMESTAMPTZ."
+    evidence: "Vitest integration test asserting SELECT result matches INSERT values using ChangeTelemetrySchema.parse()."
+
+  - id: HP-5
+    title: "Round-trip: budget_exhausted outcome with escalated_to populated (integration)"
+    setup: "APIP-5001 test database with migration applied."
+    action: "INSERT a row with outcome='budget_exhausted', escalated_to='claude', attempts=3, tokens_input=8000, cost_usd=0.012000."
+    expected: "SELECT returns row with outcome='budget_exhausted' and escalated_to='claude'. ChangeTelemetrySchema.parse() succeeds on the result."
+    evidence: "Key integration test for APIP-3020 field coverage. Vitest assertion on round-trip parse."
+
+  - id: HP-6
+    title: "drizzle-kit check passes with no schema drift"
+    setup: "Both Drizzle schema definition in packages/backend/database-schema/src/schema/ and SQL migration applied to test DB."
+    action: "Run drizzle-kit check against the test database."
+    expected: "No drift reported. Drizzle schema and SQL migration are in sync."
+    evidence: "drizzle-kit check exits 0 with no diff output."
+
+error_cases:
+  - id: EC-1
+    title: "writeTelemetry() on DB insert failure: does not throw, logs warning"
+    setup: "Mock db.insert().values() to throw new Error('connection refused'). Prepare valid ChangeTelemetrySchema record."
+    action: "Call writeTelemetry(record, mockDb). Await resolution."
+    expected: "Function resolves without throwing. logger.warn called once with storyId, changeSpecId, and the error. Return value is undefined."
+    evidence: "Vitest vi.spyOn(logger, 'warn') asserts called once. vi.expect(writeTelemetry(...)).resolves.toBeUndefined()."
+
+  - id: EC-2
+    title: "change-loop node continues normally when writeTelemetry() mock throws"
+    setup: "Inject a mock writeTelemetry that always throws. Run the change-loop node against a mock ChangeSpec with outcome='pass'."
+    action: "Execute change-loop node with the failing telemetry injected via graph config."
+    expected: "Node returns a valid result. No BudgetExhaustedError thrown. No graph routing disruption. logger.warn called once."
+    evidence: "Node return value parsed; assert valid shape. Spy confirms warn called, not error/fatal."
+
+  - id: EC-3
+    title: "outcome column rejects invalid values (integration)"
+    setup: "APIP-5001 test database with migration applied."
+    action: "Attempt to INSERT a row with outcome='invalid_outcome'."
+    expected: "Database raises a constraint violation error (CHECK constraint or ENUM type rejection)."
+    evidence: "Integration test wraps INSERT in try/catch; asserts error message contains constraint violation."
+
+  - id: EC-4
+    title: "change_type column rejects values not in enum (integration)"
+    setup: "APIP-5001 test database with migration applied."
+    action: "Attempt to INSERT a row with change_type='not_a_valid_type'."
+    expected: "Database raises a constraint violation error."
+    evidence: "Integration test asserts error on INSERT."
+
+  - id: EC-5
+    title: "Required NOT NULL columns reject null values (integration)"
+    setup: "APIP-5001 test database with migration applied."
+    action: "Attempt to INSERT a row with model=NULL."
+    expected: "Database raises NOT NULL constraint violation."
+    evidence: "Integration test asserts error on INSERT for each required column."
+
+edge_cases:
+  - id: ED-1
+    title: "writeTelemetry() with all nullable fields set to null"
+    setup: "Mock db resolves. Construct record with escalated_to=null, tokens_input=null, tokens_output=null, cost_usd=null."
+    action: "Call writeTelemetry(record, mockDb)."
+    expected: "Function resolves successfully. ChangeTelemetrySchema.parse(record) succeeds. db.insert called with null nullable fields."
+    evidence: "Unit test with Vitest; assert schema parse passes."
+
+  - id: ED-2
+    title: "Migration is idempotent — re-applying does not cause errors (integration)"
+    setup: "APIP-5001 test database with migration already applied."
+    action: "Re-run the APIP-3010 migration."
+    expected: "No errors (CREATE INDEX IF NOT EXISTS prevents duplicate index errors; CREATE TABLE should use IF NOT EXISTS or migration runner guards idempotency)."
+    evidence: "Integration test runs migration twice; asserts no error on second run."
+
+  - id: ED-3
+    title: "Existing orchestrator test suites pass unchanged (regression)"
+    setup: "Full @repo/orchestrator package test suite."
+    action: "Run pnpm test --filter @repo/orchestrator."
+    expected: "All existing tests pass. No regressions from adding change-telemetry.ts or instrumentation."
+    evidence: "CI output; zero test failures on packages/backend/orchestrator tests."
+
+  - id: ED-4
+    title: "All 4 outcome types produce ChangeTelemetrySchema-conformant records"
+    setup: "No DB required (pure Zod validation test)."
+    action: "Construct a record for each of the four outcome values: 'pass', 'fail', 'abort', 'budget_exhausted'. Call ChangeTelemetrySchema.parse() on each."
+    expected: "All four records parse without Zod validation errors."
+    evidence: "Vitest unit test with four test cases; each asserts parse does not throw."
+
+  - id: ED-5
+    title: "Index idx_change_telemetry_story_id exists and is queryable (integration)"
+    setup: "APIP-5001 test database with migration applied. Insert 10 rows for story_id='STORY-A' with varying created_at values."
+    action: "SELECT * FROM wint.change_telemetry WHERE story_id='STORY-A' ORDER BY created_at DESC."
+    expected: "Query returns 10 rows in descending created_at order. Query plan uses index (EXPLAIN shows index scan)."
+    evidence: "Integration test asserting row count = 10 and ordering."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "ChangeTelemetrySchema.parse() on all 4 outcome types succeeds"
+      - "db.insert spy called with correct record shape"
+      - "logger.warn spy called once on DB failure"
+      - "Node return value matches expected shape when writeTelemetry throws"
+      - "migration creates 14 columns in wint.change_telemetry"
+      - "drizzle-kit check exits 0"
+      - "budget_exhausted + escalated_to round-trip reads back correctly"
+      - "pnpm test --filter @repo/orchestrator exits 0"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: validPassTelemetryRecord
+    type: ChangeTelemetry
+    description: "A ChangeTelemetrySchema-conformant record with outcome='pass', escalated_to=null, all required fields populated."
+  - name: validBudgetExhaustedRecord
+    type: ChangeTelemetry
+    description: "A ChangeTelemetrySchema-conformant record with outcome='budget_exhausted', escalated_to='claude', attempts=3, all cost fields populated."
+  - name: mockDrizzleDb
+    type: DrizzleDb (mock)
+    description: "Vitest mock of @repo/db's db object. Supports vi.fn() on insert().values() chain. Can be configured to resolve or throw."
+  - name: apip5001TestDb
+    type: PostgreSQL test database
+    description: "APIP-5001 provisioned test database with wint schema. Used for integration tests requiring real DB writes."
+
+risks:
+  - "AC-7 (change-loop instrumentation) is gated on APIP-1030. Unit tests for the node cannot be written until APIP-1030 ships and provides the node file. Integration tests for the migration and writeTelemetry() can be written independently."
+  - "Drizzle mock chain (db.insert().values()) requires careful vi.fn() setup for the fluent interface. Consider using a test helper to build the mock chain once and reuse across tests."
+  - "drizzle-kit check requires a running APIP-5001 test database; this test may be skipped in CI without the test DB provisioned. Gate this test on the APIP-5001 test DB being available."
+  - "APIP-1020 ChangeSpec ADR not yet published — change_type and file_type enum values are placeholder 'unknown'. Tests should use 'unknown' until ADR is confirmed, then update."

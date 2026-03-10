@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-4150 has no UI surface. All artifacts are backend TypeScript schemas in packages/backend/orchestrator and agent markdown files. No React components, no frontend changes, no Playwright tests required."

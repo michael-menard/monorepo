@@ -149,7 +149,7 @@ pnpm --filter playwright test --config=playwright.legacy.config.ts --project=chr
 
 ## Output
 
-Append to: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
+Append to: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md`
 
 Include: Test files created, reusable components used, test results, AC coverage.
 

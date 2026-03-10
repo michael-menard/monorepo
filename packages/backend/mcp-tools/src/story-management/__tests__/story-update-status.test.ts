@@ -57,7 +57,7 @@ describe('storyUpdateStatus', () => {
     const currentStory = {
       id: storyUuid,
       storyId: 'WINT-0090',
-      state: 'ready_to_work' as const,
+      state: 'ready' as const,
       updatedAt: new Date('2026-02-15T00:00:00Z'),
     }
 

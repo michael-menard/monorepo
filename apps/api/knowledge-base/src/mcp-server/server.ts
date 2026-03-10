@@ -61,7 +61,7 @@ export const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  DB_POOL_SIZE: z.coerce.number().int().positive().max(20).default(5),
+  DB_POOL_SIZE: z.coerce.number().int().positive().max(20).default(3),
   // Search-specific timeouts (KNOW-0052 AC6)
   KB_SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(DEFAULT_TIMEOUTS.KB_SEARCH),
   KB_GET_RELATED_TIMEOUT_MS: z.coerce

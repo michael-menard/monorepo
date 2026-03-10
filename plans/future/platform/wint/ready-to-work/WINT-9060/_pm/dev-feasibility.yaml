@@ -1,0 +1,94 @@
+feasible: true
+confidence: high
+rationale: "Clear canonical patterns in elab-epic.ts (fan-out with Send API), backlog-review.ts (injectable stubs via z.unknown().optional()), and implementation.ts (bounded retry loop with changeLoopRetryCount). Primary file is a net-new file with no conflicts. The only risk is WINT-9030/9040/9050 being pending — fully resolved by the injectable stub pattern already present in the codebase."
+complexity: high
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/graphs/batch-process.ts (new file)
+    - packages/backend/orchestrator/src/graphs/index.ts (add exports)
+    - packages/backend/orchestrator/src/graphs/__tests__/batch-process.test.ts (new file)
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "Injectable stubs for WINT-9030/9040/9050 must be compile-time safe — if imported directly the build fails when those files don't exist"
+    mitigation: "Use z.unknown().optional() injection pattern from backlog-review.ts — never import unimplemented files; pass optional nodes through config object"
+  - finding: "append reducer on workerResults must not be overwrite — fan-in only keeps last worker result if wrong reducer used"
+    mitigation: "Copy append reducer definition from elab-epic.ts exactly: const append = <T>(current: T[], update: T[]): T[] => [...current, ...update]"
+missing_requirements: []
+evidence_expectations:
+  - "pnpm check-types --filter @repo/orchestrator exits 0 after adding batch-process.ts"
+  - "pnpm test --filter @repo/orchestrator -- graphs/__tests__/batch-process exits 0 with >=5 passing tests"
+  - "graphs/index.ts diff shows all WINT-9060 symbols added with prefixed aliases"
+subtasks:
+  - id: ST-1
+    title: "Define BatchProcessConfigSchema, BatchProcessResultSchema, BatchWorkerResultSchema, and BatchProcessStateAnnotation"
+    goal: "Establish all Zod schemas and state annotation for the batch-process graph following Zod-first pattern"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+      - packages/backend/orchestrator/src/graphs/backlog-review.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/batch-process.ts
+    acs: ["AC-1", "AC-3", "AC-7", "AC-8"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+  - id: ST-2
+    title: "Implement createBatchProcessDispatcher (Send API conditional edge) and createBatchStoryWorkerNode with per-story retry logic"
+    goal: "Fan-out dispatcher returns Send[] for each storyId; worker node runs sub-pipeline, tracks retryCount up to maxRetriesPerStory"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/batch-process.ts
+    acs: ["AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 8000
+  - id: ST-3
+    title: "Implement createBatchProcessFanInNode, createBatchProcessCompleteNode, and injectable stub initialization in createBatchProcessGraph"
+    goal: "Fan-in aggregates worker results via append reducer; complete node sets workflow terminal state; graph factory wires all nodes with injectable stubs for WINT-9030/9040/9050"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+      - packages/backend/orchestrator/src/graphs/backlog-review.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/batch-process.ts
+    acs: ["AC-2", "AC-6"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+  - id: ST-4
+    title: "Implement runBatchProcess entry point and createBatchProcessNode adapter"
+    goal: "runBatchProcess logs graph_started/graph_completed/graph_failed via @repo/logger; follows thread ID convention; createBatchProcessNode wraps graph as node adapter for larger workflows"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/batch-process.ts
+    acs: ["AC-11", "AC-8"]
+    depends_on: ST-3
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 5000
+  - id: ST-5
+    title: "Add WINT-9060 exports to graphs/index.ts with prefixed aliases"
+    goal: "All WINT-9060 symbols exported from graphs/index.ts with prefixed aliases to avoid name collisions"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/index.ts
+    acs: ["AC-9"]
+    depends_on: ST-4
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 2000
+  - id: ST-6
+    title: "Write Vitest tests in graphs/__tests__/batch-process.test.ts"
+    goal: "Tests cover: graph compiles, dispatcher fan-out count, fan-in append behavior, retry bounded by maxRetriesPerStory, graceful stub skip when injectable nodes absent"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/batch-process.ts
+      - packages/backend/orchestrator/src/graphs/elab-epic.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/__tests__/batch-process.test.ts
+    acs: ["AC-10"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/orchestrator -- graphs/__tests__/batch-process"
+    estimated_tokens: 10000

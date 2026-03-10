@@ -1,0 +1,163 @@
+schema: 1
+story_id: APIP-5004
+timestamp: "2026-03-01T20:43:56Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 3380
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+
+coverage: 75.03
+coverage_meets_threshold: true  # >= 45% per CLAUDE.md; secrets module itself at 98.58%
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >
+    Tests use vi.mock() with hoisted mocks for AWS SDK — correct pattern.
+    Fake timers used for TTL tests (ED-1) — correct Vitest pattern.
+    Static configCache fields are properly reset between test cases via beforeEach.
+    Two low-severity 'as any' casts for private property access in tests (noted in REVIEW.yaml iteration 2 — acceptable).
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      SecretsClient class confirmed in worktree at
+      packages/backend/orchestrator/src/secrets/index.ts with all 4 public methods:
+      get() (line 120), getSync() (line 136), prefetch() (line 173), flush() (line 186).
+      env and aws-secrets-manager engine modes both implemented. Spot-checked directly.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      SecretsClientConfigSchema at line 32 of secrets/index.ts includes .refine() that
+      returns false when engine=aws-secrets-manager and awsRegion is falsy.
+      Error message: 'AWS_REGION is required when SECRETS_ENGINE=aws-secrets-manager'.
+      EC-2 test confirms constructor throws with matching message. type-check: exit 0.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      Verified anthropic.ts line 78: secretsClient.getSync('ANTHROPIC_API_KEY').
+      Config shape unchanged (AnthropicConfigSchema.parse() at line 86).
+      Provider tests pass (11 tests in anthropic.test.ts). Config caching preserved.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      _fetchFromAws() logs via logger.info at line 250 with {secretName, engine, latencyMs}.
+      HP-6 test verifies: audit call found via msg.includes('cache miss'); meta has secretName,
+      engine, latencyMs; JSON.stringify(meta) does NOT contain 'do-not-log-me'.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      cache Map<string, CacheEntry> at line 89; inflight Map for deduplication at line 92.
+      cacheTtlMs parsed from SECRETS_CACHE_TTL_MS env var (line 98-100), default 300,000ms.
+      ED-1 (TTL expiry with fake timers), ED-2 (5 concurrent -> 1 SDK call), ED-3 (configurable
+      TTL) all pass. Test count confirmed: 25 secrets-client tests pass.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      infra/secrets/template.yaml verified directly. Defines 3 resources:
+      AnthropicApiKeySecret, OpenRouterApiKeySecret, MinimaxApiKeySecret.
+      Follows ADR-002 standalone stack conventions: Parameters (Environment), Resources,
+      Outputs with Exports. Same structure as infra/elasticache/template.yaml.
+      cfn-lint not available (known deviation documented in EVIDENCE.yaml).
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >
+      infra/secrets/README.md verified directly. Documents: 5-step manual rotation procedure,
+      process-lifetime configCache limitation (static fields warning), Option A (process restart)
+      and Option B (SIGHUP + flush() signal) patterns. Cross-story APIP-5006 dependency
+      documented. IAM requirements included.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: >
+      Test file verified: covers HP-1..HP-8, EC-1..EC-4, ED-1..ED-4.
+      25 tests in src/secrets/__tests__/secrets-client.test.ts — all pass.
+      Test names confirm: HP-1 env fallback + no AWS call; HP-2 AWS fetch; HP-3 cache hit;
+      HP-4 prefetch; HP-5 getSync; HP-6 audit log; HP-7 flush; HP-8 default TTL;
+      EC-1 missing env var; EC-2 missing AWS_REGION; EC-3 SDK error; EC-4 getSync before prefetch;
+      ED-1 TTL expiry; ED-2 deduplication; ED-3 configurable TTL; ED-4 exports.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: >
+      Constructor defaults SECRETS_ENGINE to 'env' (line 96: '?? "env"').
+      getSync() in env mode reads process.env directly (line 138).
+      get() in env mode calls _getFromEnv() which reads process.env — no AWS SDK call.
+      HP-1 tests confirm AWS SDK never called in env mode.
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: >
+      secrets/index.ts exports: SecretsClient (class, line 85), SecretsClientConfigSchema
+      (Zod schema, line 32), secretsClient (singleton, line 284). All 4 methods public.
+      SecretsClientConfigSchema exported and tested in separate describe block (AC-10 tests).
+      Singleton and class exported separately enabling test injection (ED-4 confirms).
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Static configCache fields on provider classes create a process-lifetime coupling issue
+      with SecretsClient. Rotation via SIGHUP requires clearing both SecretsClient cache AND
+      each provider's static configCache. Document this explicitly in infra READMEs for all
+      stories that use the provider pattern.
+    category: pattern
+    tags: ["backend", "secrets", "cache", "rotation"]
+
+  - lesson: >
+      Concurrent in-flight deduplication (Map<string, Promise<string>>) is a clean pattern
+      for preventing thundering-herd on cache-miss fetches. This can be reused in any
+      async caching module in the orchestrator.
+    category: reuse
+    tags: ["backend", "caching", "deduplication", "orchestrator"]
+
+  - lesson: >
+      cfn-lint unavailability in CI/local environments requires manual template review as a
+      fallback. Consider adding cfn-lint to the devDependencies or CI pipeline to enable
+      automated CloudFormation linting for infra stories.
+    category: blocker
+    tags: ["infra", "cloudformation", "ci", "tooling"]
+
+  - lesson: >
+      The prefetch-then-getSync pattern (ARCH-001) cleanly bridges async secrets retrieval
+      with synchronous provider loadConfig() methods without modifying the BaseProvider
+      interface. Reuse this pattern for any future secrets/config retrieval that must integrate
+      with synchronous interfaces.
+    category: pattern
+    tags: ["backend", "secrets", "architecture", "providers"]
+
+tokens:
+  in: 18000
+  out: 3500

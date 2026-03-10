@@ -6,6 +6,8 @@ type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [pm-story-generation-leader]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: pm-dev-feasibility-review
@@ -19,7 +21,7 @@ Focus ONLY on risks that block the core user journey. Track non-MVP concerns sep
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}.
 - repo architecture rules (ports/adapters, reuse-first, packages/** boundaries)
 - dev agent standards (no mocks/stubs in core paths, proof-of-work expectations)
 
@@ -38,8 +40,12 @@ A risk is **MVP-critical** ONLY if it **blocks the core user journey**:
 
 Everything else is a **Future Risk** - important but not MVP-blocking.
 
-## Output (MUST WRITE)
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/dev-feasibility.yaml`:
+## Output (MUST RETURN INLINE)
+Return the dev feasibility YAML content inline in a code block. Do NOT write to any file.
+
+The leader reads your TaskOutput and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.
+
+Return your output in this exact format:
 
 ```yaml
 feasible: true | false
@@ -75,4 +81,30 @@ subtasks:
 
 Non-MVP risks and future scope are **omitted** — out of scope for this output.
 
-The leader reads this file and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.
+
+## KB Write (Dual-Write)
+
+After returning the inline YAML to the leader, **also** write the artifact to the KB:
+
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "dev_feasibility",
+  phase: "analysis",
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    feasible: true | false,
+    confidence: "high | medium | low",
+    complexity: "low | medium | high",
+    feasibility_text: "<serialized YAML content returned inline>"
+  },
+  summary: {
+    feasible: true | false,
+    confidence: "high | medium | low",
+    complexity: "low | medium | high"
+  }
+})
+```
+
+**Fallback**: If `kb_write_artifact` is unavailable, log a warning and continue — the inline return to the leader is sufficient.

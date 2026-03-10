@@ -1,0 +1,43 @@
+schema: 1
+id: WISH-2007
+feature: wish
+type: feature
+state: uat
+title: Run Migration
+points: 1
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2000
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - infra
+goal: Generate and apply database migration to create the `wishlist_items` table with all indexes, enums, and
+  constraints in local, staging, and production environments.
+non_goals:
+  - Modifying the schema design (WISH-2000 defines schema)
+  - Seeding initial data (covered in WISH-2000 seed scripts)
+  - Setting up migration automation/CI integration (future enhancement)
+  - Schema evolution strategy for future changes (future story)
+acs:
+  - id: AC1
+    text: Migration file generated at `packages/backend/database-schema/src/migrations/app/0007_*.sql`
+    type: functional
+  - id: AC2
+    text: Migration metadata updated in `meta/` directory (snapshot JSON and journal)
+    type: functional
+  - id: AC3
+    text: Migration file contains CREATE TABLE for `wishlist_items` with all 19 columns matching WISH-2000 spec
+    type: functional
+risks:
+  - risk: Enum Definitions Must Match WISH-2000 Exactly
+    mitigation: Code review MUST verify enum values match WISH-2000 spec
+  - risk: Migration Already Exists from Previous Attempts
+    mitigation: Document "clean state" procedure for development
+  - risk: Index Creation Performance
+    mitigation: MUST run migration BEFORE any data is inserted
+created_at: 2026-01-24T02:00:00-07:00
+updated_at: 2026-01-28T22:30:00-07:00

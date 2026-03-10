@@ -1,0 +1,30 @@
+schema: 1
+story_id: WKFL-008
+timestamp: '2026-02-07T21:50:00Z'
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/config/experiments.yaml"
+  - ".claude/agents/experiment-analyzer.agent.md"
+  - ".claude/agents/pm-story-generation-leader.agent.md"
+  - ".claude/agents/dev-documentation-leader.agent.md"
+  - ".claude/schemas/**"
+  - "packages/backend/orchestrator/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create workflow experimentation framework with traffic routing, metrics tracking, and statistical analysis for A/B testing workflow variations"

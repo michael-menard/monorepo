@@ -1,0 +1,121 @@
+schema: 1
+story_id: "WINT-0030"
+timestamp: "2026-02-24T00:58:00Z"
+
+verdict: PASS
+
+story_type: duplicate
+duplicate_of: WINT-0010
+resolution_note: >
+  WINT-0030 was resolved as a duplicate during PM story generation. The full scope
+  (context cache tables) was already implemented in WINT-0010. QA verified the
+  duplicate claim by inspecting the live codebase and confirming all 11 ACs are
+  satisfied by the existing implementation.
+
+tests_executed: true
+test_results:
+  unit: { pass: 385, fail: 0 }
+  integration: { pass: 0, fail: 0, skipped: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+test_suite: "packages/backend/database-schema — 17 test files, all pass"
+
+acs_verified:
+  - ac_id: "AC-001"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextPacks table at wint.ts:492 — pack_type, pack_key, content (JSONB), version, expires_at, hit_count, token_count all present"
+    spot_check_file: "packages/backend/database-schema/src/schema/wint.ts"
+
+  - ac_id: "AC-002"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextSessions table at wint.ts:532 — session_id, agent_name, story_id, phase, input_tokens, output_tokens, cached_tokens all present"
+    spot_check_file: "packages/backend/database-schema/src/schema/wint.ts"
+
+  - ac_id: "AC-003"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextCacheHits join table at wint.ts:569 — session_id (FK), pack_id (FK), tokens_saved present"
+    spot_check_file: "packages/backend/database-schema/src/schema/wint.ts"
+
+  - ac_id: "AC-004"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextPackTypeEnum at wint.ts:477 with exactly 7 types: codebase, story, feature, epic, architecture, lessons_learned, test_patterns"
+    spot_check_file: "packages/backend/database-schema/src/schema/wint.ts"
+
+  - ac_id: "AC-005"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "All 3 tables use uuid().primaryKey().defaultRandom() — confirmed in contextPacks (492), contextSessions (532), contextCacheHits (569)"
+
+  - ac_id: "AC-006"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "14 indexes across 3 tables — packTypeKeyIdx (unique), expiresAtIdx, lastHitAtIdx, packTypeIdx, sessionIdIdx (unique), agentNameIdx, storyIdIdx, startedAtIdx, agentStoryIdx, sessionIdIdx, packIdIdx, createdAtIdx"
+
+  - ac_id: "AC-007"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextCacheHits references contextSessions and contextPacks with onDelete: cascade. Confirmed in migration 0015_messy_sugar_man.sql lines 311-312."
+
+  - ac_id: "AC-008"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "insertContextPackSchema, selectContextPackSchema, insertContextSessionSchema, selectContextSessionSchema, insertContextCacheHitSchema, selectContextCacheHitSchema all exported via drizzle-zod at wint.ts:1702-1713"
+
+  - ac_id: "AC-009"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "contextSessionsRelations, contextPacksRelations, contextCacheHitsRelations all defined at wint.ts:1567-1583"
+
+  - ac_id: "AC-010"
+    status: PASS
+    verification_method: "test_execution"
+    notes: >
+      AC-003 test 'WINT Schema - AC-003: Context Cache Schema > should define all context cache tables' PASSES.
+      AC-010 test 'should generate insert and select schemas for context packs' PASSES.
+      AC-013 test 'should define context pack type enum' PASSES.
+      Full suite: 385 passed, 0 failed.
+
+  - ac_id: "AC-011"
+    status: PASS
+    verification_method: "spot_check"
+    notes: "Migration 0015_messy_sugar_man.sql creates context_packs, context_sessions, context_cache_hits tables with all indexes and FK constraints. Verified at lines 81-352."
+    spot_check_file: "packages/backend/database-schema/src/migrations/app/0015_messy_sugar_man.sql"
+
+architecture_compliant: true
+architecture_notes:
+  - "All tables in wint PostgreSQL schema namespace (wintSchema.table)"
+  - "Zod-first types via drizzle-zod (no TypeScript interfaces)"
+  - "Uses @repo/database-schema patterns consistent with rest of codebase"
+  - "Drizzle ORM relations defined for lazy loading"
+
+issues: []
+
+duplicate_verification:
+  claim_valid: true
+  implementing_story: WINT-0010
+  evidence_location: "packages/backend/database-schema/src/schema/wint.ts"
+  actual_line_numbers: "477-595 (reported as 223-343 in COMPLETION-REPORT — stale line ref, code is correct)"
+  all_acs_satisfied_by_wint_0010: true
+  migration_verified: true
+  tests_verified: true
+
+tokens:
+  in: 0
+  out: 0
+  note: "Duplicate story — verified via direct code inspection, no sub-agents spawned"
+
+gate:
+  decision: PASS
+  reason: >
+    WINT-0030 is a valid duplicate of WINT-0010. All 11 ACs verified against live
+    implementation in packages/backend/database-schema/src/schema/wint.ts (lines 477-595).
+    Migration 0015_messy_sugar_man.sql confirmed. Test AC-003 passes in 385-test suite.
+    Zod schemas exported, relations defined, indexes correct, FK cascades confirmed.
+    No implementation work required or missing.
+  blocking_issues: []
+  decision_timestamp: "2026-02-24T00:58:00Z"
+  qa_verifier: "qa-verify-story (direct — duplicate handling)"

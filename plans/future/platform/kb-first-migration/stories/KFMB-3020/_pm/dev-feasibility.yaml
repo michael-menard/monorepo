@@ -1,0 +1,186 @@
+feasible: true
+confidence: high
+rationale: >
+  All changes are to .claude/commands/ markdown instruction files only — no TypeScript,
+  no database migrations, no infrastructure changes. The KB MCP tools (kb_list_stories,
+  kb_get_story, kb_search) are already registered and tested. The primary risk is
+  coordination with KFMB-4010 on story-update.md edits and ensuring pm-story.md's
+  two collision detection locations are both updated. Blast radius is contained to
+  6 command files, with well-defined acceptance criteria per file.
+complexity: medium
+change_surface:
+  areas:
+    - .claude/commands/ (6 files: story-update.md, pm-story.md, story-status.md, code-audit.md, elab-epic.md, index-update.md)
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: >
+      pm-story.md has TWO collision detection locations (inline Collision Detection section
+      AND Step 1c/1c-platform logic). Missing one leaves a partial migration that fails
+      the AC-12 grep audit requirement.
+    mitigation: >
+      Run grep -n "stories.index.md" .claude/commands/pm-story.md before editing to
+      enumerate all locations. Update both. Re-run grep after edits to confirm zero
+      live references remain.
+  - finding: >
+      KFMB-4010 also modifies story-update.md for stage directory elimination.
+      If both stories target the same sections, git merge conflicts may produce
+      inconsistent execution sequences.
+    mitigation: >
+      Review KFMB-4010's planned scope for story-update.md before editing. Coordinate
+      so KFMB-3020 removes Step 4 (index write), and KFMB-4010 handles separate sections.
+      If KFMB-4010 is not yet complete, KFMB-3020 should proceed with a clear note
+      in the version history about the pending KFMB-4010 coordination.
+  - finding: >
+      story-status.md's Feature Only mode deferral was originally tagged as WINT-1070.
+      Updating this deferral note to KFMB context requires careful wording so that
+      the note remains accurate for the post-KFMB-3020 state.
+    mitigation: >
+      Update the non-goals section in story-status.md to explicitly reference KFMB
+      migration path instead of WINT-1070 for feature-level DB routing.
+missing_requirements: []
+evidence_expectations:
+  - >
+    grep -rn "stories\.index\.md" .claude/commands/ returns zero live-reference results
+    after all six files are updated.
+  - >
+    All six command files retain their existing completion signals (UPDATE COMPLETE,
+    INDEX UPDATE COMPLETE, AUDIT COMPLETE) — only internal mechanics changed.
+subtasks:
+  - id: ST-1
+    title: "Add deprecation header to index-update.md"
+    goal: >
+      Mark index-update.md as deprecated with a header notice. No logic changes.
+      This is the lowest-risk change and establishes intent for the migration.
+    files_to_read:
+      - .claude/commands/index-update.md
+    files_to_modify:
+      - .claude/commands/index-update.md
+    acs:
+      - AC-9
+    depends_on: none
+    verification: >
+      grep "DEPRECATED as of KFMB-3020" .claude/commands/index-update.md returns a match.
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Remove Step 4 from story-update.md and deprecate --no-index"
+    goal: >
+      Remove the Step 4 index write from story-update.md. Mark --no-index as
+      deprecated with a no-op deprecation warning. Update Result YAML to remove
+      index_updated field. Update Integration Test Scenario F.
+    files_to_read:
+      - .claude/commands/story-update.md
+      - .claude/commands/index-update.md
+    files_to_modify:
+      - .claude/commands/story-update.md
+    acs:
+      - AC-1
+      - AC-2
+      - AC-3
+    depends_on: none
+    verification: >
+      grep -n "Step 4\|stories.index.md\|index_updated" .claude/commands/story-update.md
+      returns only version history or deprecated notice references.
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: "Update code-audit.md promote to use KB tools for dedup"
+    goal: >
+      Replace the promote subcommand's three-step workflow description to instruct
+      audit-promote-leader to dedup via kb_search or kb_list_stories rather than
+      reading stories.index.md files.
+    files_to_read:
+      - .claude/commands/code-audit.md
+    files_to_modify:
+      - .claude/commands/code-audit.md
+    acs:
+      - AC-7
+    depends_on: none
+    verification: >
+      grep -n "stories.index.md" .claude/commands/code-audit.md returns no live references.
+      "kb_search\|kb_list_stories" appears in promote section.
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Update elab-epic.md to remove stories_index from context-init template"
+    goal: >
+      Remove the stories_index field from the context-init template in elab-epic.md.
+      Ensure only feature_dir is passed to the setup leader.
+    files_to_read:
+      - .claude/commands/elab-epic.md
+    files_to_modify:
+      - .claude/commands/elab-epic.md
+    acs:
+      - AC-8
+    depends_on: none
+    verification: >
+      grep -n "stories_index\|stories.index.md" .claude/commands/elab-epic.md
+      returns no live references.
+    estimated_tokens: 3500
+
+  - id: ST-5
+    title: "Update pm-story.md Collision Detection and remove Index path from leader context"
+    goal: >
+      Replace the index check in Collision Detection with kb_list_stories query.
+      Remove "Index path: {INDEX_PATH}" from the Step 3 leader prompt template.
+      Update both collision detection locations (inline section AND Step 1c/1c-platform).
+      Verify Step 4.5 (KB seed migration) is intact.
+    files_to_read:
+      - .claude/commands/pm-story.md
+    files_to_modify:
+      - .claude/commands/pm-story.md
+    acs:
+      - AC-4
+      - AC-5
+      - AC-6
+    depends_on: none
+    verification: >
+      grep -n "stories.index.md" .claude/commands/pm-story.md returns no live-check
+      references. "kb_list_stories" appears in Collision Detection section.
+      Step 4.5 migrate:stories call is present and unchanged.
+    estimated_tokens: 8000
+
+  - id: ST-6
+    title: "Update story-status.md Feature Only, --depth, and --deps-order modes to use kb_list_stories"
+    goal: >
+      Update Feature Only mode description to note kb_list_stories for story counts.
+      Update --depth and --deps-order modes to read story data from kb_list_stories
+      rather than stories.index.md. Update WINT-1070 deferral note to reference KFMB path.
+      Retain single-story DB-first routing as-is (already migrated).
+    files_to_read:
+      - .claude/commands/story-status.md
+    files_to_modify:
+      - .claude/commands/story-status.md
+    acs:
+      - AC-10
+      - AC-11
+    depends_on: none
+    verification: >
+      grep -n "stories.index.md" .claude/commands/story-status.md returns no references
+      in Feature Only, --depth, or --deps-order mode steps.
+      "kb_list_stories" appears in all three mode descriptions.
+    estimated_tokens: 7000
+
+  - id: ST-7
+    title: "Final grep audit: verify zero live stories.index.md references across all commands"
+    goal: >
+      Run final verification grep across all .claude/commands/ files to confirm
+      no live stories.index.md references remain after all ST-1 through ST-6 edits.
+      Document any acceptable exceptions (deprecated notices, version history).
+    files_to_read:
+      - .claude/commands/story-update.md
+      - .claude/commands/pm-story.md
+      - .claude/commands/story-status.md
+      - .claude/commands/code-audit.md
+      - .claude/commands/elab-epic.md
+      - .claude/commands/index-update.md
+    files_to_modify: []
+    acs:
+      - AC-12
+      - AC-13
+    depends_on: ST-6
+    verification: >
+      grep -rn "stories\.index\.md" .claude/commands/ returns zero live-reference results.
+      Any remaining matches are in deprecated notices or version history only.
+    estimated_tokens: 2000

@@ -1,0 +1,203 @@
+schema: 1
+story_id: "APIP-4010"
+timestamp: "2026-02-25T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      The stories.index.md entry for APIP-4010 lists only APIP-1070 and APIP-3090 as
+      dependencies, omitting APIP-5007 (Database Schema Versioning and Migration Strategy).
+      Both story.yaml and APIP-4010.md correctly list all three. The index also reports
+      "Phase 4: Long-Term Quality (3 stories)" in the progress table header but the Phase 4
+      section contains 7 stories (APIP-4010 through APIP-4070). Title in index ("Codebase
+      Health Gate") matches the full title in story files. No scope inflation detected — all
+      ACs map to the three-component + cron goal stated in stories.index.md.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals, non-goals, ACs, and risks are coherent. AC-10 (cron registration) is explicitly
+      flagged [Deferred until APIP-3090 stable] and covered by ST-08/ST-09 which are blocked
+      by APIP-1070 and APIP-3090 respectively — deferral is internally consistent with the
+      dependency chain. Non-goals explicitly exclude UI dashboard, auto-remediation,
+      distributed cron, CLEANUP story workflow, and automatic baseline promotion — each
+      corresponds to a referenced follow-up story (APIP-4070, APIP-2020) or a deliberate ADR.
+      The two-option fallback for merge-count tracking (Option A: APIP-1070 coordination vs
+      Option B: standalone wint.merge_runs) is documented in RISK-001 and ST-08 description.
+      No contradictions between story.yaml acs and APIP-4010.md Acceptance Criteria sections.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      All four canonical references verified to exist on disk:
+      (1) packages/backend/database-schema/src/schema/wint.ts — wintSchema.table() pattern
+      confirmed with createInsertSchema/createSelectSchema imports present.
+      (2) packages/backend/orchestrator/src/artifacts/story-v2-compatible.ts — both
+      StoryArtifactSchema and createStoryArtifact() helper confirmed exported.
+      (3) packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts — confirmed
+      exists for KB write-back pattern reference.
+      (4) packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts — confirmed
+      exists for LangGraph routing test pattern reference.
+      APIP-3010 (writeTelemetry fire-and-forget pattern) is referenced as a plan story at
+      plans/future/platform/autonomous-pipeline/ready-to-work/APIP-3010/APIP-3010.md — exists.
+      No hand-written Drizzle column types, no one-off utilities outside shared packages.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Core detection logic (detectDriftAndGenerateCleanup) is a pure function — no DB, no FS,
+      no CLI dependencies. captureHealthSnapshot() uses injectable execFn: (cmd: string) =>
+      Promise<string> per-collector and injectable db parameter, making CLI and DB transport
+      swappable. writeCleanupStories() is separated from detection logic (ST-07 is distinct
+      from ST-06), keeping FS writes in a dedicated adapter. LangGraph cron registration
+      (ST-09) is the outermost orchestration layer and does not bleed into core helpers.
+      Architecture section documents the collector function signature explicitly.
+
+  - id: testability
+    status: PASS
+    note: >
+      12 unit tests (UT-001 through UT-012) and 5 integration tests (IT-001 through IT-005)
+      are named with concrete scenarios. All 8 metric collector functions accept injectable
+      execFn eliminating real pnpm invocations. File writes use vi.mock('fs/promises').
+      Integration tests target explicit DATABASE_URL (postgresql://postgres:postgres@
+      localhost:5432/lego_dev) with the port-5432-not-5433 ARCH-001 lesson documented.
+      Coverage targets are per-function (100% for pure detectDriftAndGenerateCleanup, 90% for
+      captureHealthSnapshot, waiver for SQL migration file). The merge-count gate is covered
+      by UT-012 independently. No blocking ambiguity on test setup.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      Two minor unresolved details: (1) CLEANUP story sequence number padding and upper bound
+      are unspecified — the architecture note says "fs.readdirSync on the backlog directory"
+      but does not define zero-padding width for NNNN (e.g. APIP-CLEANUP-0001 vs
+      APIP-CLEANUP-1). This could cause sort-order issues. (2) Migration file sequence number
+      is listed as "0NN_codebase_health.sql" with NN as TBD — acceptable since APIP-5007 is a
+      dependency that will assign it, but the implementer needs to determine the next available
+      NN at implementation time. Neither is MVP-blocking. AC-10 deferral is explicitly
+      documented and not a hidden TBD.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Four risks declared with severity and mitigation: RISK-001 (high — APIP-1070 merge-count
+      coordination with two-option fallback), RISK-002 (high — APIP-3090 not yet available,
+      mitigated by deferring AC-10), RISK-003 (medium — heterogeneous 8-metric collection,
+      mitigated by injectable decomposition), RISK-004 (medium — empirical threshold
+      calibration, mitigated by configurable schema with documented defaults). Infrastructure
+      notes call out write-access requirement for backlog directory, idempotent migration
+      requirement, and port 5432 constraint. The pg_try_advisory_lock concurrency guard for
+      cron is noted in architecture. No undisclosed auth, infra, or DB risks detected.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      13 ACs exceeds the 8-AC sizing indicator threshold. However: AC-10 is explicitly
+      deferred (not implemented in this story), and AC-11/AC-12/AC-13 are test and quality
+      ACs rather than new features. Effective functional AC count is 9 (AC-1 through AC-9).
+      Two packages touched (database-schema + orchestrator) is within the 2-package boundary.
+      No frontend. No API endpoints. The 8-metric collector decomposition in ST-04 (4h
+      estimate) touches potentially 8+ files which is the main sizing concern. Total estimate
+      sums to ~23 hours across 12 subtasks — above a typical 8-point story. The story is a
+      coherent Phase 4 feature with strong internal decomposition; a SPLIT would create more
+      coordination overhead than value. Recommend monitoring ST-04 during implementation and
+      splitting metric collectors into a separate story only if they prove more complex than
+      estimated.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      All 13 ACs are explicitly mapped to at least one subtask and the coverage matrix is
+      complete. Blocked-by relationships form a valid DAG (ST-04 -> ST-05, ST-06 -> ST-07,
+      ST-05+ST-06+ST-07 -> ST-10, ST-01+ST-02+ST-05 -> ST-11, ST-10+ST-11 -> ST-12).
+      Two concerns: (1) No verification commands in the subtask table — the implementer cannot
+      run a quick local check after completing each subtask. This should be remedied before
+      implementation begins (each subtask should include a pnpm command or assertion to verify
+      completion). (2) ST-04 (8 metric collector functions) will likely span more than 3 files
+      (8 collector files + collectors/index.ts = 9 files minimum) which violates the
+      no-subtask->3-files heuristic. Recommend splitting ST-04 into ST-04a (collect* functions
+      for CLI-stdout metrics: lint_warnings, type_errors, any_count, eslint_disable_count) and
+      ST-04b (collect* functions for structured-output metrics: test_coverage, circular_deps,
+      bundle_size, dead_exports). Condition: add per-subtask verification commands and split
+      ST-04 before marking ready-to-work.
+
+gaps:
+  - id: GAP-001
+    severity: conditional
+    description: >
+      ST-04 spans 9+ files (8 individual collector files + collectors/index.ts) which exceeds
+      the 3-file-per-subtask heuristic, increasing risk of incomplete implementation or
+      difficult code review. The 8 collectors divide naturally into two groups by collection
+      method (CLI stdout parsing vs structured output parsing). Recommend splitting into
+      ST-04a and ST-04b before implementation begins. This is a process/sizing gap, not a
+      functional gap — does not block correctness of the implementation.
+    resolution: Split ST-04 into ST-04a (stdout-based collectors) and ST-04b (structured-output collectors) in the story before moving to ready-to-work.
+    decision: add_ac
+    ac_added: "AC-14: The metric collector subtask ST-04 is decomposed into ST-04a (stdout-based collectors: lint_warnings, type_errors, any_count, eslint_disable_count) and ST-04b (structured-output collectors: test_coverage, circular_deps, bundle_size, dead_exports), each touching at most 4 source files."
+
+  - id: GAP-002
+    severity: conditional
+    description: >
+      Subtask table lacks per-subtask verification commands. Without runnable checks, an
+      implementer cannot confirm a subtask is complete before moving to the next. Each subtask
+      should include at least one pnpm command (e.g., "pnpm check-types", "pnpm test -- --grep
+      ST-01", "psql -c '\d wint.codebase_health'") to verify the artifact matches the AC.
+    resolution: Add a verification_cmd field or inline note to each subtask row before moving to ready-to-work.
+    decision: add_ac
+    ac_added: "AC-15: Every subtask in the Subtasks table includes a runnable verification command (a pnpm invocation, psql query, or equivalent shell command) that an implementer can execute locally to confirm the subtask's artifact satisfies its AC coverage before moving to the next subtask."
+
+opportunities:
+  - id: OPP-001
+    description: >
+      CLEANUP story ID zero-padding: specify 4-digit padding (APIP-CLEANUP-0001) in the
+      architecture note to ensure lexicographic sort order in the backlog directory matches
+      creation order. A one-line normalization in writeCleanupStories() handles this trivially.
+    effort: trivial
+    decision: log_to_kb
+    kb_entry_id: null
+    kb_note: "KB MCP tools unavailable at decision time. Opportunity logged inline in ELAB.yaml only."
+
+  - id: OPP-002
+    description: >
+      Baseline auto-promotion hint: when captureHealthSnapshot() inserts the very first row
+      (merge_number=1 AND no existing rows), emit an INFO log prompting the operator to
+      manually promote it as baseline. This surfaces the manual process at exactly the right
+      moment without automating it.
+    effort: small
+    decision: log_to_kb
+    kb_entry_id: null
+    kb_note: "KB MCP tools unavailable at decision time. Opportunity logged inline in ELAB.yaml only."
+
+  - id: OPP-003
+    description: >
+      The pg_try_advisory_lock concurrency guard mentioned in architecture is not covered by
+      any AC or unit test. If APIP-3090 cron scheduling ever lapses, concurrent runs could
+      produce duplicate CLEANUP stories. Consider adding an AC or test covering the advisory
+      lock path (or explicitly mark it as out-of-scope for this story).
+    effort: small
+    decision: log_to_kb
+    kb_entry_id: null
+    kb_note: "KB MCP tools unavailable at decision time. Opportunity logged inline in ELAB.yaml only."
+
+  - id: OPP-004
+    description: >
+      stories.index.md dependency column for APIP-4010 omits APIP-5007. This is a cosmetic
+      inconsistency but could confuse the pipeline scheduler. Update the index entry to list
+      APIP-1070, APIP-3090, APIP-5007 consistently.
+    effort: trivial
+    decision: log_to_kb
+    kb_entry_id: null
+    kb_note: "KB MCP tools unavailable at decision time. Opportunity logged inline in ELAB.yaml only."
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T12:30:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 4
+  opportunities_logged: 0
+  acs_added: 2

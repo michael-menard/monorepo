@@ -1,0 +1,13 @@
+id: "KFMB-5030"
+title: "Migrate _implementation/ Command Orchestrators"
+status: backlog
+priority: medium
+phase: 4
+feature: "Update dev-implement-story.md, dev-fix-story.md, elab-story.md, qa-verify-story.md, dev-code-review.md"
+goal: "Command orchestrators pass KB artifact references between agents."
+depends_on: ["KFMB-5020"]
+endpoints: []
+infrastructure: ["CLI Commands", "MCP Tools"]
+risk_notes: "Commands need new protocol for passing KB artifact IDs."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

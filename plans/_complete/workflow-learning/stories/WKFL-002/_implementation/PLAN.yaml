@@ -1,0 +1,503 @@
+schema: 1
+story_id: WKFL-002
+timestamp: '2026-02-07T00:00:00Z'
+
+# Implementation steps (sequential execution order)
+steps:
+  - id: 1
+    description: "Add 'calibration' to KnowledgeEntryTypeSchema enum"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: []
+    slice: backend
+    details: |
+      Update KnowledgeEntryTypeSchema to include 'calibration':
+      
+      export const KnowledgeEntryTypeSchema = z.enum([
+        'note',
+        'decision',
+        'constraint',
+        'runbook',
+        'lesson',
+        'feedback',
+        'calibration',  // ADD THIS
+      ])
+
+  - id: 2
+    description: "Define CalibrationEntrySchema with Zod"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: [1]
+    slice: backend
+    details: |
+      Add CalibrationEntrySchema after FeedbackContentSchema:
+      
+      /**
+       * Calibration entry schema for tracking agent confidence vs actual outcomes.
+       *
+       * Part of WKFL-002 workflow learning system.
+       * Links stated confidence from VERIFICATION.yaml to actual outcomes from feedback.
+       *
+       * @see WKFL-002 for implementation details
+       */
+      export const CalibrationEntrySchema = z.object({
+        /** Agent that generated the finding */
+        agent_id: z.string().min(1, 'Agent ID required'),
+        
+        /** Finding identifier from VERIFICATION.yaml */
+        finding_id: z.string().regex(/^[A-Z]+-\d+$/, 'Finding ID must match format: ABC-123'),
+        
+        /** Story context for the finding */
+        story_id: z.string().regex(/^[A-Z]+-\d+$/, 'Story ID must match format: ABC-123'),
+        
+        /** Confidence level stated by agent in VERIFICATION.yaml */
+        stated_confidence: z.enum(['high', 'medium', 'low']),
+        
+        /** Actual outcome determined from feedback */
+        actual_outcome: z.enum(['correct', 'false_positive', 'severity_wrong']),
+        
+        /** ISO 8601 timestamp when calibration entry was created */
+        timestamp: z.string().datetime(),
+      })
+      
+      export type CalibrationEntry = z.infer<typeof CalibrationEntrySchema>
+
+  - id: 3
+    description: "Update tool handler validation for calibration entries"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    dependencies: [2]
+    slice: backend
+    details: |
+      Add validation in kb_add tool handler (if not already generic):
+      
+      // In kb_add handler validation section:
+      if (entry_type === 'calibration') {
+        // Parse content as CalibrationEntry
+        const calibrationData = CalibrationEntrySchema.parse(JSON.parse(content))
+        // Validation passed, continue with insertion
+      }
+      
+      Note: If kb_add already validates via generic entry_type checks, no changes needed.
+      Verify current validation approach first.
+
+  - id: 4
+    description: "Add unit tests for CalibrationEntrySchema"
+    files:
+      - "apps/api/knowledge-base/src/__types__/__tests__/schemas.test.ts"
+    dependencies: [2]
+    slice: backend
+    details: |
+      Test cases for CalibrationEntrySchema:
+      
+      describe('CalibrationEntrySchema', () => {
+        it('accepts valid calibration entry', () => {
+          const valid = {
+            agent_id: 'code-review-security',
+            finding_id: 'SEC-042',
+            story_id: 'WISH-2045',
+            stated_confidence: 'high',
+            actual_outcome: 'false_positive',
+            timestamp: '2026-02-07T10:00:00Z',
+          }
+          expect(() => CalibrationEntrySchema.parse(valid)).not.toThrow()
+        })
+        
+        it('rejects missing agent_id', () => {
+          const invalid = { finding_id: 'SEC-042', ... }
+          expect(() => CalibrationEntrySchema.parse(invalid)).toThrow()
+        })
+        
+        it('rejects invalid finding_id format', () => {
+          const invalid = { finding_id: 'invalid', ... }
+          expect(() => CalibrationEntrySchema.parse(invalid)).toThrow()
+        })
+        
+        it('rejects invalid confidence level', () => {
+          const invalid = { stated_confidence: 'super-high', ... }
+          expect(() => CalibrationEntrySchema.parse(invalid)).toThrow()
+        })
+        
+        it('rejects invalid outcome', () => {
+          const invalid = { actual_outcome: 'unknown', ... }
+          expect(() => CalibrationEntrySchema.parse(invalid)).toThrow()
+        })
+      })
+
+  - id: 5
+    description: "Create confidence-calibrator.agent.md with haiku model"
+    files:
+      - ".claude/agents/confidence-calibrator.agent.md"
+    dependencies: []
+    slice: agent
+    details: |
+      Create agent following workflow-retro.agent.md pattern:
+      
+      Frontmatter:
+        model: haiku
+        type: worker
+        kb_tools: [kb_search, kb_add_lesson]
+        triggers: ["/calibration-report"]
+      
+      Phases:
+        Phase 1: Setup - Parse command args (--since, --agent), validate date range
+        Phase 2: Query - kb_search for calibration entries, group by (agent_id, confidence)
+        Phase 3: Analyze - Compute accuracy (correct / total), identify alerts, generate recommendations
+        Phase 4: Report - Write CALIBRATION-{date}.yaml, log lessons if needed
+      
+      Key logic:
+        - Accuracy = correct / total for each (agent, confidence level)
+        - Alert if high confidence accuracy < 0.90 AND sample_size >= 10
+        - Recommendations for threshold adjustments (conceptual, not explicit)
+        - Log to KB via kb_add_lesson if systemic issues detected
+
+  - id: 6
+    description: "Create /calibration-report command"
+    files:
+      - ".claude/commands/calibration-report.md"
+    dependencies: [5]
+    slice: agent
+    details: |
+      Create command following /feedback pattern:
+      
+      Command signature:
+        /calibration-report [--since=YYYY-MM-DD] [--agent=NAME]
+      
+      Arguments:
+        --since: Start date for analysis (default: 7 days ago)
+        --agent: Filter to specific agent (default: all agents)
+      
+      Implementation:
+        1. Parse command args
+        2. Spawn confidence-calibrator.agent.md with context
+        3. Wait for agent completion
+        4. Output CALIBRATION-{date}.yaml location
+      
+      Output format:
+        CALIBRATION-{date}.yaml with sections:
+          - summary: Total findings analyzed, agents covered, date range
+          - accuracy: By agent by confidence level
+          - alerts: Agents below threshold
+          - recommendations: Threshold adjustments
+          - kb_entries: IDs of KB entries created
+
+  - id: 7
+    description: "Integrate calibration writes with /feedback command"
+    files:
+      - ".claude/commands/feedback.md"
+    dependencies: [2]
+    slice: agent
+    details: |
+      After writing feedback entry in /feedback command, also write calibration entry:
+      
+      // After kb_add for feedback entry:
+      const calibrationEntry = {
+        agent_id: agentId,
+        finding_id: findingId,
+        story_id: storyId,
+        stated_confidence: finding.confidence,  // From VERIFICATION.yaml
+        actual_outcome: mapFeedbackToOutcome(feedbackType),
+        timestamp: new Date().toISOString(),
+      }
+      
+      // Validate
+      const validated = CalibrationEntrySchema.parse(calibrationEntry)
+      
+      // Write to KB
+      await kb_add({
+        content: JSON.stringify(validated, null, 2),
+        role: 'dev',
+        entry_type: 'calibration',
+        story_id: storyId,
+        tags: [
+          'calibration',
+          `agent:${agentId}`,
+          `confidence:${finding.confidence}`,
+          `outcome:${validated.actual_outcome}`,
+          `date:${new Date().toISOString().slice(0, 7)}`,
+        ],
+      })
+      
+      Outcome mapping:
+        false_positive → false_positive
+        severity_wrong → severity_wrong
+        helpful → correct
+        missing → (skip, no calibration entry)
+
+  - id: 8
+    description: "Add integration tests for calibration KB operations"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/calibration-integration.test.ts"
+    dependencies: [3, 4]
+    slice: backend
+    details: |
+      Test cases:
+      
+      1. kb_add successfully writes calibration entry
+      2. kb_search retrieves calibration entries by entry_type='calibration'
+      3. kb_search filters by tag: agent:code-review-security
+      4. kb_search filters by tag: confidence:high
+      5. kb_search filters by date range
+      6. Multiple calibration entries aggregate correctly
+      7. Tag indexing works for efficient queries
+      
+      Mock data: 20+ calibration entries with varied agents, confidence levels, outcomes
+
+  - id: 9
+    description: "Add unit tests for confidence-calibrator agent logic"
+    files:
+      - ".claude/agents/__tests__/confidence-calibrator.test.ts"
+    dependencies: [5]
+    slice: agent
+    details: |
+      Test cases (if agent testing infrastructure exists):
+      
+      1. Accuracy calculation: 17/20 correct = 0.85
+      2. Alert triggered when high confidence < 0.90 with 10+ samples
+      3. No alert when sample_size < 10
+      4. Recommendations generated for accuracy < 0.90
+      5. KB lesson logged for systemic issues
+      6. Report format validation
+      
+      Note: Agent testing may be manual verification only.
+
+  - id: 10
+    description: "Create end-to-end calibration flow test"
+    files:
+      - "apps/api/knowledge-base/src/__tests__/calibration-e2e.test.ts"
+    dependencies: [7, 8]
+    slice: backend
+    details: |
+      E2E scenario:
+      
+      1. Seed VERIFICATION.yaml with findings (SEC-042 high confidence)
+      2. Simulate /feedback SEC-042 --false-positive "reason"
+      3. Verify feedback entry created
+      4. Verify calibration entry created with correct mapping
+      5. Query KB for calibration entries
+      6. Simulate /calibration-report
+      7. Verify CALIBRATION-{date}.yaml created
+      8. Verify accuracy calculation correct
+      9. Verify alert triggered for low accuracy
+      10. Verify KB lesson logged if systemic issue
+
+# Files to modify or create (comprehensive list)
+files_to_change:
+  # Backend - Schema updates
+  - path: "apps/api/knowledge-base/src/__types__/index.ts"
+    action: modify
+    reason: "Add 'calibration' entry type and CalibrationEntrySchema"
+    estimated_lines_changed: 40-60
+
+  # Backend - Tool handler updates (conditional)
+  - path: "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    action: modify
+    reason: "Add calibration entry validation in kb_add handler (if needed)"
+    estimated_lines_changed: 10-20
+
+  # Backend - Tests
+  - path: "apps/api/knowledge-base/src/__types__/__tests__/schemas.test.ts"
+    action: modify
+    reason: "Add CalibrationEntrySchema validation tests"
+    estimated_lines: 80-100
+
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/calibration-integration.test.ts"
+    action: create
+    reason: "Integration tests for calibration KB operations"
+    estimated_lines: 200-300
+
+  - path: "apps/api/knowledge-base/src/__tests__/calibration-e2e.test.ts"
+    action: create
+    reason: "End-to-end calibration flow test"
+    estimated_lines: 150-200
+
+  # Agent - New files
+  - path: ".claude/agents/confidence-calibrator.agent.md"
+    action: create
+    reason: "Calibration analysis agent (haiku model)"
+    estimated_lines: 300-400
+
+  - path: ".claude/commands/calibration-report.md"
+    action: create
+    reason: "Command to spawn calibration agent"
+    estimated_lines: 150-200
+
+  # Agent - Modified files
+  - path: ".claude/commands/feedback.md"
+    action: modify
+    reason: "Add calibration entry write after feedback capture"
+    estimated_lines_changed: 30-50
+
+# Commands to run (in order)
+commands_to_run:
+  - command: "pnpm build --filter knowledge-base"
+    when: "after schema changes"
+    required: true
+    reason: "Verify TypeScript compilation succeeds"
+
+  - command: "pnpm check-types --filter knowledge-base"
+    when: "after schema changes"
+    required: true
+    reason: "Verify no TypeScript errors"
+
+  - command: "pnpm lint --filter knowledge-base"
+    when: "after all code changes"
+    required: true
+    reason: "Verify ESLint and Prettier compliance"
+
+  - command: "pnpm test --filter knowledge-base"
+    when: "after all tests written"
+    required: true
+    reason: "Run unit and integration tests"
+
+  - command: "pnpm test apps/api/knowledge-base/src/__tests__/calibration-e2e.test.ts"
+    when: "after all tests pass"
+    required: true
+    reason: "Run E2E calibration flow test"
+
+# Acceptance criteria mapping (evidence plan)
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    description: "Calibration entry schema captures all required fields"
+    planned_evidence: "Unit test: CalibrationEntrySchema validation tests pass"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    description: "Calibration data source integrates with WKFL-004 feedback"
+    planned_evidence: "E2E test: Feedback creates both feedback and calibration entries"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    description: "Confidence-calibrator agent analyzes accuracy per agent"
+    planned_evidence: "Agent execution: /calibration-report produces CALIBRATION-{date}.yaml with accuracy scores"
+    evidence_type: command
+
+  - ac_id: "AC-4"
+    description: "Alert when high confidence accuracy drops below 90%"
+    planned_evidence: "Agent execution: CALIBRATION-{date}.yaml contains alerts section with flagged agents"
+    evidence_type: command
+
+  - ac_id: "AC-5"
+    description: "Generate threshold adjustment recommendations"
+    planned_evidence: "Agent execution: CALIBRATION-{date}.yaml contains recommendations section"
+    evidence_type: command
+
+  - ac_id: "AC-6"
+    description: "/calibration-report command generates weekly report"
+    planned_evidence: "Manual test: Run /calibration-report, verify CALIBRATION-{date}.yaml created"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    description: "Calibration agent uses haiku model"
+    planned_evidence: "Code inspection: confidence-calibrator.agent.md frontmatter has model: haiku"
+    evidence_type: file
+
+# Architectural decisions for this story
+architectural_decisions:
+  - id: ARCH-WKFL-002-001
+    question: "Should calibration be a new entry type or use existing 'lesson' type with tags?"
+    decision: "New entry type 'calibration' in KnowledgeEntryTypeSchema"
+    rationale: |
+      Cleaner separation, easier to query (filter by entry_type='calibration'),
+      explicit schema validation, future-proof for calibration-specific fields.
+    decided_by: story
+    timestamp: '2026-02-07T00:00:00Z'
+
+  - id: ARCH-WKFL-002-002
+    question: "Where to store confidence thresholds for recommendations?"
+    decision: "Deferred to WKFL-003. MVP uses conceptual recommendations."
+    rationale: |
+      Recommendations describe behavior changes conceptually (e.g., 'tighten high threshold')
+      rather than explicit threshold values. Actual threshold implementation and storage
+      is handled by WKFL-003 (Emergent Heuristic Discovery).
+    decided_by: story
+    timestamp: '2026-02-07T00:00:00Z'
+
+  - id: ARCH-WKFL-002-003
+    question: "Should calibration also pull from OUTCOME.yaml for outcomes?"
+    decision: "No. MVP uses explicit feedback only."
+    rationale: |
+      OUTCOME.yaml integration adds complexity (implicit validation via fix cycles)
+      with noisier signal (finding ignored ≠ false positive). Explicit feedback from
+      /feedback command is cleaner signal for MVP. OUTCOME.yaml integration deferred.
+    decided_by: story
+    timestamp: '2026-02-07T00:00:00Z'
+
+  - id: ARCH-WKFL-002-004
+    question: "Minimum sample size for reporting vs recommendations?"
+    decision: "5 samples for reporting accuracy, 10 samples for alerts/recommendations"
+    rationale: |
+      5 samples provides faster feedback for visibility.
+      10 samples ensures statistical stability for actionable alerts.
+    decided_by: story
+    timestamp: '2026-02-07T00:00:00Z'
+
+# Story complexity assessment
+complexity: moderate
+
+# Implementation notes and warnings
+notes:
+  - "WKFL-004 must complete before Step 7 (feedback integration) can be implemented"
+  - "Steps 1-6 can proceed independently of WKFL-004"
+  - "CalibrationEntrySchema uses regex validation for finding_id and story_id formats"
+  - "Outcome mapping: false_positive → false_positive, helpful → correct, missing → skip"
+  - "Confidence-calibrator agent uses haiku model for simple aggregation logic"
+  - "Recommendations are conceptual (behavior changes), not explicit threshold values"
+  - "KB lesson logging only if systemic issues detected (3+ stories with same pattern)"
+  - "Alert threshold: 0.90 (90%) for high confidence with 10+ sample minimum"
+
+warnings:
+  - "WKFL-004 dependency blocks Step 7 (feedback integration) - cannot test full flow without it"
+  - "Schema changes require coordinated deployment with agents using calibration entries"
+  - "Tool handler validation may already be generic - verify before modifying"
+  - "Agent testing infrastructure may not exist - Step 9 may be manual verification only"
+  - "E2E test (Step 10) requires WKFL-004 /feedback command to be implemented"
+
+# Phase completion checklist
+completion_checklist:
+  code:
+    - "'calibration' added to KnowledgeEntryTypeSchema enum"
+    - "CalibrationEntrySchema defined with all required fields"
+    - "Tool handler validation updated (if needed)"
+    - "confidence-calibrator.agent.md created with haiku model"
+    - "/calibration-report command created"
+    - "/feedback command updated to write calibration entries"
+
+  tests:
+    - "CalibrationEntrySchema unit tests passing (5+ test cases)"
+    - "Calibration KB integration tests passing (7+ test cases)"
+    - "E2E calibration flow test passing (after WKFL-004 completes)"
+
+  quality:
+    - "pnpm build succeeds"
+    - "pnpm check-types passes"
+    - "pnpm lint passes (no errors)"
+    - "pnpm test passes (all new tests)"
+
+  manual:
+    - "/calibration-report generates CALIBRATION-{date}.yaml"
+    - "Report contains accuracy scores by agent"
+    - "Alerts triggered for agents below threshold"
+    - "Recommendations are specific and actionable"
+    - "KB lessons logged for systemic issues"
+
+# Test execution order (for verification phase)
+test_execution_order:
+  - phase: unit
+    tests:
+      - "apps/api/knowledge-base/src/__types__/__tests__/schemas.test.ts"
+
+  - phase: integration
+    tests:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/calibration-integration.test.ts"
+
+  - phase: e2e
+    tests:
+      - "apps/api/knowledge-base/src/__tests__/calibration-e2e.test.ts"
+
+  - phase: manual
+    tests:
+      - "Run /calibration-report --since=2026-01-30"
+      - "Verify CALIBRATION-{date}.yaml created"
+      - "Verify accuracy calculations correct"
+      - "Verify alerts and recommendations present"

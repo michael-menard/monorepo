@@ -1,0 +1,8 @@
+skipped: true
+reason: >
+  APIP-0010 is a pure infrastructure/library story. It creates a backend package
+  (packages/backend/pipeline-queue) with no user-facing UI components, no React components,
+  no Tailwind styling, and no shadcn/ui primitives. The Bull Board queue visibility dashboard
+  is an operator tool mounted on a dev server — it is not part of the main app frontend and
+  requires no design system compliance review for Phase 0. Bull Board UI is out of scope
+  for APIP-0010 (full operator UI is APIP-2020).

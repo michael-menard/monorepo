@@ -1,0 +1,97 @@
+# Risk Predictions: REPA-018
+# Generated: 2026-02-10
+# Model: haiku (heuristics-only mode)
+# WKFL Version: 007-v1
+
+predictions:
+  split_risk: 0.2
+  review_cycles: 2
+  token_estimate: 120000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-10T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+
+# Analysis Details
+
+## Story Complexity
+- AC count: 7
+- Estimated files: ~8 (backend-only migration)
+- Scope keywords: backend, testing, migration, zod, package
+- Domain: repackag-app (auth services)
+
+## Split Risk Calculation (0.2)
+Base risk from AC count:
+- 7 ACs → base_risk = (7 - 3) * 0.1 = 0.4
+
+Scope complexity modifiers:
+- Frontend + Backend: No (backend-only) → +0.0
+- Database: No → +0.0
+- Auth/Security: Yes (auth service) → +0.1
+- Migration story: -0.3 (well-scoped, single file)
+
+Final: 0.4 + 0.1 - 0.3 = 0.2 (LOW risk)
+
+Interpretation: Low split risk due to:
+- Well-isolated service (161 lines, single file)
+- Single consumer (AuthProvider)
+- No new features, pure migration
+- Clear acceptance criteria
+
+## Review Cycles Prediction (2)
+Base cycles: 1
+
+Complexity signals:
+- Scope keywords > 3: No (+0)
+- Auth/Security: Yes (+1)
+- Database: No (+0)
+- Estimated files > 5: Yes, ~8 files (+0, mostly new package structure)
+
+Final: 1 + 1 = 2 cycles
+
+Interpretation: 2 cycles expected due to:
+- Auth code requires careful review
+- Zod schema conversion needs validation
+- Test coverage review (45%+ requirement)
+- First migration story in REPA series may set precedents
+
+## Token Estimate (120,000)
+No similar stories found in KB (knowledge base unavailable).
+
+Fallback logic:
+- Global default: 150,000 tokens
+- Adjusted for story size: 7 ACs, backend-only
+- Reduction factor: -20% (migration stories typically lower cost)
+
+Final: 150,000 * 0.8 = 120,000 tokens
+
+Interpretation: Lower than average due to:
+- No UI work (reduces design review overhead)
+- Single file migration (focused scope)
+- Existing patterns from REPA-012/013 (reduced research)
+
+## Confidence Level (low)
+Criteria:
+- Similar stories: 0 (KB unavailable)
+- WKFL-006 patterns: Not loaded (heuristics-only mode)
+
+Result: Low confidence
+
+Interpretation:
+- No historical data for repackag-app epic
+- First auth-services migration story (no precedent)
+- Predictions based purely on heuristics
+- Actual outcomes may vary
+
+## Recommendations for PM
+1. **Monitor split risk**: Low (0.2) but track if scope expands during implementation
+2. **Plan for 2 review cycles**: Auth code justifies thorough review
+3. **Token budget**: 120K estimate, actual may be lower if integration tests skipped
+4. **Update after completion**: Use OUTCOME.yaml to calibrate future predictions
+
+## Notes
+- WKFL-006 patterns unavailable: Using heuristics-only mode
+- No similar stories: KB query returned 0 results
+- Baseline unavailable: No prior repackag-app outcomes to reference
+- Graceful degradation: Predictions proceeding with conservative estimates

@@ -1,0 +1,217 @@
+story_id: APIP-4020
+analysis_date: "2026-02-25"
+analyst_model: sonnet
+
+# --- Reuse Plan Verification ---
+reuse_verification:
+  - asset: createToolNode
+    path: packages/backend/orchestrator/src/runner/node-factory.ts
+    exists: true
+    matches_claim: true
+    notes: "Wraps createNode with retry defaults (maxAttempts: 2, backoffMs: 500, timeoutMs: 10000)"
+
+  - asset: GapAnalyticsResultSchema
+    path: packages/backend/orchestrator/src/nodes/metrics/gap-analytics.ts
+    exists: true
+    matches_claim: true
+    notes: "Valid Zod-first pattern with nested sub-schemas. Good model for CohesionScanResultSchema."
+
+  - asset: SYSTEM_REF_PATTERNS + countSystemReferences
+    path: packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+    exists: true
+    matches_claim: true
+    notes: "Both exist but are NOT exported. Story references them as pattern template (not import). Implementer must replicate, not import."
+
+  - asset: createStoryArtifact + StoryArtifactSchema
+    path: packages/backend/orchestrator/src/artifacts/story.ts
+    exists: true
+    matches_claim: partial
+    notes: >
+      CRITICAL: StoryArtifactSchema requires id matching /^[A-Z]+-\d+$/. The proposed
+      cleanup story ID format APIP-CLEANUP-{category}-{YYYYMMDD} will FAIL validation.
+      Must change ID format or extend schema regex.
+
+  - asset: yaml-artifact-bridge
+    path: packages/backend/orchestrator/src/persistence/yaml-artifact-bridge.ts
+    exists: true
+    matches_claim: true
+
+  - asset: updateState
+    path: packages/backend/orchestrator/src/runner/state-helpers.ts
+    exists: true
+    matches_claim: true
+
+  - asset: pgSchema pattern (telemetry.ts)
+    path: packages/backend/database-schema/src/schema/telemetry.ts
+    exists: true
+    matches_claim: true
+    notes: "wint.ts also uses same pgSchema pattern with wintSchema = pgSchema('wint')"
+
+# --- Target Directories ---
+target_directories:
+  - path: packages/backend/orchestrator/src/nodes/cohesion/
+    exists: false
+    action: create
+  - path: packages/backend/orchestrator/src/graphs/cohesion-scanner.ts
+    exists: false
+    action: create
+  - path: packages/backend/database-schema/src/schema/cohesion.ts
+    exists: false
+    action: create
+    note: "Story places in new file. Existing wint.ts consolidates all wint tables. Must import wintSchema from wint.ts."
+
+# --- Dependency Status ---
+dependencies:
+  - story_id: APIP-4010
+    status: backlog
+    blocking: true
+    impact: >
+      wint.cohesion_snapshots migration cannot be finalized until APIP-4010 establishes
+      the wint schema migration pattern and codebase_health table conventions.
+      Pure TypeScript work (ST-1 through ST-3, ST-5) can begin independently.
+
+  - story_id: APIP-3090
+    status: backlog
+    blocking: partial
+    impact: >
+      AC-9 cron wiring deferred until APIP-3090. All other ACs are independent.
+      Scanner will function as standalone manual trigger until cron infrastructure exists.
+
+# --- Existing Related Infrastructure ---
+existing_infrastructure:
+  - name: "cohesionRules table in wint.ts"
+    path: packages/backend/database-schema/src/schema/wint.ts
+    lines: "1241-1274"
+    impact: "No conflict. Covers static rule configuration, not scan snapshots."
+  - name: "LangGraph graph patterns"
+    path: packages/backend/orchestrator/src/graphs/
+    impact: >
+      Existing graphs (metrics.ts, elaboration.ts) provide consistent pattern:
+      ConfigSchema, StateAnnotation, node factories, createXxxGraph(), runXxxCollection().
+
+# --- Gaps ---
+gaps:
+  - id: GAP-1
+    severity: high
+    category: implementation-blocker
+    title: "StoryArtifactSchema ID regex rejects proposed cleanup story ID format"
+    description: >
+      StoryArtifactSchema validates id with /^[A-Z]+-\d+$/ which only allows
+      UPPERCASE-DIGITS patterns (e.g., APIP-4020). The proposed format
+      APIP-CLEANUP-{category}-{YYYYMMDD} has multiple hyphenated segments and
+      will fail .parse(). Either the ID format must change to comply (e.g.,
+      COHCLEAN-{NNNN}) or AC-7 must specify an alternative story creation path.
+    affected_acs: [AC-7, AC-8]
+    mvp_blocking: true
+    recommendation: >
+      Change cleanup story ID format to comply with existing regex:
+      COHCLEAN-{NNNN} (e.g., COHCLEAN-0001) with an auto-incrementing numeric suffix.
+      Alternatively, extend StoryArtifactSchema regex to support multi-segment IDs,
+      but that has broader implications across the codebase.
+
+  - id: GAP-2
+    severity: medium
+    category: missing-specification
+    title: "AC-7 cleanup story ID format needs specification change"
+    description: >
+      AC-7 specifies APIP-CLEANUP-{category}-{YYYYMMDD} format but does not account
+      for StoryArtifactSchema validation constraints. The directory path can use
+      any convention, but the story.yaml id field must comply.
+    affected_acs: [AC-7]
+    mvp_blocking: true
+    recommendation: >
+      Separate the directory naming convention from the story ID. Directory can be
+      APIP-CLEANUP-{category}-{YYYYMMDD}/ but the story ID should use a compliant
+      format like COHCLEAN-{NNNN}.
+
+  - id: GAP-3
+    severity: low
+    category: clarity
+    title: "AC-8 deduplication window unit not explicit in schema definition"
+    description: >
+      Dev feasibility notes deduplicationWindowDays must be explicit. The story's
+      schema definition in Architecture Notes already uses deduplicationWindowDays
+      (integer, default 7). This is adequately specified.
+    affected_acs: [AC-8]
+    mvp_blocking: false
+    recommendation: "Already addressed in schema definition. No change needed."
+
+# --- Opportunities ---
+opportunities:
+  - id: OPP-1
+    category: architecture
+    title: "Add cohesion_snapshots table directly to wint.ts instead of new cohesion.ts"
+    description: >
+      Existing pattern consolidates all wint tables in wint.ts. Creating a separate
+      cohesion.ts file diverges from this convention. Could add to wint.ts directly
+      for consistency.
+    impact: low
+    recommendation: "Non-blocking. Implementer can choose either approach."
+
+  - id: OPP-2
+    category: split-risk
+    title: "Story has 0.9 split risk with 13 ACs"
+    description: >
+      Predictions note high split risk. ST-1 through ST-3 and ST-5 are pure TypeScript
+      and can begin before APIP-4010. ST-4 (DB migration) and ST-6 (graph assembly)
+      are blocked. Consider splitting into Phase A (schemas + detectors + scoring)
+      and Phase B (DB + graph + cron).
+    impact: medium
+    recommendation: >
+      Keep as single story for now. The subtask breakdown already separates blocked
+      vs unblocked work. If implementation exceeds token budget, split at that point.
+
+  - id: OPP-3
+    category: test-risk
+    title: "Advisory lock test requires concurrent DB connections"
+    description: >
+      HP-9 test (advisory lock) needs two simultaneous DB connections in test harness.
+      This may require special test infrastructure setup.
+    impact: low
+    recommendation: "Note for implementation. Standard pg test patterns support this."
+
+# --- Autonomous Decisions ---
+autonomous_decisions:
+  - gap_id: GAP-1
+    decision: add_as_ac
+    action_taken: >
+      Updated AC-7 to use COHCLEAN-{NNNN} ID format (auto-incrementing numeric suffix)
+      instead of APIP-CLEANUP-{category}-{YYYYMMDD}. This complies with StoryArtifactSchema
+      regex /^[A-Z]+-\d+$/. Updated Architecture Notes section to match.
+    ac_modified: AC-7
+
+  - gap_id: GAP-2
+    decision: add_as_ac
+    action_taken: >
+      Merged with GAP-1 fix. AC-7 now specifies COHCLEAN-{NNNN} format with explicit
+      note about StoryArtifactSchema compliance. Directory and ID format are aligned.
+    ac_modified: AC-7
+
+  - gap_id: GAP-3
+    decision: out_of_scope
+    action_taken: "Already addressed in schema definition. No change needed."
+
+  - opp_id: OPP-1
+    decision: out_of_scope
+    action_taken: "Non-blocking. Implementer discretion on file placement."
+
+  - opp_id: OPP-2
+    decision: out_of_scope
+    action_taken: >
+      Keep as single story. Subtask breakdown already separates blocked vs unblocked work.
+      Split can happen during implementation if token budget exceeded.
+
+  - opp_id: OPP-3
+    decision: out_of_scope
+    action_taken: "Standard pg test patterns support concurrent connections. No story change needed."
+
+# --- Final Verdict ---
+final_verdict: CONDITIONAL PASS
+verdict_rationale: >
+  Story is well-structured with clear ACs, thorough test plan, and verified reuse plan.
+  The one MVP-blocking gap (cleanup story ID format conflicting with StoryArtifactSchema)
+  has been resolved by updating AC-7 to use COHCLEAN-{NNNN} format. All dependencies
+  are correctly identified. Both APIP-4010 and APIP-3090 are in backlog (blocking),
+  but the story correctly documents that pure TypeScript work (ST-1 through ST-3, ST-5)
+  can begin independently. The high split risk (0.9) is mitigated by the clear subtask
+  breakdown. Story is ready for implementation once dependencies complete.

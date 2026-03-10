@@ -1,0 +1,210 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "Single worker returns PASS for clean code"
+    setup: "Create a lint worker with injected toolRunner that returns exitCode: 0, stdout: '', stderr: ''"
+    action: "Invoke createReviewLintNode(config) with a mock worktreePath and empty changeSpecs"
+    expected: "WorkerResult with verdict: 'PASS', errors: 0, warnings: 0, findings: []"
+    evidence: "Unit test in review-lint.test.ts asserting returned WorkerResult fields"
+
+  - id: HP-2
+    title: "All 10 workers pass → REVIEW.yaml PASS verdict"
+    setup: "Create full review graph with all 10 workers' toolRunners injected to return PASS results. Mock YAML artifact writer."
+    action: "Call runReview(storyId, worktreePath, changeSpecs, config)"
+    expected: "Returns ReviewGraphResult with verdict: 'PASS'. REVIEW.yaml written with verdict: PASS and all 10 workers listed."
+    evidence: "Graph integration test in review.test.ts; assert REVIEW.yaml content via artifact writer mock"
+
+  - id: HP-3
+    title: "Dispatcher fans out to all enabled workers via Send API"
+    setup: "Compile graph with all 10 workers enabled. Mock all worker toolRunners."
+    action: "Invoke compiled graph; inspect dispatcher node output"
+    expected: "Dispatcher emits exactly 10 Send objects, one per enabled worker, each targeting 'review_worker_{name}'"
+    evidence: "Graph integration test asserting dispatcher return value length === 10"
+
+  - id: HP-4
+    title: "Fan-in aggregation uses addWorkerResult and generateRankedPatches helpers"
+    setup: "Run full graph with 9 PASS workers and 1 FAIL worker (lint). Spy on addWorkerResult and generateRankedPatches imports."
+    action: "Invoke runReview() and await completion"
+    expected: "addWorkerResult called 10 times; generateRankedPatches called once; REVIEW.yaml contains ranked_patches"
+    evidence: "Graph integration test with spies on artifacts/review.ts helper functions"
+
+  - id: HP-5
+    title: "REVIEW.yaml written to correct story feature directory path"
+    setup: "Mock yaml-artifact-writer; run full graph with storyId='APIP-TEST-001'"
+    action: "Call runReview('APIP-TEST-001', worktreePath, changeSpecs, config)"
+    expected: "Artifact writer called with path containing 'APIP-TEST-001/REVIEW.yaml'"
+    evidence: "Integration test asserting yaml-artifact-writer called with correct path argument"
+
+  - id: HP-6
+    title: "Security worker passes budget check and calls Claude via model router"
+    setup: "Inject mock model router returning budget OK and Claude response with no findings"
+    action: "Invoke createReviewSecurityNode(config) with mocked model router override"
+    expected: "WorkerResult with verdict: 'PASS', security-specific prompt sent to Claude tier"
+    evidence: "Unit test in review-security.test.ts asserting model router called with 'claude' tier"
+
+  - id: HP-7
+    title: "Thread ID follows convention storyId:review:attempt"
+    setup: "Run full graph with storyId='APIP-1050', attempt=1"
+    action: "Check LangGraph checkpoint thread ID"
+    expected: "Thread ID equals 'APIP-1050:review:1'"
+    evidence: "Integration test inspecting graph invocation config or documented assertion in graph source"
+
+  - id: HP-8
+    title: "changeSpecId mapped correctly in RankedPatch when file matches ChangeSpec"
+    setup: "Run graph where lint worker returns FAIL finding for file 'src/auth.ts'; ChangeSpec contains target 'src/auth.ts'"
+    action: "Inspect ranked_patches in REVIEW.yaml output"
+    expected: "RankedPatch for src/auth.ts has changeSpecId matching the ChangeSpec ID that produced that file"
+    evidence: "Integration test asserting RankedPatch.changeSpecId is non-null when file matches"
+
+error_cases:
+  - id: EC-1
+    title: "One worker fails → overall verdict is FAIL"
+    setup: "Run full graph; inject lint worker toolRunner returning exitCode: 1 with ESLint errors"
+    action: "Call runReview() and await completion"
+    expected: "ReviewGraphResult.verdict === 'FAIL'; REVIEW.yaml contains failing worker lint in workers with verdict FAIL"
+    evidence: "Graph integration test asserting verdict: FAIL when any worker fails"
+
+  - id: EC-2
+    title: "Worker timeout → FAIL finding with timeout message"
+    setup: "Set lint worker timeoutMs: 100; inject toolRunner that never resolves"
+    action: "Invoke worker node; await timeout"
+    expected: "WorkerResult with verdict: 'FAIL', findings: [{ message: 'Worker timed out after 100ms', severity: 'error', auto_fixable: false }], duration_ms: 100"
+    evidence: "Unit test in review-lint.test.ts asserting timeout behavior"
+
+  - id: EC-3
+    title: "Security worker returns FAIL when token budget exceeded"
+    setup: "Inject mock model router returning budget exceeded error"
+    action: "Invoke createReviewSecurityNode(config) with budget-exceeded mock router"
+    expected: "WorkerResult with verdict: 'FAIL', findings: [{ message: 'Security review skipped: token budget exceeded', severity: 'error', auto_fixable: false }]. No exception thrown."
+    evidence: "Unit test in review-security.test.ts asserting FAIL verdict (not throw) on budget exceeded"
+
+  - id: EC-4
+    title: "Security worker circuit breaker opens on Claude unavailability"
+    setup: "Configure NodeCircuitBreaker with failureThreshold: 2; inject Claude mock that throws on first two calls"
+    action: "Invoke security worker twice then a third time"
+    expected: "Third invocation returns FAIL immediately via circuit breaker (canExecute() returns false) without calling Claude"
+    evidence: "Unit test in review-security.test.ts asserting circuit breaker prevents third Claude call"
+
+  - id: EC-5
+    title: "Disabled worker appears in workers_skipped, does not affect verdict"
+    setup: "Create graph config with lint worker enabled: false; all other workers return PASS"
+    action: "Call runReview() with disabled lint config"
+    expected: "REVIEW.yaml workers_skipped contains 'lint'; overall verdict is PASS; dispatcher emits 9 Send objects (not 10)"
+    evidence: "Graph integration test asserting workers_skipped contains disabled worker"
+
+  - id: EC-6
+    title: "Fan-in handles partial results if one worker hangs past deadline"
+    setup: "Run graph with 9 workers returning PASS within 200ms; inject one worker that sleeps 5000ms but graph has 1000ms total deadline"
+    action: "Invoke runReview() with total deadline config"
+    expected: "Fan-in collects 9 results; hanging worker contributes FAIL timeout finding; overall verdict: FAIL"
+    evidence: "Integration test with controlled timing asserting partial fan-in result"
+
+  - id: EC-7
+    title: "changeSpecId is null when finding file does not match any ChangeSpec target"
+    setup: "Run graph where lint worker finds error in 'src/untracked-file.ts'; ChangeSpecs do not include this file"
+    action: "Inspect ranked_patches in REVIEW.yaml"
+    expected: "RankedPatch.changeSpecId === null for untracked file"
+    evidence: "Integration test asserting null changeSpecId on unmatched file"
+
+edge_cases:
+  - id: ED-1
+    title: "Zero enabled workers → PASS verdict (vacuous truth)"
+    setup: "Create graph config with all 10 workers disabled"
+    action: "Call runReview() with all-disabled config"
+    expected: "ReviewGraphResult.verdict === 'PASS'; REVIEW.yaml workers_skipped has 10 entries; no workers executed"
+    evidence: "Graph integration test asserting vacuous PASS behavior"
+
+  - id: ED-2
+    title: "Empty changeSpecs array — workers still run"
+    setup: "Run full graph with changeSpecs: []; all workers return PASS"
+    action: "Call runReview(storyId, worktreePath, [], config)"
+    expected: "Workers execute normally with empty changeSpec context; verdict PASS; REVIEW.yaml written"
+    evidence: "Integration test with empty changeSpecs asserting graph completes without error"
+
+  - id: ED-3
+    title: "LLM review worker gracefully handles malformed model response"
+    setup: "Inject model router returning invalid JSON as response for react worker"
+    action: "Invoke createReviewReactNode(config) with malformed response mock"
+    expected: "Worker returns FAIL WorkerResult with finding: 'Model response parse error' rather than throwing"
+    evidence: "Unit test in review-react.test.ts asserting parse failure → FAIL (not exception)"
+
+  - id: ED-4
+    title: "ReviewWorkerNameSchema enum covers all 10 workers"
+    setup: "Import ReviewWorkerNameSchema from types.ts"
+    action: "Assert enum values equal expected 10-worker set"
+    expected: "Enum contains exactly: lint, style, syntax, typecheck, build, react, typescript, reusability, accessibility, security"
+    evidence: "Unit test asserting ReviewWorkerNameSchema.options.length === 10"
+
+  - id: ED-5
+    title: "RankedPatchSchema includes changeSpecId field with null default"
+    setup: "Import updated RankedPatchSchema from artifacts/review.ts"
+    action: "Parse a RankedPatch object without providing changeSpecId"
+    expected: "Parsed result includes changeSpecId: null (default applied)"
+    evidence: "Schema unit test asserting default null behavior"
+
+  - id: ED-6
+    title: "Carried-forward worker (carryForwardWorker) does not affect PASS/FAIL"
+    setup: "Run second iteration where lint worker carried forward from previous PASS iteration via carryForwardWorker()"
+    action: "Call runReview() with iteration: 2 and lint carried forward"
+    expected: "Fan-in sees lint as skipped (carried forward); does not affect overall verdict"
+    evidence: "Integration test asserting workers_skipped includes carried-forward workers"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "REVIEW.yaml exists at expected story feature directory path after runReview() completes"
+      - "REVIEW.yaml verdict field is 'PASS' or 'FAIL'"
+      - "REVIEW.yaml ranked_patches array ordered by priority (1=highest)"
+      - "REVIEW.yaml workers array contains one entry per enabled worker"
+      - "REVIEW.yaml workers_skipped array contains disabled/carried-forward worker names"
+      - "RankedPatch entries include changeSpecId field (string | null)"
+      - "graph.compile() succeeds without TypeScript errors"
+      - "pnpm check-types --filter @repo/orchestrator passes"
+      - "vitest run coverage >80% on each worker file"
+      - "vitest run coverage >70% on graphs/review.ts"
+      - "fan-in aggregation logic at 100% branch coverage"
+  frontend:
+    # omitted — ui_touched: false
+
+manual_cases:
+  - id: MC-1
+    title: "Verify REVIEW.yaml human-readable summary field"
+    steps:
+      - "Run review graph against a story with 2 lint errors and 1 security finding"
+      - "Open REVIEW.yaml in editor"
+      - "Read summary field"
+    expected: "Summary reads like: '2 errors in 2 workers (lint, security). 1 auto-fixable.' — human-readable and accurate"
+
+fixture_definitions:
+  - name: MockPassingToolRunner
+    type: "(cmd: string, cwd: string) => Promise<{ exitCode: number; stdout: string; stderr: string }>"
+    description: "Returns exitCode: 0, stdout: '', stderr: '' — used for happy-path worker tests"
+  - name: MockFailingToolRunner
+    type: "(cmd: string, cwd: string) => Promise<{ exitCode: number; stdout: string; stderr: string }>"
+    description: "Returns exitCode: 1, stdout: '<ESLint error output>', stderr: '' — simulates lint failure"
+  - name: MockHangingToolRunner
+    type: "(cmd: string, cwd: string) => Promise<{ exitCode: number; stdout: string; stderr: string }>"
+    description: "Never resolves — used with timeout tests; combined with jest.useFakeTimers"
+  - name: MockModelRouter
+    type: "{ dispatch: (tier, prompt) => Promise<string>, checkBudget: (storyId) => { ok: boolean } }"
+    description: "Stub model router for LLM workers and security worker budget checks"
+  - name: MockYamlArtifactWriter
+    type: "{ write: (path: string, content: unknown) => Promise<void> }"
+    description: "Captures written path and content for assertion in integration tests"
+  - name: SampleChangeSpecs
+    type: "Array<{ id: string, files: string[] }>"
+    description: "Minimal ChangeSpec entries for fan-in changeSpecId mapping tests"
+
+risks:
+  - "APIP-0040 (model router) not yet built — LLM workers require mock model router override; real integration test must be deferred"
+  - "APIP-1030 not yet built — no real worktree available for integration tests; tests must provide mock worktreePath"
+  - "LangGraph Send API behavior depends on specific LangGraph version — verify parallel fan-out behavior matches documentation"
+  - "ESLint and TypeScript compiler versions may differ between worktree and test environment — pin CLI tool versions or run tests in deterministic container"
+  - "Security worker Claude calls are expensive — unit tests MUST mock model router; no real Claude calls in CI"
+  - "Fan-in timing test is inherently flaky if system load varies — use fake timers rather than real sleep"

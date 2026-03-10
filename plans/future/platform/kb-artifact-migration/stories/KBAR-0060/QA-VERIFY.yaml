@@ -1,0 +1,139 @@
+schema: 1
+story_id: KBAR-0060
+timestamp: "2026-02-23T22:00:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 124, fail: 0 }
+  integration: { pass: 39, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 84.0
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:commands_run[0]"
+    notes: >
+      5 test cases in sync-integration.integration.test.ts (TC-1.1 through TC-1.5):
+      new story sync, idempotency (skipped on second pass), checksum update on
+      modification, plan phase, and done phase. All pass against real PostgreSQL
+      via testcontainers. Fixture data validated with StoryFrontmatterSchema
+      before writing per AC-8 requirement.
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts"
+    notes: >
+      12 test cases: all 9 NonStoryArtifactType values (TC-2.1 through TC-2.9),
+      idempotency (TC-2.10), batchSyncArtifactsForStory batch discovery with 3+
+      artifacts (TC-2.11), and fail-soft when missing artifact file (TC-2.12).
+      All pass against real PostgreSQL.
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts"
+    notes: >
+      4 test cases: story conflict detection (hasConflict: true, conflictType:
+      checksum_mismatch, row in kbar.sync_conflicts), artifact conflict detection
+      via manual DB checksum update, no-conflict scenario (hasConflict: false).
+      All pass.
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/scripts/__tests__/integration/kbar0060.integration.test.ts"
+    notes: >
+      5 test cases: 6-story batch discovery, --epic KBAR prefix filter (skips
+      WINT-* stories), empty directory (discovers 0 stories, no error), no-match
+      filter (TELE prefix vs KBAR dirs), and fail-soft (corrupt YAML fails, valid
+      story succeeds in same batch). All pass.
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/scripts/__tests__/integration/kbar0060.integration.test.ts"
+    notes: >
+      3 test cases: pre-seed kbar.sync_checkpoints row (TC-5.1), batchSyncByType
+      resumes from seeded checkpoint (TC-5.2), checkpoint row updated after batch
+      completes (TC-5.3). All pass. TC-5.3 uses pre-seeded artifact approach
+      (interruption simulation deferred per elaboration non-blocking item #3).
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/scripts/__tests__/integration/kbar0060.integration.test.ts"
+    notes: >
+      3 test cases: dryRunStory zero-mutation (stories row count unchanged TC-6.1),
+      dryRunEpic returns correct results for 4 stories (TC-6.2), dryRunEpic single
+      batch query instrumentation via result correctness with 3+ stories (TC-6.3).
+      All pass. Note: TC-6.3 validates result correctness and checksum length rather
+      than raw pool.query counter due to @repo/db pool encapsulation.
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts"
+    notes: >
+      5 test cases: symlink rejection with DB mutation count guard (TC-7.1),
+      path traversal rejection (TC-7.2), corrupt YAML recorded in kbar.sync_events
+      with status=failed (TC-7.3), missing story file with no partial DB writes
+      (TC-7.4), unicode in title/description with raw-byte checksum (TC-7.5).
+      All pass.
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts"
+    notes: >
+      All integration tests use describe.skipIf(SKIP_TESTCONTAINERS). Verified:
+      SKIP_TESTCONTAINERS=true skips all 39 tests (3 test files, 39 tests skipped).
+      Shared helper creates all 6 enums + 7 tables with IF NOT EXISTS guards.
+      beforeAll timeout 90000ms. afterAll cleans up container and temp dirs.
+      Tests run via pnpm --filter @repo/kbar-sync test:integration. No 'as any'
+      casts in any new test file.
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Shared testcontainer across describe blocks (one container per test file)
+      is required when @repo/db uses a pg.Pool singleton. Stopping and starting
+      new containers between describe blocks causes the drizzle pool to fail.
+      Use a single sharedCtx in beforeAll at the file level.
+    category: pattern
+    tags: ["testcontainers", "postgresql", "kbar-sync", "integration-testing"]
+
+  - lesson: >
+      CLI integration tests (sync-cli) that share the same pool singleton as
+      sync-integration tests must be separated into different files so each
+      gets its own Vitest worker with an independent module cache. Colocating
+      them in the same file causes pool invalidation when containers are torn down.
+    category: pattern
+    tags: ["testcontainers", "vitest", "worker-isolation", "kbar-sync"]
+
+  - lesson: >
+      CLI scripts in .claude/scripts/**/*.{js,ts} must be added to the Node.js
+      files glob in eslint.config.js to allow console statements. The no-console
+      rule is appropriate for library code but not for CLI entry points. This
+      avoids unnecessary @repo/logger wiring in CLI scripts that output user-facing
+      messages.
+    category: pattern
+    tags: ["eslint", "no-console", "cli-scripts", "claude-scripts"]
+
+  - lesson: >
+      When a required field (QueueItem.stage) is populated via a helper function
+      (buildStageMap), the helper must be explicitly called in the main parser
+      function. TypeScript does not catch the case where a function is implemented
+      but never invoked — only runtime testing reveals the missing call.
+    category: blocker
+    tags: ["typescript", "work-queue", "refresh-work-queue", "code-review"]
+
+tokens:
+  in: 35000
+  out: 4000

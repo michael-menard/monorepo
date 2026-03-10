@@ -1,0 +1,11 @@
+schema: 1
+story_id: WISH-2039
+completed_at: 2026-02-01T20:52:37.298Z
+summary: []
+deliverables:
+  - path: apps/api/lego-api/domains/config/__tests__/user-overrides.test.ts
+    type: tests
+verification:
+  tests_passed: 17
+  all_acs_verified: true
+limitations: []

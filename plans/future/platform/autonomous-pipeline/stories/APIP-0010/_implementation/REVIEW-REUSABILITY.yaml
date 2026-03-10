@@ -1,0 +1,59 @@
+reusability:
+  verdict: PASS
+  files_checked: 9
+  errors: 0
+  warnings: 0
+  findings: []
+  summary: "No duplicated patterns found. Package follows established backend conventions and shared-first architecture."
+  analysis:
+    - category: "Shared Package Usage"
+      status: "PASS"
+      details:
+        - "Correctly uses @repo/logger for observability (not console)"
+        - "Properly imports workspace dependency @repo/logger with workspace:* version"
+        - "No duplication of logger functionality"
+
+    - category: "Zod-First Type Pattern"
+      status: "PASS"
+      details:
+        - "PipelineJobDataSchema defined using Zod (z.object with validators)"
+        - "PipelineJobData type correctly inferred via z.infer<typeof PipelineJobDataSchema>"
+        - "No TypeScript interfaces used for data types"
+        - "PipelineQueue wrapper interface is appropriate for service object (not data)"
+        - "Zod validation applied at enqueue time via schema.parse()"
+
+    - category: "Design Pattern Consistency"
+      status: "PASS"
+      details:
+        - "Follows @repo/rate-limiter structure exactly (ES2022, moduleResolution: bundler, tsc build)"
+        - "Similar factory pattern to createRedisPolicy in @repo/resilience"
+        - "No custom connection management that duplicates rate-limiter approach"
+        - "Event listener pattern follows backend conventions"
+
+    - category: "Backend Package Patterns"
+      status: "PASS"
+      details:
+        - "Package layout matches rate-limiter: package.json, tsconfig.json, vitest.config.ts, src/__types__, src/index.ts"
+        - "No duplicate Redis connection utilities (rate-limiter uses redis client, pipeline-queue uses ioredis as required by BullMQ)"
+        - "No existing queue implementations in packages/backend to conflict with"
+        - "Resilience policies (@repo/resilience) not duplicated; package can layer on top if needed"
+
+    - category: "Dependency Management"
+      status: "PASS"
+      details:
+        - "bullmq and ioredis are new external dependencies, no duplication"
+        - "zod and @repo/logger are reused from established shared packages"
+        - "No private reimplementation of shared utilities"
+
+    - category: "Exports and API"
+      status: "PASS"
+      details:
+        - "PIPELINE_QUEUE_NAME constant exported as stable contract"
+        - "PipelineJobDataSchema exported for use by downstream workers"
+        - "createPipelineConnection and createPipelineQueue exported as factories"
+        - "All exports documented and type-safe"
+        - "No barrel files (all imports direct from src/index.ts)"
+
+  tokens:
+    in: 48000
+    out: 800

@@ -1,35 +1,24 @@
 schema: 1
-story_id: WINT-9090
-timestamp: 2026-02-24T21:45:00Z
-gen_mode: false
-
+story_id: ST-3010
+timestamp: 2026-03-08T07:08:12Z
+gen_mode: true
 touches:
-  backend: true
+  backend: false
   frontend: false
-  packages: true
-  db: true
-  contracts: true
+  packages: false
+  db: false
+  contracts: false
   ui: false
   infra: false
-
 touched_paths_globs:
-  - "packages/backend/orchestrator/src/nodes/context/**"
-  - "packages/backend/mcp-tools/src/context-cache/**"
-  - "packages/backend/mcp-tools/src/session-management/**"
-
+  - ".claude/agents/dev-plan-leader.agent.md"
+  - ".claude/agents/_shared/**"
 risk_flags:
   auth: false
   payments: false
   migrations: false
   external_apis: false
-  security: true
-  performance: true
-
-summary: "Port context-warmer and session-manager agent logic to LangGraph nodes in packages/backend/orchestrator/src/nodes/context/"
-
+  security: false
+  performance: false
+summary: "Verify that dev-plan-leader.agent.md v1.3.0 correctly maps story subtasks 1:1 to PLAN.yaml steps with proper validation rules"
 elaboration: "completed"
-
-notes: |
-  WINT-9010 dependency: implementation gate — @repo/workflow-logic must reach uat/completed.
-  WINT-2100 source ambiguity: MCP tool behavior is source of truth per story spec.
-  Cache TTL and session token tracking are critical to correctness.

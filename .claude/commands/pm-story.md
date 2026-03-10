@@ -109,10 +109,11 @@ When `--elab` is used:
 
 ## Collision Detection (REQUIRED)
 
-Before generating ANY story ID, the system MUST check:
+Before generating ANY story ID, the system MUST check in order:
 
-1. **Directory check**: Does `{OUTPUT_DIR}/{STORY_ID}/` already exist?
-2. **Index check**: Does `stories.index.md` contain an entry for `{STORY_ID}`?
+1. **KB check** (primary): `kb_get_story({ story_id: "{STORY_ID}" })` — if found, collision detected
+2. **Directory check** (fallback): Does `{OUTPUT_DIR}/{STORY_ID}/` already exist on disk?
+3. **Index check** (fallback): Does `stories.index.md` contain an entry for `{STORY_ID}`?
 
 If collision detected:
 - For splits: Increment Y until unique (Y=1, Y=2, ...)
@@ -335,17 +336,14 @@ baseline_files = glob("plans/baselines/BASELINE-REALITY-*.md")
 # Sort by date in filename (descending)
 baseline_files.sort(by=date, desc=true)
 
-# Find first active baseline
-for file in baseline_files:
-    if frontmatter(file).status == "active":
-        baseline_path = file
-        break
-
-# If no active baseline, use most recent draft or null
-if not baseline_path:
-    if baseline_files.length > 0:
-        baseline_path = baseline_files[0]  # Most recent (may be draft)
-        log_warning("Using non-active baseline: {baseline_path}")
+# Find active baseline via KB first, fallback to most recent file
+# KB-first: query for baseline artifact with active state
+# kb_search({ query: "baseline reality active", type: "artifact" })
+# If KB returns an active baseline, use that path.
+# Fallback: use most recent baseline file (may be draft)
+if baseline_files.length > 0:
+    baseline_path = baseline_files[0]  # Most recent by date
+    log_info("Using most recent baseline: {baseline_path}")
     else:
         baseline_path = null
         log_warning("No baseline reality file found")
@@ -448,15 +446,7 @@ Task tool:
 
 **IF response was `PM COMPLETE`:**
 
-Run the migration script to insert the new story into the KB database:
-
-```bash
-pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
-```
-
-This is idempotent — inserts new stories, updates changed ones, skips unchanged. The story will be recorded with `state = "backlog"`, making it immediately visible to `/next-actions`.
-
-If the command fails (DB unavailable, env not configured), log a warning and continue — this is non-blocking.
+The generation leader (Phase 4.5) already inserts the story directly into the KB `stories` table via SQL. No `migrate:stories` call needed here. The story is immediately visible to `/next-actions` with `state = "backlog"`.
 
 ### Step 5: Update Platform Index (if is_platform)
 

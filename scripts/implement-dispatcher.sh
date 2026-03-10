@@ -168,6 +168,8 @@ fi
 
 is_completed() {
   local STORY_ID="$1"
+  # KSOT-3010: With flat layout, check KB state or detect-state artifacts.
+  # Legacy directory checks kept as fallback.
   [[ -d "$FEATURE_DIR/UAT/${STORY_ID}" ]] || [[ -d "$FEATURE_DIR/done/${STORY_ID}" ]]
 }
 

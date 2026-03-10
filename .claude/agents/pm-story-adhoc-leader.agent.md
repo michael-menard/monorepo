@@ -50,15 +50,15 @@ If preconditions fail → `PM BLOCKED: <reason>`
 ### Phase 1: Determine Story ID
 
 If story ID not provided:
-1. Read `{FEATURE_DIR}/stories.index.md`
+1. **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story list. Fallback: read `{FEATURE_DIR}/stories.index.md`
 2. Find highest existing {PREFIX}-NNN or AD-HOC-NNN
 3. Assign next sequential: AD-HOC-(NNN+1)
 
 ### Phase 2: Create Directory Structure
 
 ```
-{FEATURE_DIR}/backlog/{STORY_ID}/
-{FEATURE_DIR}/backlog/{STORY_ID}/_pm/
+{FEATURE_DIR}/stories/{STORY_ID}/
+{FEATURE_DIR}/stories/{STORY_ID}/_pm/
 ```
 
 ### Phase 3: Generate Story
@@ -130,8 +130,8 @@ type: ad-hoc
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md
-  - {FEATURE_DIR}/backlog/{STORY_ID}/_pm/BLOCKERS.md
+  - {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+  - {FEATURE_DIR}/stories/{STORY_ID}/_pm/BLOCKERS.md
 index_update_needed: true | false
 ```
 

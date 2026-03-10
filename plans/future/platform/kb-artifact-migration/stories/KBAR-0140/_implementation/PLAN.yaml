@@ -1,0 +1,124 @@
+schema: 2
+story_id: KBAR-0140
+timestamp: '2026-03-03T06:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Create extractArtifactSummary shared utility module covering all 13 artifact types and fallback
+    files:
+      - apps/api/knowledge-base/src/crud-operations/artifact-summary.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/scripts/migrate-artifacts-simple.ts
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+      - apps/api/knowledge-base/src/chunking/index.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+  - id: 2
+    subtask_id: ST-2
+    description: Write Vitest unit tests for extractArtifactSummary covering all 13 artifact types and edge cases
+    files:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/artifact-summary.test.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/artifact-summary.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/knowledge-base -- artifact-summary
+    acs_covered:
+      - AC-7
+  - id: 3
+    subtask_id: ST-3
+    description: Integrate extractArtifactSummary into artifact_write and verify no regression in existing tests
+    files:
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/artifact-summary.ts
+      - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-5
+      - AC-6
+      - AC-8
+      - AC-9
+files_to_change:
+  - path: apps/api/knowledge-base/src/crud-operations/artifact-summary.ts
+    action: create
+    reason: New shared utility module for extractArtifactSummary — satisfies AC-1 through AC-4
+  - path: apps/api/knowledge-base/src/crud-operations/__tests__/artifact-summary.test.ts
+    action: create
+    reason: Unit tests for all 13 artifact types and fallback/edge cases — satisfies AC-7
+  - path: apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    action: modify
+    reason: >-
+      Add optional summary field to ArtifactWriteInputSchema and wire extractArtifactSummary into artifact_write —
+      satisfies AC-5, AC-6, AC-9
+commands_to_run:
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after each step
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base -- artifact-summary
+    when: after ST-2
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base
+    when: after ST-3 to verify regression
+    required: true
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      File exists at apps/api/knowledge-base/src/crud-operations/artifact-summary.ts with exported
+      extractArtifactSummary function
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: 'Unit tests in artifact-summary.test.ts: 13 describe blocks each covering a named artifact type'
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: Unit tests verify each type returns 5-10 fields max as defined in Architecture Notes table
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: Unit test TC-014 verifies default fallback returns max 5 top-level scalar fields for unknown type
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: 'Integration test TC-019: artifact_write with no summary produces non-null summary in DB'
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: 'Integration test TC-020: artifact_write with explicit summary persists caller value (not auto-extracted)'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'artifact-summary.test.ts: 14+ test cases covering all 13 types, fallback, and edge cases (TC-001 through TC-018)'
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      Regression: artifact-tools.test.ts and artifact-tools-integration.test.ts pass without modification (TC-021,
+      TC-022)
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: pnpm check-types passes; /lint-fix produces no errors on new/changed files (TC-023, TC-024)
+    evidence_type: command
+architectural_decisions: []
+complexity: moderate
+notes:
+  - >-
+    Elaboration CONDITIONAL_PASS: follow story Architecture Notes table for verification and proof summary fields, not
+    the prototype
+  - Do NOT port tokens case from prototype — not a production artifact type
+  - Integration tests TC-019/TC-020 require real Postgres per ADR-005 — check test-helpers.ts for shared setup
+  - Default fallback correctly includes booleans and excludes arrays per AC-4 (OPP-04 confirmed)
+  - Import ArtifactTypeSchema from '../__types__/index.js' (not from mcp-server — corrected per GAP-01)
+  - >-
+    kb_write_artifact already accepts optional summary param — just wire extractArtifactSummary result into the existing
+    call
+  - ST-1 produces the utility; ST-2 and ST-3 both depend on ST-1 but are independent of each other

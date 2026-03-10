@@ -1,0 +1,139 @@
+feasible: true
+confidence: high
+rationale: "All required patterns exist in the codebase. The LangGraph StateGraph factory pattern is established by metrics.ts. The wintSchema pgSchema namespace and Drizzle ORM patterns are established by the existing wint.ts schema file. SQL migration structure follows 015_artifact_type_tables.sql. The story is correctly scoped to schema definition, SQL migrations, graph skeleton, significance logic, and winner promotion — all of which are implementable with existing tooling. The only MVP-critical risk is the integration test gate behind APIP-3010 and APIP-3020, which is addressable by phasing subtasks to decouple schema/unit-test work from integration work."
+complexity: high
+change_surface:
+  areas:
+    - packages/backend/database-schema/src/schema/wint.ts
+    - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+    - apps/api/knowledge-base/src/db/migrations/ (new migration file for model_experiments)
+    - apps/api/knowledge-base/src/db/migrations/ (new additive migration for experiment_id FK)
+    - packages/backend/orchestrator/src/graphs/__tests__/bake-off-engine.test.ts
+    - packages/backend/orchestrator/src/graphs/__tests__/bake-off-engine.integration.test.ts
+  endpoints: []
+  deploy_touchpoints:
+    - "Aurora PostgreSQL migration must run before bake-off engine cron is activated (APIP-3090)"
+    - "Additive migration for change_telemetry FK must run after APIP-3010 migration"
+
+risks:
+  - finding: "Integration tests cannot run until APIP-3010 (wint.change_telemetry) and APIP-3020 (wint.model_affinity) are both complete and merged to test DB"
+    mitigation: "Separate subtasks into a schema/migration/unit-test group (completable immediately) and an integration-test group (gated on APIP-3010 + APIP-3020). Tag integration tests with @integration and document prerequisite in test file."
+  - finding: "Additive migration for experiment_id FK on wint.change_telemetry must guard against change_telemetry not existing (APIP-3010 not yet deployed)"
+    mitigation: "Use ALTER TABLE IF EXISTS wint.change_telemetry ADD COLUMN IF NOT EXISTS experiment_id ... to make the migration safe to run on schemas where change_telemetry may not yet exist."
+  - finding: "Concurrent bake-off runs could race on experiment status transitions (e.g., two cron invocations both attempt to mark an experiment concluded)"
+    mitigation: "Use Drizzle upsert with ON CONFLICT DO UPDATE for model_affinity writes and a conditional UPDATE (WHERE status = 'active') for experiment status transitions. APIP-3090 should enforce single-instance scheduling, but the engine must be idempotent regardless."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "createBakeOffGraph() compiles without TypeScript errors (pnpm check-types --filter @repo/orchestrator)"
+  - "Unit tests pass for significance logic, expiry logic, no-op path, and BakeOffConfigSchema validation"
+  - "Integration test: insert fixture experiment + telemetry rows, run runBakeOff(), assert model_affinity updated with winner, assert experiment marked concluded"
+  - "Integration test: expiry path verified with window-exceeded fixture (max_window_rows exceeded, significance not reached)"
+  - "Both SQL migrations run idempotently (run twice, no errors)"
+  - "Existing packages/backend/database-schema/src/schema/__tests__/ tests all pass after schema additions"
+  - "No modifications to wint.trainingData, wint.mlModels, wint.modelPredictions, wint.modelMetrics"
+
+subtasks:
+  - id: ST-1
+    title: "Define wint.model_experiments Drizzle ORM table and Zod schemas in wint.ts"
+    goal: "Add wint.model_experiments table definition using wintSchema.table(), experimentStatusEnum pgEnum, and export ModelExperimentInsertSchema/ModelExperimentSelectSchema via drizzle-zod createInsertSchema/createSelectSchema"
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+      - packages/backend/database-schema/src/schema/telemetry.ts
+    files_to_modify:
+      - packages/backend/database-schema/src/schema/wint.ts
+    acs: ["AC-1", "AC-3"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/database-schema"
+    estimated_tokens: 8000
+
+  - id: ST-2
+    title: "Write SQL migration for wint.model_experiments table and experiment_status enum"
+    goal: "Create idempotent SQL migration inside BEGIN/COMMIT transaction: CREATE TYPE wint.experiment_status AS ENUM before table, CREATE TABLE IF NOT EXISTS wint.model_experiments with all required columns, CREATE UNIQUE INDEX on (change_type, file_type) WHERE status='active', CREATE INDEX on status and started_at"
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/ (new file: NNN_model_experiments.sql)
+    acs: ["AC-4"]
+    depends_on: ST-1
+    verification: "Run migration against lego_dev test DB at port 5432; run twice to verify idempotency"
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: "Write additive SQL migration for experiment_id FK on wint.change_telemetry"
+    goal: "Create separate idempotent migration that adds experiment_id UUID FK column to wint.change_telemetry using ALTER TABLE IF EXISTS guard; safe to run before or after APIP-3010 migration"
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/ (new file: NNN_change_telemetry_experiment_fk.sql)
+    acs: ["AC-2", "AC-5"]
+    depends_on: ST-2
+    verification: "Run migration against lego_dev test DB; verify ALTER TABLE IF EXISTS is safe when change_telemetry does not exist"
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Implement BakeOffEngine LangGraph graph skeleton in bake-off-engine.ts"
+    goal: "Create packages/backend/orchestrator/src/graphs/bake-off-engine.ts exporting createBakeOffGraph() factory function and runBakeOff(config) entry point following metrics.ts StateGraph+Annotation+node factory pattern; define BakeOffConfigSchema as Zod schema (no interfaces)"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/state-helpers.ts
+      - packages/backend/orchestrator/src/artifacts/story.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts (new file)
+    acs: ["AC-6", "AC-11"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator && createBakeOffGraph() compiles"
+    estimated_tokens: 10000
+
+  - id: ST-5
+    title: "Implement significance decision and active experiment query logic"
+    goal: "Add node that queries wint.model_experiments WHERE status='active', aggregates wint.change_telemetry rows by experiment_id per arm (control vs challenger), computes sample_size and success_rate per arm; implement isSignificant() pure function with MIN_SAMPLE_PER_ARM=50 and MIN_ABSOLUTE_DELTA=0.05 named constants; DB injected via config.configurable for testability"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+    acs: ["AC-7", "AC-8"]
+    depends_on: ST-4
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-6
+    title: "Implement winner promotion and experiment expiry logic"
+    goal: "Add winner promotion node: when significant, upsert wint.model_affinity with winner success_rate, UPDATE wint.model_experiments SET status='concluded', winner=<model>, concluded_at=NOW() WHERE status='active'. Add expiry node: when max_window_rows or max_window_days exceeded without significance, UPDATE SET status='expired', concluded_at=NOW(), winner=NULL. Log all outcomes with @repo/logger structured fields."
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+    acs: ["AC-9", "AC-10"]
+    depends_on: ST-5
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-7
+    title: "Write unit tests for significance logic, expiry, no-op, and schema validation"
+    goal: "Create bake-off-engine.test.ts with unit tests covering: significance threshold boundary (exactly MIN_SAMPLE, exactly MIN_DELTA), winner determination (challenger wins / control wins / tie defaults to control), expiry by rows vs expiry by days, no-op with zero active experiments, BakeOffConfigSchema Zod validation — all without DB access"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/__tests__/bake-off-engine.test.ts (new file)
+    acs: ["AC-12", "AC-14"]
+    depends_on: ST-6
+    verification: "pnpm test --filter @repo/orchestrator bake-off-engine.test"
+    estimated_tokens: 10000
+
+  - id: ST-8
+    title: "Write integration tests against real lego_dev PostgreSQL DB (gated on APIP-3010 + APIP-3020)"
+    goal: "Create bake-off-engine.integration.test.ts tagged @integration targeting postgresql://postgres:postgres@localhost:5432/lego_dev; tests: winner promotion path (insert fixture experiment + telemetry, run runBakeOff(), assert model_affinity updated, assert experiment concluded), expiry path (window-exceeded fixture), no-op path (zero active experiments); verify existing schema tests unaffected"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/bake-off-engine.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/__tests__/bake-off-engine.integration.test.ts (new file)
+    acs: ["AC-13", "AC-14"]
+    depends_on: ST-7
+    verification: "pnpm test --filter @repo/orchestrator bake-off-engine.integration.test (requires APIP-3010 + APIP-3020 complete)"
+    estimated_tokens: 10000

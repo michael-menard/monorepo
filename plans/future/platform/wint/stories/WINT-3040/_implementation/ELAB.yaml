@@ -1,0 +1,206 @@
+elab_version: "1.0"
+story_id: WINT-3040
+title: "Implement Decision Logging Skill (telemetry-decision) with Embedding Generation"
+analyst: elab-analyst
+date: "2026-03-08"
+preliminary_verdict: PASS
+
+# ─── 10-POINT AUDIT ────────────────────────────────────────────────────────────
+
+audit:
+
+  # 1. Scope Alignment
+  scope_alignment:
+    verdict: PASS
+    notes: >
+      Story scope is precisely defined: one new file (.claude/skills/telemetry-decision/SKILL.md),
+      three reference-only files explicitly listed. Frontmatter flags (touches_backend: false,
+      touches_database: false, touches_infra: false, touches_docs: true) are consistent with the
+      body. Non-Goals section is exhaustive and explicitly names sibling stories (WINT-3030/3050/3070)
+      to clarify boundary. No scope creep detected.
+
+  # 2. Internal Consistency
+  internal_consistency:
+    verdict: PASS
+    notes: >
+      Goal, Scope, ACs, and Non-Goals are fully consistent. 9 ACs map cleanly to the single
+      deliverable: AC-1 through AC-8 are verifiable by file inspection, AC-9 is the trivial
+      regression check for a docs-only change. No AC contradicts a Non-Goal. The degraded-path
+      requirement (AC-4: log without embedding if OpenAI unavailable) is echoed consistently
+      in the Task spec, Examples, Edge Cases, and Test Plan. No contradictions found.
+
+  # 3. Reuse-First Enforcement
+  reuse_first:
+    verdict: PASS
+    notes: >
+      Reuse Plan section is explicit and complete. Canonical SKILL.md structure comes from
+      .claude/skills/token-log/SKILL.md. Argument table derives from insertHitlDecisionSchema in
+      packages/backend/database-schema/src/schema/wint.ts rather than being hand-authored.
+      Embedding model (text-embedding-3-small, 1536-dim) explicitly noted as already used in
+      production by the KB server. Error handling reference (errorToToolResult) pointed to
+      existing pattern. No new patterns invented where existing ones suffice.
+
+  # 4. Ports & Adapters Compliance
+  ports_adapters:
+    verdict: N/A
+    notes: >
+      Docs-only story. No TypeScript code, no Lambda, no handler. Not applicable. The SKILL.md
+      itself is a prompt-engineering document directing Claude behaviour, not a software component.
+      The underlying MCP tool (workflow_log_decision from WINT-0120) is governed by its own story.
+
+  # 5. Local Testability
+  local_testability:
+    verdict: PASS
+    notes: >
+      Test plan provides concrete, executable manual validation steps with specific SQL queries for
+      each case (HP-1, HP-2, EC-1, EC-2, ED-1, ED-2). MC-1 is a prerequisite DB check with exact
+      SQL. MC-2 is a structural file review with a specific checklist. MC-3 includes the exact
+      array_length query to verify embedding dimensionality. All verification steps are
+      unambiguous. No "check it works" vagueness. UAT preconditions (WINT-0120 merged, lego_dev
+      on port 5432, OPENAI_API_KEY) are explicitly documented.
+
+  # 6. Decision Completeness
+  decision_completeness:
+    verdict: PASS
+    notes: >
+      No blocking TBDs found. The one open question at seed time — exact MCP tool name — is
+      resolved by directing implementer to read tool-schemas.ts at implementation start (an
+      explicit instruction in ST-1 and Architecture Notes). Database port (5432 vs 5433) is
+      explicitly documented. Embedding model and dimensions are specified. storyId FK behavior
+      (no constraint, plain text) is documented. invocationId nullability is documented.
+      Embedding failure fallback policy (log without embedding, do not block) is unambiguous.
+
+  # 7. Risk Disclosure
+  risk_disclosure:
+    verdict: PASS
+    notes: >
+      Two risk vectors explicitly named and mitigated:
+      (1) WINT-0120 dependency — story is blocked until dependency merges; mitigation is
+          explicit gate in story and subtask depends_on.
+      (2) MCP tool name drift — mitigated by directing implementer to confirm from tool-schemas.ts
+          at implementation start rather than relying on seed-time documentation.
+      OpenAI latency (200-500ms) explicitly noted as expected behavior, not a failure condition.
+      ADR-005 (real OpenAI call required in UAT) explicitly called out. No auth, DB schema, or
+      infra risks apply to a docs-only story — correct omission.
+
+  # 8. Story Sizing
+  story_sizing:
+    verdict: PASS
+    notes: >
+      1 point, docs-only, 1 deliverable file, 2 subtasks, 9 ACs all testable by file inspection
+      or SQL query. Token estimate 8k-15k is consistent with 1-point complexity. No code, no
+      endpoints, no DB changes. This is correctly sized as the smallest unit of work in the epic.
+      No split indicators present.
+
+  # 9. Subtask Decomposition
+  subtask_decomposition:
+    verdict: PASS
+    notes: >
+      Two subtasks with clear DAG: ST-1 (create SKILL.md, covers AC-1 through AC-8) →
+      ST-2 (smoke test, covers AC-9). Each subtask has: goal, files_to_read, files_to_modify,
+      ACs covered, depends_on, verification command, estimated_tokens. ST-1 touches exactly 1 file
+      (create new), ST-2 touches 0 files (read-only verification). Well within the 3-file limit.
+      AC coverage is complete: {AC-1..AC-8} in ST-1, {AC-9} in ST-2, no AC uncovered. No gaps.
+
+  # 10. Clarity Format
+  clarity_format:
+    verdict: PASS
+    notes: >
+      Story has all three required sections: Goal (clear one-sentence statement), Examples (two
+      worked examples with exact invocation syntax and expected DB state), and Edge Cases (two
+      documented with setup/expected/evidence pattern). Context section provides strong motivation.
+      Canonical References table is present and populated. Architecture Notes and Infrastructure
+      Notes sections provide operational clarity. No ambiguity in section structure.
+
+# ─── GAP ANALYSIS ──────────────────────────────────────────────────────────────
+
+gap_analysis:
+
+  mvp_critical: []
+  # No MVP-critical gaps found. All 9 ACs are unambiguous, subtask decomposition is complete,
+  # risk mitigations are concrete, and the single deliverable is clearly specified.
+
+  future_opportunities:
+
+    - id: FO-1
+      title: "WINT-0120 dependency is still in-progress (status: ready-to-work in filesystem)"
+      severity: blocker_external
+      category: dependency
+      notes: >
+        At analysis time, WINT-0120 is in the in-progress directory but its frontmatter shows
+        status: ready-to-work, indicating it has not yet been implemented. WINT-3040 cannot
+        begin ST-1 (or at minimum ST-2) until workflow_log_decision is a callable MCP tool.
+        The story already gates on this dependency — this is a scheduling note, not a story gap.
+        Recommend verifying WINT-0120 completion before moving WINT-3040 to ready-to-work.
+
+    - id: FO-2
+      title: "AC-9 verification relies on environment preconditions outside implementer control"
+      severity: low
+      category: testability
+      notes: >
+        ST-2 (smoke test) requires lego_dev running on port 5432, WINT-0120 deployed, and
+        OPENAI_API_KEY set. If these preconditions are not met, ST-2 cannot be verified and
+        AC-9 would be blocked. The story documents this clearly. Consider whether AC-9 should
+        be split into a structural AC (always passable) and an integration AC (environment-gated)
+        to allow the story to pass code review on ST-1 alone, with ST-2 tracked separately.
+        This is editorial polish, not a blocking gap.
+
+    - id: FO-3
+      title: "embedding field type (number[]) not explicitly documented in SKILL.md spec"
+      severity: negligible
+      category: clarity
+      notes: >
+        The story specifies that embedding is a 1536-dim vector but does not explicitly state
+        the JavaScript type passed to workflow_log_decision (number[] array). The implementer
+        can infer this from tool-schemas.ts (referenced in ST-1 files_to_read), but making it
+        explicit in the Canonical References or Architecture Notes would reduce ambiguity.
+        Low risk given the explicit instruction to read tool-schemas.ts before writing SKILL.md.
+
+    - id: FO-4
+      title: "No guidance on decisionText length limits for embedding input"
+      severity: negligible
+      category: edge_case
+      notes: >
+        AC-3 specifies concatenation of decisionText + context for embedding input. Edge Case 1
+        documents large context JSON (2000 chars) but does not address what happens if the
+        combined input exceeds OpenAI's token limit for text-embedding-3-small (8191 tokens).
+        The story says "the error is surfaced to the operator" — acceptable for a docs-only
+        story. A future story could add truncation logic if production usage reveals this path.
+
+# ─── SUMMARY ───────────────────────────────────────────────────────────────────
+
+summary:
+  audit_scores:
+    scope_alignment: PASS
+    internal_consistency: PASS
+    reuse_first: PASS
+    ports_adapters: N/A
+    local_testability: PASS
+    decision_completeness: PASS
+    risk_disclosure: PASS
+    story_sizing: PASS
+    subtask_decomposition: PASS
+    clarity_format: PASS
+
+  passes: 9
+  not_applicable: 1
+  failures: 0
+
+  preliminary_verdict: PASS
+  verdict: PASS
+  decided_at: "2026-03-08T00:00:00Z"
+  decided_by: elab-autonomous-decider
+  verdict_rationale: >
+    All 9 applicable audit points pass. Story is docs-only (single SKILL.md file), precisely
+    scoped, internally consistent, well-decomposed into 2 sequential subtasks, and has concrete
+    manual test verification with executable SQL. No MVP-critical gaps identified. The only
+    external concern is the WINT-0120 dependency, which the story correctly documents as a gate.
+    Four future opportunities noted, all negligible or low severity, none blocking implementation.
+    Story is ready to move to ready-to-work once WINT-0120 is confirmed merged.
+
+  implementation_notes:
+    - "Verify WINT-0120 is merged and workflow_log_decision is registered before starting ST-1"
+    - "Read tool-schemas.ts first to confirm exact MCP tool name before writing SKILL.md"
+    - "Follow token-log/SKILL.md section order exactly: frontmatter, Usage, Arguments, Task, Output, Error Handling, Examples"
+    - "insertHitlDecisionSchema in wint.ts line ~1898 is the authoritative field list for the Arguments table"
+    - "Embedding failure fallback is non-negotiable: log the decision even if OpenAI is down"

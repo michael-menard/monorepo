@@ -1,0 +1,369 @@
+story_id: KFMB-6020
+analyst: elab-analyst
+phase: 1
+generated_at: "2026-02-26T00:00:00Z"
+
+preliminary_verdict: conditional_proceed
+# Condition: AC-3 (agent Output section cleanup) must be split into KFMB-6030 before
+# implementation of ST-3. Pre-audit evidence already reveals ~62 agents with stale
+# references in Output sections — well above the >10 threshold documented in AC-3.
+# All other story elements are well-specified and ready.
+
+---
+
+checklist:
+
+  scope_alignment:
+    status: pass
+    notes: >
+      Story scope matches stories.index.md exactly. KFMB-6020 is listed as
+      "Dead Code Removal and Documentation Updates" at Phase 5 with dependency on
+      KFMB-6010. Story surfaces (scripts, agents, docs) match. No extra endpoints,
+      infrastructure, or functional features introduced. Protected areas are
+      explicitly called out as non-goals.
+
+  internal_consistency:
+    status: pass
+    notes: >
+      Goals and Non-goals are consistent. The goal states "no misleading dead
+      filesystem references and documentation accurately reflects KB-first
+      architecture." Non-goals correctly exclude: deleting actual _implementation/
+      directories, deleting historical stories.index.md files, modifying Orchestrator
+      Zod schemas, modifying functional logic, adding MCP tools, and addressing
+      sync-work-order.py function correctness. None of these Non-goals contradict
+      the Goal. ACs match Scope: every scoped file has a corresponding AC. Local
+      Testing Plan (HP-1 through HP-13, EC-1 through EC-4, ED-1 through ED-3)
+      maps directly to ACs. AC-7 syntax checks are explicitly verified by HP-1
+      through HP-5. AC-6 migration guide sections are verified by HP-12 and MC-2.
+      No contradictions found.
+
+  reuse_first:
+    status: pass
+    notes: >
+      Reuse Plan section is well-populated with concrete canonical references:
+      pm-story-seed-agent.agent.md as prose style reference, story-directory-structure.md
+      for Before/After format, resolve-plan.sh post-KFMB-6010 for comment style.
+      KB entries fac0d1b6, d3311b90, 1ef272ff, and 932b9c55 are cited for
+      implementation guidance. No per-story one-off utilities are introduced.
+      Documentation-only story — no shared packages apply.
+
+  ports_adapters:
+    status: not_applicable
+    notes: >
+      Documentation-only story. No functional code changes. No transport layer
+      involved. N/A by design.
+
+  local_testability:
+    status: pass
+    notes: >
+      Tests are concrete and executable. bash -n syntax checks are runnable
+      without dependencies. python3 -m py_compile is runnable without dependencies.
+      Content verification (direct file reads) is unambiguously executable.
+      HP-1 through HP-13 all have specific setup, action, and expected outcome.
+      Error cases and edge cases are well-defined. The only caveat is the
+      KFMB-6010 dependency precondition (AC must wait for KFMB-6010 to reach
+      needs-code-review) — this is acknowledged in the story and does not make
+      tests non-executable, merely deferred.
+
+  decision_completeness:
+    status: pass_with_notes
+    notes: >
+      No blocking TBDs. The one known unknown — the exact count of agent files
+      needing Output section cleanup (AC-3) — is handled by the design-first
+      ST-1 audit subtask and the explicit >10 split gate in AC-3. The migration
+      guide field ownership table references KB entry 932b9c55 as authoritative
+      source. The EC-4 error case addresses accuracy verification. One minor gap:
+      the story does not specify what happens if KB entry 932b9c55 is inaccessible
+      during ST-5 (fallback not documented). Low risk given it is a pre-existing
+      KB entry, but worth noting.
+
+  risk_disclosure:
+    status: pass
+    notes: >
+      Risks are explicit and well-documented. dev_feasibility.risks covers:
+      (1) AC-3 agent scope unknown until ST-1 audit with a concrete mitigation
+      (time-box 20 min, surface warning if >10 agents or >30k tokens);
+      (2) KFMB-6010 dependency with precondition enforcement. test_plan.risks
+      covers: agent scope scaling, EVIDENCE label drift, KFMB-6010 dependency,
+      and migration guide accuracy dependency on KB entry 932b9c55. No hidden
+      dependencies found. The >10 agent split gate is appropriately documented.
+
+  story_sizing:
+    status: flag
+    severity: high
+    notes: >
+      PRE-AUDIT EVIDENCE INDICATES MANDATORY SPLIT IS REQUIRED.
+
+      The story correctly documents a >10 agent split gate in AC-3, but the
+      pre-elaboration scan reveals the situation is significantly more severe
+      than anticipated:
+
+      - grep scan of .claude/agents/*.agent.md: 62 agent files contain
+        _implementation/ or _pm/ references in Output sections.
+      - This is 6x the >10 threshold that triggers KFMB-6030 creation.
+      - ST-3 estimated at 20,000 tokens but 62 agents will far exceed this —
+        realistically 60,000–120,000 tokens depending on agent file sizes.
+
+      Other sizing indicators:
+      - 8 ACs: borderline but acceptable for doc cleanup.
+      - 13 happy path tests: above the >3 distinct scenario flag, but all
+        are simple file reads / syntax checks, not complex test scenarios.
+        Acceptable for doc story.
+      - Multiple independent concern bundles: script comment cleanup (ST-2),
+        agent prose cleanup (ST-3), workflow doc updates (ST-4), migration
+        guide authorship (ST-5). These are separable but related enough to
+        keep in one story EXCEPT for ST-3 which exceeds sizing bounds.
+      - Touches scripts + agents + docs: 3+ surfaces, which is the flag threshold.
+
+      RECOMMENDATION: KFMB-6030 must be created to handle AC-3 agent Output
+      section cleanup before ST-3 begins. The current story should exclude
+      ST-3 or make it conditional on the KFMB-6030 split gate being evaluated.
+
+  subtask_decomposition:
+    status: pass_with_notes
+    notes: >
+      5 subtasks (ST-1 through ST-5) present. DAG is well-formed:
+        ST-1 (no deps) → ST-2, ST-3, ST-4 (all depend on ST-1)
+        ST-4 → ST-5
+
+      AC coverage:
+        ST-1: AC-1 (complete)
+        ST-2: AC-2, AC-7 partial (complete)
+        ST-3: AC-3 (complete, but see sizing flag)
+        ST-4: AC-4, AC-5 (complete)
+        ST-5: AC-6, AC-7, AC-8 (complete)
+
+      File counts per subtask:
+        ST-1: 5 files read, 0 modified (appropriate for audit)
+        ST-2: 3 files read, 3 modified (appropriate)
+        ST-3: count TBD by ST-1, but pre-audit suggests ~62 files (too large)
+        ST-4: 5 files read, 2-5 modified (appropriate)
+        ST-5: 2 files read, 2 files modified including 1 new (appropriate)
+
+      Verification commands are specified for each subtask. Token estimates are
+      reasonable for ST-1, ST-2, ST-4, ST-5 but grossly underestimated for ST-3
+      (20,000 estimated vs 60,000–120,000 likely actual).
+
+      Gap: ST-5 specifies AC-7 final syntax checks but ST-2 also covers AC-7
+      (partial). The division is logical (ST-2 does the changes, ST-5 does a
+      final pass), but the subtask description should clarify that ST-5's AC-7
+      is a "final verification pass" not a re-execution of ST-2's syntax checks.
+
+---
+
+gaps:
+
+  mvp_critical:
+
+    - id: GAP-1
+      title: "AC-3 agent scope far exceeds story sizing bounds — KFMB-6030 split required"
+      severity: high
+      type: sizing
+      description: >
+        Pre-elaboration grep scan reveals approximately 62 agent files with stale
+        _implementation/ or _pm/ references in their Output sections. The story's
+        own AC-3 documents a >10 agent split gate requiring KFMB-6030 creation.
+        This threshold is definitively exceeded before implementation begins.
+        Without the split, ST-3 would consume an estimated 60,000–120,000 tokens
+        against a story budget of 80,000 total, making the overall story infeasible
+        as a single unit. KFMB-6030 must be created as a prerequisite to ST-3
+        execution, or ST-3 must be removed from this story's scope and fully
+        delegated to KFMB-6030.
+      affected_acs: [AC-3]
+      affected_subtasks: [ST-3]
+      resolution: >
+        Create KFMB-6030 story for agent Output section cleanup before executing
+        ST-3. Update this story's Scope section to make AC-3/ST-3 conditional on
+        KFMB-6030 assessment or remove ST-3 entirely from this story. The AC-3
+        split gate is already specified — the pre-audit finding confirms it fires.
+
+    - id: GAP-2
+      title: "implement-dispatcher.sh contains functional filesystem references, not just comments"
+      severity: medium
+      type: scope_underspecification
+      description: >
+        The story classifies implement-dispatcher.sh as "Files to audit (scope TBD
+        by AC-1)" with the implication that only comments/docstrings may need
+        updating. However, static analysis shows implement-dispatcher.sh contains
+        functional filesystem logic: line 82 exits with error if stories.index.md
+        does not exist, line 83 errors if no stories.index.md found, lines 136/138/145/148
+        read stories.index.md for prefix and story list, and line 180/454 check
+        _implementation/ directory existence for workflow state detection.
+
+        These are not comments — they are functional code. The story's Non-goal
+        explicitly states "Do not modify any functional logic in shell or Python
+        scripts — only comments and docstrings." This creates a direct conflict:
+        implement-dispatcher.sh has dead functional code that cannot be cleaned
+        up under this story's constraints.
+
+        Resolution options:
+        (a) Explicitly acknowledge implement-dispatcher.sh functional cleanup is
+            out of scope — documenting it as a future story (KFMB-6030 or new KFMB-6040).
+        (b) Expand scope to include functional cleanup of implement-dispatcher.sh
+            (would require updating dev_feasibility.feasible rationale and risk profile).
+
+        As a documentation/comment-only story, option (a) is appropriate. Without
+        explicit acknowledgment, the AC-1 audit will surface this finding and the
+        implementor may be uncertain about the correct response.
+      affected_acs: [AC-1, AC-2, AC-7]
+      affected_subtasks: [ST-1, ST-2]
+      resolution: >
+        Add explicit Non-goal or Architecture Note: "implement-dispatcher.sh contains
+        functional (non-comment) filesystem references to stories.index.md and
+        _implementation/ that are not in scope for KFMB-6020. The AC-1 audit should
+        document these findings as requiring a follow-up story (create KFMB-6040 or
+        include in KFMB-6030)." This prevents ambiguity during ST-1.
+
+    - id: GAP-3
+      title: "sync-work-order.py functional filesystem logic is explicitly excluded but scope is ambiguous"
+      severity: low
+      type: scope_clarification
+      description: >
+        The Non-goals section excludes "sync-work-order.py scan_directories() or
+        scan_proof_files() function correctness." The grep scan shows sync-work-order.py
+        has 4 lines referencing stories.index.md (lines 5, 22, 115, 116, 120) — the
+        module docstring (lines 5, 22) are in scope for AC-2, but lines 115–120
+        are functional code (glob for *stories.index.md file, filesystem scan).
+
+        The story correctly scopes AC-2 to only the module docstring. However,
+        the AC-1 inventory will need to explicitly flag lines 115–120 as "out of
+        scope functional code" to avoid implementor confusion. The current story
+        text says "module docstring: stories.index.md listed as data source" but
+        does not explicitly call out the functional lines as out-of-scope items
+        that will appear in the AC-1 inventory.
+      affected_acs: [AC-1, AC-2]
+      affected_subtasks: [ST-1]
+      resolution: >
+        Minor clarification: Add to AC-1 inventory criteria: "Note functional
+        (non-comment) filesystem references found in scripts; mark them as
+        out-of-scope for this story." This is low severity since the Non-goals
+        already cover it, but explicit guidance prevents wasted implementor effort.
+
+  future_opportunities:
+
+    - id: OPP-1
+      title: "KFMB-6030: Agent Output Section Cleanup (deferred from KFMB-6020 AC-3)"
+      priority: high
+      description: >
+        Pre-audit reveals ~62 agents with stale _implementation/ or _pm/ references.
+        This is a mandatory future story given the AC-3 split gate fires. Suggest
+        creating KFMB-6030 as part of KFMB-6020's implementation (ST-1 produces
+        the inventory that informs KFMB-6030's scope).
+
+    - id: OPP-2
+      title: "KFMB-6040: implement-dispatcher.sh functional filesystem logic removal"
+      priority: medium
+      description: >
+        implement-dispatcher.sh contains functional (not just comment) references
+        to stories.index.md (lines 82, 83, 136, 138, 145, 148) and _implementation/
+        directory checks (lines 180, 454). These cannot be addressed under this
+        story's comment-only constraint. A follow-up story should modernize
+        implement-dispatcher.sh to use KB-based story discovery exclusively.
+        This would complete the Phase 5 cleanup work that KFMB-6020 cannot touch.
+
+    - id: OPP-3
+      title: "docs/workflow/README.md existence verification"
+      priority: low
+      description: >
+        AC-8 requires a link from docs/workflow/README.md (or equivalent). The
+        directory listing confirms docs/workflow/README.md exists. ED-3 edge case
+        in the test plan already covers the fallback scenario. No gap here, but
+        implementors should verify the README.md is an index-style document
+        before assuming it is the right link target.
+
+    - id: OPP-4
+      title: "KB entry 932b9c55 accessibility pre-check"
+      priority: low
+      description: >
+        AC-6 migration guide field ownership table relies on KB entry 932b9c55
+        (KFMB-2040 field ownership documentation). EC-4 documents what happens
+        if the table is authored without consulting this entry, but no precondition
+        check verifies the entry is accessible before ST-5 begins. Consider adding
+        a KB read of entry 932b9c55 as the first action in ST-5 to surface
+        inaccessibility early rather than discovering it mid-subtask.
+
+---
+
+subtask_dag_notes:
+  - "ST-1 is correctly the root with no dependencies — audit must precede all changes"
+  - "ST-2, ST-3, ST-4 correctly fan out from ST-1"
+  - "ST-5 correctly depends on ST-4 (needs doc update context before migration guide)"
+  - "ST-3 should be held pending KFMB-6030 split evaluation — do not execute until split decision made"
+  - "ST-2 and ST-4 can proceed in parallel after ST-1 completes (no ST-2/ST-4 dependency)"
+  - "AC-7 final syntax check in ST-5 should be labelled as 'final verification pass' to avoid confusion with ST-2 syntax checks"
+
+decisions:
+  gaps:
+    - id: GAP-1
+      finding: "AC-3 agent scope far exceeds story sizing bounds — KFMB-6030 split required"
+      decision: "Acknowledge split gate fires — AC-3/ST-3 deferred to KFMB-6030"
+      action: defer_to_split
+      notes: >
+        The story already contains the >10 agent split gate in AC-3. Pre-audit confirms
+        ~62 agents, definitively triggering the gate. AC-3 remains in this story as the
+        gate specification, but ST-3 execution is deferred to KFMB-6030. The AC-1 audit
+        (ST-1) produces the inventory that informs KFMB-6030's scope. No new AC needed
+        for this gap — the story's design already handles it.
+    - id: GAP-2
+      finding: "implement-dispatcher.sh contains functional filesystem references"
+      decision: "Add as AC-9 — inventory classification requirement"
+      action: add_ac
+      ac_number: 9
+      ac_added: "AC-9: AC-1 Inventory must classify findings as comment/docstring (in-scope) vs. functional code (out-of-scope). Functional references in implement-dispatcher.sh and sync-work-order.py documented but not addressed."
+      notes: >
+        Non-goals already exclude functional logic changes. Adding AC-9 ensures the
+        inventory explicitly classifies each finding, preventing implementor confusion
+        during ST-1 about whether to clean up functional code they discover.
+    - id: GAP-3
+      finding: "sync-work-order.py functional filesystem logic scope ambiguity"
+      decision: "Covered by AC-9 addition"
+      action: covered_by_gap2
+      notes: >
+        Low severity. The Non-goals already exclude scan_directories() and scan_proof_files().
+        AC-9 now makes the classification requirement explicit in the inventory. No
+        additional action needed.
+
+  opportunities:
+    - id: OPP-1
+      finding: "KFMB-6030 Agent Output Section Cleanup"
+      decision: "log_to_kb"
+      action: kb_write
+      kb_entry_id: "052b3e3d-c200-421a-8316-bedba031072a"
+      notes: "Mandatory future story. Inventory from ST-1/AC-1 provides exact scope."
+    - id: OPP-2
+      finding: "KFMB-6040 implement-dispatcher.sh functional filesystem logic removal"
+      decision: "log_to_kb"
+      action: kb_write
+      kb_entry_id: "00d4c856-5aa8-4559-9cb9-e7571685187b"
+      notes: "Future story for Phase 5 functional cleanup beyond comment-only constraint."
+    - id: OPP-3
+      finding: "docs/workflow/README.md existence verification"
+      decision: "defer"
+      action: defer
+      kb_entry_id: null
+      notes: "Low risk. ED-3 edge case in test plan already covers fallback. No KB write needed."
+    - id: OPP-4
+      finding: "KB entry 932b9c55 accessibility pre-check"
+      decision: "defer"
+      action: defer
+      kb_entry_id: null
+      notes: "Low risk. EC-4 error case covers inaccuracy. Implementor can check at ST-5 start."
+
+  follow_ups: []
+  out_of_scope: []
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 4
+  opportunities_logged: 2
+  acs_added: 1
+  notes: >
+    CONDITIONAL PASS. Story is well-specified and ready to proceed with the understanding
+    that AC-3/ST-3 (agent Output section cleanup) will trigger the built-in split gate
+    during implementation, deferring that work to KFMB-6030. The remaining ACs (1, 2, 4-9)
+    are independently executable. AC-9 added to ensure the AC-1 inventory explicitly
+    classifies functional vs. comment references. Two opportunities logged to KB for
+    future story creation (KFMB-6030, KFMB-6040).

@@ -1,0 +1,135 @@
+schema: 1
+story_id: APIP-0030
+timestamp: '2026-03-01T19:45:00Z'
+verdict: PASS
+tests_executed: false
+tests_skipped_reason: >-
+  Pure infrastructure story — no TypeScript packages, no unit or E2E tests applicable. Docker Compose config validation
+  executed instead.
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+  infrastructure:
+    pass: 1
+    fail: 0
+infrastructure_checks:
+  docker_compose_config_validates: true
+  command: docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config
+  exit_code: 0
+  warnings:
+    - Unset env vars default to blank string — expected for local validation without .env
+coverage: null
+coverage_meets_threshold: true
+coverage_exempt_reason: Pure infrastructure story — no TypeScript code; coverage threshold not applicable (ADR-006 / infrastructure exemption)
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    spot_check: >-
+      docker compose config exits 0 (verified locally); grep for 'image:.*latest' returns no matches — image pinned to
+      langchain/langgraph-api:0.0.9
+    notes: >-
+      Compose file at infra/langgraph-server/compose.langgraph-server.yaml validates with exit code 0. Follows infra
+      conventions: named volumes, CMD-SHELL healthcheck, extra_hosts, restart policy.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    spot_check: >-
+      langgraph-checkpoint-init has depends_on langgraph-platform condition: service_healthy and restart: 'no'.
+      Entrypoint uses /bin/sh -c wrapper with exit 0 — mirrors minio-init pattern exactly.
+    notes: >-
+      Confirmed via direct read of compose file lines 81-96. Pattern matches minio-init from compose.lego-app.yaml as
+      documented in REVIEW.yaml.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    spot_check: >-
+      grep -i 'max connections|langgraph_checkpoint_user|pool' in README.md returns Connection Pool section with
+      max_connections: 3, dedicated langgraph_checkpoint_user, and pool isolation from @repo/db.
+    notes: README.md lines 60-86 document the isolated connection pool spec and DB user creation SQL.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    spot_check: >-
+      grep '8123:8123' returns '127.0.0.1:8123:8123' — port 8123 is mapped. Note: bound to 127.0.0.1 (more restrictive
+      than evidence stated, but compliant).
+    notes: >-
+      Port 8123 confirmed in compose file. AC states 'manual verification on server' for live validation — port mapping
+      is present in config.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    spot_check: >-
+      grep '127.0.0.1:8124' returns '127.0.0.1:8124:8124' in ports section — localhost-only binding confirmed per
+      SEC-001.
+    notes: Compose file line 53 confirms '127.0.0.1:8124:8124'. README Studio UI section documents SSH tunnel access pattern.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    spot_check: >-
+      grep 'restart' shows: langgraph-platform: unless-stopped; langgraph-checkpoint-init: 'no'. AC states 'manual
+      verification on server' for live restart test.
+    notes: >-
+      Restart policies confirmed in compose file. Checkpoint init correctly uses restart: 'no' to prevent
+      re-initialization.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    spot_check: >-
+      grep -c 'langgraph_checkpoint' README.md returns 13 matches. README contains Aurora schema layout, connection pool
+      spec, DB user creation SQL, and deployment procedure.
+    notes: >-
+      README.md Aurora Checkpoint Schema section (lines 41-86) fully documents checkpoint schema structure, table names,
+      connection pool, and initialization procedure.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    spot_check: >-
+      grep 'APIP-0020|langgraph-platform:8123|localhost:8123' README.md returns APIP-0020 Integration section with
+      Docker network URL, host URL, and LANGGRAPH_API_URL env var guidance.
+    notes: >-
+      README.md APIP-0020 Integration section (lines 340-361) documents both Docker network and host URLs, with
+      LANGGRAPH_API_URL configuration guidance.
+architecture_compliant: true
+architecture_notes:
+  - Port binding to 127.0.0.1 only — compliant with SEC-001
+  - Image pinned (no 'latest') — compliant with infra conventions
+  - No credentials hardcoded — all env vars via ${VAR} references
+  - One-shot init container pattern mirrors established minio-init convention
+  - Prometheus scrape job follows lego-api pattern exactly (host.docker.internal, /metrics path)
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Infrastructure-only stories (Docker Compose + README) should be verified by direct file inspection and docker
+      compose config validation rather than test suite execution. Evidence.yaml commands can be re-run locally to
+      confirm claims.
+    category: pattern
+    tags:
+      - infrastructure
+      - qa-verify
+      - docker-compose
+  - lesson: >-
+      Port bindings in Docker Compose can be more restrictive than evidence claims (e.g., AC-4 evidence said '8123:8123'
+      but actual binding is '127.0.0.1:8123:8123'). More restrictive is compliant — QA should note the discrepancy but
+      not fail the AC.
+    category: pattern
+    tags:
+      - docker-compose
+      - security
+      - evidence-accuracy
+tokens:
+  in: 8500
+  out: 1800

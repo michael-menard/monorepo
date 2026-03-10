@@ -1,0 +1,122 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  files_touched:
+    - .claude/agents/review-aggregate-leader.agent.md
+
+happy_path_tests:
+  - id: HP-1
+    title: "review-aggregate-leader uses artifact_write for REVIEW artifact write"
+    setup: "KBAR-0160 merged; KBAR-0110 artifact_write tool live; run a story through /dev-code-review workflow (iteration 1)"
+    action: "Trigger /dev-code-review on a story with code changes"
+    expected: "File _implementation/REVIEW.yaml (or REVIEW-1.yaml) written to story's implementation directory; artifact also indexed in KB (dual-write)"
+    evidence: "File exists at expected path AND kb_read_artifact / artifact_search returns the REVIEW content for the story"
+
+  - id: HP-2
+    title: "Dual-write: REVIEW artifact file is human-readable after workflow run"
+    setup: "Completed /dev-code-review workflow with migrated review-aggregate-leader"
+    action: "Inspect the written _implementation/REVIEW.yaml (or REVIEW-1.yaml)"
+    expected: "File contains well-formed YAML with verdict, ranked_patches, findings — identical content shape to pre-migration"
+    evidence: "Cat the file, verify it matches review.ts schema fields"
+
+  - id: HP-3
+    title: "KB indexes REVIEW artifact for artifact_search queries"
+    setup: "REVIEW.yaml written via artifact_write after workflow run"
+    action: "Call artifact_search with query matching the story"
+    expected: "artifact_search returns the REVIEW artifact for the story"
+    evidence: "artifact_search result includes artifact_type=review and matching story_id"
+
+  - id: HP-4
+    title: "review-aggregate-leader frontmatter kb_tools lists artifact_write"
+    setup: "Changes applied to .claude/agents/review-aggregate-leader.agent.md"
+    action: "Read frontmatter kb_tools section"
+    expected: "kb_tools contains artifact_write; kb_write_artifact is removed from the list"
+    evidence: "Direct file inspection confirms frontmatter update"
+
+  - id: HP-5
+    title: "Multiple iterations produce correctly named REVIEW artifacts"
+    setup: "Story goes through 2 code review iterations"
+    action: "Trigger /dev-code-review twice (iteration=1, then iteration=2)"
+    expected: "Two REVIEW artifact files written (REVIEW-1.yaml and REVIEW-2.yaml, or REVIEW.yaml overwritten per chosen convention)"
+    evidence: "File system shows expected artifact files; KB shows both indexed if Option B chosen"
+
+error_cases:
+  - id: EC-1
+    title: "KB write fails — REVIEW still written to filesystem"
+    setup: "KB MCP server unavailable during /dev-code-review workflow run"
+    action: "Trigger /dev-code-review with KB unavailable"
+    expected: "artifact_write returns file_written: true and kb_write_warning; REVIEW.yaml is still written to _implementation/; code review workflow proceeds and returns verdict"
+    evidence: "REVIEW.yaml file exists; workflow does not block; kb_write_warning logged"
+
+  - id: EC-2
+    title: "File system write fails — workflow blocks with error"
+    setup: "Story implementation directory does not exist or is read-only"
+    action: "Trigger /dev-code-review with unwritable directory"
+    expected: "artifact_write returns file_written: false and error; workflow reports AGGREGATE BLOCKED"
+    evidence: "Error propagates; REVIEW.yaml not written; workflow blocked signal emitted"
+
+edge_cases:
+  - id: ED-1
+    title: "10 code review worker agents are unchanged"
+    setup: "KBAR-0180 changes applied"
+    action: "Inspect all code-review-*.agent.md files for kb_write_artifact calls"
+    expected: "None of the 10 worker agents call kb_write_artifact for REVIEW artifacts; no changes to worker agents"
+    evidence: "grep -rn 'kb_write_artifact' .claude/agents/code-review*.agent.md returns no results (or only non-REVIEW calls)"
+
+  - id: ED-2
+    title: "code-review-security kb_search / kb_add_lesson / kb_add_decision calls unchanged"
+    setup: "KBAR-0180 changes applied"
+    action: "Inspect code-review-security.agent.md"
+    expected: "kb_search, kb_add_lesson, kb_add_decision calls are unchanged — only review-aggregate-leader REVIEW write is migrated"
+    evidence: "File diff shows zero changes to code-review-security.agent.md"
+
+  - id: ED-3
+    title: "REVIEW artifact content structure is identical before and after migration"
+    setup: "Two REVIEW.yaml files: one from pre-KBAR-0180 workflow, one from post-KBAR-0180 workflow"
+    action: "Compare content field schemas of both REVIEW artifacts"
+    expected: "Content fields are identical — schema, story_id, verdict, ranked_patches, findings structure unchanged"
+    evidence: "Schema diff shows no content-level changes; only write mechanism changed"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Diff review of review-aggregate-leader.agent.md against ACs"
+    steps:
+      - "1. Read .claude/agents/review-aggregate-leader.agent.md before KBAR-0180 changes"
+      - "2. Apply KBAR-0180 changes"
+      - "3. Read updated file"
+      - "4. Verify Step 5 ('Write Review Artifact to KB') now uses artifact_write instead of kb_write_artifact"
+      - "5. Verify explicit file_path argument present with canonical path convention"
+      - "6. Verify frontmatter kb_tools replaces kb_write_artifact with artifact_write"
+      - "7. Verify graceful failure semantics documented (file_written: true + kb_write_warning pattern)"
+      - "8. Verify REVIEW artifact content (schema, story_id, verdict, ranked_patches) unchanged"
+    expected: "All 7 verification steps pass"
+
+  - id: MC-2
+    title: "Canary story code review run — end-to-end functional validation"
+    steps:
+      - "1. Pick a story currently in needs-code-review state"
+      - "2. Trigger /dev-code-review workflow with migrated review-aggregate-leader"
+      - "3. After workflow completes, check _implementation/ directory for REVIEW.yaml"
+      - "4. Confirm REVIEW.yaml content is valid YAML with expected fields"
+      - "5. Query artifact_search for the story's review artifact"
+      - "6. Confirm artifact_search returns the REVIEW content"
+    expected: "REVIEW.yaml written to filesystem AND indexed in KB; workflow completes normally"
+
+fixture_definitions:
+  - name: "canary-story-code-review"
+    type: "workflow_run"
+    description: "A real story in needs-code-review state used to validate the migrated review-aggregate-leader workflow end-to-end"
+
+risks:
+  - "No unit tests are possible for agent markdown changes — validation relies entirely on manual review and functional workflow testing"
+  - "Functional test requires KBAR-0110 (artifact_write tool) to be fully merged — cannot run before that dependency lands"
+  - "Functional test requires KBAR-0160 (Setup & Plan Leaders migration) to establish the canonical file_path convention before KBAR-0180 can be verified consistently"
+  - "Iteration naming convention (REVIEW.yaml vs REVIEW-{N}.yaml) must be decided before HP-5 test can be specified precisely — test steps may need updating after Dev Feasibility resolves this conflict"

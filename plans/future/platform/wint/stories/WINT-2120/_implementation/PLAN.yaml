@@ -1,0 +1,208 @@
+schema: 2
+story_id: WINT-2120
+timestamp: '2026-03-07T07:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Read WINT-2110 baseline token estimates and define input schema — scaffold benchmark file with Zod schemas,
+      BASELINE-TOKENS.yaml reader, and hardcoded AC-6 fallback table
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    files_to_read:
+      - plans/future/platform/wint/needs-code-review/WINT-2110/WINT-2110.md
+      - packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter orchestrator
+    acs_covered:
+      - AC-1
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement context_cache_stats() query loop — iterate packTypeValues array and collect hitCount and avgHitsPerPack
+      per pack type
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter orchestrator
+    acs_covered:
+      - AC-2
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement pack content size query from wint.context_packs — use Drizzle ORM to read tokenCount (preferred) or
+      derive from content char count / 4; handle zero-content and zero-hit packs gracefully
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts
+      - packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm check-types --filter orchestrator
+    acs_covered:
+      - AC-3
+      - AC-7
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement calculateTokenReduction pure function and apply per-agent — use WINT-2110 AC-1 mapping table to
+      attribute (packType, packKey) pairs to agent workflows; handle edge cases (zero-hit exclusion, zero-content-size
+      guard)
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm vitest run token-reduction-benchmark
+    acs_covered:
+      - AC-4
+      - AC-6
+      - AC-7
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write BENCHMARK-RESULTS.yaml artifact — serialize per-agent table, aggregate reduction %, methodology statement,
+      pack population status, PASS/NEEDS-TUNING verdict, and tuning recommendations; derive output path dynamically
+      relative to script location
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: pnpm vitest run token-reduction-benchmark && pnpm check-types --filter orchestrator
+    acs_covered:
+      - AC-5
+      - AC-6
+      - AC-8
+      - AC-9
+      - AC-10
+files_to_change:
+  - path: packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts
+    action: create
+    reason: >-
+      New benchmark integration test that measures estimated token reduction from context cache; single file
+      implementing all 10 ACs incrementally across 5 subtasks
+commands_to_run:
+  - command: pnpm check-types --filter orchestrator
+    when: after each subtask and after all code changes
+    required: true
+  - command: pnpm vitest run token-reduction-benchmark
+    when: after ST-4 and final verification
+    required: true
+  - command: pnpm test --filter orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Benchmark reads BASELINE-TOKENS.yaml when present; falls back to hardcoded AC-6 table when not found;
+      baseline_source field recorded in output
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Integration test iterates packTypeValues array and calls contextCacheStats({ packType }) for each; hitCount and
+      avgHitsPerPack collected per type
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Drizzle ORM query against wint.context_packs reads tokenCount (preferred) or derives from content char count / 4;
+      pack sizes available per packType
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      calculateTokenReduction pure function implements formula (pack_token_size * hit_count) / (baseline_input_tokens *
+      invocation_count); methodology section in BENCHMARK-RESULTS.yaml documents formula and assumptions
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      BENCHMARK-RESULTS.yaml written to _implementation/ with per-agent table, aggregate reduction %, methodology, pack
+      population status, and PASS/NEEDS-TUNING verdict
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      When aggregate < 80%, top 2-3 agents/packs identified as tuning targets and written to tuning_recommendations
+      section of artifact
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      Zero-hit packs reported as 'not yet populated', excluded from reduction calculation with explanatory note; no
+      division-by-zero runtime errors
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: pnpm vitest run token-reduction-benchmark exits 0 against live PostgreSQL on port 5433
+    evidence_type: command
+  - ac_id: AC-9
+    planned_evidence: No console.log calls in benchmark file; all output via @repo/logger; verified by code review and grep
+    evidence_type: manual
+  - ac_id: AC-10
+    planned_evidence: pnpm check-types --filter orchestrator exits 0 with no TypeScript errors
+    evidence_type: command
+architectural_decisions:
+  - id: ARCH-001
+    question: Should tokenCount column (when non-null) take precedence over char_count / 4 proxy?
+    decision: >-
+      Yes — use tokenCount from wint.context_packs when non-null; fall back to content serialization length / 4 only
+      when tokenCount is null
+    rationale: >-
+      OPP-1 from ELAB.yaml: tokenCount is more accurate when populated. Fallback maintains compatibility with packs
+      written before tokenCount was populated.
+    decided_by: auto
+    tier: 1
+  - id: ARCH-002
+    question: How should the benchmark derive the output path for BENCHMARK-RESULTS.yaml?
+    decision: >-
+      Derive path dynamically using __dirname relative to the benchmark test file location (resolving up 4 directories
+      from src/__tests__/integration/ to the monorepo root, then constructing the story _implementation/ path)
+    rationale: >-
+      GAP-2 from ELAB.yaml: hardcoding 'backlog' would fail since story moves stages. Dynamic derivation based on
+      __dirname makes the path stage-independent.
+    decided_by: auto
+    tier: 1
+  - id: ARCH-003
+    question: Which packType values to iterate — use actual enum values or story narrative names?
+    decision: >-
+      Use actual packTypeValues array from packages/backend/mcp-tools/src/context-cache/__types__/index.ts: ['codebase',
+      'story', 'feature', 'epic', 'architecture', 'lessons_learned', 'test_patterns', 'agent_missions']
+    rationale: >-
+      GAP-1 from ELAB.yaml: story narrative uses fictional names like 'project_conventions'; actual enum values must be
+      used for DB queries. Per-agent attribution uses WINT-2110 AC-1 mapping table associating (packType, packKey) pairs
+      to workflows.
+    decided_by: auto
+    tier: 1
+complexity: simple
+notes:
+  - Single file implementation — all 5 subtasks build incrementally on the same test file
+  - >-
+    BASELINE-TOKENS.yaml does NOT exist in WINT-2110 _implementation/ — hardcoded AC-6 fallback will be used
+    (baseline_source: hardcoded_ac6_fallback)
+  - >-
+    packTypeValues from __types__/index.ts: codebase, story, feature, epic, architecture, lessons_learned,
+    test_patterns, agent_missions
+  - >-
+    WINT-2110 AC-1 agent-to-pack mapping: pm-bootstrap (architecture/project-conventions +
+    lessons_learned/blockers-known + codebase/agent_missions), dev-implement (architecture/project-conventions +
+    codebase/lib-*), elab-story (lessons_learned/blockers-known + architecture/project-conventions), qa-verify
+    (test_patterns/main + lessons_learned/blockers-known + architecture/project-conventions), dev-fix: not listed in
+    WINT-2110 AC-1 — treat same as dev-implement
+  - >-
+    WINT-2110 AC-6 baseline estimates: pm-bootstrap-setup ~2000, pm-bootstrap-analysis ~4000, pm-bootstrap-generation
+    ~3000, dev-implement ~5000, elab-story ~6500, qa-verify ~5500, dev-fix ~5000 (tokens/invocation)
+  - agent_missions pack (codebase type) expected to have zero hits — WINT-2040 in failed-code-review
+  - Verdict is advisory only — do NOT use expect() assertions against 80% threshold to avoid flaky CI
+  - >-
+    OPP-2 from ELAB: add TODO comment on calculateTokenReduction marking it for potential extraction to shared utility
+    in Phase 3
+  - src/__tests__/integration/ directory confirmed to exist with existing integration tests

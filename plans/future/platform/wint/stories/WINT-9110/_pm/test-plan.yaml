@@ -1,0 +1,261 @@
+story_id: WINT-9110
+generated: "2026-03-02"
+framework: vitest
+test_filter: "@repo/orchestrator"
+
+# ============================================================================
+# Primary Testing Strategy
+# ============================================================================
+# Primary pattern: routing validation — extract conditional edge functions and
+# test with mock state objects. No live LLM or subprocess calls required.
+# Integration tests use injectable node factories (not real AI calls).
+# Parity validation (full E2E) is WINT-9120's job, not this story.
+# ============================================================================
+
+unit_tests:
+  # --- bootstrap.ts ---
+  - id: UT-1
+    description: "afterInitialize routing — routes to load_baseline on success, END on error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: routing
+    covers: AC-1
+    approach: "Call afterInitialize(mockState) with success/error states, assert correct node name returned"
+
+  - id: UT-2
+    description: "afterSeed routing — routes to fanout_pm, routes to END on seed error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: routing
+    covers: AC-1
+    approach: "Mock state with seed result, assert afterSeed returns correct branch"
+
+  - id: UT-3
+    description: "afterMergeFanout routing — routes to attack after successful merge"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: routing
+    covers: AC-1
+    approach: "Mock merged fanout state, verify routing to attack node"
+
+  - id: UT-4
+    description: "createBootstrapGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: compilation
+    covers: AC-1, AC-13
+    approach: "Call createBootstrapGraph({}) and assert it returns a compiled graph"
+
+  - id: UT-5
+    description: "runBootstrap — happy path invokes graph.invoke and returns result envelope"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: integration
+    covers: AC-1
+    approach: "Mock graph.invoke, assert runBootstrap returns storyId/success/durationMs/completedAt/errors/warnings"
+
+  - id: UT-6
+    description: "runBootstrap — exception handling returns success=false with errors array"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts"
+    type: error
+    covers: AC-1
+    approach: "Mock graph.invoke to throw, assert runBootstrap catches and returns success=false"
+
+  # --- elab-epic.ts ---
+  - id: UT-7
+    description: "afterFanIn routing — routes to aggregate_results when all stories processed"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-epic.test.ts"
+    type: routing
+    covers: AC-2
+    approach: "Mock state with completedStories == totalStories, assert routes to aggregate"
+
+  - id: UT-8
+    description: "Send API fan-out dispatches N story messages for N storyIds"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-epic.test.ts"
+    type: unit
+    covers: AC-2
+    approach: "Call the dispatch node factory with state containing 3 storyIds, assert 3 Send objects emitted"
+
+  - id: UT-9
+    description: "Fan-in aggregates all N per-story results into epic-level summary"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-epic.test.ts"
+    type: unit
+    covers: AC-2
+    approach: "Mock state with 3 per-story results, assert aggregate node merges them correctly"
+
+  - id: UT-10
+    description: "createElabEpicGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-epic.test.ts"
+    type: compilation
+    covers: AC-2, AC-13
+
+  - id: UT-11
+    description: "runElabEpic — happy path returns result envelope"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-epic.test.ts"
+    type: integration
+    covers: AC-2
+
+  # --- elab-story.ts ---
+  - id: UT-12
+    description: "afterWorktreeSetup routing — routes to elaboration on success, END on failure"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts"
+    type: routing
+    covers: AC-3
+
+  - id: UT-13
+    description: "afterElaboration routing — routes to teardown on success, teardown on error (always teardown)"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts"
+    type: routing
+    covers: AC-3
+
+  - id: UT-14
+    description: "createElabStoryGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts"
+    type: compilation
+    covers: AC-3, AC-13
+
+  - id: UT-15
+    description: "runElabStory — happy path returns result envelope with elaboration subgraph result"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts"
+    type: integration
+    covers: AC-3
+
+  # --- dev-implement.ts ---
+  - id: UT-16
+    description: "afterLoadPlan routing — routes to execute on plan loaded, END on missing plan"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts"
+    type: routing
+    covers: AC-4
+
+  - id: UT-17
+    description: "afterExecute routing — routes to review on success, collect_evidence on execute error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts"
+    type: routing
+    covers: AC-4
+
+  - id: UT-18
+    description: "afterReview routing — routes to collect_evidence always"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts"
+    type: routing
+    covers: AC-4
+
+  - id: UT-19
+    description: "createDevImplementGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts"
+    type: compilation
+    covers: AC-4, AC-13
+
+  - id: UT-20
+    description: "runDevImplement — happy path and exception handling"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts"
+    type: integration
+    covers: AC-4
+
+  # --- qa-verify.ts ---
+  - id: UT-21
+    description: "afterPreconditions routing — routes to qa_subgraph on valid worktree, END on invalid"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/qa-verify.test.ts"
+    type: routing
+    covers: AC-5
+
+  - id: UT-22
+    description: "afterQASubgraph routing — routes to state_transition on pass, complete on fail"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/qa-verify.test.ts"
+    type: routing
+    covers: AC-5
+
+  - id: UT-23
+    description: "createQAVerifyGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/qa-verify.test.ts"
+    type: compilation
+    covers: AC-5, AC-13
+
+  - id: UT-24
+    description: "runQAVerify — happy path transitions story to ready-for-merge"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/qa-verify.test.ts"
+    type: integration
+    covers: AC-5
+
+  # --- backlog-review.ts ---
+  - id: UT-25
+    description: "afterMlScore routing — routes to curator_analyze; graceful skip if ml nodes not injected"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/backlog-review.test.ts"
+    type: routing
+    covers: AC-6
+
+  - id: UT-26
+    description: "afterCuratorAnalyze routing — routes to reorder on success, persist on curator not injected"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/backlog-review.test.ts"
+    type: routing
+    covers: AC-6
+
+  - id: UT-27
+    description: "createBacklogReviewGraph — compiles without error"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/backlog-review.test.ts"
+    type: compilation
+    covers: AC-6, AC-13
+
+  - id: UT-28
+    description: "runBacklogReview — happy path returns prioritized backlog result"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/backlog-review.test.ts"
+    type: integration
+    covers: AC-6
+
+  # --- Shared / Cross-cutting ---
+  - id: UT-29
+    description: "Thread ID convention — all graphs produce ${storyId}:${graphName}:${attempt} thread IDs"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/thread-id.test.ts"
+    type: unit
+    covers: AC-11
+    approach: "Verify thread ID format for each graph via config parsing"
+
+  - id: UT-30
+    description: "Optional checkpointer injection — graph.compile receives checkpointer when provided in config"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/checkpointer-injection.test.ts"
+    type: unit
+    covers: AC-10
+    approach: "Pass mock checkpointer in config, assert graph.compile called with it"
+
+  - id: UT-31
+    description: "Optional retryMiddleware injection — config schema accepts unknown optional"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/middleware-injection.test.ts"
+    type: unit
+    covers: AC-10
+
+  - id: UT-32
+    description: "Telemetry node injection — injected at entry/exit when provided"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/telemetry-injection.test.ts"
+    type: unit
+    covers: AC-12
+
+  - id: UT-33
+    description: "graphs/index.ts — all six graphs exported by name"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/index.test.ts"
+    type: unit
+    covers: AC-7
+    approach: "Import each expected export from graphs/index.ts, assert they are functions"
+
+  - id: UT-34
+    description: "createXNode adapters — each graph exports a createXNode() factory"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/node-adapters.test.ts"
+    type: unit
+    covers: AC-8
+    approach: "Call each createXNode() factory, assert returns function compatible with createToolNode interface"
+
+type_check:
+  - id: TC-1
+    description: "pnpm check-types passes with zero errors after WINT-9110 changes"
+    command: "pnpm check-types --filter @repo/orchestrator"
+    covers: AC-13
+
+test_execution:
+  - id: TE-1
+    description: "pnpm test passes for all new test files"
+    command: "pnpm test --filter @repo/orchestrator"
+    covers: AC-13
+
+coverage_notes:
+  - "Each graph file should achieve >70% coverage via routing tests + happy/error path integration tests"
+  - "Send API fan-out in elab-epic.ts is the highest-complexity node — ensure fan-out count and fan-in aggregation are both covered"
+  - "Injectable dependencies (ml nodes, curator, telemetry, checkpointer, middleware) should be tested in both injected and not-injected states"
+
+excluded_tests:
+  - "Live LLM calls — all tests use mock state objects or mock graph.invoke()"
+  - "Subprocess execution — no real pnpm or claude calls"
+  - "Full parity validation — deferred to WINT-9120"
+  - "PostgreSQL checkpointer integration — deferred to WINT-9106"

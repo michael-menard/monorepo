@@ -1,0 +1,143 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "dev-verification-leader reads scope artifact via kb_read_artifact"
+    setup: "KFMB-5010 has run; a scope artifact exists in KB for a test story_id"
+    action: "Invoke dev-verification-leader with a valid story_id that has a scope artifact in KB"
+    expected: "Agent reads scope and checkpoint artifacts from KB without referencing _implementation/SCOPE.md or _implementation/CHECKPOINT.yaml"
+    evidence: "Agent output references artifact.content.scope_summary (or equivalent); no file-not-found errors"
+
+  - id: HP-2
+    title: "qa-verify-setup-leader precondition check uses KB null-check for evidence and review"
+    setup: "evidence and review artifacts exist in KB for a test story_id"
+    action: "Invoke qa-verify-setup-leader with that story_id"
+    expected: "Agent passes precondition check by confirming both kb_read_artifact calls return non-null artifacts"
+    evidence: "No filesystem existence check (ls or Read) for _implementation/EVIDENCE.yaml or _implementation/REVIEW.yaml"
+
+  - id: HP-3
+    title: "elab-completion-leader reads analysis artifact via kb_read_artifact"
+    setup: "analysis artifact exists in KB for a test story_id (written by elab-analyst after KFMB-5010)"
+    action: "Invoke elab-completion-leader with that story_id"
+    expected: "Agent successfully reads analysis artifact content without referencing _implementation/ELAB.yaml"
+    evidence: "Agent proceeds to completion logic using artifact.content fields"
+
+  - id: HP-4
+    title: "elab-autonomous-decider reads analysis artifact via kb_read_artifact"
+    setup: "analysis artifact exists in KB for a test story_id"
+    action: "Invoke elab-autonomous-decider with that story_id"
+    expected: "Decider reads analysis artifact and makes proceed/split decision based on KB content"
+    evidence: "No _implementation/ELAB.yaml reference in agent execution trace"
+
+  - id: HP-5
+    title: "evidence-judge reads evidence artifact via kb_read_artifact"
+    setup: "evidence artifact exists in KB for a test story_id"
+    action: "Invoke evidence-judge with that story_id"
+    expected: "Agent reads evidence artifact from KB and proceeds with judgment"
+    evidence: "No {story_dir}/_implementation/EVIDENCE.yaml path used; artifact.content accessed from KB response"
+
+  - id: HP-6
+    title: "Batch reader agents (AC-6) all have kb_read_artifact in frontmatter"
+    setup: "Story KFMB-5020 implementation complete"
+    action: "Grep all .claude/agents/ markdown files for kb_tools frontmatter"
+    expected: "All 14 batch agents have kb_read_artifact listed in their kb_tools array"
+    evidence: "grep result shows kb_read_artifact in each migrated agent file frontmatter"
+
+  - id: HP-7
+    title: "No _implementation/ artifact file paths remain in migrated agent Inputs or preconditions"
+    setup: "Story KFMB-5020 implementation complete"
+    action: >
+      Run: grep -r "_implementation/CHECKPOINT\|_implementation/EVIDENCE\|_implementation/ELAB\|_implementation/SCOPE\|_implementation/PLAN\|_implementation/REVIEW"
+      .claude/agents/ --include="*.md" -l
+    expected: "Zero matches for deprecated file paths in any migrated agent file"
+    evidence: "grep returns no results or only matches in agents that are not in the migration scope (e.g., already-migrated agents with historical references in comments)"
+
+error_cases:
+  - id: EC-1
+    title: "kb_read_artifact returns null — required artifact missing"
+    setup: "A test story_id has no checkpoint artifact in KB (KFMB-5010 not run yet for that story)"
+    action: "Invoke dev-verification-leader with that story_id"
+    expected: "Agent detects null artifact and emits a clear BLOCKED or WARN message; does NOT crash with file-not-found"
+    evidence: "Agent output contains a null-check guard message; no unhandled exception"
+
+  - id: EC-2
+    title: "qa-verify-setup-leader precondition fails when evidence artifact missing"
+    setup: "A test story_id has no evidence artifact in KB"
+    action: "Invoke qa-verify-setup-leader with that story_id"
+    expected: "Agent returns BLOCKED: evidence artifact not found in KB; does not attempt to read filesystem"
+    evidence: "BLOCKED signal emitted; no attempt to ls _implementation/EVIDENCE.yaml"
+
+  - id: EC-3
+    title: "Incorrect artifact_type string does not silently succeed"
+    setup: "Agent incorrectly queries artifact_type: 'elab' instead of 'analysis'"
+    action: "Invoke elab-completion-leader (if artifact_type were wrong)"
+    expected: "kb_read_artifact returns null (no artifact of type 'elab'); agent null-check triggers BLOCKED"
+    evidence: "Null-check guard fires; confirms correct type string 'analysis' is required"
+
+edge_cases:
+  - id: ED-1
+    title: "Agent that both reads and writes (dev-verification-leader) — read-side only migrated"
+    setup: "dev-verification-leader reads scope/checkpoint (KFMB-5020) and writes checkpoint in fix mode (KFMB-5010)"
+    action: "Verify that after KFMB-5020, dev-verification-leader uses kb_read_artifact for reads but KFMB-5010 handles write migration"
+    expected: "No double-migration or missed migration; read calls use KB, write calls status tracked by KFMB-5010 scope"
+    evidence: "Code review confirms read vs write path separation in agent"
+
+  - id: ED-2
+    title: "Metrics agents (read-only, low-traffic) all migrated correctly"
+    setup: "leakage-metrics-agent, turn-count-metrics-agent, pcar-metrics-agent, churn-index-metrics-agent all updated"
+    action: "Inspect each metrics agent for kb_read_artifact in frontmatter and no _implementation/ paths in Inputs"
+    expected: "All four metrics agents correctly reference artifact_type strings from the kb-integration.md table"
+    evidence: "Static review of each agent file passes"
+
+  - id: ED-3
+    title: "Smoke test with real KB fixture (post-KFMB-5010)"
+    setup: "KFMB-5010 complete; a story_id with all artifacts in KB available"
+    action: "Run qa-verify-setup-leader end-to-end (per AC-9)"
+    expected: "qa-verify-setup-leader successfully reads evidence and review artifacts from KB and proceeds"
+    evidence: "No filesystem reads of _implementation/; KB returns valid artifact content"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "kb_read_artifact({ story_id, artifact_type: 'scope' }) returns non-null for migrated agents"
+      - "grep count of _implementation/CHECKPOINT|EVIDENCE|ELAB|SCOPE|PLAN|REVIEW in .claude/agents/ = 0 after migration"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Full agent file review — each migrated agent"
+    steps:
+      - "For each agent in the 19-agent migration list, open the .agent.md file"
+      - "Verify frontmatter kb_tools includes kb_read_artifact"
+      - "Verify Inputs section has no _implementation/ artifact file paths"
+      - "Verify precondition checks use kb_read_artifact null-check pattern, not file existence checks"
+      - "Verify artifact_type strings match _shared/kb-integration.md table"
+    expected: "All agents pass all five checks"
+
+  - id: MC-2
+    title: "Artifact type string accuracy check"
+    steps:
+      - "Open .claude/agents/_shared/kb-integration.md"
+      - "For each migrated agent, confirm the artifact_type string used matches the 'File (deprecated) → artifact_type' table"
+      - "Special attention: ELAB.yaml → analysis, QA-VERIFY.yaml → verification, KNOWLEDGE-CONTEXT.yaml → context"
+    expected: "No incorrect artifact_type strings found"
+
+fixture_definitions:
+  - name: "test-story-with-full-kb-artifacts"
+    type: "KB fixture"
+    description: "A test story_id (e.g., TEST-0001) with checkpoint, scope, plan, evidence, review, analysis, and verification artifacts pre-loaded in KB. Required for AC-9 smoke test."
+
+  - name: "test-story-missing-artifact"
+    type: "KB fixture"
+    description: "A test story_id with no artifacts in KB. Used for EC-1, EC-2 null-check validation."
+
+risks:
+  - "KFMB-5010 dependency: AC-9 smoke test cannot run until writers are migrated. Tests HP-1 through HP-5 may need to be deferred or run with fixture data."
+  - "grep-based regression check (HP-7) may have false positives from comments or non-migrated archived agents — scope the grep to active agent files only"
+  - "Agents that read _implementation/ paths in non-Inputs sections (e.g., body text examples) may escape static grep; manual review (MC-1) is the safety net"
+  - "No Vitest or Playwright tests applicable — this story modifies only .claude/agents/ markdown files"

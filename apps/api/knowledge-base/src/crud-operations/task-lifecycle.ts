@@ -12,6 +12,29 @@ import { eq, and, sql, lt, or, isNull } from 'drizzle-orm'
 import type * as schema from '../db/schema.js'
 import { tasks } from '../db/schema.js'
 
+// Explicit column selector — guard against schema-vs-DB drift
+const taskColumns = {
+  id: tasks.id,
+  title: tasks.title,
+  description: tasks.description,
+  sourceStoryId: tasks.sourceStoryId,
+  sourcePhase: tasks.sourcePhase,
+  sourceAgent: tasks.sourceAgent,
+  taskType: tasks.taskType,
+  priority: tasks.priority,
+  status: tasks.status,
+  blockedBy: tasks.blockedBy,
+  relatedKbEntries: tasks.relatedKbEntries,
+  promotedToStory: tasks.promotedToStory,
+  tags: tasks.tags,
+  estimatedEffort: tasks.estimatedEffort,
+  createdAt: tasks.createdAt,
+  updatedAt: tasks.updatedAt,
+  completedAt: tasks.completedAt,
+  deletedAt: tasks.deletedAt,
+  deletedBy: tasks.deletedBy,
+} as const
+
 // ============================================================================
 // Stale Task Thresholds (KBMEM-020)
 // ============================================================================
@@ -218,7 +241,11 @@ export async function kb_promote_task(
   const { db } = deps
 
   // Fetch the task
-  const taskResults = await db.select().from(tasks).where(eq(tasks.id, validated.task_id)).limit(1)
+  const taskResults = await db
+    .select(taskColumns)
+    .from(tasks)
+    .where(eq(tasks.id, validated.task_id))
+    .limit(1)
 
   const task = taskResults[0]
 
@@ -331,7 +358,7 @@ export async function kb_list_promotable_tasks(
 
   // Build query - fetch tasks that might be promotable
   const query = db
-    .select()
+    .select(taskColumns)
     .from(tasks)
     .where(
       and(
@@ -438,7 +465,7 @@ export async function kb_cleanup_stale_tasks(
 
   // Find stale tasks
   const staleTasks = await db
-    .select()
+    .select(taskColumns)
     .from(tasks)
     .where(
       or(

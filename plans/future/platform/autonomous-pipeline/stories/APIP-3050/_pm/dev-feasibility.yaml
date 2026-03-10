@@ -1,0 +1,123 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-3050 is a well-scoped extension to an existing node (Structurer from APIP-1010). The
+  implementation pattern is clearly defined: extend StructurerConfigSchema with optional fields
+  (defaults ensure no breaking changes), add a readAffinityProfiles() function following the
+  delta-detect.ts file structure, inject DB via config.configurable.db (metrics.ts pattern),
+  and apply affinity guidance to extensions.preferredChangePattern only. The fallback path
+  (try/catch → logger.warn → fallbackUsed:true) is straightforward. The only blocker is timing:
+  APIP-1010 and APIP-3020 must both merge before implementation can begin. Story design proceeds
+  now; code work gates on those merges.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts  # primary target (post APIP-1010)
+    - packages/backend/orchestrator/src/nodes/elaboration/affinity-reader.ts  # new file (optional extraction)
+    - packages/backend/orchestrator/src/nodes/elaboration/index.ts  # export new schemas
+    - packages/backend/orchestrator/src/graphs/elaboration.ts  # ElaborationConfigSchema affinityConfig sub-object
+  endpoints: []
+  deploy_touchpoints:
+    - "No migration required — APIP-3050 reads from wint.model_affinity (owned by APIP-3020); no schema changes in packages/backend/database-schema/"
+    - "pnpm check-types --filter packages/backend/orchestrator must pass before merge"
+    - "pnpm test --filter packages/backend/orchestrator must pass (unit + regression)"
+
+risks:
+  - finding: "Hard dependency on APIP-1010 (structurer.ts does not exist yet)"
+    mitigation: "Gate implementation on APIP-1010 merge. Design and test plan proceed now. Do not create structurer.ts stub — extend the real file after APIP-1010 lands."
+  - finding: "Hard dependency on APIP-3020 (wint.model_affinity table and ModelAffinitySelectSchema do not exist)"
+    mitigation: "Write readAffinityProfiles() against APIP-3020's finalized spec. Use standalone function with injected db for testability with mocked DB. Integration tests gate on APIP-3020 completion."
+  - finding: "Model identifier format must match APIP-0040 exactly"
+    mitigation: "Before writing the affinity query, confirm the model identifier convention with APIP-0040 (e.g., 'claude-haiku-4-5' vs 'haiku'). Document the convention in a code comment in affinity-reader.ts."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm check-types --filter packages/backend/orchestrator exits 0 after APIP-3050 changes"
+  - "pnpm test --filter packages/backend/orchestrator passes all tests including APIP-1010 regression"
+  - "StructurerResult.fallbackUsed: true logged on DB error in unit test"
+  - "No extensions.preferredChangePattern set when affinityEnabled:false"
+  - "@integration test passes with real wint.model_affinity fixture row producing correct extensions"
+
+subtasks:
+  - id: ST-1
+    title: "Extend StructurerConfigSchema with affinity config sub-object"
+    goal: "Add affinityConfig nested sub-object to StructurerConfigSchema with affinityEnabled, minAffinityConfidence, maxAffinityWeight fields — all with defaults. Add corresponding AffinityConfigSchema. No breaking change."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts  # (post APIP-1010)
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+    acs: ["AC-1", "AC-6"]
+    depends_on: none
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: "Create AffinityGuidanceSchema and readAffinityProfiles() function"
+    goal: "Add AffinityGuidanceSchema (Zod, no interfaces). Implement readAffinityProfiles(changeOutline, db, config) in affinity-reader.ts following delta-detect.ts file structure. Function queries wint.model_affinity once per distinct (changeType, fileType) pair (not per item). Returns map of itemId → AffinityGuidance | null. Wrapped in try/catch with logger.warn fallback."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+      - packages/backend/orchestrator/src/artifacts/story.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/affinity-reader.ts  # new file
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Integrate affinity guidance into Structurer node implementation"
+    goal: "Extend createStructurerNode (or equivalent from APIP-1010) to call readAffinityProfiles() when affinityEnabled:true and apply returned AffinityGuidance to ChangeOutlineItem.extensions.preferredChangePattern. DB injected via config.configurable.db. Handle null db → warn + fallback. Apply maxAffinityWeight blending. Set fallbackUsed:true on StructurerResult when affinity skipped."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts  # (post APIP-1010)
+      - packages/backend/orchestrator/src/nodes/elaboration/affinity-reader.ts  # from ST-2
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+    acs: ["AC-4", "AC-5", "AC-8", "AC-9", "AC-10"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Export new schemas from elaboration index"
+    goal: "Export AffinityGuidanceSchema and AffinityConfigSchema from packages/backend/orchestrator/src/nodes/elaboration/index.ts. Verify pnpm check-types passes with zero errors."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/index.ts
+    acs: ["AC-14"]
+    depends_on: ST-3
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    estimated_tokens: 2000
+
+  - id: ST-5
+    title: "Write unit tests for affinity-reader and Structurer integration"
+    goal: "Vitest unit tests covering all 6 AC-11 scenarios: (a) affinity-guided pattern selection with mock data; (b) cold-start (empty rows → fallbackUsed:true); (c) DB error (thrown → fallbackUsed:true, logger.warn called); (d) affinityEnabled:false (no DB call); (e) minAffinityConfidence gate (low-confidence rows ignored when minimum is 'medium'); (f) maxAffinityWeight:0.0 (no patterns applied despite data present). Also test that no structural fields are modified (AC-5) and affinityEnabled:false produces APIP-1010 baseline output (AC-7 and AC-13)."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/affinity-reader.ts
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+      - packages/backend/orchestrator/src/nodes/elaboration/__tests__/  # existing APIP-1010 tests
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/__tests__/affinity-reader.test.ts  # new file
+      - packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer-affinity.test.ts  # new file
+    acs: ["AC-7", "AC-11", "AC-13"]
+    depends_on: ST-3
+    verification: "pnpm test --filter packages/backend/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-6
+    title: "Write integration test against APIP-5001 test DB"
+    goal: "Vitest integration test tagged @integration. Insert wint.model_affinity fixture row (model='haiku', change_type='create', file_type='tsx', confidence='high', success_rate=0.92, sample_size=45). Run Structurer with real DB injection. Assert extensions.preferredChangePattern === 'create-new-file' for matching TSX create-type items. Also verify cold-start behavior (no rows → no extensions). Gate on APIP-3020 completion (wint.model_affinity table must exist)."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+      - packages/backend/orchestrator/src/nodes/elaboration/affinity-reader.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer-affinity.integration.test.ts  # new file
+    acs: ["AC-12"]
+    depends_on: ST-5
+    verification: "pnpm test --filter packages/backend/orchestrator (integration tag gated on APIP-3020)"
+    estimated_tokens: 8000

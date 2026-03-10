@@ -1,0 +1,123 @@
+# Risk Predictions: BUGF-019
+# Generated: 2026-02-11
+# Mode: Heuristics-only (KB unavailable)
+# Confidence: low
+
+story_id: BUGF-019
+epic: bug-fix
+title: "Implement Password Reset Rate Limiting and UX Improvements"
+generated_at: "2026-02-11"
+prediction_mode: "heuristics"
+kb_available: false
+
+# Story Characteristics
+story_characteristics:
+  ac_count: 8
+  complexity: "medium"
+  estimated_hours: 9-14
+  story_points: 2
+  touches_backend: false
+  touches_frontend: true
+  touches_database: false
+  story_type: "tech_debt"
+  involves_component_extraction: true
+  involves_auth_flows: true
+
+# Predictions
+predictions:
+  split_risk:
+    score: 0.3
+    confidence: "low"
+    rationale: |
+      Medium complexity story with 8 ACs, but scope is well-defined and coherent.
+      Component extraction (RateLimitBanner, PasswordStrengthIndicator) is straightforward.
+      All work focuses on auth UX improvements in password reset flows.
+      BUGF-027 guide provides comprehensive specification, reducing ambiguity.
+      Low split risk due to clear boundaries and proven patterns.
+
+  review_cycles:
+    estimate: 1-2
+    confidence: "low"
+    rationale: |
+      Likely 1-2 review cycles based on:
+      - Straightforward implementation with proven patterns (ResendCodeButton reference)
+      - BUGF-027 guide provides complete specification
+      - No backend coordination needed (Cognito-managed)
+      - Component moves are low-risk (RateLimitBanner already works in upload flows)
+      - Main complexity: SessionStorage state tracking and countdown timers (well-documented)
+      Potential for single-cycle pass if test coverage is comprehensive.
+
+  token_estimate:
+    range: "90K-110K"
+    confidence: "low"
+    rationale: |
+      Estimated token usage:
+      - PM phase (story generation): ~50K tokens (includes seed, worker artifacts)
+      - Implementation phase: ~30-40K tokens (countdown logic, component extraction, state management)
+      - Review phase: ~10-20K tokens (test review, accessibility verification)
+      Total estimate: 90-110K tokens
+      Lower than typical feature work due to:
+      - No backend API changes
+      - Proven patterns (ResendCodeButton, RateLimitBanner)
+      - Clear specification from BUGF-027
+
+# Risk Factors
+risk_factors:
+  high:
+    - name: "Cognito Rate Limit Behavior Variability"
+      description: "Actual Cognito rate limit thresholds may differ from documented estimates"
+      mitigation: "Exponential backoff handles variability; UAT testing with real Cognito required"
+    - name: "Multi-Page State Management"
+      description: "SessionStorage state must be tracked consistently across ForgotPasswordPage and ResetPasswordPage"
+      mitigation: "Extract shared utilities to /utils/rate-limiting.ts; comprehensive unit tests for state tracking"
+
+  medium:
+    - name: "Countdown Timer Memory Leaks"
+      description: "setInterval not cleaned up properly may cause memory leaks"
+      mitigation: "Use useEffect cleanup function; test with vi.useFakeTimers()"
+    - name: "Accessibility Requirements"
+      description: "ARIA attributes, screen reader announcements, prefers-reduced-motion support required"
+      mitigation: "Follow BUGF-027 guide section 3.4; test with screen reader simulation"
+
+  low:
+    - name: "Component Extraction"
+      description: "RateLimitBanner and PasswordStrengthIndicator extraction may introduce breaking changes"
+      mitigation: "Components are stable; port existing tests; gradual rollout"
+
+# Confidence Notes
+confidence_notes: |
+  Low confidence due to:
+  - Knowledge Base unavailable (no historical data on similar stories)
+  - WKFL-006 (token tracking) not available for pattern analysis
+  - Predictions based solely on heuristics (AC count, complexity, story type)
+
+  Heuristics used:
+  - 8 ACs = medium complexity
+  - Auth flow changes = moderate review risk
+  - Component extraction = low split risk
+  - Tech debt story type = lower token usage than features
+  - BUGF-027 guide availability = reduces ambiguity and review cycles
+
+# Recommendations
+recommendations:
+  - "Implement SessionStorage utilities in shared /utils/rate-limiting.ts for reuse"
+  - "Test countdown timer with vi.useFakeTimers() to catch memory leaks early"
+  - "UAT testing with real Cognito is critical (per ADR-005) to validate rate limit thresholds"
+  - "Extract RateLimitBanner move (Phase 1) as standalone commit for easy rollback if needed"
+  - "Follow BUGF-027 guide section 3.4 closely for accessibility requirements"
+
+# Historical Comparison (Unavailable)
+historical_comparison:
+  available: false
+  reason: "Knowledge Base unavailable; no historical data for comparison"
+  fallback: "Using heuristics based on story characteristics only"
+
+---
+# Prediction Status
+status: "draft"
+mode: "heuristics"
+kb_required: true
+kb_available: false
+fallback_used: true
+last_updated: "2026-02-11"
+author: "PM Risk Predictor Worker"

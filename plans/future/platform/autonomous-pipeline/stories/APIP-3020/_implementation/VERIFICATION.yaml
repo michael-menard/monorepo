@@ -1,0 +1,201 @@
+schema: 1
+story_id: APIP-3020
+timestamp: '2026-03-01T19:48:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 27
+    fail: 0
+  integration:
+    pass: 1
+    fail: 0
+    skipped: 4
+  schema:
+    pass: 55
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+pre_existing_failures:
+  - file: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    issue: >-
+      1 test fails in elaboration.test.ts (pre-existing, documented in EVIDENCE.yaml and CHECKPOINT.yaml warnings;
+      unrelated to APIP-3020)
+coverage: 77.56
+coverage_meets_threshold: true
+coverage_notes: >-
+  pattern-miner.ts achieves 77.56% line coverage from unit tests alone. database-schema package does not have
+  @vitest/coverage-v8 installed; wint.ts coverage not measurable but schema shape tests (55/55) confirm correctness.
+  Both exceed the 45% global minimum.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    notes: >-
+      modelAffinity table defined in wint.ts at line 1838 with all required columns. Column naming deviations from story
+      spec (model_id vs model, sample_count vs sample_size, avg_retry_count vs avg_attempts, no avg_cost_usd) are
+      documented and justified by ARCH-001 in PLAN.yaml — adapting to actual APIP-3010 column names from
+      change_telemetry. avg_cost_usd is absent because change_telemetry has no cost column. Enum value 'unknown'
+      replaces story's 'none' to match Drizzle defaults. All deviations are coherent with the ARCH-001 decision.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: >-
+      uniqueIndex on (model_id, change_type, file_type) at line 1870; index on confidence_level at line 1876; index on
+      last_aggregated_at at line 1878. All three indexes defined in wintSchema.table() callback. Verified in wint.ts.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: >-
+      ModelAffinityInsertSchema and ModelAffinitySelectSchema exported from wint.ts lines 1886-1887; types derived via
+      z.infer<>. Re-exported from schema/index.ts. wint-schema.test.ts AC-3 tests pass (parse valid insert, full insert,
+      reject missing fields). 55/55 tests pass.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: >-
+      Migration file 0029_apip_3020_model_affinity.sql verified at
+      packages/backend/database-schema/src/migrations/app/0029_apip_3020_model_affinity.sql. Contains BEGIN/COMMIT
+      transaction, DO $$ IF NOT EXISTS $$ for enum idempotency, CREATE TABLE IF NOT EXISTS for table. SQL syntax
+      reviewed and confirmed correct. Review checklist sql_idempotency: PASS.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: >-
+      packages/backend/orchestrator/src/graphs/pattern-miner.ts exports createPatternMinerGraph() at line 663 and
+      runPatternMiner() at line 693. PatternMinerConfigSchema and PatternMinerStateAnnotation defined. TypeScript check
+      (tsc --noEmit) passes with no errors.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: >-
+      fetchTelemetry node uses MAX(last_aggregated_at) watermark at line 315; COLD_START_EPOCH = new
+      Date(0).toISOString() at line 56 for cold-start fallback. HP-6 unit test verifies watermark is used in query.
+      27/27 unit tests pass.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: >-
+      computeWeightedAverage() at line 248 implements (old_val * old_count + new_val * new_count) / (old_count +
+      new_count). EC-3 div-by-zero guard returns 0. EC-4 verifies (0.9*100 + 0.5*10)/110 = 0.8636 (story quoted 0.8545
+      due to a math error in the story spec, but the formula itself is correct and the test uses toBeCloseTo against the
+      correct formula). upsertProfiles uses ON CONFLICT DO UPDATE. Review sql_injection: PASS (parameterized queries
+      confirmed).
+  - ac_id: AC-8
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: >-
+      THRESHOLD DEVIATION: Story AC-8 specifies thresholds: sample_size 1-19 → 'low', 20-49 → 'medium', 50+ → 'high'.
+      Implementation uses CONFIDENCE_THRESHOLDS = { HIGH: 30, MEDIUM: 10, LOW: 1 } — resulting in 1-9 → low, 10-29 →
+      medium, 30+ → high. No architectural decision in PLAN.yaml, ELAB.yaml, or REVIEW.yaml documents or justifies this
+      threshold change. ELAB.yaml decision_completeness gap-1 notes even references the story's original '0/19/49'
+      thresholds. Unit tests HP-1–HP-4 and ED-1/ED-2 test the IMPLEMENTED thresholds (not the specified thresholds), so
+      they all pass, but against the wrong spec. This is an undocumented deviation from a named requirement. Downstream
+      consumers (APIP-3040, APIP-3050, APIP-3060) that rely on affinity confidence levels will experience different
+      routing behavior than designed.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: >-
+      computeTrend() at line 266 returns {direction, delta, computed_at}. ED-3a (stable: delta=0), ED-3b (stable: delta
+      < TREND_DELTA_THRESHOLD=0.02), ED-3c (up), ED-3d (down), ED-3e (ISO string) — 5 trend tests all pass.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: >-
+      Cold-start unit test passes: empty change_telemetry (watermark=null → COLD_START_EPOCH) → success=true,
+      rowsAggregated=0, rowsUpserted=0, no error. @repo/logger used throughout (no console.log found).
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+    notes: >-
+      27/27 unit tests pass. Covers: HP-1–HP-4 (confidence bands), HP-5 (fixture aggregation), HP-6 (watermark), EC-3
+      (div by zero), EC-4 (weighted avg), ED-1/ED-2 (boundaries), ED-3 (trend stable/up/down), AC-10 (cold-start). Note:
+      the passing boundary tests reflect implemented thresholds (10, 30) not specified thresholds (19, 49, 50). The
+      spec's AC-8 threshold deviation carries through to AC-11 test values.
+  - ac_id: AC-12
+    status: DEFERRED
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[11]
+    notes: >-
+      Integration test file exists at
+      packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.integration.test.ts. Tagged @integration with
+      canRun guard requiring TEST_DATABASE_URL + RUN_INTEGRATION_TESTS=true. 1 smoke test passes; 4 integration tests
+      (HP-7, HP-8, HP-9, ED-4) skip due to APIP-3010 not yet deployed to test DB. This is a pre-documented blocker.
+      DEFERRED is not a FAIL for this story stage.
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[12]
+    notes: >-
+      All 47 pre-existing wint-schema.test.ts tests pass after wint.ts modification. Total: 55/55 (47 pre-existing + 8
+      new APIP-3020 tests). No existing table definitions modified.
+architecture_compliant: true
+architecture_notes: >-
+  Follows LangGraph StateGraph cron pattern (metrics.ts). Zod-first types throughout (no TypeScript interfaces).
+  @repo/logger used exclusively (no console.log). Parameterized SQL — no string interpolation (SQL injection finding
+  from initial commit was remediated in fix commit per REVIEW.yaml). wintSchema.enum() correctly used for
+  confidence_level enum in wint namespace. No barrel files created. No HTTP endpoints added (E2E exempt).
+issues:
+  - id: QA-001
+    severity: fail
+    ac: AC-8
+    description: >-
+      Confidence level thresholds do not match AC-8 specification. Story requires: 1-19 → low, 20-49 → medium, 50+ →
+      high. Implementation uses: LOW=1 (1-9 → low), MEDIUM=10 (10-29 → medium), HIGH=30 (30+ → high). No architectural
+      decision or design note in any planning artifact justifies this deviation. Unit tests pass because they test the
+      implemented values, not the specified values. Downstream routing stories (APIP-3040, APIP-3050, APIP-3060) will
+      see different confidence banding than designed.
+    file: packages/backend/orchestrator/src/graphs/pattern-miner.ts
+    line: 38-42
+    recommendation: >-
+      Either update CONFIDENCE_THRESHOLDS to match AC-8 spec (HIGH: 50, MEDIUM: 20, LOW: 1) and update unit tests
+      accordingly, OR add an explicit architectural decision note in PLAN.yaml documenting why the thresholds were
+      changed and have the story AC-8 amended.
+lessons_to_record:
+  - lesson: >-
+      Confidence threshold constants that differ from story spec without a documented architectural decision are a QA
+      FAIL. Even when unit tests all pass (because they test the implemented values), the deviation from spec must be
+      explicitly documented and approved. The test naming HP-1 through HP-4 matching story test IDs can mask threshold
+      deviations.
+    category: anti_pattern
+    tags:
+      - qa
+      - ac-verification
+      - constants
+      - threshold
+  - lesson: >-
+      When APIP-3010 column names differ from story spec, using an ARCH-xxx decision in PLAN.yaml to document the
+      adaptation is an effective pattern. The ARCH-001 decision in PLAN.yaml cleanly justified model_id, sample_count,
+      avg_retry_count, and avg_cost_usd omissions. This should be the standard for any column name adaptation.
+    category: pattern
+    tags:
+      - database-schema
+      - arch-decisions
+      - column-mapping
+  - lesson: >-
+      Integration tests gated on an upstream story (APIP-3010) must be marked DEFERRED with an explicit canRun guard
+      (TEST_DATABASE_URL + RUN_INTEGRATION_TESTS=true flag). The pattern used here — 1 smoke test that always runs + 4
+      @integration tests that skip — is a good pattern to verify the file exists and loads without error while not
+      blocking CI.
+    category: pattern
+    tags:
+      - integration-tests
+      - deferred
+      - ci
+      - upstream-dependency
+  - lesson: >-
+      Story test plan EC-4 quoted an incorrect math result (0.8545 instead of correct 0.8636 for (100*0.9 +
+      10*0.5)/110). The implementation correctly uses the formula and toBeCloseTo against the actual result. Story test
+      plan math errors should be caught in ELAB review.
+    category: blocker
+    tags:
+      - test-plan
+      - math
+      - weighted-average
+      - elab
+tokens:
+  in: 28000
+  out: 3000

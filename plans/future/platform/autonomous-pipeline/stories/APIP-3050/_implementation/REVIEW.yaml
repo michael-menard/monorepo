@@ -1,0 +1,32 @@
+schema: 1
+story_id: APIP-3050
+iteration: 1
+phase: code_review
+overall_verdict: PASS
+
+checks:
+  - name: lint
+    verdict: PASS
+    findings: []
+
+  - name: type_check
+    verdict: PASS
+    findings: []
+
+  - name: style_compliance
+    verdict: PASS
+    findings:
+      - severity: fixed
+        description: "2 TypeScript interfaces converted to Zod schemas (AffinityRow, StructurerElaborationState)"
+
+  - name: security
+    verdict: PASS
+    findings: []
+
+  - name: tests
+    verdict: PASS
+    findings:
+      - severity: info
+        description: "36/36 unit tests pass, 2 integration tests skipped (no TEST_DATABASE_URL)"
+
+ranked_patches: []

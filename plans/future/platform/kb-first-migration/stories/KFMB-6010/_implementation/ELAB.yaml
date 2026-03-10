@@ -1,0 +1,177 @@
+schema: 1
+story_id: "KFMB-6010"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      stories.index.md Phase 5 entry reads "Script Modernization" with dependencies
+      KFMB-3030, KFMB-4020, KFMB-5030 — exact match to the story title and depends_on
+      list. Files modified/created (scripts/lib/kb-state.sh, generate-stories.sh,
+      implement-stories.sh, implement-dispatcher.sh, sync-work-order.py,
+      resolve-plan.sh) match the Scope section exactly. No new endpoints, no
+      infrastructure, no frontend. Boundary with KFMB-6020 (docs and dead code cleanup)
+      is explicitly drawn in Non-Goals. PASS.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (KB-exclusive state queries, shared kb-state.sh library, dormant function
+      cleanup, hard error on KB unavailability) do not contradict Non-Goals. Non-Goals
+      explicitly protect scan_directories() and scan_proof_files() — AC-7 mirrors this.
+      AC-6 conditional on KFMB-3010 is consistent with the RISK-2 disclosure and the
+      Precondition PRE-2. The "partial pass allowed" language for AC-6 in the OUTCOME
+      is consistent with the conditional framing in the Subtask ST-6. No detected
+      goal/non-goal contradictions.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Story explicitly identifies all reuse patterns with canonical references:
+      resolve-plan.sh resolve_plan() as template for kb-state.sh; existing
+      kb_state_query() verbatim extraction; batch kb_list_stories pattern from
+      KFMB-5030; subprocess.run(['claude','-p',...]) pattern from KFMB-3030.
+      No per-story one-off utilities invented — all patterns trace to established
+      shared library code. PASS.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      N/A for shell and Python scripts. No TypeScript, no HTTP handlers, no service
+      boundaries. Story explicitly states "No TypeScript, no pnpm build, no deployment,
+      no HTTP endpoints, no frontend changes." Ports & Adapters compliance is not
+      applicable to this story type.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test strategy is concrete and executable: bash -n syntax check (automatable),
+      --dry-run with live KB (manual but well-defined), KB-unavailable simulation
+      for non-zero exit (manually scriptable by pointing at wrong port), sync-work-order.py
+      one-cycle smoke test. 11 test scenarios covering all 9 ACs — each scenario maps
+      to a specific AC. PRE-1 and PRE-2 preconditions are explicit, making test
+      readiness deterministic. ADR-005 (live KB required) correctly applied for
+      TS-10 and TS-11. No mock KB anti-pattern. The only minor gap is that KB-unavailable
+      simulation (TS-3, TS-5, TS-6) lacks explicit instructions for how to simulate
+      unavailability (e.g., point at wrong port). Non-blocking — implementer can infer.
+      PASS.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. One design decision has conditional branching: AC-5
+      (remove vs. replace dormant sync-work-order.py functions) is left to implementer
+      judgment with clear guidance ("if functionality is superseded by KB: remove;
+      if a use case remains: replace"). This is intentional flexibility, not an
+      unresolved decision. AC-6 conditionality on KFMB-3010 is fully specified with
+      both branches (remove fallback vs. add TODO comment). The kb-state.sh design
+      is fully specified in Architecture Notes including exact function signature and
+      implementation template. PASS.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Four risks identified: dispatcher poll loop regression (RISK-1, medium, mitigated),
+      AC-6 KFMB-3010 gating (RISK-2, low, partial pass allowed), KB unavailability
+      producing non-zero exit (RISK-3, low, covered by TS-3/TS-5), Bash 3.2
+      compatibility (RISK-4, low). One risk NOT explicitly called out: the story
+      describes sync-work-order.py check_untracked_stories() as "dormant no-ops"
+      post-KFMB-3030, but code review of the CURRENT codebase shows these functions
+      are still actively wired in main() (lines 863-873) and discover_files() still
+      has the *stories.index.md glob. This is expected — the story's Reality Baseline
+      describes post-dependency state, not current state. The implementer must correctly
+      apply this change only AFTER KFMB-3030 is merged. This dependency-ordering risk
+      is covered by PRE-1 and RISK-2, but is not called out explicitly for
+      sync-work-order.py. Non-blocking, but noted. PASS.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      9 ACs (one above the 8-AC soft threshold), 11 test scenarios (above the 3-scenario
+      soft threshold), 6 subtasks. However, these indicators do not reflect independent
+      features bundled together — all changes serve a single coherent purpose (removing
+      filesystem fallbacks from scripts). The 6 subtasks are sequential and mechanically
+      related; none is independently releasable or independently risky. Token estimate
+      (120k-150k) and points estimate (3) are consistent with the mechanical nature
+      of the work. Split risk is assessed as low with high confidence in dev_feasibility.
+      The checklist flags fire on count thresholds, but the story is genuinely
+      well-bounded. No split required. PASS.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      6 subtasks present. AC coverage: ST-1 covers AC-1; ST-2 covers AC-1, AC-2;
+      ST-3 covers AC-1, AC-3; ST-4 covers AC-4; ST-5 covers AC-5, AC-7; ST-6 covers
+      AC-6. All 9 ACs are covered (AC-8 and AC-9 are validation ACs implicitly covered
+      by the overall test plan, not requiring dedicated subtasks). File touch count
+      per subtask: ST-1 creates 1 file; ST-2 touches 1 file; ST-3 touches 1 file;
+      ST-4 touches 1 file; ST-5 touches 1 file; ST-6 touches 1 file — all well within
+      the 3-file limit. Canonical References section is present with 4 entries.
+      No subtask touches more than 1 file. PASS.
+
+gaps: []
+
+opportunities:
+  - id: OPP-1
+    title: "kb-state.sh: consider exporting kb_artifact_exists() alongside kb_state_query()"
+    description: >
+      The story mentions kb_artifact_exists() as optional ("and optionally
+      kb_artifact_exists()") in both ST-1 and the Scope section. The implement-dispatcher.sh
+      currently checks EVIDENCE.yaml readiness via filesystem (line 454:
+      [[ ! -f "${STORY_DIR}/_implementation/EVIDENCE.yaml" ]]). AC-4 requires removing
+      filesystem fallbacks but does not explicitly mandate KB-based artifact existence
+      checks — it references EVIDENCE readiness as a "filesystem fallback path" to
+      remove. If kb_artifact_exists() is implemented in kb-state.sh, the dispatcher's
+      EVIDENCE check can be migrated to KB in the same pass rather than deferring to
+      KFMB-6020. Non-blocking since the story's AC-4 language is satisfied without it,
+      but the opportunity to eliminate a remaining filesystem artifact check exists
+      within this story's natural scope.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: null
+
+  - id: OPP-2
+    title: "AC-8 dry-run verification: add explicit KB-unavailable simulation step to test plan"
+    description: >
+      TS-3, TS-5, and TS-6 specify that "KB unavailability produces a non-zero exit"
+      but the test plan does not specify HOW to simulate KB unavailability (e.g.,
+      ANTHROPIC_BASE_URL pointing to a dead port, or temporarily stopping the KB
+      service). Adding an explicit simulation instruction (e.g., "run with
+      MCP_SERVER=localhost:9999 to force connection failure") would make these
+      test scenarios fully self-contained and reduce ambiguity for the reviewer.
+      Non-blocking — experienced implementer will infer the technique.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: null
+
+  - id: OPP-3
+    title: "Reality Baseline note: current code does not yet reflect post-dependency state"
+    description: >
+      Code review confirms that generate-stories.sh and implement-stories.sh have NO
+      kb_state_query() function and no [KB-FIRST FALLBACK] labels — they are pure
+      filesystem implementations. This is correct per the Reality Baseline's note
+      ("KB was unavailable during seed generation; lessons derived from dependency
+      story ELAB artifacts"). The story's Reality Baseline table describes the
+      expected states AFTER KFMB-3030, KFMB-4020, and KFMB-5030 are merged.
+      The implementer must confirm PRE-1 is satisfied (all three dependencies at
+      needs-code-review or later) before beginning. This is already captured in PRE-1
+      and the Dependency gate section — noting here for analyst awareness only.
+    priority: informational
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: null
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+verdict: PASS
+decided_at: "2026-02-26T00:01:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
