@@ -24,3 +24,20 @@ export { getValidTransitions } from './transitions/index.js'
 export { toDbStoryStatus } from './adapter/index.js'
 export { getStatusFromDirectory } from './directory/index.js'
 export { isValidStoryId } from './validation/index.js'
+
+// Evidence Judge — pure classification functions
+export {
+  classifyEvidenceStrength,
+  deriveAcVerdict,
+  deriveOverallVerdict,
+  EvidenceStrengthSchema,
+  AcVerdictSchema,
+  OverallVerdictSchema,
+  AcVerdictResultSchema,
+} from './evidence-judge/index.js'
+export type {
+  EvidenceStrength,
+  AcVerdict,
+  OverallVerdict,
+  AcVerdictResult,
+} from './evidence-judge/index.js'
