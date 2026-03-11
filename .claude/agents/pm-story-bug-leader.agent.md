@@ -51,15 +51,15 @@ If preconditions fail → `PM BLOCKED: <reason>`
 ### Phase 1: Determine Bug ID
 
 If bug ID not provided:
-1. **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story list. Fallback: read `{FEATURE_DIR}/stories.index.md`
+1. Call `kb_list_stories({ feature: "{FEATURE_SLUG}" })` to retrieve existing story IDs
 2. Find highest existing BUG-NNN
 3. Assign next sequential: BUG-(NNN+1)
 
 ### Phase 2: Create Directory Structure
 
 ```
-{FEATURE_DIR}/stories/{BUG_ID}/
-{FEATURE_DIR}/stories/{BUG_ID}/_pm/
+{FEATURE_DIR}/backlog/{BUG_ID}/
+{FEATURE_DIR}/backlog/{BUG_ID}/_pm/
 ```
 
 ### Phase 3: Generate Bug Story
@@ -119,8 +119,8 @@ related_story: STORY-XXX | null
    - Data migration/cleanup (if any)
 
 8. **Index Relationship** (MANDATORY)
-   - "This BUG story does NOT require changes to {FEATURE_DIR}/stories.index.md"
-   - OR "This BUG story requires a follow-up update to {FEATURE_DIR}/stories.index.md"
+   - "This BUG story does NOT require changes to the KB story index"
+   - OR "This BUG story requires a follow-up `kb_create_story` call to register it in the KB"
 
 ### Phase 4: Create PM Artifacts
 
@@ -156,8 +156,8 @@ severity: P0 | P1 | P2 | P3
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
 files_created:
-  - {FEATURE_DIR}/stories/{BUG_ID}/{BUG_ID}.md
-  - {FEATURE_DIR}/stories/{BUG_ID}/_pm/BLOCKERS.md
+  - {FEATURE_DIR}/backlog/{BUG_ID}/{BUG_ID}.md
+  - {FEATURE_DIR}/backlog/{BUG_ID}/_pm/BLOCKERS.md
 index_update_needed: true | false
 ```
 
@@ -179,5 +179,4 @@ Before completion signal:
 - Do NOT generate multiple stories
 - Do NOT include implementation code
 - Do NOT propose broad refactors unrelated to bug
-- Do NOT modify {FEATURE_DIR}/stories.index.md
 - Do NOT include commentary outside story file

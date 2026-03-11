@@ -23,21 +23,18 @@ Validate epic artifacts exist in feature directory and create output directory f
 From orchestrator prompt:
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
 
-Required artifacts:
+Required artifacts (all inside `{FEATURE_DIR}/`):
 | Artifact | Location | Required |
 |----------|----------|----------|
-| Stories | **KB-first**: `kb_list_stories({ feature_dir: "{FEATURE_DIR}" })` — authoritative. Fallback: `{FEATURE_DIR}/stories.index.md` | Yes |
-| Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` — used for prefix only if KB plan not found | Optional |
+| Stories Index | `kb_list_stories({ feature: "{prefix}" })` | Yes |
+| Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Derive Prefix
 
-Attempt in order:
-
-1. **KB plan** (preferred): `kb_list_plans({ status: 'active' })` → find plan whose `featureDir` matches `{FEATURE_DIR}` → use `storyPrefix`
-2. **Bootstrap context file** (fallback): Read prefix from `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`
-3. **Infer from story IDs** (last resort): Call `kb_list_stories({ feature_dir: "{FEATURE_DIR}" })`, take the prefix from the first story ID (everything before `-`)
-
-If none of the above yield a prefix: `SETUP BLOCKED: Cannot derive prefix for {FEATURE_DIR}`
+Read prefix from `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`:
+```yaml
+prefix: "WISH"  # Use this
+```
 
 ## Output Format
 
@@ -47,12 +44,13 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 
 ## Steps
 
-1. **Validate feature directory** - Must exist
-2. **Derive prefix** - KB plan → bootstrap context file → infer from story IDs (see above)
-3. **Count stories** - KB-first: `kb_list_stories({ feature_dir: "{FEATURE_DIR}" })` → count results. Fallback: parse `{FEATURE_DIR}/stories.index.md` if KB returns empty
-4. **Write context to KB** - `kb_write_artifact` for agent context
-5. **Write checkpoint to KB** - `kb_write_artifact` for resume capability
-6. **Estimate tokens** - Report expected cost
+1. **Validate feature directory** - Must exist with bootstrap artifacts
+2. **Read prefix** - From `_bootstrap/AGENT-CONTEXT.md`
+3. **Validate artifacts** - Check each required file exists
+4. **Count stories** - Call `kb_list_stories({ feature: "{PREFIX}" })` for story count
+5. **Write context to KB** - `kb_write_artifact` for agent context
+6. **Write checkpoint to KB** - `kb_write_artifact` for resume capability
+7. **Estimate tokens** - Report expected cost
 
 ## AGENT-CONTEXT (KB Artifact)
 
@@ -65,7 +63,7 @@ phase: "setup"
 content:
   feature_dir: "{FEATURE_DIR}"
   prefix: "{PREFIX}"
-  stories_path: "{FEATURE_DIR}/stories.index.md"  # filesystem fallback only — KB is authoritative
+  stories_source: "kb_list_stories({ feature: "{PREFIX}" })"
   story_count: N
   scope: "epic"
   timestamp: <ISO timestamp>
@@ -114,8 +112,8 @@ token_estimate:
 | Error | Action |
 |-------|--------|
 | Feature dir not found | BLOCKED: "Directory not found: {path}" |
-| Cannot derive prefix | BLOCKED: "Cannot derive story prefix for {FEATURE_DIR} — no KB plan, no _bootstrap/AGENT-CONTEXT.md, and no stories in KB" |
-| No stories in KB or index | BLOCKED: "No stories found for {FEATURE_DIR} — run /pm-bootstrap-workflow first" |
+| No bootstrap context | BLOCKED: "Run /pm-bootstrap-workflow first" |
+| Missing artifact | Report which, BLOCKED |
 | Permission denied | BLOCKED |
 
 ## Signals

@@ -110,9 +110,9 @@ If the parent story was a dependency for other stories (referenced via `#NN` in 
 Parent row #52 (WINT-1070) splits into WINT-1071 and WINT-1072:
 
 ```
-| [ ] | 52  | WINT-1070 | Deprecate stories.index.md | ❌ SPLIT | | WINT-1030 (#38) | P2 — split into #52a, #52b |
-| [ ] | 52a | WINT-1071 | Deprecate stories.index.md — Phase 1 | 🆕 | | WINT-1030 (#38) | P2 — split from WINT-1070 |
-| [ ] | 52b | WINT-1072 | Deprecate stories.index.md — Phase 2 | 🆕 | | WINT-1071 (#52a) | P2 — split from WINT-1070 |
+| [ ] | 52  | WINT-1070 | Agent KB Tool Migration | ❌ SPLIT | | WINT-1030 (#38) | P2 — split into #52a, #52b |
+| [ ] | 52a | WINT-1071 | Agent KB Tool Migration — Phase 1 | 🆕 | | WINT-1030 (#38) | P2 — split from WINT-1070 |
+| [ ] | 52b | WINT-1072 | Agent KB Tool Migration — Phase 2 | 🆕 | | WINT-1071 (#52a) | P2 — split from WINT-1070 |
 ```
 
 ### Example: Follow-up

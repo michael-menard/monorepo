@@ -64,18 +64,20 @@ From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 
-From KB (authoritative):
-- `kb_get_story({ story_id: "{STORY_ID}" })` — story content, acceptance criteria, scope
-- `kb_get_plan({ planSlug: PLAN_SLUG })` — plan metadata and execution notes (if available)
+From filesystem:
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story to audit
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB for scope alignment
+- `{FEATURE_DIR}/PLAN.exec.md` - for execution plan alignment (if exists)
+- `{FEATURE_DIR}/PLAN.meta.md` - for plan metadata (if exists)
 - `.claude/agents/qa.agent.md` - for QA role context
 - `docs/architecture/api-layer.md` - **AUTHORITATIVE** for API layer architecture (if story involves API)
 
 ---
 
-## Audit Checklist (10 Points)
+## Audit Checklist (9 Points)
 
 ### 1. Scope Alignment
-- Story scope matches KB story record (or stories.index.md fallback) exactly
+- Story scope matches `kb_get_story({ story_id: "{STORY_ID}" })` result exactly
 - No extra endpoints, infrastructure, or features introduced
 - **Defect if:** scope mismatch found
 
@@ -147,25 +149,6 @@ Check for "too large" indicators:
 - Dependency order
 - Each split independently testable
 
-### 10. Clarity Format
-- Story has a `## Goal` section
-- Story has an `## Examples` section
-- Story has an `## Edge Cases` section
-
-**Scoring:**
-- All three sections present → PASS
-- One section missing → CONDITIONAL with note: "Missing {section} — story may be unclear for small-context LLMs"
-- Two or more sections missing → FAIL with note: "Missing {sections} — clarity format incomplete; story not executable by small-context LLMs"
-
-**Verification fixtures:**
-
-| Fixture | Sections Present | Expected clarity_format Status |
-|---------|-----------------|-------------------------------|
-| A | None of Goal / Examples / Edge Cases | FAIL |
-| B | Only Goal present (Examples + Edge Cases missing) | FAIL |
-| C | Goal + Examples present, Edge Cases missing | CONDITIONAL |
-| D | All three present | PASS |
-
 ---
 
 ## Discovery Analysis
@@ -203,11 +186,9 @@ Track for later (write to `ELAB.yaml` `opportunities[]`):
 
 ## Output
 
-### Primary Output: elaboration KB artifact
+### Primary Output: ELAB.yaml
 
-Write via `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration", phase: "planning", content: { ... } })`:
-
-The `content` object matches the ELAB schema below:
+Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml`:
 
 ```yaml
 schema_version: 1
@@ -240,9 +221,6 @@ audit:
     status: PASS | FAIL | SPLIT
     note: ""
   - id: subtask_decomposition
-    status: PASS | CONDITIONAL | FAIL
-    note: ""
-  - id: clarity_format
     status: PASS | CONDITIONAL | FAIL
     note: ""
 
@@ -289,7 +267,7 @@ Leave all `decision` fields as `null` — downstream agents fill them.
 ## Completion Signal
 
 End with exactly one of:
-- `ANALYSIS COMPLETE` - elaboration artifact written to KB via kb_write_artifact
+- `ANALYSIS COMPLETE` - ELAB.yaml written to `_implementation/`
 - `ANALYSIS BLOCKED: <reason>` - cannot complete analysis
 
 ---
@@ -300,8 +278,8 @@ End with exactly one of:
 - Do NOT redesign the system
 - Do NOT modify {STORY_ID}.md
 - Do NOT provide implementation advice
-- MUST write elaboration artifact to KB via `kb_write_artifact` before completion
-- MUST set `preliminary_verdict` in elaboration artifact
+- MUST write `_implementation/ELAB.yaml` before completion
+- MUST set `preliminary_verdict` in ELAB.yaml
 
 ---
 

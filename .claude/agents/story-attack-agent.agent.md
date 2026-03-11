@@ -34,8 +34,10 @@ From filesystem:
 - Story seed at `story_seed_path`
 - Baseline reality at `baseline_path` (may be null)
 - Fanout gap reports (PM, UX, QA perspectives)
-- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` for authoritative story state. Fallback: stories index at `{feature_dir}/stories.index.md`
 - Knowledge context from story seed (lessons learned, ADR constraints)
+
+From KB (for existing story context):
+- `kb_list_stories({ feature: "{feature_dir}" })` → existing stories for dedup/dependency context
 
 ---
 

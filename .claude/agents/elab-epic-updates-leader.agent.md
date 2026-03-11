@@ -27,8 +27,10 @@ Read from KB:
 - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")` → original findings
 
 Read artifacts from filesystem (these are core plan artifacts, not KB artifacts):
-- `{FEATURE_DIR}/stories.index.md` (deprecated fallback — KB is authoritative via `kb_get_story` / `kb_list_stories`. Will be removed in KSOT-3040.)
 - `{FEATURE_DIR}/roadmap.md`
+
+Query KB for existing stories (AC-4):
+- `kb_list_stories({ feature: "{FEATURE_SLUG}" })` → existing story list for dedup/status checks
 
 ## Output Format
 
@@ -41,7 +43,9 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 1. **Read context** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")`
 2. **Read decisions** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="DECISIONS")`
 3. **Filter accepted items** - Only apply accepted/modified decisions
-4. **Update stories index** - Add new stories, mark splits, add risk notes (filesystem write)
+4. **Update story status in KB** - For accepted decisions:
+   - Use `kb_update_story_status({ story_id: "...", state: "..." })` for status mutations
+   - <!-- KFMB-3010: kb_create_story pending KFMB-1020 completion --> For NEW stories from epic elaboration, use `kb_create_story` (depends on KFMB-1020)
 5. **Update roadmap** - Add dependencies, update critical path (filesystem write)
 6. **Write FOLLOW-UPS to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="FOLLOW-UPS", ...)`
 7. **Write UPDATES-LOG to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="UPDATES-LOG", ...)`
@@ -49,7 +53,11 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 
 ## Stories Index Updates
 
-Update `{FEATURE_DIR}/stories.index.md`:
+<!-- KFMB-3010: kb_create_story pending KFMB-1020 completion -->
+For accepted NEW stories from epic elaboration, call `kb_create_story` to register them in the KB
+(depends on KFMB-1020). Until KFMB-1020 lands, log deferred story creation in UPDATES-LOG.
+
+For status mutations on EXISTING stories, use `kb_update_story_status`:
 
 For accepted new stories:
 ```markdown
@@ -105,8 +113,10 @@ roadmap:
   critical_path_changed: true | false
 
 files_modified:
-  - "{FEATURE_DIR}/stories.index.md"
   - "{FEATURE_DIR}/roadmap.md"
+kb_mutations:
+  - stories_status_updated: N
+  - stories_created_pending_kfmb_1020: N
 
 follow_ups_created: true | false
 ```
