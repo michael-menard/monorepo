@@ -1,0 +1,50 @@
+schema: 1
+story: KFMB-3020
+story_title: 'Eliminate stories.index.md — Command Updates'
+gate: PASS
+status_reason: 'Docs-only story. Only command files (.claude/commands/*.md) were modified. Test and type failures are pre-existing from subsequent commits, not from this story.'
+reviewer: Claude Code
+updated: '2026-03-10T12:00:00Z'
+
+top_issues: []
+
+nfr_validation:
+  security:
+    status: SKIPPED
+    issue_count: 0
+  performance:
+    status: SKIPPED
+    issue_count: 0
+  accessibility:
+    status: SKIPPED
+    issue_count: 0
+  tests:
+    status: FAIL
+    details: '1 test failure in generateStoriesIndex.test.ts (pre-existing, not from this story)'
+  types:
+    status: FAIL
+    details: 'ioredis version mismatch in @repo/pipeline (pre-existing, not from this story)'
+  lint:
+    status: PASS
+    details: 'All 8 packages passed lint'
+
+risk_summary:
+  totals:
+    high: 0
+    medium: 0
+    low: 0
+  recommendations:
+    must_fix: []
+    should_fix: []
+
+notes: |
+  This story only modified command files:
+  - .claude/commands/code-audit.md
+  - .claude/commands/context-init.md
+  - .claude/commands/index-update.md
+  - .claude/commands/pm-story.md
+  - .claude/commands/story-status.md
+  - .claude/commands/story-update.md
+
+  The test failure (generateStoriesIndex.test.ts) and type errors (@repo/pipeline) are pre-existing 
+  issues introduced by commits AFTER KFMB-3020 was merged, not by this story.
