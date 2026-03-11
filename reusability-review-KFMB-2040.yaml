@@ -1,0 +1,153 @@
+reusability:
+  verdict: PASS
+  files_checked: 3
+  errors: 0
+  warnings: 0
+  classification: docs-only
+  story_id: KFMB-2040
+  feature_dir: plans/future/platform/kb-first-migration
+  touched_files:
+    - .claude/agents/pm-story-seed-agent.agent.md
+    - .claude/agents/pm-story-generation-leader.agent.md
+    - .claude/commands/pm-story.md
+
+findings: []
+
+analysis:
+  pm_story_seed_agent:
+    type: worker-agent
+    role: "PM story seed generation (Phase 0 of pm-story workflow)"
+    version: "1.2.0 (created 2026-01-31, updated 2026-02-01)"
+    shared_patterns_used:
+      - "Knowledge Base kb_search integration (Phase 3) for lessons learned"
+      - "Story artifact structure conventions"
+      - "Conflict detection framework (baseline + ADR + lesson-based)"
+    duplication_check: PASS
+    notes: "No duplication with existing PM workers (Test Plan, UI/UX, Dev Feasibility). Clear single responsibility: generate grounded story seed from baseline, context, and KB."
+
+  pm_story_generation_leader:
+    type: leader-agent
+    role: "Orchestrate PM workers and synthesize complete story"
+    version: "4.4.0 (created 2026-01-24, updated 2026-03-05)"
+    shared_patterns_used:
+      - "Worker spawn pattern reference at pm-spawn-patterns.md (line 229)"
+      - "Knowledge Base kb_write_artifact for story persistence (Phase 4.5)"
+      - "worktree_register for pre-provisioning dev worktree (Phase 5.5)"
+      - "Experiment variant assignment (WKFL-008)"
+      - "Quality gates and non-negotiables framework"
+    coordination_within_agent:
+      - "Phase 0: Load seed file from pm-story-seed-agent output"
+      - "Phase 1-3: Spawn workers in parallel (Test Plan, UI/UX, Dev Feasibility)"
+      - "Phase 4: Synthesize story combining seed + worker artifacts"
+      - "Phase 4.5: Persist to KB"
+      - "Phase 5: Verify index status"
+      - "Phase 5.5: Create worktree"
+    duplication_check: PASS
+    notes: "Leader properly defers to orchestrator (pm-story.md) for high-level dispatch. No code duplication with peer leaders (pm-story-followup-leader, pm-story-split-leader). Standard patterns well-organized."
+
+  pm_story_command:
+    type: orchestrator-command
+    role: "High-level CLI command orchestrating entire story generation workflow"
+    version: "3.4.0 (created 2026-01-24, updated 2026-02-06)"
+    shared_patterns_used:
+      - "Story ID format specification {PREFIX}-XXYZ (documented pattern)"
+      - "Collision detection algorithm for ID generation"
+      - "Baseline reality finding (Step 2a)"
+      - "Platform index handling via epic-to-directory mapping (Step 1b-map)"
+      - "Dependency satisfaction checking (Step 1c-platform)"
+    execution_flow:
+      - "Step 1: Parse action (generate, followup, split, ad-hoc) and resolve paths"
+      - "Step 1b-map: Epic-to-directory mapping for platform index stories"
+      - "Step 1c: Find next available story with dependency checking"
+      - "Step 2: Run Story Seed phase (delegates to pm-story-seed-agent)"
+      - "Step 3: Spawn appropriate leader agent (generation, adhoc, followup, or split)"
+      - "Step 4: Handle response from leader"
+      - "Step 4.5: Seed story into KB database via migration script"
+      - "Step 5: Update platform index if is_platform=true"
+      - "Step 6: Chain to elaboration if --elab flag present"
+    duplication_check: PASS
+    notes: "Clear separation of concerns: orchestrator handles CLI, delegation, and index updates; agents handle detailed execution. No duplication with other orchestrator commands."
+
+cross_file_dependencies:
+  pm_story_to_seed_agent:
+    handoff_point: "Step 2c of pm-story.md spawns seed agent"
+    inputs_passed:
+      - baseline_path: "Found via glob and date sort in Step 2a"
+      - index_path: "Passed as argument"
+      - story_id: "Resolved from 'next' or explicit in Step 1"
+      - output_dir: "Derived in Step 2b"
+    artifact_produced: "STORY-SEED.md at {OUTPUT_DIR}/_pm/"
+    version_alignment: "pm-story.md v3.4.0 → pm-story-seed-agent.agent.md v1.2.0 ✓"
+
+  pm_story_to_generation_leader:
+    handoff_point: "Step 3 of pm-story.md spawns generation-leader"
+    inputs_passed:
+      - action: generate
+      - index_path: "Per-epic index for /index-update calls"
+      - feature_dir: "Epic's feature directory"
+      - story_id: "Pre-resolved from 'next' or explicit"
+      - seed_path: "Path to STORY-SEED.md generated in Phase 0"
+      - platform_index_path: "If is_platform=true"
+    artifact_consumed: "Seed file from Phase 0 (STORY-SEED.md)"
+    artifact_produced: "story.yaml with full story definition"
+    version_alignment: "pm-story.md v3.4.0 → pm-story-generation-leader.agent.md v4.4.0 ✓"
+
+  generation_leader_to_spawn_patterns:
+    reference: "Line 229 of pm-story-generation-leader.agent.md"
+    pattern_file: ".claude/agents/_reference/patterns/pm-spawn-patterns.md"
+    usage: "Documents Test Plan, UI/UX Advisor, and Dev Feasibility worker spawning"
+    status: "Correctly cross-referenced ✓"
+
+  generation_leader_to_pm_workers:
+    workers: "[pm-draft-test-plan, pm-uiux-recommendations, pm-dev-feasibility-review, pm-story-risk-predictor]"
+    coordination: "Phase 1-3: Spawn all in single message via Task tool"
+    pattern_reference: "pm-spawn-patterns.md (invoked at generation-leader line 229)"
+    status: "Standard worker invocation patterns followed ✓"
+
+shared_package_analysis:
+  kb_tools_leveraged:
+    kb_search:
+      location: "pm-story-seed-agent.agent.md Phase 3"
+      purpose: "Query lessons learned and ADRs relevant to story"
+      shared_package: "@repo/knowledge-base (MCP)"
+    kb_write_artifact:
+      location: "pm-story-generation-leader.agent.md Phase 4.5"
+      purpose: "Persist synthesized story to KB stories table"
+      shared_package: "@repo/knowledge-base (MCP)"
+    worktree_register:
+      location: "pm-story-generation-leader.agent.md Phase 5.5"
+      purpose: "Register git worktree for dev pre-provisioning"
+      shared_package: "@repo/knowledge-base (MCP)"
+    migrate_stories_script:
+      location: "pm-story.md Step 4.5"
+      purpose: "Idempotent story seeding into KB database"
+      command: "pnpm --filter @repo/knowledge-base run migrate:stories"
+      shared_package: "@repo/knowledge-base (backend)"
+  analysis: "All three files properly leverage shared KB infrastructure. No reimplementation of KB functionality."
+
+version_alignment:
+  pm_story_md: "v3.4.0 (2026-02-06)"
+  pm_story_seed_agent: "v1.2.0 (2026-02-01)"
+  pm_story_generation_leader: "v4.4.0 (2026-03-05)"
+  status: "All versions current and mutually compatible ✓"
+
+no_duplication_findings:
+  - "pm-story.md does not duplicate agent logic (delegation only)"
+  - "pm-story-seed-agent.md does not duplicate worker logic (Test Plan, UI/UX, etc.)"
+  - "pm-story-generation-leader.agent.md does not duplicate peer leader logic (followup-leader, split-leader, adhoc-leader)"
+  - "No redundant phase definitions across files"
+  - "Cross-references to shared patterns (pm-spawn-patterns.md) are single-sourced"
+  - "KB integration is centralized and not duplicated"
+
+recommendations:
+  - "No changes required. Documentation architecture is sound and follows established patterns."
+  - "Version alignment across all three files is current (checked frontmatter timestamps)."
+  - "Cross-references to shared patterns are correct and maintained."
+  - "Knowledge base integration is comprehensive and properly distributed."
+
+tokens:
+  in: 12500
+  out: 2800
+
+status: REUSABILITY PASS
+message: "All three files demonstrate proper reuse of shared patterns. No duplication found. Excellent separation of concerns between orchestrator (pm-story.md), seed agent (pm-story-seed-agent.agent.md), and generation leader (pm-story-generation-leader.agent.md)."

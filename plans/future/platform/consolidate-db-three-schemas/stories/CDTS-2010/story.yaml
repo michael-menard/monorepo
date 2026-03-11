@@ -1,0 +1,37 @@
+id: CDTS-2010
+title: Add Story Embeddings for Similarity Search
+status: backlog
+priority: medium
+phase: 2
+feature: "Add embedding vector(1536) column to stories table, IVFFlat index for cosine similarity, generate embeddings from title + feature + AC text on story upsert, and create new MCP tool kb_find_similar_stories."
+goal: "Stories are embeddable and searchable by semantic similarity, enabling graph-style traversal from any story to related stories."
+depends_on:
+  - CDTS-1050
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Migration
+  - "Migration 023_cdts_story_embeddings.sql with safety preamble"
+  - "ALTER TABLE stories ADD COLUMN embedding vector(1536)"
+  - "CREATE INDEX idx_stories_embedding ON stories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)"
+  - "Migration is idempotent"
+
+  # Drizzle
+  - "Add nullable embedding column to stories table definition in schema.ts"
+  - "pnpm check-types passes"
+
+  # Embedding generation
+  - "Story upsert (kb_update_story, kb_update_story_status) generates embedding from concatenation of title + feature + acceptance_criteria text"
+  - "Embedding generated via same OpenAI text-embedding-3-small model used for knowledge_entries"
+  - "Null embedding is acceptable for stories without sufficient text content"
+
+  # New MCP tool
+  - "Register kb_find_similar_stories tool in tool-handlers.ts and tool-schemas.ts"
+  - "Parameters: query (text), limit (default 5), feature_filter (optional text)"
+  - "Returns: array of {story_id, title, feature, state, similarity_score}"
+  - "Uses cosine similarity via pgvector <=> operator"
+  - "Filters out soft-deleted stories (WHERE deleted_at IS NULL)"
+  - "Optional feature_filter narrows results to a specific feature/epic"
+risk_notes: "IVFFlat index requires sufficient rows for good performance (100+ recommended). For small datasets, consider btree index as fallback. Embedding generation adds latency to story upsert — consider async generation if it impacts tool response time."
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

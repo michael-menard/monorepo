@@ -1,0 +1,139 @@
+schema: 1
+story_id: WINT-0120
+phase: implementation
+iteration: 0
+timestamp: '2026-03-08T18:20:00Z'
+
+summary: |
+  Implemented 4 MCP telemetry tools for the WINT workflow intelligence platform:
+  - workflow_log_invocation: inserts to wint.agent_invocations
+  - workflow_log_decision: inserts to wint.hitl_decisions
+  - workflow_log_outcome: upserts to wint.story_outcomes
+  - workflow_get_story_telemetry: reads all 3 tables by storyId
+
+  All tools follow existing patterns (Zod schemas, Drizzle ORM, errorToToolResult).
+  Type check passes cleanly. 19/19 new telemetry tests pass.
+
+acceptance_criteria:
+  - ac_id: AC1
+    description: workflow_log_invocation tool inserts to wint.agent_invocations
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+        detail: workflow_log_invocation function uses Drizzle insert on agentInvocations table
+      - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        detail: WorkflowLogInvocationInputSchema and workflowLogInvocationToolDefinition defined
+      - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        detail: handleWorkflowLogInvocation handler added and registered in toolHandlers map
+      - test: src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: 6 schema validation tests for WorkflowLogInvocationInputSchema all pass
+
+  - ac_id: AC2
+    description: workflow_log_decision tool inserts to wint.hitl_decisions
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+        detail: workflow_log_decision function uses Drizzle insert on hitlDecisions table; embedding passed as-is (number[])
+      - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        detail: WorkflowLogDecisionInputSchema and workflowLogDecisionToolDefinition defined
+      - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        detail: handleWorkflowLogDecision handler added and registered
+      - test: src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: 4 schema validation tests for WorkflowLogDecisionInputSchema all pass
+
+  - ac_id: AC3
+    description: workflow_log_outcome upserts to wint.story_outcomes with onConflictDoUpdate targeting storyId
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+        detail: workflow_log_outcome uses .onConflictDoUpdate({ target: storyOutcomes.storyId }) for upsert
+      - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        detail: WorkflowLogOutcomeInputSchema and workflowLogOutcomeToolDefinition defined
+      - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        detail: handleWorkflowLogOutcome handler added and registered
+      - test: src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: 5 schema validation tests for WorkflowLogOutcomeInputSchema all pass
+
+  - ac_id: AC4
+    description: workflow_get_story_telemetry reads all 3 tables by storyId using Promise.all for parallel queries
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+        detail: workflow_get_story_telemetry uses Promise.all([agentInvocations query, hitlDecisions query, storyOutcomes query])
+      - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        detail: WorkflowGetStoryTelemetryInputSchema and workflowGetStoryTelemetryToolDefinition defined
+      - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        detail: handleWorkflowGetStoryTelemetry handler added and registered
+      - test: src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: 2 schema validation tests for WorkflowGetStoryTelemetryInputSchema all pass
+
+  - ac_id: AC5
+    description: All 4 tools appear in getToolDefinitions() and are registered in toolHandlers map
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        detail: All 4 tool definitions added to toolDefinitions array; total tool count updated to 68
+      - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        detail: All 4 handlers registered in toolHandlers map
+      - file: apps/api/knowledge-base/src/mcp-server/access-control.ts
+        detail: All 4 tool names added to ToolNameSchema and ACCESS_MATRIX with all-role access
+      - test: src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: Tool Discovery test confirms all 4 tools present in getToolDefinitions()
+
+  - ac_id: AC6
+    description: New test file telemetry-tools-integration.test.ts created with passing tests
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        detail: 19 tests covering all 4 schema validators; all pass
+      - command: pnpm test --filter @repo/knowledge-base -- --run src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+        result: 19 passed (19)
+
+  - ac_id: AC7
+    description: mcp-integration.test.ts updated to expect 68 tools (was 62, now includes kb_find_similar_stories, kb_get_story_context, and 4 telemetry tools)
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+        detail: Tool count updated from 62 to 68; tool names list updated with all 6 new tools in correct order
+      - command: pnpm test --filter @repo/knowledge-base -- --run src/mcp-server/__tests__/mcp-integration.test.ts
+        result: 27 passed, 1 pre-existing failure (DB_POOL_SIZE default value mismatch - existed before this story)
+
+build_results:
+  type_check:
+    status: PASS
+    command: pnpm check-types (in apps/api/knowledge-base)
+    output: No type errors
+  tests:
+    status: PASS
+    new_tests: 19
+    new_passing: 19
+    pre_existing_failures: 25 (unchanged from baseline)
+    note: Pre-existing failures are in story-crud-operations.test.ts (DB connection tests), connection-pooling.test.ts (DB_POOL_SIZE default), and mcp-integration.test.ts (DB_POOL_SIZE default). None caused by this story.
+
+files_created:
+  - path: apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts
+    description: New file with 4 CRUD operations and input schemas for wint telemetry tables
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+    description: New test file with 19 unit tests for telemetry tool schemas
+
+files_modified:
+  - path: apps/api/knowledge-base/package.json
+    description: Added @repo/database-schema as workspace dependency
+  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    description: Added 4 tool schemas and definitions; updated toolDefinitions array count
+  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    description: Added import for telemetry-operations; added 4 handler functions; added to toolHandlers map
+  - path: apps/api/knowledge-base/src/mcp-server/access-control.ts
+    description: Added 4 telemetry tool names to ToolNameSchema and ACCESS_MATRIX
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    description: Updated expected tool count from 62 to 68; added 6 new tool names to expected list
+  - path: packages/backend/mcp-tools/package.json
+    description: Added @repo/sidecar-rules-registry as workspace dependency (missing dep that prevented build)
+
+design_notes:
+  - "@repo/database-schema/schema/wint is imported for agentInvocations, hitlDecisions, storyOutcomes tables"
+  - "TelemetryOperationsDeps uses NodePgDatabase<any> to avoid schema type conflicts across packages"
+  - "hitlDecisions.embedding is passed as-is (number[]) - no embedding generation needed per plan"
+  - "workflow_log_outcome uses .onConflictDoUpdate({ target: storyOutcomes.storyId }) - one row per story"
+  - "workflow_get_story_telemetry uses Promise.all for parallel DB queries across all 3 tables"
+  - "All 4 tools are accessible to all roles (pm, dev, qa, all) in ACCESS_MATRIX"

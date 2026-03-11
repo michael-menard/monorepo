@@ -1,0 +1,46 @@
+schema_version: 1
+story_id: KFMB-2020
+phase: code_review
+started_at: "2026-03-06T22:37:25Z"
+current_checkpoint:
+  phase: code_review
+  status: in_fix_cycle
+  completed_at: null
+
+review_cycles:
+  - cycle: 1
+    submitted_at: "2026-03-06T22:37:25Z"
+    verdict: CHANGES_REQUESTED
+    findings_count: 2
+    summary: "Code review flagged 2 reusability findings: shared pattern extraction opportunities for context-cache and collision-detection logic"
+
+fix_cycles:
+  - iteration: 1
+    triggered_by: code_review
+    completed_at: "2026-03-07T12:52:00Z"
+    issues_fixed:
+      - file: ".claude/agents/pm-bootstrap-setup-leader.agent.md"
+        line: 44
+        issue: "Collision detection logic (kb_list_stories call + fallback pattern) duplicated across multiple agents. Extracted to shared module."
+        severity: medium
+      - file: ".claude/agents/_shared/collision-detection.md"
+        line: null
+        issue: "Created shared collision-detection pattern documentation for reuse in KFMB-2010, KFMB-2030"
+        severity: medium
+      - file: ".claude/agents/_shared/context-cache.md"
+        line: null
+        issue: "Created shared context-cache pattern documentation for reuse across bootstrap agents"
+        severity: low
+    verification_result: PASS
+    notes: |
+      Extracted reusable patterns from pm-bootstrap-setup-leader v4.1.0:
+      1. KB collision detection pattern (kb_list_stories call with fallback to filesystem)
+      2. Bootstrap context caching pattern (SETUP-CONTEXT schema and generation)
+
+      Created shared documentation files to be imported by:
+      - pm-bootstrap-generation-leader.agent.md (KFMB-2010)
+      - pm-bootstrap-workflow.md Phase 1 (KFMB-2030)
+      - Potential future agents using KB bootstrap patterns
+
+      No changes to pm-bootstrap-setup-leader.agent.md itself. Extraction is via
+      documentation references only, preserving existing implementation as-is.

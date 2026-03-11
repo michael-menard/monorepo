@@ -1,0 +1,181 @@
+schema: 2
+story_id: KBAR-0200
+timestamp: "2026-02-25T18:35:00Z"
+subtask_source: story
+
+# CRITICAL ORDERING NOTE (from AC-10 / autonomous elaboration):
+# Story lists ST-3 before ST-4, but ST-4 (PatternDiscoveryResultSchema in knowledge-context.ts)
+# MUST execute before ST-3 (importing and using it in load-knowledge-context.ts).
+# Execution order: ST-1 → ST-2 → ST-4 → ST-3 → ST-5 → ST-6
+# Steps below are renumbered as execution steps (id) but retain their subtask_id for traceability.
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Read current state of all target files to establish baseline before making changes"
+    files:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_read:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    dependencies: []
+    slice: packages
+    verification: "Context established — confirm ArtifactSearchInputSchema shape, getLessonsFromKB signature, KnowledgeContextConfigSchema.kbDeps structure"
+    acs_covered: []
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Update knowledge-context-loader.agent.md — add Phase 1.5 Pattern Discovery, update kb_tools frontmatter, document graceful fallback and output distinction"
+    files:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+    files_to_read:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+    dependencies: [1]
+    slice: packages
+    verification: "Manual diff review: Phase 1.5 exists with 2+ artifact_search examples, kb_tools includes artifact_search, existing Phase 1 blocks unchanged, fallback documented, output distinction documented"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-9"]
+
+  - id: 3
+    subtask_id: "ST-4"
+    description: "Extend KnowledgeContextSchema in artifacts/knowledge-context.ts — add PatternDiscoveryResultSchema and pattern_discovery field, update createKnowledgeContext() factory"
+    files:
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-6", "AC-9"]
+
+  - id: 4
+    subtask_id: "ST-3"
+    description: "Extend KnowledgeContextConfigSchema in load-knowledge-context.ts — add optional artifactSearchFn to kbDeps, implement getPatternDiscoveryFromKB() helper, wire into loadKnowledgeContext() with try/catch fallback, import PatternDiscoveryResultSchema from knowledge-context.ts"
+    files:
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    dependencies: [3]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-6", "AC-7", "AC-10"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write unit tests for artifactSearchFn paths in knowledge-context.test.ts — 3 new tests: (a) provided+results, (b) provided+empty, (c) not provided"
+    files:
+      - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    dependencies: [3, 4]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator -- knowledge-context"
+    acs_covered: ["AC-8"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Human review and functional canary run — diff review against all ACs, trigger pm-story-seed-agent to verify artifact_search calls appear in logs and pattern_discovery in output"
+    files: []
+    files_to_read:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    dependencies: [5]
+    slice: packages
+    verification: "All ACs satisfied; pnpm test --filter @repo/orchestrator passes; pnpm check-types --filter @repo/orchestrator passes"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10"]
+
+files_to_change:
+  - path: ".claude/agents/knowledge-context-loader.agent.md"
+    action: modify
+    reason: "Add Phase 1.5 Pattern Discovery with artifact_search examples; update kb_tools frontmatter; document graceful fallback and output distinction (AC-1 through AC-5, AC-9)"
+
+  - path: "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    action: modify
+    reason: "Add PatternDiscoveryResultSchema and pattern_discovery field to KnowledgeContextSchema; update createKnowledgeContext() factory to initialize pattern_discovery: [] (AC-6, AC-9)"
+
+  - path: "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    action: modify
+    reason: "Extend KnowledgeContextConfigSchema.kbDeps with optional artifactSearchFn; add getPatternDiscoveryFromKB() helper; wire into loadKnowledgeContext() with try/catch fallback; import PatternDiscoveryResultSchema from artifacts/knowledge-context.ts (AC-6, AC-7, AC-10)"
+
+  - path: "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    action: modify
+    reason: "Add 3 unit tests for artifactSearchFn paths: provided+results, provided+empty, not provided (AC-8)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after modifying load-knowledge-context.ts and knowledge-context.ts"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator -- knowledge-context"
+    when: "after writing unit tests"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after all code changes — full orchestrator test suite"
+    required: true
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Manual diff of knowledge-context-loader.agent.md — Phase 1.5 exists with artifact_type: evidence and artifact_type: plan examples"
+    evidence_type: manual
+
+  - ac_id: "AC-2"
+    planned_evidence: "Manual diff — queries use {story_domain} and {story_scope}; generic queries forbidden"
+    evidence_type: manual
+
+  - ac_id: "AC-3"
+    planned_evidence: "Manual diff — fallback documented; pattern_discovery: [] on unavailable/no-results; warning added"
+    evidence_type: manual
+
+  - ac_id: "AC-4"
+    planned_evidence: "Manual diff of frontmatter kb_tools — artifact_search present alongside kb_search and kb_write_artifact"
+    evidence_type: manual
+
+  - ac_id: "AC-5"
+    planned_evidence: "Manual diff — existing Phase 1 kb_search blocks unchanged; no deletions"
+    evidence_type: manual
+
+  - ac_id: "AC-6"
+    planned_evidence: "pnpm check-types --filter @repo/orchestrator passes; KnowledgeContextConfigSchema.kbDeps has optional artifactSearchFn as Zod field; existing callers unchanged"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Code review: getPatternDiscoveryFromKB() helper exists; loadKnowledgeContext() calls it when artifactSearchFn provided; try/catch + warnings fallback; pnpm check-types passes"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit tests in knowledge-context.test.ts: HP-4 (provided+results), HP-5 (provided+empty), ED-1 (not provided); pnpm test --filter @repo/orchestrator -- knowledge-context passes"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Manual diff — KnowledgeContextSchema has pattern_discovery field with schema comment explaining distinction from lessons_learned; agent markdown documents distinction"
+    evidence_type: manual
+
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm check-types passes clean — both KnowledgeContextSchema instances updated; PatternDiscoveryResultSchema imported from knowledge-context.ts into load-knowledge-context.ts"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "CRITICAL: Steps are reordered from story subtask numbering. ST-4 (step 3) executes before ST-3 (step 4) because PatternDiscoveryResultSchema must be defined in artifacts/knowledge-context.ts before it can be imported in load-knowledge-context.ts. Failure to respect this order causes TypeScript import error at step 4 time."
+  - "Two KnowledgeContextSchema instances exist: camelCase (load-knowledge-context.ts line 112) and snake_case (artifacts/knowledge-context.ts). Both must be updated. Steps 3+4 handle this: step 3 updates the canonical schema in artifacts/, step 4 imports PatternDiscoveryResultSchema and updates the camelCase schema in load-knowledge-context.ts."
+  - "Unit tests (step 5) are in knowledge-context.test.ts but must test loadKnowledgeContext() from load-knowledge-context.ts — the test file currently only tests KnowledgeContextSchema from artifacts/knowledge-context.ts. The new tests need vi.fn() mocks for artifactSearchFn."
+  - "KB search was unavailable during planning context load. Context derived from direct file reads and story canonical references."
+  - "No architectural decisions require user input — all patterns are established (DI via kbDeps, Zod schemas, try/catch fallback)."

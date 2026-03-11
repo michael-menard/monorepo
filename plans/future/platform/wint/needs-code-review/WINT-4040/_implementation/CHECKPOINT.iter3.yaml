@@ -1,0 +1,15 @@
+schema: 1
+story_id: WINT-4040
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-09T17:00:00Z'
+current_phase: code_review
+last_successful_phase: fix
+iteration: 3
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+previous_iteration_summary: >-
+  Iteration 2: Code review failed with 2 linting issues. no-useless-escape at line 103, max-line-length at line 533 in
+  infer-capabilities.ts

@@ -169,7 +169,7 @@ artifact_write({
   artifact_type: "evidence",
   phase: "implementation",
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml",
+  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml",
   content: { /* full EVIDENCE structure */ }
 })
 // On response: if kb_write_warning present, log warning — do NOT block execute phase
@@ -185,7 +185,7 @@ artifact_write({
   artifact_type: "checkpoint",
   phase: "implementation",
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
+  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
   content: {
     ...checkpoint.content,
     current_phase: "execute",
@@ -201,8 +201,8 @@ artifact_write({
 
 ## Output
 
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml` (written via `artifact_write`)
-- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml` (written via `artifact_write`)
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
 - KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write`
 - KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write`
 - Code files (created/modified by workers)

@@ -1,0 +1,189 @@
+schema: 1
+story_id: "KBAR-0200"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches KBAR-020 in stories.index.md exactly: updating knowledge-context-loader
+      to use artifact_search for pattern discovery. No extra endpoints, infrastructure changes,
+      or features introduced beyond those stated. Non-goals are explicit and consistent with the
+      epic's Phase 5 scope boundary (this story is the final Phase 5 agent migration).
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals do not contradict Non-goals. Non-goals explicitly enumerate adjacent work
+      (ADR loading, other agent migrations, artifact_search implementation) to prevent scope
+      creep. ACs AC-1 through AC-9 map cleanly to the three-file scope declared in the Scope
+      section. Test plan (unit + manual + canary) matches the ACs. Architecture Notes confirm
+      Option B (both markdown + TypeScript) is the correct choice and explains why.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse-first is the design principle throughout. getPatternDiscoveryFromKB() explicitly mirrors
+      getLessonsFromKB() (lines 378-492 of load-knowledge-context.ts). artifactSearchFn is injected
+      via the existing kbDeps DI pattern, not imported directly. No new packages. Fallback
+      pattern reuses the same try/catch + warnings approach from getLessonsFromKB() (lines 483-491).
+      Reuse Plan section cites specific line numbers for all patterns.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints. This is a pure orchestrator node extension. artifactSearchFn is injected
+      as an optional dependency in KnowledgeContextConfigSchema (kbDeps), making the core logic
+      transport-agnostic. The node correctly isolates the artifact search concern behind the same
+      DI boundary used for kbSearchFn. No HTTP types enter the service layer.
+
+  - id: testability
+    status: PASS
+    note: >
+      No HTTP endpoints (no .http tests required). No frontend changes (no Playwright tests
+      required). Three unit test paths are explicitly specified (AC-8a, AC-8b, AC-8c) with
+      concrete mock patterns (vi.fn()). Manual review steps are enumerated against each AC.
+      Functional canary has explicit setup and evidence criteria. Type gate and coverage gate
+      both specified with exact commands.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. The critical Option A vs Option B decision (markdown-only vs both files)
+      is explicitly resolved in Architecture Notes: Option B confirmed required because the
+      TypeScript node is registered in the production LangGraph pipeline. Dependency gate on
+      KBAR-0130 reaching UAT is documented. PatternDiscoveryResultSchema field set
+      ({story_id, artifact_type, content_summary, relevance_score, phase}) is specified.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Two risks are disclosed with mitigations: (1) KBAR-0130 dependency gate — mitigated by
+      explicit prerequisite gate; (2) backward compatibility of pattern_discovery field —
+      mitigated by z.array().default([]). Coverage gate (45% minimum) is identified in both
+      test plan and dev feasibility. No auth, DB, upload, caching, or infra risks apply
+      (correctly identified as N/A in Infrastructure Notes).
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      9 ACs (one over the 8-AC threshold). All other sizing indicators are within bounds:
+      0 endpoints, only backend work (no significant frontend), 4 files modified across 2 packages
+      (orchestrator package + agent markdown), 3 unit test scenarios in happy path. The 9th AC
+      (AC-9) is a documentation/comment requirement — it could be folded into AC-6 or AC-7 to
+      bring the count to 8. However, the story is tightly scoped and all ACs are interdependent.
+      Split not recommended — WARN only.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      Two issues found:
+      (1) ST-1 reads 4 files (knowledge-context-loader.agent.md, load-knowledge-context.ts,
+      knowledge-context.ts, tool-schemas.ts lines 205-235) — exceeds the 3-file limit. Should
+      be split into ST-1a (read node and artifact files) and ST-1b (read tool-schema reference).
+      (2) ST-4 "depends on ST-3" but introduces a forward-reference ordering issue: ST-4 adds
+      PatternDiscoveryResultSchema to knowledge-context.ts, while ST-3 imports it in
+      load-knowledge-context.ts. The dependency arrow is backwards from the import direction —
+      ST-4 (defining the schema in knowledge-context.ts) should precede ST-3 (using it in
+      load-knowledge-context.ts), or the schema should be defined inline in load-knowledge-context.ts.
+      The current dependency order (ST-4 depends on ST-3) is inverted and will cause a TypeScript
+      import error at ST-3 time if PatternDiscoveryResultSchema doesn't exist yet.
+
+gaps:  # MVP-blocking only
+  - id: gap-1
+    check: internal_consistency
+    finding: >
+      Dual KnowledgeContextSchema issue: load-knowledge-context.ts defines its own
+      KnowledgeContextSchema (line 112-120, camelCase fields) while artifacts/knowledge-context.ts
+      defines a separate KnowledgeContextSchema (snake_case fields). The story adds pattern_discovery
+      to the artifact schema (AC-9, ST-4) but AC-7 states loadKnowledgeContext() must return
+      pattern_discovery as part of the KnowledgeContext type. The node's own KnowledgeContextSchema
+      (load-knowledge-context.ts line 112) is the type returned by loadKnowledgeContext() — if only
+      the artifact schema is updated, the node's KnowledgeContext type will not include
+      pattern_discovery, causing a TypeScript error in ST-3. Both schemas must be updated, but
+      ST-4 only mentions artifacts/knowledge-context.ts. Subtask ST-3 must also update
+      KnowledgeContextSchema in load-knowledge-context.ts (line 112) — or the story must clarify
+      that PatternDiscoveryResultSchema is imported from knowledge-context.ts into
+      load-knowledge-context.ts. The subtask ordering and file scope need to be corrected.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-10: Both KnowledgeContextSchema Definitions Updated for pattern_discovery"
+
+  - id: gap-2
+    check: subtask_decomposition
+    finding: >
+      ST-1 touches 4 files (above 3-file limit). Per decomposition rules, this should be split
+      into ST-1a: read agent and node files (knowledge-context-loader.agent.md,
+      load-knowledge-context.ts, knowledge-context.ts) and ST-1b: read tool contract reference
+      (tool-schemas.ts lines 205-235). While this is a process concern rather than a correctness
+      gap, it reduces LLM executability for small-context agents.
+    severity: low
+    decision: kb_write
+    kb_entry_id: null  # low-severity process concern, not written to KB — logged inline
+
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: ux_polish
+    finding: >
+      PatternDiscoveryResultSchema fields include content_summary but not a content_excerpt
+      (raw text slice). Agents would benefit from both a summary and a brief verbatim excerpt
+      from the matched artifact to decide relevance without a follow-up kb_read_artifact call.
+      Low implementation effort — add content_excerpt: z.string().optional() to the schema.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "28ad339e-b0fd-4f08-b4a8-bf1a73baebf3"
+
+  - id: opp-2
+    category: ux_polish
+    finding: >
+      Phase 1.5 placement (after lessons, before ADRs) means pattern discovery queries run
+      before the agent has ADR context. A Phase 3.5 placement (after ADR loading) would allow
+      the agent to use ADR constraints to refine its artifact_search queries — e.g., filtering
+      to artifacts from stories that touched the same ADR-governed domains. This is a refinement
+      for a future version of the agent.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "8ff8ee15-7c04-45ce-abcf-823162d7224e"
+
+  - id: opp-3
+    category: performance
+    finding: >
+      getPatternDiscoveryFromKB() hardcodes artifact_type: "evidence" and artifact_type: "plan"
+      as the two query types. Making the artifact_type list configurable (passed in via
+      KnowledgeContextConfigSchema) would allow callers to request only the artifact types
+      relevant to their workflow (e.g., a QA agent might want "review" artifacts, not "plan").
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "65bbad99-f2aa-4521-af42-649d621629bb"
+
+  - id: opp-4
+    category: observability
+    finding: >
+      The functional canary test (HP-6) requires KBAR-0130 to be in UAT status, but KBAR-0130
+      is currently at needs-code-review. Consider adding an explicit pre-implementation check
+      in the story's Definition of Ready: "KBAR-0130 must reach UAT before HP-6 can be executed."
+      A warning in the agent markdown output when artifact_search returns no results would also
+      help distinguish "no relevant past artifacts exist" from "artifact_search is not yet
+      available."
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "8b45708e-9cb6-44e4-8d60-ca8d10523483"
+
+split_recommendation: null  # story_sizing=WARN, not SPLIT — split not recommended
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 1
+  notes: >
+    gap-1 (high, dual-schema TypeScript error) resolved as AC-10 — both KnowledgeContextSchema
+    definitions must be updated for pattern_discovery. gap-2 (low, ST-1 file-count process concern)
+    logged inline as non-blocking; does not require KB entry. All 4 opportunities logged to KB.
+    story_sizing WARN acknowledged — 10 ACs total, but story remains tightly scoped with no split
+    recommended. subtask_decomposition CONDITIONAL resolved via AC-10 (schema ordering clarified).
+    Verdict: CONDITIONAL_PASS — all MVP gaps resolved with ACs, minor process notes acknowledged.

@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-1040 is a headless LangGraph worker graph with no user-facing surface. No UI components are touched. The Documentation Graph runs post-merge on the dedicated local server. Future UI visibility (operator CLI, monitor dashboard) is deferred to APIP-5005 and APIP-2020."

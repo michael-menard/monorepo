@@ -1,0 +1,108 @@
+schema: 1
+story_id: ST-1020
+timestamp: "2026-03-04T01:30:00Z"
+iteration: 2
+verdict: PASS
+
+workers_run:
+  - typecheck
+  - build
+
+workers_skipped:
+  - lint
+  - style
+  - syntax
+  - security
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+
+ranked_patches: []
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  style:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  syntax:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings:
+      - severity: info
+        message: "Documentation-only story. No .ts/.tsx files were touched."
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings:
+      - file: ".claude/agents/_reference/patterns/pm-spawn-patterns.md"
+        severity: info
+        message: "Documentation file updated - markdown only, no build impact"
+      - file: ".claude/agents/pm-story-generation-leader.agent.md"
+        severity: info
+        message: "Agent documentation updated - markdown only, no build impact"
+
+  reusability:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  react:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typescript:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  accessibility:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+tokens:
+  in: 0
+  out: 0

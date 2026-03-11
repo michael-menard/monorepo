@@ -57,7 +57,7 @@ function makeStoryInLane(storiesRoot: string, laneDir: string, storyId: string):
   fs.mkdirSync(path.join(lanePath, storyId), { recursive: true })
 }
 
-function makeDbStory(storyId: string, state: 'in_progress' | 'ready_to_work' | 'backlog') {
+function makeDbStory(storyId: string, state: 'in_progress' | 'ready' | 'backlog') {
   return {
     id: `00000000-0000-0000-0000-${storyId.replace('-', '').padStart(12, '0')}`,
     storyId,
@@ -178,12 +178,12 @@ describe('shimGetStoriesByStatus', () => {
 
     // Get page 2 (offset=2, limit=2)
     const result = await shimGetStoriesByStatus(
-      { state: 'ready_to_work', limit: 2, offset: 2 },
+      { state: 'ready', limit: 2, offset: 2 },
       { storiesRoot },
     )
 
     expect(result).toHaveLength(2)
-    expect(result.every(s => s.state === 'ready_to_work')).toBe(true)
+    expect(result.every(s => s.state === 'ready')).toBe(true)
 
     fs.rmSync(storiesRoot, { recursive: true, force: true })
   })

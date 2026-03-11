@@ -1,0 +1,2 @@
+skipped: true
+reason: "KBAR-0170 modifies agent markdown files only. frontend_impacted: false. No UI components, no Playwright evidence, no design system considerations."

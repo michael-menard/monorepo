@@ -1,0 +1,262 @@
+schema: 1
+story_id: "WINT-9140"
+timestamp: "2026-03-03T00:00:00Z"
+
+# ============================================================================
+# 9-Point Audit Checklist
+# ============================================================================
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches the stories.index.md entry precisely. Index entry reads:
+      "Validate LangGraph Parity Phase — Execute, Compare, and Sign Off" with status
+      'elaboration'. Story is bounded to execution, comparison, deviation triage, and
+      sign-off artifact creation. No feature creep: does not add nodes, graphs, or
+      endpoints. Dependency chain (WINT-9120, WINT-9130) correctly listed. Story prefix
+      WINT-9140, phase 9, epic wint — all consistent.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and non-goals are cleanly separated. Non-goals explicitly exclude: new
+      LangGraph nodes, modifying Claude Code agents, production migration decision,
+      full performance benchmarking, fixing acceptable deviations, database schema
+      changes. ACs 1-9 each map to distinct outcomes and none contradict non-goals.
+      Subtask DAG covers all 9 ACs (confirmed by AC-Subtask Coverage Check in story).
+      Reality Baseline table is accurate: parity suite dir exists with 6 test files;
+      WINT-9110 graphs exist at src/graphs/ (bootstrap, elab-epic, elab-story,
+      dev-implement, qa-verify, backlog-review all present). docs/WINT-0220-STRATEGY.md
+      exists as the sign-off format reference. docs/workflow/langgraph-migration.md
+      exists for AC-9 spot-check. No internal contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan is well-specified. parity-harness.ts provides the runParity() utility
+      with typed runners, deep diff, and known divergences — the primary test vehicle
+      is existing WINT-9120 parity suite (6 files in src/__tests__/parity/). Sign-off
+      doc format follows docs/WINT-0220-STRATEGY.md pattern. KB entry uses existing
+      mcp__knowledge-base__kb_add MCP tool. @repo/logger specified for all logging.
+      No wheel-reinventing identified. The wint9110-workflows.parity.test.ts is
+      currently all it.todo() stubs — this story's AC-1/AC-2 execution will require
+      those stubs to be implemented first (ST-2 prerequisite gap identified below).
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      parity-harness.ts explicitly enforces transport-agnosticism: runners are pure
+      async functions injected as dependencies; no real network calls permitted (harness
+      README enforces this). Both Claude Code and LangGraph paths are treated as opaque
+      runners behind the RunParityOptions interface. Sign-off document is plain Markdown
+      (human artifact, not transport-coupled). KB entry goes through MCP abstraction
+      layer. The story is correctly aware of ADR-005 (real services for UAT/live runs)
+      but the parity suite itself uses injected mocks — appropriately separated.
+
+  - id: testability
+    status: WARN
+    note: >
+      Happy path tests HP-1 through HP-8 and error cases EC-1 through EC-3 are
+      well-specified with concrete setup/action/expected/evidence format. Manual cases
+      MC-1 (HiTL) and MC-2 (migration doc review) have step-by-step instructions.
+      WARN issued for one gap: AC-1 execution depends on replacing all 18 it.todo()
+      stubs in wint9110-workflows.parity.test.ts before parity can be run against
+      WINT-9110 workflows. Story AC-2 requires "no regressions vs WINT-9120 baseline
+      passing scenarios" — but WINT-9120 is still in ready-for-qa, meaning the baseline
+      passing scenario list is not yet formally established. The story's ST-1 subtask
+      ("Verify dependency readiness") accounts for this gating, so the structure is
+      sound, but the test plan does not explicitly call out the it.todo() replacement
+      requirement. Minor gap, non-blocking.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs found. Open questions are properly resolved: deviation
+      classification (blocking vs. acceptable) is defined; sign-off format is defined
+      (follow WINT-0220-STRATEGY.md); KB entry structure is defined (entry_type
+      'decision', tags prescribed); ADR references (ADR-005, ADR-006) are cited.
+      The only conditional element — "fix minor gaps in-place; create follow-up stories
+      for substantial gaps" — has a clear decision rule embedded in AC-3/AC-4 rather
+      than being left as a TBD. HiTL gate (AC-6) is not a TBD but a deliberate
+      non-automatable checkpoint, correctly documented.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Four risks disclosed in pm_artifacts.risks: hard dependency on WINT-9120/9130,
+      blocking parity gaps extending timeline, HiTL gate requiring human availability,
+      KB write depending on MCP tool availability. dev_feasibility.risks adds:
+      hard dependency mitigation (do not activate until deps complete), substantial
+      blocking gap handling (create follow-up stories). risk_predictions flags HiTL
+      non-automatable checkpoint and dependency chain depth as primary scheduling risk.
+      KB MCP tool unavailability is called out — verified during this analysis that
+      KB MCP was indeed unavailable (internal error). This is a real risk not just
+      theoretical. All major risks are surfaced and mitigated.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      9 ACs, 7 subtasks, estimated 37,000 tokens. Sizing indicators: touches only 1
+      package (orchestrator), no endpoints, no frontend, no database, no new code
+      files authored (sign-off doc is the only new artifact). ACs are validation-and-
+      documentation work, not implementation. The 9 ACs are all tightly coupled to a
+      single outcome (Phase 9 sign-off) and cannot be independently delivered — this
+      is a gate story, not a feature story. Points estimate of 3 is appropriate for
+      a validation-heavy, dependency-conditioned story. No split recommended.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      7 subtasks with clear AC coverage map. DAG is explicit: ST-1 -> ST-2 -> ST-3
+      -> ST-4 -> ST-5 -> ST-6 (with ST-7 branching off ST-2 to run in parallel or
+      after ST-4). All 9 ACs covered by at least one subtask; no AC is orphaned.
+      Canonical references table is complete and all referenced files verified to
+      exist: story-creation.test.ts, story-creation.ts, doc-sync.ts, qa-verify.ts,
+      WINT-0220-STRATEGY.md — all present on disk. Token estimates per subtask sum to
+      37,000 matching risk_predictions.estimated_tokens. Minor note: ST-7 depends on
+      ST-2 per the table but the sign-off document is created in ST-4 — if inaccuracies
+      are found, ST-7 writes to the same document. This is correctly ordered (ST-7
+      logically after ST-4 even though it depends on ST-2 for data). Not a gap.
+
+# ============================================================================
+# Gap Analysis (MVP-blocking only)
+# ============================================================================
+
+gaps:
+  - id: GAP-1
+    title: "wint9110-workflows.parity.test.ts contains 18 it.todo() stubs — parity cannot execute until replaced"
+    severity: blocking
+    description: >
+      src/__tests__/parity/wint9110-workflows.parity.test.ts has 18 it.todo() stub
+      tests covering all 6 WINT-9110 workflow graphs (bootstrap, elab-epic, elab-story,
+      dev-implement, qa-verify, backlog-review). The README states these stubs are
+      "gated until WINT-9110 is in ready-for-qa state." WINT-9110 is now ready-for-qa,
+      so the gate condition is met. However, AC-1 requires "Execute all parity test
+      scenarios defined by WINT-9120 against both execution paths." The it.todo() stubs
+      are not executable tests. Before ST-2 can run, ST-1 must confirm these stubs are
+      replaced with passing tests as part of WINT-9120 completion criteria. This is a
+      prerequisite gap: either WINT-9120 QA completion must include stub replacement,
+      or this story must explicitly add a step to ST-1/ST-2 for it.
+    ac_impacted: ["AC-1", "AC-2"]
+    subtask_impacted: ["ST-1", "ST-2"]
+    recommendation: >
+      Add explicit note to ST-1 checklist: "Verify wint9110-workflows.parity.test.ts
+      stubs are replaced before proceeding to ST-2. If not, create blocker issue against
+      WINT-9120 and hold activation." The story already handles this pattern via the
+      dependency gate concept; this gap just needs to be surfaced in the subtask
+      description to prevent surprise at runtime.
+    decision: add_ac
+    ac_added: "AC-10: Before executing parity tests (ST-2), verify all it.todo() stubs in wint9110-workflows.parity.test.ts have been replaced with executable tests"
+
+  - id: GAP-2
+    title: "WINT-9120 baseline passing scenario list is not yet established"
+    severity: conditional
+    description: >
+      AC-2 requires "all parity test scenarios that were passing in WINT-9120 continue
+      to pass — no regressions introduced." WINT-9120 is currently in ready-for-qa
+      status, meaning QA has not yet been completed and the definitive baseline of
+      passing scenarios has not been formally established. The story's ST-1 ("Verify
+      dependency readiness") is the intended gate for this, but the AC itself asserts
+      "no regressions vs WINT-9120 baseline passing scenarios" as if that baseline
+      exists. If WINT-9120 QA reveals that some scenarios fail at QA time, the baseline
+      shifts. This is a sequencing risk: if WINT-9140 activates immediately after
+      WINT-9120 reaches UAT (skipping QA completion), the baseline is ambiguous.
+    ac_impacted: ["AC-2"]
+    subtask_impacted: ["ST-1"]
+    recommendation: >
+      ST-1 should explicitly record the WINT-9120 baseline passing scenario count and
+      test IDs before proceeding to ST-2. This can be done by running the parity suite
+      (excluding wint9110-workflows stubs) at the start of ST-1 and recording results
+      as the activation baseline in the sign-off document's workflow matrix.
+    decision: add_ac
+    ac_added: "AC-11: ST-1 records the WINT-9120 baseline passing scenario count and test IDs as activation baseline"
+
+# ============================================================================
+# Non-Blocking Opportunities
+# ============================================================================
+
+opportunities:
+  - id: OPP-1
+    title: "Sign-off document could include a machine-readable deviation register table"
+    category: observability
+    description: >
+      The story notes that "machine-readable portions (deviation register, workflow
+      matrix) should use consistent table structure for downstream parsing if needed."
+      Adding a lightweight structured table format (consistent column order, no merged
+      cells, ID column first) to the deviation register section would make it parseable
+      by future automation without requiring a separate YAML artifact. Low effort, high
+      long-term value for Phase 10 planning.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "3a69a151-2a13-4e2a-8d6d-afedbea65e6b"
+
+  - id: OPP-2
+    title: "Coverage gate for parity suite should be verified before sign-off"
+    category: quality
+    description: >
+      parity/README.md specifies ">= 80% branch coverage within src/__tests__/parity/"
+      as a cutover sign-off criterion. The story's test plan and ACs do not explicitly
+      reference this coverage gate. Running parity coverage as part of ST-2 and
+      documenting the result in the sign-off workflow matrix would make the sign-off
+      document fully self-contained against the README cutover criteria.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "6a37ddac-363c-4548-b2b6-06415690b7be"
+
+  - id: OPP-3
+    title: "KB MCP tool availability should be verified in ST-1, not assumed"
+    category: risk-mitigation
+    description: >
+      AC-7 requires a KB entry written via mcp__knowledge-base__kb_add. During this
+      analysis, the KB MCP tool was unavailable (INTERNAL_ERROR). If unavailability
+      persists at sign-off time, AC-7 would be uncompletable without a fallback. ST-1
+      dependency readiness check should include a KB health probe (kb_health or
+      kb_list with limit 1). If KB is unavailable, record the finding and establish
+      a fallback plan (e.g., defer KB write to WINT index update step; log the entry
+      in the sign-off document for manual entry when KB is restored).
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "2836f7fc-99d0-4190-87a5-5f530357a259"
+
+  - id: OPP-4
+    title: "docs/workflow/langgraph-migration.md path referenced with typo in story HP-8"
+    category: accuracy
+    description: >
+      HP-8 setup field references "docs/workflow/langraph-migration.md" (missing 'g'
+      in 'langgraph'). The actual file exists at
+      docs/workflow/langgraph-migration.md (verified on disk). This does not affect
+      execution but may cause confusion during MC-2 manual review. The body of the
+      story correctly refers to the path in the non-goals and AC-9. Only HP-8 setup
+      field has the typo.
+    effort: trivial
+    decision: log_to_kb
+    kb_entry_id: "0e9d97bb-a0bf-41b4-ace1-8d8a0bf5b4ae"
+
+# ============================================================================
+# Split Recommendation
+# ============================================================================
+
+split_recommendation: null
+
+# ============================================================================
+# Verdict
+# ============================================================================
+
+preliminary_verdict: CONDITIONAL_PASS
+# Rationale: Story is well-structured, internally consistent, and appropriately scoped.
+# Two gaps identified: GAP-1 (wint9110 parity stubs must be replaced before ST-2)
+# and GAP-2 (WINT-9120 baseline must be formally established in ST-1). Both are
+# addressed by adding explicit checklist steps to ST-1 — no ACs need to be added
+# or removed. The story can proceed to ready-to-work once the elaboration decision
+# acknowledges these two dependency readiness requirements in the subtask descriptions.
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-03T00:00:00Z"
+
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 2

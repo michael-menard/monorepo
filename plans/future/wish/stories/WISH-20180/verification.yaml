@@ -1,0 +1,89 @@
+schema: 1
+story_id: WISH-20180
+updated: 2026-01-31T22:50:49Z
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 13
+    note: ""
+tests:
+  unit:
+    pass: 26
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: .github/workflows/schema-validation.yml:4-7 (on.pull_request.paths)
+  - id: AC2
+    verdict: pass
+    evidence: .github/workflows/schema-validation.yml:44 + package.json:29
+  - id: AC3
+    verdict: pass
+    evidence: .github/workflows/schema-validation.yml:62-103 (Post PR comment step)
+  - id: AC4
+    verdict: pass
+    evidence: .github/workflows/schema-validation.yml:105-109 (Fail if critical violations)
+  - id: AC5
+    verdict: pass
+    evidence: validate-schema-changes.ts:540-548 (exit 0 for warn/pass, exit 1 for fail)
+  - id: AC6
+    verdict: pass
+    evidence: validate-schema-changes.ts:181-206 + test validateMigrationNaming (4 tests)
+  - id: AC7
+    verdict: pass
+    evidence: validate-schema-changes.ts:208-235 + test validateJournalUpdated (3 tests)
+  - id: AC8
+    verdict: pass
+    evidence: validate-schema-changes.ts:274-320 (regex-based parsing for breaking changes) + test detectBreakingChanges (6
+      tests)
+  - id: AC9
+    verdict: pass
+    evidence: validate-schema-changes.ts:237-272 + test validateJournalConsistency (3 tests)
+  - id: AC10
+    verdict: pass
+    evidence: validate-schema-changes.ts:74 (pattern) + test 'should detect DROP COLUMN as breaking change'
+  - id: AC11
+    verdict: pass
+    evidence: validate-schema-changes.ts:75 (pattern) + test 'should detect DROP TABLE as breaking change'
+  - id: AC12
+    verdict: pass
+    evidence: validate-schema-changes.ts:81-85 (ALTER TYPE RENAME VALUE pattern)
+  - id: AC13
+    verdict: pass
+    evidence: validate-schema-changes.ts:76-80 (pattern) + test 'should detect ALTER COLUMN TYPE as breaking change'
+  - id: AC14
+    verdict: pass
+    evidence: validate-schema-changes.ts:106-110 (deprecation patterns) + lines 279-315 (downgrade to warning with comment)
+  - id: AC15
+    verdict: pass
+    evidence: test 'should pass for nullable column' (line 268-275)
+  - id: AC16
+    verdict: pass
+    evidence: validate-schema-changes.ts:97-102 + test 'should warn about NOT NULL column without DEFAULT'
+  - id: AC17
+    verdict: pass
+    evidence: validate-schema-changes.ts:90-96 + test 'should warn about CREATE INDEX without CONCURRENTLY'
+  - id: AC18
+    verdict: pass
+    evidence: Story AC covered by general SQL validation - ADD VALUE syntax is non-breaking and allowed
+  - id: AC19
+    verdict: pass
+    evidence: File exists with 148 lines covering overview, validation rules, override mechanisms, troubleshooting, best
+      practices
+  - id: AC20
+    verdict: pass
+    evidence: "validate-schema-changes.ts policyRef fields: 'Section 2.1', 'Section 2.2', 'Section 3.1', 'Section 4.2',
+      'Section 5.1', 'Section 5.2'"
+qa:
+  verdict: pass
+  verified_by: qa-verify-verification-leader
+  verified_at: 2026-01-31T23:00:00Z
+  blocking_issues: []

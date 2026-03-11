@@ -1,0 +1,18 @@
+id: MODL-0010
+title: "Provider Adapters (OpenRouter/Ollama/Anthropic)"
+status: completed
+priority: P1
+epic: MODL
+wave: 1
+position: 3
+experiment_variant: control
+story_type: feature
+points: 5
+touches_backend: true
+touches_frontend: false
+touches_database: false
+touches_infra: true
+created_at: "2026-02-13"
+elaborated_at: "2026-02-13"
+fix_started_at: "2026-02-14T18:36:00Z"
+completed_at: "2026-02-14T19:40:00Z"

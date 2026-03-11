@@ -1,0 +1,78 @@
+schema: 1
+story_id: "ST-3010"
+timestamp: "2026-03-08T00:00:00Z"
+iteration: 0
+phase: implementation
+
+acceptance_criteria:
+  - ac_id: "GOAL-1"
+    description: "dev-plan-leader.agent.md Step 3 reads ## Subtasks and ## Canonical References sections from the story file, with subtask-aware 1:1 mapping language"
+    status: PASS
+    evidence:
+      type: manual
+      file: ".claude/agents/dev-plan-leader.agent.md"
+      lines: "102-112"
+      detail: |
+        Line 102: '### Step 3: Read Story ACs, Subtasks, and Canonical References'
+        Line 106: '2. `## Subtasks` — Pre-decomposed subtasks from story generation (if present)'
+        Line 108: '3. `## Canonical References` — Exemplar files for pattern guidance (if present)'
+        Line 110: '**Subtask-aware planning**: If the story contains a `## Subtasks` section, use it as
+          the primary input for PLAN.yaml step generation. Each story subtask (ST-1, ST-2, etc.)
+          maps **1:1** to a PLAN.yaml step.'
+        Line 112: 'If no subtasks are present, fall back to generating steps from ACs and SCOPE.yaml as before.'
+
+  - ac_id: "GOAL-2"
+    description: "dev-plan-leader.agent.md Step 4 emits schema: 2 PLAN.yaml when subtasks are present, with subtask_id, files_to_read, verification, and acs_covered fields"
+    status: PASS
+    evidence:
+      type: manual
+      file: ".claude/agents/dev-plan-leader.agent.md"
+      lines: "114-136"
+      detail: |
+        Line 114: '### Step 4: Generate PLAN.yaml'
+        Line 116: 'Based on scope, context, ACs, and **subtasks** (if present), generate:'
+        Line 118: '**When subtasks are present** — map 1:1 from story subtasks:'
+        Line 121: 'schema: 2'
+        Line 124: 'subtask_source: story  # indicates steps derived from story subtasks'
+        Line 128: 'subtask_id: "ST-1"  # maps to story subtask'
+        Line 131: 'files_to_read: ["canonical/reference.ts"]  # context files for agent'
+        Line 134: 'verification: "pnpm check-types --filter @repo/db"'
+        Line 135: 'acs_covered: ["AC-1", "AC-2"]'
+
+  - ac_id: "GOAL-3"
+    description: "dev-plan-leader.agent.md Step 5 self-validation rules 6 and 7 enforce subtask field presence and <=3 files per step"
+    status: PASS
+    evidence:
+      type: manual
+      file: ".claude/agents/dev-plan-leader.agent.md"
+      lines: "182-192"
+      detail: |
+        Line 182: '### Step 5: Self-Validate Plan'
+        Line 184: 'Check:'
+        Lines 185-189: Rules 1-5 (standard checks)
+        Line 190: '6. If subtask-sourced (schema: 2): each step has `subtask_id`, `files_to_read`,
+          `verification`, and `acs_covered`'
+        Line 191: '7. If subtask-sourced: no step touches more than 3 files'
+        Line 193: 'If validation fails, fix inline and note in warnings.'
+
+e2e_tests:
+  status: "exempt"
+  exempt_reason: "Verification-only story — no code surface to E2E test. This story verifies existing agent file content via direct line inspection. No application code was written or modified."
+
+touched_files: []
+
+test_summary:
+  unit:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+
+build_result: "exempt — no code changes"
+
+summary: |
+  All 3 goal criteria verified PASS by direct inspection of
+  .claude/agents/dev-plan-leader.agent.md v1.3.0.
+  The implementation was already complete prior to this story execution.
+  No code changes were required or made.

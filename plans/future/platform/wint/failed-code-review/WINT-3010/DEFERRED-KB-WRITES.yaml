@@ -1,0 +1,29 @@
+---
+# Deferred KB writes for WINT-3010
+# KB was unavailable during story generation (pg module not found in context)
+# These writes should be replayed when KB is available.
+generated: "2026-03-08"
+---
+
+pending_writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    values:
+      story_id: "WINT-3010"
+      feature: "wint"
+      title: "Create Gatekeeper Sidecar — Centralized Proof or It Didn't Happen Gate Enforcement"
+      story_dir: "plans/future/platform/wint/backlog/WINT-3010"
+      story_file: "plans/future/platform/wint/backlog/WINT-3010/WINT-3010.md"
+      story_type: "feature"
+      points: 5
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: true
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,90 @@
+feasible: true
+confidence: high
+rationale: "The infrastructure is fully in place. WINT-0100 delivered contextCachePut() as a standalone function that writes to wint.context_packs via Drizzle ORM. The upsert pattern, Zod validation, and error handling patterns are all implemented and UAT-verified. This story is primarily an extraction + packaging task: read 5 source documents, summarize key facts into structured JSONB, write via contextCachePut(). No new infrastructure, no new MCP tools, no schema changes required. The listed dependencies WINT-2020 and WINT-0030 are not actual blockers — the required table (wint.context_packs) was delivered by WINT-0010 and is deployed."
+complexity: low
+change_surface:
+  areas:
+    - packages/backend/mcp-tools/src/scripts/ (new file)
+    - packages/backend/mcp-tools/src/context-cache/__tests__/ (integration test additions)
+  endpoints: []
+  deploy_touchpoints:
+    - "Script requires DATABASE_URL pointing to port 5432 (lego_dev). No Lambda deploy needed — standalone script."
+risks:
+  - finding: "Wrong database port (port 5433 vs 5432)"
+    mitigation: "Document DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev prominently in script JSDoc and README. Integration test setup must enforce this. Historical #1 failure for WINT integration tests (ARCH-001)."
+  - finding: "packType enum constraint violation at runtime"
+    mitigation: "Import packTypeValues from __types__/index.ts and pass to ContextCachePutInputSchema. Zod validation catches invalid values before DB call. All 5 packs use 'architecture' or 'test_patterns' — both valid enum values."
+  - finding: "Oversized JSONB content breaks injection budget"
+    mitigation: "Use section-based extraction for CLAUDE.md (extract by heading, not raw file dump). Docs are short (backend.md ~40 lines). Target: < 2000 tokens per pack. Content size assertion in integration test guards this."
+missing_requirements: []
+evidence_expectations:
+  - "SELECT COUNT(*) FROM wint.context_packs WHERE packKey IN ('project-conventions','tech-stack-backend','tech-stack-frontend','tech-stack-monorepo','testing-strategy') = 5 after first run"
+  - "Same count after second run (idempotency — upsert not insert)"
+  - "content->>'summary' IS NOT NULL for all 5 packs"
+  - "All ttl = 2592000 (30 days)"
+  - "Script runs via: pnpm tsx packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+subtasks:
+  - id: ST-1
+    title: "Create populate script file and document extraction strategy"
+    goal: "Create packages/backend/mcp-tools/src/scripts/populate-project-context.ts. Define the 5 pack definitions (packType, packKey, sourceFile, extraction hints). Add JSDoc with run command. Import contextCachePut, ContextCachePutInput, @repo/logger."
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    files_to_modify:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts (create new)
+    acs: ["AC-8"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Implement doc reading and content extraction for CLAUDE.md"
+    goal: "Read CLAUDE.md using Node.js fs. Extract sections by heading: code style, Zod-first rule, no barrel files, @repo/logger, component structure, quick commands. Build structured content JSONB: { summary, rules, patterns, commands }. Call contextCachePut for packType: 'architecture', packKey: 'project-conventions' with ttl: 2592000."
+    files_to_read:
+      - CLAUDE.md
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+    files_to_modify:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+    acs: ["AC-1", "AC-6", "AC-10"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 7000
+
+  - id: ST-3
+    title: "Implement content extraction for tech-stack docs (backend, frontend, monorepo)"
+    goal: "Read docs/tech-stack/backend.md, docs/tech-stack/frontend.md, docs/tech-stack/monorepo.md. Extract key facts per doc into structured JSONB. Call contextCachePut for packKeys: tech-stack-backend, tech-stack-frontend, tech-stack-monorepo. All with packType: 'architecture', ttl: 2592000."
+    files_to_read:
+      - docs/tech-stack/backend.md
+      - docs/tech-stack/frontend.md
+      - docs/tech-stack/monorepo.md
+    files_to_modify:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+    acs: ["AC-2", "AC-3", "AC-4", "AC-6", "AC-10"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Implement content extraction for testing docs and resilient execution loop"
+    goal: "Read docs/testing/ directory (all .md files). Extract: testing frameworks, coverage requirements, query conventions, test setup patterns. Call contextCachePut for packType: 'test_patterns', packKey: 'testing-strategy', ttl: 2592000. Wrap all 5 writes in try/catch loop: log failures via @repo/logger, collect results, return summary { attempted, succeeded, failed }."
+    files_to_read:
+      - docs/testing/
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+    files_to_modify:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+    acs: ["AC-5", "AC-6", "AC-7", "AC-8", "AC-10"]
+    depends_on: ST-3
+    verification: "pnpm tsx packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    estimated_tokens: 7000
+
+  - id: ST-5
+    title: "Write integration test verifying populate function against real PostgreSQL"
+    goal: "Create packages/backend/mcp-tools/src/scripts/__tests__/populate-project-context.test.ts. Use Vitest with real PostgreSQL at port 5432. beforeEach/afterEach cleanup for the 5 packKeys. Test: (1) 5 rows written after first run, (2) count still 5 after second run (idempotency), (3) content has 'summary' field, (4) all ttl = 2592000, (5) content length < 8000 chars."
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+    files_to_modify:
+      - packages/backend/mcp-tools/src/scripts/__tests__/populate-project-context.test.ts (create new)
+    acs: ["AC-9"]
+    depends_on: ST-4
+    verification: "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev pnpm test --filter @repo/mcp-tools"
+    estimated_tokens: 8000

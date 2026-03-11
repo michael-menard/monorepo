@@ -1,0 +1,131 @@
+strategy: manual+behavioral
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+# No TypeScript source code is produced by this story — the deliverable is a single .agent.md file.
+# Testing strategy: behavioral verification by reading the agent file and confirming all ACs are satisfied.
+
+happy_path_tests:
+  - id: HP-1
+    title: "Agent file exists with valid WINT frontmatter"
+    setup: "Story delivered: .claude/agents/context-warmer.agent.md is present"
+    action: "Read .claude/agents/context-warmer.agent.md and inspect frontmatter block"
+    expected: "Frontmatter contains type: worker, model: haiku, tools: [...], version, created, updated fields"
+    evidence: "cat .claude/agents/context-warmer.agent.md | head -20"
+
+  - id: HP-2
+    title: "Agent mission is defined and concise"
+    setup: "context-warmer.agent.md exists"
+    action: "Read the ## Mission section"
+    expected: "Mission is ≤5 sentences, describes invoking cache-warm skill and returning warm-result"
+    evidence: "Manual inspection of ## Mission section"
+
+  - id: HP-3
+    title: "Agent defines phased execution model with required phases"
+    setup: "context-warmer.agent.md exists"
+    action: "Read the ## Execution Phases section"
+    expected: "At least 4 phases present: (1) validate inputs / check skill availability, (2) invoke cache-warm skill, (3) handle per-cache failures, (4) emit warm-result summary"
+    evidence: "Manual inspection of phase headings in agent file"
+
+  - id: HP-4
+    title: "Partial failure path is documented with CACHE-WARM COMPLETE WITH WARNINGS signal"
+    setup: "context-warmer.agent.md exists"
+    action: "Read failure handling phase and completion signals section"
+    expected: "Agent increments failed counter, continues with remaining caches, ends with CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings"
+    evidence: "Grep for 'WITH WARNINGS' in agent file"
+
+  - id: HP-5
+    title: "All three completion signals are present and reachable"
+    setup: "context-warmer.agent.md exists"
+    action: "Read the ## Completion Signals section"
+    expected: "CACHE-WARM COMPLETE, CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings, CACHE-WARM BLOCKED: {reason} — all three listed"
+    evidence: "Grep for 'CACHE-WARM' in agent file — should match at least 3 distinct lines"
+
+  - id: HP-6
+    title: "LangGraph Porting Notes section is present with required tables"
+    setup: "context-warmer.agent.md exists"
+    action: "Read ## LangGraph Porting Notes section"
+    expected: "Section contains: input state fields table, output contract table, tool requirements"
+    evidence: "Manual inspection of ## LangGraph Porting Notes section"
+
+  - id: HP-7
+    title: "Non-Goals section lists all four required exclusions"
+    setup: "context-warmer.agent.md exists"
+    action: "Read ## Non-Goals section"
+    expected: "Section explicitly excludes: (a) direct populate-*.ts invocation, (b) direct wint.context_packs writes, (c) cache invalidation, (d) scheduling/cron"
+    evidence: "Manual inspection of ## Non-Goals section"
+
+error_cases:
+  - id: EC-1
+    title: "cache-warm skill unavailable — agent emits BLOCKED, does not attempt direct scripts"
+    setup: "context-warmer.agent.md exists"
+    action: "Read graceful degradation section of the agent file"
+    expected: "Agent emits CACHE-WARM BLOCKED: cache-warm skill unavailable — NO fallback to populate scripts"
+    evidence: "Grep for 'BLOCKED' and confirm no mention of populate-*.ts in fallback path"
+
+  - id: EC-2
+    title: "All caches fail to warm — agent still reports structured result"
+    setup: "context-warmer.agent.md exists"
+    action: "Read embedded fallback constraint section"
+    expected: "Even total failure produces { attempted: N, succeeded: 0, failed: N } warm-result"
+    evidence: "Manual inspection of embedded constraints block"
+
+  - id: EC-3
+    title: "One of N caches fails — agent continues and counts failures"
+    setup: "context-warmer.agent.md exists"
+    action: "Read partial failure handling phase"
+    expected: "Agent logs individual failure, increments failed counter, proceeds with remaining caches, ends with CACHE-WARM COMPLETE WITH WARNINGS"
+    evidence: "Manual inspection of failure phase logic"
+
+edge_cases:
+  - id: ED-1
+    title: "Agent file does not import from barrel files"
+    setup: "context-warmer.agent.md exists"
+    action: "Read the agent file for any import patterns"
+    expected: "No barrel file imports present (consistent with CLAUDE.md no-barrel-files rule)"
+    evidence: "Grep for 'from index' or barrel-style imports — should return empty"
+
+  - id: ED-2
+    title: "Warm-result schema is PopulateResultSchema-compatible"
+    setup: "context-warmer.agent.md exists"
+    action: "Read the embedded constraints / output contract sections"
+    expected: "warm-result includes attempted, succeeded, failed counts matching PopulateResultSchema shape"
+    evidence: "Manual inspection: confirm { attempted, succeeded, failed } fields documented"
+
+  - id: ED-3
+    title: "Agent frontmatter uses haiku model, not sonnet or opus"
+    setup: "context-warmer.agent.md exists"
+    action: "Read frontmatter model field"
+    expected: "model: haiku"
+    evidence: "grep 'model:' .claude/agents/context-warmer.agent.md"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  # No frontend — ui_touched: false
+
+manual_cases:
+  - id: MC-1
+    title: "Full agent file behavioral review (AC checklist)"
+    steps:
+      - "Read .claude/agents/context-warmer.agent.md"
+      - "Verify AC-1: frontmatter has type: worker, model: haiku, tools list, version, created, updated"
+      - "Verify AC-2: ## Mission is ≤5 sentences, describes invoking cache-warm skill and returning warm-result"
+      - "Verify AC-3: At least 4 execution phases present (validate, invoke, handle-failures, emit-summary)"
+      - "Verify AC-4: Partial failure path increments counter and continues — ends with CACHE-WARM COMPLETE WITH WARNINGS"
+      - "Verify AC-5: Skill unavailability → CACHE-WARM BLOCKED (no fallback to populate scripts)"
+      - "Verify AC-6: Exactly three completion signals defined (COMPLETE / COMPLETE WITH WARNINGS / BLOCKED)"
+      - "Verify AC-7: ## LangGraph Porting Notes section with input table, output table, tool requirements"
+      - "Verify AC-8: Embedded fallback constraint documenting { attempted, succeeded, failed } result schema"
+      - "Verify AC-9: ## Non-Goals excludes direct script invocation, direct DB writes, cache invalidation, scheduling"
+    expected: "All 9 ACs verified by file inspection"
+
+fixture_definitions: []
+
+risks:
+  - "WINT-2070 skill API is not yet defined — the agent uses a placeholder invocation contract; the test plan cannot verify actual skill call correctness until WINT-2070 is elaborated"
+  - "Behavioral testing of agent instruction logic (per WINT-1150 lesson) is deferred — no TypeScript helper to unit test in this story"
+  - "Integration test requiring real cache-warm skill invocation is blocked until WINT-2070 is delivered"

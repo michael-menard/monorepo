@@ -1,0 +1,529 @@
+## ELAB.yaml — Phase 1 Analysis
+## Story: APIP-1040 — Documentation Graph (Post-Merge)
+## Analyst: elab-analyst (Phase 1 Worker)
+## Generated: 2026-02-25
+
+story_id: APIP-1040
+title: "Documentation Graph (Post-Merge)"
+phase1_analyst: elab-analyst
+analysis_date: "2026-02-25"
+
+# ============================================================================
+# AUDIT CHECKLIST RESULTS (9 Points)
+# ============================================================================
+
+audit:
+
+  scope_alignment:
+    verdict: PASS
+    notes: >
+      Story scope matches stories.index.md exactly. The index records APIP-1040
+      as "Documentation Graph (Post-Merge)" in Phase 1: Full Worker Graphs, with
+      dependency on APIP-1030. The story touches only
+      packages/backend/orchestrator. No extra endpoints, infrastructure
+      components, UI, or database schema changes introduced. Non-goals
+      explicitly exclude Lambda, APIGW, Supervisor integration, UI dashboard,
+      operator CLI, and DB schema changes — all properly deferred to other
+      stories (APIP-2020, APIP-5005, APIP-1070).
+
+  internal_consistency:
+    verdict: PASS_WITH_MINOR_NOTE
+    notes: >
+      Goals and Non-goals are consistent. The goal ("build the Documentation
+      Graph") does not contradict any non-goal. Decisions (ADR-001 D2/D3/D4)
+      are respected throughout scope and architecture notes.
+
+      ACs are consistent with Scope section: every file listed in Scope appears
+      covered by at least one AC. Test Plan matches ACs: HP tests correspond to
+      AC-6/8/9/10/11/17; EC tests correspond to AC-6/7/9; ED test corresponds
+      to AC-6.
+
+      Minor note: AC-12 (DocGraphConfigSchema) lists `dryRun` at the top level,
+      and AC-17 also asserts `dryRun: z.boolean().default(false)` at the top
+      level — these are identical requirements stated twice. This creates a
+      minor redundancy but no contradiction. Recommend consolidating in Phase B.
+
+      Minor note: The "aggregate" node is mentioned in Architecture Notes graph
+      flow and subtask ST-9 wiring, but it does not appear as a named AC. It is
+      implicitly required by AC-8 (Send fan-out) and AC-11 (graph wiring).
+      Developer must ensure the aggregate node receives explicit test coverage
+      in ST-12.
+
+  reuse_first:
+    verdict: PASS
+    canonical_references_verified:
+      - file: "packages/backend/orchestrator/src/runner/node-factory.ts"
+        status: VERIFIED
+        notes: >
+          createToolNode() factory exists and is exported. Signature matches
+          (name, implementation) => NodeFunction. Doc workers should use
+          createToolNode, not createLLMNode (timeout 10s vs 60s — this may
+          be a concern; see gaps).
+      - file: "packages/backend/orchestrator/src/nodes/story/fanout-pm.ts"
+        status: VERIFIED
+        notes: >
+          Pattern confirmed: Zod schemas at top, pure analysis function,
+          createToolNode() exported node, createFanoutPMNode(config) factory.
+          Doc workers should mirror this structure exactly.
+      - file: "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+        status: VERIFIED
+        notes: >
+          7-phase doc sync confirmed. Phase 1 (discoverChangedFiles),
+          Phase 2 (parseFrontmatter), Phase 6 (draftChangelog) are
+          directly reusable. Workers should import these phase functions
+          rather than re-implementing them. Important: doc-sync.ts operates
+          on `.claude/agents/` and `.claude/commands/` directories — doc
+          workers operate on different doc surfaces (API docs, component docs,
+          etc.) so file discovery logic needs adaptation per worker, not
+          direct copy.
+      - file: "packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts"
+        status: VERIFIED
+        notes: >
+          KB dedup guard confirmed: kbSearchFn called with limit:1 and
+          relevance_score threshold 0.85 before kbAddFn. Injectable
+          kbSearchFn/kbAddFn pattern confirmed via PersistLearningsConfig.
+          The story's architecture note code snippet matches the actual
+          implementation pattern. KB Sync Worker replication path is clear.
+      - file: "packages/backend/orchestrator/src/graphs/elaboration.ts"
+        status: VERIFIED
+        notes: >
+          Annotation.Root() pattern confirmed. overwrite reducer pattern
+          confirmed. addConditionalEdges() wiring confirmed. StateGraph()
+          with .addNode()/.addEdge()/.addConditionalEdges() pattern confirmed.
+          createElaborationGraph() factory pattern confirmed. Doc graph
+          should follow this structure closely.
+    gaps:
+      - "createToolNode has a 10s timeout (tool preset). LLM workers may
+        exceed this. Story should use createLLMNode (60s timeout, 5 retries)
+        for workers that call an LLM — or override timeout via config. This
+        is not called out explicitly in the story."
+      - "doc-sync.ts Phase 1 file discovery scans .claude/agents/ and
+        .claude/commands/ exclusively. Doc workers need their own file
+        discovery logic scoped to their surface (API handlers, component
+        files, architecture docs, READMEs, KB, CHANGELOG). The reuse claim
+        for Phase 1 is partial — the pattern is reusable but not the
+        implementation directly."
+
+  ports_and_adapters:
+    verdict: PASS
+    notes: >
+      Core logic is transport-agnostic: no HTTP routes, no Lambda handlers.
+      Workers operate on filesystem state via proposedFileChanges (not direct
+      writes). KB Sync Worker injects kbSearchFn/kbAddFn for testability.
+      Commit node is the only filesystem writer, and only after review passes.
+      No adapter violations identified. LangGraph Send API is the
+      appropriate dispatch mechanism. No endpoint checks needed (0 endpoints).
+
+  local_testability:
+    verdict: PASS_WITH_NOTE
+    notes: >
+      Unit tests are concrete and executable via Vitest. No external
+      dependencies for unit tests (LLM injected via mock, KB injected via
+      mock, kbSearchFn/kbAddFn injectable).
+
+      Note: Test plan includes an integration test (dryRun: true + mock
+      MergeEventPayload) that is explicitly listed as a graph-level test
+      using graph.compile(). This requires LangGraph to be installed
+      (which it is — elaboration.ts uses @langchain/langgraph) but does
+      NOT require APIP-5006 LangGraph Server. The story correctly separates
+      unit tests (no external deps) from graph routing tests (Vitest,
+      real graph.compile()) from integration tests (requires APIP-5006).
+
+      The dryRun integration test (AC-17) explicitly verifies
+      fs.writeFile call count === 0, which is testable via Vitest spy
+      without filesystem mocking. This is well-designed.
+
+  decision_completeness:
+    verdict: PASS_WITH_ONE_CONCERN
+    notes: >
+      No blocking TBDs. All architectural decisions are documented and
+      trace to ADR-001. The aggregate node sentinel count pattern is
+      documented with explicit implementation guidance.
+
+      One concern: the "aggregate" node is described in Architecture Notes
+      but does not appear as a named AC. AC-11 says the graph wires
+      "6 workers → aggregate" but does not specify the aggregate node's
+      contract (what it does, what it returns to state). ST-9 wires it
+      but ST-7 (DocReviewNode) is what aggregates results. There may be
+      confusion between "aggregate" (the sentinel-count node) and
+      "DocReviewNode" (the review node). The story treats them as
+      separate nodes — aggregate waits for all workers, then doc-review
+      evaluates. This is architecturally sound but the aggregate node's
+      implementation is only implied, not explicitly specified in any AC.
+      Developer must be clear this node exists solely to wait for
+      expectedWorkers count before passing to doc-review.
+
+  risk_disclosure:
+    verdict: PASS
+    notes: >
+      Risks are explicit in both pm_artifacts.dev_feasibility.risks and
+      pm_artifacts.test_plan.risks sections. Key risks disclosed:
+      1. Sizing warning (17 ACs) with Phase A/B mitigation
+      2. KB Sync Worker hallucination with mandatory 0.85 dedup guard
+      3. LangGraph no built-in join barrier — sentinel count workaround
+      4. LangGraph Send API dispatch requires compiled graph for routing tests
+      5. Aggregate node sentinel count test fragility if worker count changes
+      6. 6 parallel workers mean 6 test files — shared fixture factory needed
+
+      No hidden dependencies identified. Upstream dependencies (APIP-1030
+      for trigger wiring, APIP-5006 for integration tests, APIP-5003 for
+      git security boundary) are disclosed. The story correctly does NOT
+      depend on APIP-1070 (merge graph trigger wiring deferred).
+
+  story_sizing:
+    verdict: WARNING_PHASED_ACCEPTABLE
+    sizing_warning: true
+    split_risk: 0.9
+    indicators_triggered:
+      - "17 ACs — exceeds 8 AC threshold (YES)"
+      - "More than 3 distinct test scenarios — 5 HP + 4 EC + 1 ED = 10 test cases (YES)"
+      - "0 endpoints (NO)"
+      - "Backend only, no frontend (NO)"
+      - "Touches 1 package only (NO)"
+      - "Multiple independent features: 6 workers + 1 review node + 1 commit node (BORDERLINE)"
+    phasing_assessment: >
+      The story already has a built-in Phase A (AC-1 to AC-11) / Phase B
+      (AC-12 to AC-17) split with explicit token budget guidance. Phase A
+      delivers the compilable graph scaffold with worker stubs and basic
+      review/commit nodes. Phase B delivers config finalization and full
+      test suite.
+
+      Assessment: The built-in phasing IS sufficient as a risk mitigation
+      because:
+      (a) Phase A and Phase B share all schemas — they cannot be split into
+          separate stories without creating schema duplication
+      (b) Phase B (AC-12 to AC-17) is purely additive: DocGraphConfigSchema
+          finalization, exports index, and test suite completion
+      (c) The token_estimate of 200,000 with confidence: low reflects the
+          uncertainty, but the subtask breakdown (12 subtasks, 100,000 total
+          estimated tokens for ST-1 through ST-12) is reasonable
+      (d) The phasing is already baked into the subtask dependency DAG —
+          ST-1 through ST-9 can complete independently of ST-10 through ST-12
+
+      Recommendation: Do NOT formally split into separate stories. The
+      built-in Phase A/B boundary is sufficient. Developer must commit to
+      shipping Phase A first and treating Phase B as explicit follow-through
+      within the same story, not scope creep.
+
+  subtask_decomposition:
+    verdict: PASS_WITH_ONE_GAP
+    has_subtasks: true
+    subtask_count: 12
+    canonical_references_section: true
+    notes: >
+      All 17 ACs are covered by at least one subtask:
+      - AC-1, AC-2, AC-3, AC-4, AC-12 → ST-1
+      - AC-1 (annotation) → ST-2
+      - AC-5, AC-6 → ST-3, ST-4
+      - AC-5, AC-6, AC-7 → ST-5
+      - AC-8 → ST-6
+      - AC-9 → ST-7
+      - AC-10, AC-17 → ST-8
+      - AC-11 → ST-9
+      - AC-13 → ST-10
+      - AC-14 → ST-11
+      - AC-15, AC-16 → ST-12
+
+      Dependencies form a valid DAG (no cycles detected):
+      ST-1 → ST-2 → ST-6 → ST-7 → ST-8 → ST-9 → ST-10 → ST-11 → ST-12
+      ST-1 → ST-3 → ST-4 (parallel with ST-2 path)
+      ST-1 → ST-3 → ST-5 (parallel with ST-4)
+
+      Each subtask has a verification command (pnpm check-types or pnpm test).
+
+      Gap: ST-3 and ST-4 modify only 2-3 files each (within limit), but
+      ST-1 is front-loading 5 ACs (AC-1, AC-2, AC-3, AC-4, AC-12) into a
+      single subtask. AC-12 (DocGraphConfigSchema) is explicitly Phase B
+      material — including it in ST-1 creates potential scope creep in
+      Phase A. The story text says "Phase B (AC-12 to AC-17)" but ST-1
+      includes AC-12. Developer must be careful not to skip AC-12 in ST-1
+      since all downstream subtasks depend on it for type correctness, but
+      ST-1 completion should be verified against Phase A AC list (AC-1 to
+      AC-11 only for Phase A gate).
+
+      Gap: No subtask explicitly covers the "aggregate" node implementation
+      (the sentinel-count wait node between workers and doc-review). ST-9
+      wires it but ST-7 is listed as DocReviewNode only. The aggregate node
+      logic (sentinel count check) should be implemented as part of ST-7
+      or explicitly added to ST-6/ST-9 scope.
+
+# ============================================================================
+# DISCOVERY ANALYSIS
+# ============================================================================
+
+gaps:
+  mvp_critical:
+    - id: GAP-001
+      title: "createToolNode 10s timeout too short for LLM-calling doc workers"
+      severity: HIGH
+      description: >
+        createToolNode() uses tool preset: 10s timeout, 2 retries.
+        Doc workers that call an LLM (api-docs, component-docs, architecture-docs,
+        readme-guides, changelog workers) will likely exceed 10s for non-trivial
+        diffs. The story calls out 'cheap model via config.model' but even cheap
+        models (haiku, gemini-flash) can take 15-30s for document generation tasks.
+        Using createToolNode for LLM-calling workers risks systematic timeout
+        failures. createLLMNode (60s, 5 retries) is the correct preset.
+        Alternatively, workers should accept timeoutMs in their config and
+        override the preset. Either way, the story should specify which factory
+        to use for LLM-calling workers.
+      affects_acs: ["AC-5", "AC-6"]
+      resolution: >
+        Use createLLMNode (or createNode with custom retry config including
+        timeoutMs: 120000) for the 5 LLM-calling workers. KB Sync Worker
+        (primarily doing KB search + conditional write) can use createToolNode.
+        Add timeout override to DocWorkerConfigSchema (timeoutMs already
+        exists in AC-4 — confirm it flows to createNode retry config).
+      blocking: true
+
+    - id: GAP-002
+      title: "Aggregate node contract unspecified — sentinel count implementation implicit"
+      severity: MEDIUM
+      description: >
+        The graph flow requires a dedicated 'aggregate' node between the 6
+        workers and 'doc-review'. This node must: (a) check
+        state.workerResults.length >= state.expectedWorkers to detect completion,
+        and (b) pass through to doc-review only when all workers have reported.
+        No AC explicitly specifies this node's contract. AC-11 mentions it in
+        graph wiring but does not describe its logic. No subtask explicitly
+        implements it — ST-7 covers DocReviewNode, ST-9 covers wiring.
+        Without explicit specification, a developer might conflate 'aggregate'
+        with 'doc-review' or implement it incorrectly.
+      affects_acs: ["AC-11"]
+      resolution: >
+        Add explicit sentinel count check to AC-11 or create AC-11a. The
+        aggregate node should: read state.workerResults.length and
+        state.expectedWorkers; if equal, return {} (no-op, pass through);
+        if not equal, this indicates a LangGraph wiring issue. Include this
+        in ST-9 implementation scope.
+      blocking: true
+
+    - id: GAP-003
+      title: "ProposedFileChangeSchema not defined in any AC"
+      severity: HIGH
+      description: >
+        Multiple ACs (AC-6, AC-9, AC-10) reference ProposedFileChange and
+        state.proposedFileChanges, but no AC defines the ProposedFileChangeSchema
+        Zod schema. AC-1 mentions 'proposedFileChanges: Annotation<ProposedFileChange[]>'
+        and AC-3 mentions 'proposedChanges: z.array(ProposedFileChangeSchema)'
+        but neither defines what ProposedFileChangeSchema contains. ST-1 is
+        expected to define it but the schema fields are not specified.
+        A developer implementing ST-1 must invent this schema — creating risk
+        of inconsistency between workers (one worker might propose
+        {filePath, content, operation} while another uses {path, newContent, type}).
+      affects_acs: ["AC-1", "AC-3", "AC-6", "AC-10"]
+      resolution: >
+        Define ProposedFileChangeSchema fields explicitly in the story (or
+        in ST-1 guidance). Recommended minimum:
+        z.object({
+          filePath: z.string(),
+          operation: z.enum(['create', 'update', 'delete']),
+          content: z.string().nullable(),
+          reason: z.string(),
+        })
+        The 'delete' operation should probably be restricted per AC-7
+        (KB Sync Worker never proposes deletion) — DocReviewNode blocks
+        on any delete in KB worker output (EC-3).
+      blocking: true
+
+  future_opportunities:
+    - id: OPP-001
+      title: "Shared fixture factory for 6 worker tests"
+      description: >
+        The test plan risk notes '6 parallel workers mean 6 test files —
+        use shared fixture factory'. A createMockMergeEventPayload() and
+        createMockDocWorkerConfig() helper in a test utilities file would
+        reduce test boilerplate significantly. Not blocking but improves
+        maintainability.
+      affects_acs: ["AC-14"]
+
+    - id: OPP-002
+      title: "AC-12 inclusion in ST-1 creates Phase A/B boundary ambiguity"
+      description: >
+        AC-12 is Phase B material but is listed in ST-1 dependencies.
+        If a developer partially implements DocGraphConfigSchema in ST-1
+        (just enough for Phase A to type-check) but defers full
+        minSuccessThreshold/commitMessage fields to Phase B, this is
+        technically correct but may confuse reviewers. Recommend the
+        developer implement DocGraphConfigSchema fully in ST-1 even if
+        Phase B formally claims it — since all downstream workers need it
+        for type safety.
+      affects_acs: ["AC-12"]
+
+    - id: OPP-003
+      title: "DocCommitResult schema unspecified"
+      description: >
+        AC-1 includes 'commitResult: Annotation<DocCommitResult | null>' in
+        DocGraphStateAnnotation but no AC defines DocCommitResultSchema fields.
+        AC-10 describes commit node behavior but not the result shape.
+        Recommended fields: { committed: boolean, commitSha: string | null,
+        filesWritten: string[], durationMs: number, error: string | null }.
+        This is non-blocking (developer can define it) but worth noting.
+      affects_acs: ["AC-1", "AC-10"]
+
+    - id: OPP-004
+      title: "DocReviewResult schema unspecified"
+      description: >
+        AC-1 includes 'docReviewResult: Annotation<DocReviewResult | null>'
+        but the schema fields are only implied by AC-9's description.
+        Recommended Zod schema fields: { docReviewPassed: z.boolean(),
+        commitBlocked: z.boolean(), commitBlockedReason: z.string().nullable(),
+        workerSuccessCount: z.number(), workerFailureCount: z.number() }.
+        Non-blocking but should be explicit.
+      affects_acs: ["AC-1", "AC-9"]
+
+    - id: OPP-005
+      title: "git operations in commit node may need spawn abstraction for testability"
+      description: >
+        AC-10 requires the commit node to 'create a git commit' via git
+        operations. The story does not specify how git is invoked (exec,
+        spawn, simple-git library). For testability, git operations should
+        be injectable (e.g., gitCommitFn in commit node config) similar to
+        how kbSearchFn/kbAddFn are injectable in KB Sync Worker. Otherwise
+        unit tests must mock child_process.exec.
+      affects_acs: ["AC-10"]
+
+# ============================================================================
+# PRELIMINARY VERDICT
+# ============================================================================
+
+preliminary_verdict:
+  status: NEEDS_MINOR_REVISION
+  confidence: HIGH
+  rationale: >
+    The story is architecturally sound with excellent reuse planning, clear
+    non-goals, and a well-structured Phase A/B approach to manage the sizing
+    warning. All 4 canonical references are verified and confirmed in the
+    codebase. The dependency DAG is valid. Tests are concrete and executable.
+
+    Three MVP-critical gaps must be addressed before implementation:
+
+    1. GAP-001 (HIGH): createToolNode timeout (10s) is too short for
+       LLM-calling doc workers. Must clarify which factory to use (createLLMNode
+       recommended) or confirm timeoutMs in DocWorkerConfigSchema overrides
+       the preset.
+
+    2. GAP-002 (MEDIUM): The 'aggregate' sentinel-count node is implicit.
+       Must be explicitly specified (which subtask implements it, what its
+       contract is) to prevent conflation with DocReviewNode.
+
+    3. GAP-003 (HIGH): ProposedFileChangeSchema fields are unspecified. All 6
+       workers and the commit node depend on this schema. Developer must not
+       invent it independently — it should be specified in ST-1 guidance.
+
+    The built-in Phase A/B phasing is sufficient — no formal story split
+    recommended. Split risk of 0.9 is acknowledged but the schema coupling
+    between phases makes splitting counterproductive.
+
+  split_recommendation: DO_NOT_SPLIT
+  split_reasoning: >
+    Phase A and Phase B share all core schemas (AC-1 through AC-4, AC-12).
+    Splitting would require duplicating or forward-referencing schemas across
+    stories, creating more coordination overhead than the split saves.
+    The built-in Phase A/B boundary within the story is the correct mechanism.
+    Token budget risk (200K estimated, low confidence) is managed by the
+    explicit Phase A gate: graph compiles + routing tests pass = Phase A done.
+
+# ============================================================================
+# DECISION FIELDS (set by Phase 1.5 autonomous decider)
+# ============================================================================
+
+decisions:
+  proceed: true
+  split: false
+  split_stories: null
+  revisions_required: true
+  revision_notes: >
+    3 MVP-critical gaps resolved by adding ACs AC-18, AC-19, AC-20.
+    No structural changes to story scope. All gaps addressed via AC additions only.
+
+    GAP-001 → AC-18: Specifies that 5 LLM-calling workers must use node factory
+    with timeout >= 60s (createLLMNode recommended); KB Sync Worker may use
+    createToolNode; workers must pass config.timeoutMs to the factory.
+
+    GAP-002 → AC-19: Specifies aggregate node contract explicitly — reads
+    state.workerResults.length vs state.expectedWorkers, passes through to
+    doc-review when equal, logs warning and proceeds on mismatch; scoped to
+    ST-9 and covered in ST-12.
+
+    GAP-003 → AC-20: Defines ProposedFileChangeSchema with filePath, operation
+    (enum: create | update — no delete), content, reason, workerName fields;
+    'delete' excluded per Non-Goals (KB Sync append-only); scoped to ST-1.
+
+  approved_by: elab-autonomous-decider
+  approved_at: "2026-02-25T23:55:00Z"
+
+gap_decisions:
+  GAP-001:
+    decision: RESOLVED_VIA_AC
+    added_ac: AC-18
+    rationale: >
+      AC-4 already has timeoutMs: 120000 default in DocWorkerConfigSchema.
+      AC-18 makes explicit that 5 LLM-calling workers must use createLLMNode
+      (or equivalent >= 60s timeout factory) and must pass config.timeoutMs
+      to the node factory. KB Sync Worker explicitly permitted to use
+      createToolNode. No structural change needed — this is a clarification
+      that closes the gap.
+
+  GAP-002:
+    decision: RESOLVED_VIA_AC
+    added_ac: AC-19
+    rationale: >
+      The aggregate node was architecturally described but not contracted in
+      any AC. AC-19 provides the explicit contract: sentinel count check,
+      pass-through behavior, logging on mismatch, deadlock prevention,
+      distinction from DocReviewNode, and scoping to ST-9/ST-12. This
+      prevents developer conflation of aggregate and doc-review nodes.
+
+  GAP-003:
+    decision: RESOLVED_VIA_AC
+    added_ac: AC-20
+    rationale: >
+      ProposedFileChangeSchema was referenced in 4 ACs without being defined.
+      AC-20 specifies the complete Zod schema with all required fields.
+      The 'delete' operation is intentionally excluded from the operation enum
+      to enforce the append-only KB Sync Worker constraint at the schema level.
+      workerName field added (beyond minimal recommendation) to enable
+      DocReviewNode to attribute which worker proposed each change.
+
+opportunity_decisions:
+  OPP-001:
+    decision: LOGGED_TO_KB
+    kb_artifact: OPP-001-shared-fixture-factory
+    rationale: Non-blocking improvement; developer decision at implementation time.
+
+  OPP-002:
+    decision: LOGGED_TO_KB
+    kb_artifact: OPP-002-phase-ab-boundary-ambiguity
+    rationale: Non-blocking; developer awareness note for ST-1 implementation.
+
+  OPP-003:
+    decision: LOGGED_TO_KB
+    kb_artifact: OPP-003-doc-commit-result-schema
+    rationale: Non-blocking; developer can define in ST-1 alongside other schemas.
+
+  OPP-004:
+    decision: LOGGED_TO_KB
+    kb_artifact: OPP-004-doc-review-result-schema
+    rationale: Non-blocking; developer can define in ST-1 alongside other schemas.
+
+  OPP-005:
+    decision: LOGGED_TO_KB
+    kb_artifact: OPP-005-git-operations-injectable
+    rationale: Non-blocking; injectable gitCommitFn pattern recommended for ST-8.
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T23:55:00Z"
+decided_by: elab-autonomous-decider
+decision_mode: autonomous
+
+summary:
+  gaps_total: 3
+  gaps_resolved: 3
+  gaps_unresolved: 0
+  acs_added: 3
+  new_acs: ["AC-18", "AC-19", "AC-20"]
+  opportunities_total: 5
+  opportunities_logged_to_kb: 5
+  story_split: false
+  final_ac_count: 20

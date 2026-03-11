@@ -1,0 +1,29 @@
+schema: 1
+id: WISH-20142
+feature: wish
+type: feature
+state: backlog
+title: Playwright E2E Tests for Smart Sorting
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2014
+follow_up_from: WISH-2014
+scope:
+  packages: []
+  surfaces:
+    - frontend
+goal: >
+  Add Playwright E2E tests covering the full smart sorting interaction flow
+  (AC12 from WISH-2014). Verify sort dropdown selection, API calls, item reordering,
+  and accessibility in a real browser environment.
+non_goals:
+  - Changing sort algorithm behavior (already implemented in WISH-2014)
+  - Adding new sort modes
+  - Modifying backend sort logic
+  - Testing icon/tooltip rendering (covered by WISH-20141)
+acs: []
+risks: []
+created_at: 2026-02-09T00:00:00-07:00
+updated_at: 2026-02-09T00:00:00-07:00

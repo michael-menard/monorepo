@@ -1,0 +1,136 @@
+feasible: true
+confidence: high
+rationale: >
+  The package pattern is well-established in this monorepo (rate-limiter, gallery-core).
+  BullMQ is a mature library with excellent TypeScript support. Redis is already running
+  locally with AOF persistence. The Zod-first schema pattern, injected-dependency connection
+  factory, and package skeleton can all be derived directly from existing code. No new
+  infrastructure is required for Phase 0. The primary risk (BullMQ ioredis peer dep version)
+  is easily verified before implementation begins.
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/pipeline-queue (new package)"
+    - "pnpm-workspace.yaml (add new workspace)"
+    - "packages/backend/pipeline-queue/package.json"
+    - "packages/backend/pipeline-queue/src/index.ts"
+    - "packages/backend/pipeline-queue/src/__types__/index.ts"
+    - "packages/backend/pipeline-queue/src/__tests__/"
+    - "packages/backend/pipeline-queue/vitest.config.ts"
+    - "packages/backend/pipeline-queue/tsup.config.ts"
+    - "packages/backend/pipeline-queue/README.md"
+  endpoints: []
+  deploy_touchpoints:
+    - "pnpm install (new bullmq, @bull-board/express, @bull-board/api dependencies)"
+    - "pnpm build --filter @repo/pipeline-queue (tsup build)"
+    - "pnpm check-types --filter @repo/pipeline-queue"
+    - "pnpm test --filter @repo/pipeline-queue"
+
+risks:
+  - finding: "BullMQ v5+ requires ioredis v5+. If the monorepo has an older ioredis version, there will be peer dep conflicts."
+    mitigation: "Run 'pnpm why ioredis' before adding BullMQ. Confirm ioredis version >= 5.x. BullMQ and ioredis version must be pinned compatibly in package.json."
+  - finding: "BullMQ requires two separate IORedis connections per queue (one for commands, one for blocking BRPOP). If createPipelineQueue only creates one connection, queue operations will hang or error."
+    mitigation: "Read BullMQ Queue constructor docs. Pass the connection option correctly — BullMQ Queue and Worker each manage their own connection internally when given a connection config object. Alternatively, createPipelineQueue can accept an IORedis instance and BullMQ will clone it internally. Document this requirement in README and AC-11."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm check-types --filter @repo/pipeline-queue exits 0"
+  - "pnpm test --filter @repo/pipeline-queue exits 0 with unit tests passing"
+  - "Integration test (guarded by REDIS_URL) shows enqueue + dequeue round-trip succeeds"
+  - "import { createPipelineQueue, PIPELINE_QUEUE_NAME } from '@repo/pipeline-queue' resolves in a consumer package"
+
+subtasks:
+  - id: ST-1
+    title: "Scaffold packages/backend/pipeline-queue package skeleton"
+    goal: "Create the package directory with package.json, tsup.config.ts, vitest.config.ts, tsconfig.json following the rate-limiter skeleton. Register in pnpm workspace."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/package.json"
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/tsup.config.ts"
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/vitest.config.ts"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/package.json (create)"
+      - "packages/backend/pipeline-queue/tsup.config.ts (create)"
+      - "packages/backend/pipeline-queue/vitest.config.ts (create)"
+      - "packages/backend/pipeline-queue/tsconfig.json (create)"
+      - "pnpm-workspace.yaml (add packages/backend/pipeline-queue)"
+    acs: ["AC-1", "AC-10"]
+    depends_on: "none"
+    verification: "pnpm install && pnpm build --filter @repo/pipeline-queue"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Define PipelineJobDataSchema and related Zod types in src/__types__/index.ts"
+    goal: "Create Zod-first job payload schema with storyId (string), phase (enum), priority (number, optional), metadata (record, optional). Export PipelineJobDataSchema and PipelineJobData type."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/gallery-core/src/__types__/index.ts"
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/orchestrator/src/artifacts/story.ts"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/src/__types__/index.ts (create)"
+    acs: ["AC-2"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/pipeline-queue"
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: "Implement createPipelineConnection factory in src/index.ts"
+    goal: "Create createPipelineConnection(redisUrl: string): IORedis factory adapted from apps/api/lego-api/core/cache/redis-client.ts pattern but without Lambda singleton, lazyConnect, or module-level global. Add enableOfflineQueue: false, retryStrategy, event logging via @repo/logger."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/apps/api/lego-api/core/cache/redis-client.ts"
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/src/index.ts"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/src/index.ts (create)"
+    acs: ["AC-4"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/pipeline-queue"
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: "Implement createPipelineQueue factory and PIPELINE_QUEUE_NAME constant"
+    goal: "Export PIPELINE_QUEUE_NAME = 'apip-pipeline' constant. Implement createPipelineQueue(connection: IORedis, queueName?: string): Queue<PipelineJobData> with defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 1000 } }. Wire @repo/logger for queue events (job added, completed, failed)."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/src/index.ts"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/src/index.ts (extend from ST-3)"
+    acs: ["AC-3", "AC-5"]
+    depends_on: "ST-3"
+    verification: "pnpm check-types --filter @repo/pipeline-queue && pnpm build --filter @repo/pipeline-queue"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Write unit tests in src/__tests__/ for schema validation, queue factory, and connection factory"
+    goal: "Unit tests (no Redis required): PipelineJobDataSchema valid/invalid payloads, createPipelineQueue returns Queue with correct name and defaultJobOptions, createPipelineConnection returns IORedis instance. Tests must pass without network access."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/gallery-core/src/__tests__/"
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/rate-limiter/src/__tests__/"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts (create)"
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts (create)"
+    acs: ["AC-7", "AC-9"]
+    depends_on: "ST-2, ST-4"
+    verification: "pnpm test --filter @repo/pipeline-queue"
+    estimated_tokens: 8000
+
+  - id: ST-6
+    title: "Write integration test with Redis environment guard"
+    goal: "Integration test: enqueue a valid PipelineJobData job against real local Redis (port 6379). BullMQ Worker dequeues and validates payload. Guard with process.env.REDIS_URL check — test.skipIf when absent. Clean up queue after test."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts (create)"
+    acs: ["AC-8"]
+    depends_on: "ST-5"
+    verification: "REDIS_URL=redis://localhost:6379 pnpm test --filter @repo/pipeline-queue"
+    estimated_tokens: 6000
+
+  - id: ST-7
+    title: "Write package README documenting queue contract, AOF note, and Bull Board setup"
+    goal: "README covers: queue name constant, PipelineJobData schema fields, connection requirements (two IORedis connections — command + blocking), AOF persistence note (local enabled; ElastiCache tier must support AOF — verify before prod), Bull Board mount instructions (optional, dev/operator only at /bull-board)."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "packages/backend/pipeline-queue/README.md (create)"
+    acs: ["AC-6", "AC-11"]
+    depends_on: "ST-4"
+    verification: "Manual review — README covers all required sections from AC-11"
+    estimated_tokens: 3000

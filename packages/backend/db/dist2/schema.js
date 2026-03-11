@@ -1,0 +1,414 @@
+import { boolean, index, integer, jsonb, pgSchema, pgTable, text, timestamp, uniqueIndex, uuid, } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { z } from 'zod';
+// Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
+// Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
+// Gallery Images Table
+export const galleryImages = pgTable('gallery_images', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+    title: text('title').notNull(),
+    description: text('description'),
+    tags: jsonb('tags').$type(),
+    imageUrl: text('image_url').notNull(),
+    thumbnailUrl: text('thumbnail_url'), // Thumbnail image URL
+    albumId: uuid('album_id'), // Will reference galleryAlbums.id - added in migration
+    flagged: boolean('flagged').default(false),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    lastUpdatedAt: timestamp('last_updated_at').notNull().defaultNow(),
+}, table => ({
+    // Indexes for lazy fetching and performance
+    userIdx: index('idx_gallery_images_user_id_lazy').on(table.userId),
+    albumIdx: index('idx_gallery_images_album_id_lazy').on(table.albumId),
+    userCreatedIdx: index('idx_gallery_images_user_created').on(table.userId, table.createdAt),
+    albumCreatedIdx: index('idx_gallery_images_album_created').on(table.albumId, table.createdAt),
+}));
+// Gallery Albums Table
+export const galleryAlbums = pgTable('gallery_albums', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+    title: text('title').notNull(),
+    description: text('description'),
+    coverImageId: uuid('cover_image_id'), // Will reference galleryImages.id - added in migration
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    lastUpdatedAt: timestamp('last_updated_at').notNull().defaultNow(),
+}, table => ({
+    // Indexes for lazy fetching and performance
+    userIdx: index('idx_gallery_albums_user_id_lazy').on(table.userId),
+    userCreatedIdx: index('idx_gallery_albums_user_created').on(table.userId, table.createdAt),
+}));
+// Gallery Flags Table
+export const galleryFlags = pgTable('gallery_flags', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    imageId: uuid('image_id')
+        .notNull()
+        .references(() => galleryImages.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+    reason: text('reason'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    lastUpdatedAt: timestamp('last_updated_at').notNull().defaultNow(),
+}, table => ({
+    // Indexes for lazy fetching and performance
+    userIdx: index('idx_gallery_flags_user_id_lazy').on(table.userId),
+    imageIdx: index('idx_gallery_flags_image_id').on(table.imageId),
+    // Unique constraint to prevent duplicate flags per user/image
+    uniqueImageUser: uniqueIndex('gallery_flags_image_user_unique').on(table.imageId, table.userId),
+}));
+// MOC Instructions Table
+export const mocInstructions = pgTable('moc_instructions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+    title: text('title').notNull(),
+    description: text('description'),
+    type: text('type').notNull(), // 'moc' or 'set'
+    // ─────────────────────────────────────────────────────────────────────────
+    // Core Identification (new fields)
+    // ─────────────────────────────────────────────────────────────────────────
+    mocId: text('moc_id'), // External platform ID (e.g., "MOC-243400" from Rebrickable)
+    slug: text('slug'), // URL-friendly identifier (e.g., "king-mearas-castle")
+    // ─────────────────────────────────────────────────────────────────────────
+    // MOC-specific fields
+    // ─────────────────────────────────────────────────────────────────────────
+    author: text('author'), // Designer/creator name - Required for MOCs, null for Sets
+    partsCount: integer('parts_count'), // Number of parts - Required for MOCs, null for Sets
+    minifigCount: integer('minifig_count'), // Number of minifigures included
+    theme: text('theme'), // Theme like "Castle" - Required for both MOCs and Sets
+    themeId: integer('theme_id'), // Numeric theme ID from external platform (e.g., 186)
+    subtheme: text('subtheme'), // Subtheme like "Lion Knights" - Optional for MOCs, null for Sets
+    uploadedDate: timestamp('uploaded_date'), // When MOC was uploaded - Required for MOCs, null for Sets
+    // ─────────────────────────────────────────────────────────────────────────
+    // Set-specific fields
+    // ─────────────────────────────────────────────────────────────────────────
+    brand: text('brand'), // Required for Sets, null for MOCs
+    setNumber: text('set_number'), // MOC ID (e.g., "MOC-172552") for MOCs, Set number (e.g., "10294") for Sets
+    releaseYear: integer('release_year'), // Optional for Sets
+    retired: boolean('retired'), // Optional for Sets (default false)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Extended Metadata (JSONB fields for complex nested data)
+    // ─────────────────────────────────────────────────────────────────────────
+    designer: jsonb('designer').$type(), // Designer profile and social information
+    dimensions: jsonb('dimensions').$type(), // Physical dimensions of built MOC
+    instructionsMetadata: jsonb('instructions_metadata').$type(), // Information about instruction files
+    alternateBuild: jsonb('alternate_build').$type(), // Info if this is an alternate build of official sets
+    features: jsonb('features').$type(), // List of notable features/highlights
+    // ─────────────────────────────────────────────────────────────────────────
+    // Platform & Source Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    sourcePlatform: jsonb('source_platform').$type(), // Source platform info (where MOC was imported from)
+    eventBadges: jsonb('event_badges').$type(), // Competition/event badges earned by this MOC
+    moderation: jsonb('moderation').$type(), // Moderation status and actions
+    platformCategoryId: integer('platform_category_id'), // Platform-specific category ID (BrickLink: idModelCategory)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rich Description Content
+    // ─────────────────────────────────────────────────────────────────────────
+    descriptionHtml: text('description_html'), // HTML-formatted description with rich text
+    shortDescription: text('short_description'), // Brief 1-2 sentence summary (max 500 chars)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Difficulty & Build Info
+    // ─────────────────────────────────────────────────────────────────────────
+    difficulty: text('difficulty'), // 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    buildTimeHours: integer('build_time_hours'), // Estimated time to build in hours
+    ageRecommendation: text('age_recommendation'), // Recommended minimum age (e.g., "16+", "12+")
+    // ─────────────────────────────────────────────────────────────────────────
+    // Status & Visibility
+    // ─────────────────────────────────────────────────────────────────────────
+    status: text('status').default('draft'), // 'draft' | 'published' | 'archived' | 'pending_review'
+    visibility: text('visibility').default('private'), // 'public' | 'private' | 'unlisted'
+    isFeatured: boolean('is_featured').default(false), // True if featured on homepage
+    isVerified: boolean('is_verified').default(false), // True if verified by moderators
+    // ─────────────────────────────────────────────────────────────────────────
+    // Common fields
+    // ─────────────────────────────────────────────────────────────────────────
+    tags: jsonb('tags').$type(),
+    thumbnailUrl: text('thumbnail_url'),
+    totalPieceCount: integer('total_piece_count'), // Total piece count from parts lists
+    // ─────────────────────────────────────────────────────────────────────────
+    // Timestamps
+    // ─────────────────────────────────────────────────────────────────────────
+    publishedAt: timestamp('published_at'), // Date MOC was first published/made public
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    // ─────────────────────────────────────────────────────────────────────────
+    // Audit Trail
+    // ─────────────────────────────────────────────────────────────────────────
+    addedByUserId: text('added_by_user_id'), // UUID of user who first added this record
+    lastUpdatedByUserId: text('last_updated_by_user_id'), // UUID of user who last modified
+}, table => ({
+    // Indexes for lazy fetching and performance
+    userIdx: index('idx_moc_instructions_user_id_lazy').on(table.userId),
+    userCreatedIdx: index('idx_moc_instructions_user_created').on(table.userId, table.createdAt),
+    // Title search index - for searching across all MOCs and Sets
+    titleIdx: index('idx_moc_instructions_title').on(table.title),
+    // Business constraint: Unique MOC title per user
+    uniqueUserTitle: uniqueIndex('moc_instructions_user_title_unique').on(table.userId, table.title),
+    // Set-specific constraints and indexes
+    // Note: Unique constraint for Sets (brand + setNumber) is handled via EXCLUDE constraint in migration
+    // This ensures each official LEGO set can only exist once in the system
+    // Performance indexes for Set queries
+    setBrandSetNumberIdx: index('idx_sets_brand_set_number')
+        .on(table.brand, table.setNumber)
+        .where(sql `type = 'set' AND brand IS NOT NULL AND set_number IS NOT NULL`),
+    setBrandThemeIdx: index('idx_sets_brand_theme')
+        .on(table.brand, table.theme)
+        .where(sql `type = 'set'`),
+    setReleaseYearIdx: index('idx_sets_release_year')
+        .on(table.releaseYear)
+        .where(sql `type = 'set' AND release_year IS NOT NULL`),
+    setRetiredIdx: index('idx_sets_retired')
+        .on(table.retired)
+        .where(sql `type = 'set' AND retired IS NOT NULL`),
+}));
+// MOC Files Table (for instructions, parts lists, images, etc.)
+export const mocFiles = pgTable('moc_files', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocId: uuid('moc_id')
+        .notNull()
+        .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    fileType: text('file_type').notNull(), // e.g., 'instruction', 'parts-list', 'thumbnail', 'gallery-image'
+    fileUrl: text('file_url').notNull(),
+    originalFilename: text('original_filename'),
+    mimeType: text('mime_type'), // Optional: for clarity on file format
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft-delete support (nullable)
+}, table => ({
+    // Indexes for lazy fetching and performance
+    mocIdx: index('idx_moc_files_moc_id_lazy').on(table.mocId),
+    mocTypeIdx: index('idx_moc_files_moc_type').on(table.mocId, table.fileType),
+    // Partial index for soft-deleted files (created in migration 0004)
+    // deletedAtIdx: index('idx_moc_files_deleted_at').on(table.deletedAt).where(sql`deleted_at IS NOT NULL`),
+    // Business constraints
+    // Note: Removed uniqueMocFileType constraint - MOCs can have multiple files of the same type
+    uniqueMocFilename: uniqueIndex('moc_files_moc_filename_unique').on(table.mocId, table.originalFilename),
+}));
+// Join table: Link MOCs to existing gallery images
+export const mocGalleryImages = pgTable('moc_gallery_images', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocId: uuid('moc_id')
+        .notNull()
+        .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    galleryImageId: uuid('gallery_image_id')
+        .notNull()
+        .references(() => galleryImages.id, { onDelete: 'cascade' }),
+}, table => ({
+    // Indexes for lazy fetching and performance
+    mocIdx: index('idx_moc_gallery_images_moc_id_lazy').on(table.mocId),
+    galleryImageIdx: index('idx_moc_gallery_images_gallery_image_id_lazy').on(table.galleryImageId),
+}));
+// Join table: Link MOCs to existing gallery albums (optional, for album linking)
+export const mocGalleryAlbums = pgTable('moc_gallery_albums', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocId: uuid('moc_id')
+        .notNull()
+        .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    galleryAlbumId: uuid('gallery_album_id')
+        .notNull()
+        .references(() => galleryAlbums.id, { onDelete: 'cascade' }),
+}, table => ({
+    // Indexes for lazy fetching and performance
+    mocIdx: index('idx_moc_gallery_albums_moc_id_lazy').on(table.mocId),
+    galleryAlbumIdx: index('idx_moc_gallery_albums_gallery_album_id_lazy').on(table.galleryAlbumId),
+}));
+export const wishlistItems = pgTable('wishlist_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(), // Cognito user ID (sub claim from JWT)
+    title: text('title').notNull(),
+    description: text('description'),
+    productLink: text('product_link'),
+    imageUrl: text('image_url'),
+    imageWidth: integer('image_width'), // Image width in pixels for frontend optimization
+    imageHeight: integer('image_height'), // Image height in pixels for frontend optimization
+    category: text('category'), // LEGO categories like 'Speed Champions', 'Modular', 'Star Wars', etc.
+    sortOrder: text('sort_order').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, table => ({
+    userIdx: index('idx_wishlist_user_id').on(table.userId),
+    userSortIdx: index('idx_wishlist_sort_order').on(table.userId, table.sortOrder),
+    categorySortIdx: index('idx_wishlist_category_sort').on(table.userId, table.category, table.sortOrder),
+}));
+// MOC Parts Lists Table - Enhanced tracking for parts lists
+export const mocPartsLists = pgTable('moc_parts_lists', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocId: uuid('moc_id')
+        .notNull()
+        .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    fileId: uuid('file_id').references(() => mocFiles.id, { onDelete: 'set null' }), // Optional file reference
+    title: text('title').notNull(),
+    description: text('description'),
+    built: boolean('built').default(false),
+    purchased: boolean('purchased').default(false),
+    inventoryPercentage: text('inventory_percentage').default('0.00'), // Using text to match decimal precision
+    totalPartsCount: text('total_parts_count'), // Using text for large numbers
+    acquiredPartsCount: text('acquired_parts_count').default('0'),
+    costEstimate: text('cost_estimate'), // Using text for decimal precision
+    actualCost: text('actual_cost'), // Using text for decimal precision
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, table => ({
+    mocIdx: index('idx_moc_parts_lists_moc_id').on(table.mocId),
+    fileIdx: index('idx_moc_parts_lists_file_id').on(table.fileId),
+    builtIdx: index('idx_moc_parts_lists_built').on(table.built),
+    purchasedIdx: index('idx_moc_parts_lists_purchased').on(table.purchased),
+    mocBuiltIdx: index('idx_moc_parts_lists_moc_built').on(table.mocId, table.built),
+    mocPurchasedIdx: index('idx_moc_parts_lists_moc_purchased').on(table.mocId, table.purchased),
+}));
+// MOC Parts Table - Individual parts from CSV upload
+export const mocParts = pgTable('moc_parts', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partsListId: uuid('parts_list_id')
+        .notNull()
+        .references(() => mocPartsLists.id, { onDelete: 'cascade' }),
+    partId: text('part_id').notNull(), // LEGO part number (e.g., "3001")
+    partName: text('part_name').notNull(), // Part description (e.g., "Brick 2 x 4")
+    quantity: integer('quantity').notNull(), // Number of parts
+    color: text('color').notNull(), // Part color (e.g., "Red")
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+}, table => ({
+    partsListIdx: index('idx_moc_parts_parts_list_id').on(table.partsListId),
+    partIdIdx: index('idx_moc_parts_part_id').on(table.partId),
+    colorIdx: index('idx_moc_parts_color').on(table.color),
+}));
+// Define relationships for lazy loading
+export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
+    album: one(galleryAlbums, {
+        fields: [galleryImages.albumId],
+        references: [galleryAlbums.id],
+    }),
+    flags: many(galleryFlags),
+    mocGalleryImages: many(mocGalleryImages),
+}));
+export const galleryAlbumsRelations = relations(galleryAlbums, ({ one, many }) => ({
+    coverImage: one(galleryImages, {
+        fields: [galleryAlbums.coverImageId],
+        references: [galleryImages.id],
+    }),
+    images: many(galleryImages),
+    mocGalleryAlbums: many(mocGalleryAlbums),
+}));
+export const galleryFlagsRelations = relations(galleryFlags, ({ one }) => ({
+    image: one(galleryImages, {
+        fields: [galleryFlags.imageId],
+        references: [galleryImages.id],
+    }),
+}));
+export const mocInstructionsRelations = relations(mocInstructions, ({ many }) => ({
+    files: many(mocFiles),
+    galleryImages: many(mocGalleryImages),
+    galleryAlbums: many(mocGalleryAlbums),
+    partsLists: many(mocPartsLists),
+}));
+export const mocFilesRelations = relations(mocFiles, ({ one, many }) => ({
+    moc: one(mocInstructions, {
+        fields: [mocFiles.mocId],
+        references: [mocInstructions.id],
+    }),
+    partsLists: many(mocPartsLists),
+}));
+export const mocGalleryImagesRelations = relations(mocGalleryImages, ({ one }) => ({
+    moc: one(mocInstructions, {
+        fields: [mocGalleryImages.mocId],
+        references: [mocInstructions.id],
+    }),
+    galleryImage: one(galleryImages, {
+        fields: [mocGalleryImages.galleryImageId],
+        references: [galleryImages.id],
+    }),
+}));
+export const mocGalleryAlbumsRelations = relations(mocGalleryAlbums, ({ one }) => ({
+    moc: one(mocInstructions, {
+        fields: [mocGalleryAlbums.mocId],
+        references: [mocInstructions.id],
+    }),
+    galleryAlbum: one(galleryAlbums, {
+        fields: [mocGalleryAlbums.galleryAlbumId],
+        references: [galleryAlbums.id],
+    }),
+}));
+export const mocPartsListsRelations = relations(mocPartsLists, ({ one, many }) => ({
+    moc: one(mocInstructions, {
+        fields: [mocPartsLists.mocId],
+        references: [mocInstructions.id],
+    }),
+    file: one(mocFiles, {
+        fields: [mocPartsLists.fileId],
+        references: [mocFiles.id],
+    }),
+    parts: many(mocParts),
+}));
+export const mocPartsRelations = relations(mocParts, ({ one }) => ({
+    partsList: one(mocPartsLists, {
+        fields: [mocParts.partsListId],
+        references: [mocPartsLists.id],
+    }),
+}));
+// Note: No user relations - userId is a Cognito reference, not a FK
+// ─────────────────────────────────────────────────────────────────────────────
+// Telemetry Schema (INFR-0040)
+// ─────────────────────────────────────────────────────────────────────────────
+export const telemetrySchema = pgSchema('telemetry');
+export const workflowEventTypeEnum = telemetrySchema.enum('workflow_event_type', [
+    'item_state_changed',
+    'step_completed',
+    'story_changed',
+    'gap_found',
+    'flow_issue',
+]);
+/**
+ * Workflow Event Payload Schema
+ * Event-specific data stored in JSONB payload column.
+ * Each event_type may have different payload structure.
+ * Per CLAUDE.md: Using Zod schema with z.infer<> instead of TypeScript type alias
+ */
+export const WorkflowEventPayloadSchema = z
+    .object({
+    // Common fields across all event types
+    message: z.string().optional(),
+    error: z.string().optional(),
+    metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+    // Event-type specific fields
+    previousState: z.string().optional(),
+    newState: z.string().optional(),
+    stepName: z.string().optional(),
+    duration: z.number().optional(),
+    tokens: z.number().optional(),
+    cost: z.number().optional(),
+    gapType: z.string().optional(),
+    severity: z.string().optional(),
+})
+    .passthrough(); // Allow additional properties like Record<string, unknown>
+export const workflowEvents = telemetrySchema.table('workflow_events', {
+    eventId: uuid('event_id').primaryKey().defaultRandom(),
+    eventType: workflowEventTypeEnum('event_type').notNull(),
+    eventVersion: integer('event_version').notNull().default(1),
+    ts: timestamp('ts').notNull().defaultNow(),
+    runId: text('run_id'),
+    itemId: text('item_id'),
+    workflowName: text('workflow_name'),
+    agentRole: text('agent_role'),
+    status: text('status'),
+    payload: jsonb('payload').$type(),
+    // INFR-0041: Metadata columns for distributed tracing and debugging
+    correlationId: uuid('correlation_id'), // AC-6: Link to OpenTelemetry trace IDs
+    source: text('source'), // AC-7: Source system/service that emitted event
+    emittedBy: text('emitted_by'), // AC-8: Agent/node that emitted event
+}, table => ({
+    uniqueEventId: uniqueIndex('idx_workflow_events_event_id_unique').on(table.eventId),
+    eventTypeTsIdx: index('idx_workflow_events_event_type_ts').on(table.eventType, table.ts),
+    runIdTsIdx: index('idx_workflow_events_run_id_ts').on(table.runId, table.ts),
+    itemIdIdx: index('idx_workflow_events_item_id').on(table.itemId),
+    workflowNameIdx: index('idx_workflow_events_workflow_name').on(table.workflowName),
+    agentRoleIdx: index('idx_workflow_events_agent_role').on(table.agentRole),
+    statusIdx: index('idx_workflow_events_status').on(table.status),
+    tsIdx: index('idx_workflow_events_ts').on(table.ts),
+}));
+// Note (KBAR-0010): KBAR schemas are defined in @repo/database-schema package
+// and exported from the schema/index.ts file. They are automatically discovered
+// by Drizzle when the db client is initialized with the full schema.
+// ─────────────────────────────────────────────────────────────────────────────
+// Artifacts Schema (INFR-0110)
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTE: Artifacts schema, context sessions, and context packs are now imported directly
+// from @repo/database-schema to avoid cyclic dependency. Import them directly:
+// import { artifactsSchema, contextSessions, contextPacks } from '@repo/database-schema'

@@ -1,0 +1,52 @@
+schema: 1
+story_id: WINT-2060
+timestamp: 2026-03-07T00:00:00Z
+failure_source: code-review-failed
+iteration: 1
+issues_to_fix:
+  - id: 1
+    file: "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+    line: null
+    issue: "Duplicated readDoc utility function — identical implementation exists in populate-domain-kb.ts and populate-project-context.ts. Extract to shared utility."
+    severity: critical
+    auto_fixable: false
+  - id: 2
+    file: "packages/backend/mcp-tools/src/scripts/__tests__"
+    line: null
+    issue: "Consider creating shared test utilities for populate-* integration tests (low priority warning)."
+    severity: low
+    auto_fixable: false
+focus_files:
+  - "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+  - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+  - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+  - "packages/backend/mcp-tools/src/scripts/shared-utils.ts"
+
+fix_applied:
+  status: complete
+  timestamp: 2026-03-07T00:00:00Z
+  description: |
+    Removed the local readDoc wrapper function from all three populate-* scripts.
+    Each script already imported readDoc as readDocUtil from ./utils/read-doc.js.
+    The thin wrappers (function readDoc(relPath) { return readDocUtil(relPath, CALLER_TAG) })
+    were the duplication — removed them and replaced with direct readDocUtil calls.
+
+    Changes per file:
+    - populate-library-cache.ts: removed local readDoc wrapper + "File helpers" section header.
+      Default readFn now uses inline lambda: relPath => readDocUtil(relPath, CALLER_TAG)
+    - populate-domain-kb.ts: removed local readDoc wrapper + "File helpers" section header.
+      Call site (line ~408) changed from readDoc('plans/stories/ADR-LOG.md') to
+      readDocUtil('plans/stories/ADR-LOG.md', CALLER_TAG)
+    - populate-project-context.ts: removed local readDoc wrapper.
+      Call site changed from readDoc(pack.sourceFile) to readDocUtil(pack.sourceFile, CALLER_TAG)
+
+  issues_fixed:
+    - id: 1
+      resolution: "Removed duplicated local readDoc wrappers from all three scripts. Each now calls readDocUtil directly with CALLER_TAG."
+    - id: 2
+      resolution: "No action taken — LOW severity warning, not required to fix per review."
+
+  new_errors_introduced: none
+  pre_existing_errors: |
+    Cannot find module '@repo/logger' and related TS2307 errors exist across the mcp-tools package
+    (pre-existing build environment issue, confirmed in original review as unrelated to WINT-2060).

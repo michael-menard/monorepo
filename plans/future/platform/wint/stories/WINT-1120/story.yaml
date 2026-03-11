@@ -1,0 +1,30 @@
+id: WINT-1120
+title: "Validate Foundation Phase — Story CRUD, Shim, Commands, Unified Schema, and Worktree Integration"
+status: uat
+priority: P1
+points: 5
+phase: 1
+experiment_variant: "control"
+epic: wint
+story_type: spike
+touches_backend: true
+touches_frontend: false
+touches_database: false
+touches_infra: false
+depends_on:
+  - WINT-1040
+  - WINT-1050
+  - WINT-1060
+  - WINT-1070
+  - WINT-1160
+blocks:
+  - WINT-2010
+created_at: "2026-02-20"
+updated_at: "2026-02-24T21:00:00Z"
+qa_verdict: "CONDITIONAL_PASS"
+qa_gate: "PASS"
+elaboration_started_at: "2026-02-20T00:00:00Z"
+elaboration_completed_at: "2026-02-20T00:00:00Z"
+elaboration_verdict: "CONDITIONAL PASS"
+elaboration_summary: "0 MVP-critical gaps, 0 ACs added, 11 KB entries deferred. Story is executable as written once implementation gate clears (all five dependencies at uat or completed). CONDITIONAL PASS handling fully specified in AC-14 with EVIDENCE.yaml proof artifact."
+implementation_gate: "All five dependencies (WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160) must reach uat or completed before implementation begins"

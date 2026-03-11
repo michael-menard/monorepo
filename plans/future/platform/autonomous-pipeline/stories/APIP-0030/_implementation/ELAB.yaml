@@ -1,0 +1,235 @@
+story_id: APIP-0030
+story_title: LangGraph Platform Docker Deployment
+analysis_date: 2026-02-25
+analyst: elab-analyst
+preliminary_verdict: CONDITIONAL_PASS
+
+# ---------------------------------------------------------------------------
+# 9-Point Audit Checklist Results
+# ---------------------------------------------------------------------------
+
+checklist:
+  scope_alignment:
+    verdict: FAIL
+    notes: >
+      The stories.index.md lists APIP-0030 as depending only on APIP-0020, but
+      the story frontmatter declares depends_on: [APIP-5006, APIP-0020]. APIP-5006
+      (server provisioning) is the hard predecessor — the server must exist before
+      Docker Compose can be deployed. The missing APIP-5006 dependency in the index
+      is a scheduling risk. All other scope elements are consistent between index
+      and story body.
+
+  internal_consistency:
+    verdict: FAIL
+    notes: >
+      story.yaml goal reads "Deploy the supervisor graph as a durable, restart-safe
+      long-running process with automatic state checkpointing" — this directly
+      contradicts APIP ADR-001 Decision 2, which explicitly states the supervisor
+      is NOT a LangGraph graph and is NOT deployed via LangGraph Platform. The
+      story body and non-goals correctly reflect the clarified scope. The story.yaml
+      stub was carried over from the original planning stub and never updated.
+      ACs, non-goals, and test plan are mutually consistent. The contradiction is
+      confined to story.yaml.
+
+  reuse_first:
+    verdict: PASS
+    notes: >
+      Strong reuse plan documented. Story explicitly reuses patterns from
+      infra/compose.lego-app.yaml (healthchecks, named volumes, restart policy,
+      init container pattern). Reuses minio-init one-shot container pattern.
+      Reuses KB pgvector connection pool isolation pattern for Aurora. No
+      unnecessary new conventions introduced.
+
+  ports_and_adapters:
+    verdict: PASS
+    notes: >
+      Not applicable — pure infrastructure story with no TypeScript, no Lambda,
+      no API endpoints, and no service layer. Docker Compose services follow
+      standard conventions. SEC-001 resolution confirms port 8124 is
+      localhost-only, satisfying security constraints.
+
+  local_testability:
+    verdict: PASS
+    notes: >
+      All tests are operational/manual (docker compose config, curl, ss, psql)
+      which is appropriate for an infrastructure story. Coverage waiver and E2E
+      exemption are both declared. HP-1 through HP-7 in the test plan cover
+      AC-1 through AC-8 adequately.
+
+  decision_completeness:
+    verdict: PASS
+    notes: >
+      Key decisions resolved: APIP ADR-001 Decision 2 (supervisor is plain TS,
+      not LangGraph), SEC-001 (port 8124 localhost-only), PLAT-002 (checkpoint
+      schema documented). dev-feasibility notes that the exact LangGraph Platform
+      Docker image name and version tag must be confirmed before implementation —
+      a minor open item that is acceptable for infrastructure stories at this stage.
+
+  risk_disclosure:
+    verdict: PASS
+    notes: >
+      APIP-5006 hard predecessor dependency is explicitly gated in the story and
+      subtasks. Aurora max_connections exhaustion risk is mitigated with a
+      dedicated connection pool. Studio UI port exposure is controlled via
+      localhost binding. Image version pinning requirement is called out.
+      Risks are well-disclosed and mitigated.
+
+  story_sizing:
+    verdict: PASS
+    notes: >
+      8 ACs (at the threshold), 0 endpoints, no frontend work, no multiple
+      independent features bundled, 3 files to create/modify, 0 packages
+      touched. Only 1 sizing indicator triggered (AC count at threshold) — does
+      not meet the 2+ indicator threshold required to recommend a split.
+
+  subtask_decomposition:
+    verdict: PASS
+    notes: >
+      6 subtasks with full AC coverage. ST-1 is the prerequisite gate.
+      ST-2 covers AC-1, AC-3, AC-5. ST-3 covers AC-2. ST-4 covers
+      observability (supporting). ST-5 covers AC-7, AC-8. ST-6 covers
+      AC-4, AC-5, AC-6. Dependencies form a valid DAG:
+      ST-1 -> ST-2 -> ST-3 -> ST-5 -> ST-6, ST-2 -> ST-4. All subtasks
+      have verification commands and canonical file references.
+
+# ---------------------------------------------------------------------------
+# Gaps
+# ---------------------------------------------------------------------------
+
+gaps:
+  - id: GAP-001
+    severity: high
+    category: scope_alignment
+    title: Index missing APIP-5006 dependency
+    description: >
+      stories.index.md shows APIP-0030 depends only on APIP-0020, but the story
+      frontmatter correctly declares depends_on: [APIP-5006, APIP-0020]. APIP-5006
+      (server provisioning) is the hard predecessor — the deployment target server
+      must exist before any Docker Compose configuration can be applied. Omitting
+      APIP-5006 from the index could cause the story to be scheduled before its
+      hard dependency is satisfied.
+    resolution: >
+      Update stories.index.md to add APIP-5006 to the dependency column for
+      APIP-0030. The entry should read depends_on: [APIP-5006, APIP-0020].
+    blocking: true
+    requires_story_redesign: false
+    decision: auto_fixed
+    resolution_applied: "Updated stories.index.md to include APIP-5006 in dependency column"
+
+  - id: GAP-002
+    severity: medium
+    category: internal_consistency
+    title: story.yaml goal contradicts ADR-001 Decision 2 and story body
+    description: >
+      story.yaml `goal` field states "Deploy the supervisor graph as a durable,
+      restart-safe long-running process with automatic state checkpointing."
+      This conflicts with APIP ADR-001 Decision 2, which explicitly states the
+      supervisor is NOT a LangGraph graph. The story body and non-goals correctly
+      reflect the actual scope (deploying LangGraph Platform infrastructure, not
+      the supervisor). The story.yaml was not updated after the ADR clarification
+      was incorporated.
+    resolution: >
+      Update story.yaml `goal` field to accurately reflect the story scope, e.g.:
+      "Deploy the LangGraph Platform Docker configuration on the dedicated server
+      with PostgreSQL-backed checkpointing and Studio UI, providing the runtime
+      infrastructure for future worker graph deployments."
+    blocking: false
+    requires_story_redesign: false
+    decision: auto_fixed
+    resolution_applied: "Updated story.yaml goal to reflect actual scope per ADR-001 Decision 2"
+
+# ---------------------------------------------------------------------------
+# Non-Blocking Opportunities
+# ---------------------------------------------------------------------------
+
+opportunities:
+  - id: OPP-001
+    category: observability
+    effort: low
+    title: Docker log rotation configuration
+    description: >
+      No mention of Docker log rotation for the langgraph-platform container.
+      Long-running services can fill disk if logging is unbounded. Standard
+      practice is to add `logging.driver: json-file` with `max-size` and
+      `max-file` options to the compose service definition.
+    recommendation: >
+      Add log rotation config to the langgraph-platform service in compose.yaml,
+      consistent with how it is configured for other long-running services in
+      infra/compose.lego-app.yaml.
+    decision: log_to_kb
+
+  - id: OPP-002
+    category: performance
+    effort: low
+    title: Container resource limits
+    description: >
+      No `deploy.resources.limits` are specified for any containers. On a
+      dedicated but shared server, an unbounded container could exhaust memory
+      or CPU, impacting other services.
+    recommendation: >
+      Add reasonable resource limits to the langgraph-platform and postgres
+      service definitions. Limits can be conservative initially and tuned
+      after load testing.
+    decision: log_to_kb
+
+  - id: OPP-003
+    category: observability
+    effort: medium
+    title: Checkpoint database backup strategy
+    description: >
+      The langgraph_checkpoint Aurora database stores critical graph state for
+      recovery. The story documents the schema and connection pool isolation but
+      does not mention backup/recovery strategy. Loss of checkpoint data would
+      break graph resumption after failures.
+    recommendation: >
+      Document the Aurora automated backup schedule that covers the
+      langgraph_checkpoint database, and note any restore procedure in the
+      README. This can reference existing Aurora backup infrastructure if
+      already in place.
+    decision: log_to_kb
+
+  - id: OPP-004
+    category: ux_polish
+    effort: low
+    title: Environment variable documentation
+    description: >
+      The compose file uses environment variables (e.g., LANGGRAPH_CHECKPOINT_DATABASE_URL
+      and related secrets) but there is no `.env.example` file or documented list
+      of required variables and their expected formats.
+    recommendation: >
+      Add an `.env.example` file alongside the compose.yaml listing all required
+      environment variables with placeholder values and brief comments. This
+      reduces onboarding friction and prevents misconfiguration.
+    decision: log_to_kb
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+verdict: CONDITIONAL PASS
+decided_at: "2026-02-25T00:00:00Z"
+decided_by: elab-autonomous-decider
+
+summary:
+  total_checklist_items: 9
+  passed: 7
+  failed: 2
+  gaps_found: 2
+  gaps_resolved: 2
+  gaps_blocking: 1
+  gaps_non_blocking: 1
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0
+  verdict_rationale: >
+    The story is well-written with strong reuse patterns, clear scope boundaries,
+    and a comprehensive test plan appropriate for an infrastructure story. Two gaps
+    were identified and auto-resolved: GAP-001 (high — index missing APIP-5006
+    dependency, fixed in stories.index.md) and GAP-002 (medium — story.yaml goal
+    contradicted ADR-001, fixed in story.yaml). Neither required story redesign.
+    Four non-blocking opportunities logged to KB for future reference. No new ACs
+    needed — existing 8 ACs are comprehensive for the story scope.
+  actions_taken:
+    - "AUTO-FIXED: stories.index.md — added APIP-5006 to APIP-0030 dependency column"
+    - "AUTO-FIXED: story.yaml — updated goal field to reflect actual scope per ADR-001"
+    - "KB-LOGGED: 4 non-blocking opportunities (log rotation, resource limits, backup docs, env vars)"

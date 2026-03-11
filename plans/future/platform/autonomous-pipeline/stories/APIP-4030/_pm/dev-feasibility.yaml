@@ -1,0 +1,179 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-4030 is architecturally sound and follows well-established patterns in the codebase.
+  The five analysis functions are independently implementable and testable. DB table definitions
+  follow the wintSchema.table() pattern already used across wint.ts. Fire-and-forget insert
+  semantics follow persist-learnings.ts exactly. The blocked queue routing dependency on APIP-2010
+  is acknowledged as a staging dependency — the auditor's detection logic can be built and tested
+  independently using a stub interface; only the final routing wiring is gated on APIP-2010.
+  Cron registration with APIP-3090 is similarly decoupled: the DepAuditCronTask interface is
+  defined here, plugging in one line when APIP-3090 ships.
+complexity: high
+change_surface:
+  areas:
+    - packages/backend/database-schema/src/schema/wint.ts
+    - packages/backend/orchestrator/src/nodes/ (new dep-audit/ directory)
+    - packages/backend/orchestrator/src/config/dep-equivalences.yaml (new)
+    - migrations/ (two new SQL files following APIP-5007 naming)
+  endpoints: []
+  deploy_touchpoints:
+    - "Run migration against lego_dev (port 5432) to create wint.dep_audit_runs and wint.dep_audit_findings"
+    - "drizzle-kit check must pass post-migration"
+    - "Register DepAuditCronTask with APIP-3090 cron infrastructure when available"
+
+risks:
+  - finding: "APIP-2010 blocked queue API not yet stable — high-risk routing cannot be fully wired until APIP-2010 ships"
+    mitigation: "Define DepBlockedQueueClient interface (Zod-typed); implement stub that logs a warning and records the would-be item. Wire real APIP-2010 API in a follow-on subtask or when APIP-2010 reaches Ready to Work."
+  - finding: "pnpm audit --json schema varies between pnpm v7/v8/v9 — brittle parsing could silently miss vulnerabilities"
+    mitigation: "Use .passthrough() on PnpmAuditOutputSchema; parse only the fields we need; log unknown fields at debug level; integration-test against the actual pinned pnpm version in this repo."
+  - finding: "bundlephobia public API rate limit — estimateBundleImpact could fail under multiple concurrent audit runs"
+    mitigation: "Mark bundle estimation as info-only severity (never block); implement graceful null return on any HTTP error; prefer local cost-of-modules CLI invocation if available; add exponential backoff with single retry."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "wint.dep_audit_runs and wint.dep_audit_findings tables exist in APIP-5001 test DB after migration"
+  - "drizzle-kit check passes with no schema drift"
+  - "DepAuditRunSchema.parse and DepAuditFindingSchema.parse succeed on round-trip rows"
+  - "Unit tests cover all five analysis functions with injectable mocks"
+  - "runDepAudit DB failure path: logger.warn called, no throw"
+  - "pnpm check-types passes on all new TypeScript files"
+
+subtasks:
+  - id: ST-1
+    title: "Define wint.dep_audit_runs and wint.dep_audit_findings Drizzle tables + Zod schemas"
+    goal: "Create the two new wint-schema tables with proper column types, indices, and drizzle-zod auto-generated schemas exported from database-schema package."
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - packages/backend/database-schema/src/schema/wint.ts
+    acs: ["AC-1", "AC-2", "AC-4"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/database-schema"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Write SQL migration files for dep_audit_runs and dep_audit_findings"
+    goal: "Create two APIP-5007-compatible numbered migration SQL files that create both tables in the wint schema, including FK constraint and indices."
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - migrations/0NN_dep_audit_runs.sql
+      - migrations/0NN_dep_audit_findings.sql
+    acs: ["AC-1", "AC-2", "AC-3"]
+    depends_on: ST-1
+    verification: "Apply migration to APIP-5001 test DB; drizzle-kit check passes"
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: "Implement detectNewPackages() — package.json diff across workspaces"
+    goal: "Compare workspace package.json files before/after merge (via git diff) to produce a typed PackageChangeSummary (added, updated, removed arrays)."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/detect-new-packages.ts
+    acs: ["AC-5"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- detectNewPackages"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Implement checkOverlap() — equivalence config YAML loader and overlap detection"
+    goal: "Load dep-equivalences.yaml from configurable path; flag any new package that has a functional equivalent already installed. Return typed overlap findings."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dep-audit/detect-new-packages.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/check-overlap.ts
+      - packages/backend/orchestrator/src/config/dep-equivalences.yaml
+    acs: ["AC-6"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator -- checkOverlap"
+    estimated_tokens: 8000
+
+  - id: ST-5
+    title: "Implement estimateBundleImpact() — bundlephobia/cost-of-modules bundle size estimation"
+    goal: "Estimate minified+gzipped byte delta for each new package. Gracefully returns null on network error or private package. Never blocks on failure."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dep-audit/check-overlap.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/estimate-bundle-impact.ts
+    acs: ["AC-7"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator -- estimateBundleImpact"
+    estimated_tokens: 6000
+
+  - id: ST-6
+    title: "Implement runPnpmAudit() — shell out to pnpm audit --json with Zod parsing"
+    goal: "Execute pnpm audit --json via injectable toolRunner; parse output via PnpmAuditOutputSchema with .passthrough(); return typed VulnerabilityFinding array. Graceful empty-return on parse failure."
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-pnpm-audit.ts
+    acs: ["AC-8"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator -- runPnpmAudit"
+    estimated_tokens: 8000
+
+  - id: ST-7
+    title: "Implement detectUnmaintained() — npm registry age check"
+    goal: "Query npm registry for each new package; flag packages with no release in 12+ months or with deprecated field. Injectable fetchFn for testability."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-pnpm-audit.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/detect-unmaintained.ts
+    acs: ["AC-9"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator -- detectUnmaintained"
+    estimated_tokens: 7000
+
+  - id: ST-8
+    title: "Implement runDepAudit() orchestrator + DepAuditThresholdsSchema config + advisory lock"
+    goal: "Orchestrate ST-3 through ST-7 functions; persist dep_audit_runs and dep_audit_findings rows via fire-and-forget insert (injectable db); include pg_try_advisory_lock concurrency guard; return DepAuditResultSchema."
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+    acs: ["AC-10", "AC-12"]
+    depends_on: ST-7
+    verification: "pnpm test --filter @repo/orchestrator -- runDepAudit"
+    estimated_tokens: 12000
+
+  - id: ST-9
+    title: "Implement high-risk blocked queue routing with deduplication"
+    goal: "For findings at or above blockingThreshold severity, call APIP-2010 blocked queue API (stub DepBlockedQueueClient during development); deduplicate by storyId:packageName:findingType key."
+    files_to_read:
+      - plans/future/platform/autonomous-pipeline/backlog/APIP-2010/APIP-2010.md
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/route-high-risk-findings.ts
+    acs: ["AC-11"]
+    depends_on: ST-8
+    verification: "pnpm test --filter @repo/orchestrator -- routeHighRiskFindings"
+    estimated_tokens: 9000
+
+  - id: ST-10
+    title: "Register DepAuditCronTask with APIP-3090 cron infrastructure"
+    goal: "Define DepAuditCronTask interface implementing APIP-3090's cron task contract; register trigger condition (package.json or pnpm-lock.yaml changed in post-merge). Stub trigger until APIP-3090 ships."
+    files_to_read:
+      - plans/future/platform/autonomous-pipeline/backlog/APIP-3090/story.yaml
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/cron/dep-audit-cron-task.ts
+    acs: ["AC-13"]
+    depends_on: ST-8
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 5000
+
+  - id: ST-11
+    title: "Write integration tests: migration apply, round-trip DB insert/read, real pnpm audit"
+    goal: "Integration tests against APIP-5001 test DB: migrations apply cleanly, dep_audit_runs and dep_audit_findings insert/read round-trip, real pnpm audit --json call parses without error."
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/dep-audit.integration.test.ts
+    acs: ["AC-14", "AC-15"]
+    depends_on: ST-8
+    verification: "pnpm test:integration --filter @repo/orchestrator -- dep-audit"
+    estimated_tokens: 10000

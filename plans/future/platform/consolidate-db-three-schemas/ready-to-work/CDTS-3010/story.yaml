@@ -1,0 +1,29 @@
+id: CDTS-3010
+title: Audit Consumers of Empty Aurora Schemas
+status: backlog
+priority: medium
+phase: 3
+feature: "Grep entire monorepo for references to wint, kbar, artifacts, telemetry, umami schemas. Confirm all references are historical (applied migration files) or already patched. Verify wint in lego_dev (port 5432) is unaffected. Confirm all 5 schemas have 0 tables via information_schema."
+goal: "Zero active code references to the five empty Aurora schemas. Database boundary between KB (port 5433) and lego_dev (port 5432) documented."
+depends_on:
+  - CDTS-1050
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Code audit
+  - "Grep entire monorepo for schema references: wint, kbar, artifacts, telemetry, umami"
+  - "Classify each reference as: (a) historical migration file — acceptable, (b) active code — must be patched, (c) config — must be updated"
+  - "All active code references patched or confirmed as false positives"
+
+  # Database boundary
+  - "Document that wint in lego_dev (port 5432) is a DIFFERENT schema from wint in knowledgebase (port 5433)"
+  - "Confirm lego_dev.wint is NOT affected by CDTS-3020 DROP"
+  - "Verify connection strings in all migration scripts target port 5433 explicitly"
+
+  # Schema emptiness verification
+  - "Run information_schema.tables query on knowledgebase DB for each of the 5 schemas"
+  - "Confirm all 5 schemas have exactly 0 tables (wint tables were moved to analytics in CDTS-1010)"
+  - "Document any unexpected objects (views, sequences, functions) in these schemas"
+risk_notes: "The wint schema name exists in BOTH databases — audit must carefully distinguish by connection string/port. A false positive in the grep results could lead to incorrectly patching live code."
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

@@ -1,0 +1,55 @@
+schema: 1
+story_id: WISH-2012
+date: 2026-01-29
+verdict: conditional
+audit:
+  scope_alignment:
+    status: pass
+    note: Story scope matches stories.index.md entry exactly. No extra endpoints, infrastructure, or features introduced.
+  internal_consistency:
+    status: pass
+    note: Goals align with Non-goals. All ACs align with scope. Test Plan matches ACs comprehensively.
+  reuse-first:
+    status: pass
+    note: QA Discovery Notes show AC16 was added to require explicit evaluation of @repo/accessibility package during
+      implementation. Story correctly plans to enhance existing package if needed. Issue resolved.
+  ports_&_adapters:
+    status: pass
+    note: No API endpoints planned. Frontend-only testing infrastructure work. No service layer required.
+  local_testability:
+    status: pass
+    note: Story creates test infrastructure itself. Test plan includes 15+ axe-core tests, 10+ keyboard tests, 8+ screen
+      reader tests, and integration test patterns.
+  decision_completeness:
+    status: pass
+    note: No blocking TBDs or unresolved design decisions. Story is focused and well-scoped.
+  risk_disclosure:
+    status: pass
+    note: "Four risks explicitly documented with mitigation strategies: axe-core false positives, keyboard navigation
+      brittleness, screen reader mock limitations, and performance overhead."
+  story_sizing:
+    status: conditional pass
+    note: "**15 Acceptance Criteria** (exceeds 8 AC threshold). However, story is focused infrastructure setup with clear
+      bounded scope. No multiple independent features bundled. All ACs relate to single goal: accessibility testing
+      harness. Touches 1 package primarily. Recommend monitoring during implementation; consider split only if effort
+      exceeds 2 points."
+gaps:
+  - id: GAP-1
+    category: requirements
+    severity: important
+    finding: Missing reuse evaluation for @repo/accessibility
+    recommendation: ""
+  - id: GAP-4
+    category: requirements
+    severity: important
+    finding: Playwright integration gap
+    recommendation: ""
+split_required: true
+follow_ups:
+  - finding: "AC16: Evaluate @repo/accessibility package enhancements during WISH-2012 implementation"
+    story_id: null
+  - finding: "AC17: Document manual screen reader testing requirements and explicit WISH-2121 dependency"
+    story_id: null
+tokens:
+  input: 0
+  output: 0

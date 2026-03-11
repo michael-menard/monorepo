@@ -1,0 +1,397 @@
+schema: 2
+story_id: APIP-4030
+timestamp: '2026-03-01T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Define wint.dep_audit_runs and wint.dep_audit_findings Drizzle tables + Zod schemas via drizzle-zod
+      createInsertSchema/createSelectSchema
+    files:
+      - packages/backend/database-schema/src/schema/wint.ts
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/db
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-4
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Write SQL migration files for dep_audit_runs (0030) and dep_audit_findings (0031) following APIP-5007 sequential
+      naming convention with BEGIN/COMMIT guards and IF NOT EXISTS
+    files:
+      - packages/backend/database-schema/src/migrations/app/0030_apip_4030_dep_audit_runs.sql
+      - packages/backend/database-schema/src/migrations/app/0031_apip_4030_dep_audit_findings.sql
+    files_to_read:
+      - packages/backend/database-schema/src/migrations/app/0029_apip_3020_model_affinity.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/db
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement detectNewPackages() — compare workspace package.json snapshots and return typed PackageChangeSummary
+      (Zod-validated) with added/updated/removed arrays
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/detect-new-packages.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-5
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement checkOverlap() with YAML equivalence config loader and overlap detection; seed dep-equivalences.yaml
+      with 5+ package groups (date-fns/dayjs/moment, lodash/ramda/underscore, axios/node-fetch/got/ky, uuid/nanoid/cuid,
+      winston/pino/bunyan)
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/check-overlap.ts
+      - packages/backend/orchestrator/src/config/dep-equivalences.yaml
+    files_to_read:
+      - packages/backend/orchestrator/src/config/model-assignments.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-6
+      - AC-18
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Implement estimateBundleImpact() — bundlephobia API integration with injectable fetchFn, graceful null return on
+      network errors, single retry with exponential backoff
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/estimate-bundle-impact.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-7
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Implement runPnpmAudit() — shell out to pnpm audit --json with injectable toolRunner, parse via
+      PnpmAuditOutputSchema with .passthrough(), handle malformed output gracefully with logger.warn
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-pnpm-audit.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-8
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Implement detectUnmaintained() — query npm registry for each package with injectable fetchFn, flag packages with
+      no release in 12+ months or with deprecated field, graceful 404 handling
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/detect-unmaintained.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-9
+  - id: 8
+    subtask_id: ST-8
+    description: >-
+      Implement runDepAudit() orchestrator with DepAuditThresholdsSchema config (blockingThreshold: 'high',
+      maxBundleDeltaBytes: 102400, unmaintainedAgeDays: 365), pg_try_advisory_lock guard (LOCK_KEYS.DEP_AUDIT in
+      constants.ts), and fire-and-forget DB persistence
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+      - packages/backend/orchestrator/src/cron/constants.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/constants.ts
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+    dependencies:
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-10
+      - AC-12
+  - id: 9
+    subtask_id: ST-9
+    description: >-
+      Implement route-high-risk-findings.ts — DepBlockedQueueClient stub interface (logs warning, records would-be
+      item), deduplication by storyId:packageName:findingType, threshold-gated routing
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/route-high-risk-findings.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+    dependencies:
+      - 8
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-11
+  - id: 10
+    subtask_id: ST-10
+    description: >-
+      Define DepAuditCronTask Zod schema (taskId, trigger, changedFilesFilter, run method) and implement
+      dep-audit.job.ts following pattern-miner.job.ts pattern; stub run logs payload via @repo/logger until APIP-3090
+      ships
+    files:
+      - packages/backend/orchestrator/src/cron/jobs/dep-audit.job.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+      - packages/backend/orchestrator/src/cron/constants.ts
+    dependencies:
+      - 8
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-13
+      - AC-17
+  - id: 11
+    subtask_id: ST-11
+    description: >-
+      Write unit tests for all five analysis functions + runDepAudit orchestration + deduplication + threshold routing;
+      write integration tests for migration apply and round-trip DB insert/read
+    files:
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/dep-audit.integration.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/detect-new-packages.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/check-overlap.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/estimate-bundle-impact.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/run-pnpm-audit.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/detect-unmaintained.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/run-dep-audit.test.ts
+      - packages/backend/orchestrator/src/nodes/dep-audit/__tests__/route-high-risk-findings.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    dependencies:
+      - 8
+      - 9
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-14
+      - AC-15
+files_to_change:
+  - path: packages/backend/database-schema/src/schema/wint.ts
+    action: modify
+    reason: >-
+      Add wint.dep_audit_runs and wint.dep_audit_findings table definitions with createInsertSchema/createSelectSchema
+      (AC-1, AC-2, AC-4)
+  - path: packages/backend/database-schema/src/migrations/app/0030_apip_4030_dep_audit_runs.sql
+    action: create
+    reason: SQL migration for dep_audit_runs table (AC-1, AC-3)
+  - path: packages/backend/database-schema/src/migrations/app/0031_apip_4030_dep_audit_findings.sql
+    action: create
+    reason: SQL migration for dep_audit_findings table with FK to dep_audit_runs, indexes on run_id and severity (AC-2, AC-3)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/detect-new-packages.ts
+    action: create
+    reason: detectNewPackages() returning PackageChangeSummary (AC-5)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/check-overlap.ts
+    action: create
+    reason: checkOverlap() with YAML config loader (AC-6)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/estimate-bundle-impact.ts
+    action: create
+    reason: estimateBundleImpact() with bundlephobia integration (AC-7)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/run-pnpm-audit.ts
+    action: create
+    reason: runPnpmAudit() shelling out to pnpm audit --json (AC-8)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/detect-unmaintained.ts
+    action: create
+    reason: detectUnmaintained() querying npm registry (AC-9)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/run-dep-audit.ts
+    action: create
+    reason: >-
+      runDepAudit() orchestrator with advisory lock, fire-and-forget persistence, DepAuditThresholdsSchema (AC-10,
+      AC-12)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/route-high-risk-findings.ts
+    action: create
+    reason: DepBlockedQueueClient stub + dedup routing for high-risk findings (AC-11)
+  - path: packages/backend/orchestrator/src/cron/jobs/dep-audit.job.ts
+    action: create
+    reason: DepAuditCronTask Zod schema + CronJobDefinition registration (AC-13, AC-17)
+  - path: packages/backend/orchestrator/src/config/dep-equivalences.yaml
+    action: create
+    reason: Seeded equivalence map with 5+ package groups for checkOverlap (AC-18)
+  - path: packages/backend/orchestrator/src/cron/constants.ts
+    action: modify
+    reason: Add LOCK_KEYS.DEP_AUDIT integer constant for pg_try_advisory_lock
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/dep-audit.integration.test.ts
+    action: create
+    reason: 'Integration tests: migration apply, round-trip DB insert/read, real pnpm audit (AC-15)'
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/detect-new-packages.test.ts
+    action: create
+    reason: Unit tests for detectNewPackages() (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/check-overlap.test.ts
+    action: create
+    reason: Unit tests for checkOverlap() including missing config fallback (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/estimate-bundle-impact.test.ts
+    action: create
+    reason: Unit tests for estimateBundleImpact() including network failure (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/run-pnpm-audit.test.ts
+    action: create
+    reason: Unit tests for runPnpmAudit() including malformed JSON (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/detect-unmaintained.test.ts
+    action: create
+    reason: Unit tests for detectUnmaintained() including npm 404 (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/run-dep-audit.test.ts
+    action: create
+    reason: Unit tests for runDepAudit() happy path and DB failure path (AC-14)
+  - path: packages/backend/orchestrator/src/nodes/dep-audit/__tests__/route-high-risk-findings.test.ts
+    action: create
+    reason: Unit tests for deduplication and threshold routing (AC-14)
+commands_to_run:
+  - command: pnpm check-types --filter @repo/db
+    when: after ST-1 and ST-2 (schema + migrations)
+    required: true
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after each subtask ST-3 through ST-10
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after ST-11 (all tests written)
+    required: true
+  - command: pnpm build
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      wint.dep_audit_runs table definition in wint.ts + migration file 0030; integration test confirms table exists in
+      APIP-5001 test DB
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      wint.dep_audit_findings table definition in wint.ts + migration file 0031 with FK to dep_audit_runs and indexes on
+      run_id/severity; integration test confirms
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: 'Integration test: drizzle-kit check passes with no schema drift after both migrations applied to test DB'
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: >-
+      DepAuditRunSchema and DepAuditFindingSchema exported from wint.ts via drizzle-zod
+      createInsertSchema/createSelectSchema; unit tests parse valid rows without error
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit tests: add/update/remove cases + empty diff case (detect-new-packages.test.ts); HP-1 and ED-1 happy paths
+      pass
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit tests: equivalence match returns flagged entry (HP-2), no-match returns empty (HP-3), missing config
+      gracefully returns empty with logger.warn (EC-3)
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      Unit tests: success case returns byte count, network error returns null without throw (EC-4); injectable fetchFn
+      used in all tests
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      Unit tests: valid JSON output returns VulnerabilityFindings (HP-4), malformed JSON returns empty array +
+      logger.warn (EC-2); injectable toolRunner used
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      Unit tests: stale package flagged (HP-5), recent package not flagged, npm 404 graceful return (EC-5); injectable
+      fetchFn used
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Unit tests: happy path (HP-6) persists run + findings rows, DB failure warns without throw (EC-1),
+      pg_try_advisory_lock second call exits early (EC-7)
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: >-
+      Unit tests: high-severity finding creates blocked queue item (HP-6), deduplication prevents second item with same
+      key (EC-6), no high-severity = no items (ED-2)
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      DepAuditThresholdsSchema with documented defaults (blockingThreshold: 'high', maxBundleDeltaBytes: 102400,
+      unmaintainedAgeDays: 365); unit test parses valid config (ED-3)
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      dep-audit.job.ts exports CronJobDefinition with changedFilesFilter defaulting to ['package.json',
+      'pnpm-lock.yaml']; implements DepAuditCronTask interface
+    evidence_type: file
+  - ac_id: AC-14
+    planned_evidence: >-
+      All unit test files in dep-audit/__tests__/ covering HP-1 through HP-9, EC-1 through EC-7, ED-1 through ED-5 pass
+      via pnpm test --filter @repo/orchestrator
+    evidence_type: test
+  - ac_id: AC-15
+    planned_evidence: >-
+      dep-audit.integration.test.ts: both tables exist after migration, round-trip insert/read of dep_audit_runs and
+      dep_audit_findings rows, Zod schemas parse without error
+    evidence_type: test
+  - ac_id: AC-16
+    planned_evidence: >-
+      pnpm check-types --filter @repo/orchestrator and pnpm check-types --filter @repo/db pass with zero errors after
+      all steps
+    evidence_type: command
+  - ac_id: AC-17
+    planned_evidence: >-
+      DepAuditCronTask Zod schema exported from dep-audit.job.ts with taskId, trigger, changedFilesFilter, and run
+      method accepting { storyId, changedFiles, commitSha }
+    evidence_type: file
+  - ac_id: AC-18
+    planned_evidence: >-
+      dep-equivalences.yaml seeded with 5+ groups: date-fns/dayjs/moment, lodash/ramda/underscore,
+      axios/node-fetch/got/ky, uuid/nanoid/cuid, winston/pino/bunyan
+    evidence_type: file
+architectural_decisions: []
+complexity: complex
+notes:
+  - >-
+    Last migration is 0029_apip_3020_model_affinity.sql — new migrations are 0030 (dep_audit_runs) and 0031
+    (dep_audit_findings)
+  - cron/ and config/ directories already exist in orchestrator src — no directory creation needed
+  - LOCK_KEYS.DEP_AUDIT constant (e.g., 42002) must be added to packages/backend/orchestrator/src/cron/constants.ts
+  - >-
+    Advisory lock pattern from pattern-miner.job.ts: tryAcquireAdvisoryLock with getCronDbClient, pool released in
+    finally block
+  - 'Per KB lesson: wint schema tables live in lego_dev port 5432 (not port 5433 KB database)'
+  - >-
+    Per KB lesson: pg_try_advisory_lock pattern from APIP-3020 — fixed integer keys, session-level, auto-released on
+    disconnect
+  - 'Per KB lesson: Drizzle ORM enum comparisons in wint schema require raw SQL tag for ::text casts'
+  - >-
+    DepBlockedQueueClient is a stub interface (logs warning) until APIP-2010 ships — no real blocked queue wiring in
+    this story
+  - >-
+    APIP-3090 cron infrastructure exists (cron/registry.ts, cron/adapter.ts) — dep-audit.job.ts can be added to jobs
+    array when APIP-3090 wiring is completed
+  - PnpmAuditOutputSchema must use .passthrough() to survive pnpm major version upgrades
+  - estimateBundleImpact is info-only severity — graceful null return on all errors, never blocks pipeline
+  - >-
+    Integration tests for migrations require APIP-5001 test database — tag with .integration.test.ts suffix for CI
+    exclusion from unit-only runs
+  - AC-16 (check-types + lint) verified at end of each subtask step — not a single final step

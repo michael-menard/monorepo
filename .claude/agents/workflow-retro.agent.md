@@ -30,7 +30,7 @@ Retrospective agent that analyzes completed story outcomes, detects patterns, lo
 ## Mission
 
 Establish continuous workflow improvement by:
-1. Loading story metrics from completed stories (OUTCOME.yaml if present, fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml)
+1. Loading story metrics from completed stories (OUTCOME.yaml if present, fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml)
 2. Comparing actual vs estimated metrics
 3. Detecting recurring patterns across stories
 4. Writing significant patterns to KB
@@ -104,19 +104,22 @@ For each story, read in priority order:
 
 **Fallback (use when OUTCOME.yaml absent — these always exist):**
 - `_implementation/CHECKPOINT.yaml` — phase timing, iterations, status
-- `_implementation/TOKEN-LOG.md` — per-phase token counts (parse markdown table rows)
+- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
 - `_implementation/REVIEW.yaml` — code review findings, cycles, severity breakdown
 - `_implementation/EVIDENCE.yaml` — AC coverage, pass/fail per AC
+- `_implementation/TOKEN-LOG.md` — [BACKWARD-COMPAT ONLY] legacy per-phase token counts for stories predating KB migration; only read if KB storyTokenUsage returns no entries
 
 **Always read:**
 - `story.yaml` — estimated_tokens, ACs, story_type
-- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data (preferred over TOKEN-LOG.md)
 
-**Pending KB entries (scan and surface):**
+**Pending KB entries (scan, stamp, and surface):**
 - `_implementation/DEFERRED-KB-WRITE.yaml` — check `status: pending`
 - `_implementation/DEFERRED-KB-WRITES.yaml` — check `status: pending`
+- Also scan story root for `DEFERRED-KB-WRITE*.yaml`
 
 Report any pending deferred write files found — they contain lessons that haven't reached KB yet.
+
+**Stamp processed files:** After scanning a deferred write file, append a `processed_at` timestamp and `imported: true` to the YAML frontmatter. This marks the file as seen by the retro agent and starts the TTL clock for cleanup.
 
 ---
 
@@ -223,11 +226,11 @@ Before analyzing any story:
 1. Locate stories (check both `{feature_dir}/done/` and `plans/_complete/` stage subdirs)
 2. For each story, load metrics using the priority order in the Inputs section:
    - Preferred: `OUTCOME.yaml`
-   - Fallback: `CHECKPOINT.yaml` + `TOKEN-LOG.md` + `REVIEW.yaml` + `EVIDENCE.yaml`
+   - Fallback: `CHECKPOINT.yaml` + KB storyTokenUsage + `REVIEW.yaml` + `EVIDENCE.yaml` (+ `TOKEN-LOG.md` as legacy-only last resort)
    - Note which source was used in the RETRO output (`data_source: outcome | fallback`)
 3. Load story.yaml for context (estimated_tokens, ACs, story_type)
 4. Query KB for existing patterns
-5. Scan `_implementation/` for pending `DEFERRED-KB-WRITE*.yaml` files — collect and report them
+5. Scan `_implementation/` and story root for pending `DEFERRED-KB-WRITE*.yaml` files — collect, report, and stamp with `processed_at` + `imported: true`
 
 ### Phase 2: Single-Story Analysis
 
@@ -268,10 +271,11 @@ story_analysis:
     pre_existing_type_errors: {N}
     pre_existing_build_failures: {N}
 
-  pending_deferred_writes:      # populated if DEFERRED-KB-WRITE*.yaml found with status: pending
+  pending_deferred_writes:      # populated if DEFERRED-KB-WRITE*.yaml found
     - file: "_implementation/DEFERRED-KB-WRITES.yaml"
       entry_count: {N}
-      status: pending
+      status: pending | stamped    # stamped = processed_at was written
+      processed_at: "{ISO timestamp}"
 ```
 
 ### Phase 3: Cross-Story Pattern Detection
@@ -329,7 +333,19 @@ kb_add_lesson({
 })
 ```
 
-### Phase 5: Generate Recommendations
+### Phase 5: Deferred Write TTL Cleanup (batch/epic mode only)
+
+In batch or epic mode, after all stories are analyzed, prune stale deferred write files:
+
+1. Find all `DEFERRED-KB-WRITE*.yaml` files across the analyzed feature directories
+2. Delete any file where:
+   - `processed_at` exists AND is older than 30 days, OR
+   - File creation date (from `created_at`, `deferred_at`, or `generated_at` field) is older than 30 days AND no `processed_at` stamp exists
+3. Log deletions: `TTL cleanup: deleted {N} stale deferred write files`
+
+This ensures deferred write files don't accumulate indefinitely. The 30-day TTL gives enough time for retros to process them and for humans to review if needed.
+
+### Phase 6: Generate Recommendations
 
 Write `WORKFLOW-RECOMMENDATIONS.md`:
 
@@ -424,9 +440,10 @@ End with exactly one of:
 ## Non-Negotiables
 
 - MUST check for existing `RETRO-{STORY_ID}.yaml` before analyzing a story — skip if present (unless --force)
-- MUST read OUTCOME.yaml if present; fall back to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml if absent
+- MUST read OUTCOME.yaml if present; fall back to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml if absent (TOKEN-LOG.md is legacy-only last resort for pre-KB stories)
 - MUST record `data_source: outcome | fallback` in each story's RETRO output
-- MUST scan for pending `DEFERRED-KB-WRITE*.yaml` files and surface them in output
+- MUST scan for pending `DEFERRED-KB-WRITE*.yaml` files, stamp them with `processed_at`, and surface them in output
+- MUST prune deferred write files older than 30 days in batch/epic mode (TTL cleanup)
 - MUST query KB for existing patterns first
 - MUST apply significance thresholds before KB writes
 - MUST include evidence (story IDs) with patterns

@@ -1,0 +1,171 @@
+schema: 1
+story_id: WINT-9107
+timestamp: '2026-03-03T09:58:00Z'
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 33
+    fail: 0
+  integration:
+    pass: 25
+    fail: 0
+  runner_total:
+    pass: 312
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+    exempt_reason: Backend-only story — frontend_impacted false per SCOPE.yaml; ADR-006 E2E skip condition applies
+
+coverage: 94.74
+coverage_meets_threshold: true
+coverage_detail:
+  statements: 94.74
+  branches: 94.09
+  functions: 94.69
+  lines: 94.74
+  threshold: 80
+  scope: src/runner/** (scoped via --coverage.include)
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    vi.useFakeTimers() used correctly in all timing-sensitive tests (HALF_OPEN, backoff).
+    All mocks properly scoped with beforeEach/afterEach. @repo/logger mocked per convention.
+    No console.log usage. No setTimeout anti-patterns. Error assertions use optional chaining
+    before dereferencing. ZodError instantiation is valid. Tests use semantic Vitest patterns.
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[0]'
+    notes: >-
+      Gap analysis document verified at packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md.
+      Comprehensive AC-by-AC comparison of WINT-9105 requirements vs runner implementation.
+      Correctly identifies file_io/db_write/git presets as deferred design decisions.
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[1]'
+    notes: >-
+      Test "WINT-9107: NodeCircuitBreaker per-node isolation > createNode() produces independent
+      circuit breaker instances" confirmed present and passing in node-factory.test.ts.
+      Opens nodeA circuit (CIRCUIT_OPEN code verified), asserts nodeB still proceeds.
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[2]'
+    notes: >-
+      Test "WINT-9107: RETRY_PRESETS distinct values > createLLMNode and createToolNode apply
+      distinct retry presets" confirmed passing. Asserts RETRY_PRESETS.llm.maxAttempts=5,
+      RETRY_PRESETS.tool.maxAttempts=2, distinct backoffMs and timeoutMs values.
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[3]'
+    notes: >-
+      Verified in both node-factory.test.ts (classifyError sole decision point suite: ZodError
+      non-retryable=1 attempt, generic Error retryable=3 attempts) and integration.test.ts
+      (Error classification end-to-end: ZodError=1 attempt, NodeTimeoutError retried,
+      TypeError not retried). classifyError confirmed as sole retry decision point.
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[4]'
+    notes: >-
+      Test "WINT-9107: NodeRetryExhaustedError routes to routingFlags.blocked > retry exhaustion
+      sets routingFlags.blocked=true with no unhandled exception" confirmed passing in
+      integration.test.ts. 3 attempts exhausted, result.routingFlags.blocked===true, no exception.
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[5]'
+    notes: >-
+      Test "WINT-9107: CIRCUIT_OPEN state update has code CIRCUIT_OPEN" confirmed passing.
+      Drives circuit to OPEN via 2 failures (failureThreshold=2), asserts
+      result.errors[0].code==='CIRCUIT_OPEN' and result.routingFlags.blocked===true.
+      HALF_OPEN recovery and probe-failure re-open tests also pass (25/25 integration).
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[6]'
+    notes: >-
+      Node author guide verified at packages/backend/orchestrator/docs/node-author-guide.md.
+      Documents canonical import path from @repo/orchestrator/runner, all factory functions,
+      RETRY_PRESETS reference table, circuit breaker isolation explanation, and testing patterns.
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[7]'
+    notes: >-
+      Coverage re-run confirmed: src/runner scoped via --coverage.include=src/runner/**
+      yields 94.74% statements, 94.09% branches, 94.69% functions — all exceed 80% threshold.
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[8]'
+    notes: >-
+      Full runner test suite re-run confirmed: 312 tests across 11 test files, 0 failures.
+      All pre-existing runner tests continue to pass without modification.
+
+  - ac_id: AC-10
+    status: PARTIAL
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[9]'
+    notes: >-
+      4 pre-existing TypeScript errors confirmed unchanged and unrelated to WINT-9107 scope:
+      src/graphs/elaboration.ts(1037,78) TS2554,
+      src/nodes/elaboration/affinity-reader.ts(226,38) TS2307,
+      src/nodes/elaboration/index.ts(102,3) TS2305,
+      src/nodes/elaboration/index.ts(107,8) TS2305.
+      All are in elaboration/ nodes — zero runner/ scope errors. PARTIAL accepted per review verdict.
+
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: 'EVIDENCE.yaml:acceptance_criteria[10]'
+    notes: >-
+      pnpm eslint on node-factory.test.ts and integration.test.ts returned no output = 0 errors,
+      0 warnings. Confirmed clean.
+
+architecture_compliant: true
+architecture_notes: >-
+  Story is backend-only (no frontend, no DB, no infra). All runner source files unchanged
+  (circuit-breaker.ts, retry.ts, node-factory.ts, types.ts, errors.ts) — per Non-Goals.
+  @repo/logger mocked correctly in tests. No barrel files created. Direct source imports used.
+  vi.useFakeTimers() used per ADR-005 for timing-sensitive unit tests. No console.log.
+  Zod-first types throughout (ZodError imported from 'zod', not redefined). No unsafe casts.
+
+http_files_executed: false
+http_files_exist: false
+
+issues: []
+
+lessons_to_record:
+  - lesson: >-
+      Scoping coverage with --coverage.include="src/<module>/**" isolates meaningful coverage
+      numbers when the package has many untested modules. Without scoping, coverage appears
+      misleadingly low (3.33% statements) because untouched adapters/graphs are included.
+    category: pattern
+    tags: ['testing', 'coverage', 'vitest', 'orchestrator']
+
+  - lesson: >-
+      vi.useFakeTimers() in beforeEach with vi.useRealTimers() in afterEach is the correct
+      pattern for HALF_OPEN circuit breaker tests — avoids flaky real-timer waits while
+      maintaining per-test isolation. Documented in node-author-guide.md per ADR-005.
+    category: pattern
+    tags: ['testing', 'vitest', 'circuit-breaker', 'fake-timers']
+
+  - lesson: >-
+      Pre-existing TS errors in unrelated modules (elaboration/) should not block story QA
+      when the story scope is explicitly limited to runner/ and all runner/ files compile cleanly.
+      PARTIAL verdict on AC-10 is acceptable when REVIEW verdict is PASS and errors are documented.
+    category: pattern
+    tags: ['typescript', 'qa', 'pre-existing-errors']
+
+tokens:
+  in: 18000
+  out: 3500

@@ -1,0 +1,26 @@
+schema: 1
+story_id: WINT-4020
+timestamp: '2026-03-08T07:45:00Z'
+failure_source: code-review-failed
+iteration: 1
+issues_to_fix:
+  - id: 1
+    file: packages/backend/sidecars/rules-registry/src/http-handler.ts
+    line: 35
+    issue: >
+      Duplicated HTTP utility functions (sendJson, readJsonBody) — identical
+      to @repo/sidecar-http-utils sendJson and readBody. Should import from
+      shared package instead. Other sidecars (cohesion, context-pack) already
+      use @repo/sidecar-http-utils.
+    severity: critical
+    auto_fixable: false
+    recommendation: |
+      1. Add @repo/sidecar-http-utils to rules-registry/package.json dependencies
+      2. Import { sendJson, readBody } from '@repo/sidecar-http-utils'
+      3. Adapt readJsonBody wrapper to parse JSON from readBody string result
+      4. Remove local sendJson and readJsonBody function definitions
+focus_files:
+  - packages/backend/sidecars/rules-registry/src/http-handler.ts
+  - packages/backend/sidecars/rules-registry/src/rules-registry.ts
+  - packages/backend/sidecars/rules-registry/src/__tests__/http-handler.test.ts
+  - packages/backend/sidecars/rules-registry/src/__tests__/integration/rules.integration.test.ts

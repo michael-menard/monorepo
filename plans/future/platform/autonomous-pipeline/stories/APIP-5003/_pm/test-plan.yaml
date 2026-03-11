@@ -1,0 +1,199 @@
+strategy: manual+operational
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  infra_touched: true
+  frontend_impacted: false
+  e2e_exemption:
+    declared: true
+    reason: "Pure infrastructure and documentation story — no frontend surface exists. Story type: infra/config/documentation. ADR-006 exemption applies: frontend_impacted: false."
+  coverage_waiver:
+    declared: true
+    reason: "No TypeScript business logic produced. QA gate = compose config validation + port binding verification + security checklist audit pass. 45% coverage threshold waived per knowledge base lesson for pure infra/config stories."
+
+happy_path_tests:
+  - id: HP-1
+    title: "compose.langgraph-server.yaml passes docker compose config validation"
+    setup: "APIP-0030 must be complete; compose.langgraph-server.yaml must exist at infra/langgraph-server/compose.langgraph-server.yaml with all LangGraph Platform services defined and hardening directives applied"
+    action: "Run: docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config"
+    expected: "Command exits with code 0; no errors reported; hardened service definitions appear in output"
+    evidence: "Terminal output showing exit code 0 and compose config dump with security directives visible (read_only, cap_drop, user, port bindings)"
+    acs: ["AC-8"]
+
+  - id: HP-2
+    title: "Ports 8123 and 8124 are bound to 127.0.0.1 only on the deployed server"
+    setup: "LangGraph Platform services running via docker compose on the dedicated server; APIP-0030 deployment complete"
+    action: "Run: ss -tlnp | grep -E '8123|8124'"
+    expected: "Output shows 127.0.0.1:8123 and 127.0.0.1:8124 — no entries showing 0.0.0.0:8123, 0.0.0.0:8124, :::8123, or :::8124"
+    evidence: "Terminal output from ss -tlnp showing 127.0.0.1 bind addresses for both ports; screenshot or log capture"
+    acs: ["AC-2"]
+
+  - id: HP-3
+    title: "Container security options reflect applied hardening"
+    setup: "LangGraph Platform containers running on the deployed server"
+    action: "Run: docker inspect --format='{{.HostConfig.SecurityOpt}}' <langgraph-platform-container-name>"
+    expected: "Returns configured security options (e.g., no-new-privileges:true if applicable, or empty if only cap_drop used); not empty unless all options default"
+    evidence: "Terminal output from docker inspect showing SecurityOpt configuration"
+    acs: ["AC-3"]
+
+  - id: HP-4
+    title: "Container has dropped ALL Linux capabilities"
+    setup: "LangGraph Platform containers running on the deployed server"
+    action: "Run: docker inspect --format='{{.HostConfig.CapDrop}}' <langgraph-platform-container-name>"
+    expected: "Returns [ALL] or equivalent capability list indicating cap_drop: [ALL] applied"
+    evidence: "Terminal output from docker inspect showing CapDrop: [ALL]"
+    acs: ["AC-3"]
+
+  - id: HP-5
+    title: "Configuration volume mounts are read-only"
+    setup: "LangGraph Platform containers running on the deployed server"
+    action: "Run: docker inspect --format='{{range .Mounts}}{{.Source}} RW:{{.RW}}{{println}}{{end}}' <langgraph-platform-container-name>"
+    expected: "All configuration file mounts show RW:false; only named volumes for persistent state (checkpoint data, logs) show RW:true"
+    evidence: "Terminal output from docker inspect Mounts section showing RW:false for config mounts"
+    acs: ["AC-4"]
+
+  - id: HP-6
+    title: "All LangGraph Platform image tags are pinned to specific versions"
+    setup: "compose.langgraph-server.yaml available at infra/langgraph-server/"
+    action: "Run: grep 'image:' infra/langgraph-server/compose.langgraph-server.yaml | grep ':latest'"
+    expected: "Command returns empty output — no image references use :latest tag"
+    evidence: "Empty terminal output confirming no :latest tags; full image list from compose file showing pinned version tags"
+    acs: ["AC-5"]
+
+  - id: HP-7
+    title: "SECURITY.md exists and contains all required sections"
+    setup: "APIP-5003 implementation complete"
+    action: "Run: test -f infra/langgraph-server/SECURITY.md && echo PASS || echo FAIL; then review file contents for required sections"
+    expected: "File exists; contains: (a) network boundary statement, (b) port inventory table, (c) Phase 2 auth/authz deferred statement, (d) container secret injection mechanism documentation, (e) operational verification checklist, (f) Phase 2 design placeholder section"
+    evidence: "File existence check passes; manual review confirms all required sections present per AC-1, AC-6, AC-7, AC-9"
+    acs: ["AC-1", "AC-6", "AC-7", "AC-9"]
+
+  - id: HP-8
+    title: "Secret env var references use variable substitution pattern"
+    setup: "compose.langgraph-server.yaml with hardening applied"
+    action: "Review environment: stanza in compose.langgraph-server.yaml for LangGraph Platform services; check for hardcoded secrets"
+    expected: "All secret values use ${VAR_NAME} variable reference pattern; no plaintext credentials appear in compose file"
+    evidence: "grep output showing only ${...} patterns for secret env vars; no plaintext API keys or passwords visible"
+    acs: ["AC-6"]
+
+error_cases:
+  - id: EC-1
+    title: "Hardening directive incompatible with LangGraph Platform image — compose startup fails"
+    setup: "compose.langgraph-server.yaml with read_only: true applied to LangGraph Platform service that writes to root filesystem at startup"
+    action: "Run: docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up langgraph-platform"
+    expected: "Compose startup fails with error indicating read-only filesystem violation; SECURITY.md documents this incompatibility and provides fallback using tmpfs: for required writable paths"
+    evidence: "Docker startup error log; SECURITY.md section documenting which hardening directives are and are not compatible with the LangGraph Platform image"
+    acs: ["AC-3"]
+
+  - id: EC-2
+    title: "Port 8123 accidentally bound to 0.0.0.0 — external access possible"
+    setup: "compose.langgraph-server.yaml with port binding changed from '127.0.0.1:8123:8123' to '8123:8123' (or '0.0.0.0:8123:8123')"
+    action: "Run: ss -tlnp | grep '8123'"
+    expected: "Output shows 0.0.0.0:8123 or :::8123 — security boundary violation detected via verification procedure"
+    evidence: "ss output demonstrating how the verification checklist catches misconfiguration; confirms that operational checklist (AC-7) is effective"
+    acs: ["AC-2", "AC-7"]
+
+  - id: EC-3
+    title: "Hardcoded credential appears in compose.langgraph-server.yaml"
+    setup: "compose.langgraph-server.yaml environment stanza contains a plaintext API key instead of ${VAR_NAME}"
+    action: "Code review check: grep -E '(API_KEY|SECRET|PASSWORD|TOKEN)\s*=\s*[^$]' infra/langgraph-server/compose.langgraph-server.yaml"
+    expected: "Pattern is detected; AC-6 prevents merge until env var reference pattern is restored"
+    evidence: "grep output showing the hardcoded credential; demonstrates that the review gate catches this anti-pattern"
+    acs: ["AC-6"]
+
+  - id: EC-4
+    title: ".env file not excluded from git tracking"
+    setup: "infra/langgraph-server/.env file containing real secrets exists in the repo"
+    action: "Run: git status infra/langgraph-server/.env"
+    expected: ".env file is untracked (shown in .gitignore); git status does not show it as a modified or new file to be committed"
+    evidence: "git status output showing .env is ignored; .gitignore contents confirming the exclusion"
+    acs: ["AC-6"]
+
+edge_cases:
+  - id: ED-1
+    title: "LangGraph Platform image does not support non-root user — gap documented"
+    setup: "LangGraph Platform Docker image runs as root with no USER directive in Dockerfile"
+    action: "Attempt to set user: <non-root-uid> in compose service definition; observe container behavior; check SECURITY.md for gap documentation"
+    expected: "If image does not support non-root: compose service fails or warnings appear; SECURITY.md explicitly documents this as a known gap with a GitHub issue reference for Phase 2 remediation"
+    evidence: "SECURITY.md gap documentation section; GitHub issue reference; docker inspect showing running user"
+    acs: ["AC-3"]
+
+  - id: ED-2
+    title: "ss command not available on server — netstat fallback documented"
+    setup: "Server OS does not have iproute2 package installed; ss command not found"
+    action: "Run: ss -tlnp on server; observe 'command not found' error; check SECURITY.md for fallback"
+    expected: "SECURITY.md operational checklist documents both ss -tlnp (primary) and netstat -tlnp (fallback) with note about netstat deprecation; operator can use either"
+    evidence: "SECURITY.md checklist section showing both commands; note about iproute2 package requirement"
+    acs: ["AC-7"]
+
+  - id: ED-3
+    title: "compose.langgraph-server.yaml does not yet exist (APIP-0030 incomplete)"
+    setup: "APIP-0030 has not delivered compose.langgraph-server.yaml"
+    action: "Attempt to begin APIP-5003 implementation without APIP-0030 complete"
+    expected: "Implementation is blocked; dev feasibility worker explicitly documents that APIP-5003 must not begin until APIP-0030 is complete; gate check noted in story"
+    evidence: "Story file documents implementation gate check requirement; no hardening applied to non-existent compose file"
+    acs: ["AC-2", "AC-3", "AC-4", "AC-8"]
+
+  - id: ED-4
+    title: "SECURITY.md Phase 2 placeholder is missing required deferred items"
+    setup: "SECURITY.md created without all required Phase 2 placeholder items"
+    action: "Review SECURITY.md Phase 2 section against AC-9 checklist"
+    expected: "Section includes all four deferred items: (1) LangGraph Platform API authentication (bearer token or mTLS), (2) Studio UI access control, (3) network policy enforcement, (4) estimated prerequisites"
+    evidence: "SECURITY.md content review against AC-9; all four deferred items present"
+    acs: ["AC-9"]
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  infra:
+    operational_commands:
+      - "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config"
+      - "ss -tlnp | grep -E '8123|8124'"
+      - "netstat -tlnp | grep -E '8123|8124'  # fallback if ss unavailable"
+      - "docker inspect --format='{{.HostConfig.SecurityOpt}}' <container>"
+      - "docker inspect --format='{{.HostConfig.CapDrop}}' <container>"
+      - "docker inspect --format='{{range .Mounts}}{{.Source}} RW:{{.RW}}{{println}}{{end}}' <container>"
+      - "grep 'image:' infra/langgraph-server/compose.langgraph-server.yaml | grep ':latest'"
+      - "test -f infra/langgraph-server/SECURITY.md && echo PASS || echo FAIL"
+    assertions:
+      - "compose config exits 0"
+      - "no 0.0.0.0 or :: bind addresses for ports 8123, 8124"
+      - "CapDrop shows [ALL] for LangGraph Platform containers"
+      - "all config mounts show RW:false"
+      - "no :latest image tags"
+      - "SECURITY.md file exists with all required sections"
+      - "no plaintext credentials in compose file"
+      - ".env excluded by .gitignore"
+
+manual_cases:
+  - id: MC-1
+    title: "Security documentation completeness review"
+    steps:
+      - "Read infra/langgraph-server/SECURITY.md"
+      - "Verify network boundary statement declares ports 8123 and 8124 as internal-only"
+      - "Verify port inventory table lists all LangGraph server services with service name, internal port, external binding, protocol, access scope columns"
+      - "Verify explicit statement that full auth/authz is deferred to Phase 2 with reference to FOLLOW-UPS SEC-001-full-auth"
+      - "Verify container secret injection mechanism section with env var pattern, .env gitignore requirement, and APIP-5004 cross-reference"
+      - "Verify operational verification checklist with numbered steps, expected command output, and PASS/FAIL indicators"
+      - "Verify Phase 2 design placeholder section with all four deferred items"
+    expected: "All sections present, accurate, and sufficient for an operator to verify security posture post-compose-change"
+
+  - id: MC-2
+    title: "APIP-5004 boundary coordination verification"
+    steps:
+      - "Review SECURITY.md container secret injection section"
+      - "Confirm documented env var names match APIP-5004's actual variable names (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, etc.)"
+      - "Confirm APIP-5003 does not implement SecretsClient or AWS Secrets Manager resources"
+      - "Confirm cross-reference to APIP-5004 is accurate and specific"
+    expected: "Boundary between APIP-5003 (injection mechanism documentation) and APIP-5004 (secrets retrieval implementation) is clear and non-overlapping"
+
+fixture_definitions: []
+
+risks:
+  - "APIP-0030 not complete when APIP-5003 begins implementation — compose.langgraph-server.yaml does not exist; all operational tests will fail until APIP-0030 delivers"
+  - "LangGraph Platform image may not support read_only: true or non-root user — requires image compatibility research before compose hardening; EC-1 and ED-1 cover this scenario"
+  - "ss command availability on server OS not confirmed — ED-2 covers fallback; pre-verify with APIP-5006 team"
+  - "APIP-5004 env var names not finalized — MC-2 requires coordination before AC-6 can be verified complete"
+  - "Operational tests require real deployed server (ADR-005) — cannot run in CI without server access; all HP and EC tests are manual/operational"

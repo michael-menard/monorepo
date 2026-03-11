@@ -1,0 +1,13 @@
+id: "KFMB-3030"
+title: "Eliminate stories.index.md — Script Updates"
+status: backlog
+priority: medium
+phase: 3
+feature: "Update resolve-plan.sh, implement-dispatcher.sh, generate-stories.sh, implement-stories.sh, sync-work-order.py"
+goal: "All scripts discover and track story state through KB API calls."
+depends_on: ["KFMB-3010"]
+endpoints: []
+infrastructure: ["Shell Scripts", "Python Scripts", "MCP Tools"]
+risk_notes: "Scripts currently use mv for state transitions; API calls require network availability."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

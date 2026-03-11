@@ -1,0 +1,21 @@
+schema: 1
+story_id: WINT-4150
+timestamp: '2026-03-09T17:15:00Z'
+current_phase: qa-verify
+last_successful_phase: qa-setup
+blocked: false
+blocked_reason: null
+forced: false
+iteration: 0
+max_iterations: 3
+e2e_gate: null
+warnings:
+  - >-
+    Pre-existing test failures in @repo/orchestrator (knowledge-context.test.ts,
+    story-v2-compatible.test.ts, qa.test.ts) due to @repo/logger not resolvable in story
+    worktree. Not caused by WINT-4150 changes.
+  - >-
+    TypeScript check-types reports pre-existing @repo/logger module not found errors.
+    New schema files have no TypeScript errors.
+feature_dir: plans/future/platform/wint
+completed_at: null

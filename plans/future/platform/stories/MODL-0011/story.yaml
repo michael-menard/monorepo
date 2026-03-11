@@ -1,0 +1,20 @@
+id: MODL-0011
+title: "Refactor Provider Base Class - DRY up Duplicated Methods"
+status: uat
+priority: P2
+epic: MODL
+wave: 2
+position: 1
+story_type: tech-debt
+points: 2
+touches_backend: true
+touches_frontend: false
+touches_database: false
+touches_infra: false
+created_at: "2026-02-14"
+started_at: "2026-02-14T18:45:00Z"
+completed_at: "2026-02-14T19:37:00Z"
+dependencies:
+  - MODL-0010
+technical_debt_resolution: true
+parent_story: MODL-0010

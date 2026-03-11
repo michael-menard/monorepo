@@ -1,0 +1,128 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  e2e: not_applicable
+
+happy_path_tests:
+  - id: HP-1
+    title: "Script inserts known epics into graph.epics on first run"
+    setup: "Empty graph.epics table in test DB (or mocked dbInsertFn)"
+    action: "Run populateGraphFeatures({ dbInsertEpicFn: mockFn }) with known epics list [WINT, KBAR, WISH, BUGF]"
+    expected: "mockFn called 4 times; result.epics = { attempted: 4, succeeded: 4, failed: 0 }"
+    evidence: "Vitest assertion on mockFn.calls.length and returned result shape"
+
+  - id: HP-2
+    title: "Script scans monorepo directories and inserts features into graph.features"
+    setup: "Mock node:fs to return known directory structure; mock dbInsertFeatureFn"
+    action: "Run populateGraphFeatures({ dbInsertFeatureFn: mockFn, monorepoRoot: testFixtureDir })"
+    expected: "Features discovered from handler dirs, component dirs, package dirs; mockFn called for each; result.features.succeeded > 0"
+    evidence: "Vitest assertion on mockFn call count matching fixture directory count"
+
+  - id: HP-3
+    title: "Result shape matches { attempted, succeeded, failed } for both epics and features"
+    setup: "Mock all DB insert functions"
+    action: "Run full populateGraphFeatures() with mock deps"
+    expected: "Returned object has .epics.attempted, .epics.succeeded, .epics.failed, .features.attempted, .features.succeeded, .features.failed as numbers"
+    evidence: "Vitest Zod validation of returned object against PopulateResult schema"
+
+  - id: HP-4
+    title: "graph.epics Drizzle schema is defined correctly in wint.ts"
+    setup: "Import wint.ts schema exports"
+    action: "Check that 'epics' table export exists with expected columns"
+    expected: "epics table has id (uuid PK), epicName (text unique not null), epicPrefix (text unique not null), description (text nullable), isActive (boolean default true), createdAt, updatedAt"
+    evidence: "Schema unit test in wint-graph-schema.test.ts asserting column presence"
+
+  - id: HP-5
+    title: "Migration file applies cleanly to dev DB"
+    setup: "Fresh dev DB with WINT schema present"
+    action: "Run drizzle migration push or apply 0036_wint_4030_graph_epics.sql"
+    expected: "graph.epics table created; SELECT * FROM graph.epics returns empty set (no errors)"
+    evidence: "psql output or drizzle migrate output showing table created"
+
+error_cases:
+  - id: EC-1
+    title: "DB insert failure for a single epic does not abort full run"
+    setup: "Mock dbInsertEpicFn to throw for 'KBAR' but succeed for others"
+    action: "Run populateGraphFeatures() with partially-failing epic insert mock"
+    expected: "result.epics = { attempted: 4, succeeded: 3, failed: 1 }; logger.error called once; script does not throw"
+    evidence: "Vitest assertion on result and spy on logger.error"
+
+  - id: EC-2
+    title: "DB insert failure for a single feature does not abort full run"
+    setup: "Mock dbInsertFeatureFn to throw on the 3rd call"
+    action: "Run populateGraphFeatures() with partially-failing feature insert mock"
+    expected: "result.features.failed === 1; rest inserted; no unhandled exception"
+    evidence: "Vitest assertion on result.features.failed count"
+
+  - id: EC-3
+    title: "Directory scan finds no subdirectories — empty result, no crash"
+    setup: "Mock fs to return empty directory listing for all scan paths"
+    action: "Run populateGraphFeatures()"
+    expected: "result.features = { attempted: 0, succeeded: 0, failed: 0 }; no error thrown"
+    evidence: "Vitest assertion on result.features.attempted === 0"
+
+edge_cases:
+  - id: ED-1
+    title: "Idempotency — running script twice on live DB produces identical row counts"
+    setup: "Dev DB with graph.epics and graph.features tables present; first run inserts all rows"
+    action: "Run pnpm tsx populate-graph-features.ts twice; query row counts before/after second run"
+    expected: "Row counts identical after both runs; result.epics.failed === 0 on second run (onConflictDoNothing)"
+    evidence: "Manual/integration test: SELECT COUNT(*) FROM graph.epics same before and after second run"
+
+  - id: ED-2
+    title: "Duplicate featureName in scan output — only one row inserted"
+    setup: "Mock fs scan to return same directory path twice in results"
+    action: "Run populateGraphFeatures() with duplicate feature name in input"
+    expected: "onConflictDoNothing absorbs duplicate; graph.features has 1 row for that featureName; result reflects skip"
+    evidence: "Vitest assertion on DB call count vs input count"
+
+  - id: ED-3
+    title: "graph.epics table schema test — epicName uniqueness constraint"
+    setup: "Test DB with graph.epics table"
+    action: "Insert same epicName twice via direct Drizzle insert"
+    expected: "Second insert throws unique constraint violation"
+    evidence: "Integration test asserting error on duplicate epicName insert"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "result.epics shape: { attempted: number, succeeded: number, failed: number }"
+      - "result.features shape: { attempted: number, succeeded: number, failed: number }"
+      - "graph.epics row count increases by 4 on first run, unchanged on second"
+      - "graph.features row count > 0 after first run; unchanged on second"
+      - "logger.error called once on single-item failure"
+  frontend: ~
+
+manual_cases:
+  - id: MC-1
+    title: "UAT: Run script against dev DB and verify rows via psql"
+    steps:
+      - "Run: pnpm tsx packages/backend/mcp-tools/src/scripts/populate-graph-features.ts from monorepo root"
+      - "Connect to dev DB: psql"
+      - "Run: SELECT epicName, epicPrefix FROM graph.epics;"
+      - "Run: SELECT featureName, featureType, packageName FROM graph.features LIMIT 20;"
+      - "Confirm at least WINT, KBAR, WISH, BUGF rows in graph.epics"
+      - "Confirm at least 5 feature rows in graph.features"
+      - "Run script again"
+      - "Re-run SELECT COUNT(*) on both tables — counts must be identical"
+    expected: "Rows present, idempotency confirmed, no DB errors"
+
+fixture_definitions:
+  - name: "mockEpicInsertFn"
+    type: "vi.fn() → Promise<void>"
+    description: "Replaces real DB insert for graph.epics in unit tests"
+  - name: "mockFeatureInsertFn"
+    type: "vi.fn() → Promise<void>"
+    description: "Replaces real DB insert for graph.features in unit tests"
+  - name: "testMonorepoRoot"
+    type: "string (tmpdir path)"
+    description: "Fixture directory tree mimicking monorepo structure for scan tests"
+
+risks:
+  - "Feature extraction heuristic may produce false positives (non-feature dirs matched) — unit tests use controlled fixture dirs"
+  - "Migration must be applied before integration tests run — document prerequisite"
+  - "CI has no live DB — all unit tests must use mocked dbInsertFn; integration test marked @integration and skipped in CI"
+  - "wint-graph-schema.test.ts may not exist yet — check if file needs to be created as part of AC-2 scope"

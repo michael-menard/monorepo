@@ -1,17 +1,18 @@
 /**
  * Deferred KB Writes Processing (KBMEM-022)
  *
- * Handles failed KB writes by queueing them for later processing.
- * When KB is unavailable during a write operation, the write is
- * saved to a deferred writes file and processed when KB reconnects.
+ * Handles failed KB writes by queueing them to a DB table for later processing.
+ * When KB is unavailable during a write operation, the write is saved to the
+ * deferred_writes table and processed when KB reconnects.
  *
- * @see plans/future/kb-memory-architecture/PLAN.md
+ * If the DB is completely down, the write is silently lost (accepted tradeoff).
  */
 
-import { readFile, writeFile, access, mkdir } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import { constants } from 'node:fs'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { logger } from '@repo/logger'
+import { deferredWrites } from '../db/schema.js'
 
 // ============================================================================
 // Schema Definitions
@@ -35,7 +36,7 @@ export const DeferredOperationTypeSchema = z.enum([
 export type DeferredOperationType = z.infer<typeof DeferredOperationTypeSchema>
 
 /**
- * Schema for a deferred write entry.
+ * Schema for a deferred write entry (DB row shape).
  */
 export const DeferredWriteEntrySchema = z.object({
   /** Unique ID for this deferred write */
@@ -47,42 +48,29 @@ export const DeferredWriteEntrySchema = z.object({
   /** The payload that was being written */
   payload: z.record(z.unknown()),
 
-  /** When the write was attempted */
-  timestamp: z.string().datetime(),
+  /** When the write was created */
+  created_at: z.coerce.date(),
 
   /** Error message from the failed attempt */
-  error: z.string(),
+  error: z.string().nullable(),
 
   /** Number of retry attempts */
   retry_count: z.number().int().min(0).default(0),
 
   /** Last retry attempt timestamp */
-  last_retry: z.string().datetime().optional(),
+  last_retry: z.coerce.date().nullable().optional(),
 
   /** Story ID if applicable */
-  story_id: z.string().optional(),
+  story_id: z.string().nullable().optional(),
 
   /** Agent that attempted the write */
-  agent: z.string().optional(),
+  agent: z.string().nullable().optional(),
+
+  /** When the write was successfully processed */
+  processed_at: z.coerce.date().nullable().optional(),
 })
 
 export type DeferredWriteEntry = z.infer<typeof DeferredWriteEntrySchema>
-
-/**
- * Schema for the deferred writes file structure.
- */
-export const DeferredWritesFileSchema = z.object({
-  /** Schema version for forward compatibility */
-  version: z.literal('1.0'),
-
-  /** Array of deferred writes */
-  writes: z.array(DeferredWriteEntrySchema),
-
-  /** Last updated timestamp */
-  updated_at: z.string().datetime(),
-})
-
-export type DeferredWritesFile = z.infer<typeof DeferredWritesFileSchema>
 
 /**
  * Schema for kb_queue_deferred_write input.
@@ -148,44 +136,63 @@ export type KbListDeferredWritesInput = z.infer<typeof KbListDeferredWritesInput
 /**
  * Result of queueing a deferred write.
  */
-export interface QueueDeferredWriteResult {
-  success: boolean
-  id: string
-  message: string
-}
+export const QueueDeferredWriteResultSchema = z.object({
+  success: z.boolean(),
+  id: z.string(),
+  message: z.string(),
+})
+
+export type QueueDeferredWriteResult = z.infer<typeof QueueDeferredWriteResultSchema>
 
 /**
  * Result of processing a single deferred write.
  */
-export interface ProcessedWrite {
-  id: string
-  operation: DeferredOperationType
-  status: 'success' | 'failed' | 'skipped'
-  error?: string
-}
+export const ProcessedWriteSchema = z.object({
+  id: z.string(),
+  operation: DeferredOperationTypeSchema,
+  status: z.enum(['success', 'failed', 'skipped']),
+  error: z.string().optional(),
+})
+
+export type ProcessedWrite = z.infer<typeof ProcessedWriteSchema>
 
 /**
  * Result of processing deferred writes.
  */
-export interface ProcessDeferredWritesResult {
-  success: boolean
-  dry_run: boolean
-  total: number
-  processed: number
-  succeeded: number
-  failed: number
-  writes: ProcessedWrite[]
-  message: string
-}
+export const ProcessDeferredWritesResultSchema = z.object({
+  success: z.boolean(),
+  dry_run: z.boolean(),
+  total: z.number(),
+  processed: z.number(),
+  succeeded: z.number(),
+  failed: z.number(),
+  writes: z.array(ProcessedWriteSchema),
+  message: z.string(),
+})
+
+export type ProcessDeferredWritesResult = z.infer<typeof ProcessDeferredWritesResultSchema>
 
 /**
  * Result of listing deferred writes.
  */
-export interface ListDeferredWritesResult {
-  success: boolean
-  total: number
-  writes: DeferredWriteEntry[]
-  message: string
+export const ListDeferredWritesResultSchema = z.object({
+  success: z.boolean(),
+  total: z.number(),
+  writes: z.array(DeferredWriteEntrySchema),
+  message: z.string(),
+})
+
+export type ListDeferredWritesResult = z.infer<typeof ListDeferredWritesResultSchema>
+
+// ============================================================================
+// Dependencies
+// ============================================================================
+
+/**
+ * Database dependency for deferred write operations.
+ */
+export interface DeferredWritesDeps {
+  db: NodePgDatabase<typeof import('../db/schema.js')>
 }
 
 // ============================================================================
@@ -193,66 +200,9 @@ export interface ListDeferredWritesResult {
 // ============================================================================
 
 /**
- * Default path for deferred writes file.
- * Relative to the git worktree root at /_implementation/
- */
-export const DEFAULT_DEFERRED_WRITES_PATH = '_implementation/DEFERRED-KB-WRITES.yaml'
-
-/**
  * Maximum retry count before marking as permanent failure.
  */
 export const MAX_RETRY_COUNT = 5
-
-// ============================================================================
-// File Operations
-// ============================================================================
-
-/**
- * Check if a file exists.
- */
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath, constants.F_OK)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Read deferred writes file.
- */
-export async function readDeferredWritesFile(filePath: string): Promise<DeferredWritesFile> {
-  if (!(await fileExists(filePath))) {
-    return {
-      version: '1.0',
-      writes: [],
-      updated_at: new Date().toISOString(),
-    }
-  }
-
-  const content = await readFile(filePath, 'utf-8')
-
-  // Parse YAML-like format (simple JSON for now)
-  const parsed = JSON.parse(content)
-  return DeferredWritesFileSchema.parse(parsed)
-}
-
-/**
- * Write deferred writes file.
- */
-export async function writeDeferredWritesFile(
-  filePath: string,
-  data: DeferredWritesFile,
-): Promise<void> {
-  // Ensure directory exists
-  const dir = dirname(filePath)
-  await mkdir(dir, { recursive: true })
-
-  // Write as JSON (could be YAML if we add a YAML library)
-  const content = JSON.stringify(data, null, 2)
-  await writeFile(filePath, content, 'utf-8')
-}
 
 // ============================================================================
 // Operations
@@ -262,41 +212,29 @@ export async function writeDeferredWritesFile(
  * Queue a failed write for later processing.
  *
  * @param input - Write details to queue
- * @param filePath - Path to deferred writes file
+ * @param deps - Database dependency
  * @returns Queue result
  */
 export async function kb_queue_deferred_write(
   input: KbQueueDeferredWriteInput,
-  filePath: string = DEFAULT_DEFERRED_WRITES_PATH,
+  deps: DeferredWritesDeps,
 ): Promise<QueueDeferredWriteResult> {
   const validated = KbQueueDeferredWriteInputSchema.parse(input)
 
-  // Read existing file
-  const data = await readDeferredWritesFile(filePath)
-
-  // Create new entry
-  const id = crypto.randomUUID()
-  const entry: DeferredWriteEntry = {
-    id,
-    operation: validated.operation,
-    payload: validated.payload,
-    timestamp: new Date().toISOString(),
-    error: validated.error,
-    retry_count: 0,
-    story_id: validated.story_id,
-    agent: validated.agent,
-  }
-
-  // Add to writes array
-  data.writes.push(entry)
-  data.updated_at = new Date().toISOString()
-
-  // Write back
-  await writeDeferredWritesFile(filePath, data)
+  const [row] = await deps.db
+    .insert(deferredWrites)
+    .values({
+      operation: validated.operation,
+      payload: validated.payload,
+      error: validated.error,
+      storyId: validated.story_id ?? null,
+      agent: validated.agent ?? null,
+    })
+    .returning({ id: deferredWrites.id })
 
   return {
     success: true,
-    id,
+    id: row.id,
     message: `Queued deferred write for ${validated.operation}`,
   }
 }
@@ -305,78 +243,114 @@ export async function kb_queue_deferred_write(
  * List pending deferred writes.
  *
  * @param input - Filter options
- * @param filePath - Path to deferred writes file
+ * @param deps - Database dependency
  * @returns List of deferred writes
  */
 export async function kb_list_deferred_writes(
   input: KbListDeferredWritesInput,
-  filePath: string = DEFAULT_DEFERRED_WRITES_PATH,
+  deps: DeferredWritesDeps,
 ): Promise<ListDeferredWritesResult> {
   const validated = KbListDeferredWritesInputSchema.parse(input)
 
-  // Read file
-  const data = await readDeferredWritesFile(filePath)
-
-  // Filter writes
-  let writes = data.writes
+  // Build conditions: always filter unprocessed
+  const conditions = [isNull(deferredWrites.processedAt)]
 
   if (validated.operation) {
-    writes = writes.filter(w => w.operation === validated.operation)
+    conditions.push(eq(deferredWrites.operation, validated.operation))
   }
 
   if (validated.story_id) {
-    writes = writes.filter(w => w.story_id === validated.story_id)
+    conditions.push(eq(deferredWrites.storyId, validated.story_id))
   }
 
-  // Apply limit
-  writes = writes.slice(0, validated.limit)
+  const rows = await deps.db
+    .select()
+    .from(deferredWrites)
+    .where(and(...conditions))
+    .orderBy(deferredWrites.createdAt)
+    .limit(validated.limit)
+
+  // Count total unprocessed
+  const [countResult] = await deps.db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(deferredWrites)
+    .where(isNull(deferredWrites.processedAt))
+
+  const total = countResult?.count ?? 0
+
+  // Map DB rows to API shape
+  const writes: DeferredWriteEntry[] = rows.map(row => ({
+    id: row.id,
+    operation: row.operation as DeferredOperationType,
+    payload: row.payload as Record<string, unknown>,
+    created_at: row.createdAt,
+    error: row.error,
+    retry_count: row.retryCount,
+    last_retry: row.lastRetry,
+    story_id: row.storyId,
+    agent: row.agent,
+    processed_at: row.processedAt,
+  }))
 
   return {
     success: true,
-    total: data.writes.length,
+    total,
     writes,
-    message: `Found ${writes.length} deferred writes (${data.writes.length} total)`,
+    message: `Found ${writes.length} deferred writes (${total} total unprocessed)`,
   }
 }
 
 /**
  * Process deferred writes.
  *
- * This function would normally invoke the actual KB operations, but we don't
- * have access to the database connection here. Instead, this function is meant
- * to be called with a processor callback that handles the actual writes.
+ * Replays rows through the provided processor callback. On success, marks
+ * `processed_at`. On failure, increments `retry_count`.
  *
  * @param input - Process options
- * @param filePath - Path to deferred writes file
+ * @param deps - Database dependency
  * @param processor - Callback to process individual writes
  * @returns Process result
  */
 export async function kb_process_deferred_writes(
   input: KbProcessDeferredWritesInput,
-  filePath: string = DEFAULT_DEFERRED_WRITES_PATH,
+  deps: DeferredWritesDeps,
   processor?: (entry: DeferredWriteEntry) => Promise<{ success: boolean; error?: string }>,
 ): Promise<ProcessDeferredWritesResult> {
   const validated = KbProcessDeferredWritesInputSchema.parse(input)
 
-  // Read file
-  const data = await readDeferredWritesFile(filePath)
-
-  // Filter writes to process
-  let writesToProcess = data.writes
+  // Build conditions: always filter unprocessed
+  const conditions = [isNull(deferredWrites.processedAt)]
 
   if (validated.operation) {
-    writesToProcess = writesToProcess.filter(w => w.operation === validated.operation)
+    conditions.push(eq(deferredWrites.operation, validated.operation))
   }
 
   if (validated.story_id) {
-    writesToProcess = writesToProcess.filter(w => w.story_id === validated.story_id)
+    conditions.push(eq(deferredWrites.storyId, validated.story_id))
   }
 
-  // Limit
-  writesToProcess = writesToProcess.slice(0, validated.limit)
+  const rows = await deps.db
+    .select()
+    .from(deferredWrites)
+    .where(and(...conditions))
+    .orderBy(deferredWrites.createdAt)
+    .limit(validated.limit)
+
+  // Map to entries
+  const writesToProcess: DeferredWriteEntry[] = rows.map(row => ({
+    id: row.id,
+    operation: row.operation as DeferredOperationType,
+    payload: row.payload as Record<string, unknown>,
+    created_at: row.createdAt,
+    error: row.error,
+    retry_count: row.retryCount,
+    last_retry: row.lastRetry,
+    story_id: row.storyId,
+    agent: row.agent,
+    processed_at: row.processedAt,
+  }))
 
   if (validated.dry_run) {
-    // Dry run - just return what would be processed
     return {
       success: true,
       dry_run: true,
@@ -410,7 +384,6 @@ export async function kb_process_deferred_writes(
   const results: ProcessedWrite[] = []
   let succeeded = 0
   let failed = 0
-  const successIds: string[] = []
 
   for (const entry of writesToProcess) {
     // Skip if max retries exceeded
@@ -428,14 +401,29 @@ export async function kb_process_deferred_writes(
       const result = await processor(entry)
 
       if (result.success) {
+        // Mark as processed
+        await deps.db
+          .update(deferredWrites)
+          .set({ processedAt: new Date() })
+          .where(eq(deferredWrites.id, entry.id))
+
         results.push({
           id: entry.id,
           operation: entry.operation,
           status: 'success',
         })
         succeeded++
-        successIds.push(entry.id)
       } else {
+        // Increment retry count
+        await deps.db
+          .update(deferredWrites)
+          .set({
+            retryCount: sql`retry_count + 1`,
+            lastRetry: new Date(),
+            error: result.error ?? entry.error,
+          })
+          .where(eq(deferredWrites.id, entry.id))
+
         results.push({
           id: entry.id,
           operation: entry.operation,
@@ -443,18 +431,18 @@ export async function kb_process_deferred_writes(
           error: result.error,
         })
         failed++
-
-        // Update retry count
-        const idx = data.writes.findIndex(w => w.id === entry.id)
-        if (idx !== -1) {
-          data.writes[idx].retry_count++
-          data.writes[idx].last_retry = new Date().toISOString()
-          if (result.error) {
-            data.writes[idx].error = result.error
-          }
-        }
       }
     } catch (error) {
+      // Increment retry count on exception too
+      await deps.db
+        .update(deferredWrites)
+        .set({
+          retryCount: sql`retry_count + 1`,
+          lastRetry: new Date(),
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .where(eq(deferredWrites.id, entry.id))
+
       results.push({
         id: entry.id,
         operation: entry.operation,
@@ -464,11 +452,6 @@ export async function kb_process_deferred_writes(
       failed++
     }
   }
-
-  // Remove successful writes from file
-  data.writes = data.writes.filter(w => !successIds.includes(w.id))
-  data.updated_at = new Date().toISOString()
-  await writeDeferredWritesFile(filePath, data)
 
   return {
     success: true,
@@ -483,20 +466,20 @@ export async function kb_process_deferred_writes(
 }
 
 /**
- * Clear all deferred writes (for cleanup/reset).
+ * Clear all unprocessed deferred writes.
  *
- * @param filePath - Path to deferred writes file
+ * @param deps - Database dependency
  * @returns Number of writes cleared
  */
 export async function kb_clear_deferred_writes(
-  filePath: string = DEFAULT_DEFERRED_WRITES_PATH,
+  deps: DeferredWritesDeps,
 ): Promise<{ cleared: number; message: string }> {
-  const data = await readDeferredWritesFile(filePath)
-  const count = data.writes.length
+  const result = await deps.db
+    .delete(deferredWrites)
+    .where(isNull(deferredWrites.processedAt))
+    .returning({ id: deferredWrites.id })
 
-  data.writes = []
-  data.updated_at = new Date().toISOString()
-  await writeDeferredWritesFile(filePath, data)
+  const count = result.length
 
   return {
     cleared: count,
@@ -507,13 +490,8 @@ export async function kb_clear_deferred_writes(
 /**
  * Helper to wrap a KB operation with deferred write fallback.
  *
- * @example
- * ```typescript
- * const result = await withDeferredFallback(
- *   () => kb_add({ content, role }),
- *   { operation: 'kb_add', payload: { content, role }, story_id }
- * )
- * ```
+ * On connection error: tries to queue to DB.
+ * If DB queue also fails: logs warning and accepts loss.
  */
 export async function withDeferredFallback<T>(
   operation: () => Promise<T>,
@@ -522,34 +500,46 @@ export async function withDeferredFallback<T>(
     payload: Record<string, unknown>
     story_id?: string
     agent?: string
-    filePath?: string
+    deps: DeferredWritesDeps
   },
-): Promise<{ success: true; result: T } | { success: false; queued: true; id: string }> {
+): Promise<{ success: true; result: T } | { success: false; queued: boolean; id?: string }> {
   try {
     const result = await operation()
     return { success: true, result }
   } catch (error) {
-    // Check if this is a KB unavailable error
-    const isKbUnavailable =
+    // Check if this is a connection error
+    const isConnectionError =
       error instanceof Error &&
       (error.message.includes('ECONNREFUSED') ||
         error.message.includes('connection') ||
         error.message.includes('timeout'))
 
-    if (isKbUnavailable) {
-      // Queue for later
-      const queueResult = await kb_queue_deferred_write(
-        {
-          operation: context.operation,
-          payload: context.payload,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          story_id: context.story_id,
-          agent: context.agent,
-        },
-        context.filePath,
-      )
+    if (isConnectionError) {
+      // Try to queue to DB
+      try {
+        const queueResult = await kb_queue_deferred_write(
+          {
+            operation: context.operation,
+            payload: context.payload,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            story_id: context.story_id,
+            agent: context.agent,
+          },
+          context.deps,
+        )
 
-      return { success: false, queued: true, id: queueResult.id }
+        return { success: false, queued: true, id: queueResult.id }
+      } catch (queueError) {
+        // DB is also down — accept the loss
+        logger.warn('Deferred write lost: DB unavailable for both operation and queue', {
+          operation: context.operation,
+          story_id: context.story_id,
+          original_error: error instanceof Error ? error.message : 'Unknown error',
+          queue_error: queueError instanceof Error ? queueError.message : 'Unknown error',
+        })
+
+        return { success: false, queued: false }
+      }
     }
 
     // Re-throw non-connection errors

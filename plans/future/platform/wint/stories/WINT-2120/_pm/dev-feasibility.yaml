@@ -1,0 +1,87 @@
+feasible: true
+confidence: high
+rationale: "All required data sources exist and are accessible: context_cache_stats() MCP tool is deployed and UAT-verified (WINT-0100), wint.context_packs table is deployed (WINT-0010/0030), and WINT-2110 baseline estimates are available either as BASELINE-TOKENS.yaml or from the story body. The benchmark is a single TypeScript file with no novel infrastructure requirements. Main complexity is the proxy measurement formula and graceful partial-population handling."
+complexity: low
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/__tests__/integration/ (new benchmark integration test file)"
+    - "plans/future/platform/wint/backlog/WINT-2120/_implementation/ (BENCHMARK-RESULTS.yaml output artifact)"
+  endpoints: []
+  deploy_touchpoints:
+    - "No deployment required — benchmark is a local/CI script only"
+risks:
+  - finding: "ADR-005 requires real PostgreSQL for integration benchmark — no mocking of DB calls allowed"
+    mitigation: "Follow the existing pattern from performance-benchmarks.integration.test.ts which already uses real PostgreSQL at port 5433; mark test as integration-only to avoid accidental CI execution without DB"
+  - finding: "WINT-2040 (agent_missions pack) is in failed-code-review — pack will have zero hits in real runs"
+    mitigation: "Implement graceful exclusion: zero-hit packs are reported as 'not_yet_populated' and excluded from aggregate calculation; this is already specified in AC-7"
+  - finding: "Phase 3 telemetry not yet available — no actual token counts; proxy only"
+    mitigation: "Use content size (character count / ~4 chars per token estimate) as token proxy; document methodology limitations clearly in artifact; do not hard-assert 80% target in CI"
+missing_requirements: []
+evidence_expectations:
+  - "pnpm check-types passes on benchmark script file"
+  - "_implementation/BENCHMARK-RESULTS.yaml exists after benchmark run with required sections"
+  - "pnpm vitest run exits 0 for unit test of reduction formula"
+  - "Integration test exits 0 against live PostgreSQL DB"
+subtasks:
+  - id: ST-1
+    title: "Read WINT-2110 baseline token estimates and define input schema"
+    goal: "Load pre-implementation token baselines into benchmark as the 'before' side of comparison; implement BASELINE-TOKENS.yaml reader with hardcoded AC-6 fallback"
+    files_to_read:
+      - "plans/future/platform/wint/needs-code-review/WINT-2110/WINT-2110.md"
+      - "plans/future/platform/wint/needs-code-review/WINT-2110/_implementation/BASELINE-TOKENS.yaml (if exists)"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts (create)"
+    acs: ["AC-1"]
+    depends_on: "none"
+    verification: "pnpm check-types --filter orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Implement context_cache_stats() query loop for all pack types"
+    goal: "Call context_cache_stats({ packType }) for each value in packTypeValues array and collect hitCount, avgHitsPerPack per pack type"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts"
+    acs: ["AC-2"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter orchestrator"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Implement pack content size query from wint.context_packs"
+    goal: "Query wint.context_packs for content size per pack type to estimate tokens-per-cache-hit using Drizzle ORM pattern"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts"
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts"
+    acs: ["AC-3", "AC-7"]
+    depends_on: "ST-2"
+    verification: "pnpm check-types --filter orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: "Implement token reduction formula and per-agent calculation"
+    goal: "Implement calculateTokenReduction pure function and apply it per agent; handle zero-hit and zero-content-size cases gracefully; document formula in output"
+    files_to_read:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts"
+    acs: ["AC-4", "AC-6", "AC-7"]
+    depends_on: "ST-3"
+    verification: "pnpm vitest run token-reduction-benchmark"
+    estimated_tokens: 7000
+
+  - id: ST-5
+    title: "Write BENCHMARK-RESULTS.yaml artifact with verdict and tuning recommendations"
+    goal: "Serialize all results to _implementation/BENCHMARK-RESULTS.yaml with per-agent table, aggregate reduction, methodology statement, pack population status, PASS/NEEDS-TUNING verdict, and tuning recommendations if below 80%"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/ (evidence schema conventions)"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/token-reduction-benchmark.integration.test.ts"
+    acs: ["AC-5", "AC-6", "AC-8", "AC-9", "AC-10"]
+    depends_on: "ST-4"
+    verification: "pnpm vitest run token-reduction-benchmark && pnpm check-types --filter orchestrator"
+    estimated_tokens: 8000

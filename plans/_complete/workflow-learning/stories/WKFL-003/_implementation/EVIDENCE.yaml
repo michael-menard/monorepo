@@ -1,0 +1,246 @@
+schema: 1
+story_id: "WKFL-003"
+version: 1
+timestamp: "2026-02-07T00:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Track decision outcomes with fields: pattern, auto_accepted, user_outcome, tier, story_id, decision_id, timestamp"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/schemas/decision-outcome-schema.md"
+        description: "Schema defines all required fields with comprehensive documentation including examples, KB query patterns, and integration points"
+      - type: section
+        path: ".claude/schemas/decision-outcome-schema.md"
+        section: "Schema Definition"
+        description: "YAML schema template includes all AC-1 fields: pattern, auto_accepted, user_outcome, tier, story_id, decision_id, timestamp"
+      - type: section
+        path: ".claude/schemas/decision-outcome-schema.md"
+        section: "Examples"
+        description: "Three complete examples demonstrating all field usage scenarios"
+
+  - ac_id: "AC-2"
+    ac_text: "Compute success rate per pattern (minimum 5 samples required)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        description: "Agent documents success rate calculation formula and enforces minimum 5 sample requirement"
+      - type: section
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        section: "Phase 2: Success Rate Calculation"
+        description: "Explicit formula: confirmed / total with minimum 5 samples check"
+      - type: code
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        snippet: |
+          function computeSuccessRate(outcomes) {
+            const confirmed = outcomes.filter(o => o.user_outcome === "confirmed").length
+            const total = outcomes.length
+            return confirmed / total
+          }
+        description: "Success rate calculation pseudocode"
+      - type: section
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        section: "insufficient_samples"
+        description: "Template includes section for tracking patterns with < 5 samples"
+
+  - ac_id: "AC-3"
+    ac_text: "Propose promotion when success rate > 95%"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        description: "Agent documents promotion logic: success_rate > 95% triggers single-step tier decrease"
+      - type: section
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        section: "Phase 3: Promotion Logic"
+        description: "Full promotion rules including single-step tier changes, special cases, and tier boundaries"
+      - type: example
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        snippet: |
+          - pattern: "loading.*state|skeleton"
+            current_tier: 3
+            proposed_tier: 2
+            success_rate: 0.957
+            samples: 23
+        description: "Concrete example of promotion proposal with 95.7% success rate"
+      - type: file
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        description: "Proposal template includes promotions section with all required fields: pattern, current_tier, proposed_tier, success_rate, samples, rationale, example_stories"
+      - type: section
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        section: "promotions"
+        description: "Complete example promotion entry with rationale and supporting data"
+
+  - ac_id: "AC-4"
+    ac_text: "Propose demotion when success rate < 80%"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        description: "Agent documents demotion logic: <80% success triggers tier increase, <50% skips a tier"
+      - type: section
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        section: "Phase 4: Demotion Logic"
+        description: "Complete demotion rules with single-step (80% > rate >= 50%) and two-step (rate < 50%) logic"
+      - type: example
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        snippet: |
+          - pattern: "breaking.*api"
+            current_tier: 2
+            proposed_tier: 3
+            success_rate: 0.72
+        description: "Single-step demotion example with 72% success rate"
+      - type: example
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        snippet: |
+          - pattern: "credential|secret"
+            current_tier: 2
+            proposed_tier: 4
+            success_rate: 0.45
+        description: "Severe two-step demotion example with 45% success rate"
+      - type: file
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        description: "Proposal template includes demotions section with severity field (moderate | severe)"
+      - type: section
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        section: "demotions"
+        description: "Two example demotion entries: moderate (single-step) and severe (two-step)"
+
+  - ac_id: "AC-5"
+    ac_text: "All changes are proposals, not auto-applied"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        description: "Agent explicitly states in Role section: 'This agent generates PROPOSALS ONLY. It NEVER modifies decision-classification.yaml directly.'"
+      - type: section
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        section: "Non-Negotiables"
+        description: "First non-negotiable: 'DO NOT MODIFY decision-classification.yaml - This agent generates proposals ONLY'"
+      - type: section
+        path: ".claude/agents/heuristic-evolver.agent.md"
+        section: "Phase 6: Verify Integrity"
+        description: "Agent runs git diff to verify decision-classification.yaml was not modified, aborts if changes detected"
+      - type: command
+        command: "git diff .claude/config/decision-classification.yaml"
+        result: "No output (no changes)"
+        description: "Verified decision-classification.yaml is unchanged after implementation"
+      - type: file
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        description: "File header explicitly states: 'IMPORTANT: These are PROPOSALS only. Do NOT auto-apply. Human review required before updating decision-classification.yaml.'"
+      - type: section
+        path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        section: "review_notes"
+        description: "Complete human review workflow documented with steps for applying, rejecting, and archiving proposals"
+
+touched_files:
+  - path: ".claude/schemas/decision-outcome-schema.md"
+    action: created
+    description: "Decision outcome tracking schema with full field definitions, examples, integration points, KB query patterns, and evolution notes"
+  - path: ".claude/agents/heuristic-evolver.agent.md"
+    action: created
+    description: "Heuristic evolver agent definition with complete execution flow, tier logic (promotion/demotion), KB queries, error handling, and future enhancements"
+  - path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+    action: created
+    description: "Proposal output template with examples for promotions, demotions, no-change patterns, insufficient samples, and human review workflow"
+
+commands_run:
+  - command: "git diff .claude/config/decision-classification.yaml"
+    result: "No output (no changes)"
+    purpose: "Verify AC-5: decision-classification.yaml unchanged"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - decision: "Single-step tier changes by default"
+    rationale: "Gradual evolution reduces risk of over-correction. Exception: <50% success allows 2-step demotion for severe issues."
+  - decision: "Cap promotions at Tier 2"
+    rationale: "Tier 1 requires exceptional track record. First-time promotions should not jump directly to Tier 1."
+  - decision: "Tier 4 patterns never promoted/demoted"
+    rationale: "Destructive actions should always escalate regardless of success rate. Safety takes precedence over autonomy."
+  - decision: "Minimum 5 samples required"
+    rationale: "Statistical significance requires adequate sample size. Prevents premature tier changes based on limited data."
+  - decision: "Include rationale and example stories in every proposal"
+    rationale: "Transparency and traceability for human review. Reviewers need context to approve/reject proposals."
+
+known_deviations:
+  - "No unit tests - agent/config-only story per story_type: infra"
+  - "E2E exempt - infrastructure story type (no app code to test)"
+  - "WKFL-002 dependency listed in story but implementation continued per user instruction to force-continue"
+  - "KB tools (kb_search, kb_query) referenced in agent but not implemented yet - will be available when KB is implemented"
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra - agent/config files only, no app code to test"
+  mode: "n/a"
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage: {}
+
+quality_gates:
+  linting: pass
+  type_checking: n/a
+  build: n/a
+  unit_tests: exempt
+  integration_tests: exempt
+  e2e_tests: exempt
+
+integration_points:
+  producers:
+    - "dev-plan-leader (future - logs decisions to DECISIONS.yaml)"
+    - "dev-implementation-worker (future - logs decisions to DECISIONS.yaml)"
+    - "dev-fix-worker (future - logs decisions to DECISIONS.yaml)"
+    - "qa-verify-leader (future - logs decisions to DECISIONS.yaml)"
+  consumers:
+    - "heuristic-evolver.agent.md (this story - analyzes decision_outcome entries)"
+    - "calibration.agent.md (WKFL-002 - correlates decision overhead with token usage)"
+    - "pattern-miner.agent.md (WKFL-006 - identifies cross-story decision patterns)"
+    - "workflow-retro.agent.md (future - retrospective analysis)"
+  dependencies:
+    - "Knowledge Base (KB) implementation - required for kb_search queries"
+    - "decision-classification.yaml - source of truth for current tier rules"
+    - "autonomy-tiers.md - tier system reference documentation"
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 28000, out: 10000 }
+  total: { in: 28000, out: 10000 }
+
+story_metadata:
+  story_type: infra
+  domain: workflow-learning
+  epic: workflow-learning
+  feature_dir: plans/future/workflow-learning
+  dependencies:
+    - "WKFL-001 (complete - outcome schema foundation)"
+    - "WKFL-002 (blocked but force-continued per user)"
+
+verification_notes: |
+  All acceptance criteria met:
+  - AC-1: decision-outcome-schema.md defines all required fields
+  - AC-2: heuristic-evolver.agent.md implements success rate calculation with minimum 5 samples
+  - AC-3: Promotion logic documented (>95% success → tier - 1)
+  - AC-4: Demotion logic documented (<80% → tier + 1, <50% → tier + 2)
+  - AC-5: All changes are proposals only, decision-classification.yaml unchanged
+
+  File quality:
+  - All files follow existing schema/agent patterns
+  - Complete frontmatter with version tracking
+  - Comprehensive examples and use cases
+  - Integration points documented
+  - Future enhancements outlined
+  - Error handling specified
+
+  No code to test (infra story), no E2E required (config/agent files only).

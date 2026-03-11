@@ -53,13 +53,13 @@ export const wintSchema = pgSchema('wint')
  */
 export const storyStateEnum = pgEnum('story_state', [
   'backlog',
-  'ready_to_work',
+  'ready',
   'in_progress',
   'ready_for_review',
   'ready_for_qa',
   'in_qa',
   'blocked',
-  'done',
+  'completed',
   'cancelled',
   'failed_code_review',
   'failed_qa',
@@ -1429,6 +1429,36 @@ export const cohesionRules = wintSchema.table(
     isActiveIdx: index('cohesion_rules_is_active_idx').on(table.isActive),
     // Composite index for active rule queries
     typeActiveIdx: index('cohesion_rules_type_active_idx').on(table.ruleType, table.isActive),
+  }),
+)
+
+/**
+ * Epics Table
+ * Tracks high-level project epics for feature grouping and cohesion analysis
+ * Related stories: WINT-4030
+ */
+export const epics = wintSchema.table(
+  'epics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Epic identification
+    epicName: text('epic_name').notNull().unique(),
+    epicPrefix: text('epic_prefix').notNull().unique(), // e.g. 'WINT', 'KBAR'
+
+    // Metadata
+    description: text('description'),
+
+    // Status
+    isActive: boolean('is_active').notNull().default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    epicNameIdx: uniqueIndex('epics_epic_name_idx').on(table.epicName),
+    epicPrefixIdx: uniqueIndex('epics_epic_prefix_idx').on(table.epicPrefix),
+    isActiveIdx: index('epics_is_active_idx').on(table.isActive),
   }),
 )
 

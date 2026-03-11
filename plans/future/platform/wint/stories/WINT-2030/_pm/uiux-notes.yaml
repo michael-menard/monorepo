@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-2030 is a backend-only populate script with no UI surface. No frontend components, no HTTP endpoints, no browser interaction."

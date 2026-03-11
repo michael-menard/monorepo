@@ -1,0 +1,26 @@
+schema: 1
+story_id: WINT-9140
+timestamp: "2026-03-03T20:47:00.000Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/orchestrator/**"
+  - "packages/backend/workflow-logic/**"
+  - "packages/core/**"
+  - "apps/api/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: true
+summary: "Execute full parity validation suite comparing original and LangGraph orchestration paths; identify gaps and sign off"
+elaboration: "completed"

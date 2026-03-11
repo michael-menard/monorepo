@@ -22,7 +22,7 @@ Execute workflow phases sequentially, checking signals and updating state after 
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/*/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
+Read from `{FEATURE_DIR}/stories/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
 - `feature_dir`
 - `story_id`
 - `story_path`

@@ -14,21 +14,13 @@ Output tokens ≈ bytes_written / 4
 
 ## Required Log Format
 
-Every agent MUST append to its output artifact a `## Token Log` section:
+Token data MUST be logged to the KB via the `/token-log` skill, which calls `kb_log_tokens`. Do NOT write to a TOKEN-LOG.md file.
 
-```markdown
-## Token Log
-
-| Operation | Type | Bytes | Tokens (est) |
-|-----------|------|-------|--------------|
-| Read: STORY-XXX.md | input | 18,397 | ~4,600 |
-| Read: serverless.yml | input | 70,000 | ~17,500 |
-| Read: handler.ts | input | 3,200 | ~800 |
-| Write: IMPLEMENTATION-PLAN.md | output | 8,000 | ~2,000 |
-| **Total Input** | — | 91,597 | **~22,900** |
-| **Total Output** | — | 8,000 | **~2,000** |
-| **Grand Total** | — | 99,597 | **~24,900** |
+```bash
+/token-log {STORY_ID} {PHASE} --model={MODEL} --input={INPUT_TOKENS} --output={OUTPUT_TOKENS}
 ```
+
+The `/token-log` skill handles all KB persistence. Agents do not need to manage token storage directly.
 
 ## What to Log
 
@@ -63,7 +55,7 @@ Orchestrator commands (like `/dev-implement-story`) MUST track sub-agent totals:
 
 ## Story-Level Aggregation
 
-Token data is stored in KB via `kb_log_tokens` after each phase. OUTCOME.yaml queries KB for the full story aggregate (no TOKEN-LOG.md file needed).
+Token data is stored in KB via `kb_log_tokens` after each phase. OUTCOME.yaml queries KB for the full story aggregate.
 
 ## High-Cost Operations Reference
 

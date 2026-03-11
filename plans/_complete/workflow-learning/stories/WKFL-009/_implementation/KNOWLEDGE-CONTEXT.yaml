@@ -1,0 +1,87 @@
+schema: 1
+story_id: "WKFL-009"
+timestamp: "2026-02-07T22:05:00-07:00"
+
+existing_infrastructure:
+  database:
+    table: knowledgeEntries
+    schema_file: "apps/api/knowledge-base/src/db/schema.ts"
+    columns:
+      - id (uuid, PK)
+      - content (text)
+      - embedding (vector(1536))
+      - role (text: pm|dev|qa|all)
+      - entryType (text: note|decision|constraint|runbook|lesson|feedback|calibration)
+      - storyId (text, nullable)
+      - tags (text[], nullable)
+      - verified (boolean)
+      - verifiedAt (timestamp)
+      - verifiedBy (text)
+      - createdAt (timestamp)
+      - updatedAt (timestamp)
+    notes: "No metadata JSONB column exists - must use dedicated columns for archival state"
+
+  crud_operations:
+    kb_add:
+      file: "apps/api/knowledge-base/src/crud-operations/kb-add.ts"
+      input: "content, role, entry_type, story_id, tags"
+      returns: "uuid string"
+      notes: "Auto-generates embedding via EmbeddingClient"
+    kb_update:
+      file: "apps/api/knowledge-base/src/crud-operations/kb-update.ts"
+      input: "id, content?, role?, entry_type?, story_id?, tags?, verified?, verified_by?"
+      returns: "KnowledgeEntry"
+      notes: "Re-embeds only if content hash changes"
+    kb_list:
+      file: "apps/api/knowledge-base/src/crud-operations/kb-list.ts"
+      input: "role?, entry_type?, story_id?, tags?, verified?, limit?"
+      returns: "KnowledgeEntry[]"
+    kb_get:
+      file: "apps/api/knowledge-base/src/crud-operations/kb-get.ts"
+      input: "id"
+      returns: "KnowledgeEntry | null"
+
+  search:
+    semantic_search:
+      file: "apps/api/knowledge-base/src/search/semantic.ts"
+      input: "db, queryEmbedding (number[]), filters, limit"
+      returns: "ScoredEntry[] with similarity scores"
+      notes: "Uses pgvector cosine distance operator <=>"
+    kb_search:
+      file: "apps/api/knowledge-base/src/search/kb-search.ts"
+      input: "query, role?, tags?, entry_type?, limit?, min_confidence?, explain?"
+      returns: "SearchResult with metadata"
+      notes: "Hybrid semantic+keyword with RRF. Fallback to keyword-only if embedding fails."
+
+  embedding_client:
+    file: "apps/api/knowledge-base/src/embedding-client/index.ts"
+    model: "text-embedding-3-small"
+    dimensions: 1536
+    features:
+      - "Content-hash caching in PostgreSQL"
+      - "Batch processing with splitting (>2048 texts)"
+      - "Exponential backoff retry"
+      - "Graceful degradation on API failure"
+
+  types:
+    file: "apps/api/knowledge-base/src/__types__/index.ts"
+    existing_schemas:
+      - KnowledgeRoleSchema
+      - KnowledgeEntryTypeSchema
+      - EmbeddingSchema
+      - FeedbackTypeSchema (WKFL-004)
+      - CalibrationEntrySchema (WKFL-002)
+
+reference_agents:
+  pattern_miner: ".claude/agents/pattern-miner.agent.md"
+  confidence_calibrator: ".claude/agents/confidence-calibrator.agent.md"
+
+reference_commands:
+  pattern_mine: ".claude/commands/pattern-mine.md"
+  calibration_report: ".claude/commands/calibration-report.md"
+
+key_decisions:
+  - "Archival via dedicated columns (not metadata JSONB)"
+  - "Similarity via semanticSearch per entry (Option A, MVP)"
+  - "Canonical IDs use standard UUID generation"
+  - "Archive-only - never delete KB entries"

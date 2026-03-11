@@ -1,0 +1,96 @@
+schema: 1
+story_id: WISH-2042
+date: 2026-01-27
+verdict: conditional
+audit:
+  scope_alignment:
+    status: fail
+    note: Story scope references non-existent lego-api architecture that conflicts with documented API layer architecture
+  internal_consistency:
+    status: fail
+    note: Architecture notes reference services in wrong location, contradict actual lego-api structure
+  reuse-first:
+    status: pass
+    note: Good reuse of existing patterns from WISH-2041
+  ports_&_adapters:
+    status: fail
+    note: Story plans business logic in wishlist service that should coordinate through separate services; violates API
+      layer architecture doc
+  local_testability:
+    status: pass
+    note: Comprehensive test plan with .http tests, frontend tests, E2E tests
+  decision_completeness:
+    status: pass
+    note: No blocking TBDs or unresolved design decisions
+  risk_disclosure:
+    status: pass
+    note: Good risk analysis with 7 identified risks and mitigation strategies
+  story_sizing:
+    status: pass
+    note: 15 ACs is high but justified for cross-domain transaction complexity
+gaps:
+  - id: GAP-1
+    category: requirements
+    severity: important
+    finding: "Architecture Mismatch: lego-api vs api-layer.md documentation conflict"
+    recommendation: ""
+  - id: GAP-2
+    category: requirements
+    severity: important
+    finding: "Service Location Contradiction: Routes and services in wrong paths"
+    recommendation: ""
+  - id: GAP-3
+    category: requirements
+    severity: important
+    finding: "Cross-Domain Coordination Anti-Pattern: Tight coupling between wishlist and sets services"
+    recommendation: ""
+  - id: GAP-4
+    category: requirements
+    severity: important
+    finding: "S3 Service Abstraction Missing: Direct S3 operations bypass abstraction layer"
+    recommendation: ""
+  - id: GAP-5
+    category: requirements
+    severity: important
+    finding: "Transaction Semantics Unclear: Database transaction boundaries not defined"
+    recommendation: ""
+  - id: GAP-6
+    category: requirements
+    severity: important
+    finding: "Image Copy Strategy Incomplete: No handling for missing images"
+    recommendation: ""
+  - id: GAP-7
+    category: requirements
+    severity: important
+    finding: "Zod Schema Missing: MarkAsPurchasedInputSchema not defined"
+    recommendation: ""
+  - id: GAP-8
+    category: requirements
+    severity: important
+    finding: "Architecture Notes Reference Wrong Paths: Incorrect service paths in examples"
+    recommendation: ""
+  - id: GAP-9
+    category: requirements
+    severity: important
+    finding: "Sets Service Type Mismatch: Parameter structure doesn't match actual Sets service"
+    recommendation: ""
+  - id: GAP-10
+    category: requirements
+    severity: important
+    finding: "DELETE /api/sets/:id Endpoint Missing: Undo functionality undefined"
+    recommendation: ""
+  - id: GAP-11
+    category: requirements
+    severity: important
+    finding: "Frontend Architecture Missing Service Import: RTK Query endpoint location not specified"
+    recommendation: ""
+  - id: GAP-12
+    category: requirements
+    severity: important
+    finding: "Decimal Handling Inconsistency: Number vs string type mismatch"
+    recommendation: ""
+split_required: false
+follow_ups: []
+tokens:
+  input: 0
+  output: 0

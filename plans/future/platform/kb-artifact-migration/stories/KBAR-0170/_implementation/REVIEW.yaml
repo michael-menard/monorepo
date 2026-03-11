@@ -1,0 +1,201 @@
+schema: 1
+story_id: "KBAR-0170"
+iteration: 1
+review_date: "2026-02-25"
+reviewer: "code-review aggregate (3 workers: requirements, style, correctness)"
+verdict: PASS
+
+# ─── Worker 1: code-review-requirements ────────────────────────────────────────
+
+requirements_review:
+  verdict: PASS
+  findings:
+
+    - ac_id: "AC-1"
+      status: PASS
+      note: >
+        Step 8 calls artifact_write with story_id, artifact_type: "evidence",
+        phase: "implementation", iteration: checkpoint.content.iteration, and
+        file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml".
+        All required fields present. Matches story spec exactly.
+
+    - ac_id: "AC-2"
+      status: PASS
+      note: >
+        Step 9 calls artifact_write with artifact_type: "checkpoint",
+        phase: "implementation", file_path pointing to CHECKPOINT.yaml,
+        and content: { ...checkpoint.content, current_phase: "execute",
+        last_successful_phase: "plan" }. All required fields present.
+
+    - ac_id: "AC-3"
+      status: PASS
+      note: >
+        Frontmatter kb_tools updated from [kb_update_story_status, kb_read_artifact,
+        kb_write_artifact] to [kb_update_story_status, kb_read_artifact, artifact_write].
+        kb_write_artifact removed; artifact_write added. kb_read_artifact and
+        kb_update_story_status preserved.
+
+    - ac_id: "AC-4"
+      status: PASS
+      note: >
+        Both Step 8 and Step 9 include graceful failure documentation:
+        "If KB write fails, artifact_write returns file_written: true with a
+        kb_write_warning. Execute phase proceeds without blocking — do not stop
+        on KB write failure." Present in both blocks. AC satisfied.
+
+    - ac_id: "AC-5"
+      status: PASS
+      note: >
+        Steps 1-2 Inputs section and kb_read_artifact calls are entirely unchanged.
+        Git diff confirms no modifications to the read path. Four kb_read_artifact
+        calls (plan, scope, context, checkpoint) are identical to pre-migration.
+
+    - ac_id: "AC-6"
+      status: PASS
+      note: >
+        dev-implement-backend-coder non-negotiables now include: "BACKEND-LOG.md
+        MUST be written via direct Write tool calls... Do NOT use artifact_write
+        for log files — high-frequency log writes (5-10 per story) must not incur
+        KB round-trip overhead. This is an explicit scope decision from KBAR-0170
+        (AC-6, Option b)." Identical pattern in frontend-coder for FRONTEND-LOG.md.
+        Decision and rationale explicitly stated.
+
+    - ac_id: "AC-7"
+      status: PASS
+      note: >
+        Coder agent frontmatter kb_tools unchanged: both still list only [kb_search].
+        artifact_write NOT added to either coder agent. Git diff confirms frontmatter
+        changes are limited to version/date bumps only.
+
+    - ac_id: "AC-8"
+      status: PASS
+      note: >
+        grep for kb_write_artifact across all three agent files returns exit code 1
+        (no matches). Zero occurrences in dev-execute-leader (migrated away), and
+        trivially zero in both coder agents (never used it).
+
+# ─── Worker 2: code-review-style ───────────────────────────────────────────────
+
+style_review:
+  verdict: PASS
+  findings:
+
+    - check: "version_bumps"
+      status: PASS
+      note: >
+        dev-execute-leader: v3.1.0 → v3.2.0 (minor bump for functional migration,
+        correct). dev-implement-backend-coder: v3.4.0 → v3.5.0 (minor bump for
+        non-negotiable doc addition, correct). dev-implement-frontend-coder:
+        v3.3.0 → v3.4.0 (minor bump, correct). All follow semver minor convention
+        for behavioral/documentation additions. Matches KBAR-0160 pattern.
+
+    - check: "updated_dates"
+      status: PASS
+      note: >
+        All three files updated to 2026-02-25 (today's date). Consistent.
+
+    - check: "frontmatter_format"
+      status: PASS
+      note: >
+        All three files retain identical YAML frontmatter block structure.
+        Structural fields (created, updated, version, type, permission_level, etc.)
+        unchanged. No new frontmatter fields introduced. kb_tools list format
+        (YAML list with - entries) preserved consistently.
+
+    - check: "non_negotiables_format"
+      status: PASS
+      note: >
+        Coder agents add new bullet using bold lead (**FIELD MUST...**) pattern,
+        consistent with the immediately preceding bullet
+        (**NEVER make architectural decisions not in the approved plan**).
+        dev-execute-leader non-negotiables table adds new row using same
+        | Rule | Description | format as all existing rows.
+
+    - check: "section_structure"
+      status: PASS
+      note: >
+        No new sections introduced or removed. Changes are scoped to: frontmatter
+        (version/date/kb_tools), Steps 8-10 body, Output section, Non-Negotiables.
+        All within existing structural sections. Agent file structure intact.
+
+    - check: "heading_in_step_section"
+      status: PASS
+      note: >
+        Step 8-10 section heading updated from "Map ACs to Evidence, Update CHECKPOINT
+        in KB, Write EVIDENCE Artifact" to "Map ACs to Evidence, Write EVIDENCE
+        Artifact, Update CHECKPOINT" — reordering matches the actual execution order
+        (EVIDENCE before CHECKPOINT). Minor improvement, stylistically consistent.
+
+# ─── Worker 3: code-review-correctness ─────────────────────────────────────────
+
+correctness_review:
+  verdict: PASS
+  findings:
+
+    - check: "artifact_write_contract_evidence"
+      status: PASS
+      note: >
+        KBAR-0110 contract: { story_id, artifact_type, content, file_path?, phase?,
+        iteration?, skip_kb? }. Step 8 uses: story_id, artifact_type: "evidence",
+        phase: "implementation", iteration: checkpoint.content.iteration,
+        file_path: canonical path, content: {...}. All fields valid. No extraneous
+        fields. Response handling references file_written: true and kb_write_warning —
+        both are documented response fields per KBAR-0110 contract.
+
+    - check: "artifact_write_contract_checkpoint"
+      status: PASS
+      note: >
+        Step 9 uses same valid contract shape with artifact_type: "checkpoint",
+        different file_path, content spread with two overrides. No deviations from
+        KBAR-0110 schema. iteration field present and correctly sourced from
+        checkpoint.content.iteration.
+
+    - check: "graceful_failure_semantics"
+      status: PASS
+      note: >
+        Both steps document kb_write_warning as the failure signal (not an error),
+        and explicitly state execute phase proceeds without blocking. This accurately
+        reflects the dual-write design from KBAR-0110 where file write is primary
+        (blocking) and KB write is secondary (best-effort).
+
+    - check: "coder_non_negotiables_accuracy"
+      status: PASS
+      note: >
+        Claim "5-10 per story" for log write frequency is consistent with the story's
+        architecture notes (AC-6 feasibility rationale). Claim about KB round-trip
+        overhead is accurate per dual-write design. KBAR-0170 (AC-6, Option b)
+        citation is correct. No factual inaccuracies found.
+
+    - check: "no_contradictions_with_story_decisions"
+      status: PASS
+      note: >
+        Coder agents correctly prohibit artifact_write for log files, matching the
+        explicit AC-6 Option (b) decision. dev-execute-leader non-negotiables table
+        rule "MUST write artifacts via artifact_write" refers to its own EVIDENCE/
+        CHECKPOINT outputs (not log files), so no contradiction with coder agents.
+        Read path (kb_read_artifact) correctly preserved unchanged in execute-leader.
+
+    - check: "no_residual_kb_write_artifact_calls"
+      status: PASS
+      note: >
+        grep exit code 1 (no matches) confirmed. Zero kb_write_artifact occurrences
+        across all three files. Migration complete.
+
+    - check: "file_paths_canonical"
+      status: PASS
+      note: >
+        Both file_path values use the canonical {FEATURE_DIR}/in-progress/{STORY_ID}/
+        _implementation/ prefix, matching the file path convention documented in the
+        story's Reuse Plan section (Option A paths). Consistent with KBAR-0160 pattern.
+
+# ─── Aggregate ──────────────────────────────────────────────────────────────────
+
+aggregate:
+  verdict: PASS
+  blockers: []
+  warnings: []
+  notes:
+    - "All 8 ACs satisfied. No regressions. No style violations. No contract deviations."
+    - "Changes are minimal and precisely scoped: execute-leader write path migrated, coder agents documented."
+    - "Canary validation (MC-3) still pending full dependency chain merge (KBAR-0110 + KBAR-0160)."
+    - "This is a documented known deviation in EVIDENCE.yaml, not a review finding."

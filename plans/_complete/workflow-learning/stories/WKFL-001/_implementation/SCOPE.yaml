@@ -1,0 +1,66 @@
+schema: 1
+story_id: WKFL-001
+timestamp: 2026-02-07T20:00:00Z
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/schemas/**"
+  - ".claude/agents/**"
+  - ".claude/commands/**"
+  - "plans/future/workflow-learning/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+acceptance_criteria:
+  - id: AC-1
+    description: "OUTCOME.yaml schema defined in .claude/schemas/"
+    status: pending
+
+  - id: AC-2
+    description: "Every completed story generates OUTCOME.yaml via dev-documentation-leader integration"
+    status: pending
+
+  - id: AC-3
+    description: "workflow-retro.agent.md created and analyzes outcomes for patterns"
+    status: pending
+
+  - id: AC-4
+    description: "Repeated failure patterns logged to Knowledge Base"
+    status: pending
+
+  - id: AC-5
+    description: "WORKFLOW-RECOMMENDATIONS.md generated with actionable proposals"
+    status: pending
+
+  - id: AC-6
+    description: "Retro mechanism triggered via /workflow-retro command"
+    status: pending
+
+summary: "Create retrospective agent infrastructure with outcome schema, pattern analysis, and KB integration for meta-learning foundation"
+
+key_deliverables:
+  - .claude/schemas/outcome.schema.yaml
+  - .claude/agents/workflow-retro.agent.md
+  - .claude/commands/workflow-retro.md
+  - plans/future/workflow-learning/WORKFLOW-RECOMMENDATIONS.md
+  - Integration in dev-documentation-leader.agent.md
+
+technical_considerations:
+  - OUTCOME.yaml schema must capture: tokens_in/out, duration_ms, status for each phase
+  - Pattern detection should identify: repeated failures, token estimation drift, cycle count variance
+  - KB writes should use structured entries with tags ['retro', 'pattern']
+  - Recommendations should be filtered by significance (>2 occurrences or >20% variance)

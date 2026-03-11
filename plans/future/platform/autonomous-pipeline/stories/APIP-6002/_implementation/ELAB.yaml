@@ -1,0 +1,90 @@
+schema_version: 1
+story_id: "APIP-6002"
+timestamp: "2026-03-04T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story scope matches stories.index.md Phase 5 entry. Single file (implement-stories.sh), single concern (stuck recovery)."
+  - id: internal_consistency
+    status: PASS
+    note: "Goals, non-goals, ACs, and technical approach are internally consistent. Non-goals correctly exclude external alerting and phase gate changes (APIP-6001)."
+  - id: reuse_first
+    status: PASS
+    note: "Story reuses existing implement-stories.sh helpers (move_story_to, validate_artifact, has_worktree_commits). No new packages created."
+  - id: ports_adapters
+    status: PASS
+    note: "N/A for bash infrastructure script. No API endpoints or service boundaries involved."
+  - id: testability
+    status: WARN
+    note: "Previous implementation had ZERO tests — only bash -n syntax check. For a recovery system that moves stories and cleans worktrees, there should be at minimum: (1) a test harness that sets up mock story directories and verifies recovery actions, (2) idempotency verification tests. Story AC list lacks any testing AC."
+  - id: decision_completeness
+    status: WARN
+    note: "APIP-6001 (dependency) is in failed-code-review — unclear if its phase gate functions exist on main. Story assumes APIP-6001 helpers are available but this is not verified. Previous implementation proceeded without APIP-6001 merged."
+  - id: risk_disclosure
+    status: WARN
+    note: "risk_notes mentions idempotency risk but underspecifies: (1) What happens if recovery acts on a legitimately slow story (not stuck, just processing)? (2) Previous implementation added 2112 lines to a 2001-line script — doubling script size is a maintainability risk. (3) No rollback mechanism if recovery action is wrong."
+  - id: story_sizing
+    status: PASS
+    note: "10 ACs but all in same domain (bash script), single file touched. Borderline large but acceptable given single-concern scope."
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: "PLAN.yaml has 5 steps with dependencies forming a DAG. However, no formal subtask section in story, no verification commands per subtask, no canonical references section. Previous implementation was done as a single 2112-line batch — should be decomposed into smaller, verifiable increments."
+
+gaps:
+  - id: gap-1
+    check: testability
+    finding: "No testing acceptance criteria — previous implementation had 0 tests for a recovery system that moves stories between stages and cleans worktrees"
+    severity: high
+    decision: add_ac
+    ac_added: "AC-11: Test harness with at least 3 test scenarios: detect finds stuck story, recover moves story and writes artifact, idempotency second run is no-op"
+  - id: gap-2
+    check: decision_completeness
+    finding: "Dependency APIP-6001 is in failed-code-review — story assumes phase gate helpers exist but they may not be on main"
+    severity: critical
+    decision: add_ac
+    ac_added: "AC-12: Story works independently of APIP-6001 — degrades gracefully if phase gate functions absent, logs warning"
+  - id: gap-3
+    check: risk_disclosure
+    finding: "No safeguard against recovering a legitimately in-progress story (just slow, not stuck) — 4-hour threshold may be too aggressive for large stories"
+    severity: high
+    decision: add_ac
+    ac_added: "AC-13: Activity-based stuck detection — check for recent worktree commits (last 30 min) before recovering, skip if active"
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: "Add a dry-run mode (--detect-stuck --dry-run) that reports what would be recovered without taking action"
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "a3f83f74-711b-49c7-8884-43beac9fc642"
+  - id: opp-2
+    category: performance
+    finding: "Previous implementation doubled script size (2112 lines added to 2001-line file). Consider extracting to scripts/lib/stuck-recovery.sh sourced file to improve maintainability"
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "822d457d-2099-4877-8f1e-8a69c0680703"
+  - id: opp-3
+    category: edge_cases
+    finding: "Recovery for stale-in-progress pattern mentioned in story seed but not covered by any AC — stories stuck in in-progress stage have no recovery path"
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "e93e5de0-8296-40ec-8735-75225053fa80"
+  - id: opp-4
+    category: observability
+    finding: "No summary report after sweep — add a final count line: RECOVERY SWEEP: checked=N stuck=M recovered=K skipped=J"
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "77b42cf0-b4d0-4c54-87e1-7d3285c2b040"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-04T12:05:00Z"
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 3

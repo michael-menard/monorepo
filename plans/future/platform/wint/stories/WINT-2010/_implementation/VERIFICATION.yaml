@@ -1,0 +1,175 @@
+schema: 1
+story_id: WINT-2010
+timestamp: '2026-03-07T22:00:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 16
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt — backend-only package
+coverage: not_measured
+coverage_meets_threshold: unknown
+coverage_note: >-
+  @vitest/coverage-v8 is not declared in devDependencies for this package — pnpm test:coverage fails with ERR_LOAD_URL.
+  The coverage provider is configured in vitest.config.ts (v8, thresholds 80%) but the tool is not installed. This is a
+  blocking issue: AC-6 requires >= 80% coverage verified, and the evidence claim of coverage passing cannot be
+  independently confirmed.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes:
+    - Tests use vi.mock + vi.mocked correctly for isolation
+    - beforeEach/afterEach clear cache and reset mocks — stateful cache tests properly isolated
+    - Semantic assertions on status codes and body shapes
+    - No setTimeout anti-patterns
+acs_verified:
+  - ac_id: AC-1
+    story_description: Package scaffold created — package.json, tsconfig.json, vitest.config.ts, pnpm-workspace.yaml updated
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: >-
+      Package exists at packages/backend/sidecars/role-pack/, name @repo/sidecar-role-pack confirmed in package.json.
+      pnpm-workspace.yaml has 'packages/backend/sidecars/*' glob. tsconfig.json extends root. vitest.config.ts has 80%
+      coverage thresholds.
+  - ac_id: AC-2
+    story_description: RoleSchema = z.enum(['dev', 'po', 'qa', 'da']), input/output schemas defined, all z.infer<> types
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: >-
+      Verified in src/__types__/index.ts: RoleSchema = z.enum(['dev','po','qa','da']) with pm excluded and comment.
+      RolePackGetInputSchema, RolePackGetOutputSchema, RolePackHttpResponseSchema all defined. All types use z.infer<>.
+      No TypeScript interfaces.
+  - ac_id: AC-3
+    story_description: 'File reader: reads .claude/prompts/role-packs/{role}.md, returns null with logger.warn on miss'
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: >-
+      role-pack-reader.ts reads from ROLE_PACK_DIR env var or CWD/.claude/prompts/role-packs/. ENOENT -> null +
+      logger.warn. Generic error -> null + logger.warn. Frontmatter stripped (content returned raw with frontmatter
+      present — see gap note). In-memory Map cache confirmed.
+  - ac_id: AC-4
+    story_description: In-memory Map cache per role, cache hit on second call
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: >-
+      const cache = new Map<Role, CachedPack>() confirmed in role-pack-reader.ts. Cache hit test in
+      role-pack-reader.test.ts verifies readFile called exactly once for two readRolePack calls.
+  - ac_id: AC-5
+    story_description: Returns null with logger.warn on file miss or read error
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: >-
+      Both ENOENT and generic errors handled in try/catch, both call logger.warn and return null. Tested in
+      role-pack-reader.test.ts for both error paths.
+  - ac_id: AC-6
+    story_description: 'Unit tests pass: 3 test files, coverage >= 80%'
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: >-
+      FAIL — 16/16 tests pass (confirmed by QA re-run). However @vitest/coverage-v8 is not in devDependencies; pnpm
+      test:coverage fails with ERR_LOAD_URL. The 80% coverage threshold in vitest.config.ts cannot be independently
+      verified. This is a blocking gap: AC-6 explicitly requires >= 80% line coverage to be confirmed.
+    issue_type: missing_devDependency
+  - ac_id: AC-7
+    story_description: 'HTTP endpoint: 200 success, 400 missing/invalid role, 404 on miss, versioning strategy (v mismatch -> 404)'
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: >-
+      FAIL — Version mismatch in HTTP endpoint is NOT implemented. The http-handler.ts parses the 'v' query param but
+      never compares it against pack.version. GET /role-pack?role=dev&v=99 returns 200 (not 404) when the file exists
+      with version 1. AC-7 requires: 'GET /role-pack?role=dev&v=2 returns content only if version: 2 matches'. No test
+      in http-endpoint.test.ts covers version mismatch. The story's HTTP contract explicitly defines: '404 { error:
+      "Version not found", available: N }' for version mismatch. rolePackGet() also logs a warning on version mismatch
+      but still returns content (non-null) — acceptable for MCP tool but HTTP layer must enforce the 404.
+  - ac_id: AC-8
+    story_description: Integration with role pack files — reads from .claude/prompts/role-packs/, fixture fallback documented
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: >-
+      File reader uses ROLE_PACK_DIR env var (defaults to CWD/.claude/prompts/role-packs/). 4 fixture stubs present in
+      src/__fixtures__/: dev.md, po.md, qa.md, da.md — each with version: 1 frontmatter.
+  - ac_id: AC-9
+    story_description: README.md documents service, HTTP API, MCP tool, versioning, WINT-0210 dependency
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: README.md confirmed present with HTTP API docs, MCP usage, env vars, dev commands. Mentions WINT-0210 dependency.
+  - ac_id: AC-10
+    story_description: RoleSchema uses ['dev','po','qa','da'] not 'pm'; all docs/tests reference correct roles
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: >-
+      Confirmed: RoleSchema = z.enum(['dev','po','qa','da']). Test in role-pack-get.test.ts explicitly asserts 'pm'
+      throws ZodError. HTTP test confirms role=pm returns 400. Fixtures use da.md not pm.md.
+  - ac_id: AC-11
+    story_description: README.md documents service, HTTP API, MCP tool, env vars
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+    notes: README confirmed present with complete documentation including downstream consumers (WINT-2020, etc.).
+  - ac_id: AC-12
+    story_description: src/index.ts exports rolePackGet and all schemas
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[11]
+    notes: >-
+      index.ts exports rolePackGet, RoleSchema, RolePackGetInputSchema, RolePackGetOutputSchema,
+      RolePackHttpResponseSchema and all inferred types. No barrel anti-patterns.
+architecture_compliant: true
+architecture_notes:
+  - 'Zod-first types: confirmed, no TypeScript interfaces'
+  - 'No console.log: @repo/logger used exclusively'
+  - 'No barrel files: direct imports from source files'
+  - 'No @repo/db dependency: correct for this package'
+  - 'ADR-001 exempt (internal sidecar path): confirmed, /role-pack path is valid'
+  - 'No Lambda deployment: sidecar is a standalone Node.js process'
+  - >-
+    2 low-severity typescript warnings from code review: non-null assertion at role-pack-reader.ts:58 and 'as any' in
+    test — both are acceptable
+issues:
+  - id: ISSUE-1
+    ac: AC-7
+    severity: blocking
+    description: >-
+      HTTP version mismatch not implemented. GET /role-pack?role=dev&v=99 returns 200 instead of 404 when file has
+      version: 1. The 'v' query param is parsed in http-handler.ts but never compared against pack.version. No test
+      covers this path.
+    file: packages/backend/sidecars/role-pack/src/http-handler.ts
+    required_behavior: >-
+      If v param provided and pack.version !== v, return 404 { ok: false, error: 'Version not found', available:
+      pack.version }
+  - id: ISSUE-2
+    ac: AC-6
+    severity: blocking
+    description: >-
+      @vitest/coverage-v8 is not declared in devDependencies. pnpm test:coverage fails with ERR_LOAD_URL. Coverage
+      threshold compliance (>= 80%) cannot be confirmed.
+    file: packages/backend/sidecars/role-pack/package.json
+    required_fix: Add @vitest/coverage-v8 to devDependencies and run pnpm test:coverage to confirm thresholds pass
+lessons_to_record:
+  - lesson: >-
+      HTTP sidecar version mismatch logic must be explicitly tested with a version-mismatch case in
+      http-endpoint.test.ts. The 'v' query param being parsed but unused is an easy-to-miss gap.
+    category: anti_pattern
+    tags:
+      - http
+      - versioning
+      - sidecar
+      - test-coverage
+  - lesson: >-
+      When configuring vitest coverage (provider: v8, thresholds in vitest.config.ts), the @vitest/coverage-v8 package
+      must be added to devDependencies — it is not implicitly available from the workspace root. Omitting it causes pnpm
+      test:coverage to fail silently at the module load stage.
+    category: blocker
+    tags:
+      - vitest
+      - coverage
+      - devDependencies
+      - sidecar
+tokens:
+  in: 18000
+  out: 3500

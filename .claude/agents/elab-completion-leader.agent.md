@@ -34,23 +34,23 @@ From orchestrator context:
 - Final verdict: PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED
 - User decisions from interactive discussion (JSON or structured) - OR - auto-decisions from DECISIONS.yaml
 
-From filesystem:
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story file
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` - full elaboration record (audit, gaps, opportunities, verdict)
+From KB (authoritative):
+- Story data: `kb_get_story({ story_id: "{STORY_ID}" })` — primary source of truth
+- ELAB artifact: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })` — primary source of truth
 
 ### Decision Source
 
-**Interactive mode**: Decisions come from orchestrator context (user input); write them into ELAB.yaml.
+**Interactive mode**: Decisions come from orchestrator context (user input); write them into elaboration KB artifact.
 
-**Autonomous mode**: Read decisions from `_implementation/ELAB.yaml` `gaps[].decision` and `opportunities[].decision` fields (already populated by elab-autonomous-decider).
+**Autonomous mode**: Read decisions from elaboration KB artifact `gaps[].decision` and `opportunities[].decision` fields (already populated by elab-autonomous-decider).
 
 ---
 
 ## Actions (Sequential)
 
-### Step 1: Finalize ELAB.yaml
+### Step 1: Finalize elaboration KB artifact
 
-Update `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` with final verdict:
+Update the elaboration artifact via `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration", phase: "planning", content: { ...existing, ...finalDecisions } })` with final verdict:
 
 ```yaml
 verdict: PASS | CONDITIONAL_PASS | FAIL | SPLIT_REQUIRED
@@ -66,9 +66,36 @@ summary:
 **Interactive mode**: Also fill in `gaps[].decision` and `opportunities[].decision` from user choices.
 **Autonomous mode**: These are already set by elab-autonomous-decider; only write `verdict`, `decided_at`, `summary`.
 
-### Step 2: Append QA Notes to Story
+### Step 1a: Artifact Gate Validation (Soft — Warn, Do Not Block)
 
-Append `qa_notes` block to `{STORY_ID}.md` frontmatter (or as a YAML block at end of file):
+Check whether the following elab output artifact files exist for this story:
+
+| Artifact | Expected Path |
+|----------|---------------|
+| `gaps.ts` data | `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/` (ELAB.yaml `gaps[]` field) |
+| Cohesion findings | `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` `audit` entries |
+| Scope challenges | Story `non_goals` or `scope_challenges` section |
+| MVP slice | Story `acceptance_criteria` prioritization |
+| Final scope | ELAB.yaml `verdict` + `gaps_resolved` |
+| Evidence expectations | PLAN.yaml `acceptance_criteria_map` |
+
+**This is a soft gate — warn if missing, do not block elaboration completion.**
+
+For each expected artifact that is absent, add a warning entry to the ELAB.yaml `summary` or append a note:
+
+```yaml
+# Example warning note when artifacts are missing
+warnings:
+  - "cohesion_findings: not produced — pre-WINT-4150 elaboration, graceful skip"
+  - "scope_challenges: not produced — story predates artifact schema"
+```
+
+**Graceful degradation**: Stories elaborated before WINT-4150 will not have these artifacts. This step must never block completion — emit warnings only. If all artifacts are present, no action needed.
+
+
+### Step 2: Write QA Notes to KB Story Record
+
+Update the story's `metadata` or `qa_notes` field in the KB via `kb_update_story` (or equivalent mutation):
 
 ```yaml
 qa_notes:
@@ -80,9 +107,22 @@ qa_notes:
   opportunities_logged: N
 ```
 
-### Step 3: Update Story Status (use /story-update skill)
+### Step 3: Update KB State (PRIMARY — always run)
 
-Based on verdict, use the skill to update status:
+Based on verdict:
+
+| Verdict | KB State |
+|---------|----------|
+| PASS | `kb_update_story_status({ story_id, state: "ready", phase: "planning" })` |
+| CONDITIONAL PASS | `kb_update_story_status({ story_id, state: "ready", phase: "planning" })` |
+| FAIL | `kb_update_story_status({ story_id, state: "backlog", phase: "planning" })` |
+| SPLIT REQUIRED | `kb_update_story_status({ story_id, state: "backlog", phase: "planning" })` |
+
+If KB unavailable: log warning, continue.
+
+### Step 4: Update Story File Status (best-effort — only if story file exists on disk)
+
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` does not exist on disk. KB update in Step 3 is the authoritative state change.
 
 | Verdict | Command |
 |---------|---------|
@@ -91,9 +131,9 @@ Based on verdict, use the skill to update status:
 | FAIL | `/story-update {FEATURE_DIR} {STORY_ID} needs-refinement` |
 | SPLIT REQUIRED | `/story-update {FEATURE_DIR} {STORY_ID} needs-split` |
 
-### Step 4: Move Story Directory (use /story-move skill)
+### Step 5: Move Story Directory (best-effort — only if directory exists on disk)
 
-Based on verdict:
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/` does not exist. KB update in Step 3 is the authoritative state change.
 
 **If PASS or CONDITIONAL PASS:**
 ```
@@ -103,28 +143,32 @@ Based on verdict:
 **If FAIL or SPLIT REQUIRED:**
 Story stays in `{FEATURE_DIR}/elaboration/` for PM to address. No move needed.
 
-### Step 5: Update Story Index (use /index-update skill)
+### Step 6: Update Story Index (best-effort — only if index file exists)
+
+Skip silently if index file does not exist.
 
 ```
 /index-update {FEATURE_DIR} {STORY_ID} --status=<new-status>
 ```
 
-Use the appropriate status from Step 3.
-
-### Step 6: Verify Final State
+### Step 7: Verify Final State
 
 Confirm:
-- `_implementation/ELAB.yaml` exists with `verdict` and `decided_at` set
-- Story status updated (frontmatter + index)
-- Directory in correct location
+- Elaboration KB artifact written (`kb_write_artifact`) with `verdict` and `decided_at` set
+- KB story state updated (authoritative)
+- Filesystem directory moved if it existed on disk (best-effort)
 
 ---
 
 ## Output
 
-Write exactly:
-- Update `_implementation/ELAB.yaml` - finalize verdict + summary
-- Append `qa_notes` block to `{STORY_ID}.md`
+Always (KB-first, required):
+- Update KB story state (Step 3): `kb_update_story_status`
+- Write elaboration KB artifact (Step 1): `kb_write_artifact({ story_id, artifact_type: "elaboration", ... })`
+- Write QA notes to KB story record (Step 2): `kb_update_story`
+
+Best-effort (only if on-disk files exist):
+- Update story file status and move directory (Steps 4-5)
 
 ---
 
@@ -157,8 +201,10 @@ Estimate: `tokens ≈ bytes / 4`
 
 ## Non-Negotiables
 
+- MUST update KB story state before reporting completion signal (Step 3)
+- MUST write elaboration verdict as KB artifact
 - MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents
-- Do NOT modify story content except to append QA Notes and update status
-- Do NOT skip directory move for PASS/CONDITIONAL PASS
+- Do NOT modify story content except to append QA Notes and update status (only if file exists)
+- Filesystem directory moves and index updates are best-effort — skip if no directory/file
 - MUST verify final state before completion

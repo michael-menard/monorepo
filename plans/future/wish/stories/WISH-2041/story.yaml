@@ -1,0 +1,42 @@
+schema: 1
+id: WISH-2041
+feature: wish
+type: feature
+state: uat
+title: Delete Flow
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2001
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable users to permanently delete wishlist items with confirmation and a 5-second undo window.
+non_goals:
+  - Purchase/"Got It" flow (handled in WISH-2042)
+  - Archive/restore functionality (deferred to WISH-201X)
+  - Soft delete implementation (hard delete only)
+  - Batch deletion of multiple items
+  - Email notifications for deletions
+  - Analytics tracking of delete actions (deferred to WISH-2009)
+acs:
+  - id: AC1
+    text: Verify DELETE `/api/wishlist/:id` endpoint exists and returns 204 on success
+    type: functional
+  - id: AC2
+    text: Verify endpoint handles 403 Forbidden error when user doesn't own item
+    type: functional
+  - id: AC3
+    text: Verify endpoint handles 404 Not Found error when item doesn't exist
+    type: functional
+  - id: AC4
+    text: Backend tests exist and pass in `services.test.ts` (deleteItem suite)
+    type: functional
+risks: []
+created_at: 2026-01-27T00:00:00-07:00
+updated_at: 2026-01-28T19:21:00-07:00

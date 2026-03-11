@@ -17,9 +17,9 @@ Catch issues early to avoid wasting context on a flawed plan.
 - Story ID (e.g., `WISH-001`)
 
 Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/SCOPE.md`
 
 ## Validation Checklist
 
@@ -52,7 +52,7 @@ Read from story directory:
 
 ## Output (MUST WRITE)
 Write to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN-VALIDATION.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN-VALIDATION.md`
 
 ## Required Structure
 
@@ -97,4 +97,4 @@ End with "PLAN VALID" or "PLAN INVALID: <summary of blockers>".
 
 ## Blockers
 If unable to validate, write details to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BLOCKERS.md`

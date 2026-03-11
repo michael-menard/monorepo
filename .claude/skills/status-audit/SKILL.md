@@ -29,37 +29,17 @@ type: utility
 
 ## What It Does
 
-Performs a four-part audit and optionally fixes all detected issues:
+Performs a five-part audit and optionally fixes all detected issues:
 
 | Section | What It Checks |
 |---------|---------------|
-| **A. Duplicate Directories** | Stories with copies in multiple stage dirs — picks furthest-progressed as canonical |
-| **B. KB State Mismatch** | Canonical disk state vs KB `state` field — updates KB if behind |
+| **A. Legacy Stage Directories** | Stories that still exist in old-style stage dirs (`backlog/`, `in-progress/`, etc.) — flags for migration to flat `stories/` layout |
+| **B. KB State Mismatch** | Stories in flat `stories/` on disk vs KB `state` field — flags stories on disk not in KB, and vice versa |
 | **C. Orphaned Worktrees** | Active `git worktree list` entries vs `worktree_list_active` KB records |
 | **D. Deferred KB Writes** | `DEFERRED-KB-WRITES.yaml` files on disk that were never processed |
 | **E. Artifact Sync** | Key artifacts on disk (`CHECKPOINT.yaml`, `EVIDENCE.yaml`, `QA-VERIFY.yaml`) vs KB artifact records |
 
-**Conflict resolution rule:** When a story exists in multiple directories, the one furthest along the progression order is ground truth. The KB is then corrected to match it.
-
----
-
-## Progression Order (lower = earlier, higher = further along)
-
-| Rank | Directory Name | KB State |
-|------|---------------|----------|
-| 0 | `backlog/`, `elaboration/`, `created/` | `backlog` |
-| 1 | `ready-to-work/` | `ready` |
-| 2 | `in-progress/` | `in_progress` |
-| 3 | `needs-code-review/` | `ready_for_review` |
-| 4 | `failed-code-review/` | `failed_code_review` |
-| 5 | `ready-for-qa/` | `ready_for_qa` |
-| 6 | `failed-qa/` | `failed_qa` |
-| 7 | `UAT/` | `in_qa` → check `QA-VERIFY.yaml` for `verdict: PASS` → `completed` |
-| 8 | `completed/` | `completed` |
-
-> **UAT rule:** A story in `UAT/` is `in_qa` by default. If a `QA-VERIFY.yaml` or `CHECKPOINT.yaml` with `verdict: PASS` exists anywhere in its directory tree, use `completed` instead.
-
-> **Failure state rule:** `failed-code-review` (4) and `failed-qa` (6) outrank their respective success predecessors because they represent the most recent state. If a story is in BOTH `UAT/` (7) and `failed-code-review/` (4), `UAT/` wins.
+**Source of truth:** The KB is the authoritative source for story state. Filesystem directories are for artifact storage only — status is never inferred from directory location.
 
 ---
 
@@ -106,28 +86,40 @@ If tool fails, set `KB_WORKTREES = {}` and note in output.
 
 ### Step 3 — Filesystem Scan
 
-Run via Bash tool to find all story directories:
+**Scan A: Flat stories/ directories (canonical)**
+
+Run via Bash tool to find all story directories in the flat layout:
 
 ```bash
-find plans/future/platform -mindepth 2 -maxdepth 5 -type d \
+find plans/future/platform -type d \
   -regextype posix-extended \
-  -regex '.*/[A-Z]+-[0-9]+$'
+  -regex '.*/stories/[A-Z]+-[0-9]+$'
 ```
 
 For each path found, extract:
 - `story_id`: last path segment (e.g., `KBAR-0040`)
-- `stage_dir`: parent directory name (e.g., `UAT`, `ready-for-qa`)
-- `rank`: from the Progression Order table above
+- `story_path`: full path (e.g., `plans/future/platform/wint/stories/KBAR-0040`)
 
-**Ignore nested story directories** — if a path like `UAT/AUDT-0010/AUDT-0010` is found, the inner `AUDT-0010` is a nested artifact folder, not a separate story entry. Skip any path where the parent directory matches the story ID pattern (`[A-Z]+-[0-9]+`).
+Store as `DISK_STORIES`: `{ storyId → { story_path } }`
 
-Group by `story_id`. For each story with multiple entries:
-- Pick the entry with the highest rank as **canonical**
-- Flag all lower-ranked entries as **stale copies**
+**Scan B: Legacy stage directories (flag for migration)**
 
-Store as `DISK_STORIES`: `{ storyId → { canonical_path, canonical_stage, canonical_rank, kb_expected_state, stale_copies[] } }`
+Run via Bash tool to find stories still in old-style stage directories:
 
-If `--story` flag is set, filter to just that story ID.
+```bash
+find plans/future/platform -mindepth 2 -maxdepth 5 -type d \
+  -regextype posix-extended \
+  -regex '.*/(backlog|created|elaboration|ready-to-work|in-progress|needs-code-review|failed-code-review|ready-for-qa|failed-qa|UAT|completed)/[A-Z]+-[0-9]+$'
+```
+
+For each path found, extract:
+- `story_id`: last path segment
+- `stage_dir`: parent directory name
+- `legacy_path`: full path
+
+Store as `LEGACY_STORIES`: `{ storyId → { legacy_path, stage_dir } }`. These are flagged in Section A.
+
+If `--story` flag is set, filter both scans to just that story ID.
 
 ---
 
@@ -200,21 +192,25 @@ Flag stories where disk artifacts exist but no corresponding KB artifact type is
 
 ### Step 7 — Build Report
 
-#### Section A: Duplicate Directories
+#### Section A: Legacy Stage Directories
 
-For each story with stale copies:
+For each story in `LEGACY_STORIES`:
 
 ```
-STORY-ID  canonical: UAT/STORY-ID (rank 7)  stale: ready-for-qa/STORY-ID (rank 5), backlog/STORY-ID (rank 0)
+STORY-ID  legacy: in-progress/STORY-ID  → needs migration to stories/STORY-ID/
 ```
+
+Stories in legacy directories should be manually moved to `{FEATURE_DIR}/stories/{STORY_ID}/` and the KB updated accordingly. Run with `--fix` to update KB state from these directories.
 
 #### Section B: KB State Mismatches
 
-Compare `DISK_STORIES[id].kb_expected_state` vs `KB_STORIES[id].state`:
+Compare `DISK_STORIES` vs `KB_STORIES`:
 
-- If story is in `DISK_STORIES` but NOT in `KB_STORIES`: flag as **Not in KB**
-- If states match: skip (no issue)
-- If states differ: flag as **Mismatch** with current → expected
+- If story is in `DISK_STORIES` but NOT in `KB_STORIES`: flag as **Not in KB** (on disk, not registered)
+- If story is in `KB_STORIES` but NOT in `DISK_STORIES`: flag as **No directory** (in KB, no story directory)
+- If `KB_STORIES[id].story_dir` doesn't match the path in `DISK_STORIES`: flag as **Path mismatch**
+
+Also include stories from `LEGACY_STORIES` in KB comparisons — their KB state is preserved but directory needs migration.
 
 Also flag if `KB_STORIES[id].story_dir` doesn't match the canonical path on disk.
 
@@ -243,15 +239,10 @@ STATUS AUDIT — plans/future/platform
 Scanned: {N} stories on disk  |  {M} in KB  |  {date}
 ═══════════════════════════════════════════════════════
 
-── A. DUPLICATE DIRECTORIES ({count} stories affected) ──────────────
+── A. LEGACY STAGE DIRECTORIES ({count} stories) ─────────────────────
 
-  KBAR-0040  ✓ canonical: kb-artifact-migration/UAT/KBAR-0040 (rank 7: in_qa)
-             ✗ stale:     kb-artifact-migration/failed-code-review/KBAR-0040 (rank 4)
-             ✗ stale:     ready-for-qa/KBAR-0040 (rank 5)
-
-  LNGG-0030  ✓ canonical: UAT/LNGG-0030 (rank 7: in_qa)
-             ✗ stale:     ready-for-qa/LNGG-0030 (rank 5)
-             ✗ stale:     backlog/LNGG-0030 (rank 0)
+  KBAR-0040  legacy: in-progress/KBAR-0040   → migrate to stories/KBAR-0040/
+  LNGG-0030  legacy: UAT/LNGG-0030           → migrate to stories/LNGG-0030/
   ...
 
 ── B. KB STATE MISMATCHES ({count} stories) ─────────────────────────
@@ -290,7 +281,7 @@ Scanned: {N} stories on disk  |  {M} in KB  |  {date}
 
 ═══════════════════════════════════════════════════════
 SUMMARY
-  Duplicate dirs:      {A_count} stories with stale copies
+  Legacy stage dirs:   {A_count} stories need migration
   KB state mismatches: {B_count} (updates needed)
   Orphaned worktrees:  {C_count}
   Deferred writes:     {D_count} files
@@ -309,6 +300,19 @@ Run with --fix to apply all KB corrections.
 ### Step 9 — Apply Fixes (only if `--fix` flag is set)
 
 Apply in this order:
+
+#### Fix A: Legacy Stage Directories
+
+Legacy stage directories cannot be auto-migrated (requires moving files and potentially active work). Flag as:
+
+```
+⚠ LEGACY directories require manual migration:
+  For each story: mv {legacy_path} {FEATURE_DIR}/stories/{STORY_ID}/
+  Then update KB story_dir:
+    kb_update_story({ story_id, story_dir: "{FEATURE_DIR}/stories/{STORY_ID}" })
+```
+
+List each legacy path for easy access.
 
 #### Fix B: KB State + story_dir Updates
 
@@ -364,9 +368,9 @@ After applying fixes, show:
 
 ```
 Fix Results:
-  ✓ {N} KB states updated
-  ✓ {N} story_dir paths corrected
+  ✓ {N} KB story_dir paths corrected
   ✓ {N} orphaned worktree KB records marked complete
+  ⚠ {N} legacy stage directories need manual migration
   ⚠ {N} untracked worktrees need manual review (/wt-status)
   ⚠ {N} deferred write files need manual processing
   ⚠ {N} artifact gaps need re-verification
@@ -378,12 +382,9 @@ Fix Results:
 
 | Scenario | Behavior |
 |----------|----------|
-| Story in `UAT/` with no `QA-VERIFY.yaml` | Use `in_qa` (not `completed`) |
-| Story in `UAT/` with `QA-VERIFY.yaml` but `verdict: FAIL` | Use `in_qa` |
-| Story in `UAT/` with `QA-VERIFY.yaml` `verdict: PASS` | Use `completed` |
-| Nested story dir (e.g., `UAT/KBAR-0020/KBAR-0020`) | Skip inner dir — it's an artifact folder |
+| Legacy story in `UAT/` or other stage dir | Flagged in Section A as needing migration to `stories/` layout |
+| Nested story dir (e.g., `stories/KBAR-0020/KBAR-0020`) | Skip inner dir — it's an artifact folder |
 | Story in git worktree but no active work / clearly abandoned | Flag for manual review, don't auto-remove |
 | `kb_list_stories` pagination | Keep calling with increasing offset until total exhausted |
 | Story on disk but `--story` filter doesn't match | Skip |
-| KB `state` is `completed` but disk shows `in_qa` | Do NOT downgrade — KB may be correct if QA-VERIFY was done without moving dir. Flag as `REVIEW` not auto-fix |
-| `failed_qa` (rank 6) vs `UAT` (rank 7) | UAT wins — story was re-submitted to QA |
+| KB `state` is `completed` but story is in a legacy stage dir | KB wins — KB is the authoritative source. Flag dir for migration. |

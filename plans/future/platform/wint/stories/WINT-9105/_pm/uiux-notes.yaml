@@ -1,0 +1,4 @@
+skipped: true
+reason: "WINT-9105 is a pure backend architecture story. It produces an ADR Markdown
+  document only. There are no frontend components, API endpoints, user-facing surfaces,
+  or UI/UX concerns of any kind."

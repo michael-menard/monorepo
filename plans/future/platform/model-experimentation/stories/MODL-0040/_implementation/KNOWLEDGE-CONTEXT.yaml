@@ -1,0 +1,97 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-18T20:30:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "MODL-0030"
+        lesson: "QualityEvaluationSchema extends TaskContractSchema — importing from models/__types__/task-contract.ts is required for schema extension; importing from quality-evaluator.ts (implementation) would create circular deps"
+        category: blocker
+        applies_because: "MODL-0040 RunRecordSchema extends QualityEvaluationSchema; same import chain risk applies"
+
+      - story_id: "MODL-0020"
+        lesson: "Strategy YAML loader uses yaml package with indent:2, lineWidth:120 — this is the established convention for all YAML artifacts in the orchestrator package"
+        category: pattern
+        applies_because: "saveLeaderboard must match this convention for consistency"
+
+      - story_id: "WINT-1070"
+        lesson: "Integration tests using os.tmpdir() require unique suffixes per test to avoid cross-test file collisions when running in parallel; use crypto.randomUUID() or timestamp+random suffix"
+        category: time_sink
+        applies_because: "AC-10 requires integration test with os.tmpdir() write/reload cycle"
+
+      - story_id: "MODL-0010"
+        lesson: "New directories in src/ (e.g. providers/) require no special package.json registration — Turborepo picks them up automatically via tsconfig paths"
+        category: reuse
+        applies_because: "model-selector/ directory is new; no registration needed beyond creating the files"
+
+    blockers_to_avoid:
+      - "Do NOT import from models/quality-evaluator.ts in leaderboard.ts — use models/__types__/quality-evaluation.ts for type imports only to prevent circular dependency"
+      - "Do NOT maintain a module-level leaderboard singleton — caller owns lifecycle; load on demand"
+      - "Do NOT modify QualityEvaluationSchema, TaskContractSchema, quality-evaluator.ts, task-selector.ts, or yaml-artifact-writer.ts — these are protected files"
+
+    patterns_to_follow:
+      - "logger.info('leaderboard', { event: '...', ...fields }) pattern matching quality-evaluator.ts logger calls"
+      - "Atomic write: write to temp path (.{base}.{random}.tmp{ext}), then fs.rename to target — same pattern as YamlArtifactWriter.atomicWrite()"
+      - "Use yaml.Document + doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 }) for YAML serialization"
+      - "Use LeaderboardSchema.safeParse() on load — never throw on corrupt file, surface error gracefully"
+      - "Pure function design for computation: computeValueScore, computeConvergence, computeQualityTrend are all pure and testable in isolation without filesystem"
+      - "vi.mock('@repo/logger', ...) pattern at top of test files matching quality-evaluator.test.ts structure"
+
+    patterns_to_avoid:
+      - "Do not use barrel files (index.ts re-exports) — import directly from source files"
+      - "Do not use TypeScript interfaces — use Zod schemas with z.infer<>"
+      - "Do not use console.log — use @repo/logger"
+      - "Do not read yaml-artifact-writer.ts implementation for reuse — copy the atomic write pattern into leaderboard.ts directly (story explicitly says 'copy pattern, not the class')"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "MODL-ARCH-001"
+        title: "RunRecord Input Design — Additive Pattern"
+        status: active
+        constraint: "RunRecord = QualityEvaluationSchema.extend({ cost_usd, latency_ms, tokens_in?, tokens_out? }) — additive only, MODL-0030 schema is not modified"
+        applies_to: ["model-selector", "leaderboard"]
+
+      - id: "MODL-ARCH-002"
+        title: "No Module-Level Singletons in Leaderboard"
+        status: active
+        constraint: "Load leaderboard from YAML on demand per recordRun call; do not maintain module-level state"
+        applies_to: ["model-selector", "leaderboard"]
+
+    constraints:
+      api_paths: "N/A — no HTTP endpoints in this story"
+      infrastructure: "N/A — no Lambda/APIGW/CDN changes"
+      storage: "YAML-only persistence (temp → rename atomic pattern); Postgres deferred to INFRA epic"
+      auth: "N/A"
+      testing: "Vitest; coverage ≥80% for src/model-selector/; integration test uses real os.tmpdir() (no mocks for fs); logger mocked with vi.mock('@repo/logger')"
+      circular_imports: "leaderboard.ts imports ONLY from models/__types__/quality-evaluation.ts — never from models/quality-evaluator.ts"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full yaml-artifact-writer.ts for atomic write pattern"
+        typical_tokens: 3500
+        mitigation: "Pattern already captured in KNOWLEDGE-CONTEXT and PLAN — executor can copy pattern directly without re-reading the file"
+
+      - operation: "Reading quality-evaluator.ts for logger pattern during execution"
+        typical_tokens: 4000
+        mitigation: "Logger pattern: logger.info('leaderboard', { event: '...', ...fields }) — executor can use this directly"
+
+      - operation: "Exploring the full orchestrator src/ tree"
+        typical_tokens: 2000
+        mitigation: "Use targeted reads — only files in PLAN.yaml files_to_read per step"
+
+    recommended_patterns:
+      - "Read only the canonical reference file listed per subtask step — not the full orchestrator src/"
+      - "For ST-7/ST-8 (tests), read leaderboard.ts after ST-4 completes rather than re-reading canonical refs"
+      - "Use pnpm check-types after each step to catch type errors early rather than discovering all at end"
+
+  warnings:
+    - "MODL-0030 (Quality Evaluator) is in UAT status — if its QualityEvaluation schema changes before implementation completes, RunRecordSchema will need updating. Verify MODL-0030 UAT has not regressed before starting ST-1."
+    - "AC-1 in story body was confirmed to include recent_run_scores field (line 117) — no story modification required, elaboration PASS verdict is clean."
+    - "ST-5 (reports.ts) can be developed in parallel with ST-2/3/4 since it only depends on ST-1 (schema). The PLAN.yaml encodes this as dependency on ST-1 only."
+    - "No ADR-LOG.md found at plans/stories/ADR-LOG.md — architectural decisions sourced from story Architecture Notes section and elaboration artifacts directly."
+
+  tokens:
+    in: 0
+    out: 0

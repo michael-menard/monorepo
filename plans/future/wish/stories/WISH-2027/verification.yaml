@@ -1,0 +1,81 @@
+schema: 1
+story_id: WISH-2027
+updated: 2026-01-31T12:45:00-07:00
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 0
+    fail: 0
+    note: N/A - documentation only
+  integration:
+    pass: 0
+    fail: 0
+    note: N/A - documentation only
+  e2e:
+    pass: 0
+    fail: 0
+    note: N/A - documentation only
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: File exists at specified path with 426 lines
+  - id: AC2
+    verdict: pass
+    evidence: Lines 11-40 'PostgreSQL Enum Constraints and Limitations' section with CAN/CANNOT tables
+  - id: AC3
+    verdict: pass
+    evidence: Lines 42-103 'Safe Enum Addition Procedure' with 5-step process
+  - id: AC4
+    verdict: pass
+    evidence: Lines 249-294 'Rollback Strategy' section documenting impossibility of rollback and mitigation strategies
+  - id: AC5
+    verdict: pass
+    evidence: Lines 222-258 'Multi-Environment Coordination Checklist' with pre-deployment checklist and deployment order
+  - id: AC6
+    verdict: pass
+    evidence: "File at docs/enum-migration-examples/add-store-example.sql, line 45: ALTER TYPE wishlist_store ADD VALUE IF
+      NOT EXISTS 'Amazon' BEFORE 'Other'"
+  - id: AC7
+    verdict: pass
+    evidence: "File at docs/enum-migration-examples/add-currency-example.sql, line 45: ALTER TYPE wishlist_currency ADD
+      VALUE IF NOT EXISTS 'JPY'"
+  - id: AC8
+    verdict: pass
+    evidence: "File at docs/enum-migration-examples/deprecate-store-example.sql, lines 48-109: Transaction with UPDATE
+      statement migrating Barweer to Other with notes annotation"
+  - id: AC9
+    verdict: pass
+    evidence: File at docs/enum-migration-examples/enum-to-table-migration.sql, 5-step migration process (lines 48-221)
+      converting ENUMs to lookup tables
+  - id: AC10
+    verdict: pass
+    evidence: "add-store-example.sql lines 76-97: DO block with INSERT/DELETE test validation for Amazon store"
+  - id: AC11
+    verdict: pass
+    evidence: "add-currency-example.sql lines 76-98: DO block with INSERT/DELETE test validation for JPY currency"
+  - id: AC12
+    verdict: pass
+    evidence: "deprecate-store-example.sql lines 48-109: Transaction with migration_log temp table, UPDATE with count
+      verification, and zero-row assertion"
+  - id: AC13
+    verdict: pass
+    evidence: All scripts use idempotent patterns (IF NOT EXISTS), include pre/post verification queries, have proper
+      transaction blocks, and are copy-paste ready
+  - id: AC14
+    verdict: pass
+    evidence: Lines 104-133 'Idempotency Patterns' section with IF NOT EXISTS examples and EXISTS check query
+  - id: AC15
+    verdict: pass
+    evidence: Lines 135-168 'Transaction Semantics' section with critical limitation warning and hybrid two-phase approach
+      example
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.289Z
+  blocking_issues: []

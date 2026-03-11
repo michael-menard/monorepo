@@ -1,0 +1,69 @@
+schema: 1
+story_id: WISH-2001
+updated: 2026-01-28T13:45:00-07:00
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 38
+    fail: 0
+  integration:
+    passed: 0
+    failed: 0
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC?
+    verdict: pass
+    evidence: File exists with 18 test scenarios covering GET /api/wishlist and GET /api/wishlist/:id
+  - id: AC?
+    verdict: pass
+    evidence: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts uses cookie-based auth via credentials: 'include'"
+  - id: AC?
+    verdict: pass
+    evidence: "wishlist-gallery-api.ts line 61,79: transformResponse with WishlistListResponseSchema.parse() and
+      WishlistItemSchema.parse()"
+  - id: AC?
+    verdict: pass
+    evidence: apps/web/app-wishlist-gallery/src/components/WishlistCard/index.tsx - all fields rendered with proper formatting
+  - id: AC?
+    verdict: pass
+    evidence: apps/web/app-wishlist-gallery/src/pages/main-page.tsx lines 398-411 - Tabs component with store filters
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 215-219 handleSearch, line 169 useGetWishlistQuery with q param
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 47-57 wishlistSortOptions with all required sort modes
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 148-149 useViewMode hook, lines 387-393 GalleryViewToggle component
+  - id: AC?
+    verdict: pass
+    evidence: "main-page.tsx line 444 GalleryGrid with columns={{ sm: 1, md: 2, lg: 3, xl: 4 }}"
+  - id: AC?
+    verdict: pass
+    evidence: WishlistCard uses GalleryCard with onClick handler, Got It button added for WISH-2042
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx line 293 GallerySkeleton from @repo/gallery package
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 336-347 GalleryEmptyState with Add First Item action
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 300-316 error state with GalleryEmptyState and retry action
+  - id: AC?
+    verdict: pass
+    evidence: main-page.tsx lines 473-481 GalleryPagination component, lines 251-256 handlePageChange
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.238Z
+  blocking_issues: []

@@ -1,0 +1,106 @@
+feasible: true
+confidence: high
+rationale: "All changes are mechanical extensions of well-established patterns in the KB codebase. Migration 015 provides a complete canonical pattern for the SQL work. The artifact-operations.ts CRUD file has clear extension points (ARTIFACT_TYPES constant, ARTIFACT_TYPE_TO_TABLE map, mapContentToTypedColumns switch, getDetailTableRef tableMap, generateArtifactName map). The ArtifactTypeSchema Zod enum is a simple additive extension. No existing tables or types are modified. Primary risk is forgetting one of the 5 extension locations in artifact-operations.ts — mitigated by the AC checklist and the runtime 'Unknown artifact type' error which surfaces missing mappings immediately."
+complexity: low
+change_surface:
+  areas:
+    - "apps/api/knowledge-base/src/db/migrations/ (new file)"
+    - "apps/api/knowledge-base/src/db/schema.ts (extend)"
+    - "apps/api/knowledge-base/src/__types__/index.ts (extend)"
+    - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts (extend)"
+    - "apps/api/knowledge-base/src/crud-operations/__tests__/ (extend)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Run migration 017_pm_artifact_types.sql against KB DB (port 5433) during deploy"
+risks:
+  - finding: "Dependency on KFMB-1010 not being complete"
+    mitigation: "Do not begin implementation until KFMB-1010 status is 'completed' in stories.index.md. The two stories touch separate tables so there is no code overlap, but the ordering constraint should be respected per the plan."
+  - finding: "One of the 5 extension locations in artifact-operations.ts missed"
+    mitigation: "AC-4 through AC-8 each cover one of the 5 locations explicitly. Run pnpm test after each subtask to surface 'Unknown artifact type' errors immediately. The systematic subtask ordering (ST-5) addresses all 5 locations in a single focused change."
+missing_requirements: []
+evidence_expectations:
+  - "pnpm check-types --filter @repo/knowledge-base passes with zero TypeScript errors after all changes"
+  - "pnpm test --filter @repo/knowledge-base passes including new unit tests for 4 new PM types"
+  - "SELECT table_name FROM information_schema.tables WHERE table_name IN ('artifact_test_plans', 'artifact_dev_feasibility', 'artifact_uiux_notes', 'artifact_story_seeds') returns all 4 rows"
+  - "kb_write_artifact then kb_read_artifact round-trip for each of the 4 new types succeeds with correct typed column values"
+subtasks:
+  - id: ST-1
+    title: "Read target files and confirm no hidden CHECK constraint"
+    goal: "Establish baseline understanding of all 5 files to be modified. Confirm artifact_type column in story_artifacts has no DB-level CHECK constraint by reading migration history and schema."
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql"
+      - "apps/api/knowledge-base/src/db/migrations/016_unique_story_prefix.sql"
+      - "apps/api/knowledge-base/src/db/schema.ts"
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+      - "apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.test.ts"
+      - "plans/future/platform/kb-artifact-migration/needs-code-review/KBAR-0200/_pm/dev-feasibility.yaml"
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: "Read confirms no CHECK constraint exists on artifact_type; migration pattern understood"
+    estimated_tokens: 6000
+  - id: ST-2
+    title: "Write SQL migration 017_pm_artifact_types.sql"
+    goal: "Create 4 new detail tables following the migration 015 pattern exactly: artifact_test_plans, artifact_dev_feasibility, artifact_uiux_notes, artifact_story_seeds. Each with id UUID PK, target_id TEXT NOT NULL, typed summary columns, data JSONB, timestamps, and appropriate indexes."
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/db/migrations/017_pm_artifact_types.sql"
+    acs: ["AC-1"]
+    depends_on: ST-1
+    verification: "SQL file valid; runs cleanly against local KB DB (port 5433) with no errors; all 4 tables visible in \\dt"
+    estimated_tokens: 5000
+  - id: ST-3
+    title: "Extend Drizzle schema with 4 new table definitions"
+    goal: "Add 4 Drizzle table definitions to schema.ts following the artifactReviews pattern: one per PM artifact type. Export createInsertSchema/createSelectSchema and inferred Insert*/Select* types for each."
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/schema.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/db/schema.ts"
+    acs: ["AC-3"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/knowledge-base passes; 4 new Drizzle tables exported"
+    estimated_tokens: 7000
+  - id: ST-4
+    title: "Extend ArtifactTypeSchema Zod enum in __types__/index.ts"
+    goal: "Add 4 new values to the ArtifactTypeSchema z.enum: test_plan, dev_feasibility, uiux_notes, story_seed. Existing values must be unchanged."
+    files_to_read:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    acs: ["AC-2"]
+    depends_on: ST-3
+    verification: "pnpm check-types passes; z.enum includes all 17 types (13 existing + 4 new)"
+    estimated_tokens: 3000
+  - id: ST-5
+    title: "Extend artifact-operations.ts — all 5 extension locations"
+    goal: "Update all 5 locations in artifact-operations.ts: (1) ARTIFACT_TYPES constant, (2) ARTIFACT_TYPE_TO_TABLE map, (3) mapContentToTypedColumns switch cases for each of the 4 new types, (4) getDetailTableRef tableMap entries pointing to the 4 new Drizzle table refs, (5) generateArtifactName typeNames map entries."
+    files_to_read:
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/crud-operations/artifact-operations.ts"
+    acs: ["AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+    depends_on: ST-4
+    verification: "pnpm check-types passes; kb_write_artifact with each new type succeeds without 'Unknown artifact type' error"
+    estimated_tokens: 8000
+  - id: ST-6
+    title: "Write unit tests for 4 new PM artifact types"
+    goal: "Add test cases to artifact-operations.test.ts covering write+read+delete round-trip for at least one PM type (test_plan), plus verify content is stored in the correct detail table. Add regression test confirming all 13 existing types still work."
+    files_to_read:
+      - "apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.test.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.test.ts"
+    acs: ["AC-9", "AC-10", "AC-11", "AC-12", "AC-14"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/knowledge-base passes all new and existing test cases"
+    estimated_tokens: 8000
+  - id: ST-7
+    title: "Final type check and full test run"
+    goal: "Run pnpm check-types and pnpm test to verify zero TypeScript errors and full test suite passes including regression tests for existing artifact types."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-13"]
+    depends_on: ST-6
+    verification: "pnpm check-types --filter @repo/knowledge-base exits 0; pnpm test --filter @repo/knowledge-base exits 0 with all tests green"
+    estimated_tokens: 2000

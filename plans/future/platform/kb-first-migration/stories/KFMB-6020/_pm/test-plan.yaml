@@ -1,0 +1,194 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "Script syntax check — generate-stories.sh"
+    setup: "KFMB-6010 is merged; generate-stories.sh comments updated to remove stories.index.md references"
+    action: "Run: bash -n scripts/generate-stories.sh"
+    expected: "Exit code 0, no syntax errors"
+    evidence: "Command output shows no errors"
+
+  - id: HP-2
+    title: "Script syntax check — implement-stories.sh"
+    setup: "KFMB-6010 is merged; implement-stories.sh comments updated"
+    action: "Run: bash -n scripts/implement-stories.sh"
+    expected: "Exit code 0, no syntax errors"
+    evidence: "Command output shows no errors"
+
+  - id: HP-3
+    title: "Script syntax check — implement-dispatcher.sh"
+    setup: "implement-dispatcher.sh comments updated (if any were modified)"
+    action: "Run: bash -n scripts/implement-dispatcher.sh"
+    expected: "Exit code 0, no syntax errors"
+    evidence: "Command output shows no errors"
+
+  - id: HP-4
+    title: "Script syntax check — resolve-plan.sh"
+    setup: "scripts/lib/resolve-plan.sh comments updated (if any were modified)"
+    action: "Run: bash -n scripts/lib/resolve-plan.sh"
+    expected: "Exit code 0, no syntax errors"
+    evidence: "Command output shows no errors"
+
+  - id: HP-5
+    title: "Python syntax check — sync-work-order.py"
+    setup: "sync-work-order.py module docstring updated to remove stories.index.md reference"
+    action: "Run: python3 -m py_compile scripts/sync-work-order.py"
+    expected: "Exit code 0, no syntax errors"
+    evidence: "Command output shows no errors"
+
+  - id: HP-6
+    title: "Script comments describe KB discovery model (generate-stories.sh)"
+    setup: "generate-stories.sh lines 13 and 26 comments have been updated"
+    action: "Read scripts/generate-stories.sh lines 13 and 26 directly"
+    expected: "Comments reference KB-based story discovery (not stories.index.md)"
+    evidence: "File content shows updated comment text describing KB query pattern"
+
+  - id: HP-7
+    title: "Script comments describe KB discovery model (implement-stories.sh)"
+    setup: "implement-stories.sh lines 30 and 32 comments have been updated"
+    action: "Read scripts/implement-stories.sh lines 30 and 32 directly"
+    expected: "Comments reference KB-based story discovery (not stories.index.md)"
+    evidence: "File content shows updated comment text"
+
+  - id: HP-8
+    title: "sync-work-order.py module docstring does not reference stories.index.md"
+    setup: "Module docstring updated"
+    action: "Read scripts/sync-work-order.py module-level docstring directly"
+    expected: "Docstring describes current KB + filesystem hybrid model without referencing stories.index.md as data source"
+    evidence: "File content confirms stories.index.md not listed as data source in docstring"
+
+  - id: HP-9
+    title: "Agent Output sections updated — no stale filesystem paths"
+    setup: "All agents identified in AC-1 audit have had their Output sections updated"
+    action: "For each updated agent file: read the Output section directly"
+    expected: "Output section describes artifact writes as KB tool calls (e.g., kb_write_artifact with artifact_type evidence), not filesystem paths like _implementation/EVIDENCE.yaml"
+    evidence: "Agent file content confirms KB-based prose in Output section"
+
+  - id: HP-10
+    title: "COMMANDS.md artifact descriptions describe KB model"
+    setup: "docs/COMMANDS.md sections updated to remove _implementation/ANALYSIS.md, _implementation/VERIFICATION.md, _pm/*.md, plans/stories/{PREFIX}.stories.index.md references"
+    action: "Read docs/COMMANDS.md sections covering workflow command outputs directly"
+    expected: "Descriptions reference KB storage and kb_read_artifact retrieval, not filesystem paths"
+    evidence: "File content confirms KB-first artifact description"
+
+  - id: HP-11
+    title: "story-directory-structure.md reflects KB-first architecture"
+    setup: "docs/workflow/story-directory-structure.md updated; Before/After history preserved"
+    action: "Read docs/workflow/story-directory-structure.md directly"
+    expected: "Document states _implementation/ and _pm/ artifact files are no longer written during normal workflow post-KFMB migration; historical migration context preserved"
+    evidence: "File content confirms current-state description and historical context preserved"
+
+  - id: HP-12
+    title: "Migration guide authored with all required sections"
+    setup: "docs/workflow/kb-first-migration-guide.md created"
+    action: "Read docs/workflow/kb-first-migration-guide.md directly"
+    expected: >
+      Document contains all 6 required sections:
+      (1) What the KB-First Migration was and why
+      (2) Phase-by-phase summary (5 phases)
+      (3) Current architecture description
+      (4) Field ownership table (kb_update_story vs migrate:stories script)
+      (5) How to use the new system (MCP tools, resolve-plan.sh pattern, script examples)
+    evidence: "File content inspection confirms all 6 sections present with accurate content"
+
+  - id: HP-13
+    title: "Migration guide discoverable from workflow docs index"
+    setup: "Link added to docs/workflow/README.md (or equivalent index)"
+    action: "Read docs/workflow/README.md (or equivalent) directly"
+    expected: "File contains link or reference to kb-first-migration-guide.md"
+    evidence: "File content confirms link present"
+
+error_cases:
+  - id: EC-1
+    title: "Scope audit inventory (AC-1) is missing before proceeding"
+    setup: "Implementation begins without completing AC-1 audit"
+    action: "Attempt to modify agent Output sections without running grep inventory first"
+    expected: "Story blocked — audit must precede any changes per seed constraints"
+    evidence: "EVIDENCE artifact contains inventory before any file modifications"
+
+  - id: EC-2
+    title: "Shell script comment update introduces bash 4+ syntax"
+    setup: "Comment updated with bash 4+ syntax inadvertently"
+    action: "Run: bash -n scripts/generate-stories.sh (or other script)"
+    expected: "If running bash 3.2 compatibility check: no syntax errors from new syntax"
+    evidence: "bash -n passes on macOS default Bash 3.2"
+
+  - id: EC-3
+    title: "Agent Output section update removes valid historical context"
+    setup: "Agent file updated to remove all _implementation/ references"
+    action: "Read updated agent file Output section"
+    expected: "Prose describes KB tool calls; valid historical migration notes (if any) preserved with appropriate tense"
+    evidence: "File content confirms KB-based prose without removing legitimate historical context"
+
+  - id: EC-4
+    title: "Migration guide field ownership table is inaccurate"
+    setup: "Field ownership table authored without consulting KB entry 932b9c55"
+    action: "Compare field ownership table in migration guide against KB entry 932b9c55 (KFMB-2040 field ownership documentation)"
+    expected: "Table entries match the documented field ownership split: kb_update_story (content fields) vs migration script (structural fields)"
+    evidence: "File content read directly; cross-referenced against KB entry content"
+
+edge_cases:
+  - id: ED-1
+    title: "Agent audit reveals more than 10 agents needing Output section updates"
+    setup: "AC-1 audit completes and identifies > 10 agent files with stale Output section prose"
+    action: "Review AC-1 inventory count for agent files"
+    expected: "If count > 10 files or estimated tokens > 30,000: story surfaces sizing warning and proposes KFMB-6030 split before proceeding with AC-3"
+    evidence: "EVIDENCE artifact notes sizing decision; implementation either proceeds with bounded scope or flags split"
+
+  - id: ED-2
+    title: "workflow doc references _implementation/ in historical context prose"
+    setup: "A workflow doc contains _implementation/ in historical/past-tense context"
+    action: "Read doc file directly; assess whether reference is live (current-state) or historical"
+    expected: "Historical references retained with appropriate past tense ('previously', 'before migration'); live/present-tense references updated to KB model"
+    evidence: "File content confirms appropriate tense used for retained historical references"
+
+  - id: ED-3
+    title: "docs/workflow/README.md does not exist as an index file"
+    setup: "AC-8 requires link from README.md or equivalent; file does not exist or has different name"
+    action: "Read docs/workflow/ directory; identify the actual index file"
+    expected: "Migration guide link added to the correct index file (whichever exists); if no index exists, one is created"
+    evidence: "Link present in appropriate discovery location"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "EVIDENCE dead code inventory completeness review"
+    steps:
+      - "Read the EVIDENCE artifact produced by AC-1 audit"
+      - "Cross-reference against seed's list of in-scope files: generate-stories.sh, implement-stories.sh, implement-dispatcher.sh, sync-work-order.py, resolve-plan.sh, .claude/agents/*.agent.md, docs/workflow/*.md, docs/COMMANDS.md, docs/elab-story-reference.md"
+      - "Verify each in-scope file appears in inventory (even if no stale references found, it should be noted as 'audited, clean')"
+    expected: "Inventory accounts for all files in scope"
+
+  - id: MC-2
+    title: "Migration guide section quality review"
+    steps:
+      - "Read docs/workflow/kb-first-migration-guide.md"
+      - "Verify section (4) field ownership table has >= 3 entries covering key fields"
+      - "Verify section (5) includes kb_get_story, kb_list_stories, kb_write_artifact, kb_read_artifact as named MCP tools"
+      - "Verify section (3) correctly states filesystem is retained only for worktree directories and PROOF files"
+    expected: "Migration guide is accurate and useful for a developer new to the KB-first architecture"
+
+  - id: MC-3
+    title: "No functional logic altered in shell/Python scripts"
+    steps:
+      - "Read each modified script before and after (using git diff or equivalent)"
+      - "Verify only comment lines (#) or docstring lines (triple-quote strings) are changed"
+      - "Verify no function bodies, conditionals, loops, or variable assignments were modified"
+    expected: "Diff shows exclusively comment/docstring changes"
+
+fixture_definitions: []
+
+risks:
+  - "Agent Output section scope unknown until AC-1 audit; if > 10 agents, test effort scales significantly"
+  - "EVIDENCE label drift: QA must read files directly rather than relying on grep patterns — grep may miss formatting variations"
+  - "KFMB-6010 dependency: tests cannot be run until KFMB-6010 is at needs-code-review; final state of scripts must be known before verifying AC-2"
+  - "Migration guide field ownership table accuracy depends on KB entry 932b9c55 being accessible during implementation"

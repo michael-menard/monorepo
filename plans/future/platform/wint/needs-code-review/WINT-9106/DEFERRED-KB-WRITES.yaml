@@ -1,0 +1,25 @@
+deferred_at: "2026-03-02"
+reason: "psql not available in current shell environment"
+retry_when: "KB database (port 5433) is accessible"
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: WINT-9106
+      feature: wint
+      title: "Implement LangGraph Checkpointer & State Recovery"
+      story_dir: plans/future/platform/wint/backlog/WINT-9106
+      story_file: plans/future/platform/wint/backlog/WINT-9106/WINT-9106.md
+      story_type: feature
+      points: 8
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

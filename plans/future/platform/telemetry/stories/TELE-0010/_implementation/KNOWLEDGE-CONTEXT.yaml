@@ -1,0 +1,127 @@
+schema: 1
+story_id: TELE-0010
+timestamp: "2026-02-20T23:45:00Z"
+
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-20T23:45:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "TELE-0010 (analysis)"
+        lesson: >
+          foldersFromFilesStructure: true in Grafana provisioning is load-bearing alongside the
+          subdirectory — setting the flag without the corresponding .gitkeep directory means no
+          folder is provisioned; Grafana starts cleanly but the folder never appears
+        category: blocker
+        applies_because: "ST-2 implements both changes; the .gitkeep must not be omitted"
+
+      - story_id: "TELE-0010 (analysis)"
+        lesson: >
+          AC-9 (OTel Collector) uses port 8889 (Prometheus exporter) for metric verification;
+          the healthcheck port 13133 is for compose health only — they serve different purposes
+          and must not be confused in smoke test assertions
+        category: pattern
+        applies_because: "ST-3 smoke test script must use 8889 for AC-9 curl assertion"
+
+      - story_id: "INFR-0040 (dependency)"
+        lesson: >
+          INFR-0040 is in-QA status; telemetry.workflow_events table schema is available in
+          packages/backend/database-schema but does not block TELE-0010 — no DB changes needed
+        category: reuse
+        applies_because: "TELE-0010 is infra-only; no schema migrations required"
+
+    blockers_to_avoid:
+      - >
+        Omitting infra/grafana/dashboards/workflow-telemetry/.gitkeep when setting
+        foldersFromFilesStructure: true — Grafana silently provisions no folder without the directory
+      - >
+        Running the compose stack without ENABLE_METRICS=true on the host lego-api — Prometheus
+        shows lego-api as DOWN and AC-3 fails; this is a prerequisite, not a code change
+      - >
+        Using port 13133 for OTel Collector metric verification — 13133 is the health extension port,
+        8889 is the Prometheus exporter endpoint tested by AC-9
+
+    patterns_to_follow:
+      - "Use :ro mounts for all config files (already applied in compose.lego-app.yaml)"
+      - >
+        Follow healthcheck pattern: wget -q --spider http://localhost:{port}/-/healthy for new services
+      - >
+        depends_on with condition: service_healthy for services that depend on prometheus
+        (already applied to grafana and otel-collector)
+      - "Named volumes for persistence (all 5 volumes already defined in compose)"
+      - "host.docker.internal:host-gateway extra_hosts for container-to-host scraping (prometheus, otel)"
+
+    patterns_to_avoid:
+      - "Creating a new pnpm workspace package for infra concerns (infra/ is the correct home)"
+      - "Modifying compose.lego-app.yaml — all services are already complete; story is verification + gap-closing"
+      - "Modifying packages/backend/observability/ — createMetricsEndpoint() is correct as-is"
+      - "Reading full serverless.yml — not applicable to this infra-only story"
+
+  architecture_decisions:
+    active_count: 3
+    relevant_adrs:
+      - id: "ADR-002"
+        title: "Infrastructure-as-Code Strategy"
+        status: active
+        constraint: >
+          All infrastructure configuration lives in infra/; all config files committed to repo
+          with :ro mounts; framework-agnostic patterns preferred
+        applies_to: ["infra", "telemetry"]
+
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: >
+          UAT uses real Docker services; no mocking infrastructure. For this infra-only story,
+          verification is operational smoke tests against live compose stack
+        applies_to: ["infra", "telemetry"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: >
+          Not applicable — no frontend surface, no UI-facing ACs. Skip condition applies:
+          frontend_impacted: false in SCOPE.yaml. Operational smoke tests replace E2E for this story.
+        applies_to: ["infra"]
+
+    constraints:
+      api_paths: "Not applicable — no new API endpoints"
+      infrastructure: >
+        All infra in infra/compose.lego-app.yaml; configs committed with :ro mounts;
+        canonical dashboard path is infra/grafana/dashboards/ (decided in story)
+      storage: "Not applicable — no S3/CDN changes"
+      auth: "Not applicable — no auth changes"
+      testing: >
+        UAT = real Docker services; smoke test via bash script with curl assertions per AC;
+        no MSW, no mocks; lego-api must run on host with ENABLE_METRICS=true for AC-3
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full compose.lego-app.yaml"
+        typical_tokens: 2000
+        mitigation: "Already read in planning; dev agents should pass grafana volumes section only as context"
+      - operation: "Reading all story docs"
+        typical_tokens: 10000
+        mitigation: "Pass ACs and subtask goal only per step; SCOPE.yaml has the AC list"
+
+    recommended_patterns:
+      - "Pass only the files_to_read listed per subtask — no full story re-reads in execute phase"
+      - "Grep before Read for large yaml files"
+      - "Each ST agent reads only its 2-3 context files"
+      - "ST-3 reads only compose.lego-app.yaml and prometheus.yml — no other files needed"
+
+  warnings:
+    - >
+      AC-3 requires lego-api to be running on the host with ENABLE_METRICS=true. This is a
+      developer prerequisite, not something the smoke test can enforce. The smoke test script
+      must document this requirement in its header comment.
+    - >
+      PLAN.md at plans/future/platform/telemetry/PLAN.md still references apps/telemetry/dashboards/
+      (stale). AC-7 README supersedes this, but PLAN.md itself is not updated by TELE-0010.
+      Tracked as Future Opportunity — does not block implementation.
+
+  tokens:
+    in: 12000
+    out: 1200

@@ -1,0 +1,134 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "pm-story-generation-leader reads all four PM artifacts from KB successfully"
+    setup: "KFMB-5040 has run; story_seed, test_plan, dev_feasibility, uiux_notes artifacts exist in KB for a test story_id"
+    action: "Run pm-story-generation-leader with a valid story_id that has all four PM artifacts in KB"
+    expected: "Leader reads all four artifacts via kb_read_artifact in parallel (Promise.all) and produces a valid story document with no _pm/ file references"
+    evidence: "Story document generated without referencing _pm/ paths; no pm_artifacts block in story.yaml frontmatter"
+
+  - id: HP-2
+    title: "pm-story-fix-leader reads PM artifacts from KB when pm_artifacts embedding absent"
+    setup: "Story.yaml has no pm_artifacts block; test_plan, uiux_notes, dev_feasibility artifacts exist in KB"
+    action: "Run pm-story-fix-leader against a story that was generated post-KFMB-5050"
+    expected: "Leader reads all three PM artifacts via kb_read_artifact and proceeds normally"
+    evidence: "Fix leader produces valid output without erroring on missing pm_artifacts"
+
+  - id: HP-3
+    title: "architect-story-review reads dev_feasibility from KB"
+    setup: "dev_feasibility artifact exists in KB for a story_id; story.yaml has no pm_artifacts.dev_feasibility"
+    action: "Run architect-story-review on a story without pm_artifacts block"
+    expected: "Agent reads dev_feasibility via kb_read_artifact and performs constraint checks"
+    evidence: "Review agent proceeds without reference to pm_artifacts frontmatter"
+
+  - id: HP-4
+    title: "story-synthesize-agent accepts story_id and reads story_seed from KB"
+    setup: "story_seed artifact exists in KB for a test story_id"
+    action: "Invoke story-synthesize-agent with story_id parameter (not story_seed_path)"
+    expected: "Agent reads story_seed via kb_read_artifact({ story_id, artifact_type: 'story_seed' }) and produces synthesis output"
+    evidence: "Agent instructions reference story_id input, not story_seed_path; successful read from KB"
+
+  - id: HP-5
+    title: "pm-story-risk-predictor accepts story_id and reads story_seed from KB"
+    setup: "story_seed artifact exists in KB for a test story_id"
+    action: "Invoke pm-story-risk-predictor with story_id parameter"
+    expected: "Agent reads story_seed via kb_read_artifact and generates risk predictions"
+    evidence: "Agent instructions reference story_id input, not story_seed_path"
+
+error_cases:
+  - id: EC-1
+    title: "kb_read_artifact returns null for missing PM artifact — generation leader handles gracefully"
+    setup: "KB does not have a test_plan artifact for the given story_id (KFMB-5040 not yet run)"
+    action: "pm-story-generation-leader attempts to read test_plan from KB"
+    expected: "Leader detects null/missing artifact and logs a warning; does not crash or attempt _pm/ fallback"
+    evidence: "Leader instruction includes null-check: if (!artifact || !artifact.content) → WARN; no fallback to filesystem"
+
+  - id: EC-2
+    title: "kb_read_artifact returns null for story_seed — synthesize-agent stops with STOP signal"
+    setup: "story_seed artifact does not exist in KB for the given story_id"
+    action: "story-synthesize-agent invoked with story_id"
+    expected: "Agent emits STOP signal and does not proceed with synthesis"
+    evidence: "Agent includes precondition: if (!artifact || !artifact.content) → STOP"
+
+  - id: EC-3
+    title: "pm-story-risk-predictor degrades gracefully when story_seed missing from KB"
+    setup: "story_seed artifact missing from KB"
+    action: "pm-story-risk-predictor invoked"
+    expected: "Risk predictor returns fallback predictions (low confidence) without blocking pipeline"
+    evidence: "Fallback predictions present; no blocking error emitted"
+
+edge_cases:
+  - id: ED-1
+    title: "Grep audit finds zero residual _pm/ filesystem references in migrated agents"
+    setup: "All agent migrations complete"
+    action: "Run: grep -r '_pm/test-plan\\|_pm/dev-feasibility\\|_pm/uiux-notes\\|_pm/STORY-SEED\\|pm_artifacts' .claude/agents/ (excluding writer agents and archived files)"
+    expected: "Zero matches in non-writer, non-archived agent files"
+    evidence: "Grep output shows 0 matches"
+
+  - id: ED-2
+    title: "story.yaml files generated after migration contain no pm_artifacts block"
+    setup: "pm-story-generation-leader updated per KFMB-5050"
+    action: "Generate a new story via pm-story-generation-leader"
+    expected: "Resulting story.yaml frontmatter does not contain a pm_artifacts: key"
+    evidence: "grep 'pm_artifacts' against new story.yaml returns empty"
+
+  - id: ED-3
+    title: "pm-story-generation-leader performs parallel reads via Promise.all"
+    setup: "All four PM artifacts exist in KB"
+    action: "Review pm-story-generation-leader Phase 1-3 (read worker outputs section) for parallel read pattern"
+    expected: "Agent instructions use Promise.all([kb_read_artifact(...), kb_read_artifact(...), ...]) for parallel reads of test_plan, dev_feasibility, uiux_notes, story_seed"
+    evidence: "Promise.all pattern present in agent markdown"
+
+  - id: ED-4
+    title: "All migrated agents include kb_read_artifact in frontmatter kb_tools"
+    setup: "Migration complete for all agents"
+    action: "Read frontmatter of each migrated agent and check kb_tools array"
+    expected: "kb_read_artifact present in kb_tools for: pm-story-generation-leader, pm-story-fix-leader, architect-story-review, story-synthesize-agent, pm-story-risk-predictor"
+    evidence: "Manual inspection of each agent frontmatter"
+
+  - id: ED-5
+    title: "_shared/kb-integration.md Artifact Type Reference table includes all four PM types"
+    setup: "kb-integration.md updated per AC-11"
+    action: "Read _shared/kb-integration.md and inspect Artifact Type Reference table"
+    expected: "Table contains entries for story_seed, test_plan, dev_feasibility, uiux_notes with phase and written_by columns populated"
+    evidence: "Table rows visible for all four PM artifact types"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Full PM pipeline smoke test post-migration"
+    steps:
+      - "Ensure KFMB-5040 is complete and PM artifacts exist in KB for a canary story"
+      - "Invoke pm-story-generation-leader with the canary story_id"
+      - "Confirm story document generated without _pm/ file reads"
+      - "Confirm story.yaml has no pm_artifacts block"
+      - "Invoke pm-story-fix-leader with the canary story — confirm it reads from KB"
+      - "Run architect-story-review — confirm dev_feasibility read from KB"
+    expected: "Full PM story lifecycle completes with all artifact reads going through kb_read_artifact"
+
+  - id: MC-2
+    title: "Interface change regression: callers pass story_id not story_seed_path"
+    steps:
+      - "Read pm-story-generation-leader instructions for how it calls story-synthesize-agent and pm-story-risk-predictor"
+      - "Confirm story_id (not story_seed_path) is passed in both call sites"
+      - "Read pm-story-adhoc-leader for similar caller updates"
+    expected: "All callers pass story_id; story_seed_path removed from call sites"
+
+fixture_definitions:
+  - name: "kb_pm_artifacts_fixture"
+    type: "KB state fixture"
+    description: "Pre-populated KB state with test_plan, dev_feasibility, uiux_notes, and story_seed artifacts for a canary story_id (e.g., KFMB-TEST-001). Required for MC-1 and HP-1 through HP-5."
+
+risks:
+  - "Dependency on KFMB-5040: All happy-path tests and the smoke test require KB artifacts to exist. If KFMB-5040 is not complete, only the structural grep tests (ED-1, ED-2, ED-4, ED-5) can be verified."
+  - "Consumer audit completeness: The breaking change test (ED-1) relies on a comprehensive grep. Additional consumers of pm_artifacts or _pm/ reads not identified in the seed may exist in scripts/ or .claude/skills/."
+  - "Interface change is cross-agent: AC-7 requires coordinated updates to pm-story-adhoc-leader and any other callers. Missing a caller means story_seed reads will silently fail."

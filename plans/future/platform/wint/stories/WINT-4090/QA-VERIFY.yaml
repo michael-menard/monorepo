@@ -1,0 +1,73 @@
+schema: 1
+story_id: WINT-4090
+timestamp: "2026-02-23T00:00:00Z"
+
+verdict: PASS
+
+story_type: documentation
+deliverable: .claude/agents/evidence-judge.agent.md
+
+tests_executed: false
+tests_executed_reason: >
+  Documentation-only story — no TypeScript code, no EVIDENCE.yaml, no test suite.
+  QA is structural verification of the agent file against all 8 acceptance criteria.
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    notes: >
+      File exists at .claude/agents/evidence-judge.agent.md. All 8 frontmatter fields
+      present (created, updated, version, type, name, description, model, tools).
+      model: haiku, type: worker, version: 1.0.0, description: 73 chars (≤80).
+
+  - ac_id: AC-2
+    status: PASS
+    notes: >
+      Required inputs (evidence_yaml_path, story_id) and optional inputs
+      (story_file_path, qa_role_pack_path) documented. Graceful degradation for
+      missing EVIDENCE.yaml (all-REJECT + warning) and missing optional inputs documented.
+
+  - ac_id: AC-3
+    status: PASS
+    notes: >
+      4 sequential phases defined with explicit input/output per phase.
+      Phase chain complete: Load → Evaluate Strength → Apply Challenge → Produce Output.
+
+  - ac_id: AC-4
+    status: PASS
+    notes: >
+      Evidence strength rules cover all 4 types (test, command, e2e, http) plus
+      any-type subjective language blocklist (appears/seems/should/looks).
+      ACCEPT/CHALLENGE/REJECT thresholds are binary decision rules.
+
+  - ac_id: AC-5
+    status: PASS
+    notes: >
+      ac-verdict.json schema fully documented with all required fields: story_id,
+      generated_at, overall_verdict (PASS/CHALLENGE/FAIL), ac_verdicts array
+      (ac_id, ac_text, verdict, evidence_evaluated, strong_evidence_count,
+      weak_evidence_count, challenge_reason, proof_required), total_acs, accepted,
+      challenged, rejected. Output path documented.
+
+  - ac_id: AC-6
+    status: PASS
+    notes: >
+      Section "Completion Signals" exists with exactly 3 signals. Explicit note
+      that overall_verdict: FAIL does NOT trigger BLOCKED.
+
+  - ac_id: AC-7
+    status: PASS
+    notes: >
+      LangGraph Porting Notes section present. Input contract table, 4-phase execution
+      contract, output contract, no-MCP-tools note for v1.0, WINT-9010 shared business
+      logic relationship with 3 portable functions named.
+
+  - ac_id: AC-8
+    status: PASS
+    notes: >
+      Non-Goals section lists all 6 required out-of-scope items: no test re-run,
+      no DB/MCP writes, no qa-verify-verification-leader replacement, no code quality
+      evaluation, no final QA gate decision, no cohesion-sidecar consumption.
+
+architecture_compliant: true
+issues: []

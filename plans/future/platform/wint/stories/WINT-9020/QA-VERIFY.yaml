@@ -1,0 +1,99 @@
+schema: 1
+story_id: WINT-9020
+timestamp: '2026-02-24T00:45:00Z'
+
+qa_verify:
+  verdict: PASS
+  evidence_source: PROOF-WINT-9020.md
+  note: "Story uses PROOF-*.md evidence format (pre-dates evidence-first workflow). Native 7-phase doc-sync LangGraph node implementation at nodes/sync/doc-sync.ts with full TypeScript port."
+  test_summary:
+    total_tests: 42
+    passed: 42
+    failed: 0
+    skipped: 0
+    doc_sync_tests: 42
+  type_check:
+    orchestrator: PASS
+    note: "npx tsc --noEmit on orchestrator: zero errors in new files (nodes/sync/doc-sync.ts, nodes/sync/index.ts, nodes/sync/__tests__/doc-sync.test.ts, nodes/index.ts)"
+  lint: PASS
+  acceptance_criteria:
+    total: 13
+    passed: 13
+    missing: 0
+    failed: 0
+    percent: "100% (13/13 PASS)"
+  acceptance_criteria_detail:
+    - ac: AC-1
+      status: PASS
+      evidence: "Native implementation at nodes/sync/doc-sync.ts with nodes/sync/index.ts exports. Existing subprocess variant retained at nodes/workflow/doc-sync.ts."
+    - ac: AC-2
+      status: PASS
+      evidence: "All 7 phases implemented and tested: Phase 1 (File Discovery), Phase 2 (Frontmatter Parsing), Phase 3 (Section Mapping), Phase 4 (Documentation Updates), Phase 5 (Mermaid Regeneration), Phase 6 (Changelog Drafting), Phase 7 (SYNC-REPORT.md Generation). HP-1 test validates full flow."
+    - ac: AC-3
+      status: PASS
+      evidence: "DocSyncConfigSchema validates checkOnly (boolean, default false) and force (boolean, default false) flags. HP-2 test validates checkOnly=true prevents doc writes. HP-4 test validates force=true bypasses git diff."
+    - ac: AC-4
+      status: PASS
+      evidence: "DocSyncResultSchema includes all required fields: success, filesChanged, sectionsUpdated, diagramsRegenerated, manualReviewNeeded, changelogDrafted, reportPath, errors, and database_status (optional). SYNC-REPORT.md written to configured path."
+    - ac: AC-5
+      status: PASS
+      evidence: "Completion signals mapped: DOC-SYNC COMPLETE → success=true, manualReviewNeeded=0, errors=[]; DOC-SYNC COMPLETE (warnings) → success=true, manualReviewNeeded>0; DOC-SYNC CHECK FAILED → success=false in checkOnly; DOC-SYNC BLOCKED → success=false with populated errors."
+    - ac: AC-6
+      status: PASS
+      evidence: "Graceful degradation tested: EC-3 (DB connection failed) → database_status='connection_failed', file-only mode; EC-4 (DB timeout) → database_status='timeout', file-only fallback. Database unavailability does not throw."
+    - ac: AC-7
+      status: PASS
+      evidence: "isValidStoryId imported from @repo/workflow-logic at line 27 of doc-sync.ts. Used in story ID validation loop for agent file discovery."
+    - ac: AC-8
+      status: PASS
+      evidence: "docSyncNode created via createToolNode factory from runner/node-factory.ts. Pattern: createToolNode('doc_sync', async (state) => docSyncImpl(state, config)). Wrapper patterns match orchestrator node exemplar (delta-detect)."
+    - ac: AC-9
+      status: PASS
+      evidence: "Named exports from nodes/sync/index.ts: docSyncNode, createDocSyncNode, DocSyncConfigSchema, DocSyncResultSchema, DocSyncConfig, DocSyncResult, GraphStateWithDocSync. Re-exported from nodes/index.ts with sync/ aliases (nativeDocSyncNode, etc.) to avoid collision with workflow/doc-sync exports."
+    - ac: AC-10
+      status: PASS
+      evidence: "42 unit tests in nodes/sync/__tests__/doc-sync.test.ts covering all scenarios: HP-1 to HP-5 (happy path), EC-1 to EC-6 (error cases), EG-1 to EG-6 (edge cases). Coverage: 86.14% statement coverage on doc-sync.ts (exceeds 80% threshold)."
+    - ac: AC-11
+      status: PASS
+      evidence: "Zero TypeScript errors: npx tsc --noEmit on orchestrator package returns 0. All new files in nodes/sync/ pass type-check."
+    - ac: AC-12
+      status: PASS
+      evidence: "Zero ESLint errors: pnpm --filter @repo/orchestrator exec eslint src/nodes/sync/ src/nodes/index.ts returns exit 0, zero errors, zero warnings."
+    - ac: AC-13
+      status: PASS
+      evidence: "EG-6 test (Deterministic output test): Two consecutive runs with identical mocked inputs produce identical DocSyncResult structural counts (filesChanged, sectionsUpdated, diagramsRegenerated, manualReviewNeeded, success)."
+
+gate:
+  decision: PASS
+  reason: "13/13 ACs verified by fresh test runs. 42 unit tests passing (all doc-sync specific). TypeScript and ESLint clean. Coverage 86.14% exceeds 80% threshold. Full 7-phase native TypeScript implementation complete with all completion signals mapped correctly. All graceful degradation paths tested."
+  blocking_issues: []
+  waived_issues: []
+
+tests_executed: true
+test_results:
+  unit: { pass: 42, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 86.14
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Native 7-phase implementation of subprocess-delegating agent proves viable. Sequential phase architecture with graceful DB fallback is robust for orchestration use case."
+    category: pattern
+    tags: ["backend", "orchestration", "langgraph", "workflow-automation"]
+  - lesson: "Zod schema with optional fields (database_status) cleanly models database availability states without throwing errors. Enables observability of downstream DB dependencies."
+    category: pattern
+    tags: ["zod", "error-handling", "observability"]
+  - lesson: "createToolNode factory pattern extends cleanly across backend packages. Node composition follows consistent DI pattern (injected config, mocked functions for testing)."
+    category: reuse
+    tags: ["langgraph", "factory-pattern", "dependency-injection"]

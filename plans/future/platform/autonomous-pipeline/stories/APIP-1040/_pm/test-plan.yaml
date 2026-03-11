@@ -1,0 +1,219 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  packages_touched:
+    - packages/backend/orchestrator/src/nodes/doc-workers/
+    - packages/backend/orchestrator/src/graphs/doc-graph.ts
+
+happy_path_tests:
+  - id: HP-1
+    title: "API Docs Worker produces DocWorkerResult with success: true and proposed changes"
+    setup: "Construct MergeEventPayload with changedFiles: ['apps/api/src/handlers/wishlist.ts']; inject mock LLM response"
+    action: "Call api-docs worker with populated state"
+    expected: "Returns DocWorkerResult with success: true, workerName: 'api-docs', non-empty proposedChanges, durationMs > 0"
+    evidence: "Vitest assertion on return value shape via DocWorkerResultSchema.parse()"
+
+  - id: HP-2
+    title: "Component Docs Worker produces DocWorkerResult with success: true"
+    setup: "Construct MergeEventPayload with changedFiles: ['apps/web/main-app/src/components/WishCard/index.tsx']; inject mock LLM"
+    action: "Call component-docs worker with populated state"
+    expected: "Returns DocWorkerResult with success: true, workerName: 'component-docs', non-empty proposedChanges"
+    evidence: "Vitest assertion on return value; no thrown exceptions"
+
+  - id: HP-3
+    title: "KB Sync Worker applies dedup guard and proposes new entry with auto-generated tag"
+    setup: "Mock kbSearchFn returning empty results (no similar content); provide MergeEventPayload with diffSummary"
+    action: "Call kb-sync worker with populated state"
+    expected: "Calls kbSearchFn before proposing entry; proposed entry has tags: ['auto-generated', 'source:APIP-1040']; no deletion proposed"
+    evidence: "Spy on kbSearchFn mock to verify it was called with similarity threshold 0.85 before any kbAddFn call"
+
+  - id: HP-4
+    title: "Dispatch node fans out to all 6 enabled workers via Send API"
+    setup: "All 6 workers enabled in DocGraphConfig; compile full graph"
+    action: "Invoke dispatch node with valid MergeEventPayload state"
+    expected: "Returns array of 6 Send objects, one per worker (api-docs, component-docs, architecture-docs, readme-guides, kb-sync, changelog)"
+    evidence: "Assert return value is array of length 6, each element is Send instance with correct nodeName"
+
+  - id: HP-5
+    title: "DocReviewNode passes when 6/6 workers succeed"
+    setup: "Build state.workerResults with 6 DocWorkerResult objects all having success: true"
+    action: "Call DocReviewNode with fully populated state"
+    expected: "Returns { docReviewPassed: true, commitBlocked: false, commitBlockedReason: null }"
+    evidence: "Vitest assertion; no thrown exceptions"
+
+  - id: HP-6
+    title: "Commit node writes all proposed changes atomically when dryRun: false and review passed"
+    setup: "state.docReviewResult = { docReviewPassed: true, commitBlocked: false }; state.proposedFileChanges has 3 entries; mock fs.writeFile"
+    action: "Call commit node"
+    expected: "All 3 files written; git commit created with message 'docs(auto): sync documentation for APIP-1040'"
+    evidence: "Spy on mock fs.writeFile: called 3 times; mock git.commit spy: called once with correct message"
+
+  - id: HP-7
+    title: "Full graph compiles and routing is correct"
+    setup: "Import graph from doc-graph.ts; mock all 6 worker node implementations"
+    action: "graph.compile() then verify routing with mock state"
+    expected: "Compilation succeeds; dispatch routes to all 6 workers via Send; all worker edges converge to aggregate; doc-review conditional edge routes to commit when passed"
+    evidence: "graph.compile() does not throw; routing path assertions in compiled graph"
+
+  - id: HP-8
+    title: "Changelog Worker drafts semver entry for merged story"
+    setup: "MergeEventPayload with storyId: 'APIP-1040', diffSummary: '6 new doc worker files added'; inject mock LLM response"
+    action: "Call changelog worker"
+    expected: "Returns DocWorkerResult with success: true, workerName: 'changelog', proposedChanges includes CHANGELOG.md update"
+    evidence: "Assert proposedChanges[0].filePath ends with 'CHANGELOG.md'; proposed content includes storyId"
+
+  - id: HP-9
+    title: "Architecture Docs Worker updates Mermaid diagram for changed architecture files"
+    setup: "MergeEventPayload with changedFiles: ['packages/backend/orchestrator/src/graphs/doc-graph.ts']; inject mock LLM"
+    action: "Call architecture-docs worker"
+    expected: "Returns success: true with proposedChanges including an architecture doc file"
+    evidence: "Vitest assertion on return value shape; no filesystem writes"
+
+  - id: HP-10
+    title: "dryRun: true prevents all filesystem writes"
+    setup: "DocGraphConfig with dryRun: true; mock all 6 workers to return success: true; spy on fs.writeFile"
+    action: "Run full graph end-to-end with mock MergeEventPayload"
+    expected: "fs.writeFile is never called; all workers return success; commit node logs proposed changes without writing"
+    evidence: "fs.writeFile mock call count === 0; logger.info spy captures dry-run log message"
+
+error_cases:
+  - id: EC-1
+    title: "Worker error — LLM call fails — returns success: false without throwing"
+    setup: "Inject mock LLM that throws an error; provide valid MergeEventPayload"
+    action: "Call api-docs worker"
+    expected: "Returns DocWorkerResult with success: false, error: '<error message>', does NOT throw"
+    evidence: "Worker call is wrapped in try/catch; test asserts no exception thrown; result.error is non-null string"
+
+  - id: EC-2
+    title: "KB Sync Worker detects existing similar entry (0.85+ similarity) — skips new entry"
+    setup: "Mock kbSearchFn to return result with similarity_score: 0.90"
+    action: "Call kb-sync worker"
+    expected: "Worker does not propose new KB entry; returns success: true with warnings: ['Entry skipped: similar content exists (score 0.90)']"
+    evidence: "proposedChanges is empty or excludes KB entry; warnings array contains dedup message"
+
+  - id: EC-3
+    title: "DocReviewNode blocks commit when KB Sync Worker proposes entry deletion"
+    setup: "Build state.workerResults where kb-sync worker result contains a proposedChange of type 'delete'"
+    action: "Call DocReviewNode"
+    expected: "Returns { docReviewPassed: false, commitBlocked: true, commitBlockedReason: contains 'KB Sync Worker proposed entry deletion' }"
+    evidence: "Vitest assertion on commitBlocked: true; commitBlockedReason is human-readable string"
+
+  - id: EC-4
+    title: "DocReviewNode blocks commit when 3/6 workers failed (below threshold)"
+    setup: "Build state.workerResults with 3 success: false, 3 success: true"
+    action: "Call DocReviewNode (minSuccessThreshold: 4)"
+    expected: "Returns { docReviewPassed: false, commitBlocked: true, commitBlockedReason: contains failure count }"
+    evidence: "Vitest assertion on commitBlocked: true"
+
+  - id: EC-5
+    title: "Disabled worker is skipped by dispatch node without error"
+    setup: "DocGraphConfig with apiDocs.enabled: false; all others enabled"
+    action: "Call dispatch node"
+    expected: "Returns array of 5 Send objects (skips api-docs); no error logged"
+    evidence: "Assert return array length === 5; none have nodeName 'doc-worker-api-docs'"
+
+  - id: EC-6
+    title: "Commit node skips writes when commitBlocked: true"
+    setup: "state.docReviewResult = { docReviewPassed: false, commitBlocked: true, commitBlockedReason: 'test reason' }; spy on fs.writeFile"
+    action: "Call commit node"
+    expected: "fs.writeFile never called; logger logs blocked reason; graph continues to END"
+    evidence: "fs.writeFile mock call count === 0; logger spy captures blocked message"
+
+  - id: EC-7
+    title: "Worker times out — returns success: false without blocking other workers"
+    setup: "Inject mock that delays beyond timeoutMs; all other workers mock to succeed"
+    action: "Run graph with timeout-configured worker"
+    expected: "Timed-out worker returns success: false with error: 'timeout'; other 5 workers complete successfully"
+    evidence: "state.workerResults has 6 entries; only 1 has success: false with timeout error"
+
+edge_cases:
+  - id: ED-1
+    title: "Worker receives empty changedFiles array — returns success: true with empty proposedChanges and warning"
+    setup: "MergeEventPayload with changedFiles: []"
+    action: "Call each of the 6 workers"
+    expected: "Each worker returns success: true, proposedChanges: [], warnings: ['No changed files — no documentation update needed']"
+    evidence: "All 6 workers tested; no exceptions; warnings array non-empty"
+
+  - id: ED-2
+    title: "All 6 workers succeed but all return empty proposedChanges — commit node handles gracefully"
+    setup: "All 6 workers return success: true, proposedChanges: []"
+    action: "Run through doc-review → commit"
+    expected: "docReviewPassed: true; commit node logs 'No file changes proposed'; no git commit created"
+    evidence: "git.commit spy call count === 0; logger captures no-op message"
+
+  - id: ED-3
+    title: "DocGraphConfig minSuccessThreshold: 6 — requires all workers to succeed"
+    setup: "Configure DocReviewConfigSchema with minSuccessThreshold: 6; 5/6 workers succeed"
+    action: "Call DocReviewNode"
+    expected: "Returns commitBlocked: true (5 < 6 threshold)"
+    evidence: "Vitest assertion; threshold is honored as configurable"
+
+  - id: ED-4
+    title: "KB Sync Worker called with diffSummary: '' — returns success: true with warning"
+    setup: "MergeEventPayload with diffSummary: ''"
+    action: "Call kb-sync worker"
+    expected: "Returns success: true, proposedChanges: [], warnings: ['Empty diffSummary — no KB entry generated']"
+    evidence: "No KB write attempted; no kbAddFn call"
+
+  - id: ED-5
+    title: "DocWorkerResultSchema Zod validation — invalid data rejected at runtime"
+    setup: "Construct a result object missing required 'success' field"
+    action: "Call DocWorkerResultSchema.parse(invalidResult)"
+    expected: "Throws ZodError with field-level error message"
+    evidence: "ZodError thrown; test uses expect(() => ...).toThrow(ZodError)"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "DocWorkerResultSchema.parse() passes on valid results"
+      - "DocWorkerResultSchema.parse() throws ZodError on invalid results"
+      - "MergeEventPayloadSchema.parse() validates required fields"
+      - "DocGraphConfigSchema.parse() validates nested worker configs"
+      - "graph.compile() does not throw for fully wired doc-graph"
+      - "dispatch node returns Send[] of correct length (6 enabled, <6 for disabled)"
+      - "DocReviewNode returns commitBlocked: true when KB deletion detected"
+      - "fs.writeFile spy call count === 0 during dryRun: true graph execution"
+  frontend:
+    # omitted: ui_touched: false
+
+manual_cases: []
+
+fixture_definitions:
+  - name: mockMergeEventPayload
+    type: MergeEventPayload
+    description: "Standard merge event with storyId: 'APIP-1040', mergeCommitSha: 'abc123', changedFiles: ['apps/api/src/handlers/wishlist.ts', 'packages/backend/orchestrator/src/graphs/elaboration.ts'], diffSummary: 'Added 2 new handlers and updated elaboration graph routing'"
+
+  - name: mockMergeEventPayloadEmpty
+    type: MergeEventPayload
+    description: "Merge event with changedFiles: [] and diffSummary: '' for empty-input edge cases"
+
+  - name: mockAllWorkersSucceeded
+    type: DocWorkerResult[]
+    description: "Array of 6 DocWorkerResult objects, all success: true, one per worker name enum value"
+
+  - name: mockPartialFailure
+    type: DocWorkerResult[]
+    description: "Array of 6 DocWorkerResult objects, 3 with success: false (api-docs, component-docs, architecture-docs failed)"
+
+  - name: mockKBSyncWithDeletion
+    type: DocWorkerResult
+    description: "DocWorkerResult for kb-sync where proposedChanges includes an entry with type: 'delete'"
+
+  - name: mockDocGraphConfig
+    type: DocGraphConfig
+    description: "Standard config with all workers enabled, dryRun: false, minSuccessThreshold: 4, cheap model IDs"
+
+  - name: mockDocGraphConfigDryRun
+    type: DocGraphConfig
+    description: "Same as mockDocGraphConfig but dryRun: true"
+
+risks:
+  - "LangGraph Send API dispatch is tricky to unit-test without a compiled graph — graph-level tests may need real LangGraph compilation"
+  - "KB Sync Worker dedup guard requires injectable kbSearchFn — test must verify injection works at construction time"
+  - "Aggregate node sentinel count depends on knowing expected worker count — test fragility if worker count changes"
+  - "Centralized commit node git operations require careful mocking to avoid real git calls during tests"
+  - "6 parallel workers mean 6 separate test files — test suite setup overhead is non-trivial; use shared fixture factory"
+  - "Timeout behavior per-worker may be difficult to test deterministically — use fake timers (vi.useFakeTimers)"

@@ -21,6 +21,18 @@ import {
   type AuditOperation,
 } from './__types__/index.js'
 
+// Explicit column selector — guard against schema-vs-DB drift
+const auditLogColumns = {
+  id: auditLog.id,
+  entryId: auditLog.entryId,
+  operation: auditLog.operation,
+  previousValue: auditLog.previousValue,
+  newValue: auditLog.newValue,
+  timestamp: auditLog.timestamp,
+  userContext: auditLog.userContext,
+  createdAt: auditLog.createdAt,
+} as const
+
 /**
  * Dependencies for audit queries.
  */
@@ -64,7 +76,7 @@ export async function queryAuditByEntry(
 
   // Query audit logs with pagination
   const results = await db
-    .select()
+    .select(auditLogColumns)
     .from(auditLog)
     .where(eq(auditLog.entryId, validated.entry_id))
     .orderBy(asc(auditLog.timestamp)) // Oldest first for entry history
@@ -148,7 +160,7 @@ export async function queryAuditByTimeRange(
 
   // Query audit logs with pagination
   const results = await db
-    .select()
+    .select(auditLogColumns)
     .from(auditLog)
     .where(and(...conditions))
     .orderBy(desc(auditLog.timestamp)) // Newest first for time range queries

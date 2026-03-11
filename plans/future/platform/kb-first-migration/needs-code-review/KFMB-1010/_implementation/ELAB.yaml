@@ -1,0 +1,337 @@
+elab_version: "1.0"
+story_id: "KFMB-1010"
+title: "Stories Table Content Columns Migration"
+analyst: "elab-analyst"
+date: "2026-02-26"
+preliminary_verdict: "CONDITIONAL_PASS"
+verdict: "CONDITIONAL_PASS"
+decided_at: "2026-02-26T00:00:00Z"
+decided_by: "elab-autonomous-decider"
+
+# ============================================================================
+# SCHEMA AUDIT — VERIFIED FINDINGS
+# ============================================================================
+#
+# Files inspected:
+#   packages/backend/database-schema/src/schema/wint.ts   (lines 142–183)
+#   packages/backend/database-schema/src/schema/kbar.ts   (lines 124–168)
+#   packages/backend/database-schema/drizzle.config.ts
+#   packages/backend/database-schema/src/migrations/app/  (28 migration files)
+#
+# Drizzle config: schema entrypoint = ./src/schema/index.ts
+#                 migrations out    = ./src/migrations/app
+#                 dialect           = postgresql
+#
+# WINT stories table (wint.stories) — confirmed columns:
+#   id, storyId, title, description (text, nullable), storyType, epic, wave,
+#   priority, complexity, storyPoints, state, metadata (jsonb),
+#   createdAt, updatedAt
+#   MISSING: acceptance_criteria, non_goals, packages
+#
+# KBAR stories table (kbar.stories) — confirmed columns:
+#   id, storyId, epic, title, description (text, nullable), storyType,
+#   priority, complexity, storyPoints, currentPhase, status, metadata (jsonb),
+#   createdAt, updatedAt
+#   MISSING: acceptance_criteria, non_goals, packages
+# ============================================================================
+
+# ============================================================================
+# 9-POINT AUDIT CHECKLIST
+# ============================================================================
+
+checklist:
+
+  - id: "CHECK-1"
+    category: "Scope Alignment"
+    status: "FAIL"
+    finding: >
+      The story feature field lists four columns to add: description,
+      acceptance_criteria, non_goals, and packages. However, the description
+      column already exists as a nullable text column in both wint.stories
+      (wint.ts line 148) and kbar.stories (kbar.ts line 133). The effective
+      scope is therefore three new columns — acceptance_criteria, non_goals,
+      packages — not four. The story must be corrected before implementation
+      begins to prevent the implementer from creating a duplicate column error.
+    resolution_required: true
+    gap_ref: "GAP-1"
+
+  - id: "CHECK-2"
+    category: "Internal Consistency"
+    status: "WARN"
+    finding: >
+      The goal states "story body data" without listing a complete inventory of
+      story.yaml fields that remain DB-unrepresented. Inspecting the story.yaml
+      schema reveals additional fields present in story files but absent from
+      both DB schemas: phase, feature, goal, depends_on, endpoints,
+      infrastructure, risk_notes, sizing_warning, created. KFMB-1010 explicitly
+      scopes only acceptance_criteria, non_goals, and packages (post-correction).
+      This limited scope is a deliberate Phase 1 choice. However the story does
+      not acknowledge or justify the exclusion of the other fields, which creates
+      ambiguity about whether the scope is intentionally partial. A brief
+      rationale should be documented in the story or in a follow-on story
+      (KFMB-1020+).
+    resolution_required: false
+    gap_ref: "OPP-1"
+
+  - id: "CHECK-3"
+    category: "Reuse-First"
+    status: "PASS"
+    finding: >
+      Drizzle ORM with drizzle-kit is the established pattern for all schema
+      migrations in this codebase (28 migration files present in
+      packages/backend/database-schema/src/migrations/app/). drizzle-zod is
+      already wired for auto-generating Zod schemas from table definitions.
+      No new tooling is needed.
+    resolution_required: false
+
+  - id: "CHECK-4"
+    category: "Ports and Adapters"
+    status: "PASS"
+    finding: >
+      This story is a pure DB migration. It touches no API layer, no Lambda
+      handlers, and no frontend surfaces. No ports-and-adapters concerns apply.
+      The migration is additive only (new nullable columns) so existing DB
+      consumers require no changes.
+    resolution_required: false
+
+  - id: "CHECK-5"
+    category: "Local Testability"
+    status: "FAIL"
+    finding: >
+      The story contains no test plan, no acceptance criteria, and no
+      verification steps. There is no mechanism defined to confirm the migration
+      ran successfully or that the columns are present with correct types and
+      nullability. A migration test or introspection assertion (e.g. using
+      pg_catalog or a Drizzle introspection query) is needed to satisfy the
+      project's quality gates.
+    resolution_required: true
+    gap_ref: "GAP-3"
+
+  - id: "CHECK-6"
+    category: "Decision Completeness"
+    status: "FAIL"
+    finding: >
+      Two unresolved decisions block implementation:
+      (a) WHICH SCHEMA(S): The story says "stories table" ambiguously. There are
+          two distinct stories tables — wint.stories and kbar.stories — in
+          separate PostgreSQL schema namespaces. The KB-First Migration plan
+          context (KBAR prefix) implies kbar.stories is primary, but WINT also
+          tracks stories and would be inconsistent if left without the new
+          columns. The story must explicitly name the target schema(s).
+      (b) COLUMN TYPES: No SQL types are specified for the three new columns.
+          acceptance_criteria and non_goals are multi-item fields in story.yaml
+          (typically arrays of strings). packages is an array of package names.
+          Candidate types are text (serialized), text[] (PostgreSQL array), or
+          jsonb (for structured arrays). The choice has downstream implications
+          for query patterns and drizzle-zod type inference.
+    resolution_required: true
+    gap_ref: "GAP-2"
+
+  - id: "CHECK-7"
+    category: "Risk Disclosure"
+    status: "PASS"
+    finding: >
+      The story correctly notes the migration must be backward-compatible and
+      that existing rows will have NULL values for new columns. This is accurate:
+      all three new columns should be nullable with no default to avoid a full
+      table rewrite. Both schemas already follow this pattern for other optional
+      columns (e.g. description, complexity, storyPoints).
+    resolution_required: false
+
+  - id: "CHECK-8"
+    category: "Story Sizing"
+    status: "PASS"
+    finding: >
+      Adding three nullable columns to one or two tables is a small, well-bounded
+      change. The Drizzle workflow is: edit schema file, run pnpm db:generate,
+      run pnpm db:migrate. No API changes, no frontend changes, no data
+      backfill required. Sizing is appropriate for a Phase 1 foundation story.
+    resolution_required: false
+
+  - id: "CHECK-9"
+    category: "Subtask Decomposition"
+    status: "WARN"
+    finding: >
+      No subtasks are defined in the story. For a migration of this size subtasks
+      are optional but recommended. Suggested decomposition:
+        1. Determine target schema(s) and column types (unblocks all else).
+        2. Add columns to Drizzle schema definition(s).
+        3. Run pnpm db:generate to produce the SQL migration file.
+        4. Run pnpm db:migrate (local dev) to verify migration applies cleanly.
+        5. Update drizzle-zod exports and TypeScript types.
+        6. Write/run migration verification test.
+    resolution_required: false
+
+# ============================================================================
+# MVP-CRITICAL GAPS (blocks implementation start)
+# ============================================================================
+
+gaps:
+
+  - id: "GAP-1"
+    severity: "BLOCKER"
+    title: "description column already exists — scope is overstated"
+    detail: >
+      The story feature field lists description as a column to add. It already
+      exists as text (nullable) in wint.stories (wint.ts:148) and kbar.stories
+      (kbar.ts:133). Attempting to add it again will cause a migration error
+      (column already exists). The story.yaml feature text must be corrected to
+      list only the three genuinely new columns: acceptance_criteria, non_goals,
+      packages.
+    required_action: >
+      Update the story feature field to remove description from the column list.
+      Confirm whether the existing text description column is adequate or whether
+      a richer replacement (e.g. replacing text with jsonb) is intended.
+    owner: "story-author"
+    decision: >
+      RESOLVED. The feature field has been corrected to list only the three new
+      columns: acceptance_criteria, non_goals, packages. The existing text
+      description column in both schemas is adequate as-is; no replacement needed.
+    resolution: "story.yaml feature field updated — description removed from column list"
+
+  - id: "GAP-2"
+    severity: "BLOCKER"
+    title: "Target schema(s) and column SQL types unspecified"
+    detail: >
+      Two schema-selection and type decisions must be made before the Drizzle
+      schema file(s) can be edited:
+
+      SCHEMA TARGET:
+        Option A — kbar.stories only (KBAR is the primary KB-First schema;
+                   WINT.stories is a separate workflow-intelligence table that
+                   may not need content columns in Phase 1).
+        Option B — Both wint.stories and kbar.stories (keeps schemas consistent;
+                   requires two schema file edits and one combined migration or
+                   two separate ones).
+      Recommendation: Option A (kbar.stories only) for Phase 1, with a follow-on
+      story to add equivalent columns to wint.stories if needed.
+
+      COLUMN TYPES:
+        acceptance_criteria: story.yaml stores this as a list of criterion
+          objects (text descriptions). Recommended: jsonb (typed as
+          {id: string, description: string, met?: boolean}[]) to preserve
+          structure and enable future querying. Alternative: text[] if only
+          plain strings are needed.
+        non_goals:           story.yaml stores this as a list of plain strings.
+          Recommended: text[] (PostgreSQL native array, efficient for simple
+          string lists). Alternative: jsonb.
+        packages:            story.yaml stores this as a list of package
+          name strings. Recommended: text[] (same rationale as non_goals).
+
+    required_action: >
+      Author must document schema target choice and column type decisions in the
+      story (or in a DECISION record) before implementation begins.
+    owner: "story-author"
+    decision: >
+      RESOLVED. Target: kbar.stories ONLY (Option A). Column types decided:
+      acceptance_criteria = jsonb, non_goals = text[], packages = text[].
+      All three columns nullable. Documented in story.yaml decisions section.
+    resolution: "story.yaml decisions section added with DEC-1 (schema target) and DEC-2 (column types)"
+
+  - id: "GAP-3"
+    severity: "BLOCKER"
+    title: "No acceptance criteria or test plan defined"
+    detail: >
+      The story has no acceptance_criteria field and no test plan. There is no
+      definition of done. Without ACs, the implementer cannot verify completion
+      and reviewers cannot approve the story.
+    required_action: >
+      Add concrete acceptance criteria to the story. Minimum required ACs:
+        AC-1: Running pnpm db:migrate against a local database applies the
+              migration without errors.
+        AC-2: The acceptance_criteria, non_goals, and packages columns are
+              present in the target table(s) with the correct SQL types and
+              nullable constraint (confirmed via psql \d or introspection query).
+        AC-3: The Drizzle-generated TypeScript types (via drizzle-zod
+              insertStorySchema / selectStorySchema) reflect the new columns.
+        AC-4: All existing tests continue to pass after schema change.
+    owner: "story-author"
+    decision: >
+      RESOLVED. Four acceptance criteria added to story.yaml: AC-1 (migration
+      applies cleanly), AC-2 (columns present with correct types in kbar.stories),
+      AC-3 (drizzle-zod types reflect new columns), AC-4 (existing tests pass).
+    resolution: "story.yaml acceptance_criteria section added with AC-1 through AC-4"
+
+# ============================================================================
+# OPPORTUNITIES (non-blocking, suggested improvements)
+# ============================================================================
+
+opportunities:
+
+  - id: "OPP-1"
+    title: "Document scope exclusions for remaining story.yaml fields"
+    detail: >
+      Fields present in story.yaml but not covered by KFMB-1010 (phase, feature,
+      goal, depends_on, endpoints, infrastructure, risk_notes, sizing_warning,
+      created) should be acknowledged. Either add a note to this story explaining
+      why they are deferred, or create a follow-on story (e.g. KFMB-1011) to
+      track their migration.
+    effort: "low"
+    decision: "log_to_kb — scope exclusion rationale documented in story.yaml DEC-3; future stories to be tracked in KB"
+
+  - id: "OPP-2"
+    title: "Add migration verification test"
+    detail: >
+      The project has a test-data directory under migrations. A lightweight
+      integration test that runs the migration against a test DB instance and
+      asserts column presence (using pg_catalog.pg_attribute or Drizzle
+      introspection) would increase confidence in migration correctness and
+      provide a regression guard for future migrations that touch this table.
+    effort: "low"
+    decision: "log_to_kb — nice-to-have, not MVP for Phase 1; to be tracked as a future enhancement"
+
+  - id: "OPP-3"
+    title: "Export updated drizzle-zod Zod schemas for new columns"
+    detail: >
+      Both kbar.ts and wint.ts already export insertStorySchema and
+      selectStorySchema via createInsertSchema / createSelectSchema. After adding
+      the new columns, these auto-generated schemas will automatically include
+      them. Verify that the exported TypeScript types are re-generated and that
+      any downstream consumers (KB MCP tools, sync service) that use these types
+      are updated accordingly.
+    effort: "low"
+    decision: "covered_by_ac — AC-3 requires drizzle-zod types to reflect new columns; no separate action needed"
+
+  - id: "OPP-4"
+    title: "Consider DB-level constraints for packages array format"
+    detail: >
+      If packages is stored as text[], a check constraint could enforce that
+      entries match a package name pattern (e.g. @repo/* or packages/*). This
+      is low-priority for Phase 1 but would prevent malformed data from entering
+      the DB without application-layer validation.
+    effort: "medium"
+    decision: "log_to_kb — future enhancement, out of scope for Phase 1"
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+
+summary:
+  blocker_count: 3
+  warn_count: 2
+  pass_count: 4
+  blockers_resolved: 3
+  opportunities_decided: 4
+  blocking_gaps:
+    - "GAP-1: RESOLVED — description removed from feature field"
+    - "GAP-2: RESOLVED — target kbar.stories only; acceptance_criteria=jsonb, non_goals=text[], packages=text[]"
+    - "GAP-3: RESOLVED — 4 acceptance criteria added to story.yaml"
+  opportunities:
+    - "OPP-1: log_to_kb — scope exclusions documented in DEC-3"
+    - "OPP-2: log_to_kb — migration verification test deferred as future enhancement"
+    - "OPP-3: covered_by_ac — AC-3 covers drizzle-zod type verification"
+    - "OPP-4: log_to_kb — DB constraints for packages deferred to future enhancement"
+  verdict_rationale: >
+    All three blockers have been resolved autonomously by the elab-autonomous-decider
+    agent. GAP-1 is resolved by correcting the story feature field. GAP-2 is resolved
+    by documenting schema target (kbar.stories only) and column types (jsonb/text[])
+    in a decisions section. GAP-3 is resolved by adding four concrete acceptance
+    criteria covering migration execution, column presence, type generation, and test
+    regression. The story is now cleared for implementation. Non-blocking opportunities
+    have been triaged: OPP-3 is covered by AC-3; OPP-1, OPP-2, and OPP-4 are logged
+    to KB for future action.
+  preliminary_verdict: "CONDITIONAL_PASS"
+  verdict: "CONDITIONAL_PASS"
+  condition: >
+    All blockers resolved. Story is cleared for implementation. The implementer
+    should proceed with ST-1 through ST-5 as defined in story.yaml subtasks.

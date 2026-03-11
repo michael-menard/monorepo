@@ -1,0 +1,155 @@
+---
+generated: "2026-02-16"
+story_id: WINT-0210
+phase: pm-generate
+agent: pm-story-risk-predictor
+kb_available: false
+wkfl_006_available: false
+mode: fallback
+---
+
+# Risk Predictions: WINT-0210
+
+## Story Splitting Risk
+
+### Prediction: 0.2 (Low)
+
+**Rationale:**
+- This is a documentation story with 4 similar artifacts (dev.md, po.md, da.md, qa.md)
+- No complex logic, schemas, or integrations required
+- All 7 ACs can be completed in a single implementation session (2-3 hours)
+- Each role pack is independent - failure in one doesn't block others
+- Token counting is mechanical (tiktoken library)
+
+**Confidence:** High (documentation stories rarely split)
+
+**Indicators Supporting Low Risk:**
+- No database migrations
+- No API changes
+- No UI components
+- No test suite needed (manual validation only)
+- Clear pattern: 4x (template + examples + token count)
+
+**Indicators That Could Increase Risk:**
+- If token budget (150-300) proves too strict → may need to split into "minimal role packs" vs "extended role packs"
+- If WINT-0180 chooses database storage → adds schema/migration work (unlikely per seed)
+
+**Mitigation:**
+- Start with Dev role pack (most complex, includes Patch Queue pattern)
+- If Dev pack exceeds 300 tokens after reasonable iteration, escalate to PM for budget review
+
+---
+
+## Review Cycles
+
+### Prediction: 2 cycles
+
+**Rationale:**
+- **Cycle 1:** Initial implementation
+  - Likely issues: Token counts need tuning, examples too generic, pattern skeletons too long
+  - Expected feedback: "Condense Dev role pack", "Make PO examples more specific", "Add more context to DA decision rule"
+- **Cycle 2:** Refinements
+  - Likely issues: Minor wording adjustments, example clarity improvements
+  - Expected feedback: "Looks good, minor tweak to QA example"
+
+**Confidence:** Medium (documentation quality is subjective)
+
+**Indicators Supporting 2 Cycles:**
+- No executable code to fail tests
+- No integration points to break
+- PM review focuses on clarity and token budget (objective criteria)
+- Examples based on WINT-0190/0200 specs (well-defined patterns)
+
+**Indicators That Could Increase Cycles:**
+- If examples are too generic (not codebase-specific) → cycle 3 for concreteness
+- If hard caps are ambiguous → cycle 3 for explicit numbers
+- If PM wants different example types → cycle 3 for rework
+
+**Mitigation:**
+- Use actual codebase patterns in examples (not placeholders)
+- Make hard caps explicit numbers (no "around 5" phrasing)
+- Include decision rules in pattern skeletons (when to apply)
+
+---
+
+## Token Estimate
+
+### Prediction: 95,000 tokens
+
+**Breakdown:**
+
+#### Planning and Setup (15,000 tokens)
+- Reading seed, examples, WINT-0190/0200 specs: 10,000 tokens
+- Reading expert-personas.md for condensing: 5,000 tokens
+
+#### Role Pack Authoring (40,000 tokens)
+- Dev role pack (3 iterations to fit token budget): 12,000 tokens
+- PO role pack (2 iterations): 10,000 tokens
+- DA role pack (2 iterations): 9,000 tokens
+- QA role pack (2 iterations): 9,000 tokens
+
+#### Example Outputs (20,000 tokens)
+- patch-plan.json example: 5,000 tokens
+- cohesion-findings.json example: 5,000 tokens
+- scope-challenges.json example: 5,000 tokens
+- ac-trace.json example: 5,000 tokens
+
+#### Documentation (10,000 tokens)
+- README.md creation: 7,000 tokens
+- Token counting script and validation: 3,000 tokens
+
+#### QA and Refinement (10,000 tokens)
+- Running token count validation: 2,000 tokens
+- Example clarity review: 3,000 tokens
+- Cycle 2 adjustments: 5,000 tokens
+
+**Confidence:** Medium (documentation work, fewer unknowns than code)
+
+**Indicators Supporting Estimate:**
+- No complex debugging loops (token sink)
+- No database queries or API calls (fast validation)
+- Pattern is repetitive (4 role packs = 4x same work)
+- Token counting is mechanical (tiktoken library)
+
+**Indicators That Could Increase Tokens:**
+- If token budget iteration takes many rounds (trial and error to hit 150-300)
+- If examples need significant refinement (generic → specific)
+- If PM requests major structural changes in cycle 2
+
+**Mitigation:**
+- Start with concise templates (expand if under 150 tokens)
+- Use WINT-0190/0200 examples directly (don't reinvent)
+- Batch token count measurements (run once per iteration, not per role pack)
+
+---
+
+## Prediction Confidence
+
+### Overall Confidence: Medium-High
+
+**Rationale:**
+- **High confidence on split risk:** Documentation stories rarely split, clear deliverables
+- **Medium confidence on review cycles:** Quality is subjective, examples may need iteration
+- **Medium confidence on tokens:** Documentation work is faster than code, but token budget iteration adds uncertainty
+
+**Knowledge Base Unavailable:** Predictions based on seed context and story structure analysis (no historical data for WINT epic documentation stories)
+
+**WKFL-006 Unavailable:** Using fallback heuristics (AC count, story type, complexity)
+
+---
+
+## Fallback Mode Disclaimer
+
+**Note:** These predictions were generated in fallback mode due to:
+- Knowledge Base unavailable (no historical WINT story data)
+- WKFL-006 prediction model unavailable (no trained model for WINT epic)
+
+**Heuristics Used:**
+- AC count (7 ACs → low split risk, 2 review cycles)
+- Story type (documentation → lower token usage than code)
+- Complexity (4 similar artifacts → repetitive work, predictable effort)
+
+**Recommendation:**
+- Treat token estimate as upper bound (likely 75-100K actual usage)
+- Monitor cycle 1 feedback quality → if many issues, plan for cycle 3
+- If split becomes necessary, split by role (Dev/PO in story 1, DA/QA in story 2)

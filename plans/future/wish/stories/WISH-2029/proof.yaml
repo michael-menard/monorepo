@@ -1,0 +1,12 @@
+schema: 1
+story_id: WISH-2029
+completed_at: 2026-02-01T20:52:37.292Z
+summary:
+  - Completely rewrote `docs/architecture/api-layer.md` to document the current hexagonal architecture pattern at
+    `apps/api/lego-api/domains/`. The previous documentation referenced a deprecated `services/{domain}/` pattern that
+    no longer exists.
+deliverables: []
+verification:
+  tests_passed: 0
+  all_acs_verified: true
+limitations: []

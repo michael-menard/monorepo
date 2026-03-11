@@ -1,0 +1,109 @@
+strategy: integration+unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "Populate script writes 5 distinct cache entries on first run"
+    setup: "Clean wint.context_packs table of any entries with packKeys: project-conventions, tech-stack-backend, tech-stack-frontend, tech-stack-monorepo, testing-strategy. DATABASE_URL points to port 5432 (lego_dev)."
+    action: "Run populateProjectContext() function"
+    expected: "5 rows inserted in wint.context_packs with packType/packKey pairs: (architecture, project-conventions), (architecture, tech-stack-backend), (architecture, tech-stack-frontend), (architecture, tech-stack-monorepo), (test_patterns, testing-strategy). All rows have non-null content JSONB."
+    evidence: "SELECT packType, packKey, content FROM wint.context_packs WHERE packKey IN ('project-conventions','tech-stack-backend','tech-stack-frontend','tech-stack-monorepo','testing-strategy') — 5 rows returned, content not null"
+
+  - id: HP-2
+    title: "Content JSONB has structured object shape, not raw file string"
+    setup: "Run populate function as in HP-1"
+    action: "Read content column for each inserted row"
+    expected: "Each content value is a JSONB object with at minimum a 'summary' string field. Not a raw file string. JSON.stringify(content).length < 8000 for each pack."
+    evidence: "SELECT packKey, LENGTH(content::text), content->>'summary' FROM wint.context_packs WHERE packKey IN (...) — summary field non-null, length < 8000"
+
+  - id: HP-3
+    title: "TTL is set to 30 days on all entries"
+    setup: "Run populate function as in HP-1"
+    action: "Read ttl column for each inserted row"
+    expected: "All 5 rows have ttl = 2592000"
+    evidence: "SELECT packKey, ttl FROM wint.context_packs WHERE packKey IN (...) — all ttl = 2592000"
+
+  - id: HP-4
+    title: "Script exits with summary reporting 5 succeeded, 0 failed"
+    setup: "Clean database state as in HP-1"
+    action: "Run populate function, capture return value or log output"
+    expected: "Function returns or logs: { attempted: 5, succeeded: 5, failed: 0 }"
+    evidence: "Console output or return value shows correct summary counts"
+
+error_cases:
+  - id: EC-1
+    title: "Single pack write failure does not abort remaining packs"
+    setup: "Mock or configure one contextCachePut call to throw. Other 4 packs have valid DB connection."
+    action: "Run populateProjectContext()"
+    expected: "4 other packs are written successfully. Failure is logged via @repo/logger. Summary shows attempted: 5, succeeded: 4, failed: 1. Function does not throw."
+    evidence: "4 rows in wint.context_packs. Logger.error called once. Summary object returned with failed: 1."
+
+  - id: EC-2
+    title: "Missing source doc file logs warning and continues"
+    setup: "Temporarily rename or mock one source doc path (e.g., docs/tech-stack/backend.md) to be unreadable"
+    action: "Run populateProjectContext()"
+    expected: "Script logs warning for the missing file. Remaining 4 packs are attempted. Summary counts reflect the failure."
+    evidence: "Logger.warn called for missing file. 4 rows written for remaining packs."
+
+  - id: EC-3
+    title: "Invalid packType value rejected before DB call"
+    setup: "Attempt to call contextCachePut with a non-existent packType value (e.g., 'project_context')"
+    action: "Call contextCachePut with invalid packType"
+    expected: "Zod validation rejects the input before reaching the database. Error logged. No DB write attempted."
+    evidence: "Zod parse error thrown. No row in wint.context_packs with invalid packType."
+
+edge_cases:
+  - id: ED-1
+    title: "Idempotency: running populate twice does not duplicate rows"
+    setup: "Run populateProjectContext() once to completion. Record row count (5)."
+    action: "Run populateProjectContext() a second time"
+    expected: "Row count remains 5 (not 10). Existing rows are updated via upsert. Updated_at timestamps updated."
+    evidence: "SELECT COUNT(*) FROM wint.context_packs WHERE packKey IN ('project-conventions','tech-stack-backend','tech-stack-frontend','tech-stack-monorepo','testing-strategy') = 5 after second run."
+
+  - id: ED-2
+    title: "Content size stays within injection budget"
+    setup: "Run populate function"
+    action: "Check JSON stringified length of each content value"
+    expected: "No pack has JSON.stringify(content).length > 8000 characters"
+    evidence: "SELECT packKey, LENGTH(content::text) FROM wint.context_packs WHERE packKey IN (...) — all < 8000"
+
+  - id: ED-3
+    title: "Script is runnable via pnpm tsx from monorepo root"
+    setup: "Navigate to monorepo root. Ensure DATABASE_URL set to port 5432."
+    action: "Run: pnpm tsx packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    expected: "Script runs without compilation errors. Produces summary output."
+    evidence: "Exit code 0. Summary log line visible in stdout."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "SELECT COUNT(*) FROM wint.context_packs WHERE packKey IN ('project-conventions','tech-stack-backend','tech-stack-frontend','tech-stack-monorepo','testing-strategy') = 5"
+      - "All content::text lengths < 8000 chars"
+      - "All ttl = 2592000"
+      - "content->>'summary' IS NOT NULL for all 5 packs"
+      - "COUNT after second run still = 5 (idempotency)"
+
+manual_cases:
+  - id: MC-1
+    title: "Verify packKey taxonomy does not collide with WINT-2040/2050/2060 future stories"
+    steps:
+      - "Review packKey values: project-conventions, tech-stack-backend, tech-stack-frontend, tech-stack-monorepo, testing-strategy"
+      - "Confirm none of these keys are reserved by WINT-2040 (agent missions), WINT-2050 (domain KB), WINT-2060 (library patterns)"
+    expected: "No packKey collision — each future story will use distinct keys"
+
+fixture_definitions:
+  - name: cleanContextPacksFixture
+    type: database cleanup
+    description: "Before each integration test, DELETE FROM wint.context_packs WHERE packKey IN ('project-conventions','tech-stack-backend','tech-stack-frontend','tech-stack-monorepo','testing-strategy'). After each test, same cleanup."
+  - name: invalidPackTypeInput
+    type: test input
+    description: "A ContextCachePutInput object with packType set to 'project_context' (invalid enum value)"
+
+risks:
+  - "Port mismatch: tests accidentally targeting port 5433 (KB database) instead of port 5432 (lego_dev). Must set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev in test environment."
+  - "Content size drift: if source docs grow significantly, content JSONB may exceed injection budget. Size assertions guard against this."
+  - "Enum constraint runtime error: if packType validation is not done in TypeScript before the DB call, Postgres will throw a constraint violation that must be caught."
+  - "fs.readFile path resolution: script must resolve doc paths relative to monorepo root, not the script's own location."

@@ -1,0 +1,134 @@
+strategy: unit+integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "Benchmark script runs end-to-end and produces BENCHMARK-RESULTS.yaml"
+    setup: "Live PostgreSQL KB database running on port 5433; wint.context_packs table populated by at least WINT-2030/2050/2060 packs; WINT-2110 baseline available (from BASELINE-TOKENS.yaml or hardcoded fallback)"
+    action: "Execute the benchmark script via pnpm (e.g., pnpm vitest run token-reduction-benchmark)"
+    expected: "Script completes without error; BENCHMARK-RESULTS.yaml written to _implementation/ with per-agent table, aggregate reduction %, methodology statement, pack population status, and PASS or NEEDS-TUNING verdict"
+    evidence: "File _implementation/BENCHMARK-RESULTS.yaml exists and is valid YAML; @repo/logger output shows benchmark steps and final verdict"
+
+  - id: HP-2
+    title: "Benchmark reads WINT-2110 baseline estimates as the 'before' side"
+    setup: "BASELINE-TOKENS.yaml exists in WINT-2110 _implementation/ dir; OR hardcoded fallback table defined in benchmark"
+    action: "Run benchmark script"
+    expected: "Output artifact contains per-agent 'before' baseline values matching WINT-2110 AC-6 estimates (~2,000–6,500 tokens/invocation per agent)"
+    evidence: "BENCHMARK-RESULTS.yaml 'before_estimates' section matches WINT-2110 baseline values"
+
+  - id: HP-3
+    title: "Benchmark collects hitCount and avgHitsPerPack for all registered pack types"
+    setup: "context_cache_stats() MCP tool available; at least one pack type has hits in wint.context_packs"
+    action: "Run benchmark script"
+    expected: "BENCHMARK-RESULTS.yaml contains per-pack-type hitCount and avgHitsPerPack values; each registered pack type appears in the output"
+    evidence: "BENCHMARK-RESULTS.yaml 'pack_stats' section lists all pack types with their hit counts"
+
+  - id: HP-4
+    title: "Benchmark computes and documents the reduction formula per agent"
+    setup: "Packs with non-zero content sizes and non-zero hit counts present in DB"
+    action: "Run benchmark script"
+    expected: "BENCHMARK-RESULTS.yaml includes the formula (pack_token_size × hit_count) / (baseline_input_tokens × invocation_count) with stated assumptions for each agent"
+    evidence: "Formula and assumptions appear in methodology section of BENCHMARK-RESULTS.yaml"
+
+  - id: HP-5
+    title: "Reduction calculation formula is mathematically correct (unit test)"
+    setup: "Pure function calculateTokenReduction(packTokenSize, hitCount, baselineInputTokens, invocationCount) defined in benchmark script"
+    action: "Run unit test with known inputs: packTokenSize=1000, hitCount=5, baselineInputTokens=2500, invocationCount=10"
+    expected: "Returns 0.20 (20% reduction); formula is (1000×5)/(2500×10) = 5000/25000 = 0.20"
+    evidence: "Unit test passes in pnpm vitest run"
+
+error_cases:
+  - id: EC-1
+    title: "DB unavailable — script exits with clear error message"
+    setup: "PostgreSQL database not running or unreachable"
+    action: "Run benchmark script"
+    expected: "Script exits with non-zero code and logs a clear error via @repo/logger: 'DB connection failed — cannot run benchmark'; no partial BENCHMARK-RESULTS.yaml written"
+    evidence: "@repo/logger error output; script exit code != 0"
+
+  - id: EC-2
+    title: "Zero packs populated — all agents show 'not yet populated', aggregate excluded"
+    setup: "wint.context_packs table is empty (no packs populated)"
+    action: "Run benchmark script"
+    expected: "BENCHMARK-RESULTS.yaml shows all pack types as 'not yet populated'; aggregate reduction percentage is omitted or marked as 'N/A — insufficient data'; verdict is NEEDS-TUNING with note explaining no data"
+    evidence: "BENCHMARK-RESULTS.yaml pack_population_status shows all packs with hits: 0 and status: 'not_yet_populated'"
+
+  - id: EC-3
+    title: "WINT-2110 BASELINE-TOKENS.yaml not found — falls back to hardcoded estimates"
+    setup: "WINT-2110 _implementation/BASELINE-TOKENS.yaml does not exist"
+    action: "Run benchmark script"
+    expected: "Script logs warning via @repo/logger ('BASELINE-TOKENS.yaml not found, using hardcoded AC-6 estimates'); benchmark continues with hardcoded values from the AC-6 table in WINT-2110 story; methodology section notes this fallback"
+    evidence: "BENCHMARK-RESULTS.yaml methodology.baseline_source = 'hardcoded_ac6_fallback'; @repo/logger warning logged"
+
+  - id: EC-4
+    title: "WINT-2040 agent_missions pack absent — gracefully excluded from percentage"
+    setup: "wint.context_packs has no rows for agent_missions pack type (WINT-2040 in failed-code-review)"
+    action: "Run benchmark script"
+    expected: "agent_missions appears in output as 'not yet populated' and is excluded from aggregate reduction calculation; note in artifact explains exclusion reason"
+    evidence: "BENCHMARK-RESULTS.yaml agent_missions row shows status: 'not_yet_populated', excluded_from_aggregate: true"
+
+edge_cases:
+  - id: ED-1
+    title: "Only one pack type populated — partial result reported correctly"
+    setup: "Only project_conventions pack type has data; all others empty"
+    action: "Run benchmark script"
+    expected: "BENCHMARK-RESULTS.yaml reports reduction for project_conventions only; aggregate notes 'based on 1 of N pack types'; verdict reflects limited sample"
+    evidence: "BENCHMARK-RESULTS.yaml aggregate section includes sample_size note"
+
+  - id: ED-2
+    title: "Pack content size is zero — no division by zero in formula"
+    setup: "A pack row exists in wint.context_packs with content = '' (empty content)"
+    action: "Run benchmark script"
+    expected: "Script handles zero content size gracefully — that pack is excluded from calculation with a note; no runtime error thrown"
+    evidence: "Script completes without exception; @repo/logger warning logged for zero-content pack"
+
+  - id: ED-3
+    title: "Aggregate reduction is below 80% — NEEDS-TUNING verdict with recommendations"
+    setup: "Pack data yields only ~40% estimated reduction across populated agents"
+    action: "Run benchmark script"
+    expected: "BENCHMARK-RESULTS.yaml verdict = NEEDS-TUNING; top 2-3 agents or pack types identified as tuning targets (e.g., packs with zero hits, agents with low injection coverage)"
+    evidence: "BENCHMARK-RESULTS.yaml has verdict: NEEDS-TUNING and tuning_recommendations list with at least 2 entries"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "BENCHMARK-RESULTS.yaml is valid YAML and conforms to expected schema"
+      - "pnpm check-types passes on benchmark script file"
+      - "pnpm vitest run on benchmark integration test exits 0"
+      - "No console.log usage — all output via @repo/logger"
+
+manual_cases:
+  - id: MC-1
+    title: "Reviewer inspects BENCHMARK-RESULTS.yaml for methodology correctness"
+    steps:
+      - "Run benchmark against live DB"
+      - "Open _implementation/BENCHMARK-RESULTS.yaml"
+      - "Verify methodology.formula matches the documented formula in AC-4"
+      - "Verify methodology.limitations section is present and honest about proxy measurement constraints"
+      - "Verify per-agent before/after table shows distinct values for each of the 5 WINT-2110 agents"
+      - "Verify verdict is clearly stated as PASS or NEEDS-TUNING"
+    expected: "Artifact is self-contained and clearly communicates findings, limitations, and recommendations"
+
+  - id: MC-2
+    title: "Reviewer verifies per-agent breakdown shows model-tier differentiation"
+    steps:
+      - "Inspect BENCHMARK-RESULTS.yaml per_agent_results"
+      - "Confirm haiku vs. sonnet agents are identified separately if applicable"
+      - "Confirm reduction percentages differ per agent rather than showing one single aggregate"
+    expected: "Per-agent breakdown is present; single aggregate is supplemented (not replaced) by per-agent data"
+
+fixture_definitions:
+  - name: "baseline_tokens_fixture"
+    type: "YAML"
+    description: "Static BASELINE-TOKENS.yaml with hardcoded per-agent estimates from WINT-2110 AC-6 table (used as fallback when actual artifact not present)"
+  - name: "context_packs_seed"
+    type: "SQL"
+    description: "Minimal seed for wint.context_packs with at least 2 pack types populated for integration test runs"
+
+risks:
+  - "ADR-005 requires real PostgreSQL — integration tests cannot run in CI without DB; consider marking as local-only or using test DB"
+  - "WINT-2040 absence means agent_missions pack will show zero hits in real runs, making aggregate reduction less representative"
+  - "Token reduction estimates are proxy-based (content size, not actual LLM invocation counts); results are directional, not precise"
+  - "Hard assertions against 80% threshold would cause flaky CI — AC-5 verdict must be advisory (logged, not CI-blocking)"

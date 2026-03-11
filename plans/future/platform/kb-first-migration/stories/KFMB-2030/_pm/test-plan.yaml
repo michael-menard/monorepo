@@ -1,0 +1,99 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  files_touched:
+    - .claude/commands/pm-bootstrap-workflow.md
+    - .claude/docs/pm-bootstrap-workflow-reference.md
+
+happy_path_tests:
+  - id: HP-1
+    title: "KB Mode bootstrap produces correct completion report (no stories.index.md)"
+    setup: "KFMB-2010 and KFMB-2020 merged; run /pm-bootstrap-workflow with a test plan slug in KB Mode"
+    action: "Execute /pm-bootstrap-workflow {test-plan-slug} and observe the completion report output"
+    expected: "Completion report lists only story.yaml files; stories.index.md is NOT listed under Files Created"
+    evidence: "Screenshot or transcript of the completion report showing no stories.index.md entry"
+  - id: HP-2
+    title: "Phase 0 prompt accurately describes kb_list_stories collision check"
+    setup: "Read the updated .claude/commands/pm-bootstrap-workflow.md"
+    action: "Review the Phase 0 section (pm-bootstrap-setup-leader invocation) in KB Mode"
+    expected: "Phase 0 prompt references kb_list_stories for collision detection, no mention of stories.index.md disk check"
+    evidence: "Diff showing old text removed, new kb_list_stories reference added"
+  - id: HP-3
+    title: "Phase 2 prompt accurately describes kb_create_story insertion"
+    setup: "Read the updated .claude/commands/pm-bootstrap-workflow.md"
+    action: "Review the Phase 2 section (pm-bootstrap-generation-leader invocation) in KB Mode"
+    expected: "Phase 2 prompt references kb_create_story for story insertion; no mention of stories.index.md being written"
+    evidence: "Diff showing kb_create_story reference in Phase 2 prompt, stories.index.md removed"
+  - id: HP-4
+    title: "File Mode behavior unchanged — stories.index.md still listed"
+    setup: "Read the updated .claude/commands/pm-bootstrap-workflow.md"
+    action: "Review the File Mode (--file) sections and completion report"
+    expected: "File Mode documentation is unchanged; stories.index.md still listed as a File Mode output"
+    evidence: "Diff showing File Mode sections untouched"
+
+error_cases:
+  - id: EC-1
+    title: "Running command before KFMB-2010/2020 merged causes agent mismatch"
+    setup: "Attempt to run /pm-bootstrap-workflow in KB Mode with OLD agent versions"
+    action: "Execute bootstrap with pre-KFMB-2010/2020 agent files"
+    expected: "Command documentation accurately describes new behavior but agents still produce old behavior — mismatch is expected and documented as a dependency gate"
+    evidence: "Not testable until dependencies are merged; this is a dependency risk, not a test case"
+  - id: EC-2
+    title: "pnpm migrate:stories no longer appears as primary mechanism in KB Mode Done section"
+    setup: "Read the updated Done — KB Mode section"
+    action: "Verify pnpm migrate:stories is either removed or marked as fallback-only"
+    expected: "migrate:stories is absent or marked as idempotent fallback, NOT as the primary seeding mechanism"
+    evidence: "Diff showing the Done section updated"
+
+edge_cases:
+  - id: ED-1
+    title: "kb_tools frontmatter includes kb_create_story and kb_list_stories"
+    setup: "Read the frontmatter of .claude/commands/pm-bootstrap-workflow.md"
+    action: "Check kb_tools list in YAML frontmatter"
+    expected: "kb_tools contains kb_create_story and kb_list_stories (in addition to existing kb_get_plan, kb_list_plans)"
+    evidence: "YAML frontmatter diff showing new tool names added"
+  - id: ED-2
+    title: "Reference doc artifacts table annotates stories.index.md as File Mode only"
+    setup: "Read .claude/docs/pm-bootstrap-workflow-reference.md Artifacts table"
+    action: "Check the row for stories.index.md"
+    expected: "Row either removed or annotated with '(File Mode only)' qualifier"
+    evidence: "Diff of reference doc showing updated Artifacts table"
+  - id: ED-3
+    title: "Troubleshooting entry for 'Prefix already exists' updated if stories.index.md check changes"
+    setup: "Read the Troubleshooting section in the reference doc"
+    action: "Check whether the 'Prefix already exists' entry still references stories.index.md"
+    expected: "Entry updated to reflect KB Mode uses kb_list_stories, not stories.index.md on disk"
+    evidence: "Diff showing updated troubleshooting entry (or unchanged if still accurate)"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+
+manual_cases:
+  - id: MC-1
+    title: "End-to-end KB Mode bootstrap after KFMB-2010/2020 merges"
+    steps:
+      - "1. Ensure KFMB-2010 and KFMB-2020 are merged to main"
+      - "2. Run: /pm-bootstrap-workflow {test-slug} (KB Mode)"
+      - "3. Observe phase outputs — Phase 0 should show kb_list_stories collision check, Phase 2 should show kb_create_story"
+      - "4. Observe Done section — should call kb_update_plan, NOT pnpm migrate:stories as primary"
+      - "5. Read the Completion Report output — confirm stories.index.md is absent from Files Created"
+    expected: "Bootstrap completes with no filesystem index file created; all story data in KB"
+  - id: MC-2
+    title: "Reference doc review"
+    steps:
+      - "1. Open .claude/docs/pm-bootstrap-workflow-reference.md"
+      - "2. Locate Artifacts table"
+      - "3. Verify stories/{PREFIX}.stories.index.md row is absent or annotated as File Mode only"
+      - "4. Verify Troubleshooting section is updated to reflect KB Mode collision check change"
+    expected: "Reference doc is consistent with updated command behavior"
+
+fixture_definitions: []
+
+risks:
+  - "Cannot be fully tested until KFMB-2010 and KFMB-2020 are merged — all tests are gated on those dependencies"
+  - "Manual-only testing — no automated regression coverage for .claude/commands/ markdown files"
+  - "Risk of partial update: if command updated but reference doc not updated (or vice versa), consistency breaks"

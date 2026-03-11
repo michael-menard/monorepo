@@ -1,0 +1,25 @@
+schema: 1
+story_id: WINT-4150
+timestamp: "2026-03-08T00:00:00Z"
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/orchestrator/src/artifacts/**"
+  - ".claude/agents/elab-completion-leader.agent.md"
+  - ".claude/schemas/story-brief-schema.md"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Define 7 Zod schemas for Phase 4 elab artifacts (gaps, cohesion-findings, user-flows re-export, scope-challenges, mvp-slice, final-scope, evidence-expectations) with factory functions and unit tests; update elab-completion-leader gate for graceful artifact validation"
+elaboration: "completed"

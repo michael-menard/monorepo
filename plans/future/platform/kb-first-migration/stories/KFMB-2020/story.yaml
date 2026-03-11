@@ -1,0 +1,13 @@
+id: "KFMB-2020"
+title: "KB-Native Bootstrap Setup Leader"
+status: failed-code-review
+priority: medium
+phase: 2
+feature: "Rewrite pm-bootstrap-setup-leader to replace stories.index.md collision checks with kb_list_stories queries"
+goal: "Bootstrap setup detects existing stories via KB query rather than filesystem inspection."
+depends_on: ["KFMB-1020"]
+endpoints: []
+infrastructure: ["MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "Must verify that kb_list_stories filter by prefix is reliable."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

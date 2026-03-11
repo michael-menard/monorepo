@@ -1,0 +1,16 @@
+schema: 1
+story_id: WINT-9120
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-03T10:01:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    E2E gate: WINT-9120 creates a pure backend unit/integration test suite (no UI, no
+    API endpoints). Playwright E2E tests are not applicable per ADR-005 and story non-goals.
+    Parity tests run successfully with pnpm test --filter @repo/orchestrator.
+gen_mode: false

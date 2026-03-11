@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-0200 has no frontend UI impact. The user-flows.schema.json is consumed by backend agents and the PO role pack workflow, not rendered in any browser-facing component. ADR-006 skip condition applies: frontend_impacted: false. E2E tests are not applicable."

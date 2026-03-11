@@ -1,0 +1,25 @@
+schema: 1
+story_id: WISH-2008
+total:
+  input: 106000
+  output: 19300
+phases:
+  - phase: elab-setup
+    input: 35000
+    output: 5000
+  - phase: elab-analysis
+    input: 14000
+    output: 2000
+  - phase: elab-completion
+    input: 12000
+    output: 3000
+  - phase: pm-followup
+    input: 18000
+    output: 4000
+  - phase: elab-setup
+    input: 8500
+    output: 2100
+  - phase: elab-completion
+    input: 18500
+    output: 3200
+high_cost: []
