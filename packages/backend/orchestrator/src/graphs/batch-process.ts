@@ -218,7 +218,9 @@ export function createBatchStoryWorkerNode(config: Partial<BatchProcessConfig> =
     const warnings: string[] = []
 
     if (!devImpl) {
-      warnings.push(`story_worker[${storyId}]: devImplementNode not injected — skipping sub-pipeline`)
+      warnings.push(
+        `story_worker[${storyId}]: devImplementNode not injected — skipping sub-pipeline`,
+      )
       return {
         workerResults: [
           BatchWorkerResultSchema.parse({
@@ -304,9 +306,9 @@ export function createBatchStoryWorkerNode(config: Partial<BatchProcessConfig> =
 export function createBatchProcessFanInNode() {
   return async (state: BatchProcessState): Promise<Partial<BatchProcessState>> => {
     const results = state.workerResults
-    const succeeded = results.filter(r => r.success).length
+    const _succeeded = results.filter(r => r.success).length
     const failed = results.filter(r => !r.success).length
-    const retried = results.filter(r => r.retryCount > 0).length
+    const _retried = results.filter(r => r.retryCount > 0).length
 
     return {
       workflowComplete: true,
