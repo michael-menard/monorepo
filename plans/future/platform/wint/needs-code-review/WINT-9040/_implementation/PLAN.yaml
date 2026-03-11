@@ -1,0 +1,416 @@
+schema: 1
+story_id: WINT-9040
+timestamp: "2026-03-08T00:00:00Z"
+
+# ============================================================================
+# KEY DECISIONS FROM CANONICAL REFERENCE ANALYSIS
+# ============================================================================
+
+key_decisions:
+  state_extension_pattern: >
+    Use type casting pattern from attack.ts (NOT z.object().extend() from base
+    GraphStateSchema). Define GraphStateWithScopeDefend as a local type in
+    scope-defend.ts. Cast state inside the node: 'const stateWithDefend = state
+    as GraphStateWithScopeDefend'. This keeps the base GraphState clean.
+
+  no_graphstate_base_modification: >
+    GraphState base schema at packages/backend/orchestrator/src/state/graph-state.ts
+    must NOT be modified. All new fields (story_brief, acceptance_criteria,
+    gap_analysis, role_pack_path, warning_count, scope_defend_output) are
+    node-local extensions only.
+
+  doc_sync_interface_warning: >
+    doc-sync.ts uses a TypeScript 'interface' for GraphStateWithDocSync — this
+    violates project rules. Do NOT follow this pattern. Follow attack.ts instead,
+    which uses Zod-first types and type casting.
+
+  workflow_logic_not_needed: >
+    @repo/workflow-logic exports only: WorkflowStoryStatusSchema, DbStoryStatusSchema,
+    getValidTransitions, toDbStoryStatus, getStatusFromDirectory, isValidStoryId.
+    None are relevant to scope-defend logic. Do NOT import @repo/workflow-logic.
+
+  warning_count_field: >
+    warning_count is a node-local concept. Include in GraphStateWithScopeDefend
+    extension and return via updateState(). Each missing optional input
+    (gap_analysis=null, role_pack_path=null) increments warning_count by 1.
+
+  story_dir_resolution: >
+    The node must resolve a story directory path to write scope-challenges.json.
+    createScopeDefendNode accepts an optional storyDir string parameter.
+    scopeDefendNode (default export) uses process.cwd() as fallback.
+    Tests use vi.spyOn on fs.writeFile to verify path and content.
+
+  export_naming_convention: >
+    Follow attack.ts naming: const scopeDefendNode (default) + function
+    createScopeDefendNode (configurable). NOT scopeDefenderNode.
+
+# ============================================================================
+# STATE FIELD ANALYSIS
+# ============================================================================
+
+state_fields_needed:
+  existing_in_graphstate:
+    - storyId
+    - epicPrefix
+    - routingFlags
+    - evidenceRefs
+    - gateDecisions
+    - errors
+    - artifactPaths
+    - stateHistory
+    - schemaVersion
+    - blockedBy
+    - storyState
+
+  to_add_as_node_local_extension:
+    - field: story_brief
+      type: "{ title: string, goal: string, context: string } | null | undefined"
+      required: true
+      degradation: "If missing: emit SCOPE-DEFENDER BLOCKED, return error state"
+
+    - field: acceptance_criteria
+      type: "Array<{ id: string, description: string, mvp_critical?: boolean }> | undefined"
+      required: true
+      degradation: "If undefined: treat as [] (zero candidates)"
+
+    - field: gap_analysis
+      type: "{ mvp_critical_ids?: string[], blocking_ids?: string[], [key: string]: unknown } | null | undefined"
+      required: false
+      degradation: "null -> warning_count += 1, 'gap_analysis_missing' in warnings, all ACs are challengeable"
+
+    - field: role_pack_path
+      type: "string | null | undefined"
+      required: false
+      degradation: "null -> warning_count += 1, 'role_pack_missing' in warnings, use embedded constraints"
+
+    - field: warning_count
+      type: "number | undefined"
+      default: 0
+      note: "Accumulated from missing optional inputs; returned in state update"
+
+    - field: scope_defend_output
+      type: "ScopeChallengesOutput | null | undefined"
+      note: "Returned in state update for downstream consumers (e.g., synthesis node)"
+
+# ============================================================================
+# SCOPE-CHALLENGES.JSON SCHEMA (from scope-defender.agent.md)
+# ============================================================================
+
+scope_challenges_schema:
+  description: "Exact schema from scope-defender.agent.md Output Contract section"
+  written_to: "{story_dir}/_implementation/scope-challenges.json"
+  idempotent: true  # overwrites existing file
+
+  zod_schemas: |
+    const ScopeChallengeRecommendationSchema = z.enum([
+      'defer-to-backlog',
+      'reduce-scope',
+      'accept-as-mvp',
+    ])
+
+    const RiskIfDeferredSchema = z.enum(['low', 'medium', 'high'])
+
+    const ScopeChallengeSchema = z.object({
+      id: z.string().min(1),                          // DA-001 through DA-005
+      target: z.string().min(1),                      // Which AC or feature is challenged
+      challenge: z.string().min(1),                   // One-line explanation
+      recommendation: ScopeChallengeRecommendationSchema,
+      deferral_note: z.string().optional(),           // Only when defer-to-backlog
+      risk_if_deferred: RiskIfDeferredSchema,
+    })
+
+    const ScopeChallengesOutputSchema = z.object({
+      story_id: z.string().min(1),
+      generated_at: z.string().datetime(),
+      challenges: z.array(ScopeChallengeSchema).max(5),
+      total_candidates_reviewed: z.number().int().nonnegative(),
+      truncated: z.boolean(),                         // true if > 5 candidates qualified
+      warnings: z.array(z.string()),                  // e.g. ['gap_analysis_missing']
+      warning_count: z.number().int().nonnegative(),
+    })
+
+  field_definitions:
+    story_id: "string (required) — Story ID being challenged"
+    generated_at: "string ISO 8601 (required) — Timestamp of generation"
+    challenges: "array max 5 (required) — Challenge objects"
+    challenges[].id: "string (required) — Sequential ID: DA-001 through DA-005"
+    challenges[].target: "string (required) — Which AC or feature is challenged"
+    challenges[].challenge: "string (required) — One-line explanation"
+    challenges[].recommendation: "enum (required) — 'defer-to-backlog' | 'reduce-scope' | 'accept-as-mvp'"
+    challenges[].deferral_note: "string (optional) — Backlog entry description"
+    challenges[].risk_if_deferred: "enum (required) — 'low' | 'medium' | 'high'"
+    total_candidates_reviewed: "integer (required) — Count before cap"
+    truncated: "boolean (required) — True if > 5 candidates qualified"
+    warnings: "array of strings (required) — Warning identifiers"
+    warning_count: "integer (required) — Count of warnings"
+
+# ============================================================================
+# SUBTASKS
+# ============================================================================
+
+subtasks:
+  - id: ST-1
+    title: "Read canonical references and confirm GraphState field availability"
+    status: done
+    files_to_create: []
+    files_to_modify: []
+    ac_coverage: []
+    depends_on: none
+    verification: "Read-only — no compilation step"
+    findings:
+      - "GraphState has NO fields for story_brief, acceptance_criteria, gap_analysis, role_pack_path, or warning_count"
+      - "attack.ts pattern: define local extended type + cast 'state as GraphStateWithScopeDefend'"
+      - "@repo/workflow-logic NOT needed (exports only status/transition/validation utilities)"
+      - "doc-sync.ts uses interface (non-compliant) — follow attack.ts instead"
+      - "attack.ts exports: storyAttackNode (const) + createAttackNode (function)"
+
+  - id: ST-2
+    title: "Add missing GraphState fields for scope-defend node (if required)"
+    status: pending
+    files_to_create: []
+    files_to_modify: []  # NO modification to graph-state.ts — fields are node-local
+    ac_coverage: [AC-3]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    decision: >
+      SKIP base GraphState modification. All required fields are defined as
+      node-local extensions in scope-defend.ts using Zod schemas + type casting.
+      No changes to packages/backend/orchestrator/src/state/graph-state.ts.
+
+  - id: ST-3
+    title: "Implement scope-defend.ts node using createToolNode factory"
+    status: pending
+    files_to_create:
+      - "packages/backend/orchestrator/src/nodes/story/scope-defend.ts"
+    files_to_modify: []
+    ac_coverage: [AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator"
+
+    imports: |
+      import * as fs from 'node:fs/promises'
+      import * as path from 'node:path'
+      import { z } from 'zod'
+      import { logger } from '@repo/logger'
+      import { createToolNode } from '../../runner/node-factory.js'
+      import type { GraphState } from '../../state/index.js'
+      import { updateState } from '../../runner/state-helpers.js'
+
+    exported_symbols:
+      - "ScopeChallengeRecommendationSchema"
+      - "RiskIfDeferredSchema"
+      - "ScopeChallengeSchema"
+      - "ScopeChallengesOutputSchema"
+      - "type ScopeChallengeRecommendation"
+      - "type RiskIfDeferred"
+      - "type ScopeChallenge"
+      - "type ScopeChallengesOutput"
+      - "type GraphStateWithScopeDefend"
+      - "scopeDefendNode (const) — AC-1"
+      - "createScopeDefendNode (function) — AC-1"
+
+    node_signatures: |
+      // Default node (no config)
+      export const scopeDefendNode = createToolNode(
+        'scope_defend',
+        async (state: GraphState): Promise<Partial<GraphStateWithScopeDefend>> => {
+          return scopeDefendImpl(state, undefined)
+        },
+      )
+
+      // Configurable node factory
+      export function createScopeDefendNode(storyDir?: string) {
+        return createToolNode(
+          'scope_defend',
+          async (state: GraphState): Promise<Partial<GraphStateWithScopeDefend>> => {
+            return scopeDefendImpl(state, storyDir)
+          },
+        )
+      }
+
+    four_phase_contract:
+      phase_1_load_inputs: >
+        Extract story_brief, acceptance_criteria, gap_analysis, role_pack_path
+        from 'state as GraphStateWithScopeDefend'. Validate story_brief exists
+        (title + goal non-empty). If missing: logger.error, return updateState
+        with error in errors array (do not throw). For gap_analysis=null:
+        warningCount += 1, push 'gap_analysis_missing' to warnings array.
+        For role_pack_path=null: warningCount += 1, push 'role_pack_missing'.
+
+      phase_2_identify_candidates: >
+        Walk each AC in acceptance_criteria (default []). If gap_analysis is
+        available: collect protected IDs from gap_analysis.mvp_critical_ids
+        (default []) and gap_analysis.blocking_ids (default []). Filter out any
+        AC whose id is in the protected set. Remaining ACs are candidates.
+        Record total_candidates_reviewed = candidates.length (before cap).
+
+      phase_3_apply_da_challenges: >
+        MAX_CHALLENGES = 5. For each candidate AC, produce a ScopeChallenge:
+          id: 'DA-' + String(index + 1).padStart(3, '0')
+          target: ac.id + ': ' + ac.description
+          challenge: "(derived from AC content — deterministic heuristic)"
+          recommendation: 'defer-to-backlog' | 'reduce-scope' | 'accept-as-mvp'
+          deferral_note: optional, provided when recommendation='defer-to-backlog'
+          risk_if_deferred: 'low' | 'medium' | 'high'
+        Sort candidates by risk_if_deferred descending (high > medium > low).
+        If candidates.length > 5: truncated = true, take first 5.
+        Otherwise: truncated = false.
+
+      phase_4_produce_output: >
+        Assemble ScopeChallengesOutput conforming to schema. Write JSON to
+        '{storyDir}/_implementation/scope-challenges.json' using fs.writeFile
+        with 'utf-8' encoding (overwrites existing file, no mkdir guard needed
+        if _implementation/ directory assumed to exist; mkdir -p as safety).
+        Log completion with logger.info. Return updateState({
+          scope_defend_output: output,
+          warning_count: warningCount,
+        } as Partial<GraphStateWithScopeDefend>).
+
+    da_constraints:
+      - "MAX_CHALLENGES = 5 (hard cap, non-negotiable)"
+      - "Never challenge items in gap_analysis.mvp_critical_ids or .blocking_ids"
+      - "Never add new ACs or expand scope"
+      - "Never modify existing AC text"
+      - "missing optional inputs trigger warning, not blocking"
+
+  - id: ST-4
+    title: "Write unit tests for scope-defend node"
+    status: pending
+    files_to_create:
+      - "packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts"
+    files_to_modify: []
+    ac_coverage: [AC-10, AC-11, AC-12]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator"
+
+    mocks: |
+      vi.mock('@repo/logger', () => ({
+        logger: {
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          debug: vi.fn(),
+        },
+      }))
+
+      vi.mock('node:fs/promises', () => ({
+        writeFile: vi.fn().mockResolvedValue(undefined),
+        mkdir: vi.fn().mockResolvedValue(undefined),
+      }))
+
+    fixtures:
+      baseState: >
+        { storyId: 'wint-9040', epicPrefix: 'wint', routingFlags: {},
+          evidenceRefs: [], gateDecisions: {}, errors: [], artifactPaths: {},
+          stateHistory: [], schemaVersion: '1.0.0', blockedBy: null }
+
+      completeStateFixture: >
+        baseState + story_brief={ title: 'Test Story', goal: 'Test goal',
+        context: 'Test context' }, acceptance_criteria (5 non-critical ACs with
+        ids AC-1 through AC-5), gap_analysis={ mvp_critical_ids: [],
+        blocking_ids: [] }, role_pack_path='/some/path/da.md'
+
+      sparseStateFixture: >
+        baseState + story_brief={ title, goal, context }, acceptance_criteria
+        (3 ACs), gap_analysis=null, role_pack_path=null
+
+      mvpCriticalStateFixture: >
+        baseState + story_brief, 3 ACs (AC-1, AC-2, AC-3) where AC-1 is in
+        gap_analysis.mvp_critical_ids
+
+      largeACStateFixture: >
+        baseState + story_brief, 8 non-critical ACs (AC-1 through AC-8),
+        gap_analysis={ mvp_critical_ids: [], blocking_ids: [] }
+
+    test_cases:
+      - id: HP-1
+        name: "Node produces scope-challenges.json with valid challenges for complete story"
+        setup: completeStateFixture
+        expected: "fs.writeFile called once; parsed JSON has challenges.length <= 5, truncated=false"
+
+      - id: HP-2
+        name: "Node caps challenges at 5 and sets truncated=true when >5 candidates qualify"
+        setup: largeACStateFixture
+        expected: "challenges.length === 5, truncated === true"
+
+      - id: HP-3
+        name: "Node excludes MVP-critical items from challenges"
+        setup: mvpCriticalStateFixture
+        expected: "No challenge.target includes 'AC-1'"
+
+      - id: EC-1
+        name: "Graceful degradation when gap_analysis is null"
+        setup: sparseStateFixture (gap_analysis=null)
+        expected: "returned state has warning_count >= 1; fs.writeFile called"
+
+      - id: EC-2
+        name: "Graceful degradation when role_pack_path is null"
+        setup: sparseStateFixture (role_pack_path=null)
+        expected: "returned state has warning_count >= 1; fs.writeFile called"
+
+      - id: EC-3
+        name: "Node overwrites existing scope-challenges.json on repeat runs"
+        setup: completeStateFixture
+        expected: "fs.writeFile called twice (call node twice); no error thrown"
+
+      - id: ED-1
+        name: "Node handles zero ACs gracefully"
+        setup: baseState + story_brief + acceptance_criteria=[]
+        expected: "challenges=[], truncated=false; fs.writeFile called"
+
+      - id: ED-2
+        name: "Node handles all ACs being MVP-critical"
+        setup: baseState + story_brief + 3 ACs all in mvp_critical_ids
+        expected: "challenges=[], truncated=false; no exception thrown"
+
+    afterEach: "vi.restoreAllMocks()"
+
+# ============================================================================
+# IMPORTS NEEDED
+# ============================================================================
+
+imports_needed:
+  required:
+    - "import * as fs from 'node:fs/promises'"
+    - "import * as path from 'node:path'"
+    - "import { z } from 'zod'"
+    - "import { logger } from '@repo/logger'"
+    - "import { createToolNode } from '../../runner/node-factory.js'"
+    - "import type { GraphState } from '../../state/index.js'"
+    - "import { updateState } from '../../runner/state-helpers.js'"
+
+  not_needed:
+    - "@repo/workflow-logic — no relevant exports for scope-defend logic"
+    - "GraphStateBaseSchema — use type casting pattern from attack.ts instead"
+    - "Any MCP SDK imports — file-based output only per AC-9"
+
+# ============================================================================
+# VERIFICATION COMMANDS
+# ============================================================================
+
+verification_commands:
+  - "pnpm check-types --filter @repo/orchestrator"
+  - "pnpm test --filter @repo/orchestrator"
+  - "pnpm lint --filter @repo/orchestrator"
+
+# ============================================================================
+# FILE PATHS
+# ============================================================================
+
+file_paths:
+  files_to_create:
+    - "packages/backend/orchestrator/src/nodes/story/scope-defend.ts"
+    - "packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts"
+
+  files_to_not_modify:
+    - "packages/backend/orchestrator/src/state/graph-state.ts"
+    - ".claude/agents/scope-defender.agent.md"
+    - "packages/backend/workflow-logic/src/index.ts"
+
+  canonical_references:
+    sibling_node: "packages/backend/orchestrator/src/nodes/story/attack.ts"
+    gold_standard: "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    node_factory: "packages/backend/orchestrator/src/runner/node-factory.ts"
+    state_helpers: "packages/backend/orchestrator/src/runner/state-helpers.ts"
+    agent_spec: ".claude/agents/scope-defender.agent.md"
+    sibling_test: "packages/backend/orchestrator/src/nodes/story/__tests__/attack.test.ts"
