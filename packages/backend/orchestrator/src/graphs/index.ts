@@ -307,3 +307,31 @@ export {
   type BacklogStory,
   type GraphStateWithBacklogReview,
 } from './backlog-review.js'
+
+// Batch Process Graph — Send API fan-out (WINT-9060)
+export {
+  // Graph factory and runner
+  createBatchProcessGraph,
+  runBatchProcess,
+  // Node adapters for workflow integration
+  createBatchProcessNode,
+  // Individual node factories
+  createBatchProcessDispatcher,
+  createBatchStoryWorkerNode,
+  createBatchProcessFanInNode,
+  createBatchProcessCompleteNode,
+  // Conditional edge functions
+  afterBatchFanIn,
+  // Schemas
+  BatchProcessConfigSchema,
+  BatchProcessResultSchema,
+  BatchWorkerResultSchema,
+  // State annotation
+  BatchProcessStateAnnotation,
+  // Types
+  type BatchProcessConfig,
+  type BatchProcessResult,
+  type BatchWorkerResult,
+  type BatchProcessState,
+  type GraphStateWithBatchProcess,
+} from './batch-process.js'
