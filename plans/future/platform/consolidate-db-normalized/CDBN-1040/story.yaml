@@ -1,0 +1,16 @@
+id: CDBN-1040
+title: Create telemetry Schema — Tables, Constraints, Indexes, Drizzle
+status: backlog
+priority: medium
+phase: 1
+feature: consolidate-db-normalized
+goal: Ship the telemetry schema as the write-heavy observability store, migrating all agent invocation and workflow execution tables from wint
+depends_on:
+  - CDBN-1010
+endpoints: []
+infrastructure:
+  - Aurora PostgreSQL migration file
+  - Drizzle schema.ts update
+risk_notes: Low-medium risk. Telemetry tables are append-only and read loosely; FK to workflow.stories on story_id must be nullable to avoid blocking writes when story context is absent. Volume of historical rows may make migration slow.
+sizing_warning: false
+created: '2026-03-11T20:23:22Z'

@@ -1,0 +1,95 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  kb_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "Enumerate CDTS stories before cancellation"
+    setup: "KB is running (port 5433). CDTS stories exist in stories table."
+    action: "Call kb_list_stories({ feature: 'consolidate-db-three-schemas' })"
+    expected: "Returns 12 stories: CDTS-0010 through CDTS-3030. All IDs confirmed."
+    evidence: "Output logged. Story ID list matches expected enumeration."
+  - id: HP-2
+    title: "Cancel non-completed CDTS stories"
+    setup: "Enumeration confirmed (HP-1 passed). 6 non-completed stories identified: CDTS-0020, CDTS-1010, CDTS-1020, CDTS-1030, CDTS-1040, CDTS-1050."
+    action: "Call kb_update_story_status for each non-completed story with state=cancelled and reason message referencing CDBN."
+    expected: "All 6 stories show state=cancelled in KB. 6 completed stories untouched."
+    evidence: "Re-query kb_list_stories and confirm states."
+  - id: HP-3
+    title: "Archive CDTS plan in KB"
+    setup: "Stories are cancelled (HP-2 passed)."
+    action: "Call kb_update_plan or kb_upsert_plan for 'consolidate-db-three-schemas' with status=archived."
+    expected: "Plan entry shows status=archived."
+    evidence: "kb_get_plan returns archived status."
+  - id: HP-4
+    title: "Record deprecation decision in KB"
+    setup: "Plan is archived (HP-3 passed)."
+    action: "Call kb_add_decision with deprecation rationale, date 2026-03-11, noting CDTS-0020 and CDTS-1010 had in-flight work."
+    expected: "KB contains a decision entry searchable via kb_search."
+    evidence: "kb_search({ query: 'CDTS deprecated superseded CDBN' }) returns the decision entry."
+  - id: HP-5
+    title: "No CDTS stories surface in platform epic queue"
+    setup: "All cancellations and plan archival complete."
+    action: "Call kb_get_next_story({ epic: 'platform' }) or equivalent."
+    expected: "No CDTS-prefixed story is returned as next eligible work."
+    evidence: "Returned story_id does not start with CDTS-."
+error_cases:
+  - id: EC-1
+    title: "kb_update_story_status rejects ready_for_review -> cancelled transition"
+    setup: "Attempting to cancel CDTS-0020 (state: ready_for_review)."
+    action: "Call kb_update_story_status with state=cancelled."
+    expected: "If direct transition is rejected, use kb_update_story (force-update) as workaround."
+    evidence: "Story state is cancelled after workaround."
+  - id: EC-2
+    title: "Accidental cancellation of completed story"
+    setup: "CDTS-0010 is completed."
+    action: "Verify CDTS-0010 is excluded from bulk-cancel loop."
+    expected: "CDTS-0010 state remains completed after all operations."
+    evidence: "kb_get_story({ story_id: 'CDTS-0010' }) returns state=completed."
+edge_cases:
+  - id: ED-1
+    title: "CDTS story count differs from expected 12"
+    setup: "Pre-cancellation enumeration step (HP-1)."
+    action: "If kb_list_stories returns fewer or more than 12 stories, halt and investigate before proceeding."
+    expected: "Implementer pauses, identifies the discrepancy, resolves before bulk update."
+    evidence: "No stories are cancelled without confirmation of full enumeration."
+  - id: ED-2
+    title: "KB is unavailable during execution"
+    setup: "KB MCP server is down during story execution."
+    action: "Implementer cannot connect to KB on port 5433."
+    expected: "Story execution is deferred. No partial cancellations. Retry when KB is available."
+    evidence: "No intermediate state (some cancelled, some not)."
+  - id: ED-3
+    title: "CDTS-3030 not expected in seed but present in KB"
+    setup: "Seed document listed 11 stories but KB has 12 (CDTS-3030 exists and is completed)."
+    action: "Treat CDTS-3030 as completed (must not cancel). Proceed with enumeration-driven approach."
+    expected: "CDTS-3030 remains completed. Only non-completed stories are cancelled."
+    evidence: "kb_get_story('CDTS-3030') returns completed."
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "kb_list_stories returns 12 CDTS stories"
+      - "All non-completed stories show state=cancelled after execution"
+      - "Completed stories retain state=completed"
+      - "Plan shows status=archived"
+      - "kb_get_next_story does not surface CDTS stories"
+manual_cases:
+  - id: MC-1
+    title: "Full CDTS retirement execution"
+    steps:
+      - "1. Run kb_list_stories({ feature: 'consolidate-db-three-schemas' }) and record output"
+      - "2. Identify completed vs non-completed stories from output"
+      - "3. For each non-completed story: run kb_update_story_status with state=cancelled"
+      - "4. Run kb_update_plan for consolidate-db-three-schemas with status=archived"
+      - "5. Run kb_add_decision with deprecation rationale"
+      - "6. Optionally write DEPRECATED.md to plans/future/platform/consolidate-db-three-schemas/"
+      - "7. Run kb_get_next_story for platform epic — confirm no CDTS stories returned"
+    expected: "All steps pass without errors. 6 stories cancelled, 6 remain completed, plan archived, decision recorded."
+fixture_definitions: []
+risks:
+  - "State transition from ready_for_review to cancelled may require direct DB update or force flag"
+  - "CDTS-3030 was not in seed enumeration — implementer must use KB-first enumeration, not seed list"
+  - "KB server must be running on port 5433 for execution"

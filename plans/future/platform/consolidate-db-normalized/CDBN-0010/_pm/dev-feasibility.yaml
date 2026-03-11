@@ -1,0 +1,78 @@
+feasible: true
+confidence: high
+rationale: "This story requires only KB MCP tool calls — no code changes, no migrations, no deployment steps. All required tools (kb_list_stories, kb_update_story_status, kb_update_plan, kb_add_decision) exist in the MCP server schema. The main risk is the state transition from ready_for_review to cancelled, which may require the kb_update_story tool as fallback. Total implementation is ~10 MCP tool calls."
+complexity: low
+change_surface:
+  areas:
+    - "apps/api/knowledge-base (KB MCP server — tool calls only, no code changes)"
+    - "plans/future/platform/consolidate-db-three-schemas/ (optional DEPRECATED.md write)"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "CDTS-0020, CDTS-1010, CDTS-1030, CDTS-1040, CDTS-1050 are in active states (ready_for_review, ready, in_qa). Direct transition to cancelled via kb_update_story_status may be blocked by state machine validation."
+    mitigation: "If kb_update_story_status rejects the transition, use kb_update_story with the state field set directly (bypasses state machine). Confirm with KB tool schema whether state=cancelled is a valid target from ready_for_review."
+  - finding: "Seed expected 11 CDTS stories but KB has 12 (CDTS-3030 is completed and was not in seed). Implementer must use enumeration-first approach."
+    mitigation: "Always run kb_list_stories first. Never rely on seed's story ID list as the authoritative source. Use the enumeration result to drive cancellation loop."
+missing_requirements: []
+evidence_expectations:
+  - "Before/after kb_list_stories output showing state transitions"
+  - "kb_get_plan output showing archived status"
+  - "kb_search result confirming decision entry is searchable"
+subtasks:
+  - id: ST-1
+    title: "Enumerate all CDTS stories from KB"
+    goal: "Confirm the full list of CDTS stories and their current states before any mutations."
+    files_to_read:
+      - "plans/future/platform/consolidate-db-three-schemas/"
+    files_to_modify: []
+    acs: ["AC-1"]
+    depends_on: none
+    verification: "kb_list_stories({ feature: 'consolidate-db-three-schemas' }) returns 12 stories including CDTS-3030"
+    estimated_tokens: 2000
+  - id: ST-2
+    title: "Cancel all non-completed CDTS stories in KB"
+    goal: "Set state=cancelled on CDTS-0020, CDTS-1010, CDTS-1020, CDTS-1030, CDTS-1040, CDTS-1050 with supersession reason."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-1
+    verification: "kb_list_stories shows 6 cancelled, 6 completed"
+    estimated_tokens: 3000
+  - id: ST-3
+    title: "Archive CDTS plan in KB"
+    goal: "Mark the consolidate-db-three-schemas plan as archived/superseded so it no longer appears as active."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-4"]
+    depends_on: ST-2
+    verification: "kb_get_plan returns archived status for consolidate-db-three-schemas"
+    estimated_tokens: 1500
+  - id: ST-4
+    title: "Record deprecation decision in KB"
+    goal: "Add a KB decision entry documenting the formal CDTS retirement for future agent traceability."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-5"]
+    depends_on: ST-3
+    verification: "kb_search({ query: 'CDTS deprecated superseded CDBN' }) returns the decision entry"
+    estimated_tokens: 1500
+  - id: ST-5
+    title: "Add DEPRECATED.md marker to CDTS filesystem directory"
+    goal: "Provide a human-visible signal that the CDTS plan is retired without deleting any artifacts."
+    files_to_read:
+      - "plans/future/platform/consolidate-db-three-schemas/"
+    files_to_modify:
+      - "plans/future/platform/consolidate-db-three-schemas/DEPRECATED.md"
+    acs: ["AC-6"]
+    depends_on: ST-4
+    verification: "File exists at plans/future/platform/consolidate-db-three-schemas/DEPRECATED.md"
+    estimated_tokens: 1000
+  - id: ST-6
+    title: "Verify no CDTS stories surface in platform epic queue"
+    goal: "Confirm retirement is complete by checking kb_get_next_story does not return CDTS stories."
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-7"]
+    depends_on: ST-5
+    verification: "kb_get_next_story({ epic: 'platform' }) returns a non-CDTS story or empty"
+    estimated_tokens: 1000

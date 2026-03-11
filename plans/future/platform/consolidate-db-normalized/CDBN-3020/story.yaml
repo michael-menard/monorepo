@@ -1,0 +1,15 @@
+id: CDBN-3020
+title: Update Telemetry Commands and Roadmap Queries to New Schema
+status: backlog
+priority: medium
+phase: 3
+feature: consolidate-db-normalized
+goal: Ensure all telemetry instrumentation and roadmap queries remain functional against the new schema with no silent data loss
+depends_on:
+  - CDBN-2010
+  - CDBN-2020
+endpoints: []
+infrastructure: []
+risk_notes: Medium risk. Telemetry writes are fire-and-forget in most paths — a broken query may fail silently and create gaps in observability data. Must add explicit error logging for all telemetry write failures post-migration.
+sizing_warning: false
+created: '2026-03-11T20:23:22Z'

@@ -1,0 +1,13 @@
+id: CDBN-0020
+title: Produce Migration Manifest of Live Data Across Old Schemas
+status: backlog
+priority: medium
+phase: 0
+feature: consolidate-db-normalized
+goal: Produce a complete inventory of what must be migrated so Phase 2 has no surprises
+depends_on: []
+endpoints: []
+infrastructure: []
+risk_notes: Medium risk. The wint schema has 40+ tables; some may have undocumented dependencies or FK violations that only surface under audit. Must run against production-like data.
+sizing_warning: false
+created: '2026-03-11T20:23:22Z'

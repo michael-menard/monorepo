@@ -1,0 +1,208 @@
+schema_version: 1
+story_id: "CDBN-0020"
+timestamp: "2026-03-11T21:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      KB record confirms story_id CDBN-0020, feature consolidate-db-normalized, phase 0, goal "Produce a complete
+      inventory of what must be migrated so Phase 2 has no surprises." story.yaml is consistent. No extra endpoints,
+      infrastructure, or UI scope introduced. The story is correctly bounded to a read-only audit producing a MANIFEST
+      artifact. Downstream stories (CDBN-1010 through CDBN-2020) depend on this manifest output; scope alignment is
+      tight.
+
+  - id: internal_consistency
+    status: FAIL
+    note: >
+      The story.yaml contains only id, title, status, priority, phase, feature, goal, depends_on, endpoints,
+      infrastructure, risk_notes, sizing_warning, and created fields. There are NO Acceptance Criteria, NO Non-Goals,
+      NO Decisions, NO Subtasks, and NO Local Testing Plan sections. With no AC defined, internal consistency cannot
+      be fully verified — but the absence of contradictions between goals and non-goals is vacuously true only because
+      neither exists. The story is materially incomplete: downstream stories (CDBN-1020 risk_notes) explicitly say
+      "deduplication strategy must be decided during CDBN-0020 audit," meaning AC must cover that decision output.
+      This is a FAIL for completeness of story content, not a logic contradiction.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      This is a pure audit story with no code deliverables. The manifest is a document artifact. No per-story
+      utilities are expected. When the implementer does write SQL queries, they will target information_schema
+      (standard PostgreSQL system catalog — no custom packages required). No shared package creation is needed.
+      PASS by design — no reuse concern applies to an audit-only story.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No API endpoints defined (endpoints: []). No business logic or route handlers involved. The story produces a
+      data artifact (MANIFEST) via direct DB queries. Ports & Adapters compliance is not applicable — there is no
+      transport layer to audit. PASS.
+
+  - id: testability
+    status: WARN
+    note: >
+      The story has no Local Testing Plan section. For a database audit story, testability means: (a) the SQL
+      inventory queries must be reproducible and documented so they can be re-run, and (b) the MANIFEST output
+      must be verifiable against live DB state. No .http tests are applicable (no endpoints). No Playwright tests
+      are applicable (no frontend). However, the story SHOULD define: the exact SQL commands used to produce the
+      inventory, the database connection target (lego_dev port 5432 — confirmed by KB lesson ARCH-001), and a
+      verification step confirming row counts or table counts match expectations. Without these, the manifest
+      cannot be independently verified by a reviewer. WARN: testability is possible and expected but not yet
+      specified.
+
+  - id: decision_completeness
+    status: FAIL
+    note: >
+      Multiple downstream decisions are gated on CDBN-0020 output but are not resolved here:
+      (1) CDBN-1020 risk_notes: "deduplication strategy must be decided during CDBN-0020 audit" — the manifest
+      must include a deduplication recommendation for artifact tables with duplicate (story_id, artifact_type,
+      phase) rows.
+      (2) CDBN-1030 risk_notes: "context_packs and context_sessions are currently wint tables — must not break
+      the live MCP context cache tools during migration" — the manifest must flag these tables and their live
+      usage.
+      (3) The story does not resolve whether all 40+ wint tables have undocumented FK dependencies (stated risk).
+      No Open Questions section exists, yet there are at least 3 blocking design questions that must be answered
+      by this story for Phase 1 to proceed. FAIL: decision completeness cannot be assessed because no Decisions
+      or Open Questions sections exist in the story.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      The story.yaml risk_notes states: "Medium risk. The wint schema has 40+ tables; some may have undocumented
+      dependencies or FK violations that only surface under audit. Must run against production-like data." This
+      correctly identifies the primary risk. However, two critical architecture risks are not explicitly disclosed:
+      (1) Database target ambiguity: KB lesson ARCH-001 documents that wint schema lives in lego_dev (port 5432),
+      NOT the knowledgebase DB (port 5433). If the implementer queries the wrong DB, the manifest will be
+      incorrect and all Phase 1 stories will proceed on bad data. This risk is not mentioned in the story.
+      (2) CDTS-3020 already dropped empty wint/kbar/artifacts/telemetry schemas from port 5433 — the story must
+      target lego_dev exclusively. This architectural context is absent. WARN: primary risk is disclosed but
+      critical DB targeting risk is missing.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      No sizing indicators triggered: the story has no AC (0 < 8), no endpoints (0 < 5), no frontend work,
+      no multiple independent features bundled. It is a single audit task producing one artifact (MANIFEST).
+      story.yaml sizing_warning: false confirmed. PASS.
+
+  - id: subtask_decomposition
+    status: FAIL
+    note: >
+      No Subtasks section exists. No Canonical References section exists. Given that the story.yaml is
+      essentially a stub with only metadata fields (no body content), there is no subtask decomposition at all.
+      The story is not executable by a small-context LLM in its current form. Required subtasks would cover:
+      ST-1: Connect to lego_dev (port 5432) and enumerate all schemas and tables via information_schema;
+      ST-2: Produce FK edge map for wint schema tables;
+      ST-3: Document column definitions for tables targeted for migration;
+      ST-4: Identify deduplication conflicts in artifact tables (CDBN-1020 gate);
+      ST-5: Flag live-usage tables (context_packs, context_sessions per CDBN-1030 risk);
+      ST-6: Write MANIFEST.md with current_schema, target_schema, action, dedup_strategy, notes columns;
+      ST-7: Write verification SQL to confirm manifest completeness.
+      FAIL: subtask decomposition is absent.
+
+gaps:
+  - id: gap-1
+    check: internal_consistency
+    finding: >
+      Story body is a stub — no Acceptance Criteria, Non-Goals, Decisions, Subtasks, or Testing Plan sections
+      exist. The story cannot be handed to an implementer as-is. Downstream Phase 1 stories (CDBN-1010 through
+      CDBN-1040) gate their design decisions on CDBN-0020 output, but the expected outputs are not defined as AC.
+      Specifically: CDBN-1020 requires a deduplication strategy decision from this story, and CDBN-1030 requires
+      identification of live context cache tables. These are MVP-blocking: without defined outputs, Phase 1
+      cannot begin.
+    severity: critical
+    decision: null
+    ac_added: null
+
+  - id: gap-2
+    check: risk_disclosure
+    finding: >
+      Critical DB targeting risk is undisclosed: the wint schema lives in lego_dev (port 5432), not the
+      knowledgebase DB (port 5433). KB lesson ARCH-001 documents this explicitly. If the audit queries the
+      wrong database, the manifest will enumerate zero wint tables (since CDTS-3020 already confirmed the
+      knowledgebase DB wint schema was empty and was dropped). The entire manifest would be incorrect and
+      mislead all Phase 1 stories. The story must explicitly state: "Target database: lego_dev, port 5432.
+      Do NOT query the knowledgebase DB (port 5433)."
+    severity: critical
+    decision: null
+    ac_added: null
+
+  - id: gap-3
+    check: decision_completeness
+    finding: >
+      Three downstream Phase 1 design decisions are gated on CDBN-0020 output but are not captured as
+      required manifest outputs:
+      (1) Deduplication strategy for artifact tables (CDBN-1020 explicit dependency).
+      (2) Live-usage classification for context_packs and context_sessions tables (CDBN-1030 explicit risk).
+      (3) FK violation audit result (story risk_notes mentions potential FK violations that "only surface
+      under audit"). Without these three outputs defined as AC, Phase 1 stories cannot begin implementation.
+      This is MVP-blocking: the manifest is the Phase 1 gate artifact.
+    severity: critical
+    decision: null
+    ac_added: null
+
+  - id: gap-4
+    check: testability
+    finding: >
+      No reproducible verification plan for the manifest. The manifest is a critical gate artifact — reviewers
+      need to be able to independently verify it against the live DB. Without documented SQL commands and a
+      verification step (e.g., row count cross-check, table count assertion), the manifest cannot be reviewed
+      with confidence. This blocks the code review phase of this story.
+    severity: high
+    decision: null
+    ac_added: null
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: >
+      The MANIFEST should include a "live_usage" boolean column flagging tables actively queried by running
+      MCP tools (e.g., context_packs, context_sessions used by context_cache tools). This is noted in
+      CDBN-1030 risk_notes but would benefit all Phase 1 stories, not just CDBN-1030. Low effort to add
+      a column during manifest authoring vs. discovering it during each Phase 1 story.
+    effort: low
+    decision: null
+    kb_entry_id: null
+
+  - id: opp-2
+    category: edge_cases
+    finding: >
+      The manifest should document row counts per table (not just schema/name) so Phase 2 migration stories
+      (CDBN-2010 risk: "must be run in a transaction with rollback tested") have a baseline to validate
+      post-migration row parity. Adding row counts is a single additional SQL join (information_schema + pg_stat).
+    effort: low
+    decision: null
+    kb_entry_id: null
+
+  - id: opp-3
+    category: edge_cases
+    finding: >
+      The story risk notes mention "40+ tables" but does not define the source of this count. The MANIFEST
+      authoring step should begin with an exact table count assertion to anchor the audit. This prevents
+      partial manifests (e.g., if a query returns 38 tables, is it because 2 are missing or because 38 is
+      correct?).
+    effort: low
+    decision: null
+    kb_entry_id: null
+
+  - id: opp-4
+    category: ux_polish
+    finding: >
+      The MANIFEST format is unspecified. Standardizing it as a YAML or structured Markdown table (with
+      consistent columns across all rows) would make it machine-readable by later CDBN stories and agents.
+      A YAML manifest would allow direct ingestion into CDBN-2010 implementation without manual parsing.
+    effort: low
+    decision: null
+    kb_entry_id: null
+
+split_recommendation: null  # story_sizing=PASS; no split required
+
+preliminary_verdict: FAIL
+verdict: null
+decided_at: null
+summary:
+  gaps_found: 4
+  gaps_resolved: 0
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0

@@ -1,0 +1,19 @@
+id: CDBN-2010
+title: Migrate Live Data from wint/kbar/artifacts/telemetry into New Schemas
+status: backlog
+priority: medium
+phase: 2
+feature: consolidate-db-normalized
+goal: Move all live data into the new schemas with zero data loss and validated FK integrity
+depends_on:
+  - CDBN-1010
+  - CDBN-1020
+  - CDBN-1030
+  - CDBN-1040
+endpoints: []
+infrastructure:
+  - One-time migration SQL script
+  - Aurora PostgreSQL
+risk_notes: High risk. The most dangerous story in the plan. Story content must be split across stories and story_content by section — requires parsing existing jsonb or text columns. The 5-table → story_state_history consolidation needs an unambiguous ordering rule for conflicting timestamps. Must be run in a transaction with rollback tested. Production downtime window may be required.
+sizing_warning: true
+created: '2026-03-11T20:23:22Z'

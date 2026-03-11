@@ -1,0 +1,16 @@
+id: CDBN-2020
+title: Filesystem Ingestion Pipeline for Stories and Plans Not in DB
+status: backlog
+priority: medium
+phase: 2
+feature: consolidate-db-normalized
+goal: Ensure the DB is the single source of truth by pulling in any stories and plans that exist only on the filesystem
+depends_on:
+  - CDBN-2010
+endpoints: []
+infrastructure:
+  - Node.js/TypeScript ingestion script
+  - Aurora PostgreSQL
+risk_notes: Medium risk. story.yaml parsing must handle schema variations across old and new formats. Idempotency is critical — re-running must not create duplicate rows. Reconciliation report should be reviewed before marking complete.
+sizing_warning: false
+created: '2026-03-11T20:23:22Z'
