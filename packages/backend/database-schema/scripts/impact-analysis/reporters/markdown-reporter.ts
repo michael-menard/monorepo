@@ -2,7 +2,7 @@
  * Markdown report generator for impact analysis
  * WISH-20210
  */
-import { ImpactResult, ImpactFinding, ImpactCategory } from '../__types__/index.js'
+import { ImpactResult, ImpactCategory } from '../__types__/index.js'
 
 /**
  * Generate a Markdown report from impact analysis results

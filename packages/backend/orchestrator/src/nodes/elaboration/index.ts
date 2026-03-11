@@ -99,12 +99,10 @@ export {
   StructurerConfigSchema,
   ChangeOutlineItemSchema,
   StructurerResultSchema,
-  AffinityConfigSchema,
   // Types
   type StructurerConfig,
   type ChangeOutlineItem,
   type StructurerResult,
-  type AffinityConfig,
 } from './structurer.js'
 
 export {

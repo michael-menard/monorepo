@@ -64,7 +64,7 @@ describe('seedCapabilities', () => {
     await seedCapabilities(mockTx)
 
     // Verify the values passed to insert contain all 7 capabilities
-    const insertCall = mockTx.insert.mock.calls[0]
+    const _insertCall = mockTx.insert.mock.calls[0]
     const valuesCall = mockTx.insert.mock.results[0].value.values.mock.calls[0][0]
 
     expect(valuesCall).toHaveLength(7)

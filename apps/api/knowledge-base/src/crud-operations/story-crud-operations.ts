@@ -1029,7 +1029,6 @@ export async function kb_create_story(
   // to the partial-merge UPDATE path.
   // ---------------------------------------------------------------------------
   let wasCreated = false
-  let story: typeof stories.$inferSelect
 
   const transactionResult = await deps.db.transaction(async tx => {
     // Attempt atomic insert — do nothing on conflict (story already exists)
@@ -1202,7 +1201,7 @@ export async function kb_create_story(
   })
 
   wasCreated = transactionResult.isNew
-  story = transactionResult.row
+  const story = transactionResult.row
 
   return {
     story,

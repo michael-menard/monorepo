@@ -34,9 +34,7 @@ import {
   insertCapabilitySchema,
   selectCapabilitySchema,
   insertFeatureRelationshipSchema,
-  selectFeatureRelationshipSchema,
   insertCohesionRuleSchema,
-  selectCohesionRuleSchema,
 } from '../wint'
 
 describe('WINT-0060 Graph Relational Schema', () => {

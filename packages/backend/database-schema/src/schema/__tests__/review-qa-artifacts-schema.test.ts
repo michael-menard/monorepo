@@ -11,7 +11,6 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { z } from 'zod'
 import {
   // Schema namespace (reused from INFR-0110)
   artifactsSchema,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import path from 'path'
 import { parseFrontmatter, validateFrontmatter } from '../parsers/frontmatter-parser.js'
 import { z } from 'zod'
@@ -33,7 +33,7 @@ describe('parseFrontmatter', () => {
   })
 
   it('handles malformed YAML frontmatter gracefully', async () => {
-    const result = await parseFrontmatter(path.join(fixturesDir, 'malformed-agent.md'))
+    const _result = await parseFrontmatter(path.join(fixturesDir, 'malformed-agent.md'))
 
     // gray-matter is lenient about malformed YAML, may still return something
     // The key is that it doesn't throw

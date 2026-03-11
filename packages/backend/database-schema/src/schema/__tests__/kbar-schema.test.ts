@@ -821,7 +821,7 @@ describe('KBAR Schema - AC-3: JSONB Metadata Schema Validation', () => {
     errorMessage: z.string().optional(),
   })
 
-  const StoryDependencyMetadataSchema = z.object({
+  const _StoryDependencyMetadataSchema = z.object({
     reason: z.string().optional(),
     criticality: z.enum(['high', 'medium', 'low']).optional(),
   })

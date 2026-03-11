@@ -14,11 +14,7 @@
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import {
-  agentInvocations,
-  hitlDecisions,
-  storyOutcomes,
-} from '@repo/database-schema/schema/wint'
+import { agentInvocations, hitlDecisions, storyOutcomes } from '@repo/database-schema/schema/wint'
 
 // ============================================================================
 // Input Schemas
@@ -363,18 +359,9 @@ export async function workflow_get_story_telemetry(
   const validated = WorkflowGetStoryTelemetryInputSchema.parse(input)
 
   const [invocationsRows, decisionsRows, outcomesRows] = await Promise.all([
-    deps.db
-      .select()
-      .from(agentInvocations)
-      .where(eq(agentInvocations.storyId, validated.story_id)),
-    deps.db
-      .select()
-      .from(hitlDecisions)
-      .where(eq(hitlDecisions.storyId, validated.story_id)),
-    deps.db
-      .select()
-      .from(storyOutcomes)
-      .where(eq(storyOutcomes.storyId, validated.story_id)),
+    deps.db.select().from(agentInvocations).where(eq(agentInvocations.storyId, validated.story_id)),
+    deps.db.select().from(hitlDecisions).where(eq(hitlDecisions.storyId, validated.story_id)),
+    deps.db.select().from(storyOutcomes).where(eq(storyOutcomes.storyId, validated.story_id)),
   ])
 
   return {
