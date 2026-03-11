@@ -1,0 +1,168 @@
+schema: 2
+story_id: "KBAR-0210"
+timestamp: "2026-02-25T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Verify valid state strings from StoryStateSchema — read __types__/index.ts and elab-story.md to confirm AC-1/AC-2 resolution before any files are modified"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+      - ".claude/commands/elab-story.md"
+      - ".claude/commands/story-update.md"
+    dependencies: []
+    slice: backend
+    verification: "Manual diff review — no type check needed (no TS changes)"
+    acs_covered: ["AC-1", "AC-2"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Audit elab-story.md — verify state strings and add graceful failure documentation for kb_update_story_status (WARNING + continue on null/throw)"
+    files:
+      - ".claude/commands/elab-story.md"
+    files_to_read:
+      - ".claude/commands/elab-story.md"
+      - ".claude/commands/qa-verify-story.md"
+    dependencies: [1]
+    slice: backend
+    verification: "Manual diff review — grep for graceful failure note near kb_update_story_status call sites"
+    acs_covered: ["AC-1", "AC-2", "AC-5"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Audit dev-implement-story.md — add Step 0.6 DB claim (state: 'in_progress') with guard and abort recovery; verify Done-path uses correct state 'ready_for_review'"
+    files:
+      - ".claude/commands/dev-implement-story.md"
+    files_to_read:
+      - ".claude/commands/dev-implement-story.md"
+      - ".claude/commands/qa-verify-story.md"
+      - ".claude/commands/dev-code-review.md"
+    dependencies: [1]
+    slice: backend
+    verification: "Manual diff review — Step 0.6 block present with all 3 elements (claim call, guard, abort recovery)"
+    acs_covered: ["AC-3", "AC-4", "AC-5"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Audit dev-fix-story.md — add guard and abort recovery to Step 0.6 claim; add graceful failure documentation; verify state strings are correct"
+    files:
+      - ".claude/commands/dev-fix-story.md"
+    files_to_read:
+      - ".claude/commands/dev-fix-story.md"
+      - ".claude/commands/qa-verify-story.md"
+    dependencies: [1]
+    slice: backend
+    verification: "Manual diff review — consistent with qa-verify-story.md and dev-code-review.md patterns"
+    acs_covered: ["AC-5", "AC-6"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Verify qa-verify-story.md and dev-code-review.md are already correct — read-only audit confirming state strings and patterns are canonical; document as PASS"
+    files: []
+    files_to_read:
+      - ".claude/commands/qa-verify-story.md"
+      - ".claude/commands/dev-code-review.md"
+    dependencies: []
+    slice: backend
+    verification: "Confirmation that both files require no changes — document in implementation notes"
+    acs_covered: ["AC-4"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Audit story-update.md and story-move.md for regressions — read-only check that shimUpdateStoryStatus usage is intact and correct (v3.0.0)"
+    files: []
+    files_to_read:
+      - ".claude/commands/story-update.md"
+      - ".claude/commands/story-move.md"
+    dependencies: []
+    slice: backend
+    verification: "Confirmation that both files require no changes — no regression found"
+    acs_covered: ["AC-7"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Human review of all diffs against ACs — verify AC coverage is complete; write implementation notes documenting dev-implement-story.md Step 0.6 design decision and state string verification"
+    files: []
+    files_to_read:
+      - ".claude/commands/dev-implement-story.md"
+      - ".claude/commands/elab-story.md"
+      - ".claude/commands/dev-fix-story.md"
+    dependencies: [2, 3, 4]
+    slice: backend
+    verification: "All ACs checkable from diff output. No TypeScript files modified (AC-8)."
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+
+files_to_change:
+  - path: ".claude/commands/elab-story.md"
+    action: modify
+    reason: "Add graceful failure documentation (AC-5): if kb_update_story_status returns null or throws, emit WARNING and continue — both PASS and FAIL paths"
+  - path: ".claude/commands/dev-implement-story.md"
+    action: modify
+    reason: "Add Step 0.6 DB claim (state: 'in_progress') with guard (check if already in_progress) and abort recovery instruction (AC-3, AC-4, AC-5)"
+  - path: ".claude/commands/dev-fix-story.md"
+    action: modify
+    reason: "Add guard and abort recovery to existing Step 0.6 claim; add graceful failure documentation (AC-5, AC-6)"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "N/A — no TypeScript source files modified"
+    required: false
+  - command: "pnpm test"
+    when: "N/A — no TypeScript source files modified; command markdown not unit-testable"
+    required: false
+  - command: "grep -r 'kb_update_story_status' .claude/commands/"
+    when: "After all command file edits — verify call sites and graceful failure documentation"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "ST-1 grep output confirming StoryStateSchema enum values; diff review showing all call sites use valid state strings"
+    evidence_type: manual
+  - ac_id: "AC-2"
+    planned_evidence: "ST-1 confirms elab-story.md PASS path uses state: 'ready' — already correct per StoryStateSchema; ST-2 diff confirms no correction needed"
+    evidence_type: manual
+  - ac_id: "AC-3"
+    planned_evidence: "ST-3 diff showing Step 0.6 block added to dev-implement-story.md with claim, guard, and abort recovery; implementation notes documenting design decision"
+    evidence_type: manual
+  - ac_id: "AC-4"
+    planned_evidence: "ST-3 and ST-4 diffs showing guard added; ST-5 confirmation that qa-verify-story.md and dev-code-review.md already have guard"
+    evidence_type: manual
+  - ac_id: "AC-5"
+    planned_evidence: "ST-2, ST-3, ST-4 diffs showing graceful failure documentation (WARNING + continue) added to elab-story.md, dev-implement-story.md, dev-fix-story.md"
+    evidence_type: manual
+  - ac_id: "AC-6"
+    planned_evidence: "ST-4 diff showing dev-fix-story.md Step 0.6 has guard, abort recovery, and graceful failure note; state strings verified against StoryStateSchema"
+    evidence_type: manual
+  - ac_id: "AC-7"
+    planned_evidence: "ST-6 audit log confirming story-update.md and story-move.md require no changes — shimUpdateStoryStatus usage intact (v3.0.0)"
+    evidence_type: manual
+  - ac_id: "AC-8"
+    planned_evidence: "Final diff summary: only .claude/commands/*.md files modified; grep for .ts/.tsx in diff confirms no TypeScript source files touched"
+    evidence_type: manual
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should dev-implement-story.md add a Step 0.6 DB claim given that Step 1.3 worktree verification already prevents parallel work conflicts at the filesystem level?"
+    decision: "Add Step 0.6 DB claim (state: 'in_progress') to dev-implement-story.md"
+    rationale: "All other workflow commands that initiate active work claim DB state at Step 0.6. The worktree check provides filesystem isolation but not DB state consistency. Adding the Step 0.6 claim ensures the DB reflects 'in_progress' at the correct moment (implementation start), consistent with the architecture applied to dev-code-review.md, qa-verify-story.md, and dev-fix-story.md. This also enables future tooling that queries story DB state to correctly reflect active implementation. Recommendation from story architecture notes."
+    decided_by: plan
+
+complexity: simple
+
+notes:
+  - "ST-1 pre-read findings: StoryStateSchema enum values confirmed: backlog, ready, in_progress, ready_for_review, in_review, ready_for_qa, in_qa, completed, cancelled, deferred, failed_code_review, failed_qa"
+  - "elab-story.md PASS path already uses state: 'ready' — CORRECT. No AC-2 correction needed."
+  - "elab-story.md FAIL path already uses state: 'backlog' — CORRECT."
+  - "dev-implement-story.md Done-path uses state: 'ready_for_review' — CORRECT per StoryStateSchema."
+  - "dev-fix-story.md Step 0.6 uses state: 'in_progress' — CORRECT. Guard and abort recovery are MISSING — must be added."
+  - "dev-fix-story.md notes 'No guard needed' — this is incorrect per AC-4; must be corrected and guard added."
+  - "dev-fix-story.md Done-path uses state: 'ready_for_review' — CORRECT."
+  - "qa-verify-story.md: Step 0.6 claim (in_qa), guard, and abort recovery all present. Done-path uses failed_qa — CORRECT. No changes needed — canonical model."
+  - "dev-code-review.md: Step 0.6 claim (in_review), guard, and abort recovery all present. Done-paths use ready_for_qa and failed_code_review — both CORRECT. No changes needed — canonical model."
+  - "story-update.md v3.0.0: uses shimUpdateStoryStatus with graceful failure (WARNING + continue). No regression. No changes needed."
+  - "story-move.md v2.1.0: uses shimUpdateStoryStatus with graceful failure (log warning). No regression. No changes needed."
+  - "This is a documentation-only story. No TypeScript source files are modified. No build or unit tests required."
+  - "Steps 1, 5, and 6 can run in parallel (no dependencies on each other). Steps 2, 3, 4 depend on Step 1 but can run in parallel with each other."

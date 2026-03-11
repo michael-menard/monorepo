@@ -1,0 +1,25 @@
+schema: 1
+story_id: "APIP-2020"
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: true
+  packages: false
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+touched_paths_globs:
+  - "apps/api/**"
+  - "apps/web/**"
+  - "packages/core/**"
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: true
+summary: "Read-only web dashboard for monitoring pipeline state, costs, and blocked queue with REST and SSE endpoints"
+elaboration: "completed"

@@ -135,12 +135,9 @@ describe('RegenerateIndexCLIOptionsSchema validation', () => {
 // ============================================================================
 
 describe('main()', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let exitSpy: MockInstance<any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let stdoutSpy: MockInstance<any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let stderrSpy: MockInstance<any>
+  let exitSpy: MockInstance
+  let stdoutSpy: MockInstance
+  let stderrSpy: MockInstance
   let originalArgv: string[]
 
   beforeEach(() => {

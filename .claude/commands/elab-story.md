@@ -69,12 +69,13 @@ Signal: ELAB-SETUP COMPLETE
 ```
 
 ### Phase 1: Analysis
-Move story: `backlog/{STORY_ID}` → `elaboration/{STORY_ID}`
+<!-- KSOT-3010: No filesystem move — story stays in {FEATURE_DIR}/stories/{STORY_ID}/.
+     KB state update in elab-setup-leader is the authoritative state change. -->
 
 ```
 Task: sonnet, "Phase 1 Analysis {STORY_ID}"
 Read: .claude/agents/elab-analyst.agent.md
-Output: _implementation/ELAB.yaml (audit + gaps + opportunities + preliminary_verdict)
+Output: elaboration KB artifact via kb_write_artifact (audit + gaps + opportunities + preliminary_verdict)
 Signal: ANALYSIS COMPLETE
 ```
 
@@ -89,15 +90,15 @@ Signal: AUTONOMOUS DECISIONS COMPLETE: <verdict>
 ```
 
 The autonomous decider will:
-1. Read `_implementation/ELAB.yaml` for gaps and opportunities
-2. Auto-add MVP gaps as new ACs to the story
+1. Read elaboration KB artifact (`kb_read_artifact`) for gaps and opportunities
+2. Auto-add MVP gaps as new ACs to the story (via KB)
 3. Spawn kb-writer for each non-blocking opportunity
-4. Update ELAB.yaml with decisions + verdict
+4. Update elaboration KB artifact with decisions + verdict
 5. Return verdict for completion phase
 
 **IF interactive (default):**
 
-1. Read `_implementation/ELAB.yaml`
+1. Read elaboration KB artifact: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })`
 2. Count gaps and opportunities
 3. Ask: "Discuss [N] gaps and [M] enhancements? (yes/no)"
 4. For each finding, collect decision:
@@ -128,12 +129,13 @@ Signal: ELABORATION COMPLETE: <verdict>
 
 ## Verdicts
 
+<!-- KSOT-3010: Verdicts trigger KB state updates, not filesystem moves -->
 | Verdict | Action |
 |---------|--------|
-| PASS | Move to `ready-to-work/` |
-| CONDITIONAL PASS | Move to `ready-to-work/`, log risks |
+| PASS | KB state → `ready`, story stays in `stories/` |
+| CONDITIONAL PASS | KB state → `ready`, log risks, story stays in `stories/` |
 | SPLIT REQUIRED | Spawn split workflow, recursive elab |
-| FAIL | Return to `backlog/`, document gaps |
+| FAIL | KB state → `backlog`, document gaps |
 
 ---
 
@@ -141,19 +143,17 @@ Signal: ELABORATION COMPLETE: <verdict>
 
 After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CONDITIONAL PASS`:
 
-1. Update DB state:
+<!-- KSOT-3010: KB state update only — no filesystem move -->
+1. Update KB state (PRIMARY — always run):
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "ready", phase: "planning" })
    ```
-   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
-2. Move story directory:
-   ```bash
-   mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
-   ```
-3. Report:
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID}` and continue.
+2. Report:
    ```
    ELABORATION COMPLETE: PASS
    Story: {STORY_ID} ready for implementation
+   Location: {FEATURE_DIR}/stories/{STORY_ID}/
    Next: /dev-implement-story {FEATURE_DIR} {STORY_ID}
    ```
 
@@ -161,25 +161,24 @@ After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CON
 
 After Phase 2 returns `ELABORATION COMPLETE: FAIL`:
 
-1. Update DB state:
+<!-- KSOT-3010: KB state update only — no filesystem move -->
+1. Update KB state (PRIMARY — always run):
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "backlog", phase: "planning" })
    ```
-   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
-2. Move story directory:
-   ```bash
-   mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/backlog/{STORY_ID}
-   ```
-3. Report:
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID}` and continue.
+2. Report:
    ```
    ELABORATION COMPLETE: FAIL
-   Story: {STORY_ID} returned to backlog — address gaps and re-run /elab-story
+   Story: {STORY_ID} returned to backlog (KB state) — address gaps and re-run /elab-story
+   Location: {FEATURE_DIR}/stories/{STORY_ID}/
    ```
 
 ## On SPLIT REQUIRED
 
 No DB state change on the parent story — it will be superseded by split children. Spawn split workflow per existing behavior (recursive `/elab-story` for each split part).
 
-## Note on Phase 1 Directory Move
+## Note on Phase 1 State
 
-The Phase 1 move (`backlog/ → elaboration/`) does **not** need a DB state change — `backlog` is the correct DB state during in-progress analysis.
+<!-- KSOT-3010: No Phase 1 directory move — story stays in stories/ -->
+Phase 1 does **not** need a KB state change — `backlog` is the correct KB state during in-progress analysis. The story directory remains at `{FEATURE_DIR}/stories/{STORY_ID}/` throughout elaboration.

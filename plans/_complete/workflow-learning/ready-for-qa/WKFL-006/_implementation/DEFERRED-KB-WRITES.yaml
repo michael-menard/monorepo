@@ -235,3 +235,7 @@ notes:
   - "If KB unavailable, these entries can be manually processed later"
   - "Entry #14 captures elaboration pattern learned during this story's autonomous decision-making"
   - "Priority: Entry #2 (embedding upgrade) should inform future story WKFL-006-B"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,34 @@
+schema: 1
+story_id: KFMB-1040
+feature_dir: plans/future/platform/kb-first-migration
+timestamp: "2026-03-07T20:25:00Z"
+current_phase: needs-code-review
+last_successful_phase: fix
+iteration: 3
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+
+context:
+  fix_source: rebase-on-main
+  fix_iteration: 1
+  fix_completed: true
+  fix_approach: "Rebased story/KFMB-1040 on main to incorporate EC-11 test from commit a6b80ff7"
+  ec11_test_present: true
+  all_tests_pass: true
+
+fix_cycles:
+  - iteration: 1
+    triggered_by: code-review
+    started_at: "2026-03-07T19:30:00Z"
+    completed_at: "2026-03-07T19:45:00Z"
+    issues_fixed:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+        line: 427
+        issue: "Missing EC-11 authorization test for kb_delete_artifact (AC-6 requirement)"
+        severity: critical
+    verification_result: PASS
+
+next_action: "Submit for code review"

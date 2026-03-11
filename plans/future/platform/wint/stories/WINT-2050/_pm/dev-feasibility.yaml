@@ -1,0 +1,91 @@
+feasible: true
+confidence: high
+rationale: "Infrastructure fully in place. wint.context_packs table is deployed (WINT-0010, protected). contextCachePut() is UAT-complete (WINT-0100, 2026-02-16). The populate-project-context.ts pattern (WINT-2030) provides a direct, well-tested template. Primary novelty is dual-database access: reading from KB pgvector store at port 5433 and writing to lego_dev at port 5432. This has clear implementation path via a secondary Drizzle connection. No schema changes required."
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/mcp-tools/src/scripts/"
+    - "packages/backend/mcp-tools/src/context-cache/__tests__/"
+  endpoints: []
+  deploy_touchpoints:
+    - "Script must be run manually after deploy (or via cache warming trigger — out of scope for this story)"
+
+risks:
+  - finding: "Dual-database connection management: script must open connection to port 5433 (KB) for reads AND port 5432 (lego_dev) for writes. If KB connection is not properly closed, it may hang the process."
+    mitigation: "Use a try/finally pattern to close the KB connection after queries complete, consistent with how assemble-context-pack.ts manages its DB lifecycle. Make KB connection injectable (AC-9) so tests can mock it."
+  - finding: "KB data sparsity: if the KB pgvector store has few or no entries for certain domain tags (frontend, testing), the corresponding lessons packs will be empty and not written. This reduces cache coverage."
+    mitigation: "Script should only write packs for areas with >= 1 KB result. Document this behavior. Integration tests should verify graceful handling of empty KB result sets."
+  - finding: "Content length enforcement: KB query may return many entries. Without explicit truncation, JSON stringified content could exceed 8000 chars."
+    mitigation: "Limit KB results to top 5-8 per domain area. Add explicit check: if JSON.stringify(content).length >= 8000, truncate entries array and log warning."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm tsx packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts exits 0 with { attempted, succeeded, failed } summary logged"
+  - "SELECT COUNT(*) FROM wint.context_packs WHERE pack_type IN ('architecture','lessons_learned') AND pack_key IN ('active-adrs','lessons-backend','lessons-frontend','lessons-testing','lessons-workflow','blockers-known') returns >= 6 after successful run"
+  - "pnpm test --filter @repo/mcp-tools passes all unit and integration tests for populate-domain-kb"
+  - "Running the script twice produces same row count (idempotency via upsert)"
+
+subtasks:
+  - id: ST-1
+    title: "Scaffold script file and define dependencies"
+    goal: "Create populate-domain-kb.ts with imports, Zod schemas, constants (MONOREPO_ROOT, TTL_30_DAYS), and PopulateResultSchema — no logic yet"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+    files_to_modify:
+      - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    acs: ["AC-7", "AC-10"]
+    depends_on: "none"
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Implement ADR-LOG.md reader and extractor"
+    goal: "Read plans/stories/ADR-LOG.md, extract ADR entries using extractSections() pattern, produce structured { summary, adrs: [{id, title, constraint, status}] } JSONB, write via contextCachePut() with packType:'architecture', packKey:'active-adrs'"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+      - "plans/stories/ADR-LOG.md"
+    files_to_modify:
+      - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    acs: ["AC-1", "AC-4", "AC-6"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Implement KB query with injectable dependency and domain grouping"
+    goal: "Define kbQueryFn parameter (injectable, defaults to real Drizzle connection to port 5433). Query KB for lesson-learned entries, group by domain area tag. Query for constraint/blocker entries. Extract structured JSONB per group with content length capped at 8000 chars."
+    files_to_read:
+      - "packages/backend/sidecars/context-pack/src/assemble-context-pack.ts"
+      - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    files_to_modify:
+      - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    acs: ["AC-2", "AC-3", "AC-6", "AC-9"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Implement resilient write loop and result summary"
+    goal: "Assemble all packs (ADR + lessons per area + blockers). Write each via contextCachePut() in try/catch loop. Accumulate { attempted, succeeded, failed } counts. Log errors and final summary via @repo/logger. Return PopulateResultSchema result."
+    files_to_read:
+      - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    files_to_modify:
+      - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    acs: ["AC-4", "AC-5", "AC-7"]
+    depends_on: "ST-2, ST-3"
+    verification: "pnpm tsx packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts (with real DBs available)"
+    estimated_tokens: 7000
+
+  - id: ST-5
+    title: "Write integration and unit tests"
+    goal: "Integration test (real PostgreSQL port 5432, mocked KB): verifies >= 6 packs written, idempotency, correct packType/packKey pairs. Unit tests: mock contextCachePut and kbQueryFn, verify error handling, content structure, TTL value."
+    files_to_read:
+      - "packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts"
+    files_to_modify:
+      - "packages/backend/mcp-tools/src/scripts/__tests__/populate-domain-kb.test.ts"
+    acs: ["AC-8", "AC-9", "AC-5", "AC-6"]
+    depends_on: "ST-4"
+    verification: "pnpm test --filter @repo/mcp-tools"
+    estimated_tokens: 9000

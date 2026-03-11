@@ -1,0 +1,136 @@
+strategy: integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  notes: "Docs-only story — agent .md files. No runnable unit tests. Integration tests verify KB tool call behavior end-to-end."
+
+happy_path_tests:
+  - id: HP-1
+    title: "pm-story generate writes seed artifact to KB"
+    setup: "KFMB-1020 and KFMB-1030 complete; real KB at port 5433 available; test story with Pending status in KB"
+    action: "Run /pm-story generate <test-story-id>; observe pm-story-seed-agent execution"
+    expected: "kb_write_artifact called with artifact_type='story_seed'; artifact retrievable via kb_read_artifact({ story_id, artifact_type: 'story_seed' })"
+    evidence: "SELECT * FROM story_artifacts WHERE story_id = '<test-story-id>' AND artifact_type = 'story_seed'; verify row exists with correct content"
+
+  - id: HP-2
+    title: "pm-story-generation-leader reads seed from KB"
+    setup: "Seed artifact written to KB (HP-1 passed); generation leader invoked"
+    action: "Observe generation leader Phase 0 — confirm it calls kb_read_artifact rather than reading STORY-SEED.md from disk"
+    expected: "Generation leader loads seed data from KB artifact; story generation proceeds normally using KB-sourced seed"
+    evidence: "Inspect agent execution log for kb_read_artifact call; story is synthesized correctly"
+
+  - id: HP-3
+    title: "pm-story-generation-leader persists content via kb_update_story"
+    setup: "KFMB-1020 complete (content columns available); generation leader Phase 4.5 runs"
+    action: "Complete a full /pm-story generate run; observe Phase 4.5 persistence behavior"
+    expected: "kb_update_story called with description, acceptance_criteria, non_goals fields; story row in DB has content populated"
+    evidence: "kb_get_story({ story_id: '<test-story-id>' }) returns description, acceptance_criteria, non_goals non-null"
+
+  - id: HP-4
+    title: "pm-story-generation-leader discovers stories via kb_list_stories"
+    setup: "Story in Pending state in KB; generation leader invoked"
+    action: "Run /pm-story generate without providing stories.index.md path"
+    expected: "Leader calls kb_list_stories with feature/state filters and finds stories awaiting generation"
+    evidence: "No file read of stories.index.md in leader execution; story discovered via KB query"
+
+  - id: HP-5
+    title: "pm-story command passes story_id as primary context key"
+    setup: "pm-story.md updated per AC-5"
+    action: "Run /pm-story generate <story-id>"
+    expected: "Seed agent receives story_id in context; does not require index_path to determine story identity"
+    evidence: "Seed agent executes successfully using story_id only; no stories.index.md read required"
+
+error_cases:
+  - id: EC-1
+    title: "KB unavailable during seed write — fallback to filesystem"
+    setup: "KB MCP server offline or connection refused on port 5433"
+    action: "Run /pm-story generate; observe pm-story-seed-agent behavior when kb_write_artifact fails"
+    expected: "Seed agent falls back to writing STORY-SEED.md to filesystem; DEFERRED-KB-WRITES.yaml entry created with pending write details"
+    evidence: "STORY-SEED.md exists at {output_dir}/_pm/STORY-SEED.md; DEFERRED-KB-WRITES.yaml contains entry for the failed artifact write"
+
+  - id: EC-2
+    title: "KB unavailable during generation leader seed read — fallback to filesystem"
+    setup: "KB artifact missing or unavailable; STORY-SEED.md exists on disk from dual-write"
+    action: "Generation leader attempts kb_read_artifact, receives error"
+    expected: "Leader falls back to reading STORY-SEED.md from filesystem; story generation proceeds"
+    evidence: "Story synthesized correctly despite KB read failure; no generation blocked"
+
+  - id: EC-3
+    title: "kb_update_story content fields rejected — graceful error"
+    setup: "KFMB-1020 not yet deployed (content columns missing)"
+    action: "Generation leader Phase 4.5 calls kb_update_story with description/ACs/non_goals"
+    expected: "Error surfaced clearly; story file still written to filesystem; DEFERRED-KB-WRITES.yaml entry created"
+    evidence: "Story .md file exists; DEFERRED-KB-WRITES.yaml has entry for content column write"
+
+edge_cases:
+  - id: ED-1
+    title: "Caller agent (pm-story-followup-leader) compatibility after AC-5 changes"
+    setup: "pm-story.md updated to pass story_id; pm-story-followup-leader uses existing calling convention"
+    action: "Run /pm-story followup <existing-story-id>"
+    expected: "Followup leader functions correctly; seed agent receives compatible context"
+    evidence: "Followup story generation completes without errors; no calling convention break"
+
+  - id: ED-2
+    title: "Caller agent (pm-story-split-leader) compatibility after AC-5 changes"
+    setup: "pm-story.md updated to pass story_id; pm-story-split-leader uses existing calling convention"
+    action: "Run /pm-story split <existing-story-id>"
+    expected: "Split leader functions correctly; seed agent receives compatible context"
+    evidence: "Split story generation completes without errors"
+
+  - id: ED-3
+    title: "kb_tools frontmatter accurately reflects call sites after migration"
+    setup: "Migration complete; pm-story-seed-agent.agent.md and pm-story-generation-leader.agent.md updated"
+    action: "Spot-check both agent files: grep for kb_write_artifact, kb_read_artifact, kb_update_story, kb_list_stories call sites"
+    expected: "All tools in kb_tools frontmatter have at least one call site in the agent body; no stale entries"
+    evidence: "Manual review confirms frontmatter kb_tools list matches actual call sites (AC-6 verification)"
+
+  - id: ED-4
+    title: "Dual-write mode: STORY-SEED.md still written to filesystem alongside KB artifact"
+    setup: "Migration complete; dual-write enabled (transitional state)"
+    action: "Run /pm-story generate; check both KB and filesystem"
+    expected: "Both kb artifact and STORY-SEED.md exist; neither read path is broken"
+    evidence: "kb_read_artifact returns seed data; STORY-SEED.md exists at {output_dir}/_pm/STORY-SEED.md"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "kb_read_artifact({ story_id, artifact_type: 'story_seed' }) returns non-null content"
+      - "kb_get_story({ story_id }) returns description, acceptance_criteria, non_goals non-null"
+      - "stories table row has content fields populated after Phase 4.5"
+      - "story_artifacts table has row with artifact_type='story_seed' for test story"
+
+manual_cases:
+  - id: MC-1
+    title: "Spot-check agent file frontmatter kb_tools accuracy"
+    steps:
+      - "Open pm-story-seed-agent.agent.md"
+      - "Check kb_tools list in frontmatter"
+      - "Grep body for each tool name listed in kb_tools"
+      - "Confirm every listed tool has at least one call site"
+      - "Confirm no call sites exist for tools not in kb_tools list"
+      - "Repeat for pm-story-generation-leader.agent.md"
+    expected: "Frontmatter kb_tools exactly matches call sites (AC-6)"
+
+  - id: MC-2
+    title: "Caller audit — index_path usage across all .claude files"
+    steps:
+      - "grep -r 'index_path' .claude/agents/ .claude/commands/"
+      - "Document all callers that pass index_path to seed agent"
+      - "Confirm none of the sibling leaders (adhoc, followup, split) break after AC-5 changes"
+    expected: "All callers either updated or confirmed compatible"
+
+fixture_definitions:
+  - name: test_story_pending
+    type: KB story row
+    description: "A story with status=Pending in the KB stories table, used for integration tests"
+  - name: kb_offline_condition
+    type: environment configuration
+    description: "KB MCP server stopped or port 5433 blocked — used for fallback tests (EC-1, EC-2)"
+
+risks:
+  - "Integration tests require KFMB-1020 and KFMB-1030 to be complete — tests cannot run until these stories ship"
+  - "Caller regression tests (ED-1, ED-2) require real /pm-story commands to be runnable in test environment"
+  - "Dual-write behavior (ED-4) is a transitional state — test expectations may change when KB-only read path is confirmed"
+  - "story_seed artifact type must be registered (KFMB-1030) before HP-1 can be verified"

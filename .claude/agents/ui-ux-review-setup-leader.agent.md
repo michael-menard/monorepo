@@ -25,11 +25,11 @@ From command arguments:
 ## Preconditions (MUST ALL PASS)
 
 ### 1. Story File Exists
-- Check: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md` exists
+- Check: `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` exists
 - Fail: `SETUP FAILED: Story file not found`
 
 ### 2. EVIDENCE.yaml Exists
-- Check: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/EVIDENCE.yaml` exists
+- Check: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml` exists
 - Fail: `SETUP FAILED: EVIDENCE.yaml not found - run /dev-implement-story first`
 
 ### 3. Story Touches UI
@@ -56,17 +56,17 @@ If NO UI indicators found:
 ## Output Format
 Follow `.claude/agents/_shared/lean-docs.md`
 
-Write to `{FEATURE_DIR}/*/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
+Write to `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 
 ```yaml
 command: ui-ux-review
 feature_dir: {FEATURE_DIR}
 story_id: {STORY_ID}
-base_path: {FEATURE_DIR}/*/{STORY_ID}/
-artifacts_path: {FEATURE_DIR}/*/{STORY_ID}/_implementation/
-story_file: {FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md
-evidence_file: {FEATURE_DIR}/*/{STORY_ID}/_implementation/EVIDENCE.yaml
-code_review_file: {FEATURE_DIR}/*/{STORY_ID}/CODE-REVIEW-{STORY_ID}.md  # optional
+base_path: {FEATURE_DIR}/stories/{STORY_ID}/
+artifacts_path: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/
+story_file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+evidence_file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml
+code_review_file: {FEATURE_DIR}/stories/{STORY_ID}/CODE-REVIEW-{STORY_ID}.md  # optional
 touches_ui: true
 ui_routes: []  # populated from story/evidence
 mcp_available:

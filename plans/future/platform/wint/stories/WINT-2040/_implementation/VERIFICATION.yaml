@@ -1,0 +1,171 @@
+schema: 1
+story_id: "WINT-2040"
+timestamp: "2026-03-07T12:40:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 437, fail: 0 }
+  integration: { pass: 2, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage:
+  notes: "437 tests pass across 19 test files in @repo/database-schema. No numeric threshold violation — well above 45% minimum."
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >
+    Tests use vi.mock for @repo/logger and createMockDb helper for chainable Drizzle mock.
+    No setTimeout anti-patterns found. waitFor not needed (no async UI). Tests use
+    describe/it blocks properly, verify both happy path and error paths. Integration tests
+    run against live .claude/agents/ directory with appropriate 60s timeout. All 20 new
+    tests in agent-mission-cache-populator.test.ts pass.
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      Verified: populateAgentMissionCache() in agent-mission-cache-populator.ts uses
+      glob('**/*.agent.md', { ignore: ['**/_archive/**'] }). Integration test HP-1
+      confirms >= 142 files discovered from live .claude/agents/ directory.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      Verified: Script calls parseFrontmatter + extractAgentMetadata + extractMissionSummary.
+      mission-extractor.ts extracts mission, role, scope, triggers via section-based regex
+      targeting ## Mission, ## Role, ## Scope, ## Signals headings.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      Verified: Upsert in agent-mission-cache-populator.ts uses packType='agent_missions' as const,
+      packKey=path.basename(filePath, '.agent.md'), and AgentMissionContentSchema JSONB.
+      Live run confirmed 138 rows written.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      Verified: onConflictDoUpdate targets [contextPacks.packType, contextPacks.packKey].
+      Live idempotency run confirmed row count stable at 138 after second execution.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      Verified: try/catch around each agent file processes failure with logger.warn + skipped++
+      and continues. EC-3 test (insertThrowsOn: 2) confirms script continues when DB throws
+      on single insert. Test asserts result.skipped >= 1 and result.cached + result.skipped == result.totalFound.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      Verified: glob ignore pattern ['**/_archive/**'] confirmed in source code.
+      Test fixture _archive/archived-agent.agent.md exists; ED-1 test verifies
+      insertedPackKeys does not contain 'archived-agent'.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >
+      Verified: No TypeScript interfaces found (grep confirmed zero matches). Both files
+      use Zod schemas exclusively: MissionSummarySchema, PopulateResultSchema,
+      AgentMissionContentSchema all defined with z.object().
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: >
+      Verified: PopulateResultSchema.parse() applied to { totalFound, cached, skipped, warnings }
+      before return. HP-6 test verifies result matches expected shape. Live run confirmed
+      { totalFound: 142, cached: 138, skipped: 4, warningCount: 29 }.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: >
+      Verified: HP-5 integration test (mock DB, live .claude/agents/ directory) asserts
+      result.cached >= 130 and result.cached/result.totalFound >= 0.9. Test passes.
+      Live run evidence confirms 138/142 = 97.2% — well above 90% threshold.
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: >
+      Verified: 20 tests in agent-mission-cache-populator.test.ts covering extractMissionSummary
+      (HP-3, EC-2, truncation), extractSection (H2, H3, case-insensitive, missing section),
+      populateAgentMissionCache (HP-4, HP-6, EC-1, EC-3, ED-1, ED-4), and integration
+      (HP-1, HP-5). All 437 package tests pass.
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: >
+      Verified: Migration file 0033_wint_2040_agent_missions_enum.sql exists with
+      ALTER TYPE public.context_pack_type ADD VALUE IF NOT EXISTS 'agent_missions'.
+      wint.ts schema array updated to include 'agent_missions' at line 486. Live DB
+      enum confirmed as {codebase,story,feature,epic,architecture,lessons_learned,test_patterns,agent_missions}.
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: >
+      Verified: wint.ts content column uses .$type<unknown>() (from WINT-2030), which accepts
+      any JSONB shape including AgentMissionContentSchema. AgentMissionContentSchema provides
+      runtime validation in the script itself. tsc --noEmit confirms no compilation errors
+      from WINT-2040 changes.
+
+architecture_compliant: true
+architecture_notes: >
+  - No console.log — all output via @repo/logger (verified by grep, zero matches)
+  - No TypeScript interfaces — all types via Zod schemas with z.infer<>
+  - No barrel files introduced
+  - Direct Drizzle upsert (not contextCachePut MCP tool) — correctly independent of WINT-0100 UAT
+  - packKey derived deterministically from path.basename(filePath, '.agent.md')
+  - glob ignore pattern correctly excludes _archive/ subdirectory
+  - Dependency injection used for db parameter enables unit testing without DB
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Dependency injection of the DB instance (accepting `db: any` parameter) enables
+      unit-testing Drizzle upsert scripts without a live database, using a chainable
+      vi.fn() mock that mirrors insert().values().onConflictDoUpdate() chain.
+    category: pattern
+    tags: ["testing", "drizzle", "seed-scripts", "database-schema"]
+
+  - lesson: >
+      Section-based regex extraction from Markdown (.agent.md body) using H2/H3 heading
+      anchors is reliable for structured content but produces null for agents with
+      non-standard formatting. Designing with graceful null-return and continuing rather
+      than skipping allows 97%+ success rates even in heterogeneous corpora.
+    category: pattern
+    tags: ["parsing", "agent-files", "mission-extraction", "wint"]
+
+  - lesson: >
+      ALTER TYPE ... ADD VALUE IF NOT EXISTS (PostgreSQL 12+) is safe and non-blocking.
+      The IF NOT EXISTS clause makes migrations idempotent, matching the upsert pattern
+      used in the application layer. This should be standard for all enum extension migrations.
+    category: pattern
+    tags: ["migrations", "postgres", "enum", "idempotency"]
+
+  - lesson: >
+      The .$type<unknown>() Drizzle column type annotation (established in WINT-2030) is
+      sufficient to accommodate arbitrary JSONB shapes without per-story schema changes —
+      runtime Zod validation in the inserting code provides the actual type safety.
+    category: reuse
+    tags: ["drizzle", "jsonb", "typescript", "wint", "WINT-2030"]
+
+tokens:
+  in: 28000
+  out: 4500

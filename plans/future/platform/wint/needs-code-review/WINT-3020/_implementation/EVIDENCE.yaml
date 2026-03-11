@@ -1,0 +1,175 @@
+schema: 1
+story_id: WINT-3020
+phase: implementation
+iteration: 1
+timestamp: '2026-03-08T18:15:00Z'
+
+summary:
+  status: complete
+  acs_covered: 10
+  acs_total: 10
+  tests_passed: true
+  type_check_passed: true
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence_type: file
+    evidence: >-
+      File created at .claude/skills/telemetry-log/SKILL.md with all required sections:
+      frontmatter, usage, arguments (all 11 parameters), standardized phase values,
+      task (MCP call block), output, error handling, examples
+    files:
+      - .claude/skills/telemetry-log/SKILL.md
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_type: file
+    evidence: >-
+      SKILL.md documents all 11 parameters (agentName, invocationId, storyId, phase,
+      status, inputTokens, outputTokens, cachedTokens, durationMs, modelName, errorMessage).
+      WorkflowLogInvocationInputSchema in packages/backend/mcp-tools/src/telemetry/__types__/index.ts
+      matches the full parameter spec with correct types and defaults.
+    files:
+      - .claude/skills/telemetry-log/SKILL.md
+      - packages/backend/mcp-tools/src/telemetry/__types__/index.ts
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_type: command
+    evidence: >-
+      packages/backend/mcp-tools/src/telemetry/ contains __types__/index.ts and
+      workflow-log-invocation.ts. pnpm check-types --filter @repo/mcp-tools passes
+      with zero errors.
+    commands:
+      - pnpm --filter @repo/mcp-tools check-types
+    files:
+      - packages/backend/mcp-tools/src/telemetry/__types__/index.ts
+      - packages/backend/mcp-tools/src/telemetry/workflow-log-invocation.ts
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_type: test
+    evidence: >-
+      logInvocation inserts exactly one row via Drizzle .insert().values().returning().
+      invocationId is auto-generated via randomUUID() if not provided (HP-1 test validates
+      caller-provided ID is used; auto-generation test validates UUID format).
+      createdAt and startedAt default to now() via DB defaults.
+    tests_passing:
+      - HP-1: Valid full-field insert returns row
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_type: test
+    evidence: >-
+      workflow_log_invocation registered in tool-handlers.ts (handleWorkflowLogInvocation function
+      + toolHandlers map entry) and tool-schemas.ts (workflowLogInvocationToolDefinition + push
+      to toolDefinitions). mcp-integration.test.ts updated to 65 tools; 27/28 tests pass
+      (1 pre-existing failure on DB_POOL_SIZE default unrelated to this story).
+    commands:
+      - pnpm --filter knowledge-base test -- mcp-integration
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_type: test
+    evidence: >-
+      Unit test file covers all 7 scenarios: HP-1 (valid insert), EC-1 (DB failure returns
+      null + logger.warn), EC-2 (missing agentName → ZodError), EC-3 (invalid status → ZodError),
+      ED-1 (optional fields → defaults), ED-2 (status partial), EC-4 (duplicate invocationId).
+      8 tests total pass (includes auto-generate invocationId test).
+    commands:
+      - pnpm --filter @repo/mcp-tools test -- telemetry
+    files:
+      - packages/backend/mcp-tools/src/telemetry/__tests__/workflow-log-invocation.test.ts
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_type: file
+    evidence: >-
+      SKILL.md error handling section explicitly states: "Continue the primary workflow —
+      telemetry is fire-and-forget" and "The calling agent must never block or fail due to
+      a telemetry write error". workflow-log-invocation.ts try/catch returns null on DB
+      error without re-throwing.
+    files:
+      - .claude/skills/telemetry-log/SKILL.md
+      - packages/backend/mcp-tools/src/telemetry/workflow-log-invocation.ts
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_type: file
+    evidence: >-
+      SKILL.md documents standard phase values in a table: setup, plan, execute, review, qa.
+      These match the column comment in wint.ts.
+    files:
+      - .claude/skills/telemetry-log/SKILL.md
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_type: command
+    evidence: >-
+      pnpm --filter @repo/mcp-tools check-types passes zero errors.
+      pnpm --filter knowledge-base check-types passes zero errors.
+      All new and modified files type-check cleanly.
+    commands:
+      - pnpm --filter @repo/mcp-tools check-types
+      - pnpm --filter knowledge-base check-types
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_type: test
+    evidence: >-
+      All 8 unit tests pass (workflow-log-invocation.test.ts).
+      mcp-integration tool discovery test passes (workflow_log_invocation in tool list).
+    commands:
+      - pnpm --filter @repo/mcp-tools test -- workflow-log-invocation
+      - pnpm --filter knowledge-base test -- mcp-integration
+
+files_created:
+  - .claude/skills/telemetry-log/SKILL.md
+  - packages/backend/mcp-tools/src/telemetry/__types__/index.ts
+  - packages/backend/mcp-tools/src/telemetry/workflow-log-invocation.ts
+  - packages/backend/mcp-tools/src/telemetry/__tests__/workflow-log-invocation.test.ts
+
+files_modified:
+  - packages/backend/mcp-tools/src/index.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+  - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+
+test_results:
+  unit_tests:
+    filter: workflow-log-invocation
+    passed: 8
+    failed: 0
+    test_file: packages/backend/mcp-tools/src/telemetry/__tests__/workflow-log-invocation.test.ts
+  integration_tests:
+    filter: mcp-integration
+    passed: 27
+    failed: 1
+    pre_existing_failures:
+      - test: should use default values for optional env vars
+        reason: DB_POOL_SIZE default in server.ts is 3 but test expects 5 — pre-existing mismatch unrelated to WINT-3020
+  e2e_tests:
+    exempt: true
+    reason: story_type backend — frontend_impacted false, no UI changes
+
+type_check_results:
+  mcp_tools: PASS
+  knowledge_base: PASS
+
+architectural_decisions_followed:
+  - ARCH-001: logInvocation placed in packages/backend/mcp-tools/src/telemetry/
+  - ARCH-002: totalTokens deferred to DB default (0); not computed at application level
+  - ARCH-003: import { randomUUID } from 'crypto' — matches session-create.ts canonical reference
+
+notes:
+  - Tool count in mcp-integration.test.ts updated to 65 (not 63 as planned) because worktree
+    already had kb_find_similar_stories and kb_get_story_context in the toolDefinitions array
+    (CDTS-2010 and CDTS-2020 were merged after the test count was last updated)
+  - Pre-existing DB_POOL_SIZE test failure unrelated to WINT-3020 changes
+  - Worktree @repo/db build required manual tsc invocation to produce dist/
+  - @repo/sidecar-rules-registry symlink was missing from mcp-tools/node_modules/@repo/ — added manually

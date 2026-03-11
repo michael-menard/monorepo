@@ -26,11 +26,12 @@ Everything else is a **future enhancement**.
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
 - `PREFIX`: Story prefix (e.g., "WISH")
 
+List stories via KB:
+```javascript
+kb_list_stories({ feature: "{FEATURE_SLUG}" })  // FEATURE_SLUG derived from FEATURE_DIR basename
+```
+
 Read from `{FEATURE_DIR}/`:
-
-**KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: if KB is unavailable, read from the files listed below.
-
-- `stories.index.md`
 - `PLAN.meta.md`
 - `PLAN.exec.md`
 - `roadmap.md`

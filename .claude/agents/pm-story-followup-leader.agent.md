@@ -29,7 +29,6 @@ From orchestrator context:
 From filesystem:
 - Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
 - Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
-- Stories index: **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 
@@ -92,13 +91,13 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 
 **If NO pre-allocated ID (running standalone):**
 
-1. **Scan stories.index.md for existing IDs:**
-   ```bash
-   grep -E "^## {PREFIX}-[0-9]+:" {FEATURE_DIR}/stories.index.md
+1. **List existing stories via KB:**
+   ```javascript
+   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
    ```
 
 2. **Find highest existing ID:**
-   - Extract numeric portion from each ID
+   - Extract numeric suffix from each returned story ID matching `{PREFIX}-*`
    - Find MAX (e.g., if WISH-2050 exists, MAX=2050)
 
 3. **Calculate new ID:**
@@ -120,14 +119,14 @@ For multiple follow-ups from same parent in one session, each gets +10 from the 
 
 For the proposed follow-up ID:
 
-1. **Scan stories.index.md for existing IDs:**
-   ```bash
-   grep -E "^## {PREFIX}-[0-9]{4}:" {FEATURE_DIR}/stories.index.md
+1. **List existing stories via KB:**
+   ```javascript
+   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
    ```
-   Extract all existing story IDs from the index.
+   Extract all existing story IDs from the result.
 
-2. **Check if proposed ID exists in index:**
-   - Search for `## {NEW_STORY_ID}:` in stories.index.md
+2. **Check if proposed ID exists in KB:**
+   - Search returned story IDs for `{NEW_STORY_ID}`
    - If found (regardless of status): ID is taken
 
 3. **Check if directory exists:**
@@ -139,7 +138,7 @@ For the proposed follow-up ID:
    - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
 
 4. **If collision detected:**
-   - Find the highest existing story ID in the index matching `{PREFIX}-*`
+   - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and find the highest story ID matching `{PREFIX}-*`
    - Set new ID to `{PREFIX}-{MAX_ID + 10}` (increment by 10 to leave room)
    - Re-run collision check on new ID
 
@@ -150,9 +149,9 @@ For the proposed follow-up ID:
 ```
 Proposed: WISH-2047
 Collision: WISH-2047 already exists (IP/Geolocation Logging)
-Scan index: highest WISH-* ID is WISH-2050
+KB list: highest WISH-* ID is WISH-2050
 New ID: WISH-2060
-Check: WISH-2060 not in index, no directory exists
+Check: WISH-2060 not in KB, no directory exists
 Use: WISH-2060
 ```
 
@@ -214,26 +213,14 @@ follow_up_from: {STORY_ID}
 
 11. **Open Questions** (should be empty or non-blocking)
 
-### Phase 5: Update Index
+### Phase 5: Register in KB
 
-1. Open `{FEATURE_DIR}/stories.index.md`
-2. Add new entry:
+1. Register the new follow-up story in the KB:
+   ```javascript
+   kb_update_story_status({ story_id: "{NEW_STORY_ID}", state: "backlog", phase: "pm" })
+   ```
 
-```markdown
-## {NEW_STORY_ID}: [Title]
-
-**Status:** pending
-**Depends On:** {STORY_ID}
-**Follow-up From:** {STORY_ID}
-
-### Scope
-[Brief scope from generated story]
-
-### Source
-Follow-up from QA Elaboration of {STORY_ID}
-```
-
-3. Update Progress Summary: increment `pending` count
+2. The KB is the source of truth — no index file update needed
 
 ### Phase 6: Update Source Story
 
@@ -265,7 +252,6 @@ reason: (if not complete)
 files_created:
   - {FEATURE_DIR}/backlog/{NEW_STORY_ID}/{NEW_STORY_ID}.md
 files_updated:
-  - {FEATURE_DIR}/stories.index.md
   - {STORY_ID}.md (checkbox marked)
 ```
 
@@ -295,4 +281,4 @@ Before completion signal:
 
 After generation, report:
 - "Created {NEW_STORY_ID}: [title]" (e.g., WISH-0110)
-- "Next step: Run /elab-story {INDEX_PATH} {NEW_STORY_ID} to elaborate the follow-up story"
+- "Next step: Run /elab-story {NEW_STORY_ID} to elaborate the follow-up story"

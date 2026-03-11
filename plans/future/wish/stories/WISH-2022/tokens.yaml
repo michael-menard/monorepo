@@ -1,0 +1,10 @@
+schema: 1
+story_id: WISH-2022
+total:
+  input: 15000
+  output: 8500
+phases:
+  - phase: qa-verify
+    input: 15000
+    output: 8500
+high_cost: []

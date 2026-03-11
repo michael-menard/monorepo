@@ -27,7 +27,6 @@ From orchestrator context:
 From filesystem:
 - Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
 - Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
-- Stories index: **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 
@@ -75,14 +74,14 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 For each proposed split ID:
 
-1. **Scan stories.index.md for existing IDs:**
-   ```bash
-   grep -E "^## {PREFIX}-[0-9]{4}:" {FEATURE_DIR}/stories.index.md
+1. **List existing stories via KB:**
+   ```javascript
+   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
    ```
-   Extract all existing story IDs from the index.
+   Extract all existing story IDs from the result.
 
-2. **Check if proposed ID exists in index:**
-   - Search for `## {NEW_STORY_ID}:` in stories.index.md
+2. **Check if proposed ID exists in KB:**
+   - Search returned story IDs for `{NEW_STORY_ID}`
    - If found (regardless of status): ID is taken
 
 3. **Check if directory exists:**
@@ -94,7 +93,7 @@ For each proposed split ID:
    - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
 
 4. **If collision detected:**
-   - Find the highest existing story ID in the index matching `{PREFIX}-*`
+   - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and find the highest story ID matching `{PREFIX}-*`
    - Set new ID to `{PREFIX}-{MAX_ID + 10}` (increment by 10 to leave room)
    - Re-run collision check on new ID
 
@@ -105,35 +104,26 @@ For each proposed split ID:
 ```
 Proposed: WISH-0110 (split 1)
 Collision: WISH-0110 already exists
-Scan index: highest WISH-* ID is WISH-2050
+KB list: highest WISH-* ID is WISH-2050
 New IDs: WISH-2060 (split 1), WISH-2070 (split 2)
 ```
 
 If validation fails → `PM BLOCKED: <validation issue>`
 
-### Phase 2: Update Stories Index
+### Phase 2: Register Splits in KB
 
-1. Open `{FEATURE_DIR}/stories.index.md`
-2. Locate entry for {STORY_ID}
-3. **DELETE the original entry entirely** (superseded stories are not kept in index)
-4. Add NEW entries for each split:
+1. Register each split story in the KB:
+   ```javascript
+   kb_update_story_status({ story_id: "{PREFIX}-XX1Z", state: "backlog", phase: "pm" })
+   kb_update_story_status({ story_id: "{PREFIX}-XX2Z", state: "backlog", phase: "pm" })
+   // (repeat for all splits)
+   ```
 
-```markdown
-## {PREFIX}-XX1Z: [Brief title from scope summary]
+2. The KB is the source of truth — no index file update needed
 
-**Status:** pending
-**Depends On:** [none OR previous split if this is Y=2+]
-**Split From:** {STORY_ID}
-
-### Scope
-[Scope summary from ELAB split recommendations]
-
-### Acceptance Criteria (from parent)
-[List specific AC numbers allocated to this split]
-```
-
-5. **Identify downstream dependencies (DO NOT auto-update):**
-   - Find all stories where `Depends On` or `Blocked By` contains {STORY_ID}
+3. **Identify downstream dependencies (DO NOT auto-update):**
+   - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and inspect each story's `depends_on` field
+   - Find all stories where `depends_on` or `blocked_by` contains {STORY_ID}
    - List these in the output summary as "Requires Review"
    - The PM must manually decide which split part(s) each downstream story should depend on
 
@@ -145,11 +135,6 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
    Action required: Update these dependencies to reference specific split(s)
    ```
-
-6. Update Progress Summary:
-   - Increment `pending` by number of splits
-   - Decrement `generated` (or `needs-split`) by 1
-   - Do NOT increment `superseded` (superseded stories are deleted, not tracked)
 
 ### Phase 2b: Delete Original Story Directory
 
@@ -266,8 +251,9 @@ reason: (if not complete)
 files_created:
   - {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md
   - {FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md
-files_updated:
-  - {FEATURE_DIR}/stories.index.md (original removed, splits added)
+kb_updated:
+  - {PREFIX}-XX1Z registered as backlog
+  - {PREFIX}-XX2Z registered as backlog
 files_deleted:
   - {FEATURE_DIR}/*/{STORY_ID}/ (entire directory)
 verification:
@@ -320,4 +306,4 @@ Before completion signal:
 After completion, report:
 - "Created N split stories: {PREFIX}-XX1Z, {PREFIX}-XX2Z, ..."
 - "Dependency chain: Y=1 → Y=2 → ..."
-- "Next step: Run /elab-story {INDEX_PATH} {PREFIX}-XX1Z to begin elaboration of first split"
+- "Next step: Run /elab-story {PREFIX}-XX1Z to begin elaboration of first split"

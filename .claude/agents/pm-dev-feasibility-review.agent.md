@@ -19,7 +19,7 @@ Focus ONLY on risks that block the core user journey. Track non-MVP concerns sep
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}.
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB
 - repo architecture rules (ports/adapters, reuse-first, packages/** boundaries)
 - dev agent standards (no mocks/stubs in core paths, proof-of-work expectations)
 
@@ -38,12 +38,8 @@ A risk is **MVP-critical** ONLY if it **blocks the core user journey**:
 
 Everything else is a **Future Risk** - important but not MVP-blocking.
 
-## Output (MUST RETURN INLINE)
-Return the dev feasibility YAML content inline in a code block. Do NOT write to any file.
-
-The leader reads your TaskOutput and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.
-
-Return your output in this exact format:
+## Output (MUST WRITE)
+Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/dev-feasibility.yaml`:
 
 ```yaml
 feasible: true | false
@@ -78,3 +74,5 @@ subtasks:
 - Sizing: 1-point → 1-2 subtasks, 3-point → 3-5, 5-point → 5-8
 
 Non-MVP risks and future scope are **omitted** — out of scope for this output.
+
+The leader reads this file and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.

@@ -1,0 +1,13 @@
+id: "KFMB-5020"
+title: "Migrate _implementation/ Reader Agents to kb_read_artifact"
+status: ready-to-work
+priority: medium
+phase: 4
+feature: "Update 10+ reader agents to read artifacts via kb_read_artifact instead of from disk"
+goal: "All _implementation/ artifact reads go through kb_read_artifact."
+depends_on: ["KFMB-5010"]
+endpoints: []
+infrastructure: ["MCP Tools", "Agents", "PostgreSQL/Aurora"]
+risk_notes: "Reader migration must follow writer migration."
+sizing_warning: true
+created: "2026-02-26T00:00:00Z"

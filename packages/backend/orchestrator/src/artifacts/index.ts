@@ -246,3 +246,81 @@ export {
   type TrendDirection,
   type DebtFileEntry,
 } from './audit-findings.js'
+
+// Gaps - MVP-blocking and non-blocking elaboration gaps (WINT-4150)
+export {
+  GapsSchema,
+  GapItemSchema,
+  GapSeveritySchema,
+  createGaps,
+  type Gaps,
+  type GapItem,
+  type GapSeverity,
+} from './gaps.js'
+
+// Cohesion Findings - PO cohesion check results, max(5) findings, max(2) blocking (WINT-4150)
+export {
+  CohesionFindingsSchema,
+  CohesionFindingSchema,
+  CohesionSeveritySchema,
+  createCohesionFindings,
+  type CohesionFindings,
+  type CohesionFinding,
+  type CohesionSeverity,
+} from './cohesion-findings.js'
+
+// Scope Challenges - scope challenge analysis, max(5) challenges (WINT-4150)
+export {
+  ScopeChallengesSchema,
+  ScopeChallengeSchema,
+  RecommendationSchema,
+  RiskIfDeferredSchema,
+  createScopeChallenges,
+  type ScopeChallenges,
+  type ScopeChallenge,
+  type Recommendation,
+  type RiskIfDeferred,
+} from './scope-challenges.js'
+
+// MVP Slice - included/excluded ACs for MVP (WINT-4150)
+export {
+  MvpSliceSchema,
+  createMvpSlice,
+  type MvpSlice,
+} from './mvp-slice.js'
+
+// Final Scope - formalized final scope after elaboration, z.literal('1.0') (WINT-4150)
+export {
+  FinalScopeSchema,
+  FinalAcSchema,
+  FollowupSchema,
+  createFinalScope,
+  type FinalScope,
+  type FinalAc,
+  type Followup,
+} from './final-scope.js'
+
+// Evidence Expectations - expected evidence items for AC verification (WINT-4150)
+export {
+  EvidenceExpectationsSchema,
+  ExpectationSchema,
+  EvidenceTypeSchema,
+  createEvidenceExpectations,
+  type EvidenceExpectations,
+  type Expectation,
+  type EvidenceType,
+} from './evidence-expectations.js'
+
+// User Flows - re-export from __types__/user-flows.ts (AC-3, WINT-4150)
+export {
+  UserFlowsSchema,
+  UserFlowSchema,
+  UserFlowStepSchema,
+  UserFlowStateEnum,
+  UserFlowCapabilityEnum,
+  type UserFlows,
+  type UserFlow,
+  type UserFlowStep,
+  type UserFlowState,
+  type UserFlowCapability,
+} from './__types__/user-flows.js'

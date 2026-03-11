@@ -1,0 +1,240 @@
+schema: 1
+story: KBAR-0020
+story_title: "Schema Tests & Validation"
+gate: CONCERNS
+status_reason: "All functional requirements met with 100% AC coverage and 128 passing tests. Non-blocking code quality and maintainability improvements identified for test code refactoring."
+reviewer: "Claude Code (/review + /qa-gate)"
+updated: "2026-02-15T22:30:00Z"
+
+waiver:
+  active: false
+  reason: ""
+  approved_by: ""
+
+# Top issues requiring attention (high + medium severity)
+top_issues:
+  # High Severity (Code Quality - Test Maintainability)
+  - id: QUAL-001
+    severity: high
+    category: code_quality
+    finding: "Excessive test data duplication across validation tests. Story, artifact, dependency, and conflict objects are recreated identically in multiple test suites (20+ similar object literals)."
+    suggested_action: "Extract test data builders into a test fixtures/factories module (e.g., kbar-schema.fixtures.ts) with reusable object creators."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 199
+
+  - id: QUAL-008
+    severity: high
+    category: code_quality
+    finding: "Comment-only relation tests (lines 1109-1174, 1317-1367). Tests verify table columns exist but skip actual FK/relation verification. These provide minimal value - they just check tables are defined."
+    suggested_action: "Either: (a) Remove tests that only check .toBeDefined() as they add no value, (b) Implement actual schema validation using Drizzle introspection, or (c) Add integration tests against real DB schema."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 1110
+
+  # Medium Severity (Code Quality)
+  - id: QUAL-002
+    severity: medium
+    category: code_quality
+    finding: "Repetitive safeParse validation pattern (54 occurrences). Every Zod validation follows identical pattern: create object, call safeParse, check result.success."
+    suggested_action: "Create test helpers: expectValidSchema<T>() and expectInvalidSchema<T>() to reduce boilerplate."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 206
+
+  - id: QUAL-003
+    severity: medium
+    category: code_quality
+    finding: "Table column verification tests (lines 73-168) are repetitive. Each table gets const columns = Object.keys(table) followed by multiple toContain() assertions. Pattern duplicated 9 times."
+    suggested_action: "Extract helper function: expectTableColumns(table, expectedColumns) to reduce duplication."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 74
+
+  - id: QUAL-004
+    severity: medium
+    category: code_quality
+    finding: "Enum validation tests (lines 929-1106) contain highly repetitive patterns. Each enum describe block has: validate all values, reject invalid value, verify enum name. 6 enums × 3 patterns = 18 nearly identical implementations."
+    suggested_action: "Create parameterized test helper: testEnumValidation() or use describe.each() to generate test suites from configuration arrays."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 930
+
+  - id: QUAL-006
+    severity: medium
+    category: code_quality
+    finding: "UUID test data hardcoded and duplicated (e.g., '123e4567-e89b-12d3-a456-426614174000' appears 60+ times). Same UUID used across completely unrelated test cases."
+    suggested_action: "Create named test constants in fixtures: const TEST_STORY_ID, const TEST_ARTIFACT_ID with meaningful names."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 239
+
+  - id: QUAL-009
+    severity: medium
+    category: code_quality
+    finding: "Index coverage tests (lines 1176-1224) are documentation-only with zero assertions. 8 tests that only check table existence and include comments describing indexes."
+    suggested_action: "Convert to documentation (README or JSDoc) or implement actual checks using Drizzle index introspection."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 1177
+
+  - id: QUAL-011
+    severity: medium
+    category: code_quality
+    finding: "Snapshot tests (lines 1370-1376) use generic snapshot names. If snapshots fail, users must manually inspect diffs to understand which schema changed."
+    suggested_action: "Replace with property-based assertions that document contract (e.g., 'story schema must have required fields: storyId, epic, title')."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    line: 1370
+
+  # Medium Severity (Technical Debt)
+  - id: DEBT-001
+    severity: medium
+    category: technical_debt
+    finding: "Extensive commented documentation in test descriptions that verify behavior in migrations rather than testing actual schema validation. Comments about 'FK relationships verified in migration SQL' suggest tests are overly coupled to implementation details."
+    suggested_action: "Refactor relation tests to focus on schema structure validation only. Create separate integration tests for database-level FK constraints."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    estimated_effort: medium
+
+  - id: DEBT-002
+    severity: medium
+    category: technical_debt
+    finding: "Duplicate test patterns repeated across all 11 tables. Each test follows identical structure: safeParse → expect → assertions."
+    suggested_action: "Create helper function(s) to reduce boilerplate. This would reduce test file from 1440 lines to ~400 lines while maintaining coverage."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    estimated_effort: large
+
+  - id: DEBT-004
+    severity: medium
+    category: technical_debt
+    finding: "Metadata schema validation (StoryMetadataSchema, StoryStateMetadataSchema, etc.) defined locally in test file instead of being exported from kbar.ts schema definition. Creates risk of divergence."
+    suggested_action: "Move metadata schema definitions to /src/schema/kbar.ts as exported validators. Import them in tests."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    estimated_effort: medium
+
+  - id: DEBT-006
+    severity: medium
+    category: technical_debt
+    finding: "Missing negative validation tests for common edge cases: UUID format validation, checksum format validation, enum value constraints, required field constraints for all 11 table schemas."
+    suggested_action: "Create comprehensive negative test suite for each schema covering: (1) Invalid UUIDs, (2) Wrong enum values, (3) Missing required fields, (4) Type violations."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    estimated_effort: large
+
+  - id: DEBT-010
+    severity: medium
+    category: technical_debt
+    finding: "AC-* references in test descriptions suggest these tests document acceptance criteria from KBAR-0020. If requirements change, these tests may not be updated. No traceability mechanism."
+    suggested_action: "Create requirements traceability map: Add comments linking each test to KBAR-0020 AC#, document which ACs are covered in test file header."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    estimated_effort: small
+
+  # Medium Severity (Test Coverage)
+  - id: TEST-003
+    severity: medium
+    category: test_coverage
+    finding: "Empty string handling is tested but comment suggests database constraints would catch it - this creates false confidence about Zod validation."
+    suggested_action: "Either add explicit Zod min-length validators to schema or clarify test with comment that Zod doesn't validate string length (database-level constraint only)."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+
+  - id: TEST-006
+    severity: medium
+    category: test_coverage
+    finding: "No negative tests for field type validation - missing tests that show integer fields reject strings, UUID fields reject invalid formats, etc."
+    suggested_action: "Add tests like: insertStorySchema.safeParse({...story, storyPoints: 'five'}) should fail."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+
+  - id: TEST-015
+    severity: medium
+    category: test_coverage
+    finding: "Large JSONB test (200 fields) passes but no performance assertion - doesn't test if parsing takes reasonable time for large metadata."
+    suggested_action: "Document that performance testing is deferred to KBAR-0030+. Consider adding comment noting this test only validates correctness, not performance."
+    file: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+
+# NFR validation summary
+nfr_validation:
+  security:
+    status: PASS
+    issue_count: 0
+    details: "Backend test file with no security implications. No hardcoded secrets, proper Zod validation usage, no injection vulnerabilities."
+
+  performance:
+    status: PASS
+    issue_count: 0
+    details: "Test file with excellent performance characteristics. No database I/O, no React rendering, small linear algorithms."
+
+  accessibility:
+    status: SKIPPED
+    issue_count: 0
+    details: "Backend database schema test file - no UI components, accessibility criteria not applicable."
+
+  tests:
+    status: PASS
+    details: "128 tests passed (128/128) in 24ms. Test coverage ~95% for kbar.ts schema file (exceeds 90% target)."
+
+  types:
+    status: PASS
+    details: "No type errors introduced by KBAR-0020. Pre-existing error in unified-wint.ts is unrelated to this story."
+
+  lint:
+    status: PASS
+    details: "0 lint errors. Test file follows project guidelines (Zod schemas, no barrel files, proper imports)."
+
+# Risk summary
+risk_summary:
+  totals:
+    high: 2
+    medium: 14
+    low: 31
+
+  by_category:
+    code_quality: 13  # 2 high, 6 medium, 5 low
+    technical_debt: 13  # 0 high, 5 medium, 8 low
+    test_coverage: 15  # 0 high, 3 medium, 12 low
+    security: 3  # 0 high, 0 medium, 3 low (all acceptable)
+    performance: 2  # 0 high, 0 medium, 2 low
+    accessibility: 1  # 0 high, 0 medium, 1 low (N/A context)
+
+  recommendations:
+    must_fix: []  # No blocking issues
+
+    should_fix:
+      - "QUAL-001: Extract test data to fixtures module to eliminate duplication (20+ object literals)"
+      - "QUAL-008: Remove or enhance low-value documentation-only tests (21 tests with only .toBeDefined())"
+      - "QUAL-002: Create test helper functions to reduce safeParse boilerplate (54 occurrences)"
+      - "DEBT-002: Consolidate duplicate test patterns - could reduce 1440 lines to ~400 lines"
+      - "TEST-006: Add comprehensive negative field-type validation tests"
+
+    nice_to_have:
+      - "All low-severity findings (31 items) are improvement opportunities"
+      - "Consider refactoring in follow-up story for test maintainability"
+      - "Most medium-severity items are about reducing technical debt, not functional issues"
+
+# T-shirt size estimate (from /review)
+t_shirt_sizing:
+  recommended_size: M
+  confidence: high
+  specialist_estimates:
+    requirements: { size: M, rationale: "10 ACs with moderate complexity across 11 tables, 6 enums, JSONB structures" }
+    code_quality: { size: M, rationale: "Moderate complexity driven by comprehensive schema validation, refactoring opportunities" }
+    security: { size: XS, rationale: "No security implications, read-only test operations" }
+    performance: { size: XS, rationale: "Minimal performance considerations, simple test operations" }
+    accessibility: { size: XS, rationale: "Backend test file, no UI components" }
+    test_coverage: { size: L, rationale: "Comprehensive unit testing with 128 test cases, edge case coverage" }
+    technical_debt: { size: M, rationale: "Some refactoring opportunities, moderate maintenance burden" }
+  size_breakdown:
+    XS: 3  # Security, Performance, Accessibility
+    S: 0
+    M: 3  # Requirements, Code Quality, Tech Debt
+    L: 1  # Test Coverage
+    XL: 0
+    XXL: 0
+  synthesis_rationale: |
+    Modal size is M (3 specialists) when considering applicable dimensions. Test Coverage is elevated to L
+    due to comprehensive unit testing requirements (expected for schema validation story). Backend test file
+    context explains XS ratings for Security/Performance/Accessibility. Overall: M with high confidence.
+
+# Implementation evidence
+implementation_summary:
+  acs_covered: 10
+  acs_total: 10
+  coverage_percentage: 100
+  tests_added: 128
+  tests_passing: 128
+  test_pass_rate: 100
+  lines_added: 976
+  files_modified: 1
+  story_type: chore
+  touches_backend: true
+  touches_frontend: false

@@ -139,13 +139,14 @@ export async function main(): Promise<void> {
   }
 
   // Dynamic import: generateStoriesIndex may not exist yet (KBAR-0230 not merged)
-  let generateStoriesIndex: ((opts: { epic: string; verbose?: boolean }) => Promise<string>) | null =
-    null
+  let generateStoriesIndex:
+    | ((opts: { epic: string; verbose?: boolean }) => Promise<string>)
+    | null = null
 
   try {
     const mod = await import('../src/index.js')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    generateStoriesIndex = (mod as any).generateStoriesIndex ?? null
+    generateStoriesIndex =
+      ((mod as Record<string, unknown>).generateStoriesIndex as typeof generateStoriesIndex) ?? null
   } catch (error) {
     rethrowExitError(error)
     const msg = error instanceof Error ? error.message : String(error)
@@ -161,9 +162,7 @@ export async function main(): Promise<void> {
     process.stderr.write(
       `[regenerate:index] ERROR: generateStoriesIndex() is not yet available in @repo/kbar-sync.\n`,
     )
-    process.stderr.write(
-      `  This function will be available after KBAR-0230 is merged.\n`,
-    )
+    process.stderr.write(`  This function will be available after KBAR-0230 is merged.\n`)
     process.exit(1)
   }
 

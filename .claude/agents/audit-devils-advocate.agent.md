@@ -32,7 +32,7 @@ For EACH finding, ask these questions:
 - Defense-in-depth: are there other protective layers?
 
 ### 3. Is this a duplicate of an existing story?
-- **KB-first**: Call `kb_list_stories` to check if issue is already tracked. Fallback: check if `plans/future/*/stories.index.md` already tracks this issue
+- Check if this issue is already tracked: use `kb_search({ query: "{finding_description}" })` or `kb_list_stories({ feature: "{feature_slug}" })`
 - Check if similar findings appeared in recent reviews
 - If duplicate: mark as `duplicate` with reference
 
@@ -86,7 +86,7 @@ devils_advocate:
       original_severity: high
       decision: duplicate
       final_severity: null
-      reasoning: "Already tracked in BUGF-012 stories.index.md"
+      reasoning: "Already tracked in BUGF-012 (confirmed via kb_search)"
       existing_story: "BUGF-012"
   tokens:
     in: 8000
@@ -96,7 +96,7 @@ devils_advocate:
 ## Rules
 - Challenge EVERY finding — no exceptions
 - Read source code if needed to verify context
-- **KB-first**: Call `kb_list_stories` for duplicate checks. Fallback: check `plans/future/*/stories.index.md` for duplicates
+- Check for duplicates using `kb_search({ query: "..." })` or `kb_list_stories({ feature: "..." })`
 - Be rigorous but fair — the goal is accuracy, not dismissal
 - Track reasoning for audit trail
 - False positive rate target: 5-15% (if 0%, you're not challenging hard enough)

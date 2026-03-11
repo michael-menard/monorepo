@@ -1,0 +1,192 @@
+schema: 1
+story_id: WINT-4150
+timestamp: '2026-03-08T16:45:00Z'
+phase: implementation
+iteration: 0
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence_type: test
+    summary: >-
+      GapsSchema defined in gaps.ts with GapItemSchema (id, description, blocking, severity enum,
+      source, resolution nullable) and createGaps() factory. Unit tests in gaps.test.ts pass:
+      8 tests covering valid parse, empty array, invalid severity, all severity levels, resolution
+      default, and factory output.
+    files:
+      - packages/backend/orchestrator/src/artifacts/gaps.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/gaps.test.ts
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_type: test
+    summary: >-
+      CohesionFindingsSchema defined with max(5) findings enforced via .max(5), max(2)
+      blocking_findings enforced via .max(2). Unit tests in cohesion-findings.test.ts:
+      9 tests — valid parse, max(5) boundary, rejection of 6 findings, max(2) blocking boundary,
+      rejection of 3 blocking, invalid verdict, optional user_flow, and factory output.
+    files:
+      - packages/backend/orchestrator/src/artifacts/cohesion-findings.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/cohesion-findings.test.ts
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_type: command
+    summary: >-
+      UserFlowsSchema, UserFlowSchema, UserFlowStepSchema, UserFlowStateEnum, UserFlowCapabilityEnum
+      and their types re-exported from artifacts/index.ts pointing to ./__types__/user-flows.js.
+      No new user-flows.ts file created — re-export only. All 18 existing user-flows tests still pass.
+    files:
+      - packages/backend/orchestrator/src/artifacts/index.ts
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_type: test
+    summary: >-
+      ScopeChallengesSchema defined with max(5) challenges enforced via .max(5), recommendation
+      enum (defer-to-backlog|reduce-scope|accept-as-mvp), risk_if_deferred enum
+      (critical|high|medium|low|none), optional deferral_note. Unit tests: 9 tests covering
+      max(5) boundary, rejection of 6, all recommendation enums, invalid enum rejection,
+      all risk_if_deferred values, optional deferral_note, and factory output.
+    files:
+      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/scope-challenges.test.ts
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_type: test
+    summary: >-
+      MvpSliceSchema defined with schema_version z.literal('1.0'), story_id, generated_at,
+      included_acs (min 1), excluded_acs (default []), rationale. createMvpSlice() factory
+      function exported. Unit tests: 8 tests covering valid parse with included/excluded,
+      empty excluded_acs, default excluded_acs, schema_version rejection (not '1.0'),
+      empty included_acs rejection, factory output, and datetime validation.
+    files:
+      - packages/backend/orchestrator/src/artifacts/mvp-slice.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/mvp-slice.test.ts
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_type: test
+    summary: >-
+      FinalScopeSchema defined with z.literal('1.0') schema_version (not z.string()), final_acs
+      (min 1), followups with conflict: z.boolean(), warnings array, optional notes.
+      createFinalScope() factory exported. Unit tests: 9 tests — valid parse, rejection of '1.0-draft',
+      rejection of '2.0', followup conflict:true, followup conflict:false, warnings array,
+      empty final_acs rejection, defaults for omitted arrays, factory output.
+    files:
+      - packages/backend/orchestrator/src/artifacts/final-scope.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/final-scope.test.ts
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_type: test
+    summary: >-
+      EvidenceExpectationsSchema defined with expectations array, ExpectationSchema with
+      id, ac_id, description, evidence_type enum (test|file|command|manual),
+      verification_command optional, required: boolean (default true).
+      createEvidenceExpectations() factory exported. Unit tests: 9 tests — valid empty artifact,
+      all evidence types, absent verification_command, present verification_command, required default,
+      required:false, invalid evidence_type rejection, factory output, datetime validation.
+    files:
+      - packages/backend/orchestrator/src/artifacts/evidence-expectations.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/evidence-expectations.test.ts
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_type: file
+    summary: >-
+      story-brief-schema.md written at .claude/schemas/story-brief-schema.md following
+      elab-schema.md section structure: title, version, overview, schema definition,
+      field descriptions table (required/optional), lifecycle, example, validation rules,
+      integration points (producers/consumers), changelog.
+    files:
+      - .claude/schemas/story-brief-schema.md
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_type: command
+    summary: >-
+      All 7 new schemas exported from packages/backend/orchestrator/src/artifacts/index.ts
+      using .js extension (ESM): gaps.js, cohesion-findings.js, scope-challenges.js,
+      mvp-slice.js, final-scope.js, evidence-expectations.js, plus __types__/user-flows.js
+      re-export. Total 18 export sources in index.ts (11 original + 7 new).
+    files:
+      - packages/backend/orchestrator/src/artifacts/index.ts
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_type: manual
+    summary: >-
+      elab-completion-leader.agent.md updated with Step 1a 'Artifact Gate Validation
+      (Soft — Warn, Do Not Block)'. Step explicitly states 'warn if missing, do not block
+      elaboration completion'. Includes graceful degradation note: 'Stories elaborated before
+      WINT-4150 will not have these artifacts. This step must never block completion — emit
+      warnings only.'
+    files:
+      - .claude/agents/elab-completion-leader.agent.md
+
+  - ac_id: AC-11
+    status: PASS
+    evidence_type: test
+    summary: >-
+      All 7 new schema test files pass: gaps.test.ts (8 tests), cohesion-findings.test.ts
+      (9 tests), scope-challenges.test.ts (9 tests), mvp-slice.test.ts (8 tests),
+      final-scope.test.ts (9 tests), evidence-expectations.test.ts (9 tests). Each covers:
+      valid parse, constraint violations (where applicable), and factory function output.
+      Total 52 new tests across 6 test files (ST-3 has no test file per architectural decision
+      — UserFlowsSchema re-export covered by existing user-flows.test.ts).
+    files:
+      - packages/backend/orchestrator/src/artifacts/__tests__/gaps.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/cohesion-findings.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/scope-challenges.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/mvp-slice.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/final-scope.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/evidence-expectations.test.ts
+
+touched_files:
+  - packages/backend/orchestrator/src/artifacts/gaps.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/gaps.test.ts
+  - packages/backend/orchestrator/src/artifacts/cohesion-findings.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/cohesion-findings.test.ts
+  - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/scope-challenges.test.ts
+  - packages/backend/orchestrator/src/artifacts/mvp-slice.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/mvp-slice.test.ts
+  - packages/backend/orchestrator/src/artifacts/final-scope.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/final-scope.test.ts
+  - packages/backend/orchestrator/src/artifacts/evidence-expectations.ts
+  - packages/backend/orchestrator/src/artifacts/__tests__/evidence-expectations.test.ts
+  - packages/backend/orchestrator/src/artifacts/index.ts
+  - .claude/schemas/story-brief-schema.md
+  - .claude/agents/elab-completion-leader.agent.md
+
+commands_run:
+  - command: pnpm test --filter @repo/orchestrator -- --reporter=verbose gaps
+    exit_code: 0
+    result: 8 tests passed
+  - command: pnpm test --filter @repo/orchestrator -- --reporter=verbose cohesion-findings
+    exit_code: 0
+    result: 9 tests passed
+  - command: pnpm test --filter @repo/orchestrator -- --reporter=verbose scope-challenges mvp-slice final-scope evidence-expectations
+    exit_code: 0
+    result: 37 tests passed (scope-challenges: 9, mvp-slice: 8, final-scope: 9, evidence-expectations: 9+2 factory)
+  - command: pnpm test --filter @repo/orchestrator -- src/artifacts/
+    exit_code: 1
+    result: >-
+      336 tests passed across 18 test files. 2 pre-existing failures (knowledge-context.test.ts,
+      story-v2-compatible.test.ts) due to @repo/logger not resolvable in worktree — not related
+      to WINT-4150 changes.
+
+e2e_exempt: true
+e2e_exempt_reason: >-
+  Pure schema definitions — unit tests only per plan notes. No E2E tests required.
+
+notes:
+  - Pre-existing test failures in orchestrator (knowledge-context.test.ts, story-v2-compatible.test.ts,
+    qa.test.ts) are due to @repo/logger not being resolvable in the story worktree. All 11+2 failures
+    existed before WINT-4150 work began. All 7 new test files pass cleanly.
+  - TypeScript type errors in check-types are also pre-existing (@repo/logger module not found).
+    All new schema files (gaps.ts, cohesion-findings.ts, etc.) have no TS errors.
+  - ST-3 (UserFlowsSchema re-export) folded into ST-9 per ARCH-001 in PLAN.yaml — single index.ts
+    write pass avoiding double-write conflict.

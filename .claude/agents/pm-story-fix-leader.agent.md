@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-03-09
+version: 3.1.0
 type: leader
 permission_level: docs-only
 triggers: ["/pm-fix-story"]
@@ -35,12 +35,15 @@ Note: Story fixing is typically leader-driven since it requires understanding th
 From orchestrator context:
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., WISH-007)
-- Story file: `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md`
 
-From filesystem:
-- Original story file
-- QA audit feedback (in story file or separate `_pm/QA-FEEDBACK.md`)
-- Original artifacts in `_pm/` directory
+From KB (primary source):
+- Story record: `kb_get_story({ story_id: STORY_ID })`
+- Elab/QA feedback artifact: `kb_read_artifact({ story_id: STORY_ID, artifact_type: "elab" })`
+- PM artifacts (test_plan, uiux_notes, dev_feasibility): `kb_read_artifact({ story_id: STORY_ID, artifact_type: "pm_artifacts" })`
+
+From filesystem (fallback only, if KB artifacts unavailable):
+- Story file at `{FEATURE_DIR}/{stage}/{STORY_ID}/{STORY_ID}.md` (resolve stage from KB story record)
+- `_pm/QA-FEEDBACK.md` if present
 
 ---
 
@@ -48,15 +51,15 @@ From filesystem:
 
 ### Phase 1: Load Context
 
-1. Read the story file
-2. Extract QA feedback (look for):
-   - `## QA Feedback` section in story
-   - `_pm/QA-FEEDBACK.md` file
-   - YAML frontmatter `status: needs-refinement`
-3. Read original artifacts from `pm_artifacts` in story.yaml frontmatter:
-   - `pm_artifacts.test_plan`
-   - `pm_artifacts.uiux_notes` (if present)
-   - `pm_artifacts.dev_feasibility`
+1. **Read from KB (primary)**:
+   ```javascript
+   const story = await kb_get_story({ story_id: "{STORY_ID}" })
+   const elabArtifact = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elab" })
+   const pmArtifacts = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "pm_artifacts" })
+   ```
+2. Extract QA feedback from `elabArtifact.content` (look for `qa_feedback`, `gaps`, `issues` fields)
+3. Extract PM artifacts (`test_plan`, `uiux_notes`, `dev_feasibility`) from `pmArtifacts.content`
+4. **Fallback**: If KB artifacts unavailable, read story file from filesystem to extract content
 
 ### Phase 2: Analyze Gaps
 
@@ -105,31 +108,42 @@ For each identified gap:
 - Add explicit constraint section
 - Specify env vars, migrations, dependencies
 
-### Phase 4: Update Story File
+### Phase 4: Write Updated Story to KB
 
-Write updated `{STORY_ID}.md` with:
-- All gaps addressed
-- YAML status changed to `backlog` (ready for re-audit)
-- Clear changelog at bottom:
+Write the updated story content to KB via `kb_update_story`:
+```javascript
+kb_update_story({
+  story_id: "{STORY_ID}",
+  description: "<updated story content with all gaps addressed and revision history appended>"
+})
+```
 
+Revision history to append at end of description:
 ```markdown
 ---
 
 ## Revision History
 
-### v2 - 2024-01-20
-- Fixed ambiguous AC #3: now specifies exact error message
-- Added missing AC #8: handles empty state
-- Updated test plan with error path coverage
-- Addressed QA feedback from 2024-01-19 audit
+### v2 - {TODAY}
+- <list of changes made>
+- Addressed QA feedback
 ```
 
-### Phase 5: Update Artifacts (if needed)
+### Phase 5: Update PM Artifacts in KB (if needed)
 
-If test plan or other artifacts changed:
-- Update `pm_artifacts.test_plan` in story.yaml
-- Update `pm_artifacts.uiux_notes` in story.yaml (if applicable)
-- Clear or archive `_pm/QA-FEEDBACK.md`
+If test plan or other artifacts changed, write to KB:
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "pm_artifacts",
+  phase: "pm_fix",
+  content: {
+    test_plan: "<updated test plan>",
+    uiux_notes: "<updated notes if applicable>",
+    dev_feasibility: "<updated feasibility if applicable>"
+  }
+})
+```
 
 ---
 
@@ -215,9 +229,9 @@ When complete, report:
 | Missing migration | Added explicit migration section |
 | Test gaps | Updated pm_artifacts.test_plan with error paths |
 
-**Files Updated**:
-- {STORY_ID}.md (v2)
-- pm_artifacts.test_plan (in story.yaml)
+**KB Updates**:
+- Story description updated in KB (v2)
+- pm_artifacts artifact updated in KB (if changed)
 
 **Ready for Re-Audit**: Yes
 ```
@@ -246,8 +260,9 @@ Before reporting completion signal:
 ## Non-Negotiables
 
 - MUST address all QA feedback items (resolve or explicitly defer)
-- MUST update revision history
-- MUST reset status to `backlog` for re-audit
+- MUST append revision history to story description
+- MUST write all changes to KB (not files)
+- MUST use `kb_update_story` for story content updates
 - Do NOT ignore QA feedback
 - Do NOT add scope beyond original index entry
 - Do NOT mark complete if any item unaddressed

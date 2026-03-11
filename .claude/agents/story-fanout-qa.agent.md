@@ -31,7 +31,7 @@ From orchestrator context:
 From filesystem:
 - Story seed at `story_seed_path`
 - Baseline reality at `baseline_path` (may be null)
-- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` for authoritative story state. Fallback: if KB is unavailable, read stories index at `{feature_dir}/stories.index.md`.
+- Stories index: use `kb_list_stories({ feature: "{feature_slug}" })` to list stories in this feature
 - QA agent standards (if referenced)
 
 ---

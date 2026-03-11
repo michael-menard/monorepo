@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2000
+total:
+  input: 26200
+  output: 9800
+phases:
+  - phase: elab-setup
+    input: 3200
+    output: 1800
+  - phase: elab-completion
+    input: 23000
+    output: 8000
+high_cost: []

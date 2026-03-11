@@ -1,0 +1,17 @@
+schema: 1
+story_id: "WKFL-003"
+feature_dir: "plans/future/workflow-learning"
+timestamp: "2026-02-07T20:00:00Z"
+
+current_phase: qa-complete
+last_successful_phase: qa-verify
+qa_verdict: PASS
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: true
+warnings:
+  - "Dependency WKFL-002 still in-progress - force-continued by user"
+
+completed_at: "2026-02-07T20:30:00Z"
+e2e_gate: exempt

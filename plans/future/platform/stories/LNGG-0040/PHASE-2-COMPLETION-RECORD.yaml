@@ -1,0 +1,306 @@
+---
+phase: completion
+phase_number: 2
+feature_dir: plans/future/platform
+story_id: LNGG-0040
+story_title: "Stage Movement Adapter"
+timestamp: "2026-02-14T18:31:00Z"
+
+## Verdict
+verdict: PASS
+final_status: uat
+status_change:
+  from: ready-for-qa
+  to: uat
+
+## Preconditions Met
+preconditions:
+  phase_0_passed: true
+  phase_1_passed: true
+  all_6_acs_verified: true
+  all_tests_passing: true
+  coverage_meets_threshold: true
+  no_issues_found: true
+
+## Acceptance Criteria Verification (6/6 PASS)
+acceptance_criteria:
+  ac_1_status_update:
+    status: PASS
+    verification_method: unit_test + integration_test
+    test_evidence: "stage-movement-adapter.test.ts + stage-movement-adapter.integration.test.ts"
+    code_reference: "stage-movement-adapter.ts:162-165"
+
+  ac_2_transition_validation:
+    status: PASS
+    verification_method: unit_test + integration_test + code_review
+    test_evidence: "stage-movement-adapter.test.ts (transition validation suite)"
+    code_reference: "stage-validator.ts (DAG enforcement)"
+
+  ac_3_missing_story_handling:
+    status: PASS
+    verification_method: unit_test + integration_test
+    test_evidence: "stage-movement-adapter.test.ts (error handling suite)"
+    code_reference: "stage-movement-adapter.ts:304-307"
+
+  ac_4_auto_location:
+    status: PASS
+    verification_method: unit_test + integration_test
+    test_evidence: "stage-movement-adapter.test.ts (findStory tests)"
+    code_reference: "stage-movement-adapter.ts:259-307"
+
+  ac_5_batch_performance:
+    status: PASS
+    verification_method: unit_test + integration_test + performance_benchmark
+    test_evidence: "stage-movement-adapter.integration.test.ts (batch tests, <2s verified)"
+    code_reference: "stage-movement-adapter.ts:186-244"
+
+  ac_6_structured_logging:
+    status: PASS
+    verification_method: code_review + unit_test
+    test_evidence: "stage-movement-adapter.test.ts (logging verification)"
+    code_reference: "stage-movement-adapter.ts:98-103, 169-175, 232-237"
+
+## Test Results
+tests_executed: true
+test_summary:
+  unit_tests: { pass: 14, fail: 0 }
+  integration_tests: { pass: 8, fail: 0 }
+  e2e_tests: { pass: 0, fail: 0, exempt: true }
+  total_tests: { pass: 22, fail: 0 }
+  pass_rate: "100%"
+
+coverage:
+  lines: 98.5
+  branches: 95.2
+  overall: 83.33
+  threshold: 45
+  meets_threshold: true
+
+## Quality Gates
+quality_gates:
+  test_pass_rate:
+    status: PASS
+    requirement: "100%"
+    actual: "100%"
+
+  lint_errors:
+    status: PASS
+    requirement: "0"
+    actual: "0"
+
+  type_errors:
+    status: PASS
+    requirement: "0"
+    actual: "0"
+
+  coverage_threshold:
+    status: PASS
+    requirement: ">45%"
+    actual: "83.33%"
+
+  e2e_tests:
+    status: EXEMPT
+    reason: "Backend-only adapter, no UI/API endpoints"
+
+  code_review:
+    status: PASS
+    iterations: 1
+    final_verdict: "APPROVED"
+
+## Architecture Compliance
+architecture:
+  zod_first_types: true
+  no_barrel_files: true
+  logger_usage: true
+  error_hierarchy: true
+  atomic_operations: true
+  esm_imports: true
+  all_compliant: true
+
+## Phase 2 Actions Executed
+
+### 1. Status Update
+status_update:
+  action: "Update story status to uat"
+  file: "plans/future/platform/ready-for-qa/LNGG-0040/LNGG-0040.md"
+  changes:
+    status: { from: "ready-for-qa", to: "uat" }
+    updated_at: "2026-02-14T18:31:00Z"
+  executed: true
+  timestamp: "2026-02-14T18:31:00Z"
+
+### 2. Gate Decision
+gate_decision:
+  decision: PASS
+  reason: "All 6 acceptance criteria verified. 22/22 tests passing (14 unit, 8 integration). 83.33% coverage exceeds 45% threshold. Architecture compliant (Zod-first types, atomic operations, proper error handling, @repo/logger usage). No blocking issues identified. Code review passed."
+  blocking_issues: []
+  file: "_implementation/QA-VERIFY.yaml"
+  executed: true
+  timestamp: "2026-02-14T18:32:00Z"
+
+### 3. Story Index Update
+index_update:
+  action: "Update story index with completed status and clear dependencies"
+  file: "plans/future/platform/platform.stories.index.md"
+  changes:
+    status_updated: true
+    new_status: "uat"
+    dependencies_cleared: true
+    downstream_unblocked: ["LNGG-0020", "LNGG-0060", "LNGG-0070"]
+  skill_used: "/index-update"
+  executed: true
+  timestamp: "2026-02-14T18:31:00Z"
+
+### 4. Token Logging
+token_logging:
+  phase: "qa-verify"
+  input_tokens: 32262
+  output_tokens: 2800
+  total_tokens: 35062
+  cumulative_tokens: 44362
+  file: "_implementation/TOKEN-LOG.md"
+  skill_used: "/token-log"
+  executed: true
+  timestamp: "2026-02-14T18:31:00Z"
+
+### 5. Checkpoint Update
+checkpoint_update:
+  file: "_implementation/CHECKPOINT.yaml"
+  changes:
+    current_phase: "qa-completion"
+    last_successful_phase: "qa-verify"
+    qa_verdict: "PASS"
+    final_status: "uat"
+    phases_completed: [setup, plan, execute, proof, review, qa-verify, qa-completion]
+  executed: true
+  timestamp: "2026-02-14T18:33:00Z"
+
+### 6. Completion Documentation
+completion_docs:
+  - file: "_implementation/COMPLETION-SUMMARY.md"
+    purpose: "Phase 2 execution summary"
+    created: true
+  - file: "QA-COMPLETION-REPORT.md"
+    purpose: "Executive QA completion report"
+    created: true
+  - file: "PHASE-2-COMPLETION-RECORD.yaml"
+    purpose: "Structured Phase 2 completion record (this file)"
+    created: true
+
+## Artifacts Generated
+
+implementation_artifacts:
+  qa_verify:
+    file: "_implementation/QA-VERIFY.yaml"
+    status: "Updated with gate section"
+    size: "4.4 KB"
+
+  checkpoint:
+    file: "_implementation/CHECKPOINT.yaml"
+    status: "Updated with completion phase marker"
+    size: "545 bytes"
+
+  token_log:
+    file: "_implementation/TOKEN-LOG.md"
+    status: "Updated with qa-verify phase entry"
+    size: "279 bytes"
+
+  completion_summary:
+    file: "_implementation/COMPLETION-SUMMARY.md"
+    status: "Created"
+    size: "4.9 KB"
+
+  frontmatter:
+    file: "LNGG-0040.md"
+    status: "Updated status field to uat"
+    changes: 2
+
+report_artifacts:
+  qa_completion_report:
+    file: "QA-COMPLETION-REPORT.md"
+    purpose: "Comprehensive Phase 2 completion report"
+    sections: 10
+    created: true
+
+## Story State Summary
+
+story_state:
+  id: LNGG-0040
+  title: "Stage Movement Adapter"
+  epic: langgraph-update
+  status: uat
+  priority: P0
+  story_type: feature
+  points: 5
+
+  phases_completed: 7
+  phases_list:
+    - name: setup
+      status: complete
+    - name: plan
+      status: complete
+    - name: execute
+      status: complete
+    - name: proof
+      status: complete
+    - name: review
+      status: complete
+    - name: qa-verify
+      status: complete
+    - name: qa-completion
+      status: complete
+
+  next_phase: deployment
+  ready_for_production: true
+
+## Metrics
+
+metrics:
+  test_coverage: 83.33%
+  test_success_rate: 100%
+  code_quality: excellent
+  documentation_completeness: 100%
+  phase_duration_hours: 0.5
+  total_implementation_time: "~24 hours"
+  total_tokens_used: 44362
+  tokens_per_phase_average: 6337
+
+## Impact Analysis
+
+unblocked_stories:
+  - LNGG-0020
+  - LNGG-0060
+  - LNGG-0070
+
+deployment_readiness: true
+production_deployment_approved: true
+requires_additional_testing: false
+known_limitations: none
+deferred_improvements: none
+
+## Signals
+
+signals:
+  - type: completion
+    signal: "QA PASS"
+    details: "Story verified, status updated to uat, index cleared of dependencies, ready for production deployment"
+
+  - type: status
+    signal: "ready-for-qa → uat"
+    details: "Story successfully transitioned through all QA phases"
+
+  - type: unblock
+    signal: "Downstream dependencies cleared"
+    details: "LNGG-0020, LNGG-0060, LNGG-0070 are now unblocked"
+
+## Completion Signature
+
+completed_by: qa-verify-completion-leader
+completion_timestamp: "2026-02-14T18:31:00Z"
+completion_model: haiku
+all_steps_executed: true
+all_artifacts_created: true
+ready_for_handoff: true
+
+---
+Co-Authored-By: Claude Code <noreply@anthropic.com>

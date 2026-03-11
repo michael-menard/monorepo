@@ -36,14 +36,13 @@ This seed provides the foundation for subsequent PM workers (Test Plan, UI/UX, D
 
 From orchestrator context:
 - `baseline_path`: Path to most recent active baseline reality file (e.g., `plans/baselines/BASELINE-REALITY-2026-01-31.md`)
-- `index_path`: Path to stories index file (e.g., `plans/stories/WISH.stories.index.md`)
 - `story_id`: Story ID being generated (e.g., `WISH-0500`)
 - `story_request`: Raw story entry from index (title, description, scope)
 - `output_dir`: Directory where story artifacts will be written
 
 From filesystem:
 - Baseline reality file at `baseline_path`
-- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` or `kb_list_stories` for authoritative story state. Fallback: stories index at `index_path`
+- Story data from `kb_get_story({ story_id: "{STORY_ID}" })` (KB lookup)
 - Plan documents referenced in index (PLAN.meta.md, PLAN.exec.md)
 
 ---
@@ -54,8 +53,7 @@ From filesystem:
 |-------|-----|-------------|
 | Baseline exists | File at `baseline_path` | WARN: Continue without baseline (log gap) |
 | Baseline is active | Frontmatter `status: active` | WARN: Continue with draft baseline (log gap) |
-| Index exists | File at `index_path` | STOP: "Index file not found" |
-| Story in index | Story entry exists for `story_id` | STOP: "Story not found in index" |
+| Story in KB | `kb_get_story({ story_id })` returns a result | STOP: "Story not found in KB" |
 
 **Note:** Missing or inactive baseline is a warning, not a blocker. The seed can still be generated but should flag the missing context.
 

@@ -1,0 +1,209 @@
+id: WKFL-006
+title: "Cross-Story Pattern Mining"
+status: ready-to-work
+priority: P1
+phase: analysis
+created_at: 2026-02-06T17:00:00-07:00
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies:
+  - WKFL-001
+blocks:
+  - WKFL-007
+  - WKFL-009
+  - WKFL-010
+
+owner: null
+estimated_tokens: 120000
+
+tags:
+  - analysis
+  - patterns
+  - mining
+  - kb-integration
+
+summary: |
+  Weekly job that mines patterns across all story outcomes to identify
+  recurring issues, anti-patterns, and successful approaches.
+
+goal: |
+  Create a pattern mining system that:
+  1. Analyzes all OUTCOME.yaml and VERIFICATION.yaml from last N days
+  2. Clusters similar findings across stories
+  3. Identifies file/path patterns that correlate with failures
+  4. Outputs distilled patterns for agent enhancement
+
+non_goals:
+  - Real-time pattern detection
+  - Cross-project patterns
+  - Semantic code analysis
+
+scope:
+  in:
+    - pattern-miner.agent.md (sonnet)
+    - /pattern-mine command (--days N, --all-epics, --trend flags)
+    - PATTERNS-{month}.yaml output
+    - ANTI-PATTERNS.md for team reference
+    - AGENT-HINTS.yaml for injection into prompts
+    - KB writes for significant patterns
+
+  out:
+    - Risk prediction (WKFL-007 uses this)
+    - KB compression (WKFL-009)
+    - Improvement proposals (WKFL-010 uses this)
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Analyze minimum 10 stories per mining run"
+    verification: "Run requires >= 10 OUTCOME.yaml files or skips with warning"
+
+  - id: AC-2
+    description: "Identify file/path patterns that correlate with failures"
+    verification: "PATTERNS-{month}.yaml has file_patterns section"
+
+  - id: AC-3
+    description: "Identify AC patterns that correlate with under-specification"
+    verification: "PATTERNS-{month}.yaml has ac_patterns section"
+
+  - id: AC-4
+    description: "Cluster similar findings using vector embedding similarity (cosine >= 0.85)"
+    verification: "PATTERNS-{month}.yaml has cluster_label and similarity scores per entry"
+
+  - id: AC-5
+    description: "Output actionable patterns; automatic injection into agent .md files"
+    verification: "AGENT-HINTS.yaml written and relevant hints appended to target agent files idempotently"
+
+  - id: AC-6
+    description: "ANTI-PATTERNS.md documents patterns to avoid"
+    verification: "File exists at .claude/patterns/YYYY-MM/ANTI-PATTERNS.md"
+
+  - id: AC-7
+    description: "/pattern-mine accepts --days N flag with default of 30"
+    verification: "--days 7 and --days 90 both work"
+
+  - id: AC-8
+    description: "All output files written to .claude/patterns/YYYY-MM/"
+    verification: "PATTERNS-{YYYY-MM}.yaml, AGENT-HINTS.yaml, ANTI-PATTERNS.md all present after run"
+
+  - id: AC-9
+    description: "Technical risks documented in pattern-miner.agent.md"
+    verification: "Agent risks section covers bootstrap, data path, and non-determinism"
+
+  - id: AC-10
+    description: "Complete subtask decomposition added during SETUP phase"
+    verification: "Subtasks section maps each AC to implementation steps"
+
+  - id: AC-11
+    description: "Cross-epic pattern mining via --all-epics flag"
+    verification: "PATTERNS-{month}.yaml includes epic field per pattern; traverses all epics under plans/future/platform/"
+
+  - id: AC-12
+    description: "Trend analysis across mining periods via --trend flag"
+    verification: "trend field (improving/regressing/stable) per pattern; warns if < 2 prior periods"
+
+  - id: AC-13
+    description: "Interactive dashboard rendering to index.html"
+    verification: "index.html written to .claude/patterns/YYYY-MM/ after each run; viewable in browser"
+
+  - id: AC-14
+    description: "Pattern confidence scoring"
+    verification: "Every pattern has confidence field (0.0-1.0); null for < 5 samples"
+
+  - id: AC-15
+    description: "Automatic AGENT-HINTS injection into agent .md files"
+    verification: "Post-run step appends hints idempotently; re-running does not duplicate"
+
+  - id: AC-16
+    description: "Cross-period deduplication of patterns"
+    verification: "Patterns matching previous month suppressed; logged to deduplicated_from_previous section"
+
+technical_notes: |
+  ## Pattern Types
+
+  1. **File Patterns**: Which files/paths correlate with failures
+     - "routes.ts files fail lint 78% of first reviews"
+     - "Components without __tests__ fail QA 65% of time"
+
+  2. **AC Patterns**: Which AC phrasings correlate with issues
+     - "ACs with 'should be intuitive' fail verification 80%"
+     - "ACs without explicit error handling fail 60%"
+
+  3. **Agent Correlation**: Which agent pairs often disagree
+     - "security + architecture disagree on validation 45%"
+
+  4. **Cycle Patterns**: What predicts multiple review cycles
+     - "Stories touching 5+ files average 2.8 cycles"
+
+  ## PATTERNS-{month}.yaml
+
+  ```yaml
+  mining_period:
+    start: 2026-02-01
+    end: 2026-02-28
+  stories_analyzed: 23
+
+  file_patterns:
+    - pattern: "**/routes.ts"
+      correlation: 0.78
+      finding_type: lint_failure
+      sample_size: 15
+      recommendation: "Add lint pre-check to backend-coder"
+
+    - pattern: "components without __tests__"
+      correlation: 0.65
+      finding_type: qa_failure
+      sample_size: 12
+      recommendation: "Require test directory in component creation"
+
+  ac_patterns:
+    - pattern: "intuitive|obvious|clear"
+      correlation: 0.80
+      finding_type: verification_failure
+      sample_size: 8
+      recommendation: "Flag vague ACs in elaboration"
+
+  agent_correlations:
+    - agents: [code-review-security, architect-story-review]
+      disagreement_rate: 0.45
+      topic: "validation approach"
+      sample_size: 11
+      recommendation: "Add cross-domain check for validation"
+
+  cycle_predictors:
+    - predictor: "files_touched > 5"
+      avg_cycles: 2.8
+      baseline_cycles: 1.8
+      sample_size: 9
+  ```
+
+  ## AGENT-HINTS.yaml
+
+  ```yaml
+  # Injected into agent prompts
+  hints:
+    code-review-lint:
+      - "routes.ts files frequently have import order issues"
+      - "Check for missing trailing commas in route handlers"
+
+    elab-analyst:
+      - "Flag ACs containing 'intuitive', 'obvious', 'clear'"
+      - "Stories touching >5 files likely need splitting"
+  ```
+
+reuse_plan:
+  must_reuse:
+    - OUTCOME.yaml from WKFL-001
+    - VERIFICATION.yaml from existing workflow
+    - KB tools for pattern storage
+
+  may_create:
+    - pattern-miner.agent.md
+    - /pattern-mine command
+    - PATTERNS-{month}.yaml schema
+    - AGENT-HINTS.yaml schema
+
+token_budget:
+  estimated: 120000
+  enforcement: warning

@@ -330,7 +330,7 @@ predictions:
 
 1. **Load predictions from story YAML**:
    ```javascript
-   const story_yaml = parseYaml(readFile(`{feature_dir}/in-progress/{story_id}/{story_id}.md`))
+   const story_yaml = parseYaml(readFile(`{feature_dir}/stories/{story_id}/{story_id}.md`))
    const predictions = story_yaml.predictions
    
    if (!predictions) {

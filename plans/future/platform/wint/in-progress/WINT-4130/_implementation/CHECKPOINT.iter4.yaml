@@ -1,0 +1,10 @@
+current_phase: qa-verify
+last_successful_phase: code_review
+iteration: 4
+blocked: true
+blocked_reason: >-
+  AC-1, AC-2, AC-3 FAIL due to environment pre-conditions: wint schema absent from dev PostgreSQL. Requires WINT-4030
+  and WINT-4050 to be applied before re-running.
+verdict: FAIL
+timestamp: '2026-03-09T20:30:00Z'
+verification_file: _implementation/VERIFICATION.iter1.yaml

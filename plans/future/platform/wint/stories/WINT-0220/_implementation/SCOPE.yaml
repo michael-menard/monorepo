@@ -1,0 +1,25 @@
+schema: 1
+story_id: WINT-0220
+timestamp: 2026-03-02T00:00:00Z
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/orchestrator/**"
+  - ".claude/agents/**"
+  - "packages/backend/orchestrator/src/artifacts/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: Define and validate the model-per-task strategy for agent assignment with Zod schema validation and coverage analysis
+elaboration: completed

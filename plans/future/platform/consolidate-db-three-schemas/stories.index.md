@@ -12,11 +12,11 @@
 
 | Phase | Status | Stories | Progress |
 |-------|--------|---------|----------|
-| 0: Infrastructure Foundation | Backlog | 2 | 0/2 (0%) |
-| 1: Schema DDL, Drizzle, and Code | In Progress | 5 | 1/5 (20%) |
+| 0: Infrastructure Foundation | In Progress | 2 | 2/2 (100%) |
+| 1: Schema DDL, Drizzle, and Code | Backlog | 5 | 0/5 (0%) |
 | 2: Graph Infrastructure | Backlog | 2 | 0/2 (0%) |
 | 3: Aurora Cleanup | Backlog | 2 | 0/2 (0%) |
-| **Total** | **In Progress** | **11** | **1/11 (9%)** |
+| **Total** | **In Progress** | **11** | **2/11 (18%)** |
 
 ## Schema Assignment
 
@@ -37,8 +37,8 @@ Establish migration runner, safety guardrails, ground-truth table inventory, and
 
 | ID | Title | Dependencies | Status | Resolves |
 |----|-------|--------------|--------|----------|
-| CDTS-0010 | Establish Migration Runner and Safety Preamble | None | Backlog | PLAT-001, PLAT-002 |
-| CDTS-0020 | Audit Actual Table Locations and Produce Migration Manifest | CDTS-0010 | Backlog | ENG-001, QA-001 |
+| CDTS-0010 | Establish Migration Runner and Safety Preamble | None | 👀 Needs Code Review | PLAT-001, PLAT-002 |
+| CDTS-0020 | Audit Actual Table Locations and Produce Migration Manifest | CDTS-0010 | 👀 Needs Code Review | ENG-001, QA-001 |
 
 ## Phase 1: Schema DDL, Drizzle, and Code
 
@@ -50,8 +50,8 @@ Create analytics schema, move wint tables, write structural DDL (header/detail s
 |----|-------|--------------|--------|----------|
 | CDTS-1010 | Create analytics Schema and Move wint Tables into Drizzle | CDTS-0020 | Backlog | ENG-002 |
 | CDTS-1020 | Write Structural DDL Migrations | CDTS-1010 | Backlog | QA-002 |
-| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | uat | ENG-003 |
-| CDTS-1040 | Update MCP Tool SQL | None | Backlog | ENG-003 |
+| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | Backlog | ENG-003 |
+| CDTS-1040 | Update MCP Tool SQL | CDTS-1030 | Backlog | ENG-003 |
 | CDTS-1050 | Apply Phase 1 Migrations and Verify | CDTS-1040 | Backlog | ENG-003, QA-001, QA-002, PLAT-001, PLAT-002 |
 
 ## Phase 2: Graph Infrastructure

@@ -1,0 +1,25 @@
+schema: 1
+story_id: APIP-4050
+timestamp: "2026-03-01T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+touched_paths_globs:
+  - packages/backend/**
+  - packages/core/**
+  - infra/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+summary: "Monthly cron detecting unexported functions, unused components, orphaned files, and unused package.json deps — generates cleanup stories with micro-verification"
+elaboration: "completed"

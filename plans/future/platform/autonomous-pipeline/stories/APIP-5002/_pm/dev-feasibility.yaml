@@ -1,0 +1,147 @@
+feasible: true
+confidence: high
+rationale: "All deliverables are new test infrastructure files isolated to packages/backend/orchestrator/e2e/. No modification of existing packages, no new AWS infrastructure, no database changes. Playwright is already in the monorepo for web tests. BullMQ and Redis client patterns are established. The primary risk is the synthetic ChangeSpec design for micro-verify passability — all other components follow known patterns."
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/e2e/ (new directory)"
+    - "packages/backend/orchestrator/ (package.json — add e2e script, possibly add @playwright/test devDependency)"
+  endpoints: []
+  deploy_touchpoints:
+    - "No deployment required — E2E suite runs against local Docker Compose stack"
+    - "CI pipeline may need a new job to run phase0 E2E after APIP-0010 and APIP-0020 merge"
+
+risks:
+  - finding: "Synthetic ChangeSpec must produce TypeScript-error-free, test-passing code change — LLM non-determinism makes this hard unless the ChangeSpec uses a pre-written literal diff"
+    mitigation: "Design the ChangeSpec to add a documented constant with a corresponding Vitest test to a non-critical utility file. The implementation graph applies it as a literal patch. Document this design in PIPELINE-E2E-TEST-PLAN.md before APIP-1030 is available."
+  - finding: "QA graph (APIP-1060) invokes Playwright as a subprocess — port/process conflicts if pipeline E2E and QA graph run concurrently"
+    mitigation: "Use distinct project name 'pipeline-e2e' in config; set workers:1 to prevent concurrent pipeline E2E runs; document that pipeline E2E must be serialized with QA graph executions."
+  - finding: "BullMQ QueueEvents.waitUntilFinished() requires a separate Redis connection for event subscription — fixture setup must open two Redis connections (Queue client + QueueEvents)"
+    mitigation: "In beforeAll, create both Queue and QueueEvents with separate connection configs from REDIS_URL env var. Close both in afterAll. This is standard BullMQ pattern — documented in BullMQ docs."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "packages/backend/orchestrator/e2e/playwright.config.ts exists and is valid TypeScript"
+  - "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts exports PipelineTestFixtures"
+  - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts exports SyntheticTestStorySchema and syntheticStory"
+  - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts exports all 5 assertion functions"
+  - "packages/backend/orchestrator/e2e/helpers/job-poller.ts exports PipelineJobPoller and PollTimeoutError"
+  - "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts exists"
+  - "packages/backend/orchestrator/e2e/tests/phase1-elaboration.spec.ts exists with skipIf guard"
+  - "packages/backend/orchestrator/e2e/tests/phase1-critical-path.spec.ts exists with skipIf guards"
+  - "packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md exists with all 5 required sections"
+  - "pnpm check-types passes on all new files"
+  - "No modifications to apps/web/playwright/"
+
+subtasks:
+  - id: ST-1
+    title: "Create Playwright E2E config for pipeline"
+    goal: "Establish packages/backend/orchestrator/e2e/playwright.config.ts with pipeline-specific settings"
+    files_to_read:
+      - "apps/web/playwright/playwright.config.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/playwright.config.ts (new)"
+      - "packages/backend/orchestrator/package.json (add e2e script)"
+    acs: ["AC-1"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: "Create PipelineJobPoller utility with exponential back-off"
+    goal: "Implement async BullMQ job state polling utility with configurable timeouts, exponential back-off, and PollTimeoutError"
+    files_to_read:
+      - "apps/api/lego-api/core/cache/redis-client.ts"
+      - "packages/backend/orchestrator/e2e/playwright.config.ts (from ST-1)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/helpers/job-poller.ts (new)"
+      - "packages/backend/orchestrator/e2e/helpers/__tests__/job-poller.test.ts (new)"
+    acs: ["AC-8"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Create E2E artifact assertion helpers"
+    goal: "Implement assertEvidenceArtifact, assertReviewArtifact, assertQaVerifyArtifact, assertMergeArtifact using canonical Zod schemas"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/evidence.ts"
+      - "packages/backend/orchestrator/src/artifacts/review.ts"
+      - "packages/backend/orchestrator/src/persistence/yaml-artifact-reader.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts (new)"
+      - "packages/backend/orchestrator/e2e/helpers/__tests__/artifact-assertions.test.ts (new)"
+    acs: ["AC-4"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 9000
+
+  - id: ST-4
+    title: "Design and create SyntheticTestStory fixture with trivially-passable ChangeSpec"
+    goal: "Create SyntheticTestStorySchema Zod schema and minimal pre-built story fixture that traverses the full pipeline without real LLM elaboration and passes micro-verify"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/evidence.ts"
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts (from ST-3)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts (new)"
+      - "packages/backend/orchestrator/e2e/fixtures/__tests__/synthetic-story.test.ts (new)"
+    acs: ["AC-3"]
+    depends_on: ST-3
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-5
+    title: "Create PipelineTestFixtures with test.extend() composition"
+    goal: "Implement pipeline.fixture.ts with queueClient, pipelineStateReader, and syntheticStory fixture injection following browser-auth.fixture.ts pattern"
+    files_to_read:
+      - "apps/web/playwright/fixtures/browser-auth.fixture.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts (from ST-4)"
+      - "packages/backend/orchestrator/e2e/helpers/job-poller.ts (from ST-2)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts (new)"
+    acs: ["AC-2", "AC-12"]
+    depends_on: ST-4
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 9000
+
+  - id: ST-6
+    title: "Write phase0-queue-supervisor E2E test spec"
+    goal: "Create phase0-queue-supervisor.spec.ts verifying BullMQ enqueue and supervisor dispatch"
+    files_to_read:
+      - "apps/web/playwright/tests/wishlist/drag-preview.spec.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts (from ST-5)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts (new)"
+    acs: ["AC-5", "AC-10", "AC-11"]
+    depends_on: ST-5
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-7
+    title: "Write phase1-elaboration and phase1-critical-path E2E test specs with skipIf guards"
+    goal: "Create phase1-elaboration.spec.ts and phase1-critical-path.spec.ts with programmatic skipIf guards tied to dependency graph availability"
+    files_to_read:
+      - "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts (from ST-6)"
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts (from ST-3)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/tests/phase1-elaboration.spec.ts (new)"
+      - "packages/backend/orchestrator/e2e/tests/phase1-critical-path.spec.ts (new)"
+    acs: ["AC-6", "AC-7", "AC-10", "AC-11"]
+    depends_on: ST-6
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-8
+    title: "Write PIPELINE-E2E-TEST-PLAN.md documentation"
+    goal: "Create comprehensive E2E test plan document covering synthetic story design, dependency mapping, port isolation, env vars, and phased activation"
+    files_to_read:
+      - "packages/backend/orchestrator/e2e/playwright.config.ts (from ST-1)"
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts (from ST-4)"
+      - "packages/backend/orchestrator/e2e/tests/ (from ST-6, ST-7)"
+    files_to_modify:
+      - "packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md (new)"
+    acs: ["AC-9"]
+    depends_on: ST-7
+    verification: "File exists and contains all 5 required sections"
+    estimated_tokens: 8000

@@ -28,8 +28,9 @@ Creates a standardized context file that subsequent phases can read to understan
 
 ## Output Location
 
+<!-- KSOT-3010: Flat stories/ layout — no stage-based directories -->
 ```
-plans/stories/{STAGE}/{STORY-ID}/_implementation/AGENT-CONTEXT.md
+plans/stories/{STORY-ID}/_implementation/AGENT-CONTEXT.md
 ```
 
 Or if `--path` provided:
@@ -46,10 +47,11 @@ command: {COMMAND-NAME}
 created: {ISO-TIMESTAMP}
 
 paths:
-  base: plans/stories/{STAGE}/{STORY-ID}/
-  story_file: plans/stories/{STAGE}/{STORY-ID}/{STORY-ID}.md
-  artifacts: plans/stories/{STAGE}/{STORY-ID}/_implementation/
-  pm: plans/stories/{STAGE}/{STORY-ID}/_pm/
+  # KSOT-3010: flat stories/ layout — stage comes from KB, not directory
+  base: plans/stories/{STORY-ID}/
+  story_file: plans/stories/{STORY-ID}/{STORY-ID}.md
+  artifacts: plans/stories/{STORY-ID}/_implementation/
+  pm: plans/stories/{STORY-ID}/_pm/
 
 status:
   current_phase: setup
@@ -60,10 +62,11 @@ status:
 
 ### 1. Locate Story
 
-**KB-first (KSOT Phase 2)**: Call `kb_get_story({storyId: STORY_ID})` to get the story's current state. Use the state to determine which stage directory the story should be in. If KB is unavailable, fall back to directory scan.
+**KB-first (KSOT Phase 2)**: Call `kb_get_story({storyId: STORY_ID})` to get the story's current state. If KB is unavailable, fall back to directory scan.
 
-**Directory fallback**: Search stage directories for `{STORY-ID}/`:
-- backlog, elaboration, ready-to-work, in-progress, QA, UAT
+<!-- KSOT-3010: Flat stories/ layout — no stage-based directories to scan -->
+**Directory fallback**: Search for `{STORY-ID}/` in the flat stories directory:
+- `{FEATURE_DIR}/stories/{STORY-ID}/` (or `plans/stories/{STORY-ID}/` for plan-scoped stories)
 
 If not found via KB or directory and no `--path`: `INIT FAILED: Story not found`
 
@@ -99,15 +102,16 @@ mode: created | updated | resumed
 
 ### For `/dev-implement-story`
 
+<!-- KSOT-3010: flat stories/ layout for all commands -->
 ```yaml
 schema: 1
 story_id: WRKF-1021
 command: dev-implement-story
 
 paths:
-  base: plans/stories/in-progress/WRKF-1021/
-  story_file: plans/stories/in-progress/WRKF-1021/WRKF-1021.md
-  artifacts: plans/stories/in-progress/WRKF-1021/_implementation/
+  base: plans/stories/WRKF-1021/
+  story_file: plans/stories/WRKF-1021/WRKF-1021.md
+  artifacts: plans/stories/WRKF-1021/_implementation/
 
 status:
   current_phase: setup
@@ -122,10 +126,10 @@ story_id: WRKF-1021
 command: elab-story
 
 paths:
-  base: plans/stories/elaboration/WRKF-1021/
-  story_file: plans/stories/elaboration/WRKF-1021/WRKF-1021.md
-  artifacts: plans/stories/elaboration/WRKF-1021/_implementation/
-  elab_yaml: plans/stories/elaboration/WRKF-1021/_implementation/ELAB.yaml
+  base: plans/stories/WRKF-1021/
+  story_file: plans/stories/WRKF-1021/WRKF-1021.md
+  artifacts: plans/stories/WRKF-1021/_implementation/
+  elab_yaml: plans/stories/WRKF-1021/_implementation/ELAB.yaml
 
 status:
   current_phase: setup
@@ -140,10 +144,10 @@ story_id: WRKF-1021
 command: qa-verify-story
 
 paths:
-  base: plans/stories/QA/WRKF-1021/
-  story_file: plans/stories/QA/WRKF-1021/WRKF-1021.md
-  artifacts: plans/stories/QA/WRKF-1021/_implementation/
-  verification_file: plans/stories/QA/WRKF-1021/_implementation/VERIFICATION.yaml
+  base: plans/stories/WRKF-1021/
+  story_file: plans/stories/WRKF-1021/WRKF-1021.md
+  artifacts: plans/stories/WRKF-1021/_implementation/
+  verification_file: plans/stories/WRKF-1021/_implementation/VERIFICATION.yaml
 
 status:
   current_phase: setup

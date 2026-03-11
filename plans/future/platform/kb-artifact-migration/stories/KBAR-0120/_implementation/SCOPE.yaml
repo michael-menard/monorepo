@@ -1,0 +1,25 @@
+---
+schema: 1
+story_id: KBAR-0120
+timestamp: "2026-02-24T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - apps/api/knowledge-base/src/mcp-server/__tests__/**
+  - apps/api/knowledge-base/src/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: "Write comprehensive unit tests for 4 artifact MCP tool handlers (write, read, list, delete)"
+elaboration: "completed"

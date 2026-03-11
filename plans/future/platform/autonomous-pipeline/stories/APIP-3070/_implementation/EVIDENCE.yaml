@@ -1,0 +1,191 @@
+story_id: "APIP-3070"
+phase: "implementation"
+iteration: 1
+timestamp: "2026-02-28T20:57:00Z"
+status: "COMPLETE"
+
+summary: >
+  Cold-start bootstrapping and exploration budget implemented for PipelineModelRouter.
+  Extended model-router.ts with 4-tier routing (when hasAnyQualifyingProfile is configured),
+  created affinity-seeder.ts for manual seed import, and wrote 21 new unit tests.
+  All 76 pipeline tests pass (11 new cold-start + 10 new affinity-seeder + 55 existing).
+
+test_results:
+  cold_start_tests:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/model-router-cold-start.test.ts"
+    passed: 11
+    failed: 0
+  affinity_seeder_tests:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/affinity-seeder.test.ts"
+    passed: 10
+    failed: 0
+  regression_model_router:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+    passed: 22
+    failed: 0
+  regression_escalation:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/escalation-integration.test.ts"
+    passed: 11
+    failed: 0
+  regression_budget:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts"
+    passed: 11
+    failed: 0
+  regression_token_bucket:
+    file: "packages/backend/orchestrator/src/pipeline/__tests__/token-bucket.test.ts"
+    passed: 11
+    failed: 0
+  total: 76
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    status: "PASS"
+    evidence: >
+      PipelineModelRouterConfigSchema extended with 5 new fields:
+      conservativeOpenRouterModel (default: 'openrouter/anthropic/claude-3-haiku'),
+      explorationBudgetFraction (default: 0.1), explorationMinSuccessRateFloor (default: 0.3),
+      manualSeedEnabled (default: false), randomFn (optional).
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-2"
+    status: "PASS"
+    evidence: >
+      Cold-start detection implemented in _dispatchFourTier(). When hasAnyQualifyingProfile()
+      returns false, dispatch skips tiers 2 and 3, routes directly to tier 4 (conservative OpenRouter).
+      Flag is lazily evaluated and cached in _hasAnyHighConfidenceProfile.
+      UT-1 and UT-2 confirm behavior.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-3"
+    status: "PASS"
+    evidence: >
+      Tier 2 confidence gate in _dispatchFourTier(): profile qualifies only when
+      confidence_level IN ('medium', 'high') AND sample_size >= affinityMinSampleSize.
+      'none' and 'low' confidence profiles fall through to tier 3/4.
+      UT-4 (medium passes), UT-7 (low rejected) confirm behavior.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-4"
+    status: "PASS"
+    evidence: >
+      _tryExplorationSlot() implements 10% exploration. randomFn() < explorationBudgetFraction
+      triggers Ollama routing. Skip conditions: (a) success_rate < floor AND sample_size > 0,
+      (b) Ollama unavailable. explorationBudgetFraction=0 disables, =1.0 always routes.
+      sample_size=0 always allows exploration.
+      UT-8, UT-9, UT-10, UT-12 confirm behavior.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-5"
+    status: "PASS"
+    evidence: >
+      importAffinitySeeds() standalone function in affinity-seeder.ts.
+      Takes (seeds, db), upserts to wint.model_affinity using ON CONFLICT pattern.
+      Returns { seeded, skipped, errors }.
+      UT-11 tests cover all scenarios including mixed success/failure.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/affinity-seeder.ts"
+
+  - ac_id: "AC-6"
+    status: "PASS"
+    evidence: >
+      deriveConfidenceLevel() function derives confidence_level from sample_size using
+      CONFIDENCE_THRESHOLDS: none (0-4), low (5-9), medium (10-19), high (20+).
+      importAffinitySeeds uses it when confidence_level not explicitly provided.
+      UT-6 tests all 4 threshold ranges. UT-11 tests derivation in seed import.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/affinity-seeder.ts"
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-7"
+    status: "PASS"
+    evidence: >
+      Cold-start routing logs: { source: 'cold_start', model, provider: 'openrouter',
+      change_type, file_type, reason: 'no_qualifying_profiles' }.
+      Exploration slot logs: { source: 'exploration', model, provider: 'ollama',
+      change_type, file_type, exploration_fraction }.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-8"
+    status: "PASS"
+    evidence: >
+      invalidateAffinityCache() resets both affinityCache (Map.clear()) AND
+      _hasAnyHighConfidenceProfile = null.
+      UT-3 confirms flag is re-evaluated after invalidation.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+  - ac_id: "AC-9"
+    status: "PASS"
+    evidence: >
+      21 unit tests written:
+      - model-router-cold-start.test.ts: 11 tests (UT-1 through UT-4, UT-7 through UT-10, UT-12, backward compat)
+      - affinity-seeder.test.ts: 10 tests (UT-6, UT-11)
+      All 21 tests pass.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/__tests__/model-router-cold-start.test.ts"
+      - "packages/backend/orchestrator/src/pipeline/__tests__/affinity-seeder.test.ts"
+
+  - ac_id: "AC-10"
+    status: "DEFERRED"
+    evidence: >
+      Integration tests (real PostgreSQL) deferred per story specification.
+      No test database available in this environment.
+      Story explicitly marked AC-10 as deferred.
+
+  - ac_id: "AC-11"
+    status: "PASS"
+    evidence: >
+      All existing tests pass unchanged:
+      - model-router.test.ts: 22/22 pass
+      - escalation-integration.test.ts: 11/11 pass
+      - budget-accumulator.test.ts: 11/11 pass
+      - token-bucket.test.ts: 11/11 pass
+      Backward compat maintained via 3-mode routing (four-tier, three-tier-affinity, legacy).
+    files:
+      - "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+
+  - ac_id: "AC-12"
+    status: "PASS"
+    evidence: >
+      ManualAffinitySeedEntrySchema exported from affinity-seeder.ts with all required fields:
+      model, change_type, file_type, success_rate, sample_size, confidence_level (optional).
+    files:
+      - "packages/backend/orchestrator/src/pipeline/affinity-seeder.ts"
+
+  - ac_id: "AC-13"
+    status: "PASS"
+    evidence: >
+      SeedImportResultSchema and SeedImportErrorSchema exported from affinity-seeder.ts.
+      SeedImportResult: { seeded, skipped, errors }.
+      SeedImportError: { entry, reason }.
+    files:
+      - "packages/backend/orchestrator/src/pipeline/affinity-seeder.ts"
+
+files_created:
+  - "packages/backend/orchestrator/src/pipeline/affinity-seeder.ts"
+  - "packages/backend/orchestrator/src/pipeline/__tests__/model-router-cold-start.test.ts"
+  - "packages/backend/orchestrator/src/pipeline/__tests__/affinity-seeder.test.ts"
+
+files_modified:
+  - "packages/backend/orchestrator/src/pipeline/model-router.ts"
+
+notes:
+  - >
+    3-mode routing design: The router detects which mode to use at dispatch time:
+    (1) four-tier mode when affinityReader + hasAnyQualifyingProfile both configured,
+    (2) three-tier-affinity mode when only affinityReader configured (APIP-3040 compat),
+    (3) legacy escalation mode when no affinityReader (APIP-0040 compat).
+    This preserves full backward compatibility with all existing tests.
+  - >
+    CONFIDENCE_THRESHOLDS exported from model-router.ts (not pattern-miner.ts as originally noted
+    in story — pattern-miner.ts does not export this constant).
+  - >
+    Pre-existing type errors in @repo/database-schema and @repo/mcp-tools are unrelated to
+    APIP-3070 changes and were present before this implementation.
+  - >
+    E2E tests: Not applicable for this story (story_type: infra — backend routing logic only).

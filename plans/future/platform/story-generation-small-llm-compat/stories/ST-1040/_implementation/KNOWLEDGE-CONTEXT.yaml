@@ -1,0 +1,37 @@
+schema: 1
+story_id: "ST-1040"
+timestamp: "2026-03-05T04:36:00Z"
+
+context_summary:
+  story_type: docs-only
+  changes: agent documentation
+  files_modified: 2
+
+modified_files:
+  - path: ".claude/agents/pm-story-generation-leader.agent.md"
+    type: documentation
+    version: 4.4.0
+    changes:
+      - "Added Goal/Examples/Edge Cases enforcement to Phase 4 synthesis"
+      - "Added three quality gate rows (SHOULD level)"
+      - "Positioned before Canonical References section"
+
+  - path: ".claude/agents/_reference/patterns/pm-spawn-patterns.md"
+    type: reference
+    changes:
+      - "Updated Story File Structure list"
+      - "Inserted Goal (item 4), Examples (item 5), Edge Cases (item 6)"
+      - "Renumbered subsequent items from 5-17 to 7-19"
+
+acceptance_criteria_summary:
+  total_acs: 1
+  passing_acs: 1
+  failing_acs: 0
+
+evidence_notes:
+  - "All ACs covered by file edits and grep verifications"
+  - "Goal/Examples/Edge Cases sections now required in generated stories"
+  - "Quality gates table includes SHOULD-level enforcement"
+  - "No E2E tests required (docs-only story type)"
+
+verification_ready: true

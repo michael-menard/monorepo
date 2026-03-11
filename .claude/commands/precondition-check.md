@@ -16,17 +16,15 @@ Validate preconditions before starting a workflow phase.
 |----------|----------|-------------|
 | `STORY-ID` | Yes | Story identifier (e.g., STORY-007, WRKF-1020) |
 | `--command=X` | Yes | The command to validate preconditions for |
-| `--status=X` | No | Required story status |
+| `--status=X` | No | Required story status (checked against KB state) |
 | `--requires=FILE1,FILE2` | No | Required artifact files |
-| `--in-stage=X` | No | Required stage directory |
 
 ## Purpose
 
 Standardized precondition checking for all setup leaders. Ensures:
-- Story exists
-- Story is in correct status
+- Story exists in KB
+- Story is in correct KB state
 - Required artifacts are present
-- Story is in expected stage directory
 
 Returns structured pass/fail with specific failure reasons.
 
@@ -41,12 +39,11 @@ verdict: PASS
 checks:
   story_exists: true
   status_valid: true
-  stage_correct: true
   artifacts_present: true
 details:
-  story_path: plans/stories/{STAGE}/{STORY-ID}/{STORY-ID}.md
+  story_path: {FEATURE_DIR}/stories/{STORY-ID}/{STORY-ID}.md
   current_status: {STATUS}
-  current_stage: {STAGE}
+  kb_state: {KB_STATE}
 ```
 
 ### Check Fails
@@ -58,13 +55,12 @@ verdict: FAIL
 checks:
   story_exists: true
   status_valid: false
-  stage_correct: true
   artifacts_present: false
 failures:
   - check: status_valid
     expected: ready-to-work
     actual: backlog
-    message: "Story status must be ready-to-work"
+    message: "Story KB state must be ready (ready-to-work)"
   - check: artifacts_present
     missing:
       - _implementation/ELAB.yaml
@@ -78,65 +74,53 @@ failures:
 ```yaml
 --command=dev-implement-story
 --status=ready-to-work
---in-stage=ready-to-work
 --requires=_implementation/ELAB.yaml
 ```
 
 Checks:
-1. Story file exists
-2. Status is `ready-to-work`
-3. In `ready-to-work/` directory
-4. ELAB.yaml exists with `verdict: PASS` or `CONDITIONAL_PASS`
+1. Story exists in KB with state `ready`
+2. ELAB.yaml exists with `verdict: PASS` or `CONDITIONAL_PASS`
 
 ### `/elab-story`
 
 ```yaml
 --command=elab-story
 --status=backlog,generated
---in-stage=backlog
 ```
 
 Checks:
-1. Story file exists
-2. Status is `backlog` or `generated`
-3. In `backlog/` directory
+1. Story exists in KB with state `backlog`
 
 ### `/qa-verify-story`
 
 ```yaml
 --command=qa-verify-story
 --status=ready-for-qa
---in-stage=in-progress
 --requires=_implementation/VERIFICATION.yaml
 ```
 
 Checks:
-1. Story file exists
-2. Status is `ready-for-qa`
-3. In `in-progress/` directory
-4. VERIFICATION.yaml exists with code_review.verdict: PASS
+1. Story exists in KB with state `ready_for_qa`
+2. VERIFICATION.yaml exists with code_review.verdict: PASS
 
 ### `/dev-code-review`
 
 ```yaml
 --command=dev-code-review
 --status=in-progress
---in-stage=in-progress
 ```
 
 Checks:
-1. Story file exists
-2. Status is `in-progress`
+1. Story exists in KB with state `in_progress`
 
 ### `/ui-ux-review`
 
 ```yaml
 --command=ui-ux-review
---in-stage=in-progress,QA
 ```
 
 Checks:
-1. Story file exists
+1. Story exists in KB
 2. Story touches UI (check scope)
 
 ### `/pm-generate-story`
@@ -154,35 +138,24 @@ Checks:
 
 ### 1. Find Story
 
-**KB-first (KSOT Phase 2)**: Call `kb_get_story({storyId: STORY_ID})` to get authoritative state. If the KB returns a result, use its `state` field to derive the current stage. If KB is unavailable or returns null, fall back to directory scan.
+**KB-first**: Call `kb_get_story({storyId: STORY_ID})` to get authoritative state. If KB is unavailable or returns null, fall back to directory scan.
 
-**Directory fallback**: Search all stage directories for `{STORY-ID}/`.
+**Directory fallback**: Search for `{STORY-ID}/` in flat stories directory: `{FEATURE_DIR}/stories/{STORY_ID}/`
 
 If not found via KB or directory: `FAIL: Story not found`
 
-### 2. Check Stage (if --in-stage)
+### 2. Check Status (if --status)
 
-Verify story is in expected stage directory.
-
-```yaml
-# If --in-stage=in-progress but found in backlog/
-FAIL: Story in wrong stage
-expected: in-progress
-actual: backlog
-```
-
-### 3. Check Status (if --status)
-
-If KB returned a result in Step 1, use its `state` field (mapped to display label) for status comparison. Otherwise, read frontmatter and verify status matches.
+Use the KB `state` field (mapped to display label) from Step 1 for status comparison. KB is **required** — if KB lookup failed in Step 1, FAIL the precondition check with "KB unavailable for story state". Do NOT fall back to frontmatter status.
 
 ```yaml
-# If --status=ready-to-work but status is backlog
+# If --status=ready-to-work but KB state is backlog
 FAIL: Invalid status
-expected: ready-to-work
-actual: backlog
+expected: ready-to-work (KB state: ready)
+actual: backlog (KB state: backlog)
 ```
 
-### 4. Check Artifacts (if --requires)
+### 3. Check Artifacts (if --requires)
 
 For each required file, check existence:
 - `{STORY-ID}.md` → `{base}/{STORY-ID}.md`
@@ -190,7 +163,7 @@ For each required file, check existence:
 - `_implementation/X` → `{base}/_implementation/X`
 - `_pm/X` → `{base}/_pm/X`
 
-### 5. Custom Checks (command-specific)
+### 4. Custom Checks (command-specific)
 
 Some commands need additional checks:
 
@@ -206,7 +179,7 @@ Some commands need additional checks:
 - Scan story scope for UI indicators
 - Return SKIPPED verdict if no UI
 
-### 6. Return Result
+### 5. Return Result
 
 Structured YAML (see Output Format above).
 
@@ -237,8 +210,7 @@ Called at start of every setup leader:
 
 # Check elaboration preconditions
 /precondition-check WRKF-1021 --command=elab-story \
-  --status=backlog \
-  --in-stage=backlog
+  --status=backlog
 ```
 
 ## Error Handling

@@ -1,0 +1,57 @@
+schema: 1
+story_id: APIP-1060
+iteration: 0
+verdict: FAIL
+workers_run:
+  - typecheck
+  - build
+  - lint
+  - security
+  - typescript
+  - style
+workers_skipped:
+  - react
+  - accessibility
+  - reusability
+  - syntax
+total_errors: 3
+total_warnings: 7
+auto_fixable_count: 2
+blocking_issues:
+  - id: TS-001
+    file: packages/backend/orchestrator/src/graphs/qa.ts
+    line: 247
+    severity: error
+    description: ModelClient uses TypeScript interface instead of Zod schema — CLAUDE.md violation
+  - id: TS-002
+    file: packages/backend/orchestrator/src/graphs/qa.ts
+    line: 334
+    severity: error
+    description: NodeFactory type alias uses 'any' — should use typed function signature
+  - id: SEC-001
+    file: packages/backend/orchestrator/src/graphs/qa.ts
+    severity: high
+    description: >-
+      Config values (testFilter, playwrightConfig, playwrightProject) passed to spawn() without regex validation in
+      schema
+accepted_findings:
+  - id: SEC-002
+    severity: medium
+    description: Prompt injection in AC verification — mitigated by anti-hallucination instruction and trusted AC source
+  - id: SEC-003
+    severity: medium
+    description: Path traversal via storyId — mitigated by orchestrator control of config
+  - id: SEC-004
+    severity: medium
+    description: Full env var inheritance in subprocesses — intentional per story design
+  - id: SEC-005
+    severity: medium
+    description: Model response string fields unbounded — trusted provider (Claude)
+  - id: SEC-006
+    severity: low
+    description: Error message detail in logs — acceptable for diagnostic logging
+  - id: STY-001
+    severity: medium
+    description: >-
+      Line width violations in gate-decision.ts import and verify-acs.ts prompt — prompt is a long string constant,
+      import can be fixed

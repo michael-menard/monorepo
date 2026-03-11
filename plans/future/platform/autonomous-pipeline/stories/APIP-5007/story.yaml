@@ -1,0 +1,19 @@
+id: "APIP-5007"
+title: "Database Schema Versioning and Migration Strategy"
+status: ready-to-work
+priority: medium
+phase: 0
+feature: "Define database schema versioning strategy, Alembic migration framework, and checkpoint schema integration with Aurora; document design decisions"
+goal: "Establish clear schema evolution path for checkpoint storage and work queue table changes; ensure safe migrations in production."
+depends_on:
+  - "APIP-0010"
+endpoints: []
+infrastructure:
+  - "Alembic schema migration framework"
+  - "Version control for schema changes"
+  - "Checkpoint schema design documentation"
+  - "Aurora integration and rollback procedures"
+risk_notes: "Migration reversibility under data load; ensuring zero-downtime migrations."
+sizing_warning: false
+created: "2026-02-25T14:30:00Z"
+source: "Epic Elaboration - Platform perspective"

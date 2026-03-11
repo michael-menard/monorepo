@@ -1,0 +1,14 @@
+id: "APIP-3080"
+title: "Parallel Story Concurrency (2-3 Worktrees)"
+status: in-qa
+priority: medium
+phase: 3
+feature: "Extend supervisor to dispatch 2-3 stories in parallel, each in an isolated git worktree, with rate limiting to prevent provider API throttling and file-lock coordination to prevent conflicts"
+goal: "Increase pipeline throughput by processing multiple stories simultaneously without sacrificing isolation or correctness."
+depends_on: ["APIP-0020", "APIP-0040"]
+endpoints: []
+infrastructure:
+  - "Git worktree isolation per concurrent story"
+risk_notes: "Git conflict risk if concurrent stories touch the same files; start with concurrency=1 and increment; provider rate limits must be respected across concurrent workers."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

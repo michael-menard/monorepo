@@ -241,7 +241,11 @@ export async function kb_promote_task(
   const { db } = deps
 
   // Fetch the task
-  const taskResults = await db.select(taskColumns).from(tasks).where(eq(tasks.id, validated.task_id)).limit(1)
+  const taskResults = await db
+    .select(taskColumns)
+    .from(tasks)
+    .where(eq(tasks.id, validated.task_id))
+    .limit(1)
 
   const task = taskResults[0]
 

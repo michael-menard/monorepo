@@ -1,0 +1,162 @@
+id: WKFL-004
+title: "Human Feedback Capture"
+status: completed
+priority: P0
+phase: foundation
+created_at: 2026-02-06T17:00:00-07:00
+updated_at: 2026-02-07T17:31:00Z
+completed_at: 2026-02-07T17:31:00Z
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies: []
+blocks:
+  - WKFL-002
+  - WKFL-003
+
+owner: null
+estimated_tokens: 30000
+
+tags:
+  - foundation
+  - feedback
+  - kb-integration
+  - command
+
+summary: |
+  Add /feedback command to capture explicit human judgment on agent findings,
+  enabling calibration and heuristic improvement based on real corrections.
+
+goal: |
+  Create a feedback loop where humans can:
+  1. Mark findings as false positives
+  2. Mark findings as genuinely helpful
+  3. Add context for why decisions were overridden
+  4. Build training data for calibration and heuristics
+
+non_goals:
+  - Auto-adjust thresholds (WKFL-002/003 use this data)
+  - Interactive feedback during workflow (post-hoc only)
+  - Complex sentiment analysis
+
+scope:
+  in:
+    - /feedback command with subcommands
+    - KB schema for feedback entries
+    - Integration with finding IDs from VERIFICATION.yaml
+    - Feedback aggregation queries
+    - Optional: prompt after gate decisions
+
+  out:
+    - Calibration calculation (WKFL-002)
+    - Heuristic evolution (WKFL-003)
+    - Real-time feedback during phases
+
+acceptance_criteria:
+  - id: AC-1
+    description: "/feedback {FINDING-ID} --false-positive 'reason' captures to KB"
+    verification: "Run command, query KB with tags: ['feedback'], verify entry exists with correct metadata"
+
+  - id: AC-2
+    description: "/feedback {FINDING-ID} --helpful 'note' captures to KB"
+    verification: "Run command, verify entry has feedback_type: helpful"
+
+  - id: AC-3
+    description: "Feedback linked to agent, story, and finding"
+    verification: "Query KB entry, verify agent_id, story_id, finding_id fields populated"
+
+  - id: AC-4
+    description: "Queryable via kb_search with feedback tags"
+    verification: "kb_search({query: 'false positive security', tags: ['feedback']}) returns results"
+
+  - id: AC-5
+    description: "Multiple feedback types supported"
+    verification: "Test --false-positive, --helpful, --missing, --severity-wrong flags"
+
+technical_notes: |
+  ## Command Structure
+
+  ```bash
+  # Mark as false positive
+  /feedback SEC-042 --false-positive "This is intentional behavior for admin users"
+
+  # Mark as helpful
+  /feedback ARCH-015 --helpful "Good catch, would have missed this boundary issue"
+
+  # Mark as missing something
+  /feedback QA-001 --missing "Should also check empty array case"
+
+  # Mark severity as wrong
+  /feedback SEC-003 --severity-wrong "Should be medium, not high - defense in depth exists"
+  ```
+
+  ## KB Schema
+
+  ```yaml
+  type: feedback
+  finding_id: SEC-042
+  agent_id: code-review-security
+  story_id: WISH-2045
+  feedback_type: false_positive | helpful | missing | severity_wrong
+  original_severity: high
+  suggested_severity: medium  # if severity_wrong
+  note: "This is intentional behavior for admin users"
+  created_at: 2026-02-06T15:30:00Z
+  tags:
+    - feedback
+    - agent:code-review-security
+    - story:WISH-2045
+    - type:false_positive
+    - date:2026-02
+  ```
+
+  ## Finding ID Resolution
+
+  Finding IDs come from VERIFICATION.yaml:
+
+  ```yaml
+  findings:
+    - id: SEC-042  # This is the finding_id
+      agent: code-review-security
+      severity: high
+      description: "No Zod validation on request body"
+  ```
+
+  The command should:
+  1. Parse finding ID from VERIFICATION.yaml
+  2. Extract agent, story, severity
+  3. Create KB entry with full context
+  4. Confirm to user
+
+  ## Optional: Post-Gate Prompt
+
+  After /qa-gate, optionally prompt:
+
+  ```
+  Gate complete. Any feedback on findings?
+
+  [SEC-042] No Zod validation (high) - false positive? helpful?
+  [ARCH-015] API boundary issue (medium) - false positive? helpful?
+
+  Type finding ID to give feedback, or press Enter to skip.
+  ```
+
+reuse_plan:
+  must_reuse:
+    - KB tools (kb_add)
+    - Command file patterns from existing commands
+
+  may_create:
+    - /feedback command
+    - Feedback KB schema
+
+local_testing:
+  - Create test VERIFICATION.yaml with findings
+  - Run /feedback commands
+  - Query KB to verify entries
+  - Test all feedback types
+
+token_budget:
+  estimated: 30000
+  enforcement: warning

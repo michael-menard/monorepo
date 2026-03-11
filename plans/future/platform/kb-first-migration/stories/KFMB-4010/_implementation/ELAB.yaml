@@ -1,0 +1,409 @@
+elab_version: "1.0"
+story_id: "KFMB-4010"
+title: "Stage Directory Elimination — story-move and story-update Commands"
+analyst: "elab-analyst"
+date: "2026-02-26"
+preliminary_verdict: "PASS"
+
+# ============================================================================
+# SOURCE ARTIFACTS INSPECTED
+# ============================================================================
+#
+# Files read during this audit:
+#   plans/future/platform/kb-first-migration/elaboration/KFMB-4010/KFMB-4010.md
+#   plans/future/platform/kb-first-migration/stories.index.md
+#   plans/future/platform/kb-first-migration/elaboration/KFMB-4010/_pm/STORY-SEED.md
+#   plans/future/platform/kb-first-migration/backlog/KFMB-3020/KFMB-3020.md (partial)
+#   plans/future/platform/kb-first-migration/elaboration/KFMB-3010/KFMB-3010.md (partial)
+#   .claude/commands/story-move.md (v2.1.0 — before state)
+#   .claude/commands/story-update.md (v3.0.0 — before state)
+#   packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts
+#   plans/future/platform/kb-first-migration/ready-to-work/KFMB-1010/_implementation/ELAB.yaml (format reference)
+#
+# Key findings from source inspection:
+#   story-move.md v2.1.0 — confirmed: shimGetStoryStatus → directory fallback → shimUpdateStoryStatus
+#     (non-blocking) → mv (primary) structure. db_updated field present. from_path/to_path fields present.
+#   story-update.md v3.0.0 — confirmed: locate via directory scan → worktree cleanup → shimUpdateStoryStatus
+#     (step 3a, non-blocking) → frontmatter write (step 3b, primary) → stories.index.md (step 4) → result.
+#     file_updated and db_updated fields present. index_updated field present.
+#   SWIM_LANE_TO_STATE — confirmed mapping in TypeScript: 8 swim-lane dirs mapped; 'created' and
+#     'elaboration' absent (no DB mapping); 'done' present as internal but not a valid TO_STAGE.
+#   story-update.md also has 'needs-code-review', 'failed-code-review', 'failed-qa', 'needs-split'
+#     listed as unmapped (skip) in the DB write table — these are absent from SWIM_LANE_TO_STATE.
+#   KFMB-3020 scope confirmed: removes stories.index.md step from story-update.md and other commands;
+#     files_in_scope explicitly includes story-update.md. Boundary is well-defined.
+#   stories.index.md — confirmed KFMB-4010 listed in Phase 3 (Index & Stage Elimination); Group 5
+#     parallelization group confirmed (alongside KFMB-3020, KFMB-3030, KFMB-5010, KFMB-5040).
+# ============================================================================
+
+# ============================================================================
+# 9-POINT AUDIT CHECKLIST
+# ============================================================================
+
+checklist:
+
+  - id: "CHECK-1"
+    category: "Scope Alignment"
+    status: "PASS"
+    finding: >
+      Story scope matches the plan's Phase 3 description exactly: "Remove stories.index.md references
+      and replace stage directories with DB state transitions." KFMB-4010 owns the directory-mv
+      elimination half of that goal (the state-transition aspect), while KFMB-3020 owns the index
+      reference elimination half. The two stories partition Phase 3 cleanly.
+
+      Files to modify are precisely two: .claude/commands/story-move.md and
+      .claude/commands/story-update.md. No endpoints, no UI, no TypeScript, no migrations,
+      no infrastructure changes. The scope statement is narrow and accurate. No extra features
+      are introduced. The non-goals section correctly guards against KFMB-4020 scope creep
+      (precondition-check, context-init) and KFMB-3020 scope creep (stories.index.md step).
+
+      Confirmed from stories.index.md: KFMB-4010 is explicitly listed as a Phase 3 story.
+      The story correctly sets phase: 3 in frontmatter.
+    resolution_required: false
+
+  - id: "CHECK-2"
+    category: "Internal Consistency"
+    status: "PASS"
+    finding: >
+      Goals, non-goals, ACs, and test plan are mutually consistent with no contradictions found.
+
+      Goal: "Rewrite story-move.md and story-update.md so that story state transitions are
+      exclusively driven by kb_update_story_status, with no filesystem side effects."
+      Non-goals clearly exclude: /precondition-check, /context-init, stories.index.md removal,
+      SWIM_LANE_TO_STATE changes, shimUpdateStoryStatus TypeScript changes, caller agent updates,
+      directory creation/deletion logic, worktree cleanup logic, double-write issue.
+
+      AC-1 through AC-11 map precisely to the goal with no overlap with non-goals:
+        - AC-1, AC-2, AC-3, AC-4, AC-5, AC-9, AC-11 (partial): story-move.md changes
+        - AC-6, AC-7, AC-8, AC-10, AC-11 (partial): story-update.md changes
+        All ACs are verifiable and non-contradictory.
+
+      One minor terminology inconsistency noted: story.yaml frontmatter has
+      touches_database: true but the story modifies only markdown command specs, not the DB
+      schema. This is technically correct in the sense that the commands' behavior changes
+      how DB is used, but strictly speaking the story writes no migrations. This is a
+      cosmetic inconsistency that does not affect implementation.
+
+      Test plan (HP-1 through HP-4, EC-1 through EC-4, ED-1 through ED-5, MC-1 through MC-3)
+      maps cleanly to the 11 ACs. No AC is untested. No test references a behavior outside
+      the stated scope.
+
+      The story correctly notes KFMB-3020 coordination: "If KFMB-3020 has already landed,
+      the step will already be gone; otherwise coordinate." ST-3 explicitly handles both scenarios.
+    resolution_required: false
+
+  - id: "CHECK-3"
+    category: "Reuse-First"
+    status: "PASS"
+    finding: >
+      The story demonstrates exemplary reuse discipline.
+
+      MCP Tools: Both kb_update_story_status and kb_get_story are already registered MCP tools
+      confirmed in use by existing agents (dev-setup-leader, qa-verify-completion-leader, etc.).
+      No new MCP tools are needed.
+
+      Mapping Table: SWIM_LANE_TO_STATE is read inline from the canonical TypeScript source
+      at packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts. The story
+      correctly calls for an inline copy (not an import) within the command spec — appropriate
+      for markdown-based command files. The mapping values themselves are not changed.
+
+      Reference Pattern: The dev-setup-leader.agent.md step 8 is cited as the canonical
+      kb_update_story_status call syntax. This pattern is proven and already in production.
+
+      No new utilities, libraries, or tools are introduced. No new TypeScript is written.
+      The story specifically protects against adding shimUpdateStoryStatus or new tools.
+    resolution_required: false
+
+  - id: "CHECK-4"
+    category: "Ports and Adapters"
+    status: "PASS"
+    finding: >
+      No API endpoints are involved. No Lambda handlers. No frontend surfaces. No ports-and-adapters
+      architectural concerns apply to this story.
+
+      The two modified files are markdown command specification documents consumed by Claude agents.
+      They define behavior, not code. The MCP tools they reference (kb_update_story_status,
+      kb_get_story) already exist with stable interfaces. No new adapter layer is introduced.
+      No interface changes to existing adapters.
+    resolution_required: false
+
+  - id: "CHECK-5"
+    category: "Local Testability"
+    status: "PASS"
+    finding: >
+      The test strategy (manual review + live KB integration) is appropriate and correctly scoped
+      for a command-spec-only story with no TypeScript changes.
+
+      The test plan is comprehensive:
+        - 4 happy-path tests covering both commands with round-trip KB verification
+        - 4 error cases covering DB unavailable and story-not-found scenarios for both commands
+        - 5 edge cases including grep-based negative verification of filesystem operation removal
+        - 3 manual review cases providing AC-level coverage mapping
+        - 1 fixture definition for the integration test KB record
+
+      ED-2 (grep for mv/readdirSync in story-move.md) and ED-3 (grep for frontmatter write
+      patterns in story-update.md) serve as automated regression guards requiring zero matches —
+      this is the correct verification approach for command spec changes.
+
+      ADR-005 compliance is explicitly addressed: integration tests require a live
+      postgres-knowledgebase MCP server, not mocks. ADR-006 is satisfied by MC-3 (live KB
+      happy-path test).
+
+      No .http tests are needed (no HTTP endpoints). No Playwright tests needed (no UI).
+      The absence of unit tests is appropriate and justified — there is no TypeScript to test.
+    resolution_required: false
+
+  - id: "CHECK-6"
+    category: "Decision Completeness"
+    status: "PASS"
+    finding: >
+      No TBDs or blocking unresolved decisions were found in the story.
+
+      All behavioral decisions are explicitly documented:
+        1. Hard-failure on DB unavailability: AC-3 specifies exact error signal (MOVE FAILED: DB unavailable).
+        2. Story-not-found behavior: AC-1 specifies (MOVE FAILED: Story not found in KB) — consistent
+           with the target model where KB is the only locate mechanism.
+        3. SWIM_LANE_TO_STATE unmapped stage behavior: AC-4 specifies exact error signal.
+        4. Worktree cleanup ordering: AC-7 explicitly states cleanup runs BEFORE kb_update_story_status.
+        5. KFMB-3020 coordination: Non-goals and ST-3 address both scenarios (step 4 already removed
+           or not yet removed). No decision is required from outside parties — the implementer handles
+           both cases.
+        6. Double-write advisory: Explicitly documented as out of scope in non-goals and Architecture Notes.
+        7. Result YAML schema changes: AC-9 and AC-10 are specific and unambiguous about field removals
+           and additions.
+
+      One minor observation: the story does not specify what happens to the --update-status flag
+      in story-move.md after the rewrite. Currently this flag delegates to /story-update for the
+      DB write. After the rewrite, story-move.md will call kb_update_story_status directly, making
+      the --update-status delegation pattern potentially redundant. The story is silent on whether
+      the --update-status flag is preserved, deprecated, or removed. However, this is a non-blocking
+      observation — the story's ACs do not require --update-status to be removed, and preserving
+      backward compatibility (AC-5) implies the flag behavior should be maintained or gracefully
+      deprecated. This does not block implementation.
+    resolution_required: false
+    gap_ref: "OPP-1"
+
+  - id: "CHECK-7"
+    category: "Risk Disclosure"
+    status: "PASS"
+    finding: >
+      The story discloses risks appropriately and accurately.
+
+      Risk 1 — Behavioral contract inversion: Documented in Architecture Notes, dev_feasibility.risks,
+      and pm_artifacts.test_plan.risks. The exact failure mode (DB unavailability blocks the move
+      entirely, no fallback) is specified in AC-3 and covered by EC-1 and EC-4 in the test plan.
+      Mitigation is explicit: error signal documented in AC, callers documented as out-of-scope.
+
+      Risk 2 — KFMB-3020 parallel sibling: Documented in dev_feasibility.risks, STORY-SEED.md
+      conflict analysis, and ST-3 description. The story accounts for both KFMB-3020 landed and
+      not-yet-landed scenarios. The recommended serialization order (KFMB-3020 first, then
+      KFMB-4010) is stated.
+
+      Risk 3 — Double-write advisory: Explicitly noted as out of scope with rationale. The guard
+      clause behavior change (current --update-status guard will need re-evaluation) is noted
+      in Architecture Notes.
+
+      Risk 4 — SWIM_LANE_TO_STATE completeness: Noted in pm_artifacts.test_plan.risks. The story
+      correctly identifies that the mapping table completeness is not fully tested here. This is
+      appropriate — the mapping itself is not changed, only how it is used.
+
+      Risk 5 — KB MCP server availability for integration tests: Noted in test plan risks and
+      Infrastructure Notes. ADR-005 compliance requirement is explicit.
+
+      Inspecting SWIM_LANE_TO_STATE confirms that story-update.md v3.0.0 has additional statuses
+      mapped that are NOT in SWIM_LANE_TO_STATE (needs-code-review, failed-code-review, failed-qa
+      are in story-update's skip list but absent from SWIM_LANE_TO_STATE). The story does not
+      explicitly address how these currently-skipped statuses are handled in the new kb_update_story_status
+      primary-call model. This is a non-blocking gap since the story only says kb_update_story_status
+      is called for "mapped statuses" — the skip behavior for unmapped statuses is inherited. See OPP-2.
+    resolution_required: false
+    gap_ref: "OPP-2"
+
+  - id: "CHECK-8"
+    category: "Story Sizing"
+    status: "PASS"
+    finding: >
+      Despite 11 ACs (above the 8-AC threshold that normally triggers split evaluation), the story
+      is correctly sized at 2 points and does NOT warrant a split.
+
+      The 11 ACs are granular verification points for 2 markdown file rewrites, not independent
+      features. They decompose into two natural groups: AC-1 to AC-5, AC-9, AC-11 (story-move.md)
+      and AC-6, AC-7, AC-8, AC-10, AC-11 (story-update.md). The ACs are thin behavioral assertions
+      that each take seconds to verify via grep or code review — they are not implementation tasks.
+
+      Actual work items:
+        - ST-1: Read-only audit of caller agents (documentation only, no file writes). ~1-2 hours.
+        - ST-2: Rewrite one markdown file (story-move.md). ~2-3 hours of careful editing.
+        - ST-3: Rewrite one markdown file (story-update.md). ~2-3 hours of careful editing.
+        - ST-4: Grep audit + manual review + live KB integration test. ~1-2 hours.
+
+      Total estimated effort: ~6-10 hours, consistent with 2 story points. No frontend work.
+      No TypeScript. No migrations. No infra changes. The 4 subtasks are focused and sequential.
+
+      A split would create artificial fragmentation: splitting story-move.md and story-update.md
+      into separate stories adds coordination overhead with no benefit, since both files are small
+      and their changes are conceptually unified (eliminate filesystem side effects from both commands).
+
+      Verdict: Do not split. 2 points is appropriate.
+    resolution_required: false
+
+  - id: "CHECK-9"
+    category: "Subtask Decomposition"
+    status: "PASS"
+    finding: >
+      Subtask decomposition is well-structured and complete.
+
+      ST-1 (Audit callers): Correctly identified as a prerequisite read-only step. The specific
+      agent files to inspect are enumerated. Verification command is provided (grep pattern).
+      Covers AC-2, AC-3 (understanding behavioral impact on callers). Estimated at 6,000 tokens.
+
+      ST-2 (Rewrite story-move.md): Precisely scoped to one file. Files to read (reference
+      material) and files to modify (one: story-move.md) are enumerated. ACs covered: AC-1, AC-2,
+      AC-3, AC-4, AC-5, AC-9, AC-11 (the full story-move AC set). Verification command is provided
+      (grep for removed keywords). Estimated at 10,000 tokens. Depends on ST-1.
+
+      ST-3 (Rewrite story-update.md): Precisely scoped to one file. ACs covered: AC-6, AC-7, AC-8,
+      AC-10, AC-11 (the full story-update AC set). KFMB-3020 coordination noted explicitly.
+      Verification command is provided. Estimated at 10,000 tokens. Depends on ST-1.
+
+      ST-4 (Verify both commands): Read-only verification subtask. Covers all 11 ACs. Includes
+      live KB integration test. Depends on ST-3 (which implies ST-2 is also complete via the
+      dependency chain ST-1 → ST-2 and ST-1 → ST-3 → ST-4). Verification is the full MC-1 through
+      MC-3 test execution.
+
+      Dependency graph is correct: ST-2 and ST-3 both depend on ST-1 (caller audit informs
+      both rewrites). ST-4 depends on ST-3 only (implying ST-2 is also done, since both are
+      needed for full verification). This is logically sound — ST-4 cannot proceed until both
+      files are rewritten.
+
+      Canonical References section provides 4 reference files with clear rationale for each.
+      Token estimates are reasonable for the work involved.
+
+      One minor observation: ST-4's dependency is listed as "ST-3" only, but ST-4 verifies
+      story-move.md (ST-2's output) as well. This is implicitly correct because ST-3 can only
+      begin after ST-1 is done, and ST-2 is also unblocked by ST-1 — so by the time ST-4 runs,
+      ST-2 will have completed. The dependency is functionally correct even if not explicitly stated.
+    resolution_required: false
+
+# ============================================================================
+# MVP-CRITICAL GAPS (blocks implementation start)
+# ============================================================================
+
+gaps: []
+# No MVP-critical gaps found. The story is complete, internally consistent,
+# appropriately scoped, and ready for implementation once KFMB-3010 completes.
+
+# ============================================================================
+# OPPORTUNITIES (non-blocking, suggested improvements)
+# ============================================================================
+
+opportunities:
+
+  - id: "OPP-1"
+    title: "--update-status flag disposition unspecified after rewrite"
+    detail: >
+      story-move.md v2.1.0 has a --update-status flag that delegates the DB write to /story-update
+      (with a guard clause to prevent double-writes). After the KFMB-4010 rewrite, story-move.md
+      will call kb_update_story_status directly as its primary action. The --update-status delegation
+      pattern becomes redundant: /story-update (post-rewrite) also calls kb_update_story_status,
+      so both would hit the DB.
+
+      The story does not specify whether --update-status is:
+        (a) Preserved as-is (still delegates to /story-update, causing double-write of same state)
+        (b) Deprecated as a no-op with a deprecation note
+        (c) Removed entirely
+
+      AC-5 requires backward-compatible error signals (MOVE COMPLETE, MOVE FAILED, MOVE SKIPPED)
+      but does not address --update-status flag behavior. AC-11 requires no filesystem directory
+      operations — the --update-status delegation to /story-update no longer serves a filesystem
+      purpose after both commands are KB-only, but the flag could remain as a no-op.
+
+      Recommended disposition: Mark --update-status as deprecated (no-op) in the rewritten
+      command spec, with a note that state is now always written to KB regardless of flag presence.
+      This preserves backward compatibility without silently causing double-writes.
+    effort: "low"
+    blocking: false
+    decision: "log_to_kb — implementer should decide during ST-2; deprecating as no-op is the safe default"
+
+  - id: "OPP-2"
+    title: "Clarify behavior for story-update statuses absent from SWIM_LANE_TO_STATE"
+    detail: >
+      story-update.md v3.0.0 has statuses in its DB write mapping table that are explicitly marked
+      as 'skip' (no DB write): needs-code-review, failed-code-review, failed-qa, needs-split,
+      created, elaboration. Notably, needs-code-review, failed-code-review, and failed-qa are
+      NOT present in SWIM_LANE_TO_STATE at all (only backlog, ready-to-work, in-progress,
+      needs-code-review [mapped to ready_for_review], failed-code-review, ready-for-qa, failed-qa,
+      UAT, done are in the TypeScript constant — wait, needs-code-review IS present mapped to
+      ready_for_review, failed-code-review IS present, failed-qa IS present).
+
+      Re-checking: SWIM_LANE_TO_STATE DOES contain needs-code-review → ready_for_review,
+      failed-code-review → failed_code_review, failed-qa → failed_qa. However, story-update.md
+      v3.0.0 lists these as 'skip' in its status table (no DB state mapping for the command
+      perspective). This is an intentional design choice in v3.0.0 (treating them as transient
+      states not tracked in DB).
+
+      After KFMB-4010, if kb_update_story_status becomes the primary action, the story needs to
+      clarify: for statuses that are currently skipped in story-update.md but ARE in SWIM_LANE_TO_STATE
+      (needs-code-review, failed-code-review, failed-qa) — should kb_update_story_status now be
+      called for these, or should the skip behavior be preserved?
+
+      This is a design question that the implementer should resolve during ST-3. The story is
+      silent on it, but AC-6 says "for all mapped statuses" which implicitly preserves the
+      existing skip list. The safe interpretation is: skip behavior is preserved as-is, only
+      the call mechanism changes from shimUpdateStoryStatus to kb_update_story_status for
+      the mapped cases.
+    effort: "low"
+    blocking: false
+    decision: "log_to_kb — clarify during ST-3; AC-6 'for all mapped statuses' implies skip list is preserved; no behavior change intended for unmapped statuses"
+
+  - id: "OPP-3"
+    title: "Consider adding a caller-impact summary to ST-1 output"
+    detail: >
+      ST-1 audits callers but its output format is unspecified (just "documentation only"). The
+      implementer may want to produce a brief table or YAML note documenting which callers use
+      --update-status flag, which call /story-move without it, and which will be most impacted
+      by the hard-failure DB behavior change. This would make ST-2/ST-3 rewrites more informed
+      and provide a paper trail for the KFMB-4020 implementer (who takes the next step in
+      stage directory elimination).
+    effort: "low"
+    blocking: false
+    decision: "log_to_kb — nice-to-have; implementer may produce inline comments in the rewritten command spec noting caller impact"
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+
+summary:
+  blocker_count: 0
+  warn_count: 0
+  pass_count: 9
+  blocking_gaps: []
+  opportunities:
+    - "OPP-1: --update-status flag disposition — log_to_kb; implementer resolves during ST-2"
+    - "OPP-2: skip-list behavior for unmapped statuses — log_to_kb; AC-6 implies preservation; implementer confirms during ST-3"
+    - "OPP-3: ST-1 caller-impact summary format — log_to_kb; nice-to-have documentation artifact"
+  verdict_rationale: >
+    All 9 checklist items pass cleanly. The story is well-specified, internally consistent, and
+    accurately scoped. No MVP-critical gaps were found. The before-state of both command files
+    was verified against the story's description and found to match exactly. The SWIM_LANE_TO_STATE
+    mapping in TypeScript was verified as the correct canonical source for the inline table that
+    will be copied into both command specs. The test plan is comprehensive and appropriate for
+    a command-spec-only story. The subtask decomposition is logically sound with correct
+    dependency ordering. The three non-blocking opportunities (--update-status flag disposition,
+    skip-list clarification for story-update, ST-1 output format) are low-effort decisions that
+    the implementer can resolve inline during the subtasks without requiring story revision.
+    The story is cleared for implementation immediately upon KFMB-3010 completion.
+  preliminary_verdict: "PASS"
+  verdict: "PASS"
+  decided_at: "2026-02-26T00:00:00Z"
+  decided_by: "elab-autonomous-decider"
+  mode: "autonomous"
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+  condition: >
+    Hard prerequisite: KFMB-3010 must complete before implementation begins. This is already
+    documented in the story's depends_on field and the STORY-SEED conflict analysis. No story
+    revisions are required. The implementer should proceed with ST-1 through ST-4 as specified.

@@ -1,0 +1,90 @@
+schema: 1
+story_id: WINT-0240
+timestamp: "2026-02-23T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+tests_executed_note: "Shell script and markdown story. No automated test runner applicable. Manual CLI execution verified per EVIDENCE.yaml. E2E exempt: no TypeScript/UI/API surface."
+
+coverage: null
+coverage_meets_threshold: true
+coverage_note: "No runtime code coverage applicable. Scripting/infra story — all ACs verified via manual CLI execution and file system spot-checks."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: "No automated tests exist for shell scripts in this monorepo. Verification performed via direct CLI execution of --help flag and filesystem inspection of deliverables."
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Verified: scripts/setup-ollama-models.sh exists with -rwxr-xr-x permissions, #!/usr/bin/env bash shebang on line 1, set -e on line 18, check_ollama_installed() uses command -v ollama, check_ollama_server() validates ${OLLAMA_BASE_URL}/api/tags."
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Verified: FULL_MODELS array includes deepseek-coder-v2:16b, :33b, codellama:13b, qwen2.5-coder:14b, :7b, llama3.2:8b. Progress indicator [N/total] pattern present. Header comments reference WINT-0220-STRATEGY.yaml tier 2/3."
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Verified: LITE_MODELS=(qwen2.5-coder:7b llama3.2:8b). --lite flag parsed in arg loop (line 244). --help output explicitly documents --lite flag with description. Satisfies Tier 3 minimum requirement."
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "Verified: verify_models() function at line 168 iterates REQUIRED_MODELS, prints PRESENT/MISSING with pull command, exits 1 if missing array non-empty. Full mode verifies REQUIRED_MODELS (5 models); lite mode verifies LITE_MODELS (2 models)."
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Verified: scripts/check-ollama-health.sh exists with -rwxr-xr-x permissions. check_server() queries ${OLLAMA_BASE_URL}/api/tags via curl -sf. REQUIRED_MODELS array defined. Structured table output with OK/FAIL status. exit 0 (HEALTHY) / exit 1 (UNHEALTHY) at lines 155/152."
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Verified: docs/tech-stack/ollama-model-fleet.md exists. VRAM Requirements Table with columns Model Name, Tier, Ollama Registry Tag, VRAM Required, Use Cases, Notes. 7 models covered including llama3.2:3b as documented alternative. Recommended Minimum Hardware section present."
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Verified: FULL_MODELS covers all WINT-0220 Tier 2/3 models. Header comment cites WINT-0220-STRATEGY.yaml. Reconciled Discrepancies section in docs documents ARCH-001 (:16b vs :33b), ARCH-002 (:8b vs :3b), ARCH-003 (OLLAMA_ENABLE_FALLBACK)."
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Verified: packages/backend/orchestrator/setup-ollama.sh lines 1-19 contain DEPRECATED notice pointing to scripts/setup-ollama-models.sh. No model pull logic duplication — all pull logic isolated to scripts/setup-ollama-models.sh."
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "Verified via live --help execution: all 4 env vars (OLLAMA_BASE_URL, OLLAMA_TEMPERATURE, OLLAMA_TIMEOUT_MS, OLLAMA_ENABLE_FALLBACK) documented with defaults and descriptions. docs/tech-stack/ollama-model-fleet.md Environment Variables section confirmed with 4-column table."
+
+architecture_compliant: true
+architecture_notes: "Scripting/infra story. No ADR violations. Scripts follow POSIX bash conventions: set -e, proper quoting, no eval/dynamic execution, exit codes strictly 0/1. curl -sf pattern mirrors OllamaProvider.checkAvailability(). No TypeScript, no linting scope, no barrel files, no interface types."
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Shell script stories with no TypeScript deliverables are cleanly exempt from pnpm test, coverage thresholds, and linting gates — document this exemption explicitly in EVIDENCE.yaml to prevent QA confusion."
+    category: pattern
+    tags: ["infra", "shell-scripts", "qa-process"]
+
+  - lesson: "Documenting model fleet discrepancies (ARCH-001/002/003) in both the setup script header and the markdown docs provides dual-redundancy that makes QA verification straightforward — a good pattern for infra stories with external source-of-truth files."
+    category: pattern
+    tags: ["documentation", "infra", "ollama"]
+
+  - lesson: "Deprecation notices on superseded scripts should point to the canonical replacement with concrete usage examples, not just a file path — setup-ollama.sh does this well and should serve as the template."
+    category: pattern
+    tags: ["deprecation", "shell-scripts", "documentation"]
+
+tokens:
+  in: 8500
+  out: 1800

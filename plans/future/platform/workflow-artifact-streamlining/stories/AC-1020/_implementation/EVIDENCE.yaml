@@ -1,0 +1,44 @@
+schema: 1
+story_id: AC-1020
+title: "Eliminate PROOF-{ID}.md"
+status: pass
+e2e_tests:
+  status: exempt
+  reason: "Agent markdown files only - no application code"
+  mode: "n/a"
+files_changed:
+  - ".claude/agents/dev-documentation-leader.agent.md"
+  - ".claude/agents/_reference/patterns/dev-workflow-spawn.md"
+  - ".claude/agents/_shared/permissions.md"
+  - ".claude/agents/_shared/kb-integration.md"
+  - ".claude/agents/knowledge-context-loader.agent.md"
+  - ".claude/agents/qa-verify-verification-leader.agent.md"
+  - ".claude/agents/qa-verify-setup-leader.agent.md"
+  - ".claude/commands/dev-implement-story.md"
+  - ".claude/commands/workflow-batch.md"
+  - ".claude/commands/dev-fix-story.md"
+  - ".claude/commands/migrate-agents-v3.md"
+  - ".claude/commands/pm-generate-story-000-harness.md"
+  - ".claude/skills/wt-commit-and-pr/SKILL.md"
+  - ".claude/docs/dev-implement-reference.md"
+acceptance_criteria:
+  - id: AC-1
+    status: pass
+    description: "No active agent generates or reads PROOF-{ID}.md"
+    evidence: "grep for PROOF artifact references returns only _archive/ files (3 matches). Zero active agents generate or read PROOF."
+  - id: AC-2
+    status: pass
+    description: "dev-implement-learnings sources AC coverage from EVIDENCE.yaml"
+    evidence: "dev-implement-learnings.agent.md line 91 reads EVIDENCE.yaml as authoritative source. No PROOF references exist."
+  - id: AC-3
+    status: pass
+    description: "Stale proof cross-references removed from active agent files"
+    evidence: "Edited 14 files removing all PROOF references from active agents, commands, skills, and docs."
+  - id: AC-4
+    status: pass
+    description: "Proof Leader phase removed from dev-workflow-spawn.md"
+    evidence: "Entire Proof Leader (haiku) section removed. Phase enums updated to exclude 'proof'."
+  - id: AC-5
+    status: pass
+    description: "Grep checklist confirms zero stale PROOF references in active agents"
+    evidence: "Final grep returned only 3 matches, all in .claude/agents/_archive/. Zero matches in active files."

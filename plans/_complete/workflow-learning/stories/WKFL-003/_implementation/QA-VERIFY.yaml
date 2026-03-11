@@ -1,0 +1,239 @@
+schema: 1
+story_id: "WKFL-003"
+timestamp: "2026-02-07T00:00:00Z"
+
+verdict: PASS
+
+# INFRA STORY - No app code, no tests to run
+tests_executed: false
+test_execution_exempt: true
+exempt_reason: "story_type: infra - agent/config files only, no app code to test"
+
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true
+coverage_exempt_reason: "infra story - no code to cover"
+
+test_quality:
+  verdict: EXEMPT
+  exempt_reason: "infra story - no tests to quality check"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification_method: "spot_check"
+    spot_check_results:
+      - file: ".claude/schemas/decision-outcome-schema.md"
+        check: "All required fields present in Schema Definition section"
+        found: true
+        details: "Lines 31-62 define all AC-1 fields: pattern, auto_accepted, user_outcome, tier, story_id, decision_id, timestamp"
+      - file: ".claude/schemas/decision-outcome-schema.md"
+        check: "Examples demonstrate all field usage"
+        found: true
+        details: "Lines 100-177 provide three complete examples showing all field scenarios"
+    notes: "Decision outcome schema fully defines all required tracking fields with comprehensive documentation, examples, and integration points"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification_method: "spot_check"
+    spot_check_results:
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Success rate calculation formula documented"
+        found: true
+        details: "Lines 136-146 define computeSuccessRate function: confirmed / total"
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Minimum 5 samples requirement enforced"
+        found: true
+        details: "Line 138 explicitly states 'minimum 5 samples', Phase 2 heading confirms requirement"
+      - file: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        check: "Template includes insufficient_samples section"
+        found: true
+        details: "Lines 91-99 define insufficient_samples section for patterns with < 5 samples"
+    notes: "Success rate calculation properly documented with minimum sample size requirement"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification_method: "spot_check"
+    spot_check_results:
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Promotion logic: >95% success triggers tier decrease"
+        found: true
+        details: "Lines 159-181 document promotion logic with >95% threshold and single-step tier changes"
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Concrete promotion example provided"
+        found: true
+        details: "Lines 173-181 show example: loading.*state from tier 3→2 with 95.7% success rate"
+      - file: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        check: "Promotions section template with all required fields"
+        found: true
+        details: "Lines 24-39 define promotions array with pattern, current_tier, proposed_tier, success_rate, samples, rationale, example_stories"
+    notes: "Promotion logic fully specified with >95% threshold, tier boundaries, and complete proposal template"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification_method: "spot_check"
+    spot_check_results:
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Demotion logic: <80% success triggers tier increase"
+        found: true
+        details: "Lines 183-224 document demotion logic: <80% single-step, <50% two-step"
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Single-step demotion example (72% success)"
+        found: true
+        details: "Lines 205-213 show breaking.*api from tier 2→3 with 72% success"
+      - file: ".claude/agents/heuristic-evolver.agent.md"
+        check: "Severe two-step demotion example (45% success)"
+        found: true
+        details: "Lines 215-224 show credential|secret from tier 2→4 with 45% success"
+      - file: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+        check: "Demotions section with severity field"
+        found: true
+        details: "Lines 41-74 define demotions array with moderate/severe severity classification"
+    notes: "Demotion logic fully specified with <80% threshold, two-step logic for <50%, and severity classification"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification_method: "safety_check"
+    safety_checks:
+      - check: "Agent explicitly states proposals-only mode"
+        location: ".claude/agents/heuristic-evolver.agent.md:26"
+        content: "CRITICAL: This agent generates PROPOSALS ONLY. It NEVER modifies decision-classification.yaml directly."
+        status: PASS
+      - check: "Non-negotiables enforce no modifications"
+        location: ".claude/agents/heuristic-evolver.agent.md:363"
+        content: "DO NOT MODIFY decision-classification.yaml - This agent generates proposals ONLY"
+        status: PASS
+      - check: "Phase 6 integrity verification"
+        location: ".claude/agents/heuristic-evolver.agent.md:262-270"
+        content: "Agent runs git diff to verify decision-classification.yaml unchanged, aborts if changes detected"
+        status: PASS
+      - check: "Proposal template header warns against auto-apply"
+        location: ".claude/config/HEURISTIC-PROPOSALS.yaml:8"
+        content: "IMPORTANT: These are PROPOSALS only. Do NOT auto-apply. Human review required."
+        status: PASS
+      - check: "Git diff confirms no changes to decision-classification.yaml"
+        command: "git diff .claude/config/decision-classification.yaml"
+        result: "No output (clean)"
+        status: PASS
+    notes: "All changes are proposals only - verified through agent documentation, safety checks, and git diff confirmation"
+
+architecture_compliant: true
+architecture_compliance_notes: |
+  Tier system consistency verified across all three deliverable files:
+
+  1. decision-outcome-schema.md references tier 1-5 consistently
+  2. heuristic-evolver.agent.md documents tier promotion/demotion logic with correct tier boundaries
+  3. HEURISTIC-PROPOSALS.yaml template uses current_tier/proposed_tier fields consistently
+
+  Cross-file integration verified:
+  - Schema defines decision_outcome structure consumed by agent
+  - Agent queries KB for decision_outcome entries (per schema)
+  - Agent writes proposals to HEURISTIC-PROPOSALS.yaml
+  - Proposals reference decision-classification.yaml but do NOT modify it
+
+  All files follow existing schema/agent patterns:
+  - Proper frontmatter with version, created, updated timestamps
+  - Story ID tracking (WKFL-003)
+  - Integration points documented
+  - Future enhancements outlined
+
+issues: []
+
+deliverables_verified:
+  - file: ".claude/schemas/decision-outcome-schema.md"
+    status: COMPLETE
+    checks:
+      - "Frontmatter with version, dates, story_id: PASS"
+      - "All AC-1 fields documented (pattern, auto_accepted, user_outcome, tier, story_id, decision_id, timestamp): PASS"
+      - "Schema Definition section complete: PASS"
+      - "Three comprehensive examples provided: PASS"
+      - "Field Descriptions table complete: PASS"
+      - "Integration points documented: PASS"
+      - "KB query examples provided: PASS"
+      - "Evolution notes for future versions: PASS"
+
+  - file: ".claude/agents/heuristic-evolver.agent.md"
+    status: COMPLETE
+    checks:
+      - "Frontmatter with version, type:worker, model:sonnet, story_id: PASS"
+      - "Role clearly states proposals-only mode: PASS"
+      - "Phase 2 documents success rate calculation: PASS"
+      - "Phase 3 documents promotion logic (>95%): PASS"
+      - "Phase 4 documents demotion logic (<80%, <50%): PASS"
+      - "Phase 6 integrity verification step: PASS"
+      - "Non-negotiables enforce safety constraints: PASS"
+      - "KB query protocol documented: PASS"
+      - "Error handling specified: PASS"
+      - "Tier system reference table included: PASS"
+      - "Future enhancements outlined: PASS"
+
+  - file: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+    status: COMPLETE
+    checks:
+      - "File header warns proposals-only: PASS"
+      - "Schema_version, generated_at, analyzed_stories fields: PASS"
+      - "Promotions section with example entry: PASS"
+      - "Demotions section with moderate/severe examples: PASS"
+      - "No_change_patterns section: PASS"
+      - "Insufficient_samples section: PASS"
+      - "Analysis_summary metadata: PASS"
+      - "Review_notes with human workflow documented: PASS"
+
+lessons_to_record:
+  - lesson: "Infra stories (agent/config files) require adapted QA approach - spot-check evidence rather than running tests"
+    category: pattern
+    tags: ["qa", "infra", "workflow-learning"]
+
+  - lesson: "Safety verification for proposal-generating agents: check documentation, non-negotiables, integrity checks, and git diff"
+    category: pattern
+    tags: ["qa", "safety", "autonomy"]
+
+  - lesson: "Schema-first design for KB entries enables clear integration between agents and data structures"
+    category: pattern
+    tags: ["architecture", "kb", "workflow-learning"]
+
+verification_notes: |
+  INFRA STORY VERIFICATION APPROACH:
+
+  Since this is story_type: infra with no app code, verification focused on:
+  1. Spot-checking evidence claims against actual file contents
+  2. Cross-referencing tier logic consistency across files
+  3. Safety verification (decision-classification.yaml unchanged)
+  4. Schema completeness (all AC-1 fields documented)
+  5. Logic verification (promotion/demotion thresholds match AC-3/AC-4)
+  6. Architecture compliance (tier system, integration points)
+
+  All 5 acceptance criteria verified PASS:
+  - AC-1: All required fields documented in schema ✓
+  - AC-2: Success rate calculation with min 5 samples ✓
+  - AC-3: Promotion logic >95% documented and exemplified ✓
+  - AC-4: Demotion logic <80% (single-step), <50% (two-step) documented ✓
+  - AC-5: Proposals-only mode enforced, decision-classification.yaml unchanged ✓
+
+  File quality:
+  - All files follow existing schema/agent patterns
+  - Complete frontmatter with version tracking
+  - Comprehensive examples and use cases
+  - Integration points clearly documented
+  - Future enhancements outlined
+  - Error handling specified
+  - Safety constraints enforced
+
+tokens:
+  in: 32000
+  out: 2500
+
+gate:
+  decision: PASS
+  reason: "All 5 ACs verified, architecture compliant, safety verified, proposals-only mode enforced"
+  blocking_issues: []
+  qa_completed_at: "2026-02-07T21:00:00Z"

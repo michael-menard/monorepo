@@ -1,0 +1,182 @@
+schema: 1
+story_id: KFMB-2040
+phase: implementation
+iteration: 0
+generated_at: '2026-03-07T00:00:00Z'
+
+summary:
+  total_acs: 9
+  acs_with_evidence: 9
+  acs_missing_evidence: 0
+  e2e_status: exempt
+  e2e_exempt_reason: "story_type: docs — agent .md files only, no frontend/browser surface"
+  build_status: exempt
+  build_exempt_reason: "docs-only story — no TypeScript changes"
+
+acceptance_criteria:
+  - ac_id: AC-1
+    description: "pm-story-generation-leader discovers stories via kb_list_stories (not stories.index.md)"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-generation-leader.agent.md v4.5.0 — Story Discovery section (line ~340) calls
+      kb_list_stories({ feature, state: 'pending' }) as primary mechanism. The file explicitly
+      states 'stories.index.md should not be used as the primary discovery mechanism after this
+      migration.' kb_tools frontmatter includes kb_list_stories.
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+
+  - ac_id: AC-2
+    description: "Seed agent writes seed via kb_write_artifact (dual-write with filesystem)"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-seed-agent.agent.md v1.3.0 — Output section Step 1 calls kb_write_artifact({
+      story_id, artifact_type: 'story_seed', phase: 'setup', iteration: 0, ... }) before
+      filesystem write. Step 2 always writes STORY-SEED.md to filesystem regardless of KB
+      outcome (dual-write). kb_tools frontmatter includes kb_write_artifact.
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+
+  - ac_id: AC-3
+    description: "Leader reads seed from KB via kb_read_artifact (fallback to filesystem)"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-generation-leader.agent.md v4.5.0 — Phase 0 calls kb_read_artifact({ story_id,
+      artifact_type: 'story_seed' }) as primary. On failure or null result, falls back to reading
+      STORY-SEED.md from filesystem at {SEED_PATH}. Dependency gate for KFMB-1030 documented.
+      kb_tools frontmatter includes kb_read_artifact.
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+
+  - ac_id: AC-4
+    description: "Leader Phase 4.5 uses kb_update_story for content persistence (not raw SQL)"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-generation-leader.agent.md v4.5.0 — Phase 4.5 calls kb_update_story({ story_id,
+      title, priority, points, description, acceptance_criteria, non_goals }). Raw SQL INSERT
+      removed and replaced with kb_update_story. DEFERRED-KB-WRITES.yaml fallback documented
+      for when KB is unavailable or KFMB-1020 content columns are not yet present.
+      kb_tools frontmatter includes kb_update_story.
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+
+  - ac_id: AC-5
+    description: "pm-story passes story_id as primary context key to seed agent"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story.md v3.4.0 Step 2c spawn block updated — Story ID is now the FIRST field in the
+      CONTEXT block with comment '# Primary identity key — seed agent uses kb_get_story to resolve'.
+      index_path marked optional with comment '# Optional — retained for backward compatibility'.
+      Note added below spawn block explaining the migration rationale.
+    files:
+      - .claude/commands/pm-story.md
+
+  - ac_id: AC-6
+    description: "kb_tools frontmatter accuracy on both agent files"
+    status: satisfied
+    evidence_type: command
+    evidence: >-
+      Grep verification: pm-story-seed-agent.agent.md kb_tools=[kb_get_story, kb_write_artifact,
+      kb_search] — all 3 have call sites in body (lines 49/64, 311/483, 190 respectively).
+      pm-story-generation-leader.agent.md kb_tools=[kb_search, kb_read_artifact, kb_list_stories,
+      kb_update_story, worktree_register] — all 5 have call sites (lines 34/35, 65/77, 340/349,
+      275/285, 329 respectively). Stale entry mcp__postgres-knowledgebase__query removed from
+      generation leader (no call sites in body).
+    command_run: "grep -n 'kb_write_artifact|kb_read_artifact|kb_update_story|kb_list_stories|kb_get_story' .claude/agents/pm-story-seed-agent.agent.md .claude/agents/pm-story-generation-leader.agent.md .claude/commands/pm-story.md"
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+      - .claude/agents/pm-story-generation-leader.agent.md
+
+  - ac_id: AC-7
+    description: "Sibling leaders (adhoc, followup, split) remain functional"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      ST-1 audit confirmed: pm-story-adhoc-leader, pm-story-followup-leader, and pm-story-split-leader
+      do NOT directly spawn the seed agent or pass index_path to it. All seed spawning flows
+      through pm-story.md Step 2c. The adhoc leader reads stories.index.md for ID sequencing
+      only (not to spawn seed). followup and split leaders do not reference seed agent at all.
+      index_path retained as optional in seed agent signature ensures no breaking change for
+      any future callers.
+    files:
+      - .claude/agents/pm-story-adhoc-leader.agent.md
+      - .claude/agents/pm-story-followup-leader.agent.md
+      - .claude/agents/pm-story-split-leader.agent.md
+
+  - ac_id: AC-8
+    description: "Fallback to filesystem + DEFERRED-KB-WRITES.yaml on KB failure"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-seed-agent.agent.md v1.3.0 — Output section has try/catch block: on
+      kb_write_artifact failure, writes STORY-SEED.md to filesystem (always, as Step 2) and
+      appends DEFERRED-KB-WRITES.yaml entry with tool, args, failure_reason, and retry_when
+      fields. Fallback section documents this explicitly with YAML schema for the deferred entry.
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+
+  - ac_id: AC-9
+    description: "Seed agent uses kb_get_story for identity (not index file lookup)"
+    status: satisfied
+    evidence_type: manual
+    evidence: >-
+      pm-story-seed-agent.agent.md v1.3.0 — Preconditions table: 'Index exists' and 'Story in
+      index' rows replaced with single 'Story exists in KB' row checked via
+      kb_get_story({ story_id }) returning non-null. index_path listed as optional in Inputs
+      section with comment 'optional — retained for backward compatibility; not required for
+      story identity'. kb_tools frontmatter includes kb_get_story.
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+
+files_modified:
+  - path: .claude/agents/pm-story-seed-agent.agent.md
+    version_before: 1.2.0
+    version_after: 1.3.0
+    changes:
+      - Added kb_get_story, kb_write_artifact to kb_tools frontmatter (kb_search was already present)
+      - Added story_id as primary identity input; made index_path optional
+      - Replaced Index/Story-in-index preconditions with Story-exists-in-KB via kb_get_story
+      - Added KFMB-1030 dependency gate note
+      - Output section rewritten: Step 1 = kb_write_artifact (dual-write primary), Step 2 = filesystem write (always)
+      - Added DEFERRED-KB-WRITES.yaml fallback block
+      - Updated Non-Negotiables to require kb_get_story verification and dual-write
+
+  - path: .claude/agents/pm-story-generation-leader.agent.md
+    version_before: 4.4.0
+    version_after: 4.5.0
+    changes:
+      - Removed stale kb_tools entry mcp__postgres-knowledgebase__query
+      - Added kb_read_artifact, kb_list_stories, kb_update_story to kb_tools frontmatter
+      - Phase 0 updated: kb_read_artifact as primary seed read, filesystem STORY-SEED.md as fallback
+      - Added KFMB-1030 dependency gate note for kb_read_artifact
+      - Phase 4.5 updated: raw SQL INSERT replaced with kb_update_story call with content fields
+      - Added KFMB-1020 dependency gate note for content columns
+      - Added DEFERRED-KB-WRITES.yaml fallback block for Phase 4.5
+      - Added Story Discovery section with kb_list_stories pattern
+      - Updated Non-Negotiables to reference kb_read_artifact and kb_update_story
+      - Inputs section updated: story_id is primary, seed_path is filesystem fallback reference
+
+  - path: .claude/commands/pm-story.md
+    version_before: 3.4.0
+    version_after: 3.4.0
+    note: version not bumped (orchestrator script, not agent — minor amendment)
+    changes:
+      - Step 2c spawn block: story_id moved to first position in CONTEXT with primary-key comment
+      - index_path marked optional with backward-compatibility comment
+      - Note added below spawn block explaining KFMB-2040 migration rationale
+
+e2e_tests:
+  status: exempt
+  reason: "story_type: docs — no frontend/browser surface touched. No E2E tests applicable per ADR-006."
+
+build_verification:
+  status: exempt
+  reason: "Docs-only story — no TypeScript changes. No build/type-check required."
+
+lessons_applied:
+  - KBAR-0190: "kb_tools frontmatter updated atomically with call-site migration — same commit as body changes"
+  - WKFL-008: "Docs-only story verified via PROOF-based file spot-check, not unit tests"

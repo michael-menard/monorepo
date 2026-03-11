@@ -1,0 +1,152 @@
+schema: 1
+story_id: WINT-1050
+
+key_files:
+  - path: ".claude/commands/story-update.md"
+    role: >
+      The sole deliverable file. Current version 2.1.0. Contains the /story-update command
+      specification that agents execute to update story status. Step 3 (Update Frontmatter)
+      will be renamed to Step 3b, and a new Step 3a (DB write via shimUpdateStoryStatus)
+      will be inserted between Step 2 and Step 3b. The result YAML in Step 5 will gain
+      a db_updated field. An Integration Test Scenarios section will be appended.
+      Version will be bumped to 3.0.0.
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+    role: >
+      Contains the shimUpdateStoryStatus function implementation. Behavioral contract:
+      DB-only write (no filesystem fallback, WINT-1011 AC-2). Returns null when DB is
+      unavailable (storyUpdateStatus returns null). Logs a warning internally via @repo/logger
+      on null return. The command spec must handle null return by emitting a user-visible
+      WARNING and proceeding to Step 3b. Input: StoryUpdateStatusInput. Output:
+      StoryUpdateStatusOutput (the updated story record) or null.
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    role: >
+      Contains SWIM_LANE_TO_STATE — the authoritative mapping of swim-lane directory names
+      to DB state enum values. Keys: backlog, ready-to-work, in-progress, ready-for-qa, UAT,
+      done. Values: backlog, ready_to_work, in_progress, ready_for_qa, in_qa, done.
+      Important: 'done' key maps to 'done' value, but the command status for this DB target
+      is 'completed' (not 'done'). The inline mapping table in Step 3a must express this as
+      "completed → done". Also contains KNOWN_DB_ONLY_STATES: ['blocked', 'cancelled'] —
+      these are the DB states for the two explicit-decision mapped statuses (BLOCKED and
+      superseded) that are NOT in SWIM_LANE_TO_STATE.
+
+  - path: "packages/backend/mcp-tools/src/story-management/__types__/index.ts"
+    role: >
+      Contains StoryUpdateStatusInputSchema — the call signature for shimUpdateStoryStatus.
+      Fields: storyId (UUID or human-readable story ID format), newState (DB state enum),
+      reason (optional string), triggeredBy (string, defaults to 'agent'), metadata
+      (optional record). The command must use triggeredBy: 'story-update-command' to
+      identify the caller in audit logs.
+
+  - path: ".claude/commands/story-move.md"
+    role: >
+      Canonical pattern reference for DB integration in an existing command (WINT-1060).
+      Step 2.5 shows the exact pattern to follow: inline SWIM_LANE_TO_STATE table with
+      columns for stage→DB state, conditional shimUpdateStoryStatus call block, null-return
+      handling with db_updated=false, unmapped-stage handling with db_updated=skipped
+      (NOTE: story-update uses false, not skipped, for unmapped statuses — explicit Non-goal).
+      The result YAML in Step 5 shows db_updated: true | false | skipped with comment
+      documentation. Follow the formatting style of Step 2.5 exactly for Step 3a.
+
+patterns_to_follow:
+  - name: "Inline SWIM_LANE_TO_STATE mapping table"
+    source: ".claude/commands/story-move.md Step 2.5"
+    description: >
+      Embed the status-to-DB-state mapping as an inline markdown table within the command
+      step, rather than referencing the TypeScript source at runtime. Columns:
+      "Command status | DB newState | Action". Rows that are mapped get the DB state value.
+      Rows that are unmapped get "skip" in the DB newState column and a reason in Action.
+      This keeps the command self-documenting. The table is sourced from
+      SWIM_LANE_TO_STATE but extended with 2 explicit decisions (BLOCKED, superseded) and
+      6 explicit skips (created, elaboration, needs-code-review, failed-code-review,
+      failed-qa, needs-split).
+
+  - name: "Conditional shimUpdateStoryStatus call with null-return handling"
+    source: ".claude/commands/story-move.md Step 2.5"
+    description: >
+      Use a pseudocode block showing the conditional:
+        if NEW_STATUS is in the mapped rows:
+          result = shimUpdateStoryStatus({ storyId: STORY_ID, newState: <mapped_state>,
+            triggeredBy: 'story-update-command' })
+          if result is null:
+            emit WARNING: "DB write failed for story '{STORY_ID}' — DB unavailable.
+              Proceeding with filesystem update only."
+            db_updated = false
+          else:
+            db_updated = true
+        else (unmapped):
+          db_updated = false  # no call made
+      Always proceed to Step 3b regardless of DB outcome.
+
+  - name: "db_updated field in result YAML"
+    source: ".claude/commands/story-move.md Step 5 result block"
+    description: >
+      Add db_updated as a field in the Step 5 result YAML block. For story-update, only two
+      values are valid: true (DB write succeeded) and false (DB unavailable OR unmapped status).
+      Do NOT use 'skipped' — this is an explicit Non-goal (deferred to WINT-7030). Include
+      inline comment lines documenting what each value means, matching the style of the
+      story-move.md result block comments.
+
+  - name: "Docs-only command version bump"
+    source: "WINT-1050 story AC-8, story-move.md frontmatter pattern"
+    description: >
+      Update both 'version' and 'updated' fields in the command's YAML frontmatter.
+      Version is 3.0.0 (major bump — DB integration is a breaking behavioral change for
+      agents consuming command output). Updated date is 2026-02-20. Add a version history
+      note or comment explaining that v3.0.0 introduces DB integration.
+
+  - name: "Step renaming without full renumbering"
+    source: "WINT-1050 story Architecture Notes"
+    description: >
+      The new DB write step is inserted as Step 3a; the old Step 3 becomes Step 3b.
+      Steps 4 and 5 retain their existing numbers — do not renumber them. This minimises
+      diff noise and preserves compatibility with any external references to Step 4 / Step 5.
+
+  - name: "WARNING emit format for DB failure"
+    source: "WINT-1050 story AC-3"
+    description: >
+      When shimUpdateStoryStatus returns null, the command must emit this exact string:
+      "WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with
+      filesystem update only."
+      Use {STORY_ID} as the placeholder. The warning is user-visible (not just a logger.warn
+      internal call) — it must appear in the command's output to the executing agent.
+
+  - name: "Integration Test Scenarios section"
+    source: "WINT-1050 story AC-9, story-move.md integration notes pattern"
+    description: >
+      Append a top-level "## Integration Test Scenarios" section after the Signal section
+      (or at the end of the file). Format each of the 6 scenarios (A-F) consistently.
+      Each scenario needs: label (A/B/C/D/E/F), brief name, precondition, action, and
+      expected outcome (including db_updated value). Add an ADR-005 compliance note for
+      scenarios A, B, F which require a live postgres-knowledgebase MCP server.
+
+constraints:
+  - "docs-only: The ONLY file modified is .claude/commands/story-update.md. No TypeScript
+    source files are created or modified."
+  - "Do NOT remove or replace Step 3b (YAML frontmatter update) — retained for Phase 1
+    backward compatibility."
+  - "Do NOT remove or replace Step 4 (stories.index.md update)."
+  - "Do NOT modify packages/backend/mcp-tools/ — shim API is frozen."
+  - "Do NOT implement a --db-only flag — deferred to WINT-7030."
+  - "Do NOT add db_updated: skipped as a third value — use false for both null-return and
+    unmapped-status cases (explicit Non-goal; differs from story-move.md which uses skipped)."
+  - "Do NOT modify the worktree cleanup logic in Step 2 — preserve as-is (WINT-1150 owns it)."
+  - "Do NOT change permission_level in the frontmatter — must remain docs-only."
+  - "Transition validation (Status Transition Rules table) must remain BEFORE the DB write
+    (Step 3a). If transition is invalid, emit UPDATE FAILED and exit without calling
+    shimUpdateStoryStatus."
+  - "The execution order must be: Step 1 (locate) → Step 2 (worktree cleanup, if completing)
+    → Step 3a (DB write) → Step 3b (frontmatter) → Step 4 (index, unless --no-index) →
+    Step 5 (result YAML)."
+  - "The --no-index flag suppresses ONLY Step 4. Step 3a and Step 3b always execute."
+  - "The mapping table must cover exactly 14 statuses — one row per status in the Valid
+    Status Values table. No status left without an explicit decision."
+  - "BLOCKED maps to DB state 'blocked'. superseded maps to DB state 'cancelled'. These are
+    explicit decisions not derivable from SWIM_LANE_TO_STATE alone."
+  - "The 6 unmapped statuses (skip with reason): created, elaboration, needs-code-review,
+    failed-code-review, failed-qa, needs-split. NOT 8 — the Architecture Notes prose count
+    is a typo. Use the 6-bullet list in the story as authoritative."
+  - "triggeredBy value must be 'story-update-command' (not 'agent' or 'story-update')."
+  - "Version bump is to 3.0.0 (major, not patch or minor) — DB integration changes observable
+    behavior for downstream consumers."

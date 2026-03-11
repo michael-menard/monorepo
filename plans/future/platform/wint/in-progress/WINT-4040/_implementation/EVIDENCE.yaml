@@ -193,10 +193,58 @@ commands_run:
     output: "Usage text printed. Exit 0."
     timestamp: "2026-03-08T17:45:00Z"
 
+  - command: "pnpm --filter @repo/mcp-tools exec eslint src/scripts/infer-capabilities.ts --max-warnings=0"
+    result: SUCCESS
+    output: "Exit 0 — no lint errors or warnings after fixing no-useless-escape (line 103) and max-line-length (line 533)"
+    timestamp: "2026-03-08T18:30:00Z"
+    note: "Fix iteration 2: resolved ranked_patches priority 1 (no-useless-escape) and priority 2 (max-line-length)"
+
+  - command: "pnpm --filter @repo/mcp-tools exec eslint src/scripts/infer-capabilities.ts --fix"
+    result: SUCCESS
+    output: "Exit 0 — auto-fixed 4 prettier/prettier formatting errors (lines 252, 494, 555, 556)"
+    timestamp: "2026-03-09T10:58:00Z"
+    note: "Fix iteration 3: auto-fixed prettier formatting for .select(), dynamic import, and logger.info calls"
+
+  - command: "pnpm --filter @repo/mcp-tools exec eslint src/scripts/infer-capabilities.ts --max-warnings=0"
+    result: SUCCESS
+    output: "Exit 0 — no lint errors or warnings"
+    timestamp: "2026-03-09T10:58:30Z"
+
+  - command: "pnpm --filter @repo/mcp-tools check-types"
+    result: SUCCESS
+    output: "Exit 0 — no TypeScript errors"
+    timestamp: "2026-03-09T10:58:45Z"
+
+  - command: "pnpm --filter @repo/mcp-tools test src/scripts/__tests__/infer-capabilities"
+    result: SUCCESS
+    output: "44 tests passed (1 test file)"
+    timestamp: "2026-03-09T10:59:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools exec eslint src/scripts/infer-capabilities.ts src/scripts/__types__/index.ts --max-warnings=0"
+    result: SUCCESS
+    output: "Exit 0 — no lint errors or warnings on all WINT-4040 files"
+    timestamp: "2026-03-09T21:05:00Z"
+    note: "Fix iteration 4: verified no remaining lint issues in WINT-4040 files. Pre-existing trailing newline in src/index.ts (WINT-3020, not modified by WINT-4040) not in scope."
+
+  - command: "pnpm --filter @repo/mcp-tools check-types"
+    result: SUCCESS
+    output: "Exit 0 — no TypeScript errors"
+    timestamp: "2026-03-09T21:05:30Z"
+
+  - command: "pnpm --filter @repo/mcp-tools build"
+    result: SUCCESS
+    output: "Exit 0 — tsc build succeeded"
+    timestamp: "2026-03-09T21:06:00Z"
+
+  - command: "pnpm --filter @repo/mcp-tools test src/scripts/__tests__/infer-capabilities.test.ts"
+    result: SUCCESS
+    output: "44 tests passed (1 test file) — all WINT-4040 tests pass"
+    timestamp: "2026-03-09T21:06:30Z"
+
 endpoints_exercised: []
 
 test_summary:
-  unit: { pass: 33, fail: 0 }
+  unit: { pass: 44, fail: 0 }
   e2e: { pass: 0, fail: 0 }
 
 e2e_tests:

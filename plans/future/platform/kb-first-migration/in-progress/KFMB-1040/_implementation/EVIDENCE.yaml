@@ -1,0 +1,46 @@
+schema: 1
+story_id: KFMB-1040
+timestamp: "2026-03-07T20:20:00Z"
+iteration: 3
+phase: fix
+
+summary: >-
+  Fixed the EC-11 authorization test gap by rebasing story/KFMB-1040 on main.
+  The rebase incorporated commit a6b80ff7 which added the EC-11 test for
+  kb_delete_artifact authorization (AC-6 requirement). All 20 tests pass and
+  type check is clean.
+
+touched_files:
+  - apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+  - apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+  - apps/api/knowledge-base/src/mcp-server/access-control.ts
+
+commands_run:
+  - command: "git rebase main"
+    result: "Success after resolving plan-file conflicts (story tracking YAML files)"
+    worktree: "tree/story/KFMB-1040"
+  - command: "pnpm test -- \"src/mcp-server/__tests__/artifact-tools.test.ts\""
+    result: "20 tests passed"
+    worktree: "tree/story/KFMB-1040/apps/api/knowledge-base"
+  - command: "pnpm check-types"
+    result: "Clean - no errors"
+    worktree: "tree/story/KFMB-1040/apps/api/knowledge-base"
+
+fix_approach: "Rebase branch on main - no new source code needed"
+fix_iteration: 1
+rebase_conflicts_resolved:
+  - file: plans/future/platform/kb-first-migration/in-progress/KFMB-1020/story.yaml
+    resolution: "Took theirs (main commit version)"
+  - file: plans/future/platform/kb-first-migration/in-progress/KFMB-1020/_implementation/CHECKPOINT.yaml
+    resolution: "Took theirs (main commit version)"
+  - file: plans/future/platform/kb-first-migration/stories.index.md
+    resolution: "Took ours (HEAD/main current state with accurate story statuses)"
+
+verification:
+  ec11_test_present: true
+  test_line_range: "427-445"
+  test_count: 20
+  type_errors: 0
+  build_errors: 0

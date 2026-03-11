@@ -11,6 +11,15 @@ import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm'
 import { auditLog } from '../db/schema.js'
+import {
+  AuditByEntryInputSchema,
+  AuditQueryInputSchema,
+  type AuditByEntryInput,
+  type AuditQueryInput,
+  type AuditLogResponse,
+  type AuditQueryResult,
+  type AuditOperation,
+} from './__types__/index.js'
 
 // Explicit column selector — guard against schema-vs-DB drift
 const auditLogColumns = {
@@ -23,16 +32,6 @@ const auditLogColumns = {
   userContext: auditLog.userContext,
   createdAt: auditLog.createdAt,
 } as const
-
-import {
-  AuditByEntryInputSchema,
-  AuditQueryInputSchema,
-  type AuditByEntryInput,
-  type AuditQueryInput,
-  type AuditLogResponse,
-  type AuditQueryResult,
-  type AuditOperation,
-} from './__types__/index.js'
 
 /**
  * Dependencies for audit queries.

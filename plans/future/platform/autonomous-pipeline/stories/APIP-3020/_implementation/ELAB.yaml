@@ -1,0 +1,110 @@
+schema: 1
+story_id: "APIP-3020"
+timestamp: "2026-02-25T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story scope matches stories.index.md exactly: 'Model Affinity Profiles Table and Pattern Miner Cron'. No extra endpoints, infrastructure, or features beyond what is described in the index. Dependencies (APIP-3010) and downstream (APIP-3030/3040/3050/3060/3090) match."
+
+  - id: internal_consistency
+    status: PASS
+    note: "Goals (schema + Pattern Miner) do not contradict Non-Goals (10 explicit non-goals). ACs align with Scope section. Test Plan maps 1:1 to ACs. Architecture Notes are consistent with AC requirements (weighted average formula, confidence thresholds, watermark strategy)."
+
+  - id: reuse_first
+    status: PASS
+    note: "Reuse Plan explicitly references wintSchema, drizzle-zod createInsertSchema/createSelectSchema, StateGraph+Annotation from LangGraph, updateState helper, @repo/logger, and SQL migration patterns. No per-story one-off utilities proposed."
+
+  - id: ports_adapters
+    status: PASS
+    note: "No HTTP endpoints or API surface. Pattern Miner is a self-contained LangGraph cron graph with a clean entry point (runPatternMiner). DB access is isolated to the graph nodes. Transport-agnostic core logic confirmed."
+
+  - id: testability
+    status: PASS
+    note: "Detailed test plan: 7 unit test areas with mocked DB (CI-runnable), 5 integration test scenarios against real PostgreSQL, 3 migration tests. No frontend, no Playwright needed. All tests are concrete and verifiable."
+
+  - id: decision_completeness
+    status: PASS
+    note: "No blocking TBDs. All design decisions are explicit: watermark strategy (MAX last_aggregated_at), confidence thresholds (0/19/49), weighted average formula, cold-start behavior, APIP-3090 compatibility contract. Migration naming defers to APIP-5007 but fallback is clear (next sequential number 016_)."
+
+  - id: risk_disclosure
+    status: PASS
+    note: "Risks well-documented: APIP-3010 upstream dependency (column names may differ), pgEnum ordering in migration, integration tests requiring real PostgreSQL, weighted average complexity. Deploy touchpoints documented (migration before cron). APIP-3090 single-instance scheduling acknowledged."
+
+  - id: story_sizing
+    status: SPLIT
+    note: "3 of 6 sizing indicators triggered: (1) 13 ACs exceeds 8 threshold, (2) 9 happy path tests exceeds 3 threshold, (3) touches 3 packages (database-schema, orchestrator, knowledge-base migrations). Natural split boundary exists: Part A = Schema + Migration (AC-1 to AC-4, AC-13; ST-1/ST-2/ST-3), Part B = Pattern Miner graph + logic + tests (AC-5 to AC-12; ST-4 through ST-8). However, subtask decomposition is strong and the work is tightly coupled — split is recommended but not strictly required."
+
+  - id: subtask_decomposition
+    status: PASS
+    note: "8 well-defined subtasks covering all 13 ACs. Each subtask touches <=3 files. Dependencies form a clean DAG (ST-1 -> ST-2/ST-3/ST-4 -> ST-5 -> ST-6 -> ST-7 -> ST-8). Every subtask has a verification command and references canonical files. Canonical References section has 4 entries covering all patterns needed."
+
+gaps:
+  - id: gap-1
+    check: decision_completeness
+    finding: "APIP-5007 (Database Schema Versioning) is in 'Created' status — migration naming convention is not yet established. Story references 'per APIP-5007 naming convention' but APIP-5007 has no implementation. Story should explicitly state fallback: use next sequential number (016_model_affinity.sql) if APIP-5007 is not complete."
+    severity: medium
+    decision: log_to_kb
+    ac_added: null
+    notes: "Non-blocking: fallback to sequential numbering (016_) is clear and works. Logged to KB for awareness."
+    kb_entry_id: "17adef0d-38b5-4018-a2ff-21651a6a6e68"
+
+  - id: gap-2
+    check: risk_disclosure
+    finding: "No advisory lock or concurrency guard documented for Pattern Miner. Story acknowledges APIP-3090 should ensure single-instance execution, but Pattern Miner itself has no protection against concurrent runs. If two instances run simultaneously, the watermark-based approach could cause duplicate aggregation or incorrect weighted averages."
+    severity: medium
+    decision: log_to_kb
+    ac_added: null
+    notes: "Non-blocking: APIP-3090 owns single-instance scheduling. Advisory lock is defense-in-depth, not MVP-critical. Logged to KB."
+    kb_entry_id: "1f244cad-a29b-4246-8cae-198d8e788bbf"
+
+opportunities:
+  - id: opp-1
+    category: performance
+    finding: "Batch upsert: aggregation could use a single multi-row INSERT...ON CONFLICT instead of per-group individual upserts, reducing DB round-trips when many (model, change_type, file_type) combinations exist."
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "c11081ab-fd0e-4a14-9da8-69d9e1b290b3"
+
+  - id: opp-2
+    category: observability
+    finding: "Structured metrics emission: Pattern Miner could emit per-group aggregation durations and row counts as structured log fields for operational monitoring, beyond the final summary log."
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "be8aefc6-ecd6-46cc-8788-08a3a388f771"
+
+  - id: opp-3
+    category: edge_cases
+    finding: "The metrics.ts canonical reference uses TypeScript interfaces (GraphStateWithMetrics) which contradicts the Zod-first types rule in CLAUDE.md. Pattern Miner implementation should use Zod schemas for all state types, not follow this specific anti-pattern."
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "dffb32dd-da75-4fb0-a8e0-9d96a29b3aaf"
+
+  - id: opp-4
+    category: performance
+    finding: "Trend delta computation reads the previous success_rate before upsert. This creates a read-then-write race window. A CTE-based approach (WITH old AS SELECT ... INSERT ... ON CONFLICT DO UPDATE RETURNING) would be atomic."
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "4783b718-9c36-4fbf-951b-e9d462b76c62"
+
+split_recommendation:
+  splits:
+    - id: A
+      scope: "Schema + Migration: wint.model_affinity Drizzle ORM table, pgEnum, indexes, SQL migration, schema shape tests"
+      ac_allocation: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-13"]
+      dependency: none
+    - id: B
+      scope: "Pattern Miner: LangGraph cron graph, confidence assignment, aggregation logic, trend detection, cold-start, unit tests, integration tests"
+      ac_allocation: ["AC-5", "AC-6", "AC-7", "AC-8", "AC-9", "AC-10", "AC-11", "AC-12"]
+      dependency: "APIP-3020-A"
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T12:05:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0
+  notes: "Both gaps are non-MVP-blocking (medium severity) — logged to KB. Story sizing flagged SPLIT (3 indicators) but subtask decomposition is strong with 8 well-scoped subtasks forming a clean DAG. Split is advisory, not required. All 4 opportunities logged to KB for future reference."

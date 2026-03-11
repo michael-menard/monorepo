@@ -1,0 +1,1 @@
+{"version":3,"file":"flush-timer.d.ts","sourceRoot":"","sources":["../../../src/telemetry-sdk/utils/flush-timer.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,uBAAuB,CAAA;AAE7D;;;;;;GAMG;AACH,wBAAgB,eAAe,CAAC,UAAU,EAAE,MAAM,EAAE,OAAO,EAAE,MAAM,IAAI,GAAG,gBAAgB,CAEzF;AAED;;;;GAIG;AACH,wBAAgB,cAAc,CAAC,KAAK,EAAE,gBAAgB,GAAG,IAAI,CAI5D"}

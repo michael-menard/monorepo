@@ -90,6 +90,12 @@ Report: "Feature triage blocked: <reason>"
 
 Features updated in `plans/future/FEATURES.md`
 
+Log telemetry (fire-and-forget — never blocks workflow):
+```
+/telemetry-log null pm-refine-story review success
+```
+If the call returns null or throws, log a warning and continue.
+
 **If features promoted**: Suggest `/pm-story generate` for each promoted feature.
 
 ## Ref

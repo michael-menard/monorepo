@@ -904,6 +904,7 @@ export {
   capabilities,
   featureRelationships,
   cohesionRules,
+  epics,
 
   // Workflow Tracking tables
   workflowExecutions,
@@ -1210,6 +1211,7 @@ export {
   type InsertChangeTelemetry,
   type SelectChangeTelemetry,
 } from './change-telemetry.js'
+
 
 // Re-export Rules Registry table (WINT-4020)
 export {

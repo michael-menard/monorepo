@@ -1,0 +1,196 @@
+strategy: unit+e2e
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  pipeline_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "Playwright E2E config file is valid and loads without errors"
+    setup: "packages/backend/orchestrator/e2e/playwright.config.ts exists"
+    action: "Run `npx playwright test --config packages/backend/orchestrator/e2e/playwright.config.ts --list`"
+    expected: "Config loads, project 'pipeline-e2e' appears in project list, workers:1, timeout:1800000 visible"
+    evidence: "playwright --list output shows pipeline-e2e project"
+
+  - id: HP-2
+    title: "PipelineTestFixtures injects queueClient connected to local Redis"
+    setup: "Redis running on REDIS_URL, BullMQ queue 'pipeline-e2e' exists"
+    action: "Run a minimal test using the pipeline fixture; call queueClient.getJobCounts()"
+    expected: "queueClient returns job counts without throwing; Redis connection established"
+    evidence: "Test passes, no connection refused errors"
+
+  - id: HP-3
+    title: "SyntheticTestStory fixture parses against SyntheticTestStorySchema"
+    setup: "synthetic-story.ts fixture file exists with defined storyId and ChangeSpec"
+    action: "Import syntheticStory from fixture; call SyntheticTestStorySchema.parse(syntheticStory)"
+    expected: "Parse succeeds with no Zod validation errors"
+    evidence: "Unit test passes"
+
+  - id: HP-4
+    title: "assertEvidenceArtifact validates schema-valid EVIDENCE.yaml"
+    setup: "A schema-valid EVIDENCE.yaml file placed in a temp story dir"
+    action: "Call assertEvidenceArtifact(tempStoryDir)"
+    expected: "Returns parsed EvidenceSchema result without throwing"
+    evidence: "Unit test passes"
+
+  - id: HP-5
+    title: "PipelineJobPoller completes successfully when job reaches 'completed' state"
+    setup: "BullMQ job mock that transitions to 'completed' after 2 polls"
+    action: "Call pollJobCompletion(queue, jobId, 30000)"
+    expected: "Returns terminal state 'completed' within timeout"
+    evidence: "Unit test passes, no PollTimeoutError thrown"
+
+  - id: HP-6
+    title: "phase0-queue-supervisor spec enqueues job and gets non-null jobId"
+    setup: "APIP-0010 and APIP-0020 complete; Redis running; supervisor polling active"
+    action: "Run phase0-queue-supervisor.spec.ts E2E test"
+    expected: "queueClient.add() returns job with non-null id; job transitions to 'active' within 30s"
+    evidence: "Playwright test report shows PASS"
+
+  - id: HP-7
+    title: "Full critical path E2E completes with MERGE_COMPLETE verdict"
+    setup: "All APIP-0010/0020/1010/1020/1030/1050/1060/1070 complete; synthetic story fixture ready"
+    action: "Run phase1-critical-path.spec.ts E2E test with all skipIf guards resolved"
+    expected: "MERGE.yaml written with verdict: MERGE_COMPLETE; git log shows squash commit; BullMQ job in 'completed' state"
+    evidence: "Playwright test report PASS; git log output captured"
+
+  - id: HP-8
+    title: "Teardown cleans synthetic story feature directory after test run"
+    setup: "Completed E2E test run that created synthetic story artifacts"
+    action: "Observe afterAll teardown hook execution"
+    expected: "plans/future/platform/autonomous-pipeline/<syntheticStoryId>/ directory removed; BullMQ job removed from Redis"
+    evidence: "Directory does not exist post-test; BullMQ job count returns 0 for completed test job"
+
+error_cases:
+  - id: EC-1
+    title: "assertEvidenceArtifact throws on schema-invalid EVIDENCE.yaml"
+    setup: "A YAML file at storyDir/EVIDENCE.yaml that fails EvidenceSchema validation (missing required fields)"
+    action: "Call assertEvidenceArtifact(storyDir)"
+    expected: "Throws ZodError with validation details"
+    evidence: "Unit test catches error; error.name === 'ZodError'"
+
+  - id: EC-2
+    title: "pollJobCompletion throws PollTimeoutError when job does not reach terminal state"
+    setup: "BullMQ job that never transitions beyond 'active' state"
+    action: "Call pollJobCompletion(queue, jobId, 1000) with 1s timeout"
+    expected: "Throws PollTimeoutError after maxWaitMs exceeded"
+    evidence: "Unit test catches PollTimeoutError; error parsed by PollTimeoutErrorSchema"
+
+  - id: EC-3
+    title: "PipelineJobPoller uses exponential back-off — no busy loop"
+    setup: "Job that takes 5 polls to complete; poll intervals tracked"
+    action: "Run PipelineJobPoller with pollIntervalMs:100, observe interval durations"
+    expected: "Intervals increase exponentially (100ms, 200ms, 400ms, ...); never calls Redis synchronously in tight loop"
+    evidence: "Unit test verifies interval sequence matches exponential formula"
+
+  - id: EC-4
+    title: "phase1-elaboration spec skips when APIP-1010 module not available"
+    setup: "APIP-1010 elaboration graph module not yet deployed (import would fail)"
+    action: "Run phase1-elaboration.spec.ts"
+    expected: "Test is marked as skipped with message 'SKIPPED: APIP-1010 (structurer node) not yet available'"
+    evidence: "Playwright report shows test as skipped, not failed"
+
+  - id: EC-5
+    title: "assertReviewArtifact throws on missing REVIEW.yaml file"
+    setup: "storyDir exists but REVIEW.yaml is absent"
+    action: "Call assertReviewArtifact(storyDir)"
+    expected: "Throws an error indicating the artifact file was not found"
+    evidence: "Unit test catches error; error message includes 'REVIEW.yaml'"
+
+  - id: EC-6
+    title: "Playwright E2E config does not conflict with web app project names"
+    setup: "Both apps/web/playwright/playwright.config.ts and packages/backend/orchestrator/e2e/playwright.config.ts present"
+    action: "List project names from both configs"
+    expected: "Pipeline project name 'pipeline-e2e' does not appear in web app config project names"
+    evidence: "Manual config comparison; grep output shows distinct project names"
+
+edge_cases:
+  - id: ED-1
+    title: "PipelineJobPoller caps exponential back-off at maxPollIntervalMs"
+    setup: "PipelineJobPoller with maxPollIntervalMs:60000 and a job that takes many polls"
+    action: "Run poller; observe intervals after several doublings"
+    expected: "Poll interval does not exceed 60000ms regardless of how many poll iterations occur"
+    evidence: "Unit test verifies interval never exceeds cap"
+
+  - id: ED-2
+    title: "Teardown logs warning (not error) when synthetic story directory already removed"
+    setup: "E2E test where teardown is called but feature directory was already manually deleted"
+    action: "Execute afterAll teardown with missing directory"
+    expected: "Teardown logs a @repo/logger warning, does not throw, does not fail the test run"
+    evidence: "Test completes; logger.warn called; no unhandled exception"
+
+  - id: ED-3
+    title: "E2E config has forbidOnly:true when CI=true environment variable is set"
+    setup: "process.env.CI = 'true'"
+    action: "Import playwright.config.ts and inspect forbidOnly field"
+    expected: "forbidOnly evaluates to true"
+    evidence: "Unit test or manual inspection confirms `!!process.env.CI === true`"
+
+  - id: ED-4
+    title: "Synthetic test story fixture produces trivially-passable code change"
+    setup: "Synthetic ChangeSpec applied to codebase in isolation"
+    action: "Run `pnpm check-types --filter <target-package>` and `pnpm test --filter <target-package>`"
+    expected: "Zero TypeScript errors; all tests pass"
+    evidence: "CI output; both commands exit 0"
+
+  - id: ED-5
+    title: "BullMQ test queue name 'pipeline-e2e' is distinct from production queue"
+    setup: "E2E test fixture creates queue with connection to local Redis"
+    action: "Check queue name used by queueClient fixture"
+    expected: "Queue name is 'pipeline-e2e', not 'pipeline' or any production queue name"
+    evidence: "Fixture code inspection; unit test asserting queue.name === 'pipeline-e2e'"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "BullMQ job state: waiting -> active -> completed"
+      - "BullMQ job.id is non-null after queue.add()"
+      - "EVIDENCE.yaml parses with EvidenceSchema.parse()"
+      - "REVIEW.yaml parses with ReviewSchema.parse()"
+      - "QA-VERIFY.yaml parses with QaVerifySchema.parse()"
+      - "MERGE.yaml parses with MergeArtifactSchema.parse() and verdict === 'MERGE_COMPLETE'"
+      - "git log --oneline main --grep=storyId returns at least 1 commit"
+  frontend:
+    # ui_touched: false — omitted
+
+manual_cases:
+  - id: MC-1
+    title: "PIPELINE-E2E-TEST-PLAN.md is complete and developer-actionable"
+    steps:
+      - "Open packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md"
+      - "Verify it documents synthetic test story design and micro-verify rationale"
+      - "Verify it maps each test scenario to its required dependency story"
+      - "Verify it documents port isolation strategy from QA graph Playwright subprocess"
+      - "Verify it lists required environment variables: REDIS_URL, LANGGRAPH_SERVER_URL, TEST_STORY_FEATURE_DIR"
+      - "Verify it documents phased activation strategy per test scenario"
+    expected: "All 6 sections present and understandable to a developer unfamiliar with the pipeline"
+
+  - id: MC-2
+    title: "apps/web/playwright/ tests are unmodified"
+    steps:
+      - "Run `git diff HEAD apps/web/playwright/`"
+      - "Verify zero changes to any file in apps/web/playwright/"
+    expected: "No modifications to existing web app Playwright tests"
+
+fixture_definitions:
+  - name: PipelineTestFixtures
+    type: "Playwright test.extend fixture"
+    description: "Injects queueClient (BullMQ Queue), pipelineStateReader (YAML artifact reader + BullMQ poller), syntheticStory (SyntheticTestStory fixture)"
+  - name: SyntheticTestStory
+    type: "Zod-inferred type (SyntheticTestStorySchema)"
+    description: "Pre-built minimal story fixture with storyId, feature directory path, 1 AC, and 1 trivially-passable ChangeSpec"
+  - name: PollTimeoutError
+    type: "Zod-inferred error type"
+    description: "Error thrown by PipelineJobPoller when maxWaitMs exceeded without terminal job state"
+  - name: PipelineStateReader
+    type: "Zod-inferred type"
+    description: "Utility composing YAML artifact reader and BullMQ job state poller for use in E2E assertions"
+
+risks:
+  - "Phase 0 E2E is runnable immediately; full critical path E2E is blocked until all 8 dependency graphs are complete — test plan must clearly document phased activation"
+  - "Playwright port conflict with QA graph's internal test runner subprocess (APIP-1060) — mitigated by distinct project name 'pipeline-e2e' and workers:1 to prevent concurrent runs"
+  - "Synthetic test story ChangeSpec must produce zero TypeScript errors and passing unit tests — requires careful upfront design of the trivial code change"
+  - "Exponential back-off implementation must not use synchronous polling — Vitest unit test coverage required for PipelineJobPoller to prevent regression"
+  - "teardown failures in afterAll hooks should log warnings but never fail the test suite — requires deliberate error swallowing with @repo/logger.warn"

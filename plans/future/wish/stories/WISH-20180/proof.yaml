@@ -1,0 +1,21 @@
+schema: 1
+story_id: WISH-20180
+completed_at: 2026-02-01T20:52:37.281Z
+summary: []
+deliverables:
+  - path: .github/workflows/schema-validation.yml
+    type: workflow
+  - path: packages/backend/database-schema/scripts/validate-schema-changes.ts
+    type: code
+  - path: packages/backend/database-schema/scripts/__tests__/validate-schema-changes.test.ts
+    type: tests
+  - path: packages/backend/database-schema/vitest.config.ts
+    type: tests
+  - path: packages/backend/database-schema/docs/CI-SCHEMA-VALIDATION.md
+    type: docs
+verification:
+  tests_passed: 26
+  all_acs_verified: true
+limitations:
+  - Uses regex-based detection rather than full SQL AST parsing
+  - References SCHEMA-EVOLUTION-POLICY.md which may not exist yet (WISH-2057 dependency)

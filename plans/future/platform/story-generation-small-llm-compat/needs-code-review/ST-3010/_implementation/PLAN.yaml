@@ -1,0 +1,67 @@
+schema: 1
+story_id: "ST-3010"
+timestamp: "2026-03-08T00:00:00Z"
+gen_mode: true
+verification_story: true
+
+steps:
+  - id: 1
+    description: "Verify Step 3 of dev-plan-leader.agent.md reads ## Subtasks and ## Canonical References from the story file"
+    files: [".claude/agents/dev-plan-leader.agent.md"]
+    dependencies: []
+    slice: packages
+    verification: "Confirm lines 102-112 contain Step 3 instructions for reading ## Subtasks and ## Canonical References, with subtask-aware planning note and 1:1 mapping language"
+
+  - id: 2
+    description: "Verify Step 4 of dev-plan-leader.agent.md emits schema: 2 PLAN.yaml when subtasks are present, with all required fields (subtask_id, files_to_read, verification, acs_covered)"
+    files: [".claude/agents/dev-plan-leader.agent.md"]
+    dependencies: [1]
+    slice: packages
+    verification: "Confirm lines 114-136 show schema: 2 YAML block with subtask_id, files_to_read, verification, and acs_covered fields under the 'When subtasks are present' branch"
+
+  - id: 3
+    description: "Verify Step 5 of dev-plan-leader.agent.md includes self-validation rules for subtask-sourced plans: checks subtask_id, files_to_read, verification, acs_covered present, and enforces <=3 files per step"
+    files: [".claude/agents/dev-plan-leader.agent.md"]
+    dependencies: [2]
+    slice: packages
+    verification: "Confirm lines 182-192 contain rules 6 and 7 in Step 5 that check subtask_id, files_to_read, verification, acs_covered on schema: 2 plans and enforce no step touches more than 3 files"
+
+  - id: 4
+    description: "Write EVIDENCE.yaml documenting verification results with line-level proof for each capability"
+    files: ["plans/future/platform/story-generation-small-llm-compat/in-progress/ST-3010/_implementation/EVIDENCE.yaml"]
+    dependencies: [1, 2, 3]
+    slice: packages
+    verification: "EVIDENCE.yaml exists and contains verified: true with line references for all three capabilities"
+
+files_to_change:
+  - path: "plans/future/platform/story-generation-small-llm-compat/in-progress/ST-3010/_implementation/EVIDENCE.yaml"
+    action: create
+    reason: "Document verification results proving all three capabilities are already implemented in dev-plan-leader.agent.md v1.3.0"
+
+commands_to_run:
+  - command: "echo 'No build/test commands required — verification story with no code changes'"
+    when: "after verification steps"
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: "GOAL-1"
+    planned_evidence: "Manual verification: lines 102-112 of dev-plan-leader.agent.md confirm Step 3 reads ## Subtasks and ## Canonical References"
+    evidence_type: manual
+  - ac_id: "GOAL-2"
+    planned_evidence: "Manual verification: lines 114-136 of dev-plan-leader.agent.md confirm Step 4 emits schema: 2 with subtask_id, files_to_read, verification, acs_covered"
+    evidence_type: manual
+  - ac_id: "GOAL-3"
+    planned_evidence: "Manual verification: lines 182-192 of dev-plan-leader.agent.md confirm Step 5 self-validation rules 6 and 7 for subtask-sourced plans"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "This is a gen_mode=true VERIFICATION story — no code changes are expected"
+  - "risk_notes confirm: already fully implemented in dev-plan-leader.agent.md v1.3.0"
+  - "All three capabilities verified by direct line-level inspection of the agent file"
+  - "Step 3 proof: lines 102-112 (subtask-aware planning section)"
+  - "Step 4 proof: lines 114-136 (schema: 2 YAML block with all required fields)"
+  - "Step 5 proof: lines 182-192 (validation rules 6 and 7 for subtask-sourced plans)"

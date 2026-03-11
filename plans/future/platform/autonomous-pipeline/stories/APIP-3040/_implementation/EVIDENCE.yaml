@@ -1,0 +1,287 @@
+story_id: APIP-3040
+title: "Learning-Aware Model Router"
+branch: story/APIP-3040
+main_commit: 5d3747b1
+generated: "2026-02-28"
+reviewer: claude-sonnet-4-6
+
+files_examined:
+  - packages/backend/orchestrator/src/pipeline/model-router.ts
+  - packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts
+  - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+
+# ---------------------------------------------------------------------------
+# AC-by-AC evidence
+# ---------------------------------------------------------------------------
+
+acceptance_criteria:
+
+  AC-1:
+    title: "dispatch() accepts change_type and file_type, performs affinity lookup before static chain"
+    status: PASS
+    evidence:
+      - "PipelineDispatchOptionsSchema in __types__/index.ts adds changeType and fileType fields:
+         changeType: z.string().default('unknown'), fileType: z.string().default('unknown')"
+      - "dispatch() destructures changeType and fileType from options (model-router.ts line 166-170)"
+      - "Tier 2 affinity lookup block at lines 208-246 calls _queryAffinityProfile(changeType, fileType)
+         before the Tier 3 static escalation chain at lines 249-329"
+
+  AC-2:
+    title: "_queryAffinityProfile(changeType, fileType) queries wint.model_affinity"
+    status: PASS_WITH_NOTE
+    evidence:
+      - "_queryAffinityProfile() private method defined at lines 340-360 in model-router.ts"
+      - "Delegates to affinityReader.query(changeType, fileType, threshold, minSampleSize)"
+      - "Returns AffinityProfile | null"
+    note: >
+      Ordering (ORDER BY avg_cost_usd ASC, success_rate DESC) is delegated to the
+      AffinityReader implementation rather than enforced in the router itself. The interface
+      contract passes threshold and minSampleSize params, but does not enforce sort order.
+      Because APIP-3020 (real DB reader) is out of scope for this story and the router trusts
+      the injected reader, this is an acceptable design decision consistent with AC-15's
+      injectable abstraction. The ordering responsibility is correctly placed on the reader.
+
+  AC-3:
+    title: "Affinity model selected when qualifying profile exists; DB override takes absolute precedence"
+    status: PASS
+    evidence:
+      - "Tier 1 (lines 178-203): _resolveDbAssignment(agentId) checked first; if non-null, dispatched
+         immediately without consulting affinityReader"
+      - "Tier 2 (lines 208-246): only reached when Tier 1 returns null"
+      - "HP-2 test (line 380): DB assignment loaded, affinityReader configured; verifies
+         mockAffinityReader.query was NOT called — DB override wins"
+      - "HP-1 test (line 353): affinity model used when no DB assignment and qualifying profile exists"
+
+  AC-4:
+    title: "Fallback to static chain when no qualifying profile (cold-start, low confidence, below threshold)"
+    status: PASS
+    evidence:
+      - "Affinity filter at lines 214-218: profile !== null AND success_rate >= threshold
+         AND confidence_level not 'none' AND confidence_level not 'low'
+         AND sample_size >= minSampleSize — all conditions must hold"
+      - "When any condition fails, falls through to Tier 3 static chain"
+      - "EC-2 test: success_rate 0.5 < 0.85 threshold → fallback (line 480)"
+      - "EC-3 test: confidence_level 'none' → fallback (line 505)"
+      - "EC-4 test: confidence_level 'low' → fallback (line 530)"
+      - "EC-5 test: null profile (cold-start) → fallback (line 555)"
+
+  AC-5:
+    title: "affinitySuccessRateThreshold stored as named constant in PipelineModelRouterConfig"
+    status: PASS
+    evidence:
+      - "DEFAULT_AFFINITY_SUCCESS_RATE_THRESHOLD = 0.85 constant at model-router.ts line 79"
+      - "DEFAULT_AFFINITY_MIN_SAMPLE_SIZE = 20 constant at line 84"
+      - "PipelineModelRouterConfigSchema includes affinitySuccessRateThreshold: z.number().min(0).max(1).optional()
+         at line 106"
+      - "Constructor assigns threshold from config or DEFAULT constant (lines 150-153)"
+      - "Test createRouterWithAffinity() accepts overrides for affinitySuccessRateThreshold
+         confirming injectable threshold"
+
+  AC-6:
+    title: "Affinity profiles cached in-memory, lazily populated, invalidateAffinityCache() exposed"
+    status: PASS
+    evidence:
+      - "affinityCache: Map<string, AffinityProfile | null> declared at line 138"
+      - "_queryAffinityProfile() checks affinityCache.has(cacheKey) before querying reader (lines 346-348)"
+      - "Cache populated on hit-miss at line 355: affinityCache.set(cacheKey, profile)"
+      - "Cache key is \${changeType}:\${fileType} (line 343)"
+      - "invalidateAffinityCache() clears entire Map at lines 366-371"
+      - "HP-4-affinity test: affinityReader.query called exactly once for two dispatches (line 423)"
+      - "ED-2 test: after invalidateAffinityCache(), query called twice (line 598)"
+
+  AC-7:
+    title: "Every dispatch() logs routing_decision with required fields"
+    status: PASS
+    evidence:
+      - "Three routing_decision log calls present — one per tier:"
+      - "  Tier 1 (DB): lines 191-201 — source: 'db_assignment', model, provider, change_type,
+           file_type, confidence_level: null, success_rate: null, sample_size: null"
+      - "  Tier 2 (affinity): lines 225-234 — source: 'affinity', model, provider, change_type,
+           file_type, confidence_level: profile.confidence_level, success_rate: profile.success_rate,
+           sample_size: profile.sample_size"
+      - "  Tier 3 (fallback): lines 294-303 — source: 'fallback', model, provider, change_type,
+           file_type, confidence_level: null, success_rate: null, sample_size: null"
+      - "All log calls use domain 'pipeline_model_router'"
+      - "All required AC-7 fields present: source, model, provider, change_type, file_type,
+         confidence_level, success_rate, sample_size"
+
+  AC-8:
+    title: "PipelineModelRouterFactory singleton preserved; dispatch() signature backward-compatible"
+    status: PASS
+    evidence:
+      - "PipelineModelRouterFactory class unchanged from APIP-0040 pattern (lines 547-571)"
+      - "getInstance() / clearInstance() preserved"
+      - "changeType and fileType are optional fields with .default('unknown') in
+         PipelineDispatchOptionsSchema — existing callers without these fields are unaffected"
+      - "Legacy single-number constructor still supported (lines 141-147) for backward compat"
+      - "ED-1 test confirms 'unknown','unknown' defaults when not provided (line 572)"
+
+  AC-9:
+    title: "PipelineModelRouterConfig Zod schema includes affinitySuccessRateThreshold and affinityMinSampleSize"
+    status: PASS_WITH_NOTE
+    evidence:
+      - "PipelineModelRouterConfigSchema at lines 102-108 includes:
+         affinitySuccessRateThreshold: z.number().min(0).max(1).optional()
+         affinityMinSampleSize: z.number().int().nonnegative().optional()"
+    note: >
+      AC-9 specifies z.number().int().min(1) for affinityMinSampleSize, but implementation
+      uses .nonnegative() (allows 0). This is a minor schema relaxation — functionally
+      equivalent since DEFAULT_AFFINITY_MIN_SAMPLE_SIZE = 20. However the story explicitly
+      states min(1) as the constraint. Also, AC-9 mentions .default(0.85) and .default(20)
+      in the schema, but implementation uses .optional() with runtime defaults via nullish
+      coalescing in the constructor. The defaults are effectively applied; the schema alone
+      does not enforce them. This is a minor deviation, not a blocking defect.
+
+  AC-10:
+    title: "Unit tests cover all sub-cases (a-g)"
+    status: PASS
+    evidence:
+      - "AC-10a — HP-1 test (line 353): affinity routing selected when high-confidence profile"
+      - "AC-10b — EC-5 test (line 555): cold-start, null profile → fallback"
+      - "AC-10c — EC-3 test (line 505): confidence_level 'none' → fallback
+                  EC-4 test (line 530): confidence_level 'low' → fallback"
+      - "AC-10d — EC-2 test (line 480): success_rate 0.5 < threshold → fallback"
+      - "AC-10e — HP-2 test (line 380): DB override takes precedence over affinity"
+      - "AC-10f — ED-2 test (line 598): invalidateAffinityCache() causes re-query"
+      - "AC-10g — ED-1 test (line 572): changeType/fileType default to 'unknown'"
+
+  AC-11:
+    title: "Integration test with real PostgreSQL and wint.model_affinity fixture rows"
+    status: FAIL
+    evidence:
+      - "No model-router.integration.test.ts file found in branch (ST-6 not implemented)"
+      - "git ls-tree shows only model-router.test.ts and escalation-integration.test.ts
+         in pipeline/__tests__; no @integration tagged test for affinity DB fixture"
+    impact: >
+      AC-11 is a deferred integration test gated on APIP-3020 (wint.model_affinity migration)
+      and APIP-5001 (test DB). Story risk TR-1 acknowledges this dependency and notes
+      '@integration if not applied' as the mitigation. This omission is expected per the
+      story's own risk register — the skip/defer is acceptable for story completion
+      but the AC is technically unmet in this implementation.
+
+  AC-12:
+    title: "All existing APIP-0040 unit tests continue to pass; no models/ files modified"
+    status: PASS
+    evidence:
+      - "Commit diff shows only 3 files modified: model-router.ts, __tests__/model-router.test.ts,
+         __types__/index.ts — no changes to packages/backend/orchestrator/src/models/"
+      - "12 existing tests preserved in model-router.test.ts (lines 100-344):
+         singleton tests (2), HP-4, EC-3/EC-5 escalation (3 cases), budget accumulation (2),
+         BudgetExhaustedError (2), HP-5 DB override, ED-3 cache invalidation"
+      - "token-bucket.test.ts, budget-accumulator.test.ts, escalation-integration.test.ts
+         not modified"
+
+  AC-13:
+    title: "affinityReader.query failure handled gracefully — log warn, fall through to static chain"
+    status: PASS
+    evidence:
+      - "try/catch block at lines 208-246 wraps the entire Tier 2 affinity block"
+      - "catch handler at lines 238-246: logs logger.warn with event 'affinity_query_failed',
+         changeType, fileType, reason — then falls through to Tier 3 (comment 'Fall through to Tier 3')"
+      - "EC-1-affinity test (line 452): mockAffinityReader.query throws 'DB connection failed';
+         result is 'Fallback response' from static chain — no rethrow"
+
+  AC-14:
+    title: "Sort order: ORDER BY avg_cost_usd ASC, success_rate DESC (cheapest qualifying model first)"
+    status: PASS_WITH_NOTE
+    evidence:
+      - "AffinityReader interface delegates ordering to the reader implementation"
+      - "Architecture Notes SQL in story specifies: ORDER BY avg_cost_usd ASC, success_rate DESC LIMIT 1"
+      - "AffinityReaderSchema.query receives threshold and minSampleSize params — the reader
+         is responsible for applying the correct SQL ORDER BY"
+      - "No real Drizzle reader implemented in this story (gated on APIP-3020); the unit
+         tests use vi.fn() mocks that return a single profile — cost ordering is untested"
+    note: >
+      ED-4 test ('Cheapest qualifying model selected when multiple profiles exist') listed
+      in the story test plan but NOT implemented in model-router.test.ts. This is the only
+      test from the plan's edge_cases that is missing. The ordering contract exists in the
+      AffinityReader interface but cannot be verified without the real reader or ED-4 test.
+      Minor gap — the interface contract is correct but unverified by a test.
+
+  AC-15:
+    title: "AffinityReaderSchema (Zod-typed callable) in pipeline/__types__/index.ts"
+    status: PASS
+    evidence:
+      - "AffinityProfileSchema defined at __types__/index.ts lines 138-145"
+      - "AffinityReaderSchema defined at lines 152-158 as Zod schema with query function type"
+      - "AffinityReader type inferred via z.infer<typeof AffinityReaderSchema>"
+      - "PipelineModelRouterConfig accepts affinityReader: AffinityReader | undefined"
+      - "Unit tests use vi.fn() mock objects matching the AffinityReaderSchema interface"
+
+# ---------------------------------------------------------------------------
+# Code quality evidence
+# ---------------------------------------------------------------------------
+
+code_quality:
+
+  zod_schemas:
+    status: PASS
+    evidence:
+      - "All new types use Zod: AffinityProfileSchema, AffinityReaderSchema,
+         PipelineDispatchOptionsSchema extension, PipelineModelRouterConfigSchema extension"
+      - "No TypeScript interfaces in modified files (grep confirmed zero results)"
+      - "ModelAssignmentSchema, PipelineModelRouterConfigSchema in model-router.ts are Zod-validated"
+
+  logger_usage:
+    status: PASS
+    evidence:
+      - "import { logger } from '@repo/logger' at model-router.ts line 23"
+      - "12 logger.info calls and 2 logger.warn calls throughout dispatch() and helper methods"
+      - "No console.log usage found"
+      - "Domain 'pipeline_model_router' used consistently on all calls"
+
+  no_semicolons:
+    status: PASS
+    evidence:
+      - "Grep for ';' in non-comment lines returned only TypeScript type annotation colons
+         (Record<..., ...>) — no statement-ending semicolons present"
+      - "Code style matches Prettier config: no semicolons, single quotes, trailing commas"
+
+  parameterized_sql:
+    status: PASS_WITH_NOTE
+    evidence:
+      - "No raw SQL in model-router.ts — SQL is delegated to AffinityReader which is
+         injected and mocked in tests"
+      - "Real Drizzle reader implementation not present in this story (APIP-3020 dependency)"
+    note: "Parameterized SQL compliance must be verified when APIP-3020 implements the real reader"
+
+  no_barrel_files:
+    status: PASS
+    evidence:
+      - "Imports in model-router.ts use direct file paths (./__types__/index.js, etc.)"
+      - "No barrel file created"
+
+# ---------------------------------------------------------------------------
+# Test count summary
+# ---------------------------------------------------------------------------
+
+test_summary:
+  total_tests: 22
+  existing_tests_preserved: 12
+  new_affinity_tests: 10
+  test_breakdown:
+    singleton_factory: 2
+    escalation_chain_existing: 3
+    budget_accumulation: 2
+    budget_cap_errors: 2
+    db_override: 1
+    cache_invalidation_assignments: 1
+    affinity_happy_path: 1
+    db_override_beats_affinity: 1
+    affinity_cache_reuse: 1
+    affinity_reader_throws_fallback: 1
+    success_rate_below_threshold: 1
+    confidence_none_fallback: 1
+    confidence_low_fallback: 1
+    null_profile_cold_start: 1
+    default_unknown_changeType_fileType: 1
+    invalidate_affinity_cache_requery: 1
+  missing_tests:
+    - id: ED-4
+      title: "Cheapest qualifying model selected when multiple profiles exist"
+      ac_coverage: "AC-2, AC-3 (cost-first ordering)"
+      impact: minor
+    - id: HP-3
+      title: "Integration test with real PostgreSQL wint.model_affinity fixture rows"
+      ac_coverage: "AC-11"
+      impact: deferred_per_story_risk_TR-1

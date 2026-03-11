@@ -24,7 +24,7 @@ Generate story scaffold files from the structured analysis and seed stories into
 
 The orchestrator provides `SETUP-CONTEXT` and `ANALYSIS` inline. No intermediate files are read.
 
-Write story files to disk (`story.yaml` per story + `stories.index.md`). Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
+Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
 
 ### File Mode
 
@@ -69,17 +69,6 @@ created: "{ISO timestamp}"
 ```
 
 Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
-
-### Stories Index (both modes)
-
-Note: Story state is authoritative from KB (`kb_get_story` / `kb_list_stories`), not from this index file. The index file is maintained as a filesystem fallback.
-
-File: `{feature_dir}/stories.index.md`
-
-Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md`. Populate:
-- Progress Summary table
-- Per-phase story listing with IDs, titles, dependencies, status
-- Metrics summary
 
 ## KB Stories Insert
 
@@ -132,16 +121,7 @@ feature_dir: "{feature_dir}"
 prefix: "{PREFIX}"
 completed: "{ISO timestamp}"
 
-phases_completed:
-  # Array of strings. Allowed values: setup, analysis, generation, review, done
-  # This field replaces _bootstrap/CHECKPOINT.md entirely — CHECKPOINT.md is no longer written.
-  - setup
-  - analysis
-  - generation
-
 files_created:
-  - path: "{feature_dir}/stories.index.md"
-    type: index
   - path: "{feature_dir}/{PREFIX}-1010/story.yaml"
     type: story
   # ... one entry per story
@@ -160,9 +140,7 @@ next_step: "/elab-epic {PREFIX}"
 
 ### File Mode — Write to Disk
 
-Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`, including the `phases_completed` field.
-
-**CHECKPOINT.md is no longer written in any mode.** Do not create `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`. Phase completion state is tracked via `phases_completed` in SUMMARY.yaml instead.
+Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
 
 ## Error Handling
 

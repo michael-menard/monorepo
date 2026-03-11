@@ -11,6 +11,8 @@ model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
+  - kb_get_story
+  - kb_update_story_status
   - mcp__postgres-knowledgebase__query
   - worktree_register
 skills_used:
@@ -38,16 +40,15 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
-| Test Plan Writer | `pm-draft-test-plan.agent.md` | (inline) | Always |
-| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | (inline) | Always (skipped:true if no UI) |
-| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | (inline) | Always |
+| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/test-plan.yaml` | Always |
+| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/uiux-notes.yaml` | Always (skipped:true if no UI) |
+| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/dev-feasibility.yaml` | Always |
 | Risk Predictor | `pm-story-risk-predictor.agent.md` | predictions YAML (inline) | Always (WKFL-007) |
 
 ---
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`) -- Note: KB (`kb_get_story` / `kb_list_stories`) is the authoritative source for story state; index file is fallback.
 - Story ID
 - Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
 
@@ -59,7 +60,7 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 1. Read seed file at `{SEED_PATH}` - extract reality_context, retrieved_context, conflicts
 2. Check for blocking conflicts → `PM BLOCKED`
 3. Resolve paths from index
-4. Create directory structure: `{OUTPUT_DIR}/`
+4. Create directory structure: `{OUTPUT_DIR}/`, `{OUTPUT_DIR}/_pm/`
 
 ### Phase 0.5: Collision Detection
 Check if story directory already exists. If collision:
@@ -70,15 +71,15 @@ Check if story directory already exists. If collision:
 
 Immediately update the index to prevent parallel generation windows from picking up the same story.
 
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Created
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress" })
 ```
 
 This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken and skip to the next eligible story.
 
 If story generation later fails (PM BLOCKED / PM FAILED), the status should be reverted:
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
 ```
 
 ### Phase 0.5a: Experiment Variant Assignment (WKFL-008)
@@ -179,7 +180,7 @@ function isEligible(story, eligibility) {
 ### Phase 1-3: Spawn Workers (PARALLEL)
 Spawn all workers in SINGLE message. For patterns, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
 
-Wait for workers with TaskOutput. Check each worker output for blockers.
+Wait for workers with TaskOutput. Check for blockers in `_pm/BLOCKERS.md`.
 
 ### Phase 4: Synthesize Story
 Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
@@ -198,7 +199,7 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 - These references flow into each subtask for dev agent context
 
 **Subtask Decomposition** (from dev-feasibility worker):
-- Read `subtasks[]` from Dev Feasibility worker TaskOutput
+- Read `subtasks[]` from `_pm/dev-feasibility.yaml`
 - Include as `## Subtasks` section in story file
 - Cross-reference: every AC must be covered by at least one subtask
 - Cross-reference: each subtask's canonical reference should come from the seed's references
@@ -206,9 +207,9 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
 **PM Artifacts (pm_artifacts section)**:
 Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
-- Read Test Plan Writer TaskOutput → `pm_artifacts.test_plan`
-- Read Dev Feasibility worker TaskOutput → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
-- Read UI/UX Advisor TaskOutput → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
+- Read `_pm/test-plan.yaml` → `pm_artifacts.test_plan`
+- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
+- Read `_pm/uiux-notes.yaml` → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
 
 **Experiment Variant in Story Frontmatter** (WKFL-008):
 Include `experiment_variant` field in story.yaml frontmatter:
@@ -257,14 +258,15 @@ ON CONFLICT (story_id) DO UPDATE SET ...
 - If KB unavailable: Log warning, continue without KB write
 - Queue failed writes to `DEFERRED-KB-WRITES.yaml` in story dir for later retry
 
-### Phase 5: Verify Index Status
+### Phase 5: Verify KB Story Status
 
-Index was already claimed in Phase 0.6. Verify the status is still `Created`. If story generation failed and was not caught earlier, revert:
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+Story was already claimed in Phase 0.6. Verify the status is still `in_progress`. If story generation failed and was not caught earlier, revert:
+```javascript
+kb_get_story({ story_id: "{STORY_ID}" })
+// If state is not "in_progress", or if generation failed:
+kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
 ```
 
-**Platform index note:** When `platform_index_path` is provided in context (i.e., the story was auto-picked from the platform index), the **orchestrator** (pm-story.md Step 5) handles updating `platform.stories.index.md` after the leader returns `PM COMPLETE`. The leader does NOT need to update the platform index — only the per-epic index via `/index-update`.
 
 ### Phase 5.5: Create Worktree (Pre-provision for Dev)
 
@@ -331,7 +333,7 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 | First match wins | Story in ONE experiment only (WKFL-008) |
 | Graceful degradation | Workflow continues if experiments.yaml unavailable (WKFL-008) |
 | KB persistence | MUST write story to KB after synthesis (Phase 4.5) |
-| Claim early | MUST call /index-update --status=Created in Phase 0.6 before workers |
+| Claim early | MUST call kb_update_story_status state=in_progress in Phase 0.6 before workers |
 | Revert on failure | MUST revert index to Pending if generation fails |
 | Token log | MUST call before completion |
 | Parallel spawn | Single message for all workers |

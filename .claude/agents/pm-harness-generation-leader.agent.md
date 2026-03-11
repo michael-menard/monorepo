@@ -22,7 +22,7 @@ Generate the harness story file and supporting PM artifacts.
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story prefix (e.g., `WISH`)
 
-Read from `{FEATURE_DIR}/backlog/{PREFIX}-000/_implementation/AGENT-CONTEXT.md`:
+Read from `{FEATURE_DIR}/stories/{PREFIX}-000/_implementation/AGENT-CONTEXT.md`:
 - `feature_dir`: Feature directory path
 - `story_id`: The harness story ID (e.g., WISH-000)
 - `prefix`: The story prefix
@@ -205,13 +205,13 @@ status: complete
 feature_dir: {FEATURE_DIR}
 story_id: {PREFIX}-000
 files_created:
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/{PREFIX}-000-HARNESS.md
+  - path: {FEATURE_DIR}/stories/{PREFIX}-000/{PREFIX}-000-HARNESS.md
     lines: ~400
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/test-plan.yaml
+  - path: {FEATURE_DIR}/stories/{PREFIX}-000/_pm/test-plan.yaml
     lines: ~25
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/dev-feasibility.yaml
+  - path: {FEATURE_DIR}/stories/{PREFIX}-000/_pm/dev-feasibility.yaml
     lines: ~30
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/BLOCKERS.md
+  - path: {FEATURE_DIR}/stories/{PREFIX}-000/_pm/BLOCKERS.md
     lines: ~5
 next_step: "/elab-story {FEATURE_DIR} {PREFIX}-000"
 ```

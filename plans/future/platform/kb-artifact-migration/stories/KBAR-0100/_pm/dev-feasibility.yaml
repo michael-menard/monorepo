@@ -1,0 +1,82 @@
+feasible: true
+confidence: high
+rationale: >
+  All production code is complete. The five story tool handlers (kb_get_story, kb_list_stories,
+  kb_update_story_status, kb_update_story, kb_get_next_story) are fully implemented in
+  tool-handlers.ts. The test infrastructure (vi.mock, handleToolCall pattern, test-helpers.ts)
+  is proven and working in mcp-integration.test.ts and story-tools.test.ts.
+  The access-control.ts file confirms all story tools allow pm, dev, qa, and all roles,
+  making auth test cases straightforward. This story is pure test authorship.
+complexity: low
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/mcp-server/__tests__/
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "vi.mock path must use .js extension for ESM compatibility"
+    mitigation: "Use vi.mock('../../crud-operations/story-crud-operations.js', ...) — confirmed working in story-tools.test.ts"
+  - finding: "createMockStory fixture factory must be available in the new test file"
+    mitigation: "Either inline a copy of the factory or extract it to test-helpers.ts for sharing — avoid cross-file test imports that create fragile dependencies"
+  - finding: "mcp-integration.test.ts tool count (53) must not be touched"
+    mitigation: "KBAR-0100 creates a new file story-tools-integration.test.ts; it does not modify mcp-integration.test.ts"
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test --filter @repo/knowledge-base passes with zero failures"
+  - "pnpm check-types --filter @repo/knowledge-base passes with zero TypeScript errors"
+  - "New file story-tools-integration.test.ts is present and contains test cases for all 5 tools"
+  - "No duplication of test cases already in story-tools.test.ts"
+
+subtasks:
+  - id: ST-1
+    title: "Verify KBAR-0090 landing state and read canonical test files"
+    goal: "Confirm story-tools.test.ts exists, mcp-integration.test.ts has 53 tools, and understand exact mock patterns to replicate"
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/test-helpers.ts
+      - apps/api/knowledge-base/src/mcp-server/access-control.ts
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: "Read files successfully, confirm 53-tool count and story-tools.test.ts existence"
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Create story-tools-integration.test.ts with boilerplate and happy-path tests"
+    goal: "Create new test file with vi.hoisted mock setup, createMockStory fixture, and happy-path tests for all 5 story tools (AC-1, AC-3, AC-4 success path, AC-5 success path, AC-6 success + no-candidates)"
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools-integration.test.ts
+    acs: ["AC-1", "AC-3", "AC-4", "AC-5", "AC-6"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/knowledge-base -- story-tools-integration runs with happy-path tests passing"
+    estimated_tokens: 10000
+
+  - id: ST-3
+    title: "Add Zod validation error tests and DB error sanitization tests"
+    goal: "Add test cases for Zod validation errors (empty/missing inputs) and DB error sanitization (MockDatabaseError with sensitive content) — verifies AC-2 and AC-7"
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/test-helpers.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools-integration.test.ts
+    acs: ["AC-2", "AC-7"]
+    depends_on: ST-2
+    verification: "pnpm test --filter @repo/knowledge-base -- story-tools-integration passes all error case tests"
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: "Add authorization tests for dev and all roles on story tools"
+    goal: "Add ToolCallContext-based tests verifying dev and all roles can access story tools without FORBIDDEN errors — verifies AC-8 and AC-9"
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/access-control.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools-integration.test.ts
+    acs: ["AC-8", "AC-9"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/knowledge-base passes all tests; pnpm check-types --filter @repo/knowledge-base passes"
+    estimated_tokens: 5000

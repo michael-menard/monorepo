@@ -1,0 +1,169 @@
+feasible: true
+confidence: high
+rationale: >
+  The knowledge-context-loader has a well-established dependency injection
+  pattern for KB functions (kbSearchFn in KnowledgeContextConfigSchema, line 133
+  of load-knowledge-context.ts). Adding an optional artifactSearchFn follows
+  exactly the same pattern. The TypeScript node is actively used in the
+  LangGraph graph (referenced in nodes/story/attack.ts and exported from
+  nodes/reality/index.ts), confirming Option B (both markdown + TypeScript) is
+  required for full consistency. The KnowledgeContextSchema in
+  artifacts/knowledge-context.ts is cleanly extensible with an optional
+  pattern_discovery field. Graceful fallback is already implemented for
+  kbSearchFn — the same try/catch + warning pattern applies for artifactSearchFn.
+  The only dependency risk is KBAR-0130 (artifact_search tool) which must be
+  in UAT or completed before implementation begins.
+complexity: medium
+change_surface:
+  areas:
+    - ".claude/agents/knowledge-context-loader.agent.md"
+    - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+  endpoints: []
+  deploy_touchpoints:
+    - "pnpm check-types --filter @repo/orchestrator (TypeScript compilation gate)"
+    - "pnpm test --filter @repo/orchestrator (unit test gate)"
+risks:
+  - finding: >
+      KBAR-0130 (artifact_search) must be in UAT or completed before
+      implementation begins. The tool contract (ArtifactSearchInputSchema) is
+      defined in apps/api/knowledge-base/src/mcp-server/tool-schemas.ts and
+      is stable in code, but the QA failure in KBAR-0130 means runtime
+      behavior may have defects. Implementing against a broken tool adds
+      integration risk.
+    mitigation: >
+      Gate KBAR-0200 elaboration on KBAR-0130 reaching UAT status. If
+      KBAR-0130 is still in failed-qa at elaboration time, escalate to block
+      KBAR-0200 from starting.
+  - finding: >
+      KnowledgeContext output schema in artifacts/knowledge-context.ts does not
+      currently have a pattern_discovery field. If added, existing consumers
+      (dev-execute-leader, dev-proof-leader, qa-verify-verification-leader) that
+      read knowledge context YAML must tolerate the new optional field.
+    mitigation: >
+      Add pattern_discovery as an optional Zod field with .default([]) so
+      it is always present but empty when no artifact results were found.
+      Existing consumers can ignore it (additive change, backward compatible).
+missing_requirements:
+  - >
+    AC-6/AC-7/AC-8 are marked scope-dependent — the scope decision (Option A
+    markdown-only vs Option B both) must be confirmed in elaboration. Based on
+    this feasibility review, Option B is recommended because the TypeScript
+    node is actively used in the LangGraph production graph. This should be
+    explicitly stated in the story ACs.
+evidence_expectations:
+  - "Diff of knowledge-context-loader.agent.md showing new Pattern Discovery phase, updated kb_tools frontmatter"
+  - "Diff of load-knowledge-context.ts showing KnowledgeContextConfigSchema extension with artifactSearchFn"
+  - "Diff of artifacts/knowledge-context.ts showing optional pattern_discovery field"
+  - "New test cases in knowledge-context.test.ts covering 3 artifactSearchFn paths (provided+results, provided+empty, not provided)"
+  - "pnpm check-types --filter @repo/orchestrator passes clean"
+  - "pnpm test --filter @repo/orchestrator passes with coverage >= 45%"
+subtasks:
+  - id: ST-1
+    title: "Read current state of target files"
+    goal: >
+      Establish baseline understanding of load-knowledge-context.ts (full file),
+      knowledge-context.ts (artifact schema), and knowledge-context-loader.agent.md
+      (current Phase structure). Confirm artifact_search input/response shapes
+      from tool-schemas.ts and tool-handlers.ts.
+    files_to_read:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts (lines 205-235)"
+    files_to_modify: []
+    acs: []
+    depends_on: "none"
+    verification: "Context established — no verification step"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Update knowledge-context-loader.agent.md — Pattern Discovery phase"
+    goal: >
+      Add new Phase 1.5 (after existing Phase 1 lesson queries) to the agent
+      markdown. Phase must: (a) include >= 2 artifact_search call examples
+      with domain-scoped queries, (b) specify artifact_type: "evidence" and
+      artifact_type: "plan" examples, (c) document graceful fallback for
+      empty results or tool unavailable, (d) update kb_tools frontmatter to
+      add artifact_search, (e) preserve all existing Phase 1/2/3 content.
+      Document output distinction between artifact results and lesson entries.
+    files_to_read:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+    files_to_modify:
+      - ".claude/agents/knowledge-context-loader.agent.md"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-9"]
+    depends_on: "ST-1"
+    verification: "Manual diff review against AC-1 through AC-5 and AC-9 checklist"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Extend KnowledgeContextConfigSchema with optional artifactSearchFn"
+    goal: >
+      In load-knowledge-context.ts, extend KnowledgeContextConfigSchema.kbDeps
+      (or add a parallel optional kbDeps.artifactSearchFn field) following the
+      exact pattern of kbSearchFn. The artifactSearchFn should be typed as
+      z.function().args(z.unknown()).returns(z.promise(z.unknown())).optional().
+      Then in loadKnowledgeContext(), add a getPatternDiscoveryFromKB() helper
+      (mirroring getLessonsFromKB()) that calls artifactSearchFn when provided.
+      Wrap in try/catch; push to warnings[] on failure; return [] on empty.
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    acs: ["AC-6", "AC-7"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Extend KnowledgeContext artifact schema with optional pattern_discovery field"
+    goal: >
+      In packages/backend/orchestrator/src/artifacts/knowledge-context.ts,
+      add an optional pattern_discovery field to KnowledgeContextSchema.
+      Use z.array(z.object({...})).default([]) so it is always present
+      but backward-compatible. The object shape should capture: story_id,
+      artifact_type, content_summary, relevance_score, phase. Update
+      createKnowledgeContext() to initialize pattern_discovery: [].
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/artifacts/knowledge-context.ts"
+    acs: ["AC-6", "AC-9"]
+    depends_on: "ST-3"
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Write unit tests for artifactSearchFn paths in knowledge-context.test.ts"
+    goal: >
+      Add 3 new unit tests to the existing knowledge-context.test.ts file.
+      Test case (a): artifactSearchFn provided and returns results — verify
+      results appear in knowledgeContext.pattern_discovery. Test case (b):
+      artifactSearchFn provided but returns empty array — verify warning added
+      and pattern_discovery = []. Test case (c): artifactSearchFn not provided —
+      verify existing behavior unchanged, no errors. Use vi.fn() mock matching
+      ArtifactSearchInputSchema shape.
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    acs: ["AC-8"]
+    depends_on: "ST-3,ST-4"
+    verification: "pnpm test --filter @repo/orchestrator -- knowledge-context"
+    estimated_tokens: 8000
+
+  - id: ST-6
+    title: "Human review and functional canary run"
+    goal: >
+      Perform human diff review of all changes against ACs. Then trigger a
+      canary story run using pm-story-seed-agent to verify the updated
+      knowledge-context-loader executes artifact_search tool calls with
+      domain-scoped queries and surfaces results in the knowledge context YAML.
+    files_to_read:
+      - "plans/future/platform/kb-artifact-migration/backlog/KBAR-0200/KBAR-0200.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9"]
+    depends_on: "ST-5"
+    verification: "All ACs satisfied; canary run produces no regressions"
+    estimated_tokens: 5000
