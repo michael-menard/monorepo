@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-4030 is a headless post-merge cron worker with no UI surfaces. All output is structured log lines and blocked queue items routed through APIP-2010. No frontend components, no API Gateway endpoints, no browser-facing interaction."

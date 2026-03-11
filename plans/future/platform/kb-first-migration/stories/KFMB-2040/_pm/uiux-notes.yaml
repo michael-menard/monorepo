@@ -1,0 +1,2 @@
+skipped: true
+reason: "Story KFMB-2040 modifies only internal agent instruction files (.claude/agents/ and .claude/commands/). No user-facing UI components or interfaces are touched. All changes are to AI agent markdown instruction files used by the story generation pipeline."

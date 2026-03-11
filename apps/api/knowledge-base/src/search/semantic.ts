@@ -66,8 +66,9 @@ export async function semanticSearch(
         created_at as "createdAt",
         updated_at as "updatedAt",
         1 - (embedding <=> ${embeddingStr}::vector) as score
-      FROM knowledge_entries
-      WHERE 1 - (embedding <=> ${embeddingStr}::vector) >= ${SEMANTIC_SIMILARITY_THRESHOLD}
+      FROM public.knowledge_entries
+      WHERE deleted_at IS NULL
+        AND 1 - (embedding <=> ${embeddingStr}::vector) >= ${SEMANTIC_SIMILARITY_THRESHOLD}
         ${filters.role ? sql`AND (role = ${filters.role} OR role = 'all')` : sql``}
         ${filters.tags && filters.tags.length > 0 ? sql`AND tags && ${filters.tags}::text[]` : sql``}
       ORDER BY embedding <=> ${embeddingStr}::vector ASC

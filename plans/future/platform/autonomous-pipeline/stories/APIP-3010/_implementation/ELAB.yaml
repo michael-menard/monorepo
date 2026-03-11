@@ -1,0 +1,179 @@
+schema: 1
+story_id: "APIP-3010"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title and description in stories.index.md ("Change Telemetry Table and Instrumentation,
+      APIP-1030 dependency") match the story file exactly. The story delivers the telemetry table
+      (AC-1 through AC-4, AC-11) and the writeTelemetry() instrumentation (AC-5, AC-6, AC-7).
+      No extra endpoints, infrastructure components, or features introduced. The rollback script
+      is a mandatory companion to a migration — not scope creep. APIP-5007 migration runner
+      dependency is correctly modelled as a declared depends_on rather than a new feature in
+      this story.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals are tightly scoped to producing the telemetry table and the write path. Non-goals
+      explicitly exclude reading/aggregating telemetry (APIP-3020), HTTP exposure (APIP-2020,
+      APIP-5005), and implementing the change loop itself (APIP-1030). No goal contradicts a
+      non-goal. ACs 1-6 and 8-12 are independent of the gate; AC-7 is cleanly isolated with an
+      explicit implementation_gate field and gated note on ST-6. Test plan aligns to ACs: HP-1/2
+      cover AC-6/AC-9, HP-3/4/5/6 cover AC-10/AC-11, EC-1 covers AC-8, EC-2 covers AC-7/AC-8,
+      EC-3 covers AC-3, ED-1 covers AC-5, ED-2 covers AC-10. No AC is left without a test case
+      in the pm_artifacts test plan. The architecture notes (fire-and-continue, DB injection,
+      Zod-first) all reinforce rather than contradict each other.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan table is explicit and covers all shared patterns: SQL migration structure from
+      0026_wint_1130_worktree_tracking.sql, Drizzle ORM + drizzle-zod generation from
+      packages/backend/db/src/generated-schemas.ts, @repo/db client, @repo/logger, and the
+      EvidenceSchema pattern from evidence.ts. No one-off utilities invented: ChangeTelemetrySchema
+      follows the EvidenceSchema/CommandRunSchema pattern. writeTelemetry() follows the
+      addCommandRun() fire-and-continue pattern. DB injection follows the IModelDispatch pattern
+      established in APIP-1030. No new shared package is introduced — the telemetry module lives
+      in the orchestrator package where it is consumed.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints in this story. DB access is correctly abstracted: writeTelemetry() accepts
+      a Db parameter (injected, not imported directly), which makes unit tests trivially mockable
+      without a real database. The change-loop node receives db via graph config (config.configurable),
+      not direct import — this is the established IModelDispatch injection pattern. Core logic
+      (ChangeTelemetrySchema, writeTelemetry) is transport-agnostic. No business logic is placed
+      in any transport or infrastructure layer.
+
+  - id: testability
+    status: PASS
+    note: >
+      Unit tests use mocked db (Vitest vi.fn() spy on insert chain) — concretely executable
+      without a real database. Integration tests explicitly name the APIP-5001 test DB as the
+      target — not a vague "real database". Each test case in pm_artifacts has setup, action,
+      expected, and evidence fields. Verification commands are concrete pnpm invocations in each
+      subtask. The Drizzle fluent mock chain risk is acknowledged in test risks. The gated AC-7
+      test is isolated to ST-6 so ungated subtasks can be verified independently. EC-2
+      (change-loop node continues when writeTelemetry throws) tests the integration between
+      writeTelemetry and the node without requiring APIP-1030 to be merged, as long as a mock
+      node wrapper is used — this is reasonable.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs remain for ungated work. The only genuine open item is the APIP-1020
+      ChangeSpec enum taxonomy for change_type/file_type — this is explicitly handled with the
+      'unknown' placeholder strategy and a documented follow-up comment convention in AC-2.
+      This is not a blocker: the migration and Drizzle schema can be written and merged without
+      the full enum taxonomy. The fire-and-continue vs. fire-and-forget decision is resolved in
+      favour of await-with-catch, with the alternative documented in code comments. The
+      implementation_gate for AC-7 is unambiguous. The index design rationale is explicit in
+      the Architecture Notes.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      All material risks are disclosed: (1) APIP-1030 hard gate on AC-7 with concrete mitigation
+      (stub as TODO, implement after merge); (2) APIP-1020 ChangeSpec ADR not yet published,
+      mitigated with 'unknown' placeholder; (3) Drizzle schema/SQL drift risk, mitigated with
+      drizzle-kit check as CI gate; (4) fire-and-continue await vs. fire-and-forget latency
+      tradeoff, mitigated by documenting in code; (5) high write volume at scale with explicit
+      mitigation (indexes defined at migration time). The pm_artifacts.risks section captures
+      test-specific risks (Drizzle mock chain, drizzle-kit CI gate, gated AC-7 unit tests).
+      No hidden dependencies detected. APIP-5007 dependency on the migration runner is declared
+      in depends_on. APIP-1020 upstream coordination is correctly listed in upstream_coordination
+      rather than depends_on (correct — it's a soft dependency for enum finalization, not a
+      hard prerequisite for any ungated AC).
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Two sizing indicators are present: (1) 12 ACs exceeds the 8-AC threshold; (2) 3 packages
+      touched (database-schema, db, orchestrator) exceeds the 2-package threshold. However,
+      a SPLIT verdict is NOT recommended for the following reasons: (a) The work is highly
+      cohesive — every AC serves a single purpose: one telemetry table and one write path.
+      There is no independently shippable subset that provides value without the others.
+      (b) AC-7 is already gated and isolated in ST-6, providing a natural two-phase execution
+      that reduces the effective working surface. (c) ACs 1-4 are tightly coupled migration
+      columns/constraints/indexes that cannot be separated without an impractical migration
+      split. (d) ACs 8-12 are test coverage for ACs 1-7 — extracting them to a separate
+      story would create a story with only tests, which is anti-pattern. (e) The 3 packages
+      are a natural consequence of the Drizzle pattern: SQL migration lives in database-schema,
+      generated types in db, and the consumer in orchestrator. This is architectural necessity,
+      not scope creep. (f) The 6 subtasks are well-scoped with clear DAG dependencies and
+      each covers a focused file set. CONDITIONAL_PASS is the appropriate verdict with a note
+      that the implementer must respect the ST-1→ST-2→ST-3→ST-4→ST-5 sequence and hold ST-6
+      until APIP-1030 merges.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      Subtask section is present and complete. All 12 ACs are covered by exactly one subtask
+      each (coverage table provided). Subtask file counts: ST-1 touches 2 files, ST-2 touches
+      2 files, ST-3 touches 1 file, ST-4 touches 1 file, ST-5 touches 1 file, ST-6 touches
+      1 file — all within the 3-file limit. Dependencies form a valid DAG: ST-1→ST-2→ST-3→
+      ST-4→ST-5→ST-6 (linear chain, no cycles). Each subtask has a concrete verification
+      command (pnpm test, pnpm check-types, drizzle-kit check, information_schema query).
+      Each subtask names specific canonical reference files to read. The Canonical References
+      section at the bottom of the story provides 4 entries with absolute paths, justification,
+      and usage guidance. No gaps in coverage.
+
+# MVP-blocking gaps only — things that would prevent telemetry from writing to DB and reading back
+gaps: []
+
+# Non-blocking items that have value but are not required for the core user journey
+opportunities:
+  - id: OPP-1
+    title: "Add a drizzle-kit check step to CI pipeline configuration"
+    description: >
+      The story correctly identifies drizzle-kit check as a CI gate (pm_artifacts.risks, ST-2
+      verification), but does not specify which CI configuration file to modify. A follow-up
+      task or note in the PR should update the CI pipeline (e.g., turbo.json or GitHub Actions
+      workflow) to run drizzle-kit check automatically on changes to the database-schema package.
+      Currently this is a manual gate.
+    priority: medium
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "9ea9d551-cb17-4ba3-8135-06af478aba01"
+
+  - id: OPP-2
+    title: "Document the 'unknown' placeholder enum update process as a follow-up task"
+    description: >
+      AC-2 specifies a code comment convention for the change_type/file_type 'unknown' placeholder,
+      but does not create a concrete follow-up task or KB entry to ensure the enum is updated
+      after APIP-1020 ADR is published. Creating a backlog task (e.g., APIP-3011 or a note in
+      APIP-1020's story) would prevent this placeholder from becoming permanent by default.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "e745505b-ba6a-4622-88dd-ee31ce4e298d"
+
+  - id: OPP-3
+    title: "Clarify whether EC-2 (change-loop node test) requires APIP-1030 merge or can use a stub"
+    description: >
+      EC-2 tests that the change-loop node continues when writeTelemetry throws. The test plan
+      says this is executable via mock injection, but the subtask decomposition does not clarify
+      whether this test belongs in ST-4 (unit, no APIP-1030 needed) or ST-6 (gated). If it can
+      be implemented with a minimal stub wrapper of the change-loop node, it should be in ST-4
+      to maximise pre-APIP-1030 coverage. Low risk — implementer can decide at coding time.
+    priority: low
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "b6969830-466d-411a-9dbb-ec63d712914f"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+condition: "Implementer must respect subtask sequence (ST-1 through ST-5 in order) and hold ST-6 until APIP-1030 merges."
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

@@ -36,7 +36,7 @@ kb_fetch_stories() {
 
   # Single claude -p call: fetch all stories as NDJSON
   local raw_result
-  raw_result=$(claude -p \
+  raw_result=$(env -u CLAUDECODE claude -p \
     "Call kb_list_stories with feature='${plan_slug}'. For each story, output ONE JSON object per line (NDJSON format) with keys: id, state, phase, storyDir. Output ONLY the NDJSON lines — no markdown fences, no explanation, no wrapper array. If no stories are found, output nothing." \
     --allowedTools "mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_get_story" \
     --output-format text 2>/dev/null) || true
@@ -88,7 +88,7 @@ kb_fetch_by_ids() {
 
   # Build the prompt: ask claude to fetch each story and output NDJSON
   local raw_result
-  raw_result=$(claude -p \
+  raw_result=$(env -u CLAUDECODE claude -p \
     "For each of these story IDs: ${ids_csv} — call kb_get_story for each one. Output ONE JSON object per line (NDJSON format) with keys: id, state, phase, storyDir. Output ONLY the NDJSON lines — no markdown fences, no explanation, no wrapper array. If a story is not found in the KB, skip it (do not output a line for it)." \
     --allowedTools "mcp__knowledge-base__kb_get_story" \
     --output-format text 2>/dev/null) || true

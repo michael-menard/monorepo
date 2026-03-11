@@ -1,0 +1,19 @@
+schema: 1
+story_id: WISH-2011
+total:
+  input: 150394
+  output: 57240
+phases:
+  - phase: pm-generate
+    input: 87871
+    output: 20000
+  - phase: elab-setup
+    input: 8500
+    output: 4200
+  - phase: elab-completion
+    input: 8200
+    output: 4100
+  - phase: qa-verify
+    input: 45823
+    output: 28940
+high_cost: []

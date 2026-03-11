@@ -1,0 +1,29 @@
+schema: 1
+story_id: KBAR-0200
+timestamp: "2026-02-25T10:35:00Z"
+iteration: 1
+verdict: PASS
+
+checks:
+  - check: lint
+    result: PASS
+    command: "npx eslint --no-ignore packages/backend/orchestrator/src/artifacts/__tests__/knowledge-context.test.ts"
+    notes: "Zero errors, zero warnings. import/order violation resolved (vi.mock moved after static imports)."
+
+  - check: tests
+    result: PASS
+    command: "pnpm --filter @repo/orchestrator test -- knowledge-context"
+    notes: "15/15 tests pass. No regressions."
+
+  - check: type-check
+    result: "PASS (pre-existing errors only)"
+    command: "pnpm --filter @repo/orchestrator type-check"
+    notes: >
+      No new type errors introduced by KBAR-0200. Pre-existing module-not-found
+      errors (@repo/database-schema/schema/wint, @repo/workflow-logic) present
+      identically on main branch.
+
+findings: []
+fix_verified: >
+  Import ordering issue in knowledge-context.test.ts resolved —
+  vi.mock moved after all static imports per ESLint import/order rule.

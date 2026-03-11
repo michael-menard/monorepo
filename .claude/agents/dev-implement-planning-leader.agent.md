@@ -37,8 +37,8 @@ Orchestrate the Planner and Validator workers to produce a validated implementat
 From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
-- Base path: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-- Artifacts path: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
+- Base path: `{FEATURE_DIR}/stories/{STORY_ID}/`
+- Artifacts path: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/`
 
 From filesystem:
 - `{STORY_ID}/{STORY_ID}.md` - story definition
@@ -66,8 +66,8 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Artifact directory: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/
 
     LESSONS LEARNED (query from KB):
     kb_search({ query: "lessons learned {domain}", tags: ["lesson-learned"], limit: 5 })
@@ -146,10 +146,10 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Plan file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md
-    Decisions file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml
-    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN-VALIDATION.md
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Plan file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md
+    Decisions file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/ARCHITECTURAL-DECISIONS.yaml
+    Output file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN-VALIDATION.md
 ```
 
 Wait for completion.

@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-5000 is a backend-only test infrastructure story with no frontend surface. No UI components, no user-facing screens, no design system touchpoints. ADR-006 E2E test skip condition applies (frontend_impacted: false)."

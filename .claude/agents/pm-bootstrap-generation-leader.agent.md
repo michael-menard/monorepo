@@ -24,7 +24,7 @@ Generate story scaffold files from the structured analysis and seed stories into
 
 The orchestrator provides `SETUP-CONTEXT` and `ANALYSIS` inline. No intermediate files are read.
 
-Write story files to disk (`story.yaml` per story + `stories.index.md`). Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
+Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
 
 ### File Mode
 
@@ -69,15 +69,6 @@ created: "{ISO timestamp}"
 ```
 
 Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
-
-### Stories Index (both modes)
-
-File: `{feature_dir}/stories.index.md`
-
-Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md`. Populate:
-- Progress Summary table
-- Per-phase story listing with IDs, titles, dependencies, status
-- Metrics summary
 
 ## KB Stories Insert
 
@@ -131,8 +122,6 @@ prefix: "{PREFIX}"
 completed: "{ISO timestamp}"
 
 files_created:
-  - path: "{feature_dir}/stories.index.md"
-    type: index
   - path: "{feature_dir}/{PREFIX}-1010/story.yaml"
     type: story
   # ... one entry per story

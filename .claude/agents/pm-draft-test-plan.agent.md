@@ -22,7 +22,7 @@ Do not write implementation code.
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB
 - `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 

@@ -1,0 +1,66 @@
+schema: 1
+story_id: WISH-2010
+updated: 2026-01-30T22:19:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 56
+    fail: 0
+    file: packages/core/api-client/src/schemas/__tests__/wishlist.test.ts
+    notes: All wishlist schema validation tests pass (exceeds minimum 15 required)
+  integration:
+    pass: 0
+    fail: 0
+    notes: No integration tests required for schema-only story
+  e2e:
+    pass: 0
+    fail: 0
+    notes: No E2E tests required for schema-only story
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: wishlist.ts:43-79 - Schema aligned with database (lines 382-436 in schema/index.ts)
+  - id: AC2
+    verdict: pass
+    evidence: wishlist.ts:97-114 - Omits id, userId, sortOrder, timestamps, audit fields
+  - id: AC3
+    verdict: pass
+    evidence: wishlist.ts:127 - Uses .partial() pattern on CreateWishlistItemSchema
+  - id: AC4
+    verdict: pass
+    evidence: wishlist.ts:145-161 - Implemented as WishlistQueryParamsSchema with all filters
+  - id: AC5
+    verdict: pass
+    evidence: wishlist.ts:229-238 - Implemented as BatchReorderSchema with UUID and sortOrder validation
+  - id: AC6
+    verdict: pass
+    evidence: wishlist.ts:285-338 - Implemented as MarkAsPurchasedInputSchema
+  - id: AC7
+    verdict: pass
+    evidence: index.ts:9-49 - All schemas exported including ReorderResponse, Presign, Purchase schemas
+  - id: AC8
+    verdict: pass
+    evidence: lego-api/domains/wishlist/types.ts:1-14 - JSDoc references alignment, maintains separate schemas for Date handling
+  - id: AC9
+    verdict: pass
+    evidence: 10+ files in app-wishlist-gallery import from @repo/api-client
+  - id: AC10
+    verdict: pass
+    evidence: wishlist.test.ts - 56 tests covering validation, defaults, constraints, edge cases
+  - id: AC13
+    verdict: pass
+    evidence: wishlist.ts - All 18 schema exports have comprehensive JSDoc documentation
+  - id: AC14
+    verdict: deferred
+    evidence: Low priority for MVP - JSDoc provides inline documentation
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.259Z
+  blocking_issues: []

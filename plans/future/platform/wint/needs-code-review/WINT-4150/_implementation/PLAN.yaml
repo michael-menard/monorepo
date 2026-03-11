@@ -1,0 +1,319 @@
+schema: 2
+story_id: WINT-4150
+timestamp: '2026-03-08T23:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Define gaps.ts Zod schema and unit tests — GapsSchema with blocking/non-blocking split, createGaps() factory
+    files:
+      - packages/backend/orchestrator/src/artifacts/gaps.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/gaps.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/scope.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/scope.test.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- gaps
+    acs_covered:
+      - AC-1
+      - AC-11
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Define cohesion-findings.ts Zod schema and unit tests — CohesionFindingsSchema with max(5) findings, max(2)
+      blocking_findings
+    files:
+      - packages/backend/orchestrator/src/artifacts/cohesion-findings.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/cohesion-findings.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/scope.test.ts
+      - .claude/agents/cohesion-prosecutor.agent.md
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- cohesion-findings
+    acs_covered:
+      - AC-2
+      - AC-11
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Confirm UserFlowsSchema re-export — add export from existing __types__/user-flows.ts to artifacts index.ts; no new
+      schema created
+    files:
+      - packages/backend/orchestrator/src/artifacts/index.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+      - packages/backend/orchestrator/src/artifacts/index.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Define scope-challenges.ts Zod schema and unit tests — ScopeChallengesSchema with max(5) challenges and
+      recommendation enum
+    files:
+      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/scope-challenges.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+      - .claude/agents/story-attack-agent.agent.md
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- scope-challenges
+    acs_covered:
+      - AC-4
+      - AC-11
+  - id: 5
+    subtask_id: ST-5
+    description: Define mvp-slice.ts Zod schema and unit tests — MvpSliceSchema with included_acs, excluded_acs, rationale
+    files:
+      - packages/backend/orchestrator/src/artifacts/mvp-slice.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/mvp-slice.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/scope.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- mvp-slice
+    acs_covered:
+      - AC-5
+      - AC-11
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Define final-scope.ts Zod schema and unit tests — FinalScopeSchema formalizing schema_version z.literal('1.0'),
+      followups with conflict: z.boolean()
+    files:
+      - packages/backend/orchestrator/src/artifacts/final-scope.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/final-scope.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/scope.ts
+      - .claude/agents/elab-epic-engineering.agent.md
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- final-scope
+    acs_covered:
+      - AC-6
+      - AC-11
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Define evidence-expectations.ts Zod schema and unit tests — EvidenceExpectationsSchema with expectations array,
+      verification_command optional
+    files:
+      - packages/backend/orchestrator/src/artifacts/evidence-expectations.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/evidence-expectations.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/scope.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- evidence-expectations
+    acs_covered:
+      - AC-7
+      - AC-11
+  - id: 8
+    subtask_id: ST-8
+    description: Write story-brief-schema.md prose documentation following elab-schema.md format
+    files:
+      - .claude/schemas/story-brief-schema.md
+    files_to_read:
+      - .claude/schemas/elab-schema.md
+    dependencies: []
+    slice: packages
+    verification: File exists at .claude/schemas/story-brief-schema.md and matches elab-schema.md section structure
+    acs_covered:
+      - AC-8
+  - id: 9
+    subtask_id: ST-9
+    description: Register all 7 new schemas in artifacts index.ts — additive exports only
+    files:
+      - packages/backend/orchestrator/src/artifacts/index.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/index.ts
+    dependencies:
+      - 1
+      - 2
+      - 4
+      - 5
+      - 6
+      - 7
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-9
+  - id: 10
+    subtask_id: ST-10
+    description: Update elab-completion-leader.agent.md with soft artifact gate validation — warn if missing, do not block
+    files:
+      - .claude/agents/elab-completion-leader.agent.md
+    files_to_read:
+      - .claude/agents/elab-completion-leader.agent.md
+    dependencies:
+      - 1
+      - 2
+      - 4
+      - 5
+      - 6
+      - 7
+    slice: packages
+    verification: grep -A 10 'artifact.*validation\|gate.*validation' .claude/agents/elab-completion-leader.agent.md
+    acs_covered:
+      - AC-10
+files_to_change:
+  - path: packages/backend/orchestrator/src/artifacts/gaps.ts
+    action: create
+    reason: >-
+      New GapsSchema Zod definition with GapItemSchema (id, description, blocking, severity enum, source, resolution
+      nullable) and createGaps() factory — AC-1
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/gaps.test.ts
+    action: create
+    reason: 'Unit tests: valid parse, empty gaps array edge case, factory output validation — AC-11'
+  - path: packages/backend/orchestrator/src/artifacts/cohesion-findings.ts
+    action: create
+    reason: >-
+      New CohesionFindingsSchema with max(5) findings, max(2) blocking_findings constraints and createCohesionFindings()
+      factory — AC-2
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/cohesion-findings.test.ts
+    action: create
+    reason: 'Unit tests: valid parse with 5/2 maxes, constraint violation (6 findings, 3 blocking), factory output — AC-11'
+  - path: packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+    action: create
+    reason: >-
+      New ScopeChallengesSchema with max(5) challenges, recommendation enum
+      (defer-to-backlog|reduce-scope|accept-as-mvp), risk_if_deferred enum — AC-4
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/scope-challenges.test.ts
+    action: create
+    reason: 'Unit tests: valid parse with 5 challenges, max violation (6), invalid enum, factory output — AC-11'
+  - path: packages/backend/orchestrator/src/artifacts/mvp-slice.ts
+    action: create
+    reason: >-
+      New MvpSliceSchema with schema_version, story_id, generated_at, included_acs, excluded_acs, rationale and
+      createMvpSlice() factory — AC-5
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/mvp-slice.test.ts
+    action: create
+    reason: 'Unit tests: valid parse, factory output validation — AC-11'
+  - path: packages/backend/orchestrator/src/artifacts/final-scope.ts
+    action: create
+    reason: >-
+      New FinalScopeSchema with z.literal('1.0') schema_version, final_acs, followups (conflict: z.boolean()), warning
+      arrays and createFinalScope() factory — AC-6
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/final-scope.test.ts
+    action: create
+    reason: >-
+      Unit tests: valid parse, z.literal('1.0') rejects '1.0-draft', followup conflict boolean both values, factory
+      output — AC-11
+  - path: packages/backend/orchestrator/src/artifacts/evidence-expectations.ts
+    action: create
+    reason: >-
+      New EvidenceExpectationsSchema with expectations array (id, ac_id, description, verification_command optional,
+      required: boolean) and createEvidenceExpectations() factory — AC-7
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/evidence-expectations.test.ts
+    action: create
+    reason: 'Unit tests: valid parse, optional verification_command absent, factory output — AC-11'
+  - path: .claude/schemas/story-brief-schema.md
+    action: create
+    reason: Prose documentation for story-brief.md required sections following elab-schema.md format — AC-8
+  - path: packages/backend/orchestrator/src/artifacts/index.ts
+    action: modify
+    reason: 'Additive exports: all 7 new schemas + UserFlowsSchema re-export from __types__/user-flows.ts — AC-3, AC-9'
+  - path: .claude/agents/elab-completion-leader.agent.md
+    action: modify
+    reason: Add soft artifact gate validation step after ELAB.yaml finalization — warn if missing, do not block — AC-10
+commands_to_run:
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all schema files and tests are created
+    required: true
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after index.ts is updated with all exports
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Unit test: gaps.test.ts — GapsSchema.parse(validInput) succeeds, empty gaps array valid, GapItemSchema fields
+      validated
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: cohesion-findings.test.ts — max(5) findings enforced, max(2) blocking_findings enforced, ZodError on
+      violation
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      pnpm check-types passes — UserFlowsSchema imported from index resolves without TS error; no new user-flows.ts file
+      created
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test: scope-challenges.test.ts — max(5) enforced, recommendation enum validated, ZodError on 6 challenges or
+      invalid enum
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: 'Unit test: mvp-slice.test.ts — MvpSliceSchema.parse(validInput) succeeds, factory produces valid output'
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test: final-scope.test.ts — z.literal('1.0') rejects '1.0-draft', followups with conflict boolean parse
+      correctly
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      Unit test: evidence-expectations.test.ts — EvidenceExpectationsSchema.parse succeeds, verification_command
+      optional field absent is valid
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      File .claude/schemas/story-brief-schema.md exists and matches elab-schema.md section structure (title, version,
+      description, required fields, optional fields, validation rules)
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: pnpm check-types --filter @repo/orchestrator passes; grep confirms all 7 schema names in index.ts exports
+    evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: >-
+      grep -A 10 shows gate validation step with 'warn if missing' language in elab-completion-leader.agent.md; manual
+      review confirms graceful degradation
+    evidence_type: manual
+  - ac_id: AC-11
+    planned_evidence: >-
+      pnpm test --filter @repo/orchestrator passes all 7 new test files; each covers valid parse, constraint violation,
+      and factory output validation
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: Should ST-3 (UserFlowsSchema re-export) be merged into ST-9 (index.ts update) or kept as a separate step?
+    decision: >-
+      Merge UserFlowsSchema re-export into ST-9 (index.ts). ST-3 touches index.ts and ST-9 also touches index.ts —
+      consolidating avoids double-write conflicts. ST-3's verification (check-types) is identical to ST-9's.
+    rationale: >-
+      Both ST-3 and ST-9 modify index.ts. Running them separately risks merge conflicts in the file. Agents implementing
+      ST-9 will have already read index.ts and can add both the UserFlowsSchema re-export and all 7 new schema exports
+      in a single pass. ST-3 remains as a logical step (id: 3) but its file changes are subsumed into step 9.
+    decided_by: planner
+complexity: simple
+notes:
+  - Steps 1-8 are fully parallelizable. Steps 9 and 10 depend on 1,2,4,5,6,7 completing first.
+  - >-
+    ST-3 (UserFlowsSchema re-export) is folded into ST-9 since both touch index.ts — the step remains for AC tracking
+    but its file output is produced in step 9.
+  - >-
+    scope-challenges.ts field names (recommendation enum, deferral_note, risk_if_deferred) come from AC-4 text directly;
+    story-attack-agent.agent.md read in ST-4 is for alignment verification only.
+  - >-
+    final-scope.ts uses z.literal('1.0') to distinguish from WINT-4140 provisional schema_version '1.0-draft'. This is
+    the key formalization this story delivers.
+  - >-
+    elab-completion-leader gate must use 'warn if missing, do not block' language explicitly — AC-10 edge case ED-3
+    requires graceful degradation for pre-WINT-4150 elaborations.
+  - >-
+    No E2E tests required — pure schema definitions; pnpm test --filter @repo/orchestrator is the primary validation
+    gate.
+  - >-
+    All new schema files follow scope.ts pattern: single-file, Zod schema export, factory function export, type export
+    via z.infer<>.
+  - >-
+    IMPORTANT: index.ts uses .js extensions in import paths (ESM). All new exports must follow the pattern: export { ...
+    } from './gaps.js'

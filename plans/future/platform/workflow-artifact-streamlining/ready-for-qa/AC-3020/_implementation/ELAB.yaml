@@ -1,0 +1,212 @@
+schema_version: 1
+story_id: "AC-3020"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      story.yaml 'feature' and 'goal' match the stories.index.md description exactly.
+      However, the stories.index.md dependency column lists 'AC-3010, KFMB-5050, CDTS'
+      while story.yaml 'depends_on' only lists AC-3010. The external blockers (KFMB-5050,
+      CDTS) are acknowledged in 'risk_notes' direction but are missing from the formal
+      'depends_on' array. This means automated tooling that reads depends_on cannot detect
+      the true blocked state.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Story has a clear goal and no contradicting non_goals (field is absent entirely).
+      The absence of 'non_goals', 'acceptance_criteria', and 'subtasks' fields is
+      inconsistent with the peer story AC-3010 which established the pattern for Phase 3
+      stories. The story's 'action_items' are procedural reminders, not verifiable ACs.
+      No contradiction found, but structural completeness is below the peer-story baseline.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Story only modifies agent .md files and the pm-bootstrap-workflow command — no
+      production code or shared packages involved. No one-off utilities would be created.
+      Reuse-first is not applicable in the traditional sense; scope is documentation/workflow
+      file edits only.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      endpoints: [] and infrastructure: []. No API layer. No transport-specific logic
+      is being introduced. Ports and adapters compliance is N/A and the story correctly
+      reflects this.
+
+  - id: testability
+    status: FAIL
+    note: >
+      No 'acceptance_criteria' field exists. 'action_items' only references a grep
+      checklist step, which is a process reminder rather than an executable verification
+      command. There are no evidence strings, no yq/grep commands to confirm artifact
+      absence, and no concrete pass/fail criteria for SUMMARY.yaml phases_completed field.
+      Comparable story AC-3010 provided 6 explicit ACs with evidence commands. This story
+      provides zero. A developer completing this story has no machine-checkable definition
+      of done.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      'ac_decisions' captures ENG-REC-002 (grep checklist). No decision captures
+      (a) what the SUMMARY.yaml 'phases_completed' field schema looks like,
+      (b) whether File Mode bootstrap still writes CHECKPOINT.md or it is replaced,
+      (c) what happens to existing _bootstrap/CHECKPOINT.md files in active runs.
+      The story's risk_notes mention 'must not clash with any existing field' but no
+      decision records the actual schema. One unresolved design decision blocks safe
+      implementation.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      risk_notes covers the two primary risks (grep checklist for stale refs,
+      SUMMARY.yaml field collision). However, a third risk is undisclosed: the story
+      is blocked by KFMB-5050 and CDTS (noted in stories.index.md) but these external
+      dependencies are absent from 'depends_on', meaning any automated pipeline could
+      attempt to start this story before prerequisites are satisfied. Additionally,
+      elab-analyst.agent.md reads PLAN.exec.md and PLAN.meta.md 'if exists' — removing
+      them from generation does not require updating elab-analyst, but this conditional
+      read pattern should be confirmed explicitly to avoid confusion about scope.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      sizing_warning: false. Scope is 2 files (pm-bootstrap-generation-leader.agent.md
+      and pm-bootstrap-workflow.md Done section). Very small delta; no ACs to count,
+      but the intended work is clearly bounded. No frontend work, no DB, no infrastructure.
+      No split required.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      No 'acceptance_criteria', 'subtasks', or structured decomposition fields are
+      present. The story is implementable in a single session given its small scope,
+      but without explicit subtasks the implementer must derive the task list from
+      the 'feature' description alone. Minimum required: (1) remove PLAN.meta.md
+      generation step, (2) remove PLAN.exec.md generation step, (3) remove roadmap.md
+      generation step, (4) merge _bootstrap/CHECKPOINT.md into SUMMARY.yaml as
+      phases_completed, (5) update pm-bootstrap-workflow Done section. Should be added
+      before implementation begins, but does not block CONDITIONAL_PASS.
+
+  - id: clarity_format
+    status: CONDITIONAL
+    note: >
+      'goal' field is present and meaningful. 'examples' and 'edge_cases' fields are
+      absent; these are optional for YAML-format stories. However, the story lacks
+      'acceptance_criteria' and 'non_goals' fields that peer story AC-3010 included
+      and that the elab pipeline depends on for verification. The story is interpretable
+      but is structurally incomplete relative to the established story.yaml schema used
+      by this plan's other Phase 3 stories.
+
+gaps:
+  - id: GAP-001
+    severity: blocking
+    description: >
+      Missing acceptance_criteria field. No executable definition of done exists.
+      Without ACs, the evidence-judge and QA agents cannot verify completion, and
+      the implementer cannot confirm the work is finished. Minimum required ACs:
+      (1) grep confirms zero references to PLAN.meta.md, PLAN.exec.md, roadmap.md in
+      pm-bootstrap-generation-leader.agent.md; (2) grep confirms generation leader no
+      longer has generation steps for those three files; (3) SUMMARY.yaml schema has
+      a phases_completed field documented; (4) File Mode _bootstrap/CHECKPOINT.md is
+      either removed or explicitly retained with documented rationale.
+    resolution: Add acceptance_criteria array to story.yaml with evidence commands per AC.
+    decision: "RESOLVED — Added acceptance_criteria array with 5 ACs (AC-001 through AC-005) to story.yaml. Each AC has an evidence_command and pass_condition."
+    ac_added: true
+    acs_added:
+      - AC-001
+      - AC-002
+      - AC-003
+      - AC-004
+      - AC-005
+
+  - id: GAP-002
+    severity: blocking
+    description: >
+      External dependencies (KFMB-5050, CDTS) are absent from story.yaml 'depends_on'.
+      The stories.index.md records the blocked status but automated pipeline tooling
+      reads 'depends_on' from story.yaml, not the index file. If this story is picked
+      up by an agent before KFMB and CDTS land, it will attempt to remove artifacts that
+      downstream agents may still be generating.
+    resolution: >
+      Add KFMB-5050 and the relevant CDTS story ID to 'depends_on'. If those IDs are
+      not yet stable, add a 'blocked_by' free-text field or use a TBD placeholder with
+      a note.
+    decision: >
+      RESOLVED — Added KFMB-5050 and CDTS to the depends_on array in story.yaml.
+      stories.index.md lists 'CDTS' without a specific story number; used 'CDTS' as a
+      placeholder matching the index file. Automated tooling will now detect the blocked
+      state when reading depends_on.
+    ac_added: false
+
+  - id: GAP-003
+    severity: blocking
+    description: >
+      SUMMARY.yaml phases_completed schema is undefined. The story states "SUMMARY.yaml
+      carries phase completion state" but no decision records the field name, type,
+      or allowed values. Without this, two implementers working independently could
+      produce incompatible schemas. The risk_notes acknowledges the clash risk but
+      defers resolution to the implementer.
+    resolution: >
+      Add an ac_decision or inline schema note specifying: field name (phases_completed),
+      type (array of strings or array of objects), allowed values (e.g., ["setup",
+      "analysis", "generation"]), and whether it replaces CHECKPOINT.md entirely or
+      supplements it in File Mode.
+    decision: >
+      RESOLVED — Added SCHEMA-DEC-001 to ac_decisions in story.yaml, specifying:
+      field name 'phases_completed', type array of strings, allowed values
+      ['setup', 'analysis', 'generation', 'review', 'done'], replaces CHECKPOINT.md
+      entirely in all modes including File Mode. Also added AC-004 to acceptance_criteria
+      requiring the implementer to confirm this schema is documented in the agent file.
+    ac_added: true
+    acs_added:
+      - AC-004
+
+opportunities:
+  - id: OPP-001
+    description: >
+      elab-analyst.agent.md reads PLAN.exec.md and PLAN.meta.md conditionally ('if exists').
+      Once AC-3020 removes generation of these files, no new feature runs will produce them.
+      A future cleanup story could remove the conditional read branches from elab-analyst
+      and the elab-epic-* agents (platform, product, ux, security, engineering, qa) that
+      list these files as inputs. This would tighten the agent contract surface area.
+    effort: small
+    story_candidate: true
+    decision: "LOGGED — KB entry created for follow-on story candidate."
+    kb_entry_id: "44d9d21b-1107-4159-98fb-c0c82a97ce3f"
+
+  - id: OPP-002
+    description: >
+      pm-bootstrap-workflow-reference.md still lists PLAN.meta.md, PLAN.exec.md, and
+      roadmap.md in its Artifacts table and Agent Log template. Once AC-3020 ships, this
+      reference doc will be stale. A doc-sync pass should update the reference doc to
+      remove these entries and update the CHECKPOINT.md row to reference SUMMARY.yaml
+      phases_completed.
+    effort: trivial
+    story_candidate: false
+    decision: "LOGGED — KB entry created as a doc-sync chore note (not a story)."
+    kb_entry_id: "962533da-e448-48ce-8559-37a54e569fcf"
+
+  - id: OPP-003
+    description: >
+      pm-story-seed-agent.agent.md references "Plan documents referenced in index
+      (PLAN.meta.md, PLAN.exec.md)" as context inputs. Once these files no longer exist,
+      this agent will silently receive no context from those paths. The agent should be
+      updated to read from story.yaml or SUMMARY.yaml instead, matching the new data model.
+    effort: small
+    story_candidate: true
+    decision: "LOGGED — KB entry created for follow-on story candidate."
+    kb_entry_id: "3608aa58-bff4-4805-bb28-020d8ea97a2c"
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 5

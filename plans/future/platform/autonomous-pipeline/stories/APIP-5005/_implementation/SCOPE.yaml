@@ -1,0 +1,24 @@
+schema: 1
+story_id: APIP-5005
+timestamp: '2026-03-01T00:00:00Z'
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - apps/api/**
+  - packages/backend/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+summary: CLI tool for operators to query BullMQ queue status with minimal visibility into pipeline job processing state
+elaboration: completed

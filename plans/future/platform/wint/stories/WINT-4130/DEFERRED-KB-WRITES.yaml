@@ -1,0 +1,26 @@
+---
+generated: "2026-03-08"
+reason: "KB unavailable during story generation"
+---
+
+deferred_writes:
+  - operation: upsert
+    table: stories
+    data:
+      story_id: WINT-4130
+      feature: wint
+      title: "Validate Graph & Cohesion System — Detection Verification Against Known Franken-Features"
+      story_dir: plans/future/platform/wint/backlog/WINT-4130
+      story_file: plans/future/platform/wint/backlog/WINT-4130/WINT-4130.md
+      story_type: spike
+      points: 3
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

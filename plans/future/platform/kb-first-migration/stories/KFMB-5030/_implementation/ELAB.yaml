@@ -1,0 +1,236 @@
+schema: 1
+story_id: "KFMB-5030"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title matches stories.index.md ("Migrate _implementation/ Command Orchestrators").
+      Correctly placed in Phase 4: Artifact Migration. No extra endpoints, infrastructure, or
+      unscoped features introduced. Non-goals explicitly exclude agent workers (KFMB-5010/5020),
+      stage directories (KFMB-4010/4020), stories.index.md (KFMB-3020/3030), and production DB
+      schemas. Scope coordination notes for KFMB-4020 and KFMB-3030 overlap are documented.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goals, non-goals, and ACs are largely consistent. One logic concern in the Architecture Notes
+      KB state mapping table: "Implemented" is mapped to `state == "in_progress"` or
+      `state == "ready_for_review"`. A story in `in_progress` is actively being implemented (not
+      complete), so using it as the `is_implemented()` signal may produce false positives — a story
+      mid-flight would appear implemented to implement-stories.sh. The expected correct sentinel is
+      `state == "ready_for_review"` (or later). The `in_progress` inclusion should be clarified or
+      removed. HP-3 expected output "ALREADY_ELABORATED" aligns with AC-3 semantics; no issue there.
+      AC-6 includes scrum-master.md while non-goals exclude story-move.md/story-update.md —
+      consistent. AC-7's either/or clause is internally consistent with ST-1/ST-7 split.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan explicitly identifies resolve-plan.sh (batch KB query pattern), dev-code-review.md
+      Phase 0 (kb_read_artifact existence check pattern), and KFMB-2010/2020/2030 analogous
+      migration stories. No new shared packages created — all changes are in .claude/commands/
+      markdown files and scripts/*.sh bash scripts. The batch query strategy (Option B) avoids
+      per-story subprocess duplication. KBAR-0190 frontmatter atomicity lesson is cited and actioned
+      in ST-8.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      This is a docs+scripts story with no TypeScript packages. The architecture notes correctly
+      identify the constraint: bash scripts cannot make MCP tool calls directly, so the claude -p
+      subprocess is the adapter boundary. The batch query approach isolates KB-access IO to a single
+      subprocess call per poll cycle. The command markdown files are the orchestration layer;
+      kb_read_artifact / kb_list_stories calls are the port. Platform-specific logic (bash
+      associative arrays for in-memory lookup) is confined to shell scripts only.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test strategy is appropriate for docs+scripts story. Concrete dry-run commands are provided
+      for all three shell scripts. Precondition-check regression tests cover both happy path (PASS)
+      and error case (FAIL) for elaboration and verification artifacts. Grep spot-checks provide
+      mechanical evidence of migration completeness. End-to-end pipeline smoke test covers the
+      full story lifecycle. ADR-006 Playwright skip is correctly justified (frontend_impacted:
+      false). ADR-005 real DB requirement for integration tests is cited. No .http tests needed
+      (no API endpoints created/modified).
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      No blocking TBDs. The context-init.md design decision is handled via ST-1 audit gating
+      ST-7 implementation — the either/or clause in AC-7 prevents a blocking TBD. However, the
+      `is_implemented()` KB state mapping ambiguity (see internal_consistency) constitutes a
+      design decision that should be resolved before ST-2/ST-3 implementation: specifically,
+      whether `state == "in_progress"` is a valid `is_implemented()` signal or should be dropped
+      in favor of `state == "ready_for_review"` only. This is not a hard blocker (implementer can
+      decide at the time) but ideally should be clarified in the story to avoid inconsistent
+      implementations across ST-2 and ST-3.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks are comprehensive: KFMB-5020 hard dependency (must reach needs-code-review), KB
+      unavailability during tests (ADR-005 real DB mitigation), dispatcher poll loop performance
+      degradation (batch strategy mitigation), KFMB-4020 scope overlap on shared files
+      (serial execution mitigation), KFMB-3030 scope overlap on implement-stories.sh and
+      generate-stories.sh (serial PR mitigation), context-init.md downstream consumer audit
+      (ST-1 gates ST-7). Graceful degradation pattern for KB unavailability is documented.
+      No hidden infrastructure or auth risks (infra_impacted: false, no new MCP tool
+      registrations required per non-goals).
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      10 ACs (exceeds the 8 AC threshold — 1 sizing indicator triggered). 0 endpoints. No
+      frontend work. 8 subtasks. Story touches 3 shell scripts + 7 command files but all are
+      the same type (markdown/bash — not TypeScript packages), making the breadth manageable.
+      The story self-reports split_risk: 0.5 but sizing_warning: false in frontmatter —
+      the frontmatter may be understated given the AC count. Story is NOT recommended for
+      split: the shell script migrations (ST-2/ST-3/ST-4) and command file migrations
+      (ST-5/ST-6) are tightly coupled through the precondition-check and ALLOWED_TOOLS
+      requirements (AC-10). Splitting would require duplicating the batch query infrastructure
+      across two stories. WARN is appropriate; not SPLIT.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      All 10 ACs are covered by subtasks: AC-1→ST-2, AC-2→ST-3, AC-3→ST-4, AC-4→ST-5,
+      AC-5→ST-5, AC-6→ST-6, AC-7→ST-1+ST-7, AC-8→ST-5, AC-9 (implicitly verified by
+      ST-2/ST-3/ST-4 dry-run verification), AC-10→ST-2/ST-3/ST-4. DAG is acyclic (ST-1 →
+      ST-2, ST-5, ST-7; ST-2 → ST-3, ST-4; ST-5 → ST-6 → ST-8). Each subtask has a
+      verification command. Canonical References section has exactly 4 entries (within 2-4
+      range). CONDITIONAL on one issue: ST-6 touches 6 files (dev-implement-story.md,
+      elab-story.md, dev-code-review.md, qa-verify-story.md, dev-fix-story.md,
+      scrum-master.md), violating the "no subtask touches more than 3 files" guideline.
+      Recommend splitting ST-6 into two subtasks: ST-6a (audit-only pass across all 6 files)
+      and ST-6b (apply story_id spawn fixes where found). Alternatively, the audit-only nature
+      of ST-6 may justify the exception — it is a read-then-write-if-needed pattern rather than
+      a multi-file rewrite.
+
+gaps:
+  - id: GAP-1
+    severity: MVP_BLOCKING
+    description: >
+      ST-6 violates the subtask file-count guideline (6 files > 3 file limit). While not a
+      correctness issue, it makes the subtask non-atomic and increases the risk of partial
+      completion during implementation. The subtask should be split into ST-6a (read-only audit
+      of all 6 command files to identify filesystem path references) and ST-6b (apply story_id
+      spawn prompt fixes where the audit found violations). This split maintains the DAG
+      integrity (ST-6a → ST-6b → ST-8) and respects the guideline.
+    resolution: >
+      Split ST-6 into ST-6a (audit, read-only, all 6 files) and ST-6b (apply fixes, max 3
+      files per pass or iterate). Update the Subtasks table and subtask detail sections.
+
+  - id: GAP-2
+    severity: MVP_BLOCKING
+    description: >
+      The `is_implemented()` KB state mapping in Architecture Notes includes `state == "in_progress"`
+      as a valid "implemented" signal. This is semantically incorrect: `in_progress` means a story
+      is being actively worked on (not yet implemented). Using it in `is_implemented()` would cause
+      implement-stories.sh to skip stories that are mid-flight but not yet complete. The correct
+      sentinel for "implemented" is `state == "ready_for_review"` (submitted for review) or later.
+      This ambiguity exists in both the Architecture Notes and propagates to ST-2 and ST-3.
+    resolution: >
+      Clarify the KB state mapping in Architecture Notes: remove `state == "in_progress"` from
+      the `is_implemented()` mapping. The corrected mapping should read: Implemented:
+      `state == "ready_for_review"` or `state == "needs_review"` or later. Ensure ST-2 and ST-3
+      subtask detail sections reference the corrected mapping.
+
+opportunities:
+  - id: OPP-1
+    severity: non_blocking
+    description: >
+      AC-9 verifies shell script correctness via dry-run output but does not specify what
+      "correct story filtering" means in measurable terms (e.g., how many stories should appear,
+      which specific story IDs, what the expected count delta is). Adding a concrete expected
+      count or story ID list to the test plan would make AC-9 falsifiable rather than
+      observational. This is an enhancement for test rigor, not a blocking gap.
+    recommendation: >
+      Add a concrete expected-result note to HP-1, HP-2, HP-3 specifying which story IDs from
+      the kb-first-migration plan are expected to appear/not appear in dry-run output based on
+      their current KB state.
+
+  - id: OPP-2
+    severity: non_blocking
+    description: >
+      The Architecture Notes document the preferred batch query strategy (Option B) but do not
+      document a rejected Option A (per-story subprocess) with an explicit rationale for why it
+      was rejected beyond "latency multiplication." Adding a short ADR note or inline rejection
+      rationale would help future implementers avoid regressing to per-story calls if they are
+      tempted to simplify the implementation.
+    recommendation: >
+      Add a brief "Option A: per-story subprocess — rejected because N-story × claude -p call
+      latency is multiplicative in implement-dispatcher.sh poll loop (can add 10-60s per cycle)"
+      note to the Architecture Notes section.
+
+  - id: OPP-3
+    severity: non_blocking
+    description: >
+      ST-8 (frontmatter kb_artifacts update) is listed as depending on ST-6 only. However,
+      ST-5 (precondition-check.md migration) also modifies a command file whose frontmatter
+      should be updated per KBAR-0190. The dependency chain ST-5 → ST-8 is not explicitly
+      listed in the Subtasks table. While an implementer would catch this during ST-8 work,
+      making the dependency explicit reduces the risk of an incomplete frontmatter update for
+      precondition-check.md.
+    recommendation: >
+      Add ST-5 as an explicit dependency of ST-8 in the Subtasks table
+      (Depends On: ST-6, ST-5).
+
+decisions:
+  - id: GAP-1
+    action: FIXED_IN_STORY
+    description: >
+      Split ST-6 into ST-6a (read-only audit of all 6 command orchestrator files) and ST-6b (apply
+      story_id spawn prompt fixes for violations found in audit). Subtasks table and detail sections
+      updated accordingly. DAG chain updated to ST-5 → ST-6a → ST-6b → ST-8. No new AC added —
+      this is a structural decomposition fix, not a missing acceptance criterion.
+    decided_at: "2026-02-26T00:00:00Z"
+
+  - id: GAP-2
+    action: FIXED_IN_STORY
+    description: >
+      Corrected the `is_implemented()` KB state mapping in Architecture Notes. Removed
+      `state == "in_progress"` as a valid "implemented" signal — a story in `in_progress` is
+      mid-flight and not yet implemented; using it would produce false positives in
+      implement-stories.sh. The corrected mapping uses `state == "ready_for_review"` or later only.
+      No new AC added — this was a factual error in the story content, not a missing criterion.
+    decided_at: "2026-02-26T00:00:00Z"
+
+  - id: OPP-1
+    action: KB_LOG_DEFERRED
+    description: >
+      AC-9 dry-run lacks concrete expected story IDs/counts — non-blocking test rigor enhancement.
+      Logged as future opportunity. KB write artifact tool unavailable in this session; opportunity
+      noted here for manual KB logging.
+    decided_at: "2026-02-26T00:00:00Z"
+
+  - id: OPP-2
+    action: KB_LOG_DEFERRED
+    description: >
+      Option A rejection rationale in Architecture Notes is thin — non-blocking documentation
+      enhancement. Logged as future opportunity. KB write artifact tool unavailable in this session;
+      opportunity noted here for manual KB logging.
+    decided_at: "2026-02-26T00:00:00Z"
+
+  - id: OPP-3
+    action: FIXED_IN_STORY
+    description: >
+      Added ST-5 as an explicit dependency of ST-8 in the Subtasks table (Depends On: ST-6b, ST-5).
+      This reflects that precondition-check.md (migrated in ST-5) also requires frontmatter
+      kb_artifacts update per KBAR-0190. Also logged as future opportunity for KB (tool unavailable).
+    decided_at: "2026-02-26T00:00:00Z"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-02-26T00:00:00Z"
+
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

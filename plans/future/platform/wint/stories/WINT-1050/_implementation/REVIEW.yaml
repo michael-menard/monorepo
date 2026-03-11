@@ -1,0 +1,99 @@
+schema: 1
+story_id: WINT-1050
+timestamp: "2026-02-20"
+iteration: 1
+verdict: PASS
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - reusability
+
+workers_skipped:
+  - typecheck   # exempt: docs-only, no TS files
+  - build       # exempt: docs-only, no build artifacts
+  - react       # exempt: no React components
+  - typescript  # exempt: no TS files
+  - accessibility # exempt: no UI
+
+ranked_patches: []
+
+findings:
+  lint:
+    verdict: PASS
+    total_errors: 0
+    total_warnings: 0
+    details: "Markdown formatting, links, spelling, and consistency all correct."
+
+  style:
+    verdict: PASS
+    total_errors: 0
+    total_warnings: 2
+    details: >
+      Two minor style observations downgraded to advisory:
+      (1) Step 3a heading lacks (WINT-1050) ticket reference that story-move.md Step 2.5
+      includes — minor style preference, not required by ACs.
+      (2) 'emit WARNING' vs 'log warning via @repo/logger' — story-update.md uses 'emit'
+      because AC-3 specifies the exact WARNING format for agent output; story-move.md targets
+      @repo/logger for TypeScript code. Different contexts, both correct.
+    advisory_notes:
+      - "Consider adding (WINT-1050) to Step 3a heading for traceability — not blocking."
+
+  syntax:
+    verdict: PASS
+    total_errors: 0
+    total_warnings: 0
+    details: "YAML frontmatter, markdown tables, code blocks, and pseudocode all syntactically valid."
+
+  security:
+    verdict: PASS
+    total_errors: 0
+    total_warnings: 2
+    details: >
+      Two pre-existing concerns flagged, neither introduced by WINT-1050:
+      (1) Path traversal risk on STORY_ID/FEATURE_DIR — pre-existing in v2.1.0, caller validates.
+      (2) STORY_ID passed to shimUpdateStoryStatus — parameterized queries per WINT-1011 contract.
+      Both are pre-existing patterns, not regressions. No new security surface introduced.
+    advisory_notes:
+      - "Input validation is caller responsibility — documented in shimUpdateStoryStatus contract."
+
+  reusability:
+    verdict: PASS
+    total_errors: 0
+    total_warnings: 0
+    details: >
+      Correctly reuses shimUpdateStoryStatus with standard call signature. Mapping table
+      sourced from SWIM_LANE_TO_STATE with explicit BLOCKED/superseded decisions. Pattern
+      consistent with WINT-1060 sibling. No DRY violations.
+
+  typecheck:
+    verdict: EXEMPT
+    reason: "Docs-only story — no TypeScript source files"
+
+  build:
+    verdict: EXEMPT
+    reason: "Docs-only story — no build artifacts"
+
+  react:
+    verdict: EXEMPT
+    reason: "No React components modified"
+
+  typescript:
+    verdict: EXEMPT
+    reason: "No TypeScript files modified"
+
+  accessibility:
+    verdict: EXEMPT
+    reason: "No UI components modified"
+
+total_errors: 0
+total_warnings: 4
+auto_fixable_count: 0
+
+summary: >
+  CODE REVIEW PASS. Docs-only story modifying .claude/commands/story-update.md (v2.1.0 → v3.0.0).
+  All 5 applicable workers pass. 4 warnings are advisory only: 2 minor style preferences and
+  2 pre-existing security patterns not introduced by this change. All 10 ACs verified.
+  No ranked patches — no fixes required.

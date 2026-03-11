@@ -1,0 +1,105 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "round-table.agent.md file exists at expected path"
+    setup: "Story WINT-4140 implementation complete"
+    action: "Check file exists: .claude/agents/round-table.agent.md"
+    expected: "File present at .claude/agents/round-table.agent.md"
+    evidence: "Read .claude/agents/round-table.agent.md — file content readable"
+  - id: HP-2
+    title: "YAML frontmatter contains all required fields"
+    setup: "round-table.agent.md exists"
+    action: "Read frontmatter block; verify fields: created, updated, version, type: worker, model: haiku, name: round-table, spawned_by"
+    expected: "All required YAML frontmatter fields present and valid"
+    evidence: "Grep for 'model: haiku' and 'type: worker' and 'spawned_by' in frontmatter"
+  - id: HP-3
+    title: "All 10 ACs addressed in agent spec body"
+    setup: "round-table.agent.md exists"
+    action: "Read full agent body; verify each of AC-1 through AC-10 requirements is present"
+    expected: "Every AC requirement traceable to a section in the agent spec"
+    evidence: "Manual content review + grep for key terms: synthesis constraint, followups, schema_version"
+  - id: HP-4
+    title: "final-scope.json schema section present with all required fields"
+    setup: "round-table.agent.md exists"
+    action: "Read output schema section; verify fields: story_id, generated_at, schema_version, final_acs, followups, po_warnings, da_warnings, synthesis_warnings, total_warning_count"
+    expected: "All required fields documented in schema"
+    evidence: "Grep for 'schema_version' and 'followups' and 'final_acs'"
+  - id: HP-5
+    title: "Three completion signals defined"
+    setup: "round-table.agent.md exists"
+    action: "Read completion signals section"
+    expected: "ROUND-TABLE COMPLETE, ROUND-TABLE COMPLETE WITH WARNINGS, ROUND-TABLE BLOCKED all defined"
+    evidence: "Grep for 'ROUND-TABLE COMPLETE' and 'ROUND-TABLE BLOCKED'"
+  - id: HP-6
+    title: "LangGraph porting notes section present"
+    setup: "round-table.agent.md exists"
+    action: "Read LangGraph porting notes section; verify input/output contracts documented"
+    expected: "Section present with state field table and output contract"
+    evidence: "Grep for 'LangGraph' in agent file"
+error_cases:
+  - id: EC-1
+    title: "Synthesis constraint explicitly stated — no new ACs allowed"
+    setup: "round-table.agent.md exists"
+    action: "Grep for synthesis constraint text"
+    expected: "Explicit statement that Round Table MUST NOT add new ACs or invent requirements"
+    evidence: "Grep: 'MUST NOT' near 'new ACs' or 'invent' in agent spec"
+  - id: EC-2
+    title: "Blocking condition correctly defined — only scope-challenges.json missing triggers BLOCKED"
+    setup: "round-table.agent.md exists"
+    action: "Read blocking logic in completion signals section"
+    expected: "ROUND-TABLE BLOCKED only when scope-challenges.json unreadable; PO findings and elab gaps are optional"
+    evidence: "Grep for 'BLOCKED' condition text in agent spec"
+  - id: EC-3
+    title: "followups[] schema includes source, reason, conflict fields"
+    setup: "round-table.agent.md exists"
+    action: "Read followups schema definition"
+    expected: "followups[] objects include: id, text, source, reason, conflict (boolean)"
+    evidence: "Grep for 'conflict' near 'followups' in agent spec"
+edge_cases:
+  - id: ED-1
+    title: "accept-as-mvp DA challenge handling documented"
+    setup: "round-table.agent.md exists"
+    action: "Read conflict resolution section for accept-as-mvp entries"
+    expected: "Agent spec describes filtering accept-as-mvp entries into accepted pass-through list"
+    evidence: "Grep for 'accept-as-mvp' in agent spec"
+  - id: ED-2
+    title: "schema_version '1.0-draft' present in output schema"
+    setup: "round-table.agent.md exists"
+    action: "Read output schema section"
+    expected: "'1.0-draft' appears as the schema_version value in the output schema"
+    evidence: "Grep for '1.0-draft' in agent spec"
+  - id: ED-3
+    title: "Missing cohesion-findings.json graceful degradation described"
+    setup: "round-table.agent.md exists"
+    action: "Read optional inputs table degradation column"
+    expected: "Missing cohesion-findings.json = 1 warning, proceed with PO findings empty"
+    evidence: "Read optional inputs table — degradation column for cohesion-findings row"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+manual_cases:
+  - id: MC-1
+    title: "Content completeness review — all 10 ACs verified"
+    steps:
+      - "Read .claude/agents/round-table.agent.md in full"
+      - "Check AC-1: frontmatter fields present including spawned_by"
+      - "Check AC-2: optional inputs table with degradation column"
+      - "Check AC-3: 4-phase execution workflow defined"
+      - "Check AC-4: synthesis constraint explicitly documented"
+      - "Check AC-5: final-scope.json output schema with all required fields"
+      - "Check AC-6: DA defer-to-backlog/reduce-scope items appear in followups[] with source: DA"
+      - "Check AC-7: Blocking PO findings not in final_acs appear in followups[] with conflict: true if DA also challenged"
+      - "Check AC-8: non-goals section present"
+      - "Check AC-9: LangGraph porting notes with input/output contracts"
+      - "Check AC-10: exactly three completion signals defined"
+    expected: "All 10 ACs fully satisfied by agent spec content"
+fixture_definitions: []
+risks:
+  - "Agent-file-only stories have no automated test coverage — all verification is manual content review"
+  - "cohesion-findings.json schema (WINT-4070) may still be in flux — verify agent spec handles provisional schema gracefully"
+  - "WINT-4150 will supersede final-scope.json schema — schema_version: '1.0-draft' must be present to signal pre-standardization status"

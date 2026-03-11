@@ -1,0 +1,2 @@
+skipped: true
+reason: "KBAR-0210 modifies command markdown files only (.claude/commands/*.md). No UI components, no frontend code, no user-facing surfaces are touched. frontend_impacted: false."

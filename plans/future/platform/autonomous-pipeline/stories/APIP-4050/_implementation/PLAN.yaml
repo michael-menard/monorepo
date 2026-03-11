@@ -1,0 +1,338 @@
+schema: 2
+story_id: APIP-4050
+timestamp: '2026-03-02T04:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Define Zod schemas for Dead Code Reaper domain types in
+      packages/backend/orchestrator/src/nodes/dead-code/schemas.ts. Covers DeadCodeReaperConfigSchema (with minAgeDays,
+      excludePatterns, maxFindingsPerRun, timeoutMs, dryRun defaults), DeadExportFindingSchema, UnusedFileFindingSchema,
+      UnusedDepFindingSchema, MicroVerifyResultSchema, DeadCodeReaperResultSchema, and CronRunResult extension schema.
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/story.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement scanDeadExports, scanUnusedFiles, and scanUnusedDeps in
+      packages/backend/orchestrator/src/nodes/dead-code/scanners.ts. All three accept injectable execFn: (cmd: string)
+      => Promise<string>. scanDeadExports runs ts-prune and parses output into DeadExportFinding[]. scanUnusedFiles runs
+      TypeScript compiler analysis for no-importers. scanUnusedDeps loops over all package.json paths running depcheck.
+      All three respect excludePatterns config. Dynamic import guard: files only referenced via import(...) are excluded
+      from findings.
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+      - packages/backend/orchestrator/src/nodes/audit/lens-typescript.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- dead-code/scanners
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement microVerify in packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts. Accepts a
+      DeadExportFinding or UnusedFileFinding plus injectable execFn. In dryRun:true mode, simulates deletion without
+      writing files. In non-dryRun mode, performs actual targeted tsc --project per affected package. Returns
+      MicroVerifyResult with status: 'safe' | 'false-positive' | 'error', typeCheckOutput, and durationMs.
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+      - packages/backend/orchestrator/src/runner/timeout.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- dead-code/micro-verify
+    acs_covered:
+      - AC-6
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement runDeadCodeReaper in packages/backend/orchestrator/src/nodes/dead-code/runner.ts. Orchestrates: (1)
+      acquires pg_try_advisory_lock via LOCK_KEYS.DEAD_CODE_REAPER — exits with status:'skipped' if not acquired; (2)
+      runs all three scanners concurrently via Promise.all up to maxFindingsPerRun total; (3) micro-verifies each safe
+      candidate sequentially; (4) filters false-positives; (5) returns DeadCodeReaperResult. Wraps the full operation
+      with withTimeout from runner/timeout.ts. MUST catch NodeTimeoutError explicitly and convert to
+      DeadCodeReaperResult with status:'partial' and accumulated verifiedDeletions. Emits structured
+      CronRunResult-shaped log via @repo/logger on completion (AC-11).
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/runner.ts
+      - packages/backend/orchestrator/src/cron/constants.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+      - packages/backend/orchestrator/src/runner/timeout.ts
+      - packages/backend/orchestrator/src/runner/errors.ts
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/cron/constants.ts
+    dependencies:
+      - 2
+      - 3
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- dead-code/runner
+    acs_covered:
+      - AC-7
+      - AC-8
+      - AC-10
+      - AC-11
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Implement generateCleanupStory in packages/backend/orchestrator/src/nodes/dead-code/cleanup-story-generator.ts.
+      Reads backlog directory via fs.readdirSync to find max existing CLEANUP-NNNN sequence number, increments by 1.
+      Builds a StoryArtifact using createStoryArtifact() from artifacts/story.ts with id format CLEANUP-NNNN (satisfies
+      /^[A-Z]+-\d+$/). Serializes to YAML via js-yaml. Validates via StoryArtifactSchema.parse() before writing. Writes
+      to plans/future/platform/autonomous-pipeline/backlog/CLEANUP-NNNN/story.yaml.
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/cleanup-story-generator.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+      - packages/backend/orchestrator/src/artifacts/story.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- dead-code/cleanup-story-generator
+    acs_covered:
+      - AC-9
+      - AC-14
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Create LangGraph graph factory in packages/backend/orchestrator/src/graphs/dead-code-reaper.ts following the
+      createMetricsGraph() factory pattern. Exports createDeadCodeReaperGraph() and a convenience dead-code-reaper cron
+      job definition in packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.job.ts. The job definition uses
+      LOCK_KEYS.DEAD_CODE_REAPER and schedule '0 3 1 * *' (monthly at 3am on the 1st). AC-10 cron registration is
+      implemented here using buildCronRegistry/registerCronJobs; InMemoryCronAdapter is used for unit testing.
+    files:
+      - packages/backend/orchestrator/src/graphs/dead-code-reaper.ts
+      - packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.job.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/cron/adapter.ts
+      - packages/backend/orchestrator/src/cron/registry.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-10
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Write comprehensive unit tests in
+      packages/backend/orchestrator/src/nodes/dead-code/__tests__/dead-code-reaper.test.ts covering all AC-12 subcases:
+      (a) DeadCodeReaperConfigSchema valid/invalid; (b) scanDeadExports with mock execFn — verifies finding extraction
+      and excludePatterns filtering; (b-bis) scanUnusedFiles with mock execFn — verifies UnusedFileFindingSchema[]
+      extraction and excludePatterns filtering; (c) scanUnusedDeps with mock execFn returning depcheck JSON; (d)
+      microVerify → status:'safe' with mock returning empty string; (e) microVerify → status:'false-positive' with mock
+      returning 'error TS...'; (f) runDeadCodeReaper with dryRun:true produces DeadCodeReaperResultSchema-conformant
+      result; (g) generateCleanupStory output passes StoryArtifactSchema.parse(); (h) timeout path via
+      vi.useFakeTimers() → status:'partial'; (i) advisory lock skip path mocking pg_try_advisory_lock returning false →
+      status:'skipped'. All execFn mocked, dryRun:true enforced, vi.useFakeTimers() restored in afterEach.
+    files:
+      - packages/backend/orchestrator/src/nodes/dead-code/__tests__/dead-code-reaper.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+      - packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+      - packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+      - packages/backend/orchestrator/src/nodes/dead-code/runner.ts
+      - packages/backend/orchestrator/src/nodes/dead-code/cleanup-story-generator.ts
+      - packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+    dependencies:
+      - 2
+      - 3
+      - 4
+      - 5
+    slice: backend
+    verification: >-
+      pnpm test --filter @repo/orchestrator && pnpm check-types --filter @repo/orchestrator && pnpm lint --filter
+      @repo/orchestrator
+    acs_covered:
+      - AC-12
+      - AC-13
+files_to_change:
+  - path: packages/backend/orchestrator/src/nodes/dead-code/schemas.ts
+    action: create
+    reason: Zod-first domain type definitions for Dead Code Reaper (AC-1 through AC-4, AC-11)
+  - path: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    action: create
+    reason: scanDeadExports, scanUnusedFiles, scanUnusedDeps with injectable execFn (AC-2 through AC-5)
+  - path: packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+    action: create
+    reason: microVerify function with dryRun mode (AC-6)
+  - path: packages/backend/orchestrator/src/nodes/dead-code/runner.ts
+    action: create
+    reason: runDeadCodeReaper orchestration with withTimeout and advisory lock (AC-7, AC-8, AC-10, AC-11)
+  - path: packages/backend/orchestrator/src/nodes/dead-code/cleanup-story-generator.ts
+    action: create
+    reason: generateCleanupStory with CLEANUP-NNNN ID format and StoryArtifactSchema validation (AC-9, AC-14)
+  - path: packages/backend/orchestrator/src/graphs/dead-code-reaper.ts
+    action: create
+    reason: createDeadCodeReaperGraph() LangGraph factory following metrics.ts pattern (AC-10)
+  - path: packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.job.ts
+    action: create
+    reason: 'Dead Code Reaper cron job definition: schedule ''0 3 1 * *'', LOCK_KEYS.DEAD_CODE_REAPER (AC-10)'
+  - path: packages/backend/orchestrator/src/cron/constants.ts
+    action: modify
+    reason: 'Add DEAD_CODE_REAPER: 42_002 lock key to LOCK_KEYS constant (AC-10)'
+  - path: packages/backend/orchestrator/src/nodes/dead-code/__tests__/dead-code-reaper.test.ts
+    action: create
+    reason: Comprehensive unit tests for all AC-12 subcases a-h plus advisory lock skip path (AC-12, AC-13)
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after each step
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes (ST-7)
+    required: true
+  - command: pnpm lint --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Unit test AC-12a: DeadCodeReaperConfigSchema.parse({}) applies all defaults; parse({minAgeDays:-5}) throws
+      ZodError
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test AC-12b: scanDeadExports with mock execFn returning ts-prune fixture — DeadExportFinding[] validated,
+      excludePatterns respected
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test AC-12b-bis: scanUnusedFiles with mock execFn returning compiler output — UnusedFileFindingSchema[]
+      extraction and excludePatterns filtering verified
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: 'Unit test AC-12c: scanUnusedDeps with mock execFn returning depcheck JSON — UnusedDepFinding[] extraction verified'
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit tests in scanners: dynamic import guard test — ts-prune output listing file only via import(...) is excluded
+      from findings; excludePatterns filter verified in AC-12b and AC-12b-bis
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit tests AC-12d and AC-12e: microVerify mock returns '' → status:'safe'; mock returns 'error TS...' →
+      status:'false-positive'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      Unit test AC-12f: runDeadCodeReaper with dryRun:true produces DeadCodeReaperResultSchema-conformant result;
+      DeadCodeReaperResultSchema.parse(result) does not throw
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      Unit test AC-12h: runDeadCodeReaper with very short timeoutMs via vi.useFakeTimers() → result.status ===
+      'partial'. NodeTimeoutError catch-and-convert logic visible in runner.ts implementation.
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      Unit test AC-12g: generateCleanupStory output passes StoryArtifactSchema.parse(); story.yaml written to
+      backlog/CLEANUP-NNNN/story.yaml
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Unit test: InMemoryCronAdapter.hasJob('dead-code-reaper') === true after buildCronRegistry; schedule === '0 3 1 *
+      *' verified. Advisory lock skip test: mock pg_try_advisory_lock returning false → status:'skipped' and no scan
+      functions invoked.
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: >-
+      Code review: runner.ts emits @repo/logger.info call with jobName:'dead-code-reaper', startedAt, completedAt,
+      durationMs, status, and summary counts on every run path (success, partial, skipped)
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      pnpm test --filter @repo/orchestrator passes all subcases a through h plus b-bis and advisory lock skip path in
+      dead-code-reaper.test.ts
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      pnpm check-types --filter @repo/orchestrator and pnpm lint --filter @repo/orchestrator pass with zero new errors
+      or warnings
+    evidence_type: command
+  - ac_id: AC-14
+    planned_evidence: >-
+      Unit test AC-12g: generated story.yaml ID matches /^[A-Z]+-\d+$/ (CLEANUP-NNNN format);
+      StoryArtifactSchema.parse() succeeds. APIP-CLEANUP-NNNN format NOT used anywhere in implementation.
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: LOCK_KEYS constant for DEAD_CODE_REAPER — which integer key to use?
+    decision: Use 42_002 (PATTERN_MINER is 42_001; increment by 1 for the next cron job)
+    rationale: >-
+      ARCH-002 in the codebase mandates fixed integer constants (not hashtext()). 42_002 follows the established
+      numbering sequence in cron/constants.ts.
+    decided_by: planner
+  - id: ARCH-002
+    question: Should the CLEANUP story backlog directory scan use the worktree path or the repo root path?
+    decision: >-
+      Use the monorepo root path (not worktree path) for scanning existing CLEANUP-NNNN directories and writing new
+      story.yaml files. The backlog is a shared resource in the repo, not per-worktree.
+    rationale: >-
+      CLEANUP stories are written to plans/future/platform/autonomous-pipeline/backlog/ which is a repo-level directory,
+      not worktree-local. The Reaper writes to the live repo path, consistent with how story.yaml files are tracked in
+      git.
+    decided_by: planner
+  - id: ARCH-003
+    question: How should the CronRunResult for dead-code-reaper be extended with domain-specific summary counts (AC-11)?
+    decision: >-
+      Emit an extended log object via @repo/logger.info that includes all CronRunResult fields PLUS the domain counts
+      (findingsTotal, verifiedDeletions, falsePositives, cleanupStoriesGenerated). Do not extend CronRunResultSchema —
+      log the extra fields as a superset object. The cron registry's CronRunResultSchema.parse() is not involved in the
+      runner's internal logging.
+    rationale: >-
+      CronRunResultSchema is defined in cron/schemas.ts and is not specific to dead-code-reaper. Extending it globally
+      for one job's domain counts would pollute the shared schema. The runner logs its own richer summary independently
+      before returning, keeping the shared cron infrastructure clean.
+    decided_by: planner
+complexity: complex
+notes:
+  - >-
+    AC-14 supersedes AC-9 ID format: use CLEANUP-NNNN (e.g., CLEANUP-0001) not APIP-CLEANUP-NNNN. StoryArtifactSchema id
+    regex is /^[A-Z]+-\d+$/.
+  - >-
+    AC-8 CRITICAL: withTimeout throws NodeTimeoutError — it does NOT return partial. runDeadCodeReaper MUST wrap in
+    try/catch, catch NodeTimeoutError, and convert to {status:'partial', verifiedDeletions: accumulated}.
+  - >-
+    AC-10 cron registration is NOT deferred — APIP-3090 is complete and buildCronRegistry/registerCronJobs are
+    available. Implement fully in ST-6.
+  - >-
+    ARCH-002 (codebase): pg_try_advisory_lock must use integer key from LOCK_KEYS constant, NOT hashtext(). Add
+    DEAD_CODE_REAPER: 42_002 to cron/constants.ts.
+  - All unit tests use dryRun:true and mock execFn — no real CLI invocations in CI.
+  - vi.useFakeTimers() in timeout test MUST be restored in afterEach to prevent test leakage.
+  - >-
+    scanUnusedFiles uses TypeScript compiler analysis for no-importers (not a separate tool like unimported). Parse tsc
+    --listFiles or similar output.
+  - >-
+    Backlog scan in generateCleanupStory: readdirSync on plans/future/platform/autonomous-pipeline/backlog/, filter for
+    CLEANUP-\d{4} pattern, find max N, use N+1.
+  - 'KB context note: opp-4 (shared runTsPrune helper with APIP-4010) is logged but NOT in scope for this story.'
+  - >-
+    KB context note: opp-2 (bounded concurrent micro-verify pool) is logged but NOT in scope — sequential is correct for
+    MVP.

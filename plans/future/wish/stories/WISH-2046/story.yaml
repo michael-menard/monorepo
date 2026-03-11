@@ -1,0 +1,28 @@
+schema: 1
+id: WISH-2046
+feature: wish
+type: feature
+state: uat
+title: Client-side Image Compression Quality Presets
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2022
+follow_up_from: WISH-2022
+scope:
+  packages: []
+  surfaces:
+    - frontend
+    - infra
+goal: Add user-selectable compression quality presets to give users control over image quality vs file size trade-offs.
+non_goals:
+  - Not implementing per-image preset selection (preset applies globally to all uploads)
+  - Not implementing custom preset creation (only predefined presets)
+  - Not implementing dynamic preset recommendations based on network speed
+  - Not implementing image quality metrics or comparison tools
+  - Not re-implementing compression logic from WISH-2022
+acs: []
+risks: []
+created_at: 2026-01-29T18:30:00-07:00
+updated_at: 2026-01-31T19:00:00-07:00

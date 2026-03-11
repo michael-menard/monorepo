@@ -1,0 +1,13 @@
+id: "KFMB-6010"
+title: "Script Modernization"
+status: ready-to-work
+priority: medium
+phase: 5
+feature: "Update all scripts to use KB API / MCP queries for story state and artifact access"
+goal: "All automation scripts operate against the KB exclusively."
+depends_on: ["KFMB-3030", "KFMB-4020", "KFMB-5030"]
+endpoints: []
+infrastructure: ["Shell Scripts", "Python Scripts", "MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "KB availability and auth in non-interactive shell contexts must be validated."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

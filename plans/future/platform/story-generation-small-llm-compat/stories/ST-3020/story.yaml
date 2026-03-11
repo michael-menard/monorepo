@@ -1,0 +1,30 @@
+id: "ST-3020"
+title: "Dev-Plan-Leader — Map Subtasks to PLAN.yaml Steps"
+status: backlog
+priority: medium
+phase: 3
+feature: "Update dev-plan-leader to read the story's subtasks array and emit one PLAN.yaml step per subtask"
+goal: "PLAN.yaml steps are derived directly from story subtasks, ensuring plan and story stay in sync."
+depends_on: ["ST-3010"]
+endpoints: []
+infrastructure: []
+risk_notes: "If subtasks are poorly defined upstream, plan quality degrades."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+qa_notes:
+  verdict: FAIL
+  decided_at: "2026-03-03T19:32:00Z"
+  mode: autonomous
+  acs_added: 0
+  gaps_resolved: 0
+  opportunities_logged: 0
+  fail_reasons:
+    - "Scope mismatch: story.yaml describes dev-plan-leader subtask mapping but index assigns ST-3020 to dev-execute-leader subtask iteration"
+    - "Content matches ST-3010 index entry, not ST-3020 — Phase 3 story.yaml files are shifted by one"
+    - "Minimal YAML stub: no acceptance criteria, subtasks, test plan, or clarity format sections"
+    - "Index notes feature may already be fully implemented (no-op risk)"
+  recommended_actions:
+    - "Reconcile story.yaml content with stories.index.md — determine if ST-3020 covers plan-leader or execute-leader"
+    - "Consider renumbering: ST-3020 yaml -> ST-3010, ST-3030 yaml -> ST-3020, and retire duplicate"
+    - "Write full story file with Goal, ACs, Examples, Edge Cases, Subtasks, Test Plan"
+    - "Verify whether target agent already implements the feature (no-op audit)"

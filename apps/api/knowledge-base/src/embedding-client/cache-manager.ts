@@ -14,6 +14,15 @@ import { getDbClient } from '../db/client.js'
 import { embeddingCache } from '../db/schema.js'
 import type { Embedding } from './__types__/index.js'
 
+// Explicit column selector — guard against schema-vs-DB drift
+const cacheColumns = {
+  id: embeddingCache.id,
+  contentHash: embeddingCache.contentHash,
+  model: embeddingCache.model,
+  embedding: embeddingCache.embedding,
+  createdAt: embeddingCache.createdAt,
+} as const
+
 /**
  * Preprocess text for consistent hashing.
  *
@@ -53,7 +62,7 @@ export async function getFromCache(contentHash: string, model: string): Promise<
     const db = getDbClient()
 
     const result = await db
-      .select()
+      .select(cacheColumns)
       .from(embeddingCache)
       .where(and(eq(embeddingCache.contentHash, contentHash), eq(embeddingCache.model, model)))
       .limit(1)
@@ -137,7 +146,7 @@ export async function prefetchCache(
     // Drizzle doesn't support tuple IN clauses directly, so we filter in memory
     // Fetch all entries for the given model where content_hash is in the list
     const results = await db
-      .select()
+      .select(cacheColumns)
       .from(embeddingCache)
       .where(
         and(inArray(embeddingCache.contentHash, contentHashes), eq(embeddingCache.model, model)),

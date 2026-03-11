@@ -1,0 +1,345 @@
+story_id: KFMB-2030
+title: "Update /pm-bootstrap-workflow Command for KB-Native Bootstrap"
+elab_date: "2026-02-26"
+analyst: elab-analyst
+story_type: docs_only
+points: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9-POINT AUDIT
+# ─────────────────────────────────────────────────────────────────────────────
+
+audit:
+
+  # 1. SCOPE ALIGNMENT
+  # Story scope matches what stories.index.md describes for KFMB-2030.
+  scope_alignment:
+    result: PASS
+    notes: >
+      stories.index.md (Phase 2, Group 4) lists KFMB-2030 as "Update /pm-bootstrap-workflow
+      Command" with dependencies on KFMB-2010 and KFMB-2020. The story file exactly
+      matches: it updates .claude/commands/pm-bootstrap-workflow.md and
+      .claude/docs/pm-bootstrap-workflow-reference.md to reflect KB-native bootstrap.
+      The title in stories.index.md ("Update /pm-bootstrap-workflow Command") aligns
+      with the story title ("Update /pm-bootstrap-workflow Command for KB-Native Bootstrap").
+      No scope drift detected.
+
+  # 2. INTERNAL CONSISTENCY
+  # Goals do not contradict Non-goals; ACs match Scope.
+  internal_consistency:
+    result: PASS
+    notes: >
+      Goal: update two markdown files to reflect KB-native bootstrap.
+      Non-goals explicitly fence off agent logic rewrites (KFMB-2010/2020), index
+      elimination broadly (KFMB-3020/3030), and TypeScript changes — none of
+      which appear in the ACs or Scope table.
+      ACs 1–7 map directly onto the Scope/Files-to-Modify table. File Mode
+      preservation (Non-goal / protected_feature) has its own AC (AC-6) and
+      is explicitly addressed in ST-4. No contradiction found.
+      The dual-path documentation pattern described in Architecture Notes is
+      consistent with the constraint in the story body ("Do not collapse KB Mode
+      and File Mode into a single path").
+
+  # 3. REUSE-FIRST
+  # Shared logic reused; no reinvention.
+  reuse_first:
+    result: PASS
+    notes: >
+      Reuse Plan explicitly calls out:
+      - kb_get_plan / kb_update_plan patterns already in the command — keep as-is.
+      - kb_create_story / kb_list_stories patterns to be adopted from the final
+        post-KFMB-2010/2020 agent files rather than invented independently.
+      - Inline context passing protocol (SETUP-CONTEXT / ANALYSIS / SUMMARY YAML blocks)
+        explicitly preserved.
+      - KB Mode / File Mode dual-path pattern preserved.
+      No new patterns, shared packages, or utilities are introduced. Appropriate
+      for a docs-only editorial story.
+
+  # 4. PORTS AND ADAPTERS
+  # Core logic is transport-agnostic. N/A for docs-only stories.
+  ports_and_adapters:
+    result: N/A
+    notes: >
+      Documentation-only story. No TypeScript, no runtime code, no transport layer
+      involved. The architectural constraint this story enforces (KB Mode uses MCP
+      tool calls; File Mode uses disk IO) is itself a ports-and-adapters separation
+      — the story preserves it rather than collapsing it. No implementation concern here.
+
+  # 5. TESTABILITY
+  # Tests are concrete and executable.
+  testability:
+    result: PASS_WITH_NOTE
+    notes: >
+      Testing strategy is correctly declared as manual — markdown command files
+      are not executable. The test plan is concrete:
+      - HP-1 through HP-4 are specific, diff-verifiable checks against named
+        sections of named files.
+      - EC-1 checks a specific section (Done — KB Mode) for absence of a specific
+        string (pnpm migrate:stories as primary mechanism).
+      - ED-1 and ED-2 are frontmatter and table checks, easily verified by diff.
+      - MC-1 and MC-2 are end-to-end manual steps with specific expected outputs.
+      All test cases identify evidence (diff, screenshot, or transcript).
+      NOTE: All tests are gated on KFMB-2010 and KFMB-2020 being merged (explicitly
+      declared in the Test Plan). This is a known constraint, not a gap. AC-8 is
+      the runtime confirmation and is correctly classified as a manual case (MC-1).
+      No automated tests are possible or appropriate for this story type.
+
+  # 6. DECISION COMPLETENESS
+  # No blocking TBDs.
+  decision_completeness:
+    result: PASS
+    notes: >
+      No TBDs, open questions, or deferred decisions in the story body or
+      ACs. The one conditional in AC-3 ("removed if KFMB-2010 eliminates it
+      entirely") is explicitly handled: the implementer is told to read the
+      post-KFMB-2010 agent file as the authoritative contract before editing
+      (Files to Read section). This defers the precise wording decision to
+      implementation time in a documented, deliberate way — not a gap.
+      The dependency gate ("MUST NOT be elaborated or implemented until
+      KFMB-2010 and KFMB-2020 have reached needs-code-review") is a clear
+      process constraint, not an unresolved design question.
+
+  # 7. RISK DISCLOSURE
+  # Risks are explicit.
+  risk_disclosure:
+    result: PASS
+    notes: >
+      Three risk vectors are explicitly disclosed:
+      1. Dependency gate (dev_feasibility.risks[0]): Cannot implement accurately
+         before KFMB-2010/2020 agent files are finalized. Mitigation: gate on
+         needs-code-review status. This is the primary risk.
+      2. Overlap with KFMB-3010 (dev_feasibility.risks[1]): Reference doc edits
+         may conflict. Mitigation: clear ownership boundary defined (KFMB-2030
+         owns pm-bootstrap-workflow.md and its reference doc only).
+      3. Atomicity risk (test_plan.risks[2]): Command and reference doc must be
+         updated together. No mitigation listed beyond the subtask ordering (ST-5
+         depends on ST-4). This is a minor editorial risk, acceptable for a 1-point
+         story.
+      4. Manual-only testing (test_plan.risks[1]): No automated regression coverage.
+         Accepted as inherent to this story type — appropriate disclosure.
+      Risk coverage is complete and proportionate.
+
+  # 8. STORY SIZING
+  # Check for "too large" indicators.
+  story_sizing:
+    result: PASS
+    notes: >
+      8 ACs is at the numeric threshold for a sizing warning (>8 ACs is a red flag;
+      8 is borderline). However, all 8 ACs are editorial checks against two markdown
+      files with no branching logic, no TypeScript, no tests, and no infrastructure
+      changes. The effective complexity is well within 1 story point.
+      Breakdown:
+        - AC-1, AC-2, AC-3, AC-4: Text edits to named sections of pm-bootstrap-workflow.md
+        - AC-5: Frontmatter list update (2 entries)
+        - AC-6: Verification that File Mode is unchanged (no edit required)
+        - AC-7: Single table row removal/annotation in reference doc
+        - AC-8: Manual runtime verification (gated on dependency merge)
+      The sizing_warning field in story.yaml is false, which is correct. The
+      predictions.notes field acknowledges the 8-AC count but correctly identifies
+      complexity as low (docs-only editorial story). No split warranted.
+
+  # 9. SUBTASK DECOMPOSITION
+  # Subtasks section exists, covers all ACs, DAG dependencies correct.
+  subtask_decomposition:
+    result: PASS
+    notes: >
+      5 subtasks present. AC coverage table confirms:
+        AC-1 → ST-2, AC-2 → ST-3, AC-3 → ST-4, AC-4 → ST-4,
+        AC-5 → ST-1, AC-6 → ST-4, AC-7 → ST-5, AC-8 → MC-1.
+      All 8 ACs are covered. AC-6 (File Mode preservation) is covered by ST-4
+      through the negative constraint "File Mode completion report unchanged" in
+      its verification step — appropriate for a "do not break" AC.
+      AC-8 (runtime end-to-end verification) is correctly mapped to the manual
+      case MC-1, not to a subtask, because it requires KFMB-2010/2020 to be
+      merged and is not an implementation step.
+      DAG: ST-1 → ST-2 → ST-3 → ST-4 → ST-5. Linear chain is correct for
+      sequential edits to the same file (each subtask builds on the previous
+      state of pm-bootstrap-workflow.md). ST-5 correctly depends on ST-4 to
+      ensure the command is stable before updating the reference doc.
+      Token estimates (2,000–3,000 per subtask) are proportionate to editorial
+      work on short markdown sections. Total ~13,500 tokens is well within
+      the story's 50,000 token estimate.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUDIT SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+
+audit_summary:
+  total_checks: 9
+  pass: 7
+  pass_with_note: 1
+  na: 1
+  fail: 0
+  conditional_fail: 0
+  critical_gaps: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DISCOVERY ANALYSIS
+# ─────────────────────────────────────────────────────────────────────────────
+
+discovery:
+
+  mvp_critical_gaps:
+    # Conservative threshold for a docs-only story. A gap is MVP-critical only
+    # if it blocks the core user journey (KB-native bootstrap producing correct output).
+    - id: GAP-1
+      severity: conditional
+      description: >
+        AC-8 (runtime end-to-end verification) is explicitly gated on KFMB-2010
+        and KFMB-2020 reaching needs-code-review. This is not a gap in the story
+        design — it is a correctly declared dependency gate. However, if KFMB-2030
+        is implemented and merged before its dependencies, the documentation will
+        describe agent behavior that does not yet exist, and AC-8 cannot be
+        verified. This story MUST NOT be closed until MC-1 has been executed
+        against the live merged agents.
+      mitigation: >
+        Gate is already declared in the story body and test plan. No additional
+        design change needed. Enforcing the gate at the workflow level (story
+        status check before implementation begins) is sufficient.
+      blocking: false
+      action_required: none
+
+  # No other MVP-critical gaps identified. The story is well-scoped, internally
+  # consistent, and all ACs are clearly implementable editorial changes.
+
+  future_opportunities:
+    - id: OPP-1
+      priority: low
+      description: >
+        Phase 2 KB Mode prompt in pm-bootstrap-workflow.md currently reads
+        "Mode: KB (story files written to disk, stories inserted into KB stories table)"
+        (line 144 of current file). After this story is implemented, the inline
+        prompt text should reflect that story files are written to disk AND inserted
+        via kb_create_story — but the current text already mentions disk writes.
+        If KFMB-2010 eliminates disk writes entirely, this inline comment would
+        also need updating. KFMB-2030's AC-2 covers this, but the implementer
+        should verify against the post-KFMB-2010 agent contract carefully — the
+        inline prompt comment may need more than a simple tool name swap.
+      action: Note for implementer — not a blocking gap. Covered by AC-2 + Files to Read.
+
+    - id: OPP-2
+      priority: low
+      description: >
+        The reference doc (pm-bootstrap-workflow-reference.md) Architecture section
+        still describes Phase 2 as "Generates all artifact files" without distinguishing
+        KB Mode vs File Mode. After KFMB-2010 eliminates disk artifacts in KB Mode,
+        this description will be mildly misleading. KFMB-2030's AC-7 covers only the
+        Artifacts table and Troubleshooting section. The Architecture diagram text
+        is not in scope.
+      action: >
+        Could be addressed in this story (low effort, single line change) or deferred
+        to KFMB-3020/3030. Recommend deferring to keep this story atomic — not blocking.
+
+    - id: OPP-3
+      priority: low
+      description: >
+        The Retry Policy table in the reference doc references "Prefix already exists"
+        with guidance to "Look for existing {PREFIX}.stories.index.md". After
+        KFMB-2010/2020 are merged, this troubleshooting guidance will be stale
+        (KB Mode will use kb_list_stories, not a disk file). KFMB-2030 AC-7 mentions
+        "update Troubleshooting section (if collision check wording changed)" but this
+        is conditional. The Retry Policy table row is a separate entry from Troubleshooting.
+      action: >
+        Recommend expanding AC-7 verification to explicitly check the Retry Policy
+        table row "Prefix already exists". Currently the story mentions Troubleshooting
+        section only. Not blocking — implementer reading the file first will catch it.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OBSERVATIONS ON CURRENT FILE STATE
+# ─────────────────────────────────────────────────────────────────────────────
+
+current_state_observations:
+  # Verified by reading .claude/commands/pm-bootstrap-workflow.md and
+  # .claude/docs/pm-bootstrap-workflow-reference.md at time of audit.
+
+  pm_bootstrap_workflow_md:
+    version: "5.0.0"
+    kb_tools_current: ["kb_get_plan", "kb_list_plans"]
+    kb_tools_missing: ["kb_create_story", "kb_list_stories"]
+    # AC-5: confirmed kb_create_story and kb_list_stories are absent from frontmatter.
+
+    phase_2_prompt_stale_text: >
+      "Mode: KB (story files written to disk, stories inserted into KB stories table)"
+      — this will need updating to reflect pure kb_create_story insertion with no
+      disk index file after KFMB-2010.
+    # AC-2 covers this.
+
+    done_kb_mode_stale: true
+    done_kb_mode_notes: >
+      Steps 1-2 in Done/KB Mode reference both "kb_create_story or migrate:stories"
+      as primary and then pnpm migrate:stories as a seed step. Post-KFMB-2010,
+      migrate:stories should be demoted to fallback or removed. AC-3 covers this.
+
+    completion_report_stale: true
+    completion_report_notes: >
+      Files Created section lists "{feature_dir}/stories.index.md" unconditionally.
+      In KB Mode this will not be generated. AC-4 covers removal.
+
+  pm_bootstrap_workflow_reference_md:
+    version: "1.0.0"
+    artifacts_table_stale_row: "stories/{PREFIX}.stories.index.md"
+    artifacts_table_notes: >
+      Row listed without KB Mode / File Mode qualifier. AC-7 covers annotation
+      or removal. Additionally, Troubleshooting row "Prefix already exists: Look
+      for existing {PREFIX}.stories.index.md" will be stale for KB Mode
+      (see OPP-3).
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRELIMINARY VERDICT
+# ─────────────────────────────────────────────────────────────────────────────
+
+preliminary_verdict:
+  result: PASS
+  rationale: >
+    All 9 audit checks pass (7 PASS, 1 PASS_WITH_NOTE for manual-only testability
+    which is inherent to this story type, 1 N/A for ports-and-adapters). No failing
+    checks. No MVP-critical gaps — GAP-1 is a correctly declared dependency gate,
+    not a design flaw. The story is well-scoped, internally consistent, fully
+    decomposed into 5 ordered subtasks with complete AC coverage, and proportionately
+    sized at 1 point for a documentation-only editorial change.
+
+    The dependency gate on KFMB-2010 and KFMB-2020 is the primary constraint.
+    This story is ready for implementation once those dependencies reach
+    needs-code-review. The implementer should additionally verify the Retry Policy
+    table row in the reference doc (OPP-3) as a low-effort bonus check during ST-5.
+
+  conditions: []
+  ready_to_implement: true
+  gate_condition: "KFMB-2010 and KFMB-2020 must reach needs-code-review before implementation begins."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTONOMOUS DECISIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+decisions:
+  timestamp: "2026-02-26T00:00:00Z"
+  mode: autonomous
+
+  gap_decisions:
+    - id: GAP-1
+      decision: acknowledged
+      notes: "Dependency gate correctly declared in story. No design change needed."
+      action: none
+
+  opportunity_decisions:
+    - id: OPP-1
+      decision: log_to_kb
+      notes: "Implementer note — covered by AC-2 + Files to Read section"
+      kb_entry_id: null
+    - id: OPP-2
+      decision: defer
+      notes: "Deferred to KFMB-3020/3030 — out of scope for this story"
+      kb_entry_id: null
+    - id: OPP-3
+      decision: log_to_kb
+      notes: "Recommend checking Retry Policy table during ST-5 implementation"
+      kb_entry_id: null
+
+verdict: PASS
+decided_at: "2026-02-26T00:00:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 3
+  opportunities_logged: 2
+  acs_added: 0

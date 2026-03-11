@@ -1,0 +1,107 @@
+schema: 1
+story_id: WINT-4110
+timestamp: '2026-03-09T18:00:00.000Z'
+verdict: PASS
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: >-
+  Documentation-only story — no TypeScript source files, no HTTP endpoints, no UI surface (WKFL-010). All test
+  categories exempt.
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+    exempt: true
+  integration:
+    pass: 0
+    fail: 0
+    exempt: true
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+  http:
+    pass: 0
+    fail: 0
+    exempt: true
+coverage: null
+coverage_meets_threshold: true
+coverage_note: No TypeScript source files — coverage not applicable
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Documentation-only story; test quality check not applicable. Code review (iteration 1) passed with 0 errors, 0
+    warnings across 10 workers.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-1
+    notes: >-
+      YAML frontmatter at lines 1-7 of cohesion-check.md contains: created: 2026-03-08, updated: 2026-03-08, version:
+      1.0.0, type: orchestrator, agents: ["graph-checker.agent.md"]. All required keys present.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-2
+    notes: >-
+      Line 9 of cohesion-check.md: `/cohesion-check {FEATURE_DIR} {STORY_ID} [--package <name>]`. Parameters table at
+      lines 24-27 describes all three parameters with Required column and Description column.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-3
+    notes: >-
+      Phases table (lines 31-33) contains: Phase 0, graph-checker.agent.md, model haiku, signal GRAPH-CHECKER COMPLETE.
+      Exact match to AC requirement.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-4
+    notes: >-
+      Execution section (lines 36-51): subagent_type: "general-purpose", model: "haiku", prompt includes 'Read
+      instructions: .claude/agents/graph-checker.agent.md' and 'Story directory path: {FEATURE_DIR}/*/{STORY_ID}' and
+      'Package name filter: {package_name or "none"}'.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-5
+    notes: >-
+      Output section (lines 59-73) documents {STORY_DIR}/_implementation/graph-check-results.json. Key fields table
+      describes franken_features_found (integer), violations (array with rule_id/feature_id/etc.), and warning_count
+      (integer).
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-6
+    notes: >-
+      Completion Signals section (lines 75-83) documents all three signals in a table: GRAPH-CHECKER COMPLETE,
+      GRAPH-CHECKER COMPLETE WITH WARNINGS: {N}, GRAPH-CHECKER BLOCKED: {reason}. Each has a Meaning and Guidance
+      column.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-7
+    notes: >-
+      Non-Goals section (line 90): 'Auto-run at story completion (integration into dev-implement-story and
+      qa-verify-story) is deferred to WINT-4120'. Explicit reference to WINT-4120 present.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-8
+    notes: >-
+      Parameters table (line 26): --package <name> documented with Required: no. Line 26 states: 'forwarded to
+      graph-checker as packageName filter parameter'. Execution section (line 46) shows 'Package name filter:
+      {package_name or "none"}' passed in prompt.
+architecture_compliant: true
+architecture_notes: >-
+  Command file follows established .claude/commands/ pattern (markdown document, no build step, YAML frontmatter,
+  orchestrator type). Consistent with qa-verify-story.md structural template. Agent spawning via Task tool with
+  subagent_type: general-purpose matches ARCH-001 direct-call pattern. No TypeScript, infrastructure, or database
+  changes.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Documentation-only command files (orchestrator .md) are efficiently verified by structural grep checks against the
+      file. No test suite needed; evidence artifact is the primary verification vehicle.
+    category: pattern
+    tags:
+      - documentation
+      - qa-verification
+      - command-files
+tokens:
+  in: 18000
+  out: 2200

@@ -1,0 +1,147 @@
+schema: 1
+story_id: "KBAR-0130"
+timestamp: "2026-02-25T16:49:00Z"
+iteration: 3
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 1179, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:4478; tool-schemas.ts:3203; access-control.ts"
+    notes: >
+      artifact_search registered in toolHandlers map at line 4478 and in getToolDefinitions()
+      via artifactSearchToolDefinition at tool-schemas.ts:3203. Independently verified by
+      reading source files on disk.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "tool-schemas.ts:213-234 (ArtifactSearchInputSchema); tool-handlers.ts:1099-1105"
+    notes: >
+      ArtifactSearchInputSchema (lines 213-234) contains: query (required), story_id (optional),
+      artifact_type (ArtifactTypeSchema, optional), phase (StoryPhaseSchema, optional),
+      limit (optional, default 10), min_confidence (optional, default 0.0), explain (optional,
+      default false). All fields confirmed present in source. handler passes all three to
+      kb_search at lines 1101-1105: query, min_confidence, explain.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "tool-schemas.ts:215 (query: z.string().min(1))"
+    notes: >
+      query is required (z.string().min(1)) — confirmed at line 215. All other parameters
+      are optional. Test 'should reject empty string query (min length 1)' and 'should reject
+      empty input (query is required)' both pass, confirming runtime validation behavior.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1084-1086"
+    notes: >
+      Tags composed as ['artifact', validated.story_id, validated.artifact_type,
+      validated.phase].filter(Boolean) at lines 1084-1086. Base 'artifact' tag always present.
+      Test 'should compose tags with only defined segments' verifies .filter(Boolean) behavior.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1097-1108 (kb_search call)"
+    notes: >
+      Delegates to kb_search via withTimeout wrapper at lines 1097-1108.
+      No reimplementation of search logic. query: validated.query passed directly at line 1101.
+      Test 'should pass caller query directly to kb_search' verifies delegation.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1146-1160"
+    notes: >
+      Returns { results: result.results, metadata: { ...result.metadata, correlation_id } }
+      at lines 1146-1160. min_confidence (line 1103) and explain (line 1104) forwarded to
+      kb_search. Structured response confirmed.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "artifact-search-tools.test.ts:HP-5 (lines 168-179)"
+    notes: >
+      HP-5 mocks kb_search to return empty results and asserts result.isError is undefined,
+      results is [], metadata.total is 0. Test passes. No special error path for empty results.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1126-1131; artifact-search-tools.test.ts:HP-6 (lines 182-193)"
+    notes: >
+      fallback_mode propagated via metadata spread at line 1149. Logged at warn level when true
+      (lines 1126-1131). HP-6 verifies response.metadata.fallback_mode === true.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "artifact-search-tools.test.ts: 19 tests total (HP-1..6, EC-1..4, 9 edge cases)"
+    notes: >
+      Test file contains: HP-1..6 (happy paths), EC-1..4 (error cases), plus 9 edge case tests
+      including: correlation_id, empty input, empty string query, limit pass-through,
+      tag composition, query pass-through, min_confidence pass-through, explain pass-through,
+      handleToolCall dispatch. All 19 tests pass. All parameter pass-throughs explicitly tested.
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "mcp-integration.test.ts:69-72 (56 tool count assertion)"
+    notes: >
+      mcp-integration.test.ts line 69 asserts tools.length === 56. Test passes. Full suite of
+      1179 tests across 48 files passes.
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "mcp-integration.test.ts:149 ('artifact_search' in names list)"
+    notes: >
+      'artifact_search' present at line 149 in the tool names list. Test passes confirming
+      artifact_search appears in getToolDefinitions() output.
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acs_implemented (AC-12)"
+    notes: >
+      Tag convention ['artifact', story_id, artifact_type, phase].filter(Boolean) confirmed
+      consistent with KBAR-0110 implementation before KBAR-0130 code was written.
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Fix commits that claim to address a parameter pass-through must be verified at the downstream
+      call site, not just at the schema level. A schema field can be added without being wired to the
+      underlying function call — the commit message may describe the intent but the code diff is the
+      ground truth. QA should always check the kb_search call arguments directly.
+    category: anti_pattern
+    tags: ["qa", "fix-cycle", "schema", "handler", "pass-through"]
+
+  - lesson: >
+      When AC-9 explicitly lists 'limit/min_confidence/explain pass-through', all three must be
+      tested. A missing explain test is invisible if reviewers only confirm that some pass-through
+      tests exist. QA must enumerate each listed parameter and verify coverage for each one.
+    category: pattern
+    tags: ["qa", "ac-coverage", "test-completeness"]
+
+  - lesson: >
+      False-negative QA cycles (QA marks FAIL but code is already correct) waste fix cycles.
+      The root cause in KBAR-0130 was QA reading stale evidence or a prior snapshot rather than
+      reading the actual source files on disk. Evidence-first QA must cross-check by reading
+      the source file at the exact line reference given in EVIDENCE.yaml — not inferring from
+      prior QA artifacts or commit messages alone.
+    category: anti_pattern
+    tags: ["qa", "false-negative", "evidence-first", "source-verification"]
+
+tokens:
+  in: 9500
+  out: 1400

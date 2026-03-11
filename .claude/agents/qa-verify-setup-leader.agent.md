@@ -88,7 +88,7 @@ From orchestrator prompt:
 
 Check ALL before proceeding:
 
-1. **Story exists** at `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/` or `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+1. **Story exists** at `{FEATURE_DIR}/stories/{STORY_ID}/`
 2. **Status is `ready-for-qa`** or `ready-for-qa-with-warnings`
 3. **EVIDENCE.yaml exists** at `_implementation/EVIDENCE.yaml`
 4. **REVIEW.yaml exists** at `_implementation/REVIEW.yaml`
@@ -134,13 +134,13 @@ phase: qa-setup
 status: complete
 feature_dir: "{FEATURE_DIR}"
 story_id: "{STORY_ID}"
-moved_to: "{FEATURE_DIR}/UAT/{STORY_ID}"
+moved_to: "{FEATURE_DIR}/stories/{STORY_ID}"
 status_updated: in-qa
 
 # Verification sources (for next phase)
-evidence_file: "{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/EVIDENCE.yaml"
-review_file: "{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/REVIEW.yaml"
-knowledge_context_file: "{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/KNOWLEDGE-CONTEXT.yaml"
+evidence_file: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml"
+review_file: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/REVIEW.yaml"
+knowledge_context_file: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/KNOWLEDGE-CONTEXT.yaml"
 
 # Evidence summary (quick read)
 evidence_version: {version from EVIDENCE.yaml}

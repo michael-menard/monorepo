@@ -142,7 +142,7 @@ Task tool:
   prompt: |
     Read instructions: .claude/agents/pm-bootstrap-generation-leader.agent.md
 
-    Mode: KB (story files written to disk, stories inserted into KB stories table)
+    Mode: KB (no file IO — all story data written directly to DB)
     Setup context:
     {SETUP-CONTEXT from Phase 0}
 
@@ -175,23 +175,17 @@ Task tool:
 If `--dry-run` flag:
 - Run Phase 0 (Setup) and Phase 1 (Analysis) only
 - Output analysis summary to user
-- Do NOT generate story files
-- Report: "Dry run complete. {N} stories extracted. Run without --dry-run to generate files."
+- Do NOT write to DB or generate files
+- Report: "Dry run complete. {N} stories extracted. Run without --dry-run to insert into DB."
 
 ## Done
 
 On `GENERATION COMPLETE`:
 
 ### KB Mode
-1. Stories are already in the KB (Phase 2 generation leader inserts them via `kb_create_story` or `migrate:stories`).
+1. Stories and all FK data are already in the DB (Phase 2 inserts into stories, story_details, plan_story_links, story_dependencies, story_artifacts).
 
-2. Seed stories into KB if the generation leader wrote story.yaml files but didn't insert directly:
-   ```bash
-   pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
-   ```
-   (Idempotent, non-blocking if DB unavailable.)
-
-3. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
+2. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
    ```
    mcp__knowledge-base__kb_update_plan({
      plan_slug: "{plan_slug}",
@@ -199,16 +193,56 @@ On `GENERATION COMPLETE`:
    })
    ```
 
-4. Report to user.
+3. Read `phases_completed` from the SUMMARY returned by Phase 2 to confirm all phases ran:
+   - Expected: `[setup, analysis, generation]`
+   - If `generation` is absent from `phases_completed`, treat as a partial failure and re-run Phase 2.
+   - Note: `_bootstrap/CHECKPOINT.md` is no longer written. Phase state is carried exclusively in `phases_completed` within SUMMARY.yaml.
+
+4. Log telemetry (fire-and-forget — never blocks workflow):
+   ```
+   /telemetry-log null pm-bootstrap-workflow execute success
+   ```
+   If the call returns null or throws, log a warning and continue.
+
+5. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:
    ```bash
    pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
    ```
-2. Report to user.
+2. Read `phases_completed` from `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml` to confirm completion.
+   - Note: `_bootstrap/CHECKPOINT.md` is no longer written in File Mode. Do not expect it.
+3. Report to user.
 
 ### Completion Report
+
+#### KB Mode
+
+```
+## Bootstrap Complete: {PREFIX}
+
+| Metric | Value |
+|--------|-------|
+| Plan | {plan_slug} |
+| Total Stories | {N} |
+| Ready to Start | {N} |
+| Critical Path | {N} stories |
+| Max Parallel | {N} |
+| Phases | {N} |
+
+### DB Rows Inserted
+| Table                | Count |
+|----------------------|-------|
+| Stories Inserted     | N |
+| Plan Links (spawned) | N |
+| Dependencies Inserted| N |
+| Analysis Artifacts   | N |
+
+**Next**: `/elab-epic {PREFIX}`
+```
+
+#### File Mode (legacy)
 
 ```
 ## Bootstrap Complete: {PREFIX}
@@ -223,10 +257,9 @@ On `GENERATION COMPLETE`:
 | Phases | {N} |
 
 ### Files Created
-- {feature_dir}/stories.index.md
 - {feature_dir}/{PREFIX}-*/story.yaml ({N} files)
 
-**Next**: `/elab-epic {PREFIX}` (recommended) or `/elab-story {PREFIX}-1010`
+**Next**: `/elab-epic {PREFIX}`
 ```
 
 ## Error Handling

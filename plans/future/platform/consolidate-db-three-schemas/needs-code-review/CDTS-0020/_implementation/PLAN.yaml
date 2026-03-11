@@ -1,0 +1,172 @@
+schema: 1
+story_id: CDTS-0020
+timestamp: '2026-03-08T07:00:00Z'
+steps:
+  - id: 1
+    description: Query live knowledgebase DB for ground-truth table inventory and capture all schemas present
+    files:
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/INVENTORY.md
+    files_to_read:
+      - plans/future/platform/consolidate-db-three-schemas/_bootstrap/AGENT-CONTEXT.md
+    dependencies: []
+    slice: backend
+    verification: psql query returns table list matching expected tables from bootstrap context
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 2
+    description: Produce FK edge map from information_schema.table_constraints and document missing FKs
+    files:
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/FK-EDGE-MAP.md
+    files_to_read:
+      - plans/future/platform/consolidate-db-three-schemas/_bootstrap/AGENT-CONTEXT.md
+    dependencies:
+      - 1
+    slice: backend
+    verification: FK map documents all 7 constraints found; missing FKs flagged
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+  - id: 3
+    description: >-
+      Document wint schema table definitions — verify actual schema location of model_experiments, model_assignments,
+      change_telemetry in live DB
+    files:
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/WINT-TABLE-DEFS.md
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/016_model_experiments.sql
+      - apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql
+      - apps/api/knowledge-base/src/db/migrations/017_change_telemetry_experiment_fk.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: Document confirms no wint schema exists in live DB; tables not found (resolves ENG-001)
+    acs_covered:
+      - AC-7
+  - id: 4
+    description: Produce MANIFEST.md with table_name, current_schema, target_schema, action, and notes columns for all tables
+    files:
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/MANIFEST.md
+    files_to_read:
+      - plans/future/platform/consolidate-db-three-schemas/_bootstrap/AGENT-CONTEXT.md
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/INVENTORY.md
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/WINT-TABLE-DEFS.md
+    dependencies:
+      - 1
+      - 2
+      - 3
+    slice: backend
+    verification: MANIFEST.md contains all 33 tables with correct action assignments per bootstrap schema plan
+    acs_covered:
+      - AC-8
+      - AC-9
+      - AC-10
+  - id: 5
+    description: >-
+      Define test strategy template for all subsequent CDTS migration stories covering idempotency, FK count checks, and
+      Drizzle smoke tests
+    files:
+      - plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/TEST-STRATEGY-TEMPLATE.md
+    files_to_read:
+      - plans/future/platform/consolidate-db-three-schemas/_bootstrap/AGENT-CONTEXT.md
+    dependencies:
+      - 4
+    slice: backend
+    verification: 'Template covers all 3 required test dimensions: idempotency, FK count check, Drizzle query smoke test'
+    acs_covered:
+      - AC-11
+files_to_change:
+  - path: plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/INVENTORY.md
+    action: create
+    reason: Ground-truth table inventory from live DB query (AC-1, AC-2, AC-3)
+  - path: plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/FK-EDGE-MAP.md
+    action: create
+    reason: Complete FK relationship map from information_schema (AC-4, AC-5, AC-6)
+  - path: plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/_implementation/WINT-TABLE-DEFS.md
+    action: create
+    reason: Wint schema table definitions — resolves ENG-001 discrepancy (AC-7)
+  - path: plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/MANIFEST.md
+    action: create
+    reason: Migration manifest with actual vs target schema assignments (AC-8, AC-9, AC-10)
+  - path: plans/future/platform/consolidate-db-three-schemas/in-progress/CDTS-0020/TEST-STRATEGY-TEMPLATE.md
+    action: create
+    reason: Test template for all subsequent migration stories — resolves QA-001 (AC-11)
+commands_to_run:
+  - command: >-
+      PGPASSWORD=$KB_DB_PASSWORD psql -h localhost -p $KB_DB_PORT -U $KB_DB_USER -d $KB_DB_NAME -c "SELECT table_schema,
+      table_name FROM information_schema.tables WHERE table_catalog = 'knowledgebase' AND table_schema NOT IN
+      ('pg_catalog', 'information_schema') ORDER BY table_schema, table_name"
+    when: Step 1 — table inventory
+    required: true
+  - command: >-
+      PGPASSWORD=$KB_DB_PASSWORD psql -h localhost -p $KB_DB_PORT -U $KB_DB_USER -d $KB_DB_NAME -c "SELECT schema_name
+      FROM information_schema.schemata WHERE catalog_name = 'knowledgebase' ORDER BY schema_name"
+    when: Step 3 — confirm wint schema absence
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: 'INVENTORY.md: table_schema + table_name rows from live DB SELECT'
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: 'INVENTORY.md: captured output note stating ''ground-truth, not bootstrap assumptions'''
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      INVENTORY.md: discrepancy section documenting that model_experiments/model_assignments/change_telemetry do NOT
+      exist in wint (or anywhere) in live DB
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: 'FK-EDGE-MAP.md: information_schema FK query results'
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: 'FK-EDGE-MAP.md: table of source_table, target_table, constraint_name, on_delete for all 7 FKs'
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: 'FK-EDGE-MAP.md: missing FKs section flagging story_artifacts.story_id and work_state.story_id'
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      WINT-TABLE-DEFS.md: confirms no wint schema exists; notes tables were defined in migrations but never applied to
+      live DB
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: 'MANIFEST.md: table with columns table_name | current_schema | target_schema | action | notes for all 33 tables'
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      MANIFEST.md: all existing public tables show action=stay EXCEPT story_token_usage (->analytics);
+      model_experiments/model_assignments/change_telemetry show action=create-in-analytics (not in live DB)
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      MANIFEST.md: new tables section lists plan_details, story_details, plan_dependencies, story_knowledge_links in
+      public (all action=new)
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: 'TEST-STRATEGY-TEMPLATE.md: template covering idempotency, FK count check, Drizzle smoke test dimensions'
+    evidence_type: file
+architectural_decisions: []
+complexity: simple
+notes:
+  - This is a documentation/audit story — no application code is produced
+  - >-
+    KEY FINDING: No wint schema exists in live knowledgebase DB (port 5433). Only schemas: public, drizzle, and system
+    schemas. This resolves ENG-001.
+  - >-
+    model_experiments, model_assignments, and change_telemetry were defined in migration SQL files (016/017) but were
+    NEVER applied to the live DB — wint schema was never created
+  - >-
+    All 33 tables are in public schema (plus 1 in drizzle). Bootstrap context listing them as 'wint' tables was an
+    assumption from the migration SQL, not ground truth.
+  - >-
+    Live FK count: 7 constraints across 6 tables. Missing FKs to flag: story_artifacts.story_id -> stories.story_id and
+    work_state.story_id -> stories.story_id
+  - schema_migrations table already exists in public schema — CDTS-0010 migration runner is confirmed present
+  - 'story_token_usage is the only table that moves: public -> analytics per bootstrap design'
+  - >-
+    The three wint tables (model_experiments, model_assignments, change_telemetry) will be created directly in analytics
+    (not moved) since they don't exist in live DB
+  - 'Per bootstrap AGENT-CONTEXT.md: migration numbering starts at 020 (last existing is 019 in KB migrations dir)'
+  - No pnpm build/test required — this story produces only documentation files

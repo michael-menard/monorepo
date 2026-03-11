@@ -1,0 +1,35 @@
+feasible: true
+confidence: high
+rationale: "Deliverable is a single markdown command file following established patterns. Direct analog exists in .claude/commands/qa-verify-story.md. The graph-checker agent (WINT-4060) is complete and its Inputs section is fully specified. No TypeScript, no build steps, no infrastructure changes required."
+complexity: low
+change_surface:
+  areas:
+    - ".claude/commands/"
+  endpoints: []
+  deploy_touchpoints: []
+risks: []
+missing_requirements: []
+evidence_expectations:
+  - "File .claude/commands/cohesion-check.md exists and is well-formed"
+  - "All 8 ACs can be verified by reading and grepping the file"
+subtasks:
+  - id: ST-1
+    title: "Author .claude/commands/cohesion-check.md"
+    goal: "Create the command file using qa-verify-story.md as structural skeleton, adapting the execution section for graph-checker parameters and the output section for graph-check-results.json"
+    files_to_read:
+      - ".claude/commands/qa-verify-story.md"
+      - ".claude/agents/graph-checker.agent.md"
+    files_to_modify:
+      - ".claude/commands/cohesion-check.md"
+    acs:
+      - "AC-1"
+      - "AC-2"
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+      - "AC-6"
+      - "AC-7"
+      - "AC-8"
+    depends_on: "none"
+    verification: "Read .claude/commands/cohesion-check.md and verify all 8 ACs structurally"
+    estimated_tokens: 2000

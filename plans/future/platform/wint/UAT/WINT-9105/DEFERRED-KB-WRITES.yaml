@@ -1,0 +1,23 @@
+deferred_at: "2026-03-02T00:00:00Z"
+reason: "KB MCP tool not available during story generation — write queued for retry"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-9105
+      feature: wint
+      title: "Define LangGraph Error Handling & Retry Strategy"
+      story_dir: plans/future/platform/wint/backlog/WINT-9105
+      story_file: plans/future/platform/wint/backlog/WINT-9105/WINT-9105.md
+      story_type: spike
+      points: 3
+      priority: critical
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

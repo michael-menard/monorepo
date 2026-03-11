@@ -1,0 +1,88 @@
+schema: 1
+story_id: WINT-9107
+knowledge_context:
+  loaded: true
+  timestamp: '2026-03-03T14:00:00Z'
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: KBAR-0110
+        lesson: Use vi.useFakeTimers() for timeout tests — naive real-timer tests add up to 10s per test case in CI
+        category: pattern
+        applies_because: WINT-9107 has HALF_OPEN recovery tests that depend on recoveryTimeoutMs — must use fake timers for unit scope
+      - story_id: APIP-1030
+        lesson: >-
+          Token bucket rate limiter patterns: vi.useFakeTimers() + while-loop setTimeout works cleanly for
+          timing-sensitive tests
+        category: pattern
+        applies_because: Circuit breaker HALF_OPEN transition uses time-based recovery; same fake timer pattern applies
+      - story_id: APIP-3030
+        lesson: >-
+          LangGraph createToolNode factory handler index.ts files are not unit-testable in isolation — test individual
+          module functions instead
+        category: pattern
+        applies_because: Node factory tests should target createNode/createLLMNode directly, not any composed handler index.ts
+      - story_id: APIP-2010
+        lesson: >-
+          Circuit-open detection gap: event-driven callback only fires on dispatch, not on state transitions without new
+          jobs. Known trade-off.
+        category: pattern
+        applies_because: HALF_OPEN tests must actively trigger transitions — cannot rely on passive observation
+    blockers_to_avoid:
+      - Real wall-clock timers in HALF_OPEN recovery tests — use vi.useFakeTimers() in unit scope
+      - Testing handler index.ts in isolation — test createNode/createLLMNode/createToolNode directly
+    patterns_to_follow:
+      - vi.useFakeTimers() + vi.advanceTimersByTimeAsync() for all timing-sensitive tests
+      - Promise.allSettled for concurrent test scenarios to avoid unhandled rejection warnings
+      - Test graph.compile() for routing validation without running full pipeline
+    patterns_to_avoid:
+      - Real timers in unit tests with recoveryTimeoutMs — fragile and slow CI
+      - Generic artifact_search without domain scope
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: ADR-005
+        title: Testing Strategy - UAT Must Use Real Services
+        status: active
+        constraint: >-
+          Unit tests: mocking allowed. Integration tests: partial mocks. UAT: NEVER mock. Story uses unit+integration
+          strategy — fake timers acceptable in unit scope, real timing required in UAT/integration scope.
+        applies_to:
+          - testing
+          - backend
+      - id: ADR-006
+        title: E2E Tests Required in Dev Phase
+        status: active
+        constraint: >-
+          E2E required per story. Skip condition: frontend_impacted: false (SCOPE.yaml shows frontend: false). This
+          story is backend-only — ADR-006 E2E skip condition applies.
+        applies_to:
+          - testing
+    constraints:
+      api_paths: Not applicable — no API endpoints
+      infrastructure: Not applicable — no infrastructure changes
+      storage: Not applicable — no media/image work
+      auth: Not applicable
+      testing: 'ADR-005: vi.useFakeTimers() for timing-sensitive unit tests. ADR-006: E2E skip (frontend_impacted: false).'
+  token_optimization:
+    high_cost_operations:
+      - operation: Read full node-factory.ts (300+ lines)
+        typical_tokens: 3000
+        mitigation: >-
+          Read only the factory function signatures and createLLMNode/createToolNode implementations — target
+          offset/limit reads
+      - operation: Read full integration.test.ts
+        typical_tokens: 3500
+        mitigation: Already read — circuit breaker and HALF_OPEN tests confirm what gaps exist. No re-read needed.
+    recommended_patterns:
+      - Targeted file reads over full files
+      - Grep before Read for finding specific test patterns
+      - >-
+        Existing tests (node-factory.test.ts, integration.test.ts) already provide canonical patterns — extend rather
+        than create from scratch
+  pattern_discovery: []
+  warnings:
+    - >-
+      WINT-9105 ADR is in-progress (status: created) — gap analysis in ST-1 proceeds against WINT-9105 story spec, not
+      finalized ADR
+    - artifact_search returned INTERNAL_ERROR — pattern_discovery section is empty, graceful fallback applied

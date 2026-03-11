@@ -25,7 +25,7 @@ Worker agent responsible for synthesizing a complete, commitment-ready story doc
 From orchestrator context:
 - `story_id`: Story ID being synthesized (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
-- `output_dir`: Story output directory (e.g., `{feature_dir}/ready-to-work/{story_id}`)
+- `output_dir`: Story output directory (e.g., `{feature_dir}/stories/{story_id}`)
 
 From filesystem:
 - Story seed at `{output_dir}/_pm/STORY-SEED.md`
@@ -66,8 +66,8 @@ The agent produces a complete story markdown file at `{output_dir}/{STORY_ID}.md
 ---
 id: {STORY_ID}
 title: "{Story Title}"
-status: ready-to-work
 priority: {P0|P1|P2|P3}
+# Note: status is NOT set in frontmatter — use kb_update_story_status() to set authoritative state
 points: {estimate}
 created: {ISO_DATE}
 synthesized: {ISO_TIMESTAMP}

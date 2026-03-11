@@ -1,0 +1,23 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "KB unavailable during story generation (pg client not available in context)"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: KFMB-2030
+      feature: kb-first-migration
+      title: "Update /pm-bootstrap-workflow Command for KB-Native Bootstrap"
+      story_dir: plans/future/platform/kb-first-migration/backlog/KFMB-2030
+      story_file: plans/future/platform/kb-first-migration/backlog/KFMB-2030/KFMB-2030.md
+      story_type: tech_debt
+      points: 1
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

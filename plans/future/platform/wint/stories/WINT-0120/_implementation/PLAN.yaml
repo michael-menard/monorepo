@@ -1,0 +1,234 @@
+schema: 2
+story_id: WINT-0120
+timestamp: '2026-03-08T18:30:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Add Zod input schemas for all 4 telemetry tools to tool-schemas.ts — register workflow_log_invocation,
+      workflow_log_decision, workflow_log_outcome, workflow_get_story_telemetry in getToolDefinitions() array
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    dependencies: []
+    slice: backend
+    verification: >-
+      pnpm check-types --filter @repo/knowledge-base && grep -c
+      'workflow_log_invocation\|workflow_log_decision\|workflow_log_outcome\|workflow_get_story_telemetry'
+      apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-5
+      - AC-7
+      - AC-14
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement workflow_log_invocation and workflow_log_outcome handlers — insert to wint.agent_invocations (plain
+      insert) and upsert to wint.story_outcomes (.onConflictDoUpdate on storyId); wire both into toolHandlers dispatch
+      map
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts
+      - apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-2
+      - AC-6
+      - AC-9
+      - AC-10
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement workflow_log_decision handler — insert row to wint.hitl_decisions accepting optional embedding as
+      number[]; wire into toolHandlers dispatch map
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-4
+      - AC-9
+      - AC-10
+      - AC-13
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement workflow_get_story_telemetry handler — query all three telemetry tables by storyId using Promise.all;
+      return structured { invocations, decisions, outcome } with null for missing outcome; wire into toolHandlers
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-8
+      - AC-9
+      - AC-10
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write integration tests and update mcp-integration.test.ts tool count — create telemetry-tools-integration.test.ts
+      with per-tool happy-path and error-case tests; update tool count assertion from 62 to actual
+      getToolDefinitions().length after adding 4 tools
+    files:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/story-tools-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: pnpm test --filter @repo/knowledge-base -- --run mcp-integration telemetry-tools-integration
+    acs_covered:
+      - AC-11
+      - AC-12
+      - AC-13
+      - AC-14
+files_to_change:
+  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    action: modify
+    reason: >-
+      Register 4 new telemetry tool definitions with Zod input schemas in getToolDefinitions() array (AC-1, AC-3, AC-5,
+      AC-7, AC-14)
+  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    action: modify
+    reason: >-
+      Add 4 handler functions (workflow_log_invocation, workflow_log_decision, workflow_log_outcome,
+      workflow_get_story_telemetry) and wire into toolHandlers dispatch map (AC-2, AC-4, AC-6, AC-8, AC-9, AC-10, AC-13)
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    action: modify
+    reason: >-
+      Update tool count assertion from 62 to actual count after adding 4 new tools; add 4 new tool names to the expected
+      tool list (AC-11)
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+    action: create
+    reason: >-
+      Per-tool integration tests via handleToolCall covering happy paths, Zod validation errors, and edge cases for all
+      4 telemetry tools (AC-12, AC-13)
+commands_to_run:
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after each step (ST-1 through ST-4)
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base -- --run mcp-integration telemetry-tools-integration
+    when: after ST-5 (tests written)
+    required: true
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      workflow_log_invocation entry present in getToolDefinitions() with Zod input schema (agentName, invocationId,
+      status required; all others optional)
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Integration test HP-1: handleToolCall('workflow_log_invocation', {...}) returns { id: <uuid> }; row present in
+      wint.agent_invocations
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      workflow_log_decision entry present in getToolDefinitions() with Zod input schema (decisionType, decisionText,
+      operatorId, storyId required; invocationId, context, embedding optional)
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      Integration test HP-2: handleToolCall('workflow_log_decision', {...}) returns { id: <uuid> }; row present in
+      wint.hitl_decisions; ED-2 validates embedding passthrough
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      workflow_log_outcome entry present in getToolDefinitions() with Zod input schema (storyId, finalVerdict required;
+      all metric columns optional)
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      Integration tests HP-3 (new insert) and HP-4 (upsert on duplicate storyId): both return { id }, COUNT = 1 after
+      both calls
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: workflow_get_story_telemetry entry present in getToolDefinitions() with storyId as required input
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      Integration test HP-5: handleToolCall('workflow_get_story_telemetry', { storyId }) returns { invocations: [2],
+      decisions: [1], outcome: {finalVerdict: 'pass'} }
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      All 4 handlers wrap DB operations in try/catch; catch calls logger.warn and returns errorToToolResult — verified
+      by EC-1..EC-3 error case tests
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Code review: all DB queries in handlers use Drizzle ORM (db.insert, db.select, db.query) — no template literals or
+      sql`` strings for table access
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: >-
+      mcp-integration.test.ts tool count assertion updated to 66 (62+4) and 4 new tool names added to expected list;
+      test passes
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      telemetry-tools-integration.test.ts contains at minimum one integration test per tool (HP-1 through HP-5 test
+      cases implemented)
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      Error case tests EC-1..EC-4 in telemetry-tools-integration.test.ts: missing required fields return MCP error
+      result (not thrown exception)
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      Tool description strings in getToolDefinitions() include when to call each tool and Drizzle parameterization note;
+      all descriptions > 50 chars (existing test coverage)
+    evidence_type: file
+architectural_decisions: []
+complexity: simple
+notes:
+  - >-
+    Tool count at seed time was 62. VERIFY actual getToolDefinitions().length before updating mcp-integration.test.ts —
+    do not assume 62+4=66 if concurrent stories added tools.
+  - >-
+    storyOutcomes upsert MUST use .onConflictDoUpdate({ target: storyOutcomes.storyId, set: {...} }) — conflict target
+    is the unique index 'story_outcomes_story_id_idx' on storyId column.
+  - >-
+    hitlDecisions.embedding is vector(1536) — pass number[] as-is; do not attempt embedding generation (deferred to
+    WINT-3040).
+  - >-
+    Import DB schema tables directly from 'packages/backend/database-schema/src/schema/wint.ts' — no barrel files per
+    CLAUDE.md policy.
+  - >-
+    workflow_get_story_telemetry must use Promise.all for three parallel DB queries; outcome is null (not empty array)
+    when no row exists.
+  - >-
+    WINT-0040 migration dependency: wint.hitl_decisions and wint.story_outcomes tables must exist in the target DB
+    before integration tests for those two tools can pass. Manual case MC-1 confirms this.
+  - All 4 tools are backend-only. No frontend changes, no new npm packages, no infrastructure changes.
+  - >-
+    Pattern reference for Zod validation + Drizzle + error handling:
+    packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts
+  - >-
+    Pattern reference for upsert: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    (storyDetails.onConflictDoUpdate)

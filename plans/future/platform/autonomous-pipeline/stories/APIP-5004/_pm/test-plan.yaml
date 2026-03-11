@@ -1,0 +1,165 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "SecretsClient env fallback reads from process.env"
+    setup: "Set SECRETS_ENGINE=env (or unset). Set process.env.ANTHROPIC_API_KEY='test-key-123'."
+    action: "Instantiate SecretsClient with engine=env. Call get('ANTHROPIC_API_KEY')."
+    expected: "Returns 'test-key-123' without any AWS SDK call. No error thrown."
+    evidence: "Unit test: mock AWS SDK, assert it is never called. Assert return value equals process.env value."
+
+  - id: HP-2
+    title: "SecretsClient aws-secrets-manager mode retrieves secret from AWS SDK"
+    setup: "Set SECRETS_ENGINE=aws-secrets-manager. Mock @aws-sdk/client-secrets-manager GetSecretValueCommand to return '{\"SecretString\":\"live-key-abc\"}'."
+    action: "Instantiate SecretsClient. Call get('anthropic-api-key')."
+    expected: "Returns 'live-key-abc'. AWS SDK GetSecretValueCommand called once."
+    evidence: "Unit test: spy on SecretsManagerClient.send(). Assert called once with correct SecretId."
+
+  - id: HP-3
+    title: "SecretsClient cache hit avoids a second AWS SDK call"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Mock AWS SDK. Call get('anthropic-api-key') once (cache miss)."
+    action: "Call get('anthropic-api-key') a second time within TTL window."
+    expected: "AWS SDK called exactly once for both requests combined. Second call returns same value instantly."
+    evidence: "Unit test: spy count on SDK send(). Assert count === 1 after two get() calls."
+
+  - id: HP-4
+    title: "AnthropicProvider.loadConfig() produces valid config via SecretsClient"
+    setup: "SECRETS_ENGINE=env. Set ANTHROPIC_API_KEY='sk-ant-test'. Reset AnthropicProvider.configCache to null."
+    action: "Call new AnthropicProvider().loadConfig()."
+    expected: "Returns AnthropicConfig with apiKey === 'sk-ant-test'. No change to existing config shape."
+    evidence: "Integration test: use vitest with real AnthropicProvider class. Assert AnthropicConfigSchema.parse() succeeds."
+
+  - id: HP-5
+    title: "OpenRouterProvider.loadConfig() and MiniMaxProvider.loadConfig() work via SecretsClient"
+    setup: "SECRETS_ENGINE=env. Set OPENROUTER_API_KEY and MINIMAX_API_KEY / MINIMAX_GROUP_ID. Reset provider caches."
+    action: "Call loadConfig() on each refactored provider."
+    expected: "Both return valid config objects. Schema validation passes."
+    evidence: "Integration test: assert each config schema validates with no errors."
+
+  - id: HP-6
+    title: "SecretsClient emits structured audit log on cache-miss fetch"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Mock AWS SDK. Mock @repo/logger."
+    action: "Call get('openrouter-api-key') (first call, cache miss)."
+    expected: "logger.info called with object containing secretName, engine, and latencyMs. No secret value in log payload."
+    evidence: "Unit test: assert logger.info called once. Assert log payload does not contain the secret string."
+
+  - id: HP-7
+    title: "SecretsClient Zod config validates and instantiates correctly"
+    setup: "Process env has SECRETS_ENGINE=aws-secrets-manager and AWS_REGION=us-east-1."
+    action: "Instantiate SecretsClient (calls SecretsClientConfigSchema.parse internally)."
+    expected: "No error thrown. Client is ready to make calls."
+    evidence: "Unit test: assert instantiation does not throw."
+
+  - id: HP-8
+    title: "CloudFormation template deploys Secrets Manager resources successfully"
+    setup: "Run cfn-lint or CloudFormation validate-template on infra/secrets/template.yaml."
+    action: "Execute cfn-lint infra/secrets/template.yaml."
+    expected: "Zero validation errors. Template defines anthropic-api-key, openrouter-api-key, minimax-api-key secrets."
+    evidence: "CI cfn-lint output shows 0 errors."
+
+error_cases:
+  - id: EC-1
+    title: "Missing secret in env fallback mode throws clear error"
+    setup: "SECRETS_ENGINE=env. Unset ANTHROPIC_API_KEY from process.env."
+    action: "Call SecretsClient.get('ANTHROPIC_API_KEY')."
+    expected: "Throws an Error with message pattern matching the existing provider error shape (clear 'not found' message, not a generic TypeError)."
+    evidence: "Unit test: assert error.message includes 'ANTHROPIC_API_KEY' and 'required' (or equivalent). Error class is Error."
+
+  - id: EC-2
+    title: "SECRETS_ENGINE=aws-secrets-manager without AWS_REGION throws at instantiation"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Unset AWS_REGION."
+    action: "Instantiate SecretsClient."
+    expected: "Throws startup error immediately. Clear message references AWS_REGION requirement. Does not silently fail at first get() call."
+    evidence: "Unit test: assert constructor throws synchronously or init() throws before any get() call."
+
+  - id: EC-3
+    title: "AWS SDK error surfaces as clear error from get()"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Mock AWS SDK to throw ResourceNotFoundException."
+    action: "Call SecretsClient.get('nonexistent-secret')."
+    expected: "Throws error with secret name in message. Error is not swallowed silently."
+    evidence: "Unit test: assert rejection message contains secret name and AWS error type."
+
+  - id: EC-4
+    title: "Provider loadConfig() still throws when no API key is available via SecretsClient"
+    setup: "SECRETS_ENGINE=env. Remove ANTHROPIC_API_KEY from process.env. Reset AnthropicProvider.configCache."
+    action: "Call new AnthropicProvider().loadConfig()."
+    expected: "Throws same error as before the refactoring. Error message references ANTHROPIC_API_KEY."
+    evidence: "Integration test: assert error.message matches existing error text. Confirms backward compatibility of error contract."
+
+edge_cases:
+  - id: ED-1
+    title: "Cache TTL expiry triggers a new SDK call"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Mock AWS SDK. Set SECRETS_CACHE_TTL_MS=50 (50ms TTL)."
+    action: "Call get('anthropic-api-key'). Wait 60ms. Call get('anthropic-api-key') again."
+    expected: "AWS SDK called twice. Second call refreshes the cache after TTL expires."
+    evidence: "Unit test: use vitest fake timers. Assert SDK send() called exactly 2 times."
+
+  - id: ED-2
+    title: "SecretsClient.get() is safe to call concurrently (no duplicate SDK calls for same key)"
+    setup: "SECRETS_ENGINE=aws-secrets-manager. Mock AWS SDK with 10ms delay."
+    action: "Call get('anthropic-api-key') 5 times concurrently (Promise.all)."
+    expected: "AWS SDK called once (deduplication / request coalescing). All 5 promises resolve to the same value."
+    evidence: "Unit test: spy count === 1 after Promise.all resolves."
+
+  - id: ED-3
+    title: "SECRETS_CACHE_TTL_MS env var is respected by SecretsClient config"
+    setup: "Set SECRETS_CACHE_TTL_MS=300000 (5 minutes)."
+    action: "Instantiate SecretsClient. Read the effective TTL from config."
+    expected: "cacheTtlMs === 300000 in SecretsClientConfig."
+    evidence: "Unit test: assert config.cacheTtlMs equals parsed env var value."
+
+  - id: ED-4
+    title: "generateConfigHash() in base.ts still excludes apiKey after refactoring"
+    setup: "SECRETS_ENGINE=env. Load AnthropicProvider config."
+    action: "Call generateConfigHash() on the loaded config."
+    expected: "Hash does not change whether apiKey is 'sk-ant-test' or 'sk-ant-other'. apiKey is excluded from hash input."
+    evidence: "Unit test: assert two configs differing only in apiKey produce the same hash."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "SecretsClient.get() returns string value"
+      - "AWS SDK mock called correct number of times (cache hit/miss)"
+      - "logger.info called with non-sensitive payload"
+      - "Error messages reference missing secret name"
+      - "AnthropicConfigSchema.parse() succeeds after refactoring"
+      - "cfn-lint exits 0 on infra/secrets/template.yaml"
+  frontend:
+
+manual_cases:
+  - id: MC-1
+    title: "Local dev workflow unaffected — run pipeline with existing .env file"
+    steps:
+      - "Ensure SECRETS_ENGINE is unset or set to 'env' in .env"
+      - "Run the orchestrator package locally (pnpm dev or equivalent)"
+      - "Issue a request that triggers model invocation via AnthropicProvider"
+    expected: "Provider loads successfully from .env values. No AWS credentials required. No error about SecretsClient."
+
+  - id: MC-2
+    title: "Manual rotation procedure is documented and comprehensible"
+    steps:
+      - "Read infra/secrets/README.md or rotation section in APIP-5004.md"
+      - "Verify procedure covers: update secret in AWS console, flush in-memory cache"
+    expected: "Procedure is clear. Steps include how to trigger cache flush (SIGHUP or CLI stub). Note about configCache process-lifetime issue is present."
+
+fixture_definitions:
+  - name: mockSecretsManagerClient
+    type: vitest mock
+    description: "Mock of @aws-sdk/client-secrets-manager SecretsManagerClient with configurable GetSecretValueCommand response. Used in all aws-secrets-manager mode tests."
+  - name: envFallbackClient
+    type: test setup
+    description: "SecretsClient instantiated with SECRETS_ENGINE=env. process.env keys preset with test values."
+  - name: shortTtlClient
+    type: test setup
+    description: "SecretsClient instantiated with SECRETS_CACHE_TTL_MS=50 for TTL expiry tests."
+
+risks:
+  - "Cache TTL tests require reliable fake timer control (vitest fake timers) — flaky if real timers used"
+  - "Concurrent deduplication test (ED-2) depends on implementation choice; if not implemented, mark as future scope"
+  - "cfn-lint availability in CI must be confirmed; alternative is 'aws cloudformation validate-template' with LocalStack"
+  - "AnthropicProvider.configCache is static — tests must reset it between cases to avoid state leakage"

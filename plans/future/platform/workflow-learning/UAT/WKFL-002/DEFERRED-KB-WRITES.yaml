@@ -64,3 +64,7 @@ deferred_writes:
       components: [knowledge-base, agents, commands]
       dependencies: [WKFL-001, WKFL-004]
       blocks: [WKFL-003, WKFL-010]
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

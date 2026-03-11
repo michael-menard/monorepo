@@ -1,0 +1,185 @@
+schema_version: 1
+story_id: "WINT-4050"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      stories.index.md lists WINT-4050 as "Create Cohesion Rules" / "Formalize cohesion requirements."
+      The story delivers exactly 4 cohesion rules seeded via proposeRule()/promoteRule() with no
+      extra endpoints, DB schema changes, UI, or infrastructure. Story title, goal, scope, and
+      index entry are in tight alignment.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goals, Non-goals, ACs, and Local Testing Plan are internally consistent — no contradictions
+      detected. All 8 ACs are covered by the test plan scenarios (HP-1..HP-3, EC-1..EC-3, ED-1..ED-3).
+      Minor concern: story metadata has `depends_on: []` yet the Context section makes clear WINT-4020
+      is a functional prerequisite (delivers proposeRule/promoteRule/getRules). This is acceptable
+      because WINT-4020 is already delivered (in UAT/completed state), so the dependency is
+      satisfied rather than absent. No blocking inconsistency but worth noting for dependency graph
+      tooling accuracy.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan explicitly enumerates @repo/sidecar-rules-registry (proposeRule, promoteRule,
+      getRules, ProposeRuleInputSchema, RuleTypeSchema, RuleSeveritySchema) and @repo/logger.
+      No per-story one-off utilities. Seed script lives inside the rules-registry sidecar package
+      itself, which is the canonical location. Architecture notes reinforce: "Do not redeclare
+      types already exported from @repo/sidecar-rules-registry — import them."
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints are introduced — confirmed explicitly in Scope ("No endpoints added").
+      ARCH-001 direct-call pattern is documented. Seed script calls proposeRule()/promoteRule()
+      as imported TypeScript functions (transport-agnostic). No business logic in route handlers
+      because no route handlers exist. The discriminated union result pattern ({ ok: true/false })
+      ensures the seed script handles errors via inspection, not exceptions. Pattern is appropriate
+      for a backend-only seed script with no HTTP surface.
+
+  - id: testability
+    status: PASS
+    note: >
+      Unit tests are concrete and executable: mocked proposeRule/promoteRule covering happy path,
+      idempotency, and promote failure. Integration tests target real wint.rules table (ADR-005)
+      verifying exact rule count, source_story_id, rule_type, and re-run no-op. Snapshot test
+      explicitly included. Verification commands are precise (pnpm test --filter and
+      pnpm test:integration --filter). All test cases have setup/action/expected/evidence fields.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      AC-5 explicitly resolves the upload/replace rule type decision: store as rule_type:
+      prompt_injection (advisory). The resolution is documented in the Edge Cases section,
+      dev_feasibility.risks, AC-1 (conditional "depending on AC-5 decision"), and AC-5 itself.
+      The dev_feasibility rationale explicitly recommends prompt_injection to keep scope bounded.
+      No blocking TBDs remain. The decision chain is traceable from Edge Cases → AC-5 → ST-1.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      Documented risks include: proposeRule conflict detection is case-insensitive (test DB
+      pollution risk), integration tests require live wint.rules table (ADR-005), upload/replace
+      type decision affects snapshot assertions. These are appropriate and specific.
+      Gap: no explicit risk around seed script environment targeting — the seed script uses
+      a DB connection and could be run against a production environment. There is no documented
+      guard (e.g., NODE_ENV check, confirmation prompt, or environment variable gate) to prevent
+      accidental production seeding. Given the seed is idempotent, this is low severity (running
+      twice is safe), but the missing environment-safety note is a disclosure gap.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      Sizing indicators checked: 8 ACs (exactly at threshold, not over), 0 HTTP endpoints,
+      backend-only (no frontend), single coherent feature (seed 4 canonical rules), 3 happy path
+      tests (exactly at threshold), touches 1 package (rules-registry sidecar). No two or more
+      split indicators triggered. Story is appropriately sized at 3 points.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      Subtasks section present with 5 subtasks (ST-1..ST-5). Explicit AC coverage check table
+      included showing all 8 ACs covered by at least one subtask. File counts per subtask: ST-1
+      (1 new file), ST-2 (1 modified file), ST-3 (1 file), ST-4 (1 new test file), ST-5 (1 new
+      test file) — all within the 3-file limit. Dependency DAG: ST-1→ST-2→{ST-3, ST-4}→ST-5;
+      no cycles. Each subtask has a concrete verification command (pnpm check-types, pnpm lint,
+      pnpm test, pnpm test:integration). Canonical References section present with 4 entries
+      (rules-registry.ts, rules-registry-propose.ts, __types__/index.ts, compute-check.ts).
+
+  - id: clarity_format
+    status: PASS
+    note: >
+      Story has ## Goal section (concise, outcome-focused). ## Examples section present with
+      two Given/When/Then scenarios covering first-run seeding and idempotency re-run.
+      ## Edge Cases section present with two documented edge cases (upload/replace lifecycle
+      gap and partial promote failure). All three required sections are present and substantive.
+
+gaps:
+  - id: gap-1
+    check: risk_disclosure
+    finding: >
+      The seed script invocation (pnpm seed:cohesion-rules) requires a database connection but
+      the story does not document any guard against accidental production environment targeting.
+      While idempotency makes re-seeding safe (proposeRule returns conflict, no duplicates),
+      a missing environment-safety pattern means the seed could be run in the wrong environment
+      without a clear warning or barrier. Recommend documenting: (a) which environment variable
+      or config flag determines the DB target, and (b) whether the script should emit a
+      confirmation prompt or NODE_ENV check before executing against non-local DBs.
+    severity: low
+    decision: log_to_kb
+    ac_added: false
+    decision_rationale: >
+      Low severity. Idempotency already mitigates production-run risk (proposeRule returns
+      conflict, no data destroyed). This is a documentation/disclosure concern, not a
+      core-journey blocker. The seed can still run successfully without this guard. Logged
+      to KB as a future seed-script authoring pattern.
+    kb_entry_id: "1ebf9666-3bd6-4328-92f9-569fc28e9034"
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: >
+      The seed script could emit a structured summary log at completion (e.g., "Seed complete:
+      4 proposed, 4 promoted, 0 conflicts, 0 failures") via @repo/logger. This would provide
+      post-deploy confidence without requiring a manual getRules() call. Low implementation
+      effort since @repo/logger is already a required dependency.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "cc42119d-d578-4ce2-a0cd-a14f03ddca74"
+
+  - id: opp-2
+    category: ux_polish
+    finding: >
+      EC-2 (promote failure handling) uses the phrase "exits cleanly or reports failure count"
+      — the "or" leaves behavior ambiguous. For operational clarity, recommend specifying exact
+      behavior: non-zero exit code on any promote failure (so CI/CD pipelines can detect
+      partial seed failures) combined with a logged count per-rule. This is a story-authoring
+      refinement that would improve implementer confidence, not a blocking gap.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "abe2eef9-a5e1-4415-80e7-0a926a346096"
+
+  - id: opp-3
+    category: observability
+    finding: >
+      A snapshot test is mentioned in the Test Plan but not mapped to a dedicated subtask.
+      ST-4 covers "unit tests" and ST-5 covers "integration tests." The snapshot test appears
+      to be bundled into ST-5 implicitly (integration test asserts exact rule set), but having
+      it explicitly named in the subtask goal would prevent it from being deprioritized under
+      time pressure. Low-risk omission since the snapshot is implied by HP-3 in the test plan.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "e3a2ca6b-36fb-46c6-863d-0869082b9e83"
+
+  - id: opp-4
+    category: integrations
+    finding: >
+      The story notes that WINT-4120 (prosecutor/judge integration) depends on this story's
+      active ruleset. Consider adding a `getRules({ status: 'active' }).length >= 4` assertion
+      as a health-check that can be called by the WINT-4120 bootstrap to validate prerequisites
+      before running enforcement logic. This would make the inter-story contract explicit and
+      machine-verifiable, rather than relying on documentation cross-references.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "f8253bde-829a-4820-8d6a-770ad067d86f"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0
+  verdict_rationale: >
+    The single gap (gap-1) is low severity and non-blocking — idempotency already mitigates
+    production-run risk, making this a documentation concern rather than a core-journey
+    blocker. All 5 findings (gap-1 + opp-1 through opp-4) were logged to KB as future
+    authoring patterns. No ACs were added. Story is ready to proceed to implementation.

@@ -1,0 +1,39 @@
+id: CDTS-3020
+title: Drop Empty Aurora Schemas and Final Verification
+status: backlog
+priority: medium
+phase: 3
+feature: "Execute DROP SCHEMA IF EXISTS for wint, kbar, artifacts, telemetry, umami with safety preamble and dry-run assertion (0 tables in target schemas before DROP). Run full end-to-end verification: public has expected tables, analytics has exactly 4 tables. Full MCP test suite passes. Rollback runbook added to KB."
+goal: "Five empty Aurora schemas dropped, database catalogue clean, full test suite green, rollback runbook documented."
+depends_on:
+  - CDTS-3010
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Migration
+  - "Migration 024_cdts_drop_empty_aurora_schemas.sql with safety preamble"
+  - "Dry-run check: assert 0 tables in each target schema BEFORE executing DROP"
+  - "DROP SCHEMA IF EXISTS wint, kbar, artifacts, telemetry, umami RESTRICT"
+  - "RESTRICT ensures DROP fails if any objects remain (safety net)"
+  - "Migration is idempotent — running twice does not error"
+
+  # Post-drop verification
+  - "public schema has exactly the expected tables (all KB, workflow, and graph tables)"
+  - "analytics schema has exactly 4 tables: model_experiments, model_assignments, change_telemetry, story_token_usage"
+  - "No other schemas exist besides public, analytics, pg_catalog, information_schema"
+
+  # End-to-end testing
+  - "Full MCP test suite passes: pnpm test:all"
+  - "pnpm check-types passes"
+  - "MCP server starts and all 67+ tools respond"
+  - "kb_health returns healthy status"
+
+  # Rollback runbook
+  - "Rollback runbook documented: how to recreate empty schemas if needed (CREATE SCHEMA IF NOT EXISTS)"
+  - "Runbook added to KB as a decision entry"
+
+  # Schema_migrations updated
+  - "Migration 024 recorded in schema_migrations table"
+risk_notes: "CRITICAL: DROP SCHEMA targets knowledgebase DB (port 5433), NOT lego_dev (port 5432). Safety preamble + RESTRICT mode provide defense in depth. Dry-run assertion is the final safety check before destructive operation."
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

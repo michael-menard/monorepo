@@ -1,0 +1,181 @@
+schema_version: 1
+story_id: "WINT-4020"
+timestamp: "2026-03-07T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope aligns with the stories.index.md entry ("Create rules registry sidecar at GET/POST /rules
+      for enforceable rules from retros with propose/promote workflow"). All scope items (new package, MCP
+      wrappers, DB migration, endpoints) are directly traceable to the described feature. Non-goals are
+      clearly delineated (no enforcement, no UI, no semantic similarity). Phase 4 placement is consistent
+      with other sidecars in the same tier (cohesion at WINT-4010).
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Minor inconsistency: the Scope section says the migration file will be
+      "packages/backend/database-schema/src/migrations/<next>-add-rules-table.ts" but the actual migration
+      directory uses Drizzle-generated SQL files (e.g., 0034_kfmb_1010_story_content_columns.sql), not .ts
+      files. The implementer should generate the migration via `drizzle-kit generate` after defining the
+      schema in src/schema/rules.ts, producing a .sql file — not manually write a .ts migration. The story
+      also says "rules table in postgres-knowledgebase" but the database-schema package migrations live under
+      app/ — the implementer needs clarity on which database/migration directory hosts this table. All other
+      internal references (ACs, subtasks, test plan, HTTP contract) are mutually consistent.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan is thorough and accurate. All 5 canonical references verified as existing:
+      (1) role-pack server.ts — exists, matches described pattern (Node.js http, PORT env var);
+      (2) role-pack http-handler.ts — exists, has sendJson helper, route guard, Zod parse;
+      (3) role-pack __types__/index.ts — exists, has Zod schema pattern;
+      (4) context-pack-get.ts MCP wrapper — exists, uses ARCH-001 direct-call pattern with no-op fallback;
+      (5) context-pack assemble-context-pack.ts — exists, DB-backed compute with dependency injection.
+      @repo/logger and @repo/db are established project dependencies.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Story properly separates concerns: core compute functions (getRules, proposeRule, promoteRule) in
+      rules-registry.ts, conflict detection in conflict-detector.ts, HTTP routing in http-handler.ts,
+      server bootstrap in server.ts. MCP wrappers import compute functions directly (ARCH-001) without
+      HTTP intermediary. This matches the established sidecar pattern where transport (HTTP) is decoupled
+      from business logic (compute functions). The dependency injection pattern from context-pack is
+      referenced for DB access.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test plan covers unit tests (mocked DB) and integration tests (live postgres-knowledgebase port 5433
+      per ADR-005). Coverage targets are specified: 45% minimum (project requirement), 80%+ for core compute.
+      Happy path tests (HP-1 through HP-9), error cases (EC-1 through EC-7), and edge cases (ED-1 through
+      ED-6) are comprehensive. MCP wrapper tests (HP-8, HP-9) verify direct-call pattern. All tests are
+      locally runnable with a postgres-knowledgebase instance. The integration test dependency on a live
+      database is a known pattern in this project (ADR-005).
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      Two open design decisions not addressed: (1) The story specifies conflict detection uses
+      case-insensitive text match but does not specify whether to use a database-level index
+      (e.g., unique index on lower(trim(rule_text)) for non-deprecated rules) or application-level
+      query-then-compare. A DB-level partial unique index would be more robust but adds migration
+      complexity. (2) The story references @repo/db for database access but does not specify whether
+      the compute functions use raw SQL via @repo/db or Drizzle query builder. The existing sidecar
+      pattern (context-pack) may clarify this, but the story should be explicit. Neither gap is
+      MVP-blocking — the implementer can follow established patterns.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Blocking dependency on WINT-2020 (failed-qa) is properly disclosed in frontmatter (depends_on,
+      blocked_by), Context section, dev_feasibility risks, and Reality Baseline table. Port 3093 conflict
+      risk is acknowledged with mitigation (check existing server.ts files). Integration test dependency
+      on live postgres is disclosed. The story does not disclose a risk around the migration target
+      database (see internal_consistency note), but this is a minor procedural concern, not a true risk.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Story has 12 ACs (above the >8 threshold that triggers sizing review) and touches 3 packages
+      (@repo/sidecar-rules-registry, @repo/mcp-tools, @repo/database-schema). Estimated total tokens
+      across subtasks: 54,000. However, all 12 ACs are tightly coupled to a single feature (rules CRUD
+      lifecycle), the subtask decomposition is clean with clear dependency chains, and the pattern is
+      well-established from prior sidecars. The AC count is high because the story properly enumerates
+      response schemas (AC-5, AC-6), conflict detection (AC-10), and testing standards (AC-11, AC-12)
+      as separate ACs rather than burying them. Splitting would create artificial boundaries. Recommend
+      CONDITIONAL pass — accept at 8 points but flag for the implementer that ST-8 (tests, 12K tokens)
+      may need its own focused session.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      8 subtasks with clear dependency chain (ST-1 scaffold -> ST-2/ST-3 parallel -> ST-4 compute ->
+      ST-5/ST-7 parallel -> ST-6 server -> ST-8 tests). AC-subtask coverage matrix is provided and
+      complete — all 12 ACs are covered by at least one subtask. Token estimates are reasonable.
+      Verification criteria are specified for each subtask. ST-4 covers 4 ACs (AC-2, AC-3, AC-4, AC-10)
+      which is the densest subtask but appropriate since these are the core compute functions.
+
+gaps:
+  - id: GAP-1
+    severity: low
+    title: "Migration file format mismatch"
+    description: >
+      Story scope says migration will be a .ts file at src/migrations/<next>-add-rules-table.ts,
+      but the actual project uses Drizzle-generated .sql migrations (e.g., 0034_*.sql). The implementer
+      should define the schema in src/schema/rules.ts and run drizzle-kit generate to produce the
+      SQL migration. This is a documentation inaccuracy, not an implementation blocker.
+    ac_impact: ["AC-3", "AC-4"]
+    recommendation: "Follow existing Drizzle workflow: define schema in src/schema/rules.ts, generate SQL migration via drizzle-kit."
+    decision: "noted"
+    decided_at: "2026-03-07T12:15:00Z"
+    notes: "Non-blocking documentation inaccuracy. Implementer follows existing Drizzle workflow."
+
+  - id: GAP-2
+    severity: low
+    title: "Target database/migration directory ambiguity"
+    description: >
+      Story says rules table goes in "postgres-knowledgebase" but all existing migrations live under
+      database-schema/src/migrations/app/. If postgres-knowledgebase is a separate database from the
+      app database, the migration needs to target a different directory or connection. The implementer
+      needs clarity on which database hosts the rules table.
+    ac_impact: ["AC-3", "AC-4", "AC-12"]
+    recommendation: "Confirm target database. If rules table is in the app database (same as other WINT tables), use migrations/app/. If postgres-knowledgebase is separate, check for a dedicated migration config."
+    decision: "noted"
+    decided_at: "2026-03-07T12:15:00Z"
+    notes: "Non-blocking. Implementer should check existing WINT migration patterns to resolve."
+
+opportunities:
+  - id: OPP-1
+    title: "Database-level conflict uniqueness constraint"
+    description: >
+      The story specifies application-level conflict detection (case-insensitive text match). Adding
+      a partial unique index on lower(trim(rule_text)) WHERE status != 'deprecated' would provide
+      database-level enforcement as a safety net. This is not MVP-blocking but would prevent race
+      conditions in concurrent rule proposals.
+    priority: low
+    decision: "log_to_kb"
+    kb_entry_id: "ad2a4f4d-01b7-4db5-89f3-cf1276dcbb0d"
+
+  - id: OPP-2
+    title: "MCP tool for rule promotion (rules_registry_promote)"
+    description: >
+      The story defines MCP wrappers for get (AC-7) and propose (AC-8) but not for promote. If agents
+      need to promote rules programmatically (not just via HTTP), a rules_registry_promote MCP wrapper
+      following the same ARCH-001 pattern would be useful. This may be intentionally deferred since
+      promotion is a human-review action.
+    priority: low
+    decision: "log_to_kb"
+    kb_entry_id: "ffe5089f-8940-44e8-8033-24cc284de9bc"
+
+  - id: OPP-3
+    title: "Health check endpoint"
+    description: >
+      Other sidecars may benefit from a GET /health endpoint for readiness probes. The role-pack
+      sidecar does not have one, so this is consistent with current pattern, but as sidecar count
+      grows a health endpoint becomes more valuable for orchestration.
+    priority: low
+    decision: "log_to_kb"
+    kb_entry_id: "dc73de60-7bd1-4148-89bf-bd4034beac80"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-07T12:15:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+  notes: >
+    Story is well-seeded with comprehensive ACs, test plan, canonical references, and subtask
+    decomposition. The two gaps are low-severity documentation inaccuracies around migration file
+    format and target database — neither blocks implementation. Both noted for implementer awareness.
+    All 3 opportunities logged to KB for future reference. The 12-AC count triggers a sizing
+    warning but splitting is not recommended since all ACs serve a single tightly-coupled feature.
+    Conditional pass: implementer should clarify migration target database before starting ST-2,
+    and follow Drizzle SQL generation workflow (not manual .ts migration).

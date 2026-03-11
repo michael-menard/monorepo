@@ -1,0 +1,70 @@
+feasible: true
+confidence: high
+rationale: "The scope-defender agent spec has a clear LangGraph Porting Notes section defining the exact 4-phase contract. The pattern is well-established (attack.ts sibling, doc-sync.ts gold standard). The @repo/workflow-logic package (WINT-9010) is confirmed deployed and functional. WINT-4060 dependency in the index is an artifact — scope-defender non-goals explicitly exclude consuming graph-checker output, so WINT-4060 is not a true implementation dependency."
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/nodes/story/"
+    - "packages/backend/orchestrator/src/nodes/story/__tests__/"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "GraphState may not have all 5 required input fields (story_id, story_brief, acceptance_criteria, gap_analysis, role_pack_path)"
+    mitigation: "Check packages/backend/orchestrator/src/state/index.ts before writing. Add missing fields using z.object() extension pattern (not TypeScript interface)."
+  - finding: "scope-challenges.json schema must exactly match scope-defender.agent.md definition — any mismatch will fail parity tests in WINT-9110"
+    mitigation: "Read scope-defender.agent.md 'Output Contract' section first; implement schema as Zod type before coding node logic."
+missing_requirements: []
+evidence_expectations:
+  - "pnpm check-types --filter @repo/orchestrator passes 0 errors"
+  - "pnpm test --filter @repo/orchestrator passes 0 failures"
+  - "scope-challenges.json written to correct path in integration test run"
+  - "No TypeScript interfaces (only z.object() + z.infer<>)"
+subtasks:
+  - id: ST-1
+    title: "Read canonical references and confirm GraphState field availability"
+    goal: "Establish implementation baseline — confirm which state fields exist, which need adding, and whether @repo/workflow-logic imports are needed"
+    files_to_read:
+      - "packages/backend/orchestrator/src/state/index.ts"
+      - "packages/backend/orchestrator/src/nodes/story/attack.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/workflow-logic/src/index.ts"
+      - ".claude/agents/scope-defender.agent.md"
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: "Read-only — no compilation step. Document field availability in CHECKPOINT.yaml."
+    estimated_tokens: 6000
+  - id: ST-2
+    title: "Add missing GraphState fields for scope-defend node (if required)"
+    goal: "Ensure story_brief, acceptance_criteria, gap_analysis, role_pack_path are in GraphState schema using z.object() extension"
+    files_to_read:
+      - "packages/backend/orchestrator/src/state/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/state/index.ts"
+    acs: ["AC-3"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 4000
+  - id: ST-3
+    title: "Implement scope-defend.ts node using createToolNode factory"
+    goal: "Create the complete 4-phase LangGraph node: Load Inputs → Identify Candidates → Apply DA Challenges (max 5) → Produce Output"
+    files_to_read:
+      - "packages/backend/orchestrator/src/runner/node-factory.ts"
+      - "packages/backend/orchestrator/src/runner/state-helpers.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/story/scope-defend.ts"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 18000
+  - id: ST-4
+    title: "Write unit tests for scope-defend node"
+    goal: "Test happy path, graceful degradation (missing gap_analysis, missing role_pack_path), truncation at 5, idempotent overwrite"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/story/__tests__/attack.test.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts"
+    acs: ["AC-10", "AC-11", "AC-12"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 12000

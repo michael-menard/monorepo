@@ -28,9 +28,10 @@
 # NEEDS_SPLIT     — story.yaml contains needs-split marker
 
 # ── Stage search order (most-progressed first) ─────────────────────
-# Note: created/ is where /pm-story generate writes completed stories.
-# backlog/ may contain only a seed (_pm/STORY-SEED.md) before generation.
-DETECT_STAGE_ORDER=(done UAT failed-qa ready-for-qa failed-code-review needs-code-review in-progress ready-to-work created elaboration backlog)
+# KSOT-3010: "stories" is the flat layout directory (primary). Legacy stage
+# dirs are kept as fallback for unmigrated plans.
+# KSOT-3050: Only flat layout and completion states. Legacy stage dirs removed.
+DETECT_STAGE_ORDER=(stories done UAT)
 
 # ── Output variables ────────────────────────────────────────────────
 DETECTED_STATE=""
@@ -50,6 +51,8 @@ has_story_file() {
 }
 
 # ── Find all stage directories containing a story ───────────────────
+# KSOT-3050: Only scans flat layout (stories/) and completion dirs (done/, UAT/).
+# Legacy stage dirs (needs-code-review, in-progress, etc.) removed.
 # Args: $1 = story_id, $2 = feature_dir
 # Outputs: space-separated list of stages (most-progressed first)
 find_story_stages() {
@@ -90,14 +93,6 @@ map_stage_to_state() {
     return
   fi
 
-  # Terminal states
-  case "$stage" in
-    UAT|done)
-      echo "UAT"
-      return
-      ;;
-  esac
-
   # Check artifacts to determine real state
   local has_elab=false has_evidence=false has_review=false
 
@@ -110,78 +105,15 @@ map_stage_to_state() {
   fi
   [[ -f "${impl_dir}/REVIEW.yaml" ]] && has_review=true
 
-  # Artifact-based state (truth over directory name)
+  # KSOT-3050: Only flat layout (stories/) and completion states (UAT/done).
+  # Legacy stage dir cases removed.
   case "$stage" in
-    failed-qa)
-      echo "FAILED_QA"
+    UAT|done)
+      echo "UAT"
+      return
       ;;
-    ready-for-qa)
-      if $has_review; then
-        echo "READY_FOR_QA"
-      elif $has_evidence; then
-        # Missing REVIEW.yaml — needs review first
-        echo "NEEDS_REVIEW"
-      elif $has_elab; then
-        echo "ELABORATED"
-      else
-        echo "GENERATED"
-      fi
-      ;;
-    failed-code-review)
-      echo "FAILED_REVIEW"
-      ;;
-    needs-code-review)
-      if $has_evidence; then
-        echo "NEEDS_REVIEW"
-      elif $has_elab; then
-        # Missing EVIDENCE.yaml — needs implementation
-        echo "ELABORATED"
-      else
-        echo "GENERATED"
-      fi
-      ;;
-    in-progress)
-      # Stale claim from crashed run — infer from artifacts
-      if $has_evidence; then
-        echo "NEEDS_REVIEW"
-      elif $has_elab; then
-        echo "ELABORATED"
-      else
-        echo "GENERATED"
-      fi
-      ;;
-    ready-to-work|created)
-      if $has_elab; then
-        echo "ELABORATED"
-      elif has_story_file "$story_dir" "$story_id"; then
-        echo "GENERATED"
-      else
-        echo "NOT_FOUND"
-      fi
-      ;;
-    backlog)
-      # backlog/ often contains only a seed (_pm/STORY-SEED.md) before
-      # /pm-story generate has run. Only count as GENERATED if a real
-      # story file exists (story.yaml or {STORY_ID}.md).
-      if $has_elab; then
-        echo "ELABORATED"
-      elif has_story_file "$story_dir" "$story_id"; then
-        echo "GENERATED"
-      else
-        echo "NOT_FOUND"
-      fi
-      ;;
-    elaboration)
-      if $has_elab; then
-        echo "ELABORATED"
-      elif has_story_file "$story_dir" "$story_id"; then
-        echo "GENERATED"
-      else
-        echo "NOT_FOUND"
-      fi
-      ;;
-    *)
-      # Unknown stage — best-effort from artifacts
+    stories|*)
+      # Flat layout (KSOT-3010) or unknown stage — artifact-based detection
       if $has_review && $has_evidence; then
         echo "READY_FOR_QA"
       elif $has_evidence; then

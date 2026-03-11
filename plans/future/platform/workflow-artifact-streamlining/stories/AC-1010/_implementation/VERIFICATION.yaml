@@ -1,0 +1,116 @@
+schema: 1
+story_id: AC-1010
+timestamp: '2026-03-07T18:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: infra story — no application code changes
+  http:
+    pass: 0
+    fail: 0
+coverage: null
+coverage_meets_threshold: true
+coverage_note: >-
+  Not applicable — no application code changed. All touched files are .md documentation and .yaml schema files under
+  .claude/.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: >-
+    No automated tests exist for .claude/ documentation files. Test exemption is valid for this infra/tooling story
+    type.
+acs_verified:
+  - ac_id: AC1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_created[0]
+    notes: >-
+      File .claude/schemas/elab-schema.md exists on story/AC-1010 branch. schema_version: 1 is the first field in the
+      schema definition (line 31 with explicit comment on line 29). Golden reference schema is complete with audit[],
+      gaps[], opportunities[], split_recommendation, preliminary_verdict, verdict, decided_at, and summary sections.
+      Verification: grep confirmed schema_version at line 31.
+  - ac_id: AC2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:grep_verification.old_artifact_names
+    notes: >-
+      All four agent files updated on story/AC-1010 branch: elab-completion-leader.agent.md line 35 now reads
+      'auto-decisions from ELAB.yaml gaps[].decision and opportunities[].decision fields' (old: DECISIONS.yaml);
+      dev-documentation-leader.agent.md lines 131-134 reference ELAB.yaml summary fields; risk-predictor.agent.md lines
+      222 and 516 reference 'ELAB.yaml opportunities[]' not FUTURE-OPPORTUNITIES.md; elab-analyst.agent.md has
+      schema_version: 1 at line 194. Zero old artifact references confirmed on AC-1010 branch.
+  - ac_id: AC3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_verified_no_changes
+    notes: >-
+      elab-story.md and workflow-batch.md verified — zero references to ANALYSIS.md, DECISIONS.yaml (elab-specific),
+      FUTURE-OPPORTUNITIES.md, or ELAB-STORY-xxx on story/AC-1010 branch. These files were already correct and required
+      no changes.
+  - ac_id: AC4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_modified
+    notes: >-
+      All four schema/doc files updated on story/AC-1010 branch: outcome-schema.md — three DECISIONS.yaml references
+      replaced with ELAB.yaml; decision-outcome-schema.md — elab-phase references updated to ELAB.yaml,
+      implementation-phase references correctly point to ARCHITECTURAL-DECISIONS.yaml; pm-fix-story-reference.md — both
+      ELAB-STORY-XXX.md references replaced with _implementation/ELAB.yaml; elab-story-reference.md — verified clean
+      (already correct, no changes needed).
+  - ac_id: AC5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:grep_verification
+    notes: >-
+      Final grep checklist on story/AC-1010 branch confirms zero operational references to eliminated artifact names
+      (ANALYSIS.md, FUTURE-OPPORTUNITIES.md, ELAB-STORY-xxx, ELAB-{ID}.md) across .claude/ directory. Only acceptable
+      occurrences are in elab-schema.md itself where they appear as historical/supersession documentation in the
+      Overview and Changelog sections — these are expected and correct. Zero story-level DECISIONS.yaml references
+      remain across agent files; decision-outcome-schema.md correctly distinguishes elab-phase (ELAB.yaml) from
+      implementation-phase (ARCHITECTURAL-DECISIONS.yaml).
+architecture_compliant: true
+architecture_notes: >-
+  Story changes are purely .claude/ documentation (.md and .yaml). No TypeScript/JavaScript changes. No barrel files, no
+  interfaces, no console.log, no hardcoded colors to check. The elab-schema.md golden reference schema follows the
+  project's YAML-first approach.
+branch_note: >-
+  QA verification performed against story/AC-1010 branch. Current main branch shows pre-implementation state of touched
+  files — this is expected for a story in ready-for-qa status. All AC verifications confirmed on the story branch.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For documentation-only infra stories, QA must explicitly verify the story branch rather than the main branch. The
+      current working directory reflects main, not the story branch, so grep checks must use 'git show story/<ID>:path'
+      rather than direct file reads.
+    category: pattern
+    tags:
+      - qa
+      - infra-story
+      - documentation
+      - branch-verification
+  - lesson: >-
+      QA-SETUP-RESULT.yaml showing BLOCKED can be stale — it reflects the state at the time qa-setup ran. If
+      EVIDENCE.yaml and REVIEW.yaml exist in the implementation directory, QA verification can proceed even if an older
+      QA-SETUP-RESULT shows BLOCKED.
+    category: blocker
+    tags:
+      - qa-setup
+      - stale-artifact
+      - qa-workflow
+  - lesson: >-
+      When eliminating artifact names (e.g., DECISIONS.yaml), the schema documentation file itself (elab-schema.md) is
+      allowed to reference the old names in its 'Overview' and 'Changelog' sections to document what was superseded.
+      These are not stale references and should be excluded from grep checks.
+    category: pattern
+    tags:
+      - grep-checklist
+      - documentation
+      - artifact-elimination
+tokens:
+  in: 28000
+  out: 3500

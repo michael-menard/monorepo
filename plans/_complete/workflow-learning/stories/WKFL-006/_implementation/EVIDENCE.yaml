@@ -1,0 +1,168 @@
+schema: 1
+story_id: "WKFL-006"
+version: 1
+timestamp: "2026-02-07T21:15:00-07:00"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Pattern-miner agent gracefully handles <10 stories (warning) and ≥10 stories (proceed)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Pre-Flight Checks section (lines 47-56) implements minimum sample size validation with warning prompt"
+
+  - ac_id: "AC-2"
+    ac_text: "PATTERNS-{month}.yaml includes file_patterns section with correlation data (file X modified → file Y likely needs changes)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/schemas/patterns-schema.yaml"
+        description: "File Patterns Section (lines 28-63) defines structure with correlation_metrics and evidence"
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 2: File Pattern Detection (lines 128-173) implements correlation calculation and filtering"
+
+  - ac_id: "AC-3"
+    ac_text: "PATTERNS-{month}.yaml includes ac_patterns section detecting vague/problematic phrases in AC text"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/schemas/patterns-schema.yaml"
+        description: "AC Patterns Section (lines 67-108) defines vague phrase detection with impact metrics"
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 3: AC Pattern Detection (lines 175-229) implements vague phrase regex and impact correlation"
+
+  - ac_id: "AC-4"
+    ac_text: "Clustering algorithm groups similar findings (text similarity threshold 0.70 for MVP)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 4: Clustering Algorithm (lines 231-252) implements Levenshtein distance with 0.70 threshold"
+      - type: file
+        path: ".claude/schemas/patterns-schema.yaml"
+        description: "Metadata section (lines 150-169) documents clustering_threshold: 0.70 and clustering_method: levenshtein"
+
+  - ac_id: "AC-5"
+    ac_text: "AGENT-HINTS.yaml generated with per-agent actionable recommendations"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/schemas/agent-hints-schema.yaml"
+        description: "Complete schema defines agents[], priority_hints[], file_hints[], anti_patterns[] structure"
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 6.2: AGENT-HINTS.yaml (lines 284-299) transforms patterns into per-agent hints"
+
+  - ac_id: "AC-6"
+    ac_text: "ANTI-PATTERNS.md generated with human-readable pattern documentation"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 6.3: ANTI-PATTERNS.md (lines 301-339) defines markdown structure similar to WORKFLOW-RECOMMENDATIONS.md"
+
+  - ac_id: "AC-7"
+    ac_text: "KB integration: patterns persisted via kb_add_lesson with category='pattern'"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 7: KB Integration (lines 341-364) implements kb_add_lesson calls for high-severity patterns only"
+
+  - ac_id: "AC-8"
+    ac_text: "Agent supports VERIFICATION.yaml fallback when OUTCOME.yaml unavailable (37 files available)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Data Sources section (lines 31-45) implements primary/fallback logic with warning logging"
+      - type: file
+        path: ".claude/agents/pattern-miner.agent.md"
+        description: "Step 1: Data Loading (lines 76-106) implements glob patterns and fallback behavior"
+
+touched_files:
+  - path: ".claude/schemas/patterns-schema.yaml"
+    action: created
+    lines: 259
+    description: "Schema definition for PATTERNS-{month}.yaml output"
+
+  - path: ".claude/schemas/agent-hints-schema.yaml"
+    action: created
+    lines: 275
+    description: "Schema definition for AGENT-HINTS.yaml output"
+
+  - path: ".claude/agents/pattern-miner.agent.md"
+    action: created
+    lines: 436
+    description: "Main pattern-miner agent implementation with all detection algorithms"
+
+  - path: ".claude/commands/pattern-mine.md"
+    action: created
+    lines: 190
+    description: "Command specification for /pattern-mine with parameters and usage examples"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/verification-samples.yaml"
+    action: created
+    lines: 272
+    description: "5 synthetic VERIFICATION.yaml samples for testing"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/outcome-samples.yaml"
+    action: created
+    lines: 270
+    description: "5 synthetic OUTCOME.yaml samples (placeholder for future)"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/pattern-detection.test.md"
+    action: created
+    lines: 329
+    description: "Unit test documentation for pattern detection algorithms"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/integration.test.md"
+    action: created
+    lines: 485
+    description: "Integration test documentation for full mining flow"
+
+commands_run: []
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Used Levenshtein distance text similarity (threshold 0.70) for MVP clustering instead of embeddings (ARCH-001)"
+  - "Default thresholds: 3 occurrences, 0.60 correlation with CLI configurability (ARCH-002)"
+  - "Manual /pattern-mine command only for MVP, cron automation deferred (ARCH-003)"
+  - "VERIFICATION.yaml fallback is critical - 37 files available, 0 OUTCOME.yaml files (MVP requirement)"
+  - "No build/lint/test commands - all deliverables are documentation/schema YAML files"
+
+known_deviations:
+  - "Schemas were already created before this execution (patterns-schema.yaml and agent-hints-schema.yaml exist)"
+  - "No executable TypeScript code - agent is markdown documentation with algorithmic logic described"
+
+test_summary:
+  unit: { pass: 0, fail: 0, note: "Documentation tests in pattern-detection.test.md (not executable)" }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra - workflow agent implementation, no user-facing features"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+
+coverage:
+  note: "Documentation-based implementation - coverage metrics not applicable"
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 48044, out: 0 }

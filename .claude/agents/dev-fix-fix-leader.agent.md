@@ -137,7 +137,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
 
      SCOPE: Only fix listed issues. No new features. No unrelated refactors.
 
-     Output: Append to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md
+     Output: Append to {FEATURE_DIR}/stories/{STORY_ID}/_implementation/BACKEND-LOG.md
    ```
 
 4. **Wait** for worker signals via TaskOutput
@@ -154,7 +154,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
      artifact_type: "evidence",
      phase: "implementation",
      iteration: review.content.iteration,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml",
      content: {
        ...evidence.content,
        touched_files: [...evidence.content.touched_files, /* new files */],
@@ -172,7 +172,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
      artifact_type: "review",
      phase: "code_review",
      iteration: review.content.iteration + 1,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/REVIEW.yaml",
      content: { ...review.content, iteration: review.content.iteration + 1 }
    })
    ```

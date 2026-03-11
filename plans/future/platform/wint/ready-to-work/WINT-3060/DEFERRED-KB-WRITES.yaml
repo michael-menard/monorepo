@@ -1,0 +1,33 @@
+---
+# Deferred KB writes for WINT-3060
+# Written: 2026-03-08
+# Reason: KB write attempted at story generation time; retry when MCP tools available
+---
+
+writes:
+  - operation: upsert_story
+    table: stories
+    data:
+      story_id: WINT-3060
+      feature: wint
+      title: "Create Telemetry Query Command (/telemetry)"
+      story_dir: "plans/future/platform/wint/backlog/WINT-3060"
+      story_file: "plans/future/platform/wint/backlog/WINT-3060/WINT-3060.md"
+      story_type: feature
+      points: 0.5
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    on_conflict: "DO UPDATE SET title=EXCLUDED.title, story_dir=EXCLUDED.story_dir, story_file=EXCLUDED.story_file, points=EXCLUDED.points, state=EXCLUDED.state"
+    created_at: "2026-03-08T00:00:00Z"
+  - operation: worktree_register
+    table: worktrees
+    data:
+      story_id: WINT-3060
+      branch_name: "story/WINT-3060"
+      path: "tree/story/WINT-3060"
+      status: active
+    created_at: "2026-03-08T00:00:00Z"

@@ -207,7 +207,7 @@ describe('WINT-1120 Foundation Validation — Integration Tests (real PostgreSQL
     it('returns null for story absent from DB without creating filesystem artifacts', async () => {
       const result = await shimUpdateStoryStatus({
         storyId: 'MISS-9001',
-        newState: 'done',
+        newState: 'completed',
         triggeredBy: 'wint-1120-test',
       })
 
@@ -256,14 +256,14 @@ describe('WINT-1120 Foundation Validation — Integration Tests (real PostgreSQL
     it('state written via raw SQL UPDATE is immediately visible via storyGetStatus', async () => {
       // Raw SQL UPDATE — replicates StoryRepository.updateStoryState() pattern
       await db.execute(
-        sql`UPDATE wint.stories SET state = 'ready_to_work', updated_at = NOW() WHERE story_id = 'TEST-8001'`,
+        sql`UPDATE wint.stories SET state = 'ready', updated_at = NOW() WHERE story_id = 'TEST-8001'`,
       )
 
       // Read via Drizzle (MCP storyGetStatus path)
       const mcpResult = await storyGetStatus({ storyId: testStoryUuid })
 
       expect(mcpResult).not.toBeNull()
-      expect(mcpResult?.state).toBe('ready_to_work')
+      expect(mcpResult?.state).toBe('ready')
 
       // Reset to backlog for subsequent tests
       await storyUpdateStatus({

@@ -12,13 +12,15 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { ZodError } from 'zod'
+import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
-import { stories } from '../../db/schema.js'
+import { stories, planStoryLinks } from '../../db/schema.js'
 import {
   kb_create_story,
   kb_get_story,
+  kb_list_stories,
   kb_update_story,
   KbCreateStoryInputSchema,
   KbUpdateStoryInputSchema,
@@ -43,8 +45,6 @@ function makeStoryId(suffix: string): string {
 // Pre-check: Verify content columns exist
 // ============================================================================
 
-let contentColumnsExist = false
-
 beforeAll(async () => {
   // Check that the content columns exist in the stories table
   // (KFMB-1020 adds description, acceptance_criteria, non_goals, packages)
@@ -54,16 +54,22 @@ beforeAll(async () => {
        AND column_name IN ('description', 'acceptance_criteria', 'non_goals', 'packages')` as any,
   )
   const found = (result.rows as { column_name: string }[]).map(r => r.column_name)
-  contentColumnsExist =
-    found.includes('description') &&
-    found.includes('acceptance_criteria') &&
-    found.includes('non_goals') &&
-    found.includes('packages')
+  const requiredColumns = ['description', 'acceptance_criteria', 'non_goals', 'packages']
+  const missingColumns = requiredColumns.filter(col => !found.includes(col))
+  if (missingColumns.length > 0) {
+    logger.error('Required content columns missing from stories table — migration not applied', {
+      missingColumns,
+    })
+    throw new Error(
+      `stories table is missing required content columns: ${missingColumns.join(', ')}. Run KFMB-1020 migration first.`,
+    )
+  }
 })
 
 afterEach(async () => {
-  // Clean up all test stories created during test
+  // Clean up all test stories created during test (plan links first due to FK)
   for (const id of testStoryIds) {
+    await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
   testStoryIds.length = 0
@@ -72,6 +78,7 @@ afterEach(async () => {
 afterAll(async () => {
   // Final safety cleanup
   for (const id of testStoryIds) {
+    await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
 })
@@ -121,11 +128,6 @@ describe('kb_create_story — happy path', () => {
   })
 
   it('HP-3: content fields round-trip through create → get', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP HP-3: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('HP-3')
     testStoryIds.push(storyId)
 
@@ -190,11 +192,6 @@ describe('kb_create_story — happy path', () => {
   })
 
   it('HP-5: null content fields are stored and retrieved correctly', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP HP-5: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('HP-5')
     testStoryIds.push(storyId)
 
@@ -349,14 +346,12 @@ describe('kb_create_story — edge cases', () => {
     const result = await kb_create_story(deps, {
       story_id: storyId,
       title: 'ED-3 Story',
-      story_dir: 'plans/future/platform/kb-first-migration/in-progress/KFMB-1020',
-      story_file: 'story.yaml',
+      story_dir: '',
+      story_file: '',
     })
 
-    expect(result.story.storyDir).toBe(
-      'plans/future/platform/kb-first-migration/in-progress/KFMB-1020',
-    )
-    expect(result.story.storyFile).toBe('story.yaml')
+    expect(result.story.storyDir).toBe('')
+    expect(result.story.storyFile).toBe('')
   })
 
   it('ED-4: multiple sequential upserts are idempotent', async () => {
@@ -396,11 +391,6 @@ describe('kb_update_story — content field support', () => {
   })
 
   it('AC-5: kb_update_story updates content fields without touching others', async () => {
-    if (!contentColumnsExist) {
-      console.warn('SKIP AC-5: content columns not present in DB schema')
-      return
-    }
-
     const storyId = makeStoryId('AC-5')
     testStoryIds.push(storyId)
 
@@ -473,5 +463,98 @@ describe('KbCreateStoryInputSchema — schema validation', () => {
   it('AC-3: story_id cannot be empty string', () => {
     const result = KbCreateStoryInputSchema.safeParse({ story_id: '', title: 'Has title' })
     expect(result.success).toBe(false)
+  })
+})
+
+// ============================================================================
+// plan_slug — plan_story_links FK wiring
+// ============================================================================
+
+describe('kb_create_story — plan_slug wiring', () => {
+  // Use a plan slug that must exist in the plans table for the FK to succeed.
+  // These tests skip gracefully if no plan with that slug exists.
+  const PLAN_SLUG = 'knowledge-base-operations'
+
+  it('PSL-1: creates a plan_story_links row when plan_slug is provided', async () => {
+    const storyId = makeStoryId('PSL-1')
+    testStoryIds.push(storyId)
+
+    // Check plan exists — skip if not
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-1: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    await kb_create_story(deps, {
+      story_id: storyId,
+      title: 'PSL-1 Test Story',
+      plan_slug: PLAN_SLUG,
+    })
+
+    const links = await db
+      .select()
+      .from(planStoryLinks)
+      .where(and(eq(planStoryLinks.storyId, storyId), eq(planStoryLinks.planSlug, PLAN_SLUG)))
+
+    expect(links).toHaveLength(1)
+    expect(links[0]!.linkType).toBe('spawned_from')
+  })
+
+  it('PSL-2: calling kb_create_story twice with same plan_slug is idempotent', async () => {
+    const storyId = makeStoryId('PSL-2')
+    testStoryIds.push(storyId)
+
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-2: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    await kb_create_story(deps, { story_id: storyId, title: 'PSL-2 Test Story', plan_slug: PLAN_SLUG })
+    // Second call — should not throw a unique constraint error
+    await expect(
+      kb_create_story(deps, { story_id: storyId, title: 'PSL-2 Updated', plan_slug: PLAN_SLUG }),
+    ).resolves.not.toThrow()
+
+    const links = await db
+      .select()
+      .from(planStoryLinks)
+      .where(and(eq(planStoryLinks.storyId, storyId), eq(planStoryLinks.planSlug, PLAN_SLUG)))
+
+    expect(links).toHaveLength(1)
+  })
+})
+
+describe('kb_list_stories — plan_slug filter', () => {
+  const PLAN_SLUG = 'knowledge-base-operations'
+
+  it('PSL-3: plan_slug filter returns only stories linked to that plan', async () => {
+    const linkedId = makeStoryId('PSL-3A')
+    const unlinkedId = makeStoryId('PSL-3B')
+    testStoryIds.push(linkedId, unlinkedId)
+
+    const planExists = await db.execute(
+      `SELECT 1 FROM plans WHERE plan_slug = '${PLAN_SLUG}' LIMIT 1` as any,
+    )
+    if ((planExists.rows as unknown[]).length === 0) {
+      console.warn(`SKIP PSL-3: plan '${PLAN_SLUG}' not present in DB`)
+      return
+    }
+
+    // Create linked story (with plan_slug)
+    await kb_create_story(deps, { story_id: linkedId, title: 'PSL-3A linked', plan_slug: PLAN_SLUG })
+    // Create unlinked story (no plan_slug)
+    await kb_create_story(deps, { story_id: unlinkedId, title: 'PSL-3B unlinked' })
+
+    const result = await kb_list_stories(deps, { plan_slug: PLAN_SLUG, limit: 100 })
+
+    const returnedIds = result.stories.map(s => s.storyId)
+    expect(returnedIds).toContain(linkedId)
+    expect(returnedIds).not.toContain(unlinkedId)
   })
 })

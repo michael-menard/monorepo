@@ -1,0 +1,91 @@
+schema: 1
+story_id: "ST-2010"
+timestamp: "2026-03-03T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story scope matches stories.index.md entry — extends dev-feasibility worker to produce subtasks array. No extra endpoints or infrastructure introduced."
+  - id: internal_consistency
+    status: PASS
+    note: "Story now has 5 ACs, test plan, and decisions section added by autonomous elaboration. Internally consistent."
+  - id: reuse_first
+    status: PASS
+    note: "Change is confined to the pm-dev-feasibility-review agent prompt and its output schema. No new packages or utilities needed — extends existing agent."
+  - id: ports_adapters
+    status: PASS
+    note: "No API endpoints involved. Agent prompt modification is self-contained. Output schema change is in YAML format consumed by pm-story-generation-leader."
+  - id: testability
+    status: PASS
+    note: "Test plan added with 3 concrete verification steps: prompt schema check, leader integration check, dry-run confirmation."
+  - id: decision_completeness
+    status: PASS
+    note: "Subtask ID format resolved: ST-N sequential format. Matches existing convention."
+  - id: risk_disclosure
+    status: PASS
+    note: "Risk note acknowledges speculative nature of feasibility-time subtasks. Dependency on ST-1020 is declared."
+  - id: story_sizing
+    status: PASS
+    note: "Small scope — single agent prompt file modification plus output schema update. No sizing warning flags."
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: "Story itself lacks subtask decomposition and canonical references. Acceptable for a prompt-only change (2 files), but noted for small-LLM compatibility."
+
+gaps:
+  - id: gap-1
+    check: internal_consistency
+    finding: "Story has no Acceptance Criteria — cannot verify implementation correctness"
+    severity: critical
+    decision: add_ac
+    ac_added: "AC-1 through AC-5: subtask schema fields, ID format, leader integration, design rules, dry-run verification"
+  - id: gap-2
+    check: subtask_decomposition
+    finding: "No subtask decomposition — story needs subtasks for small-LLM execution"
+    severity: high
+    decision: defer
+    ac_added: null
+    note: "Story touches only 2 agent prompt files — subtask decomposition adds overhead disproportionate to scope. Small-LLM agents can execute this with the full story.yaml context."
+  - id: gap-3
+    check: testability
+    finding: "No test plan — needs concrete verification steps for the subtasks array output"
+    severity: high
+    decision: add_ac
+    ac_added: "test_plan section added to story.yaml with 3 verification steps"
+  - id: gap-4
+    check: decision_completeness
+    finding: "Unresolved: should subtask IDs use ST-N format or allow custom prefixes? Must align with ST-1020 template."
+    severity: medium
+    decision: add_ac
+    ac_added: "AC-2: ST-N sequential format; decisions section added to story.yaml"
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: "Add token estimation validation — verify estimated_tokens field is reasonable (e.g., 2K-32K range)"
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "f0bf41d4-c42c-4e3b-b116-e429ca49a216"
+  - id: opp-2
+    category: ux_polish
+    finding: "Include a confidence score per subtask indicating quality of the decomposition at feasibility time"
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "6e66a2d1-8669-4fcb-88f9-9aee2532b10f"
+  - id: opp-3
+    category: edge_cases
+    finding: "Handle stories with no clear file boundaries — fallback to coarser subtask granularity when files_to_modify cannot be determined"
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "bd4cd264-ada7-4e28-9566-d15ae92eb2fa"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-03T00:00:00Z"
+summary:
+  gaps_found: 4
+  gaps_resolved: 3
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 5

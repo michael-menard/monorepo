@@ -1,0 +1,41 @@
+schema: 1
+story_id: WISH-2014
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Backend Schema Extension
+    acs: []
+    files: []
+  - id: 2
+    name: Backend Repository Sorting Implementation
+    acs: []
+    files: []
+  - id: 3
+    name: Backend Service Type Update
+    acs: []
+    files: []
+  - id: 4
+    name: Backend Unit Tests
+    acs: []
+    files: []
+  - id: 5
+    name: Backend Integration Tests (.http file)
+    acs: []
+    files: []
+  - id: 6
+    name: Frontend Sort Dropdown Update
+    acs: []
+    files: []
+  - id: 7
+    name: Frontend Component Tests
+    acs: []
+    files: []
+  - id: 8
+    name: Playwright E2E Test
+    acs: []
+    files: []
+reuse: []

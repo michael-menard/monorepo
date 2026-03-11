@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Auto-syncs work order status columns from three sources:
+Auto-syncs work order status columns from two sources:
   1. Directory structure (ready-to-work / in-progress / ready-for-qa / UAT)
-  2. stories.index.md inline status markers
-  3. PROOF-*.md files (presence signals QA passed → treat as completed)
+  2. PROOF-*.md files (presence signals QA passed → treat as completed)
 
 Usage:
   python3 sync-work-order.py <epic-dir> [--interval=20]
@@ -19,7 +18,6 @@ Examples:
   python3 scripts/sync-work-order.py plans/future/platform --interval=30
 
 Auto-discovers:
-  - Index file:  *stories.index.md or stories.index.md
   - Work order:  WORK-ORDER*.md (optional — prints status if not found)
   - Stage dirs:  {ready-to-work, in-progress, ready-for-qa, UAT}/
 """
@@ -70,63 +68,26 @@ STAGE_TO_CHECK = {
 
 STORY_RE = re.compile(r'\b([A-Z]{4}-\d{2,4})\b')
 
-# Patterns to recognize in index file title column
-INDEX_STATUS_PATTERNS = {
-    '**completed**': 'completed',
-    '**uat**': 'UAT',
-    '**in-qa**': 'ready-for-qa',
-    '**ready-for-qa**': 'ready-for-qa',
-    '**in-progress**': 'in-progress',
-    '**ready-to-work**': 'ready-to-work',
-    '**elaborated**': 'ready-to-work',
-    '**in-elaboration**': 'elaboration',
-    '[In Elaboration]': 'elaboration',
-    '**created**': 'created',
-    '**needs-code-review**': 'needs-code-review',
-    '**needs-review**': 'needs-code-review',
-    '**ready-for-code-review**': 'needs-code-review',
-    '**failed-code-review**': 'failed-code-review',
-    '**failed-review**': 'failed-code-review',
-    '**code-review-failed**': 'failed-code-review',
-    '**failed-qa**': 'failed-qa',
-    '**needs-work**': 'failed-qa',
-}
 
-ALL_STATUS_EMOJIS = ['⏸️', '🆕', '📝', '⏳', '🚧', '🔴', '👀', '⚠️', '🔍', '✅']
 
+
+# KSOT-3050: Only flat layout (stories/) and completion state (UAT). Legacy stage dirs removed.
 STAGE_DIRS = [
-    'created',
-    'elaboration',
-    'ready-to-work',
-    'in-progress',
-    'needs-code-review',
-    'failed-code-review',
-    'failed-qa',
-    'ready-for-qa',
+    'stories',
     'UAT',
 ]
 
 
 def discover_files(epic_dir):
-    """Auto-discover index and work order files in the epic directory."""
-    index_file = None
+    """Auto-discover work order file in the epic directory."""
     work_order = None
-
-    # Find index file: prefer *stories.index.md, fall back to stories.index.md
-    candidates = glob.glob(os.path.join(epic_dir, '*stories.index.md'))
-    if candidates:
-        index_file = candidates[0]
-    else:
-        fallback = os.path.join(epic_dir, 'stories.index.md')
-        if os.path.isfile(fallback):
-            index_file = fallback
 
     # Find work order file
     candidates = glob.glob(os.path.join(epic_dir, 'WORK-ORDER*.md'))
     if candidates:
         work_order = candidates[0]
 
-    return index_file, work_order
+    return work_order
 
 
 def collect_scan_dirs(epic_dir):
@@ -163,28 +124,6 @@ def scan_directories(epic_dir):
     return status_map
 
 
-def scan_index_file(index_file):
-    """Parse stories index file → {story_id: stage}."""
-    status_map = {}
-    if not index_file or not os.path.isfile(index_file):
-        return status_map
-
-    with open(index_file, 'r') as f:
-        for line in f:
-            if '|' not in line:
-                continue
-            match = STORY_RE.search(line)
-            if not match:
-                continue
-            story_id = match.group(1)
-            lower_line = line.lower()
-
-            for pattern, stage in INDEX_STATUS_PATTERNS.items():
-                if pattern.lower() in lower_line:
-                    status_map[story_id] = stage
-                    break
-
-    return status_map
 
 
 def scan_proof_files(epic_dir):
@@ -209,13 +148,13 @@ def scan_proof_files(epic_dir):
     return status_map
 
 
-def merge_statuses(dir_map, index_map, proof_map):
-    """Merge all three sources, taking the highest-priority status."""
+def merge_statuses(dir_map, proof_map):
+    """Merge directory scan and proof scan, taking the highest-priority status."""
     merged = {}
-    all_stories = set(dir_map.keys()) | set(index_map.keys()) | set(proof_map.keys())
+    all_stories = set(dir_map.keys()) | set(proof_map.keys())
     for story in all_stories:
         candidates = []
-        for source in [dir_map, index_map, proof_map]:
+        for source in [dir_map, proof_map]:
             stage = source.get(story)
             if stage:
                 candidates.append(stage)
@@ -226,7 +165,7 @@ def merge_statuses(dir_map, index_map, proof_map):
 
 def replace_status_emoji(cell, new_emoji):
     """Replace a status emoji in a table cell, preserving spacing."""
-    for emoji in ALL_STATUS_EMOJIS:
+    for emoji in STAGE_TO_EMOJI.values():
         if emoji in cell:
             return cell.replace(emoji, new_emoji, 1)
     return cell
@@ -404,7 +343,7 @@ def update_work_order(work_order, status_map):
         if new_line != old_line:
             lines[i] = new_line
             old_emoji = '?'
-            for e in ALL_STATUS_EMOJIS:
+            for e in STAGE_TO_EMOJI.values():
                 if e in old_line.split('|')[5] if len(old_line.split('|')) > 5 else '':
                     old_emoji = e
                     break
@@ -685,34 +624,6 @@ def check_and_run_batch_tests(epic_dir, status_map, batch_config, project_root):
     sys.stdout.flush()
 
 
-def scan_all_index_stories(index_file):
-    """Extract story IDs from the pre-transition section of the index file.
-
-    Only returns stories from waves before the '🎉 TRANSITION POINT' marker,
-    since post-transition stories are intentionally not in the work order.
-    """
-    stories = set()
-    if not index_file or not os.path.isfile(index_file):
-        return stories
-    with open(index_file, 'r') as f:
-        for line in f:
-            # Stop at the transition point — everything after is future work
-            if 'TRANSITION POINT' in line:
-                break
-            if '|' not in line:
-                continue
-            # Skip struck-through / DUPLICATE lines
-            if '~~' in line and 'DUPLICATE' in line:
-                continue
-            # Only extract story IDs from the Story column (column index 3)
-            # to avoid false positives from dependency/blocks columns
-            parts = line.split('|')
-            if len(parts) >= 4:
-                story_col = parts[3].strip()
-                m = STORY_RE.search(story_col)
-                if m:
-                    stories.add(m.group(1))
-    return stories
 
 
 def scan_work_order_stories(work_order):
@@ -729,17 +640,6 @@ def scan_work_order_stories(work_order):
     return stories
 
 
-def check_untracked_stories(index_file, work_order, already_warned, status_map):
-    """Find stories in the index but not in the work order. Returns new untracked set."""
-    index_stories = scan_all_index_stories(index_file)
-    wo_stories = scan_work_order_stories(work_order)
-    untracked = index_stories - wo_stories
-    # Filter out GATE stories and completed/UAT stories
-    untracked = {s for s in untracked
-                 if not s.startswith('GATE-')
-                 and status_map.get(s) not in ('completed', 'UAT')}
-    new_untracked = untracked - already_warned
-    return new_untracked, untracked
 
 
 def print_status_table(status_map, epic_name):
@@ -780,7 +680,7 @@ def main():
         sys.exit(1)
 
     epic_name = os.path.basename(epic_dir)
-    index_file, work_order = discover_files(epic_dir)
+    work_order = discover_files(epic_dir)
     batch_config = None if args.no_tests else load_batch_config(epic_dir)
     project_root = os.path.abspath(os.path.join(epic_dir, '..', '..', '..'))
 
@@ -791,11 +691,6 @@ def main():
 
     stage_dirs_found = [s for s in STAGE_DIRS if os.path.isdir(os.path.join(epic_dir, s))]
     print(f"    dirs:  {{{', '.join(stage_dirs_found)}}}/")
-
-    if index_file:
-        print(f"    index: {os.path.basename(index_file)}")
-    else:
-        print(f"    index: (none found)")
 
     print(f"    proof: PROOF-*.md files in stage directories")
 
@@ -816,16 +711,14 @@ def main():
     print(f"  Interval: {args.interval}s | Ctrl+C to stop")
     print()
 
-    warned_untracked = set()
     cycle = 0
     while True:
         cycle += 1
         ts = datetime.datetime.now().strftime('%H:%M:%S')
 
         dir_map = scan_directories(epic_dir)
-        idx_map = scan_index_file(index_file)
         proof_map = scan_proof_files(epic_dir)
-        merged = merge_statuses(dir_map, idx_map, proof_map)
+        merged = merge_statuses(dir_map, proof_map)
 
         if work_order:
             # Promote blocked stories whose deps are all done
@@ -858,19 +751,6 @@ def main():
             # No work order file — just print status
             print(f"[{ts}] Cycle {cycle} — {len(merged)} stories tracked")
             print_status_table(merged, epic_name)
-
-        # Check for new stories in the index that aren't in the work order
-        if work_order and index_file:
-            new_untracked, all_untracked = check_untracked_stories(
-                index_file, work_order, warned_untracked, merged
-            )
-            if new_untracked:
-                print(f"  ⚠️  New untracked stories (in index but not in work order):")
-                for s in sorted(new_untracked):
-                    stage = merged.get(s, 'pending')
-                    emoji = STAGE_TO_EMOJI.get(stage, '⏸️')
-                    print(f"      {emoji} {s} ({stage})")
-                warned_untracked = all_untracked
 
         # Check for newly completed batches and run validation tests
         if batch_config:

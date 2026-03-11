@@ -1,0 +1,114 @@
+schema: 1
+story_id: AC-3020
+timestamp: "2026-03-08T00:00:00Z"
+iteration: 1
+verdict: PASS
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped: []
+
+total_errors: 0
+total_warnings: 1
+auto_fixable_count: 0
+
+findings:
+  lint:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    notes: "Touched files are markdown/YAML configuration documents, not lintable code files"
+
+  style:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+  syntax:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    notes: "Markdown documents, not JS/TS code"
+
+  security:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typecheck:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+    notes: "Touched files are markdown (.md) files; no TypeScript files to check"
+
+  build:
+    verdict: PASS
+    errors: 0
+    warnings: 1
+    findings:
+      - severity: warning
+        file: .claude/commands/pm-bootstrap-workflow.md
+        message: "Phase 0-2 inline context passing uses raw YAML blocks without structured serialization"
+        pre_existing: false
+        review_comment: >
+          Works for text content but requires careful escaping of YAML delimiters in plan_content
+          and SETUP-CONTEXT. Recommend documenting edge case handling for plans containing '---' delimiters.
+
+  reusability:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+  react:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typescript:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+  accessibility:
+    verdict: PASS
+    errors: 0
+    warnings: 0
+    findings: []
+
+ranked_patches:
+  - priority: 1
+    severity: medium
+    worker: build
+    file: .claude/commands/pm-bootstrap-workflow.md
+    issue: "Phase 0-2 inline context passing uses raw YAML blocks without structured serialization"
+    auto_fixable: false
+    review_comment: >
+      Works for text content but requires careful escaping of YAML delimiters in plan_content
+      and SETUP-CONTEXT. Recommend documenting edge case handling for plans containing '---' delimiters.
+
+codebase_health:
+  pre_existing_type_errors: 0
+  pre_existing_build_failures: 0
+  note: "All in-scope files passed review. One non-blocking warning documented for future improvement."
+
+tokens:
+  in: 60500
+  out: 6460

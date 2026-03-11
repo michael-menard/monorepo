@@ -11,6 +11,8 @@ model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
+  - kb_get_story
+  - kb_update_story_status
   - mcp__postgres-knowledgebase__query
   - worktree_register
 skills_used:
@@ -47,7 +49,6 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`)
 - Story ID
 - Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
 
@@ -70,15 +71,15 @@ Check if story directory already exists. If collision:
 
 Immediately update the index to prevent parallel generation windows from picking up the same story.
 
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Created
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress" })
 ```
 
 This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken and skip to the next eligible story.
 
 If story generation later fails (PM BLOCKED / PM FAILED), the status should be reverted:
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
 ```
 
 ### Phase 0.5a: Experiment Variant Assignment (WKFL-008)
@@ -257,14 +258,15 @@ ON CONFLICT (story_id) DO UPDATE SET ...
 - If KB unavailable: Log warning, continue without KB write
 - Queue failed writes to `DEFERRED-KB-WRITES.yaml` in story dir for later retry
 
-### Phase 5: Verify Index Status
+### Phase 5: Verify KB Story Status
 
-Index was already claimed in Phase 0.6. Verify the status is still `Created`. If story generation failed and was not caught earlier, revert:
-```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+Story was already claimed in Phase 0.6. Verify the status is still `in_progress`. If story generation failed and was not caught earlier, revert:
+```javascript
+kb_get_story({ story_id: "{STORY_ID}" })
+// If state is not "in_progress", or if generation failed:
+kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
 ```
 
-**Platform index note:** When `platform_index_path` is provided in context (i.e., the story was auto-picked from the platform index), the **orchestrator** (pm-story.md Step 5) handles updating `platform.stories.index.md` after the leader returns `PM COMPLETE`. The leader does NOT need to update the platform index — only the per-epic index via `/index-update`.
 
 ### Phase 5.5: Create Worktree (Pre-provision for Dev)
 
@@ -331,7 +333,7 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 | First match wins | Story in ONE experiment only (WKFL-008) |
 | Graceful degradation | Workflow continues if experiments.yaml unavailable (WKFL-008) |
 | KB persistence | MUST write story to KB after synthesis (Phase 4.5) |
-| Claim early | MUST call /index-update --status=Created in Phase 0.6 before workers |
+| Claim early | MUST call kb_update_story_status state=in_progress in Phase 0.6 before workers |
 | Revert on failure | MUST revert index to Pending if generation fails |
 | Token log | MUST call before completion |
 | Parallel spawn | Single message for all workers |

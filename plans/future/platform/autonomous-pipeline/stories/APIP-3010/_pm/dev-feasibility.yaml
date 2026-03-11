@@ -1,0 +1,117 @@
+feasible: true
+confidence: high
+rationale: "The story is well-specified with clear deliverables: a SQL migration, Drizzle schema, Zod schema, and a fire-and-continue telemetry writer. All patterns are established (wint namespace, Drizzle ORM, @repo/logger). The only hard gate is APIP-1030 for AC-7 (change-loop instrumentation), but AC-1 through AC-6, AC-8 through AC-12 can be implemented independently. The DB injection pattern and fire-and-continue error handling are well-understood. No novel architecture decisions needed."
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/database-schema/src/migrations/app/ (new SQL migration file)"
+    - "packages/backend/database-schema/src/schema/ (new Drizzle table schema definition)"
+    - "packages/backend/orchestrator/src/telemetry/ (new directory: change-telemetry.ts)"
+    - "packages/backend/orchestrator/src/nodes/change-loop.ts (instrumentation — gated on APIP-1030)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Run APIP-5007 migration runner to apply wint.change_telemetry migration to Aurora PostgreSQL"
+    - "Run drizzle-kit generate to regenerate Zod insert/select schemas in packages/backend/db/src/generated-schemas.ts"
+    - "Verify drizzle-kit check passes before merging"
+
+risks:
+  - finding: "APIP-1030 hard gate on AC-7: change-loop.ts does not exist until APIP-1030 ships"
+    mitigation: "Implement AC-1 through AC-6 and AC-8 through AC-12 first. Stub out change-loop instrumentation (AC-7) as a TODO comment with the writeTelemetry() call interface documented. Complete AC-7 immediately after APIP-1030 merge. This allows parallel progress without writing against a non-existent file."
+  - finding: "APIP-1020 ChangeSpec ADR not yet published: change_type and file_type enum values are unknown"
+    mitigation: "Use 'unknown' as the initial enum value in both the SQL migration CHECK constraint and the Zod schema z.enum(). Add a code comment: 'Enum values will be expanded to match APIP-1020 ChangeSpec ADR once published.' Document this as a follow-up task."
+  - finding: "Drizzle schema and SQL migration can drift if not kept in sync"
+    mitigation: "Run drizzle-kit check as a CI gate (AC-11). If drift is detected, fail the build. Developer must reconcile both the Drizzle schema file and the SQL migration file before merging."
+  - finding: "Fire-and-continue async pattern: unclear whether to await writeTelemetry() in the hot path"
+    mitigation: "Default to awaiting writeTelemetry() for correctness (row committed before advancing). Document the tradeoff in code comments: awaiting adds ~1-5ms DB write latency per ChangeSpec; not awaiting risks row loss on crash. If profiling shows latency impact, switch to fire-and-forget. AC-8 unit test must cover both sync and async failure modes."
+  - finding: "DB injection pattern in LangGraph graph config: requires coordination with APIP-1030's IModelDispatch interface"
+    mitigation: "Follow the same injection pattern APIP-1030 establishes. The db instance is passed via graph config (not imported directly in the node). This decouples the node from the real DB in unit tests. Confirm the injection interface with APIP-1030 output before implementing AC-7."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "SQL migration file exists and runs without error on APIP-5001 test DB"
+  - "Drizzle schema definition matches SQL migration column-for-column"
+  - "drizzle-kit check exits 0 (no drift)"
+  - "writeTelemetry() unit test: DB failure does not throw, logger.warn called"
+  - "ChangeTelemetrySchema.parse() succeeds for all 4 outcome types"
+  - "Integration round-trip: budget_exhausted + escalated_to='claude' reads back correctly"
+  - "pnpm test --filter @repo/orchestrator exits 0 (no regressions)"
+
+subtasks:
+  - id: ST-1
+    title: "Write SQL migration for wint.change_telemetry table"
+    goal: "Create the APIP-3010 SQL migration file following the wint namespace pattern. Define table columns, CHECK constraints for outcome/change_type/file_type, and all three required indexes. Include rollback companion script."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/database-schema/src/migrations/app/0026_wint_1130_worktree_tracking.sql"
+    files_to_modify:
+      - "packages/backend/database-schema/src/migrations/app/{sequence}_apip_3010_change_telemetry.sql (new file)"
+      - "packages/backend/database-schema/src/migrations/app/{sequence}_apip_3010_change_telemetry_rollback.sql (new file)"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4"]
+    depends_on: "none"
+    verification: "Apply migration to APIP-5001 test DB; verify 14 columns and 3 indexes exist via information_schema queries"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Add Drizzle schema definition for changeTelemetry table"
+    goal: "Define the changeTelemetry Drizzle ORM table schema in packages/backend/database-schema/src/schema/, mirroring the SQL migration columns exactly. Run drizzle-kit generate to produce updated Zod types."
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/ (existing table definitions for pattern)"
+      - "packages/backend/db/src/generated-schemas.ts"
+    files_to_modify:
+      - "packages/backend/database-schema/src/schema/change-telemetry.ts (new file)"
+      - "packages/backend/db/src/generated-schemas.ts (regenerated via drizzle-kit generate)"
+    acs: ["AC-11"]
+    depends_on: "ST-1"
+    verification: "drizzle-kit check exits 0; no drift between schema definition and SQL migration"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Define ChangeTelemetrySchema Zod schema and writeTelemetry() function"
+    goal: "Create packages/backend/orchestrator/src/telemetry/change-telemetry.ts with a Zod-first ChangeTelemetrySchema (z.object() with z.infer<>) and a writeTelemetry() function that inserts via Drizzle ORM with fire-and-continue error handling."
+    files_to_read:
+      - "/Users/michaelmenard/Development/monorepo/packages/backend/orchestrator/src/artifacts/evidence.ts"
+      - "packages/backend/db/src/generated-schemas.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/telemetry/change-telemetry.ts (new file)"
+    acs: ["AC-5", "AC-6"]
+    depends_on: "ST-2"
+    verification: "pnpm check-types --filter @repo/orchestrator; no TypeScript errors in new file"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Write unit tests for ChangeTelemetrySchema and writeTelemetry()"
+    goal: "Vitest unit tests covering: (a) DB insert failure does not throw and calls logger.warn; (b) all 4 outcome types produce ChangeTelemetrySchema-conformant records; (c) nullable fields (escalated_to, tokens_input, tokens_output, cost_usd) accept null values."
+    files_to_read:
+      - "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts (new file)"
+    acs: ["AC-8", "AC-9"]
+    depends_on: "ST-3"
+    verification: "pnpm test --filter @repo/orchestrator -- change-telemetry.test.ts; all tests pass"
+    estimated_tokens: 8000
+
+  - id: ST-5
+    title: "Write integration tests for migration and round-trip DB operations"
+    goal: "Vitest integration tests against APIP-5001 test DB: migration applies cleanly, row insert+readback for pass and budget_exhausted outcomes, idempotency check, drizzle-kit check passes."
+    files_to_read:
+      - "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+      - "packages/backend/database-schema/src/migrations/app/{sequence}_apip_3010_change_telemetry.sql"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.integration.test.ts (new file)"
+    acs: ["AC-10"]
+    depends_on: "ST-4"
+    verification: "pnpm test --filter @repo/orchestrator -- change-telemetry.integration; all integration tests pass against APIP-5001 test DB"
+    estimated_tokens: 9000
+
+  - id: ST-6
+    title: "Instrument change-loop node to call writeTelemetry() (GATED: after APIP-1030 merge)"
+    goal: "Modify packages/backend/orchestrator/src/nodes/change-loop.ts (created by APIP-1030) to call writeTelemetry() after each ChangeSpec attempt outcome. Receive db instance via graph config injection. Confirm IModelDispatch injection pattern with APIP-1030 output."
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/change-loop.ts (post-APIP-1030)"
+      - "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/change-loop.ts"
+    acs: ["AC-7", "AC-12"]
+    depends_on: "ST-5"
+    verification: "pnpm test --filter @repo/orchestrator exits 0; no modifications to packages/backend/orchestrator/src/models/"
+    estimated_tokens: 8000

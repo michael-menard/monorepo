@@ -1,0 +1,116 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "workflow_log_invocation inserts agent invocation row"
+    setup: "DB has wint.agent_invocations table (WINT-0040 migration applied)"
+    action: "Call handleToolCall('workflow_log_invocation', { invocationId: 'inv-001', agentName: 'dev-leader', status: 'success' })"
+    expected: "Returns { id: <uuid> }; row present in wint.agent_invocations with matching invocationId"
+    evidence: "Select from wint.agent_invocations where invocation_id = 'inv-001'"
+  - id: HP-2
+    title: "workflow_log_decision inserts HITL decision row"
+    setup: "DB has wint.hitl_decisions table"
+    action: "Call handleToolCall('workflow_log_decision', { decisionType: 'approve', decisionText: 'LGTM', operatorId: 'op-1', storyId: 'WINT-0120' })"
+    expected: "Returns { id: <uuid> }; row present in wint.hitl_decisions"
+    evidence: "Select from wint.hitl_decisions where story_id = 'WINT-0120'"
+  - id: HP-3
+    title: "workflow_log_outcome upserts story outcome row (new)"
+    setup: "DB has wint.story_outcomes table; no existing row for storyId WINT-TEST-01"
+    action: "Call handleToolCall('workflow_log_outcome', { storyId: 'WINT-TEST-01', finalVerdict: 'pass' })"
+    expected: "Returns { id: <uuid> }; exactly one row in wint.story_outcomes with story_id = 'WINT-TEST-01'"
+    evidence: "COUNT from wint.story_outcomes where story_id = 'WINT-TEST-01' = 1"
+  - id: HP-4
+    title: "workflow_log_outcome upserts on duplicate storyId"
+    setup: "Row already exists for storyId WINT-TEST-01 with finalVerdict='fail'"
+    action: "Call handleToolCall('workflow_log_outcome', { storyId: 'WINT-TEST-01', finalVerdict: 'pass' })"
+    expected: "Returns same id; row updated to finalVerdict='pass'; still exactly one row"
+    evidence: "COUNT = 1; final_verdict = 'pass'"
+  - id: HP-5
+    title: "workflow_get_story_telemetry returns full summary for known storyId"
+    setup: "2 agent_invocations rows for storyId; 1 hitl_decisions row; 1 story_outcomes row"
+    action: "Call handleToolCall('workflow_get_story_telemetry', { storyId: 'WINT-TEST-01' })"
+    expected: "Returns { invocations: [<2 items>], decisions: [<1 item>], outcome: {finalVerdict: 'pass'} }"
+    evidence: "Response object structure validated; lengths match inserted records"
+error_cases:
+  - id: EC-1
+    title: "workflow_log_invocation rejects missing required fields"
+    setup: "No setup required"
+    action: "Call with only { agentName: 'dev-leader' } — missing invocationId and status"
+    expected: "Returns MCP error result (not thrown exception); error mentions Zod validation failure"
+    evidence: "Response contains error content; no row inserted"
+  - id: EC-2
+    title: "workflow_log_decision rejects missing operatorId"
+    setup: "No setup required"
+    action: "Call with { decisionType: 'approve', decisionText: 'ok', storyId: 'X' } — missing operatorId"
+    expected: "Returns MCP error result with Zod validation message"
+    evidence: "Error content present; no row inserted"
+  - id: EC-3
+    title: "workflow_log_outcome rejects missing finalVerdict"
+    setup: "No setup required"
+    action: "Call with { storyId: 'WINT-0120' } — missing finalVerdict"
+    expected: "Returns MCP error result"
+    evidence: "Error content present; no row inserted"
+  - id: EC-4
+    title: "workflow_get_story_telemetry returns empty result for unknown storyId"
+    setup: "No records exist for storyId 'WINT-NONEXISTENT'"
+    action: "Call handleToolCall('workflow_get_story_telemetry', { storyId: 'WINT-NONEXISTENT' })"
+    expected: "Returns { invocations: [], decisions: [], outcome: null }"
+    evidence: "All arrays empty; outcome null; no exception thrown"
+edge_cases:
+  - id: ED-1
+    title: "workflow_log_invocation with all optional fields populated"
+    setup: "DB ready"
+    action: "Call with all fields: invocationId, agentName, status, storyId, phase, inputTokens, outputTokens, durationMs, modelName, etc."
+    expected: "Row inserted with all field values correct"
+    evidence: "Select row and compare all fields"
+  - id: ED-2
+    title: "workflow_log_decision with optional embedding array"
+    setup: "DB has wint.hitl_decisions with vector(1536) column"
+    action: "Call with embedding: array of 1536 floats"
+    expected: "Row inserted with embedding stored as-is; no generation attempted"
+    evidence: "Select row; embedding column not null and has length 1536"
+  - id: ED-3
+    title: "workflow_get_story_telemetry storyId with only invocations (no outcome)"
+    setup: "2 agent_invocations rows for storyId; no hitl_decisions; no story_outcomes row"
+    action: "Call handleToolCall('workflow_get_story_telemetry', { storyId: 'WINT-PARTIAL' })"
+    expected: "Returns { invocations: [<2>], decisions: [], outcome: null }"
+    evidence: "outcome is null; invocations length = 2"
+  - id: ED-4
+    title: "mcp-integration.test.ts tool count updated to reflect +4 new tools"
+    setup: "All 4 new tools registered in getToolDefinitions()"
+    action: "Run mcp-integration.test.ts"
+    expected: "Tool count assertion passes (exact count verified at implementation start)"
+    evidence: "Test passes; getToolDefinitions().length equals count in assertion"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "DB row count assertions for each table after insert"
+      - "Response structure validation (id returned, arrays returned)"
+      - "Zod error response format on invalid input"
+manual_cases:
+  - id: MC-1
+    title: "Verify WINT-0040 migration applied before integration tests run"
+    steps:
+      - "Connect to target DB"
+      - "Run: SELECT 1 FROM information_schema.tables WHERE table_schema='wint' AND table_name IN ('hitl_decisions','story_outcomes')"
+      - "Confirm both tables exist"
+    expected: "2 rows returned"
+fixture_definitions:
+  - name: "agent_invocation_row"
+    type: "DB fixture"
+    description: "Minimal valid agentInvocations row: { invocationId, agentName, status }"
+  - name: "hitl_decision_row"
+    type: "DB fixture"
+    description: "Minimal valid hitlDecisions row: { decisionType, decisionText, operatorId, storyId }"
+  - name: "story_outcome_row"
+    type: "DB fixture"
+    description: "Minimal valid storyOutcomes row: { storyId, finalVerdict }"
+risks:
+  - "WINT-0040 migration not applied in test DB — integration tests for workflow_log_decision/workflow_log_outcome will fail"
+  - "Tool count in mcp-integration.test.ts may drift if concurrent stories add tools — verify at implementation start"
+  - "Upsert conflict target must match unique index name 'story_outcomes_story_id_idx' exactly"
+  - "embedding column type vector(1536) — must pass correctly typed number[] array"

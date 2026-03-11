@@ -1,0 +1,33 @@
+schema: 1
+story_id: WISH-2000
+version: 1
+approved: true
+estimates:
+  files: 0
+  tokens: 25000
+chunks:
+  - id: 1
+    name: Schema Enhancements (Backend)
+    acs: []
+    files: []
+  - id: 2
+    name: Zod Schema Updates (Backend)
+    acs: []
+    files: []
+  - id: 3
+    name: Schema Validation Tests (Backend)
+    acs: []
+    files: []
+  - id: 4
+    name: Expanded Zod Tests (Backend)
+    acs: []
+    files: []
+  - id: 5
+    name: Schema<>Zod Alignment Tests
+    acs: []
+    files: []
+  - id: 6
+    name: Documentation
+    acs: []
+    files: []
+reuse: []

@@ -1,0 +1,13 @@
+---
+schema: 1
+story_id: KBAR-0070
+feature_dir: plans/future/platform/kb-artifact-migration
+timestamp: 2026-02-24T05:20:00Z
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false

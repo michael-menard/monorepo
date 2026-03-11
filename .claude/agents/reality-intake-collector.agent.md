@@ -58,10 +58,10 @@ From orchestrator context:
 **Actions**:
 
 1. **Scan Feature Directories**
+   ```javascript
+   kb_list_stories({ state: "completed" })
    ```
-   plans/future/*/stories.index.md
-   ```
-   - Identify stories with `status: completed` or `status: uat`
+   - Call `kb_list_stories({ state: "completed" })` to retrieve all completed stories
    - Extract feature names, locations, and completion dates
    - Note any stories marked as production-deployed
 

@@ -1,0 +1,116 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-07T19:00:00Z"
+
+  lessons_learned:
+    count: 8
+    relevant_to_scope:
+      - story_id: "WKFL-001"
+        lesson: "OUTCOME.yaml schema established for workflow meta-learning, provides historical story metrics (tokens, cycles, splits)"
+        category: reuse
+        applies_because: "Risk predictor needs OUTCOME.yaml data for similar story token estimates and cycle predictions"
+
+      - story_id: "WKFL-006"
+        lesson: "Pattern mining depends on OUTCOME.yaml but provides PATTERNS-{month}.yaml for cross-story analysis"
+        category: pattern
+        applies_because: "Risk predictor consumes WKFL-006 patterns for split risk and cycle prediction boosts, must handle graceful degradation when unavailable"
+
+      - story_id: "knowledge-context-loader"
+        lesson: "Haiku worker agents should write YAML output to _implementation/ directory for persistence across phases"
+        category: pattern
+        applies_because: "Risk predictor is haiku worker, follows same pattern of YAML output and completion signals"
+
+      - story_id: "gap-analytics-agent"
+        lesson: "Sonnet model used for complex pattern analysis across historical data, haiku insufficient for cross-story mining"
+        category: pattern
+        applies_because: "Risk predictor is simpler heuristic-based analysis (not pattern mining), haiku sufficient for cost optimization"
+
+      - story_id: "pm-story-generation-leader"
+        lesson: "PM pipeline spawns workers in parallel (test plan, UIUX, dev feasibility), synthesizes into final story file"
+        category: reuse
+        applies_because: "Risk predictor integrates as additional parallel worker in PM pipeline, predictions merged into story YAML"
+
+      - story_id: "WISH-2004"
+        lesson: "API path mismatches between frontend and backend caused 404s, leading to ADR-001 path schema"
+        category: blocker
+        applies_because: "Story involves KB queries and potential API integration, must follow ADR-001 if any HTTP calls needed"
+
+      - story_id: "PLAN.meta.md"
+        lesson: "Workflow learning principle: proposals over auto-changes, graceful degradation required"
+        category: pattern
+        applies_because: "Risk predictor must be advisory only (never block workflow), must degrade gracefully when KB/patterns unavailable"
+
+      - story_id: "pm-worker-pattern"
+        lesson: "PM workers use Task tool for spawning, TaskOutput for waiting, pass seed context to all workers"
+        category: pattern
+        applies_because: "Risk predictor spawned by pm-story-generation-leader as haiku worker, receives STORY-SEED.md context"
+
+    blockers_to_avoid:
+      - "WKFL-006 dependency blocking WKFL-007 implementation - mitigate with heuristics-only fallback mode"
+      - "KB unavailable causing prediction failure - must return conservative defaults and continue"
+      - "Predictor crash blocking PM pipeline - must never block story generation (AC-7)"
+      - "Missing OUTCOME.yaml for similar stories - must fall back to global/epic averages"
+
+    patterns_to_follow:
+      - "Haiku worker agents output YAML only, use completion signals (COMPLETE/BLOCKED/FAILED)"
+      - "Spawned workers receive context via prompt, write artifacts to _implementation/"
+      - "KB queries use kb_search with tags for filtering, timeout handling required"
+      - "Zod-first types for all schemas, never use TypeScript interfaces (CLAUDE.md)"
+      - "Advisory predictions never block workflow, confidence level indicates data quality"
+      - "Graceful degradation: workflow continues even when predictor fails"
+
+    patterns_to_avoid:
+      - "Blocking PM pipeline on prediction failure - predictions are advisory only"
+      - "Complex machine learning models - simple heuristics sufficient for MVP"
+      - "Real-time prediction updates - one-time generation at story creation sufficient"
+      - "Cross-repository patterns - single monorepo scope only (non-goal)"
+      - "Automatic story splitting - flag risk, don't auto-split (human decision required)"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}, Vite proxy maps between"
+        applies_to: ["api", "backend", "frontend"]
+
+      - id: "WKFL-PRINCIPLE-001"
+        title: "Proposals Over Auto-Changes (Workflow Learning Principle)"
+        status: active
+        constraint: "Predictions inform but don't block workflow, graceful degradation required"
+        applies_to: ["workflow-learning", "pm-pipeline", "predictions"]
+
+    constraints:
+      api_paths: "If KB queries involve HTTP: use /api/v2/{domain} pattern per ADR-001"
+      workflow_learning: "Predictions are advisory only, never block PM pipeline, degrade gracefully"
+      testing: "Unit tests for algorithms, integration test for PM pipeline graceful failure (ADR-006 E2E in dev phase)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story files for similar story analysis"
+        typical_tokens: 5000
+        mitigation: "Load OUTCOME.yaml only for similar stories (compact metrics), not full story markdown"
+
+      - operation: "KB search returning too many results"
+        typical_tokens: 3000
+        mitigation: "Limit KB queries to 10 results, filter to top 5 by similarity_score > 0.70"
+
+      - operation: "Loading WKFL-006 PATTERNS-{month}.yaml for every prediction"
+        typical_tokens: 2000
+        mitigation: "Cache patterns in memory when available, single read per prediction session"
+
+    recommended_patterns:
+      - "Query KB with targeted tags ['outcome'] for similar stories, not broad search"
+      - "Read STORY-SEED.md only (ACs available), not full story file"
+      - "Haiku model for lightweight heuristic analysis vs sonnet for complex pattern mining"
+      - "Batch similar story OUTCOME.yaml loads if multiple predictions in sequence"
+
+  warnings:
+    - "WKFL-006 (Cross-Story Pattern Mining) in pending status, patterns unavailable for initial implementation"
+    - "No OUTCOME.yaml files exist yet (0 files), similar story search will return empty results until WKFL-001 outcome generation activates"
+    - "Risk predictor must handle cold-start scenario: no patterns, no similar stories, no historical data"
+
+  tokens:
+    in: 15000
+    out: 1200

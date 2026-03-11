@@ -21,6 +21,28 @@ import {
   BlockerSchema,
 } from '../__types__/index.js'
 
+// Explicit column selectors — guard against schema-vs-DB drift
+const workStateColumns = {
+  id: workState.id,
+  storyId: workState.storyId,
+  branch: workState.branch,
+  phase: workState.phase,
+  constraints: workState.constraints,
+  recentActions: workState.recentActions,
+  nextSteps: workState.nextSteps,
+  blockers: workState.blockers,
+  kbReferences: workState.kbReferences,
+  createdAt: workState.createdAt,
+  updatedAt: workState.updatedAt,
+} as const
+
+const workStateHistoryColumns = {
+  id: workStateHistory.id,
+  storyId: workStateHistory.storyId,
+  stateSnapshot: workStateHistory.stateSnapshot,
+  archivedAt: workStateHistory.archivedAt,
+} as const
+
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -145,7 +167,7 @@ export async function kb_get_work_state(
   const { db } = deps
 
   const result = await db
-    .select()
+    .select(workStateColumns)
     .from(workState)
     .where(eq(workState.storyId, validatedInput.story_id))
     .limit(1)
@@ -173,77 +195,60 @@ export async function kb_update_work_state(
 
   const now = new Date()
 
-  // Check if work state exists
-  const existing = await db
-    .select()
-    .from(workState)
-    .where(eq(workState.storyId, validatedInput.story_id))
-    .limit(1)
-
-  if (existing.length === 0) {
-    // Create new work state
-    const result = await db
-      .insert(workState)
-      .values({
-        storyId: validatedInput.story_id,
-        branch: validatedInput.branch ?? null,
-        phase: validatedInput.phase ?? null,
-        constraints: validatedInput.constraints ?? [],
-        recentActions: validatedInput.recent_actions ?? [],
-        nextSteps: validatedInput.next_steps ?? [],
-        blockers: validatedInput.blockers ?? [],
-        kbReferences: validatedInput.kb_references ?? {},
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning()
-
-    logger.info('Work state created', {
-      storyId: validatedInput.story_id,
-      phase: validatedInput.phase,
-    })
-
-    return toWorkStateResponse(result[0])
-  }
-
-  // Update existing work state
-  const updateData: Record<string, unknown> = {
+  // Build update set for upsert — only include fields that were provided
+  const updateSet: Record<string, unknown> = {
     updatedAt: now,
   }
-
   if (validatedInput.branch !== undefined) {
-    updateData.branch = validatedInput.branch
+    updateSet.branch = validatedInput.branch
   }
   if (validatedInput.phase !== undefined) {
-    updateData.phase = validatedInput.phase
+    updateSet.phase = validatedInput.phase
   }
   if (validatedInput.constraints !== undefined) {
-    updateData.constraints = validatedInput.constraints
+    updateSet.constraints = validatedInput.constraints
   }
   if (validatedInput.recent_actions !== undefined) {
-    updateData.recentActions = validatedInput.recent_actions
+    updateSet.recentActions = validatedInput.recent_actions
   }
   if (validatedInput.next_steps !== undefined) {
-    updateData.nextSteps = validatedInput.next_steps
+    updateSet.nextSteps = validatedInput.next_steps
   }
   if (validatedInput.blockers !== undefined) {
-    updateData.blockers = validatedInput.blockers
+    updateSet.blockers = validatedInput.blockers
   }
   if (validatedInput.kb_references !== undefined) {
-    // Merge with existing kb_references
-    const existingRefs = (existing[0].kbReferences as Record<string, string>) ?? {}
-    updateData.kbReferences = { ...existingRefs, ...validatedInput.kb_references }
+    // Note: on conflict we can't easily merge JSONB in Drizzle's onConflictDoUpdate,
+    // so we overwrite. Callers should send the full merged object.
+    updateSet.kbReferences = validatedInput.kb_references
   }
 
+  // Atomic upsert — eliminates TOCTOU race under concurrent agents
   const result = await db
-    .update(workState)
-    .set(updateData)
-    .where(eq(workState.storyId, validatedInput.story_id))
+    .insert(workState)
+    .values({
+      storyId: validatedInput.story_id,
+      branch: validatedInput.branch ?? null,
+      phase: validatedInput.phase ?? null,
+      constraints: validatedInput.constraints ?? [],
+      recentActions: validatedInput.recent_actions ?? [],
+      nextSteps: validatedInput.next_steps ?? [],
+      blockers: validatedInput.blockers ?? [],
+      kbReferences: validatedInput.kb_references ?? {},
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: workState.storyId,
+      set: updateSet,
+    })
     .returning()
 
-  logger.info('Work state updated', {
+  const wasCreated = result[0].createdAt.getTime() === result[0].updatedAt.getTime()
+  logger.info(wasCreated ? 'Work state created' : 'Work state updated', {
     storyId: validatedInput.story_id,
-    fieldsUpdated: Object.keys(updateData).filter(k => k !== 'updatedAt'),
+    phase: validatedInput.phase,
+    fieldsUpdated: wasCreated ? undefined : Object.keys(updateSet).filter(k => k !== 'updatedAt'),
   })
 
   return toWorkStateResponse(result[0])
@@ -267,7 +272,7 @@ export async function kb_archive_work_state(
 
   // Get existing work state
   const existing = await db
-    .select()
+    .select(workStateColumns)
     .from(workState)
     .where(eq(workState.storyId, validatedInput.story_id))
     .limit(1)
@@ -335,7 +340,7 @@ export async function kb_get_work_state_history(
   const { db } = deps
 
   const result = await db
-    .select()
+    .select(workStateHistoryColumns)
     .from(workStateHistory)
     .where(eq(workStateHistory.storyId, storyId))
     .orderBy(workStateHistory.archivedAt)

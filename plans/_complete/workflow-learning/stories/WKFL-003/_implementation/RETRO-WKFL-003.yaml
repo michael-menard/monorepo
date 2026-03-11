@@ -1,0 +1,48 @@
+schema_version: 1
+story_id: WKFL-003
+retro_generated_at: "2026-02-22T00:00:00Z"
+retro_scope: batch
+
+story_analysis:
+  story_id: WKFL-003
+  title: "Emergent Heuristic Discovery"
+  completed_at: "2026-02-07T20:30:00Z"
+  status: uat
+
+  token_metrics:
+    estimated: 60000
+    actual: 11882
+    variance_percent: -80.2
+    rating: under_budget
+    note: "TOKEN-LOG only captures PM generation phase (validation path, no full generation). Heavily incomplete - story not yet fully implemented. Token log captures story markdown generation from existing story.yaml only."
+
+  review_metrics:
+    cycles: null
+    baseline: 2
+    above_baseline: null
+    failure_breakdown: null
+    note: "No REVIEW.yaml found in _implementation/. Story forced to continue despite WKFL-002 dependency in-progress."
+
+  phase_metrics:
+    slowest_phase: unknown
+    token_heaviest_phase: pm-generate
+    failure_phases: []
+
+  decision_metrics:
+    auto_accepted: null
+    escalated: null
+    escalation_rate: null
+
+  ac_metrics:
+    total_acs: null
+    passed_first_try: null
+    failed_first_try: null
+    ac_pass_rate: null
+    note: "QA-VERIFY.yaml not found; story moved to UAT via force-continue"
+
+  observations:
+    - "Story was force-continued despite WKFL-002 dependency still in-progress"
+    - "Warning flag set: 'Dependency WKFL-002 still in-progress - force-continued by user'"
+    - "PM token log only captured markdown generation from existing story.yaml (validation path)"
+    - "Significant token undercount in log - does not represent full implementation"
+    - "Dependency bypass is a workflow risk pattern - downstream dependencies of WKFL-002 may be incomplete"

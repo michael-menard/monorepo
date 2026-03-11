@@ -33,10 +33,10 @@ import {
  * })
  * ```
  *
- * @example Get ready-to-work stories with pagination
+ * @example Get ready stories with pagination
  * ```typescript
  * const readyStories = await storyGetByStatus({
- *   state: 'ready_to_work',
+ *   state: 'ready',
  *   limit: 100,
  *   offset: 50,
  * })

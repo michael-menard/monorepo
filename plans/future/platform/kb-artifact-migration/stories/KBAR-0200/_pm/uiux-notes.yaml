@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  KBAR-0200 modifies the knowledge-context-loader agent markdown file and
+  potentially the TypeScript LangGraph node (load-knowledge-context.ts).
+  There is no frontend impact, no UI component changes, and no Playwright
+  evidence required. frontend_impacted: false per seed recommendations.

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-03-07
-version: 4.1.0
+updated: 2026-02-22
+version: 4.0.0
 type: leader
 permission_level: setup
 triggers: ["/pm-bootstrap-workflow"]
@@ -41,10 +41,7 @@ The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. W
 1. **Validate plan_content** — must be non-empty and >100 chars. If not: BLOCKED: "Plan content is empty or too short"
 2. **Validate prefix** — must be 2–6 uppercase alphanumeric chars
 3. **Validate feature_dir** — must be a valid path string (does not need to exist yet)
-4. **Check for collision** — call `kb_list_stories({ feature: "{project_name}", limit: 1 })`.
-   - If one or more stories returned: BLOCKED: "Stories already exist in KB for plan '{project_name}' — bootstrap already run"
-   - If zero stories returned: proceed to Step 5
-   - If `kb_list_stories` is unavailable (tool not found, connection error, timeout): log warning `"KB collision check unavailable — falling back to filesystem check"`, then fall back to filesystem check: if `{feature_dir}/stories.index.md` exists on disk: BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run (filesystem fallback)"; otherwise proceed to Step 5
+4. **Check for collision** — Call `kb_list_stories({ feature: "{prefix}", limit: 100 })`. If any stories exist with this prefix: BLOCKED: "Bootstrap already run for {feature_dir} — {N} stories exist in KB"
 5. **Extract raw plan summary** — first 500 chars of plan_content
 6. **Return SETUP-CONTEXT inline**
 
@@ -53,7 +50,7 @@ The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. W
 1. **Check for existing context** — Read `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md` if exists
 2. **Validate feature directory** — must exist and contain `PLAN.md` or `PRD.md`
 3. **Derive prefix** — from directory name (remove hyphens, first 4 chars, uppercase)
-4. **Check for collision** — verify `stories.index.md` doesn't already exist
+4. **Check for collision** — Call `kb_list_stories({ feature: "{prefix}", limit: 100 })`. If any stories exist with this prefix: BLOCKED: "Bootstrap already run for {feature_dir} — {N} stories exist in KB"
 5. **Create bootstrap dir** — create `{FEATURE_DIR}/_bootstrap/` if needed
 6. **Write AGENT-CONTEXT.md** — see format below
 7. **Write CHECKPOINT.md** — see format below
@@ -111,9 +108,7 @@ timestamp: "{TIMESTAMP}"
 | Error | Action |
 |-------|--------|
 | Plan content empty | BLOCKED: "Plan content is empty or too short" |
-| KB stories exist for plan | BLOCKED: "Stories already exist in KB for plan '{project_name}' — bootstrap already run" |
-| kb_list_stories unavailable | Warning: "KB collision check unavailable — falling back to filesystem check" → filesystem fallback |
-| stories.index.md exists (fallback) | BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run (filesystem fallback)" |
+| KB query failed | SETUP BLOCKED: "Cannot verify bootstrap status — KB unavailable. Try again later." |
 | Directory not found (file mode) | BLOCKED: "Directory not found: {path}" |
 | No plan file (file mode) | BLOCKED: "No PLAN.md or PRD.md in {dir}" |
 

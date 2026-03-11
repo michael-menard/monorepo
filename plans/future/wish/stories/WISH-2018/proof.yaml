@@ -1,0 +1,15 @@
+schema: 1
+story_id: WISH-2018
+completed_at: 2026-02-01T20:52:37.278Z
+summary: []
+deliverables:
+  - path: apps/api/lego-api/core/cdn/cloudfront.ts
+    type: code
+  - path: apps/api/lego-api/core/cdn/index.ts
+    type: code
+  - path: apps/api/lego-api/core/cdn/__tests__/cloudfront.test.ts
+    type: tests
+verification:
+  tests_passed: 470
+  all_acs_verified: true
+limitations: []

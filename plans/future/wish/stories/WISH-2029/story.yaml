@@ -1,0 +1,24 @@
+schema: 1
+id: WISH-2029
+feature: wish
+type: feature
+state: uat
+title: Update architecture documentation for lego-api/domains/ pattern
+points: null
+priority: null
+blocked_by: null
+depends_on: []
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Update `docs/architecture/api-layer.md` to accurately document the current `apps/api/lego-api/domains/` hexagonal
+  architecture pattern as the canonical approach for all backend domain development.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-02-01T20:52:37.290Z
+updated_at: 2026-02-01T20:52:37.290Z

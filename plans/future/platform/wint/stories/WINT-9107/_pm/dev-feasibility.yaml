@@ -1,0 +1,142 @@
+feasible: true
+confidence: high
+rationale: >
+  The orchestrator runner infrastructure is fully implemented and tested.
+  packages/backend/orchestrator/src/runner/ contains NodeCircuitBreaker, withNodeRetry,
+  createNode(), classifyError(), RETRY_PRESETS, a complete error hierarchy, and state helpers
+  that already produce the blocked/CIRCUIT_OPEN GraphState updates required by the ACs.
+  The runner/index.ts exports all primitives via a clean named-export surface.
+  WINT-9107 scope is bounded to: (1) gap analysis vs WINT-9105 ADR, (2) verifying/adding
+  per-node circuit breaker isolation, (3) confirming or documenting the import path for node
+  authors, and (4) adding integration test coverage for the HALF_OPEN recovery path and
+  the blocked/CIRCUIT_OPEN state output. No new primitives are expected to be built.
+  The WINT-9010 (workflow-logic) dependency is in-qa and re-export work is conditional
+  on whether the gap analysis finds middleware types that must live there.
+
+complexity: low
+
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/runner/
+    - packages/backend/orchestrator/src/runner/__tests__/
+    - packages/backend/workflow-logic/src/ (conditional — only if re-export needed)
+    - packages/backend/orchestrator/docs/architecture/ (gap analysis artifact)
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: "WINT-9105 ADR (adr-langgraph-error-handling.md) may not yet exist"
+    mitigation: >
+      If the ADR is not yet committed, perform AC-1 gap analysis against the WINT-9105
+      story specification. Document coverage confirmation inline in the story implementation
+      notes. Do not block — the existing runner implementation is grounded in the seed's
+      documented requirements.
+  - finding: "workflow-logic re-export scope is conditionally coupled to WINT-9010 in-qa"
+    mitigation: >
+      If WINT-9010 QA has not resolved before WINT-9107 implementation begins, defer the
+      workflow-logic re-export subtask (ST-4) to a follow-up or coordinate explicitly.
+      AC-7 can be satisfied by documenting the existing runner/index.ts path without requiring
+      workflow-logic re-export.
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator — all existing runner tests pass (AC-9)"
+  - "pnpm check-types --filter @repo/orchestrator — zero TypeScript errors (AC-10)"
+  - "pnpm test --filter @repo/orchestrator --coverage — >=80% on new/changed code (AC-8)"
+  - "Integration test output showing NodeRetryExhaustedError → routingFlags: ['blocked'] (AC-5)"
+  - "Integration test output showing CIRCUIT_OPEN → state update with code: 'CIRCUIT_OPEN' (AC-6)"
+  - "Integration test output showing HALF_OPEN → CLOSED state transition on successful probe (EC-2)"
+  - "Gap analysis document or inline coverage notes confirming WINT-9105 alignment (AC-1)"
+
+subtasks:
+  - id: ST-1
+    title: "Perform WINT-9105 gap analysis and document coverage"
+    goal: >
+      Compare WINT-9105 error handling strategy requirements against the existing runner
+      implementation (circuit-breaker.ts, retry.ts, node-factory.ts, types.ts). Produce
+      a gap analysis artifact: either a markdown doc at
+      packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md confirming
+      full coverage, or a list of gaps to close in subsequent subtasks.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/retry.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/types.ts
+      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+    files_to_modify:
+      - packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+    acs: ["AC-1"]
+    depends_on: none
+    verification: "File exists at packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md with coverage verdict"
+    estimated_tokens: 8000
+
+  - id: ST-2
+    title: "Verify per-node NodeCircuitBreaker isolation and add coverage"
+    goal: >
+      Confirm via code review that each createNode() call instantiates a new NodeCircuitBreaker
+      instance (already true by inspection of node-factory.ts line 125-127). Add or extend a
+      unit test in node-factory.test.ts that explicitly asserts two nodes of the same type
+      have independent circuit breaker state — one OPEN does not affect the other.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator node-factory — new isolation test passes"
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: "Add integration tests for HALF_OPEN recovery and CIRCUIT_OPEN blocked state"
+    goal: >
+      Extend integration.test.ts to cover: (a) HALF_OPEN recovery — drive circuit to OPEN,
+      advance fake timers past recoveryTimeoutMs, send probe that succeeds, assert CLOSED state;
+      (b) HALF_OPEN probe failure — send probe that fails, assert circuit stays OPEN;
+      (c) confirm CIRCUIT_OPEN state returns GraphState update with code: 'CIRCUIT_OPEN' and
+      routingFlags includes 'blocked'. These are the gaps identified in test plan HP-5 and EC-2/EC-3.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/state-helpers.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+    acs: ["AC-5", "AC-6", "AC-8", "AC-9"]
+    depends_on: ST-2
+    verification: "pnpm test --filter @repo/orchestrator integration — HALF_OPEN and CIRCUIT_OPEN tests pass; all existing tests pass"
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Document import path for node authors (AC-7)"
+    goal: >
+      Produce a brief developer guide at packages/backend/orchestrator/docs/node-author-guide.md
+      documenting: (a) the canonical import path from runner/index.ts; (b) createNode() / createLLMNode()
+      / createToolNode() / createSimpleNode() usage patterns with examples; (c) RETRY_PRESETS usage;
+      (d) how to configure circuit breaker per node. If gap analysis (ST-1) reveals that workflow-logic
+      re-export is needed, add the re-export to packages/backend/workflow-logic/src/ (conditional).
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/index.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/workflow-logic/src/index.ts
+    files_to_modify:
+      - packages/backend/orchestrator/docs/node-author-guide.md
+    acs: ["AC-7"]
+    depends_on: ST-1
+    verification: "packages/backend/orchestrator/docs/node-author-guide.md exists with import examples; pnpm check-types passes if workflow-logic modified"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Final quality gate: type check, lint, coverage report"
+    goal: >
+      Run pnpm check-types --filter @repo/orchestrator and pnpm lint on all new/changed files.
+      Run pnpm test --coverage and verify >=80% coverage on new/changed code. Confirm all
+      11 ACs are verified by test output and artifacts.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+      - packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    files_to_modify: []
+    acs: ["AC-8", "AC-9", "AC-10", "AC-11"]
+    depends_on: ST-3
+    verification: "Zero TypeScript errors; zero ESLint errors; >=80% coverage; all runner tests pass"
+    estimated_tokens: 3000

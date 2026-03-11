@@ -1,0 +1,315 @@
+---
+story_id: WINT-2070
+title: "Implement Cache Warming Strategy — Create cache-warm Skill that Invokes All Populate Scripts"
+elab_phase: 1
+elab_date: "2026-03-03"
+analyst: elab-analyst
+preliminary_verdict: PASS
+
+summary:
+  points: 1
+  complexity: low
+  deliverable: "Single markdown file: .claude/skills/cache-warm/SKILL.md"
+  checklist_items: 10
+  pass_count: 9
+  conditional_count: 1
+  fail_count: 0
+  gaps_found: 2
+  gaps_mvp_critical: 0
+  gaps_non_blocking: 2
+  opportunities_found: 2
+
+---
+
+# ELAB.yaml — Phase 1 Audit: WINT-2070
+
+## Checklist Evaluation
+
+### 1. Scope Alignment
+
+status: PASS
+
+The story scope matches the index entry precisely.
+
+- Index entry (stories.index.md ~line 1080): "Create cache-warm skill that pre-populates all caches before workflow starts"
+- Story goal: Create `.claude/skills/cache-warm/SKILL.md` as a single entry point invoking 4 populate scripts
+- Infrastructure annotation in index ("new skill") matches the single-file deliverable
+- `consumed_by: [WINT-2080]` aligns with the index's WINT-2080 entry ("Create context-warmer Agent — Depends On: WINT-2070")
+- `depends_on: [WINT-2030, WINT-2040, WINT-2050, WINT-2060]` matches index dependency chain
+
+No scope drift detected. Story title, index entry, and deliverable are consistent.
+
+---
+
+### 2. Internal Consistency
+
+status: PASS
+
+Goals, non-goals, and acceptance criteria are mutually consistent.
+
+- Non-goal "Do not implement a TypeScript orchestrator script" is consistent with ACs specifying `pnpm tsx` invocation of existing scripts (AC-3 through AC-6)
+- Non-goal "Do not extract populate-utils.ts shared module" is reflected as a follow-on opportunity in dev_feasibility and non-goals — correctly deferred
+- Non-goal "Do not require WINT-2040 to pass code review before this story can be completed" is supported by AC-9 (--skip=agent-missions option)
+- 11 ACs map cleanly to the 6-phase architecture (Phase 1 = AC-2/AC-11; Phases 2-5 = AC-3/4/5/6; Phase 6 = AC-7/8; plus AC-1/AC-9/AC-10 covering format and skip behavior)
+- touches_database: true is accurate — the skill invokes scripts that write to wint.context_packs
+- touches_backend: false is accurate — the skill itself is a markdown file, not TypeScript
+
+One minor observation: the story frontmatter says `touches_database: true` but the skill itself doesn't directly touch the DB; the populate scripts do. This is defensible (indirect touch) and not a contradiction worth flagging as a gap.
+
+---
+
+### 3. Reuse-First
+
+status: PASS
+
+Reuse is the dominant pattern throughout.
+
+- Skill format: explicitly references `.claude/skills/lint-fix/SKILL.md` as gold standard — confirmed read during audit; format is well-established with phased execution, gate behavior, parameters, and usage section
+- Pre-workflow analog: `.claude/skills/session-create/SKILL.md` is cited — confirmed read; the "setup before workflow" pattern maps well to cache-warm's orchestration purpose
+- All 4 populate scripts exist at confirmed paths — no new scripts created
+- No new packages, no new migrations, no new TypeScript
+- `pnpm tsx` invocation pattern matches existing developer conventions for these scripts
+
+The cache-warm skill does not reuse a "script runner" utility because none exists for this pattern — the reuse here is structural (skill format) and referential (existing scripts), which is appropriate.
+
+---
+
+### 4. Ports & Adapters
+
+status: PASS (N/A)
+
+The deliverable is a markdown instruction file, not a TypeScript module. No ports/adapters pattern applies. The skill invokes existing scripts that are already tested and architected independently.
+
+---
+
+### 5. Testability
+
+status: PASS
+
+The testing strategy is well-matched to the deliverable type.
+
+- Correctly identifies that Vitest coverage does not apply to a markdown file
+- Strategy is manual: smoke test + format compliance check (MC-1, MC-2)
+- Happy path cases (HP-1, HP-2, HP-3) cover the main execution paths
+- Error cases (EC-1 through EC-4) cover the failure modes including the port-confusion scenario
+- Edge cases (ED-1 through ED-3) include idempotency (upsert behavior) and LLM-agent execution
+- SQL evidence queries are provided and specific
+- MC-1 includes minimum row count (>= 13) with per-pack-type breakdown
+- WINT-2040 risk is acknowledged in HP-1 setup and risks list with appropriate mitigation (use --skip=agent-missions)
+
+The only honest limitation: EC-4 (wrong port) requires a real DB running to verify — this is documented and accepted.
+
+---
+
+### 6. Decision Completeness
+
+status: PASS
+
+No blocking TBDs remain.
+
+- Path discrepancy for agent-mission-cache-populator.ts is documented and resolved: use `packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts` verbatim (AC-6)
+- WINT-2040 failed-code-review is handled by --skip=agent-missions (AC-9)
+- Port assignments are fixed: DATABASE_URL=5432, KB_DATABASE_URL=5433 (AC-2, AC-11)
+- Sequential vs parallel execution is decided: sequential is MVP (Architecture Notes)
+- Summary block format is defined with a concrete example
+
+No open design decisions were found that would block implementation.
+
+---
+
+### 7. Risk Disclosure
+
+status: PASS
+
+Risks are identified and mitigated appropriately.
+
+Disclosed risks:
+1. WINT-2040 failed-code-review — mitigated by --skip=agent-missions (AC-9)
+2. Port confusion (5432 vs 5433) — mitigated by explicit port documentation in AC-2, AC-11, and EC-4 test case
+3. Skill is markdown, not TypeScript — standard quality gates don't apply; mitigated by smoke test + format compliance check
+4. Real DB required for smoke tests — acknowledged; CI cannot run these without provisioning
+5. Non-standard path for agent-mission-cache-populator.ts — mitigated by verbatim path in AC-6 and Architecture Notes
+
+All risks are at appropriate severity for a 1-point story. No undisclosed systemic risks identified.
+
+One minor observation: the story notes WINT-2040 is "failed-code-review" but does not address what happens if WINT-2040 is fixed and its path moves. The skill would reference the correct path (packages/backend/database-schema/src/seed/) regardless — this is not a risk since the path is not expected to change after code review passes.
+
+---
+
+### 8. Story Sizing
+
+status: CONDITIONAL_PASS
+
+note: "Sizing is defensible but the 11-AC count warrants a callout."
+
+The 1-point estimate is accurate for the actual work involved (one markdown file). However, 11 acceptance criteria for a 1-point story is a relatively high AC density. Analysis:
+
+- AC-1: File exists with valid frontmatter — trivial
+- AC-2: Documents env vars with ports — content requirement
+- AC-3 through AC-6: Documents 4 script invocations — 4 similar ACs, each a line in the skill
+- AC-7: Non-fatal failure behavior — content requirement
+- AC-8: Summary block format — content requirement
+- AC-9: --skip option documented — content requirement
+- AC-10: Human + LLM executable — quality/format requirement
+- AC-11: Precondition check — content requirement
+
+Most ACs are satisfied by writing one well-structured markdown file. The 11-AC count reflects completeness-checking rather than 11 separate implementation tasks. The 1-point estimate is correct.
+
+Conditional: The 6-phase architecture description and the AC-to-phase mapping are clear enough that a dev agent can use the story as a direct authoring guide. No split required.
+
+---
+
+### 9. Subtask Decomposition
+
+status: PASS
+
+Subtasks are logical, ordered, and complete.
+
+- ST-1 (read canonical references, ~3K tokens): orientation step, no output — appropriate
+- ST-2 (verify populate script paths, ~4K tokens): verification step before authoring — appropriate
+- ST-3 (create SKILL.md, ~6K tokens): single implementation step covering all 11 ACs — appropriate given single-file deliverable
+- ST-4 (smoke test, ~5K tokens): real-DB execution validation — appropriate
+
+Total estimated: ~18K tokens — reasonable for a 1-point story.
+
+ST-1 includes `.claude/skills/next-actions/SKILL.md` as a third reference, but the story's canonical references section only lists lint-fix and session-create. This is a minor inconsistency (ST-1 is more inclusive than the Reuse Plan) and is non-blocking — reading one additional skill file for orientation is fine.
+
+---
+
+### 10. Clarity Format
+
+status: PASS
+
+The story is well-structured and complete.
+
+Present:
+- Goal section: clear single-sentence goal with 5 numbered sub-goals
+- Non-Goals: explicit, comprehensive (9 items)
+- Architecture Notes: 6-phase structure with concrete pseudocode
+- Summary Block Format: example output provided
+- Canonical References table: 4 entries with "Why" column
+- Subtasks: 4 STs with files-to-read/modify, coverage, dependencies, verification, estimated tokens
+- Test Plan: referenced inline and in _pm/test-plan.yaml (which was confirmed to be the YAML embedded in the story frontmatter)
+- Reality Baseline: gap acknowledged
+
+The story uses the established WINT story format consistently. No structural gaps.
+
+---
+
+## Gap Analysis
+
+### MVP-Critical Gaps
+
+none
+
+No gaps were found that would block the core deliverable (creating .claude/skills/cache-warm/SKILL.md) or that would leave an implementer uncertain about what to build.
+
+---
+
+### Non-Blocking Opportunities
+
+#### OPP-1: Skill discoverability — no central skill registry
+
+description: |
+  The story creates a new skill at `.claude/skills/cache-warm/SKILL.md` but there is no
+  central skill index or registry file (e.g. `.claude/skills/README.md` or a skills manifest).
+  The lint-fix skill documents "who should call this" and integration notes, but the skills
+  directory does not have a top-level inventory. As the skill count grows (currently 23+ skills),
+  discoverability becomes harder for agents picking which skill to invoke.
+
+  This is not a WINT-2070 gap — the story's scope is the skill file itself. But it is a
+  good follow-on candidate.
+
+mvp_critical: false
+suggested_action: "Flag as WINT-Phase-3 opportunity: create .claude/skills/INDEX.md listing all skills with one-line descriptions and caller guidance"
+decision: out_of_scope
+decision_rationale: "Phase 3 follow-on; not blocking WINT-2070 delivery"
+
+---
+
+#### OPP-2: Summary output format not machine-parseable by regex
+
+description: |
+  AC-8 and ED-2 require the summary block to be parseable by the context-warmer agent (WINT-2080).
+  The example summary format is human-readable but lacks a machine-parseable anchor (e.g. a
+  consistent prefix like `CACHE_WARM_RESULT:` or a JSON block). The dev_feasibility notes
+  "ensure summary output is machine-parseable before WINT-2080 authoring" as a follow-on.
+
+  This is partially addressed (the structured table format is regular enough for regex), but
+  the story does not specify an exact parse pattern. WINT-2080 will need to define what it
+  expects. If WINT-2070 and WINT-2080 are authored independently, there is a coordination risk.
+
+  Recommendation: the SKILL.md should include a comment noting that the summary block format
+  is a contract for WINT-2080 and should not be changed without updating that agent. This
+  does not change any AC but reduces interface drift risk.
+
+mvp_critical: false
+suggested_action: "Add a note in the SKILL.md's Phase 6 section: 'Summary block format is consumed by context-warmer agent (WINT-2080) — treat as interface contract'"
+decision: implementation_note
+decision_rationale: "Low-effort one-liner in Phase 6; implementer should include it but not as a new AC"
+
+---
+
+## Discovery Notes
+
+### Populate Script Path Verification
+
+All 4 populate scripts were confirmed to exist at their specified paths:
+
+- packages/backend/mcp-tools/src/scripts/populate-project-context.ts: EXISTS
+- packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts: EXISTS
+- packages/backend/mcp-tools/src/scripts/populate-library-cache.ts: EXISTS
+- packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts: EXISTS
+
+The non-standard path for agent-mission-cache-populator.ts is correctly identified and documented in the story. No correction needed.
+
+### Skill Format Conformance
+
+The lint-fix/SKILL.md gold standard uses:
+- YAML frontmatter (name, description)
+- "Who Should Call This" section
+- Gate Behavior section
+- Description section
+- Usage section with --flag examples
+- Parameter table
+- Phase-by-phase execution instructions with code blocks
+- Terminal output example
+
+The cache-warm skill architecture (6-phase structure, --skip option, env var documentation, summary block) maps cleanly to this format. The story's Architecture Notes provide enough detail that an implementer can write a conformant skill without additional guidance.
+
+The session-create/SKILL.md analog is less directly applicable (it wraps an MCP tool call, not shell scripts) but demonstrates the "pre-workflow orchestration" pattern well. The Step 1/2/3 structure vs Phase 1-N structure difference is a format variant, not a conflict — lint-fix is the primary format reference.
+
+### WINT-2040 Status Assessment
+
+WINT-2040 is noted as "failed-code-review" in the story context table and in the git status (moved to failed-code-review directory). The agent-mission-cache-populator.ts script nonetheless exists at the expected path, meaning the implementation exists even if the code review did not pass. The --skip=agent-missions flag correctly handles this — the skill is fully usable without WINT-2040 resolution.
+
+### Cache-warm Skill Does Not Yet Exist
+
+Confirmed: `.claude/skills/cache-warm/` does not exist in the skills directory. The story is creating a new skill, not modifying an existing one.
+
+---
+
+## Preliminary Verdict
+
+verdict: PASS
+decided_at: "2026-03-03"
+decided_by: elab-autonomous-decider
+
+rationale: |
+  WINT-2070 is a well-scoped, internally consistent 1-point story delivering a single markdown
+  file. All 10 checklist items pass (9 PASS, 1 CONDITIONAL_PASS on sizing, which is calibrated
+  correctly). All 4 populate script paths are verified to exist. No blocking gaps were found.
+  The two non-blocking opportunities (skill registry, machine-parseable summary contract) are
+  appropriate for follow-on stories. The story provides sufficient detail in its Architecture
+  Notes and Canonical References for an implementer to proceed directly to ST-1 without
+  clarification.
+
+  Ready to move to implementation.
+
+implementation_notes:
+  - "Implementer should start with ST-1 (read lint-fix and session-create skills) before authoring"
+  - "The 6-phase structure in Architecture Notes is the primary authoring guide — follow it closely"
+  - "Use the exact pnpm tsx paths specified in ACs 3-6; do not abbreviate or assume"
+  - "The --skip=agent-missions default workaround for WINT-2040 is required — do not omit it"
+  - "Port numbers (5432, 5433) must appear verbatim in the skill file per AC-2 and AC-11"
+  - "OPP-2 is low-urgency but worth adding a one-line comment in Phase 6 about WINT-2080 interface contract"

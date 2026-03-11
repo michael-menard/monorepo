@@ -34,7 +34,7 @@ Update story status based on verdict, move story to appropriate directory, spawn
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
+Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 - `feature_dir`, `story_id`, `base_path`, `verification_file`
 
 Read from Knowledge Base:
@@ -84,7 +84,7 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
      artifact_type: "verification",
      phase: "qa_verification",
      iteration: 0,
-     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
@@ -189,7 +189,7 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
      artifact_type: "verification",
      phase: "qa_verification",
      iteration: 0,
-     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
@@ -262,7 +262,7 @@ feature_dir: {FEATURE_DIR}
 story_id: {STORY_ID}
 verdict: PASS | FAIL
 status_updated: uat | failed-qa
-moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/failed-qa/{STORY_ID}
+moved_to: {FEATURE_DIR}/stories/{STORY_ID}
 index_updated: true
 kb_findings_captured: true | false | skipped  # only on PASS, false if no notable findings
 tokens_logged: true
