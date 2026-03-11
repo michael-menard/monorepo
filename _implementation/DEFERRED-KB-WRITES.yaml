@@ -274,7 +274,118 @@
       "retry_count": 0,
       "story_id": "APIP-5003",
       "agent": "review-aggregate-leader"
+    },
+    {
+      "id": "f4f9b057-060d-4f56-b849-27981a52ec42",
+      "operation": "kb_add_lesson",
+      "payload": {
+        "title": "Schema merge conflict resolution: preserving intersecting story columns",
+        "story_id": "CDTS-1030",
+        "category": "edge-cases",
+        "what_happened": "During CDTS-1030 implementation, a merge conflict with KFMB-1020 resulted in the stories table retaining columns (completedAt, fileSyncedAt, fileHash) that CDTS-1030 intended to move to storyDetails.",
+        "why": "KFMB-1020 added these columns to the stories header table after CDTS-1030 had been developed. Rather than removing KFMB-1020's additions, the merge resolution preserved them.",
+        "resolution": "Document the duplication in evidence deviations. When resolving schema migration conflicts, prioritize preserving all story intent and document the architectural rationale in the verification evidence.",
+        "tags": [
+          "schema",
+          "merge-conflicts",
+          "drizzle",
+          "qa-lesson"
+        ]
+      },
+      "timestamp": "2026-03-08T08:47:08.584Z",
+      "error": "DATABASE_ERROR: KB lesson write failed during qa-verify workflow",
+      "retry_count": 0,
+      "story_id": "CDTS-1030",
+      "agent": "qa-verify-completion-leader"
+    },
+    {
+      "id": "8b74b783-d628-4c4c-9a6d-8c680b58c3d9",
+      "operation": "kb_add_lesson",
+      "payload": {
+        "title": "Self-referencing Drizzle foreign keys require inline type import syntax",
+        "story_id": "CDTS-1030",
+        "category": "pattern",
+        "what_happened": "CDTS-1030 schema defined a self-referencing FK on plans.parentPlanId → plans.id. Initial implementation failed until the reference was updated to use inline type import syntax.",
+        "why": "Drizzle ORM resolves self-referencing FKs at runtime. To avoid circular dependency issues, Drizzle requires the referenced column to be accessed via a function that performs inline type import.",
+        "resolution": "Use inline type import syntax for self-referencing FKs: .references((): import('drizzle-orm/pg-core').AnyPgColumn => table.col, { onDelete: 'restrict' }). This pattern is documented and verified in schema.ts.",
+        "tags": [
+          "drizzle",
+          "schema",
+          "self-referencing-fk",
+          "pattern"
+        ]
+      },
+      "timestamp": "2026-03-08T08:47:11.616Z",
+      "error": "DATABASE_ERROR: KB lesson write failed during qa-verify workflow",
+      "retry_count": 0,
+      "story_id": "CDTS-1030",
+      "agent": "qa-verify-completion-leader"
+    },
+    {
+      "id": "b8a3289b-a3cd-44cd-8ee2-120635ae4d4d",
+      "operation": "kb_add_lesson",
+      "payload": {
+        "title": "Drizzle does not support CHECK constraints natively",
+        "story_id": "CDTS-1030",
+        "category": "pattern",
+        "what_happened": "CDTS-1030 schema includes a storyKnowledgeLinks table with a link_type column requiring CHECK constraint. Drizzle schema definition did not include CHECK constraint syntax.",
+        "why": "Drizzle ORM does not provide native CHECK constraint support. Constraint enforcement must be delegated to the database migration DDL.",
+        "resolution": "When CHECK constraints are needed, define them in the database migration file (0035_*.sql) and document the constraint clearly in the Drizzle schema column comment.",
+        "tags": [
+          "drizzle",
+          "schema",
+          "check-constraints",
+          "postgres"
+        ]
+      },
+      "timestamp": "2026-03-08T08:47:13.432Z",
+      "error": "DATABASE_ERROR: KB lesson write failed during qa-verify workflow",
+      "retry_count": 0,
+      "story_id": "CDTS-1030",
+      "agent": "qa-verify-completion-leader"
+    },
+    {
+      "id": "01701d9f-b885-4be2-b213-378e9a4c25f5",
+      "operation": "kb_add_lesson",
+      "payload": {
+        "title": "Path hygiene in story.yaml AC evidence_command fields",
+        "story_id": "AC-3020",
+        "category": "testing",
+        "what_happened": "Story.yaml AC evidence_command fields referenced stale paths (.opencode/ directory) while actual implementation lived under .claude/ directory. QA verification required cross-referencing actual filesystem paths to validate ACs correctly.",
+        "resolution": "When story.yaml AC evidence_command paths diverge from actual implementation paths, QA must verify against actual filesystem paths. The story seed template should be updated to match the current directory convention to avoid confusion. Recommend pre-commit validation to ensure template paths match live directory structure.",
+        "tags": [
+          "qa",
+          "story-authoring",
+          "path-hygiene"
+        ]
+      },
+      "timestamp": "2026-03-08T17:45:13.616Z",
+      "error": "Embedding generation failed (KB service unavailable)",
+      "retry_count": 0,
+      "story_id": "AC-3020",
+      "agent": "qa-verify-completion-leader"
+    },
+    {
+      "id": "d3320760-58cd-4560-a219-7978d8bec543",
+      "operation": "kb_add_lesson",
+      "payload": {
+        "title": "Markdown-only agent configuration changes are test-exempt",
+        "story_id": "AC-3020",
+        "category": "testing",
+        "what_happened": "AC-3020 involved removing dead artifact generation steps from agent markdown files (.claude/agents/ and .claude/commands/). QA verification was requested for all 5 ACs, but no unit tests, build steps, or coverage checks were applicable.",
+        "resolution": "Markdown-only agent configuration changes (removing obsolete artifact generation references like PLAN.meta.md, PLAN.exec.md, CHECKPOINT.md) are properly exempted from test coverage requirements. Use EVIDENCE.yaml exempt status = true for this pattern. Verification focus shifts to manual inspection and grep-based confirmation of changes.",
+        "tags": [
+          "qa",
+          "agent-config",
+          "exemption-pattern"
+        ]
+      },
+      "timestamp": "2026-03-08T17:45:14.440Z",
+      "error": "Embedding generation failed (KB service unavailable)",
+      "retry_count": 0,
+      "story_id": "AC-3020",
+      "agent": "qa-verify-completion-leader"
     }
   ],
-  "updated_at": "2026-03-01T02:07:54.465Z"
+  "updated_at": "2026-03-08T17:45:14.440Z"
 }

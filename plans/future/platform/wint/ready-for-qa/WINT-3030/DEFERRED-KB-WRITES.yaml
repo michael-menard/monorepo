@@ -1,0 +1,19 @@
+deferred_at: "2026-03-09"
+reason: "KB unavailable during story generation"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-3030
+      feature: wint
+      title: "Create telemetry-logger Worker Agent — Haiku-Powered Fire-and-Forget Telemetry Invocation"
+      story_dir: plans/future/platform/wint/backlog/WINT-3030
+      story_file: plans/future/platform/wint/backlog/WINT-3030/WINT-3030.md
+      story_type: feature
+      points: 2
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

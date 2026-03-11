@@ -1,0 +1,127 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "artifact_write — file write + KB write both succeed"
+    setup: "Mock fs/promises.writeFile to resolve. Mock kb_write_artifact to return { id: 'kb-123' }. Valid input: { story_id: 'KBAR-0110', artifact_type: 'CHECKPOINT', content: { phase: 'setup' }, file_path: '/tmp/test/CHECKPOINT.yaml' }."
+    action: "Invoke handleArtifactWrite with valid input via MCP tool call."
+    expected: "Returns { file_path: '/tmp/test/CHECKPOINT.yaml', file_written: true, kb_artifact_id: 'kb-123', kb_write_skipped: false }. No error thrown. kb_write_artifact called once with correct args."
+    evidence: "Unit test assertion: result.content[0].text parsed JSON matches expected shape. kb_write_artifact mock called once."
+
+  - id: HP-2
+    title: "artifact_write — skip_kb:true skips KB write entirely"
+    setup: "Mock fs/promises.writeFile to resolve. Mock kb_write_artifact as a spy. Valid input with skip_kb: true."
+    action: "Invoke handleArtifactWrite with skip_kb: true."
+    expected: "Returns { file_path, file_written: true, kb_write_skipped: true }. kb_artifact_id absent or undefined. kb_write_artifact never called."
+    evidence: "Spy assertion: kb_write_artifact.mock.calls.length === 0. Response includes kb_write_skipped: true."
+
+  - id: HP-3
+    title: "artifact_write tool is registered — appears in getToolDefinitions() list"
+    setup: "Load tool-schemas.ts definitions via getToolDefinitions() in mcp-integration.test.ts environment."
+    action: "Call getToolDefinitions() and inspect the result array."
+    expected: "Array includes a tool with name === 'artifact_write'. Tool count matches expected value (current count + 1 after KBAR-0090 merge)."
+    evidence: "mcp-integration.test.ts assertion passes. Tool count matches verified programmatic count."
+
+  - id: HP-4
+    title: "artifact_write — optional fields (phase, iteration) are accepted and passed to KB"
+    setup: "Mock both writes to succeed. Input includes phase: 'implementation', iteration: 2."
+    action: "Invoke handleArtifactWrite with optional fields."
+    expected: "Returns success response. kb_write_artifact called with phase and iteration fields included."
+    evidence: "Mock call args assertion includes phase and iteration."
+
+error_cases:
+  - id: EC-1
+    title: "artifact_write — file write failure returns error response (KB write not attempted)"
+    setup: "Mock fs/promises.writeFile to throw ENOENT (invalid directory path). Mock kb_write_artifact as a spy."
+    action: "Invoke handleArtifactWrite with a file_path whose parent directory does not exist and cannot be created."
+    expected: "Returns MCP error response or content with file_written: false and error message. kb_write_artifact never called."
+    evidence: "Spy: kb_write_artifact.mock.calls.length === 0. Response content indicates file write failure."
+
+  - id: EC-2
+    title: "artifact_write — KB write failure returns warning, not error; file_written remains true"
+    setup: "Mock fs/promises.writeFile to resolve. Mock kb_write_artifact to throw Error('DB unavailable')."
+    action: "Invoke handleArtifactWrite with valid input (skip_kb not set)."
+    expected: "Returns { file_path, file_written: true, kb_write_warning: 'DB unavailable', kb_artifact_id: undefined }. No error thrown. Response is not an MCP error response."
+    evidence: "Response parsed JSON: file_written === true, kb_write_warning is a non-empty string. Tool does not throw."
+
+  - id: EC-3
+    title: "artifact_write — invalid Zod input shape returns parse error"
+    setup: "No mocks needed."
+    action: "Invoke handleArtifactWrite with missing required field story_id."
+    expected: "Zod parse throws ZodError or MCP returns structured error. Tool does not crash the process."
+    evidence: "Response is an error content or throws ZodError caught at call boundary."
+
+  - id: EC-4
+    title: "artifact_write — KB write timeout does not block file write result"
+    setup: "Mock fs/promises.writeFile to resolve immediately. Mock kb_write_artifact to delay 10000ms then reject."
+    action: "Invoke handleArtifactWrite. Measure wall time."
+    expected: "Response returns within acceptable time (e.g., <5s with timeout wrapper or synchronous await-with-catch). file_written: true. kb_write_warning present."
+    evidence: "Test timer assertion. File write result returned despite slow KB write."
+
+edge_cases:
+  - id: ED-1
+    title: "artifact_write — skip_kb:false (explicit false) still attempts KB write"
+    setup: "Mock both writes to succeed. Input includes skip_kb: false explicitly."
+    action: "Invoke handleArtifactWrite with skip_kb: false."
+    expected: "KB write is attempted. Returns full success response including kb_artifact_id."
+    evidence: "kb_write_artifact spy called once. kb_write_skipped absent or false."
+
+  - id: ED-2
+    title: "artifact_write — content is JSONB-serializable (object with nested fields)"
+    setup: "Mock both writes to succeed. Content is a deeply nested object."
+    action: "Invoke with content: { phase: 'setup', steps: [{ name: 'init', status: 'done' }] }."
+    expected: "File is written with YAML/JSON serialized content. KB write receives content without serialization error."
+    evidence: "fs/promises.writeFile called with string arg (not raw object). kb_write_artifact receives correct content."
+
+  - id: ED-3
+    title: "artifact_write — mcp-integration.test.ts tool name list includes 'artifact_write'"
+    setup: "Run mcp-integration.test.ts in the test suite with updated tool-schemas.ts."
+    action: "Execute the tool names assertion in mcp-integration.test.ts."
+    expected: "Test passes. 'artifact_write' present in names array."
+    evidence: "CI passes. grep for 'artifact_write' in mcp-integration.test.ts returns the name assertion line."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "handleArtifactWrite returns MCP content array with parsed JSON matching ArtifactWriteResponseSchema"
+      - "kb_write_artifact mock called with correct story_id, artifact_type, content, phase, iteration"
+      - "fs/promises.writeFile mock called with correct file_path and serialized content string"
+      - "getToolDefinitions() length === N+1 where N is verified current count before KBAR-0110"
+      - "getToolDefinitions() names array includes 'artifact_write'"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: validArtifactWriteInput
+    type: ArtifactWriteInput (Zod-inferred)
+    description: "{ story_id: 'KBAR-0110', artifact_type: 'CHECKPOINT', content: { phase: 'setup' }, file_path: '/tmp/test/CHECKPOINT.yaml' }"
+  - name: validArtifactWriteInputWithSkipKb
+    type: ArtifactWriteInput
+    description: "Same as above but with skip_kb: true"
+  - name: validArtifactWriteInputWithOptionals
+    type: ArtifactWriteInput
+    description: "Includes phase: 'implementation', iteration: 2"
+  - name: mockKbWriteArtifactSuccess
+    type: vi.fn()
+    description: "Returns Promise.resolve({ id: 'kb-artifact-123', story_id: 'KBAR-0110', artifact_type: 'CHECKPOINT' })"
+  - name: mockKbWriteArtifactFailure
+    type: vi.fn()
+    description: "Returns Promise.reject(new Error('DB unavailable'))"
+  - name: mockFileWriteSuccess
+    type: vi.fn()
+    description: "fs/promises.writeFile mock resolving void"
+  - name: mockFileWriteFailure
+    type: vi.fn()
+    description: "fs/promises.writeFile mock rejecting with ENOENT error"
+
+risks:
+  - "Tool count in mcp-integration.test.ts must be re-verified at implementation time by running getToolDefinitions().length programmatically before setting the assertion value. Hardcoding wrong count causes CI failure."
+  - "ADR-005: any integration test exercising the real KB write leg must connect to real PostgreSQL — mocks in unit tests only. Tests that attempt real DB without connection will flake in CI without DB."
+  - "KBAR-0090 must be merged before KBAR-0110's mcp-integration.test.ts updates — otherwise tool count assertion will conflict."
+  - "vi.mock block for artifact-operations.ts module must use correct module path (not barrel). Incorrect path causes real DB calls in unit tests."
+  - "YAML serialization of content: if js-yaml is not available and JSON.stringify is used instead, file output will be JSON not YAML. Test should assert format matches expected output type."

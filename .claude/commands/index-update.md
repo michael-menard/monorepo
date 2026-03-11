@@ -10,6 +10,8 @@ permission_level: docs-only
 
 # /index-update {FEATURE_DIR} {STORY_ID} [--status=X] [--clear-deps] [--add-dep=Y]
 
+> **DEPRECATED (2026-03-10)**: `stories.index.md` is no longer maintained. Status is tracked exclusively in the KB. Agents calling this command should use `kb_update_story_status` or `kb_update_story` directly instead. This command is a no-op — it will log a warning and return without writing to any file.
+
 Update a story's entry in the feature's stories index file.
 
 ## Arguments

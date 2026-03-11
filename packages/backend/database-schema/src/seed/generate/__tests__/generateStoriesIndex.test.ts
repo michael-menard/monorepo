@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
+import { writeFile, unlink } from 'fs/promises'
+import { join } from 'path'
+import { tmpdir } from 'os'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { generateStoriesIndex } from '../generateStoriesIndex.js'
+import { parseStoriesIndex } from '../../../seed/parsers/index-parser.js'
 
 // Mock @repo/logger
 vi.mock('@repo/logger', () => ({
@@ -18,6 +22,7 @@ vi.mock('@repo/logger', () => ({
 // Using valid UUIDs (version 4 format: third segment starts with 4, fourth with a/b/8/9)
 const UUID_1 = 'a1a1a1a1-0000-4000-a000-000000000001'
 const UUID_2 = 'a2a2a2a2-0000-4000-a000-000000000002'
+const UUID_3 = 'a3a3a3a3-0000-4000-a000-000000000003'
 const INDEX_UUID = 'ffffffff-0000-4000-a000-000000000001'
 
 function makeStory(overrides: Record<string, unknown> = {}) {
@@ -121,14 +126,76 @@ describe('TC-03: Progress Summary table reflects actual counts', () => {
 })
 
 // ============================================================================
-// TC-04: Ready to Start section — no blocking deps
+// TC-04: Ready to Start section — workable story with no deps appears
 // ============================================================================
-describe('TC-04: Ready to Start section — story with no deps appears', () => {
-  it('includes story with no dependencies in Ready to Start table', async () => {
-    const db = makeDb([makeStory()])
+describe('TC-04: Ready to Start section — workable story with no deps appears', () => {
+  it('includes workable story with no dependencies in Ready to Start table', async () => {
+    const db = makeDb([makeStory({ status: 'ready-to-work', storyId: 'KBAR-0010' })])
     const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
     expect(markdown).toContain('## Ready to Start')
     expect(markdown).toContain('KBAR-0010')
+  })
+
+  it('excludes completed story from Ready to Start section', async () => {
+    const db = makeDb([makeStory({ status: 'completed' })])
+    const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
+    const readyMatch = markdown.match(/## Ready to Start[\s\S]*?(?=\n## |$)/)
+    const readySection = readyMatch?.[0] ?? ''
+    expect(readySection).not.toContain('KBAR-0010')
+  })
+
+  it('excludes in-progress story from Ready to Start section', async () => {
+    const db = makeDb([makeStory({ status: 'in-progress' })])
+    const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
+    const readyMatch = markdown.match(/## Ready to Start[\s\S]*?(?=\n## |$)/)
+    const readySection = readyMatch?.[0] ?? ''
+    expect(readySection).not.toContain('KBAR-0010')
+  })
+})
+
+// ============================================================================
+// TC-04b: AC-4 — dependency resolution checks target story status
+// ============================================================================
+describe('TC-04b: AC-4 — Ready to Start checks target story status', () => {
+  it('includes story whose dependency target is completed', async () => {
+    const db = makeDb(
+      [makeStory2({ status: 'ready-to-work' })],
+      [
+        {
+          storyId: UUID_2,
+          dependsOnStoryId: UUID_1,
+          dependencyType: 'requires',
+          resolved: false,
+          dependsOnStoryLabel: 'KBAR-0010',
+          dependsOnStoryStatus: 'completed',
+        },
+      ],
+    )
+    const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
+    // Extract the Ready to Start section (between "## Ready to Start" and the next "##" header)
+    const readyMatch = markdown.match(/## Ready to Start[\s\S]*?(?=\n## |$)/)
+    const readySection = readyMatch?.[0] ?? ''
+    expect(readySection).toContain('KBAR-0020')
+  })
+
+  it('excludes story whose dependency target is in-progress', async () => {
+    const db = makeDb(
+      [makeStory2({ status: 'ready-to-work' })],
+      [
+        {
+          storyId: UUID_2,
+          dependsOnStoryId: UUID_1,
+          dependencyType: 'requires',
+          resolved: false,
+          dependsOnStoryLabel: 'KBAR-0010',
+          dependsOnStoryStatus: 'in-progress',
+        },
+      ],
+    )
+    const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
+    const readyMatch = markdown.match(/## Ready to Start[\s\S]*?(?=\n## |$)/)
+    const readySection = readyMatch?.[0] ?? ''
+    expect(readySection).not.toContain('KBAR-0020')
   })
 })
 
@@ -158,6 +225,7 @@ describe('TC-06: Dependency labels resolved from JOIN', () => {
           dependencyType: 'requires',
           resolved: false,
           dependsOnStoryLabel: 'KBAR-0010',
+          dependsOnStoryStatus: 'in-progress',
         },
       ],
     )
@@ -246,5 +314,41 @@ describe('TC-12: Checksum is deterministic SHA-256 hex string', () => {
     // SHA-256 hex is always 64 characters
     expect(r1.checksum).toHaveLength(64)
     expect(r1.checksum).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
+// ============================================================================
+// TC-13: AC-14 — Round-trip test: parseStoriesIndex does not throw
+// ============================================================================
+describe('TC-13: AC-14 — Round-trip: parseStoriesIndex does not throw on generated output', () => {
+  it('parseStoriesIndex does not throw when given generated markdown', async () => {
+    const db = makeDb([
+      makeStory({ status: 'completed' }),
+      makeStory2({ status: 'pending' }),
+      {
+        ...makeStory({
+          id: UUID_3,
+          storyId: 'KBAR-0030',
+          title: 'API Endpoints',
+          status: 'in-progress',
+        }),
+      },
+    ])
+    const { markdown } = await generateStoriesIndex('KBAR', db, { filePath: TEST_FILE_PATH })
+
+    // Write generated markdown to a temp file for parseStoriesIndex (which reads from disk)
+    const tmpFile = join(tmpdir(), `kbar-0230-roundtrip-${Date.now()}.md`)
+    await writeFile(tmpFile, markdown, 'utf-8')
+
+    try {
+      // AC-14: parser should not throw — it returns phase data (empty array expected
+      // since generated output has story sections, not phase sections)
+      const phases = await parseStoriesIndex(tmpFile)
+      expect(Array.isArray(phases)).toBe(true)
+      // Generated output doesn't contain "## Phase N:" headers, so 0 phases expected
+      expect(phases).toHaveLength(0)
+    } finally {
+      await unlink(tmpFile).catch(() => {})
+    }
   })
 })

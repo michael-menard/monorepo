@@ -2,7 +2,6 @@
  * File discovery utilities for scanning the monorepo
  * WISH-20210
  */
-import { resolve } from 'path'
 import { glob } from 'glob'
 
 /**

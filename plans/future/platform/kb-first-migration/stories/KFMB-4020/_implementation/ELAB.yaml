@@ -1,0 +1,171 @@
+schema: 1
+story_id: "KFMB-4020"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title, phase (3), dependency (KFMB-4010), priority (medium), and status
+      (In Elaboration) match the stories.index.md entry exactly. Index places this story
+      in Phase 3 "Index & Stage Elimination" and Parallelization Group 6 — consistent
+      with the story's own Context section and frontmatter. No discrepancies found.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goal (KB-first state reads for workflow commands and automation scripts) is fully
+      realized by the 10 ACs: AC-1 through AC-3 cover /precondition-check, AC-4 through
+      AC-5 cover /context-init, AC-6 covers generate-stories.sh, AC-7 covers
+      implement-stories.sh, AC-8 covers resilience across all surfaces, AC-9 and AC-10
+      cover cross-cutting auditability. Non-goals explicitly exclude Phase 4/5 artifact
+      migration, DB schema changes, uat-precondition-check.agent.md, and
+      stories.index.md progress count updates — all coherent with Phase 3 scope boundary.
+      Dependency note in Context ("must not be elaborated until KFMB-4010 reaches
+      ready-for-qa") is consistent with frontmatter depends_on: [KFMB-4010].
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse Plan explicitly references four canonical sources: (1) shimGetStoryStatus
+      guard from story-move.md, verified present at .claude/commands/story-move.md with
+      the described pattern; (2) SWIM_LANE_TO_STATE from __types__/index.ts, confirmed
+      exported at packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts;
+      (3) claude -p KB query pattern from scripts/lib/resolve-plan.sh, confirmed present
+      using same claude -p + --allowedTools approach; (4) resilient null-return from
+      story-get-status.ts, confirmed implementation returns null on both DB-miss and
+      DB-error. STATE_TO_SWIM_LANE inverse map is explicitly derived from existing
+      SWIM_LANE_TO_STATE rather than invented from scratch.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Architecture is transport-agnostic at the core: .md command files define
+      agent-executed instructions independent of any HTTP transport. Shell scripts use
+      claude -p subprocess (MCP tool call adapter) with a clean KB-miss fallback to the
+      existing directory scan adapter. The resilience layer (directory fallback) is
+      explicitly preserved as required by the Ports & Adapters pattern. storyGetStatus
+      itself is already a resilient adapter (returns null on error, never throws) as
+      confirmed in story-get-status.ts. No new infrastructure dependencies introduced.
+
+  - id: testability
+    status: PASS
+    note: >
+      5 happy-path tests (HP-1 through HP-5) and 4 error-case tests (EC-1 through EC-4)
+      are defined with concrete setup/action/expected/evidence per scenario. Each
+      scenario is independently verifiable: HP-1 and HP-2 test command behavior via
+      result YAML inspection; HP-3 and HP-4 use --dry-run flag for safe script
+      invocation; HP-5 validates STATE_TO_SWIM_LANE mapping via result YAML.
+      EC-1 through EC-4 verify KB unavailability fallback paths. ADR-005 compliance
+      noted (integration tests require live KB at port 5433). ADR-006 compliance noted
+      (no E2E required — no frontend surface). Test strategy is integration + manual,
+      appropriate for shell script and .md command file changes.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      The only apparent TBD — STATE_TO_SWIM_LANE not yet existing — is resolved in the
+      story itself via an explicit derivation pattern using Object.entries inversion of
+      the existing SWIM_LANE_TO_STATE constant. DB-only states (blocked, cancelled) edge
+      case is explicitly addressed: "reverse lookup returns undefined for these;
+      Commands must handle undefined as not in a swim-lane directory and fall back to
+      directory scan." The claude -p null-handling pattern is fully specified in the
+      Architecture Notes section with exact bash idiom (|| true, -z check). No
+      unresolved blocking TBDs found.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Six risks identified across two sections. dev_feasibility.risks: (1) KFMB-4010
+      dependency for DB writes — mitigation is merge gate; (2) claude -p subprocess
+      returning empty output on KB miss — mitigation is || true + -z check pattern;
+      (3) STATE_TO_SWIM_LANE not yet existing — mitigation is Object.entries derivation
+      in ST-1. pm_artifacts.test_plan.risks: (4) ADR-005 CI compliance for live KB;
+      (5) shell script test coverage limited to --dry-run; (6) STATE_TO_SWIM_LANE
+      correctness depends on SWIM_LANE_TO_STATE being authoritative. All risks have
+      explicit mitigations or are acknowledged constraints.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      10 ACs exceeds the 8-AC threshold. split_risk prediction is 0.8 (high) with
+      confidence: low. However, mitigating factors exist: (a) backend-only, no FE work;
+      (b) no HTTP endpoints; (c) the 10 ACs decompose cleanly into 5 independently
+      testable subtasks touching separate files (ST-4 and ST-5 are fully independent of
+      ST-1/ST-2/ST-3); (d) all 5 modified files serve a single coherent behavioral
+      change (add KB-first guard with directory fallback); (e) the pattern is fully
+      established by KFMB-4010 with no design exploration required. ST-5 covers 5
+      functions in implement-stories.sh (find_story_dir, is_elaborated, is_implemented,
+      is_reviewed, is_completed) and carries the highest token estimate (11,000) — this
+      is the most likely split candidate if implementation proves unwieldy. WARN rather
+      than SPLIT: the shared architectural pattern across all changes is the glue that
+      makes the story coherent as a unit. Recommend monitoring ST-5 token burn during
+      implementation.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      All 5 subtasks (ST-1 through ST-5) have: files-to-read, files-to-modify, ACs
+      covered, depends-on, verification commands, and token estimates. DAG is valid:
+      ST-1 (no deps) → ST-2, ST-3; ST-4 and ST-5 are independent of ST-1 DAG (no deps).
+      AC coverage is complete: AC-1 (ST-2), AC-2 (ST-1, ST-2), AC-3 (ST-2), AC-4
+      (ST-3), AC-5 (ST-3), AC-6 (ST-4), AC-7 (ST-5), AC-8 (ST-2, ST-3, ST-4, ST-5),
+      AC-9 (ST-2, ST-3), AC-10 (ST-4, ST-5). No AC is uncovered. Verification commands
+      are concrete and machine-executable (pnpm check-types, bash -n, grep -q). Each
+      subtask modifies exactly one file, satisfying the file-limit principle. Canonical
+      refs are specified per subtask.
+
+gaps: []
+
+opportunities:
+  - id: OPP-1
+    title: "Consider splitting ST-5 if implement-stories.sh function count grows"
+    description: >
+      ST-5 covers 5 distinct functions (find_story_dir, is_elaborated, is_implemented,
+      is_reviewed, is_completed) with a 11,000-token estimate. If the implementation
+      reveals that each function requires non-trivial logic beyond the template pattern,
+      the implementer may want to split ST-5 into ST-5a (find_story_dir) and ST-5b
+      (the four is_* predicate functions). This is not required pre-implementation but
+      is a contingency worth noting.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "30da669b-41ff-4f35-9faf-45337b065aa7"
+
+  - id: OPP-2
+    title: "kb_state_query helper could be extracted to scripts/lib/ for reuse"
+    description: >
+      The kb_state_query bash function described in Architecture Notes will be duplicated
+      in both generate-stories.sh (ST-4) and implement-stories.sh (ST-5). A future
+      refactoring could extract it to scripts/lib/kb-state.sh for DRY compliance. This
+      is explicitly out of scope for this story (Phase 5 cleanup) and should not be
+      done here, but is worth logging as a KFMB-6010/KFMB-6020 candidate.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "5d1e871c-1ee6-4991-8c0b-59d7fb1ef6f8"
+
+  - id: OPP-3
+    title: "Verify SWIM_LANE_TO_STATE covers all active stage directories before STATE_TO_SWIM_LANE derivation"
+    description: >
+      The story notes that 'UAT' maps to 'in_qa' in SWIM_LANE_TO_STATE — this
+      directory name is uppercase, which may differ from other lowercase entries. The
+      implementer should confirm all active stage directories under
+      plans/future/platform/kb-first-migration/ are represented in SWIM_LANE_TO_STATE
+      before the inverse map is derived in ST-1. A missing entry would silently fail
+      --in-stage validation. Not blocking (confirmed mapping exists at audit time) but
+      worth a quick scan during ST-1.
+    blocking: false
+    decision: log_to_kb
+    kb_entry_id: "91efb1bb-da12-4f64-9b14-9428370299fa"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

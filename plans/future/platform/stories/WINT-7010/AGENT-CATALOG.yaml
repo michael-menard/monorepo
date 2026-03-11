@@ -1,0 +1,1588 @@
+# Agent Catalog - Complete Agent Directory Audit
+# Generated: 2026-02-14
+# Total Agents: 141
+
+agents:
+
+  - name: architect-aggregation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-aggregation-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-api-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-api-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    model: sonnet
+    spawns:
+      - architect-hexagonal-worker
+      - architect-route-worker
+      - architect-service-worker
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-barrel-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-barrel-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-frontend-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-boundary-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-boundary-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-packages-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-circular-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-circular-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-packages-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-component-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-component-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-frontend-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-frontend-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-frontend-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    model: sonnet
+    spawns:
+      - architect-component-worker
+      - architect-import-worker
+      - architect-barrel-worker
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-hexagonal-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-hexagonal-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-api-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-import-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-import-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-frontend-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-interface-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-interface-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-types-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-packages-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-packages-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    model: sonnet
+    spawns:
+      - architect-boundary-worker
+      - architect-circular-worker
+      - architect-workspace-worker
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-route-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-route-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-api-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-schema-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-schema-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-types-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-service-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-service-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-api-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-setup-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-story-review
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-story-review.agent.md
+    type: worker
+    version: 2.0.0
+    permission_level: docs-only
+    model: sonnet
+    triggers:
+      - /elab-story
+      - /elab-epic
+    created: 2026-01-28
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: architect-types-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-types-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    model: sonnet
+    spawns:
+      - architect-zod-worker
+      - architect-interface-worker
+      - architect-schema-worker
+    triggers:
+      - /architect-review
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-workspace-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-workspace-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-packages-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: architect-zod-worker
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/architect-zod-worker.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - architect-types-leader
+    created: 2026-01-28
+    updated: 2026-01-28
+    frontmatter_complete: True
+
+  - name: audit-accessibility
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-accessibility.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-aggregate-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-aggregate-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: write-artifacts
+    triggers:
+      - /code-audit
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-code-quality
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-code-quality.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-debt-map-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-debt-map-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: test-run
+    triggers:
+      - /code-audit debt-map
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-devils-advocate
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-devils-advocate.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-duplication
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-duplication.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-moderator
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-moderator.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-performance
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-performance.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-promote-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-promote-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: write-artifacts
+    triggers:
+      - /code-audit promote
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-react
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-react.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-security
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-security.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-setup-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-test-coverage
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-test-coverage.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: test-run
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-trends-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-trends-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: write-artifacts
+    triggers:
+      - /code-audit trends
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-typescript
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-typescript.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: audit-ui-ux
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/audit-ui-ux.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: churn-index-metrics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/churn-index-metrics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - scrum-master-loop-leader
+      - dev-verification-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: code-review-accessibility
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-accessibility.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: code-review-build
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-build.agent.md
+    type: worker
+    version: 2.0.0
+    permission_level: test-run
+    created: 2026-01-25
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: code-review-lint
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-lint.agent.md
+    type: worker
+    version: 4.0.0
+    permission_level: test-run
+    created: 2026-01-24
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: code-review-react
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-react.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: code-review-reusability
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-reusability.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: code-review-security
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-security.agent.md
+    type: worker
+    version: 4.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: code-review-style-compliance
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-style-compliance.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: code-review-syntax
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-syntax.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: code-review-typecheck
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-typecheck.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: test-run
+    created: 2026-01-25
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: code-review-typescript
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/code-review-typescript.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    created: 2026-02-11
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: commitment-gate-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/commitment-gate-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - dev-implement-story
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: confidence-calibrator
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/confidence-calibrator.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    triggers:
+      - /calibration-report
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: dev-documentation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-documentation-leader.agent.md
+    type: leader
+    version: 3.2.0
+    permission_level: orchestrator
+    triggers:
+      - /dev-implement-story
+      - /dev-fix-story
+    created: 2026-01-24
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: dev-execute-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-execute-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    model: sonnet
+    triggers:
+      - /dev-implement-story
+    created: 2026-02-01
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: dev-fix-fix-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-fix-fix-leader.agent.md
+    type: leader
+    version: 5.0.0
+    permission_level: orchestrator
+    model: sonnet
+    triggers:
+      - /dev-fix-story
+    created: 2026-01-24
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: dev-implement-backend-coder
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-backend-coder.agent.md
+    type: worker
+    version: 3.4.0
+    permission_level: code-write
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: dev-implement-contracts
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-contracts.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: dev-implement-frontend-coder
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-frontend-coder.agent.md
+    type: worker
+    version: 3.3.0
+    permission_level: code-write
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: dev-implement-implementation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-implementation-leader.agent.md
+    type: leader
+    version: 4.2.0
+    permission_level: orchestrator
+    model: sonnet
+    triggers:
+      - /dev-implement-story
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: dev-implement-learnings
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-learnings.agent.md
+    type: worker
+    version: 4.0.0
+    permission_level: docs-only
+    created: 2026-01-24
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: dev-implement-plan-validator
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-plan-validator.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: dev-implement-planner
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-planner.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: dev-implement-planning-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-planning-leader.agent.md
+    type: leader
+    version: 3.1.0
+    permission_level: orchestrator
+    triggers:
+      - /dev-implement-story
+    created: 2026-01-24
+    updated: 2026-01-31
+    frontmatter_complete: True
+
+  - name: dev-implement-playwright
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-playwright.agent.md
+    type: worker
+    version: 6.0.0
+    permission_level: test-run
+    model: sonnet
+    created: 2026-01-24
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: dev-implement-proof-writer
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-proof-writer.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: dev-implement-verifier
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-implement-verifier.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: test-run
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: dev-plan-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-plan-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: orchestrator
+    triggers:
+      - /dev-implement-story
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: dev-proof-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-proof-leader.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: documentation
+    triggers:
+      - /dev-implement-story
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: dev-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-setup-leader.agent.md
+    type: leader
+    version: 5.1.0
+    permission_level: setup
+    model: haiku
+    triggers:
+      - /dev-implement-story
+      - /dev-fix-story
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: dev-verification-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/dev-verification-leader.agent.md
+    type: leader
+    version: 3.1.0
+    permission_level: orchestrator
+    triggers:
+      - /dev-implement-story
+      - /dev-fix-story
+    created: 2026-01-24
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: doc-sync
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/doc-sync.agent.md
+    type: worker
+    version: 1.0.0
+    model: haiku
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: elab-analyst
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-analyst.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /elab-story
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-autonomous-decider
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-autonomous-decider.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: kb-write
+    triggers:
+      - /elab-story --autonomous
+    created: 2026-02-06
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: elab-completion-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-completion-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /elab-story
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-delta-review-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-delta-review-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - elab-story
+      - elab-completion-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: elab-epic-aggregation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-aggregation-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-engineering
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-engineering.agent.md
+    type: worker
+    version: 4.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: elab-epic-interactive-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-interactive-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-platform
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-platform.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-product
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-product.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-qa
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-qa.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-reviews-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-reviews-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-security
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-security.agent.md
+    type: worker
+    version: 4.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: elab-epic-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-updates-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-updates-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-epic-ux
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-epic-ux.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: read-only
+    triggers:
+      - /elab-epic
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: elab-escape-hatch-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-escape-hatch-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - elab-story
+      - elab-completion-leader
+      - elab-delta-review-agent
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: elab-phase-contract-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-phase-contract-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - elab-setup-leader
+      - elab-completion-leader
+      - scrum-master-loop-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: elab-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/elab-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /elab-story
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: experiment-analyzer
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/experiment-analyzer.agent.md
+    frontmatter_complete: True
+
+  - name: gap-analytics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/gap-analytics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: gap-hygiene-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/gap-hygiene-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: heuristic-evolver
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/heuristic-evolver.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: sonnet
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: improvement-proposer
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/improvement-proposer.agent.md
+    type: analyzer
+    version: 1.0.0
+    permission_level: read-write
+    model: sonnet
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: kb-compressor
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/kb-compressor.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: kb-write
+    model: haiku
+    spawned_by:
+      - manual
+      - cron
+    triggers:
+      - /kb-compress
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: kb-writer
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/kb-writer.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: kb-write
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: knowledge-context-loader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/knowledge-context-loader.agent.md
+    type: worker
+    version: 2.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+      - pm-story-seed-agent
+      - dev-setup-leader
+      - dev-plan-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: leakage-metrics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/leakage-metrics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - scrum-master-loop-leader
+      - dev-verification-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: pattern-miner
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pattern-miner.agent.md
+    type: analyzer
+    version: 1.0.0
+    permission_level: read-write
+    model: sonnet
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: pcar-metrics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pcar-metrics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - scrum-master-loop-leader
+      - dev-verification-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: pm
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm.agent.md
+    type: orchestrator
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /pm-story
+      - /pm-fix-story
+      - /pm-refine-story
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-bootstrap-analysis-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-bootstrap-analysis-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /pm-bootstrap-workflow
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: pm-bootstrap-generation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-bootstrap-generation-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-bootstrap-workflow
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: pm-bootstrap-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-bootstrap-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /pm-bootstrap-workflow
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: pm-dev-feasibility-review
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-dev-feasibility-review.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-draft-test-plan
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-draft-test-plan.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-harness-generation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-harness-generation-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-generate-story-000-harness
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-harness-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-harness-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /pm-generate-story-000-harness
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-story-adhoc-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-adhoc-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-story generate --ad-hoc
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-story-bug-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-bug-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-story bug
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-story-fix-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-fix-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-fix-story
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-story-followup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-followup-leader.agent.md
+    type: leader
+    version: 3.1.0
+    permission_level: docs-only
+    triggers:
+      - /pm-story followup
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-story-generation-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-generation-leader.agent.md
+    type: leader
+    version: 4.2.0
+    permission_level: orchestrator
+    model: sonnet
+    triggers:
+      - /pm-story generate
+    created: 2026-01-24
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: pm-story-risk-predictor
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-risk-predictor.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+  - name: pm-story-seed-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-seed-agent.agent.md
+    type: worker
+    version: 1.1.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+      - pm-story-followup-leader
+      - pm-story-split-leader
+    created: 2026-01-31
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: pm-story-split-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-story-split-leader.agent.md
+    type: leader
+    version: 4.0.0
+    permission_level: docs-only
+    triggers:
+      - /pm-story split
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: pm-triage-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-triage-leader.agent.md
+    type: leader
+    version: 2.0.0
+    permission_level: orchestrator
+    triggers:
+      - /pm-refine-story
+    created: 2026-01-24
+    updated: 2026-01-24
+    frontmatter_complete: True
+
+  - name: pm-uiux-recommendations
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/pm-uiux-recommendations.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: qa
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/qa.agent.md
+    type: reference
+    version: 3.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: qa-verify-completion-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/qa-verify-completion-leader.agent.md
+    type: leader
+    version: 3.2.0
+    permission_level: orchestrator
+    triggers:
+      - /qa-verify-story
+    created: 2026-01-24
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: qa-verify-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/qa-verify-setup-leader.agent.md
+    type: leader
+    version: 5.1.0
+    permission_level: setup
+    model: haiku
+    triggers:
+      - /qa-verify-story
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: qa-verify-verification-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/qa-verify-verification-leader.agent.md
+    type: leader
+    version: 4.0.0
+    permission_level: test-run
+    triggers:
+      - /qa-verify-story
+    created: 2026-01-24
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: quick-review
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/quick-review.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    created: 2026-02-04
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: quick-security
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/quick-security.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: read-only
+    model: haiku
+    created: 2026-02-04
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: quick-test
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/quick-test.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: test-run
+    model: haiku
+    created: 2026-02-04
+    updated: 2026-02-04
+    frontmatter_complete: True
+
+  - name: readiness-score-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/readiness-score-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: reality-intake-collector
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/reality-intake-collector.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: docs-only
+    model: sonnet
+    triggers:
+      - reality-intake
+    created: 2026-01-31
+    updated: 2026-01-31
+    frontmatter_complete: True
+
+  - name: reality-intake-setup
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/reality-intake-setup.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - workflow-shift
+      - reality-intake
+    created: 2026-01-31
+    updated: 2026-01-31
+    frontmatter_complete: True
+
+  - name: review-aggregate-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/review-aggregate-leader.agent.md
+    type: leader
+    version: 2.0.0
+    permission_level: write-artifacts
+    triggers:
+      - /dev-code-review
+    created: 2026-02-01
+    updated: 2026-02-11
+    frontmatter_complete: True
+
+  - name: scrum-master-loop-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/scrum-master-loop-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: orchestrator
+    triggers:
+      - /scrum-master
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: scrum-master-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/scrum-master-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /scrum-master
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: story-attack-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/story-attack-agent.agent.md
+    type: worker
+    version: 1.1.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: story-fanout-pm
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/story-fanout-pm.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: story-fanout-qa
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/story-fanout-qa.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: story-fanout-ux
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/story-fanout-ux.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: story-synthesize-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/story-synthesize-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: sonnet
+    spawned_by:
+      - pm-story-generation-leader
+      - pm-story-adhoc-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: ttdc-metrics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/ttdc-metrics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - dev-implement-story
+      - scrum-master-loop-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: turn-count-metrics-agent
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/turn-count-metrics-agent.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: docs-only
+    model: haiku
+    spawned_by:
+      - scrum-master-loop-leader
+      - dev-verification-leader
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: uat-orchestrator
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/uat-orchestrator.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: orchestrator
+    triggers:
+      - /qa-verify-story (UAT mode)
+      - /uat-run
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: uat-precondition-check
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/uat-precondition-check.agent.md
+    type: worker
+    version: 1.0.0
+    permission_level: readonly
+    triggers:
+      - /qa-verify-story (UAT phase)
+    created: 2026-02-01
+    updated: 2026-02-01
+    frontmatter_complete: True
+
+  - name: ui-ux-review-report-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/ui-ux-review-report-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: docs-only
+    triggers:
+      - /ui-ux-review
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: ui-ux-review-reviewer
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/ui-ux-review-reviewer.agent.md
+    type: worker
+    version: 3.0.0
+    permission_level: test-run
+    triggers:
+      - /ui-ux-review
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: ui-ux-review-setup-leader
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/ui-ux-review-setup-leader.agent.md
+    type: leader
+    version: 3.0.0
+    permission_level: setup
+    triggers:
+      - /ui-ux-review
+    created: 2026-01-24
+    updated: 2026-01-25
+    frontmatter_complete: True
+
+  - name: uiux
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/uiux.agent.md
+    type: reference
+    version: 3.0.0
+    permission_level: read-only
+    created: 2026-01-24
+    updated: 2026-02-06
+    frontmatter_complete: True
+
+  - name: workflow-retro
+    file_path: /Users/michaelmenard/Development/monorepo/.claude/agents/workflow-retro.agent.md
+    type: leader
+    version: 1.0.0
+    permission_level: orchestrator
+    model: sonnet
+    triggers:
+      - /workflow-retro
+    created: 2026-02-07
+    updated: 2026-02-07
+    frontmatter_complete: True
+
+summary:
+  total_agents: 141
+  by_type:
+    analyzer: 2
+    leader: 50
+    orchestrator: 1
+    reference: 2
+    unknown: 1
+    worker: 85

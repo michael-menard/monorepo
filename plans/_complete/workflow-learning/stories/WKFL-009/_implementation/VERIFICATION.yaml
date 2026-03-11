@@ -1,0 +1,183 @@
+schema: 1
+story_id: "WKFL-009"
+timestamp: "2026-02-07T22:10:00-07:00"
+verifier: qa-verify-story
+
+# ============================================================================
+# QA Verification Results
+# ============================================================================
+
+qa_verify:
+  status: PASS
+  date: "2026-02-07T22:10:00-07:00"
+
+  # Test execution
+  tests:
+    unit:
+      status: pass
+      total: 34
+      passed: 34
+      failed: 0
+      command: "pnpm vitest run apps/api/knowledge-base/src/__types__/__tests__/compression-schemas.test.ts"
+      details: "CanonicalEntrySchema (11), ArchiveMetadataSchema (6), CompressionReportSchema (17)"
+
+    e2e:
+      status: exempt
+      reason: "Agent/command creation + schema extension. No API endpoints or UI. Verified via unit tests and type-checking."
+
+    type_check:
+      status: pass
+      notes: "No new type errors. Pre-existing errors in openai/tiktoken/MCP modules are unrelated."
+
+  # AC-by-AC verification
+  acceptance_criteria:
+    - id: AC-1
+      title: "Cluster similar lessons (embedding similarity > 0.9)"
+      status: PASS
+      verification_method: code_review
+      evidence:
+        - "kb-compressor.agent.md Phase 2: Uses kb_search() per entry with configurable threshold (default 0.9)"
+        - "kb-compressor.agent.md Phase 3: Union-find clustering groups entries by similarity >= threshold"
+        - "Agent documents minimum cluster size of 2 members"
+      findings: []
+
+    - id: AC-2
+      title: "Merge clusters into canonical lessons"
+      status: PASS
+      verification_method: code_review + schema_test
+      evidence:
+        - "CanonicalEntrySchema requires: title (min 1), recommendation (min 1), merged_from (min 2 UUIDs), examples[], tags[]"
+        - "11 unit tests validate CanonicalEntrySchema (valid entries, required fields, examples)"
+        - "kb-compressor.agent.md Phase 4: Content merging rules documented (title, recommendation, examples, tags)"
+        - "Canonical content format includes merged title, unified recommendation, merged_from list, and examples"
+      findings: []
+
+    - id: AC-3
+      title: "Archive originals with pointer to canonical"
+      status: PASS
+      verification_method: code_review + schema_test
+      evidence:
+        - "ArchiveMetadataSchema requires: archived (boolean), archived_at (date), canonical_id (uuid)"
+        - "6 unit tests validate ArchiveMetadataSchema"
+        - "KbUpdateInputSchema extended with archived, archived_at, canonical_id, is_canonical fields"
+        - "kb_update.ts handles all 4 archival fields in updateData mapping"
+        - "kb-compressor.agent.md Phase 5: Archives each cluster member with canonical_id pointer"
+        - "Agent Non-Negotiables: 'NEVER delete KB entries (archive only)'"
+      findings: []
+
+    - id: AC-4
+      title: "Report: entries before, after, token savings"
+      status: PASS
+      verification_method: schema_test
+      evidence:
+        - "CompressionReportSchema validates: run_date, threshold, before{}, after{}, compression{ratio, token_savings}, clusters_created[], no_cluster{}, dry_run"
+        - "17 unit tests validate report structure (valid reports, threshold bounds, cluster validation, required sections)"
+        - "before section has: total_entries, lessons, decisions, feedback, other"
+        - "after section has: total_entries, canonical_entries, archived_entries"
+        - "compression section has: ratio (0-1), estimated_token_savings"
+      findings: []
+
+    - id: AC-5
+      title: "No loss of unique information"
+      status: PASS
+      verification_method: code_review + schema_test
+      evidence:
+        - "CanonicalEntrySchema.merged_from requires min 2 entries (prevents single-entry canonicals)"
+        - "Agent Information Preservation section: 5-step automated verification during merge"
+        - "Agent verification checklist: recommendations, examples (by story ID), tags (union), coherence, merged_from"
+        - "Agent Non-Negotiable: 'MUST preserve all unique information in canonical entries'"
+        - "Content merging rules: title (most descriptive), recommendation (unified), examples (all unique pairs), tags (union + canonical)"
+      findings: []
+
+    - id: AC-6
+      title: "Haiku model agent with /kb-compress command"
+      status: PASS
+      verification_method: file_exists
+      evidence:
+        - ".claude/agents/kb-compressor.agent.md exists with frontmatter model: haiku"
+        - "Agent type: worker, permission_level: kb-write, triggers: ['/kb-compress']"
+        - ".claude/commands/kb-compress.md exists with --threshold, --dry-run, --days flags"
+        - "Command shows in available skills list as 'kb-compress'"
+      findings: []
+
+    - id: AC-7
+      title: "Schema migration adds archival columns"
+      status: PASS
+      verification_method: code_review
+      evidence:
+        - "schema.ts knowledgeEntries has: archived (boolean, default false, NOT NULL)"
+        - "schema.ts knowledgeEntries has: archivedAt (timestamp, nullable)"
+        - "schema.ts knowledgeEntries has: canonicalId (uuid, self-referential FK to knowledgeEntries.id)"
+        - "schema.ts knowledgeEntries has: isCanonical (boolean, default false, NOT NULL)"
+        - "Two indexes added: archivedIdx on archived, isCanonicalIdx on isCanonical"
+        - "CRUD schemas.ts extended with archived, archived_at, canonical_id, is_canonical"
+        - "kb_update.ts updateData type expanded to include all 4 archival fields"
+      findings: []
+
+  # Code quality checks
+  quality:
+    claude_md_compliance:
+      status: PASS
+      checks:
+        - "Zod-first types: All 3 new schemas use z.infer<> (no interfaces)"
+        - "No barrel files: Direct imports from source files"
+        - "No console.log: Uses @repo/logger"
+        - "Code style: No semicolons, single quotes, trailing commas, 2-space indent"
+
+    schema_design:
+      status: PASS
+      checks:
+        - "Self-referential FK canonicalId properly references knowledgeEntries.id"
+        - "Boolean columns have NOT NULL + default false (no NULL ambiguity)"
+        - "Nullable timestamp archivedAt (only set when archived=true)"
+        - "Indexes target query patterns: WHERE archived=false, WHERE is_canonical=true"
+
+    backwards_compatibility:
+      status: PASS
+      checks:
+        - "All new columns have defaults (false for booleans, null for timestamps/uuids)"
+        - "KbUpdateInputSchema fields are optional (existing callers unaffected)"
+        - "kb_update only processes archival fields if explicitly provided"
+        - "No changes to existing column types, constraints, or indexes"
+
+  # Findings
+  findings:
+    - id: QA-001
+      severity: low
+      category: documentation
+      file: ".claude/agents/kb-compressor.agent.md:94"
+      description: "Pseudocode uses min_confidence parameter but kb_search uses min_confidence field (which maps to different semantics). Should document that threshold is applied post-search to result scores."
+      recommendation: "Clarify in agent doc that threshold is applied to search result scores, not as min_confidence input"
+      blocking: false
+
+    - id: QA-002
+      severity: low
+      category: schema_design
+      file: "apps/api/knowledge-base/src/db/schema.ts:181"
+      description: "canonicalId FK has no ON DELETE constraint. If a canonical entry is somehow deleted, archived entries would have a dangling reference."
+      recommendation: "Acceptable given archive-only business rules. The agent Non-Negotiables explicitly prohibit deletion. Future: consider ON DELETE SET NULL."
+      blocking: false
+
+# ============================================================================
+# Gate Decision
+# ============================================================================
+
+gate:
+  decision: PASS
+  confidence: high
+  rationale: |
+    All 7 acceptance criteria verified and passing.
+    34 unit tests passing (0 failures).
+    No new type errors introduced.
+    Code follows all CLAUDE.md conventions (Zod-first, no interfaces, no barrel files).
+    Schema design is sound with proper defaults and backwards compatibility.
+    2 low-severity documentation findings (non-blocking).
+    E2E exempt (agent/command + schema changes, no API/UI).
+
+  blocking_issues: 0
+  total_findings: 2
+  findings_by_severity:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 2

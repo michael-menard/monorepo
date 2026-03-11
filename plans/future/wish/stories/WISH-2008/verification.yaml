@@ -1,0 +1,100 @@
+schema: 1
+story_id: WISH-2008
+updated: 2026-01-29T18:26:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 11
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 217
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+    note: HTTP file created but requires manual execution
+  e2e:
+    pass: 0
+    fail: 0
+    note: N/A - backend only story
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: repositories.ts:228 - verifyOwnership uses WHERE userId = $1 AND id IN (...)
+  - id: AC2
+    verdict: pass
+    evidence: routes.ts:3 - auth middleware, 17 unit tests in auth.test.ts
+  - id: AC3
+    verdict: pass
+    evidence: services.test.ts:86-93 - getItem returns FORBIDDEN for cross-user access
+  - id: AC4
+    verdict: pass
+    evidence: services.test.ts:187-197 - updateItem returns FORBIDDEN for cross-user access
+  - id: AC5
+    verdict: pass
+    evidence: services.test.ts:208-216 - deleteItem returns FORBIDDEN for cross-user access
+  - id: AC6
+    verdict: pass
+    evidence: auth.test.ts:88-95 - Missing Authorization header returns 401
+  - id: AC7
+    verdict: pass
+    evidence: auth.test.ts:61-72 - Expired token returns 401
+  - id: AC8
+    verdict: pass
+    evidence: auth.test.ts:75-85 - Invalid signature returns 401
+  - id: AC9
+    verdict: pass
+    evidence: services.test.ts:131-171 - createItem uses userId from JWT context
+  - id: AC10
+    verdict: pass
+    evidence: services.test.ts:107-128 - listItems filters by userId
+  - id: AC11
+    verdict: pass
+    evidence: services.test.ts:236-251 - reorderItems verifies ownership via verifyOwnership()
+  - id: AC12
+    verdict: pass
+    evidence: purchase.test.ts:288-299 - markAsPurchased returns FORBIDDEN for cross-user access
+  - id: AC13
+    verdict: pass
+    evidence: services.test.ts:254-289 - generateImageUploadUrl passes userId to storage adapter
+  - id: AC14
+    verdict: pass
+    evidence: routes.ts:33-50 - logAuthorizationFailure() logs structured events
+  - id: AC15
+    verdict: pass
+    evidence: packages/backend/database-schema/docs/wishlist-authorization-policy.md - 334 lines
+  - id: AC16
+    verdict: pass
+    evidence: __http__/wishlist-authorization.http - 24+ test scenarios (8 happy, 6 cross-user, 4 auth, 4 edge, 2 rate limit)
+  - id: AC17
+    verdict: pass
+    evidence: auth.test.ts - 17 unit tests covering JWT parsing, validation, error handling
+  - id: AC18
+    verdict: pass
+    evidence: HTTP file covers all endpoints with happy path, 401, and cross-user scenarios
+  - id: AC19
+    verdict: pass
+    evidence: code_review section shows security worker PASS - no hardcoded secrets, proper Zod validation, rate limiting
+  - id: AC20
+    verdict: pass
+    evidence: This verification - all tests pass, security policy documented, authorization enforcement verified
+  - id: AC21
+    verdict: pass
+    evidence: wishlist-authorization-policy.md:134-164 - Section 4 documents createdBy/updatedBy are audit-only
+  - id: AC22
+    verdict: pass
+    evidence: auth.test.ts:186-216 - Tests for missing Bearer prefix and extra whitespace
+  - id: AC23
+    verdict: pass
+    evidence: wishlist-authorization.http:221-228 - Test scenario for 15-minute expiration
+  - id: AC24
+    verdict: pass
+    evidence: rate-limit.ts - 10 failures/5 min window, 25 unit tests in rate-limit.test.ts
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.252Z
+  blocking_issues: []

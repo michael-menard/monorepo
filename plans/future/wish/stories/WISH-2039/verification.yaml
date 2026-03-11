@@ -1,0 +1,71 @@
+schema: 1
+story_id: WISH-2039
+updated: 2026-01-31T00:00:00Z
+code_review:
+  verdict: pass
+  iterations: 1
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 56
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: packages/backend/database-schema/src/schema/feature-flags.ts:76-114 - featureFlagUserOverrides table with all
+      required columns, constraints, and indexes
+  - id: AC2
+    verdict: pass
+    evidence: "apps/api/lego-api/domains/config/application/services.ts:118-182 - evaluateFlag() checks exclusion >
+      inclusion > percentage priority. Tests: user-overrides.test.ts:174-252"
+  - id: AC3
+    verdict: pass
+    evidence: apps/api/lego-api/domains/config/routes.ts:139-174 - Admin endpoint with Zod validation, auth, rate limiting.
+      HTTP test case 1 in feature-flags-user-targeting.http
+  - id: AC4
+    verdict: pass
+    evidence: apps/api/lego-api/domains/config/routes.ts:181-205 - Admin endpoint returns 204 No Content. HTTP test case 5
+      in feature-flags-user-targeting.http
+  - id: AC5
+    verdict: pass
+    evidence: apps/api/lego-api/domains/config/routes.ts:213-233 - Pagination support (default 50, max 500). HTTP test case
+      3 in feature-flags-user-targeting.http
+  - id: AC6
+    verdict: pass
+    evidence: "apps/api/lego-api/domains/config/adapters/cache.ts - getUserOverride, setUserOverride, invalidateUserOverride
+      methods. Tests: user-overrides.test.ts:290-297, 322-326"
+  - id: AC7
+    verdict: pass
+    evidence: "apps/api/lego-api/domains/config/application/services.ts:36-38, 100-113 - RATE_LIMIT_MAX_CHANGES=100 per
+      hour. Tests: user-overrides.test.ts:358-381"
+  - id: AC8
+    verdict: pass
+    evidence: apps/api/lego-api/domains/config/__tests__/user-overrides.test.ts - 17 unit tests (exceeds requirement)
+  - id: AC9
+    verdict: pass
+    evidence: apps/api/lego-api/__http__/feature-flags-user-targeting.http - 9 HTTP test cases (exceeds requirement)
+  - id: AC10
+    verdict: pass
+    evidence: "Tests verify full flow: add inclusion override, add exclusion override (priority), remove override.
+      user-overrides.test.ts:173-252"
+  - id: AC11
+    verdict: pass
+    evidence: packages/core/api-client/src/schemas/feature-flags.ts:69-117 - All user override schemas synchronized.
+      TypeScript compilation passes.
+  - id: AC12
+    verdict: deferred
+    evidence: WISH-2009 documentation update deferred to story completion (non-blocking for technical verification)
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.297Z
+  blocking_issues: []

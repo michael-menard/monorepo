@@ -1,0 +1,156 @@
+story_id: KBAR-0120
+phase: implementation
+iteration: 0
+generated_at: "2026-02-24T21:50:00Z"
+
+summary:
+  total_acs: 8
+  acs_met: 8
+  acs_missing: 0
+  tests_written: 19
+  tests_passing: 19
+  e2e_status: exempt
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    status: MET
+    evidence:
+      type: file
+      description: "File apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts created with all 4 handler describe blocks (handleKbReadArtifact, handleKbWriteArtifact, handleKbListArtifacts, handleKbDeleteArtifact)"
+      file: "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts"
+
+  - ac_id: "AC-2"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        handleKbReadArtifact describe block covers:
+        (a) HP-1: artifact found — returns JSON-serialized ArtifactResponse, asserts parsed.id and story_id
+        (b) EC-1: artifact not found — asserts result.content[0].text === 'null' (literal string, not JSON null)
+        (c) EC-2: empty story_id — asserts result.isError === true
+        (d) EC-3: DB rejection — asserts result.isError === true (handler does not throw)
+        (e) ED-1: explicit iteration:0 — asserts mockKbReadArtifact.mock.calls[0][0].iteration === 0
+      tests:
+        - "should return JSON-serialized artifact when artifact exists (HP-1)"
+        - "should return literal string \"null\" text when artifact not found (EC-1)"
+        - "should return MCP error result for invalid input (EC-2)"
+        - "should return MCP error result on DB rejection (EC-3)"
+        - "should call kb_read_artifact with explicit iteration: 0 (ED-1)"
+
+  - ac_id: "AC-3"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        handleKbWriteArtifact describe block covers:
+        (a) HP-2: successful write — returns JSON-serialized ArtifactResponse with correct story_id and artifact_type
+        (b) EC-4: missing content field — asserts result.isError === true
+        (c) EC-5: DB rejection — asserts result.isError === true
+        (d) ED-2: iteration:2 — asserts mockKbWriteArtifact called with {iteration:2} and parsed result has iteration 2
+      tests:
+        - "should return JSON-serialized artifact on successful write (HP-2)"
+        - "should return MCP error result for missing required fields (EC-4)"
+        - "should return MCP error result on DB rejection (EC-5)"
+        - "should pass iteration: 2 through to the operation (ED-2)"
+
+  - ac_id: "AC-4"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        handleKbListArtifacts describe block covers:
+        (a) HP-3: returns artifact list with count — asserts parsed.total === 2 and artifacts.length === 2
+        (b) EC-6: empty result — asserts parsed.artifacts.length === 0 and total === 0
+        (c) HP-5: include_content:true — asserts artifacts[0].content is defined
+        (d) EC-7: DB rejection — asserts result.isError === true
+        (e) ED-3: artifact_type filter forwarding — asserts mockKbListArtifacts called with {artifact_type:'evidence'}
+      tests:
+        - "should return artifact list with count (HP-3)"
+        - "should return artifacts with content field when include_content is true (HP-5)"
+        - "should return empty list when no artifacts found (EC-6)"
+        - "should return MCP error result on DB rejection (EC-7)"
+        - "should forward artifact_type filter to the operation (ED-3)"
+
+  - ac_id: "AC-5"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        handleKbDeleteArtifact describe block covers:
+        (a) HP-4: deleted:true — asserts parsed.deleted === true and artifact_id matches
+        (b) EC-8: deleted:false (not found) — asserts parsed.deleted === false and artifact_id matches
+        (c) EC-9: invalid UUID — asserts result.isError === true (Zod validation catches before auth)
+        (d) EC-10: DB rejection — asserts result.isError === true
+        (e) bare string call assertion — verifies handler calls kb_delete_artifact(artifactId, deps) not (validated, deps)
+        Note: PM context (agent_role:'pm') required because kb_delete_artifact is admin-only per access-control.ts
+      tests:
+        - "should return deleted: true on successful deletion (HP-4)"
+        - "should return deleted: false when artifact not found (EC-8)"
+        - "should return MCP error result for invalid UUID (EC-9)"
+        - "should return MCP error result on DB rejection (EC-10)"
+        - "should call kb_delete_artifact with bare artifact_id string (not full input object)"
+
+  - ac_id: "AC-6"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        vi.hoisted block defines 4 mock fns: mockKbReadArtifact, mockKbWriteArtifact, mockKbListArtifacts, mockKbDeleteArtifact.
+        vi.mock targets '../../crud-operations/artifact-operations.js' (NOT crud-operations/index.js).
+        Logger mock targets '../logger.js'.
+      file: "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts"
+      lines: "23-58"
+
+  - ac_id: "AC-7"
+    status: MET
+    evidence:
+      type: command
+      description: |
+        pnpm --filter @repo/knowledge-base test: 46 test files passed, 1122 tests passed (includes new artifact-tools.test.ts with 19 tests).
+        pnpm --filter @repo/knowledge-base check-types: exits 0 with no output (no type errors).
+      commands:
+        - command: "pnpm --filter @repo/knowledge-base test -- --reporter=verbose artifact-tools"
+          result: "19 passed (19)"
+        - command: "pnpm --filter @repo/knowledge-base test"
+          result: "Test Files: 46 passed (46), Tests: 1122 passed (1122)"
+        - command: "pnpm --filter @repo/knowledge-base check-types"
+          result: "exit 0, no output"
+
+  - ac_id: "AC-8"
+    status: MET
+    evidence:
+      type: test
+      description: |
+        mcp-integration.test.ts tool count assertion passes without modification.
+        The test description now shows 55 tools (updated since PLAN was authored; no changes made in this story).
+        pnpm --filter @repo/knowledge-base test -- --reporter=verbose mcp-integration: all tests pass.
+        Zero new tools were registered in this story (test-infrastructure only).
+      note: "Plan referenced 53 tools; actual count is 55 at time of execution. No changes made to mcp-integration.test.ts — assertion continues to pass."
+
+e2e_tests:
+  status: exempt
+  reason: "Story is test-infrastructure only (no user-facing changes, no new MCP tools, no frontend impact). Playwright E2E tests are not applicable."
+
+build_verification:
+  type_check: PASS
+  unit_tests: PASS
+  test_file_count: 1
+  test_count: 19
+  all_existing_tests_pass: true
+
+files_created:
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts"
+    action: create
+    tests: 19
+    describe_blocks:
+      - "handleKbReadArtifact (5 tests: HP-1, EC-1, EC-2, EC-3, ED-1)"
+      - "handleKbWriteArtifact (4 tests: HP-2, EC-4, EC-5, ED-2)"
+      - "handleKbListArtifacts (5 tests: HP-3, HP-5, EC-6, EC-7, ED-3)"
+      - "handleKbDeleteArtifact (5 tests: HP-4, EC-8, EC-9, EC-10, bare-string-call)"
+
+implementation_notes:
+  - "kb_delete_artifact is PM-only per access-control.ts. Tests use pmContext with agent_role:'pm' for delete happy path and error isolation."
+  - "vi.mock targets artifact-operations.js (not crud-operations/index.js) — mock isolation correct per AC-6."
+  - "EC-1 critical: result.content[0].text === 'null' (string) correctly asserted, not null === null."
+  - "kb_delete_artifact call signature: handler(artifactId: string, deps) — bare string, not full validated object. Verified by explicit spy call assertion."
+  - "Test file also synced to worktree at tree/story/KBAR-0120/apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts"

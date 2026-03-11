@@ -1,0 +1,31 @@
+schema: 1
+story_id: KBAR-0240
+feature_dir: plans/future/platform/kb-artifact-migration
+timestamp: "2026-03-03T21:30:00Z"
+current_phase: code-review
+last_successful_phase: fix
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+fix_cycles:
+  - iteration: 1
+    triggered_by: code_review
+    completed_at: "2026-03-03T22:15:00Z"
+    issues_fixed:
+      - file: packages/backend/kbar-sync/scripts/__tests__/regenerate-index.test.ts
+        line: 148
+        issue: "MockInstance type incompatibility in vi.spyOn(process, 'exit') — fixed with MockInstance<any> type annotation"
+        severity: high
+      - file: packages/backend/kbar-sync/scripts/__tests__/regenerate-index.test.ts
+        line: 151
+        issue: "MockInstance type incompatibility in vi.spyOn(process.stdout, 'write') — fixed with MockInstance<any> type annotation"
+        severity: high
+      - file: packages/backend/kbar-sync/scripts/__tests__/regenerate-index.test.ts
+        line: 152
+        issue: "MockInstance type incompatibility in vi.spyOn(process.stderr, 'write') — fixed with MockInstance<any> type annotation"
+        severity: high
+    verification_result: PASS
+    test_results: "146 tests passed, 0 type errors"

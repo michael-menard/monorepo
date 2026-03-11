@@ -1,0 +1,144 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "Apply baseline migration to fresh apip schema on Aurora"
+    setup: "Fresh PostgreSQL database with no apip schema present; Docker Compose environment running (infra/compose.lego-app.yaml)"
+    action: "Run the baseline migration script (001_apip_schema_baseline.sql) via migration runner or psql against Aurora port 5432"
+    expected: "apip schema namespace created; schema_migrations table exists with correct columns; no errors in psql output"
+    evidence: "psql query: SELECT table_name FROM information_schema.tables WHERE table_schema = 'apip' — returns schema_migrations"
+
+  - id: HP-2
+    title: "Re-apply baseline migration (idempotency verification)"
+    setup: "apip schema and schema_migrations table already exist from HP-1"
+    action: "Re-run the same baseline migration script against the same database"
+    expected: "No errors; no duplicate tables; no duplicate rows in schema_migrations; PostgreSQL exits with code 0"
+    evidence: "psql output shows no ERROR lines; SELECT COUNT(*) FROM apip.schema_migrations returns same value as after first application"
+
+  - id: HP-3
+    title: "LangGraph PostgreSQL checkpointer initializes without schema conflict"
+    setup: "apip schema applied per HP-1; LangGraph server configured with POSTGRES_URL pointing to Aurora port 5432"
+    action: "Start LangGraph server (Docker Compose); LangGraph PostgreSQL checkpointer runs its internal migration"
+    expected: "LangGraph creates its own checkpoint tables (checkpoints, checkpoint_blobs, checkpoint_writes, checkpoint_migrations) in its own namespace (langgraph or public); no conflicts with apip schema objects"
+    evidence: "psql query: SELECT table_name, table_schema FROM information_schema.tables WHERE table_name LIKE 'checkpoint%' — tables exist in LangGraph's namespace, NOT in apip schema"
+
+  - id: HP-4
+    title: "Thread ID convention format validation"
+    setup: "Thread ID convention documented per AC-4: {story_id}:{stage}:{attempt_number}"
+    action: "Parse representative thread IDs: 'APIP-0020:elaboration:1', 'WISH-2068:implementation:3', 'APIP-1030:review:1'"
+    expected: "Each thread ID is: unique per attempt; human-readable; parseable by splitting on ':' into 3 parts (story_id, stage, attempt_number)"
+    evidence: "Manual verification or simple TypeScript test splitting on ':' and checking parts count === 3"
+
+  - id: HP-5
+    title: "Migration version tracking records migration application"
+    setup: "schema_migrations table exists in apip schema"
+    action: "Apply a migration; confirm schema_migrations row is inserted with correct version, filename, and applied_at timestamp"
+    expected: "SELECT * FROM apip.schema_migrations returns a row with version matching the migration file number"
+    evidence: "psql query result shows correct row in schema_migrations"
+
+error_cases:
+  - id: EC-1
+    title: "Apply migration against wrong database instance (port 5433 KB instance)"
+    setup: "Two PostgreSQL instances running: port 5432 (Aurora main), port 5433 (KB pgvector instance)"
+    action: "Attempt to run APIP migration against port 5433 (Knowledge Base PostgreSQL)"
+    expected: "Migration fails with clear error or, if run, creates schema on wrong instance without affecting KB tables"
+    evidence: "Manual verification: confirm apip schema does NOT appear on port 5433 after incorrect application attempt; confirm KB tables unaffected"
+
+  - id: EC-2
+    title: "Re-run migration that includes constraint addition without idempotency guard"
+    setup: "apip schema applied; a migration with ADD CONSTRAINT (no DO $$ IF NOT EXISTS guard) is applied once"
+    action: "Re-apply the same migration"
+    expected: "Migration FAILS with 'constraint already exists' error — this tests that the story's requirement for idempotency guards is necessary and enforced"
+    evidence: "psql stderr output shows ERROR: constraint already exists — confirms the story's DO $$ ... END $$ guard requirement"
+
+  - id: EC-3
+    title: "LangGraph checkpoint table initialization when hand-rolled DDL already exists"
+    setup: "Baseline apip migration applied; additionally, checkpoint tables hand-rolled in same schema as LangGraph would create them"
+    action: "Start LangGraph server with PostgreSQL checkpointer"
+    expected: "Either: LangGraph uses existing tables (if compatible schema), OR LangGraph errors with clear message about table conflict — documents why delegation to LangGraph is the correct choice"
+    evidence: "LangGraph server startup log shows explicit handling of existing checkpoint tables"
+
+edge_cases:
+  - id: ED-1
+    title: "Destructive migration rollback procedure — documented as downtime-required"
+    setup: "apip schema has a table with data; rollback procedure document exists per AC-5"
+    action: "Review the rollback procedure document for a destructive migration (DROP COLUMN/TABLE scenario)"
+    expected: "Document clearly states: downtime window required; data backup step documented before DROP; no automatic rollback path exists for destructive changes"
+    evidence: "Manual review of rollback procedure document confirms these three points are explicitly stated"
+
+  - id: ED-2
+    title: "PostgreSQL enum change rollback — documented as irreversible without data migration"
+    setup: "Rollback procedure document exists per AC-5"
+    action: "Review the rollback procedure document for enum type changes"
+    expected: "Document explicitly states: PostgreSQL enum ADD VALUE is irreversible; full data migration required to remove enum values; no simple rollback path"
+    evidence: "Manual review of rollback procedure document confirms irreversibility statement"
+
+  - id: ED-3
+    title: "Docker Compose startup sequence — runbook covers LangGraph checkpoint initialization order"
+    setup: "Local development runbook exists per AC-6"
+    action: "Review runbook for Docker Compose service startup sequence"
+    expected: "Runbook documents explicit order: (1) Aurora PostgreSQL starts, (2) APIP baseline migration applied, (3) LangGraph server starts and checkpointer initializes. Dependency on DB health check before migration run is documented."
+    evidence: "Manual review of runbook startup sequence section"
+
+  - id: ED-4
+    title: "apip schema namespace — no conflict with existing pgSchema namespaces"
+    setup: "Aurora PostgreSQL instance with existing wint, public, umami schemas"
+    action: "Query information_schema.schemata for all existing schemas; confirm 'apip' is not already in use"
+    expected: "SELECT schema_name FROM information_schema.schemata — 'apip' does not appear; only wint, public, umami, and default PostgreSQL schemas present"
+    evidence: "psql query result"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "SELECT table_name FROM information_schema.tables WHERE table_schema = 'apip' — returns schema_migrations"
+      - "SELECT COUNT(*) FROM apip.schema_migrations after re-apply equals count after first apply"
+      - "SELECT table_schema FROM information_schema.tables WHERE table_name LIKE 'checkpoint%' — LangGraph tables in separate namespace"
+      - "psql exit code 0 after re-applying idempotent migration"
+  frontend:
+    # omitted — ui_touched: false
+
+manual_cases:
+  - id: MC-1
+    title: "ADR review — migration tooling decision completeness"
+    steps:
+      - "Open the ADR file produced by this story"
+      - "Confirm it documents: why Drizzle Kit was considered, why sequential SQL scripts were chosen (or vice versa), and the rationale referencing KB migration 014 as the cautionary example"
+      - "Confirm it explicitly states which tooling will be used for pipeline-owned tables going forward"
+    expected: "ADR is complete, grounded in codebase evidence, and actionable"
+
+  - id: MC-2
+    title: "ADR review — LangGraph checkpoint ownership decision completeness"
+    steps:
+      - "Open the ADR (or ADR section) on checkpoint table ownership"
+      - "Confirm it states explicitly: LangGraph's built-in PostgreSQL checkpointer creates tables X, Y, Z; APIP-5007 delegates checkpoint DDL to LangGraph; APIP pipeline only manages apip-prefixed tables"
+      - "Confirm it documents how LangGraph checkpoint initialization is invoked on first startup"
+    expected: "Decision is explicit, unambiguous, and referenced from the runbook"
+
+  - id: MC-3
+    title: "APIP-5001 consultation confirmation"
+    steps:
+      - "Review AC-8 documentation artifact or story notes for APIP-5007"
+      - "Confirm that APIP-5001 requirements (test database setup, migration testing fixtures) are either addressed in this story's migration strategy or explicitly deferred with documented gap"
+    expected: "A gap analysis exists and APIP-5001 team has been informed of migration strategy so test fixtures can be built against it"
+
+fixture_definitions:
+  - name: "fresh_apip_schema_db"
+    type: "postgres_database"
+    description: "PostgreSQL instance (port 5432) with no apip schema — used for first-apply tests (HP-1, HP-3)"
+  - name: "migrated_apip_schema_db"
+    type: "postgres_database"
+    description: "PostgreSQL instance with apip schema and schema_migrations table already applied — used for idempotency tests (HP-2, HP-5)"
+  - name: "apip_migration_scripts"
+    type: "file_set"
+    description: "The set of SQL migration files produced by this story (001_apip_schema_baseline.sql at minimum)"
+
+risks:
+  - "LangGraph checkpoint table namespace behavior may differ between @langchain/langgraph-checkpoint-postgres versions — HP-3 test outcome depends on package version pinning"
+  - "Docker Compose environment setup is a prerequisite for HP-1 and HP-3 — if infra/compose.lego-app.yaml Aurora service not running, these tests cannot execute"
+  - "Migration version tracking (HP-5) requires that the migration runner actually inserts rows to schema_migrations — if runner is manual psql only, this step requires explicit INSERT in migration SQL"
+  - "AC-8 (APIP-5001 consultation) is a process gate, not a code artifact — verification depends on team coordination, not automated test"

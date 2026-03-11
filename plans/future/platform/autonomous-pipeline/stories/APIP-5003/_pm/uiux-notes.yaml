@@ -1,0 +1,4 @@
+skipped: true
+reason: "APIP-5003 is a pure infrastructure and documentation story. No user-facing UI components are introduced or modified. LangGraph Studio UI (port 8124) is a third-party operator tool whose network access is being restricted, not built. No React components, Tailwind styles, or design system elements are involved. The story produces Markdown documentation (SECURITY.md) and Docker Compose configuration changes only. Operator ergonomics notes are captured in the story's documentation guidance section rather than here."
+story_type: infrastructure/documentation
+frontend_impacted: false

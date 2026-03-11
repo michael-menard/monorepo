@@ -1,0 +1,6 @@
+blocked: false
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 0
+completed_at: '2026-03-09T18:00:00Z'
+verdict: PASS

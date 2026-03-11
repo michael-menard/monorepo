@@ -629,7 +629,7 @@ describe('APIP-3020 - AC-1: modelAffinity Table Definition', () => {
   })
 
   it('should have all required columns', () => {
-    const cols = modelAffinity[Symbol.for('drizzle:Columns')] ?? Object.keys(modelAffinity)
+    const _cols = modelAffinity[Symbol.for('drizzle:Columns')] ?? Object.keys(modelAffinity)
     // Table object is defined — column presence validated via Zod schema shape below
     expect(modelAffinity).toBeTruthy()
   })

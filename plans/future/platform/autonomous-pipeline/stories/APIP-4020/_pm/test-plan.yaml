@@ -1,0 +1,183 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  e2e: not_applicable  # no UI-facing ACs; ADR-006 does not apply
+
+happy_path_tests:
+  - id: HP-1
+    title: "Route handler detector identifies compliant handler correctly"
+    setup: "Create fixture file: a route handler with Zod validation wrapper and service delegation call present"
+    action: "Call detectRouteHandlerViolations(fixtureContent)"
+    expected: "Returns empty violations array"
+    evidence: "Unit test assertion: violations.length === 0"
+
+  - id: HP-2
+    title: "Zod naming convention detector identifies compliant schema"
+    setup: "Create fixture file: a z.object() assigned to a variable ending in 'Schema'"
+    action: "Call detectZodNamingViolations(fixtureContent)"
+    expected: "Returns empty violations array"
+    evidence: "Unit test assertion: violations.length === 0"
+
+  - id: HP-3
+    title: "React directory structure detector approves compliant component"
+    setup: "Create controlled directory tree: MyComponent/index.tsx and MyComponent/__tests__/MyComponent.test.tsx"
+    action: "Call detectDirectoryStructureViolations(componentDir)"
+    expected: "Returns empty violations array"
+    evidence: "Unit test assertion: violations.length === 0"
+
+  - id: HP-4
+    title: "Import convention detector approves @repo/* imports"
+    setup: "Create fixture file using @repo/logger and @repo/db imports only"
+    action: "Call detectImportConventionViolations(fixtureContent)"
+    expected: "Returns empty violations array"
+    evidence: "Unit test assertion: violations.length === 0"
+
+  - id: HP-5
+    title: "Score computation produces correct per-category and composite score"
+    setup: "Prepare known violation counts and sample sizes for each category"
+    action: "Call computeCohesionScore(violations, sampleSizes, config)"
+    expected: "Per-category scores and weighted composite within expected numeric range"
+    evidence: "Unit test with deterministic inputs; assert score within ±1 of expected"
+
+  - id: HP-6
+    title: "Scanner persists cohesion_snapshots row on successful scan"
+    setup: "Controlled sample directory with known violations; test DB available"
+    action: "Run full scanner integration against controlled sample"
+    expected: "One wint.cohesion_snapshots row inserted with correct scores and run_id"
+    evidence: "SELECT from wint.cohesion_snapshots; assert row count +1, scores match expected"
+
+  - id: HP-7
+    title: "Cleanup story generated when category score below threshold"
+    setup: "Controlled sample with 6+ route handler violations to breach threshold; deduplication window not yet elapsed for this category"
+    action: "Run full scanner integration"
+    expected: "YAML file written to plans/future/platform/autonomous-pipeline/backlog/APIP-CLEANUP-route-handler-{date}/story.yaml"
+    evidence: "Assert file exists; parse YAML; verify title includes category name and date"
+
+  - id: HP-8
+    title: "Cleanup story deduplication prevents duplicate within window"
+    setup: "Run scanner once (story created); run scanner again before deduplication window expires"
+    action: "Second scanner run"
+    expected: "No new cleanup story created; existing story path logged"
+    evidence: "Assert backlog directory still has only one cleanup story for that category; log contains 'deduplication'"
+
+  - id: HP-9
+    title: "Advisory lock prevents concurrent scanner runs"
+    setup: "Simulate two simultaneous scanner invocations in test DB"
+    action: "Start scan A, then immediately start scan B before A releases lock"
+    expected: "Scan B logs advisory lock miss and exits gracefully without inserting a second snapshot row"
+    evidence: "Assert wint.cohesion_snapshots has only 1 row for that run window; log contains 'advisory lock not acquired'"
+
+error_cases:
+  - id: EC-1
+    title: "Route handler detector flags missing Zod validation wrapper"
+    setup: "Fixture file: route handler function body without any Zod .parse() or .safeParse() call"
+    action: "Call detectRouteHandlerViolations(fixtureContent)"
+    expected: "Returns PatternViolationSchema with category=route-handler, violationType=missing-zod-validation"
+    evidence: "Unit test assertion: violations[0].violationType === 'missing-zod-validation'"
+
+  - id: EC-2
+    title: "Zod naming detector flags z.object() assigned to variable without Schema suffix"
+    setup: "Fixture file: const UserData = z.object({...})"
+    action: "Call detectZodNamingViolations(fixtureContent)"
+    expected: "Returns PatternViolationSchema with violationType=missing-schema-suffix"
+    evidence: "Unit test assertion: violations.length === 1, filePath matches fixture"
+
+  - id: EC-3
+    title: "Import convention detector flags direct shadcn import path"
+    setup: "Fixture file: import { Button } from '@radix-ui/react-button'"
+    action: "Call detectImportConventionViolations(fixtureContent)"
+    expected: "Returns violation with violationType=direct-shadcn-import"
+    evidence: "Unit test assertion on violation category and type"
+
+  - id: EC-4
+    title: "Scanner handles unreadable files gracefully"
+    setup: "Sample directory includes a file with no read permissions"
+    action: "Run scanner over sample directory"
+    expected: "File skipped with warning logged; scan continues; no thrown exception"
+    evidence: "Assert scan completes; log contains skip warning with file path"
+
+  - id: EC-5
+    title: "Cleanup story generation failure does not abort scan"
+    setup: "Mock createStoryArtifact to throw; run full scan with below-threshold category"
+    action: "Run scanner"
+    expected: "Scan completes, snapshot row persisted; story generation error logged as warning"
+    evidence: "Assert wint.cohesion_snapshots row present; no exception propagated to caller"
+
+edge_cases:
+  - id: ED-1
+    title: "Zod naming detector ignores files in __tests__ directories"
+    setup: "Fixture file in __tests__/ path with non-Schema-suffixed z.object()"
+    action: "Call detectZodNamingViolations with file path containing __tests__"
+    expected: "No violation returned (test files excluded per non-goals)"
+    evidence: "Unit test assertion: violations.length === 0 for test-path input"
+
+  - id: ED-2
+    title: "React directory detector skips utility files without JSX"
+    setup: "A TypeScript file at utils/formatDate.ts (no index.tsx, no __tests__/)"
+    action: "Call detectDirectoryStructureViolations for that path"
+    expected: "No violation — pure utility files exempt from component structure rule"
+    evidence: "Unit test; assert violations.length === 0 for non-JSX utility"
+
+  - id: ED-3
+    title: "Score computation with zero sample size avoids division by zero"
+    setup: "Category has sampleSize = 0"
+    action: "Call computeCohesionScore with empty sample"
+    expected: "Returns score = null or sentinel value (not NaN or thrown error); category excluded from composite"
+    evidence: "Unit test assertion: result.score is null or 100 with violationCount 0"
+
+  - id: ED-4
+    title: "Deduplication window boundary: story created exactly at window edge"
+    setup: "Cleanup story created exactly deduplicationWindowDays ago (boundary)"
+    action: "Run scanner"
+    expected: "New story generated (boundary is exclusive — story at exact window age is expired)"
+    evidence: "Assert new cleanup story file present in backlog"
+
+  - id: ED-5
+    title: "Scanner respects sampleRatePercent when file population is small"
+    setup: "Directory with only 3 source files; sampleRatePercent = 20"
+    action: "Run scanner"
+    expected: "At least 1 file scanned (floor to 1 when sample rate would round to 0)"
+    evidence: "Unit test on file sampling logic; assert scannedFiles.length >= 1"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "wint.cohesion_snapshots row count increments by 1 per scan run"
+      - "CohesionScanResultSchema passes Zod validation on scanner output"
+      - "Cleanup story YAML validates against StoryArtifactSchema"
+      - "Advisory lock row present in pg_locks during active scan"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Manual trigger of scanner via CLI produces readable output"
+    steps:
+      - "Run scanner CLI command against local monorepo"
+      - "Observe console output / log file"
+    expected: "Scores printed per category; any below-threshold categories listed with top 3 violations; advisory lock acquired and released logged"
+
+fixture_definitions:
+  - name: compliant-route-handler.ts
+    type: file-fixture
+    description: "Route handler with Zod .parse() on request body and explicit service.method() delegation — passes all route-handler checks"
+  - name: violating-route-handler.ts
+    type: file-fixture
+    description: "Route handler calling res.json directly with raw req.body — missing Zod validation and service delegation"
+  - name: compliant-zod-schema.ts
+    type: file-fixture
+    description: "All z.object() declarations follow *Schema naming convention"
+  - name: violating-zod-schema.ts
+    type: file-fixture
+    description: "z.object() assigned to 'UserData' (missing Schema suffix)"
+  - name: cohesion-sample/
+    type: directory-fixture
+    description: "Controlled directory tree with 10+ files: some compliant, some deliberately violating each category — used for integration test"
+
+risks:
+  - "False-positive rate on regex heuristics may cause flaky integration tests — mitigate by keeping fixture violations unambiguous"
+  - "wint.cohesion_snapshots table depends on APIP-4010 migration; integration tests require that table to exist in test DB"
+  - "Advisory lock test requires a second DB connection; test harness must support concurrent connections"
+  - "Deduplication boundary test is time-sensitive — use injectable clock to avoid flakiness"

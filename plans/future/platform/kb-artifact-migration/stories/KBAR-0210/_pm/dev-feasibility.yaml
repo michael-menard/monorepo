@@ -1,0 +1,159 @@
+feasible: true
+confidence: high
+rationale: >
+  KBAR-0210 is a documentation/markdown consistency audit with no TypeScript source changes.
+  All target files exist, patterns to follow are established in qa-verify-story.md and
+  dev-code-review.md, and the valid state strings have been verified from StoryStateSchema.
+  The key finding is that 'ready' IS a valid DB state (not 'ready_to_work'), so elab-story.md
+  may already be correct — this must be confirmed at implementation time by inspecting the
+  actual call site. The scope is well-bounded: 5 command files to audit, 2 to verify unchanged.
+complexity: low
+change_surface:
+  areas:
+    - .claude/commands/dev-implement-story.md
+    - .claude/commands/elab-story.md
+    - .claude/commands/qa-verify-story.md
+    - .claude/commands/dev-fix-story.md
+    - .claude/commands/dev-code-review.md
+    - .claude/commands/story-update.md (read-only audit)
+    - .claude/commands/story-move.md (read-only audit)
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      Critical state string finding: StoryStateSchema in apps/api/knowledge-base/src/__types__/index.ts
+      uses 'ready' (not 'ready_to_work'). The story-update.md shim maps 'ready-to-work' → 'ready_to_work'
+      but that is the SHIM's mapping string, not the DB state. The actual valid DB states include 'ready'.
+      If elab-story.md uses state: 'ready', it IS correct. If AC-1 and AC-2 were written assuming
+      'ready_to_work' is wrong for elab-story.md, they need re-evaluation. Dev must verify elab-story.md
+      actual call site value before deciding if a correction is needed.
+    mitigation: >
+      At ST-1, read elab-story.md actual state value. If it says 'ready', it is correct — no AC-2 fix needed.
+      If it says 'ready_to_work', that IS incorrect and must be corrected to 'ready'.
+      Document the finding in the story regardless.
+
+missing_requirements:
+  - >
+    AC-2 should be updated to reflect that 'ready' (not 'ready_to_work') is the valid DB state for
+    the elab PASS path. The story seed's conflict analysis may have been comparing against the shim
+    mapping string rather than the actual DB enum. Dev must clarify this at implementation time.
+
+evidence_expectations:
+  - >
+    Grep output showing kb_update_story_status call site in elab-story.md with confirmed state string value
+  - >
+    Grep or read output showing StoryStateSchema enum values from __types__/index.ts at implementation time
+  - >
+    Git diff showing each modified command file — diff must be reviewable and traceable to specific ACs
+  - >
+    Dev-implement-story.md Step 0.6 block — before/after diff if added
+
+subtasks:
+  - id: ST-1
+    title: "Verify valid state strings from StoryStateSchema"
+    goal: >
+      Read apps/api/knowledge-base/src/__types__/index.ts and extract the exact StoryStateSchema enum values.
+      Read elab-story.md PASS path kb_update_story_status call site and confirm the state string used.
+      Document the mapping and whether elab-story.md needs correction. This subtask resolves the
+      AC-1/AC-2 ambiguity before any files are modified.
+    files_to_read:
+      - apps/api/knowledge-base/src/__types__/index.ts
+      - .claude/commands/elab-story.md
+      - .claude/commands/story-update.md
+    files_to_modify: []
+    acs: ["AC-1", "AC-2"]
+    depends_on: none
+    verification: "Manual diff review — no type check needed (no TS changes)"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Audit elab-story.md — verify state strings and add graceful failure note"
+    goal: >
+      If AC-2 fix is needed (state string wrong), correct it. Regardless, add or verify graceful
+      failure documentation for the kb_update_story_status call: if null returned or throws,
+      emit WARNING and continue. Verify both PASS path (state: 'ready') and FAIL path
+      (state: 'backlog') use correct strings.
+    files_to_read:
+      - .claude/commands/elab-story.md
+    files_to_modify:
+      - .claude/commands/elab-story.md
+    acs: ["AC-1", "AC-2", "AC-5"]
+    depends_on: ST-1
+    verification: "Manual diff review against StoryStateSchema enum from ST-1"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Audit dev-implement-story.md — add Step 0.6 DB claim if needed"
+    goal: >
+      Read dev-implement-story.md. Determine if Step 0.6 claim with state: 'in_progress' is present.
+      If absent, add it with guard (check if already 'in_progress') and abort recovery instruction.
+      Document the design decision: Step 0.6 claim provides DB state consistency even though
+      worktree verification (Step 1.3) already prevents parallel work conflicts at the filesystem level.
+      Also verify Done-path calls use correct state string ('ready_for_review').
+    files_to_read:
+      - .claude/commands/dev-implement-story.md
+    files_to_modify:
+      - .claude/commands/dev-implement-story.md
+    acs: ["AC-3", "AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "Manual diff review — Step 0.6 block present with all 3 elements, Done-path state correct"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Audit dev-fix-story.md — verify guard, abort recovery, and state strings"
+    goal: >
+      Read dev-fix-story.md Step 0.6 claim (state: 'in_progress'). Verify guard and abort recovery
+      pattern are present. Verify Done-path uses correct state string. Add graceful failure
+      documentation for kb_update_story_status unavailability.
+    files_to_read:
+      - .claude/commands/dev-fix-story.md
+    files_to_modify:
+      - .claude/commands/dev-fix-story.md
+    acs: ["AC-5", "AC-6"]
+    depends_on: ST-1
+    verification: "Manual diff review — consistent with qa-verify-story.md and dev-code-review.md patterns"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Verify qa-verify-story.md and dev-code-review.md are already correct"
+    goal: >
+      Confirm no changes needed in qa-verify-story.md and dev-code-review.md. Verify state strings
+      (in_qa, in_review) are valid per StoryStateSchema. Confirm guard and abort recovery patterns
+      present. Document as PASS in story implementation notes.
+    files_to_read:
+      - .claude/commands/qa-verify-story.md
+      - .claude/commands/dev-code-review.md
+    files_to_modify: []
+    acs: ["AC-4"]
+    depends_on: none
+    verification: "Confirmation that both files require no changes — grep state strings against StoryStateSchema"
+    estimated_tokens: 4000
+
+  - id: ST-6
+    title: "Audit story-update.md and story-move.md for regressions"
+    goal: >
+      Read both files. Confirm shimUpdateStoryStatus usage is intact and correct (v3.0.0).
+      Confirm no changes needed. Document audit result in story notes (AC-7).
+    files_to_read:
+      - .claude/commands/story-update.md
+      - .claude/commands/story-move.md
+    files_to_modify: []
+    acs: ["AC-7"]
+    depends_on: none
+    verification: "Confirmation that both files require no changes"
+    estimated_tokens: 3000
+
+  - id: ST-7
+    title: "Human review of all diffs against ACs"
+    goal: >
+      Review all modified command files (elab-story.md, dev-implement-story.md, dev-fix-story.md)
+      against each AC. Verify AC coverage is complete. Write implementation notes documenting
+      the dev-implement-story.md Step 0.6 design decision and state string verification findings.
+    files_to_read:
+      - plans/future/platform/kb-artifact-migration/backlog/KBAR-0210/KBAR-0210.md
+    files_to_modify: []
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+    depends_on: ST-2
+    verification: "All ACs checkable from diff output. No TypeScript files modified (AC-8)."
+    estimated_tokens: 4000

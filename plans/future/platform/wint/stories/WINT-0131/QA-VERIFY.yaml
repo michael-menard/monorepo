@@ -1,0 +1,76 @@
+schema: 1
+story_id: WINT-0131
+timestamp: '2026-02-24T00:37:00Z'
+
+qa_verify:
+  verdict: CONDITIONAL PASS
+  evidence_source: PROOF-WINT-0131.md
+  note: "Story uses PROOF-*.md evidence format (pre-dates evidence-first workflow)"
+  test_summary:
+    total_tests: 305
+    passed: 305
+    failed: 0
+    skipped: 0
+    graph_query_tests: 31
+  type_check:
+    mcp_tools: PASS
+    database_schema: PASS
+    note: "database-schema has pre-existing seed/index.ts error unrelated to WINT-0131"
+  lint: PASS
+  acceptance_criteria:
+    total: 14
+    passed: 13
+    missing: 1
+    failed: 0
+    percent: "93% (13/14 PASS, 1 MISSING - AC-2 requires live DB)"
+  acceptance_criteria_detail:
+    - ac: AC-1
+      status: PASS
+      evidence: "Migration 0027 SQL file exists at packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk.sql"
+    - ac: AC-2
+      status: MISSING
+      evidence: "Migration not applied to live DB — no PostgreSQL connection available in this environment. Known deviation documented in PROOF file."
+    - ac: AC-3
+      status: PASS
+      evidence: "Rollback SQL file exists: 0027_wint_0131_capabilities_feature_fk_rollback.sql"
+    - ac: AC-4
+      status: PASS
+      evidence: "featureId FK column in wint.ts (line 1170), capabilitiesRelations with one(features), featuresRelations with many(capabilities), index defined"
+    - ac: AC-5
+      status: PASS
+      evidence: "8 tests pass in graph-get-franken-features.test.ts"
+    - ac: AC-6
+      status: PASS
+      evidence: "7 tests pass in graph-get-capability-coverage.test.ts"
+    - ac: AC-7
+      status: PASS
+      evidence: "Source code confirmed: only Drizzle ORM operators used (eq, or, isNotNull, innerJoin)"
+    - ac: AC-8
+      status: PASS
+      evidence: "ZodError tests pass in both graph-query test files"
+    - ac: AC-9
+      status: PASS
+      evidence: "DB error + logger.warn tests pass in both graph-query test files"
+    - ac: AC-10
+      status: PASS
+      evidence: "31 total graph-query tests cover all required scenarios"
+    - ac: AC-11
+      status: PASS
+      evidence: "npx tsc --noEmit on mcp-tools: zero errors"
+    - ac: AC-12
+      status: PASS
+      evidence: "pnpm eslint on all changed files: zero errors"
+    - ac: AC-13
+      status: PASS
+      evidence: "305/305 mcp-tools tests pass (no regressions)"
+    - ac: AC-14
+      status: PASS
+      evidence: "8 tests each for graph-check-cohesion and graph-apply-rules pass"
+
+gate:
+  decision: PASS
+  reason: "13/14 AC verified by fresh test runs. 305 unit tests passing (31 for graph-query specifically). TypeScript and ESLint clean. AC-2 (live DB migration apply) is an acceptable deviation — no DB env available, migration SQL is syntactically correct and follows established patterns."
+  blocking_issues: []
+  waived_issues:
+    - ac: AC-2
+      reason: "Migration apply requires live PostgreSQL connection. Deferred to deployment pipeline per story's documented Known Deviations."

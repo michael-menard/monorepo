@@ -1,0 +1,29 @@
+schema: 1
+id: WISH-2070
+feature: wish
+type: chore
+state: uat
+title: "Fix Pre-existing TypeScript Errors in app-wishlist-gallery"
+points: 2
+priority: P1
+blocked_by: null
+depends_on: []
+follow_up_from: null
+scope:
+  packages:
+    - apps/web/app-wishlist-gallery
+    - packages/core/logger
+    - packages/core/app-component-library
+    - packages/core/api-client
+    - packages/core/gallery
+  surfaces:
+    - frontend
+goal: Fix all pre-existing TypeScript errors so pnpm check-types passes with 0 errors for app-wishlist-gallery.
+non_goals:
+  - Not refactoring working code beyond what is needed to fix type errors
+  - Not adding new features or changing runtime behavior
+  - Not fixing warnings (only errors)
+acs: []
+risks: []
+created_at: 2026-02-09T00:00:00-07:00
+updated_at: 2026-02-09T20:52:00Z

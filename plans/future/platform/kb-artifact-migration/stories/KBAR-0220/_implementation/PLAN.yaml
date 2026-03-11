@@ -1,0 +1,277 @@
+schema: 2
+story_id: KBAR-0220
+timestamp: '2026-03-03T06:10:00Z'
+subtask_source: story
+spike: true
+notes:
+  - This is a validation-only spike. No TypeScript, no agent markdown, no command markdown is written or modified.
+  - >-
+    The PLAN steps describe OBSERVATION actions, not code changes. Each step invokes existing workflow commands and
+    observes output.
+  - >-
+    EVIDENCE.yaml must be written incrementally at each phase boundary (after each ST) to protect against mid-run defect
+    termination.
+  - Canary story MUST be KBAR-TEST-001 (purpose-built stub). Do NOT use a real pending backlog story.
+  - 'ADR-005 compliance: real KB server (port 5433), real DB (port 5432) required. No mocking.'
+  - 'ADR-006 exempt: e2e_exempt: true — no UI surface. Canary run IS the test.'
+  - >-
+    Terminal state after QA pass must be verified against StoryStateSchema in
+    apps/api/knowledge-base/src/__types__/index.ts — do not assert from memory.
+  - >-
+    artifact_search may return empty or error transiently; this is a graceful fallback, not a fatal failure. Document in
+    EVIDENCE.yaml.
+  - >-
+    AC-11 is assigned to ST-4 (not ST-3) per elab GAP-05 resolution — knowledge-context-loader runs during
+    dev-setup-leader which is part of /dev-implement-story.
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Verify all KBAR Phase 5 migrations (KBAR-0160 through KBAR-0210) are present in merged agent and command files.
+      Read each file and confirm it contains the expected artifact_write or kb_update_story_status call sites from each
+      respective migration.
+    files: []
+    files_to_read:
+      - .claude/agents/dev-setup-leader.agent.md
+      - .claude/agents/dev-plan-leader.agent.md
+      - .claude/agents/dev-execute-leader.agent.md
+      - .claude/agents/review-aggregate-leader.agent.md
+      - .claude/agents/qa-verify-completion-leader.agent.md
+      - .claude/agents/knowledge-context-loader.agent.md
+      - .claude/commands/dev-implement-story.md
+      - .claude/commands/elab-story.md
+      - .claude/commands/dev-code-review.md
+      - .claude/commands/qa-verify-story.md
+    dependencies: []
+    slice: backend
+    verification: >-
+      Each agent/command file confirms: (1) artifact_write call sites where kb_write_artifact was replaced (KBAR-0160
+      through KBAR-0190), (2) kb_update_story_status in dev-implement-story/dev-code-review/qa-verify-story Step 0.6
+      (KBAR-0170), (3) kb_sync_working_set calls present (KBAR-0180), (4) knowledge-context-loader contains
+      artifact_search (KBAR-0200), (5) review-aggregate-leader at migrated version (KBAR-0210). Document version found
+      for each file in EVIDENCE.yaml.
+    acs_covered:
+      - AC-12
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Create the canary story KBAR-TEST-001 in the DB via kb_update_story_status or direct DB insert. Verify initial
+      state is 'backlog' via kb_get_story. Read StoryStateSchema to confirm valid state value names. Document
+      CANARY_STORY_ID for all subsequent steps.
+    files: []
+    files_to_read:
+      - apps/api/knowledge-base/src/__types__/index.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      kb_get_story({story_id: 'KBAR-TEST-001'}).state === 'backlog'. Document the story_id used as CANARY_STORY_ID in
+      EVIDENCE.yaml. Precondition: DO NOT use a real pending backlog story (KBAR-0230 or similar).
+    acs_covered:
+      - AC-1
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Execute /elab-story KBAR-TEST-001. Observe command completion without fatal errors. Verify DB state transitions to
+      'ready' via kb_get_story after completion. Write phase boundary observation to EVIDENCE.yaml.
+    files: []
+    files_to_read:
+      - .claude/commands/elab-story.md
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      kb_get_story({story_id: CANARY_STORY_ID}).state === 'ready'. Document elab command output summary and state value
+      in EVIDENCE.yaml.
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Execute /dev-implement-story KBAR-TEST-001. Observe: (a) Step 0.6 sets in_progress state, (b) dev-setup-leader
+      writes CHECKPOINT.yaml and SCOPE.yaml via artifact_write, (c) dev-plan-leader writes PLAN.yaml via artifact_write,
+      (d) dev-execute-leader writes EVIDENCE.yaml via artifact_write, (e) Done path sets state to ready_for_review, (f)
+      knowledge-context-loader invokes artifact_search during setup phase — record whether invocation is visible in tool
+      usage output and what result count it returns.
+    files: []
+    files_to_read:
+      - .claude/commands/dev-implement-story.md
+      - packages/backend/orchestrator/src/artifacts/checkpoint.ts
+      - packages/backend/orchestrator/src/artifacts/scope.ts
+      - packages/backend/orchestrator/src/artifacts/plan.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      All 4 artifacts present in canary _implementation/: CHECKPOINT.yaml, SCOPE.yaml, PLAN.yaml, EVIDENCE.yaml.
+      Validate each file against its Zod schema. kb_get_story state === 'ready_for_review'. Knowledge-context-loader
+      artifact_search invocation observed (or absence documented). Write phase boundary to EVIDENCE.yaml.
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-11
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Run artifact_search({story_id: 'KBAR-TEST-001'}) via MCP tool. Record result count and artifact types. This
+      verifies the KB indexing path of artifact_write is operative end-to-end.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 4
+    slice: backend
+    verification: >-
+      artifact_search result count >= 1 (PASS) or 0 (document as potential KB indexing delay, not fatal). Record
+      artifact types found. Write observation to EVIDENCE.yaml.
+    acs_covered:
+      - AC-10
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Execute /dev-code-review KBAR-TEST-001. Observe: (a) Step 0.6 sets in_review state, (b) review-aggregate-leader
+      writes REVIEW.yaml via artifact_write, (c) PASS path sets state to ready_for_qa. Verify REVIEW.yaml is retrievable
+      via kb_read_artifact.
+    files: []
+    files_to_read:
+      - .claude/commands/dev-code-review.md
+      - packages/backend/orchestrator/src/artifacts/review.ts
+    dependencies:
+      - 5
+    slice: backend
+    verification: >-
+      REVIEW.yaml present in canary _implementation/. kb_read_artifact({story_id: CANARY_STORY_ID, artifact_type:
+      'review'}) returns artifact. kb_get_story state === 'ready_for_qa'. Write phase boundary to EVIDENCE.yaml.
+    acs_covered:
+      - AC-1
+      - AC-6
+      - AC-7
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Check KBAR-0190 merge status. If merged: execute /qa-verify-story KBAR-TEST-001, observe Step 0.6 sets in_qa,
+      qa-verify-completion-leader writes QA artifact, PASS path sets terminal state. If not merged: document deferral in
+      EVIDENCE.yaml with reason 'KBAR-0190 not merged at validation time'.
+    files: []
+    files_to_read:
+      - .claude/commands/qa-verify-story.md
+      - .claude/agents/qa-verify-completion-leader.agent.md
+    dependencies:
+      - 6
+    slice: backend
+    verification: >-
+      If KBAR-0190 merged: QA artifact present in canary _implementation/. kb_get_story returns terminal state (verify
+      against StoryStateSchema — do not assert value from memory). If not merged: EVIDENCE.yaml deferral entry with
+      KBAR-0190 status. Write phase boundary to EVIDENCE.yaml.
+    acs_covered:
+      - AC-1
+      - AC-8
+      - AC-9
+  - id: 8
+    subtask_id: ST-8
+    description: >-
+      Clean up canary story: mark as cancelled via kb_update_story_status or delete from DB. Write comprehensive final
+      EVIDENCE.yaml documenting: all observed DB state values at each phase boundary, all artifact file paths,
+      artifact_search result counts, any defects found (with story_id + AC + observed + expected), AC-by-AC
+      PASS/FAIL/DEFERRED verdict.
+    files:
+      - plans/future/platform/kb-artifact-migration/in-progress/KBAR-0220/_implementation/EVIDENCE.yaml
+    files_to_read: []
+    dependencies:
+      - 7
+    slice: backend
+    verification: >-
+      kb_get_story({story_id: CANARY_STORY_ID}) returns cancelled state or 404. kb_get_next_story does not return canary
+      story. EVIDENCE.yaml exists and contains all observations.
+    acs_covered:
+      - AC-12
+      - AC-13
+files_to_change:
+  - path: plans/future/platform/kb-artifact-migration/in-progress/KBAR-0220/_implementation/EVIDENCE.yaml
+    action: create
+    reason: >-
+      Primary deliverable of this spike — documents all validation observations, AC-by-AC verdicts, and defects found
+      during canary workflow run
+commands_to_run:
+  - command: docker compose ps
+    when: before ST-2 (before starting canary run)
+    required: true
+    description: Verify KB service (port 5433) and main DB (port 5432) are running
+  - command: /elab-story KBAR-TEST-001
+    when: ST-3
+    required: true
+    description: Run elab phase on canary story
+  - command: /dev-implement-story KBAR-TEST-001
+    when: ST-4
+    required: true
+    description: Run implement phase on canary story
+  - command: /dev-code-review KBAR-TEST-001
+    when: ST-6
+    required: true
+    description: Run code review phase on canary story
+  - command: /qa-verify-story KBAR-TEST-001
+    when: ST-7 (conditional on KBAR-0190 merged)
+    required: false
+    description: Run QA verify phase on canary story (conditional)
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      KB DB state transition verified at each phase boundary via kb_get_story — values recorded in EVIDENCE.yaml at each
+      ST
+    evidence_type: manual
+  - ac_id: AC-2
+    planned_evidence: elab-story completes without fatal error, kb_get_story returns ready state post-elab (ST-3)
+    evidence_type: manual
+  - ac_id: AC-3
+    planned_evidence: >-
+      CHECKPOINT.yaml and SCOPE.yaml exist in canary _implementation/ after dev-setup-leader (ST-4), validated against
+      Zod schemas
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      EVIDENCE.yaml exists in canary _implementation/ after dev-execute-leader (ST-4), validated against evidence.ts
+      schema
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: PLAN.yaml exists in canary _implementation/ after dev-plan-leader (ST-4), validated against plan.ts schema
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: in_review state confirmed via kb_get_story after dev-code-review Step 0.6 (ST-6)
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: >-
+      REVIEW.yaml exists in canary _implementation/ after review-aggregate-leader (ST-6); kb_read_artifact returns
+      review artifact; state transitions to ready_for_qa
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: in_qa state confirmed via kb_get_story after qa-verify-story Step 0.6 (ST-7, conditional)
+    evidence_type: manual
+  - ac_id: AC-9
+    planned_evidence: >-
+      Terminal state confirmed via kb_get_story after qa-verify PASS (ST-7, conditional); value verified against
+      StoryStateSchema
+    evidence_type: manual
+  - ac_id: AC-10
+    planned_evidence: 'artifact_search({story_id: CANARY_STORY_ID}) result count and types recorded in EVIDENCE.yaml (ST-5)'
+    evidence_type: manual
+  - ac_id: AC-11
+    planned_evidence: >-
+      knowledge-context-loader artifact_search invocation observed during dev-setup-leader phase (ST-4);
+      presence/absence and result count documented in EVIDENCE.yaml
+    evidence_type: manual
+  - ac_id: AC-12
+    planned_evidence: >-
+      All 6 agent/command files at expected migrated versions confirmed (ST-1); canary story cleaned up post-validation
+      (ST-8)
+    evidence_type: manual
+  - ac_id: AC-13
+    planned_evidence: kb_get_story returns cancelled or 404 after cleanup; kb_get_next_story does not return canary story (ST-8)
+    evidence_type: manual
+architectural_decisions: []
+complexity: moderate
+e2e_gate: exempt
+e2e_exempt_reason: No UI surface. Validation story — canary run IS the test. ADR-006 exempt.
+story_type: spike

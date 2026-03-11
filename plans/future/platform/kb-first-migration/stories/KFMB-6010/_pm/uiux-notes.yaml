@@ -1,0 +1,9 @@
+story_id: KFMB-6010
+skipped: true
+reason: >
+  No frontend surface. KFMB-6010 is a shell/Python scripting story that
+  modifies scripts/lib/resolve-plan.sh, scripts/lib/kb-state.sh (new file),
+  scripts/generate-stories.sh, scripts/implement-stories.sh,
+  scripts/implement-dispatcher.sh, and scripts/sync-work-order.py.
+  frontend_impacted: false. No UI components, no user-facing changes,
+  no UX guidance required.

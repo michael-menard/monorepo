@@ -1,0 +1,167 @@
+schema: 1
+story_id: WKFL-008
+timestamp: '2026-02-07T22:00:00Z'
+
+# Knowledge Context for WKFL-008 - Workflow Experimentation Framework
+
+relevant_adrs: []
+  # No formal ADRs found for this domain yet
+
+relevant_lessons:
+  - source: WKFL-001
+    lesson_id: meta-learning-outcome-schema
+    summary: "OUTCOME.yaml schema established with versioning and backward compatibility"
+    application: "Extend OUTCOME.yaml schema with experiment_variant field using same versioning pattern"
+
+  - source: WKFL-002
+    lesson_id: statistical-significance-patterns
+    summary: "Minimum sample sizes (10+) and p-value thresholds (p < 0.05 for medium confidence)"
+    application: "Reuse statistical thresholds for experiment analysis and rollout recommendations"
+
+  - source: WKFL-006
+    lesson_id: cross-story-pattern-analysis
+    summary: "Pattern detection across multiple stories requires robust file handling and graceful degradation"
+    application: "Apply same error handling patterns when loading multiple OUTCOME.yaml files for experiment analysis"
+
+reusable_patterns:
+  - pattern_id: zod-schema-validation
+    location: "Codebase-wide (CLAUDE.md requirement)"
+    description: "All YAML schemas defined as Zod objects with z.infer<typeof Schema>"
+    application: "Define ExperimentSchema, ExperimentReportSchema using Zod with runtime validation"
+
+  - pattern_id: yaml-config-files
+    location: ".claude/config/"
+    description: "Configuration files stored in .claude/config/ with schema validation"
+    application: "Create .claude/config/experiments.yaml following existing config patterns"
+
+  - pattern_id: sonnet-agent-analysis
+    location: "pattern-miner.agent.md, workflow-retro.agent.md"
+    description: "Complex analysis tasks use Sonnet model with YAML output"
+    application: "experiment-analyzer.agent.md uses Sonnet for statistical analysis"
+
+  - pattern_id: agent-frontmatter
+    location: "All .agent.md files"
+    description: "Standard frontmatter with created, updated, version, type, permission_level, model"
+    application: "Follow same frontmatter pattern for experiment-analyzer.agent.md"
+
+  - pattern_id: kb-integration
+    location: "WKFL-001, WKFL-002, WKFL-006"
+    description: "kb_search for querying, kb_add_lesson for persistence"
+    application: "Persist experiment results as KB lessons for future reference"
+
+  - pattern_id: backward-compatibility
+    location: ".claude/schemas/outcome-schema.md"
+    description: "Schema evolution with nullable fields and version checks"
+    application: "Add experiment_variant as nullable field to support legacy OUTCOME.yaml files"
+
+  - pattern_id: graceful-degradation
+    location: "All agent implementations"
+    description: "Workflow continues even if optional features unavailable (missing config, missing files)"
+    application: "Story creation continues with control assignment if experiments.yaml missing or malformed"
+
+integration_points:
+  - agent: pm-story-generation-leader.agent.md
+    modification: "Add Phase 0.5a: Traffic Routing (after seed, before story.yaml write)"
+    impact: "Non-blocking enhancement - defaults to control if experiments unavailable"
+    risk: low
+
+  - agent: dev-documentation-leader.agent.md
+    modification: "Read story.yaml experiment_variant and include in OUTCOME.yaml"
+    impact: "Schema extension - backward compatible with nullable field"
+    risk: low
+
+  - schema: .claude/schemas/outcome-schema.md
+    modification: "Add experiment_variant: string | null field to schema"
+    impact: "Extends existing schema v1, maintains backward compatibility"
+    risk: low
+
+dependencies:
+  - dependency_id: WKFL-001
+    status: COMPLETED
+    artifact: OUTCOME.yaml schema
+    availability: Available
+    notes: "Schema defined in .claude/schemas/outcome-schema.md, ready for extension"
+
+  - dependency_id: WKFL-006
+    status: IN_PROGRESS
+    artifact: Pattern-based eligibility criteria
+    availability: Optional
+    notes: "MVP uses heuristic-based eligibility, can enhance with patterns post-WKFL-006"
+
+risks_and_mitigations:
+  - risk: Statistical t-test implementation correctness
+    severity: medium
+    mitigation: "Test against known datasets with expected p-values, document formula"
+
+  - risk: Variant pollution (story in multiple experiments)
+    severity: medium
+    mitigation: "Strict first-match-wins logic with assertion checking"
+
+  - risk: Missing OUTCOME.yaml for in-progress stories
+    severity: low
+    mitigation: "Try/catch wrapping with graceful skip and logging"
+
+  - risk: Insufficient sample sizes early in experiments
+    severity: low
+    mitigation: "Sample size check before analysis, return 'continue' recommendation"
+
+  - risk: Backward compatibility with legacy OUTCOME.yaml
+    severity: low
+    mitigation: "Nullable experiment_variant field, treat missing as null not control"
+
+technical_constraints:
+  - constraint: "No external statistical libraries (pure JS/TS implementation)"
+    impact: "Must implement Welch's t-test from scratch"
+    workaround: "Use documented formula, validate with test datasets"
+
+  - constraint: "No HTTP endpoints (pure workflow framework)"
+    impact: "No API integration required"
+    benefit: "Simplified implementation, no infra changes"
+
+  - constraint: "Zod-first types required (CLAUDE.md)"
+    impact: "All schemas must be Zod objects"
+    benefit: "Runtime validation prevents malformed YAML"
+
+suggested_approach:
+  - phase: "Schema Definitions"
+    tasks:
+      - "Create .claude/config/experiments.yaml with Zod schema"
+      - "Define ExperimentSchema with traffic validation (0.0-1.0)"
+      - "Define ExperimentReportSchema for analysis output"
+      - "Extend outcome-schema.md with experiment_variant field"
+
+  - phase: "Traffic Routing"
+    tasks:
+      - "Add Phase 0.5a to pm-story-generation-leader"
+      - "Implement eligibility checking (AC count, complexity, domain)"
+      - "Implement random traffic assignment with first-match-wins"
+      - "Add experiment_variant to story.yaml schema"
+      - "Graceful degradation if experiments.yaml missing"
+
+  - phase: "Variant Propagation"
+    tasks:
+      - "Modify dev-documentation-leader to read story.yaml variant"
+      - "Include experiment_variant in OUTCOME.yaml generation"
+      - "Handle backward compatibility for legacy files"
+
+  - phase: "Statistical Analysis"
+    tasks:
+      - "Create experiment-analyzer.agent.md (Sonnet)"
+      - "Implement Welch's t-test with validation tests"
+      - "Implement sample size checking (min 10 per variant)"
+      - "Implement control group selection (same calendar period)"
+      - "Generate EXPERIMENT-REPORT.yaml with recommendations"
+
+  - phase: "Command and Integration"
+    tasks:
+      - "Create /experiment-report command"
+      - "Wire command to spawn experiment-analyzer"
+      - "Test with mock data (20+ stories per variant)"
+
+notes:
+  - "Control group selection: same calendar period as experiment (experiment.created_at to present)"
+  - "Rollout confidence threshold: minimum 'medium' confidence required (p < 0.05, n >= 10)"
+  - "Experiment lifecycle: manual status transitions only (no auto-progression)"
+  - "Statistical validation critical: test t-test implementation against known datasets"
+  - "First match wins strictly enforced: story can only be in one experiment"
+  - "Graceful degradation: workflow continues if experiments framework unavailable"

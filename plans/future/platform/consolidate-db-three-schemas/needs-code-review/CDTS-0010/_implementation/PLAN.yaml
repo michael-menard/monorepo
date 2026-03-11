@@ -1,0 +1,112 @@
+schema: 1
+story_id: CDTS-0010
+timestamp: '2026-03-08T07:00:00Z'
+steps:
+  - id: 1
+    description: >-
+      Create the knowledgebase migrations directory and the 020_cdts_safety_preamble.sql migration file with the safety
+      preamble, schema_migrations table DDL, and self-registration INSERT
+    files:
+      - packages/backend/database-schema/src/migrations/knowledgebase/020_cdts_safety_preamble.sql
+    dependencies: []
+    slice: backend
+  - id: 2
+    description: >-
+      Create RUNNER.md documenting the canonical psql command, pre-flight checklist, execution steps, rollback
+      procedure, and post-flight verification queries
+    files:
+      - packages/backend/database-schema/src/migrations/knowledgebase/RUNNER.md
+    dependencies:
+      - 1
+    slice: backend
+  - id: 3
+    description: >-
+      Apply 020_cdts_safety_preamble.sql to the live knowledgebase DB (port 5433) and verify the schema_migrations table
+      contains exactly one row
+    files: []
+    dependencies:
+      - 1
+      - 2
+    slice: backend
+files_to_change:
+  - path: packages/backend/database-schema/src/migrations/knowledgebase/020_cdts_safety_preamble.sql
+    action: create
+    reason: >-
+      Creates schema_migrations table and inserts its own row as proof of concept; includes safety preamble asserting
+      current_database() = 'knowledgebase' (AC-1, AC-2, AC-3, AC-7, AC-8)
+  - path: packages/backend/database-schema/src/migrations/knowledgebase/RUNNER.md
+    action: create
+    reason: >-
+      Documents canonical psql command, pre-flight checklist, rollback procedure, and post-flight verification queries
+      (AC-5, AC-6)
+commands_to_run:
+  - command: >-
+      psql -h localhost -p 5433 -U kbuser -d knowledgebase -f
+      packages/backend/database-schema/src/migrations/knowledgebase/020_cdts_safety_preamble.sql
+    when: after migration file is created (Step 3)
+    required: true
+  - command: psql -h localhost -p 5433 -U kbuser -d knowledgebase -c "SELECT * FROM schema_migrations;"
+    when: after applying migration, to verify one row exists (Step 3)
+    required: true
+  - command: >-
+      psql -h localhost -p 5433 -U kbuser -d wrong_db_name -f
+      packages/backend/database-schema/src/migrations/knowledgebase/020_cdts_safety_preamble.sql 2>&1 | grep -i 'wrong
+      database'
+    when: after applying migration, to verify safety preamble rejects wrong DB (AC-4)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      schema_migrations table DDL in 020_cdts_safety_preamble.sql with columns: id SERIAL, filename TEXT UNIQUE,
+      applied_at TIMESTAMPTZ DEFAULT now(), applied_by TEXT
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: 020_cdts_safety_preamble.sql contains both the CREATE TABLE and INSERT INTO schema_migrations for its own filename
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      Safety preamble DO $$ block present at top of 020_cdts_safety_preamble.sql asserting current_database() =
+      'knowledgebase'
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: 'Manual command: psql against a wrong db name confirms RAISE EXCEPTION fires with clear error message'
+    evidence_type: manual
+  - ac_id: AC-5
+    planned_evidence: 'RUNNER.md contains canonical command: psql -h localhost -p 5433 -U kbuser -d knowledgebase -f migrations/NNN.sql'
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      RUNNER.md contains all four sections: pre-flight checklist, execution steps, rollback procedure, post-flight
+      verification queries
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: psql apply command exits 0 and reports CREATE TABLE / INSERT on knowledgebase DB
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: SELECT * FROM schema_migrations returns exactly one row with filename = '020_cdts_safety_preamble.sql'
+    evidence_type: command
+architectural_decisions: []
+complexity: simple
+notes:
+  - 'This story is entirely database-infra: two new files, no TypeScript changes, no pnpm build required.'
+  - >-
+    The knowledgebase DB is a separate PostgreSQL instance on port 5433, distinct from the main app DB. All SQL targets
+    this DB exclusively.
+  - >-
+    Migration naming convention 020_cdts_*.sql uses 3-digit prefix matching the story numbering series (CDTS-0010 is
+    migration 020).
+  - >-
+    The safety preamble pattern must be copy-pasted verbatim at the top of every future CDTS migration; RUNNER.md should
+    document this requirement.
+  - >-
+    No Drizzle ORM involvement — knowledgebase DB is managed with raw psql scripts, not Drizzle. The knowledgebase/
+    subdirectory in migrations/ is new and separate from the app/ and umami/ Drizzle-managed subdirectories.
+  - >-
+    Step 3 is a manual apply step performed by the operator; the agent should produce the commands and the operator (or
+    the implementation agent) executes them.
+  - >-
+    Post-apply verification: query schema_migrations to confirm exactly 1 row. Also test preamble rejection against a
+    wrong-db connection.
+  - >-
+    RUNNER.md lives alongside the migrations, not in docs/, to keep migration tooling co-located with the files it
+    documents.

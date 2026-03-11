@@ -1,0 +1,157 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  test_file: apps/api/knowledge-base/src/mcp-server/__tests__/story-tools-integration.test.ts
+  test_command: pnpm test --filter @repo/knowledge-base
+  type_check_command: pnpm check-types --filter @repo/knowledge-base
+
+happy_path_tests:
+  - id: HP-1
+    title: "kb_get_story routes correctly via handleToolCall and returns parseable response"
+    setup: "Mock kb_get_story to resolve with createMockStory({ storyId: 'KBAR-0080' })"
+    action: "handleToolCall('kb_get_story', { story_id: 'KBAR-0080' }, mockDeps)"
+    expected: "result.isError is undefined; JSON.parse(result.content[0].text) has shape { story: {...}, message: string }"
+    evidence: "Vitest assertion passes on result shape"
+
+  - id: HP-2
+    title: "kb_list_stories routes correctly and returns stories array"
+    setup: "Mock kb_list_stories to resolve with { stories: [createMockStory()], total: 1 }"
+    action: "handleToolCall('kb_list_stories', { feature: 'kbar', limit: 20 }, mockDeps)"
+    expected: "result.isError is undefined; JSON.parse(result.content[0].text) has shape { stories: [...], total: 1, message: string }"
+    evidence: "Vitest assertion on stories array length and total"
+
+  - id: HP-3
+    title: "kb_update_story_status returns updated:true on success"
+    setup: "Mock kb_update_story_status to resolve with { updated: true, story: createMockStory({ state: 'in_progress' }) }"
+    action: "handleToolCall('kb_update_story_status', { story_id: 'KBAR-0080', state: 'in_progress' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has updated: true, story with state: 'in_progress'"
+    evidence: "Vitest assertion on updated flag and state"
+
+  - id: HP-4
+    title: "kb_update_story_status returns updated:false for terminal-state guard"
+    setup: "Mock kb_update_story_status to resolve with { updated: false, message: 'Story is in terminal state' }"
+    action: "handleToolCall('kb_update_story_status', { story_id: 'KBAR-0080', state: 'completed' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has updated: false with terminal state message"
+    evidence: "Vitest assertion on updated: false and message content"
+
+  - id: HP-5
+    title: "kb_update_story returns updated:true and updated story on success"
+    setup: "Mock kb_update_story to resolve with { updated: true, story: createMockStory({ title: 'New Title' }) }"
+    action: "handleToolCall('kb_update_story', { story_id: 'KBAR-0080', title: 'New Title' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has updated: true and story.title === 'New Title'"
+    evidence: "Vitest assertion on updated flag and story title"
+
+  - id: HP-6
+    title: "kb_update_story returns updated:false when story not found"
+    setup: "Mock kb_update_story to resolve with { updated: false, story: null }"
+    action: "handleToolCall('kb_update_story', { story_id: 'NONEXISTENT-999', title: 'New Title' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has updated: false, story: null"
+    evidence: "Vitest assertion on updated: false and story: null"
+
+  - id: HP-7
+    title: "kb_get_next_story returns story and candidates_count on success"
+    setup: "Mock kb_get_next_story to resolve with { story: createMockStory({ epic: 'platform' }), candidates_count: 3 }"
+    action: "handleToolCall('kb_get_next_story', { epic: 'platform' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has story: {...} and candidates_count: 3"
+    evidence: "Vitest assertion on story existence and candidates_count value"
+
+  - id: HP-8
+    title: "kb_get_next_story returns null story when no candidates"
+    setup: "Mock kb_get_next_story to resolve with { story: null, candidates_count: 0 }"
+    action: "handleToolCall('kb_get_next_story', { epic: 'platform' }, mockDeps)"
+    expected: "result.isError is undefined; parsed response has story: null and candidates_count: 0"
+    evidence: "Vitest assertion on story: null and candidates_count: 0"
+
+error_cases:
+  - id: EC-1
+    title: "kb_get_story with empty story_id returns VALIDATION_ERROR"
+    setup: "No mock setup needed — Zod schema rejects empty string"
+    action: "handleToolCall('kb_get_story', { story_id: '' }, mockDeps)"
+    expected: "result.isError === true; JSON.parse(result.content[0].text).code === 'VALIDATION_ERROR'"
+    evidence: "Vitest assertion on isError: true and code: VALIDATION_ERROR"
+
+  - id: EC-2
+    title: "kb_list_stories with invalid limit returns VALIDATION_ERROR"
+    setup: "No mock setup needed — Zod schema rejects negative limit"
+    action: "handleToolCall('kb_list_stories', { limit: -1 }, mockDeps)"
+    expected: "result.isError === true; parsed error has code: VALIDATION_ERROR"
+    evidence: "Vitest assertion on isError: true and error code"
+
+  - id: EC-3
+    title: "kb_update_story_status with empty story_id returns VALIDATION_ERROR"
+    setup: "No mock setup needed"
+    action: "handleToolCall('kb_update_story_status', { story_id: '', state: 'in_progress' }, mockDeps)"
+    expected: "result.isError === true; parsed error has code: VALIDATION_ERROR"
+    evidence: "Vitest assertion on isError and error code"
+
+  - id: EC-4
+    title: "All 5 story tools return sanitized error on MockDatabaseError (no credentials in output)"
+    setup: "Mock kb_get_story to reject with new MockDatabaseError('Connection failed: password=secret123')"
+    action: "handleToolCall('kb_get_story', { story_id: 'KBAR-0080' }, mockDeps)"
+    expected: "result.isError === true; JSON.parse(result.content[0].text).message does NOT contain 'password'"
+    evidence: "Vitest assertion on isError: true and absence of 'password' in error message"
+
+  - id: EC-5
+    title: "kb_get_story with missing required field returns VALIDATION_ERROR"
+    setup: "No mock setup needed — Zod rejects missing story_id"
+    action: "handleToolCall('kb_get_story', {}, mockDeps)"
+    expected: "result.isError === true; code: VALIDATION_ERROR"
+    evidence: "Vitest assertion on isError: true"
+
+edge_cases:
+  - id: ED-1
+    title: "dev role can access kb_get_story (story tools are not admin-restricted)"
+    setup: "Mock kb_get_story to return mock story; create context with agent_role: 'dev'"
+    action: "handleToolCall('kb_get_story', { story_id: 'KBAR-0080' }, mockDeps, { correlation_id: 'test', tool_call_chain: [], start_time: Date.now(), agent_role: 'dev' })"
+    expected: "result.isError is undefined — dev role is not blocked from story tools"
+    evidence: "Vitest assertion on isError being undefined"
+
+  - id: ED-2
+    title: "all role can access kb_update_story_status (story tools are not admin-restricted)"
+    setup: "Mock kb_update_story_status to return { updated: true, story: createMockStory() }; create context with agent_role: 'all'"
+    action: "handleToolCall('kb_update_story_status', { story_id: 'KBAR-0080', state: 'in_progress' }, mockDeps, { agent_role: 'all', correlation_id: 'test', tool_call_chain: [], start_time: Date.now() })"
+    expected: "result.isError is undefined — all role is not blocked from story tools"
+    evidence: "Vitest assertion on isError being undefined"
+
+  - id: ED-3
+    title: "kb_update_story with invalid state enum returns VALIDATION_ERROR"
+    setup: "No mock setup needed — Zod rejects unknown state value"
+    action: "handleToolCall('kb_update_story_status', { story_id: 'KBAR-0080', state: 'not_a_real_state' }, mockDeps)"
+    expected: "result.isError === true; code: VALIDATION_ERROR"
+    evidence: "Vitest assertion on error shape"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "result.isError === undefined for happy path"
+      - "result.isError === true for error cases"
+      - "JSON.parse(result.content[0].text) validates response shape"
+      - "error.code === 'VALIDATION_ERROR' for schema violations"
+      - "error.message does not contain DB credentials"
+  frontend:
+    # omitted — ui_touched: false
+
+manual_cases: []
+
+fixture_definitions:
+  - name: createMockStory
+    type: function
+    description: "Factory function producing story objects matching typeof stories.$inferSelect; copy/import from story-tools.test.ts"
+  - name: MockDatabaseError
+    type: class
+    description: "Error class from test-helpers.ts that simulates DB failures with sensitive content"
+  - name: mockDeps
+    type: object
+    description: "ToolHandlerDeps with mocked db and embeddingClient from createMockEmbeddingClient()"
+  - name: authContext
+    type: object
+    description: "ToolCallContext shape: { correlation_id, tool_call_chain, start_time, agent_role }"
+
+risks:
+  - "Tool count in mcp-integration.test.ts may drift from 53 if new tools are added concurrently — do NOT touch tool count in this file"
+  - "vi.mock path must use .js extension (ESM requirement): vi.mock('../../crud-operations/story-crud-operations.js', ...)"
+  - "Access control config for story tools must be verified at implementation time — seed suggests all roles have access but must be confirmed in access-control.ts"
+  - "createMockStory should be shared or duplicated carefully — avoid import cycles between test files"

@@ -1,0 +1,84 @@
+knowledge_context:
+  loaded: true
+  timestamp: '2026-03-08T00:00:00Z'
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: WINT-4050-elab
+        lesson: >-
+          Seed scripts should document environment-safety guards to prevent accidental production targeting. Idempotency
+          already mitigates risk but must be stated explicitly.
+        category: pattern
+        applies_because: This story introduces pnpm seed:cohesion-rules which requires a live DB connection
+      - story_id: WINT-4050-elab
+        lesson: >-
+          Seed scripts benefit from a structured completion summary log (proposed/promoted/conflicted/failed counts) via
+          @repo/logger for post-deploy confidence.
+        category: reuse
+        applies_because: The seed script calls proposeRule/promoteRule for 4 rules; @repo/logger is already a required dependency
+      - story_id: WINT-4050-elab
+        lesson: >-
+          Inter-story prerequisite contracts benefit from machine-verifiable health checks (getRules().length >= 4) over
+          documentation cross-references.
+        category: pattern
+        applies_because: WINT-4120 depends on this story's active ruleset; a health-check assertion is more reliable than docs
+      - story_id: WINT-1120
+        lesson: >-
+          wint schema lives in lego_dev (port 5432), not the KB database (port 5433). Integration tests targeting
+          wint.rules must use DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev.
+        category: blocker
+        applies_because: Integration tests for ST-5 target wint.rules table and require the correct DB connection
+    blockers_to_avoid:
+      - Integration tests targeting wint.rules must use port 5432 (lego_dev), not port 5433 (KB database)
+    patterns_to_follow:
+      - 'Discriminated union result inspection: check ok field before proceeding to promoteRule'
+      - Emit structured completion summary log at seed script end via @repo/logger
+      - Import all types from @repo/sidecar-rules-registry — do not redeclare
+      - 'Zod-first: all types via z.object() + z.infer<>, no interfaces'
+    patterns_to_avoid:
+      - Do not create barrel index.ts in seeds directory
+      - 'Do not call promoteRule for rules where proposeRule returned ok: false with conflicting_ids'
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: ADR-005
+        title: Testing Strategy - UAT Must Use Real Services
+        status: active
+        constraint: Integration tests must use real wint.rules table (not mocked). Unit tests may mock proposeRule/promoteRule.
+        applies_to:
+          - backend
+          - testing
+      - id: ADR-006
+        title: E2E Tests Required in Dev Phase
+        status: active
+        constraint: 'E2E may be skipped when frontend_impacted: false. SCOPE.yaml confirms frontend: false — E2E skip applies.'
+        applies_to:
+          - backend
+          - testing
+    constraints:
+      api_paths: Not applicable — no HTTP endpoints in this story (direct-call pattern only)
+      infrastructure: Not applicable
+      storage: Not applicable
+      auth: Not applicable
+      testing: Unit tests mock proposeRule/promoteRule; integration tests use real wint.rules table on port 5432
+  token_optimization:
+    high_cost_operations:
+      - operation: Reading full serverless.yml
+        typical_tokens: 17500
+        mitigation: Not needed for this story — no infrastructure changes
+      - operation: Reading full rules-registry.ts implementation
+        typical_tokens: 3000
+        mitigation: Read only the proposeRule/promoteRule/getRules function signatures and return types
+    recommended_patterns:
+      - Read canonical reference files (files_to_read from subtasks) before writing code
+      - Grep for existing type exports before declaring new types
+      - Use pnpm check-types --filter @repo/sidecar-rules-registry for fast type validation
+  pattern_discovery: []
+  warnings:
+    - artifact_search returned INTERNAL_ERROR — pattern_discovery is empty. Not blocking.
+    - >-
+      NOTE: seeds/cohesion-rules.ts and seeds/__tests__/*.ts already exist on filesystem — implementation may be
+      partially complete. Plan steps should verify existing state before creating files.
+    - >-
+      seeds/cohesion-rules.ts exists but pnpm seed:cohesion-rules is NOT registered in package.json — ST-3 is the only
+      outstanding file change.

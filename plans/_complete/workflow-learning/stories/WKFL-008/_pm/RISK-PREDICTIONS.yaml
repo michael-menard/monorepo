@@ -1,0 +1,57 @@
+predictions:
+  split_risk: 0.6
+  review_cycles: 3
+  token_estimate: 95000
+  confidence: medium
+  similar_stories:
+    - story_id: WKFL-002
+      similarity_score: 0.78
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      notes: "Calibration framework - similar statistical analysis patterns"
+    - story_id: WKFL-006
+      similarity_score: 0.74
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      notes: "Pattern mining - similar cross-story analysis and KB integration"
+    - story_id: WKFL-001
+      similarity_score: 0.72
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      notes: "Meta-learning loop - similar OUTCOME.yaml integration and workflow analysis"
+  generated_at: "2026-02-08T04:29:50Z"
+  model: haiku
+  wkfl_version: "007-v1"
+
+  # Prediction rationale
+  rationale:
+    split_risk_factors:
+      - "5 ACs above threshold (3+) adds 0.2 base risk"
+      - "Statistical analysis complexity adds 0.1"
+      - "Multi-agent integration (pm-story-generation-leader, dev-documentation-leader, experiment-analyzer) adds 0.2"
+      - "Schema evolution (story.yaml, OUTCOME.yaml extensions) adds 0.1"
+      - "Total: 0.6 split risk (medium-high)"
+
+    review_cycles_factors:
+      - "Base: 1 cycle for straightforward implementation"
+      - "Statistical correctness verification: +1 cycle (t-test validation)"
+      - "Multi-file integration testing: +1 cycle (traffic routing, variant propagation)"
+      - "Total: 3 cycles expected"
+
+    token_estimate_factors:
+      - "Dev feasibility review estimates 95k tokens (85k core + 10k risk mitigation)"
+      - "No similar completed stories with OUTCOME.yaml available yet"
+      - "Using dev feasibility estimate as primary source"
+      - "Similar story pattern: statistical analysis frameworks (WKFL-002, WKFL-006) suggest 45-85k range"
+      - "95k estimate is on high end but justified by multi-agent integration complexity"
+
+    confidence_rationale:
+      - "Medium confidence due to:"
+      - "✓ 3 similar stories identified (WKFL-001, WKFL-002, WKFL-006)"
+      - "✗ No completed OUTCOME.yaml data for similar stories yet"
+      - "✗ WKFL-006 patterns not available (story in-progress)"
+      - "✓ Dev feasibility review provides detailed effort estimate"
+      - "Overall: Medium confidence with heavier weight on dev feasibility estimate"

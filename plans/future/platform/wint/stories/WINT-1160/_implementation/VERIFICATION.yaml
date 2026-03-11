@@ -1,0 +1,146 @@
+schema: 1
+story_id: WINT-1160
+timestamp: "2026-02-20T00:00:00Z"
+verified_by: qa-verify-verification-leader
+
+verdict: PASS
+
+# This is a CLI/markdown-only story (touches_cli: true, touches_backend/frontend/database: false).
+# No TypeScript changes; no unit test suite applicable.
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: "CLI/markdown-only story — no TypeScript compilation, no Vitest tests, no HTTP endpoints. ADR-006 applies (E2E exempt). ADR-005 applies (integration tests are live-MCP scenarios documented in TEST-PLAN.md, not automated Vitest specs)."
+
+test_results:
+  unit: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  grep: { pass: 11, fail: 0 }
+
+coverage:
+  lines: null
+  branches: null
+  coverage_meets_threshold: true
+  note: "CLI/markdown-only story — no TypeScript code; coverage threshold not applicable per ADR-006."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No test code to evaluate. Integration scenarios documented in TEST-PLAN.md follow live-MCP pattern (ADR-005). No mocking anti-patterns present."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification_method: grep
+    grep_command: "grep -n 'Database-Tracked Worktrees' .claude/skills/wt-status/SKILL.md"
+    grep_result: "Lines 46 (section header), 103 (output format), 117 (empty state output) — all confirmed"
+    notes: "Section 2 header, tabular output format, and empty state all use 'Database-Tracked Worktrees' label. worktree_list_active call documented at line 50-53."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification_method: grep
+    grep_command: "grep -n 'worktree_list_active MCP tool error' .claude/skills/wt-status/SKILL.md"
+    grep_result: "Lines 64 (conditional branch) and 124 (degraded state output format) — confirmed"
+    notes: "Null-Check Resilience section at line 56. Degraded state shows warning and returns; git section always rendered first so git view is preserved on error."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification_method: grep
+    grep_command: "grep -n 'ORPHANED' .claude/skills/wt-status/SKILL.md"
+    grep_result: "Lines 75, 83, 111, 135 — ORPHANED Detection section header, disk-check rule, tabular output example, execution flow"
+    notes: "Disk-Check Mechanism section (line 75) documents 'Use Bash tool: ls {worktreePath}' — non-zero exit → [ORPHANED]. [CHECK-FAILED] fallback also documented."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification_method: grep
+    grep_command: "grep -n 'UNTRACKED' .claude/skills/wt-status/SKILL.md"
+    grep_result: "Lines 87, 94, 96, 136, 138 — Cross-Reference Mechanism section, detection rule, definition, execution flow"
+    notes: "Cross-Reference Mechanism section (line 87) documents: collect db_paths, collect git_paths, flag any git_path NOT in db_paths with [UNTRACKED]."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification_method: grep
+    grep_command: "grep -n 'ALWAYS requires explicit user confirmation' .claude/commands/dev-implement-story.md"
+    grep_result: "Line 325 — confirmed (EVIDENCE.yaml cited line 316; off-by-9 due to file edits; content is correct)"
+    notes: "Line 325: 'CRITICAL — Option (b) take-over ALWAYS requires explicit user confirmation.' Line 326 reinforces: 'This rule overrides all autonomy levels including aggressive. Never auto-select option (b).' Autonomy table at lines 319-323 also shows ALWAYS prompt for moderate and aggressive."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification_method: grep + file_read
+    grep_command: "grep -n 'worktree_mark_complete' .claude/commands/dev-implement-story.md"
+    grep_result: "Lines 267, 345, 346, 352 — cross-reference comment, ordered sequence steps 1 and 2, cancellation guard"
+    notes: "Ordered sequence confirmed at lines 344-348: (1) worktree_mark_complete with abandoned status, (2) null-check with abort message at line 346, (3) wt:new ONLY if step 1 succeeded, (4) register and continue. 'Take-over aborted' text at line 346 (EVIDENCE.yaml cited line 337; off-by-9 due to file edits; content correct)."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification_method: grep
+    grep_command: "grep -n 'WINT-1130\\|WINT-1140\\|WINT-1160' .claude/commands/dev-implement-story.md"
+    grep_result: "Lines 267-269 (HTML comment block), 302, 332 — all three story IDs present in Step 1.3"
+    notes: "HTML comment at lines 267-269 cross-references all three: WINT-1130 (MCP tools), WINT-1140 (original AC-4 prompt UX), WINT-1160 (take-over hardening AC-5/AC-6). Inline references at lines 302 and 332 further anchor the context."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification_method: grep
+    grep_command: "grep -n '2.0.0' .claude/skills/wt-status/SKILL.md"
+    grep_result: "Line 3: 'version: 2.0.0' — confirmed"
+    notes: "Frontmatter at lines 1-5 confirmed: name: wt-status, version: 2.0.0, description reflects DB-aware capabilities including orphaned and untracked detection."
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    verification_method: file_read
+    file_read: "plans/future/platform/wint/UAT/WINT-1160/_pm/TEST-PLAN.md"
+    notes: |
+      TEST-PLAN.md confirmed (file moved to UAT/ with story; EVIDENCE.yaml path references in-progress/ which was the path at time of authoring).
+      - IT-1 at line 165: 'IT-1: Happy Path — DB records render with [ORPHANED] detection' — Setup/Action/Expected/Evidence structure present
+      - IT-2 at line 180: 'IT-2: Empty State — No active DB-tracked worktrees' — Setup/Action/Expected/Evidence structure present
+      - IT-3 at line 191: 'IT-3: Error/Degradation — MCP tool unavailable or returns error' — Setup/Action/Expected/Evidence structure present
+      All three scenarios use live MCP tools (ADR-005: no mocking in integration tests).
+
+architecture_compliant: true
+architecture_notes:
+  - "ADR-005 (no mocking in integration tests): IT-1/IT-2/IT-3 explicitly require live MCP tools — compliant"
+  - "ADR-006 (E2E exempt for CLI/infrastructure stories): correctly applied — no Playwright tests created"
+  - "CLI output style from KNOWLEDGE-CONTEXT L-4: no emoji, '---' delimiters, ALL-CAPS bracketed indicators — confirmed in SKILL.md output format"
+  - "Null-check resilience pattern (P-1 from KNOWLEDGE-CONTEXT): correctly applied in SKILL.md Null-Check Resilience section"
+  - "Option (b) as Tier 4 Destructive action (P-2 from KNOWLEDGE-CONTEXT): correctly implemented with always-escalate behavior"
+
+issues:
+  - id: MINOR-1
+    severity: minor
+    description: "EVIDENCE.yaml line number references for dev-implement-story.md are off by 9 (e.g., cited line 316 but actual line 325 for 'ALWAYS requires explicit user confirmation'). This is a cosmetic discrepancy from post-authoring edits to the file. The content is correct and verified."
+    verdict_impact: none
+
+known_deviations_verified:
+  - deviation: "worktree_list_active returns [] on DB error (not null) per WINT-1130 source code — SKILL.md documents null-check resilience for MCP tool availability failure (different from DB error)"
+    qa_assessment: "Acceptable. The two failure modes are distinct: (1) MCP tool unavailable (null/exception from Claude Code) and (2) DB error inside the tool (returns [] per WINT-1130 implementation). SKILL.md correctly documents the null/exception path. Both cases produce graceful output."
+
+lessons_to_record:
+  - lesson: "EVIDENCE.yaml line number citations can drift if the target file is edited after the evidence is written. QA should verify content, not line numbers."
+    category: anti_pattern
+    tags: ["qa", "evidence", "cli"]
+
+  - lesson: "CLI/markdown-only stories with no TypeScript have no meaningful coverage metric. The coverage threshold check should be explicitly marked exempt rather than silently skipped."
+    category: pattern
+    tags: ["cli", "coverage", "qa"]
+
+  - lesson: "Skill files (.claude/skills/*/SKILL.md) use YAML frontmatter versioning. When a skill gains new capabilities, bumping the version field signals to dependent documentation that behavior has changed."
+    category: pattern
+    tags: ["cli", "skills", "versioning"]
+
+tokens:
+  in: 18000
+  out: 3500
+
+gate:
+  decision: PASS
+  reason: "All 9 ACs verified, evidence confirmed against actual files, architecture compliant, CLI/markdown-only story"
+  blocking_issues: []

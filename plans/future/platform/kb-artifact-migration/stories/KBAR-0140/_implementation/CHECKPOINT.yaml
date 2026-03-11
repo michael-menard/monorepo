@@ -1,0 +1,14 @@
+schema: 1
+story_id: KBAR-0140
+current_phase: proof
+last_successful_phase: execute
+iteration: 0
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+e2e_gate: exempt
+warnings:
+  - "E2E exempt per ADR-006 (frontend_impacted: false)"
+feature_dir: plans/future/platform/kb-artifact-migration
+completed_at: null

@@ -265,3 +265,7 @@ metadata:
   story_phase: 3
   story_type: "bug"
   elaboration_verdict: "PASS"
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

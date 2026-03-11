@@ -1,0 +1,28 @@
+schema: 1
+story_id: APIP-5003
+timestamp: '2026-03-01T00:00:00Z'
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - 'infra/langgraph-server/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Document network isolation (VPC/firewall), container hardening (Docker best practices), and secrets management for LangGraph Platform MVP"
+
+elaboration: completed

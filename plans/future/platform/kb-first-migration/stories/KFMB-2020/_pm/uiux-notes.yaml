@@ -1,0 +1,2 @@
+skipped: true
+reason: "No UI surface in this story. The pm-bootstrap-setup-leader agent is a server-side markdown agent file. The only user-visible artifact is the BLOCKED message text (AC-2), which is CLI output — not a UI component. No React components, Tailwind classes, shadcn primitives, accessibility concerns, or Playwright evidence apply. ADR-006 waives E2E for this story."

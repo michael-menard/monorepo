@@ -1,0 +1,232 @@
+---
+# Risk Predictions for WINT-0060
+# Generated: 2026-02-14
+# Model: pm-story-risk-predictor
+# Mode: Advisory (non-blocking)
+---
+
+story_id: WINT-0060
+epic: WINT
+title: "Create Graph Relational Tables"
+predicted_at: "2026-02-14T00:00:00Z"
+
+# Split Risk Assessment
+split_risk:
+  probability: low
+  confidence: 0.85
+  reasoning: |
+    Story is well-scoped with 12 acceptance criteria covering 4 related tables.
+    All tables are part of a cohesive graph schema group. Splitting would break
+    relational integrity (self-referencing FKs between tables). Estimated 3-5
+    hours fits comfortably in single session. WINT-0010 precedent: 22 tables
+    in single story (no split). Risk: LOW.
+
+  indicators:
+    total_ac_count: 12
+    estimated_hours: 4.0
+    complexity_score: medium
+    cohesion: high
+    precedent: "WINT-0010 (22 tables, no split)"
+
+  recommendation: "Keep as single story. Do not split."
+
+# Review Cycle Predictions
+review_cycles:
+  predicted_count: 1
+  confidence: 0.80
+  reasoning: |
+    Low complexity, well-defined schema work. Strong foundation from WINT-0010.
+    Clear acceptance criteria with comprehensive test plan (80%+ coverage target).
+    No UI/UX surface (backend-only). No API changes. Standard Drizzle patterns.
+    Similar story (WINT-0010) passed QA on first attempt with 100% test coverage.
+
+  risk_factors:
+    - factor: "Self-referencing FKs"
+      impact: low
+      mitigation: "Standard pattern, comprehensive tests (TC-009, TC-020)"
+
+    - factor: "JSONB schema validation"
+      impact: low
+      mitigation: "Typed JSONB with Zod validation layer"
+
+    - factor: "Migration reversibility"
+      impact: low
+      mitigation: "MT-002 test verifies rollback works"
+
+  likely_failure_modes:
+    - "Missing index on composite query pattern"
+    - "Zod schema not catching edge case (strength > 100)"
+    - "Migration missing CASCADE on FK delete"
+
+  gate_pass_probability: 0.85
+
+# Token Cost Estimates
+token_estimates:
+  pm_phase:
+    input_tokens: 12000
+    output_tokens: 8000
+    total_tokens: 20000
+    cost_usd: 0.60
+    notes: "Story seed generation + test plan + feasibility + risk prediction"
+
+  implementation_phase:
+    input_tokens: 25000
+    output_tokens: 15000
+    total_tokens: 40000
+    cost_usd: 1.20
+    notes: "Schema enhancement (4 tables) + relations + Zod schemas + tests"
+
+  qa_phase:
+    input_tokens: 8000
+    output_tokens: 3000
+    total_tokens: 11000
+    cost_usd: 0.33
+    notes: "Test execution review + migration verification"
+
+  review_phase:
+    input_tokens: 6000
+    output_tokens: 2000
+    total_tokens: 8000
+    cost_usd: 0.24
+    notes: "Code review (schema definitions + test coverage)"
+
+  rework_phase:
+    input_tokens: 5000
+    output_tokens: 3000
+    total_tokens: 8000
+    cost_usd: 0.24
+    probability: 0.20
+    notes: "Estimated 20% chance of minor rework (index adjustment, Zod refinement)"
+
+  total_expected:
+    input_tokens: 56000
+    output_tokens: 31000
+    total_tokens: 87000
+    expected_cost_usd: 2.37
+    worst_case_cost_usd: 2.61
+    notes: "Baseline + 20% rework probability"
+
+# Complexity Signals
+complexity_analysis:
+  code_complexity: low
+  reasoning: |
+    Schema definition work using established Drizzle patterns. No business logic.
+    Self-referencing FKs are standard PostgreSQL feature. JSONB fields use typed
+    approach. 4 tables with ~10 columns each. Minimal branching logic.
+
+  test_complexity: medium
+  reasoning: |
+    24 test cases across 9 categories. Self-referencing FK tests require careful
+    setup. JSONB validation needs structured test data. Edge cases (circular
+    relationships, strength boundaries) add test surface. Overall: manageable.
+
+  integration_complexity: low
+  reasoning: |
+    Pure database schema. No API changes, no UI. Integration limited to @repo/db
+    re-export and TypeScript type inference. Migration is DDL-only (no data transforms).
+
+  overall_complexity: low-medium
+
+  similar_stories:
+    - story_id: WINT-0010
+      similarity: 0.90
+      outcome: "Passed QA first attempt, 100% coverage, 0 review cycles"
+      lessons: "Follow exact same test pattern, achieve high coverage early"
+
+# Time Estimates
+time_predictions:
+  optimistic_hours: 3.0
+  realistic_hours: 4.0
+  pessimistic_hours: 6.0
+  confidence: 0.75
+
+  breakdown:
+    schema_enhancement: 2.5
+    relations_and_zod: 0.75
+    tests: 1.5
+    migration: 0.5
+    documentation: 0.25
+
+  blockers_probability: 0.05
+  blocker_scenarios:
+    - "Drizzle Kit migration generation fails (version incompatibility)"
+    - "Circular dependency in relations crashes type inference"
+    - "JSONB type inference breaks in drizzle-zod"
+
+# Quality Predictions
+quality_indicators:
+  expected_test_coverage: 0.95
+  expected_type_safety: high
+  expected_migration_safety: high
+
+  likely_gaps:
+    - "Performance testing (NFT-001) may be deferred to WINT-0130"
+    - "Real-world graph query patterns not validated until data seeded"
+
+  quality_gates:
+    - gate: "Test coverage >= 80%"
+      pass_probability: 0.95
+
+    - gate: "Migration reversibility verified"
+      pass_probability: 0.90
+
+    - gate: "TypeScript compilation succeeds"
+      pass_probability: 0.98
+
+    - gate: "No ESLint errors"
+      pass_probability: 0.95
+
+# Recommendations
+recommendations:
+  - priority: high
+    recommendation: "Write tests incrementally (per-table) to catch issues early"
+
+  - priority: high
+    recommendation: "Verify self-referencing FK forward references compile before writing all relations"
+
+  - priority: medium
+    recommendation: "Test migration rollback in dev environment before committing"
+
+  - priority: medium
+    recommendation: "Use WINT-0010 test file as exact template for consistency"
+
+  - priority: low
+    recommendation: "Document JSONB schema structure in comments for future maintainers"
+
+# Confidence Calibration
+confidence_notes: |
+  High confidence in predictions due to:
+  - Strong precedent (WINT-0010 similar scope, successful outcome)
+  - Well-defined acceptance criteria (12 clear ACs)
+  - Comprehensive test plan (24 test cases, 80%+ target)
+  - Low technical risk (standard Drizzle/PostgreSQL patterns)
+  - No external dependencies or blocking stories
+
+  Uncertainty factors:
+  - Dev familiarity with self-referencing FKs (first time in WINT epic)
+  - JSONB validation complexity (may need iteration)
+  - Migration size estimation (actual may vary ±20%)
+
+# Fallback Strategy
+fallback_plan:
+  if_split_needed:
+    reason: "Story exceeds 8 hours"
+    approach: "Split by table: WINT-0060A (features), WINT-0060B (capabilities), WINT-0060C (relationships+cohesion)"
+    probability: 0.05
+
+  if_blocked:
+    likely_blocker: "Drizzle Kit version incompatibility"
+    resolution: "Upgrade drizzle-kit to latest stable, regenerate migration"
+    estimated_delay: "1 hour"
+
+---
+# Prediction Model Metadata
+model_version: "1.0-advisory"
+kb_available: false
+wkfl_006_available: false
+degraded_mode: true
+fallback_heuristics:
+  - "AC count (12) vs median (5-8): medium complexity"
+  - "Similar story lookup: WINT-0010 (high similarity)"
+  - "Backend-only + schema work: low review cycle risk"
+  - "Estimated hours (3-5) < 8: no split needed"

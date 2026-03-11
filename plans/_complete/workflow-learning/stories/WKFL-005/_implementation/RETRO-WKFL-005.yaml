@@ -1,0 +1,48 @@
+schema_version: 1
+story_id: WKFL-005
+retro_generated_at: "2026-02-22T00:00:00Z"
+retro_scope: batch
+
+story_analysis:
+  story_id: WKFL-005
+  title: "Doc Sync Agent"
+  completed_at: "2026-02-07T19:30:00Z"
+  status: in-qa
+
+  token_metrics:
+    estimated: 40000
+    actual: 59400
+    variance_percent: +48.5
+    rating: over_budget
+    note: "TOKEN-LOG captures qa-verify (48,800) + completion (10,600) = 59,400. These are QA phases only. Implementation tokens not captured in this log. Full pipeline actual likely higher."
+
+  review_metrics:
+    cycles: 1
+    baseline: 2
+    above_baseline: false
+    failure_breakdown: null
+    note: "CHECKPOINT.yaml: review_verdict: PASS, qa_verify_verdict: PASS. Full review details not available in REVIEW.yaml."
+
+  phase_metrics:
+    slowest_phase: qa-verify
+    token_heaviest_phase: qa-verify
+    failure_phases: []
+
+  decision_metrics:
+    auto_accepted: null
+    escalated: null
+    escalation_rate: null
+
+  ac_metrics:
+    total_acs: null
+    passed_first_try: null
+    failed_first_try: null
+    ac_pass_rate: null
+    note: "Full AC verification data not available in files scanned"
+
+  observations:
+    - "QA phases alone (59,400 tokens) exceeded original 40,000 estimate"
+    - "qa-verify is the single most expensive phase at 48,800 tokens - 82% of all logged tokens"
+    - "Story was in-qa status when checkpoint was written - may still have partial implementation"
+    - "E2E gate was exempt"
+    - "Review and QA both passed without additional iterations"

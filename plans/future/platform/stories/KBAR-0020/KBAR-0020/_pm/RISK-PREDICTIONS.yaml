@@ -1,0 +1,55 @@
+predictions:
+  split_risk: 0.2
+  review_cycles: 2
+  token_estimate: 120000
+  confidence: medium
+  similar_stories:
+    - story_id: WINT-0010
+      similarity_score: 0.82
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      note: "Schema creation story (WINT) - similar pattern but larger scope"
+    - story_id: INFR-0110
+      similarity_score: 0.78
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      note: "Schema validation story (INFR) - similar testing approach"
+    - story_id: KBAR-0010
+      similarity_score: 0.89
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      note: "Direct dependency - schema creation, currently in UAT"
+  generated_at: "2026-02-15T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  calculation_notes:
+    split_risk_reasoning: |
+      Base risk: (10 ACs - 3) * 0.1 = 0.7
+      Backend-only: no frontend complexity boost
+      No database: -0.3 (unit tests only, no integration complexity)
+      No auth/security: no boost
+      Well-defined scope with clear patterns: -0.2
+      Final: max(0.0, 0.7 - 0.3 - 0.2) = 0.2
+    review_cycles_reasoning: |
+      Base cycles: 1
+      Scope keywords: 3-4 (schema, validation, testing) → +1
+      Backend-only (no frontend/database): no boost
+      Estimated files: 1-2 → no boost
+      Well-established patterns (WINT/INFR): reduces cycle risk
+      Final: 2 cycles (initial review + potential polish)
+    token_estimate_reasoning: |
+      No similar stories with OUTCOME.yaml available
+      Heuristic: Backend-only schema testing typically lower token cost
+      10 ACs with clear scope: moderate complexity
+      No integration/API work: reduced token usage
+      Fallback estimate adjusted down from 150K default: 120K
+      (Test writing is typically less token-intensive than feature implementation)
+    similar_stories_reasoning: |
+      KB search not available (using manual similarity assessment)
+      WINT-0010: Schema creation with testing component (high similarity)
+      INFR-0110: Schema validation focus (high similarity)
+      KBAR-0010: Direct dependency, same domain (highest similarity)
+      OUTCOME.yaml not available for any stories (actuals null)

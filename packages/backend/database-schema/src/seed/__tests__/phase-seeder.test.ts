@@ -45,7 +45,7 @@ describe('seedPhases', () => {
 
   beforeEach(() => {
     // Create mock transaction
-    const insertedRows: any[] = []
+    const _insertedRows: any[] = []
     mockTx = {
       delete: vi.fn().mockReturnValue({ execute: vi.fn().mockResolvedValue(undefined) }),
       insert: vi.fn().mockReturnValue({

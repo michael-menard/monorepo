@@ -1,0 +1,13 @@
+id: "KFMB-4020"
+title: "Stage Directory Elimination — precondition-check, context-init, and Script State Detection"
+status: backlog
+priority: medium
+phase: 3
+feature: "Update /precondition-check and /context-init to KB-only; update script state detection"
+goal: "All state detection reads the stories.state column from the DB."
+depends_on: ["KFMB-4010"]
+endpoints: []
+infrastructure: ["CLI Commands", "MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "KB availability becomes a hard dependency."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

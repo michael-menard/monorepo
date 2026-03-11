@@ -1,0 +1,311 @@
+---
+story_id: WINT-0110
+generated: "2026-02-15"
+confidence: high
+overall_risk_level: medium-low
+---
+
+# Risk Predictions: WINT-0110 - Create Session Management MCP Tools
+
+## Overall Assessment
+
+**Risk Level**: 🟡 Medium-Low
+**Confidence**: 85%
+**Recommendation**: Proceed with standard safeguards
+
+This story has low technical risk due to clear CRUD operations on an existing schema. Primary risks are architectural (MCP pattern not established) and operational (concurrent updates, cleanup safety).
+
+---
+
+## Risk Categories
+
+### 1. Technical Risks
+
+#### Risk 1.1: MCP Tool Pattern Not Established
+- **Severity**: Medium
+- **Likelihood**: High (80%)
+- **Impact**: Moderate (may require refactoring when MCP server is built)
+- **Timing**: Implementation phase
+- **Mitigation Strategy**:
+  - Focus on database operations as standalone functions
+  - Defer MCP server integration patterns to future story
+  - Keep tool functions pure (minimal external dependencies)
+  - Document clear API contracts for future wrapper layer
+- **Contingency Plan**: Refactor tool wrappers when MCP server infrastructure is defined
+- **Residual Risk**: Low (core database operations will remain valid)
+
+#### Risk 1.2: Concurrent Session Updates
+- **Severity**: Medium
+- **Likelihood**: Medium (50%)
+- **Impact**: Moderate (race conditions could cause incorrect token counts)
+- **Timing**: Production usage with parallel agents
+- **Mitigation Strategy**:
+  - Implement optimistic locking via Drizzle WHERE clause
+  - Clarify incremental vs absolute update mode semantics
+  - Add comprehensive concurrency tests
+  - Document recommended usage patterns
+- **Contingency Plan**: Add session-level locking mechanism if concurrency issues arise
+- **Residual Risk**: Low (Drizzle handles basic concurrency well)
+
+#### Risk 1.3: Token Metric Calculation
+- **Severity**: Low
+- **Likelihood**: Medium (40%)
+- **Impact**: Minor (incorrect token counts, no workflow impact)
+- **Timing**: Implementation and testing
+- **Mitigation Strategy**:
+  - Explicit `mode` parameter (incremental vs absolute)
+  - Clear documentation of semantics
+  - Comprehensive unit tests for both modes
+  - Default to `incremental` mode (safest)
+- **Contingency Plan**: Add token audit log if discrepancies detected
+- **Residual Risk**: Very Low (well-defined behavior)
+
+---
+
+### 2. Integration Risks
+
+#### Risk 2.1: Database Connection Pooling
+- **Severity**: Low
+- **Likelihood**: Low (20%)
+- **Impact**: Minor (connection exhaustion under heavy load)
+- **Timing**: Production scaling
+- **Mitigation Strategy**:
+  - Reuse existing `@repo/db` pool configuration
+  - Monitor connection usage in production
+  - Use short-lived connections for MCP tools
+- **Contingency Plan**: Increase pool size or implement connection queueing
+- **Residual Risk**: Very Low (existing patterns work well)
+
+#### Risk 2.2: Schema Reconciliation Impact (WINT-1080)
+- **Severity**: Low
+- **Likelihood**: Medium (50%)
+- **Impact**: Minor (may need to adjust queries if schema changes)
+- **Timing**: When WINT-1080 completes UAT
+- **Mitigation Strategy**:
+  - Coordinate with WINT-1080 completion
+  - Use flexible JSONB metadata field for future-proofing
+  - Monitor WINT-1080 schema changes
+  - Add integration tests for schema compatibility
+- **Contingency Plan**: Update queries when WINT-1080 finalizes schema
+- **Residual Risk**: Very Low (isolated impact)
+
+---
+
+### 3. Operational Risks
+
+#### Risk 3.1: Session Cleanup Safety
+- **Severity**: High
+- **Likelihood**: Low (10%)
+- **Impact**: Critical (accidental deletion of active sessions breaks workflows)
+- **Timing**: Production cleanup operations
+- **Mitigation Strategy**:
+  - Default `dryRun=true` (requires explicit opt-in)
+  - Validate `endedAt IS NOT NULL` before deletion
+  - Log all cleanup operations with details
+  - Require manual confirmation for bulk deletes
+  - Add safeguard: prevent deletion if session active
+- **Contingency Plan**: Database backups + rollback procedure
+- **Residual Risk**: Very Low (multiple safeguards in place)
+
+#### Risk 3.2: Session Retention Policy Undefined
+- **Severity**: Low
+- **Likelihood**: High (70%)
+- **Impact**: Minor (database bloat or premature deletion)
+- **Timing**: Post-implementation operations
+- **Mitigation Strategy**:
+  - Document recommended retention period (30-90 days)
+  - Make retentionDays configurable per cleanup call
+  - Monitor session growth rate
+  - Provide retention policy guidelines in docs
+- **Contingency Plan**: Adjust retention policy based on storage usage
+- **Residual Risk**: Very Low (easily adjustable)
+
+---
+
+### 4. Testing Risks
+
+#### Risk 4.1: Integration Test Database Setup
+- **Severity**: Low
+- **Likelihood**: Low (30%)
+- **Impact**: Minor (delays testing, not a blocker)
+- **Timing**: Testing phase
+- **Mitigation Strategy**:
+  - Reuse existing Drizzle test database patterns
+  - Document test setup in TEST-PLAN.md
+  - Use migration scripts for reproducible setup
+  - Seed test data programmatically
+- **Contingency Plan**: Use Docker PostgreSQL for isolated test env
+- **Residual Risk**: Very Low (well-established patterns)
+
+#### Risk 4.2: Concurrency Test Complexity
+- **Severity**: Low
+- **Likelihood**: Medium (40%)
+- **Impact**: Minor (edge cases may not be fully tested)
+- **Timing**: Testing phase
+- **Mitigation Strategy**:
+  - Use Promise.all for concurrent update tests
+  - Test multiple scenarios (same session, different sessions)
+  - Document known concurrency limitations
+  - Defer advanced concurrency testing to production monitoring
+- **Contingency Plan**: Add stress tests if production issues arise
+- **Residual Risk**: Low (basic concurrency covered)
+
+---
+
+### 5. Documentation Risks
+
+#### Risk 5.1: Usage Pattern Ambiguity
+- **Severity**: Low
+- **Likelihood**: Medium (50%)
+- **Impact**: Minor (developers may misuse tools)
+- **Timing**: Post-implementation adoption
+- **Mitigation Strategy**:
+  - Include clear examples in SESSION-MANAGEMENT-TOOLS.md
+  - Document orchestrator integration patterns
+  - Provide troubleshooting guide
+  - Add inline code comments for complex logic
+- **Contingency Plan**: Iterate on docs based on user feedback
+- **Residual Risk**: Very Low (documentation is straightforward)
+
+---
+
+## Risk Timeline
+
+| Phase | High Risks | Medium Risks | Low Risks |
+|-------|------------|--------------|-----------|
+| Planning | None | MCP pattern unclear | None |
+| Implementation | None | Concurrent updates, token metrics | DB pooling, test setup |
+| Testing | None | Concurrency tests | Integration DB |
+| Deployment | Session cleanup safety | Schema reconciliation | Retention policy |
+| Operations | None | None | Usage ambiguity |
+
+---
+
+## Mitigation Strategies by Priority
+
+### Critical (Must Do)
+1. **Default dryRun=true** for session_cleanup (prevents accidental deletion)
+2. **Validate endedAt IS NOT NULL** before cleanup (safety check)
+3. **Explicit mode parameter** for session_update (clarity)
+4. **Comprehensive unit tests** (≥80% coverage)
+
+### High Priority (Should Do)
+5. **Document incremental vs absolute semantics** (prevents misuse)
+6. **Add concurrency tests** (validates race condition handling)
+7. **Monitor WINT-1080 completion** (schema compatibility)
+8. **Log cleanup operations** (audit trail)
+
+### Medium Priority (Consider)
+9. **Add session-level locking** if concurrency issues arise
+10. **Document retention policy** guidelines
+11. **Provide orchestrator integration examples**
+12. **Monitor connection pool usage** in production
+
+### Low Priority (Optional)
+13. **Add token audit log** if discrepancies detected
+14. **Implement connection queueing** if pool exhaustion occurs
+15. **Create stress tests** for concurrency
+
+---
+
+## Contingency Plans
+
+### If MCP Pattern Changes After Implementation
+- **Action**: Refactor tool wrapper layer
+- **Effort**: 2-4 hours
+- **Impact**: Low (core functions remain valid)
+
+### If Concurrent Update Issues Arise
+- **Action**: Add optimistic locking with version column
+- **Effort**: 4-6 hours
+- **Impact**: Medium (requires schema migration)
+
+### If Session Cleanup Deletes Active Sessions
+- **Action**: Restore from database backup, add safeguard
+- **Effort**: 1-2 hours
+- **Impact**: High (workflow disruption)
+
+### If WINT-1080 Changes Schema Significantly
+- **Action**: Update queries and tests
+- **Effort**: 2-4 hours
+- **Impact**: Low (isolated to this story)
+
+---
+
+## Confidence Assessment
+
+**Overall Confidence**: 85%
+
+**High Confidence Areas** (>90%):
+- CRUD operation implementation
+- Zod validation patterns
+- Database access via Drizzle
+- Test coverage feasibility
+
+**Medium Confidence Areas** (70-90%):
+- MCP tool pattern stability (no precedent yet)
+- Concurrent update behavior (needs testing)
+- Retention policy definition (operational decision)
+
+**Low Confidence Areas** (<70%):
+- None identified
+
+---
+
+## Recommended Safeguards
+
+1. **Code Review Focus Areas**:
+   - Session cleanup safety logic
+   - Incremental vs absolute mode implementation
+   - Concurrency handling in session_update
+   - Error handling for all edge cases
+
+2. **Additional Testing**:
+   - Concurrency tests (multiple agents updating same session)
+   - Cleanup safety tests (dryRun validation)
+   - Edge case pagination tests
+
+3. **Documentation Requirements**:
+   - Clear usage examples for all 5 tools
+   - Orchestrator integration patterns
+   - Troubleshooting guide for common errors
+   - Retention policy recommendations
+
+4. **Monitoring in Production**:
+   - Session creation/completion rates
+   - Token metric trends
+   - Cleanup operation logs
+   - Database connection pool usage
+
+---
+
+## Success Indicators
+
+**Story Complete When**:
+- ✅ All 5 MCP tools implemented with Zod validation
+- ✅ ≥80% test coverage achieved
+- ✅ All ACs validated via tests
+- ✅ Documentation complete with examples
+- ✅ Code review passed
+- ✅ No high-severity risks remain unmitigated
+
+**Production Success Indicators**:
+- Session operations <50ms latency
+- Zero accidental session deletions
+- Concurrent updates handled correctly
+- Token metrics accurate across sessions
+
+---
+
+## Risk Review Schedule
+
+- **Pre-implementation**: Review technical risks with team
+- **Mid-implementation**: Validate concurrency handling
+- **Pre-deployment**: Confirm cleanup safety mechanisms
+- **Post-deployment**: Monitor production metrics for 1 week
+
+---
+
+**Risk Analysis Status**: Complete
+**Last Updated**: 2026-02-15
+**Next Review**: After WINT-1080 completion

@@ -1,0 +1,32 @@
+---
+story_id: APIP-4010
+generated: "2026-02-25"
+worker: pm-uiux-recommendations
+version: "1.0.0"
+skipped: true
+reason: >
+  APIP-4010 is a headless backend story with no UI surfaces. All components are:
+  - wint.codebase_health DB table (schema + migration)
+  - captureHealthSnapshot() TypeScript helper (cron worker, no UI)
+  - detectDriftAndGenerateCleanup() function (file output, no UI)
+  - LangGraph cron task registration (infrastructure, no UI)
+
+  The only human-visible output is the generated CLEANUP story YAML in the backlog
+  directory and logger.info / logger.warn log lines emitted during the cron run.
+---
+
+operator_log_format_recommendation:
+  applies: true
+  description: >
+    Although no UI exists, the summary log message emitted after each health gate run
+    should follow an operator-friendly, parseable format for use by the planned
+    APIP-4070 Weekly Pipeline Health Report.
+  recommended_format: >
+    "[health-gate] run=complete merge_number={N} metrics_checked=8
+    metrics_within_threshold={M} cleanup_stories_generated={K}
+    stories={[APIP-CLEANUP-NNNN, ...]}"
+  format_notes:
+    - Use structured key=value pairs for easy parsing by APIP-4070
+    - Include merge_number for traceability
+    - Include the list of generated story IDs (empty list if none)
+    - Log at INFO level on success, WARN level if any metric collection failed

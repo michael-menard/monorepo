@@ -1,0 +1,449 @@
+schema: 1
+story_id: "KFMB-3010"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      Story title and intent match the Phase 3 index entry: "Eliminate stories.index.md — Agent
+      Updates | KFMB-2010, KFMB-2020 | Medium | In Elaboration". The goal (zero agent references
+      to stories.index.md) is clearly bounded and separated from KFMB-3020 (commands) and
+      KFMB-3030 (scripts). Non-goals are well-enumerated and prevent scope creep.
+
+      Two scope discrepancies identified:
+
+      (1) AGENT COUNT DISCREPANCY: The story title says "~32 agents". The Scope section header
+      says "32 files". The story.yaml risk_notes says "~30 agents". Actual grep audit finds
+      exactly 30 unique agent files with stories.index.md references (excluding _shared/ and .bak
+      files). The Scope section lists 30 named agents (2+4+2+3+8+2+6+3=30, not 32). The "~32"
+      figure is stale — the final grep audit target AC-13 remains valid, but the blast-radius
+      language in predictions and risk_notes is inconsistent across artifacts.
+
+      (2) pm.agent.md MISCATEGORIZED: pm.agent.md appears in the "State-Mutation Agents (4)"
+      section but is architecturally an orchestrator that passes index_path context to workers,
+      not a direct state-mutation agent. Its AC coverage is via AC-12/AC-13 (not an explicit
+      numbered AC). It is correctly grouped in ST-9 alongside the orchestrators. The category
+      label is minor but creates confusion with AC mapping.
+
+      WARN (not FAIL) because neither discrepancy affects implementation correctness — the
+      subtask file lists and AC assignments are accurate.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goal and Non-Goals are consistent with ACs. Subtask file lists account for all 30 in-scope
+      agents. Completion signals (AC-12) and final grep audit (AC-13) are universal guards.
+
+      Three internal consistency issues identified:
+
+      (1) AC-8 SPLIT ACROSS TWO SUBTASKS: AC-8 covers "Read-Only Worker Consumers" — 5 agents in
+      ST-6 and 3 fanout agents in ST-7. ST-7 explicitly states "ACs covered: AC-8, AC-11" but
+      ST-6 covers "ACs covered: AC-8". This is correct but non-obvious; the story body under AC-8
+      lists all 8 agents in a single AC. An implementer reading ST-7 without cross-referencing
+      ST-6 may not realize AC-8 also requires ST-6. Low severity — the subtask file lists are
+      complete and unambiguous.
+
+      (2) kb_create_story DEPENDENCY NOT DECLARED: AC-3 states "elab-epic-updates-leader writes
+      new stories and splits to the KB via kb_create_story" and the Reuse Plan lists
+      mcp__knowledge-base__kb_create_story as a tool to use. However, kb_create_story is NOT
+      currently implemented in the KB MCP server (confirmed: tool-handlers.d.ts contains
+      kb_get_story, kb_list_stories, kb_update_story_status, kb_update_story, kb_get_next_story
+      — but NOT kb_create_story). kb_create_story is the deliverable of KFMB-1020, which is in
+      "Ready to Work" state (not yet complete). The story lists KFMB-2010 and KFMB-2020 as
+      declared dependencies but does NOT list KFMB-1020. This means AC-3 and AC-7 reference a
+      tool that does not yet exist at story creation time and whose delivery is not tracked as a
+      blocking dependency. This is an MVP-blocking gap (see GAP-001).
+
+      (3) TOKEN ESTIMATE DISCREPANCY: The sum of subtask token estimates (ST-1 through ST-10)
+      totals 62,000 tokens. The predictions.token_estimate is 200,000 tokens. This 3.2x gap is
+      unexplained. The subtask estimates may be per-file lower bounds excluding context overhead,
+      but the discrepancy is large enough to indicate the predictions figure was generated
+      independently of the subtask breakdown.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      All five KB tools cited in the Reuse Plan are either already implemented or blocked only by
+      declared dependencies: kb_list_stories (present), kb_get_story (present),
+      kb_update_story_status (present), kb_get_next_story (present), kb_search (present). The
+      exception is kb_create_story (absent — see GAP-001). The collision detection pattern from
+      KFMB-2020 and the story creation pattern from KFMB-2010 are correctly referenced as
+      canonical implementations once those stories complete. The story correctly defers ST-4
+      until KFMB-2010/2020 deliver their patterns. No new tools, libraries, or infrastructure are
+      invented. The MAX(id)+10 ID allocation pattern is preserved from the current grep-based
+      implementation, only replacing the data source. The fallback cleanup noted in KFMB-2020's
+      ELAB OPP-002 (removing the filesystem fallback from pm-bootstrap-setup-leader) is a
+      correct scope item for ST-4. PASS with the noted caveat on kb_create_story.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Not applicable in the strict TypeScript sense — all changes are to .md documentation files.
+      By analogy: the story correctly isolates transport mechanism (filesystem reads/writes vs
+      MCP tool calls) from downstream contracts (completion signals, agent output YAML schemas,
+      parent-worker parameter contracts). AC-12 enforces signal stability. The Architecture Notes
+      explicitly address the parent-worker contract change (index_path → feature slug in
+      pm.agent.md), identifying all contract surfaces that must be updated atomically. The
+      guidance "For each worker updated to remove index_path: identify all agents that spawn this
+      worker" correctly applies the ports-and-adapters principle to agent orchestration. PASS by
+      analogy.
+
+  - id: testability
+    status: PASS
+    note: >
+      All verification is manual review + grep, which is the appropriate methodology for agent
+      .md files (not executable code). The test plan is concrete and executable:
+      - AC-13 has a single authoritative grep command that provides a binary pass/fail signal.
+      - Per-agent grep commands in each subtask provide incremental verification.
+      - HP-1 through HP-5 specify setup, action, expected output, and evidence format.
+      - EC-1/2/3 cover partial migration, missing feature filter, and parent-worker contract
+        mismatch — the three most likely failure modes.
+      - KB Tool Signature Validation section correctly identifies the pre-implementation research
+        task (confirm parameter names before writing) to avoid silent failures.
+      The test plan covers all 13 ACs with at least one test case. AC-6 and AC-7 verification is
+      deferred to after KFMB-2010/2020 completion (correctly documented). One minor observation:
+      there is no completion signal regression test template that captures the before/after
+      strings for each modified agent — the test plan describes this check in prose but does not
+      provide a command. Low severity — "compare completion signal strings before and after" is
+      unambiguous.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      Three open decisions identified:
+
+      (1) kb_create_story PARAMETER NAMES UNKNOWN: The story references kb_create_story in AC-3
+      and AC-7 but this tool does not exist yet. Its parameter schema (story_id, feature, title,
+      state, etc.) is unknown at story creation time. KFMB-1020 will define it. Until KFMB-1020
+      completes, any prose written for AC-3/AC-7 referring to kb_create_story call signatures is
+      speculative. This is acceptable given the dependency structure, but it means the
+      implementer must validate the actual schema against what is written in the story before
+      editing the affected agents. This should be an explicit ST-4 pre-flight gate (like ST-1
+      in KFMB-2020 which validated the epic column value before edits).
+
+      (2) kb_list_stories FILTER PARAMETER NAME UNCONFIRMED FOR THIS CONTEXT: KFMB-2020's
+      ELAB.yaml (GAP-001) identified that the `feature` vs `epic` column distinction was
+      unconfirmed. KFMB-2020's verdict was CONDITIONAL_PASS and added a pre-flight verification
+      task. KFMB-3010 inherits the same risk: the story uses `kb_list_stories({feature, limit:
+      100})` in AC-1/AC-2 and `kb_list_stories({feature: prefix})` in AC-6 and AC-9. If the
+      correct filter is `epic` (as KFMB-2020 discovered for plan-slug-based queries), these AC
+      prose templates are wrong and will produce silent failures (always returning results,
+      never blocking on existing IDs). The story's KB Tool Signature Validation section mentions
+      confirming the `feature` parameter name but does not commit to a resolution.
+
+      (3) SPLIT DECISION: The story has sizing_warning: true and split_risk: 0.9. The subtask
+      structure provides natural split lines (see SPLIT section below). No explicit decision on
+      whether to split or proceed is recorded. The preliminary_verdict addresses this.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      The story discloses the correct risks for this blast-radius migration:
+      (1) Missed references — mitigated by AC-13 grep audit and per-subtask incremental checks.
+      (2) KB tool parameter names may differ — mitigated by KB Tool Signature Validation section
+          (pre-flight research before any edits).
+      (3) Parent-worker contract breaks (index_path passed to updated workers) — mitigated by
+          Architecture Notes parent tracing guidance and EC-3 error case.
+      (4) No automated test harness — accepted as intrinsic to agent .md files; not a gap.
+      (5) KFMB-2010/2020 dependency for ST-4 — correctly sequenced as last subtask.
+
+      One additional risk not explicitly disclosed: the KFMB-2020 fallback path in
+      pm-bootstrap-setup-leader.agent.md references stories.index.md (filesystem fallback in
+      AC-4). After KFMB-3010 removes all agent references, this fallback path would reference a
+      conceptually "dead" artifact. The story correctly notes in Architecture Notes that
+      stories.index.md "file itself is NOT deleted in this story" and its "content becomes stale
+      after this change completes" — but does not explicitly identify the KFMB-2020 fallback
+      path in pm-bootstrap-setup-leader.agent.md as an in-scope replacement target. This aligns
+      with KFMB-2020's ELAB OPP-002 which specifically named KFMB-3010 as the cleanup owner.
+      ST-4 should include the removal of this fallback path from pm-bootstrap-setup-leader.
+      Not MVP-blocking but a correctness gap (see GAP-002).
+
+  - id: story_sizing
+    status: FAIL
+    note: >
+      Story exceeds multiple sizing thresholds simultaneously:
+      - AC COUNT: 13 ACs (threshold: 8). Unlike KFMB-2020 where 6 of 10 ACs were negative-space
+        guards, KFMB-3010's ACs are grouped by agent category — AC-1 through AC-11 each describe
+        distinct agent-category behaviors, AC-12 is a universal signal guard, and AC-13 is the
+        final audit. These are genuinely additive ACs, not negative-space guards. Only AC-12 and
+        AC-13 are cross-cutting; the other 11 describe substantive per-category changes.
+      - FILE COUNT: 30 agent files (no threshold defined, but 3x the largest prior single-story
+        agent migration). Each file requires individual pattern research, edit, and grep
+        verification.
+      - SUBTASK COUNT: 10 subtasks (ST-1 through ST-10). The subtask structure already encodes
+        a natural split into 4 independently completable groups (see SPLIT section).
+      - EXTERNAL DEPENDENCY BLOCKER: ST-4 (AC-6, AC-7) is hard-blocked on KFMB-2010 and
+        KFMB-2020 completing. This means the story cannot be completed in a single implementation
+        session — it must be parked mid-flight awaiting dependency resolution.
+      - PREDICTIONS: split_risk: 0.9 and confidence: low both indicate the story generator
+        recognized this is an oversized story.
+      - TOKEN ESTIMATE: predictions.token_estimate: 200,000 tokens. This substantially exceeds
+        a typical single-story budget.
+
+      SPLIT RECOMMENDATION: See split_recommendation section. The story should be split along
+      the natural ST groupings into 3-4 child stories. FAIL on sizing.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      The 10 subtasks are well-structured. Each subtask specifies: goal, files to modify,
+      ACs covered, dependencies, verification command, and estimated tokens. The dependency DAG
+      is a shallow tree (most subtasks are independent; ST-6 depends on ST-3; ST-9 depends on
+      ST-3; ST-10 depends on ST-9; ST-4 is externally blocked). The verification commands are
+      concrete grep-based checks. The canonical references section points to existing files.
+
+      Two minor gaps:
+      (1) ST-4 lacks an explicit pre-flight schema research task (analogous to KFMB-2020's ST-1
+          for epic column value). Given that kb_create_story does not exist yet and its parameters
+          are unknown, ST-4 should include a pre-implementation step to validate kb_create_story
+          parameter names against the actual KFMB-1020 deliverable before writing prose in the
+          bootstrap agent files.
+      (2) ST-6's dependency note says "Depends on: ST-3 (parent orchestrator must also be
+          updated)" — this is correct but ST-9 is also a parent orchestrator dependency and
+          ST-9 depends on ST-3, not ST-6. The dependency graph could be made clearer:
+          pm.agent.md (ST-9) passes context to workers modified in ST-6; if ST-6 completes
+          before ST-9 and agents start being used, there will be a transient period where
+          pm.agent.md still passes index_path to workers that no longer accept it. The story's
+          Architecture Notes correctly identify this, but ST-9's dependency should explicitly
+          state "Must complete before ST-6 workers are used in production" or ST-6 should
+          depend on ST-9 (safer ordering). Not MVP-blocking since this is an agent .md story
+          with no runtime compilation, but noted for implementation ordering guidance.
+
+gaps:
+  - id: GAP-001
+    severity: mvp_blocking
+    description: >
+      kb_create_story IS NOT CURRENTLY IMPLEMENTED in the KB MCP server. Confirmed by
+      inspection of apps/api/knowledge-base/dist/mcp-server/tool-handlers.d.ts — the file
+      contains kb_get_story, kb_list_stories, kb_update_story_status, kb_update_story, and
+      kb_get_next_story but NOT kb_create_story. kb_create_story is the deliverable of
+      KFMB-1020 ("kb_create_story MCP Tool and CRUD Update"), which is currently in "Ready to
+      Work" state (not complete). AC-3 requires elab-epic-updates-leader to call kb_create_story
+      for new story writes. AC-7 requires pm-bootstrap-generation-leader to call kb_create_story
+      for all story creation. The story's declared dependencies are KFMB-2010 and KFMB-2020
+      only. KFMB-1020 is not listed as a dependency.
+
+      Without KFMB-1020 complete, any agent prose written for AC-3 and AC-7 that references
+      kb_create_story will instruct agents to call a non-existent tool, silently failing story
+      creation. The alternative — using kb_update_story for creation — requires the story to
+      already exist in the KB, which is the exact problem AC-3 and AC-7 are solving.
+    mitigation: >
+      Option A (add dependency): Add KFMB-1020 as an explicit blocking dependency for the
+      subtasks that use kb_create_story (ST-2 for AC-3, ST-4 for AC-7). Update the story's
+      depends_on list to include KFMB-1020. This is the correct fix.
+
+      Option B (scope reduction): If splitting the story (see split_recommendation), the
+      child story containing AC-3 and AC-7 should declare KFMB-1020 as a dependency. The
+      child story containing AC-1/2/4/5/8/9/10/11 (which use only existing tools) can proceed
+      without KFMB-1020.
+    ac_affected: "AC-3, AC-7"
+    decision: >
+      ADD_AC. Added AC-14 to the story requiring KFMB-1020 to be complete before ST-2 (AC-3)
+      or ST-4 (AC-7) work begins, and requiring kb_create_story parameter schema validation
+      against the KFMB-1020 deliverable before writing any agent prose. Also updated the
+      story's depends_on frontmatter to add KFMB-1020. Option A selected — the dependency is
+      now explicit and blocking. The split (Option B) is logged separately as OPP-003 for PM
+      judgment.
+
+  - id: GAP-002
+    severity: non_blocking
+    description: >
+      KFMB-2020 introduced a filesystem fallback path in pm-bootstrap-setup-leader.agent.md
+      (AC-4 of KFMB-2020: "falls back to checking stories.index.md existence on disk if
+      kb_list_stories fails"). KFMB-2020's own ELAB.yaml (OPP-002) explicitly flagged this as
+      dead code to be removed in KFMB-3010: "once all agents have migrated to KB-native storage
+      (Phase 3 completion), the filesystem fallback will become dead code... a natural cleanup
+      target for KFMB-3010". The current KFMB-3010 story does not mention this fallback removal
+      in ST-4's goal, file list, or AC scope. After KFMB-3010 completes, pm-bootstrap-setup-
+      leader.agent.md will still contain a reference to stories.index.md (via the fallback), and
+      AC-13 grep audit will FAIL because of this residual reference.
+
+      This is a correctness gap: AC-13 requires zero agent references to stories.index.md, but
+      without removing the KFMB-2020 fallback, AC-13 cannot pass.
+    mitigation: >
+      Add to ST-4's goal and file modification scope: "Remove the filesystem fallback path from
+      pm-bootstrap-setup-leader.agent.md (the stories.index.md existence check introduced by
+      KFMB-2020 AC-4). Replace with hard BLOCKED signal if kb_list_stories fails."
+      This is a single additional edit within ST-4's existing file scope. Alternatively, add
+      an explicit AC covering this: "pm-bootstrap-setup-leader.agent.md filesystem fallback
+      path is removed; kb_list_stories failure emits SETUP BLOCKED with a diagnostic message
+      rather than falling back to filesystem check."
+    ac_affected: "AC-6, AC-13"
+    decision: >
+      ADD_AC. Although classified non_blocking in isolation, this gap causes AC-13 to fail —
+      making it functionally MVP-blocking for story completion. Added AC-15 requiring removal
+      of the pm-bootstrap-setup-leader filesystem fallback within ST-4 scope, with replacement
+      by a hard SETUP BLOCKED signal on kb_list_stories failure. Scope of ST-4 is now
+      implicitly extended to include this one additional edit within its existing file list.
+
+  - id: GAP-003
+    severity: mvp_blocking
+    description: >
+      The story uses kb_list_stories({feature, limit: 100}) in AC-1, AC-2, AC-6, and AC-9 but
+      does not confirm whether the correct filter parameter is `feature` or `epic`. KFMB-2020's
+      ELAB GAP-001 identified this exact ambiguity for the kb-first-migration plan slug context
+      and required a pre-flight research task (ST-1) to validate the correct column name before
+      editing pm-bootstrap-setup-leader. KFMB-3010 propagates the same risk to 4 ACs across
+      multiple agent files. The KB Tool Signature Validation section acknowledges the need to
+      confirm the `feature` parameter name but does not include a structured pre-flight task
+      (analogous to KFMB-2020's ST-1) in the subtask decomposition.
+
+      If the correct filter is `epic` (as kb_list_stories in tool-handlers.d.ts suggests —
+      the tool's `feature` parameter filters by feature prefix, not plan slug), then all 4 ACs'
+      prose templates using `{feature}` would silently return incorrect results: ID-allocation
+      scans would return stories from all features, and collision detection would never block.
+    mitigation: >
+      Add a pre-flight research subtask (ST-0 or integrate into ST-1) explicitly mirroring
+      KFMB-2020's ST-1: run kb_list_stories in the dev KB against known KFMB stories, confirm
+      which parameter (`feature` or `epic` or `prefix`) correctly filters by plan slug, and
+      document the result. All subsequent subtasks must use the confirmed parameter name.
+      This gate must complete before ST-1, ST-2, and ST-5 begin their edits.
+    ac_affected: "AC-1, AC-2, AC-6, AC-9"
+    decision: >
+      ADD_AC. Added AC-16 requiring a pre-flight parameter validation step before any agent
+      edits begin. The step mirrors KFMB-2020 ST-1: run kb_list_stories against the dev KB
+      with known KFMB story IDs, confirm the correct filter parameter name (feature/epic/prefix),
+      document the result, and apply it consistently across all subsequent subtask edits. No
+      subtask writing kb_list_stories call patterns may begin until AC-16's validation is
+      complete. This gates ST-1, ST-2 (AC-4), and ST-5 edits.
+
+opportunities:
+  - id: OPP-001
+    description: >
+      The story's agent count discrepancy ("~32" vs actual 30) could be resolved by running the
+      definitive grep audit before implementation begins (as a Day-0 baseline). This would
+      confirm the exact file list, identify any agents added since the 2026-02-13 baseline date
+      that may have picked up stories.index.md references in the interim, and give the
+      implementer an accurate scope. The Test Plan's KB Tool Signature Validation section
+      already encourages pre-flight research; adding a "run baseline grep audit and reconcile
+      with scope list" step would surface any scope drift.
+    priority: low
+    phase: pre_implementation
+    decision: >
+      LOGGED_TO_KB. Non-blocking recommendation. Written to KB as entry 3c9b7964-2d3d-4292-acdd-614d4668cb66
+      (tags: kfmb-3010, pre-implementation, grep-audit, scope-validation). No AC required —
+      the baseline audit is advisory and the AC-16 pre-flight gate already covers pre-implementation
+      validation discipline.
+
+  - id: OPP-002
+    description: >
+      Several agents in ST-6 and ST-7 receive story data via index_path and parse it themselves.
+      The replacement pattern (remove index_path, add story_id, call kb_get_story) is mechanical
+      and repeated across 8 agents. A future opportunity exists to create a canonical
+      "after" template showing the exact kb_get_story call format and how to reference the
+      returned story fields in agent prose. This template would accelerate ST-6 and ST-7
+      implementation and reduce the risk of inconsistent KB call patterns across the 8 agents.
+      If the story is split, the child story implementing ST-6/ST-7 should reference one of its
+      own modified agents as the canonical implementation for subsequent agents.
+    priority: medium
+    phase: implementation
+    decision: >
+      LOGGED_TO_KB. Non-blocking implementation guidance. Written to KB as entry
+      e6caa9bb-f16e-4960-9da9-fb01bf5f0edf (tags: kfmb-3010, implementation-pattern,
+      kb_get_story, canonical-template). No AC required — the pattern recommendation is
+      advisory for the implementer of ST-6/ST-7.
+
+  - id: OPP-003
+    description: >
+      The story's split_risk: 0.9 and sizing_warning: true are both correct flags. The natural
+      split lines align with the external dependency structure: stories using only existing KB
+      tools (AC-1/2/4/5/8/9/10/11 — approximately 26 agents) can be done independently of
+      stories requiring kb_create_story from KFMB-1020 (AC-3/7 — 3 agents). Further, ST-4
+      (2 bootstrap agents) is hard-blocked on KFMB-2010/2020. Splitting along these lines
+      creates a natural high-parallelism delivery path:
+        Child A (unblocked, 24 agents): ST-1 + ST-2(AC-4 only) + ST-3 + ST-5 + ST-6 + ST-7 + ST-8 + ST-9
+        Child B (blocked on KFMB-1020): ST-2(AC-3) remaining elab-epic-updates-leader kb_create_story
+        Child C (blocked on KFMB-2010/2020 + KFMB-1020): ST-4 (bootstrap agents AC-6/7)
+        Final audit (ST-10): Blocked on all children
+      This decomposition unblocks 80% of the work immediately.
+    priority: high
+    phase: pre_implementation
+    decision: >
+      LOGGED_TO_KB. Requires PM judgment to create child stories — autonomous decider cannot
+      create follow-up stories. Written to KB as entry 61a637dd-cc59-4ee1-a950-5a7bfc37295b
+      (tags: kfmb-3010, split-recommendation, high-priority, pm-action-required). The split
+      recommendation is preserved in split_recommendation section for PM review. The current
+      story proceeds as a single story with CONDITIONAL PASS — gaps addressed via AC-14/15/16.
+
+split_recommendation:
+  recommended: true
+  rationale: >
+    Story exceeds sizing threshold on 4 dimensions (AC count 13 > 8, subtask count 10, file
+    count 30, external dependency blocker on KFMB-2010/2020 preventing single-session
+    completion). split_risk: 0.9 and confidence: low from predictions confirm this assessment.
+    The story self-decomposes naturally along tool availability and dependency lines.
+  proposed_splits:
+    - id: "KFMB-3010A"
+      title: "Eliminate stories.index.md — Agent Updates (Existing-Tool Agents)"
+      scope: >
+        All agents whose stories.index.md references can be replaced using currently-available
+        KB tools (kb_list_stories, kb_get_story, kb_update_story_status, kb_get_next_story,
+        kb_search). Covers: ST-1 (ID-allocation), partial ST-2 (audit-promote-leader AC-4),
+        ST-3 (pm-story-generation-leader AC-5), ST-5 (setup/validation AC-9/10), ST-6
+        (read-only workers AC-8), ST-7 (fanout/audit/analytics AC-8/11), ST-8 (elab-epic-review
+        AC-13), ST-9 (remaining + pm.agent.md AC-12/13), ST-10 (final grep audit AC-13).
+        Approximately 27 agents, ACs: 1, 2, 4, 5, 8, 9, 10, 11, 12, 13.
+      depends_on: ["KFMB-2010", "KFMB-2020"]
+      blocks: ["KFMB-3020", "KFMB-3030"]
+      unblocked: true
+    - id: "KFMB-3010B"
+      title: "Eliminate stories.index.md — Bootstrap and Create-Story Agents"
+      scope: >
+        Agents requiring kb_create_story (KFMB-1020 deliverable) or the KFMB-2010/2020
+        canonical patterns. Covers: partial ST-2 (elab-epic-updates-leader kb_create_story AC-3),
+        ST-4 (pm-bootstrap-setup-leader, pm-bootstrap-generation-leader AC-6/7). Also includes
+        removal of KFMB-2020 filesystem fallback (GAP-002). Approximately 3 agents,
+        ACs: 3, 6, 7.
+      depends_on: ["KFMB-1020", "KFMB-2010", "KFMB-2020"]
+      blocks: ["KFMB-3020", "KFMB-3030"]
+      unblocked: false
+
+preliminary_verdict: CONDITIONAL_PASS
+# CONDITIONAL_PASS: The story's implementation plan is sound and the subtask decomposition
+# is thorough. However, three issues must be resolved before implementation can begin:
+# (1) GAP-001: kb_create_story dependency (KFMB-1020) must be added to depends_on for AC-3/AC-7,
+#     OR the story must be split so the kb_create_story-dependent ACs are in a separate child
+#     story with the correct dependency.
+# (2) GAP-002: pm-bootstrap-setup-leader filesystem fallback removal must be added to ST-4 scope;
+#     otherwise AC-13 (zero grep matches) cannot pass.
+# (3) GAP-003: A pre-flight parameter validation task (mirroring KFMB-2020 ST-1) must be added
+#     before any edits begin, to confirm the correct kb_list_stories filter parameter name.
+# All three gaps have clear, low-effort mitigations. The story does not require substantive
+# redesign — the subtask structure, AC assignments, and agent scope are all correct.
+# Recommend split per split_recommendation (KFMB-3010A + KFMB-3010B) to unblock 80% of work
+# immediately while KFMB-1020 completes.
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+verdict_notes: >
+  All three MVP-blocking and correctness gaps addressed via new ACs. GAP-001 (kb_create_story
+  not implemented) resolved by AC-14 (KFMB-1020 gate) and adding KFMB-1020 to depends_on.
+  GAP-002 (KFMB-2020 filesystem fallback in pm-bootstrap-setup-leader) resolved by AC-15
+  (explicit fallback removal in ST-4 scope). GAP-003 (kb_list_stories filter parameter
+  unconfirmed) resolved by AC-16 (pre-flight parameter validation before any edits begin).
+  All three opportunities logged to KB. Story sizing FAIL noted — split recommendation
+  (OPP-003, KB entry 61a637dd-cc59-4ee1-a950-5a7bfc37295b) logged as HIGH priority for PM
+  review. Story proceeds as single story pending PM split decision. No substantive redesign
+  required — subtask structure, AC assignments, and agent scope are all correct.
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 3
+  acs_added_list:
+    - AC-14: KFMB-1020 dependency gate for AC-3/AC-7 subtasks (GAP-001)
+    - AC-15: pm-bootstrap-setup-leader filesystem fallback removal in ST-4 (GAP-002)
+    - AC-16: Pre-flight kb_list_stories filter parameter validation before any edits (GAP-003)
+  depends_on_updated: true
+  kb_entries_written:
+    - id: "3c9b7964-2d3d-4292-acdd-614d4668cb66"
+      opp: OPP-001
+      priority: low
+    - id: "e6caa9bb-f16e-4960-9da9-fb01bf5f0edf"
+      opp: OPP-002
+      priority: medium
+    - id: "61a637dd-cc59-4ee1-a950-5a7bfc37295b"
+      opp: OPP-003
+      priority: high

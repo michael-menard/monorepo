@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  APIP-4020 is a backend-only story — weekly LangGraph cron graph with no HTTP endpoints
+  and no UI-facing acceptance criteria. Cohesion scores will surface in APIP-4070
+  (Weekly Pipeline Health Report). No design input required for this story.
+  ADR-006 E2E tests are not applicable.

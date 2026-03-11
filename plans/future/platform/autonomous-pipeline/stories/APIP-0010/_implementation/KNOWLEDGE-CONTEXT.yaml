@@ -1,0 +1,163 @@
+schema: 1
+story_id: APIP-0010
+timestamp: "2026-02-28T18:50:00Z"
+phase: qa-setup
+
+# QA Verification Context and Attack Vectors
+
+qa_entry_point: "evidence-first QA verification"
+evidence_sources:
+  - EVIDENCE.yaml (11 acceptance criteria, all PASS)
+  - REVIEW.yaml (code review passed with verdict: PASS)
+
+verification_strategy: "AC-driven spot-checking with secondary command verification"
+
+# Key attack vectors for QA spot-checking
+
+attack_vectors:
+  - vector_id: AV-1
+    ac_ref: "AC-1"
+    description: "Package skeleton files exist and match expected structure"
+    verification_method: "File existence check + content verification"
+    files_to_check:
+      - packages/backend/pipeline-queue/package.json
+      - packages/backend/pipeline-queue/tsconfig.json
+      - packages/backend/pipeline-queue/vitest.config.ts
+    risk_level: low
+
+  - vector_id: AV-2
+    ac_ref: "AC-2"
+    description: "PipelineJobDataSchema exports correctly with all required fields"
+    verification_method: "Type check + test assertion review"
+    files_to_check:
+      - packages/backend/pipeline-queue/src/__types__/index.ts
+      - packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts
+    test_count_expected: 13
+    risk_level: medium
+
+  - vector_id: AV-3
+    ac_ref: "AC-3"
+    description: "createPipelineQueue wraps BullMQ with Zod validation and correct retry config"
+    verification_method: "Source code review + test assertion review"
+    files_to_check:
+      - packages/backend/pipeline-queue/src/index.ts
+      - packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts
+    critical_assertions:
+      - "attempts=3"
+      - "backoff.type=exponential"
+      - "backoff.delay=1000"
+      - "ZodError thrown before bullQueue.add on invalid data"
+    risk_level: high
+
+  - vector_id: AV-4
+    ac_ref: "AC-4"
+    description: "createPipelineConnection creates IORedis without lazyConnect and no singleton"
+    verification_method: "Source code review + test assertions"
+    files_to_check:
+      - packages/backend/pipeline-queue/src/index.ts
+      - packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts
+    critical_assertions:
+      - "enableOfflineQueue=false"
+      - "maxRetriesPerRequest=null"
+      - "lazyConnect=undefined"
+      - "two calls create two instances (no singleton)"
+    risk_level: high
+
+  - vector_id: AV-5
+    ac_ref: "AC-5"
+    description: "PIPELINE_QUEUE_NAME constant exported and used as default"
+    verification_method: "Source code review + test assertion"
+    files_to_check:
+      - packages/backend/pipeline-queue/src/index.ts
+      - packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts
+    critical_value: "PIPELINE_QUEUE_NAME === 'apip-pipeline'"
+    risk_level: low
+
+  - vector_id: AV-6
+    ac_ref: "AC-6,AC-11"
+    description: "README.md contains queue contract, payload schema, connection model, Bull Board setup, AOF persistence note"
+    verification_method: "Content verification in README"
+    files_to_check:
+      - packages/backend/pipeline-queue/README.md
+    required_sections:
+      - "Queue Contract table (queue name 'apip-pipeline')"
+      - "Payload Schema section"
+      - "Connection Model section (two-connection model)"
+      - "Bull Board Setup section with @bull-board/api, @bull-board/express"
+      - "Persistence: AOF note (ElastiCache AOF tier requirement)"
+    risk_level: medium
+
+  - vector_id: AV-7
+    ac_ref: "AC-7,AC-9"
+    description: "Unit tests pass with correct counts: 29 pass, 2 skipped"
+    verification_method: "Command verification: pnpm --filter @repo/pipeline-queue test"
+    expected_output:
+      - "29 tests pass"
+      - "2 integration tests skipped (REDIS_URL not set)"
+    risk_level: medium
+
+  - vector_id: AV-8
+    ac_ref: "AC-8"
+    description: "Integration test enqueue/dequeue with test.skipIf(!REDIS_URL) guard"
+    verification_method: "Source code review + test structure"
+    files_to_check:
+      - packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts
+    critical_checks:
+      - "test.skipIf(!REDIS_URL) guard present"
+      - "enqueue job step"
+      - "getWaitingCount>=1 assertion"
+      - "Worker dequeues and schema.parse succeeds"
+    risk_level: low
+
+  - vector_id: AV-9
+    ac_ref: "AC-9"
+    description: "Type checking, tests, and build all pass"
+    verification_method: "Command verification (all three commands)"
+    commands:
+      - "pnpm --filter @repo/pipeline-queue type-check"
+      - "pnpm --filter @repo/pipeline-queue test"
+      - "pnpm --filter @repo/pipeline-queue build"
+    risk_level: medium
+
+  - vector_id: AV-10
+    ac_ref: "AC-10"
+    description: "Package importable as @repo/pipeline-queue without workspace.yaml edit"
+    verification_method: "Workspace config check + import resolution"
+    files_to_check:
+      - pnpm-workspace.yaml
+    critical_check: "pnpm-workspace.yaml 'packages/backend/*' glob covers pipeline-queue"
+    risk_level: low
+
+# Known implementation details from EVIDENCE.yaml
+
+implementation_notes:
+  - "Used ConnectionOptions from bullmq instead of Redis type directly (ioredis version mismatch)"
+  - "Used vi.hoisted() pattern for vi.mock factories (Vitest temporal dead zone)"
+  - "Used try/catch + instanceof ZodError (Zod v4 error representation)"
+  - "Built @repo/logger manually (incremental cache issue in worktree)"
+  - "Omitted tsup.config.ts per ARCH-003 decision (rate-limiter pattern)"
+  - "PIPELINE_QUEUE_NAME = 'apip-pipeline' is stable contract — documented in README"
+
+known_deviations:
+  - "tsup.config.ts omitted (intentional per ARCH-003)"
+  - "Integration tests skipped in CI (test.skipIf guard working as designed)"
+
+# Review verdict summary
+
+review_verdict: PASS
+review_iteration: 1
+review_timestamp: "2026-03-01T01:45:00Z"
+all_workers_passed: true
+override_notes: "lint and typecheck reported FAIL due to branch isolation, evidence confirmed passes on story branch"
+
+# QA readiness signals
+
+signals:
+  - "EVIDENCE.yaml complete with 11 AC, all PASS"
+  - "REVIEW.yaml complete with verdict: PASS"
+  - "Story moved to UAT directory"
+  - "Checkpoint updated to qa-setup phase"
+  - "All preconditions validated"
+
+next_phase: qa-verification
+verification_focus: "Evidence-first AC verification with secondary command spot-checks"

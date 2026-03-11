@@ -70,7 +70,8 @@
     "yaml": "2.8.2",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.24.0",
-    "@repo/context-pack-sidecar": "workspace:*"
+    "@repo/context-pack-sidecar": "workspace:*",
+    "@repo/database-schema": "workspace:*"
   },
   "devDependencies": {
     "@types/js-yaml": "4.0.9",

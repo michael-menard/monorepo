@@ -1,0 +1,137 @@
+schema: 1
+story_id: WINT-1150
+timestamp: '2026-02-17T10:15:00Z'
+iteration: 2
+
+verdict: PASS
+
+workers_run:
+  - typecheck
+  - build
+  - lint
+  - unit_tests
+workers_skipped:
+  - style
+  - security
+  - react
+  - accessibility
+
+ranked_patches: []
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 1
+    findings:
+      - file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+        message: "Pre-existing Prettier formatting error on line 29 (StoryIdSchema) — predates WINT-1150, fixed in fix cycle iteration 1"
+        severity: warning
+        auto_fixable: true
+  style:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 3
+    findings:
+      - file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+        message: "DEBT-RU-001: StoryIdSchema duplicated from story-management/__types__/index.ts — pre-existing, documented with DEBT comment"
+        severity: warning
+        auto_fixable: false
+      - file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+        message: "DEBT-RU-002: Story state enum duplicated — pre-existing, documented with DEBT comment"
+        severity: warning
+        auto_fixable: false
+      - file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+        message: "DEBT-RU-003: Priority enum duplicated — pre-existing, documented with DEBT comment"
+        severity: warning
+        auto_fixable: false
+  react:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  accessibility:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  unit_tests:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 0
+total_warnings: 4
+auto_fixable_count: 1
+
+fix_cycles:
+  - iteration: 1
+    date: '2026-02-17'
+    issues_fixed:
+      - id: LINT-001
+        file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+        description: "Prettier formatting error corrected in StoryIdSchema (line 29)"
+        status: FIXED
+      - id: RU-001
+        file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+        description: "StoryIdSchema duplication documented with DEBT-RU-001 comment (pre-existing)"
+        status: DOCUMENTED
+      - id: RU-002
+        file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+        description: "Story state enum duplication documented with DEBT-RU-002 comment (pre-existing)"
+        status: DOCUMENTED
+      - id: RU-003
+        file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+        description: "Priority enum duplication documented with DEBT-RU-003 comment (pre-existing)"
+        status: DOCUMENTED
+    verification:
+      build: PASS
+      typecheck: PASS
+      lint: PASS
+      unit_tests: PASS
+
+tokens:
+  in: 25000
+  out: 4000

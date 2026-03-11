@@ -1,0 +1,28 @@
+---
+created: "2026-03-08"
+reason: "KB unavailable during story generation — no active DB connection"
+retry_after: "next available KB session"
+---
+
+writes:
+  - operation: INSERT
+    table: stories
+    conflict_action: "ON CONFLICT (story_id) DO UPDATE SET"
+    data:
+      story_id: "WINT-4120"
+      feature: "wint"
+      title: "Integrate Cohesion Checks into Workflow"
+      story_dir: "plans/future/platform/wint/backlog/WINT-4120"
+      story_file: "plans/future/platform/wint/backlog/WINT-4120/WINT-4120.md"
+      story_type: "feature"
+      points: 3
+      priority: "high"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

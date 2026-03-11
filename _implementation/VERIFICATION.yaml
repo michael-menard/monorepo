@@ -1,0 +1,133 @@
+schema: 1
+story_id: WINT-4100
+timestamp: '2026-03-09T00:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+    note: exempt — agent-prompt-only story, no TypeScript code
+  integration:
+    pass: 0
+    fail: 0
+    note: N/A
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt — agent-prompt-only story
+  http:
+    pass: 0
+    fail: 0
+    note: N/A — no backend changes
+test_exemption_reason: >-
+  WINT-4100 is an agent-prompt-only story. The deliverable is a markdown agent spec file
+  (.claude/agents/backlog-curator.agent.md). No TypeScript, no build artifacts, no test files. All test categories are
+  exempt per evidence artifact.
+coverage: N/A
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-1
+    check: head -20 backlog-curator.agent.md
+    notes: >-
+      YAML frontmatter confirmed: created=2026-03-08, updated=2026-03-08, version=1.0.0, type=worker, model=haiku,
+      name=backlog-curator, spawned_by=[pm-story-generation-leader, pm-story-adhoc-leader]
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-2
+    check: Read file — Inputs section verified
+    notes: >-
+      Required inputs table: scope, output_dir. Optional inputs table: scope_challenges_dir, deferred_writes_dir,
+      batch_limit — all present with correct descriptions and degradation notes.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-3
+    check: Read file — Execution Phases section verified
+    notes: >-
+      4 phases present: Phase 1 Load Deferred Items, Phase 2 Deduplicate and Rank, Phase 3 Generate PM Review Batch,
+      Phase 4 Produce Output.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-4
+    check: grep 'kb_search' backlog-curator.agent.md
+    notes: 'Exact query found in Phase 1: kb_search({ query: "deferred moonshot", tags: ["deferred"], limit: 50 })'
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-5
+    check: Read file — Graceful Degradation section verified
+    notes: >-
+      All 3 degradation cases documented: KB unavailable (falls back to filesystem, emits WARNINGS signal), no deferred
+      items found (emits zero-item batch + COMPLETE), scope-challenges absent (skips silently, no warning).
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-6
+    check: Read file — Phase 2 Deduplicate and Rank verified
+    notes: >-
+      Dedup key: (story_id + SHA-256 hash of deferral description). Source field records all origins joined with '+'
+      (e.g., 'kb+scope-challenges').
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-7
+    check: Read file — Phase 3 Generate PM Review Batch verified
+    notes: >-
+      batch_limit configurable (default 10), truncated: true flag set when total_items_found > batch_limit, ranked list
+      sorted by recency descending.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-8
+    check: grep 'pm-review-batch.json' backlog-curator.agent.md
+    notes: >-
+      Schema section present with all required fields: generated_at, total_items_found, items_in_batch, truncated,
+      items[]. Field definitions table included.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-9
+    check: Read file — PM-REVIEW-REPORT.md Specification verified
+    notes: >-
+      Spec defined with ~5 lines per item. recommended_action enum: promote-to-story | close | defer-again. Truncation
+      note template included.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-10
+    check: grep -i 'does not auto-create|does not modify' backlog-curator.agent.md
+    notes: >-
+      Non-Goals section enumerates: no auto-create stories, no modify KB entries, no write to stories index, no run
+      scope-defender or graph-checker. Non-Negotiables section reinforces: MUST NOT create stories, modify KB entries,
+      or write to the stories index.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-11
+    check: grep 'LangGraph' backlog-curator.agent.md
+    notes: >-
+      LangGraph Porting Notes section present. Input contract table (5 state fields), 4-phase execution contract, output
+      contract table, future node path nodes/backlog/backlog-curate.ts documented.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verification.AC-12
+    check: grep -c 'BACKLOG-CURATOR' returns 5 (not 3 as test plan states)
+    notes: >-
+      All 3 canonical completion signals defined in Completion Signals table: BACKLOG-CURATOR COMPLETE, BACKLOG-CURATOR
+      COMPLETE WITH WARNINGS, BACKLOG-CURATOR BLOCKED. The grep count of 5 (vs test plan expectation of 3) is due to 2
+      additional usage examples in the Graceful Degradation section — this is correct file structure, not a defect. Test
+      plan heuristic imprecision noted; AC itself is fully satisfied.
+architecture_compliant: true
+architecture_notes: >-
+  Agent-prompt-only deliverable. No code, no build, no TypeScript. Review artifact confirmed 0 errors, 0 warnings across
+  all 10 review workers. 1 pre-existing type error in @repo/app-sets-gallery is unrelated to this story.
+issues: []
+observations:
+  - type: test_plan_imprecision
+    ac_id: AC-12
+    detail: >-
+      Test plan check 3 expects grep -c 'BACKLOG-CURATOR' = 3. Actual count is 5. The 2 additional occurrences are valid
+      usage examples in the Graceful Degradation section (lines 52-53). All 3 required signals are correctly defined.
+      Not a defect.
+lessons_to_record: []
+tokens:
+  in: 9500
+  out: 1800

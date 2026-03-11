@@ -172,14 +172,14 @@ function parseChangeSpec(changeSpec: string): ParsedChange {
     )
   }
 
-  const [operation, target, arg1, arg2] = parts
+  const [operation, target, arg1] = parts
 
   const parsed: ParsedChange = {
     operation: operation as any,
     target,
   }
 
-  // Determine what arg1 and arg2 represent based on operation
+  // Determine what arg1 represents based on operation
   if (operation === 'rename-column' || operation === 'rename-value') {
     parsed.newName = arg1
   } else if (operation === 'add-column' || operation === 'change-type') {

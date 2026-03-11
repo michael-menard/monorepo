@@ -1,0 +1,111 @@
+schema: 1
+story_id: WINT-4050
+timestamp: '2026-03-08T21:10:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 101
+    fail: 0
+  integration:
+    pass: 8
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+  http:
+    pass: 0
+    fail: 0
+    status: n/a — no HTTP endpoints in this story
+coverage: 78.61
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Unit tests use vi.mock() correctly. Integration tests use real wint.rules table (ADR-005 compliant). Graceful
+    DB-unavailable skip pattern. No setTimeout anti-patterns. No barrel files. Zod-first types. @repo/logger used.
+    Correct discriminated union pattern enforced.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    notes: >-
+      COHESION_RULE_DEFINITIONS exports exactly 4 rules verified in source (lines 39-69) and confirmed by 27 unit tests
+      + integration HP-1 (109/109 pass in QA re-run)
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    notes: >-
+      proposeResult.ok checked before promoteRule; conflicts++ and continue on ok:false. EC-1 unit (4 tests) and
+      integration EC-1 confirm idempotency.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    notes: >-
+      SOURCE_STORY_ID = 'WINT-4050' constant (line 26) passed to all promoteRule calls. Unit AC-3 test and integration
+      HP-2 both verify.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    notes: >-
+      27 unit tests across HP-1 (5), EC-1 (4), EC-2 (4), summary log (2), definitions (8), SeedResultSchema (3). All
+      pass in QA re-run.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    notes: >-
+      rule_type: 'prompt_injection', severity: 'warning' confirmed in cohesion-rules.ts lines 63-68. Unit and
+      integration tests verify.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    notes: >-
+      Integration HP-1 and HP-3 tests verify getRules({ status: 'active' }) returns exactly 4 WINT-4050 rules. 8
+      integration tests pass in QA re-run.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    notes: 'tsc --noEmit: 0 errors. ESLint on seeds/: 0 errors. Both re-executed by QA verifier.'
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
+    notes: >-
+      package.json line 24: seed:cohesion-rules script present. Uses node dist/ (correct compiled production approach).
+      Invocable via pnpm.
+architecture_compliant: true
+architecture_notes: >-
+  ADR-005 compliant (real DB in integration tests). ADR-006 E2E exempt (frontend_impacted: false). Zod-first types.
+  @repo/logger used. No barrel files. No HTTP endpoints. No infrastructure changes.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Seed scripts in package.json should use compiled node dist/ not tsx src/ for production parity. tsx is fine during
+      development but dist/ is the canonical invocation.
+    category: pattern
+    tags:
+      - backend
+      - seed-scripts
+      - rules-registry
+  - lesson: >-
+      Graceful DB-unavailable skip pattern (checking dbAvailable flag per test) allows integration tests to pass in CI
+      without a DB while remaining verifiable during UAT.
+    category: pattern
+    tags:
+      - backend
+      - testing
+      - integration
+      - ci
+  - lesson: >-
+      Inline snapshot tests in integration tests should sort before snapshotting to ensure deterministic ordering across
+      DB runs.
+    category: pattern
+    tags:
+      - backend
+      - testing
+      - integration
+      - vitest
+tokens:
+  in: 18500
+  out: 2800

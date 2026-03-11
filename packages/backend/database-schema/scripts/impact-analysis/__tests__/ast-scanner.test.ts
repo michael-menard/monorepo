@@ -16,7 +16,7 @@ describe('AST Scanner', () => {
     it('should detect db.select().from(table) references', () => {
       const project = new Project({ useInMemoryFileSystem: true })
 
-      const sourceFile = project.createSourceFile(
+      const _sourceFile = project.createSourceFile(
         'test.ts',
         `
         import { db } from './db'

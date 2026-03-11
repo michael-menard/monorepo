@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-5006 is a pure infrastructure story. It produces Docker Compose configuration files, a README, and server provisioning artifacts. There are no UI components, no frontend changes, and no user-facing interactions. This story is invisible to end users. No UI/UX review is applicable."

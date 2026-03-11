@@ -1,0 +1,49 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "KB database (port 5433) not accessible from this environment — psql not available"
+retry_command: "psql postgresql://localhost:5433/knowledge_base"
+
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: "KFMB-1020"
+      feature: "kb-first-migration"
+      title: "kb_create_story MCP Tool and CRUD Update"
+      story_dir: "plans/future/platform/kb-first-migration/backlog/KFMB-1020"
+      story_file: "plans/future/platform/kb-first-migration/backlog/KFMB-1020/KFMB-1020.md"
+      story_type: "feature"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    sql: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra
+      ) VALUES (
+        'KFMB-1020', 'kb-first-migration', 'kb_create_story MCP Tool and CRUD Update',
+        'plans/future/platform/kb-first-migration/backlog/KFMB-1020',
+        'plans/future/platform/kb-first-migration/backlog/KFMB-1020/KFMB-1020.md',
+        'feature', 3, 'medium', 'backlog', true, false, true, false
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        feature = EXCLUDED.feature,
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra;
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

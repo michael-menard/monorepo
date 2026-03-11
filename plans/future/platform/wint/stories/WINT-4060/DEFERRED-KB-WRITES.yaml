@@ -1,0 +1,30 @@
+# DEFERRED-KB-WRITES.yaml
+# Generated: 2026-03-08
+# Reason: KB MCP tools not directly callable in this agent execution context.
+# Retry: Run kb_upsert_story with the fields below on next available KB session.
+
+story:
+  story_id: WINT-4060
+  feature: wint
+  title: "Create graph-checker Agent"
+  story_dir: plans/future/platform/wint/backlog/WINT-4060
+  story_file: plans/future/platform/wint/backlog/WINT-4060/WINT-4060.md
+  story_type: feature
+  points: 1
+  priority: medium
+  state: backlog
+  touches_backend: false
+  touches_frontend: false
+  touches_database: false
+  touches_infra: false
+  touches_agent_files: true
+  experiment_variant: control
+  created_at: "2026-03-08"
+  depends_on: []
+  blocks:
+    - WINT-4070
+    - WINT-4100
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

@@ -1,0 +1,46 @@
+schema: 1
+story_id: APIP-5003
+phase: qa-setup
+timestamp: 2026-03-01T20:46:00Z
+
+qa_context:
+  story_type: infrastructure/documentation
+  testing_approach: documentation + operational verification
+  exemptions:
+    - e2e: true (pure infra, no frontend impacts)
+    - unit_tests: true (no TypeScript code)
+    - coverage: true (45% threshold waived for infra/config)
+
+verification_strategy:
+  primary_sources:
+    - SECURITY.md documentation (network boundary, container hardening, secret injection)
+    - compose.langgraph-server.yaml (hardening directives verification)
+    - .gitignore (secret exclusion)
+
+  acceptance_criteria_verification:
+    - AC-1: Documentation completeness (SECURITY.md structure and content)
+    - AC-2: Port binding verification (127.0.0.1 localhost-only binding)
+    - AC-3: Container hardening directives (read_only, cap_drop ALL, tmpfs)
+    - AC-4: Volume mount permissions (:ro for config, rw for persistent data)
+    - AC-5: Image tag pinning (no :latest tags)
+    - AC-6: Secret injection pattern documentation (${VAR_NAME}, .env in .gitignore)
+    - AC-7: Operational verification checklist completeness
+    - AC-8: Docker compose config validity
+    - AC-9: Phase 2 deferred items placeholder with cross-references
+
+  known_gaps:
+    - Non-root user not applied to langgraph-platform (documented in SECURITY.md Section 3.5)
+    - Operational tests require deployed server (ss -tlnp, docker inspect commands)
+    - These gaps are acceptable for MVP and documented for Phase 2
+
+  review_findings:
+    - All 5 info-level findings are non-blocking
+    - Image version 0.2.10 correctly pinned (determined during implementation)
+    - PostgreSQL requires cap_add after cap_drop (expected and documented)
+    - Non-root user gap documented with Phase 2 path
+
+notes:
+  - Story is pure infrastructure/documentation — no business logic code
+  - Code review verdict: PASS with iteration 1
+  - All ACs verified as PASS by code review
+  - Operational verification checklist available for manual deployment verification

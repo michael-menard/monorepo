@@ -1,0 +1,119 @@
+schema: 1
+story_id: WISH-2013
+updated: 2026-01-31T12:30:00.000Z
+code_review:
+  verdict: pass
+  iterations: 2
+  final_issues:
+    errors: 0
+    warnings: 0
+    note: ""
+tests:
+  unit:
+    pass: 279
+    fail: 0
+    notes: >
+      All backend lego-api tests passing (13 test files):
+
+      - core/utils/__tests__/file-validation.test.ts: 41 tests (MIME validation, size validation, security logging)
+
+      - core/security/__tests__/virus-scanner.test.ts: 21 tests (ClamAV adapter, mock adapter, schema validation)
+
+      - domains/wishlist/adapters/__tests__/storage.test.ts: 25 tests (presign URL, extension/MIME validation, size
+      validation)
+
+      - domains/wishlist/__tests__/services.test.ts: 20 tests
+
+      - domains/wishlist/__tests__/purchase.test.ts: 18 tests
+
+      - Plus 8 additional domain test files
+  integration:
+    pass: 369
+    fail: 6
+    notes: |
+      Frontend app-wishlist-gallery tests (21 test files):
+      - 369 passing tests (including all security-related tests)
+      - 6 pre-existing failures in FeatureFlagContext/useFeatureFlag tests (unrelated to WISH-2013)
+      - All useS3Upload security tests passing
+      - All WishlistForm validation tests passing
+      - All accessibility tests passing (31 tests)
+  e2e:
+    passed: 0
+    failed: 0
+acs:
+  - id: AC1
+    verdict: pass
+    evidence: |
+      storage.ts:96-106 - MIME type validation before presign
+      file-validation.test.ts:29-113 - 15+ MIME type validation tests
+      Rejects: application/pdf, text/html, application/x-executable, image/gif, image/svg+xml
+  - id: AC2
+    verdict: pass
+    evidence: |
+      useS3Upload.ts:103-106 - Client validates ALLOWED_MIME_TYPES
+      Error message: "Only JPEG, PNG, and WebP images are allowed"
+      Prevents presign request for invalid files
+  - id: AC3
+    verdict: pass
+    evidence: |
+      storage.ts:59-81 - File size validation in generateUploadUrl
+      MAX_FILE_SIZE = 10,485,760 bytes
+      Rejects files < 1 byte and > 10MB with structured error responses
+      routes.ts:180-181 - Error message "File size exceeds maximum limit of 10MB"
+  - id: AC4
+    verdict: pass
+    evidence: |
+      useS3Upload.ts:94-101 - validateFile() checks size bounds
+      MIN_FILE_SIZE = 1 byte, MAX_FILE_SIZE = 10MB
+      Error message displays limit in MB
+  - id: AC5
+    verdict: pass
+    evidence: |
+      virus-scanner.ts:108-173 - ClamAV adapter with port interface
+      Stub implementation returns clean (AC5 specifies async S3 trigger Lambda)
+      21 unit tests cover scan results (clean, infected, error)
+      handleInfectedFile returns 'quarantined' action
+  - id: AC6
+    verdict: pass
+    evidence: |
+      storage.ts:37 - PRESIGN_EXPIRATION_SECONDS = 900
+      storage.ts:113 - TTL passed to getPresignedUploadUrl
+      Test: storage.test.ts:46 - expiresIn verified as 900 seconds
+  - id: AC7
+    verdict: documented
+    evidence: |
+      WISH-2013.md:489-565 - Complete policy configurations documented
+      S3 bucket policy: HTTPS-only (DenyInsecureTransport), no public access
+      IAM policy: PutObject/GetObject only to uploads/wishlist/* prefix
+      CORS: Whitelisted origins (prod, staging, localhost), PUT only
+      Deployment in separate IaC story (infrastructure as code)
+  - id: AC11
+    verdict: pass
+    evidence: |
+      security-mocks.ts:114-150 - Malicious file fixtures (exe, html, js, pdf, svg, shell script)
+      security-mocks.ts:163-179 - File size test fixtures (exact limit, just over, 50MB oversized)
+      security-mocks.ts:188-226 - API error response fixtures
+      handlers.ts:84-123 - MSW security error injection via x-mock-security-error header
+      Comprehensive test scenarios for all AC requirements
+  - id: AC16
+    verdict: pass
+    evidence: |
+      file-validation.ts:196-233 - logSecurityEvent() and createSecurityEvent()
+      storage.ts:62-68, 72-78, 86-93, 98-105 - Security rejections logged with context
+      Log structure: userId, fileName, fileSize, mimeType, rejectionReason, namespace: 'security'
+      file-validation.test.ts:321-348 - Security logging tests
+  - id: AC17
+    verdict: pass
+    evidence: |
+      WISH-2013.md - Complete story documentation with:
+        - File type whitelist rationale (lines 40-41)
+        - File size limits and S3 cost justification (line 52)
+        - Virus scanning architecture (lines 398-483)
+        - S3 security policy explanations (lines 489-565)
+        - Testing guide for security scenarios (lines 255-346)
+      PROOF-WISH-2013.md - Implementation summary and verification commands
+qa:
+  verdict: pass
+  verified_by: unknown
+  verified_at: 2026-02-01T20:52:37.268Z
+  blocking_issues: []

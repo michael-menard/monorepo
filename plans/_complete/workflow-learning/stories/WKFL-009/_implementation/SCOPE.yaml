@@ -1,0 +1,27 @@
+schema: 1
+story_id: "WKFL-009"
+timestamp: "2026-02-07T22:00:00-07:00"
+
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/knowledge-base/**"
+  - ".claude/agents/**"
+  - ".claude/commands/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "KB compression agent with embedding-based clustering, schema migration for archival columns, and canonical entry creation"

@@ -2,7 +2,6 @@
  * Schema introspection utilities for parsing Drizzle schema files
  * WISH-20210
  */
-import { resolve } from 'path'
 import { Project, SyntaxKind, VariableDeclaration } from 'ts-morph'
 
 export interface TableInfo {

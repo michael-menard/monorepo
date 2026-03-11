@@ -1,0 +1,68 @@
+story_id: KBAR-0060
+phase: implementation
+iteration: 4
+updated_at: "2026-02-23T00:00:00Z"
+
+touched_files:
+  - .claude/scripts/refresh-work-queue.ts
+  - eslint.config.js
+
+fix_summary:
+  - id: CR-1
+    severity: critical
+    description: >
+      QueueItem.stage required field never populated in queue.push().
+    resolution: >
+      Added stageMap lookup before queue.push(). stage now resolved from
+      stageMap.get(storyId)?.stage with fallback to resolveStageFromStatus(status).
+    lines_changed: "507-524"
+
+  - id: CR-2
+    severity: major
+    description: >
+      buildStageMap() implemented but never called in parseWorkOrder.
+    resolution: >
+      buildStageMap(featureDir, uatStories) called immediately after buildUatSet.
+      Result (stageMap) used to populate stage and feature_dir on each queue item.
+    lines_changed: "307-308"
+
+  - id: LINT-1
+    severity: major
+    description: >
+      STAGE_PRIORITY constant defined but never referenced — @typescript-eslint/no-unused-vars error.
+    resolution: >
+      Renamed to _STAGE_PRIORITY per CLAUDE.md convention for intentionally unused variables.
+      Comment added noting it is reserved for future queue-sort logic.
+    lines_changed: "50"
+
+  - id: LINT-2
+    severity: major
+    description: >
+      4 console statements (lines 554, 567, 578, 585) in a CLI script violated no-console ESLint rule.
+    resolution: >
+      Added .claude/scripts/**/*.{js,ts} to the Node.js files pattern in eslint.config.js
+      (where no-console is already off). Console output is appropriate for CLI scripts.
+      No code change needed in the script itself.
+    files_changed:
+      - eslint.config.js
+
+  - id: LINT-3
+    severity: minor
+    description: >
+      15 prettier formatting violations — quote style, line breaks, method chain formatting.
+    resolution: >
+      Ran pnpm exec eslint --fix .claude/scripts/refresh-work-queue.ts to auto-fix all 15 violations.
+
+commands_run:
+  - cmd: "pnpm exec tsx .claude/scripts/refresh-work-queue.ts plans/future/platform --force"
+    result: "WORK-QUEUE.json written: 7 unblocked, 48 complete, 22 blocked, 0 working"
+    stage_field_verified: true
+    notes: "Verified stage field populated (e.g. 'implement') in all queue items"
+
+  - cmd: "pnpm exec eslint .claude/scripts/refresh-work-queue.ts"
+    result: "0 errors, 0 warnings"
+    notes: "All 20 lint errors resolved: 1 unused var, 4 console, 15 prettier"
+
+  - cmd: "pnpm exec tsx .claude/scripts/refresh-work-queue.ts plans/future/platform --force"
+    result: "WORK-QUEUE.json written: 7 unblocked, 48 complete, 22 blocked, 0 working"
+    notes: "Post-fix functional verification — script output unchanged"

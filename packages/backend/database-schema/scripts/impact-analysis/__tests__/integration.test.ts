@@ -8,7 +8,7 @@ import { Project } from 'ts-morph'
 import { resolve } from 'path'
 import { analyzeColumnChange } from '../analyzers/column-analyzer.js'
 import { analyzeEnumChange } from '../analyzers/enum-analyzer.js'
-import { ParsedChange, ImpactResult } from '../__types__/index.js'
+import { ParsedChange } from '../__types__/index.js'
 import { TableInfo, EnumInfo } from '../utils/schema-introspector.js'
 import { discoverFiles } from '../utils/file-scanner.js'
 import { generateMarkdownReport } from '../reporters/markdown-reporter.js'
@@ -89,7 +89,7 @@ describe('Integration Test: Impact Analysis Workflow', () => {
     expect(result.findingsByCategory['zod-schema']).toBeDefined()
 
     // Log summary for manual verification
-    const totalFindings = Object.values(result.findingsByCategory).reduce(
+    const _totalFindings = Object.values(result.findingsByCategory).reduce(
       (sum, findings) => sum + findings.length,
       0,
     )

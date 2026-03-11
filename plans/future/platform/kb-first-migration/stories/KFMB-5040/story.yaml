@@ -1,0 +1,23 @@
+id: "KFMB-5040"
+title: "Migrate _pm/ Writer Agents to kb_write_artifact"
+status: ready-to-work
+priority: medium
+phase: 4
+points: 1
+story_type: tech_debt
+experiment_variant: "control"
+feature: kb-first-migration
+epic: kb-first-migration
+depends_on:
+  - KFMB-1030
+  - KFMB-2040
+surfaces:
+  - agents
+touches_backend: false
+touches_frontend: false
+touches_database: false
+touches_infra: false
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"
+story_dir: "plans/future/platform/kb-first-migration/ready-to-work/KFMB-5040"
+story_file: "plans/future/platform/kb-first-migration/ready-to-work/KFMB-5040/KFMB-5040.md"

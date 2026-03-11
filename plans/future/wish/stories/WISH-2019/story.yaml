@@ -1,0 +1,40 @@
+schema: 1
+id: WISH-2019
+feature: wish
+type: feature
+state: uat
+title: Redis infrastructure setup and migration from in-memory cache
+points: 4
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2009
+follow_up_from: WISH-2009
+scope:
+  packages:
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+    - apps/api/lego
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Migrate feature flag caching from in-memory Map to Redis for distributed, production-ready caching. Enable
+  consistent cache state across Lambda instances, improve cache hit rates at scale, and reduce database query load.
+non_goals:
+  - "**Redis Cluster mode**: Single-instance ElastiCache is sufficient for MVP (<1000 flags). Cluster mode deferred to
+    future scaling story."
+  - "**Cache warming on deployment**: Pre-populating cache on cold start adds complexity. MVP relies on lazy population
+    (cache-on-read)."
+  - "**Multi-region Redis replication**: Out of scope for MVP. Global latency optimization deferred to Phase 5+."
+  - "**Cache analytics dashboard**: Monitoring via CloudWatch metrics is sufficient. Grafana/Prometheus dashboards
+    deferred."
+  - "**Redis persistence configuration**: Default persistence acceptable for MVP (flag data is in database)"
+  - "**Redis pub/sub for real-time flag updates**: Deferred to future story"
+  - "**Migration of other cache layers**: This story is feature flags only"
+acs: []
+risks: []
+created_at: 2026-01-28T00:00:00-07:00
+updated_at: 2026-01-31T11:45:00-07:00

@@ -1,0 +1,7 @@
+skipped: true
+reason: "WINT-9106 is a pure backend infrastructure story with no frontend surface. The only user-facing interface is the resume-graph CLI command, which is a developer tool and not subject to UI/UX review."
+frontend_impacted: false
+cli_notes:
+  - "The resume-graph --thread-id <id> CLI should output: thread ID, checkpoint timestamp, phase being resumed from, and final outcome (success/fail) to stdout"
+  - "Error output should go to stderr with exit code 1"
+  - "No interactive prompts — all inputs via flags"

@@ -17,7 +17,7 @@ export function analyzeEnumChange(
   enumInfo: EnumInfo,
   monorepoRoot: string,
 ): ImpactResult {
-  const { operation, target, newName } = parsedChange
+  const { operation } = parsedChange
 
   switch (operation) {
     case 'add-value':

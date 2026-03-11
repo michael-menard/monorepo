@@ -1,0 +1,144 @@
+schema: 1
+story_id: WINT-9105
+phase: implementation
+iteration: 0
+generated_at: "2026-03-03T08:45:00Z"
+story_type: spike
+e2e_exempt: true
+e2e_skip_reason: "Documentation-only story — no UI-facing ACs; ADR-006 E2E skip condition applies"
+
+deliverables:
+  - path: packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+    action: CREATE
+    status: complete
+    word_count: 3929
+    line_count: 676
+    size_bytes: 31470
+
+verification:
+  file_exists: true
+  no_interface_keyword: true
+  no_src_changes: true
+  status_header_present: true
+  decision_date_present: true
+  deciders_present: true
+  word_count_exceeds_500: true
+
+acceptance_criteria:
+  - id: AC-001
+    title: "Node-level retry policy with configurable exponential backoff per operation category"
+    status: PRESENT
+    evidence: |
+      ADR §2 defines extended RETRY_PRESETS registry covering all 6 operation categories:
+      llm (existing: maxAttempts=5, backoffMs=2000), tool (existing: maxAttempts=2),
+      validation (existing: maxAttempts=1), plus new: git (maxAttempts=3, backoffMs=1000),
+      db_write (maxAttempts=3, backoffMs=500), file_io (maxAttempts=3, backoffMs=500).
+      All expressed as Zod schema instances via NodeRetryConfigSchema.parse().
+      Full preset summary table at ADR §2 covers backoffMs, maxBackoffMs, jitterFactor, timeoutMs.
+
+  - id: AC-002
+    title: "Graph-level error propagation rules — retryable vs terminal, saga vs fail-fast"
+    status: PRESENT
+    evidence: |
+      ADR §3 extends the error classification table to all LangGraph node categories
+      including WorkflowErrorType values from workflow-errors.ts.
+      ADR §4 defines Fail-Fast vs Saga-style graph semantics with explicit graph-type-to-semantics
+      mapping table. Error bubble rule: NodeRetryExhaustedError MUST be translated to
+      WorkflowError at graph boundary.
+
+  - id: AC-003
+    title: "Circuit breaker pattern — node-local vs DB-shared state decision"
+    status: PRESENT
+    evidence: |
+      ADR §5 makes explicit decision: DB-shared state for LLM provider calls (Anthropic, OpenRouter);
+      Node-local state for file_io, git, db_write, tool.
+      Decision Impact callout for WINT-9107: must implement workflow.circuitBreakerState table.
+      failureThreshold=5 for runner/ layer (node-execution); failureThreshold=3 preserved in
+      workflow-errors.ts (workflow-lifecycle) with documented rationale for the discrepancy.
+
+  - id: AC-004
+    title: "Dead-letter queue strategy for batch workflows"
+    status: PRESENT
+    evidence: |
+      ADR §6 defines DLQ strategy with DlqEntrySchema (Zod) covering storyId, graphExecutionId,
+      failedNodeName, errorType, retryEligible, retryCount, maxRetries, resolution enum.
+      Retry eligibility rules table. Manual review path with orchestrator admin command requirements.
+      Table: graph.deadLetterQueue — deferred to WINT-9107 migration.
+
+  - id: AC-005
+    title: "Idempotency contracts for side-effecting nodes"
+    status: PRESENT
+    evidence: |
+      ADR §7 defines idempotency category table for git (naturally idempotent by content hash),
+      db_write (requires idempotency key UUID), file_io (requires atomic write/checksum pattern),
+      llm (not idempotent — caller discards previous output), tool (varies — declare per tool),
+      validation (naturally idempotent). IdempotencyKeyRowSchema (Zod) defined.
+      Table: workflow.idempotencyKeys — deferred to WINT-9107.
+
+  - id: AC-006
+    title: "Timeout strategy mapping from max_turns to LangGraph timeoutMs"
+    status: PRESENT
+    evidence: |
+      ADR §8 provides explicit mapping table: dev-implement (60000ms LLM node timeout),
+      elab-story (60000ms), elab-epic worker (120000ms + checkpointer for save/resume),
+      graph-level deadline (1800000ms single / 7200000ms batch).
+      Timeout hierarchy diagram showing graph > node > category preset levels.
+
+  - id: AC-007
+    title: "Partial-success semantics for batch graphs"
+    status: PRESENT
+    evidence: |
+      ADR §9 defines minimum success threshold: 50% for elab-epic and dev-batch-implement;
+      0% (informational) for code-audit. BatchOutcomeSchema (Zod) with successRate,
+      passingThreshold, batchPassing fields. Commit-independence rule: successful items
+      commit independently without rollback on later failure.
+
+  - id: AC-008
+    title: "Claude Code agent to LangGraph retry policy parity mapping"
+    status: PRESENT
+    evidence: |
+      ADR §10 maps all 4 agents: dev-implement (ZodError non-retryable → MALFORMED_OUTPUT;
+      error context forwarding via GraphState.lastNodeError), elab-story (MALFORMED_OUTPUT 2x +
+      EXTERNAL_SERVICE_DOWN 3x retry), elab-epic (checkpointer replaces CHECKPOINT.yaml;
+      NodeTimeoutError → 5 retries), phase-contracts (phaseBlocked conditional edge to ERROR state).
+
+  - id: AC-009
+    title: "Budget-aware retry cap per model tier referencing WINT-0220 cost table"
+    status: PRESENT
+    evidence: |
+      ADR §11 defines LLM_RETRY_BY_TIER with per-tier caps:
+      Tier 0 Claude Opus $15/$75/1M → maxAttempts=2 (cost cap),
+      Tier 1 Claude Sonnet $3/$15/1M → maxAttempts=3 (cost cap),
+      Tier 2 Ollama $0 → maxAttempts=5 (latency-bound),
+      Tier 3 OpenRouter $0.08 → maxAttempts=5 (latency-bound).
+      References WINT-0220-STRATEGY.md §1 Tier Comparison Table.
+      Note on Tier 2/3: caps are latency-bound, not cost-bound.
+
+  - id: AC-010
+    title: "Layer consolidation — runner/ vs errors/workflow-errors.ts ownership declared"
+    status: PRESENT
+    evidence: |
+      ADR §1 explicitly partitions the two layers with ownership table.
+      runner/ = node-execution primitive layer (failureThreshold=5 per-invocation).
+      errors/workflow-errors.ts = workflow-lifecycle layer (failureThreshold=3 per-phase within 5min window).
+      Both thresholds are correct for their respective semantic scopes — discrepancy is intentional and documented.
+      No reader ambiguity: WINT-9107 implementers instructed not to merge these configs.
+
+  - id: AC-011
+    title: "ADR reviewed and approved with signed-off status header"
+    status: PRESENT
+    evidence: |
+      ADR frontmatter contains:
+        status: accepted
+        decision-date: "2026-03-03"
+        deciders: ["Michael Menard", "dev-execute-leader (claude-sonnet-4-6)"]
+      File committed to packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md.
+      No TypeScript interface declarations in code examples — Zod schemas only.
+
+scope_validation:
+  src_files_modified: false
+  git_diff_shows_only_adr: true
+  interface_keyword_count: 0
+  new_files:
+    - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+    - packages/backend/orchestrator/docs/architecture/ (directory)

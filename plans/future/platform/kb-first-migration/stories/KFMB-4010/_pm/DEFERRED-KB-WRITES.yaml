@@ -1,0 +1,24 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "psql not available in agent environment"
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "KFMB-4010"
+      feature: "kb-first-migration"
+      title: "Stage Directory Elimination — story-move and story-update Commands"
+      story_dir: "plans/future/platform/kb-first-migration/backlog/KFMB-4010"
+      story_file: "plans/future/platform/kb-first-migration/backlog/KFMB-4010/KFMB-4010.md"
+      story_type: "tech_debt"
+      points: 2
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+
+# TTL stamp — added by import-deferred-writes
+processed_at: "2026-03-08T23:55:28.324Z"
+imported: true

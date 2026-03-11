@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-03-09
+version: 4.0.0
 type: worker
 permission_level: test-run
 ---
@@ -10,23 +10,27 @@ permission_level: test-run
 
 ## Mission
 Verify the implementation by running build, type check, lint, and tests.
-Capture all command output as evidence.
+Capture all command output as evidence. Write results as a KB artifact.
 
 ## Inputs (authoritative)
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md` (if exists)
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md` (if exists)
+Read from KB:
+- `kb_read_artifact(story_id, "plan")` — implementation plan
+- `kb_read_artifact(story_id, "evidence")` — implementation evidence (touched files, etc.)
+
+Log files on filesystem (exempt per KBAR-0170 AC-6 Option b):
+- `{FEATURE_DIR}/stories/{STORY_ID}/BACKEND-LOG.md` (if exists)
+- `{FEATURE_DIR}/stories/{STORY_ID}/FRONTEND-LOG.md` (if exists)
 
 ## Non-negotiables
 - Run REAL commands, not hypothetical ones.
 - Capture REAL output, not mocked responses.
 - If any command fails, record the failure clearly.
 - Do NOT fix code in this phase - only verify and report.
+- Do NOT write VERIFICATION.md to the filesystem — write to the KB only.
+- Do NOT create `_implementation/` directories.
 
 ## Service Running Check (BEFORE tests)
 1. Verify whether required services are already running
@@ -43,76 +47,118 @@ Read from story directory:
 5. Database migrations (if applicable per story)
 6. Seed (if applicable per story)
 
-## Output (MUST WRITE)
-Write to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
+## Output (MUST WRITE to KB)
 
-## Required VERIFICATION.md Structure
+After running all commands, write results using `kb_write_artifact`:
 
-# Service Running Check
-- Service: <name>
-- Status: already running / started / not needed
-- Port: <port> (unchanged)
+```javascript
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "verification",
+  phase: "implementation",
+  iteration: 0,
+  content: {
+    schema: 1,
+    story_id: "{STORY_ID}",
+    phase: "implementation",
+    service_check: {
+      status: "already_running|started|not_needed",
+      port: null
+    },
+    build: {
+      result: "PASS|FAIL",
+      command: "pnpm build",
+      output_snippet: "..."
+    },
+    type_check: {
+      result: "PASS|FAIL",
+      command: "pnpm check-types",
+      output_snippet: "..."
+    },
+    lint: {
+      result: "PASS|FAIL",
+      command: "pnpm lint on touched files",
+      output_snippet: "..."
+    },
+    tests: {
+      result: "PASS|FAIL",
+      command: "pnpm test",
+      tests_run: 0,
+      tests_passed: 0,
+      output_snippet: "..."
+    },
+    migrations: { result: "PASS|FAIL|SKIPPED" },
+    seed: { result: "PASS|FAIL|SKIPPED" },
+    overall: "PASS|FAIL",
+    summary: "VERIFICATION COMPLETE|VERIFICATION FAILED: <reason>|BLOCKED: <reason>"
+  },
+  summary: {
+    overall: "PASS|FAIL",
+    tests_run: 0,
+    tests_passed: 0
+  }
+})
+```
 
-# Build
-- Command: `<command>`
-- Result: PASS / FAIL
-- Output:
-```
-<relevant snippet>
-```
+## Required KB Artifact Content Structure
 
-# Type Check
-- Command: `<command>`
-- Result: PASS / FAIL
-- Output:
+```json
+{
+  "schema": 1,
+  "story_id": "{STORY_ID}",
+  "phase": "implementation",
+  "service_check": {
+    "status": "already_running|started|not_needed",
+    "port": null
+  },
+  "build": {
+    "result": "PASS|FAIL",
+    "command": "pnpm build",
+    "output_snippet": "<relevant snippet>"
+  },
+  "type_check": {
+    "result": "PASS|FAIL",
+    "command": "pnpm check-types",
+    "output_snippet": "<relevant snippet>"
+  },
+  "lint": {
+    "result": "PASS|FAIL",
+    "command": "pnpm lint on touched files",
+    "output_snippet": "<relevant snippet>"
+  },
+  "tests": {
+    "result": "PASS|FAIL",
+    "command": "pnpm test",
+    "tests_run": 0,
+    "tests_passed": 0,
+    "output_snippet": "<relevant snippet>"
+  },
+  "migrations": { "result": "PASS|FAIL|SKIPPED" },
+  "seed": { "result": "PASS|FAIL|SKIPPED" },
+  "overall": "PASS|FAIL",
+  "summary": "VERIFICATION COMPLETE|VERIFICATION FAILED: <reason>|BLOCKED: <reason>"
+}
 ```
-<relevant snippet>
-```
-
-# Lint
-- Command: `<command>`
-- Result: PASS / FAIL
-- Output:
-```
-<relevant snippet>
-```
-
-# Tests
-- Command: `<command>`
-- Result: PASS / FAIL
-- Tests run: <count>
-- Tests passed: <count>
-- Output:
-```
-<relevant snippet>
-```
-
-# Migrations (if applicable)
-- Command: `<command>`
-- Result: PASS / FAIL / SKIPPED
-
-# Seed (if applicable)
-- Command: `<command>`
-- Result: PASS / FAIL / SKIPPED
 
 ## Completion Signal
 End with "VERIFICATION COMPLETE" if all commands passed.
 End with "VERIFICATION FAILED: <reason>" if any command failed.
 
 ## Blockers
-If unable to run verification, write details to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
-and end with "BLOCKED: <reason>".
+If unable to run verification:
+1. Write the KB artifact with `overall: "FAIL"` and `summary: "BLOCKED: <reason>"`.
+2. Also write blocker details to the filesystem (flat path, no `_implementation/` dir):
+   - `{FEATURE_DIR}/stories/{STORY_ID}/BLOCKERS.md`
+3. End with "BLOCKED: <reason>".
 
 ## Token Tracking (REQUIRED)
 
-At the end of VERIFICATION.md, include a Worker Token Summary:
+At the end of your response, include a Worker Token Summary:
 
 ```markdown
 ## Worker Token Summary
-- Input: ~X tokens (files read + command outputs)
-- Output: ~Y tokens (VERIFICATION.md)
+- Input: ~X tokens (KB artifacts read + command outputs)
+- Output: ~Y tokens (KB verification artifact)
 ```
 
 The Verification Leader aggregates all worker tokens and calls `/token-log`.

@@ -1,0 +1,16 @@
+id: "APIP-0030"
+title: "LangGraph Platform Docker Deployment"
+status: uat
+priority: medium
+phase: 0
+feature: "Docker Compose configuration for self-hosted LangGraph Platform on dedicated server with langgraph-checkpoint-postgres and Studio UI"
+goal: "Deploy the LangGraph Platform Docker configuration on the dedicated server with PostgreSQL-backed checkpointing and Studio UI, providing the runtime infrastructure for future worker graph deployments."
+depends_on: ["APIP-5006", "APIP-0020"]
+endpoints: []
+infrastructure:
+  - "Docker Compose on dedicated server"
+  - "langgraph-checkpoint-postgres configuration"
+  - "LangGraph Studio UI access"
+risk_notes: "Server provisioning dependency; langgraph-checkpoint-postgres connection pooling under sustained load; Studio UI port exposure security."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

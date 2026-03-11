@@ -49,7 +49,7 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 Analyze one completed story:
 1. Check if `_implementation/RETRO-WISH-2045.yaml` already exists — skip if present (unless --force)
 2. Locate story (check `done/`, `plans/_complete/` subdirs)
-3. Read OUTCOME.yaml if present; fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml
+3. Read OUTCOME.yaml if present; fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml (TOKEN-LOG.md as legacy-only last resort for pre-KB stories)
 4. Calculate token variance, review cycles, phase metrics
 5. Scan `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files — surface in output
 6. Generate RETRO-{STORY_ID}.yaml
@@ -65,7 +65,7 @@ Analyze one completed story:
 Analyze all stories completed in time range:
 1. Scan all feature directories for stories in `done/` and `plans/_complete/` stage subdirs
 2. **Skip stories where `RETRO-{STORY_ID}.yaml` already exists** (unless --force)
-3. For remaining stories, load metrics (OUTCOME.yaml preferred; fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml)
+3. For remaining stories, load metrics (OUTCOME.yaml preferred; fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml; TOKEN-LOG.md as legacy-only last resort)
 4. Scan each `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files
 5. Aggregate patterns across stories
 6. Detect cross-story correlations
@@ -187,8 +187,10 @@ High Priority Patterns:
 Medium Priority Patterns:
 3. Agent Correlation: backend-coder → security-review at 75%
 
-Pending deferred KB writes found (run /kb-flush to process):
-- WISH-2045/_implementation/DEFERRED-KB-WRITES.yaml: 3 entries (status: pending)
+Deferred KB writes stamped:
+- WISH-2045/_implementation/DEFERRED-KB-WRITES.yaml: 3 entries (stamped processed_at)
+
+TTL cleanup: deleted 2 stale deferred write files (>30 days old)
 
 WORKFLOW-RECOMMENDATIONS.md updated with proposals.
 ```

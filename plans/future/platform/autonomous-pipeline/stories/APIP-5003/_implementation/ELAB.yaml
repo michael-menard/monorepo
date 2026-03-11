@@ -1,0 +1,119 @@
+schema: 1
+story_id: "APIP-5003"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story title, dependency (APIP-0030), and status (In Elaboration) match stories.index.md exactly. Scope is constrained to infra/langgraph-server/ only — SECURITY.md creation and compose.langgraph-server.yaml hardening. No extra endpoints, packages, or infrastructure introduced."
+
+  - id: internal_consistency
+    status: PASS
+    note: "Goals (SECURITY.md + compose hardening) directly map to all 9 ACs. Non-goals (auth/authz, mTLS, SecretsClient, iptables) do not contradict any AC. AC-6 cross-references APIP-5004 without implementing its scope. Test plan happy paths HP-1 through HP-8 map to specific ACs with no orphaned tests. Phase 2 deferral is consistent across Non-Goals, AC-9, and Architecture Notes."
+
+  - id: reuse_first
+    status: PASS
+    note: "Reuse Plan section explicitly identifies infra/compose.lego-app.yaml as the canonical reference for all four patterns: localhost port binding syntax, pinned image tags, :ro volume mounts, and env var injection. No @repo/* packages required. No per-story utilities introduced. Patterns are established monorepo conventions."
+
+  - id: ports_adapters
+    status: PASS
+    note: "N/A — story type is infrastructure/documentation. No TypeScript, no Lambda handlers, no HTTP endpoints. ADR-002 compliance declared: plain Docker Compose only, no SST/CDK/Serverless Framework. Architecture boundary between APIP-5003 (compose injection mechanism) and APIP-5004 (SecretsClient runtime values) is explicitly diagrammed in story."
+
+  - id: testability
+    status: PASS
+    note: "All 8 happy path tests have concrete shell commands, expected output, and evidence requirements. Error cases EC-1 through EC-4 are executable. Edge cases ED-1 through ED-4 are documented. E2E exemption declared with ADR-006 reference. Coverage waiver declared with KB lesson citation. Operational test limitation (real server required, ADR-005) is explicitly acknowledged. Verification commands per subtask are present."
+
+  - id: decision_completeness
+    status: WARN
+    note: "Two unresolved cross-story dependencies explicitly documented in missing_requirements: (1) LangGraph Platform image version tag not confirmed — required for AC-5 image pinning, expected from APIP-0030 output; (2) Canonical list of secret env vars not yet agreed with APIP-5004 — required for AC-6 finalization. Neither is a hard blocker for documentation ACs (AC-1, AC-7, AC-9) but both block final verification of AC-5 and AC-6. Story correctly gates these behind APIP-0030 completion and APIP-5004 coordination."
+
+  - id: risk_disclosure
+    status: PASS
+    note: "Five explicit risks listed in pm_artifacts.risks: APIP-0030 prerequisite gate, LangGraph image hardening compatibility, ss command availability, APIP-5004 env var coordination, and operational-test-requires-server limitation. Two risks also appear in dev_feasibility.risks with mitigations. Risk mitigations are concrete and actionable (ST-1 research step, gate check, APIP-5004 coordination requirement). No hidden dependencies identified."
+
+  - id: story_sizing
+    status: WARN
+    note: "Two sizing indicators triggered: (1) 9 ACs exceeds the 8-AC threshold; (2) 8 happy path tests exceed the 3-test threshold. Story's own prediction block flags split_risk: 0.7. However, the 9 ACs are tightly coupled — all serve a single security posture deliverable. SECURITY.md documentation ACs (AC-1, AC-6, AC-7, AC-9) and compose hardening ACs (AC-2, AC-3, AC-4, AC-5, AC-8) could theoretically split but are interdependent (SECURITY.md must reflect actual hardening applied). Story is at the boundary but the cohesion argument is strong. WARN rather than SPLIT — see split_recommendation below for conditional guidance."
+
+  - id: subtask_decomposition
+    status: PASS
+    note: "All 9 ACs covered with explicit AC-subtask coverage matrix. DAG is valid: ST-1 (no deps) → ST-3 (dep ST-1) → ST-4 (dep ST-1, ST-3); ST-2 (no deps) → ST-5 (dep ST-2, ST-3, ST-4) → ST-6 (dep ST-3, ST-4, ST-5). No cycles. File touch counts per subtask: ST-1 reads 1, ST-2 reads 2/creates 1, ST-3 reads 2/modifies 2, ST-4 reads 2/modifies 1, ST-5 reads 2/modifies 1, ST-6 reads 2. All within 3-file limit. Each subtask has a verification command. Canonical References section has 3 entries (within 2-4 range)."
+
+gaps:  # MVP-blocking only
+  - id: gap-1
+    check: decision_completeness
+    finding: "APIP-5004 env var canonical names not finalized. AC-6 requires ANTHROPIC_API_KEY, OPENROUTER_API_KEY, and LANGGRAPH_POSTGRES_URL to match APIP-5004 actual variable names. If names diverge post-implementation, SECURITY.md and compose environment: stanza will be incorrect and require rework. ST-5 prerequisite note acknowledges this but no formal gate exists."
+    severity: medium
+    decision: "kb_write"
+    notes: "Non-blocking coordination dependency. Both stories are in elaboration; env var names are already documented as placeholders. The ST-5 prerequisite mandates coordination before finalization. No AC addition required — the gap is an acknowledged cross-story dependency, not a missing acceptance criterion."
+    action: kb_write
+    kb_entry_id: "d7f1635f-5c88-4a60-8d11-2a060facd927"
+    ac_added: null
+
+  - id: gap-2
+    check: decision_completeness
+    finding: "LangGraph Platform Docker image version tag unconfirmed. AC-5 requires pinning all image tags to specific versions. The actual version tag to use is unknown until APIP-0030 is delivered and documents which image version was used. Placeholder logic is not possible for image tags (wrong tag = service fails to start). This is a hard dependency on APIP-0030 output that is acknowledged but not gated in documentation ACs."
+    severity: medium
+    decision: "kb_write"
+    notes: "Non-blocking coordination dependency. All compose hardening ACs already gate on APIP-0030 completion. When that gate opens, the image tag will be known. No AC addition required — the APIP-0030 hard gate is already in the story and covers this implicitly."
+    action: kb_write
+    kb_entry_id: "c033ad5e-c3ec-4b15-9868-a474591bf044"
+    ac_added: null
+
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: observability
+    finding: "Port inventory table in Infrastructure Notes covers non-LangGraph services (PostgreSQL, Redis, Prometheus, Grafana, OTEL, MinIO) with '(varies)' external binding entries. Post-APIP-5006 completion, this table could be finalized into a complete verified port registry covering the entire server. Consider a follow-up story to finalize this as the authoritative network topology document."
+    effort: low
+    decision: "log_to_kb"
+    kb_entry_id: "c11b176c-640e-4dbf-b240-2dd66cde1055"
+
+  - id: opp-2
+    category: integrations
+    finding: "ST-1 image hardening compatibility research will produce findings about LangGraph Platform Docker image behavior (root user, filesystem writes, required capabilities). These findings have value beyond this story — they should be written to KB as a lesson for any future story that deploys third-party Docker images with security hardening requirements."
+    effort: low
+    decision: "log_to_kb"
+    kb_entry_id: "143271a8-f54c-40c2-b952-d66bc0985e03"
+
+  - id: opp-3
+    category: edge_cases
+    finding: "EC-2 (port accidentally bound to 0.0.0.0) documents a detection procedure but does not describe a prevention mechanism (e.g., a compose config lint step or CI check). A follow-up could add a grep-based pre-commit hook or CI step that fails if any port in infra/langgraph-server/compose.langgraph-server.yaml is not bound to 127.0.0.1. This would make the boundary enforcement automatic rather than purely operational."
+    effort: medium
+    decision: "log_to_kb"
+    kb_entry_id: "b9d3b92f-dde0-4756-a6f5-3cd6d658ecfd"
+
+split_recommendation:
+  splits:
+    - id: A
+      scope: "SECURITY.md documentation only — network boundary statement, port inventory, Phase 2 auth/authz placeholder, Phase 2 design placeholder. Can be drafted before APIP-0030 completes."
+      ac_allocation: ["AC-1", "AC-9"]
+      dependency: none
+    - id: B
+      scope: "Compose hardening — port binding, container hardening directives, image pinning, read-only mounts, secret injection documentation, operational verification checklist, compose config validation. Requires APIP-0030 complete."
+      ac_allocation: ["AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+      dependency: "APIP-0030, APIP-5003-A"
+
+# NOTE: Split is possible but not recommended. The two clusters are tightly coupled —
+# SECURITY.md must accurately reflect compose hardening actually applied (AC-6, AC-7 reference
+# compose directives). Splitting creates a rework risk on SECURITY.md-A when compose-B delivers.
+# Story is viable as-is given 6 subtasks with clear dependencies and <3 files per subtask.
+
+preliminary_verdict: CONDITIONAL_PASS
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+  decision_notes: >
+    Both gaps are medium-severity cross-story coordination dependencies that are already
+    acknowledged and gated in the story. gap-1 (APIP-5004 env var names) is covered by the
+    ST-5 prerequisite requiring APIP-5004 coordination before finalization. gap-2 (image
+    version tag) is covered by the APIP-0030 hard gate already in the story — the tag will
+    be known when that gate opens. Neither gap represents a missing AC or unresolvable issue.
+    All 3 opportunities logged to KB as non-blocking findings. No ACs added. Story is
+    ready to proceed to implementation once APIP-0030 and APIP-5004 coordination dependencies
+    are satisfied per existing story gates.

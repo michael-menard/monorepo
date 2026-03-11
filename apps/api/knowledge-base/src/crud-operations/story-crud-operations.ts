@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
+import { eq, and, or, sql, desc, asc, inArray, notInArray, isNull, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
@@ -51,6 +51,7 @@ export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
  */
 export const KbGetStoryResultSchema = z.object({
   story: z.custom<typeof stories.$inferSelect>().nullable(),
+  detail: z.custom<typeof storyDetails.$inferSelect>().nullable().optional(),
   artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
   dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
   message: z.string(),
@@ -98,6 +99,9 @@ export const KbListStoriesInputSchema = z.object({
       'archived',
     ])
     .optional(),
+
+  /** Filter stories linked to this specific plan slug via plan_story_links */
+  plan_slug: z.string().optional(),
 
   /** Maximum results (1-100, default 20) */
   limit: z.number().int().min(1).max(100).optional().default(20),
@@ -325,9 +329,9 @@ export async function kb_get_story(
   const validated = KbGetStoryInputSchema.parse(input)
 
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
-    .where(eq(stories.storyId, validated.story_id))
+    .where(and(eq(stories.storyId, validated.story_id), isNull(stories.deletedAt)))
     .limit(1)
 
   const story = result[0] ?? null
@@ -338,15 +342,25 @@ export async function kb_get_story(
       story: null,
       artifacts: [],
       dependencies: [],
+      detail: null,
       message: `Story ${validated.story_id} not found`,
     }
   }
+
+  // Fetch story details (1:1 detail table — cold columns)
+  const detailResult = await deps.db
+    .select(storyDetailColumns)
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const detail = detailResult[0] ?? null
 
   // Conditionally fetch artifacts (single SELECT, not N+1)
   let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
   if (validated.include_artifacts) {
     artifacts = await deps.db
-      .select()
+      .select(storyArtifactColumns)
       .from(storyArtifacts)
       .where(eq(storyArtifacts.storyId, validated.story_id))
   }
@@ -355,7 +369,7 @@ export async function kb_get_story(
   let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
   if (validated.include_dependencies) {
     dependencies = await deps.db
-      .select()
+      .select(storyDependencyColumns)
       .from(storyDependencies)
       .where(
         or(
@@ -367,6 +381,7 @@ export async function kb_get_story(
 
   return {
     story,
+    detail,
     ...(artifacts !== undefined ? { artifacts } : {}),
     ...(dependencies !== undefined ? { dependencies } : {}),
     message: `Found story ${validated.story_id}`,
@@ -393,7 +408,7 @@ export async function kb_list_stories(
   // Build WHERE condition
   let whereCondition: SQL<unknown> | undefined
 
-  const conditions: SQL<unknown>[] = []
+  const conditions: SQL<unknown>[] = [isNull(stories.deletedAt)]
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
@@ -414,6 +429,17 @@ export async function kb_list_stories(
   }
   if (validated.priority) {
     conditions.push(eq(stories.priority, validated.priority))
+  }
+
+  // Filter by plan slug (direct match on plan_story_links)
+  if (validated.plan_slug) {
+    conditions.push(
+      sql`${stories.storyId} IN (
+        SELECT ${planStoryLinks.storyId}
+        FROM ${planStoryLinks}
+        WHERE ${eq(planStoryLinks.planSlug, validated.plan_slug)}
+      )`,
+    )
   }
 
   // Filter by plan tag or plan status via plan_story_links join
@@ -451,7 +477,7 @@ export async function kb_list_stories(
 
   // Get paginated results
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(desc(stories.updatedAt))
@@ -484,7 +510,7 @@ export async function kb_update_story_status(
 
   // Check if story exists
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -497,9 +523,18 @@ export async function kb_update_story_status(
     }
   }
 
+  // Fetch storyDetails to check timestamps (moved from stories header in CDTS-1030)
+  const existingDetails = await deps.db
+    .select(storyDetailColumns)
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const currentDetail = existingDetails[0] ?? null
+
   // Terminal-state guard: prevent transitions OUT of terminal states
   // Same-state transitions are always allowed (idempotent)
-  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa']
+  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred']
   const currentState = existing[0].state
   if (
     validated.state !== undefined &&
@@ -514,20 +549,23 @@ export async function kb_update_story_status(
     }
   }
 
-  // Build update object
+  // Build update object for stories header
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),
   }
 
+  // Build update object for storyDetails (moved columns)
+  const detailUpdates: Partial<typeof storyDetails.$inferInsert> = {}
+
   if (validated.state !== undefined) {
     updates.state = validated.state
 
-    // Auto-set timestamps for state transitions
-    if (validated.state === 'in_progress' && !existing[0].startedAt) {
-      updates.startedAt = new Date()
+    // Auto-set timestamps for state transitions (stored in storyDetails)
+    if (validated.state === 'in_progress' && !currentDetail?.startedAt) {
+      detailUpdates.startedAt = new Date()
     }
-    if (validated.state === 'completed' && !existing[0].completedAt) {
-      updates.completedAt = new Date()
+    if (validated.state === 'completed' && !currentDetail?.completedAt) {
+      detailUpdates.completedAt = new Date()
     }
   }
 
@@ -542,31 +580,45 @@ export async function kb_update_story_status(
   if (validated.blocked !== undefined) {
     updates.blocked = validated.blocked
 
-    // Clear blocked fields when unblocking
+    // Clear blocked fields when unblocking (stored in storyDetails)
     if (!validated.blocked) {
-      updates.blockedReason = null
-      updates.blockedByStory = null
+      detailUpdates.blockedReason = null
+      detailUpdates.blockedByStory = null
     }
   }
 
   if (validated.blocked_reason !== undefined) {
-    updates.blockedReason = validated.blocked_reason
+    detailUpdates.blockedReason = validated.blocked_reason
   }
 
   if (validated.blocked_by_story !== undefined) {
-    updates.blockedByStory = validated.blocked_by_story
+    detailUpdates.blockedByStory = validated.blocked_by_story
   }
 
   if (validated.priority !== undefined) {
     updates.priority = validated.priority
   }
 
-  // Perform update
+  // Perform update on stories header
   const result = await deps.db
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
     .returning()
+
+  // Upsert storyDetails if there are detail fields to update
+  if (Object.keys(detailUpdates).length > 0) {
+    await deps.db
+      .insert(storyDetails)
+      .values({
+        storyId: validated.story_id,
+        ...detailUpdates,
+      })
+      .onConflictDoUpdate({
+        target: storyDetails.storyId,
+        set: { ...detailUpdates, updatedAt: new Date() },
+      })
+  }
 
   const story = result[0] ?? null
 
@@ -607,6 +659,7 @@ export async function kb_get_next_story(
 
   // Build base conditions
   const conditions: SQL<unknown>[] = [
+    isNull(stories.deletedAt),
     eq(stories.epic, validated.epic),
     eq(stories.blocked, false),
     inArray(stories.state, validStates),
@@ -643,7 +696,7 @@ export async function kb_get_next_story(
 
   // Get candidate stories (unblocked, in correct state)
   const candidates = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(
@@ -759,7 +812,7 @@ export async function kb_update_story(
   const validated = KbUpdateStoryInputSchema.parse(input)
 
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)

@@ -1,0 +1,111 @@
+feasible: true
+confidence: high
+rationale: "APIP-5003 is a documentation and configuration story with no TypeScript implementation. The deliverables are a SECURITY.md document and hardening directives applied to compose.langgraph-server.yaml. The patterns are well-established in the monorepo (infra/compose.lego-app.yaml shows localhost port binding, :ro mounts, image pinning). The primary risk is compatibility of hardening directives with the LangGraph Platform Docker image, which requires a research step before full implementation. Story is feasible but has a hard gate: implementation must not begin until APIP-0030 delivers compose.langgraph-server.yaml."
+complexity: medium
+change_surface:
+  areas:
+    - "infra/langgraph-server/ — new SECURITY.md, hardening changes to compose.langgraph-server.yaml"
+    - "infra/langgraph-server/.gitignore — add .env exclusion"
+  endpoints: []
+  deploy_touchpoints:
+    - "Docker Compose file update requires compose down + compose up to apply hardening changes on running server"
+    - "APIP-0030 must be deployed and operational before APIP-5003 implementation begins"
+
+risks:
+  - finding: "LangGraph Platform Docker image may not support read_only: true — image writes to root filesystem at startup, causing compose startup failure"
+    mitigation: "Run LangGraph Platform image with --read-only --cap-drop ALL flags locally before writing compose hardening. If incompatible, use tmpfs: for required writable paths (e.g., /tmp, /var/run). Document which hardening directives are and are not compatible in SECURITY.md with explicit rationale. This is not a blocker — it changes which directives are applied, not whether the story can be completed."
+
+  - finding: "APIP-0030 hard prerequisite — compose.langgraph-server.yaml does not exist until APIP-0030 is complete; APIP-5003 cannot harden a file that does not exist"
+    mitigation: "Implement gate check: do not begin APIP-5003 implementation until APIP-0030 is complete and compose.langgraph-server.yaml exists at infra/langgraph-server/. SECURITY.md documentation (AC-1, AC-6, AC-7, AC-9) can be drafted independently of APIP-0030 completion, but compose hardening (AC-2, AC-3, AC-4, AC-5, AC-8) requires APIP-0030 first."
+
+  - finding: "APIP-5004 boundary ambiguity — if APIP-5004 env var names are not finalized, SECURITY.md secret injection documentation (AC-6) may use wrong variable names"
+    mitigation: "Coordinate with APIP-5004 owner before implementing AC-6 to confirm canonical env var names (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, LANGGRAPH_POSTGRES_URL). Document the names as placeholders in an initial draft, then finalize after APIP-5004 confirmation. Cross-reference APIP-5004 explicitly in SECURITY.md."
+
+missing_requirements:
+  - "LangGraph Platform image version tag must be confirmed (needed for AC-5 — pin to specific version). APIP-0030 should document this, but APIP-5003 must verify it."
+  - "Canonical list of secret env vars required by LangGraph Platform services must be agreed with APIP-5004 before AC-6 is marked complete."
+
+evidence_expectations:
+  - "docker compose config exits 0 after hardening applied (AC-8)"
+  - "ss -tlnp output showing 127.0.0.1 bind addresses for ports 8123 and 8124 on running server (AC-2)"
+  - "docker inspect output showing CapDrop: [ALL] for LangGraph Platform containers (AC-3)"
+  - "docker inspect output showing RW:false for all config volume mounts (AC-4)"
+  - "SECURITY.md file exists with all required sections (AC-1, AC-6, AC-7, AC-9)"
+  - "grep ':latest' returns empty for compose.langgraph-server.yaml (AC-5)"
+
+subtasks:
+  - id: ST-1
+    title: "Research LangGraph Platform image hardening compatibility"
+    goal: "Determine which hardening directives (read_only, user, cap_drop) are compatible with the LangGraph Platform Docker image before writing compose changes"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+    files_to_modify: []
+    acs: ["AC-3"]
+    depends_on: "none"
+    verification: "Manual: run LangGraph Platform image with --read-only --cap-drop ALL and confirm startup succeeds or fails; document findings"
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Create infra/langgraph-server/SECURITY.md with network boundary and port inventory"
+    goal: "Write SECURITY.md with network boundary statement, full port inventory table, Phase 2 auth/authz deferred statement, and Phase 2 design placeholder section"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+      - "infra/elasticache/template.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/SECURITY.md (create)"
+    acs: ["AC-1", "AC-9"]
+    depends_on: "none"
+    verification: "test -f infra/langgraph-server/SECURITY.md && grep -c 'Phase 2' infra/langgraph-server/SECURITY.md"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Apply port binding hardening to compose.langgraph-server.yaml"
+    goal: "Update compose.langgraph-server.yaml to bind ports 8123 and 8124 to 127.0.0.1 only; add gitignore for .env"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+      - "infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+      - "infra/langgraph-server/.gitignore"
+    acs: ["AC-2", "AC-6"]
+    depends_on: "ST-1"
+    verification: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config | grep '127.0.0.1:8123' && grep '127.0.0.1:8124'"
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Apply container hardening directives to compose.langgraph-server.yaml"
+    goal: "Add read_only, user, cap_drop, and image pinning to LangGraph Platform service definitions based on ST-1 compatibility research; add :ro to config volume mounts"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+      - "infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    acs: ["AC-3", "AC-4", "AC-5"]
+    depends_on: "ST-1, ST-3"
+    verification: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config && grep -E 'read_only|cap_drop|:ro' infra/langgraph-server/compose.langgraph-server.yaml"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Add container secret injection documentation and operational verification checklist to SECURITY.md"
+    goal: "Document env var injection mechanism in SECURITY.md with ${VAR_NAME} pattern, .env gitignore requirement, APIP-5004 cross-reference, and numbered operational verification checklist"
+    files_to_read:
+      - "infra/langgraph-server/SECURITY.md"
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/SECURITY.md"
+    acs: ["AC-6", "AC-7"]
+    depends_on: "ST-2, ST-3, ST-4"
+    verification: "grep -c 'APIP-5004' infra/langgraph-server/SECURITY.md && grep -c 'ss -tlnp' infra/langgraph-server/SECURITY.md"
+    estimated_tokens: 4000
+
+  - id: ST-6
+    title: "Validate compose config and verify all ACs complete"
+    goal: "Run docker compose config, verify all hardening directives present, confirm SECURITY.md complete, mark story ready for review"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+      - "infra/langgraph-server/SECURITY.md"
+    files_to_modify: []
+    acs: ["AC-8"]
+    depends_on: "ST-3, ST-4, ST-5"
+    verification: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config (exit 0)"
+    estimated_tokens: 2000

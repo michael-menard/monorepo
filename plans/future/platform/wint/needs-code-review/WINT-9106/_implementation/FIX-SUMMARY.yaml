@@ -1,0 +1,91 @@
+schema: 1
+story_id: WINT-9106
+timestamp: "2026-03-09T00:00:00Z"
+failure_source: code-review-failed
+iteration: 1
+issues_to_fix:
+  - id: 1
+    severity: critical
+    file: packages/backend/orchestrator/src/checkpointer/index.ts
+    lines: 118-146
+    issue: "Checkpoint post-node state, not pre-execution snapshot. nodeFn() resolves before checkpoint is written, but repo.buildPayload() still persists pre-execution stateSnapshot."
+    auto_fixable: true
+  - id: 2
+    severity: major
+    file: apps/api/knowledge-base/src/mcp-server/access-control.ts
+    lines: 27-73
+    issue: "kb_get_roadmap missing from ToolNameSchema and ACCESS_MATRIX but tool-handlers.ts calls enforceAuthorization('kb_get_roadmap' as ToolName) — returns FORBIDDEN for every caller."
+    auto_fixable: true
+  - id: 3
+    severity: major
+    file: packages/backend/orchestrator/src/checkpointer/index.ts
+    lines: 35-61
+    issue: "WithCheckpointerOptions and CheckpointedNodeResult exported as TypeScript interfaces — violates Zod-first requirement."
+    auto_fixable: true
+  - id: 4
+    severity: major
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    lines: 856-863
+    issue: "Race-prone SELECT-then-INSERT/UPDATE pattern in kb_create_story. Replace with atomic INSERT ... ON CONFLICT(story_id) DO UPDATE SET."
+    auto_fixable: false
+  - id: 5
+    severity: major
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    lines: 887-889
+    issue: "Stale blocker metadata not cleared when blocked: false. When validated.blocked is falsy, set blockedReason: null and blockedByStory: null."
+    auto_fixable: true
+  - id: 6
+    severity: major
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    lines: 169-179
+    issue: "acceptance_criteria uses z.any() — should use proper JSONValueSchema. Define recursive JSONValueSchema and replace z.any() with it."
+    auto_fixable: true
+  - id: 7
+    severity: minor
+    file: packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+    lines: 163-173
+    issue: "WORKABLE_STATUSES and SATISFIED_DEP_STATUSES use display labels (e.g. 'ready-to-work') instead of DB enum names (e.g. 'ready_to_work')."
+    auto_fixable: true
+  - id: 8
+    severity: minor
+    file: packages/backend/orchestrator/src/checkpointer/index.ts
+    lines: 103-112
+    issue: "withCheckpointer accepts any string for phase — typos break resume logic. Constrain phase to Phase union type from PHASE_TO_CHECKPOINT_MAP, validate at runtime."
+    auto_fixable: true
+  - id: 9
+    severity: minor
+    file: packages/backend/orchestrator/src/cli/resume-graph.ts
+    lines: 115-120
+    issue: "Log prints new Date().toISOString() instead of actual checkpoint reached_at. Surface reached_at from checkpoint row and use it."
+    auto_fixable: true
+  - id: 10
+    severity: nitpick
+    file: packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+    lines: 24-41
+    issue: "StoryMetadataSchema uses .strict() — hard fails on harmless extra JSONB keys. Replace .strict() with .strip() or .passthrough()."
+    auto_fixable: true
+  - id: 11
+    severity: nitpick
+    file: apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts
+    lines: 345-359
+    issue: "Test 'ED-3: accepts empty string story_dir and story_file' does not actually pass empty strings. Pass story_dir: '' and story_file: '' to exercise the edge case."
+    auto_fixable: true
+  - id: 12
+    severity: nitpick
+    file: apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts
+    lines: 48-62
+    issue: "beforeAll uses console.warn and conditionally skips — should hard-fail with @repo/logger when migration missing. Use @repo/logger.error and throw Error in beforeAll."
+    auto_fixable: true
+  - id: 13
+    severity: nitpick
+    file: _implementation/VERIFICATION.md
+    lines: 68-72
+    issue: "Fenced code block missing language specifier. Add 'text' language specifier to the code fence."
+    auto_fixable: true
+focus_files:
+  - packages/backend/orchestrator/src/checkpointer/index.ts
+  - apps/api/knowledge-base/src/mcp-server/access-control.ts
+  - apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+  - packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+  - packages/backend/orchestrator/src/cli/resume-graph.ts
+  - apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts

@@ -123,9 +123,9 @@ export async function runRetentionCleanup(
     // Delete a batch of old entries
     // Using subquery to select IDs first, then delete
     const deletedResult = await db.execute(sql`
-      DELETE FROM audit_log
+      DELETE FROM public.audit_log
       WHERE id IN (
-        SELECT id FROM audit_log
+        SELECT id FROM public.audit_log
         WHERE timestamp < ${cutoffDate}
         LIMIT ${BATCH_SIZE}
       )

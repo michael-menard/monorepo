@@ -22,8 +22,7 @@ export function analyzeColumnChange(
   tableInfo: TableInfo,
   monorepoRoot: string,
 ): ImpactResult {
-  const { operation, target, newName, newType } = parsedChange
-  const findings: ImpactFinding[] = []
+  const { operation, target } = parsedChange
 
   // Scan for affected files
   const tableFiles = scanForTableReferences(project, tableInfo.name)
@@ -87,10 +86,10 @@ export function analyzeColumnChange(
  */
 function analyzeAddColumn(
   parsedChange: ParsedChange,
-  tableInfo: TableInfo,
+  _tableInfo: TableInfo,
   tableFiles: string[],
   zodSchemaFiles: string[],
-  zodTypeFiles: string[],
+  _zodTypeFiles: string[],
   monorepoRoot: string,
 ): ImpactResult {
   const { target, newType } = parsedChange
@@ -154,10 +153,10 @@ function analyzeAddColumn(
  */
 function analyzeDropColumn(
   parsedChange: ParsedChange,
-  tableInfo: TableInfo,
+  _tableInfo: TableInfo,
   columnFiles: string[],
   zodSchemaFiles: string[],
-  zodTypeFiles: string[],
+  _zodTypeFiles: string[],
   monorepoRoot: string,
 ): ImpactResult {
   const { target } = parsedChange
@@ -216,10 +215,10 @@ function analyzeDropColumn(
  */
 function analyzeRenameColumn(
   parsedChange: ParsedChange,
-  tableInfo: TableInfo,
+  _tableInfo: TableInfo,
   columnFiles: string[],
   zodSchemaFiles: string[],
-  zodTypeFiles: string[],
+  _zodTypeFiles: string[],
   monorepoRoot: string,
 ): ImpactResult {
   const { target, newName } = parsedChange
@@ -280,10 +279,10 @@ function analyzeRenameColumn(
  */
 function analyzeChangeType(
   parsedChange: ParsedChange,
-  tableInfo: TableInfo,
+  _tableInfo: TableInfo,
   columnFiles: string[],
   zodSchemaFiles: string[],
-  zodTypeFiles: string[],
+  _zodTypeFiles: string[],
   monorepoRoot: string,
 ): ImpactResult {
   const { target, newType } = parsedChange

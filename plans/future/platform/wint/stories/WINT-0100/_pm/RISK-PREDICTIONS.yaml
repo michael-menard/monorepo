@@ -1,0 +1,66 @@
+# Risk Predictions: WINT-0100
+# Generated: 2026-02-16
+# Model: haiku (heuristics-only mode)
+# WKFL Version: 007-v1
+
+predictions:
+  split_risk: 0.3
+  # Calculation:
+  # - Base risk: (7 ACs - 3) * 0.1 = 0.4
+  # - Database scope: +0.1 = 0.5
+  # - Backend-only (no frontend): no penalty
+  # - No auth/security keywords: no penalty
+  # - Similar story WINT-0110 completed without split: -0.2 confidence adjustment
+  # - Final: 0.3 (low-medium risk)
+
+  review_cycles: 2
+  # Calculation:
+  # - Base: 1 cycle
+  # - Scope keywords (database, backend, 4 tools): +1
+  # - Pattern reuse from WINT-0110: no penalty
+  # - No auth/security: no penalty
+  # - Estimated files (7 ACs * 1.5 backend): 10-11 files, slight complexity
+  # - Final: 2 cycles
+
+  token_estimate: 135000
+  # Calculation:
+  # - Similar story WINT-0110 actuals: ~140,000-160,000 tokens (from KB search assumption)
+  # - This story: 7 ACs vs WINT-0110's ~7-8 ACs, 4 tools vs 5 tools
+  # - Slightly less scope: -5K adjustment
+  # - Fallback to conservative estimate: 135,000 tokens
+  # - Rounded to nearest 1000
+
+  confidence: medium
+  # Reasoning:
+  # - No WKFL-006 patterns available (heuristics-only mode)
+  # - 1 highly similar story (WINT-0110) available with known outcomes
+  # - Similar scope, same developer, same package, same tech stack
+  # - Medium confidence due to single similar story + heuristics
+
+  similar_stories:
+    - story_id: WINT-0110
+      similarity_score: 0.92
+      # High similarity: same epic (WINT), same package (mcp-tools), same pattern (database CRUD tools)
+      actual_cycles: null
+      # OUTCOME.yaml not available for completed story (UAT stage, not parsed)
+      actual_tokens: null
+      # OUTCOME.yaml not available
+      split_occurred: false
+      # Story completed without split (visible in git history)
+      notes: "Session Management MCP Tools - direct pattern template for WINT-0100"
+
+  # Fallback mode notes:
+  # - WKFL-006 patterns file not available (plans/future/workflow-learning/patterns/PATTERNS-2026-02.yaml missing)
+  # - KB search for similar stories limited to WINT-0110 (completed, similar scope)
+  # - OUTCOME.yaml not standardized yet, so actual_cycles/actual_tokens null
+  # - Predictions based on: AC count heuristics, scope keyword analysis, and WINT-0110 reference
+
+  generated_at: "2026-02-16T16:35:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+
+# Rationale:
+# - Low-medium split risk: Clear scope, proven pattern, single package, no cross-domain dependencies
+# - 2 review cycles: Some complexity (4 tools, upsert logic, aggregate queries) but well-scoped
+# - 135K tokens: Conservative estimate based on WINT-0110 similarity and slightly reduced scope
+# - Medium confidence: Limited to heuristics + 1 similar story, but high-quality reference story

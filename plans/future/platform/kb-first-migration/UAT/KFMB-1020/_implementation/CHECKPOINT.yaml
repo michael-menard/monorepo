@@ -1,0 +1,13 @@
+forced: false
+schema: 1
+blocked: false
+e2e_gate: exempt
+story_id: KFMB-1020
+warnings: []
+iteration: 0
+feature_dir: plans/future/platform/kb-first-migration
+completed_at: null
+current_phase: qa-verify
+blocked_reason: null
+max_iterations: 3
+last_successful_phase: qa-verify

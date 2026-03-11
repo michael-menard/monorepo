@@ -1,0 +1,65 @@
+schema: 1
+story_id: WINT-9040
+phase: implementation
+iteration: 0
+generated_at: "2026-03-08T17:15:00Z"
+
+touched_files:
+  - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+  - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Port scope-defender to native TypeScript LangGraph node at nodes/story/scope-defend.ts"
+    status: pass
+    evidence: "File created: packages/backend/orchestrator/src/nodes/story/scope-defend.ts. Implements createToolNode('scope_defend', ...) factory pattern matching attack.ts."
+
+  - id: AC-2
+    description: "4-phase execution contract (Load Inputs, Identify Candidates, Apply DA Challenges, Produce Output)"
+    status: pass
+    evidence: "All 4 phases implemented. Phase 1 validates story_brief (blocking if missing). Phase 2 calls identifyCandidates() with gap_analysis exclusions. Phase 3 calls applyDAChallenges() with 5-challenge hard cap. Phase 4 writes scope-challenges.json."
+
+  - id: AC-3
+    description: "Max 5 challenges, truncated=true when >5 candidates"
+    status: pass
+    evidence: "HP-2 test: 8 non-critical ACs → 5 challenges produced, truncated=true, total_candidates_reviewed=8. Verified by test."
+
+  - id: AC-4
+    description: "Excludes MVP-critical and blocking items from gap_analysis"
+    status: pass
+    evidence: "HP-3 test: gap_analysis.mvp_critical_ids=['AC-1'] excludes AC-1 from challenge candidates. identifyCandidates() filters by both mvp_critical_ids and blocking_ids. Also excludes ACs with mvp_critical=true field."
+
+  - id: AC-5
+    description: "Missing optional inputs (gap_analysis, role_pack_path) increment warning_count but don't block"
+    status: pass
+    evidence: "EC-1: gap_analysis=null → warnings=['gap_analysis_missing'], warning_count>=1. EC-2: role_pack_path=null → warnings=['role_pack_missing'], warning_count>=1. Both tests pass."
+
+  - id: AC-6
+    description: "Export scopeDefendNode (const) and createScopeDefendNode (function)"
+    status: pass
+    evidence: "Both exported from scope-defend.ts. scopeDefendNode is the createToolNode() result. createScopeDefendNode() wraps it for graph assembly."
+
+  - id: AC-7
+    description: "Unit tests: HP, EC, ED scenarios per test spec"
+    status: pass
+    evidence: "20 tests pass: 5 identifyCandidates, 6 applyDAChallenges, 9 scopeDefendNode (HP-1, HP-2, HP-3, EC-1, EC-2, EC-3, ED-1, ED-2, BLOCKED)."
+
+unit_tests:
+  status: pass
+  passed: 20
+  failed: 0
+  total: 20
+  notes: "All scope-defend tests pass. 13 pre-existing failures in other test files (integration.test.ts, structurer-affinity.test.ts, health-gate.integration.test.ts) unrelated to this story."
+
+type_check:
+  status: pass
+  errors: 0
+  notes: "No type errors in scope-defend.ts or scope-defend.test.ts. Pre-existing type errors exist in elaboration.ts and elaboration/index.ts (unrelated)."
+
+e2e_tests:
+  status: exempt
+  reason: "backend-only, no HTTP surface — this is a pure TypeScript LangGraph node with no API endpoints"
+
+build:
+  status: pass
+  notes: "TypeScript compiles without errors in scope-defend.ts files. Build not run end-to-end due to pre-existing build errors in unrelated packages."

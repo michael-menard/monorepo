@@ -1,0 +1,25 @@
+---
+generated: "2026-03-08"
+story_id: WINT-3070
+reason: "KB MCP not available via CLI during story generation"
+retry_after: "Next agent session with MCP available"
+---
+
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: WINT-3070
+      feature: wint
+      title: "Update 10 Core Workflow Commands with telemetry-log Invocations"
+      story_dir: plans/future/platform/wint/backlog/WINT-3070
+      story_file: plans/future/platform/wint/backlog/WINT-3070/WINT-3070.md
+      story_type: feature
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

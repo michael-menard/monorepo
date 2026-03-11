@@ -1,0 +1,199 @@
+schema_version: 1
+story_id: "WINT-3020"
+timestamp: "2026-03-08T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      Story scope matches the index entry (invocation logging, no HTTP endpoints, no FE).
+      However, the frontmatter `depends_on` lists WINT-0120 as a prerequisite, which contradicts
+      the story body's explicit statement that this story pulls `workflow_log_invocation` forward
+      from WINT-0120, making WINT-0120 a partial scope overlap — not a blocking dependency.
+      Workflow tooling that reads `depends_on` from frontmatter will incorrectly gate this story
+      on WINT-0120 completion. Recommend correcting `depends_on` to remove WINT-0120 and replace
+      with WINT-0040 only.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goals, Non-goals, ACs, Scope, and Test Plan are internally consistent.
+      Non-goals explicitly exclude batching, other MCP tools, dashboard, and instrumentation —
+      none of these appear in ACs. AC-Coverage Matrix accounts for all 10 ACs.
+      One inconsistency: frontmatter `depends_on: [WINT-0120, WINT-0040]` contradicts the
+      story body which resolves this conflict by stating the story is pulling scope forward from
+      WINT-0120 (not depending on it). The conflict is documented in the body but not reconciled
+      in the machine-readable frontmatter.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Explicit Reuse Plan section identifies 5 canonical sources:
+      session-create.ts (insert pattern), SessionCreateInputSchema (schema template),
+      token-log/SKILL.md (skill document template), insertAgentInvocationSchema (Drizzle-Zod schema),
+      agentInvocations table. All from shared packages. No one-off utilities proposed.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No HTTP endpoints. Core insert logic lives in `packages/backend/mcp-tools/src/telemetry/`
+      (transport-agnostic). Adapter registration in `tool-handlers.ts` and `tool-schemas.ts`
+      is explicitly identified and separated. No business logic in handler layer per the pattern.
+
+  - id: testability
+    status: PASS
+    note: >
+      7 unit test cases with concrete setup/action/expected/evidence for each.
+      Verification commands specified per subtask (pnpm test --filter, pnpm check-types --filter).
+      Integration tests gated on WINT-0040 with explicit fallback (unit tests mock DB client).
+      UAT steps concrete with SQL SELECT evidence. No frontend — Playwright not applicable.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      invocationId generation strategy decided (caller-provided or crypto.randomUUID()).
+      Error handling pattern decided (returns null, logger.warn — never throws).
+      WINT-0120 scope overlap explicitly resolved with instructions for both owners.
+      Zod-first schema approach confirmed. No blocking TBDs remain.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks explicitly disclosed: (1) WINT-0040 migration prerequisite for integration/UAT
+      with concrete fallback, (2) mcp-integration.test.ts exact tool count assertion (KBAR-0080
+      lesson referenced with same-commit mitigation), (3) WINT-0120 dependency conflict with
+      coordination note. MCP server restart requirement documented. No hidden dependencies found.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      10 ACs (above the 8 threshold by 2), 5 subtasks, 7 files touched across 2 packages,
+      7 unit test scenarios. No frontend. No HTTP endpoints. However, all ACs form a single
+      cohesive feature (one MCP tool + one skill document). No independent sub-features that
+      could ship separately. Risk predictor labels this 'low split risk'. PASS with note:
+      10 ACs is mildly over threshold but justified by the single-feature coherence.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      5 subtasks present. All 10 ACs covered via AC-Coverage Matrix. Each subtask touches at
+      most 3 files (ST-4 modifies exactly 3). DAG is acyclic: ST-1 and ST-2 have no deps,
+      ST-3 depends on ST-2, ST-4 and ST-5 both depend on ST-3. Each subtask has a concrete
+      verification command. Canonical References section present with 4 entries including
+      file paths and rationale. Files to read listed per subtask.
+
+  - id: clarity_format
+    status: PASS
+    note: >
+      Goal section present. Examples section present with 2 concrete examples (full-field
+      and minimal-field). Edge Cases section present with 2 cases (DB failure and duplicate
+      invocationId). All three required sections populated with substantive content.
+
+gaps:
+  - id: GAP-001
+    severity: minor
+    blocking: false
+    title: "Schema fields totalTokens and estimatedCost not addressed in AC-2 parameter list or Zod schema"
+    description: >
+      The `agentInvocations` table has two fields not included in AC-2's parameter spec:
+      `totalTokens` (integer, NOT NULL, default 0) and `estimatedCost` (numeric, NOT NULL,
+      default '0.0000'). The story's `WorkflowLogInvocationInputSchema` (ST-2) does not include
+      these fields. If the implementation uses `insertAgentInvocationSchema` from Drizzle-Zod
+      (referenced in the Reuse Plan at line 1877 of wint.ts), that generated schema WILL include
+      those fields and the custom Zod schema may diverge. The DB defaults handle inserts correctly,
+      but the story should explicitly state whether these fields are intentionally excluded from
+      the input schema (relying on DB defaults) or whether `totalTokens` should be computed
+      application-side before insert (as the column comment says).
+    recommendation: >
+      Add a note to ST-2 clarifying that `totalTokens` and `estimatedCost` are intentionally
+      excluded from the input Zod schema and will use DB defaults. If `totalTokens` should be
+      computed as `inputTokens + outputTokens + cachedTokens` at application level (per column
+      comment), add that computation to ST-3 implementation guidance.
+    decision: defer
+    decision_note: "DB defaults handle MVP correctly; totalTokens computation is future enhancement"
+
+  - id: GAP-002
+    severity: minor
+    blocking: false
+    title: "Incorrect crypto import in implementation pseudocode"
+    description: >
+      The ST-3 pseudocode shows `import { crypto } from 'node:crypto'` which is not valid Node.js
+      syntax. The actual session-create.ts canonical reference uses `import { randomUUID } from 'crypto'`
+      (not 'node:crypto', not `crypto` as a namespace). The pseudocode also references
+      `crypto.randomUUID()` but the correct call with the named import would be `randomUUID()`.
+      A developer following the pseudocode verbatim will get a TypeScript/compile error.
+    recommendation: >
+      Correct ST-3 pseudocode to: `import { randomUUID } from 'crypto'` and call `randomUUID()`
+      directly (matching session-create.ts line 12-13 exactly).
+    decision: fix_in_story
+    decision_note: "Pseudocode corrected to match session-create.ts canonical reference"
+
+  - id: GAP-003
+    severity: minor
+    blocking: false
+    title: "frontmatter depends_on includes WINT-0120 which is a scope overlap, not a prerequisite"
+    description: >
+      The frontmatter `depends_on: [WINT-0120, WINT-0040]` will cause workflow tooling to gate
+      WINT-3020 on WINT-0120 completion. However, the story explicitly states this story pulls
+      `workflow_log_invocation` forward from WINT-0120, meaning WINT-0120 is NOT a prerequisite.
+      The `blocks` list correctly identifies WINT-3070 and WINT-3090 as downstream. WINT-0040
+      is a legitimate dependency (table must exist).
+    recommendation: >
+      Remove WINT-0120 from frontmatter `depends_on`. Keep WINT-0040. Add a comment in the
+      story's Context section (already present in body) that this story coordinates with WINT-0120
+      but does not depend on it.
+    decision: fix_in_story
+    decision_note: "Removed WINT-0120 from depends_on; it's a scope overlap not a dependency"
+
+opportunities:
+  - id: OPP-001
+    title: "Compute totalTokens at application layer before insert"
+    description: >
+      The `totalTokens` column comment says 'computed at application level' but AC-4 and ST-3
+      do not specify this computation. Adding `totalTokens: (parsed.inputTokens ?? 0) + (parsed.outputTokens ?? 0) + (parsed.cachedTokens ?? 0)`
+      to the insert values would populate the column meaningfully for analytics queries downstream
+      (WINT-3070, WINT-3090) rather than leaving it at the DB default of 0.
+    blocking: false
+    decision: log_to_kb
+
+  - id: OPP-002
+    title: "Expose invocationId auto-generation in skill documentation"
+    description: >
+      AC-4 specifies that `invocationId` should be auto-generated if not provided, but the
+      skill's recommended pattern is a stable, predictable ID (`{agentName}-{storyId}-{isoTimestamp}`).
+      The SKILL.md could include a code block showing how to construct this recommended ID before
+      calling the skill, improving consistency across agents.
+    blocking: false
+    decision: log_to_kb
+
+  - id: OPP-003
+    title: "Add EC-4 to test plan's integration test scenarios"
+    description: >
+      EC-4 (duplicate invocationId unique constraint) is only in the unit test coverage matrix
+      but not mentioned in the integration test section. Since the unique constraint is a DB-level
+      concern, validating it in an integration test (when WINT-0040 migration is applied) would
+      increase confidence. Currently gated on WINT-0040 anyway, so this is low friction to add.
+    blocking: false
+    decision: log_to_kb
+
+  - id: OPP-004
+    title: "Consider adding completedAt parameter for callers that know end time"
+    description: >
+      The `agentInvocations` table has a `completedAt` nullable timestamp column. The current
+      parameter spec (AC-2) does not expose this. A caller providing `durationMs` may also have
+      the completion timestamp. Adding `completedAt` as an optional parameter would make the
+      log record more complete for timeline analysis without blocking MVP.
+    blocking: false
+    decision: log_to_kb
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-08T00:00:00Z"
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 0

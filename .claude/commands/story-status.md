@@ -5,7 +5,7 @@ version: 5.0.0
 type: utility
 ---
 
-/story-status [FEATURE_DIR | INDEX_PATH] [STORY_ID] [--depth] [--deps-order]
+/story-status [FEATURE_DIR] [STORY_ID] [--depth] [--deps-order]
 
 Check story status. Read-only utility command.
 
@@ -24,7 +24,6 @@ Check story status. Read-only utility command.
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `FEATURE_DIR` | No | Feature directory path |
-| `INDEX_PATH` | No | Direct path to stories.index.md |
 | `STORY_ID` | No | Story identifier (e.g., WISH-001) |
 | `--depth` | No | Show in-depth epic view |
 | `--deps-order` | No | Show stories grouped by dependency tiers as a work list |
@@ -33,16 +32,19 @@ Check story status. Read-only utility command.
 
 ## Data Source
 
-### DB-First Routing (Feature + Story ID Mode Only)
+### KB-First Routing
 
-For **Feature + Story ID** mode, the database is the primary source of truth. The routing logic is:
+The KB is the authoritative source of truth for all story states. The routing logic is:
 
+**Feature + Story ID mode:**
 1. Call `story_get_status` MCP tool (wraps `shimGetStoryStatus`) with the normalized story ID
 2. If the DB returns a result: use it directly — derive display label from the DB State Display Labels table below
-3. If the DB returns null (DB unavailable, connection error, or story not yet migrated): fall back to directory scan (existing logic)
-4. If directory scan also finds nothing: display `Story not found: {STORY_ID}`
+3. If the DB returns null (KB unavailable): display `Story not found: {STORY_ID} (KB unavailable)`
 
-**Migration window context**: During the Phase 1 migration window, some stories may not yet exist in the database. The directory fallback ensures these stories remain visible via filesystem state. The DB is authoritative for all stories that have been written to it.
+**Feature-level queries (Feature Only, --depth, --deps-order):**
+1. Call `kb_list_stories({ epic: "{feature}", limit: 100 })` to get all story states and metadata from KB
+2. Paginate if result count equals limit (call again with `offset: 100`, etc.)
+3. If KB is unavailable: display `Error: KB unavailable — cannot fetch story list`
 
 **Non-Goals (updated)**:
 - Feature Only mode (e.g., `/story-status plans/future/wishlist` summary) now uses `kb_list_stories` for story counts (KFMB-3020). The WINT-1070 deferral has been resolved via the KFMB migration path.
@@ -54,15 +56,18 @@ When a DB result is returned, map the `state` field to a human-readable display 
 | DB State (`state`) | Display Label |
 |--------------------|---------------|
 | `backlog` | backlog |
-| `ready_to_work` | ready-to-work |
+| `ready` | ready-to-work |
 | `in_progress` | in-progress |
+| `ready_for_review` | needs-code-review |
 | `ready_for_qa` | ready-for-qa |
 | `in_qa` | uat |
-| `done` | completed |
+| `completed` | completed |
 | `blocked` | BLOCKED |
 | `cancelled` | superseded |
+| `failed_code_review` | failed-code-review |
+| `failed_qa` | failed-qa |
 
-**Note**: Directory-only states (`elaboration`, `needs-code-review`, `failed-code-review`, `failed-qa`, `created`) have no DB equivalent. These appear only via directory fallback during the migration window and are not in this table.
+**Note**: The KB is the sole authoritative source for story state. No directory fallback.
 
 ---
 
@@ -74,13 +79,13 @@ Show summary of all features in `plans/future/`
 ### Feature Only
 Show summary of that feature (story counts by status). Use `kb_list_stories({ feature: PREFIX })` for counts (KFMB-3020). Fall back to directory scan if KB is unavailable.
 
-### Feature + --depth (or INDEX_PATH)
+### Feature + --depth
 Show in-depth epic view:
 1. Use `kb_list_stories({ feature: PREFIX })` to fetch stories (KFMB-3020). Fall back to reading `stories.index.md` if KB is unavailable.
 2. Parse all stories (ID, status, dependencies)
 3. Check `_implementation/CHECKPOINT.md` for phase progress
 4. Build dependency graph
-5. Generate swimlane visualization
+5. Generate swimlane visualization — map KB `state` to swimlane column using the table below
 
 For output format, read: `.claude/agents/_reference/examples/story-status-output.md`
 
@@ -139,19 +144,22 @@ Check `_implementation/CHECKPOINT.md`:
 
 ### Swimlane Mapping
 
-| Directory | Emoji | Column |
-|-----------|-------|--------|
-| `backlog/` | ⏸️ | BACKLOG |
-| `created/` | 🆕 | CREATED |
-| `elaboration/` | 📝 | ELABORATION |
-| `ready-to-work/` | ⏳ | READY |
-| `in-progress/` | 🚧 | IN-PROGRESS |
-| `needs-code-review/` | 👀 | CODE-REVIEW |
-| `failed-code-review/` | 🔴 | REVIEW-FAIL |
-| `ready-for-qa/` | 🔍 | READY-QA |
-| `failed-qa/` | ⚠️ | QA-FAIL |
-| `UAT/` | ✅ | DONE |
-| `completed/` | ✅ | DONE |
+<!-- KSOT-3010: Stories live in flat {FEATURE_DIR}/stories/{STORY_ID}/ directory.
+     Swimlane column is derived from KB state, not directory name. -->
+
+| KB State | Emoji | Column |
+|----------|-------|--------|
+| `backlog` | ⏸️ | BACKLOG |
+| `backlog` (created) | 🆕 | CREATED |
+| `in_progress` (elab) | 📝 | ELABORATION |
+| `ready` | ⏳ | READY |
+| `in_progress` | 🚧 | IN-PROGRESS |
+| `ready_for_review` | 👀 | CODE-REVIEW |
+| `failed_code_review` | 🔴 | REVIEW-FAIL |
+| `ready_for_qa` | 🔍 | READY-QA |
+| `failed_qa` | ⚠️ | QA-FAIL |
+| `in_qa` | ✅ | DONE |
+| `completed` | ✅ | DONE |
 
 ---
 
@@ -164,6 +172,14 @@ Single story output format:
 Feature: plans/future/wishlist
 Story: WISH-001
 Status: in-progress
-Location: plans/future/wishlist/in-progress/WISH-001/
+Location: plans/future/wishlist/stories/WISH-001/
 Depends On: none
 ```
+
+---
+
+## Telemetry
+
+**Telemetry not applicable for this command.**
+
+`story-status` is a read-only status check utility with no state transitions. It produces no workflow outputs and does not advance any story phase. Logging a telemetry record for every status query would generate noise without observability value. This exemption is documented explicitly per WINT-3070 AC-8.

@@ -16,8 +16,7 @@ export function analyzeConstraintChange(
   tableName: string,
   monorepoRoot: string,
 ): ImpactResult {
-  const { operation, target } = parsedChange
-  const findings: ImpactFinding[] = []
+  const { operation } = parsedChange
 
   // Scan for files that reference the table
   const tableFiles = scanForTableReferences(project, tableName)

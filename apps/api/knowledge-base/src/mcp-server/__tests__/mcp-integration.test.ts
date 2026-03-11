@@ -151,6 +151,12 @@ describe('MCP Server Integration', () => {
         'kb_get_roadmap',
         'kb_update_plan',
         'kb_upsert_plan',
+        // PDBM Phase 0 plan tools
+        'kb_search_plans',
+        'kb_get_plan_dashboard',
+        'kb_get_plan_revisions',
+        'kb_log_plan_event',
+        'kb_get_plan_events',
         // Artifact search tool (KBAR-0130)
         'artifact_search',
         // Context pack tool (WINT-2020)
@@ -260,7 +266,7 @@ describe('MCP Server Integration', () => {
 
       expect(config.SHUTDOWN_TIMEOUT_MS).toBe(30000)
       expect(config.LOG_LEVEL).toBe('info')
-      expect(config.DB_POOL_SIZE).toBe(5)
+      expect(config.DB_POOL_SIZE).toBe(3)
     })
 
     it('should parse custom shutdown timeout', () => {

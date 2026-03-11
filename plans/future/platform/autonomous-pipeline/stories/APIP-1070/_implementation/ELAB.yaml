@@ -1,0 +1,385 @@
+schema: 1
+story_id: APIP-1070
+title: "Merge Graph with Learnings Extraction"
+audited: "2026-02-25"
+auditor: elab-analyst
+
+# ==============================================================================
+# AUDIT RESULTS (9 Points)
+# ==============================================================================
+
+audit:
+
+  scope_alignment:
+    status: PASS
+    note: >
+      Story scope matches the index entry exactly: "Merge Graph with Learnings Extraction"
+      targeting APIP-1070 in Phase 1. The index shows this story depends on APIP-1060
+      and the story front-matter correctly reflects this. All work is confined to
+      packages/backend/orchestrator — no extra packages, no UI, no database writes.
+      Non-goals explicitly exclude Documentation Graph (APIP-1040), Supervisor Loop
+      dispatch (APIP-0020), operator CLI (APIP-5005), E2E testing (APIP-5002), telemetry
+      (APIP-3010), and model router (APIP-0040). No scope creep detected.
+
+  internal_consistency:
+    status: PASS
+    note: >
+      Goals: 8 enumerated steps (gate, rebase, PR, CI poll, squash-merge, cleanup,
+      learnings, artifact). ACs 1-17 map cleanly to these 8 steps. Non-goals are tight
+      and non-overlapping with scope. Test plan (AC-14, AC-15) covers exactly the ACs
+      described in scope: 12 graph-level scenarios match the 12 routing paths implied
+      by AC-12's conditional edge specification. Per-node tests in AC-15 list exactly
+      the 8 node files from the New Files table. Coverage targets (100% for
+      check-preconditions, >85% per-node, >80% graph) are realistic and internally
+      consistent. The critical invariant (cleanup + write-merge-artifact on ALL paths)
+      is reflected in both AC-12 routing and AC-14/AC-15 test requirements.
+      One minor tension: AC-9 says extract-learnings "runs on ALL terminal paths
+      including MERGE_BLOCKED and MERGE_FAIL" — this is correctly wired in AC-12's
+      routing (all failure paths route to cleanup → extract-learnings → write-merge-artifact).
+      Consistent throughout.
+
+  reuse_first:
+    status: PASS
+    note: >
+      Reuse plan is strong and verified against actual source files:
+      (1) QaVerifySchema, qaPassedSuccessfully(), generateQaSummary() confirmed
+          present in qa-verify.ts — directly reused in check-preconditions and
+          create-or-update-pr nodes.
+      (2) createPersistLearningsNode(config) confirmed present in persist-learnings.ts
+          — directly reused in extract-learnings node. LearningCategorySchema and
+          LearningSchema also confirmed available.
+      (3) createToolNode() confirmed present in node-factory.ts — all 8 merge nodes
+          use this factory. No custom node wrapper invented.
+      (4) isRetryableNodeError() and ErrorCategory confirmed present in
+          error-classification.ts — reused in create-or-update-pr.
+      (5) YamlArtifactWriter (class-based, atomic writes) confirmed present —
+          reused in write-merge-artifact.
+      (6) YamlArtifactReader confirmed present — reused in check-preconditions.
+      (7) elaboration.ts StateGraph pattern confirmed — exact structural replication
+          for createMergeGraph() and runMerge(). Annotation.Root() with overwrite
+          reducer, conditional edges, factory + entry function.
+      No unnecessary one-offs. The subprocess runner pattern (injectable gitRunner/
+      ghRunner) is domain-specific to this graph's shell-command nature and is not
+      a one-off — it is properly abstracted for testability.
+
+  ports_and_adapters:
+    status: PASS
+    note: >
+      This story is backend-only with no API endpoints (endpoints: [] confirmed in
+      front-matter). Core logic is transport-agnostic: all shell invocations are
+      behind injectable SubprocessRunner interfaces (gitRunner, ghRunner, sleepFn).
+      This makes node logic testable without spawning real processes. The graph
+      itself has no HTTP layer — it is invoked via runMerge() which will be called
+      by the BullMQ supervisor (APIP-0020). No Lambda, no APIGW, no Aurora writes.
+      The GH_TOKEN injection via env var is the correct approach for local Docker
+      server context (ADR-001 Decision 4). Architecture correctly separates
+      orchestration logic from external side effects.
+
+  local_testability:
+    status: PASS
+    note: >
+      All tests are Vitest-based. Injectable runners (gitRunner, ghRunner, sleepFn,
+      persistLearnings, yamlArtifactWriter, yamlArtifactReader) are specified for
+      every node with external side effects. Graph-level tests use real graph.compile()
+      with mocked node implementations. The poll-ci exponential back-off schedule can
+      be verified synchronously via injectable sleepFn — a specific test scenario
+      (T-N-CI05) is called out for this. Per-node test files are listed in the New
+      Files table. The test plan specifies that every MERGE_BLOCKED path must verify
+      cleanup and write-merge-artifact — this is a concrete, checkable assertion.
+      No external services required to run unit tests.
+
+  decision_completeness:
+    status: PASS
+    note: >
+      No blocking TBDs found in the story. All key design decisions are resolved:
+      (1) CI polling strategy: internal async loop (not LangGraph edges) — decision
+          documented with rationale (avoids excessive checkpoint writes).
+      (2) Squash-only merge — explicitly stated, regular merge excluded from non-goals.
+      (3) Thread ID convention: "{storyId}:merge:{attempt}" — documented and aligned
+          with established APIP-1030 convention.
+      (4) Token source: GH_TOKEN env var — clear, no TBD.
+      (5) Category mapping table (QA → Learning) is fully specified in Architecture Notes.
+      (6) Subprocess pattern (spawn not execSync) — documented with signature.
+      (7) Worktree dir: absolute path from config, created by supervisor pre-dispatch — documented.
+      One notation: "APIP-5006 (Server Infrastructure): failed-code-review" in the
+      dependency table is a known risk (RISK-1070-03), not a blocking TBD.
+
+  risk_disclosure:
+    status: PASS
+    note: >
+      Five risks are explicitly enumerated with IDs, severity, and descriptions:
+      RISK-1070-01 (high): runMerge() signature alignment with APIP-0020 dispatch contract.
+      RISK-1070-02 (medium): Integration testing blocked on APIP-1060 producing real QA-VERIFY.yaml.
+      RISK-1070-03 (medium): gh CLI not installed/authenticated on dedicated server.
+      RISK-1070-04 (low): Main branch advancement during CI polling causing stale PR checks.
+      RISK-1070-05 (low): Exponential back-off implementation complexity in poll-ci.
+      APIP-5006 dependency being in "failed-code-review" state is noted in dependencies
+      table as an infrastructure precondition risk. Mitigations are implicitly present
+      (check-preconditions guards RISK-1070-03; unit tests proceed with mocks for RISK-1070-02).
+      No silent risks detected.
+
+  story_sizing:
+    status: WARN
+    note: >
+      Sizing indicators check:
+      - ACs: 17 total (>8 threshold — TRIGGERED)
+      - Endpoints: 0 (no trigger)
+      - FE+BE: backend only (no trigger)
+      - Multiple independent features bundled: 8 sequential nodes in a single pipeline
+        graph — these are NOT independent features but a single ordered workflow.
+        The nodes have strict sequential dependencies (cannot rebase without QA pass,
+        cannot poll CI without PR, etc). NOT triggered.
+      - Test scenarios: 12 graph-level + ~32 per-node (>3 threshold — TRIGGERED)
+      - Packages touched: 1 (packages/backend/orchestrator only — no trigger)
+      TRIGGERED indicators: 2 (>8 ACs, >3 test scenarios).
+      Split threshold: 2+ indicators → recommend split evaluation.
+      HOWEVER: The 17 ACs are tightly coupled — AC-1 through AC-13 define a single
+      pipeline that cannot function with missing nodes. Each AC covers one node or
+      schema in the sequential chain. Splitting would produce incomplete graphs
+      (e.g., "graph without poll-ci" is not runnable). The test count is elevated
+      because of the 8-node scope, not because of feature sprawl. 13 story points
+      is assessed as appropriately sized for the scope. Split is NOT recommended —
+      this is an inherently coupled pipeline graph. Flagged as WARN rather than
+      SPLIT_REQUIRED because the coupling is architectural, not organizational.
+
+  subtask_decomposition:
+    status: PASS
+    note: >
+      14 subtasks are defined (ST-01 through ST-14). Coverage check:
+      - ST-01: AC-10, AC-16 (MergeArtifactSchema)
+      - ST-02: AC-1, AC-2 (Config + State)
+      - ST-03: AC-3 (check-preconditions)
+      - ST-04: AC-4 (rebase-branch)
+      - ST-05: AC-5 (create-or-update-pr)
+      - ST-06: AC-6 (poll-ci)
+      - ST-07: AC-7 (squash-merge)
+      - ST-08: AC-8 (cleanup-worktree)
+      - ST-09: AC-9 (extract-learnings)
+      - ST-10: AC-11 (write-merge-artifact)
+      - ST-11: AC-12, AC-13 (graph wiring + entry point)
+      - ST-12: AC-17 (structured logging)
+      - ST-13: AC-15 (per-node tests)
+      - ST-14: AC-14 (graph tests)
+      All 17 ACs covered. No AC without a subtask.
+      File count per subtask: ST-01=1, ST-02=1, ST-03=1, ST-04=1, ST-05=1, ST-06=1,
+      ST-07=1, ST-08=1, ST-09=1, ST-10=1, ST-11=1 (update merge.ts), ST-12=0 new
+      files (logging added across nodes), ST-13=8, ST-14=1.
+      ST-13 touches 8 files but they are all test files and logically grouped.
+      No implementation subtask exceeds 3 source files.
+      DAG ordering is implied and correct: ST-01 → ST-02 → ST-03..ST-10 → ST-11 →
+      ST-12 → ST-13 → ST-14. No circular dependencies.
+      Verification commands: Not explicitly listed per subtask, but test coverage is
+      specified via pnpm test with Vitest. Per-node subtasks reference test files as
+      companion tasks. This is adequate.
+      Canonical references: elaboration.ts, persist-learnings.ts, delta-detect.ts,
+      qa-verify.ts all referenced — confirmed accurate against source.
+
+# ==============================================================================
+# GAP ANALYSIS
+# ==============================================================================
+
+gaps:
+  - id: GAP-01
+    severity: medium
+    category: reuse_friction
+    finding: >
+      The YamlArtifactWriter is a class-based API (YamlArtifactWriter class with
+      PathResolver dependency) but the story describes usage as "YAML artifact writer
+      pattern" without specifying how the writer will be constructed (which PathResolver
+      configuration to use, what feature/stage/storyId parameters to pass to
+      writeArtifact()). The write-merge-artifact node writes to
+      "plans/future/platform/autonomous-pipeline/in-progress/{storyId}/" but the
+      YamlArtifactWriter expects (feature, stage, storyId, artifactType) parameters
+      mapped through PathResolver. MERGE.yaml is not a registered YamlArtifactType
+      (registered types: story, elaboration, plan, verification, proof, context, tokens).
+      The implementer will need to use writeProof() or writeGenericYaml() as a
+      workaround, or extend the writer. This is not a blocker if writeProof() is used,
+      but it creates a naming mismatch (the artifact writes as proof.yaml not MERGE.yaml).
+    recommendation: >
+      Story should specify: use writeProof() with a custom PathResolver configured for
+      the autonomous-pipeline feature directory, OR use direct fs.writeFile with atomic
+      pattern (temp file → rename) bypassing YamlArtifactWriter, OR confirm that a
+      new 'merge' artifact type will be registered. The implementer must resolve this
+      before ST-10.
+    decision: add_ac
+    ac_added: >
+      AC-18: The write-merge-artifact node writes MERGE.yaml using direct atomic
+      filesystem write (write to temp file, then fs.rename() to final path) to
+      {featureDir}/in-progress/{storyId}/MERGE.yaml. It does NOT use YamlArtifactWriter
+      class — the merge artifact type is not registered in the writer's type system and
+      this avoids unnecessary coupling. The atomic write pattern (temp + rename) ensures
+      no partial writes on crash.
+
+  - id: GAP-02
+    severity: medium
+    category: reuse_interface_mismatch
+    finding: >
+      The extract-learnings node states it "calls createPersistLearningsNode(config)
+      from persist-learnings.ts with injected KB deps". However, createPersistLearningsNode
+      returns a LangGraph node function (NodeFunction) that expects GraphState — it
+      internally calls extractLearnings(state) which reads state.extractedLearnings
+      and state.errors (from GraphState interface). The MergeGraphStateAnnotation does
+      not extend GraphState and uses a different state shape. Directly invoking
+      createPersistLearningsNode() inside the merge graph's extract-learnings node
+      requires either: (a) calling the returned node function with a GraphState-shaped
+      object cast, (b) calling the underlying persistLearnings() function directly
+      with pre-extracted learnings, or (c) populating state.extractedLearnings in the
+      merge state annotation.
+      The story's AC-9 says to call createPersistLearningsNode(config) — but this
+      factory returns a node function, not a direct call interface. The actual persist
+      operation (persistLearnings()) is the function to call with a Learning[] array.
+    recommendation: >
+      Clarify the call pattern: the extract-learnings node should convert QA lessons
+      to Learning[] (category mapping per Architecture Notes) then call persistLearnings()
+      directly (exported from persist-learnings.ts), not createPersistLearningsNode().
+      Alternatively, explicitly note that the LangGraph node wrapper is invoked with
+      a state adapter. This is resolvable but the current AC-9 language is ambiguous
+      enough to cause implementation friction.
+    decision: add_ac
+    ac_added: >
+      AC-19: The extract-learnings node calls persistLearnings() directly (exported
+      from persist-learnings.ts) with a pre-built Learning[] array — it does NOT use
+      createPersistLearningsNode() factory, which returns a NodeFunction expecting a
+      different GraphState shape than MergeGraphStateAnnotation.
+
+  - id: GAP-03
+    severity: low
+    category: testability
+    finding: >
+      The createToolNode factory has a built-in 10s timeout (timeoutMs: 10000) and
+      2 retry attempts. The poll-ci node's internal async loop can run for up to
+      ciTimeoutMs (default 1,800,000ms = 30 minutes). Running poll-ci inside
+      createToolNode will immediately timeout at 10s in production. The story
+      architecture note says poll-ci uses "internal async loop" but does not address
+      the createToolNode default timeout override needed. If createToolNode is used
+      as-is, poll-ci will fail immediately in production.
+    recommendation: >
+      AC-6 should explicitly state that poll-ci uses createNode() with a custom
+      timeout set to ciTimeoutMs (or slightly above), not the default createToolNode()
+      10s timeout. Or specify a createSimpleNode() with no timeout, managing the
+      timeout internally via the loop's Date.now() comparison. This is a runtime
+      correctness issue, not just a test concern.
+
+opportunities:
+  - id: OPP-01
+    category: observability
+    finding: >
+      AC-17 specifies 13 log event types but does not specify log level guidance for
+      each event (info vs debug). In production, merge_ci_poll events at ciPollIntervalMs
+      (30s default) could generate substantial log volume at info level (up to 60
+      events per 30-min CI run). Recommending debug level for poll events with info
+      only on state changes (pass/fail/timeout transitions) would reduce noise.
+    blocking: false
+
+  - id: OPP-02
+    category: resilience
+    finding: >
+      The check-preconditions node checks gh auth status but does not check that
+      config.worktreeDir exists on disk before running. A missing worktree would cause
+      rebase-branch to fail immediately. A cheap fs.access() check in preconditions
+      would give a cleaner MERGE_BLOCKED message vs a raw subprocess error from git.
+    blocking: false
+
+  - id: OPP-03
+    category: resilience
+    finding: >
+      RISK-1070-04 (main branch advancement during CI polling causing stale PR checks)
+      is disclosed but no mitigation is specified in architecture notes. A re-rebase
+      after CI failure due to behind-HEAD could recover the situation. Currently,
+      a stale PR failure routes to MERGE_FAIL with no recovery path.
+    blocking: false
+
+  - id: OPP-04
+    category: testing
+    finding: >
+      ST-14 specifies 12 graph-level scenarios in merge.test.ts but the scenarios
+      list in AC-14 only names 12 items (a through l). The test plan referenced
+      (_pm/test-plan.yaml) is not present in the story directory. If the test plan
+      file is expected to exist as a companion artifact, it should be created as part
+      of elaboration or noted as a deliverable. Currently the story references
+      "See _pm/test-plan.yaml for complete scenario list" but no _pm/ directory exists.
+    blocking: false
+
+  - id: OPP-05
+    category: correctness
+    finding: >
+      The squash commit message format (Architecture Notes) includes
+      "Co-authored-by: APIP Pipeline <noreply@pipeline>" but the email domain
+      "noreply@pipeline" is not a valid RFC 5322 email address. GitHub may reject
+      or silently drop the Co-authored-by trailer with an invalid email. Suggest
+      using a valid format like "noreply@pipeline.local" or the repo's noreply address.
+    blocking: false
+
+  - id: OPP-06
+    category: resilience
+    finding: >
+      The ciStatus field in MergeGraphStateAnnotation includes 'running' in its enum
+      ('pending' | 'running' | 'pass' | 'fail' | 'timeout') but AC-6's polling logic
+      only sets 'pass', 'fail', or 'timeout' as terminal states. 'pending' and
+      'running' are intermediate states within the loop. It is not documented when
+      these intermediate states are written to the graph state (every poll? never?).
+      If LangGraph checkpoints after each poll iteration (it won't — the loop is
+      internal), these would be useful. As-is, intermediate ciStatus values may only
+      appear in the final artifact if the node is interrupted unexpectedly.
+    blocking: false
+
+# ==============================================================================
+# VERDICT
+# ==============================================================================
+
+preliminary_verdict: CONDITIONAL_PASS
+
+verdict_rationale: >
+  The story is well-structured, internally consistent, and demonstrates strong
+  reuse-first discipline with all canonical references verified against actual
+  source files. The 9-point audit passes 8 items cleanly. The sizing WARN is
+  architectural (not a decomposition problem) and split is not recommended.
+  Three gaps were identified:
+  GAP-01 (medium): MERGE.yaml write path requires clarification — YamlArtifactWriter
+    does not have a 'merge' artifact type; writeProof() or direct fs write must be
+    specified for ST-10.
+  GAP-02 (medium): createPersistLearningsNode() interface mismatch with MergeGraphState —
+    implementer must call persistLearnings() directly or adapt the state shape. AC-9
+    language is ambiguous.
+  GAP-03 (low): poll-ci uses createToolNode() which has a 10s hardcoded timeout,
+    incompatible with 30-minute CI polling. Must use createNode() with custom timeout.
+  None of these gaps block story start — they block specific subtasks (ST-10, ST-09,
+  ST-06) and must be resolved before those subtasks begin. The story may proceed to
+  implementation with the condition that these three gaps are addressed either via
+  story amendment or implementer decision log before the relevant subtasks execute.
+
+# ==============================================================================
+# SUMMARY
+# ==============================================================================
+
+summary:
+  total_audit_points: 9
+  pass: 7
+  warn: 1
+  fail: 0
+  conditional: 0
+  split_required: false
+  gaps_mvp_blocking: 3
+  gaps_severity_breakdown:
+    medium: 2
+    low: 1
+  opportunities_non_blocking: 6
+  new_files_verified_absent: true
+  canonical_references_verified: true
+  reuse_items_confirmed:
+    - "QaVerifySchema + qaPassedSuccessfully() + generateQaSummary() — qa-verify.ts CONFIRMED"
+    - "createPersistLearningsNode() + LearningSchema + LearningCategorySchema — persist-learnings.ts CONFIRMED"
+    - "createToolNode() — node-factory.ts CONFIRMED"
+    - "isRetryableNodeError() + ErrorCategory — error-classification.ts CONFIRMED"
+    - "YamlArtifactWriter (atomic) — yaml-artifact-writer.ts CONFIRMED"
+    - "YamlArtifactReader — yaml-artifact-reader.ts CONFIRMED"
+    - "StateGraph pattern — elaboration.ts CONFIRMED"
+
+# ==============================================================================
+# DECISION FIELDS (for PM/lead review)
+# ==============================================================================
+
+decisions:
+  proceed: null
+  split: null
+  notes: null

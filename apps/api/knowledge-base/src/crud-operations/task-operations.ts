@@ -10,7 +10,7 @@
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { eq, desc, and, sql, lt } from 'drizzle-orm'
+import { eq, desc, and, sql, lt, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { tasks } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
@@ -20,6 +20,29 @@ import {
   TaskStatusSchema,
   TaskEffortSchema,
 } from '../__types__/index.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const taskColumns = {
+  id: tasks.id,
+  title: tasks.title,
+  description: tasks.description,
+  sourceStoryId: tasks.sourceStoryId,
+  sourcePhase: tasks.sourcePhase,
+  sourceAgent: tasks.sourceAgent,
+  taskType: tasks.taskType,
+  priority: tasks.priority,
+  status: tasks.status,
+  blockedBy: tasks.blockedBy,
+  relatedKbEntries: tasks.relatedKbEntries,
+  promotedToStory: tasks.promotedToStory,
+  tags: tasks.tags,
+  estimatedEffort: tasks.estimatedEffort,
+  createdAt: tasks.createdAt,
+  updatedAt: tasks.updatedAt,
+  completedAt: tasks.completedAt,
+  deletedAt: tasks.deletedAt,
+  deletedBy: tasks.deletedBy,
+} as const
 
 // ============================================================================
 // Input Schemas
@@ -233,7 +256,11 @@ export async function kb_get_task(
   const validatedInput = KbGetTaskInputSchema.parse(input)
   const { db } = deps
 
-  const result = await db.select().from(tasks).where(eq(tasks.id, validatedInput.id)).limit(1)
+  const result = await db
+    .select(taskColumns)
+    .from(tasks)
+    .where(and(eq(tasks.id, validatedInput.id), isNull(tasks.deletedAt)))
+    .limit(1)
 
   return result[0] ?? null
 }
@@ -331,7 +358,9 @@ export async function kb_list_tasks(
   }
   const { db } = deps
 
-  const conditions: ReturnType<typeof eq>[] = []
+  const conditions: (ReturnType<typeof eq> | ReturnType<typeof isNull>)[] = [
+    isNull(tasks.deletedAt),
+  ]
 
   if (validatedInput.status) {
     conditions.push(eq(tasks.status, validatedInput.status))
@@ -379,7 +408,7 @@ export async function kb_list_tasks(
 
   // Get paginated results
   const result = await db
-    .select()
+    .select(taskColumns)
     .from(tasks)
     .where(whereClause)
     .orderBy(desc(tasks.createdAt))

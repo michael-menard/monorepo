@@ -1,0 +1,53 @@
+schema: 1
+story_id: WINT-2080
+timestamp: 2026-03-06T22:50:00Z
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - .claude/agents/context-warmer.agent.md
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create lightweight haiku-powered worker agent (context-warmer) that invokes cache-warm skill and handles partial failures gracefully"
+
+elaboration: completed
+
+constraints:
+  - "Single markdown file delivery: .claude/agents/context-warmer.agent.md (~150-200 lines)"
+  - "9 acceptance criteria covering: frontmatter, mission, execution phases, partial failure handling, graceful degradation, completion signals, LangGraph notes, constraints, non-goals"
+  - "Reference patterns from scope-defender.agent.md (haiku worker template) and kb-writer.agent.md (fallback/completion signals)"
+  - "No TypeScript code, no endpoints, no database changes"
+  - "Signal completion with: SETUP COMPLETE or SETUP BLOCKED: reason"
+
+dependencies:
+  - story: WINT-2070
+    role: blocking
+    reason: "cache-warm skill must be available for context-warmer to invoke"
+
+test_plan:
+  strategy: manual+behavioral
+  happy_paths:
+    - "Agent file exists with valid WINT frontmatter"
+    - "Agent mission is defined and concise (≤5 sentences)"
+    - "Agent defines phased execution model with 4+ phases"
+    - "Partial failure path documented with CACHE-WARM COMPLETE WITH WARNINGS signal"
+    - "Graceful degradation path documented"
+    - "SETUP COMPLETE signal documented"
+    - "LangGraph porting notes documented"
+    - "Embedded constraints documented"
+    - "Non-goals documented"

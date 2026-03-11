@@ -1,0 +1,25 @@
+schema: 1
+id: WISH-2004
+feature: wish
+type: feature
+state: uat
+title: Modals & Transitions
+points: null
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2001
+follow_up_from: null
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Enable users to delete wishlist items or transition them to their Sets collection with purchase details, using
+  confirmation modals and toast notifications for feedback.
+non_goals: []
+acs: []
+risks: []
+created_at: 2026-01-28T12:00:00Z
+updated_at: 2026-01-29T18:15:00Z

@@ -1,0 +1,192 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  scripts_touched: true
+  commands_touched: true
+  files_in_scope:
+    - scripts/implement-stories.sh
+    - scripts/implement-dispatcher.sh
+    - scripts/generate-stories.sh
+    - .claude/commands/precondition-check.md
+    - .claude/commands/context-init.md
+    - .claude/commands/dev-implement-story.md
+    - .claude/commands/elab-story.md
+    - .claude/commands/dev-code-review.md
+    - .claude/commands/qa-verify-story.md
+    - .claude/commands/dev-fix-story.md
+    - .claude/commands/scrum-master.md
+
+happy_path_tests:
+  - id: HP-1
+    title: "implement-stories.sh selects elaborated stories via KB state query"
+    setup: "KB has story KFMB-XXXX with state=ready (elaborated). _implementation/ELAB.yaml does NOT exist on disk for that story."
+    action: "Run ./scripts/implement-stories.sh kb-first-migration --dry-run"
+    expected: "Story KFMB-XXXX is included in the output list of stories to implement. No filesystem ELAB.yaml check errors."
+    evidence: "Dry-run output includes KFMB-XXXX; script does not log any file-not-found warnings for _implementation/ELAB.yaml"
+
+  - id: HP-2
+    title: "implement-stories.sh excludes non-elaborated stories via KB state"
+    setup: "KB has story KFMB-YYYY with state=backlog (not elaborated). _implementation/ELAB.yaml does NOT exist on disk."
+    action: "Run ./scripts/implement-stories.sh kb-first-migration --dry-run"
+    expected: "Story KFMB-YYYY is NOT included in the implement list."
+    evidence: "Dry-run output does not include KFMB-YYYY"
+
+  - id: HP-3
+    title: "precondition-check passes for elaborated story (dev-implement-story)"
+    setup: "KB has story with state=ready and elaboration artifact present (kb_read_artifact returns non-null)."
+    action: "Run /precondition-check {STORY_ID} --command=dev-implement-story"
+    expected: "Precondition check returns PASS. No error about missing _implementation/ELAB.yaml."
+    evidence: "Command output shows PASS verdict"
+
+  - id: HP-4
+    title: "precondition-check passes for verified story (qa-verify-story)"
+    setup: "KB has story with a verification artifact present (kb_read_artifact({story_id, artifact_type: 'verification'}) returns non-null)."
+    action: "Run /precondition-check {STORY_ID} --command=qa-verify-story"
+    expected: "Precondition check returns PASS."
+    evidence: "Command output shows PASS verdict"
+
+  - id: HP-5
+    title: "generate-stories.sh skips already-generated stories via KB state"
+    setup: "KB has story KFMB-ZZZZ with state=backlog or higher (already generated, has acceptance_criteria in KB). No story.yaml with acceptance_criteria exists on local disk for that story."
+    action: "Run ./scripts/generate-stories.sh kb-first-migration --dry-run"
+    expected: "KFMB-ZZZZ is skipped as already generated. No filesystem stat errors."
+    evidence: "Dry-run output shows KFMB-ZZZZ as ALREADY_GENERATED"
+
+  - id: HP-6
+    title: "generate-stories.sh skips already-elaborated stories via KB state"
+    setup: "KB has story KFMB-WWWW with state=ready (elaborated). No _implementation/ directory exists on disk."
+    action: "Run ./scripts/generate-stories.sh kb-first-migration --dry-run"
+    expected: "KFMB-WWWW is skipped as already elaborated."
+    evidence: "Dry-run output shows KFMB-WWWW as ALREADY_ELABORATED"
+
+  - id: HP-7
+    title: "Command orchestrator spawns agents with story_id not filesystem paths"
+    setup: "Start a dev-implement-story run for an elaborated story."
+    action: "Observe agent spawn prompts in dev-implement-story.md Phase 1-N"
+    expected: "All agent spawn prompts pass story_id as context key. No prompts contain _implementation/ELAB.yaml or similar filesystem paths."
+    evidence: "Grep of agent spawn prompts in dev-implement-story.md shows no _implementation/ path references as primary artifact context"
+
+error_cases:
+  - id: EC-1
+    title: "precondition-check fails for non-elaborated story"
+    setup: "KB has story with state=backlog (not elaborated). No elaboration artifact exists."
+    action: "Run /precondition-check {STORY_ID} --command=dev-implement-story"
+    expected: "Precondition check returns FAIL with message indicating elaboration artifact not found in KB."
+    evidence: "Command output shows FAIL verdict with KB-based error message (not 'file not found')"
+
+  - id: EC-2
+    title: "precondition-check fails when verification artifact absent"
+    setup: "KB has story with state=ready_for_review but no verification artifact."
+    action: "Run /precondition-check {STORY_ID} --command=qa-verify-story"
+    expected: "Precondition check returns FAIL."
+    evidence: "Command output shows FAIL verdict"
+
+  - id: EC-3
+    title: "Shell script KB query fails gracefully when KB unavailable"
+    setup: "KB MCP server is unavailable. Story has no _implementation/ELAB.yaml on disk."
+    action: "Run ./scripts/implement-stories.sh kb-first-migration --dry-run"
+    expected: "Script logs a warning about KB unavailability and skips (or treats story as not-ready) rather than crashing."
+    evidence: "Script exits with non-fatal warning; does not throw unhandled error or empty output without message"
+
+  - id: EC-4
+    title: "implement-dispatcher.sh poll cycle handles KB query failure without crash"
+    setup: "KB MCP server times out during claude -p subprocess call."
+    action: "Run ./scripts/implement-dispatcher.sh kb-first-migration"
+    expected: "Dispatcher logs error for that poll cycle and continues on next poll rather than exiting."
+    evidence: "Dispatcher process continues running after KB timeout event"
+
+edge_cases:
+  - id: ED-1
+    title: "Dispatcher performance: KB query latency acceptable"
+    setup: "Plan with 6 active stories, all requiring state queries."
+    action: "Run ./scripts/implement-dispatcher.sh {plan-slug} --dry-run and time one poll cycle"
+    expected: "Poll cycle completes within acceptable latency (batch query strategy: one kb_list_stories call covers all stories rather than per-story subprocess)"
+    evidence: "Timing output shows poll cycle < 10 seconds for 6-story plan"
+
+  - id: ED-2
+    title: "context-init.md backward compatibility maintained"
+    setup: "Run /elab-story for a story via scrum-master.md workflow."
+    action: "Observe whether AGENT-CONTEXT.md is available to downstream agents (scrum-master-loop-leader)"
+    expected: "Downstream agents receive context via KB artifact OR filesystem path (whichever was implemented per AC-7). No breakage."
+    evidence: "scrum-master.md Phase 1 loop completes without context-not-found error"
+
+  - id: ED-3
+    title: "End-to-end pipeline smoke test after migration"
+    setup: "Fresh story in KB with state=backlog. All KFMB-5010, KFMB-5020, KFMB-5030 complete."
+    action: "Run full pipeline: /elab-story -> /dev-implement-story -> /dev-code-review -> /qa-verify-story"
+    expected: "Pipeline completes all phases without _implementation/ELAB.yaml or _implementation/EVIDENCE.yaml file-not-found errors."
+    evidence: "No filesystem artifact path errors in any phase logs"
+
+  - id: ED-4
+    title: "implement-stories.sh is_reviewed() correctly identifies reviewed stories via KB"
+    setup: "Story has KB state=in_review (reviewed). No _implementation/REVIEW.yaml on disk."
+    action: "Run ./scripts/implement-stories.sh kb-first-migration --dry-run"
+    expected: "Story is correctly identified as reviewed and excluded from re-implementation list."
+    evidence: "Dry-run shows story in 'already reviewed' category"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+  scripts:
+    dry_run_commands:
+      - "bash scripts/implement-stories.sh kb-first-migration --dry-run"
+      - "bash scripts/generate-stories.sh kb-first-migration --dry-run"
+      - "bash scripts/implement-dispatcher.sh kb-first-migration --dry-run"
+    assertions:
+      - "No _implementation/ path references in is_elaborated() / is_implemented() / is_reviewed() function bodies"
+      - "claude -p subprocess pattern present for KB state queries"
+      - "Batch kb_list_stories call used in implement-dispatcher.sh (not per-story call)"
+  commands:
+    spot_checks:
+      - "grep -n '_implementation/' .claude/commands/precondition-check.md — should return 0 matches for --requires= checks after migration"
+      - "grep -n 'story_id' .claude/commands/dev-implement-story.md — should show story_id as agent spawn context key"
+      - "grep -n '_implementation/ELAB.yaml' scripts/implement-stories.sh — should return 0 matches"
+      - "grep -n '_implementation/EVIDENCE.yaml' scripts/implement-dispatcher.sh — should return 0 matches"
+
+manual_cases:
+  - id: MC-1
+    title: "Command file frontmatter kb_artifacts accuracy check"
+    steps:
+      - "Open each command file in scope (dev-implement-story.md, elab-story.md, dev-code-review.md, qa-verify-story.md, dev-fix-story.md)"
+      - "Review frontmatter kb_artifacts list"
+      - "Cross-reference with actual kb_read_artifact and kb_write_artifact calls in the command body"
+    expected: "Every artifact type read or written in the command body appears in the frontmatter kb_artifacts list"
+
+  - id: MC-2
+    title: "context-init.md migration rationale documented"
+    steps:
+      - "Open .claude/commands/context-init.md"
+      - "Check whether KB artifact write or filesystem write is used"
+      - "If filesystem retained: verify a clear rationale comment explains the deferral"
+    expected: "Either KB write is implemented OR a clear rationale paragraph explains filesystem retention with downstream consumer audit results"
+
+  - id: MC-3
+    title: "KFMB-4020 scope boundary respected"
+    steps:
+      - "Review git diff for precondition-check.md and context-init.md"
+      - "Confirm only --requires= artifact checks are modified (KFMB-5030 scope)"
+      - "Confirm --in-stage= directory checks are NOT modified (KFMB-4020 scope)"
+    expected: "No --in-stage= changes present in KFMB-5030 diff"
+
+fixture_definitions:
+  - name: "story-elaborated-kb"
+    type: "kb_state"
+    description: "Story in KB with state=ready and elaboration artifact present — represents an elaborated story after KFMB-5010/5020 completion"
+  - name: "story-backlog-kb"
+    type: "kb_state"
+    description: "Story in KB with state=backlog and no elaboration artifact — represents an unelaborated story"
+  - name: "story-implemented-kb"
+    type: "kb_state"
+    description: "Story in KB with state=ready_for_review and evidence artifact present"
+  - name: "story-reviewed-kb"
+    type: "kb_state"
+    description: "Story in KB with state=in_review"
+
+risks:
+  - "KB unavailability during integration tests may mask false positives — use ADR-005 real DB (port 5433) requirement"
+  - "KFMB-5020 must be complete before these tests are meaningful — KB artifacts must be populated by writer/reader agent migration"
+  - "Dispatcher performance test is sensitive to environment (CI vs local) — establish baseline before migration for comparison"
+  - "context-init.md consumer audit may find undocumented downstream readers not in scope for this story"

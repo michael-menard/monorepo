@@ -9,7 +9,6 @@ skills_used:
   - /precondition-check
   - /story-move
   - /story-update
-  - /index-update
   - /token-log
 ---
 
@@ -32,52 +31,57 @@ From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 
-From filesystem:
-- `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md`
-
 ---
 
 ## Precondition Validation (HARD STOP)
 
-| Check | How | Fail Action |
-|-------|-----|-------------|
-| Story in backlog | File at `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md` | Check elaboration |
-| Story in elaboration | File at `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` | Already staged, COMPLETE |
-| Story not found | Neither location | STOP: "Story not found" |
+Check story existence **KB-first**, then fall back to filesystem:
+
+```
+1. kb_get_story({ story_id: "{STORY_ID}" })
+   → state == "elaboration": Already staged → ELAB-SETUP COMPLETE (skip all actions)
+   → state == "backlog" (or "draft"): Proceed with actions below
+   → null: Fall back to filesystem check
+
+2. Filesystem fallback (only if KB returns null):
+   → File at {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md: Proceed
+   → File at {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md: Already staged → COMPLETE
+   → Neither: STOP: "Story {STORY_ID} not found in KB or filesystem"
+```
 
 ---
 
-## Actions (Sequential, using skills)
+## Actions (Sequential)
 
-### 1. Move Story Directory (use /story-move skill)
+### 1. Update KB State (PRIMARY — always run)
+
+```
+kb_update_story_status({ story_id: "{STORY_ID}", state: "elaboration", phase: "planning" })
+```
+
+If KB unavailable: log warning and continue — filesystem move below serves as fallback.
+
+### 2. Move Story Directory (best-effort — only if directory exists)
+
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/` does not exist on disk.
 
 ```
 /story-move {FEATURE_DIR} {STORY_ID} elaboration
 ```
 
-This creates the destination directory if needed and moves the story.
+### 3. Update Story Status in File (best-effort — only if story file exists)
 
-### 2. Update Story Status (use /story-update skill)
+Skip silently if `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` does not exist.
 
 ```
 /story-update {FEATURE_DIR} {STORY_ID} elaboration
 ```
 
-This updates both story frontmatter and index entry.
-
-### 3. Update Story Index (use /index-update skill)
-
-```
-/index-update {FEATURE_DIR} {STORY_ID} --status=elaboration
-```
-
-This ensures the index Progress Summary counts are updated.
-
 ---
 
 ## Output
 
-No artifacts written. Directory structure prepared, index status updated.
+No artifacts written. KB state updated; filesystem directory updated if present.
 
 ---
 
@@ -103,8 +107,10 @@ Estimate: `tokens ≈ bytes / 4`
 
 ## Non-Negotiables
 
-- MUST update index status to `In Elaboration` before completion
+- MUST check KB (`kb_get_story`) before filesystem — KB is authoritative
+- MUST update KB state to `elaboration` before completion
 - MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT modify story content
-- Do NOT proceed if story not found in either location
+- Do NOT proceed if story not found in KB or filesystem
+- Filesystem moves and index updates are best-effort — skip if no directory/file exists
