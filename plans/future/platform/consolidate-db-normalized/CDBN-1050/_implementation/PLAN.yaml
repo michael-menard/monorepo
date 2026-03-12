@@ -1,0 +1,288 @@
+schema: 2
+story_id: CDBN-1050
+timestamp: '2026-03-12T03:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Write DECISION-fk-resolution.md documenting cross-schema FK strategy and story_state_history column design (AC-11,
+      AC-4)
+    files:
+      - plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    files_to_read:
+      - plans/future/platform/consolidate-db-normalized/CDBN-0020/MANIFEST.yaml
+    dependencies: []
+    slice: backend
+    verification: >-
+      File exists at _implementation/DECISION-fk-resolution.md and contains DEFERRABLE strategy and story_state_history
+      column table
+    acs_covered:
+      - AC-4
+      - AC-11
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Write migration 033_workflow_schema.sql: safety preamble, CREATE SCHEMA IF NOT EXISTS workflow, CREATE TABLE
+      workflow.stories with columns, composite indexes on (feature,state) and (state,updated_at)
+    files:
+      - apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/025_structural_ddl_and_cross_schema_fk.sql
+      - plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      SQL file contains BEGIN; safety preamble checking current_database()='knowledgebase', CREATE SCHEMA IF NOT EXISTS
+      workflow, CREATE TABLE workflow.stories with story_id PK
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-12
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Append to 033_workflow_schema.sql: CREATE TABLE workflow.story_dependencies with self-referential FKs (story_id,
+      depends_on_story_id → workflow.stories.story_id) using DEFERRABLE INITIALLY DEFERRED
+    files:
+      - apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    files_to_read:
+      - plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      SQL contains DEFERRABLE INITIALLY DEFERRED on both FK constraints for story_dependencies, FK constraint names
+      documented
+    acs_covered:
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Append to 033_workflow_schema.sql: CREATE TABLE workflow.story_state_history with event_type discriminator, CHECK
+      constraint on event_type, FK to workflow.stories, all columns per DECISION record, composite indexes
+    files:
+      - apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    files_to_read:
+      - plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      SQL contains CREATE TABLE workflow.story_state_history with event_type CHECK constraint enumerating 6 values, FK
+      to workflow.stories, 3 composite indexes
+    acs_covered:
+      - AC-4
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Append to 033_workflow_schema.sql: CREATE TABLE workflow.worktrees (FK to stories), workflow.workflow_executions
+      (FK to stories), workflow.workflow_checkpoints (FK to executions), workflow.workflow_audit_log (FK to executions).
+      COMMIT;
+    files:
+      - apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/025_structural_ddl_and_cross_schema_fk.sql
+    dependencies:
+      - 2
+      - 3
+      - 4
+    slice: backend
+    verification: SQL contains all 4 remaining tables with correct FKs; file ends with COMMIT;
+    acs_covered:
+      - AC-5
+      - AC-6
+      - AC-7
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Update apps/api/knowledge-base/src/db/schema.ts: add pgSchema('workflow') import from drizzle-orm/pg-core, declare
+      workflowStories, workflowStoryDependencies, workflowStoryStateHistory, workflowWorktrees, workflowExecutions,
+      workflowCheckpoints, workflowAuditLog exports — all under the workflow schema object, no existing exports modified
+    files:
+      - apps/api/knowledge-base/src/db/schema.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/db/schema.ts
+      - plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      schema.ts exports workflowStories, workflowStoryDependencies, workflowStoryStateHistory, workflowWorktrees,
+      workflowExecutions, workflowCheckpoints, workflowAuditLog; existing stories/storyDependencies exports unchanged
+    acs_covered:
+      - AC-8
+      - AC-13
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Run pnpm db:migrate in apps/api/knowledge-base/ to apply 033_workflow_schema.sql against knowledgebase DB at
+      localhost:5433
+    files: []
+    files_to_read: []
+    dependencies:
+      - 5
+      - 6
+    slice: backend
+    verification: pnpm db:migrate exits 0; no error output; migration recorded in meta table
+    acs_covered:
+      - AC-12
+  - id: 8
+    subtask_id: ST-8
+    description: >-
+      Run SQL verification queries against localhost:5433/knowledgebase: confirm workflow schema exists, all 7 tables
+      present in information_schema.tables, FKs in referential_constraints, indexes in pg_indexes
+    files: []
+    files_to_read: []
+    dependencies:
+      - 7
+    slice: backend
+    verification: >-
+      All 7 tables listed: stories, story_dependencies, story_state_history, worktrees, workflow_executions,
+      workflow_checkpoints, workflow_audit_log in information_schema.tables WHERE table_schema='workflow'
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-9
+      - AC-12
+  - id: 9
+    subtask_id: ST-9
+    description: Run pnpm check-types from apps/api/knowledge-base/ and confirm zero new TypeScript errors from schema.ts additions
+    files: []
+    files_to_read: []
+    dependencies:
+      - 6
+    slice: backend
+    verification: pnpm check-types exits 0; no new errors on workflow* exports or imports
+    acs_covered:
+      - AC-10
+files_to_change:
+  - path: plans/future/platform/consolidate-db-normalized/CDBN-1050/_implementation/DECISION-fk-resolution.md
+    action: create
+    reason: Required by AC-11 before any SQL is written — documents FK strategy and story_state_history column design
+  - path: apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    action: create
+    reason: New migration file creating workflow pgSchema and all 7 workflow tables (AC-1 through AC-7, AC-9, AC-12)
+  - path: apps/api/knowledge-base/src/db/schema.ts
+    action: modify
+    reason: Add pgSchema('workflow') and 7 Drizzle table exports with workflow prefix (AC-8, AC-13)
+commands_to_run:
+  - command: pnpm db:migrate
+    when: after 033_workflow_schema.sql is written and schema.ts is updated
+    required: true
+    working_directory: apps/api/knowledge-base
+  - command: >-
+      PGPASSWORD=postgres psql -h localhost -p 5433 -d knowledgebase -U postgres -c "SELECT table_name FROM
+      information_schema.tables WHERE table_schema = 'workflow' ORDER BY table_name;"
+    when: after pnpm db:migrate succeeds
+    required: true
+    working_directory: .
+  - command: pnpm check-types
+    when: after schema.ts is updated
+    required: true
+    working_directory: apps/api/knowledge-base
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: pnpm db:migrate succeeds + psql query confirms workflow schema in information_schema.schemata
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: >-
+      psql query on information_schema.columns WHERE table_schema='workflow' AND table_name='stories' lists required
+      columns; pg_indexes shows composite indexes
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: >-
+      psql query on information_schema.referential_constraints shows fk_story_deps_story_id and fk_story_deps_depends_on
+      with DEFERRABLE
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: >-
+      DECISION-fk-resolution.md exists with story_state_history column table and event_type CHECK constraint values;
+      migration SQL creates table per spec
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      psql query on information_schema.columns WHERE table_name='worktrees' lists worktree_id, story_id, branch_name,
+      path, created_at
+    evidence_type: command
+  - ac_id: AC-6
+    planned_evidence: >-
+      psql query on information_schema.columns WHERE table_name='workflow_executions' lists id, story_id, status,
+      started_at, completed_at
+    evidence_type: command
+  - ac_id: AC-7
+    planned_evidence: >-
+      psql query on information_schema.referential_constraints confirms workflow_checkpoints and workflow_audit_log have
+      FKs to workflow_executions.id
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: schema.ts contains pgSchema('workflow') import and 7 exported table definitions under workflow schema object
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      psql query returns all 7 table names: stories, story_dependencies, story_state_history, worktrees,
+      workflow_executions, workflow_checkpoints, workflow_audit_log
+    evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: pnpm check-types exits 0 with no new TypeScript errors
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: >-
+      DECISION-fk-resolution.md exists at _implementation/ with DEFERRABLE strategy, story_state_history design, and
+      cross-schema scope boundary
+    evidence_type: file
+  - ac_id: AC-12
+    planned_evidence: >-
+      All verification commands use -p 5433 -d knowledgebase connection string; pnpm db:migrate run from
+      apps/api/knowledge-base/
+    evidence_type: command
+  - ac_id: AC-13
+    planned_evidence: >-
+      schema.ts grep confirms exports named workflowStories, workflowStoryDependencies, workflowStoryStateHistory,
+      workflowWorktrees, workflowExecutions, workflowCheckpoints, workflowAuditLog; existing stories export unchanged
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should self-referential FKs on workflow.story_dependencies use DEFERRABLE INITIALLY DEFERRED or standard
+      non-deferred constraints?
+    decision: DEFERRABLE INITIALLY DEFERRED
+    rationale: >-
+      Allows bulk inserts in Phase 2 data migration stories without topological ordering constraints. Supports circular
+      dependency graphs. Constraint integrity preserved at transaction commit boundary.
+    decided_by: user
+  - id: ARCH-002
+    question: What is the disposition of 13 cross-schema FK violations from CDBN-0020 MANIFEST?
+    decision: Out of scope for CDBN-1050 — deferred to downstream stories CDBN-1020, CDBN-1030, CDBN-1040
+    rationale: >-
+      CDBN-1050 is DDL-only for the new workflow schema. The 13 violations are pre-existing in wint/analytics schemas
+      referencing public.stories and are not introduced by this story.
+    decided_by: user
+complexity: moderate
+e2e_gate: EXEMPT
+e2e_exemption_reason: Infrastructure/DDL story — no HTTP endpoints, no Playwright tests required
+notes:
+  - >-
+    ST-1 (DECISION record) is a prerequisite for ST-2/ST-3/ST-4 — do not write any SQL before DECISION-fk-resolution.md
+    is written
+  - All verification queries target localhost:5433 knowledgebase (NOT localhost:5432 lego_dev) — AC-12 correction
+  - >-
+    Migration file must include safety preamble: DO $$ BEGIN IF current_database() != 'knowledgebase' THEN RAISE
+    EXCEPTION... per pattern in 025_structural_ddl_and_cross_schema_fk.sql
+  - Migration file must be wrapped in BEGIN; ... COMMIT; transaction block
+  - 'Next migration number is 033 (current highest: 032_compound_plan_type.sql)'
+  - >-
+    Drizzle export names must use workflow prefix (workflowStories not stories) to avoid collision with existing public
+    schema exports — AC-13
+  - >-
+    story_state_history event_type CHECK constraint must enumerate all 6 values: state_change, transition, phase_change,
+    assignment, blocker, metadata_version
+  - >-
+    ST-6 (schema.ts update) can proceed in parallel with ST-2 through ST-5 since it is TypeScript-only and does not
+    depend on migration execution
+  - ST-7 (db:migrate) depends on both SQL file completion (ST-5) and schema.ts update (ST-6) to ensure type consistency
