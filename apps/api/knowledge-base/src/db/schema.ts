@@ -14,6 +14,7 @@
 
 import {
   pgTable,
+  pgSchema,
   text,
   timestamp,
   uuid,
@@ -1892,3 +1893,294 @@ export type StoryKnowledgeLink = typeof storyKnowledgeLinks.$inferSelect
 export type NewStoryKnowledgeLink = typeof storyKnowledgeLinks.$inferInsert
 export type DeferredWrite = typeof deferredWrites.$inferSelect
 export type NewDeferredWrite = typeof deferredWrites.$inferInsert
+
+// ============================================================================
+// Workflow Schema (CDBN-1050)
+// ============================================================================
+
+/**
+ * PostgreSQL `workflow` schema — structural foundation for the story and plan store.
+ *
+ * Contains 7 tables:
+ *   workflowStories, workflowStoryDependencies, workflowStoryStateHistory,
+ *   workflowWorktrees, workflowExecutions, workflowCheckpoints, workflowAuditLog
+ *
+ * @see apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+ */
+export const workflowSchema = pgSchema('workflow')
+
+/**
+ * workflow.stories
+ *
+ * Primary story record for the workflow store. Each story has a text PK (story_id),
+ * feature prefix, lifecycle state, title, priority, and description.
+ * Indexed on (feature, state) and (state, updated_at) for hot-path queries.
+ */
+export const workflowStories = workflowSchema.table(
+  'stories',
+  {
+    /** Unique story identifier (e.g., 'CDBN-1050') — text PK */
+    storyId: text('story_id').primaryKey(),
+
+    /** Feature prefix (e.g., 'cdbn', 'wint') */
+    feature: text('feature').notNull(),
+
+    /**
+     * Lifecycle state.
+     * Examples: 'backlog' | 'ready' | 'in_progress' | 'ready_for_review' |
+     *           'in_review' | 'completed' | 'cancelled' | 'deferred'
+     */
+    state: text('state').notNull(),
+
+    /** Story title */
+    title: text('title').notNull(),
+
+    /**
+     * Priority level.
+     * Values: 'critical' | 'high' | 'medium' | 'low'
+     */
+    priority: text('priority'),
+
+    /** Human-readable story description */
+    description: text('description'),
+
+    /** When the story record was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the story record was last updated */
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    /** Composite index for filtering stories by feature and state */
+    featureStateIdx: index('idx_workflow_stories_feature_state').on(table.feature, table.state),
+
+    /** Composite index for sorted queries by state recency */
+    stateUpdatedAtIdx: index('idx_workflow_stories_state_updated_at').on(
+      table.state,
+      table.updatedAt,
+    ),
+  }),
+)
+
+/**
+ * workflow.story_dependencies
+ *
+ * Self-referential dependency graph for workflow stories.
+ * Both FKs are DEFERRABLE INITIALLY DEFERRED (ARCH-001) to allow bulk inserts
+ * before all referenced story_ids exist in the same transaction.
+ */
+export const workflowStoryDependencies = workflowSchema.table(
+  'story_dependencies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Story that has the dependency (FK to workflow.stories.story_id — DEFERRABLE) */
+    storyId: text('story_id').notNull(),
+
+    /** Story that is depended upon (FK to workflow.stories.story_id — DEFERRABLE) */
+    dependsOnId: text('depends_on_id').notNull(),
+
+    /**
+     * Nature of the dependency.
+     * Examples: 'depends_on' | 'blocked_by' | 'follow_up_from' | 'enables'
+     */
+    dependencyType: text('dependency_type').notNull(),
+
+    /** When the dependency was recorded */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_workflow_story_dep_story_id').on(table.storyId),
+    dependsOnIdx: index('idx_workflow_story_dep_depends_on').on(table.dependsOnId),
+  }),
+)
+
+/**
+ * workflow.story_state_history
+ *
+ * Append-only event log for story state transitions and lifecycle events.
+ * event_type is constrained to a closed set via CHECK constraint in the migration.
+ *
+ * Valid event_type values:
+ *   'state_change' | 'transition' | 'phase_change' | 'assignment' | 'blocker' | 'metadata_version'
+ */
+export const workflowStoryStateHistory = workflowSchema.table(
+  'story_state_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Story this event belongs to (FK to workflow.stories.story_id RESTRICT) */
+    storyId: text('story_id')
+      .notNull()
+      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
+
+    /**
+     * Discriminator for the type of event.
+     * CHECK constraint enforced in migration 033.
+     * Values: 'state_change' | 'transition' | 'phase_change' | 'assignment' | 'blocker' | 'metadata_version'
+     */
+    eventType: text('event_type').notNull(),
+
+    /** State before the transition (null for non-state events) */
+    fromState: text('from_state'),
+
+    /** State after the transition (null for non-state events) */
+    toState: text('to_state'),
+
+    /** Additional structured metadata about the event */
+    metadata: jsonb('metadata'),
+
+    /** When the event occurred */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_workflow_story_state_history_story_id').on(table.storyId),
+    eventTypeIdx: index('idx_workflow_story_state_history_event_type').on(table.eventType),
+    createdAtIdx: index('idx_workflow_story_state_history_created_at').on(table.createdAt),
+  }),
+)
+
+/**
+ * workflow.worktrees
+ *
+ * Tracks active git worktrees associated with stories.
+ * Each worktree is tied to exactly one story via FK.
+ */
+export const workflowWorktrees = workflowSchema.table(
+  'worktrees',
+  {
+    /** Unique identifier for the worktree */
+    worktreeId: uuid('worktree_id').primaryKey().defaultRandom(),
+
+    /** Story this worktree is for (FK to workflow.stories.story_id RESTRICT) */
+    storyId: text('story_id')
+      .notNull()
+      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
+
+    /** Git branch name (e.g., 'story/CDBN-1050') */
+    branchName: text('branch_name').notNull(),
+
+    /** Absolute filesystem path to the worktree root */
+    path: text('path').notNull(),
+
+    /** When the worktree record was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_workflow_worktrees_story_id').on(table.storyId),
+  }),
+)
+
+/**
+ * workflow.workflow_executions
+ *
+ * Represents a single agent workflow execution run for a story.
+ * Tracks status, start time, and optional completion time.
+ */
+export const workflowExecutions = workflowSchema.table(
+  'workflow_executions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Story this execution belongs to (FK to workflow.stories.story_id RESTRICT) */
+    storyId: text('story_id')
+      .notNull()
+      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
+
+    /**
+     * Execution status.
+     * Examples: 'running' | 'completed' | 'failed' | 'cancelled'
+     */
+    status: text('status').notNull(),
+
+    /** When the execution started */
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the execution completed (null if still running) */
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  table => ({
+    storyIdIdx: index('idx_workflow_executions_story_id').on(table.storyId),
+    statusIdx: index('idx_workflow_executions_status').on(table.status),
+  }),
+)
+
+/**
+ * workflow.workflow_checkpoints
+ *
+ * Phase-level checkpoints captured during a workflow execution.
+ * Enables resumption from a known-good state after failure.
+ */
+export const workflowCheckpoints = workflowSchema.table(
+  'workflow_checkpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Execution this checkpoint belongs to (FK to workflow.workflow_executions.id RESTRICT) */
+    executionId: uuid('execution_id')
+      .notNull()
+      .references(() => workflowExecutions.id, { onDelete: 'restrict' }),
+
+    /** Workflow phase name at the time of the checkpoint (e.g., 'plan', 'execute', 'review') */
+    phase: text('phase').notNull(),
+
+    /** Serialized state snapshot for resumption */
+    state: jsonb('state'),
+
+    /** When the checkpoint was captured */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    executionIdIdx: index('idx_workflow_checkpoints_execution_id').on(table.executionId),
+  }),
+)
+
+/**
+ * workflow.workflow_audit_log
+ *
+ * Append-only audit trail for events within a workflow execution.
+ * Records agent decisions, errors, phase transitions, and other structured events.
+ */
+export const workflowAuditLog = workflowSchema.table(
+  'workflow_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Execution this audit entry belongs to (FK to workflow.workflow_executions.id RESTRICT) */
+    executionId: uuid('execution_id')
+      .notNull()
+      .references(() => workflowExecutions.id, { onDelete: 'restrict' }),
+
+    /** Discriminator for the type of audit event */
+    eventType: text('event_type').notNull(),
+
+    /** Human-readable description of the event */
+    message: text('message').notNull(),
+
+    /** Additional structured metadata */
+    metadata: jsonb('metadata'),
+
+    /** When the audit event was recorded */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    executionIdIdx: index('idx_workflow_audit_log_execution_id').on(table.executionId),
+    createdAtIdx: index('idx_workflow_audit_log_created_at').on(table.createdAt),
+  }),
+)
+
+// Workflow schema type exports (AC-13)
+export type WorkflowStory = typeof workflowStories.$inferSelect
+export type NewWorkflowStory = typeof workflowStories.$inferInsert
+export type WorkflowStoryDependency = typeof workflowStoryDependencies.$inferSelect
+export type NewWorkflowStoryDependency = typeof workflowStoryDependencies.$inferInsert
+export type WorkflowStoryStateHistory = typeof workflowStoryStateHistory.$inferSelect
+export type NewWorkflowStoryStateHistory = typeof workflowStoryStateHistory.$inferInsert
+export type WorkflowWorktree = typeof workflowWorktrees.$inferSelect
+export type NewWorkflowWorktree = typeof workflowWorktrees.$inferInsert
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect
+export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert
+export type WorkflowCheckpoint = typeof workflowCheckpoints.$inferSelect
+export type NewWorkflowCheckpoint = typeof workflowCheckpoints.$inferInsert
+export type WorkflowAuditLogEntry = typeof workflowAuditLog.$inferSelect
+export type NewWorkflowAuditLogEntry = typeof workflowAuditLog.$inferInsert
