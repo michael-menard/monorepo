@@ -1,6 +1,6 @@
 id: CDBN-1050
 title: Create workflow Schema — DDL Tables, Constraints, Indexes, Drizzle
-status: ready-to-work
+status: needs-code-review
 priority: medium
 phase: 1
 feature: consolidate-db-normalized
