@@ -59,29 +59,29 @@ export const KbAddTaskInputSchema = z.object({
   description: z
     .string()
     .max(10000, 'Description cannot exceed 10000 characters')
-    .optional()
-    .nullable(),
+    .nullable()
+    .optional(),
 
   /** Story where this task was discovered */
-  source_story_id: z.string().optional().nullable(),
+  source_story_id: z.string().nullable().optional(),
 
   /** Workflow phase when discovered (impl, review, qa) */
-  source_phase: z.string().optional().nullable(),
+  source_phase: z.string().nullable().optional(),
 
   /** Agent that created this task */
-  source_agent: z.string().optional().nullable(),
+  source_agent: z.string().nullable().optional(),
 
   /** Type of task (required) */
   task_type: TaskTypeSchema,
 
   /** Priority level (optional, set during triage) */
-  priority: TaskPrioritySchema.optional().nullable(),
+  priority: TaskPrioritySchema.nullable().optional(),
 
   /** Tags for categorization */
-  tags: z.array(z.string()).optional().nullable(),
+  tags: z.array(z.string()).nullable().optional(),
 
   /** Effort estimate */
-  estimated_effort: TaskEffortSchema.optional().nullable(),
+  estimated_effort: TaskEffortSchema.nullable().optional(),
 })
 
 export type KbAddTaskInput = z.infer<typeof KbAddTaskInputSchema>
@@ -108,28 +108,28 @@ export const KbUpdateTaskInputSchema = z
     title: z.string().min(1).max(500).optional(),
 
     /** New description (null clears, undefined leaves unchanged) */
-    description: z.string().max(10000).optional().nullable(),
+    description: z.string().max(10000).nullable().optional(),
 
     /** New priority */
-    priority: TaskPrioritySchema.optional().nullable(),
+    priority: TaskPrioritySchema.nullable().optional(),
 
     /** New status */
     status: TaskStatusSchema.optional(),
 
     /** Task this one is blocked by */
-    blocked_by: z.string().uuid().optional().nullable(),
+    blocked_by: z.string().uuid().nullable().optional(),
 
     /** Related KB entry IDs */
-    related_kb_entries: z.array(z.string().uuid()).optional().nullable(),
+    related_kb_entries: z.array(z.string().uuid()).nullable().optional(),
 
     /** Story ID if promoted */
-    promoted_to_story: z.string().optional().nullable(),
+    promoted_to_story: z.string().nullable().optional(),
 
     /** New tags (null clears, undefined leaves unchanged) */
-    tags: z.array(z.string()).optional().nullable(),
+    tags: z.array(z.string()).nullable().optional(),
 
     /** New effort estimate */
-    estimated_effort: TaskEffortSchema.optional().nullable(),
+    estimated_effort: TaskEffortSchema.nullable().optional(),
   })
   .refine(
     data =>

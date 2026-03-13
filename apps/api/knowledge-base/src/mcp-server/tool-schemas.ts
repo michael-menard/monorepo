@@ -319,10 +319,147 @@ function zodToMcpSchema(zodSchema: unknown): Record<string, unknown> {
     }
 
     if (!rest.type) rest.type = 'object'
-    return rest
+    // Apply defense-in-depth post-processing to clean up anyOf in properties
+    return cleanSchemaProperties(rest)
   }
 
   return jsonSchema as Record<string, unknown>
+}
+
+/**
+ * Defense-in-depth: Clean up anyOf branches in schema properties.
+ * This addresses the issue where .optional().nullable() generates broken schemas
+ * with { "not": {} } branches that confuse AI model JSON generation.
+ *
+ * Transformations:
+ * 1. Remove { "not": {} } branches from anyOf arrays (they represent undefined)
+ * 2. Flatten single-element anyOf arrays
+ * 3. Simplify anyOf: [{ type: X }, { type: "null" }] → { type: [X, "null"] }
+ */
+function cleanSchemaProperties(schema: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...schema }
+
+  // Recursively clean properties
+  if (result.properties && typeof result.properties === 'object') {
+    const cleanedProps: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(result.properties as Record<string, unknown>)) {
+      cleanedProps[key] = cleanAnyOfInSchema(value)
+    }
+    result.properties = cleanedProps
+  }
+
+  // Recursively clean items (for arrays)
+  if (result.items && typeof result.items === 'object') {
+    result.items = cleanAnyOfInSchema(result.items as Record<string, unknown>)
+  }
+
+  return result
+}
+
+/**
+ * Clean anyOf/oneOf in a single schema node (including nested properties).
+ */
+function cleanAnyOfInSchema(schema: unknown): unknown {
+  if (typeof schema !== 'object' || schema === null) {
+    return schema
+  }
+
+  const node = schema as Record<string, unknown>
+  const cleaned: Record<string, unknown> = {}
+
+  // Copy all keys except anyOf/oneOf
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'anyOf' || key === 'oneOf') {
+      continue
+    }
+    // Recursively clean nested properties
+    if (key === 'properties' && typeof value === 'object') {
+      const cleanedProps: Record<string, unknown> = {}
+      for (const [propKey, propValue] of Object.entries(value as Record<string, unknown>)) {
+        cleanedProps[propKey] = cleanAnyOfInSchema(propValue)
+      }
+      cleaned[key] = cleanedProps
+    } else if (key === 'items' && typeof value === 'object') {
+      cleaned[key] = cleanAnyOfInSchema(value)
+    } else {
+      cleaned[key] = value
+    }
+  }
+
+  // Process anyOf branches if present
+  if (node.anyOf && Array.isArray(node.anyOf)) {
+    cleaned.anyOf = cleanAnyOfBranches(node.anyOf)
+  } else if (node.oneOf && Array.isArray(node.oneOf)) {
+    cleaned.oneOf = cleanAnyOfBranches(node.oneOf)
+  }
+
+  return cleaned
+}
+
+/**
+ * Clean anyOf/oneOf array by:
+ * 1. Removing { "not": {} } branches
+ * 2. Flattening single-element arrays
+ * 3. Simplifying [ { type: X }, { type: "null" } ] → { type: [X, "null"] }
+ */
+function cleanAnyOfBranches(branches: unknown[]): unknown[] {
+  // Filter out { not: {} } branches - they represent undefined which is handled by optional
+  const filtered = branches.filter(branch => {
+    if (typeof branch !== 'object' || branch === null) return true
+    const b = branch as Record<string, unknown>
+    // Remove branches that are just { not: {} } or have only 'not' key with empty object
+    if (b.not && typeof b.not === 'object') {
+      const notObj = b.not as Record<string, unknown>
+      // If 'not' is empty {}, or only has properties like 'type' that make it "not anything"
+      const notKeys = Object.keys(notObj)
+      if (notKeys.length === 0) return false
+      // Also check if it's { not: { type: ... } } which means "not this type"
+      if (notKeys.length === 1 && notObj.type) return false
+    }
+    return true
+  })
+
+  // Flatten single-element arrays
+  if (filtered.length === 1) {
+    return filtered
+  }
+
+  // Try to simplify [ { type: X }, { type: "null" } ] → { type: [X, "null"] }
+  const simplified = trySimplifyTypeArray(filtered)
+  return simplified
+}
+
+/**
+ * Try to simplify anyOf of simple types + null into a union type array.
+ */
+function trySimplifyTypeArray(branches: unknown[]): unknown[] {
+  let nullBranch: Record<string, unknown> | null = null
+  const typeBranches: Record<string, unknown>[] = []
+
+  for (const branch of branches) {
+    if (typeof branch !== 'object' || branch === null) continue
+    const b = branch as Record<string, unknown>
+
+    // Check if this is a { type: "null" } branch
+    if (b.type === 'null') {
+      nullBranch = b
+      continue
+    }
+
+    // Only include simple type branches (no enums, constraints, etc. that would be lost)
+    if (typeof b.type === 'string' && Object.keys(b).length === 1) {
+      typeBranches.push(b)
+    }
+  }
+
+  // If we have exactly one type branch + null branch, we can simplify
+  if (typeBranches.length === 1 && nullBranch) {
+    const typeValue = typeBranches[0].type
+    // Return simplified: { type: [typeValue, "null"] }
+    return [{ type: [typeValue, 'null'] }]
+  }
+
+  return branches
 }
 
 /**

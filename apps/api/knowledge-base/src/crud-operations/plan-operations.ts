@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, and, ne, isNotNull, isNull, notInArray, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, isNull, notInArray, inArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans, planDetails, planDependencies, planExecutionLog } from '../db/schema.js'
@@ -90,6 +90,60 @@ async function resolveParentPlanId(
     throw new Error(`Parent plan '${parentPlanSlug}' not found. Create the parent plan first.`)
   }
   return result[0]!.id
+}
+
+/**
+ * Sync the `plan_dependencies` join table to match a desired set of dependency slugs.
+ *
+ * Performs a diff: inserts missing rows, deletes stale rows, and leaves existing
+ * rows untouched. The join table is the single source of truth for plan blocking
+ * dependencies, powering `plan_summary_view`, auto-block, and auto-unblock.
+ *
+ * Passing an empty array clears all dependency rows for the plan.
+ * Passing null/undefined is a no-op (caller should guard).
+ */
+async function syncPlanDependencies(
+  db: NodePgDatabase<typeof schema>,
+  planSlug: string,
+  desiredSlugs: string[],
+): Promise<void> {
+  // Fetch current rows from the join table
+  const currentRows = await db
+    .select({ dependsOnSlug: planDependencies.dependsOnSlug })
+    .from(planDependencies)
+    .where(eq(planDependencies.planSlug, planSlug))
+
+  const currentSet = new Set(currentRows.map(r => r.dependsOnSlug))
+  const desiredSet = new Set(desiredSlugs)
+
+  // Slugs to insert (in desired but not in current)
+  const toInsert = desiredSlugs.filter(s => !currentSet.has(s))
+
+  // Slugs to delete (in current but not in desired)
+  const toDelete = currentRows.map(r => r.dependsOnSlug).filter(s => !desiredSet.has(s))
+
+  // Delete stale rows
+  if (toDelete.length > 0) {
+    await db
+      .delete(planDependencies)
+      .where(
+        and(
+          eq(planDependencies.planSlug, planSlug),
+          inArray(planDependencies.dependsOnSlug, toDelete),
+        ),
+      )
+  }
+
+  // Insert missing rows
+  if (toInsert.length > 0) {
+    await db.insert(planDependencies).values(
+      toInsert.map(depSlug => ({
+        planSlug,
+        dependsOnSlug: depSlug,
+        satisfied: false,
+      })),
+    )
+  }
 }
 
 // ============================================================================
@@ -202,22 +256,22 @@ export const KbUpdatePlanInputSchema = z.object({
   plan_type: z.string().optional(),
 
   /** New feature directory */
-  feature_dir: z.string().optional().nullable(),
+  feature_dir: z.string().nullable().optional(),
 
   /** New story prefix */
-  story_prefix: z.string().optional().nullable(),
+  story_prefix: z.string().nullable().optional(),
 
   /** New estimated stories count */
-  estimated_stories: z.number().int().optional().nullable(),
+  estimated_stories: z.number().int().nullable().optional(),
 
   /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
-  dependencies: z.array(z.string()).optional().nullable(),
+  dependencies: z.array(z.string()).nullable().optional(),
 
   /** Parent plan slug (null to clear, string to set) */
-  parent_plan_slug: z.string().optional().nullable(),
+  parent_plan_slug: z.string().nullable().optional(),
 
   /** UUID of the plan that supersedes/replaces this one */
-  superseded_by: z.string().uuid().optional().nullable(),
+  superseded_by: z.string().uuid().nullable().optional(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -331,7 +385,7 @@ export async function kb_get_plan(
   deps: PlanCrudDeps,
   input: KbGetPlanInput,
 ): Promise<{
-  plan: Partial<typeof plans.$inferSelect> | null
+  plan: (Partial<typeof plans.$inferSelect> & { dependencies?: string[] }) | null
   message: string
 }> {
   const validated = KbGetPlanInputSchema.parse(input)
@@ -356,6 +410,16 @@ export async function kb_get_plan(
     detail = detailResult[0] ?? null
   }
 
+  // Fetch dependencies from the join table (single source of truth)
+  let dependencies: string[] = []
+  if (plan) {
+    const depRows = await deps.db
+      .select({ dependsOnSlug: planDependencies.dependsOnSlug })
+      .from(planDependencies)
+      .where(eq(planDependencies.planSlug, validated.plan_slug))
+    dependencies = depRows.map(r => r.dependsOnSlug)
+  }
+
   return {
     plan: plan
       ? {
@@ -364,12 +428,12 @@ export async function kb_get_plan(
             ? {
                 rawContent: detail.rawContent,
                 phases: detail.phases,
-                dependencies: detail.dependencies,
                 sourceFile: detail.sourceFile,
                 sections: detail.sections,
                 formatVersion: detail.formatVersion,
               }
             : {}),
+          dependencies,
         }
       : null,
     message: plan
@@ -490,14 +554,13 @@ export async function kb_upsert_plan(
   const plan = result[0]!
   const created = plan.createdAt.getTime() === now.getTime()
 
-  // Upsert plan details (moved columns)
+  // Upsert plan details (moved columns — dependencies NOT stored here)
   await deps.db
     .insert(planDetails)
     .values({
       planId: plan.id,
       rawContent: validated.raw_content,
       phases: null,
-      dependencies: validated.dependencies ?? null,
       sourceFile: validated.source_file ?? null,
       contentHash: null,
       sections: validated.sections ?? null,
@@ -509,13 +572,22 @@ export async function kb_upsert_plan(
       target: planDetails.planId,
       set: {
         rawContent: validated.raw_content,
-        dependencies: validated.dependencies ?? null,
         sourceFile: validated.source_file ?? null,
         sections: validated.sections ?? null,
         formatVersion: validated.format_version ?? 'v1',
         updatedAt: now,
       },
     })
+
+  // Sync plan_dependencies join table (the single source of truth for deps).
+  // This powers the plan_summary_view (blocking_plans, is_blocked) and the
+  // auto-block / auto-unblock logic in handlePlanImplemented.
+  await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+
+  // Auto-block if the plan now has unsatisfied dependencies
+  if ((validated.dependencies ?? []).length > 0) {
+    await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+  }
 
   // Create revision history entry
   try {
@@ -603,23 +675,15 @@ export async function kb_update_plan(
 
   const plan = result[0] ?? null
 
-  // Upsert dependencies to planDetails when provided
+  // Sync plan_dependencies join table when dependencies are provided.
+  // The join table is the single source of truth — no JSONB column.
   if (plan && validated.dependencies !== undefined) {
-    await deps.db
-      .insert(planDetails)
-      .values({
-        planId: plan.id,
-        rawContent: '',
-        dependencies: validated.dependencies,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: planDetails.planId,
-        set: {
-          dependencies: validated.dependencies,
-          updatedAt: new Date(),
-        },
-      })
+    await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+
+    // Auto-block if the plan now has unsatisfied dependencies
+    if ((validated.dependencies ?? []).length > 0) {
+      await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+    }
   }
 
   // Auto-unblock: when status changes to 'implemented', check dependent plans
@@ -763,7 +827,7 @@ export async function kb_get_roadmap(
   deps: PlanCrudDeps,
   input: KbGetRoadmapInput,
 ): Promise<{
-  plans: Array<Partial<typeof plans.$inferSelect>>
+  plans: Array<Partial<typeof plans.$inferSelect> & { dependencies: string[] }>
   total: number
   message: string
 }> {
@@ -793,23 +857,40 @@ export async function kb_get_roadmap(
 
   const orderBy = [plans.priority, plans.status, plans.planSlug]
 
-  // Always use explicit columns; left-join planDetails for dependencies
+  // Fetch plans (no left-join on planDetails — dependencies come from join table)
   const result = await deps.db
-    .select({
-      ...planColumns,
-      dependencies: planDetails.dependencies,
-    })
+    .select(planColumns)
     .from(plans)
-    .leftJoin(planDetails, eq(plans.id, planDetails.planId))
     .where(whereClause)
     .limit(validated.limit)
     .offset(validated.offset)
     .orderBy(...orderBy)
 
+  // Batch-fetch dependencies from the join table for all returned plans
+  const slugs = result.map(r => r.planSlug)
+  const depRows =
+    slugs.length > 0
+      ? await deps.db
+          .select({
+            planSlug: planDependencies.planSlug,
+            dependsOnSlug: planDependencies.dependsOnSlug,
+          })
+          .from(planDependencies)
+          .where(inArray(planDependencies.planSlug, slugs))
+      : []
+
+  // Group by plan slug
+  const depsBySlug = new Map<string, string[]>()
+  for (const row of depRows) {
+    const arr = depsBySlug.get(row.planSlug) ?? []
+    arr.push(row.dependsOnSlug)
+    depsBySlug.set(row.planSlug, arr)
+  }
+
   return {
     plans: result.map(r => ({
       ...r,
-      dependencies: (r.dependencies as string[] | null) ?? [],
+      dependencies: depsBySlug.get(r.planSlug) ?? [],
     })),
     total,
     message: `Roadmap: ${result.length} active plans (${total} total)`,

@@ -139,16 +139,16 @@ export const KbWriteArtifactInputSchema = z.object({
   content: z.record(z.unknown()),
 
   /** Implementation phase this artifact belongs to */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Iteration number for fix cycles (default: 0) */
   iteration: z.number().int().min(0).optional().default(0),
 
   /** Human-readable name for the artifact (auto-generated if not provided) */
-  artifact_name: z.string().optional().nullable(),
+  artifact_name: z.string().nullable().optional(),
 
   /** JSONB summary for quick access (subset of content) */
-  summary: z.record(z.unknown()).optional().nullable(),
+  summary: z.record(z.unknown()).nullable().optional(),
 })
 
 export type KbWriteArtifactInput = z.infer<typeof KbWriteArtifactInputSchema>
@@ -184,10 +184,10 @@ export const KbListArtifactsInputSchema = z.object({
   story_id: z.string().min(1, 'Story ID cannot be empty'),
 
   /** Filter by phase */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Filter by artifact type */
-  artifact_type: ArtifactTypeSchema.optional().nullable(),
+  artifact_type: ArtifactTypeSchema.nullable().optional(),
 
   /** Include content in response (default: false for performance) */
   include_content: z.boolean().optional().default(false),
@@ -1023,7 +1023,7 @@ export const ArtifactWriteInputSchema = z.object({
   story_dir: z.string().min(1, 'story_dir cannot be empty'),
 
   /** Implementation phase this artifact belongs to */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Iteration number for fix cycles (default: 0) */
   iteration: z.number().int().min(0).optional().default(0),

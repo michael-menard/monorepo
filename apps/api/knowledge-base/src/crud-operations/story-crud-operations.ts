@@ -232,13 +232,13 @@ export const KbUpdateStoryStatusInputSchema = z.object({
   blocked: z.boolean().optional(),
 
   /** Reason for being blocked */
-  blocked_reason: z.string().optional().nullable(),
+  blocked_reason: z.string().nullable().optional(),
 
   /** Story ID that blocks this one */
-  blocked_by_story: z.string().optional().nullable(),
+  blocked_by_story: z.string().nullable().optional(),
 
   /** New priority */
-  priority: StoryPrioritySchema.optional().nullable(),
+  priority: StoryPrioritySchema.nullable().optional(),
 })
 
 export type KbUpdateStoryStatusInput = z.infer<typeof KbUpdateStoryStatusInputSchema>
@@ -253,34 +253,34 @@ export const KbUpdateStoryInputSchema = z.object({
   story_id: z.string().min(1, 'Story ID cannot be empty'),
 
   /** New epic value */
-  epic: z.string().optional().nullable(),
+  epic: z.string().nullable().optional(),
 
   /** New feature value */
-  feature: z.string().optional().nullable(),
+  feature: z.string().nullable().optional(),
 
   /** New title */
   title: z.string().optional(),
 
   /** New priority */
-  priority: StoryPrioritySchema.optional().nullable(),
+  priority: StoryPrioritySchema.nullable().optional(),
 
   /** New story points */
-  points: z.number().int().min(0).optional().nullable(),
+  points: z.number().int().min(0).nullable().optional(),
 
   /** Human-readable story description */
-  description: z.string().optional().nullable(),
+  description: z.string().nullable().optional(),
 
   /**
    * Acceptance criteria as JSONB (arbitrary structure).
    * Pass null to explicitly clear. Omit to leave unchanged.
    */
-  acceptance_criteria: JSONValueSchema.optional().nullable(),
+  acceptance_criteria: JSONValueSchema.nullable().optional(),
 
   /** Non-goals for this story (text array). Pass null to clear. */
-  non_goals: z.array(z.string()).optional().nullable(),
+  non_goals: z.array(z.string()).nullable().optional(),
 
   /** Packages touched by this story (text array). Pass null to clear. */
-  packages: z.array(z.string()).optional().nullable(),
+  packages: z.array(z.string()).nullable().optional(),
 })
 
 export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
@@ -338,25 +338,25 @@ export const KbCreateStoryInputSchema = z.object({
   title: z.string().min(1, 'Story title cannot be empty').optional(),
 
   /** Feature prefix (e.g., 'kfmb', 'wish') */
-  feature: z.string().optional().nullable(),
+  feature: z.string().nullable().optional(),
 
   /** Epic name */
-  epic: z.string().optional().nullable(),
+  epic: z.string().nullable().optional(),
 
   /** Relative path to story directory */
-  story_dir: z.string().optional().nullable(),
+  story_dir: z.string().nullable().optional(),
 
   /** Story file name (default: 'story.yaml') */
   story_file: z.string().optional(),
 
   /** Type of story: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt' */
-  story_type: StoryTypeSchema.optional().nullable(),
+  story_type: StoryTypeSchema.nullable().optional(),
 
   /** Story points estimate */
-  points: z.number().int().min(0).optional().nullable(),
+  points: z.number().int().min(0).nullable().optional(),
 
   /** Priority level: 'critical' | 'high' | 'medium' | 'low' */
-  priority: StoryPrioritySchema.optional().nullable(),
+  priority: StoryPrioritySchema.nullable().optional(),
 
   /** Workflow state */
   state: StoryStateSchema.optional(),
@@ -368,10 +368,10 @@ export const KbCreateStoryInputSchema = z.object({
   blocked: z.boolean().optional(),
 
   /** Reason for being blocked */
-  blocked_reason: z.string().optional().nullable(),
+  blocked_reason: z.string().nullable().optional(),
 
   /** Story ID that blocks this one */
-  blocked_by_story: z.string().optional().nullable(),
+  blocked_by_story: z.string().nullable().optional(),
 
   /** Scope flag: touches backend code */
   touches_backend: z.boolean().optional(),
@@ -386,22 +386,22 @@ export const KbCreateStoryInputSchema = z.object({
   touches_infra: z.boolean().optional(),
 
   /** Human-readable story description */
-  description: z.string().optional().nullable(),
+  description: z.string().nullable().optional(),
 
   /**
    * Acceptance criteria as JSONB (arbitrary structure).
    * Pass null to explicitly clear.
    */
-  acceptance_criteria: JSONValueSchema.optional().nullable(),
+  acceptance_criteria: JSONValueSchema.nullable().optional(),
 
   /** Non-goals for this story (text array) */
-  non_goals: z.array(z.string()).optional().nullable(),
+  non_goals: z.array(z.string()).nullable().optional(),
 
   /** Packages touched by this story (text array) */
-  packages: z.array(z.string()).optional().nullable(),
+  packages: z.array(z.string()).nullable().optional(),
 
   /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
-  plan_slug: z.string().optional().nullable(),
+  plan_slug: z.string().nullable().optional(),
 })
 
 export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>

@@ -67,10 +67,10 @@ export const KbUpdateWorkStateInputSchema = z.object({
   story_id: z.string().min(1, 'Story ID cannot be empty'),
 
   /** Git branch associated with this story */
-  branch: z.string().optional().nullable(),
+  branch: z.string().nullable().optional(),
 
   /** Current workflow phase */
-  phase: WorkPhaseSchema.optional().nullable(),
+  phase: WorkPhaseSchema.nullable().optional(),
 
   /** Constraints for this story (replaces existing) */
   constraints: z.array(WorkConstraintSchema).optional(),
