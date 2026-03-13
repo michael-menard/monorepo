@@ -104,10 +104,8 @@
     "node": ">=18"
   },
   "lint-staged": {
-    "apps/**/*.{ts,tsx,js,jsx}": [
-      "prettier --write"
-    ],
-    "packages/**/*.{ts,tsx,js,jsx}": [
+    "**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix --max-warnings 0",
       "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [
@@ -121,6 +119,33 @@
     ]
   },
   "exports": {},
+  "knip": {
+    "entry": [
+      "apps/**/src/**/*.ts",
+      "apps/**/src/**/*.tsx",
+      "packages/**/src/**/*.ts",
+      "packages/**/src/**/*.tsx"
+    ],
+    "project": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx"
+    ],
+    "ignore": [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/node_modules/**"
+    ],
+    "dependencies": true,
+    "devDependencies": true,
+    "unused": true
+  },
   "overrides": {
     "esbuild": "^0.21.5",
     "@smithy/types": "4.9.0"

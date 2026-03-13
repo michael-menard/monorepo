@@ -1,6 +1,6 @@
 # Pre-commit hook
-# NOTE: pnpm lint temporarily removed — root package.json has no lint script.
-# Re-enable when lint-staged or turbo lint is properly wired.
+# Run lint-staged to lint and format staged files
+pnpm lint-staged
 
 # Check workflow sync (Claude ↔ LangGraph)
 # Only run if workflow-related files were changed
