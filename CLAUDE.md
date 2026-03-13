@@ -1,4 +1,5 @@
 # CLAUDE.md - Project Guidelines
+
 <!-- WRKF-000 Harness Validation: 2026-01-22 -->
 
 ## Overview
@@ -8,23 +9,27 @@ This is a TypeScript monorepo (pnpm + Turborepo) for a LEGO MOC instructions pla
 ## Tech Stack
 
 ### Monorepo Tooling
+
 - **pnpm** for package management and workspaces across all apps and packages in the monorepo
 - **Turborepo** for orchestrating builds, tests, and linting with caching and parallelization
 - See also: [Monorepo tooling details](./docs/tech-stack/monorepo.md)
 
 ### Frontend
+
 - **React 19** for the main UI layer in `apps/web/*`
 - **Tailwind CSS** for utility-first styling across all React apps
 - **shadcn/ui** as the base component primitives, wrapped in our app component library under `packages/core/app-component-library`
 - See also: [Frontend architecture](./docs/tech-stack/frontend.md)
 
 ### Backend
+
 - **AWS Lambda** for serverless compute, deployed via the `apps/api` project
 - **Amazon API Gateway (APIGW)** for HTTP APIs and routing into Lambda handlers
 - **Amazon Aurora PostgreSQL** as the primary relational database for transactional data
 - See also: [Backend & data architecture](./docs/tech-stack/backend.md)
 
 ### Testing
+
 - **Vitest** for unit and integration tests across apps and packages
 - **Playwright** for end-to-end browser tests in `apps/web/playwright`
 - **MSW (Mock Service Worker)** for API mocking in unit/integration tests (not used in Playwright E2E)
@@ -204,6 +209,7 @@ All code must pass before commit, and **all new additions must pass linting and 
 
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, etc.
 - Pre-push hooks run lint, type-check, and tests
+- See `.claude/skills/github-templates/SKILL.md` for issue/PR/commit templates
 
 ## Common Pitfalls
 
