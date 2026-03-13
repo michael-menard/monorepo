@@ -211,6 +211,12 @@ All code must pass before commit, and **all new additions must pass linting and 
 - Pre-push hooks run lint, type-check, and tests
 - See `.claude/skills/github-templates/SKILL.md` for issue/PR/commit templates
 
+## Agents
+
+- Claude agents: `.claude/agents/*.agent.md`
+- Opencode agents: `.opencode/agents/*.md` (150 agents mirroring Claude)
+- Use `@agent-name` to invoke in Opencode
+
 ## Common Pitfalls
 
 1. Don't create barrel files (index.ts re-exports)

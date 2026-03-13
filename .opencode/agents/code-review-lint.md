@@ -1,36 +1,11 @@
 ---
-description: Run ESLint on touched files
-mode: subagent
-tools:
-  bash: true
+name: code-review-lint
+description: # Agent: code-review-lint ## Mission
+model: anthropic/claude-sonnet-4-5-20241022
 ---
 
 # code-review-lint
 
-## Mission
+See .claude/agents/code-review-lint.agent.md for full specification.
 
-Run ESLint on touched files and report issues.
-
-## Running
-
-```bash
-# Lint specific files
-npx eslint --fix path/to/file.ts
-
-# Or use pnpm lint
-pnpm lint
-```
-
-## Output
-
-Report in YAML format:
-
-- File
-- Line
-- Rule
-- Severity
-- Message
-
-## Pass Criteria
-
-No errors. Warnings are acceptable if auto-fixable.
+# Agent: code-review-lint ## Mission

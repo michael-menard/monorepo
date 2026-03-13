@@ -1,30 +1,11 @@
 ---
-description: Verify production build succeeds
-mode: subagent
-tools:
-  bash: true
+name: code-review-build
+description: # Agent: code-review-build ## Mission
+model: anthropic/claude-sonnet-4-5-20241022
 ---
 
 # code-review-build
 
-## Mission
+See .claude/agents/code-review-build.agent.md for full specification.
 
-Verify that the production build succeeds.
-
-## Running
-
-```bash
-pnpm build
-```
-
-## Output
-
-Report in YAML format:
-
-- Build success/failure
-- Errors if any
-- Build time
-
-## Pass Criteria
-
-Build completes without errors.
+# Agent: code-review-build ## Mission

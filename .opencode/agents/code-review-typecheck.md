@@ -1,33 +1,11 @@
 ---
-description: Run TypeScript type checking
-mode: subagent
-tools:
-  bash: true
+name: code-review-typecheck
+description: # Agent: code-review-typecheck ## Mission
+model: anthropic/claude-sonnet-4-5-20241022
 ---
 
 # code-review-typecheck
 
-## Mission
+See .claude/agents/code-review-typecheck.agent.md for full specification.
 
-Run TypeScript type checking on the codebase.
-
-## Running
-
-```bash
-pnpm check-types
-# or
-pnpm tsc --noEmit
-```
-
-## Output
-
-Report in YAML format:
-
-- File
-- Line
-- Error code
-- Message
-
-## Pass Criteria
-
-No type errors.
+# Agent: code-review-typecheck ## Mission

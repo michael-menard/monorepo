@@ -1,24 +1,11 @@
 ---
-description: Verify Tailwind and app component library compliance
-mode: subagent
-tools:
-  bash: true
-  read: true
+name: code-review-style-compliance
+description: # Agent: code-review-style-compliance ## Mission
+model: anthropic/claude-sonnet-4-5-20241022
 ---
 
 # code-review-style-compliance
 
-## Mission
+See .claude/agents/code-review-style-compliance.agent.md for full specification.
 
-Verify code uses only Tailwind CSS and @repo/ui components.
-
-## Checks
-
-- No inline styles (except rare exceptions)
-- Using @repo/ui components from app-component-library
-- No custom CSS when Tailwind suffices
-- Following design system tokens
-
-## Pass Criteria
-
-All code follows style guidelines.
+# Agent: code-review-style-compliance ## Mission
