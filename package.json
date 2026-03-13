@@ -50,7 +50,9 @@
     "gen:api": "turbo gen api",
     "gen:prd": "turbo gen prd",
     "prepare": "husky",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "circular": "madge --circular --extensions ts,tsx,js,jsx",
+    "knip": "knip"
   },
   "dependencies": {
     "knip": "5.82.1",
@@ -89,6 +91,7 @@
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "16.1.6",
+    "madge": "8.0.0",
     "prettier": "^3.6.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.20.1",
