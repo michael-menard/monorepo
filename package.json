@@ -40,7 +40,7 @@
     "security:audit": "pnpm audit --audit-level=moderate",
     "security:fix": "pnpm audit fix",
     "security:lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 --config eslint.config.security.js",
-    "sonar:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && docker compose -f docker-compose.sonarqube.yml up -d",
+    "sonar:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && bash scripts/setup-sonar-plugins.sh && docker compose -f docker-compose.sonarqube.yml up -d",
     "sonar:down": "docker compose -f docker-compose.sonarqube.yml down",
     "sonar:reset": "docker compose -f docker-compose.sonarqube.yml down -v",
     "sonar:scan": "sonar-scanner",
@@ -50,7 +50,9 @@
     "gen:api": "turbo gen api",
     "gen:prd": "turbo gen prd",
     "prepare": "husky",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "circular": "madge --circular --extensions ts,tsx,js,jsx",
+    "knip": "knip"
   },
   "dependencies": {
     "knip": "5.82.1",
@@ -76,7 +78,6 @@
     "@vitejs/plugin-react-swc": "^3.6.0",
     "canvas": "^3.1.2",
     "concurrently": "^9.1.0",
-    "dependency-cruiser": "17.3.6",
     "dotenv": "^17.2.4",
     "eslint": "^9.30.1",
     "eslint-config-prettier": "^9.1.0",
@@ -89,6 +90,7 @@
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "16.1.6",
+    "madge": "8.0.0",
     "prettier": "^3.6.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.20.1",
@@ -104,11 +106,8 @@
     "node": ">=18"
   },
   "lint-staged": {
-    "apps/**/*.{ts,tsx,js,jsx}": [
-      "prettier --write"
-    ],
-    "packages/**/*.{ts,tsx,js,jsx}": [
-      "prettier --write"
+    "**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix --max-warnings 0"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
@@ -121,6 +120,33 @@
     ]
   },
   "exports": {},
+  "knip": {
+    "entry": [
+      "apps/**/src/**/*.ts",
+      "apps/**/src/**/*.tsx",
+      "packages/**/src/**/*.ts",
+      "packages/**/src/**/*.tsx"
+    ],
+    "project": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx"
+    ],
+    "ignore": [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/node_modules/**"
+    ],
+    "dependencies": true,
+    "devDependencies": true,
+    "unused": true
+  },
   "overrides": {
     "esbuild": "^0.21.5",
     "@smithy/types": "4.9.0"

@@ -1,0 +1,15 @@
+# Pre-push hook
+# Run SonarQube scan before pushing - uncomment to enable
+# NOTE: Requires SonarQube to be running (pnpm sonar:up)
+# Uncomment the lines below to enable
+
+# echo "🔍 Running SonarQube scan..."
+# pnpm sonar:scan || { echo "❌ SonarQube scan failed"; exit 1; }
+# echo "✅ SonarQube scan passed"
+
+# Check workflow sync
+WORKFLOW_FILES=$(git diff --cached --name-only | grep -E "(docs/FULL_WORKFLOW\.md|\.claude/commands/|\.claude/agents/|packages/backend/orchestrator/src/)" || true)
+if [ -n "$WORKFLOW_FILES" ]; then
+  echo "🔄 Checking workflow sync..."
+  npx tsx scripts/check-workflow-sync.ts || exit 1
+fi
