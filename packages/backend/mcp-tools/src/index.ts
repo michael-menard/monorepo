@@ -57,14 +57,13 @@ export type {
   WorktreeRecord,
 } from './worktree-management/index.js'
 
-// Re-export story compatibility shim tools (WINT-1011)
+// Re-export story compatibility shim tools (WINT-1011, CDBN-3010: DB-only)
 export {
   shimGetStoryStatus,
   shimUpdateStoryStatus,
   shimGetStoriesByStatus,
   shimGetStoriesByFeature,
 } from './story-compatibility/index.js'
-export type { ShimOptions } from './story-compatibility/__types__/index.js'
 
 // Re-export context pack get tool (WINT-2020)
 export { contextPackGet } from './context-pack/context-pack-get.js'
@@ -73,4 +72,3 @@ export { contextPackGet } from './context-pack/context-pack-get.js'
 export { logInvocation } from './telemetry/workflow-log-invocation.js'
 export { WorkflowLogInvocationInputSchema } from './telemetry/__types__/index.js'
 export type { WorkflowLogInvocationInput } from './telemetry/__types__/index.js'
-
