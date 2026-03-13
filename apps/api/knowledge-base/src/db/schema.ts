@@ -1248,8 +1248,10 @@ export const storyAuditLog = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
 
-    /** ID of the story that was modified (links to stories.id) */
-    storyId: uuid('story_id').notNull(),
+    /** ID of the story that was modified (links to stories.story_id) */
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'cascade' }),
 
     /** Type of operation: 'add' | 'update' | 'delete' */
     operation: text('operation').notNull(),
