@@ -1,0 +1,38 @@
+* text=auto
+
+# Node
+node_modules/** -text
+
+# Package lock files
+pnpm-lock.yaml -text
+yarn.lock -text
+package-lock.json -text
+
+# Build outputs
+dist/** -text
+.next/** -text
+.turbo/** -text
+build/** -text
+
+# Binary/media
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+
+# IDE
+.idea/** -text
+.vscode/** -text
+
+# OS
+.DS_Store -text
+Thumbs.db -text
