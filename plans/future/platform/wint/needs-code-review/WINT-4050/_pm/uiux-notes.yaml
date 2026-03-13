@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-4050 is a pure backend seed story. No user-facing UI components are added or modified. No frontend packages are touched. ADR-006 E2E condition: frontend_impacted: false."

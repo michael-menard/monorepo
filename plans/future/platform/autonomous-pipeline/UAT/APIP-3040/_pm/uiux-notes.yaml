@@ -1,8 +1,0 @@
-skipped: true
-reason: >
-  APIP-3040 (Learning-Aware Model Router) is a headless internal pipeline routing module.
-  It extends PipelineModelRouter with affinity-guided model selection. There are no UI
-  components, no HTTP endpoints, and no user-facing surfaces. The only externally observable
-  output is structured log entries emitted via @repo/logger to the pipeline_model_router
-  log domain. ADR-006 E2E Playwright requirement does not apply (frontend_impacted: false).
-  Operator visibility of routing decisions is deferred to APIP-5005 (Minimal Operator CLI).

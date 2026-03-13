@@ -1,3 +1,0 @@
-skipped: true
-reason: "WINT-0220 is a pure documentation and configuration revision story with no UI surface. All work is confined to YAML files, Markdown documents, and TypeScript validation scripts within packages/backend/orchestrator/. No React components, no frontend packages, no HTTP endpoints, and no browser interactions are involved."
-future_consideration: "A model-strategy dashboard showing current tier assignments, cost trends, and agent-to-model mappings would be UX-relevant once the telemetry pipeline is complete (INFR-0040, TELE epic)."

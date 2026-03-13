@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-0120 adds MCP server tools only (workflow_log_invocation, workflow_log_decision, workflow_log_outcome, workflow_get_story_telemetry). These are agent-facing internal tools with no user-facing UI surface. No frontend components, routes, or design system usage involved."

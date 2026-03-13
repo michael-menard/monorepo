@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-4140 is an agent-prompt-only story. Deliverable is .claude/agents/round-table.agent.md — a markdown file with no user-facing interface, no UI components, no browser interaction. No UI/UX guidance applicable."

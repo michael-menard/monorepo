@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-5002 is entirely headless infrastructure — no browser UI, no React components, no visual surfaces. The deliverables are Playwright E2E config, test fixtures, assertion helpers, and documentation. The PIPELINE-E2E-TEST-PLAN.md document is the primary human-readable deliverable and should be actionable for developers setting up the test environment."

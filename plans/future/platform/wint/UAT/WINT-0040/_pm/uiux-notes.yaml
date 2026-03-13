@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-0040 is a pure database infrastructure story with no frontend surface. No UI components, no API endpoints, no user-facing features. All observability UI will come in later WINT phases that query these tables via MCP tools (WINT-0120)."

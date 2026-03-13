@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-5007 produces documentation artifacts (ADRs, runbooks) and SQL migration files only. No user-facing UI is involved in this story."

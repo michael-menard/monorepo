@@ -1,9 +1,0 @@
----
-story_id: KBAR-0140
-generated_by: pm-uiux-recommendations
-skipped: true
-skip_reason: >
-  No UI surface — this is a backend-only TypeScript utility module within
-  apps/api/knowledge-base/src/. No components, pages, or user-facing interactions
-  are created or modified. No UX considerations apply.
----

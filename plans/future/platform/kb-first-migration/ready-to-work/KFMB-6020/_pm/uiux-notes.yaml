@@ -1,7 +1,0 @@
-skipped: true
-reason: >
-  KFMB-6020 is a documentation and dead code cleanup story with no frontend surface,
-  no UI components, and no user-facing changes. Changes are confined to shell script
-  comments, Python docstrings, agent .md Output section prose, and reference
-  documentation .md files. No React components, no Tailwind CSS, no shadcn/ui
-  primitives, and no Playwright evidence scenarios are required.

@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-3030 has no frontend or UI changes. All changes are confined to shell scripts (scripts/lib/resolve-plan.sh, scripts/generate-stories.sh, scripts/implement-stories.sh, scripts/implement-dispatcher.sh) and a Python watcher script (scripts/sync-work-order.py). No React components, no Tailwind, no API endpoints, no browser-facing surfaces are touched."

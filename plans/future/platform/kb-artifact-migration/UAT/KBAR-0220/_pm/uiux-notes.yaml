@@ -1,2 +1,0 @@
-skipped: true
-reason: "KBAR-0220 is a validation/testing story with no UI surface. frontend_impacted: false. ui_touched: false. ADR-006 E2E exempt."

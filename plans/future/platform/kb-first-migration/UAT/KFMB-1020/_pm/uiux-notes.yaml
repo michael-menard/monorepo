@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-1020 is entirely backend (MCP server tools and CRUD operations). No UI surfaces, frontend components, or user-facing changes are involved. The knowledge base MCP server communicates over stdio, not HTTP, and has no rendering layer."

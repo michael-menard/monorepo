@@ -1,7 +1,0 @@
-skipped: true
-reason: >
-  KFMB-4020 has no UI surface. All changes are confined to agent command .md files
-  (/precondition-check, /context-init) and shell scripts (generate-stories.sh,
-  implement-stories.sh, scripts/lib/resolve-plan.sh). There are no React components,
-  frontend pages, browser interactions, or visual elements involved.
-  Per ADR-006, E2E tests are not applicable (frontend_impacted: false).

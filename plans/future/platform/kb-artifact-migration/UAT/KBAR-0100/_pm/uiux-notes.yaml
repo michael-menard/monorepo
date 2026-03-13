@@ -1,2 +1,0 @@
-skipped: true
-reason: "KBAR-0100 is a backend-only story — it writes MCP integration tests for story tool handlers. There are no UI components, screens, or user-facing changes. No design system, accessibility, or Playwright requirements apply."

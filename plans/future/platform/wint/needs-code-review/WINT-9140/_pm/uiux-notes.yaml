@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-9140 is a pure backend/orchestration validation story with no user-facing components. The only human-facing output is the sign-off document (Markdown), which should be human-readable with clear tables (workflow matrix, deviation register). No UI components, no frontend changes, no Playwright E2E required."

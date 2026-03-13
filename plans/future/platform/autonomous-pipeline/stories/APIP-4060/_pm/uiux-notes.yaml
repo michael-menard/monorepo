@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-4060 is a background cron worker with no UI surface. No HTTP endpoints are exposed. The freshness report is a YAML artifact consumed downstream by APIP-4070 (Weekly Pipeline Health Report). The 'stale-candidate' tag written to KB entries may eventually surface in operator tooling, but that is out of scope for this story."

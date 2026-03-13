@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-9120 is a pure backend test suite. It creates no frontend UI, touches no React components, and has no user-facing surfaces. There are no UI/UX requirements to advise on."

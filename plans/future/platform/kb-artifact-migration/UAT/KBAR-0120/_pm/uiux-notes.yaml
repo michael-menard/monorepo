@@ -1,2 +1,0 @@
-skipped: true
-reason: "KBAR-0120 is backend MCP server unit tests only. No UI components, no frontend surfaces, no user-facing flows. frontend_impacted: false."

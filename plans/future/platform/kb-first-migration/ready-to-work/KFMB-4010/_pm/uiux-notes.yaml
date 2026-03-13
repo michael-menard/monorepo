@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-4010 has no UI impact. The story rewrites two command specification files (.claude/commands/story-move.md and .claude/commands/story-update.md). No frontend components, React, Tailwind, or user-facing changes are involved. This is a pure backend command spec migration."

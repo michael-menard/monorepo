@@ -1,3 +1,0 @@
-skipped: true
-reason: "APIP-0030 is a pure infrastructure story. No user-facing UI components are added or modified. The LangGraph Studio UI (port 8124) is a third-party operator tool provided by LangGraph Platform — not an application UI component built by this team. No design system, accessibility, or component pattern requirements apply."
-frontend_impacted: false

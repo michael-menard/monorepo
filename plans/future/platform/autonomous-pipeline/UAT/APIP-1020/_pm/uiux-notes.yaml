@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-1020 is a backend research spike with no UI components. All deliverables are schema files, YAML artifacts, and a markdown ADR. The operator CLI (APIP-5005) may eventually surface ChangeSpec data but is explicitly out of scope for this spike."

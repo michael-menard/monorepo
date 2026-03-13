@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-2080 delivers only a .agent.md file — no UI components, no user-facing interface. The agent's output (warm-result summary) is machine-readable YAML/structured text returned to the calling agent or CLI. No frontend surfaces are touched."

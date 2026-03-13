@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-5040 modifies only internal agent instruction files (.claude/agents/*.agent.md). No user-facing interface changes. No UI components, pages, or visual elements are added or modified."

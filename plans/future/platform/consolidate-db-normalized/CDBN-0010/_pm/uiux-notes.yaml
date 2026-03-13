@@ -1,2 +1,0 @@
-skipped: true
-reason: "CDBN-0010 is a pure KB metadata operation with no frontend impact. No UI components, no pages, no user-facing changes. ADR-005 skip condition applies: frontend_impacted: false."

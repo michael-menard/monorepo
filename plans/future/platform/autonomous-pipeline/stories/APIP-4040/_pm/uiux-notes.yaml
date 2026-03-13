@@ -1,8 +1,0 @@
-skipped: true
-reason: >
-  APIP-4040 is a headless backend cron worker with no user interface.
-  All output is produced as structured CronRunResult log entries via @repo/logger,
-  database snapshot rows in wint.test_quality_snapshots, and auto-generated story
-  YAML artifacts written to the filesystem. No React components, no API Gateway
-  endpoints, and no operator UI are in scope for this story. Downstream visibility
-  of test quality trends is deferred to APIP-2020 (Monitor UI v1).

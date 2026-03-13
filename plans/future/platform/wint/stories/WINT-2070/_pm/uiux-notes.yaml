@@ -1,5 +1,0 @@
-skipped: true
-reason: "WINT-2070 has no UI surface. The deliverable is a .claude/skills/cache-warm/SKILL.md markdown instruction file for agent/human tooling only. No React components, no Tailwind, no Playwright E2E."
-notes:
-  - "The skill's summary output format (AC-8) functions as the 'UX' for consuming agents — a structured block (YAML or compact text) is preferred over prose for machine parseability"
-  - "Consider whether the summary block in Phase 6 should emit structured YAML so context-warmer agent (WINT-2080) can parse pass/fail status programmatically"

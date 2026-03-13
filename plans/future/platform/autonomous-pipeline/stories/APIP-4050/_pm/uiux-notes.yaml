@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-4050 is a fully backend/infrastructure story with no frontend or operator UI impact. The Dead Code Reaper produces structured log output and CLEANUP story YAML artifacts consumed by the pipeline. Visualization of results is deferred to APIP-4070 (Weekly Pipeline Health Report) and APIP-2020 (Monitor UI). No UI/UX considerations apply to this story."

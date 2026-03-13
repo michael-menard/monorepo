@@ -1,3 +1,0 @@
-skipped: true
-reason: "WINT-2020 is a pure backend service (HTTP sidecar + MCP tool wrapper). No user-facing UI is created or modified. ADR-006 E2E requirement does not apply."
-developer_ux_note: "The MCP tool context_pack_get should use snake_case parameter names consistent with existing KB MCP tools (story_id, node_type, role, ttl) for discoverability within Claude Code agent sessions."

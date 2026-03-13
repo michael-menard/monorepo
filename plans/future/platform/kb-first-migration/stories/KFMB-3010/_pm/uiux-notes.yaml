@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-3010 has no UI impact. All changes are internal to .claude/agents/*.agent.md files. No frontend components, user-facing flows, or design system elements are touched."

@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-2030 is a documentation-only story. It modifies .claude/commands/pm-bootstrap-workflow.md and .claude/docs/pm-bootstrap-workflow-reference.md — internal AI agent command files with no user-facing interface. No UI components, no frontend code, no user journeys affected."

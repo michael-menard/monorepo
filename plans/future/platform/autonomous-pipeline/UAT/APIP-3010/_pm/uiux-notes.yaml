@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-3010 is a backend-only story. No UI components are created or modified. The wint.change_telemetry table and writeTelemetry() function are invisible to end users and the operator UI. The only operator-visible artifact is @repo/logger structured log entries at telemetry write time. When APIP-2020 (Monitor Dashboard) is elaborated, it may surface per-story telemetry aggregates using the idx_change_telemetry_story_id index — note this for APIP-2020 elaboration context."

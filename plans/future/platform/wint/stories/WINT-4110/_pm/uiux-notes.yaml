@@ -1,3 +1,0 @@
-skipped: true
-reason: "No UI surface. This story produces a slash command markdown file only. No user-facing components, no Tailwind, no React, no design system changes."
-ux_note: "The only UX concern is discoverability and clarity of the command output section. The developer running /cohesion-check should immediately understand where results are written and what violations mean. This is addressed by the command's Done/Output section content, not by UI design."

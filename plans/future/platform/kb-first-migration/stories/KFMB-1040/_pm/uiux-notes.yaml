@@ -1,7 +1,0 @@
-skipped: true
-reason: >
-  KFMB-1040 has no UI surface. The kb_delete_artifact tool is an MCP tool
-  consumed by AI agents (pm role) with no end-user-facing interface. Per
-  ADR-006, E2E/Playwright tests and UI/UX review are not applicable to
-  backend-only MCP tools. No frontend components, pages, or interactions
-  are touched by this story.

@@ -1,6 +1,0 @@
-skipped: true
-reason: >
-  KFMB-2010 is a pure agent definition (markdown file) rewrite.
-  The story rewrites pm-bootstrap-generation-leader.agent.md to call kb_create_story
-  via MCP instead of raw psql. There is no user-facing interface, no React components,
-  no UI components, and no browser surface involved. UI/UX review is not applicable.

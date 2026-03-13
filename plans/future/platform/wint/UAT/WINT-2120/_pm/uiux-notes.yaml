@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-2120 has no UI surface. The output is a YAML artifact (BENCHMARK-RESULTS.yaml) consumed by PM and dev roles. No browser-facing components are touched."

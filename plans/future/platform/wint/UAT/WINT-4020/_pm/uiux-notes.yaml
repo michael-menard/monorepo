@@ -1,2 +1,0 @@
-skipped: true
-reason: "WINT-4020 is a backend sidecar only — no frontend components or UI surfaces are touched. The MCP tool interface (rules_registry_get, rules_registry_propose) serves as the developer-facing interface. Future UI (rules dashboard for proposing/promoting rules) is explicitly deferred and out of scope for this story."

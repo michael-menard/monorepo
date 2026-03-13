@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-5005 is a headless command-line tool (CLI) with no web frontend, no React components, and no browser surface. ADR-006 E2E requirement explicitly does not apply. All output is plain text to process.stdout. No UI/UX work required for this story."
