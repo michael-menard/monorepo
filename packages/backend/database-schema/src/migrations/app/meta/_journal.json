@@ -197,6 +197,20 @@
       "when": 1771380000000,
       "tag": "0027_wint_0131_capabilities_feature_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1773426704879,
+      "tag": "0028_open_northstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1773426832923,
+      "tag": "0029_classy_madrox",
+      "breakpoints": true
     }
   ]
 }
