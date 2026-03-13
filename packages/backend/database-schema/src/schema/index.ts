@@ -17,8 +17,46 @@ import { relations, sql } from 'drizzle-orm'
 import { setImages, sets } from './sets.js'
 export { setImages, sets }
 
-// Re-export Telemetry tables (INFR-0040)
-export { telemetrySchema, workflowEventTypeEnum, workflowEvents } from './telemetry.js'
+// Re-export Telemetry tables (INFR-0040, CDBN-2012)
+// Telemetry schema has separate tables from wint schema (both in different PostgreSQL schemas)
+// Export with telemetry prefix to avoid naming conflicts
+export {
+  // Schema and enums
+  telemetrySchema,
+  workflowEventTypeEnum,
+  workflowEventTypeEnum as telemetryWorkflowEventTypeEnum,
+  agentDecisionTypeEnum as telemetryAgentDecisionTypeEnum,
+  workflowStatusEnum as telemetryWorkflowStatusEnum,
+  // Tables
+  workflowEvents,
+  agentInvocations as telemetryAgentInvocations,
+  agentDecisions as telemetryAgentDecisions,
+  agentOutcomes as telemetryAgentOutcomes,
+  storyOutcomes as telemetryStoryOutcomes,
+  tokenUsage as telemetryTokenUsage,
+  workflowExecutions as telemetryWorkflowExecutions,
+  workflowCheckpoints as telemetryWorkflowCheckpoints,
+  workflowAuditLog as telemetryWorkflowAuditLog,
+  depAuditRuns as telemetryDepAuditRuns,
+  depAuditFindings as telemetryDepAuditFindings,
+  mlModels as telemetryMlModels,
+  modelMetrics as telemetryModelMetrics,
+  modelPredictions as telemetryModelPredictions,
+  trainingData as telemetryTrainingData,
+  changeTelemetry as telemetryChangeTelemetry,
+  // Relations
+  agentInvocationsRelations as telemetryAgentInvocationsRelations,
+  agentDecisionsRelations as telemetryAgentDecisionsRelations,
+  agentOutcomesRelations as telemetryAgentOutcomesRelations,
+  workflowExecutionsRelations as telemetryWorkflowExecutionsRelations,
+  workflowCheckpointsRelations as telemetryWorkflowCheckpointsRelations,
+  workflowAuditLogRelations as telemetryWorkflowAuditLogRelations,
+  depAuditRunsRelations as telemetryDepAuditRunsRelations,
+  depAuditFindingsRelations as telemetryDepAuditFindingsRelations,
+  mlModelsRelations as telemetryMlModelsRelations,
+  modelMetricsRelations as telemetryModelMetricsRelations,
+  modelPredictionsRelations as telemetryModelPredictionsRelations,
+} from './telemetry.js'
 
 // Re-export Artifacts tables (INFR-0110)
 // Note: Using 'artifactsContent' prefix to avoid conflicts with wint.storyArtifacts
@@ -1211,7 +1249,6 @@ export {
   type InsertChangeTelemetry,
   type SelectChangeTelemetry,
 } from './change-telemetry.js'
-
 
 // Re-export Rules Registry table (WINT-4020)
 export {

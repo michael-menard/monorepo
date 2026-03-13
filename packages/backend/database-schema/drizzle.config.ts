@@ -16,7 +16,7 @@ config({ path: '../../../.env' })
  */
 
 export default {
-  schema: './src/schema/index.ts',
+  schema: './dist/index.js',
   out: './src/migrations/app',
   dialect: 'postgresql',
   dbCredentials: {
