@@ -40,7 +40,7 @@
     "security:audit": "pnpm audit --audit-level=moderate",
     "security:fix": "pnpm audit fix",
     "security:lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 --config eslint.config.security.js",
-    "sonar:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && docker compose -f docker-compose.sonarqube.yml up -d",
+    "sonar:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && bash scripts/setup-sonar-plugins.sh && docker compose -f docker-compose.sonarqube.yml up -d",
     "sonar:down": "docker compose -f docker-compose.sonarqube.yml down",
     "sonar:reset": "docker compose -f docker-compose.sonarqube.yml down -v",
     "sonar:scan": "sonar-scanner",
