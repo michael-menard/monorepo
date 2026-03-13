@@ -1,6 +1,6 @@
 id: CDBN-3010
 title: Update MCP Tool SQL and Drizzle Queries to New Schema
-status: backlog
+status: completed
 priority: medium
 phase: 3
 feature: consolidate-db-normalized
