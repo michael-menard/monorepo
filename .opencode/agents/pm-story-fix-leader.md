@@ -1,6 +1,6 @@
 ---
 name: pm-story-fix-leader
-description: # Agent: pm-story-fix-leader ## Role
+description: Agent - pm-story-fix-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

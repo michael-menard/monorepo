@@ -1,6 +1,6 @@
 ---
 name: architect-boundary-worker
-description: # Agent: architect-boundary-worker ## Layering Rules
+description: Agent - architect-boundary-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

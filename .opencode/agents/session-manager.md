@@ -1,6 +1,6 @@
 ---
 name: session-manager
-description: # Agent: session-manager ## Role
+description: Agent - session-manager
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

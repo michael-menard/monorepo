@@ -1,6 +1,6 @@
 ---
 name: pattern-miner
-description: # Agent: pattern-miner ## Mission
+description: Agent - pattern-miner
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

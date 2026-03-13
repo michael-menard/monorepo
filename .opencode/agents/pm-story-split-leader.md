@@ -1,6 +1,6 @@
 ---
 name: pm-story-split-leader
-description: # Agent: pm-story-split-leader ## Mission
+description: Agent - pm-story-split-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: pm-dev-feasibility-review
-description: # Agent: pm-dev-feasibility-review ## Mission
+description: Agent - pm-dev-feasibility-review
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

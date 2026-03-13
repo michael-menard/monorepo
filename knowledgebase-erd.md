@@ -210,7 +210,7 @@ erDiagram
         text role
         text entry_type
         text story_id
-        text_arr tags
+        text[] tags
         boolean verified
         text verified_by
         timestamp verified_at
@@ -247,10 +247,12 @@ erDiagram
 erDiagram
     plans ||--o| plan_details : "plan_id"
     plans ||--o{ plan_dependencies : "plan_slug"
+    plans ||--o{ plan_dependencies : "depends_on_slug"
     plans ||--o{ plan_story_links : "plan_slug"
     plans ||--o{ plan_revision_history : "plan_id"
     plans ||--o{ plan_execution_log : "plan_slug"
     plans ||--o| plans : "parent_plan_id"
+    plans ||--o| plans : "superseded_by"
 
     plans {
         uuid id PK
@@ -263,17 +265,15 @@ erDiagram
         text feature_dir
         text story_prefix
         integer estimated_stories
-        jsonb phases
-        text_arr tags
-        text raw_content
-        text source_file
-        text content_hash
-        uuid kb_entry_id FK
+        text[] tags
         uuid parent_plan_id FK
         uuid superseded_by FK
+        text pre_blocked_status
         vector embedding
         timestamptz created_at
         timestamptz updated_at
+        timestamptz deleted_at
+        text deleted_by
     }
 
     plan_details {
@@ -281,13 +281,13 @@ erDiagram
         uuid plan_id FK
         text raw_content
         jsonb phases
-        jsonb dependencies
+        jsonb sections
+        text format_version
         text source_file
         text content_hash
         uuid kb_entry_id FK
-        jsonb sections
-        text format_version
         timestamptz imported_at
+        timestamptz archived_at
         timestamptz updated_at
     }
 
@@ -331,6 +331,8 @@ erDiagram
     }
 ```
 
+> **Note:** `plan_dependencies` is a self-referential M:M join table — both `plan_slug` and `depends_on_slug` reference `plans.plan_slug`. This is the same pattern as `story_dependencies` for stories. Dependencies are stored exclusively in this join table (not as JSONB).
+
 ## 5. Tasks and Work State Domain
 
 ```mermaid
@@ -350,7 +352,7 @@ erDiagram
         text status
         uuid blocked_by FK
         text promoted_to_story
-        text_arr tags
+        text[] tags
         text estimated_effort
         timestamp created_at
         timestamp updated_at
@@ -473,9 +475,8 @@ erDiagram
 | plan_details          | kb_entry_id     | knowledge_entries.id | SET NULL  |
 | plan_execution_log    | plan_slug       | plans.plan_slug      | RESTRICT  |
 | plan_revision_history | plan_id         | plans.id             | RESTRICT  |
-| plans                 | parent_plan_id  | plans.id             | SET NULL  |
+| plans                 | parent_plan_id  | plans.id             | RESTRICT  |
 | plans                 | superseded_by   | plans.id             | NO ACTION |
-| plans                 | kb_entry_id     | knowledge_entries.id | SET NULL  |
 | story_artifacts       | kb_entry_id     | knowledge_entries.id | SET NULL  |
 | story_dependencies    | story_id        | stories.story_id     | CASCADE   |
 | story_dependencies    | target_story_id | stories.story_id     | CASCADE   |

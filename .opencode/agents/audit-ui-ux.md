@@ -1,6 +1,6 @@
 ---
 name: audit-ui-ux
-description: # Agent: audit-ui-ux ## Mission
+description: Agent - audit-ui-ux
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

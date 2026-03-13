@@ -1,6 +1,6 @@
 ---
 name: code-review-react
-description: # Agent: code-review-react ## Mission
+description: Agent - code-review-react
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

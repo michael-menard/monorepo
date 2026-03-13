@@ -1,0 +1,207 @@
+schema: 1
+story_id: CDBN-1050
+timestamp: '2026-03-11T00:00:00.000Z'
+iteration: 0
+verdict: PASS
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+workers_skipped: []
+ranked_patches:
+  - priority: 1
+    file: apps/api/knowledge-base/src/db/schema.ts
+    issue: >-
+      workflowStoryDependencies Drizzle schema missing .references() declarations for FK columns (storyId, dependsOnId).
+      DB constraints ARE enforced in SQL migration but ORM type safety is reduced.
+    severity: medium
+    auto_fixable: true
+    worker: security
+    remediation: Add .references(() => workflowStories.storyId) to storyId and dependsOnId columns in Drizzle schema.
+  - priority: 2
+    file: apps/api/knowledge-base/src/db/schema.ts
+    issue: >-
+      SQL creates workflow schema tables; Drizzle definitions should use explicit pgSchema('workflow') qualifier to
+      match SQL migration
+    severity: medium
+    auto_fixable: false
+    worker: react
+    impact: Could cause table-not-found errors at runtime if locations don't match
+  - priority: 3
+    file: apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+    issue: >-
+      SQL migration has fewer columns than Drizzle schema (epic, storyType, points, phase, iteration, blocked, etc.).
+      May indicate incomplete migration or phased approach.
+    severity: medium
+    auto_fixable: false
+    worker: react
+  - priority: 4
+    file: apps/api/knowledge-base/src/db/schema.ts
+    issue: Consider composite index on story_state_history (story_id, created_at)
+    severity: low
+    auto_fixable: false
+    worker: react
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 1
+    findings: []
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_reviewed: 2
+    findings:
+      - Migration correctly expands plan_type constraint for compound format
+      - Schema documentation updated with examples
+      - No TypeScript, styling, or component issues
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    blocking: 0
+    findings:
+      - file: apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
+        status: PASS
+        notes: >-
+          SQL syntax correct. DEFERRABLE INITIALLY DEFERRED constraints for self-referential FKs (ARCH-001). Idempotent
+          DDL.
+      - file: apps/api/knowledge-base/src/db/schema.ts
+        status: PASS
+        notes: All ES7+ compliance checks pass. No var declarations. Proper async/await patterns. 2186 lines analyzed.
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    confidence: high
+    counts:
+      critical: 0
+      high: 0
+      medium: 1
+      low: 0
+    findings:
+      - id: SEC-001
+        severity: medium
+        category: schema-definition-mismatch
+        issue: >-
+          workflowStoryDependencies Drizzle schema missing .references() declarations for FK columns (storyId,
+          dependsOnId). DB constraints ARE enforced in SQL migration but ORM type safety is reduced.
+        remediation: Add .references(() => workflowStories.storyId) to storyId and dependsOnId columns in Drizzle schema.
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    pre_existing_outside_scope: 11
+    findings: []
+    notes:
+      - SQL file not type-checked (not TypeScript)
+      - schema.ts type-checked successfully with zero errors
+      - 11 pre-existing errors in @repo/app-inspiration-gallery (out of scope)
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 1
+    packages_built:
+      - '@repo/knowledge-base'
+    pre_existing_failures: 7
+    findings:
+      - severity: info
+        file: apps/api/knowledge-base/src/db/schema.ts
+        message: Added 7 workflow schema tables with Drizzle ORM definitions
+      - severity: warning
+        package: '@repo/pipeline'
+        message: Redis version mismatch (pre-existing, out of scope)
+        pre_existing: true
+  reusability:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 2
+    overall_score: 8
+    findings:
+      positive:
+        - Established DDL migration pattern reused (safety preamble, idempotent DDL)
+        - Plan type enhancement is documentation-only
+        - pgSchema() usage is standard Drizzle pattern
+      negative: []
+      warnings:
+        - Migration 032 must run before 033 (numbering ensures correct order)
+        - All 7 workflow tables must be exported from schema.ts
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings:
+      major:
+        - id: ALIGNMENT-001
+          title: SQL migration (workflow schema) vs Drizzle (public schema) alignment concern
+          severity: medium
+          description: >-
+            SQL creates workflow schema tables; Drizzle definitions should use explicit pgSchema('workflow') qualifier
+            to match
+          impact: Could cause table-not-found errors at runtime if locations don't match
+        - id: COLUMN-MISMATCH-001
+          title: SQL migration has fewer columns than Drizzle schema
+          severity: medium
+          description: >-
+            Migration has basic columns; Drizzle schema has additional columns (epic, storyType, points, phase,
+            iteration, blocked, etc.). May indicate incomplete migration or phased approach.
+      minor:
+        - id: INDEX-COVERAGE-001
+          title: Consider composite index on story_state_history (story_id, created_at)
+          severity: info
+        - id: NAMING-CONVENTION-001
+          title: SQL uses workflow schema, Drizzle defaults to public schema — ensure pgSchema('workflow') is used
+          severity: info
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    findings: []
+    summary:
+      - 'SQL migration: idempotent, correct DEFERRABLE FKs, proper indexes'
+      - 'schema.ts: Drizzle ORM type inference used correctly, no interfaces, no any assertions'
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 0
+    skip_reason: No frontend React files in touched files. Backend/database only story.
+summary:
+  total_errors: 0
+  total_warnings: 3
+  auto_fixable_count: 1
+  critical_issues: 0
+  high_issues: 0
+  medium_issues: 3
+  low_issues: 1
+codebase_health:
+  pre_existing_type_errors: 11
+  pre_existing_build_failures: 7
+  note: >-
+    11 type errors exist outside this story's scope (@repo/app-inspiration-gallery). 7 pre-existing build failures in
+    @repo/pipeline (out of scope).
+tokens:
+  in: 0
+  out: 0

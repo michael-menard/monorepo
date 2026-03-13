@@ -1,6 +1,6 @@
 ---
 name: story-fanout-pm
-description: # Agent: story-fanout-pm ## Role
+description: Agent - story-fanout-pm
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

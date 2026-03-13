@@ -1,6 +1,6 @@
 ---
 name: architect-setup-leader
-description: # Agent: architect-setup-leader ## Knowledge Base Integration
+description: Agent - architect-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

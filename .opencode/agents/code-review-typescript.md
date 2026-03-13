@@ -1,6 +1,6 @@
 ---
 name: code-review-typescript
-description: # Agent: code-review-typescript ## Mission
+description: Agent - code-review-typescript
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

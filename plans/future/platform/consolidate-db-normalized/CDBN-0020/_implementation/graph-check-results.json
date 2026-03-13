@@ -1,0 +1,10 @@
+{
+  "story_id": "CDBN-0020",
+  "generated_at": "2026-03-11T20:30:00Z",
+  "franken_features_found": 0,
+  "violations": [],
+  "warnings": [
+    "Story CDBN-0020 is a database audit deliverable — no feature code or UI changes; feature cohesion graph check not applicable"
+  ],
+  "warning_count": 1
+}

@@ -1,6 +1,6 @@
 ---
 name: pm-triage-leader
-description: # Agent: pm-triage-leader ## Mission
+description: Agent - pm-triage-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

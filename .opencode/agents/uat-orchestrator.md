@@ -1,6 +1,6 @@
 ---
 name: uat-orchestrator
-description: # Agent: uat-orchestrator ## Role
+description: Agent - uat-orchestrator
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

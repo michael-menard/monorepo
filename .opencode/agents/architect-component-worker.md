@@ -1,6 +1,6 @@
 ---
 name: architect-component-worker
-description: # Agent: architect-component-worker ## Required Structure
+description: Agent - architect-component-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

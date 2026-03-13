@@ -1,0 +1,51 @@
+{
+  "story_id": "CDBN-0020",
+  "generated_at": "2026-03-11T22:00:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "Story body is complete and executable — MANIFEST.yaml exists and includes all required sections: Acceptance Criteria coverage, Non-Goals documentation, Subtasks ST-1 through ST-7, and Local Testing Plan (verification SQL)",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "MANIFEST.yaml header records source_db=lego_dev, source_port=5432; story callout present stating 'Do NOT query the knowledgebase DB (port 5433)'",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "MANIFEST includes: (a) deduplication_strategy field for artifact tables, (b) live_usage=true for context_packs and context_sessions, (c) fk_violations section documenting all FK constraints and undocumented dependencies found",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "MANIFEST includes verification_queries section with SQL commands, anchored table count assertion, per-table row counts, and copy-pasteable re-runnable verification SQL",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 4,
+  "accepted": 4,
+  "challenged": 0,
+  "rejected": 0
+}

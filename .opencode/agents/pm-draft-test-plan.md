@@ -1,6 +1,6 @@
 ---
 name: pm-draft-test-plan
-description: # Agent: pm-draft-test-plan ## Mission
+description: Agent - pm-draft-test-plan
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

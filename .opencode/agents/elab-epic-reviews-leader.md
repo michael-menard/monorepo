@@ -1,6 +1,6 @@
 ---
 name: elab-epic-reviews-leader
-description: # Agent: elab-epic-reviews-leader ## Mission
+description: Agent - elab-epic-reviews-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

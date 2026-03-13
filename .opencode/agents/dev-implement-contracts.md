@@ -1,6 +1,6 @@
 ---
 name: dev-implement-contracts
-description: # Agent: dev-implement-contracts ## Mission
+description: Agent - dev-implement-contracts
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

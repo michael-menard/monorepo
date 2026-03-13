@@ -1,6 +1,6 @@
 ---
 name: architect-api-leader
-description: # Agent: architect-api-leader ## Authoritative Reference
+description: Agent - architect-api-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

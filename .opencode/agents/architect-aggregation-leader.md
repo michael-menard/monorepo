@@ -1,6 +1,6 @@
 ---
 name: architect-aggregation-leader
-description: # Agent: architect-aggregation-leader ## Input
+description: Agent - architect-aggregation-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

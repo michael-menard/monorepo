@@ -1,6 +1,6 @@
 ---
 name: pm-harness-generation-leader
-description: # Agent: pm-harness-generation-leader ## Mission
+description: Agent - pm-harness-generation-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

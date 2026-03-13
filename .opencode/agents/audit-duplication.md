@@ -1,6 +1,6 @@
 ---
 name: audit-duplication
-description: # Agent: audit-duplication ## Mission
+description: Agent - audit-duplication
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

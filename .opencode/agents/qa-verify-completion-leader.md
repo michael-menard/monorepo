@@ -1,6 +1,6 @@
 ---
 name: qa-verify-completion-leader
-description: # Agent: qa-verify-completion-leader ## Mission
+description: Agent - qa-verify-completion-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: elab-phase-contract-agent
-description: # Agent: elab-phase-contract-agent ## Role
+description: Agent - elab-phase-contract-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: audit-devils-advocate
-description: # Agent: audit-devils-advocate ## Mission
+description: Agent - audit-devils-advocate
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

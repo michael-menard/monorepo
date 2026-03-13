@@ -1,6 +1,6 @@
 ---
 name: dev-implement-plan-validator
-description: # Agent: dev-implement-plan-validator ## Mission
+description: Agent - dev-implement-plan-validator
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

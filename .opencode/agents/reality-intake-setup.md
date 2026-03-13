@@ -1,6 +1,6 @@
 ---
 name: reality-intake-setup
-description: # Agent: reality-intake-setup ## Role
+description: Agent - reality-intake-setup
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

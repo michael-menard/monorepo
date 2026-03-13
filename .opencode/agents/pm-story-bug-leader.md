@@ -1,6 +1,6 @@
 ---
 name: pm-story-bug-leader
-description: # Agent: pm-story-bug-leader ## Mission
+description: Agent - pm-story-bug-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

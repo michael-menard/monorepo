@@ -1,6 +1,6 @@
 ---
 name: code-review-lint
-description: # Agent: code-review-lint ## Mission
+description: Agent - code-review-lint
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

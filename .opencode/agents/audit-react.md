@@ -1,6 +1,6 @@
 ---
 name: audit-react
-description: # Agent: audit-react ## Mission
+description: Agent - audit-react
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

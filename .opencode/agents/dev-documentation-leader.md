@@ -1,6 +1,6 @@
 ---
 name: dev-documentation-leader
-description: # Agent: dev-documentation-leader ## Role
+description: Agent - dev-documentation-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

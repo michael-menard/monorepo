@@ -1,6 +1,6 @@
 ---
 name: architect-route-worker
-description: # Agent: architect-route-worker ## Authoritative Reference
+description: Agent - architect-route-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,0 +1,25 @@
+schema: 1
+story_id: ST-3020
+timestamp: 2026-03-12T02:41:35Z
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - packages/backend/orchestrator/**
+  - .claude/agents/dev-execute-leader.agent.md
+  - packages/backend/orchestrator/src/artifacts/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+summary: "Update dev-execute-leader to support schema: 2 PLAN.yaml with sequential subtask iteration mode for small LLM compatibility"
+elaboration: "completed"

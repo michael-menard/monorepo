@@ -1,0 +1,61 @@
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >-
+      Story scope matches KB entry. Goal is clear: Parse existing story and plan content into section-split rows and
+      verify cross-schema FK integrity. No extra endpoints or features introduced.
+  - id: internal_consistency
+    status: PASS
+    note: >-
+      Goals (parse content, verify FK) don't contradict non-goals. ACs align with scope. This is a migration story so
+      standard test plan format applies.
+  - id: reuse_first
+    status: PASS
+    note: Database migration story - no code to reuse. Standard SQL migration patterns apply.
+  - id: ports_adapters
+    status: N/A
+    note: Migration story - not an API endpoint story. Ports/Adapters pattern not applicable.
+  - id: testability
+    status: PASS
+    note: >-
+      AC-4 explicitly requires verification script for FK checks. AC-3 requires data integrity spot-checks. Testable via
+      SQL queries.
+  - id: decision_completeness
+    status: PASS
+    note: No TBDs or unresolved design decisions in story content. Risk notes are explicit about parsing complexity.
+  - id: risk_disclosure
+    status: PASS
+    note: >-
+      High risk explicitly disclosed in risk_notes. Parsing failures, data loss fallback, FK verification scope all
+      clearly documented.
+  - id: story_sizing
+    status: PASS
+    note: 5 ACs, 0 endpoints, 1 migration script. Reasonable size for database migration story. No split needed.
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >-
+      No ## Subtasks section in story file. However, AC-4 and AC-5 contain verification steps that serve as subtask-like
+      structure. Migration stories are more linear than feature stories.
+gaps: []
+opportunities:
+  - id: opp-1
+    category: performance
+    finding: Migration script may be slow for large datasets - consider batch processing
+    effort: medium
+    decision: defer
+    kb_entry_id: null
+  - id: opp-2
+    category: observability
+    finding: Add migration progress logging to track long-running operations
+    effort: low
+    decision: defer
+    kb_entry_id: null
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: '2026-03-13T18:30:00Z'
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 2
+  opportunities_logged: 0
+  acs_added: 0

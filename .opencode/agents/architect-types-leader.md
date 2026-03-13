@@ -1,6 +1,6 @@
 ---
 name: architect-types-leader
-description: # Agent: architect-types-leader ## Authoritative Reference
+description: Agent - architect-types-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

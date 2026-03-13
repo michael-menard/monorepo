@@ -1,6 +1,6 @@
 ---
 name: elab-setup-leader
-description: # Agent: elab-setup-leader ## Role
+description: Agent - elab-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

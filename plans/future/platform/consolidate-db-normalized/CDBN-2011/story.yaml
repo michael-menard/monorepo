@@ -1,0 +1,54 @@
+id: CDBN-2011
+title: Migrate knowledge Schema Live Data
+status: backlog
+priority: medium
+phase: 2
+feature: consolidate-db-normalized
+goal: Move all live knowledge data (lessons, ADRs, rules, context packs, context sessions, hitl_decisions) from wint/kbar into the new knowledge schema with FK integrity
+split_from: CDBN-2010
+split_part: '2 of 4'
+depends_on:
+  - CDBN-1030
+  - CDBN-1060
+endpoints: []
+infrastructure:
+  - One-time migration SQL script
+  - Aurora PostgreSQL
+risk_notes: >-
+  Medium risk. hitl_decisions is a net-new table with no source data to migrate — only
+  the DDL from CDBN-1030 applies. context_packs and context_sessions are live wint tables
+  used by MCP context cache tools — migration must not break cache reads during the
+  transition window. Lessons, ADRs, and rules may have text story_id references that need
+  to be resolved to workflow.stories FK UUIDs. context_cache_hits has FK to both
+  context_sessions and context_packs — ordering matters.
+sizing_warning: false
+created: '2026-03-13T00:00:00Z'
+acceptance_criteria:
+  - id: AC-1
+    description: >-
+      All rows from wint.knowledge_entries (lessons, ADRs, code_standards) are migrated
+      into the appropriate knowledge schema tables (lessons_learned, adrs, code_standards).
+      Row counts match source. Verified via COUNT(*) comparison queries.
+
+  - id: AC-2
+    description: >-
+      Rules from wint.rules and wint.cohesion_rules are migrated into knowledge.rules and
+      knowledge.cohesion_rules respectively. rule_conditions child rows have correct FK
+      references. Verified via row count and LEFT JOIN orphan check.
+
+  - id: AC-3
+    description: >-
+      context_packs and context_sessions are migrated from wint.* into knowledge.* with
+      all FK references intact. context_cache_hits rows reference valid session_id and
+      pack_id in the new schema. Verified via FK constraint validation queries.
+
+  - id: AC-4
+    description: >-
+      Text-based story_id references in lessons, ADRs, and rules are resolved to valid
+      workflow.stories FK references where possible. Unresolvable references are logged
+      to _implementation/ with counts and sample values.
+
+  - id: AC-5
+    description: >-
+      The migration script is idempotent — running it twice produces the same result.
+      Verified by double-execution on a test database.

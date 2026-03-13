@@ -1,6 +1,6 @@
 ---
 name: audit-typescript
-description: # Agent: audit-typescript ## Mission
+description: Agent - audit-typescript
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

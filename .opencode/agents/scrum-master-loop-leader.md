@@ -1,6 +1,6 @@
 ---
 name: scrum-master-loop-leader
-description: # Agent: scrum-master-loop-leader ## Mission
+description: Agent - scrum-master-loop-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: audit-code-quality
-description: # Agent: audit-code-quality ## Mission
+description: Agent - audit-code-quality
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: leakage-metrics-agent
-description: # Agent: leakage-metrics-agent ## Role
+description: Agent - leakage-metrics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

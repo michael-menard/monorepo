@@ -1,6 +1,6 @@
 ---
 name: ui-ux-review-setup-leader
-description: # Agent: ui-ux-review-setup-leader ## Mission
+description: Agent - ui-ux-review-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

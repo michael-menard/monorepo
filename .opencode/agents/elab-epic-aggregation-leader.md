@@ -1,6 +1,6 @@
 ---
 name: elab-epic-aggregation-leader
-description: # Agent: elab-epic-aggregation-leader ## Mission
+description: Agent - elab-epic-aggregation-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

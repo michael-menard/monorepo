@@ -1,6 +1,6 @@
 ---
 name: scrum-master-setup-leader
-description: # Agent: scrum-master-setup-leader ## Mission
+description: Agent - scrum-master-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

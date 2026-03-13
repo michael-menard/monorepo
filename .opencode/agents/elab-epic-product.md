@@ -1,6 +1,6 @@
 ---
 name: elab-epic-product
-description: # Agent: elab-epic-product ## MVP-Critical Definition
+description: Agent - elab-epic-product
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

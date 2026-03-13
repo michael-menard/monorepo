@@ -1,6 +1,6 @@
 ---
 name: ui-ux-review-reviewer
-description: # Agent: ui-ux-review-reviewer ## Mission
+description: Agent - ui-ux-review-reviewer
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,0 +1,141 @@
+{
+  "story_id": "CDBN-1050",
+  "generated_at": "2026-03-11T23:35:00Z",
+  "overall_verdict": "FAIL",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "workflow pgSchema created: SQL migration file executes CREATE SCHEMA IF NOT EXISTS workflow and the schema appears in SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'workflow' against lego_dev (port 5432).",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting schema creation verification."
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "workflow.stories table exists with correct columns and indexes: at minimum story_id (PK), feature, state, title, priority, created_at, updated_at columns; composite indexes on (feature, state) and (state, updated_at) created. Verified via information_schema.columns and pg_indexes queries.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting table structure and index verification."
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "workflow.story_dependencies table exists with a self-referential FK: both story_id and depends_on_story_id columns are present and each references workflow.stories.story_id. FK constraint names are documented. Verified via information_schema.referential_constraints.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting self-referential FK verification."
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "workflow.story_state_history table exists with event_type discriminator column and FK to workflow.stories.story_id. Column list covers the merged schema from the 6 source tables (story_states, story_transitions, story_phase_history, story_assignments, story_blockers, story_metadata_versions). A DECISION record in _implementation/ documents the final column design and NULL constraints.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting story_state_history table structure and merged schema coverage."
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "workflow.worktrees table exists with FK to workflow.stories.story_id. At minimum: worktree_id (PK), story_id (FK), branch_name, path, created_at columns. Verified via information_schema.columns.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting worktrees table structure and FK verification."
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "workflow.workflow_executions table exists with an id (PK), story_id (FK to workflow.stories), status, started_at, completed_at columns at minimum. Verified via information_schema.columns.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting workflow_executions table structure verification."
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "workflow.workflow_checkpoints and workflow.workflow_audit_log tables exist, both with FK to workflow.workflow_executions.id. Verified via information_schema.referential_constraints.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting both tables and their FKs to workflow_executions."
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "Drizzle schema.ts exports a workflow schema object created with pgSchema('workflow') from drizzle-orm/pg-core, and all workflow table definitions (stories, story_dependencies, story_state_history, worktrees, workflow_executions, workflow_checkpoints, workflow_audit_log) are declared under this schema object. No existing table definitions are modified.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting schema.ts file path and Drizzle schema declarations."
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "SQL verification query confirms all 7 workflow tables exist in information_schema.tables WHERE table_schema = 'workflow'. Query output must list: stories, story_dependencies, story_state_history, worktrees, workflow_executions, workflow_checkpoints, workflow_audit_log.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting SQL query result showing all 7 tables."
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "pnpm check-types passes with no new TypeScript errors after schema.ts update. No regressions to existing table definitions or imports in the knowledge-base package.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting pnpm check-types command execution and output."
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "A DECISION record at `_implementation/DECISION-fk-resolution.md` documents the cross-schema FK resolution strategy (drop-and-recreate or DEFERRABLE) for `workflow.story_dependencies` before any SQL migration is written. The strategy must address: (1) whether self-referential FKs use DEFERRABLE INITIALLY DEFERRED, (2) how story_dependencies' FKs to workflow.stories are ordered relative to the parent table, (3) disposition of the 13 cross-schema FK violations from MANIFEST CDBN-0020 that downstream Phase 1 stories will inherit.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting DECISION-fk-resolution.md file path and content verification."
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "All verification queries execute against the knowledgebase DB at localhost:5433 (NOT lego_dev at port 5432). Connection string for manual verification: `PGPASSWORD=postgres psql -h localhost -p 5433 -d knowledgebase -U postgres`. The migration file `033_workflow_schema.sql` runs via `pnpm db:migrate` in `apps/api/knowledge-base/`. Type-check command: `pnpm check-types` run from `apps/api/knowledge-base/`.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting migration execution and type-check results."
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "All Drizzle export names for workflow schema tables use the `workflow` prefix to avoid collision with existing public-schema exports: `workflowStories`, `workflowStoryDependencies`, `workflowStoryStateHistory`, `workflowWorktrees`, `workflowExecutions`, `workflowCheckpoints`, `workflowAuditLog`. The existing `stories`, `storyDependencies` and other public-schema exports in schema.ts are NOT modified or renamed.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing from _implementation directory.",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC documenting schema.ts export names and verification that existing public-schema exports are unchanged."
+    }
+  ],
+  "total_acs": 13,
+  "accepted": 0,
+  "challenged": 0,
+  "rejected": 13
+}

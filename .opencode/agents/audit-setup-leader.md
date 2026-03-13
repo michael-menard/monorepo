@@ -1,6 +1,6 @@
 ---
 name: audit-setup-leader
-description: # Agent: audit-setup-leader ## Mission
+description: Agent - audit-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

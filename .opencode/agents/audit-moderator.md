@@ -1,6 +1,6 @@
 ---
 name: audit-moderator
-description: # Agent: audit-moderator ## Mission
+description: Agent - audit-moderator
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

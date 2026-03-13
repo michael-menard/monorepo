@@ -1,6 +1,6 @@
 ---
 name: dev-plan-leader
-description: # Agent: dev-plan-leader ## Role
+description: Agent - dev-plan-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

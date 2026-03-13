@@ -1,6 +1,6 @@
 ---
 name: readiness-score-agent
-description: # Agent: readiness-score-agent ## Role
+description: Agent - readiness-score-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

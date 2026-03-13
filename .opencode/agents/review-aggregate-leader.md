@@ -1,6 +1,6 @@
 ---
 name: review-aggregate-leader
-description: # Agent: review-aggregate-leader ## Mission
+description: Agent - review-aggregate-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

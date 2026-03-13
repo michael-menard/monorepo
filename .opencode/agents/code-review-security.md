@@ -1,6 +1,6 @@
 ---
 name: code-review-security
-description: # Agent: code-review-security ## Mission
+description: Agent - code-review-security
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

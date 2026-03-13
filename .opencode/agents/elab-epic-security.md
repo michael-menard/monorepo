@@ -1,6 +1,6 @@
 ---
 name: elab-epic-security
-description: # Agent: elab-epic-security ## Expert Persona
+description: Agent - elab-epic-security
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

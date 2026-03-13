@@ -1,6 +1,6 @@
 ---
 name: pm-story-followup-leader
-description: # Agent: pm-story-followup-leader ## Mission
+description: Agent - pm-story-followup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

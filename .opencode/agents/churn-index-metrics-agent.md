@@ -1,6 +1,6 @@
 ---
 name: churn-index-metrics-agent
-description: # Agent: churn-index-metrics-agent ## Role
+description: Agent - churn-index-metrics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: pm-story-adhoc-leader
-description: # Agent: pm-story-adhoc-leader ## Mission
+description: Agent - pm-story-adhoc-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

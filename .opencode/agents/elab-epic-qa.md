@@ -1,6 +1,6 @@
 ---
 name: elab-epic-qa
-description: # Agent: elab-epic-qa ## MVP-Critical Definition
+description: Agent - elab-epic-qa
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: architect-import-worker
-description: # Agent: architect-import-worker ## Authoritative Reference
+description: Agent - architect-import-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

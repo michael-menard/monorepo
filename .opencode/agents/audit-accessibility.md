@@ -1,6 +1,6 @@
 ---
 name: audit-accessibility
-description: # Agent: audit-accessibility ## Mission
+description: Agent - audit-accessibility
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

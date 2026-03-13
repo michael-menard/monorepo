@@ -1,6 +1,6 @@
 ---
 name: architect-circular-worker
-description: # Agent: architect-circular-worker ## What Are Circular Dependencies?
+description: Agent - architect-circular-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

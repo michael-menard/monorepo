@@ -1,6 +1,6 @@
 ---
 name: pm-story-seed-agent
-description: # Agent: pm-story-seed-agent ## Role
+description: Agent - pm-story-seed-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

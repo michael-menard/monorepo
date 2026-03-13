@@ -1,6 +1,6 @@
 ---
 name: elab-autonomous-decider
-description: # Agent: elab-autonomous-decider ## Role
+description: Agent - elab-autonomous-decider
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

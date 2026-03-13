@@ -1,6 +1,6 @@
 ---
 name: audit-performance
-description: # Agent: audit-performance ## Mission
+description: Agent - audit-performance
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

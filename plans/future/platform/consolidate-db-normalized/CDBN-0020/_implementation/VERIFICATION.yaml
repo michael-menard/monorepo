@@ -1,0 +1,112 @@
+schema: 1
+story_id: CDBN-0020
+timestamp: '2026-03-11T22:30:00Z'
+verdict: PASS
+story_type: audit-only
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: EXEMPT
+    exempt_reason: >-
+      Audit-only story — no frontend or backend application code written. SQL verification queries serve as E2E
+      equivalent.
+  sql_verification:
+    pass: 8
+    fail: 0
+coverage: null
+coverage_meets_threshold: true
+coverage_note: Not applicable — audit-only story with no application code. Coverage threshold waived.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    SQL verification queries (VQ-1 through VQ-8) are re-runnable, anchored, and include expected vs actual results. No
+    test anti-patterns applicable to audit story.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    verification_detail: >-
+      MANIFEST.yaml exists at plans/future/platform/consolidate-db-normalized/CDBN-0020/MANIFEST.yaml. Contains all
+      required sections: table inventory (38 tables), deduplication_strategy, live_usage_tables, fk_violations,
+      verification_queries (VQ-1 through VQ-8), and phase1_gate_decisions. Subtasks ST-1 through ST-7 all executed and
+      documented in EVIDENCE.yaml commands_run section. Local Testing Plan present in the form of verification_queries
+      with 8 copy-pasteable SQL statements. ACs AC-1 through AC-4 were added to KB story record by autonomous
+      elaboration (confirmed in ELAB.yaml gap-1 through gap-4 with ac_added fields).
+    notes: PASS
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    verification_detail: >-
+      MANIFEST.yaml header (lines 18-24) declares source_database: lego_dev, source_host: localhost, source_port: 5432,
+      source_schema: wint. File-level comment block (lines 5-9) explicitly states 'Do NOT query the knowledgebase DB
+      (port 5433)'. target_note field (lines 22-24) repeats: 'Do NOT query the knowledgebase DB (port 5433). CDTS-3020
+      already dropped the wint schema from that DB.' Both the file-level comment and the target_note field fulfill the
+      prohibition callout requirement.
+    notes: PASS
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    verification_detail: >-
+      Three required elements all present: (1) deduplication_strategy section (lines 489-501):
+      strategy=keep_latest_by_updated_at for wint.story_artifacts on natural_key=[story_id, artifact_type],
+      current_duplicate_count=0, duplicate_check_result=CLEAN. (2) live_usage_tables section (lines 506-521):
+      context_packs live_usage=true, context_sessions live_usage=true — both explicitly flag LIVE USAGE with rationale.
+      (3) fk_violations section (lines 527-648): outbound_violations_count=3, inbound_violations_count=10,
+      total_violations=13. All 13 cross-schema FK constraints documented with constraint names, severity, and migration
+      notes. Summary block at line 639 confirms total_violations: 13.
+    notes: PASS
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    verification_detail: >-
+      verification_queries section (lines 682-853) contains VQ-1 through VQ-8. VQ-1: anchored table count assertion
+      (SELECT COUNT(*) = 38 AS assertion_passes). VQ-2: per-table row counts with full 38-row baseline in
+      row_count_baseline sub-map. VQ-3 through VQ-8: FK enumeration, cross-schema checks, duplicate detection,
+      live-usage existence check, column count validation, inbound cross-schema FK check. All 8 queries are
+      copy-pasteable, include connection string prefix at line 681 (PGPASSWORD=postgres psql -h localhost -p 5432 -d
+      lego_dev -U postgres), and include expected_result and actual_result fields. All verified_at 2026-03-11T22:00:00Z.
+    notes: PASS
+architecture_compliant: true
+architecture_notes: >-
+  Audit-only story. No application code written. No ADR violations applicable. DB target correctly set to lego_dev:5432
+  per project conventions (not knowledgebase DB at 5433). MANIFEST format is YAML as recommended by opp-4 in ELAB.yaml.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For DB audit stories, SQL verification queries (anchored count + per-table row counts) serve as an effective E2E
+      equivalent, making the audit independently verifiable by any reviewer with DB access.
+    category: pattern
+    tags:
+      - db-audit
+      - verification
+      - qa
+  - lesson: >-
+      Cross-schema FK violations are a significant migration risk in normalized DB consolidation. wint.stories is the
+      anchor table for 11 inbound cross-schema FK constraints from artifacts.* and kbar schemas — it must be migrated
+      first in any Phase 1 plan.
+    category: pattern
+    tags:
+      - db-migration
+      - fk-constraints
+      - migration-order
+  - lesson: >-
+      When documenting deduplication strategies for audit stories, always inspect the actual column schema — PLAN.yaml
+      assumed a (story_id, artifact_type, phase) composite key for wint.story_artifacts but the table has no phase
+      column. Direct column inspection corrected the strategy.
+    category: blocker
+    tags:
+      - deduplication
+      - schema-inspection
+      - audit
+tokens:
+  in: 12000
+  out: 2500

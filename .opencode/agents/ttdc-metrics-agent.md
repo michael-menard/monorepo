@@ -1,6 +1,6 @@
 ---
 name: ttdc-metrics-agent
-description: # Agent: ttdc-metrics-agent ## Role
+description: Agent - ttdc-metrics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

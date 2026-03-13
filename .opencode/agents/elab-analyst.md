@@ -1,6 +1,6 @@
 ---
 name: elab-analyst
-description: # Agent: elab-analyst ## Role
+description: Agent - elab-analyst
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

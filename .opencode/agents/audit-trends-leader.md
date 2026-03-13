@@ -1,6 +1,6 @@
 ---
 name: audit-trends-leader
-description: # Agent: audit-trends-leader ## Mission
+description: Agent - audit-trends-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

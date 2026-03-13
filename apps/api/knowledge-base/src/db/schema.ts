@@ -1525,7 +1525,11 @@ export const planDetails = pgTable(
      */
     phases: jsonb('phases'),
 
-    /** Plan slugs that must reach 'implemented' before this plan can start */
+    /**
+     * @deprecated Dependencies are now stored in the `plan_dependencies` join table.
+     * This column is retained temporarily for backward-compat during migration 037.
+     * Do NOT read or write this column in application code.
+     */
     dependencies: jsonb('dependencies').$type<string[]>(),
 
     /** Parsed heading breakdown: [{heading, level, startLine}] */

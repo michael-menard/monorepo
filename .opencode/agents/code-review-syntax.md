@@ -1,6 +1,6 @@
 ---
 name: code-review-syntax
-description: # Agent: code-review-syntax ## Mission
+description: Agent - code-review-syntax
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

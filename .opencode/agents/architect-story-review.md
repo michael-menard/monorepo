@@ -1,6 +1,6 @@
 ---
 name: architect-story-review
-description: # Agent: architect-story-review ## Expert Persona
+description: Agent - architect-story-review
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

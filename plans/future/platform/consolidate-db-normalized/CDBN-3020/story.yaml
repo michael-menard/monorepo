@@ -6,7 +6,7 @@ phase: 3
 feature: consolidate-db-normalized
 goal: Ensure all telemetry instrumentation and roadmap queries remain functional against the new schema with no silent data loss
 depends_on:
-  - CDBN-2010
+  - CDBN-2013
   - CDBN-2020
 endpoints: []
 infrastructure: []

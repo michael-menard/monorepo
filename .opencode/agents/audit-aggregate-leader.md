@@ -1,6 +1,6 @@
 ---
 name: audit-aggregate-leader
-description: # Agent: audit-aggregate-leader ## Mission
+description: Agent - audit-aggregate-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

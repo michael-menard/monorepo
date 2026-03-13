@@ -1,6 +1,6 @@
 ---
 name: pm-uiux-recommendations
-description: # Agent: pm-uiux-recommendations ## Mission
+description: Agent - pm-uiux-recommendations
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

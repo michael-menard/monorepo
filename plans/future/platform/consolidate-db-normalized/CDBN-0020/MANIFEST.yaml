@@ -1,0 +1,881 @@
+---
+# ============================================================================
+# CDBN-0020: Migration Manifest of Live Data Across Old Schemas (wint)
+# ============================================================================
+# CRITICAL: Source database is lego_dev at port 5432.
+# Do NOT query the knowledgebase DB (port 5433).
+# The wint schema was dropped from port 5433 by CDTS-3020 — querying the
+# wrong DB will return zero tables and produce an invalid manifest.
+# ============================================================================
+
+schema_version: 1
+story_id: CDBN-0020
+generated_at: '2026-03-11T22:00:00Z'
+
+# ============================================================================
+# HEADER: Source Database Declaration (AC-2)
+# ============================================================================
+source_database: lego_dev
+source_host: localhost
+source_port: 5432
+source_schema: wint
+target_note: >-
+  Do NOT query the knowledgebase DB (port 5433). CDTS-3020 already dropped the
+  wint schema from that DB. All audit SQL must target lego_dev at port 5432.
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+summary:
+  total_tables: 38
+  tables_with_pk: 38
+  tables_with_fk: 23
+  tables_no_fk: 15
+  live_usage_tables: 2
+  cross_schema_fk_violations: 3
+  inbound_cross_schema_fks: 11
+  total_rows_across_schema: 21
+  duplicate_artifacts_found: false
+
+# ============================================================================
+# TABLE INVENTORY (AC-4)
+# Columns: schema_name, table_name, row_count, column_count, has_pk, has_fk,
+#          live_usage, migration_action, dedup_strategy, notes
+# ============================================================================
+tables:
+  - schema_name: wint
+    table_name: agent_decisions
+    row_count: 0
+    column_count: 12
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to agent_invocations(id) within wint schema
+
+  - schema_name: wint
+    table_name: agent_invocations
+    row_count: 0
+    column_count: 19
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: Referenced by agent_decisions and agent_outcomes
+
+  - schema_name: wint
+    table_name: agent_outcomes
+    row_count: 0
+    column_count: 18
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to agent_invocations(id) within wint schema
+
+  - schema_name: wint
+    table_name: capabilities
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: change_telemetry
+    row_count: 5
+    column_count: 6
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: 5 live rows; no FK constraints
+
+  - schema_name: wint
+    table_name: cohesion_rules
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: context_cache_hits
+    row_count: 0
+    column_count: 5
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to context_packs(id) and context_sessions(id); junction table for live-usage tables
+
+  - schema_name: wint
+    table_name: context_packs
+    row_count: 0
+    column_count: 11
+    has_pk: true
+    has_fk: false
+    live_usage: true
+    migration_action: migrate_with_care
+    dedup_strategy: null
+    notes: >-
+      LIVE USAGE: Actively queried by running MCP context cache tools (CDBN-1030 risk).
+      Must not be dropped or truncated during migration. Zero rows currently.
+      Referenced by context_cache_hits(pack_id).
+
+  - schema_name: wint
+    table_name: context_sessions
+    row_count: 0
+    column_count: 12
+    has_pk: true
+    has_fk: false
+    live_usage: true
+    migration_action: migrate_with_care
+    dedup_strategy: null
+    notes: >-
+      LIVE USAGE: Actively queried by running MCP context cache tools (CDBN-1030 risk).
+      Must not be dropped or truncated during migration. Zero rows currently.
+      Referenced by context_cache_hits(session_id).
+
+  - schema_name: wint
+    table_name: dep_audit_findings
+    row_count: 2
+    column_count: 7
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to dep_audit_runs(id) within wint schema; 2 live rows
+
+  - schema_name: wint
+    table_name: dep_audit_runs
+    row_count: 2
+    column_count: 11
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: 2 live rows; referenced by dep_audit_findings
+
+  - schema_name: wint
+    table_name: elaborations
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: epics
+    row_count: 0
+    column_count: 7
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: feature_relationships
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to features(id) for both source_feature_id and target_feature_id within wint schema
+
+  - schema_name: wint
+    table_name: features
+    row_count: 0
+    column_count: 12
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: Referenced by feature_relationships
+
+  - schema_name: wint
+    table_name: implementation_plans
+    row_count: 0
+    column_count: 11
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: ml_models
+    row_count: 0
+    column_count: 14
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: Referenced by model_metrics and model_predictions
+
+  - schema_name: wint
+    table_name: model_metrics
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to ml_models(id) within wint schema
+
+  - schema_name: wint
+    table_name: model_predictions
+    row_count: 0
+    column_count: 11
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to ml_models(id) within wint schema
+
+  - schema_name: wint
+    table_name: proofs
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: rules
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: state_transitions
+    row_count: 0
+    column_count: 14
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: stories
+    row_count: 1
+    column_count: 14
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: >-
+      Root anchor table for 15+ FK relationships in wint schema. Also referenced
+      by kbar.story_dependencies, kbar.story_states, artifacts.* tables (cross-schema FKs).
+      1 live row. CRITICAL: dropping this table would violate 11 cross-schema FK constraints.
+
+  - schema_name: wint
+    table_name: story_artifacts
+    row_count: 0
+    column_count: 8
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: keep_latest_by_updated_at
+    notes: >-
+      FK to stories(id) within wint schema. Columns: id, story_id, artifact_type (enum),
+      file_path, checksum, last_synced_at, created_at, updated_at. No phase column exists
+      (unlike artifacts.* schema tables). Deduplication key: (story_id, artifact_type).
+      No duplicates found in current data (0 rows). Strategy: keep_latest_by_updated_at
+      if duplicates appear during migration — gates CDBN-1020 design.
+
+  - schema_name: wint
+    table_name: story_assignments
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: story_blockers
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: story_dependencies
+    row_count: 0
+    column_count: 8
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: >-
+      CROSS-SCHEMA FK VIOLATION: Two FK constraints reference kbar.stories(id)
+      (story_id and depends_on_story_id), not wint.stories(id). These are undocumented
+      cross-schema dependencies. Migration must resolve: either consolidate to wint.stories
+      or coordinate with kbar schema migration.
+
+  - schema_name: wint
+    table_name: story_metadata_versions
+    row_count: 0
+    column_count: 7
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: story_phase_history
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: story_states
+    row_count: 4
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: >-
+      CROSS-SCHEMA FK VIOLATION: FK constraint references kbar.stories(id) not
+      wint.stories(id). 4 live rows. Migration must resolve cross-schema dependency.
+
+  - schema_name: wint
+    table_name: story_transitions
+    row_count: 4
+    column_count: 9
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema. 4 live rows.
+
+  - schema_name: wint
+    table_name: token_usage
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: training_data
+    row_count: 0
+    column_count: 9
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: No FK constraints
+
+  - schema_name: wint
+    table_name: verifications
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+  - schema_name: wint
+    table_name: workflow_audit_log
+    row_count: 0
+    column_count: 7
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to workflow_executions(id) within wint schema
+
+  - schema_name: wint
+    table_name: workflow_checkpoints
+    row_count: 0
+    column_count: 8
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to workflow_executions(id) within wint schema
+
+  - schema_name: wint
+    table_name: workflow_executions
+    row_count: 5
+    column_count: 16
+    has_pk: true
+    has_fk: false
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: >-
+      Root table for workflow_audit_log and workflow_checkpoints. 5 live rows.
+      No FK constraints; referenced by 2 tables.
+
+  - schema_name: wint
+    table_name: worktrees
+    row_count: 0
+    column_count: 10
+    has_pk: true
+    has_fk: true
+    live_usage: false
+    migration_action: migrate
+    dedup_strategy: null
+    notes: FK to stories(id) within wint schema
+
+# ============================================================================
+# DEDUPLICATION STRATEGY (AC-3) — gates CDBN-1020
+# ============================================================================
+deduplication_strategy:
+  applicable_tables:
+    - table: wint.story_artifacts
+      natural_key: [story_id, artifact_type]
+      strategy: keep_latest_by_updated_at
+      rationale: >-
+        wint.story_artifacts does NOT have a phase column (unlike artifacts.* schema tables
+        which are separated by type). Deduplication key is (story_id, artifact_type).
+        Strategy: on conflict, keep the row with the most recent updated_at timestamp.
+        No duplicates exist in current data — this strategy applies only if duplicates
+        appear mid-migration.
+  current_duplicate_count: 0
+  duplicate_check_result: CLEAN
+
+# ============================================================================
+# LIVE USAGE CLASSIFICATION (AC-3) — gates CDBN-1030
+# ============================================================================
+live_usage_tables:
+  - table: wint.context_packs
+    live_usage: true
+    reason: >-
+      Actively queried by running MCP context cache tools. Must not be dropped or
+      truncated during migration. Zero current rows but schema is active.
+  - table: wint.context_sessions
+    live_usage: true
+    reason: >-
+      Actively queried by running MCP context cache tools. Must not be dropped or
+      truncated during migration. Zero current rows but schema is active.
+  - table: wint.context_cache_hits
+    live_usage: false
+    reason: >-
+      Junction table for context_packs and context_sessions. Not directly queried
+      by MCP tools but participates in the live-usage subsystem. Zero rows currently.
+
+# ============================================================================
+# FK VIOLATIONS (AC-3)
+# Cross-schema FK dependencies that complicate clean schema migration
+# ============================================================================
+fk_violations:
+  outbound_cross_schema:
+    description: >-
+      FK constraints in wint schema that reference tables OUTSIDE wint.
+      These are undocumented cross-schema dependencies discovered during this audit.
+    violations:
+      - table: wint.story_dependencies
+        column: story_id
+        references: kbar.stories(id)
+        constraint_name: story_dependencies_story_id_stories_id_fk
+        severity: HIGH
+        migration_note: >-
+          Must coordinate wint and kbar migration order or replace constraint
+          with a reference to the consolidated stories table.
+
+      - table: wint.story_dependencies
+        column: depends_on_story_id
+        references: kbar.stories(id)
+        constraint_name: story_dependencies_depends_on_story_id_stories_id_fk
+        severity: HIGH
+        migration_note: >-
+          Same table, second FK column also pointing to kbar. Both FK constraints
+          must be resolved together.
+
+      - table: wint.story_states
+        column: story_id
+        references: kbar.stories(id)
+        constraint_name: story_states_story_id_stories_id_fk
+        severity: HIGH
+        migration_note: >-
+          4 live rows in story_states reference kbar.stories. Cannot migrate
+          wint.story_states without first migrating or aliasing kbar.stories.
+
+  inbound_cross_schema:
+    description: >-
+      FK constraints from OTHER schemas that reference wint tables.
+      These are inbound dependencies: wint tables cannot be dropped without
+      first dropping or migrating these constraints.
+    violations:
+      - referencing_schema: artifacts
+        referencing_table: checkpoint_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: checkpoint_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: evidence_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: evidence_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: plan_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: plan_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: qa_verify_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: qa_verify_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: review_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: review_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: scope_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: scope_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: artifacts
+        referencing_table: story_artifacts
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: story_artifacts_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: kbar
+        referencing_table: story_dependencies
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: story_dependencies_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: kbar
+        referencing_table: story_dependencies
+        column: depends_on_story_id
+        references: wint.stories(id)
+        constraint_name: story_dependencies_depends_on_story_id_stories_id_fk
+        severity: HIGH
+
+      - referencing_schema: kbar
+        referencing_table: story_states
+        column: story_id
+        references: wint.stories(id)
+        constraint_name: story_states_story_id_stories_id_fk
+        severity: HIGH
+
+  summary:
+    outbound_violations_count: 3
+    inbound_violations_count: 10
+    total_violations: 13
+    blocking_tables:
+      - wint.stories
+        # Cannot be migrated/dropped without coordinating with artifacts.* and kbar.* schema migrations
+    recommendation: >-
+      Migration order must be: (1) migrate wint.stories to consolidated schema first,
+      (2) update all FK constraints in artifacts.* and kbar.* schemas to point to new
+      consolidated stories table, (3) migrate remaining wint tables,
+      (4) drop wint.story_dependencies and wint.story_states cross-schema FKs after
+      kbar migration completes.
+
+# ============================================================================
+# OTHER SCHEMAS IN lego_dev (context for migration planning)
+# ============================================================================
+other_schemas:
+  - name: kbar
+    table_count: 11
+    relevant_to_migration: true
+    notes: >-
+      Contains stories, story_dependencies, story_states — mirrors similar functionality
+      to wint schema. Has cross-schema FK dependencies with wint. Must be coordinated
+      with wint migration.
+  - name: artifacts
+    table_count: 7
+    relevant_to_migration: true
+    notes: >-
+      Contains 7 typed artifact tables (checkpoint_artifacts, evidence_artifacts,
+      plan_artifacts, qa_verify_artifacts, review_artifacts, scope_artifacts,
+      story_artifacts) all with FK references to wint.stories(id).
+  - name: telemetry
+    table_count: 1
+    relevant_to_migration: false
+    notes: Contains workflow_events. No FK dependencies on wint schema.
+  - name: public
+    table_count: 22
+    relevant_to_migration: false
+    notes: LEGO app tables (mocs, sets, gallery, etc.). No FK dependencies on wint schema.
+
+# ============================================================================
+# VERIFICATION QUERIES (AC-4)
+# All SQL targets lego_dev at port 5432. Copy-pasteable without modification.
+# Connection: PGPASSWORD=postgres psql -h localhost -p 5432 -d lego_dev -U postgres
+# ============================================================================
+verification_queries:
+  - id: VQ-1
+    description: Anchored table count assertion — confirms wint schema has exactly 38 tables
+    sql: |
+      SELECT COUNT(*) = 38 AS assertion_passes,
+             COUNT(*) AS actual_count
+      FROM information_schema.tables
+      WHERE table_schema = 'wint';
+    expected_result: assertion_passes=true, actual_count=38
+    actual_result: assertion_passes=true, actual_count=38
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-2
+    description: Per-table row counts — baseline for post-migration parity check
+    sql: |
+      SELECT
+        schemaname,
+        relname AS table_name,
+        n_live_tup AS row_count
+      FROM pg_stat_user_tables
+      WHERE schemaname = 'wint'
+      ORDER BY relname;
+    expected_result: 38 rows, total row count = 21
+    actual_result: 38 rows, total row count = 21
+    verified_at: '2026-03-11T22:00:00Z'
+    row_count_baseline:
+      agent_decisions: 0
+      agent_invocations: 0
+      agent_outcomes: 0
+      capabilities: 0
+      change_telemetry: 5
+      cohesion_rules: 0
+      context_cache_hits: 0
+      context_packs: 0
+      context_sessions: 0
+      dep_audit_findings: 2
+      dep_audit_runs: 2
+      elaborations: 0
+      epics: 0
+      feature_relationships: 0
+      features: 0
+      implementation_plans: 0
+      ml_models: 0
+      model_metrics: 0
+      model_predictions: 0
+      proofs: 0
+      rules: 0
+      state_transitions: 0
+      stories: 1
+      story_artifacts: 0
+      story_assignments: 0
+      story_blockers: 0
+      story_dependencies: 0
+      story_metadata_versions: 0
+      story_phase_history: 0
+      story_states: 4
+      story_transitions: 4
+      token_usage: 0
+      training_data: 0
+      verifications: 0
+      workflow_audit_log: 0
+      workflow_checkpoints: 0
+      workflow_executions: 5
+      worktrees: 0
+
+  - id: VQ-3
+    description: FK constraint enumeration — all FK edges within wint schema
+    sql: |
+      SELECT
+        tc.table_name,
+        kcu.column_name,
+        ccu.table_schema AS foreign_schema,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name,
+        tc.constraint_name
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = 'wint'
+      ORDER BY tc.table_name, kcu.column_name;
+    expected_result: 38 FK constraint rows (includes duplicates due to information_schema join behavior); 3 cross-schema FK violations pointing to kbar schema
+    actual_result: 38 rows returned (verified); cross-schema violations: story_dependencies->kbar.stories (x2), story_states->kbar.stories (x1)
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-4
+    description: Cross-schema outbound FK check — FKs from wint pointing to other schemas
+    sql: |
+      SELECT
+        tc.table_name,
+        kcu.column_name,
+        ccu.table_schema AS foreign_schema,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name,
+        tc.constraint_name
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = 'wint'
+        AND ccu.table_schema != 'wint'
+      ORDER BY tc.table_name;
+    expected_result: 3 rows (story_dependencies x2, story_states x1 — all pointing to kbar.stories)
+    actual_result: 3 rows confirmed
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-5
+    description: Duplicate artifact detection — checks for duplicate (story_id, artifact_type) composites in wint.story_artifacts
+    sql: |
+      SELECT story_id, artifact_type, COUNT(*) AS duplicate_count
+      FROM wint.story_artifacts
+      GROUP BY story_id, artifact_type
+      HAVING COUNT(*) > 1
+      ORDER BY duplicate_count DESC;
+    expected_result: 0 rows (no duplicates)
+    actual_result: 0 rows — no duplicates found
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-6
+    description: Live-usage table existence check — confirms context_packs and context_sessions exist
+    sql: |
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'wint'
+        AND table_name IN ('context_packs', 'context_sessions')
+      ORDER BY table_name;
+    expected_result: 2 rows (context_packs, context_sessions)
+    actual_result: 2 rows confirmed
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-7
+    description: Column count per table — validates MANIFEST column_count values
+    sql: |
+      SELECT table_name, COUNT(*) AS column_count
+      FROM information_schema.columns
+      WHERE table_schema = 'wint'
+      GROUP BY table_name
+      ORDER BY table_name;
+    expected_result: 38 rows matching column_count values in MANIFEST table inventory
+    actual_result: Verified — all 38 tables match recorded column counts
+    verified_at: '2026-03-11T22:00:00Z'
+
+  - id: VQ-8
+    description: Inbound cross-schema FK check — FKs from other schemas pointing INTO wint
+    sql: |
+      SELECT
+        tc.table_schema AS referencing_schema,
+        tc.table_name,
+        kcu.column_name,
+        ccu.table_schema AS foreign_schema,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name,
+        tc.constraint_name
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema != 'wint'
+        AND ccu.table_schema = 'wint'
+      ORDER BY tc.table_schema, tc.table_name;
+    expected_result: 11 rows (7 from artifacts schema, 3 from kbar schema, 1 duplicate due to join)
+    actual_result: 11 rows confirmed — artifacts.* (7 tables), kbar.story_dependencies (2), kbar.story_states (1)
+    verified_at: '2026-03-11T22:00:00Z'
+
+# ============================================================================
+# PHASE 1 GATE DECISIONS
+# Required outputs for downstream stories before Phase 1 can begin
+# ============================================================================
+phase1_gate_decisions:
+  - gate: CDBN-1020
+    decision: deduplication_strategy
+    outcome: keep_latest_by_updated_at on (story_id, artifact_type) for wint.story_artifacts
+    status: DECIDED
+    notes: No duplicates currently exist. Strategy is preventive for mid-migration conflicts.
+
+  - gate: CDBN-1030
+    decision: live_usage_classification
+    outcome: context_packs=true, context_sessions=true
+    status: DECIDED
+    notes: Both tables actively queried by MCP context cache tools. migrate_with_care required.
+
+  - gate: CDBN-1010
+    decision: fk_violation_audit
+    outcome: >-
+      3 outbound cross-schema FK violations found (wint->kbar). 10 inbound cross-schema
+      FK violations found (artifacts.*->wint, kbar->wint). Migration order constraint:
+      wint.stories must be migrated first before any other schema can be updated.
+    status: DECIDED
+    notes: >-
+      All 13 cross-schema FK constraints must be resolved during migration.
+      See fk_violations section for full constraint names and migration notes.

@@ -1,6 +1,6 @@
 ---
 name: pm-harness-setup-leader
-description: # Agent: pm-harness-setup-leader ## Mission
+description: Agent - pm-harness-setup-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

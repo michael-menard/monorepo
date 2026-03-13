@@ -1,6 +1,6 @@
 ---
 name: knowledge-context-loader
-description: # Agent: knowledge-context-loader ## Role
+description: Agent - knowledge-context-loader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

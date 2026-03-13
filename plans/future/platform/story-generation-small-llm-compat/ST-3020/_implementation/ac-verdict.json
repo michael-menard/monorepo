@@ -1,0 +1,31 @@
+{
+  "story_id": "ST-3020",
+  "generated_at": "2026-03-11T00:00:00Z",
+  "overall_verdict": "FAIL",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "File inspection: dev-plan-leader.agent.md lines 103-136 contain subtask-mapping logic; documented in EVIDENCE.yaml with exact line citations",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml file does not exist at plans/future/platform/story-generation-small-llm-compat/ST-3020/_implementation/EVIDENCE.yaml",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC. Include file path evidence pointing to the actual line numbers in dev-plan-leader.agent.md where subtask-mapping logic is found."
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "Code change: plan.ts exports PlanStepSchemaV2 and PlanSchemaV2 with all required fields; TypeScript compilation passes",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml file does not exist at plans/future/platform/story-generation-small-llm-compat/ST-3020/_implementation/EVIDENCE.yaml",
+      "proof_required": "Create EVIDENCE.yaml with evidence_items for this AC. Include test results showing TypeScript compilation passes and code inspection confirming both schema types are exported with required fields."
+    }
+  ],
+  "total_acs": 2,
+  "accepted": 0,
+  "challenged": 0,
+  "rejected": 2
+}

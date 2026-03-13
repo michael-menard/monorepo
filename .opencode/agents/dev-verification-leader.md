@@ -1,6 +1,6 @@
 ---
 name: dev-verification-leader
-description: # Agent: dev-verification-leader ## Role
+description: Agent - dev-verification-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: architect-barrel-worker
-description: # Agent: architect-barrel-worker ## What Are Barrel Files?
+description: Agent - architect-barrel-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

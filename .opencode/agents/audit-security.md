@@ -1,6 +1,6 @@
 ---
 name: audit-security
-description: # Agent: audit-security ## Mission
+description: Agent - audit-security
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

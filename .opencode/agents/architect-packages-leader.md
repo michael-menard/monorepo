@@ -1,6 +1,6 @@
 ---
 name: architect-packages-leader
-description: # Agent: architect-packages-leader ## Authoritative Reference
+description: Agent - architect-packages-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

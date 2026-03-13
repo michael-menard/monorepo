@@ -1,6 +1,6 @@
 ---
 name: elab-escape-hatch-agent
-description: # Agent: elab-escape-hatch-agent ## Role
+description: Agent - elab-escape-hatch-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

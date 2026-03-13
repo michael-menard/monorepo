@@ -1,6 +1,6 @@
 ---
 name: architect-interface-worker
-description: # Agent: architect-interface-worker ## Authoritative Reference
+description: Agent - architect-interface-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

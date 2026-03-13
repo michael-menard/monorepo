@@ -1,6 +1,6 @@
 ---
 name: architect-frontend-leader
-description: # Agent: architect-frontend-leader ## Authoritative Reference
+description: Agent - architect-frontend-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: story-attack-agent
-description: # Agent: story-attack-agent ## Role
+description: Agent - story-attack-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

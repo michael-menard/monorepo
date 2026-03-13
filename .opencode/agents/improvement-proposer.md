@@ -1,6 +1,6 @@
 ---
 name: improvement-proposer
-description: # Agent: improvement-proposer ## Mission
+description: Agent - improvement-proposer
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

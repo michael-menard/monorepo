@@ -1,6 +1,6 @@
 ---
 name: pcar-metrics-agent
-description: # Agent: pcar-metrics-agent ## Role
+description: Agent - pcar-metrics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: code-review-accessibility
-description: # Agent: code-review-accessibility ## Mission
+description: Agent - code-review-accessibility
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

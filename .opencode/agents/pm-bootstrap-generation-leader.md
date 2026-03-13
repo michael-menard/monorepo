@@ -1,6 +1,6 @@
 ---
 name: pm-bootstrap-generation-leader
-description: # Agent: pm-bootstrap-generation-leader ## Mission
+description: Agent - pm-bootstrap-generation-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

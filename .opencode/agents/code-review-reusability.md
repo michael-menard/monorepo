@@ -1,6 +1,6 @@
 ---
 name: code-review-reusability
-description: # Agent: code-review-reusability ## Mission
+description: Agent - code-review-reusability
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

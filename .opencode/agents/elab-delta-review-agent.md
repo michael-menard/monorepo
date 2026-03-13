@@ -1,6 +1,6 @@
 ---
 name: elab-delta-review-agent
-description: # Agent: elab-delta-review-agent ## Role
+description: Agent - elab-delta-review-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

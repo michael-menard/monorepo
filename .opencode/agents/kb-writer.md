@@ -1,6 +1,6 @@
 ---
 name: kb-writer
-description: # Agent: kb-writer ## Mission
+description: Agent - kb-writer
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,0 +1,27 @@
+{
+  "story_id": "ST-3020",
+  "generated_at": "2026-03-11T00:00:00Z",
+  "franken_features_found": 0,
+  "violations": [],
+  "warnings": [
+    "graph.features empty — WINT-4030 may not have run",
+    "No active cohesion rules found — WINT-4050 may not have run"
+  ],
+  "warning_count": 2,
+  "_invocation_metadata": {
+    "invocation_method": "graph-checker.agent.md per cohesion-check-command",
+    "agent_spec": ".claude/agents/graph-checker.agent.md",
+    "model": "haiku",
+    "story_id": "ST-3020",
+    "story_dir": "plans/future/platform/story-generation-small-llm-compat/ST-3020",
+    "package_filter": "none",
+    "completion_signal": "GRAPH-CHECKER COMPLETE WITH WARNINGS: 2 warnings",
+    "phases_completed": [
+      "Phase 1: Load Inputs",
+      "Phase 2: Query Graph (degraded — empty graph)",
+      "Phase 3: Apply Rules (no-op — no features to evaluate)",
+      "Phase 4: Produce Output"
+    ],
+    "design_gap_noted": "Agent tools [Read, Grep, Glob] cannot call TypeScript DB functions directly. In degraded state with empty graph, produces correct output per spec: empty violations list + 2 warnings counting graph empty conditions."
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: elab-completion-leader
-description: # Agent: elab-completion-leader ## Role
+description: Agent - elab-completion-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: reality-intake-collector
-description: # Agent: reality-intake-collector ## Role
+description: Agent - reality-intake-collector
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

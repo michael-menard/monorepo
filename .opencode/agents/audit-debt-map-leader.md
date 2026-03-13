@@ -1,6 +1,6 @@
 ---
 name: audit-debt-map-leader
-description: # Agent: audit-debt-map-leader ## Mission
+description: Agent - audit-debt-map-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dev-implement-verifier
-description: # Agent: dev-implement-verifier ## Mission
+description: Agent - dev-implement-verifier
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

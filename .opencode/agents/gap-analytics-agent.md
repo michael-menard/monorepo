@@ -1,6 +1,6 @@
 ---
 name: gap-analytics-agent
-description: # Agent: gap-analytics-agent ## Role
+description: Agent - gap-analytics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

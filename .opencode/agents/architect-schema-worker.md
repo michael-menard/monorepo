@@ -1,6 +1,6 @@
 ---
 name: architect-schema-worker
-description: # Agent: architect-schema-worker ## Authoritative Reference
+description: Agent - architect-schema-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

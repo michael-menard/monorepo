@@ -1,6 +1,6 @@
 ---
 name: turn-count-metrics-agent
-description: # Agent: turn-count-metrics-agent ## Role
+description: Agent - turn-count-metrics-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

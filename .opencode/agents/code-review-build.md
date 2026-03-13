@@ -1,6 +1,6 @@
 ---
 name: code-review-build
-description: # Agent: code-review-build ## Mission
+description: Agent - code-review-build
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

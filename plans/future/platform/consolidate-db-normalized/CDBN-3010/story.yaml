@@ -6,7 +6,7 @@ phase: 3
 feature: consolidate-db-normalized
 goal: Restore full MCP tool functionality against the new schema so all agents and workflows operate correctly post-migration
 depends_on:
-  - CDBN-2010
+  - CDBN-2013
   - CDBN-2020
 endpoints:
   - All existing MCP KB tool endpoints

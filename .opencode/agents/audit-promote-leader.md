@@ -1,6 +1,6 @@
 ---
 name: audit-promote-leader
-description: # Agent: audit-promote-leader ## Mission
+description: Agent - audit-promote-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

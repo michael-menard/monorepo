@@ -1,6 +1,6 @@
 ---
 name: gap-hygiene-agent
-description: # Agent: gap-hygiene-agent ## Role
+description: Agent - gap-hygiene-agent
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

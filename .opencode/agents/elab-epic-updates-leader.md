@@ -1,6 +1,6 @@
 ---
 name: elab-epic-updates-leader
-description: # Agent: elab-epic-updates-leader ## Mission
+description: Agent - elab-epic-updates-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

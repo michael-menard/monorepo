@@ -1,6 +1,6 @@
 ---
 name: architect-workspace-worker
-description: # Agent: architect-workspace-worker ## Rule
+description: Agent - architect-workspace-worker
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

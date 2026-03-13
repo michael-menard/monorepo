@@ -1,6 +1,6 @@
 ---
 name: pm-bootstrap-analysis-leader
-description: # Agent: pm-bootstrap-analysis-leader ## Mission
+description: Agent - pm-bootstrap-analysis-leader
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 

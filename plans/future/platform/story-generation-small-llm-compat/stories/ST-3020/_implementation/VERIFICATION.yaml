@@ -1,0 +1,60 @@
+schema: 1
+story_id: ST-3020
+timestamp: '2026-03-11T21:10:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 10
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+pre_existing_failures:
+  count: 11
+  description: >-
+    qa.test.ts failures due to @repo/logger package entry resolution failure in worktree environment — identical
+    failures exist on main branch for the same root cause. Not introduced by ST-3020 (git diff main...story/ST-3020
+    --name-only confirms only plan.ts was changed).
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results[0]
+    notes: >-
+      Confirmed at .claude/agents/dev-plan-leader.agent.md lines 102-136 in story/ST-3020 worktree. Step 3 reads ##
+      Subtasks section; Step 4 generates schema: 2 PLAN.yaml with subtask_id, files_to_read, verification, and
+      acs_covered fields. Each story subtask maps 1:1 to a PLAN.yaml step.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_results[1]
+    notes: >-
+      Confirmed in commit 6eed77eb. plan.ts exports PlanStepSchemaV2 (id, subtask_id, files_to_read, verification,
+      acs_covered), PlanSchemaV2 (schema: literal(2), subtask_source: literal('story')), and AnyPlanSchema as
+      z.discriminatedUnion('schema', [PlanSchema, PlanSchemaV2]). plan.test.ts 10/10 pass. Zero TypeScript errors in
+      plan.ts.
+architecture_compliant: true
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Worktree test environments can show @repo/logger resolution failures for qa.test.ts even when main passes — caused
+      by @repo/logger not being built in the isolated worktree. Always cross-check failing tests against main branch
+      before classifying as regressions.
+    category: blocker
+    tags:
+      - worktree
+      - test-environment
+      - logger
+tokens:
+  in: 12000
+  out: 1500

@@ -1,6 +1,6 @@
 ---
 name: code-review-style-compliance
-description: # Agent: code-review-style-compliance ## Mission
+description: Agent - code-review-style-compliance
 model: anthropic/claude-sonnet-4-5-20241022
 ---
 
