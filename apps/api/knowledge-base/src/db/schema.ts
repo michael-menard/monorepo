@@ -2486,9 +2486,15 @@ export const agentOutcomes = pgTable(
     reviewNotes: text('review_notes'),
     lintErrors: integer('lint_errors').notNull().default(0),
     typeErrors: integer('type_errors').notNull().default(0),
-    securityIssues: jsonb('security_issues').notNull().default(sql`'[]'::jsonb`),
-    performanceMetrics: jsonb('performance_metrics').notNull().default(sql`'{}'::jsonb`),
-    artifactsMetadata: jsonb('artifacts_metadata').notNull().default(sql`'{}'::jsonb`),
+    securityIssues: jsonb('security_issues')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    performanceMetrics: jsonb('performance_metrics')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    artifactsMetadata: jsonb('artifacts_metadata')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
