@@ -742,12 +742,12 @@ export const storyDependencies = pgTable(
     /** Story that has the dependency */
     storyId: text('story_id')
       .notNull()
-      .references(() => stories.storyId, { onDelete: 'restrict' }),
+      .references(() => stories.storyId, { onDelete: 'cascade' }),
 
     /** Story that is depended upon */
     targetStoryId: text('target_story_id')
       .notNull()
-      .references(() => stories.storyId, { onDelete: 'restrict' }),
+      .references(() => stories.storyId, { onDelete: 'cascade' }),
 
     /**
      * Type of dependency relationship.
