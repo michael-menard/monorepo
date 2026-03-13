@@ -2370,11 +2370,60 @@ export const contextPackTypeEnum = pgEnum('context_pack_type', [
   'agent_missions',
 ])
 
+// CDBN-1040: Telemetry Schema
+export const agentDecisionTypeEnum = pgEnum('agent_decision_type', [
+  'strategy_selection',
+  'pattern_choice',
+  'risk_assessment',
+  'scope_determination',
+  'test_approach',
+  'architecture_decision',
+])
+
+export const agentInvocations = pgTable(
+  'agent_invocations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invocationId: text('invocation_id').notNull().unique(),
+    agentName: text('agent_name').notNull(),
+    storyId: text('story_id'),
+    phase: text('phase'),
+    inputPayload: jsonb('input_payload'),
+    outputPayload: jsonb('output_payload'),
+    durationMs: integer('duration_ms'),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    cachedTokens: integer('cached_tokens').notNull().default(0),
+    totalTokens: integer('total_tokens').notNull().default(0),
+    estimatedCost: real('estimated_cost'),
+    modelName: text('model_name'),
+    status: text('status').notNull(),
+    errorMessage: text('error_message'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    invocationIdIdx: uniqueIndex('idx_agent_invocations_invocation_id').on(table.invocationId),
+    agentNameIdx: index('idx_agent_invocations_agent_name').on(table.agentName),
+    storyIdIdx: index('idx_agent_invocations_story_id').on(table.storyId),
+    startedAtIdx: index('idx_agent_invocations_started_at').on(table.startedAt),
+    statusIdx: index('idx_agent_invocations_status').on(table.status),
+    agentStoryIdx: index('idx_agent_invocations_agent_story').on(table.agentName, table.storyId),
+    agentNameStartedAtIdx: index('idx_agent_invocations_agent_name_started_at').on(
+      table.agentName,
+      table.startedAt,
+    ),
+  }),
+)
+
 export const hitlDecisions = pgTable(
   'hitl_decisions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    invocationId: uuid('invocation_id'),
+    invocationId: uuid('invocation_id').references(() => agentInvocations.id, {
+      onDelete: 'set null',
+    }),
     decisionType: text('decision_type').notNull(),
     decisionText: text('decision_text').notNull(),
     context: jsonb('context'),
@@ -2387,6 +2436,106 @@ export const hitlDecisions = pgTable(
     storyIdIdx: index('idx_hitl_decisions_story_id').on(table.storyId),
     operatorIdIdx: index('idx_hitl_decisions_operator_id').on(table.operatorId),
     createdAtIdx: index('idx_hitl_decisions_created_at').on(table.createdAt),
+  }),
+)
+
+export const agentDecisions = pgTable(
+  'agent_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invocationId: uuid('invocation_id').references(() => agentInvocations.id, {
+      onDelete: 'cascade',
+    }),
+    decisionType: agentDecisionTypeEnum('decision_type').notNull(),
+    decisionText: text('decision_text').notNull(),
+    context: jsonb('context'),
+    confidence: integer('confidence'),
+    wasCorrect: boolean('was_correct'),
+    evaluatedAt: timestamp('evaluated_at', { withTimezone: true }),
+    evaluatedBy: text('evaluated_by'),
+    correctnessScore: integer('correctness_score'),
+    alternativesConsidered: integer('alternatives_considered').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    invocationIdIdx: index('idx_agent_decisions_invocation_id').on(table.invocationId),
+    decisionTypeIdx: index('idx_agent_decisions_decision_type').on(table.decisionType),
+    createdAtIdx: index('idx_agent_decisions_created_at').on(table.createdAt),
+    decisionTypeEvaluatedAtIdx: index('idx_agent_decisions_decision_type_evaluated_at').on(
+      table.decisionType,
+      table.evaluatedAt,
+    ),
+  }),
+)
+
+export const agentOutcomes = pgTable(
+  'agent_outcomes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invocationId: uuid('invocation_id')
+      .notNull()
+      .references(() => agentInvocations.id, { onDelete: 'cascade' }),
+    outcomeType: text('outcome_type').notNull(),
+    artifactsProduced: jsonb('artifacts_produced'),
+    testsWritten: integer('tests_written').notNull().default(0),
+    testsPassed: integer('tests_passed').notNull().default(0),
+    testsFailed: integer('tests_failed').notNull().default(0),
+    codeQuality: integer('code_quality'),
+    testCoverage: integer('test_coverage'),
+    reviewScore: integer('review_score'),
+    reviewNotes: text('review_notes'),
+    lintErrors: integer('lint_errors').notNull().default(0),
+    typeErrors: integer('type_errors').notNull().default(0),
+    securityIssues: jsonb('security_issues')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    performanceMetrics: jsonb('performance_metrics')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    artifactsMetadata: jsonb('artifacts_metadata')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    invocationIdIdx: index('idx_agent_outcomes_invocation_id').on(table.invocationId),
+    outcomeTypeIdx: index('idx_agent_outcomes_outcome_type').on(table.outcomeType),
+    createdAtIdx: index('idx_agent_outcomes_created_at').on(table.createdAt),
+    outcomeTypeCreatedAtIdx: index('idx_agent_outcomes_outcome_type_created_at').on(
+      table.outcomeType,
+      table.createdAt,
+    ),
+  }),
+)
+
+export const storyOutcomes = pgTable(
+  'story_outcomes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: text('story_id').notNull().unique(),
+    finalVerdict: text('final_verdict').notNull(),
+    qualityScore: integer('quality_score').notNull().default(0),
+    totalInputTokens: integer('total_input_tokens').notNull().default(0),
+    totalOutputTokens: integer('total_output_tokens').notNull().default(0),
+    totalCachedTokens: integer('total_cached_tokens').notNull().default(0),
+    estimatedTotalCost: real('estimated_total_cost'),
+    reviewIterations: integer('review_iterations').notNull().default(0),
+    qaIterations: integer('qa_iterations').notNull().default(0),
+    durationMs: integer('duration_ms').notNull().default(0),
+    primaryBlocker: text('primary_blocker'),
+    metadata: jsonb('metadata'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: uniqueIndex('idx_story_outcomes_story_id').on(table.storyId),
+    finalVerdictIdx: index('idx_story_outcomes_final_verdict').on(table.finalVerdict),
+    completedAtIdx: index('idx_story_outcomes_completed_at').on(table.completedAt),
+    finalVerdictCompletedAtIdx: index('idx_story_outcomes_final_verdict_completed_at').on(
+      table.finalVerdict,
+      table.completedAt,
+    ),
   }),
 )
 
@@ -2460,6 +2609,14 @@ export const contextCacheHits = pgTable(
 // Type exports
 export type HitlDecision = typeof hitlDecisions.$inferSelect
 export type NewHitlDecision = typeof hitlDecisions.$inferInsert
+export type AgentInvocation = typeof agentInvocations.$inferSelect
+export type NewAgentInvocation = typeof agentInvocations.$inferInsert
+export type AgentDecision = typeof agentDecisions.$inferSelect
+export type NewAgentDecision = typeof agentDecisions.$inferInsert
+export type AgentOutcome = typeof agentOutcomes.$inferSelect
+export type NewAgentOutcome = typeof agentOutcomes.$inferInsert
+export type StoryOutcome = typeof storyOutcomes.$inferSelect
+export type NewStoryOutcome = typeof storyOutcomes.$inferInsert
 export type ContextPack = typeof contextPacks.$inferSelect
 export type NewContextPack = typeof contextPacks.$inferInsert
 export type ContextSession = typeof contextSessions.$inferSelect
