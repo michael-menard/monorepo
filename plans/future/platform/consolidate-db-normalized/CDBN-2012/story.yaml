@@ -1,0 +1,62 @@
+id: CDBN-2012
+title: Migrate telemetry Schema Live Data
+status: backlog
+priority: medium
+phase: 2
+feature: consolidate-db-normalized
+goal: Move all live telemetry data (agent invocations, token usage, workflow executions, dep audits, ML models) from wint into the new telemetry schema
+split_from: CDBN-2010
+split_part: '3 of 4'
+depends_on:
+  - CDBN-1040
+  - CDBN-1060
+endpoints: []
+infrastructure:
+  - One-time migration SQL script
+  - Aurora PostgreSQL
+risk_notes: >-
+  Medium risk. Telemetry tables are append-only and the highest volume tables in the
+  system. Migration may be slow due to row count. story_id FK to workflow.stories must
+  be nullable to handle invocations where story context was absent. workflow_executions,
+  workflow_checkpoints, workflow_audit_log, and workflow_events form a chain of FK
+  dependencies — must be migrated in parent-first order. agent_decisions and agent_outcomes
+  depend on agent_invocations. model_metrics and model_predictions depend on ml_models.
+  change_telemetry and training_data have loose story_id refs that may not resolve.
+sizing_warning: false
+created: '2026-03-13T00:00:00Z'
+acceptance_criteria:
+  - id: AC-1
+    description: >-
+      All rows from wint.agent_invocations are migrated to telemetry.agent_invocations.
+      Child tables agent_decisions and agent_outcomes have correct invocation_id FK
+      references. Row counts match source. Verified via COUNT(*) comparison.
+
+  - id: AC-2
+    description: >-
+      token_usage rows from wint are migrated to telemetry.token_usage with nullable
+      story_id and invocation_id FKs correctly resolved where possible. Unresolvable
+      FK references are set to NULL (not dropped). Row count matches source.
+
+  - id: AC-3
+    description: >-
+      workflow_executions, workflow_checkpoints, workflow_audit_log, and workflow_events
+      are migrated in correct FK order. No orphaned child rows exist. Verified via
+      LEFT JOIN orphan checks on each child table.
+
+  - id: AC-4
+    description: >-
+      dep_audit_runs, dep_audit_findings, ml_models, model_metrics, model_predictions,
+      training_data, and change_telemetry are migrated with correct FK references.
+      Row counts match source for each table.
+
+  - id: AC-5
+    description: >-
+      The migration script is idempotent — running it twice produces the same result.
+      Verified by double-execution on a test database.
+
+  - id: AC-6
+    description: >-
+      Migration script includes subtask decomposition with individual verification commands
+      for each table migrated. Each subtask can be run independently with clear success/failure
+      criteria. Subtasks cover: (1) agent_invocations + children, (2) token_usage,
+      (3) workflow_* chain, (4) remaining tables (dep_audit, ml_models, change_telemetry).
