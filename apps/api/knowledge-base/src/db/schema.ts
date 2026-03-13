@@ -1895,98 +1895,36 @@ export type DeferredWrite = typeof deferredWrites.$inferSelect
 export type NewDeferredWrite = typeof deferredWrites.$inferInsert
 
 // ============================================================================
-// Workflow Schema (CDBN-1050)
+// workflow schema exports (CDBN-1050)
 // ============================================================================
 
-/**
- * PostgreSQL `workflow` schema — structural foundation for the story and plan store.
- *
- * Contains 7 tables:
- *   workflowStories, workflowStoryDependencies, workflowStoryStateHistory,
- *   workflowWorktrees, workflowExecutions, workflowCheckpoints, workflowAuditLog
- *
- * @see apps/api/knowledge-base/src/db/migrations/033_workflow_schema.sql
- */
 export const workflowSchema = pgSchema('workflow')
 
-/**
- * workflow.stories
- *
- * Primary story record for the workflow store. Each story has a text PK (story_id),
- * feature prefix, lifecycle state, title, priority, and description.
- * Indexed on (feature, state) and (state, updated_at) for hot-path queries.
- */
 export const workflowStories = workflowSchema.table(
   'stories',
   {
-    /** Unique story identifier (e.g., 'CDBN-1050') — text PK */
     storyId: text('story_id').primaryKey(),
-
-    /** Feature prefix (e.g., 'cdbn', 'wint') */
     feature: text('feature').notNull(),
-
-    /**
-     * Lifecycle state.
-     * Examples: 'backlog' | 'ready' | 'in_progress' | 'ready_for_review' |
-     *           'in_review' | 'completed' | 'cancelled' | 'deferred'
-     */
     state: text('state').notNull(),
-
-    /** Story title */
     title: text('title').notNull(),
-
-    /**
-     * Priority level.
-     * Values: 'critical' | 'high' | 'medium' | 'low'
-     */
     priority: text('priority'),
-
-    /** Human-readable story description */
     description: text('description'),
-
-    /** When the story record was created */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-
-    /** When the story record was last updated */
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
-    /** Composite index for filtering stories by feature and state */
     featureStateIdx: index('idx_workflow_stories_feature_state').on(table.feature, table.state),
-
-    /** Composite index for sorted queries by state recency */
-    stateUpdatedAtIdx: index('idx_workflow_stories_state_updated_at').on(
-      table.state,
-      table.updatedAt,
-    ),
+    stateUpdatedAtIdx: index('idx_workflow_stories_state_updated_at').on(table.state, table.updatedAt),
   }),
 )
 
-/**
- * workflow.story_dependencies
- *
- * Self-referential dependency graph for workflow stories.
- * Both FKs are DEFERRABLE INITIALLY DEFERRED (ARCH-001) to allow bulk inserts
- * before all referenced story_ids exist in the same transaction.
- */
 export const workflowStoryDependencies = workflowSchema.table(
   'story_dependencies',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-
-    /** Story that has the dependency (FK to workflow.stories.story_id — DEFERRABLE) */
     storyId: text('story_id').notNull(),
-
-    /** Story that is depended upon (FK to workflow.stories.story_id — DEFERRABLE) */
     dependsOnId: text('depends_on_id').notNull(),
-
-    /**
-     * Nature of the dependency.
-     * Examples: 'depends_on' | 'blocked_by' | 'follow_up_from' | 'enables'
-     */
     dependencyType: text('dependency_type').notNull(),
-
-    /** When the dependency was recorded */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
@@ -1995,42 +1933,15 @@ export const workflowStoryDependencies = workflowSchema.table(
   }),
 )
 
-/**
- * workflow.story_state_history
- *
- * Append-only event log for story state transitions and lifecycle events.
- * event_type is constrained to a closed set via CHECK constraint in the migration.
- *
- * Valid event_type values:
- *   'state_change' | 'transition' | 'phase_change' | 'assignment' | 'blocker' | 'metadata_version'
- */
 export const workflowStoryStateHistory = workflowSchema.table(
   'story_state_history',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-
-    /** Story this event belongs to (FK to workflow.stories.story_id RESTRICT) */
-    storyId: text('story_id')
-      .notNull()
-      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
-
-    /**
-     * Discriminator for the type of event.
-     * CHECK constraint enforced in migration 033.
-     * Values: 'state_change' | 'transition' | 'phase_change' | 'assignment' | 'blocker' | 'metadata_version'
-     */
+    storyId: text('story_id').notNull(),
     eventType: text('event_type').notNull(),
-
-    /** State before the transition (null for non-state events) */
     fromState: text('from_state'),
-
-    /** State after the transition (null for non-state events) */
     toState: text('to_state'),
-
-    /** Additional structured metadata about the event */
     metadata: jsonb('metadata'),
-
-    /** When the event occurred */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
@@ -2040,30 +1951,13 @@ export const workflowStoryStateHistory = workflowSchema.table(
   }),
 )
 
-/**
- * workflow.worktrees
- *
- * Tracks active git worktrees associated with stories.
- * Each worktree is tied to exactly one story via FK.
- */
 export const workflowWorktrees = workflowSchema.table(
   'worktrees',
   {
-    /** Unique identifier for the worktree */
     worktreeId: uuid('worktree_id').primaryKey().defaultRandom(),
-
-    /** Story this worktree is for (FK to workflow.stories.story_id RESTRICT) */
-    storyId: text('story_id')
-      .notNull()
-      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
-
-    /** Git branch name (e.g., 'story/CDBN-1050') */
+    storyId: text('story_id').notNull(),
     branchName: text('branch_name').notNull(),
-
-    /** Absolute filesystem path to the worktree root */
     path: text('path').notNull(),
-
-    /** When the worktree record was created */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
@@ -2071,32 +1965,13 @@ export const workflowWorktrees = workflowSchema.table(
   }),
 )
 
-/**
- * workflow.workflow_executions
- *
- * Represents a single agent workflow execution run for a story.
- * Tracks status, start time, and optional completion time.
- */
 export const workflowExecutions = workflowSchema.table(
   'workflow_executions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-
-    /** Story this execution belongs to (FK to workflow.stories.story_id RESTRICT) */
-    storyId: text('story_id')
-      .notNull()
-      .references(() => workflowStories.storyId, { onDelete: 'restrict' }),
-
-    /**
-     * Execution status.
-     * Examples: 'running' | 'completed' | 'failed' | 'cancelled'
-     */
+    storyId: text('story_id').notNull(),
     status: text('status').notNull(),
-
-    /** When the execution started */
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
-
-    /** When the execution completed (null if still running) */
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
   table => ({
@@ -2105,29 +1980,13 @@ export const workflowExecutions = workflowSchema.table(
   }),
 )
 
-/**
- * workflow.workflow_checkpoints
- *
- * Phase-level checkpoints captured during a workflow execution.
- * Enables resumption from a known-good state after failure.
- */
 export const workflowCheckpoints = workflowSchema.table(
   'workflow_checkpoints',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-
-    /** Execution this checkpoint belongs to (FK to workflow.workflow_executions.id RESTRICT) */
-    executionId: uuid('execution_id')
-      .notNull()
-      .references(() => workflowExecutions.id, { onDelete: 'restrict' }),
-
-    /** Workflow phase name at the time of the checkpoint (e.g., 'plan', 'execute', 'review') */
+    executionId: uuid('execution_id').notNull(),
     phase: text('phase').notNull(),
-
-    /** Serialized state snapshot for resumption */
     state: jsonb('state'),
-
-    /** When the checkpoint was captured */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
@@ -2135,32 +1994,14 @@ export const workflowCheckpoints = workflowSchema.table(
   }),
 )
 
-/**
- * workflow.workflow_audit_log
- *
- * Append-only audit trail for events within a workflow execution.
- * Records agent decisions, errors, phase transitions, and other structured events.
- */
 export const workflowAuditLog = workflowSchema.table(
   'workflow_audit_log',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-
-    /** Execution this audit entry belongs to (FK to workflow.workflow_executions.id RESTRICT) */
-    executionId: uuid('execution_id')
-      .notNull()
-      .references(() => workflowExecutions.id, { onDelete: 'restrict' }),
-
-    /** Discriminator for the type of audit event */
+    executionId: uuid('execution_id').notNull(),
     eventType: text('event_type').notNull(),
-
-    /** Human-readable description of the event */
     message: text('message').notNull(),
-
-    /** Additional structured metadata */
     metadata: jsonb('metadata'),
-
-    /** When the audit event was recorded */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
@@ -2169,18 +2010,343 @@ export const workflowAuditLog = workflowSchema.table(
   }),
 )
 
-// Workflow schema type exports (AC-13)
-export type WorkflowStory = typeof workflowStories.$inferSelect
-export type NewWorkflowStory = typeof workflowStories.$inferInsert
-export type WorkflowStoryDependency = typeof workflowStoryDependencies.$inferSelect
-export type NewWorkflowStoryDependency = typeof workflowStoryDependencies.$inferInsert
-export type WorkflowStoryStateHistory = typeof workflowStoryStateHistory.$inferSelect
-export type NewWorkflowStoryStateHistory = typeof workflowStoryStateHistory.$inferInsert
-export type WorkflowWorktree = typeof workflowWorktrees.$inferSelect
-export type NewWorkflowWorktree = typeof workflowWorktrees.$inferInsert
-export type WorkflowExecution = typeof workflowExecutions.$inferSelect
-export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert
-export type WorkflowCheckpoint = typeof workflowCheckpoints.$inferSelect
-export type NewWorkflowCheckpoint = typeof workflowCheckpoints.$inferInsert
-export type WorkflowAuditLogEntry = typeof workflowAuditLog.$inferSelect
-export type NewWorkflowAuditLogEntry = typeof workflowAuditLog.$inferInsert
+// ============================================================================
+// artifacts schema exports (CDBN-1020)
+// ============================================================================
+
+export const artifactsSchema = pgSchema('artifacts')
+
+export const artifactsStoryArtifacts = artifactsSchema.table(
+  'story_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: text('story_id').notNull(),
+    artifactType: text('artifact_type').notNull(),
+    artifactName: text('artifact_name'),
+    kbEntryId: uuid('kb_entry_id'),
+    phase: text('phase'),
+    iteration: integer('iteration').default(0),
+    summary: jsonb('summary'),
+    detailTable: text('detail_table'),
+    detailId: uuid('detail_id'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_artifacts_story_artifacts_story_id').on(table.storyId),
+    typeIdx: index('idx_artifacts_story_artifacts_type').on(table.artifactType),
+    phaseIdx: index('idx_artifacts_story_artifacts_phase').on(table.phase),
+  }),
+)
+
+export const artifactsArtifactCheckpoints = artifactsSchema.table(
+  'artifact_checkpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    phaseStatus: jsonb('phase_status').notNull().default({}),
+    resumeFrom: integer('resume_from'),
+    featureDir: text('feature_dir'),
+    prefix: text('prefix'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_checkpoints_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifacts_artifact_checkpoints_scope').on(table.scope),
+  }),
+)
+
+export const artifactsArtifactContexts = artifactsSchema.table(
+  'artifact_contexts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    featureDir: text('feature_dir'),
+    prefix: text('prefix'),
+    storyCount: integer('story_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_contexts_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifacts_artifact_contexts_scope').on(table.scope),
+  }),
+)
+
+export const artifactsArtifactReviews = artifactsSchema.table(
+  'artifact_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    perspective: text('perspective'),
+    verdict: text('verdict'),
+    findingCount: integer('finding_count'),
+    criticalCount: integer('critical_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_reviews_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifacts_artifact_reviews_scope').on(table.scope),
+    perspectiveIdx: index('idx_artifacts_artifact_reviews_perspective').on(table.perspective),
+    verdictIdx: index('idx_artifacts_artifact_reviews_verdict').on(table.verdict),
+  }),
+)
+
+export const artifactsArtifactElaborations = artifactsSchema.table(
+  'artifact_elaborations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    elaborationType: text('elaboration_type').notNull().default('story_analysis'),
+    verdict: text('verdict'),
+    decisionCount: integer('decision_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_elaborations_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifacts_artifact_elaborations_scope').on(table.scope),
+    typeIdx: index('idx_artifacts_artifact_elaborations_type').on(table.elaborationType),
+    verdictIdx: index('idx_artifacts_artifact_elaborations_verdict').on(table.verdict),
+  }),
+)
+
+export const artifactsArtifactAnalyses = artifactsSchema.table(
+  'artifact_analyses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    analysisType: text('analysis_type').default('general'),
+    summaryText: text('summary_text'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_analyses_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifacts_artifact_analyses_scope').on(table.scope),
+    typeIdx: index('idx_artifacts_artifact_analyses_type').on(table.analysisType),
+  }),
+)
+
+export const artifactsArtifactScopes = artifactsSchema.table(
+  'artifact_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    touchesBackend: boolean('touches_backend'),
+    touchesFrontend: boolean('touches_frontend'),
+    touchesDatabase: boolean('touches_database'),
+    touchesInfra: boolean('touches_infra'),
+    fileCount: integer('file_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_scopes_target_id').on(table.targetId),
+  }),
+)
+
+export const artifactsArtifactPlans = artifactsSchema.table(
+  'artifact_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    stepCount: integer('step_count'),
+    estimatedComplexity: text('estimated_complexity'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_plans_target_id').on(table.targetId),
+  }),
+)
+
+export const artifactsArtifactEvidence = artifactsSchema.table(
+  'artifact_evidence',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    acTotal: integer('ac_total'),
+    acMet: integer('ac_met'),
+    acStatus: text('ac_status'),
+    testPassCount: integer('test_pass_count'),
+    testFailCount: integer('test_fail_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_evidence_target_id').on(table.targetId),
+    acStatusIdx: index('idx_artifacts_artifact_evidence_ac_status').on(table.acStatus),
+  }),
+)
+
+export const artifactsArtifactVerifications = artifactsSchema.table(
+  'artifact_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    verdict: text('verdict'),
+    findingCount: integer('finding_count'),
+    criticalCount: integer('critical_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_verifications_target_id').on(table.targetId),
+    verdictIdx: index('idx_artifacts_artifact_verifications_verdict').on(table.verdict),
+  }),
+)
+
+export const artifactsArtifactFixSummaries = artifactsSchema.table(
+  'artifact_fix_summaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    iteration: integer('iteration').notNull().default(0),
+    issuesFixed: integer('issues_fixed'),
+    issuesRemaining: integer('issues_remaining'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_fix_summaries_target_id').on(table.targetId),
+    iterationIdx: index('idx_artifacts_artifact_fix_summaries_iteration').on(table.iteration),
+  }),
+)
+
+export const artifactsArtifactProofs = artifactsSchema.table(
+  'artifact_proofs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    proofType: text('proof_type'),
+    verified: boolean('verified'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_proofs_target_id').on(table.targetId),
+    proofTypeIdx: index('idx_artifacts_artifact_proofs_proof_type').on(table.proofType),
+  }),
+)
+
+export const artifactsArtifactQaGates = artifactsSchema.table(
+  'artifact_qa_gates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    decision: text('decision').notNull().default('FAIL'),
+    reviewer: text('reviewer'),
+    findingCount: integer('finding_count'),
+    blockerCount: integer('blocker_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_qa_gates_target_id').on(table.targetId),
+    decisionIdx: index('idx_artifacts_artifact_qa_gates_decision').on(table.decision),
+  }),
+)
+
+export const artifactsArtifactCompletionReports = artifactsSchema.table(
+  'artifact_completion_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    status: text('status'),
+    iterationsUsed: integer('iterations_used'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_completion_reports_target_id').on(table.targetId),
+    statusIdx: index('idx_artifacts_artifact_completion_reports_status').on(table.status),
+  }),
+)
+
+export const artifactsArtifactTestPlans = artifactsSchema.table(
+  'artifact_test_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    strategy: text('strategy'),
+    scopeUiTouched: boolean('scope_ui_touched'),
+    scopeDataTouched: boolean('scope_data_touched'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_test_plans_target_id').on(table.targetId),
+  }),
+)
+
+export const artifactsArtifactDevFeasibility = artifactsSchema.table(
+  'artifact_dev_feasibility',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    feasible: boolean('feasible'),
+    confidence: text('confidence'),
+    complexity: text('complexity'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_dev_feasibility_target_id').on(table.targetId),
+  }),
+)
+
+export const artifactsArtifactUiuxNotes = artifactsSchema.table(
+  'artifact_uiux_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    hasUiChanges: boolean('has_ui_changes'),
+    componentCount: integer('component_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_uiux_notes_target_id').on(table.targetId),
+  }),
+)
+
+export const artifactsArtifactStorySeeds = artifactsSchema.table(
+  'artifact_story_seeds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    conflictsFound: integer('conflicts_found'),
+    blockingConflicts: integer('blocking_conflicts'),
+    baselineLoaded: boolean('baseline_loaded'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifacts_artifact_story_seeds_target_id').on(table.targetId),
+  }),
+)

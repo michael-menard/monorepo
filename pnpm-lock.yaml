@@ -2381,6 +2381,9 @@ importers:
       dotenv:
         specifier: 17.3.1
         version: 17.3.1
+      tsx:
+        specifier: 4.19.3
+        version: 4.19.3
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
@@ -14768,6 +14771,11 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  tsx@4.19.3:
+    resolution: {integrity: sha512-4H8vUNGNjQ4V2EOoGw005+c+dGuPSnhpPBPHBtsZdGZBk/iJb4kguGlPWaZTZ3q5nMtFOEsY0nRDlh9PJyd6SQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   tsx@4.20.6:
     resolution: {integrity: sha512-ytQKuwgmrrkDTFP4LjR0ToE2nqgy886GpvRSpU0JAnrdBYppuY5rLkRUYPU1yCryb24SsKBTL/hlDQAEFVwtZg==}
@@ -29803,6 +29811,13 @@ snapshots:
       - supports-color
       - tsx
       - yaml
+
+  tsx@4.19.3:
+    dependencies:
+      esbuild: 0.25.12
+      get-tsconfig: 4.13.6
+    optionalDependencies:
+      fsevents: 2.3.3
 
   tsx@4.20.6:
     dependencies:
