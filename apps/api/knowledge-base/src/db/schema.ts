@@ -25,6 +25,7 @@ import {
   boolean,
   integer,
   real,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -1914,7 +1915,10 @@ export const workflowStories = workflowSchema.table(
   },
   table => ({
     featureStateIdx: index('idx_workflow_stories_feature_state').on(table.feature, table.state),
-    stateUpdatedAtIdx: index('idx_workflow_stories_state_updated_at').on(table.state, table.updatedAt),
+    stateUpdatedAtIdx: index('idx_workflow_stories_state_updated_at').on(
+      table.state,
+      table.updatedAt,
+    ),
   }),
 )
 
@@ -2350,3 +2354,115 @@ export const artifactsArtifactStorySeeds = artifactsSchema.table(
     targetIdIdx: index('idx_artifacts_artifact_story_seeds_target_id').on(table.targetId),
   }),
 )
+
+// ============================================================================
+// CDBN-1030: Knowledge Extensions - hitl_decisions, context cache
+// ============================================================================
+
+export const contextPackTypeEnum = pgEnum('context_pack_type', [
+  'codebase',
+  'story',
+  'feature',
+  'epic',
+  'architecture',
+  'lessons_learned',
+  'test_patterns',
+  'agent_missions',
+])
+
+export const hitlDecisions = pgTable(
+  'hitl_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invocationId: uuid('invocation_id'),
+    decisionType: text('decision_type').notNull(),
+    decisionText: text('decision_text').notNull(),
+    context: jsonb('context'),
+    embedding: vector('embedding', { dimensions: 1536 }),
+    operatorId: text('operator_id').notNull(),
+    storyId: text('story_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_hitl_decisions_story_id').on(table.storyId),
+    operatorIdIdx: index('idx_hitl_decisions_operator_id').on(table.operatorId),
+    createdAtIdx: index('idx_hitl_decisions_created_at').on(table.createdAt),
+  }),
+)
+
+export const contextPacks = pgTable(
+  'context_packs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    packType: contextPackTypeEnum('pack_type').notNull(),
+    packKey: text('pack_key').notNull(),
+    content: jsonb('content').notNull(),
+    version: integer('version').notNull().default(1),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    hitCount: integer('hit_count').notNull().default(0),
+    lastHitAt: timestamp('last_hit_at', { withTimezone: true }),
+    tokenCount: integer('token_count'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    packTypeKeyIdx: uniqueIndex('idx_context_packs_type_key').on(table.packType, table.packKey),
+    expiresAtIdx: index('idx_context_packs_expires_at').on(table.expiresAt),
+    lastHitAtIdx: index('idx_context_packs_last_hit_at').on(table.lastHitAt),
+    packTypeIdx: index('idx_context_packs_pack_type').on(table.packType),
+  }),
+)
+
+export const contextSessions = pgTable(
+  'context_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: text('session_id').notNull().unique(),
+    agentName: text('agent_name').notNull(),
+    storyId: text('story_id'),
+    phase: text('phase'),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    cachedTokens: integer('cached_tokens').notNull().default(0),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    agentNameIdx: index('idx_context_sessions_agent_name').on(table.agentName),
+    storyIdIdx: index('idx_context_sessions_story_id').on(table.storyId),
+    startedAtIdx: index('idx_context_sessions_started_at').on(table.startedAt),
+    agentStoryIdx: index('idx_context_sessions_agent_story').on(table.agentName, table.storyId),
+  }),
+)
+
+export const contextCacheHits = pgTable(
+  'context_cache_hits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => contextSessions.id, { onDelete: 'cascade' }),
+    packId: uuid('pack_id')
+      .notNull()
+      .references(() => contextPacks.id, { onDelete: 'cascade' }),
+    tokensSaved: integer('tokens_saved'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    sessionIdIdx: index('idx_context_cache_hits_session_id').on(table.sessionId),
+    packIdIdx: index('idx_context_cache_hits_pack_id').on(table.packId),
+    createdAtIdx: index('idx_context_cache_hits_created_at').on(table.createdAt),
+  }),
+)
+
+// Type exports
+export type HitlDecision = typeof hitlDecisions.$inferSelect
+export type NewHitlDecision = typeof hitlDecisions.$inferInsert
+export type ContextPack = typeof contextPacks.$inferSelect
+export type NewContextPack = typeof contextPacks.$inferInsert
+export type ContextSession = typeof contextSessions.$inferSelect
+export type NewContextSession = typeof contextSessions.$inferInsert
+export type ContextCacheHit = typeof contextCacheHits.$inferSelect
+export type NewContextCacheHit = typeof contextCacheHits.$inferInsert

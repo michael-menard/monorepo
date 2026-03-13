@@ -6,7 +6,7 @@ phase: 1
 feature: consolidate-db-normalized
 goal: Ship the telemetry schema as the write-heavy observability store, migrating all agent invocation and workflow execution tables from wint
 depends_on:
-  - CDBN-1010
+  - CDBN-1050
 endpoints: []
 infrastructure:
   - Aurora PostgreSQL migration file

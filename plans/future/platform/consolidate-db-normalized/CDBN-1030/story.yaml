@@ -6,7 +6,7 @@ phase: 1
 feature: consolidate-db-normalized
 goal: Ship the knowledge schema as the single store for lessons, decisions, rules, and context cache data, including the previously missing hitl_decisions table
 depends_on:
-  - CDBN-1010
+  - CDBN-1050
 endpoints: []
 infrastructure:
   - Aurora PostgreSQL migration file

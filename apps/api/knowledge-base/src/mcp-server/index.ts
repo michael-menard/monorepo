@@ -7,7 +7,7 @@
  * @see KNOW-0051 for MCP server requirements
  *
  * Usage:
- *   node dist/mcp-server/index.js
+ *   tsx src/mcp-server/index.ts
  *
  * Environment variables:
  *   DATABASE_URL - PostgreSQL connection string (required)
@@ -116,7 +116,23 @@ async function main(): Promise<void> {
   logger.info('Knowledge Base MCP Server ready', {
     name: MCP_SERVER_NAME,
     version: MCP_SERVER_VERSION,
-    tools: ['kb_add', 'kb_get', 'kb_update', 'kb_delete', 'kb_list'],
+    tools: [
+      'kb_add',
+      'kb_get',
+      'kb_update',
+      'kb_delete',
+      'kb_list',
+      'kb_get_plan',
+      'kb_list_plans',
+      'kb_get_roadmap',
+      'kb_update_plan',
+      'kb_upsert_plan',
+      'kb_search_plans',
+      'kb_get_plan_dashboard',
+      'kb_get_plan_revisions',
+      'kb_log_plan_event',
+      'kb_get_plan_events',
+    ],
   })
 }
 

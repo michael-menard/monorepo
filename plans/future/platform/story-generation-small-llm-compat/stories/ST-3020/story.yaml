@@ -1,6 +1,6 @@
 id: "ST-3020"
 title: "Dev-Plan-Leader — Map Subtasks to PLAN.yaml Steps"
-status: backlog
+status: uat
 priority: medium
 phase: 3
 feature: "Update dev-plan-leader to read the story's subtasks array and emit one PLAN.yaml step per subtask"

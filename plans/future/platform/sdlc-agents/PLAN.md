@@ -1,5 +1,7 @@
 # SDLC — Agent Roles & Decision Loops
 
+> **DEPRECATED** — This plan is superseded by [`agent-as-judge-phase-gate-system`](kb:agent-as-judge-phase-gate-system). The concrete implementation of stage gates is covered by the judge agent system.
+
 ## Goal
 
 Formalize the virtual dev team as production-grade LangGraph agents with hard stage gates, budgets, confidence scoring, and auditability. This is the capstone epic — it consumes infrastructure, telemetry, model selection, and learning to create autonomous PO/PM/SM decision loops.
@@ -14,6 +16,7 @@ Formalize the virtual dev team as production-grade LangGraph agents with hard st
 ## The Most Important Truth
 
 A "team of agents" works only if you have:
+
 - **Shared contracts** (schemas, templates, event types)
 - **Hard stage gates** (no skipping, no exceptions)
 - **Auditability** (every decision recorded with confidence and evidence)
@@ -25,19 +28,23 @@ Without those, you get a noisy swarm that burns tokens and ships wrong solutions
 ## Agent Org Chart
 
 ### Product
+
 - **PO Agent:** Backlog priority, AC quality, scope boundaries, churn detection, stability prioritization
 - **Intake Agent:** (future) Normalize requests, tag, ask clarifying questions
 
 ### Delivery
+
 - **PM Agent:** Sequencing, dependencies, bottleneck detection, risk register, release planning
 - **SM Agent:** WIP limits, blocked detection, ready queue health, cadence enforcement
 
 ### Engineering (existing, enhanced)
+
 - **Architect Agent:** ADR-lite decisions, security/perf risk flags (exists as prototype)
 - **Tech Lead Agent:** Implementation plan quality, convention enforcement (exists as prototype)
 - **Implementation Subagents:** API, UI, DB, Infra, Tests, Observability (exist as prototypes)
 
 ### Quality (existing, enhanced)
+
 - **QA Agent:** AC verification, gap logging (exists as prototype)
 - **Release Agent:** (future) Changelog, telemetry verification, final checklist
 
@@ -61,6 +68,7 @@ Stage 5: Release + Retro → release notes + dashboards + lessons
 ## Machine-Readable PLAN.md Schema
 
 Plans get YAML front matter with:
+
 - `plan_id`, `plan_version`, `title`, `owner`
 - `objectives` with success metrics
 - `scope` (in/out)
@@ -76,6 +84,7 @@ Agents treat missing required sections as a **hard gate failure**.
 ## Guardrails
 
 ### Hard Budgets
+
 - Max retries per step
 - Max tokens per run
 - Max USD per day/workflow
@@ -83,19 +92,23 @@ Agents treat missing required sections as a **hard gate failure**.
 - Emit `workflow.cost_limit_hit` event when limits are reached
 
 ### Confidence Scoring
+
 - Every decision includes confidence 0..1
 - Low confidence (< 0.7) escalates to stronger model
 - Very low confidence (< 0.4) escalates to human
 - Tracked via LERN calibration
 
 ### DecisionRecord (ADR-lite)
+
 Every significant agent decision stored as an artifact:
+
 - Decision, alternatives considered, evidence, confidence, outcome
 - Override audit trail (human can override, recorded as event)
 
 ## Package Location
 
 New LangGraph nodes:
+
 ```
 packages/backend/orchestrator/src/nodes/
   sdlc/

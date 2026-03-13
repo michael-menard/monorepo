@@ -1,6 +1,6 @@
 id: CDBN-0020
 title: Produce Migration Manifest of Live Data Across Old Schemas
-status: backlog
+status: completed
 priority: medium
 phase: 0
 feature: consolidate-db-normalized

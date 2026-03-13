@@ -385,10 +385,14 @@ export function setupShutdownHandlers(
     handleShutdown('uncaughtException')
   })
 
-  // Handle unhandled promise rejections
+  // Handle unhandled promise rejections — log but don't exit.
+  // Killing the process here would permanently destroy the MCP session since
+  // Claude Code won't restart a stdio MCP server mid-session.
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled rejection', { reason, promise: String(promise) })
-    handleShutdown('unhandledRejection')
+    logger.error('Unhandled rejection (non-fatal, server continuing)', {
+      reason,
+      promise: String(promise),
+    })
   })
 
   logger.info('Shutdown handlers registered', {

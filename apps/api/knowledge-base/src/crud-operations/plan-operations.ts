@@ -112,10 +112,8 @@ export const KbUpsertPlanInputSchema = z.object({
   /** First paragraph — quick description */
   summary: z.string().optional(),
 
-  /** Category of plan */
-  plan_type: z
-    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
-    .optional(),
+  /** Category of plan - simple types or compound format {work_type}:{domain} */
+  plan_type: z.string().optional(),
 
   /** Status lifecycle */
   status: z
@@ -200,10 +198,8 @@ export const KbUpdatePlanInputSchema = z.object({
   /** New title */
   title: z.string().min(1).optional(),
 
-  /** New plan type */
-  plan_type: z
-    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
-    .optional(),
+  /** New plan type - simple types or compound format {work_type}:{domain} */
+  plan_type: z.string().optional(),
 
   /** New feature directory */
   feature_dir: z.string().optional().nullable(),

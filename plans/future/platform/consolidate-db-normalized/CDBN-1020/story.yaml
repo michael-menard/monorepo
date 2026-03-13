@@ -6,7 +6,7 @@ phase: 1
 feature: consolidate-db-normalized
 goal: Consolidate the 7 artifact tables from wint/kbar/artifacts into one normalized artifacts schema with idempotency guarantees
 depends_on:
-  - CDBN-1010
+  - CDBN-1050
 endpoints: []
 infrastructure:
   - Aurora PostgreSQL migration file

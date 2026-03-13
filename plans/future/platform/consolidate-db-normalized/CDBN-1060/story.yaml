@@ -1,0 +1,68 @@
+id: CDBN-1060
+title: Migrate workflow Schema — Live Data and Inbound FK Updates
+status: completed
+priority: medium
+phase: 1
+feature: consolidate-db-normalized
+goal: Migrate all live rows from wint.* into the workflow tables created by CDBN-1050 and update the 10 inbound cross-schema FK constraints from artifacts.* and kbar.* to reference workflow.stories
+split_from: CDBN-1010
+split_part: '2 of 2'
+depends_on:
+  - CDBN-1050
+endpoints: []
+infrastructure:
+  - Aurora PostgreSQL migration file
+risk_notes: >-
+  Critical risk. wint.story_states has a cross-schema FK to kbar.stories(id) — rows cannot be inserted
+  into story_state_history until either kbar.stories is migrated into workflow.stories first, or the
+  constraint is dropped. Ordering is strictly enforced: workflow.stories must be populated before any
+  dependent tables receive rows. The 10 inbound FK constraints from artifacts.* and kbar.* reference
+  wint.stories(id) by OID — all must be dropped and recreated pointing to workflow.stories.story_id.
+  Row parity must be verified post-migration (wint.stories=1 row, wint.story_states=4 rows,
+  wint.story_transitions=4 rows, wint.workflow_executions=5 rows). wint.story_states and
+  wint.story_dependencies also have cross-schema FKs to kbar.stories(id) that must be resolved or
+  deferred with explicit documentation before any migration SQL is executed.
+sizing_warning: false
+created: '2026-03-11T23:30:00Z'
+acceptance_criteria:
+  - id: AC-1
+    description: >-
+      workflow.stories contains exactly 1 row matching the wint.stories source data. Verified via
+      SELECT COUNT(*) FROM workflow.stories = 1 and spot-check of story_id, title, state, feature
+      columns against wint.stories source row on lego_dev (port 5432).
+
+  - id: AC-2
+    description: >-
+      workflow.story_state_history contains exactly 8 rows: 4 migrated from wint.story_states and
+      4 migrated from wint.story_transitions. Each row has the correct event_type discriminator
+      value ('state_change' for story_states rows, 'transition' for story_transitions rows).
+      Verified via SELECT event_type, COUNT(*) FROM workflow.story_state_history GROUP BY event_type.
+
+  - id: AC-3
+    description: >-
+      workflow.workflow_executions contains exactly 5 rows matching wint.workflow_executions source
+      data. Verified via SELECT COUNT(*) FROM workflow.workflow_executions = 5 and spot-check of
+      id, story_id, status columns against wint.workflow_executions source rows.
+
+  - id: AC-4
+    description: >-
+      All 10 inbound FK constraints from artifacts.* and kbar.* that previously referenced
+      wint.stories(id) are either: (a) updated to reference workflow.stories.story_id, or
+      (b) documented as deferred with written justification in a DECISION record in _implementation/.
+      No orphaned FK constraints referencing wint.stories remain after migration.
+      Verified via information_schema.referential_constraints query showing zero references to wint.stories.
+
+  - id: AC-5
+    description: >-
+      SQL row parity verification queries pass for all migrated tables:
+      SELECT COUNT(*) FROM workflow.stories = 1,
+      SELECT COUNT(*) FROM workflow.story_state_history = 8,
+      SELECT COUNT(*) FROM workflow.workflow_executions = 5.
+      All three queries documented in a VERIFICATION.yaml artifact in _implementation/.
+
+  - id: AC-6
+    description: >-
+      wint.stories table can be dropped or aliased (at a minimum: a DROP TABLE IF EXISTS wint.stories
+      dry-run succeeds with no FK violation errors) after this migration completes. If drop is deferred,
+      a DECISION record documents the reason and the planned drop story/ticket. Verified by running
+      the dry-run in a transaction that is rolled back.

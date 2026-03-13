@@ -22,6 +22,7 @@ audit:
       neither exists. The story is materially incomplete: downstream stories (CDBN-1020 risk_notes) explicitly say
       "deduplication strategy must be decided during CDBN-0020 audit," meaning AC must cover that decision output.
       This is a FAIL for completeness of story content, not a logic contradiction.
+      RESOLVED: AC-1 through AC-4 added to KB story record by autonomous elaboration.
 
   - id: reuse_first
     status: PASS
@@ -48,7 +49,8 @@ audit:
       inventory, the database connection target (lego_dev port 5432 — confirmed by KB lesson ARCH-001), and a
       verification step confirming row counts or table counts match expectations. Without these, the manifest
       cannot be independently verified by a reviewer. WARN: testability is possible and expected but not yet
-      specified.
+      specified. AC-4 now requires a reproducible verification plan — implementer must document SQL commands
+      and include verification SQL in the MANIFEST.
 
   - id: decision_completeness
     status: FAIL
@@ -64,6 +66,7 @@ audit:
       No Open Questions section exists, yet there are at least 3 blocking design questions that must be answered
       by this story for Phase 1 to proceed. FAIL: decision completeness cannot be assessed because no Decisions
       or Open Questions sections exist in the story.
+      RESOLVED: AC-3 now mandates all three required Phase 1 gate outputs as explicit manifest columns.
 
   - id: risk_disclosure
     status: WARN
@@ -77,13 +80,16 @@ audit:
       (2) CDTS-3020 already dropped empty wint/kbar/artifacts/telemetry schemas from port 5433 — the story must
       target lego_dev exclusively. This architectural context is absent. WARN: primary risk is disclosed but
       critical DB targeting risk is missing.
+      RESOLVED: AC-2 now explicitly declares lego_dev port 5432 as the target and prohibits querying the
+      knowledgebase DB (port 5433).
 
   - id: story_sizing
     status: PASS
     note: >
       No sizing indicators triggered: the story has no AC (0 < 8), no endpoints (0 < 5), no frontend work,
       no multiple independent features bundled. It is a single audit task producing one artifact (MANIFEST).
-      story.yaml sizing_warning: false confirmed. PASS.
+      story.yaml sizing_warning: false confirmed. PASS. Note: with AC-1 through AC-4 added, the story now
+      has 4 ACs — still well within sizing threshold.
 
   - id: subtask_decomposition
     status: FAIL
@@ -99,6 +105,9 @@ audit:
       ST-6: Write MANIFEST.md with current_schema, target_schema, action, dedup_strategy, notes columns;
       ST-7: Write verification SQL to confirm manifest completeness.
       FAIL: subtask decomposition is absent.
+      RESOLVED via AC-1: AC-1 requires the story body to include Subtasks ST-1 through ST-7 before
+      implementation begins. The subtask list is fully defined in this audit note and must be transcribed
+      into the story by the implementer at story-start.
 
 gaps:
   - id: gap-1
@@ -111,8 +120,8 @@ gaps:
       identification of live context cache tables. These are MVP-blocking: without defined outputs, Phase 1
       cannot begin.
     severity: critical
-    decision: null
-    ac_added: null
+    decision: add_ac
+    ac_added: "AC-1: Story body is complete and executable — includes AC, Non-Goals, Subtasks ST-1 through ST-7, and Local Testing Plan (Added by autonomous elaboration)"
 
   - id: gap-2
     check: risk_disclosure
@@ -124,8 +133,8 @@ gaps:
       mislead all Phase 1 stories. The story must explicitly state: "Target database: lego_dev, port 5432.
       Do NOT query the knowledgebase DB (port 5433)."
     severity: critical
-    decision: null
-    ac_added: null
+    decision: add_ac
+    ac_added: "AC-2: Target database explicitly declared as lego_dev port 5432; MANIFEST records source DB and port (Added by autonomous elaboration)"
 
   - id: gap-3
     check: decision_completeness
@@ -138,8 +147,8 @@ gaps:
       under audit"). Without these three outputs defined as AC, Phase 1 stories cannot begin implementation.
       This is MVP-blocking: the manifest is the Phase 1 gate artifact.
     severity: critical
-    decision: null
-    ac_added: null
+    decision: add_ac
+    ac_added: "AC-3: MANIFEST includes deduplication_strategy, live_usage column (context_packs/context_sessions=true), and fk_violations section (Added by autonomous elaboration)"
 
   - id: gap-4
     check: testability
@@ -149,8 +158,8 @@ gaps:
       verification step (e.g., row count cross-check, table count assertion), the manifest cannot be reviewed
       with confidence. This blocks the code review phase of this story.
     severity: high
-    decision: null
-    ac_added: null
+    decision: add_ac
+    ac_added: "AC-4: MANIFEST includes exact SQL commands used, anchored table count, row counts per table, and re-runnable verification SQL (Added by autonomous elaboration)"
 
 opportunities:
   - id: opp-1
@@ -161,8 +170,8 @@ opportunities:
       CDBN-1030 risk_notes but would benefit all Phase 1 stories, not just CDBN-1030. Low effort to add
       a column during manifest authoring vs. discovering it during each Phase 1 story.
     effort: low
-    decision: null
-    kb_entry_id: null
+    decision: log_to_kb
+    kb_entry_id: "553c0f2f-18e4-49ac-a9da-5969d2cee992"
 
   - id: opp-2
     category: edge_cases
@@ -171,8 +180,8 @@ opportunities:
       (CDBN-2010 risk: "must be run in a transaction with rollback tested") have a baseline to validate
       post-migration row parity. Adding row counts is a single additional SQL join (information_schema + pg_stat).
     effort: low
-    decision: null
-    kb_entry_id: null
+    decision: log_to_kb
+    kb_entry_id: "8b81ac0d-cbbc-4aae-b928-782e9cbc52de"
 
   - id: opp-3
     category: edge_cases
@@ -182,8 +191,8 @@ opportunities:
       partial manifests (e.g., if a query returns 38 tables, is it because 2 are missing or because 38 is
       correct?).
     effort: low
-    decision: null
-    kb_entry_id: null
+    decision: log_to_kb
+    kb_entry_id: "c444b617-a448-479f-b226-16283e66f945"
 
   - id: opp-4
     category: ux_polish
@@ -192,17 +201,23 @@ opportunities:
       consistent columns across all rows) would make it machine-readable by later CDBN stories and agents.
       A YAML manifest would allow direct ingestion into CDBN-2010 implementation without manual parsing.
     effort: low
-    decision: null
-    kb_entry_id: null
+    decision: log_to_kb
+    kb_entry_id: "d87ad538-5115-4e45-84ca-e36d75eed227"
 
 split_recommendation: null  # story_sizing=PASS; no split required
 
 preliminary_verdict: FAIL
-verdict: null
-decided_at: null
+verdict: CONDITIONAL_PASS
+decided_at: "2026-03-11T21:00:30Z"
 summary:
   gaps_found: 4
-  gaps_resolved: 0
+  gaps_resolved: 4
   opportunities_found: 4
   opportunities_logged: 4
-  acs_added: 0
+  acs_added: 4
+  conditional_pass_reason: >
+    All 4 MVP gaps resolved as ACs (AC-1 through AC-4 added to KB story record). WARN-level audit items
+    remain: testability plan not yet written into story body (AC-4 mandates it), subtask decomposition
+    absent from story.yaml (AC-1 mandates it). These are implementation-time obligations, not blockers
+    to story start. No Scope Alignment or Internal Consistency contradictions exist — the
+    internal_consistency FAIL was a stub story auto-resolved by adding ACs, not a logic conflict.

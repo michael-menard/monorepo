@@ -86,13 +86,15 @@ From orchestrator prompt:
 
 ## Preconditions (HARD GATES)
 
-Check ALL before proceeding:
+**KB is the source of truth.** Check ALL before proceeding:
 
-1. **Story exists** at `{FEATURE_DIR}/stories/{STORY_ID}/`
-2. **Status is `ready-for-qa`** or `ready-for-qa-with-warnings`
-3. **EVIDENCE.yaml exists** at `_implementation/EVIDENCE.yaml`
-4. **REVIEW.yaml exists** at `_implementation/REVIEW.yaml`
-5. **Code review passed** - `REVIEW.yaml` has `verdict: PASS`
+1. **Story exists in KB** — call `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })`. If null → BLOCKED.
+2. **Status is `ready_for_qa`** — check `story.state === 'ready_for_qa'` from KB response. Do NOT read `story.yaml`.
+3. **EVIDENCE artifact exists in KB** — check `artifacts` array for an entry with `type === 'evidence'` or `name === 'EVIDENCE'`. If not found in KB, fall back to filesystem: `{storyDir}/_implementation/EVIDENCE.yaml`.
+4. **REVIEW artifact exists in KB** — check `artifacts` array for an entry with `type === 'review'` or `name === 'REVIEW'`. If not found in KB, fall back to filesystem: `{storyDir}/_implementation/REVIEW.yaml`.
+5. **Code review passed** — read REVIEW artifact content (from KB or filesystem) and confirm `verdict: PASS`.
+
+> **Note:** `storyDir` comes from `story.detail.storyDir` in the KB response.
 
 If ANY precondition fails → emit `SETUP BLOCKED: <reason>` and STOP.
 

@@ -3358,7 +3358,7 @@ Parameters:
 - title (required): Plan title from the first # heading
 - raw_content (required): Full markdown content of the plan file
 - summary (optional): First paragraph / short description
-- plan_type (optional): 'feature' | 'refactor' | 'migration' | 'infra' | 'tooling' | 'workflow' | 'audit' | 'spike'
+- plan_type (optional): Plan type as string (e.g., 'feature', 'workflow:langgraph', 'tooling:platform')
 - status (optional): 'draft' | 'accepted' | 'stories-created' | 'in-progress' | 'implemented' | 'superseded' | 'archived' (default: 'draft')
 - feature_dir (optional): Target feature directory relative to repo root
 - story_prefix (optional): Story ID prefix (e.g., 'APIP')
