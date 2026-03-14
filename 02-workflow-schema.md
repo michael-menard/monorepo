@@ -12,22 +12,22 @@ The `workflow` schema contains all story management, planning, work state tracki
 
 ## Tables Overview
 
-| Table                 | Description                       | Primary Key            |
-| --------------------- | --------------------------------- | ---------------------- |
-| stories               | Story metadata and workflow state | text story_id          |
-| story_details         | Extended story information        | uuid id                |
-| story_dependencies    | Story-to-story dependencies       | uuid id                |
-| story_state_history   | State change history              | uuid id                |
-| story_content         | Raw story content storage         | uuid id                |
-| plans                 | Plan metadata                     | uuid id (plan_slug UK) |
-| plan_story_links      | Plan-story associations           | uuid id                |
-| plan_dependencies     | Plan dependencies (M:N)           | uuid id                |
-| plan_revision_history | Plan version history              | uuid id                |
-| plan_execution_log    | Plan execution events             | uuid id                |
-| work_state            | Story work context                | uuid id                |
-| workflow_executions   | Execution records                 | uuid id                |
-| workflow_checkpoints  | Execution checkpoints             | uuid id                |
-| workflow_audit_log    | Execution audit trail             | uuid id                |
+| Table                 | Description                        | Primary Key            |
+| --------------------- | ---------------------------------- | ---------------------- |
+| stories               | Story metadata and workflow state  | text story_id          |
+| story_dependencies    | Story-to-story dependencies        | uuid id                |
+| story_state_history   | State change history               | uuid id                |
+| story_content         | Raw story content storage          | uuid id                |
+| story_touches         | Story scope (backend/frontend/etc) | uuid id                |
+| plans                 | Plan metadata                      | uuid id (plan_slug UK) |
+| plan_story_links      | Plan-story associations            | uuid id                |
+| plan_dependencies     | Plan dependencies (M:N)            | uuid id                |
+| plan_revision_history | Plan version history               | uuid id                |
+| plan_execution_log    | Plan execution events              | uuid id                |
+| work_state            | Story work context                 | uuid id                |
+| workflow_executions   | Execution records                  | uuid id                |
+| workflow_checkpoints  | Execution checkpoints              | uuid id                |
+| workflow_audit_log    | Execution audit trail              | uuid id                |
 
 ## Entity Relationship Diagram
 
@@ -38,11 +38,6 @@ erDiagram
         text feature
         text state
         text title
-    }
-
-    STORY_DETAILS {
-        uuid id PK
-        text story_id
     }
 
     STORY_DEPENDENCIES {
@@ -58,6 +53,12 @@ erDiagram
     STORY_CONTENT {
         uuid id PK
         text story_id
+    }
+
+    STORY_TOUCHES {
+        uuid id PK
+        text story_id
+        text touch_type
     }
 
     PLANS {
@@ -102,10 +103,10 @@ erDiagram
         uuid execution_id
     }
 
-    STORIES ||--o{ STORY_DETAILS : "story_id"
     STORIES ||--o{ STORY_DEPENDENCIES : "story_id"
     STORIES ||--o{ STORY_STATE_HISTORY : "story_id"
     STORIES ||--o{ STORY_CONTENT : "story_id"
+    STORIES ||--o{ STORY_TOUCHES : "story_id"
     STORIES ||--o{ WORKFLOW_EXECUTIONS : "story_id"
 
     PLANS ||--o{ PLAN_STORY_LINKS : "plan_slug"
@@ -122,18 +123,23 @@ erDiagram
 
 ### stories
 
-Core story metadata and workflow state.
+Core story metadata and workflow state (consolidated from stories + story_details).
 
-| Column      | Type        | Constraints | Description                            |
-| ----------- | ----------- | ----------- | -------------------------------------- |
-| story_id    | text        | PK          | Story identifier (e.g., WISH-2045)     |
-| feature     | text        | NOT NULL    | Feature prefix                         |
-| state       | text        | NOT NULL    | Workflow state                         |
-| title       | text        | NOT NULL    | Story title                            |
-| priority    | text        |             | Priority (critical, high, medium, low) |
-| description | text        |             | Story description                      |
-| created_at  | timestamptz | NOT NULL    | Creation timestamp                     |
-| updated_at  | timestamptz | NOT NULL    | Last update                            |
+| Column           | Type             | Constraints | Description                        |
+| ---------------- | ---------------- | ----------- | ---------------------------------- |
+| story_id         | text             | PK          | Story identifier (e.g., WISH-2045) |
+| feature          | text             | NOT NULL    | Feature prefix                     |
+| state            | story_state_enum |             | Workflow state                     |
+| title            | text             | NOT NULL    | Story title                        |
+| priority         | priority_enum    |             | Priority (P1-P5)                   |
+| description      | text             |             | Story description                  |
+| created_at       | timestamptz      | NOT NULL    | Creation timestamp                 |
+| updated_at       | timestamptz      | NOT NULL    | Last update                        |
+| blocked_reason   | text             |             | Reason if story is blocked         |
+| blocked_by_story | text             |             | Story that blocks this one         |
+| started_at       | timestamptz      |             | When story was started             |
+| completed_at     | timestamptz      |             | When story was completed           |
+| file_hash        | text             |             | Hash of story file                 |
 
 **Indexes:**
 
@@ -141,42 +147,26 @@ Core story metadata and workflow state.
 - btree (feature, state)
 - btree (state, updated_at)
 
-**States:**
+**Enums:**
 
-- backlog, ready, in_progress, ready_for_review, in_review
-- ready_for_qa, in_qa, completed, cancelled, deferred
-- failed_code_review, failed_qa
+- **state:** backlog, ready, in_progress, ready_for_review, in_review, ready_for_qa, in_qa, uat, completed, cancelled, deferred, failed_code_review, failed_qa, blocked, elaboration, ready_to_work, needs_code_review
+- **priority:** P1, P2, P3, P4, P5
 
 **Foreign Keys:**
 
-- Referenced by: story_details, story_dependencies, story_state_history, story_content, workflow_executions, adrs, code_standards, lessons_learned, rules
-
-### story_details
-
-Extended story information.
-
-| Column      | Type      | Constraints | Description          |
-| ----------- | --------- | ----------- | -------------------- |
-| id          | uuid      | PK          | Primary key          |
-| story_id    | text      | FK          | Reference to stories |
-| description | text      |             | Extended description |
-| non_goals   | text[]    |             | Out of scope items   |
-| packages    | text[]    |             | Affected packages    |
-| created_at  | timestamp |             | Creation timestamp   |
-| updated_at  | timestamp |             | Last update          |
+- Referenced by: story_dependencies, story_state_history, story_content, story_touches, workflow_executions, adrs, code_standards, lessons_learned, rules
 
 ### story_dependencies
 
 Story-to-story dependencies (many-to-many self-referential join table).
 
-| Column          | Type        | Constraints   | Description                                           |
-| --------------- | ----------- | ------------- | ----------------------------------------------------- |
-| id              | uuid        | PK            | Primary key                                           |
-| story_id        | text        | FK            | Source story                                          |
-| depends_on_id   | text        | FK            | Target story (dependency)                             |
-| dependency_type | text        | NOT NULL      | Type: depends_on, blocked_by, follow_up_from, enables |
-| satisfied       | boolean     | DEFAULT false | Whether satisfied                                     |
-| created_at      | timestamptz | NOT NULL      | Creation timestamp                                    |
+| Column          | Type        | Constraints | Description                                           |
+| --------------- | ----------- | ----------- | ----------------------------------------------------- |
+| id              | uuid        | PK          | Primary key                                           |
+| story_id        | text        | FK          | Source story                                          |
+| depends_on_id   | text        | FK          | Target story (dependency)                             |
+| dependency_type | text        | NOT NULL    | Type: depends_on, blocked_by, follow_up_from, enables |
+| created_at      | timestamptz | NOT NULL    | Creation timestamp                                    |
 
 **Unique Constraint:** (story_id, depends_on_id)
 
@@ -188,23 +178,38 @@ State change history.
 | ---------- | --------- | ----------- | -------------------- |
 | id         | uuid      | PK          | Primary key          |
 | story_id   | text      | FK          | Reference to stories |
+| event_type | text      | NOT NULL    | Event type           |
 | from_state | text      |             | Previous state       |
 | to_state   | text      |             | New state            |
-| reason     | text      |             | Change reason        |
-| changed_by | text      |             | Who changed          |
+| metadata   | jsonb     |             | Event data           |
 | created_at | timestamp |             | Creation timestamp   |
 
 ### story_content
 
-Raw story content for versioning.
+Story section content storage.
 
-| Column     | Type      | Constraints | Description          |
-| ---------- | --------- | ----------- | -------------------- |
-| id         | uuid      | PK          | Primary key          |
-| story_id   | text      | FK          | Reference to stories |
-| content    | jsonb     |             | Raw story content    |
-| created_at | timestamp |             | Creation timestamp   |
-| updated_at | timestamp |             | Last update          |
+| Column       | Type        | Constraints | Description          |
+| ------------ | ----------- | ----------- | -------------------- |
+| id           | uuid        | PK          | Primary key          |
+| story_id     | text        | FK          | Reference to stories |
+| section_name | text        | NOT NULL    | Section identifier   |
+| content_text | text        |             | Section content      |
+| created_at   | timestamptz | NOT NULL    | Creation timestamp   |
+
+**Unique Constraint:** (story_id, section_name)
+
+### story_touches
+
+Story scope lookup (replaces touches_backend, touches_frontend, etc.).
+
+| Column     | Type        | Constraints | Description                |
+| ---------- | ----------- | ----------- | -------------------------- |
+| id         | uuid        | PK          | Primary key                |
+| story_id   | text        | FK          | Reference to stories       |
+| touch_type | text        | NOT NULL    | Type: backend, frontend... |
+| created_at | timestamptz | NOT NULL    | Creation timestamp         |
+
+**Unique Constraint:** (story_id, touch_type)
 
 ## Plans Tables
 
@@ -374,11 +379,11 @@ Execution audit trail.
 
 | Source                | Column             | Target                 | On Delete |
 | --------------------- | ------------------ | ---------------------- | --------- |
-| story_details         | story_id           | stories.story_id       | CASCADE   |
 | story_dependencies    | story_id           | stories.story_id       | CASCADE   |
 | story_dependencies    | depends_on_id      | stories.story_id       | CASCADE   |
 | story_state_history   | story_id           | stories.story_id       | RESTRICT  |
 | story_content         | story_id           | stories.story_id       | CASCADE   |
+| story_touches         | story_id           | stories.story_id       | CASCADE   |
 | workflow_executions   | story_id           | stories.story_id       | RESTRICT  |
 | workflow_checkpoints  | execution_id       | workflow_executions.id | CASCADE   |
 | workflow_audit_log    | execution_id       | workflow_executions.id | CASCADE   |
