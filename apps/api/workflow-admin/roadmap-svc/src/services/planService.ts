@@ -1,7 +1,8 @@
+import { z } from 'zod'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { plans, type Plan } from '@repo/knowledge-base/db'
-import { eq, desc, sql, inArray, type SQL, and, or, like, asc, isNull } from 'drizzle-orm'
+import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
 import {
   pgTable,
   uuid,
@@ -11,10 +12,10 @@ import {
   pgSchema,
 } from 'drizzle-orm/pg-core'
 
-const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL || 'postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase',
-})
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required')
+}
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 export const database = drizzle(pool)
 
@@ -45,42 +46,54 @@ const planStoryLinks = pgTable(
     linkType: text('link_type').default('mentioned').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  table => ({
+  (table: {
+    planSlug: ReturnType<typeof text>
+    storyId: ReturnType<typeof text>
+  }) => ({
     planSlugIdx: index('idx_plan_story_links_plan_slug').on(table.planSlug),
     storyIdIdx: index('idx_plan_story_links_story_id').on(table.storyId),
   }),
 )
 
-export interface PlanUpdateInput {
-  title?: string | null
-  summary?: string | null
-  planType?: string | null
-  status?: string | null
-  storyPrefix?: string | null
-  tags?: string[] | null
-  priority?: string | null
-  priorityOrder?: number | null
-}
+export const PlanUpdateInputSchema = z.object({
+  title: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+  planType: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  storyPrefix: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  priority: z.string().nullable().optional(),
+  priorityOrder: z.number().nullable().optional(),
+})
 
-export interface PlanListParams {
-  page: number
-  limit: number
-  status?: string[]
-  planType?: string[]
-  priority?: string[]
-  tags?: string[]
-  excludeCompleted?: boolean
-  search?: string
-}
+export type PlanUpdateInput = z.infer<typeof PlanUpdateInputSchema>
 
-export interface PlanListResult {
+export const PlanListParamsSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  status: z.array(z.string()).optional(),
+  planType: z.array(z.string()).optional(),
+  priority: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  excludeCompleted: z.boolean().optional(),
+  search: z.string().optional(),
+})
+
+export type PlanListParams = z.infer<typeof PlanListParamsSchema>
+
+export const PlanListResultSchema = z.object({
+  data: z.array(z.record(z.unknown())),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+})
+
+// PlanListResult uses Plan[] from drizzle which is not a Zod type, so we extend the inferred shape
+export type PlanListResult = Omit<z.infer<typeof PlanListResultSchema>, 'data'> & {
   data: Plan[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
 }
 
 export async function getPlans(params: PlanListParams): Promise<PlanListResult> {
@@ -151,23 +164,25 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   }
 }
 
-export interface PlanWithDetails {
-  id: string
-  planSlug: string
-  title: string
-  summary: string | null
-  planType: string | null
-  status: string | null
-  storyPrefix: string | null
-  tags: string[] | null
-  priority: string | null
-  priorityOrder: number | null
-  rawContent: string | null
-  sections: unknown
-  contentHash: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+export const PlanWithDetailsSchema = z.object({
+  id: z.string(),
+  planSlug: z.string(),
+  title: z.string(),
+  summary: z.string().nullable(),
+  planType: z.string().nullable(),
+  status: z.string().nullable(),
+  storyPrefix: z.string().nullable(),
+  tags: z.array(z.string()).nullable(),
+  priority: z.string().nullable(),
+  priorityOrder: z.number().nullable(),
+  rawContent: z.string().nullable(),
+  sections: z.unknown(),
+  contentHash: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type PlanWithDetails = z.infer<typeof PlanWithDetailsSchema>
 
 export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | null> {
   const result = await database.select().from(plans).where(eq(plans.planSlug, slug)).limit(1)
@@ -197,10 +212,12 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
   }
 }
 
-export interface ReorderItem {
-  id: string
-  priorityOrder: number
-}
+export const ReorderItemSchema = z.object({
+  id: z.string(),
+  priorityOrder: z.number(),
+})
+
+export type ReorderItem = z.infer<typeof ReorderItemSchema>
 
 export async function reorderPlansPriority(priority: string, items: ReorderItem[]): Promise<void> {
   const updates = items.map(item =>
@@ -260,18 +277,31 @@ export async function updatePlan(
   return getPlanBySlug(slug)
 }
 
-export interface PlanStory {
-  storyId: string
-  title: string | null
-  state: string | null
-  priority: string | null
-  currentPhase: string | null
-  phaseStatus: string | null
-  isBlocked: boolean
-  hasBlockers: boolean
-  createdAt: Date | null
-  updatedAt: Date | null
-}
+export const PlanStorySchema = z.object({
+  storyId: z.string(),
+  title: z.string().nullable(),
+  state: z.string().nullable(),
+  priority: z.string().nullable(),
+  currentPhase: z.string().nullable(),
+  phaseStatus: z.string().nullable(),
+  isBlocked: z.boolean(),
+  hasBlockers: z.boolean(),
+  createdAt: z.date().nullable(),
+  updatedAt: z.date().nullable(),
+})
+
+export type PlanStory = z.infer<typeof PlanStorySchema>
+
+const LinkedStoryRowSchema = z.object({
+  storyId: z.string(),
+  title: z.string(),
+  state: z.string(),
+  priority: z.string().nullable(),
+  blockedByStory: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+type LinkedStoryRow = z.infer<typeof LinkedStoryRowSchema>
 
 export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
   const linkedStories = await database
@@ -289,7 +319,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .where(eq(planStoryLinks.planSlug, slug))
     .orderBy(asc(stories.priority), desc(stories.createdAt))
 
-  return linkedStories.map(story => ({
+  return linkedStories.map((story: LinkedStoryRow) => ({
     storyId: story.storyId,
     title: story.title,
     state: story.state,
@@ -303,21 +333,23 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
   })) as PlanStory[]
 }
 
-export interface StoryDetails {
-  storyId: string
-  title: string
-  description: string | null
-  feature: string
-  priority: string | null
-  state: string
-  blockedReason: string | null
-  blockedByStory: string | null
-  startedAt: Date | null
-  completedAt: Date | null
-  fileHash: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+export const StoryDetailsSchema = z.object({
+  storyId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  feature: z.string(),
+  priority: z.string().nullable(),
+  state: z.string(),
+  blockedReason: z.string().nullable(),
+  blockedByStory: z.string().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
+  fileHash: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type StoryDetails = z.infer<typeof StoryDetailsSchema>
 
 export async function getStoryById(storyId: string): Promise<StoryDetails | null> {
   const result = await database.select().from(stories).where(eq(stories.storyId, storyId)).limit(1)
