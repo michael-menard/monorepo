@@ -2,9 +2,9 @@
  * Telemetry MCP Operations (WINT-0120)
  *
  * Implements 4 MCP tools for recording and querying workflow telemetry:
- * - workflow_log_invocation: inserts to wint.agent_invocations
- * - workflow_log_decision: inserts to wint.hitl_decisions
- * - workflow_log_outcome: upserts to wint.story_outcomes
+ * - workflow_log_invocation: inserts to workflow.agent_invocations
+ * - workflow_log_decision: inserts to workflow.hitl_decisions
+ * - workflow_log_outcome: upserts to workflow.story_outcomes
  * - workflow_get_story_telemetry: reads all 3 tables by storyId
  *
  * @see WINT-0040 (Telemetry & Observability) for table definitions
@@ -22,7 +22,7 @@ import { agentInvocations, hitlDecisions, storyOutcomes } from '../db/index.js'
 
 /**
  * Input schema for workflow_log_invocation tool.
- * Inserts one row to wint.agent_invocations.
+ * Inserts one row to workflow.agent_invocations.
  */
 export const WorkflowLogInvocationInputSchema = z.object({
   /** Unique invocation identifier (caller-generated, e.g. UUID or {agentName}-{timestamp}) */
@@ -81,7 +81,7 @@ export type WorkflowLogInvocationInput = z.infer<typeof WorkflowLogInvocationInp
 
 /**
  * Input schema for workflow_log_decision tool.
- * Inserts one row to wint.hitl_decisions.
+ * Inserts one row to workflow.hitl_decisions.
  */
 export const WorkflowLogDecisionInputSchema = z.object({
   /** FK to agent_invocations.id — nullable if outside invocation context */
@@ -114,7 +114,7 @@ export type WorkflowLogDecisionInput = z.infer<typeof WorkflowLogDecisionInputSc
 
 /**
  * Input schema for workflow_log_outcome tool.
- * Upserts (insert or update) one row in wint.story_outcomes.
+ * Upserts (insert or update) one row in workflow.story_outcomes.
  * Uniqueness is enforced on storyId.
  */
 export const WorkflowLogOutcomeInputSchema = z.object({
@@ -186,7 +186,7 @@ export interface TelemetryOperationsDeps {
 // ============================================================================
 
 /**
- * Log an agent invocation to wint.agent_invocations.
+ * Log an agent invocation to workflow.agent_invocations.
  *
  * @param deps - Database dependencies
  * @param input - Invocation data
@@ -235,7 +235,7 @@ export async function workflow_log_invocation(
 }
 
 /**
- * Log a HITL decision to wint.hitl_decisions.
+ * Log a HITL decision to workflow.hitl_decisions.
  *
  * @param deps - Database dependencies
  * @param input - Decision data
@@ -272,7 +272,7 @@ export async function workflow_log_decision(
 }
 
 /**
- * Upsert a story outcome to wint.story_outcomes.
+ * Upsert a story outcome to workflow.story_outcomes.
  * Uses onConflictDoUpdate targeting storyId uniqueness constraint.
  *
  * @param deps - Database dependencies

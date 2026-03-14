@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { plans, planDetails, type Plan } from '@repo/knowledge-base/src/db'
+import { plans, type Plan } from '@repo/knowledge-base/db'
 import { eq, desc, sql, inArray, type SQL, and, or, like, asc, isNull } from 'drizzle-orm'
 import {
   pgTable,
@@ -9,8 +9,6 @@ import {
   timestamp,
   index,
   pgSchema,
-  boolean,
-  jsonb,
 } from 'drizzle-orm/pg-core'
 
 const pool = new Pool({
@@ -27,27 +25,14 @@ export const stories = workflowSchema.table('stories', {
   feature: text('feature').notNull(),
   state: text('state').notNull(),
   title: text('title').notNull(),
-  priority: text('priority'),
   description: text('description'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
-
-export const storyDetails = workflowSchema.table('story_details', {
-  id: uuid('id').defaultRandom().notNull(),
-  storyId: text('story_id').notNull(),
-  storyDir: text('story_dir'),
-  storyFile: text('story_file'),
+  priority: text('priority'),
   blockedReason: text('blocked_reason'),
   blockedByStory: text('blocked_by_story'),
-  touchesBackend: boolean('touches_backend').default(false),
-  touchesFrontend: boolean('touches_frontend').default(false),
-  touchesDatabase: boolean('touches_database').default(false),
-  touchesInfra: boolean('touches_infra').default(false),
   startedAt: timestamp('started_at', { withTimezone: true }),
   completedAt: timestamp('completed_at', { withTimezone: true }),
-  fileSyncedAt: timestamp('file_synced_at', { withTimezone: true }),
   fileHash: text('file_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -71,9 +56,7 @@ export interface PlanUpdateInput {
   summary?: string | null
   planType?: string | null
   status?: string | null
-  featureDir?: string | null
   storyPrefix?: string | null
-  estimatedStories?: number | null
   tags?: string[] | null
   priority?: string | null
   priorityOrder?: number | null
@@ -133,7 +116,9 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
 
   const whereClause =
     conditions.length > 0
-      ? (conditions.reduce((acc, c) => and(acc, c) as SQL, sql``) as SQL)
+      ? ((conditions.length === 1
+          ? conditions[0]
+          : conditions.reduce((acc, c) => and(acc, c) as SQL, conditions[0])) as SQL)
       : undefined
 
   const countResult = await database
@@ -172,24 +157,16 @@ export interface PlanWithDetails {
   title: string
   summary: string | null
   planType: string | null
-  status: string
-  featureDir: string | null
+  status: string | null
   storyPrefix: string | null
-  estimatedStories: number | null
   tags: string[] | null
   priority: string | null
+  priorityOrder: number | null
+  rawContent: string | null
+  sections: unknown
+  contentHash: string | null
   createdAt: Date
   updatedAt: Date
-  details: {
-    rawContent: string
-    phases: unknown
-    sections: unknown
-    formatVersion: string | null
-    sourceFile: string | null
-    contentHash: string | null
-    importedAt: Date | null
-    updatedAt: Date
-  } | null
 }
 
 export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | null> {
@@ -201,14 +178,6 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
 
   const plan = result[0]
 
-  const detailsResult = await database
-    .select()
-    .from(planDetails)
-    .where(eq(planDetails.planId, plan.id))
-    .limit(1)
-
-  const details = detailsResult.length > 0 ? detailsResult[0] : null
-
   return {
     id: plan.id,
     planSlug: plan.planSlug,
@@ -216,25 +185,15 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
     summary: plan.summary,
     planType: plan.planType,
     status: plan.status,
-    featureDir: plan.featureDir,
     storyPrefix: plan.storyPrefix,
-    estimatedStories: plan.estimatedStories,
     tags: plan.tags,
     priority: plan.priority,
+    priorityOrder: plan.priorityOrder,
+    rawContent: plan.rawContent,
+    sections: plan.sections,
+    contentHash: plan.contentHash,
     createdAt: plan.createdAt,
     updatedAt: plan.updatedAt,
-    details: details
-      ? {
-          rawContent: details.rawContent,
-          phases: details.phases,
-          sections: details.sections,
-          formatVersion: details.formatVersion,
-          sourceFile: details.sourceFile,
-          contentHash: details.contentHash,
-          importedAt: details.importedAt,
-          updatedAt: details.updatedAt,
-        }
-      : null,
   }
 }
 
@@ -283,14 +242,8 @@ export async function updatePlan(
   if (input.status !== undefined) {
     updateData.status = input.status
   }
-  if (input.featureDir !== undefined) {
-    updateData.featureDir = input.featureDir
-  }
   if (input.storyPrefix !== undefined) {
     updateData.storyPrefix = input.storyPrefix
-  }
-  if (input.estimatedStories !== undefined) {
-    updateData.estimatedStories = input.estimatedStories
   }
   if (input.tags !== undefined) {
     updateData.tags = input.tags
@@ -327,6 +280,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       title: stories.title,
       state: stories.state,
       priority: stories.priority,
+      blockedByStory: stories.blockedByStory,
       createdAt: stories.createdAt,
       updatedAt: stories.updatedAt,
     })
@@ -335,58 +289,32 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .where(eq(planStoryLinks.planSlug, slug))
     .orderBy(asc(stories.priority), desc(stories.createdAt))
 
-  const storyIds = linkedStories.map(s => s.storyId)
-
-  if (storyIds.length === 0) {
-    return []
-  }
-
-  const detailsResult = await database
-    .select({
-      storyId: storyDetails.storyId,
-      blockedByStory: storyDetails.blockedByStory,
-    })
-    .from(storyDetails)
-    .where(inArray(storyDetails.storyId, storyIds))
-
-  const detailsMap = new Map(detailsResult.map(d => [d.storyId, d]))
-
-  return linkedStories.map(story => {
-    const details = detailsMap.get(story.storyId)
-    return {
-      storyId: story.storyId,
-      title: story.title,
-      state: story.state,
-      priority: story.priority,
-      currentPhase: null,
-      phaseStatus: null,
-      isBlocked: story.state === 'blocked',
-      hasBlockers: !!details?.blockedByStory,
-      createdAt: story.createdAt,
-      updatedAt: story.updatedAt,
-    }
-  }) as PlanStory[]
+  return linkedStories.map(story => ({
+    storyId: story.storyId,
+    title: story.title,
+    state: story.state,
+    priority: story.priority,
+    currentPhase: null,
+    phaseStatus: null,
+    isBlocked: story.state === 'blocked',
+    hasBlockers: !!story.blockedByStory,
+    createdAt: story.createdAt,
+    updatedAt: story.updatedAt,
+  })) as PlanStory[]
 }
 
 export interface StoryDetails {
-  id: string
   storyId: string
   title: string
   description: string | null
-  storyType: string
-  epic: string | null
-  wave: number | null
+  feature: string
   priority: string | null
-  complexity: string | null
-  storyPoints: number | null
   state: string
-  metadata: {
-    surfaces?: { backend?: boolean; frontend?: boolean; database?: boolean; infra?: boolean }
-    tags?: string[]
-    experimentVariant?: 'control' | 'variant_a' | 'variant_b'
-    blocked_by?: string[]
-    blocks?: string[]
-  } | null
+  blockedReason: string | null
+  blockedByStory: string | null
+  startedAt: Date | null
+  completedAt: Date | null
+  fileHash: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -400,37 +328,18 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
 
   const story = result[0]
 
-  const detailsResult = await database
-    .select()
-    .from(storyDetails)
-    .where(eq(storyDetails.storyId, storyId))
-    .limit(1)
-
-  const details = detailsResult.length > 0 ? detailsResult[0] : null
-
   return {
-    id: story.storyId,
     storyId: story.storyId,
     title: story.title,
     description: story.description,
-    storyType: story.feature,
-    epic: story.feature,
-    wave: null,
+    feature: story.feature,
     priority: story.priority,
-    complexity: null,
-    storyPoints: null,
     state: story.state,
-    metadata: details
-      ? {
-          surfaces: {
-            backend: details.touchesBackend ?? false,
-            frontend: details.touchesFrontend ?? false,
-            database: details.touchesDatabase ?? false,
-            infra: details.touchesInfra ?? false,
-          },
-          blocked_by: details.blockedByStory ? [details.blockedByStory] : undefined,
-        }
-      : null,
+    blockedReason: story.blockedReason,
+    blockedByStory: story.blockedByStory,
+    startedAt: story.startedAt,
+    completedAt: story.completedAt,
+    fileHash: story.fileHash,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   }

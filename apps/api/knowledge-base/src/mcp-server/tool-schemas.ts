@@ -3879,7 +3879,7 @@ Example:
 
 /**
  * Input schema for workflow_log_decision tool.
- * Inserts one row to wint.hitl_decisions.
+ * Inserts one row to workflow.hitl_decisions.
  */
 export const WorkflowLogDecisionInputSchema = z.object({
   invocation_id: z.string().uuid().optional(),
@@ -3894,7 +3894,7 @@ export type WorkflowLogDecisionInput = z.infer<typeof WorkflowLogDecisionInputSc
 
 export const workflowLogDecisionToolDefinition: McpToolDefinition = {
   name: 'workflow_log_decision',
-  description: `Record a HITL (Human-In-The-Loop) decision in wint.hitl_decisions.
+  description: `Record a HITL (Human-In-The-Loop) decision in workflow.hitl_decisions.
 
 Inserts one row capturing a human or agent decision during story execution.
 Supports semantic search via optional 1536-dim embedding of decision_text.
@@ -3923,7 +3923,7 @@ Example:
 
 /**
  * Input schema for workflow_log_outcome tool.
- * Upserts one row in wint.story_outcomes (unique on story_id).
+ * Upserts one row in workflow.story_outcomes (unique on story_id).
  */
 export const WorkflowLogOutcomeInputSchema = z.object({
   story_id: z.string().min(1),
@@ -3944,7 +3944,7 @@ export type WorkflowLogOutcomeInput = z.infer<typeof WorkflowLogOutcomeInputSche
 
 export const workflowLogOutcomeToolDefinition: McpToolDefinition = {
   name: 'workflow_log_outcome',
-  description: `Upsert the final outcome for a story in wint.story_outcomes.
+  description: `Upsert the final outcome for a story in workflow.story_outcomes.
 
 One row per story (unique on story_id). Updates existing row if story already has an outcome.
 Tracks cumulative token usage, cost, quality scores, and iteration counts.
@@ -3992,7 +3992,7 @@ export const workflowGetStoryTelemetryToolDefinition: McpToolDefinition = {
   name: 'workflow_get_story_telemetry',
   description: `Retrieve all telemetry data for a story from the 3 telemetry tables.
 
-Queries wint.agent_invocations, wint.hitl_decisions, and wint.story_outcomes
+Queries workflow.agent_invocations, workflow.hitl_decisions, and workflow.story_outcomes
 in parallel and returns all rows grouped by table.
 
 Parameters:
@@ -4001,9 +4001,9 @@ Parameters:
 Returns:
 {
   story_id: string,
-  invocations: AgentInvocation[],  // all rows from wint.agent_invocations
-  decisions: HitlDecision[],        // all rows from wint.hitl_decisions
-  outcome: StoryOutcome | null,     // single row from wint.story_outcomes (or null)
+  invocations: AgentInvocation[],  // all rows from workflow.agent_invocations
+  decisions: HitlDecision[],        // all rows from workflow.hitl_decisions
+  outcome: StoryOutcome | null,     // single row from workflow.story_outcomes (or null)
   message: string
 }
 
@@ -4185,7 +4185,7 @@ toolDefinitions.push(
  */
 export const workflowLogInvocationToolDefinition: McpToolDefinition = {
   name: 'workflow_log_invocation',
-  description: `Log an agent invocation record to wint.agent_invocations.
+  description: `Log an agent invocation record to workflow.agent_invocations.
 
 Fire-and-forget telemetry skill for WINT workflow agents.
 Inserts exactly one row per call. Returns the inserted row, or null if the DB write fails.

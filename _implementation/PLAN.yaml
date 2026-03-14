@@ -1,199 +1,193 @@
 schema: 2
-story_id: "WINT-9090"
-timestamp: "2026-02-24T22:00:00Z"
+story_id: "CDBN-3020"
+timestamp: "2026-03-14T00:00:00Z"
 subtask_source: story
 
 steps:
   - id: 1
     subtask_id: "ST-1"
-    description: "Create nodes/context/ directory structure and index.ts re-export stub"
+    description: "Fix story-crud-operations.ts — remove storyDetails import, update storyColumns to match actual workflow.stories schema (drop id, epic, storyType, points, phase, iteration, blocked, fileSyncedAt, acceptanceCriteria, nonGoals, packages, embedding; map to storyId PK and available columns)"
     files:
-      - "packages/backend/orchestrator/src/nodes/context/index.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+      - "apps/api/knowledge-base/src/db/schema.ts"
     files_to_read:
-      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
-      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "apps/api/knowledge-base/src/db/schema.ts"
+      - "apps/api/knowledge-base/src/__types__/index.ts"
     dependencies: []
-    slice: packages
-    verification: "pnpm check-types --filter @repo/orchestrator"
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base"
     acs_covered:
+      - "AC-1"
+      - "AC-2"
       - "AC-3"
 
   - id: 2
     subtask_id: "ST-2"
-    description: "Implement context-warmer.ts node with cache read + write (contextCacheGet + contextCachePut logic)"
+    description: "Fix planService.ts in roadmap-svc — remove planDetails and storyDetails table references (inline local table defs), rewrite getPlanBySlug, getStoriesByPlanSlug, and getStoryById to use only the plans and stories tables from workflow schema as exported by @repo/knowledge-base/db"
     files:
-      - "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
-      - "packages/backend/orchestrator/src/nodes/context/index.ts"
+      - "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
     files_to_read:
-      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
-      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
-      - "packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts"
-      - "packages/backend/mcp-tools/src/context-cache/context-cache-get.ts"
-      - "packages/backend/mcp-tools/src/context-cache/context-cache-put.ts"
-      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+      - "apps/api/knowledge-base/src/db/schema.ts"
+      - "apps/api/knowledge-base/src/db/index.ts"
     dependencies:
       - 1
-    slice: packages
-    verification: "pnpm check-types --filter @repo/orchestrator"
+    slice: backend
+    verification: "pnpm check-types --filter @repo/roadmap-svc"
     acs_covered:
-      - "AC-1"
       - "AC-4"
       - "AC-5"
-      - "AC-8"
-      - "AC-9"
-      - "AC-10"
-      - "AC-11"
-      - "AC-14"
 
   - id: 3
     subtask_id: "ST-3"
-    description: "Implement cache invalidation in context-warmer.ts (contextCacheInvalidate logic)"
+    description: "Update JSDoc/comment strings in telemetry-operations.ts — replace all 'wint.agent_invocations', 'wint.hitl_decisions', 'wint.story_outcomes' references with 'workflow.agent_invocations', 'workflow.hitl_decisions', 'workflow.story_outcomes'"
     files:
-      - "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
-    files_to_read:
-      - "packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts"
-      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
-    dependencies:
-      - 2
-    slice: packages
-    verification: "pnpm check-types --filter @repo/orchestrator"
+      - "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
+    files_to_read: []
+    dependencies: []
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base"
     acs_covered:
-      - "AC-13"
+      - "AC-6"
 
   - id: 4
     subtask_id: "ST-4"
-    description: "Implement session-manager.ts node with create, update, complete, cleanup operations"
+    description: "Update MCP tool description strings in tool-schemas.ts — replace all 'wint.hitl_decisions', 'wint.story_outcomes', 'wint.agent_invocations' references in tool descriptions and comments with 'workflow.*' equivalents"
     files:
-      - "packages/backend/orchestrator/src/nodes/context/session-manager.ts"
-      - "packages/backend/orchestrator/src/nodes/context/index.ts"
-    files_to_read:
-      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
-      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
-      - "packages/backend/mcp-tools/src/session-management/session-create.ts"
-      - "packages/backend/mcp-tools/src/session-management/session-update.ts"
-      - "packages/backend/mcp-tools/src/session-management/session-complete.ts"
-      - "packages/backend/mcp-tools/src/session-management/session-cleanup.ts"
-      - "packages/backend/mcp-tools/src/session-management/__types__/index.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_read: []
+    dependencies:
+      - 3
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base"
+    acs_covered:
+      - "AC-7"
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Update JSDoc comments in tool-handlers.ts — replace 'wint.hitl_decisions', 'wint.story_outcomes' comment references with 'workflow.*' equivalents"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    files_to_read: []
+    dependencies:
+      - 4
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base"
+    acs_covered:
+      - "AC-7"
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Update story-outcomes integration test comments — replace 'wint.story_outcomes', 'wint.*' comment references with 'workflow.*' schema references; update test prerequisite comments to reference workflow schema migration"
+    files:
+      - "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
+    files_to_read: []
+    dependencies:
+      - 3
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- --run src/crud-operations/__tests__/story-outcomes.test.ts"
+    acs_covered:
+      - "AC-8"
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Run full type-check and test suite for all modified packages to confirm zero type errors and all tests pass"
+    files: []
+    files_to_read: []
     dependencies:
       - 1
-    slice: packages
-    verification: "pnpm check-types --filter @repo/orchestrator"
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base && pnpm check-types --filter @repo/roadmap-svc && pnpm test --filter @repo/knowledge-base"
     acs_covered:
+      - "AC-1"
       - "AC-2"
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
       - "AC-6"
       - "AC-7"
       - "AC-8"
       - "AC-9"
-      - "AC-10"
-      - "AC-11"
-      - "AC-14"
-
-  - id: 5
-    subtask_id: "ST-5"
-    description: "Write unit tests for context-warmer.ts and session-manager.ts (injectable mock DB)"
-    files:
-      - "packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts"
-      - "packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts"
-    files_to_read:
-      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
-      - "packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts"
-      - "packages/backend/mcp-tools/src/session-management/__tests__/integration.test.ts"
-    dependencies:
-      - 3
-      - 4
-    slice: packages
-    verification: "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage"
-    acs_covered:
-      - "AC-12"
 
 files_to_change:
-  - path: "packages/backend/orchestrator/src/nodes/context/index.ts"
-    action: create
-    reason: "New module re-export index for nodes/context/ — consistent with nodes/sync/index.ts and nodes/reality/ conventions"
-  - path: "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
-    action: create
-    reason: "New LangGraph node porting contextCacheGet, contextCachePut, contextCacheInvalidate MCP tool behavior (AC-1, AC-4, AC-5, AC-13)"
-  - path: "packages/backend/orchestrator/src/nodes/context/session-manager.ts"
-    action: create
-    reason: "New LangGraph node porting sessionCreate, sessionUpdate, sessionComplete, sessionCleanup MCP tool behavior (AC-2, AC-6, AC-7)"
-  - path: "packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts"
-    action: create
-    reason: "Unit tests for context-warmer node — injectable mock DB, >= 80% coverage (AC-12)"
-  - path: "packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts"
-    action: create
-    reason: "Unit tests for session-manager node — injectable mock DB, >= 80% coverage (AC-12)"
+  - path: "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+    action: modify
+    reason: "Remove storyDetails import and storyDetailColumns selector; update storyColumns to use only columns present in current workflow.stories schema (storyId as PK, feature, title, description, state, priority, blockedReason, blockedByStory, startedAt, completedAt, fileHash)"
+  - path: "apps/api/knowledge-base/src/db/schema.ts"
+    action: modify
+    reason: "Verify/confirm storyDetails table is not exported — no code change expected unless an old storyDetails definition is lingering"
+  - path: "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
+    action: modify
+    reason: "Remove inline planDetails/storyDetails local table definitions and all queries that reference them; rewrite getPlanBySlug to return data from plans table only (no JOIN to planDetails); rewrite getStoriesByPlanSlug and getStoryById to use stories table columns available in workflow schema"
+  - path: "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
+    action: modify
+    reason: "Update JSDoc/comment strings from wint.* to workflow.* schema names to match current consolidated schema"
+  - path: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    action: modify
+    reason: "Update tool description strings from wint.* to workflow.* to match current schema"
+  - path: "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+    action: modify
+    reason: "Update JSDoc comment strings from wint.* to workflow.* to match current schema"
+  - path: "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
+    action: modify
+    reason: "Update wint.* schema references in test comments/docs to workflow.* to match current schema"
 
 commands_to_run:
-  - command: "pnpm check-types --filter @repo/orchestrator"
-    when: "after each implementation step"
+  - command: "pnpm check-types --filter @repo/knowledge-base"
+    when: "after ST-1 and after each subsequent backend step"
     required: true
-  - command: "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage"
+  - command: "pnpm check-types --filter @repo/roadmap-svc"
+    when: "after ST-2"
+    required: true
+  - command: "pnpm test --filter @repo/knowledge-base"
     when: "after all code changes"
     required: true
-  - command: "pnpm build --filter @repo/orchestrator"
+  - command: "pnpm build --filter @repo/knowledge-base"
     when: "after all code changes"
-    required: true
+    required: false
 
 acceptance_criteria_map:
   - ac_id: "AC-1"
-    planned_evidence: "File exists: context-warmer.ts with contextWarmerNode default export and createContextWarmerNode factory"
-    evidence_type: file
+    planned_evidence: "pnpm check-types --filter @repo/knowledge-base passes with 0 errors — storyDetails import removed"
+    evidence_type: command
   - ac_id: "AC-2"
-    planned_evidence: "File exists: session-manager.ts with sessionManagerNode default export and createSessionManagerNode factory"
+    planned_evidence: "storyColumns in story-crud-operations.ts only references columns present in workflow.stories schema"
     evidence_type: file
   - ac_id: "AC-3"
-    planned_evidence: "File exists: nodes/context/index.ts exporting both nodes — matches nodes/sync/index.ts re-export pattern"
-    evidence_type: file
+    planned_evidence: "pnpm test --filter @repo/knowledge-base -- --run src/__types__/__tests__/story-schemas.test.ts passes"
+    evidence_type: test
   - ac_id: "AC-4"
-    planned_evidence: "Unit test HP-1: contextWarmerNode cache hit — contextCacheHit=true, contextPackContent populated"
-    evidence_type: test
-  - ac_id: "AC-5"
-    planned_evidence: "Unit test HP-2: contextWarmerNode cache miss — new row inserted in contextPacks"
-    evidence_type: test
-  - ac_id: "AC-6"
-    planned_evidence: "Unit test HP-3: sessionManagerNode create — sessionId UUID in state, contextSessions row inserted"
-    evidence_type: test
-  - ac_id: "AC-7"
-    planned_evidence: "Unit test HP-4, HP-5: sessionManagerNode update/complete — token counts updated, lifecycle_status transitions"
-    evidence_type: test
-  - ac_id: "AC-8"
-    planned_evidence: "Code review: both nodes use createToolNode() from runner/node-factory.ts"
-    evidence_type: file
-  - ac_id: "AC-9"
-    planned_evidence: "Code review: GraphStateWithContextCache and GraphStateWithSession interfaces extending GraphStateWithContext"
-    evidence_type: file
-  - ac_id: "AC-10"
-    planned_evidence: "Unit test HP-8: factory functions accept mockDb and use it; no hard-wired db import at module scope"
-    evidence_type: test
-  - ac_id: "AC-11"
-    planned_evidence: "Unit tests EC-1, EC-2: DB failure returns null state fields, never throws, logger.error called"
-    evidence_type: test
-  - ac_id: "AC-12"
-    planned_evidence: "pnpm test --filter @repo/orchestrator -- --coverage shows >= 80% for nodes/context/ files"
+    planned_evidence: "pnpm check-types --filter @repo/roadmap-svc passes with 0 errors — planDetails/storyDetails references removed"
     evidence_type: command
-  - ac_id: "AC-13"
-    planned_evidence: "Code review: invalidation operation mode in createContextWarmerNode or companion utility"
+  - ac_id: "AC-5"
+    planned_evidence: "planService.ts getPlanBySlug, getStoriesByPlanSlug, getStoryById all query only columns from current workflow.plans and workflow.stories schema"
     evidence_type: file
-  - ac_id: "AC-14"
-    planned_evidence: "Code review: imports from packages/backend/mcp-tools/src/context-cache/__types__/ and session-management/__types__/ — no local re-definition"
-    evidence_type: file
+  - ac_id: "AC-6"
+    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts returns 0"
+    evidence_type: command
+  - ac_id: "AC-7"
+    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/mcp-server/tool-schemas.ts && tool-handlers.ts returns 0"
+    evidence_type: command
+  - ac_id: "AC-8"
+    planned_evidence: "pnpm test --filter @repo/knowledge-base passes all tests (including story-outcomes.test.ts)"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "pnpm check-types:all passes with 0 type errors across all changed packages"
+    evidence_type: command
 
-architectural_decisions:
-  - id: ARCH-001
-    question: "Should contextWarmerNode support all three operations (get, put, invalidate) via an operation dispatch pattern in state, or should invalidation be a separate exported companion function?"
-    decision: "Implement all three operations as a state-dispatched operation mode (operation: 'get' | 'put' | 'invalidate') within createContextWarmerNode — consistent with how sessionManagerNode dispatches create/update/complete/cleanup via state.sessionOperation"
-    rationale: "The story's session-manager node already uses this dispatch pattern (operation field in state) and the story's AC-13 says 'accessible via the context-warmer node or a companion utility'. Using the same dispatch pattern across both nodes maximizes consistency and reduces API surface."
-    decided_by: planner
+architectural_decisions: []
 
 complexity: moderate
 
 notes:
-  - "WINT-9010 (@repo/workflow-logic) is in UAT — implementation gate SATISFIED. workflow-logic is NOT required for this story (nodes use @repo/db directly, per MCP tool patterns)"
-  - "WINT-2100 source ambiguity: session-management MCP tools exist in packages/backend/mcp-tools/src/session-management/ — confirmed as behavioral source of truth"
-  - "No new packages added — all dependencies already in @repo/orchestrator package"
-  - "nodes/context/ directory does NOT yet exist — ST-1 creates it"
-  - "Import pattern: Zod schemas from mcp-tools __types__/ must be imported not duplicated (AC-14). The db type is imported from @repo/db but the db instance itself is injectable via factory config"
-  - "GraphStateWithContext (from retrieve-context.ts) is the extension base per story's architecture notes — context-warmer extends it to GraphStateWithContextCache, session-manager to GraphStateWithSession"
-  - "Cache TTL note: use explicit future timestamps in tests, not relative offsets (story risk)"
-  - "Session update throws on not-found/already-completed (MCP source behavior). The LangGraph node must wrap this in the graceful degradation try/catch, returning null sessionId state instead of propagating the throw"
-  - "Concurrent write tests should be grouped serially in vitest (story edge-case risk ED-1)"
+  - "story-crud-operations.ts has a compile-time broken reference to storyDetails from schema.ts — storyDetails table was removed in schema consolidation. ST-1 is the most critical fix."
+  - "planService.ts references planDetails (local inline table def that was deleted) and storyDetails (also deleted). The getPlanBySlug, getStoriesByPlanSlug, getStoryById functions need rewriting to use only available columns from workflow.plans and workflow.stories."
+  - "workflow.stories PK is storyId (text), not id (uuid). planService.ts stories table redef uses correct storyId pattern. story-crud-operations.ts uses stories.id which does not exist."
+  - "workflow.plans table has: id, planSlug, title, summary, planType, storyPrefix, tags, rawContent, contentHash, kbEntryId, parentPlanId, deletedAt, supersededBy, embedding, sections, status, priority, priorityOrder. No featureDir, estimatedStories, formatVersion, sourceFile."
+  - "telemetry-operations.ts, tool-schemas.ts, tool-handlers.ts changes are comment/string-only — no behavior changes, no risk of test regression."
+  - "story-outcomes.test.ts is an integration test requiring real postgres-knowledgebase on port 5433 (ADR-005). Comment updates only — test logic unchanged."
+  - "planService.ts PlanWithDetails interface references featureDir, estimatedStories which don't exist in plans table. These fields must be dropped from the response shape or mapped from available columns."

@@ -1,24 +1,25 @@
 schema: 1
-story_id: ST-3010
-timestamp: 2026-03-08T07:08:12Z
-gen_mode: true
+story_id: CDBN-3020
+timestamp: '2026-03-14T00:00:00Z'
+gen_mode: false
 touches:
-  backend: false
+  backend: true
   frontend: false
-  packages: false
-  db: false
+  packages: true
+  db: true
   contracts: false
   ui: false
   infra: false
 touched_paths_globs:
-  - ".claude/agents/dev-plan-leader.agent.md"
-  - ".claude/agents/_shared/**"
+  - "apps/api/knowledge-base/**"
+  - "apps/api/workflow-admin/**"
+  - "packages/backend/database-schema/**"
 risk_flags:
   auth: false
   payments: false
-  migrations: false
+  migrations: true
   external_apis: false
   security: false
   performance: false
-summary: "Verify that dev-plan-leader.agent.md v1.3.0 correctly maps story subtasks 1:1 to PLAN.yaml steps with proper validation rules"
+summary: "Update telemetry operations and roadmap queries from wint.* schema to new workflow schema"
 elaboration: "completed"
