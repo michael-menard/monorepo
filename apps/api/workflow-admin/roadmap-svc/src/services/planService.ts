@@ -1,7 +1,8 @@
+import { z } from 'zod'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { plans, planDetails, type Plan } from '@repo/knowledge-base/src/db'
-import { eq, desc, sql, inArray, type SQL, and, or, like, asc, isNull } from 'drizzle-orm'
+import { plans, type Plan } from '@repo/knowledge-base/db'
+import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
 import {
   pgTable,
   uuid,
@@ -9,14 +10,12 @@ import {
   timestamp,
   index,
   pgSchema,
-  boolean,
-  jsonb,
 } from 'drizzle-orm/pg-core'
 
-const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL || 'postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase',
-})
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required')
+}
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 export const database = drizzle(pool)
 
@@ -27,27 +26,14 @@ export const stories = workflowSchema.table('stories', {
   feature: text('feature').notNull(),
   state: text('state').notNull(),
   title: text('title').notNull(),
-  priority: text('priority'),
   description: text('description'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
-
-export const storyDetails = workflowSchema.table('story_details', {
-  id: uuid('id').defaultRandom().notNull(),
-  storyId: text('story_id').notNull(),
-  storyDir: text('story_dir'),
-  storyFile: text('story_file'),
+  priority: text('priority'),
   blockedReason: text('blocked_reason'),
   blockedByStory: text('blocked_by_story'),
-  touchesBackend: boolean('touches_backend').default(false),
-  touchesFrontend: boolean('touches_frontend').default(false),
-  touchesDatabase: boolean('touches_database').default(false),
-  touchesInfra: boolean('touches_infra').default(false),
   startedAt: timestamp('started_at', { withTimezone: true }),
   completedAt: timestamp('completed_at', { withTimezone: true }),
-  fileSyncedAt: timestamp('file_synced_at', { withTimezone: true }),
   fileHash: text('file_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -60,44 +46,54 @@ const planStoryLinks = pgTable(
     linkType: text('link_type').default('mentioned').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  table => ({
+  (table: {
+    planSlug: ReturnType<typeof text>
+    storyId: ReturnType<typeof text>
+  }) => ({
     planSlugIdx: index('idx_plan_story_links_plan_slug').on(table.planSlug),
     storyIdIdx: index('idx_plan_story_links_story_id').on(table.storyId),
   }),
 )
 
-export interface PlanUpdateInput {
-  title?: string | null
-  summary?: string | null
-  planType?: string | null
-  status?: string | null
-  featureDir?: string | null
-  storyPrefix?: string | null
-  estimatedStories?: number | null
-  tags?: string[] | null
-  priority?: string | null
-  priorityOrder?: number | null
-}
+export const PlanUpdateInputSchema = z.object({
+  title: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+  planType: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  storyPrefix: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  priority: z.string().nullable().optional(),
+  priorityOrder: z.number().nullable().optional(),
+})
 
-export interface PlanListParams {
-  page: number
-  limit: number
-  status?: string[]
-  planType?: string[]
-  priority?: string[]
-  tags?: string[]
-  excludeCompleted?: boolean
-  search?: string
-}
+export type PlanUpdateInput = z.infer<typeof PlanUpdateInputSchema>
 
-export interface PlanListResult {
+export const PlanListParamsSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  status: z.array(z.string()).optional(),
+  planType: z.array(z.string()).optional(),
+  priority: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  excludeCompleted: z.boolean().optional(),
+  search: z.string().optional(),
+})
+
+export type PlanListParams = z.infer<typeof PlanListParamsSchema>
+
+export const PlanListResultSchema = z.object({
+  data: z.array(z.record(z.unknown())),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+})
+
+// PlanListResult uses Plan[] from drizzle which is not a Zod type, so we extend the inferred shape
+export type PlanListResult = Omit<z.infer<typeof PlanListResultSchema>, 'data'> & {
   data: Plan[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
 }
 
 export async function getPlans(params: PlanListParams): Promise<PlanListResult> {
@@ -119,7 +115,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   }
 
   if (tags && tags.length > 0) {
-    conditions.push(sql`${plans.tags} && ${sql`{${tags.join(',')}}`}`)
+    conditions.push(sql`${plans.tags} && ARRAY[${sql.join(tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
   }
 
   if (excludeCompleted) {
@@ -133,7 +129,9 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
 
   const whereClause =
     conditions.length > 0
-      ? (conditions.reduce((acc, c) => and(acc, c) as SQL, sql``) as SQL)
+      ? ((conditions.length === 1
+          ? conditions[0]
+          : conditions.reduce((acc, c) => and(acc, c) as SQL, conditions[0])) as SQL)
       : undefined
 
   const countResult = await database
@@ -166,31 +164,25 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   }
 }
 
-export interface PlanWithDetails {
-  id: string
-  planSlug: string
-  title: string
-  summary: string | null
-  planType: string | null
-  status: string
-  featureDir: string | null
-  storyPrefix: string | null
-  estimatedStories: number | null
-  tags: string[] | null
-  priority: string | null
-  createdAt: Date
-  updatedAt: Date
-  details: {
-    rawContent: string
-    phases: unknown
-    sections: unknown
-    formatVersion: string | null
-    sourceFile: string | null
-    contentHash: string | null
-    importedAt: Date | null
-    updatedAt: Date
-  } | null
-}
+export const PlanWithDetailsSchema = z.object({
+  id: z.string(),
+  planSlug: z.string(),
+  title: z.string(),
+  summary: z.string().nullable(),
+  planType: z.string().nullable(),
+  status: z.string().nullable(),
+  storyPrefix: z.string().nullable(),
+  tags: z.array(z.string()).nullable(),
+  priority: z.string().nullable(),
+  priorityOrder: z.number().nullable(),
+  rawContent: z.string().nullable(),
+  sections: z.unknown(),
+  contentHash: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type PlanWithDetails = z.infer<typeof PlanWithDetailsSchema>
 
 export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | null> {
   const result = await database.select().from(plans).where(eq(plans.planSlug, slug)).limit(1)
@@ -201,14 +193,6 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
 
   const plan = result[0]
 
-  const detailsResult = await database
-    .select()
-    .from(planDetails)
-    .where(eq(planDetails.planId, plan.id))
-    .limit(1)
-
-  const details = detailsResult.length > 0 ? detailsResult[0] : null
-
   return {
     id: plan.id,
     planSlug: plan.planSlug,
@@ -216,32 +200,24 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
     summary: plan.summary,
     planType: plan.planType,
     status: plan.status,
-    featureDir: plan.featureDir,
     storyPrefix: plan.storyPrefix,
-    estimatedStories: plan.estimatedStories,
     tags: plan.tags,
     priority: plan.priority,
+    priorityOrder: plan.priorityOrder,
+    rawContent: plan.rawContent,
+    sections: plan.sections,
+    contentHash: plan.contentHash,
     createdAt: plan.createdAt,
     updatedAt: plan.updatedAt,
-    details: details
-      ? {
-          rawContent: details.rawContent,
-          phases: details.phases,
-          sections: details.sections,
-          formatVersion: details.formatVersion,
-          sourceFile: details.sourceFile,
-          contentHash: details.contentHash,
-          importedAt: details.importedAt,
-          updatedAt: details.updatedAt,
-        }
-      : null,
   }
 }
 
-export interface ReorderItem {
-  id: string
-  priorityOrder: number
-}
+export const ReorderItemSchema = z.object({
+  id: z.string(),
+  priorityOrder: z.number(),
+})
+
+export type ReorderItem = z.infer<typeof ReorderItemSchema>
 
 export async function reorderPlansPriority(priority: string, items: ReorderItem[]): Promise<void> {
   const updates = items.map(item =>
@@ -283,14 +259,8 @@ export async function updatePlan(
   if (input.status !== undefined) {
     updateData.status = input.status
   }
-  if (input.featureDir !== undefined) {
-    updateData.featureDir = input.featureDir
-  }
   if (input.storyPrefix !== undefined) {
     updateData.storyPrefix = input.storyPrefix
-  }
-  if (input.estimatedStories !== undefined) {
-    updateData.estimatedStories = input.estimatedStories
   }
   if (input.tags !== undefined) {
     updateData.tags = input.tags
@@ -307,18 +277,31 @@ export async function updatePlan(
   return getPlanBySlug(slug)
 }
 
-export interface PlanStory {
-  storyId: string
-  title: string | null
-  state: string | null
-  priority: string | null
-  currentPhase: string | null
-  phaseStatus: string | null
-  isBlocked: boolean
-  hasBlockers: boolean
-  createdAt: Date | null
-  updatedAt: Date | null
-}
+export const PlanStorySchema = z.object({
+  storyId: z.string(),
+  title: z.string().nullable(),
+  state: z.string().nullable(),
+  priority: z.string().nullable(),
+  currentPhase: z.string().nullable(),
+  phaseStatus: z.string().nullable(),
+  isBlocked: z.boolean(),
+  hasBlockers: z.boolean(),
+  createdAt: z.date().nullable(),
+  updatedAt: z.date().nullable(),
+})
+
+export type PlanStory = z.infer<typeof PlanStorySchema>
+
+const LinkedStoryRowSchema = z.object({
+  storyId: z.string(),
+  title: z.string(),
+  state: z.string(),
+  priority: z.string().nullable(),
+  blockedByStory: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+type LinkedStoryRow = z.infer<typeof LinkedStoryRowSchema>
 
 export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
   const linkedStories = await database
@@ -327,6 +310,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       title: stories.title,
       state: stories.state,
       priority: stories.priority,
+      blockedByStory: stories.blockedByStory,
       createdAt: stories.createdAt,
       updatedAt: stories.updatedAt,
     })
@@ -335,61 +319,37 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .where(eq(planStoryLinks.planSlug, slug))
     .orderBy(asc(stories.priority), desc(stories.createdAt))
 
-  const storyIds = linkedStories.map(s => s.storyId)
-
-  if (storyIds.length === 0) {
-    return []
-  }
-
-  const detailsResult = await database
-    .select({
-      storyId: storyDetails.storyId,
-      blockedByStory: storyDetails.blockedByStory,
-    })
-    .from(storyDetails)
-    .where(inArray(storyDetails.storyId, storyIds))
-
-  const detailsMap = new Map(detailsResult.map(d => [d.storyId, d]))
-
-  return linkedStories.map(story => {
-    const details = detailsMap.get(story.storyId)
-    return {
-      storyId: story.storyId,
-      title: story.title,
-      state: story.state,
-      priority: story.priority,
-      currentPhase: null,
-      phaseStatus: null,
-      isBlocked: story.state === 'blocked',
-      hasBlockers: !!details?.blockedByStory,
-      createdAt: story.createdAt,
-      updatedAt: story.updatedAt,
-    }
-  }) as PlanStory[]
+  return linkedStories.map((story: LinkedStoryRow) => ({
+    storyId: story.storyId,
+    title: story.title,
+    state: story.state,
+    priority: story.priority,
+    currentPhase: null,
+    phaseStatus: null,
+    isBlocked: story.state === 'blocked',
+    hasBlockers: !!story.blockedByStory,
+    createdAt: story.createdAt,
+    updatedAt: story.updatedAt,
+  })) as PlanStory[]
 }
 
-export interface StoryDetails {
-  id: string
-  storyId: string
-  title: string
-  description: string | null
-  storyType: string
-  epic: string | null
-  wave: number | null
-  priority: string | null
-  complexity: string | null
-  storyPoints: number | null
-  state: string
-  metadata: {
-    surfaces?: { backend?: boolean; frontend?: boolean; database?: boolean; infra?: boolean }
-    tags?: string[]
-    experimentVariant?: 'control' | 'variant_a' | 'variant_b'
-    blocked_by?: string[]
-    blocks?: string[]
-  } | null
-  createdAt: Date
-  updatedAt: Date
-}
+export const StoryDetailsSchema = z.object({
+  storyId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  feature: z.string(),
+  priority: z.string().nullable(),
+  state: z.string(),
+  blockedReason: z.string().nullable(),
+  blockedByStory: z.string().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
+  fileHash: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type StoryDetails = z.infer<typeof StoryDetailsSchema>
 
 export async function getStoryById(storyId: string): Promise<StoryDetails | null> {
   const result = await database.select().from(stories).where(eq(stories.storyId, storyId)).limit(1)
@@ -400,37 +360,18 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
 
   const story = result[0]
 
-  const detailsResult = await database
-    .select()
-    .from(storyDetails)
-    .where(eq(storyDetails.storyId, storyId))
-    .limit(1)
-
-  const details = detailsResult.length > 0 ? detailsResult[0] : null
-
   return {
-    id: story.storyId,
     storyId: story.storyId,
     title: story.title,
     description: story.description,
-    storyType: story.feature,
-    epic: story.feature,
-    wave: null,
+    feature: story.feature,
     priority: story.priority,
-    complexity: null,
-    storyPoints: null,
     state: story.state,
-    metadata: details
-      ? {
-          surfaces: {
-            backend: details.touchesBackend ?? false,
-            frontend: details.touchesFrontend ?? false,
-            database: details.touchesDatabase ?? false,
-            infra: details.touchesInfra ?? false,
-          },
-          blocked_by: details.blockedByStory ? [details.blockedByStory] : undefined,
-        }
-      : null,
+    blockedReason: story.blockedReason,
+    blockedByStory: story.blockedByStory,
+    startedAt: story.startedAt,
+    completedAt: story.completedAt,
+    fileHash: story.fileHash,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   }

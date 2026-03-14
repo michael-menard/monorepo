@@ -4980,7 +4980,7 @@ async function handleKbGetPlanEvents(
 
 /**
  * Handle workflow_log_decision tool call.
- * Inserts one row to wint.hitl_decisions.
+ * Inserts one row to workflow.hitl_decisions.
  */
 async function handleWorkflowLogDecision(
   input: unknown,
@@ -5021,7 +5021,7 @@ async function handleWorkflowLogDecision(
 
 /**
  * Handle workflow_log_outcome tool call.
- * Upserts one row to wint.story_outcomes.
+ * Upserts one row to workflow.story_outcomes.
  */
 async function handleWorkflowLogOutcome(
   input: unknown,
