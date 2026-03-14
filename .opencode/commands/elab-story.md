@@ -9,7 +9,7 @@ Perform story elaboration - analysis, scope definition, and acceptance criteria.
 ## Usage
 
 ```
-/elab-story {FEATURE_DIR} {STORY_ID} [flags]
+/elab-story {STORY_ID} [flags]
 ```
 
 ## Flags
@@ -20,10 +20,10 @@ Perform story elaboration - analysis, scope definition, and acceptance criteria.
 
 ## Elaboration Steps
 
-1. **Setup** - Move story from backlog to elaboration directory
+1. **Setup** - Update story state to elaboration in KB
 2. **Analysis** - Run elab-analyst for 8-point audit
 3. **UI/UX Review** - If story touches UI, run UI/UX review
-4. **Completion** - Write ELAB report, update status, move directory
+4. **Completion** - Write ELAB report to KB, update status
 
 ## 8-Point Analysis
 
@@ -39,6 +39,6 @@ Perform story elaboration - analysis, scope definition, and acceptance criteria.
 ## Example
 
 ```
-/elab-story plans/future/wishlist WISH-001
-/elab-story plans/future/wishlist WISH-001 --autonomous
+/elab-story WISH-001
+/elab-story WISH-001 --autonomous
 ```

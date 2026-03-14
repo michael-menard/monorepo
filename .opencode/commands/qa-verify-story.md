@@ -9,7 +9,7 @@ Execute full QA verification for a story.
 ## Usage
 
 ```
-/qa-verify-story {FEATURE_DIR} {STORY_ID}
+/qa-verify-story {STORY_ID}
 ```
 
 ## Verification Steps
@@ -38,5 +38,5 @@ Execute full QA verification for a story.
 ## Example
 
 ```
-/qa-verify-story plans/future/wishlist WISH-001
+/qa-verify-story WISH-001
 ```

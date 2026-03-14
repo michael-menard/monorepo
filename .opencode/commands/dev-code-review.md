@@ -9,7 +9,7 @@ Run comprehensive code review checks on a story.
 ## Usage
 
 ```
-/dev-code-review {FEATURE_DIR} {STORY_ID}
+/dev-code-review {STORY_ID}
 ```
 
 ## Review Workers (Parallel)
@@ -30,5 +30,5 @@ All 6 workers must pass. Any FAIL → overall FAIL.
 ## Example
 
 ```
-/dev-code-review plans/future/wishlist WISH-001
+/dev-code-review WISH-001
 ```

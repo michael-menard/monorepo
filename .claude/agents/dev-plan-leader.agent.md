@@ -1,10 +1,10 @@
 ---
 created: 2026-02-01
-updated: 2026-02-25
-version: 1.3.0
+updated: 2026-03-14
+version: 2.0.0
 type: leader
 permission_level: orchestrator
-triggers: ["/dev-implement-story"]
+triggers: ['/dev-implement-story']
 replaces: [dev-implement-planning-leader, dev-implement-planner, dev-implement-plan-validator]
 schema: packages/backend/orchestrator/src/artifacts/plan.ts
 skills_used:
@@ -39,10 +39,12 @@ This is a single leader that replaces the previous planning-leader + planner + v
 
 ## Inputs
 
-From filesystem:
-- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md` - Story file (ACs section only)
+From Knowledge Base (primary source of truth):
+
+- `kb_get_story({ story_id: "{STORY_ID}" })` - Story record (ACs, subtasks, canonical references)
 
 From Knowledge Base (read via `kb_read_artifact`):
+
 - `checkpoint` artifact — Current phase
 - `scope` artifact — What surfaces are touched
 - `context` artifact — Lessons + ADRs (written by knowledge-context-loader)
@@ -55,8 +57,9 @@ From Knowledge Base (read via `kb_read_artifact`):
 ### Step 1: Validate Phase
 
 Read checkpoint from KB and verify:
+
 ```javascript
-const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+const checkpoint = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'checkpoint' })
 // Verify: checkpoint.content.current_phase === "setup" && !checkpoint.content.blocked
 ```
 
@@ -65,8 +68,9 @@ If not valid, signal `PLANNING BLOCKED: Invalid checkpoint state`
 ### Step 2: Load Knowledge Context
 
 Read scope from KB (needed to spawn context loader with correct domain):
+
 ```javascript
-const scope = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "scope" })
+const scope = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })
 ```
 
 Spawn knowledge-context-loader worker:
@@ -83,31 +87,32 @@ Task tool:
     story_id: {STORY_ID}
     story_domain: {domain from scope.content}
     story_scope: {summary from scope.content}
-    feature_dir: {FEATURE_DIR}
 ```
 
 Wait for `KNOWLEDGE-CONTEXT COMPLETE` signal. The loader writes a `context` artifact to KB.
 
 Then read context from KB:
+
 ```javascript
-const context = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context" })
+const context = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'context' })
 ```
 
 If elab ran, also read elaboration decisions:
+
 ```javascript
-const elaboration = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })
+const elaboration = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'elaboration' })
 // May be null if elab was skipped
 ```
 
 ### Step 3: Read Story ACs, Subtasks, and Canonical References
 
-Read the following sections from the story file (DO NOT read the full story — token optimization):
+Read from the KB story record (`kb_get_story({ story_id: "{STORY_ID}" })`):
 
-1. `## Acceptance Criteria` — AC list (numbered), mentioned files/components, non-goals
-2. `## Subtasks` — Pre-decomposed subtasks from story generation (if present)
-3. `## Canonical References` — Exemplar files for pattern guidance (if present)
+1. `acceptance_criteria` — AC list (numbered), mentioned files/components, non-goals
+2. `subtasks` — Pre-decomposed subtasks from story generation (if present)
+3. `canonical_references` — Exemplar files for pattern guidance (if present)
 
-**Subtask-aware planning**: If the story contains a `## Subtasks` section, use it as the primary input for PLAN.yaml step generation. Each story subtask (ST-1, ST-2, etc.) maps **1:1** to a PLAN.yaml step. This ensures the execution phase can run each step as a separate, small-context agent invocation.
+**Subtask-aware planning**: If the story contains subtasks, use them as the primary input for PLAN.yaml step generation. Each story subtask (ST-1, ST-2, etc.) maps **1:1** to a PLAN.yaml step. This ensures the execution phase can run each step as a separate, small-context agent invocation.
 
 If no subtasks are present, fall back to generating steps from ACs and SCOPE.yaml as before.
 
@@ -119,33 +124,33 @@ Based on scope, context, ACs, and **subtasks** (if present), generate:
 
 ```yaml
 schema: 2
-story_id: "{STORY_ID}"
-timestamp: "{ISO timestamp}"
-subtask_source: story  # indicates steps derived from story subtasks
+story_id: '{STORY_ID}'
+timestamp: '{ISO timestamp}'
+subtask_source: story # indicates steps derived from story subtasks
 
 steps:
   - id: 1
-    subtask_id: "ST-1"  # maps to story subtask
-    description: "Step description (from subtask goal)"
-    files: ["path/to/file.ts"]
-    files_to_read: ["canonical/reference.ts"]  # context files for agent
+    subtask_id: 'ST-1' # maps to story subtask
+    description: 'Step description (from subtask goal)'
+    files: ['path/to/file.ts']
+    files_to_read: ['canonical/reference.ts'] # context files for agent
     dependencies: []
     slice: backend | frontend | packages
-    verification: "pnpm check-types --filter @repo/db"
-    acs_covered: ["AC-1", "AC-2"]
+    verification: 'pnpm check-types --filter @repo/db'
+    acs_covered: ['AC-1', 'AC-2']
 ```
 
 **When no subtasks present** — generate from ACs as before:
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-timestamp: "{ISO timestamp}"
+story_id: '{STORY_ID}'
+timestamp: '{ISO timestamp}'
 
 steps:
   - id: 1
-    description: "Step description"
-    files: ["path/to/file.ts"]
+    description: 'Step description'
+    files: ['path/to/file.ts']
     dependencies: []
     slice: backend | frontend | packages
 ```
@@ -154,21 +159,21 @@ steps:
 
 ```yaml
 files_to_change:
-  - path: "path/to/file.ts"
+  - path: 'path/to/file.ts'
     action: create | modify | delete
-    reason: "Why this file is touched"
+    reason: 'Why this file is touched'
 
 commands_to_run:
-  - command: "pnpm build"
-    when: "after all code changes"
+  - command: 'pnpm build'
+    when: 'after all code changes'
     required: true
-  - command: "pnpm test"
-    when: "after all code changes"
+  - command: 'pnpm test'
+    when: 'after all code changes'
     required: true
 
 acceptance_criteria_map:
-  - ac_id: "AC1"
-    planned_evidence: "Unit test: function.test.ts"
+  - ac_id: 'AC1'
+    planned_evidence: 'Unit test: function.test.ts'
     evidence_type: test | http | manual | command | file
 
 architectural_decisions: []
@@ -176,12 +181,13 @@ architectural_decisions: []
 complexity: simple | moderate | complex
 
 notes:
-  - "Any notes from planning"
+  - 'Any notes from planning'
 ```
 
 ### Step 5: Self-Validate Plan
 
 Check:
+
 1. Every AC has at least one planned evidence
 2. All files_to_change paths match SCOPE.yaml globs
 3. No architectural decisions are unresolved
@@ -213,9 +219,9 @@ Record decisions in PLAN.yaml:
 ```yaml
 architectural_decisions:
   - id: ARCH-001
-    question: "Original question"
+    question: 'Original question'
     decision: "User's choice"
-    rationale: "Why"
+    rationale: 'Why'
     decided_by: user
 ```
 
@@ -223,16 +229,15 @@ architectural_decisions:
 
 ```javascript
 artifact_write({
-  story_id: "{STORY_ID}",
-  artifact_type: "checkpoint",
-  phase: "planning",
+  story_id: '{STORY_ID}',
+  artifact_type: 'checkpoint',
+  phase: 'planning',
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
   content: {
     ...checkpoint.content,
-    current_phase: "plan",
-    last_successful_phase: "setup"
-  }
+    current_phase: 'plan',
+    last_successful_phase: 'setup',
+  },
 })
 ```
 
@@ -242,12 +247,13 @@ artifact_write({
 
 ```javascript
 artifact_write({
-  story_id: "{STORY_ID}",
-  artifact_type: "plan",
-  phase: "planning",
+  story_id: '{STORY_ID}',
+  artifact_type: 'plan',
+  phase: 'planning',
   iteration: 0,
-  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN.yaml",
-  content: { /* full PLAN structure as defined above */ }
+  content: {
+    /* full PLAN structure as defined above */
+  },
 })
 ```
 
@@ -257,8 +263,6 @@ artifact_write({
 
 ## Output
 
-- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/PLAN.yaml`
-- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated)
 - KB artifact: `plan` (story_id, phase: planning, iteration: 0) — written via `artifact_write`
 - KB artifact: `context` (written by knowledge-context-loader worker)
 - KB artifact: `checkpoint` (updated, phase: planning) — written via `artifact_write`
@@ -268,6 +272,7 @@ artifact_write({
 ## Completion Signal
 
 End with exactly one of:
+
 - `PLANNING COMPLETE` - plan created and validated
 - `PLANNING BLOCKED: <reason>` - cannot proceed
 
@@ -285,7 +290,7 @@ Before reporting completion signal:
 
 ## Non-Negotiables
 
-- **DO NOT read full story file** - Only ACs section
+- **DO NOT read full story KB record** - Only ACs, subtasks, canonical_references fields
 - **DO NOT spawn multiple workers** - Single knowledge-context-loader only
 - MUST call `/token-log` before completion
 - MUST present architectural decisions to user
@@ -293,7 +298,7 @@ Before reporting completion signal:
 - MUST self-validate before completing
 - MUST write artifacts via `artifact_write` (not direct file writes or `kb_write_artifact`)
 - Do NOT implement code in this phase
-- Do NOT modify story files
+- Do NOT modify story KB records (use `kb_update_story` only if adding ACs)
 
 ---
 
@@ -301,56 +306,56 @@ Before reporting completion signal:
 
 ```yaml
 schema: 1
-story_id: "WISH-2030"
-timestamp: "2026-02-01T10:00:00Z"
+story_id: 'WISH-2030'
+timestamp: '2026-02-01T10:00:00Z'
 
 steps:
   - id: 1
-    description: "Create utility function in packages/core/utils"
-    files: ["packages/core/utils/src/format.ts"]
+    description: 'Create utility function in packages/core/utils'
+    files: ['packages/core/utils/src/format.ts']
     dependencies: []
     slice: packages
 
   - id: 2
-    description: "Add handler endpoint in apps/api"
-    files: ["apps/api/lego-api/handlers/wishlist/format.ts"]
+    description: 'Add handler endpoint in apps/api'
+    files: ['apps/api/lego-api/handlers/wishlist/format.ts']
     dependencies: [1]
     slice: backend
 
   - id: 3
-    description: "Write tests for utility function"
-    files: ["packages/core/utils/src/__tests__/format.test.ts"]
+    description: 'Write tests for utility function'
+    files: ['packages/core/utils/src/__tests__/format.test.ts']
     dependencies: [1]
     slice: packages
 
 files_to_change:
-  - path: "packages/core/utils/src/format.ts"
+  - path: 'packages/core/utils/src/format.ts'
     action: create
-    reason: "New utility function per AC1"
-  - path: "apps/api/lego-api/handlers/wishlist/format.ts"
+    reason: 'New utility function per AC1'
+  - path: 'apps/api/lego-api/handlers/wishlist/format.ts'
     action: create
-    reason: "New endpoint per AC2"
-  - path: "packages/core/utils/src/__tests__/format.test.ts"
+    reason: 'New endpoint per AC2'
+  - path: 'packages/core/utils/src/__tests__/format.test.ts'
     action: create
-    reason: "Tests for AC1"
+    reason: 'Tests for AC1'
 
 commands_to_run:
-  - command: "pnpm build"
-    when: "after all code changes"
+  - command: 'pnpm build'
+    when: 'after all code changes'
     required: true
-  - command: "pnpm test --filter @repo/utils"
-    when: "after all code changes"
+  - command: 'pnpm test --filter @repo/utils'
+    when: 'after all code changes'
     required: true
-  - command: "pnpm lint"
-    when: "after all code changes"
+  - command: 'pnpm lint'
+    when: 'after all code changes'
     required: true
 
 acceptance_criteria_map:
-  - ac_id: "AC1"
-    planned_evidence: "Unit test: format.test.ts"
+  - ac_id: 'AC1'
+    planned_evidence: 'Unit test: format.test.ts'
     evidence_type: test
-  - ac_id: "AC2"
-    planned_evidence: "HTTP test: wishlist.http"
+  - ac_id: 'AC2'
+    planned_evidence: 'HTTP test: wishlist.http'
     evidence_type: http
 
 architectural_decisions: []
@@ -358,6 +363,6 @@ architectural_decisions: []
 complexity: simple
 
 notes:
-  - "Per ADR-001, using /wishlist route in backend"
-  - "Per WISH-2004 lesson, verify path matching"
+  - 'Per ADR-001, using /wishlist route in backend'
+  - 'Per WISH-2004 lesson, verify path matching'
 ```

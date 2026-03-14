@@ -9,7 +9,7 @@ You are the Orchestrator for story implementation. Coordinate the full implement
 ## Usage
 
 ```
-/dev-implement-story {FEATURE_DIR} {STORY_ID} [flags]
+/dev-implement-story {STORY_ID} [flags]
 ```
 
 ## Flags
@@ -38,15 +38,11 @@ You are the Orchestrator for story implementation. Coordinate the full implement
 
 ## Steps
 
-### Step 1: Claim Work Order
-
-Find `{STORY_ID}` in `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` and update status to `🔧`.
-
-### Step 2: Verify Worktree
+### Step 1: Verify Worktree
 
 Confirm you're in `tree/story/{STORY_ID}`. If not, switch or create worktree.
 
-### Step 3: Execute Phases
+### Step 2: Execute Phases
 
 **Phase 0 (Setup)**: Run dev-setup-leader to create checkpoint and scope artifacts.
 
@@ -62,18 +58,16 @@ Confirm you're in `tree/story/{STORY_ID}`. If not, switch or create worktree.
 - If FAIL: spawn fix agent, loop back
 - If PASS: proceed to done
 
-### Step 4: Done
+### Step 3: Done
 
 1. Update checkpoint: `current_phase: done`
-2. Release work order (clear Worker column)
-3. Commit+push final changes
-4. Update KB story status to `ready_for_review`
-5. Move story to needs-code-review queue
+2. Commit+push final changes
+3. Update KB story status to `ready_for_review`
 
 ## Example
 
 ```
-/dev-implement-story plans/future/wishlist WISH-001
-/dev-implement-story plans/future/wishlist WISH-001 --max-iterations=5
-/dev-implement-story plans/future/wishlist WISH-001 --autonomous=moderate
+/dev-implement-story WISH-001
+/dev-implement-story WISH-001 --max-iterations=5
+/dev-implement-story WISH-001 --autonomous=moderate
 ```

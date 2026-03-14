@@ -1,13 +1,26 @@
 ---
 created: 2026-01-24
-updated: 2026-03-09
-version: 6.1.0
+updated: 2026-03-14
+version: 7.0.0
 type: orchestrator
-agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md", "code-review-reusability.agent.md", "code-review-react.agent.md", "code-review-typescript.agent.md", "code-review-accessibility.agent.md", "review-aggregate-leader.agent.md"]
+agents:
+  [
+    'code-review-lint.agent.md',
+    'code-review-style-compliance.agent.md',
+    'code-review-syntax.agent.md',
+    'code-review-security.agent.md',
+    'code-review-typecheck.agent.md',
+    'code-review-build.agent.md',
+    'code-review-reusability.agent.md',
+    'code-review-react.agent.md',
+    'code-review-typescript.agent.md',
+    'code-review-accessibility.agent.md',
+    'review-aggregate-leader.agent.md',
+  ]
 schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
-Usage: /dev-code-review {FEATURE_DIR} {STORY_ID}
+Usage: /dev-code-review {STORY_ID}
 
 Code review orchestrator. Spawn workers - do NOT review code yourself.
 
@@ -18,17 +31,17 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 ## Usage
 
 ```
-/dev-code-review plans/future/wishlist WISH-001
+/dev-code-review WISH-001
 ```
 
 ## Phases
 
-| # | Phase | Model | Workers | Signal |
-|---|-------|-------|---------|--------|
-| 0 | Setup | haiku | (self) | SETUP COMPLETE |
-| 1 | Review | haiku | failed + typecheck + build (or all 10 on first run) | REVIEW COMPLETE |
-| 2 | Aggregate | haiku | review-aggregate-leader | AGGREGATE COMPLETE |
-| 3 | Finalize | haiku | (self) | CODE-REVIEW COMPLETE |
+| #   | Phase     | Model | Workers                                             | Signal               |
+| --- | --------- | ----- | --------------------------------------------------- | -------------------- |
+| 0   | Setup     | haiku | (self)                                              | SETUP COMPLETE       |
+| 1   | Review    | haiku | failed + typecheck + build (or all 10 on first run) | REVIEW COMPLETE      |
+| 2   | Aggregate | haiku | review-aggregate-leader                             | AGGREGATE COMPLETE   |
+| 3   | Finalize  | haiku | (self)                                              | CODE-REVIEW COMPLETE |
 
 ## Step 0.6: Claim Story in KB
 
@@ -38,12 +51,14 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 ## Phase 0 — Setup
 
 Validate (HARD STOP if fail):
+
 - KB story state is `ready_for_review`: `kb_get_story({ story_id: "{STORY_ID}" })` → `state == "ready_for_review"`
 - `evidence` artifact exists in KB: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })`
 
 Extract touched files from evidence artifact:
+
 ```javascript
-const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })
+const evidence = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'evidence' })
 const touched_files = evidence.content.touched_files.map(f => f.path)
 ```
 
@@ -52,6 +67,7 @@ const touched_files = evidence.content.touched_files.map(f => f.path)
 **SELECTIVE RE-REVIEW OPTIMIZATION**
 
 Check if `review` artifact exists in KB from a previous review cycle:
+
 - If NO previous review: Run all 10 workers
 - If previous review exists with FAIL verdict: Only re-run failed workers + typecheck + build
 
@@ -97,7 +113,6 @@ Task tool:
   prompt: |
     Read: .claude/agents/code-review-{worker}.agent.md
     CONTEXT:
-    feature_dir: {FEATURE_DIR}
     story_id: {STORY_ID}
     touched_files: <list from evidence KB artifact>
     Return YAML only.
@@ -108,6 +123,7 @@ Wait for all spawned workers to complete.
 ### Report Skipped Workers
 
 If any workers were skipped, report:
+
 ```
 Skipped (carried forward from previous PASS):
 - lint: PASS (skipped)
@@ -126,7 +142,6 @@ Task tool:
   prompt: |
     Read: .claude/agents/review-aggregate-leader.agent.md
     CONTEXT:
-    feature_dir: {FEATURE_DIR}
     story_id: {STORY_ID}
     iteration: <current iteration>
     worker_outputs: <collected YAML from workers>
@@ -136,25 +151,32 @@ Task tool:
 ```
 
 The aggregate leader will:
+
 - Merge all worker results
 - Generate ranked_patches for fix priority
 - Write `review` artifact to KB
 
 ## Phase 3 — Finalize
 
-| Verdict | Status | Next |
-|---------|--------|------|
-| PASS | 🔍 `ready-for-qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
-| FAIL | 🔴 `failed-code-review` | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| Verdict | Status                  | Next                          |
+| ------- | ----------------------- | ----------------------------- |
+| PASS    | 🔍 `ready-for-qa`       | `/qa-verify-story {STORY_ID}` |
+| FAIL    | 🔴 `failed-code-review` | `/dev-fix-story {STORY_ID}`   |
 
 On PASS:
+
 ```javascript
-kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_qa", phase: "code_review" })
+kb_update_story_status({ story_id: '{STORY_ID}', state: 'ready_for_qa', phase: 'code_review' })
 ```
 
 On FAIL:
+
 ```javascript
-kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_code_review", phase: "code_review" })
+kb_update_story_status({
+  story_id: '{STORY_ID}',
+  state: 'failed_code_review',
+  phase: 'code_review',
+})
 ```
 
 Token log: `/token-log {STORY_ID} code-review <in> <out>`

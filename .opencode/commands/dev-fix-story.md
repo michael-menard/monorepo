@@ -9,7 +9,7 @@ Apply fixes to a story that failed code review or has bugs.
 ## Usage
 
 ```
-/dev-fix-story {FEATURE_DIR} {STORY_ID} [flags]
+/dev-fix-story {STORY_ID} [flags]
 ```
 
 ## Flags
@@ -29,6 +29,6 @@ Apply fixes to a story that failed code review or has bugs.
 ## Example
 
 ```
-/dev-fix-story plans/future/wishlist WISH-001
-/dev-fix-story plans/future/wishlist WISH-001 --max-iterations=5
+/dev-fix-story WISH-001
+/dev-fix-story WISH-001 --max-iterations=5
 ```
