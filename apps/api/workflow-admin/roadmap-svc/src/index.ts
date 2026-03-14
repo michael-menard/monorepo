@@ -19,9 +19,12 @@ app.get('/health', c => {
 app.get('/api/v1/roadmap', async c => {
   const page = c.req.query('page') ? parseInt(c.req.query('page')!) : 1
   const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : 10
-  const status = c.req.query('status') || undefined
-  const planType = c.req.query('planType') || undefined
-  const priority = c.req.query('priority') || undefined
+  const status = c.req.query('status') ? c.req.query('status')!.split(',') : undefined
+  const planType = c.req.query('planType') ? c.req.query('planType')!.split(',') : undefined
+  const priority = c.req.query('priority') ? c.req.query('priority')!.split(',') : undefined
+  const tags = c.req.query('tags') ? c.req.query('tags')!.split(',') : undefined
+  const excludeCompleted = c.req.query('excludeCompleted') !== 'false'
+  const search = c.req.query('search') || undefined
 
   const params: PlanListParams = {
     page,
@@ -29,6 +32,9 @@ app.get('/api/v1/roadmap', async c => {
     status,
     planType,
     priority,
+    tags,
+    excludeCompleted,
+    search,
   }
 
   try {

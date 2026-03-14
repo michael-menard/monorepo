@@ -58,7 +58,16 @@ export const roadmapApi = createApi({
   endpoints: builder => ({
     getPlans: builder.query<
       PlanListResponse,
-      { page?: number; limit?: number; status?: string; planType?: string; priority?: string }
+      {
+        page?: number
+        limit?: number
+        status?: string[]
+        planType?: string[]
+        priority?: string[]
+        tags?: string[]
+        excludeCompleted?: boolean
+        search?: string
+      }
     >({
       query: params => ({
         url: '/roadmap',

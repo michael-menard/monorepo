@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { plans, planDetails, type Plan } from '@repo/database-schema/schema'
-import { eq, desc, sql, type SQL } from 'drizzle-orm'
+import { eq, desc, sql, inArray, type SQL, and, or, like } from 'drizzle-orm'
 
 const pool = new Pool({
   connectionString:
@@ -13,9 +13,12 @@ export const database = drizzle(pool)
 export interface PlanListParams {
   page: number
   limit: number
-  status?: string
-  planType?: string
-  priority?: string
+  status?: string[]
+  planType?: string[]
+  priority?: string[]
+  tags?: string[]
+  excludeCompleted?: boolean
+  search?: string
 }
 
 export interface PlanListResult {
@@ -29,26 +32,39 @@ export interface PlanListResult {
 }
 
 export async function getPlans(params: PlanListParams): Promise<PlanListResult> {
-  const { page, limit, status, planType, priority } = params
+  const { page, limit, status, planType, priority, tags, excludeCompleted = true, search } = params
   const offset = (page - 1) * limit
 
   const conditions: SQL[] = []
 
-  if (status) {
-    conditions.push(eq(plans.status, status))
+  if (status && status.length > 0) {
+    conditions.push(inArray(plans.status, status))
   }
 
-  if (planType) {
-    conditions.push(eq(plans.planType, planType))
+  if (planType && planType.length > 0) {
+    conditions.push(inArray(plans.planType, planType))
   }
 
-  if (priority) {
-    conditions.push(eq(plans.priority, priority))
+  if (priority && priority.length > 0) {
+    conditions.push(inArray(plans.priority, priority))
+  }
+
+  if (tags && tags.length > 0) {
+    conditions.push(sql`${plans.tags} && ${sql`{${tags.join(',')}}`}`)
+  }
+
+  if (excludeCompleted) {
+    conditions.push(sql`${plans.status} NOT IN ('implemented', 'superseded', 'archived')`)
+  }
+
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`
+    conditions.push(or(like(plans.title, searchTerm), like(plans.summary, searchTerm)) as SQL)
   }
 
   const whereClause =
     conditions.length > 0
-      ? (conditions.reduce((acc, c) => sql`${acc} AND ${c}`, sql``) as SQL)
+      ? (conditions.reduce((acc, c) => and(acc, c) as SQL, sql``) as SQL)
       : undefined
 
   const countResult = await database
