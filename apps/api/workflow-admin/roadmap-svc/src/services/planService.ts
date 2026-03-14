@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { plans, type Plan } from '@repo/database-schema/schema'
+import { plans, planDetails, type Plan } from '@repo/database-schema/schema'
 import { eq, desc, sql, type SQL } from 'drizzle-orm'
 
 const pool = new Pool({
@@ -74,5 +74,77 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
       total,
       totalPages: Math.ceil(total / limit),
     },
+  }
+}
+
+export interface PlanWithDetails {
+  id: string
+  planSlug: string
+  title: string
+  summary: string | null
+  planType: string | null
+  status: string
+  featureDir: string | null
+  storyPrefix: string | null
+  estimatedStories: number | null
+  tags: string[] | null
+  priority: string | null
+  createdAt: Date
+  updatedAt: Date
+  details: {
+    rawContent: string
+    phases: unknown
+    sections: unknown
+    formatVersion: string | null
+    sourceFile: string | null
+    contentHash: string | null
+    importedAt: Date | null
+    updatedAt: Date
+  } | null
+}
+
+export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | null> {
+  const result = await database.select().from(plans).where(eq(plans.planSlug, slug)).limit(1)
+
+  if (result.length === 0) {
+    return null
+  }
+
+  const plan = result[0]
+
+  const detailsResult = await database
+    .select()
+    .from(planDetails)
+    .where(eq(planDetails.planId, plan.id))
+    .limit(1)
+
+  const details = detailsResult.length > 0 ? detailsResult[0] : null
+
+  return {
+    id: plan.id,
+    planSlug: plan.planSlug,
+    title: plan.title,
+    summary: plan.summary,
+    planType: plan.planType,
+    status: plan.status,
+    featureDir: plan.featureDir,
+    storyPrefix: plan.storyPrefix,
+    estimatedStories: plan.estimatedStories,
+    tags: plan.tags,
+    priority: plan.priority,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+    details: details
+      ? {
+          rawContent: details.rawContent,
+          phases: details.phases,
+          sections: details.sections,
+          formatVersion: details.formatVersion,
+          sourceFile: details.sourceFile,
+          contentHash: details.contentHash,
+          importedAt: details.importedAt,
+          updatedAt: details.updatedAt,
+        }
+      : null,
   }
 }

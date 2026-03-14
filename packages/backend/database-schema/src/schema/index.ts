@@ -7,6 +7,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  pgSchema,
   text,
   timestamp,
   uniqueIndex,
@@ -16,6 +17,19 @@ import { relations, sql } from 'drizzle-orm'
 // Import and re-export Sets tables so Drizzle can discover them via schema entrypoint
 import { setImages, sets } from './sets.js'
 export { setImages, sets }
+
+// Re-export Workflow schema tables
+export {
+  workflowSchema,
+  plans,
+  planDetails,
+  planStatusEnum,
+  planPriorityEnum,
+  type Plan,
+  type NewPlan,
+  type PlanDetail,
+  type NewPlanDetail,
+} from './workflow.js'
 
 // Re-export Telemetry tables (INFR-0040, CDBN-2012)
 // Telemetry schema has separate tables from wint schema (both in different PostgreSQL schemas)

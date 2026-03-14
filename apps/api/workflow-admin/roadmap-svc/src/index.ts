@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { logger } from '@repo/logger'
-import { getPlans, type PlanListParams } from './services/planService'
+import { getPlans, getPlanBySlug, type PlanListParams } from './services/planService'
 
 const app = new Hono()
 
@@ -37,6 +37,21 @@ app.get('/api/v1/roadmap', async c => {
   } catch (error) {
     logger.error('Failed to fetch plans', { error, params })
     return c.json({ error: 'Failed to fetch plans' }, 500)
+  }
+})
+
+app.get('/api/v1/roadmap/:slug', async c => {
+  const slug = c.req.param('slug')
+
+  try {
+    const result = await getPlanBySlug(slug)
+    if (!result) {
+      return c.json({ error: 'Plan not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to fetch plan', { error, slug })
+    return c.json({ error: 'Failed to fetch plan' }, 500)
   }
 })
 

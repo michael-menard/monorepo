@@ -40,7 +40,7 @@ export const plans = workflowSchema.table(
     storyPrefix: text('story_prefix'),
     estimatedStories: integer('estimated_stories'),
     phases: jsonb('phases'),
-    tags: text('tags'),
+    tags: text('tags').array(),
     rawContent: text('raw_content'),
     sourceFile: text('source_file'),
     contentHash: text('content_hash'),
@@ -70,3 +70,30 @@ export const plans = workflowSchema.table(
 
 export type Plan = typeof plans.$inferSelect
 export type NewPlan = typeof plans.$inferInsert
+
+export const planDetails = workflowSchema.table(
+  'plan_details',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+    rawContent: text('raw_content').notNull(),
+    phases: jsonb('phases'),
+    sections: jsonb('sections'),
+    formatVersion: text('format_version').default('v1'),
+    sourceFile: text('source_file'),
+    contentHash: text('content_hash'),
+    kbEntryId: uuid('kb_entry_id'),
+    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planIdIdx: index('idx_plan_details_plan_id').on(table.planId),
+    contentHashIdx: index('idx_plan_details_content_hash').on(table.contentHash),
+  }),
+)
+
+export type PlanDetail = typeof planDetails.$inferSelect
+export type NewPlanDetail = typeof planDetails.$inferInsert

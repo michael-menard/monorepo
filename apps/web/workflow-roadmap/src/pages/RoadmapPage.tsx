@@ -1,20 +1,18 @@
-import { useState, useEffect } from 'react'
-import { AppDataTable, type AppDataTableColumn, Badge } from '@repo/app-component-library'
+import React from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { AppDataTable, Badge } from '@repo/app-component-library'
+import { useGetPlansQuery, type Plan } from '../store/roadmapApi'
 
-interface Plan {
-  id: string
-  planSlug: string
-  title: string
-  summary: string | null
-  planType: string | null
-  status: string
-  featureDir: string | null
-  storyPrefix: string | null
-  estimatedStories: number | null
-  tags: string[] | null
-  priority: string | null
-  createdAt: string
-  updatedAt: string
+interface AppDataTableColumn<T> {
+  key: string
+  header: string | ((column: AppDataTableColumn<T>) => React.ReactNode)
+  render?: (item: T) => React.ReactNode
+  className?: string
+  responsive?: {
+    hideAt?: 'sm' | 'md' | 'lg' | 'xl'
+    priority?: number
+  }
+  sortable?: boolean
 }
 
 const columns: AppDataTableColumn<Plan>[] = [
@@ -60,36 +58,20 @@ const columns: AppDataTableColumn<Plan>[] = [
 ]
 
 export function RoadmapPage() {
-  const [data, setData] = useState<Plan[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate({ from: '/' })
+  const { data, error } = useGetPlansQuery({ page: 1, limit: 10 })
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const response = await fetch('/api/v1/roadmap?page=1&limit=10')
-        if (!response.ok) {
-          throw new Error('Failed to fetch plans')
-        }
-        const result = await response.json()
-        setData(result.data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
-      } finally {
-        setLoading(false)
-      }
-    }
+  const handleRowClick = (plan: Plan) => {
+    navigate({ to: '/plan/$slug', params: { slug: plan.planSlug } })
+  }
 
-    fetchPlans()
-  }, [])
+  const errorMessage = error ? ('error' in error ? error.error : 'Failed to fetch plans') : null
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="p-4">
         <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded">
-          Error: {error}
+          Error: {errorMessage}
         </div>
       </div>
     )
@@ -103,9 +85,9 @@ export function RoadmapPage() {
       </div>
 
       <AppDataTable
-        data={data}
+        data={data?.data || []}
         columns={columns}
-        loading={loading}
+        onRowClick={handleRowClick}
         emptyMessage="No plans found"
         pagination={{
           enabled: true,
