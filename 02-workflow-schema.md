@@ -2,7 +2,7 @@
 title: Workflow Schema
 description: Story management, planning, work state, and execution tracking
 schema: workflow
-tables: 14
+tables: 27
 last_updated: 2026-03-13
 ---
 
@@ -15,6 +15,7 @@ The `workflow` schema contains all story management, planning, work state tracki
 | Table                 | Description                        | Primary Key            |
 | --------------------- | ---------------------------------- | ---------------------- |
 | stories               | Story metadata and workflow state  | text story_id          |
+| story_outcomes        | Story workflow outcomes            | uuid id                |
 | story_dependencies    | Story-to-story dependencies        | uuid id                |
 | story_state_history   | State change history               | uuid id                |
 | story_content         | Raw story content storage          | uuid id                |
@@ -28,6 +29,18 @@ The `workflow` schema contains all story management, planning, work state tracki
 | workflow_executions   | Execution records                  | uuid id                |
 | workflow_checkpoints  | Execution checkpoints              | uuid id                |
 | workflow_audit_log    | Execution audit trail              | uuid id                |
+| agents                | Agent definitions                  | uuid id                |
+| agent_invocations     | Agent execution records            | uuid id                |
+| agent_outcomes        | Agent execution outcomes           | uuid id                |
+| agent_decisions       | Agent decision records             | uuid id                |
+| hitl_decisions        | Human-in-the-loop decisions        | uuid id                |
+| context_sessions      | Agent context sessions             | uuid id                |
+| context_packs         | Cached context packs               | uuid id                |
+| context_cache_hits    | Context cache hit records          | uuid id                |
+| ml_models             | ML model registry                  | uuid id                |
+| model_metrics         | Model evaluation metrics           | uuid id                |
+| model_predictions     | Model predictions                  | uuid id                |
+| training_data         | Training data for ML               | uuid id                |
 
 ## Entity Relationship Diagram
 
@@ -375,10 +388,261 @@ Execution audit trail.
 | event_data   | jsonb     |             | Event data                       |
 | occurred_at  | timestamp |             | When occurred                    |
 
+## Telemetry Tables
+
+### story_outcomes
+
+Final outcome of story workflow execution.
+
+| Column               | Type        | Constraints | Description              |
+| -------------------- | ----------- | ----------- | ------------------------ |
+| id                   | uuid        | PK          | Primary key              |
+| story_id             | text        | FK          | Reference to stories     |
+| final_verdict        | text        | NOT NULL    | pass, fail, blocked...   |
+| quality_score        | integer     | NOT NULL    | 0-100                    |
+| total_input_tokens   | integer     | NOT NULL    | Cumulative input tokens  |
+| total_output_tokens  | integer     | NOT NULL    | Cumulative output tokens |
+| total_cached_tokens  | integer     | NOT NULL    | Cached tokens            |
+| estimated_total_cost | numeric     | NOT NULL    | Cost in USD              |
+| review_iterations    | integer     | NOT NULL    | Review cycles            |
+| qa_iterations        | integer     | NOT NULL    | QA cycles                |
+| duration_ms          | integer     | NOT NULL    | Execution time in ms     |
+| primary_blocker      | text        |             | Primary failure reason   |
+| metadata             | jsonb       |             | Additional data          |
+| completed_at         | timestamptz |             | Completion timestamp     |
+| created_at           | timestamptz | NOT NULL    | Creation timestamp       |
+
+### agents
+
+Agent definitions.
+
+| Column           | Type        | Constraints | Description         |
+| ---------------- | ----------- | ----------- | ------------------- |
+| id               | uuid        | PK          | Primary key         |
+| name             | text        | UNIQUE      | Agent name          |
+| agent_type       | text        | NOT NULL    | Type of agent       |
+| permission_level | text        | NOT NULL    | Permission tier     |
+| model            | text        |             | Model used          |
+| spawned_by       | jsonb       |             | Spawn configuration |
+| triggers         | jsonb       |             | Trigger rules       |
+| skills_used      | jsonb       |             | Skills available    |
+| metadata         | jsonb       |             | Additional config   |
+| created_at       | timestamptz | NOT NULL    | Creation timestamp  |
+| updated_at       | timestamptz | NOT NULL    | Last update         |
+
+### agent_invocations
+
+Agent execution records.
+
+| Column         | Type        | Constraints | Description          |
+| -------------- | ----------- | ----------- | -------------------- |
+| id             | uuid        | PK          | Primary key          |
+| invocation_id  | text        | NOT NULL    | Unique invocation ID |
+| agent_name     | text        | NOT NULL    | Agent identifier     |
+| story_id       | text        | FK          | Associated story     |
+| phase          | text        |             | Current phase        |
+| input_payload  | jsonb       |             | Input data           |
+| output_payload | jsonb       |             | Output data          |
+| duration_ms    | integer     |             | Execution time       |
+| input_tokens   | integer     |             | Input token count    |
+| output_tokens  | integer     |             | Output token count   |
+| status         | text        | NOT NULL    | Execution status     |
+| error_message  | text        |             | Error if failed      |
+| started_at     | timestamptz | NOT NULL    | Start timestamp      |
+| completed_at   | timestamptz |             | End timestamp        |
+| cached_tokens  | integer     | NOT NULL    | Cached tokens        |
+| total_tokens   | integer     | NOT NULL    | Total tokens         |
+| estimated_cost | numeric     | NOT NULL    | Cost estimate        |
+| model_name     | text        |             | Model used           |
+
+### agent_outcomes
+
+Agent execution outcomes.
+
+| Column              | Type        | Constraints | Description              |
+| ------------------- | ----------- | ----------- | ------------------------ |
+| id                  | uuid        | PK          | Primary key              |
+| invocation_id       | uuid        | FK          | Reference to invocations |
+| outcome_type        | text        | NOT NULL    | Outcome category         |
+| artifacts_produced  | jsonb       |             | Files created            |
+| tests_written       | integer     | NOT NULL    | Tests written            |
+| tests_passed        | integer     | NOT NULL    | Tests passing            |
+| tests_failed        | integer     | NOT NULL    | Tests failing            |
+| code_quality        | integer     |             | Quality score            |
+| test_coverage       | integer     |             | Coverage percentage      |
+| review_score        | integer     |             | Review score             |
+| lint_errors         | integer     | NOT NULL    | Linting errors           |
+| type_errors         | integer     | NOT NULL    | Type errors              |
+| security_issues     | jsonb       | NOT NULL    | Security findings        |
+| performance_metrics | jsonb       | NOT NULL    | Performance data         |
+| created_at          | timestamptz | NOT NULL    | Creation timestamp       |
+| updated_at          | timestamptz | NOT NULL    | Last update              |
+
+### agent_decisions
+
+Agent decision records.
+
+| Column                  | Type                | Constraints | Description              |
+| ----------------------- | ------------------- | ----------- | ------------------------ |
+| id                      | uuid                | PK          | Primary key              |
+| invocation_id           | uuid                | FK          | Reference to invocations |
+| decision_type           | agent_decision_type | NOT NULL    | Type of decision         |
+| decision_text           | text                | NOT NULL    | Decision description     |
+| context                 | jsonb               |             | Decision context         |
+| confidence              | integer             |             | Confidence score         |
+| was_correct             | boolean             |             | If evaluated correct     |
+| correctness_score       | integer             |             | 0-100 score              |
+| alternatives_considered | integer             | NOT NULL    | Options evaluated        |
+| created_at              | timestamptz         | NOT NULL    | Creation timestamp       |
+| evaluated_at            | timestamptz         |             | Evaluation timestamp     |
+| evaluated_by            | text                |             | Evaluator                |
+
+**Decision Types:** strategy_selection, pattern_choice, risk_assessment, scope_determination, test_approach, architecture_decision
+
+### hitl_decisions
+
+Human-in-the-loop decisions.
+
+| Column        | Type        | Constraints | Description              |
+| ------------- | ----------- | ----------- | ------------------------ |
+| id            | uuid        | PK          | Primary key              |
+| invocation_id | uuid        | FK          | Reference to invocations |
+| decision_type | text        | NOT NULL    | Type of decision         |
+| decision_text | text        | NOT NULL    | Decision description     |
+| context       | jsonb       |             | Decision context         |
+| operator_id   | text        | NOT NULL    | Who made decision        |
+| story_id      | text        | FK          | Associated story         |
+| created_at    | timestamptz | NOT NULL    | Creation timestamp       |
+
+### context_sessions
+
+Agent context sessions.
+
+| Column        | Type        | Constraints | Description        |
+| ------------- | ----------- | ----------- | ------------------ |
+| id            | uuid        | PK          | Primary key        |
+| session_id    | text        | UNIQUE      | Session identifier |
+| agent_name    | text        | NOT NULL    | Agent identifier   |
+| story_id      | text        | FK          | Associated story   |
+| phase         | text        |             | Current phase      |
+| input_tokens  | integer     | NOT NULL    | Input token count  |
+| output_tokens | integer     | NOT NULL    | Output token count |
+| cached_tokens | integer     | NOT NULL    | Cached tokens      |
+| started_at    | timestamptz | NOT NULL    | Start timestamp    |
+| ended_at      | timestamptz |             | End timestamp      |
+| created_at    | timestamptz | NOT NULL    | Creation timestamp |
+| updated_at    | timestamptz | NOT NULL    | Last update        |
+
+### context_packs
+
+Cached context packs.
+
+| Column      | Type              | Constraints | Description        |
+| ----------- | ----------------- | ----------- | ------------------ |
+| id          | uuid              | PK          | Primary key        |
+| pack_type   | context_pack_type | NOT NULL    | Type of pack       |
+| pack_key    | text              | NOT NULL    | Unique pack key    |
+| content     | jsonb             | NOT NULL    | Pack content       |
+| version     | integer           | NOT NULL    | Version number     |
+| expires_at  | timestamptz       |             | Expiration         |
+| hit_count   | integer           | NOT NULL    | Cache hits         |
+| last_hit_at | timestamptz       |             | Last cache hit     |
+| token_count | integer           |             | Token count        |
+| created_at  | timestamptz       | NOT NULL    | Creation timestamp |
+| updated_at  | timestamptz       | NOT NULL    | Last update        |
+
+**Pack Types:** codebase, story, feature, epic, architecture, lessons_learned, test_patterns, agent_missions
+
+### context_cache_hits
+
+Context cache hit records.
+
+| Column       | Type        | Constraints | Description           |
+| ------------ | ----------- | ----------- | --------------------- |
+| id           | uuid        | PK          | Primary key           |
+| session_id   | uuid        | FK          | Reference to sessions |
+| pack_id      | uuid        | FK          | Reference to packs    |
+| tokens_saved | integer     |             | Tokens saved          |
+| created_at   | timestamptz | NOT NULL    | Creation timestamp    |
+
+### ml_models
+
+ML model registry.
+
+| Column              | Type        | Constraints | Description        |
+| ------------------- | ----------- | ----------- | ------------------ |
+| id                  | uuid        | PK          | Primary key        |
+| model_name          | text        | NOT NULL    | Model identifier   |
+| model_type          | model_type  | NOT NULL    | Type of model      |
+| version             | text        | NOT NULL    | Model version      |
+| model_path          | text        |             | Path to model      |
+| hyperparameters     | jsonb       |             | Model config       |
+| training_data_count | integer     | NOT NULL    | Training samples   |
+| trained_at          | timestamptz | NOT NULL    | Training timestamp |
+| trained_by          | text        |             | Who trained        |
+| is_active           | boolean     | NOT NULL    | Currently active   |
+| activated_at        | timestamptz |             | Activation time    |
+| deactivated_at      | timestamptz |             | Deactivation time  |
+| created_at          | timestamptz | NOT NULL    | Creation timestamp |
+| updated_at          | timestamptz | NOT NULL    | Last update        |
+
+**Model Types:** quality_predictor, effort_estimator, risk_classifier, pattern_recommender
+
+### model_metrics
+
+Model evaluation metrics.
+
+| Column             | Type        | Constraints | Description          |
+| ------------------ | ----------- | ----------- | -------------------- |
+| id                 | uuid        | PK          | Primary key          |
+| model_id           | uuid        | FK          | Reference to models  |
+| metric_type        | text        | NOT NULL    | Metric name          |
+| metric_value       | integer     | NOT NULL    | Metric value         |
+| evaluation_dataset | text        |             | Test dataset         |
+| sample_size        | integer     |             | Samples evaluated    |
+| metadata           | jsonb       |             | Additional data      |
+| evaluated_at       | timestamptz | NOT NULL    | Evaluation timestamp |
+| created_at         | timestamptz | NOT NULL    | Creation timestamp   |
+
+### model_predictions
+
+Model predictions.
+
+| Column          | Type        | Constraints | Description          |
+| --------------- | ----------- | ----------- | -------------------- |
+| id              | uuid        | PK          | Primary key          |
+| model_id        | uuid        | FK          | Reference to models  |
+| prediction_type | text        | NOT NULL    | Type of prediction   |
+| entity_type     | text        | NOT NULL    | What was predicted   |
+| entity_id       | text        | NOT NULL    | Entity identifier    |
+| features        | jsonb       | NOT NULL    | Input features       |
+| prediction      | jsonb       | NOT NULL    | Prediction result    |
+| actual_value    | jsonb       |             | Actual outcome       |
+| error           | integer     |             | Prediction error     |
+| predicted_at    | timestamptz | NOT NULL    | Prediction timestamp |
+| created_at      | timestamptz | NOT NULL    | Creation timestamp   |
+
+### training_data
+
+Training data for ML models.
+
+| Column       | Type        | Constraints | Description          |
+| ------------ | ----------- | ----------- | -------------------- |
+| id           | uuid        | PK          | Primary key          |
+| data_type    | text        | NOT NULL    | Type of data         |
+| features     | jsonb       | NOT NULL    | Input features       |
+| labels       | jsonb       | NOT NULL    | Expected outputs     |
+| story_id     | text        | FK          | Associated story     |
+| collected_at | timestamptz | NOT NULL    | Collection timestamp |
+| validated    | boolean     | NOT NULL    | Is validated         |
+| validated_at | timestamptz |             | Validation timestamp |
+| created_at   | timestamptz | NOT NULL    | Creation timestamp   |
+
 ## Foreign Key Summary
 
 | Source                | Column             | Target                 | On Delete |
 | --------------------- | ------------------ | ---------------------- | --------- |
+| story_outcomes        | story_id           | stories.story_id       | CASCADE   |
 | story_dependencies    | story_id           | stories.story_id       | CASCADE   |
 | story_dependencies    | depends_on_id      | stories.story_id       | CASCADE   |
 | story_state_history   | story_id           | stories.story_id       | RESTRICT  |
@@ -395,3 +659,14 @@ Execution audit trail.
 | plans                 | kb_entry_id        | knowledge_entries.id   | SET NULL  |
 | plans                 | parent_plan_id     | plans.id               | SET NULL  |
 | plans                 | superseded_by      | plans.id               | SET NULL  |
+| agent_invocations     | story_id           | stories.story_id       | SET NULL  |
+| agent_outcomes        | invocation_id      | agent_invocations.id   | CASCADE   |
+| agent_decisions       | invocation_id      | agent_invocations.id   | CASCADE   |
+| hitl_decisions        | invocation_id      | agent_invocations.id   | SET NULL  |
+| hitl_decisions        | story_id           | stories.story_id       | CASCADE   |
+| context_sessions      | story_id           | stories.story_id       | SET NULL  |
+| context_cache_hits    | session_id         | context_sessions.id    | CASCADE   |
+| context_cache_hits    | pack_id            | context_packs.id       | CASCADE   |
+| model_metrics         | model_id           | ml_models.id           | CASCADE   |
+| model_predictions     | model_id           | ml_models.id           | CASCADE   |
+| training_data         | story_id           | stories.story_id       | SET NULL  |
