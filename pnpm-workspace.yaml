@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'apps/api/*'
+  - 'apps/api/workflow-admin/*'
   - 'apps/web/*'
   - 'packages/api-core'
   - 'packages/shared/*'

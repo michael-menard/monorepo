@@ -1,0 +1,44 @@
+# Docker Compose for Workflow Admin
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose down           # Stop containers
+#   docker-compose logs -f        # Follow logs
+#   docker-compose --build        # Rebuild images
+
+services:
+  # Bun + Hono API Backend
+  roadmap-api:
+    build:
+      context: ./apps/api/workflow-admin/roadmap-svc
+      dockerfile: Dockerfile
+    container_name: workflow-roadmap-api
+    ports:
+      - '3004:3004'
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - DATABASE_URL=${KB_DB_URL:-postgresql://postgres:postgres@localhost:5433/knowledgebase}
+    restart: unless-stopped
+    networks:
+      - workflow-network
+
+  # React Frontend with Nginx
+  roadmap-ui:
+    build:
+      context: ./apps/web/workflow-roadmap
+      dockerfile: Dockerfile
+    container_name: workflow-roadmap-ui
+    ports:
+      - '3002:3002'
+    environment:
+      - VITE_API_URL=http://roadmap-api:3004
+    depends_on:
+      - roadmap-api
+    restart: unless-stopped
+    networks:
+      - workflow-network
+
+networks:
+  workflow-network:
+    driver: bridge

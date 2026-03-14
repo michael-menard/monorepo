@@ -1,6 +1,7 @@
 import { ThemeProvider, Toaster, TooltipProvider } from '@repo/app-component-library'
 import { store } from './store'
 import { Provider } from 'react-redux'
+import { RoadmapPage } from './pages/RoadmapPage'
 
 export function App() {
   return (
@@ -13,8 +14,8 @@ export function App() {
                 <h1 className="text-2xl font-bold">Workflow Roadmap</h1>
               </div>
             </header>
-            <main className="container mx-auto px-4 py-8">
-              <p>Roadmap visualization coming soon</p>
+            <main>
+              <RoadmapPage />
             </main>
           </div>
           <Toaster />
