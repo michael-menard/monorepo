@@ -115,7 +115,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   }
 
   if (tags && tags.length > 0) {
-    conditions.push(sql`${plans.tags} && ${sql`{${tags.join(',')}}`}`)
+    conditions.push(sql`${plans.tags} && ARRAY[${sql.join(tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
   }
 
   if (excludeCompleted) {
