@@ -1,6 +1,14 @@
 import { Hono } from 'hono'
 import { logger } from '@repo/logger'
-import { getPlans, getPlanBySlug, type PlanListParams } from './services/planService'
+import {
+  getPlans,
+  getPlanBySlug,
+  reorderPlansPriority,
+  updatePlan,
+  getStoriesByPlanSlug,
+  type PlanListParams,
+  type PlanUpdateInput,
+} from './services/planService'
 
 const app = new Hono()
 
@@ -58,6 +66,55 @@ app.get('/api/v1/roadmap/:slug', async c => {
   } catch (error) {
     logger.error('Failed to fetch plan', { error, slug })
     return c.json({ error: 'Failed to fetch plan' }, 500)
+  }
+})
+
+app.patch('/api/v1/roadmap/:slug', async c => {
+  const slug = c.req.param('slug')
+  const input = (await c.req.json()) as PlanUpdateInput
+
+  try {
+    const result = await updatePlan(slug, input)
+    if (!result) {
+      return c.json({ error: 'Plan not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to update plan', { error, slug, input })
+    return c.json({ error: 'Failed to update plan' }, 500)
+  }
+})
+
+app.get('/api/v1/roadmap/:slug/stories', async c => {
+  const slug = c.req.param('slug')
+
+  try {
+    const result = await getStoriesByPlanSlug(slug)
+    return c.json({ data: result })
+  } catch (error) {
+    logger.error('Failed to fetch plan stories', { error, slug })
+    return c.json({ error: 'Failed to fetch plan stories' }, 500)
+  }
+})
+
+app.patch('/api/v1/roadmap/reorder', async c => {
+  const body = await c.req.json()
+
+  const { priority, items } = body as {
+    priority: string
+    items: Array<{ id: string; priorityOrder: number }>
+  }
+
+  if (!priority || !items || !Array.isArray(items)) {
+    return c.json({ error: 'Invalid request: priority and items are required' }, 400)
+  }
+
+  try {
+    await reorderPlansPriority(priority, items)
+    return c.json({ success: true })
+  } catch (error) {
+    logger.error('Failed to reorder plans', { error, priority, items })
+    return c.json({ error: 'Failed to reorder plans' }, 500)
   }
 })
 
