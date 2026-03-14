@@ -385,13 +385,27 @@ export function PlanDetailsPage() {
                   key: 'storyId',
                   header: 'Story ID',
                   render: (row: PlanStory) => (
-                    <span className="font-mono text-sm">{row.storyId}</span>
+                    <Link
+                      to="/story/$storyId"
+                      params={{ storyId: row.storyId }}
+                      className="font-mono text-sm text-blue-600 hover:underline"
+                    >
+                      {row.storyId}
+                    </Link>
                   ),
                 },
                 {
                   key: 'title',
                   header: 'Title',
-                  render: (row: PlanStory) => row.title ?? '-',
+                  render: (row: PlanStory) => (
+                    <Link
+                      to="/story/$storyId"
+                      params={{ storyId: row.storyId }}
+                      className="hover:underline"
+                    >
+                      {row.title ?? '-'}
+                    </Link>
+                  ),
                 },
                 {
                   key: 'state',

@@ -428,7 +428,7 @@ describe('Tool Handlers', () => {
       {
         id: 'dep-1-uuid',
         storyId: 'TEST-001',
-        targetStoryId: 'TEST-002',
+        dependsOnId: 'TEST-002',
         dependencyType: 'depends_on',
         satisfied: false,
         createdAt: new Date(),
@@ -507,7 +507,7 @@ describe('Tool Handlers', () => {
       expect(Array.isArray(parsed.dependencies)).toBe(true)
       expect(parsed.dependencies).toHaveLength(1)
       expect(parsed.dependencies[0].storyId).toBe('TEST-001')
-      expect(parsed.dependencies[0].targetStoryId).toBe('TEST-002')
+      expect(parsed.dependencies[0].dependsOnId).toBe('TEST-002')
     })
 
     it('should return empty dependencies array when include_dependencies:true but no dependencies exist', async () => {

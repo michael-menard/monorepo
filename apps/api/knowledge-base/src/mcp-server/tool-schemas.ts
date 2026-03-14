@@ -2874,7 +2874,7 @@ Parameters:
 - include_artifacts (optional, default false): When true, eagerly loads all story artifact records
   from story_artifacts table (type, name, phase, iteration, summary). Does not include artifact content JSONB.
 - include_dependencies (optional, default false): When true, eagerly loads all direct (1-hop) dependency
-  edges from story_dependencies table — both outbound (storyId=X) and inbound (targetStoryId=X).
+  edges from story_dependencies table — both outbound (storyId=X) and inbound (dependsOnId=X).
 
 Returns: Story object or null if not found. When story is null, artifacts and dependencies are empty arrays.
 When flags are false (default), keys are absent — backward-compatible with pre-KBAR-0070 callers.

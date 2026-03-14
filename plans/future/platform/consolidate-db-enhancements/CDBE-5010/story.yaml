@@ -1,0 +1,16 @@
+id: 'CDBE-5010'
+title: 'Partition agent_invocations and token_usage Tables'
+status: backlog
+priority: medium
+phase: 5
+feature: |
+  Convert telemetry.agent_invocations and telemetry.token_usage to monthly range-partitioned tables on started_at and created_at respectively; migrate existing data into initial partitions; create next-month partition.
+goal: |
+  Reduce query scan costs and improve write throughput on high-volume telemetry tables by isolating data into monthly partitions.
+depends_on: [CDBE-3030]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Converting an existing table to a partitioned table requires a full table rewrite in PostgreSQL — this is a potentially long-running, locking migration. Must have a maintenance window or use pg_repack. Foreign keys from other tables to these tables must be dropped and recreated on the parent. token_dashboard materialized view (CDBE-3030) must be refreshed after partition migration.
+sizing_warning: true
+created: '2026-03-14T16:01:29Z'

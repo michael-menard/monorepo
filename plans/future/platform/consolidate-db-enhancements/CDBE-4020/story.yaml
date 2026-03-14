@@ -1,0 +1,16 @@
+id: 'CDBE-4020'
+title: 'Embedding Columns on Knowledge Tables'
+status: backlog
+priority: medium
+phase: 4
+feature: |
+  Add embedding vector(1536) columns and HNSW indexes to knowledge.lessons_learned, knowledge.adrs, knowledge.code_standards, knowledge.rules, and knowledge.cohesion_rules.
+goal: |
+  Enable semantic similarity search across all knowledge-base entities for retrieval-augmented generation and agent context lookup.
+depends_on: [CDBE-4010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Five tables touched in one migration — risk of long migration time if tables have significant existing row counts. Each HNSW index should be built with appropriate m and ef_construction parameters for the expected data volume.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

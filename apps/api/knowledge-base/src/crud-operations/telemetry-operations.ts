@@ -14,7 +14,7 @@
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { agentInvocations, hitlDecisions, storyOutcomes } from '@repo/database-schema/schema/wint'
+import { agentInvocations, hitlDecisions, storyOutcomes } from '../db/index.js'
 
 // ============================================================================
 // Input Schemas

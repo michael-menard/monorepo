@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Button } from '../_primitives/button'
 import {
@@ -9,6 +9,91 @@ import {
   SelectValue,
 } from '../_primitives/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../_primitives/table'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical } from 'lucide-react'
+
+interface SortableRowProps<T> {
+  item: T
+  index: number
+  columns: AppDataTableColumn<T>[]
+  onRowClick?: (item: T) => void
+  rowClassName?: string
+  striped?: boolean
+  getResponsiveClasses: (column: AppDataTableColumn<T>) => string
+}
+
+function SortableRow<T>({
+  item,
+  index,
+  columns,
+  onRowClick,
+  rowClassName,
+  striped,
+  getResponsiveClasses,
+}: SortableRowProps<T>) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item && typeof item === 'object' && 'id' in item ? (item as any).id : `row-${index}`,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition || 'transform 150ms ease',
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  }
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      onClick={() => onRowClick?.(item)}
+      className={`
+        ${rowClassName || ''}
+        ${striped && index % 2 === 1 ? 'bg-muted/25' : ''}
+        ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+        ${isDragging ? 'bg-muted' : ''}
+      `.trim()}
+    >
+      <TableCell className="w-10">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+          onClick={e => e.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      {columns.map(column => (
+        <TableCell
+          key={column.key}
+          className={`${column.className || ''} ${getResponsiveClasses(column)}`}
+        >
+          {column.render ? column.render(item) : (item as any)[column.key]}
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
 
 export interface AppDataTableColumn<T> {
   key: string
@@ -20,6 +105,7 @@ export interface AppDataTableColumn<T> {
     priority?: number // Higher priority = more likely to show on smaller screens
   }
   sortable?: boolean
+  draggable?: boolean // Allow dragging this row
 }
 
 export interface AppDataTableProps<T> {
@@ -46,6 +132,11 @@ export interface AppDataTableProps<T> {
     direction: 'asc' | 'desc'
   }
   onSortChange?: (key: string, direction: 'asc' | 'desc') => void
+  // Drag and drop props
+  draggable?: boolean
+  onReorder?: (items: Array<{ id: string; index: number }>) => void
+  getRowId?: (item: T) => string
+  renderDragOverlay?: (item: T) => React.ReactNode
 }
 
 export function AppDataTable<T>({
@@ -60,12 +151,66 @@ export function AppDataTable<T>({
   sortable = false,
   defaultSort,
   onSortChange,
+  draggable = false,
+  onReorder,
+  getRowId,
+  renderDragOverlay,
 }: AppDataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(pagination.pageSize || 10)
   const [sortKey, setSortKey] = useState(defaultSort?.key || '')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
     defaultSort?.direction || 'asc',
+  )
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  const getId = useCallback(
+    (item: T, index: number) => {
+      if (getRowId) return getRowId(item)
+      return (item as any).id ?? `row-${index}`
+    },
+    [getRowId],
+  )
+
+  const activeItem = useCallback(() => {
+    if (!activeId) return null
+    return data.find((item, index) => getId(item, index) === activeId)
+  }, [activeId, data, getId])
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      setActiveId(null)
+
+      if (!onReorder) return
+
+      if (over && active.id !== over.id) {
+        const oldIndex = data.findIndex((item, index) => getId(item, index) === active.id)
+        const newIndex = data.findIndex((item, index) => getId(item, index) === over.id)
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const reordered = arrayMove(data, oldIndex, newIndex)
+          onReorder(reordered.map((item, index) => ({ id: getId(item, index), index })))
+        }
+      }
+    },
+    [data, getId, onReorder],
   )
 
   // Responsive column filtering
@@ -184,50 +329,124 @@ export function AppDataTable<T>({
 
       {/* Table */}
       <div className="overflow-x-auto border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {visibleColumns.map(column => (
-                <TableHead
-                  key={column.key}
-                  className={`${column.className || ''} ${getResponsiveClasses(column)} ${
-                    sortable && column.sortable ? 'cursor-pointer hover:bg-gray-50' : ''
-                  }`}
-                  onClick={() => handleSort(column.key)}
+        {draggable && onReorder ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10" />
+                  {visibleColumns.map(column => (
+                    <TableHead
+                      key={column.key}
+                      className={`${column.className || ''} ${getResponsiveClasses(column)} ${
+                        sortable && column.sortable ? 'cursor-pointer hover:bg-gray-50' : ''
+                      }`}
+                      onClick={() => handleSort(column.key)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {renderHeader(column)}
+                        {sortable && column.sortable && sortKey === column.key ? (
+                          <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        ) : null}
+                      </div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <SortableContext
+                  items={paginatedData.map((item, index) => getId(item, index))}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <div className="flex items-center gap-1">
-                    {renderHeader(column)}
-                    {sortable && column.sortable && sortKey === column.key ? (
-                      <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                    ) : null}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedData.map((item, index) => (
-              <TableRow
-                key={index}
-                onClick={() => onRowClick?.(item)}
-                className={`
-                  ${rowClassName}
-                  ${striped && index % 2 === 1 ? 'bg-muted/25' : ''}
-                  ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-                `.trim()}
-              >
+                  {paginatedData.map((item, index) => (
+                    <SortableRow
+                      key={getId(item, index)}
+                      item={item}
+                      index={index}
+                      columns={visibleColumns}
+                      onRowClick={onRowClick}
+                      rowClassName={rowClassName}
+                      striped={striped}
+                      getResponsiveClasses={getResponsiveClasses}
+                    />
+                  ))}
+                </SortableContext>
+              </TableBody>
+            </Table>
+            <DragOverlay>
+              {activeItem() && renderDragOverlay ? (
+                renderDragOverlay(activeItem()!)
+              ) : activeItem() ? (
+                <Table>
+                  <TableBody>
+                    <TableRow className="bg-background shadow-lg">
+                      <TableCell className="w-10">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                      {visibleColumns.map(column => (
+                        <TableCell key={column.key} className={column.className}>
+                          {column.render
+                            ? column.render(activeItem()!)
+                            : (activeItem() as any)[column.key]}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {visibleColumns.map(column => (
-                  <TableCell
+                  <TableHead
                     key={column.key}
-                    className={`${column.className || ''} ${getResponsiveClasses(column)}`}
+                    className={`${column.className || ''} ${getResponsiveClasses(column)} ${
+                      sortable && column.sortable ? 'cursor-pointer hover:bg-gray-50' : ''
+                    }`}
+                    onClick={() => handleSort(column.key)}
                   >
-                    {column.render ? column.render(item) : (item as any)[column.key]}
-                  </TableCell>
+                    <div className="flex items-center gap-1">
+                      {renderHeader(column)}
+                      {sortable && column.sortable && sortKey === column.key ? (
+                        <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      ) : null}
+                    </div>
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedData.map((item, index) => (
+                <TableRow
+                  key={index}
+                  onClick={() => onRowClick?.(item)}
+                  className={`
+                    ${rowClassName}
+                    ${striped && index % 2 === 1 ? 'bg-muted/25' : ''}
+                    ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+                  `.trim()}
+                >
+                  {visibleColumns.map(column => (
+                    <TableCell
+                      key={column.key}
+                      className={`${column.className || ''} ${getResponsiveClasses(column)}`}
+                    >
+                      {column.render ? column.render(item) : (item as any)[column.key]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Pagination Controls - Bottom */}

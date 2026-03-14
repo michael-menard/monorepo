@@ -14,7 +14,7 @@
 import { eq, gte, sql, and, type SQL } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import {
   ContextCacheStatsInputSchema,
   type ContextCacheStatsInput,

@@ -75,7 +75,7 @@ const storyArtifactColumns = {
 const storyDependencyColumns = {
   id: storyDependencies.id,
   storyId: storyDependencies.storyId,
-  targetStoryId: storyDependencies.targetStoryId,
+  dependsOnId: storyDependencies.dependsOnId,
   dependencyType: storyDependencies.dependencyType,
   satisfied: storyDependencies.satisfied,
   createdAt: storyDependencies.createdAt,
@@ -468,7 +468,7 @@ export async function kb_get_story(
       .where(eq(storyArtifacts.storyId, validated.story_id))
   }
 
-  // Conditionally fetch dependencies — bidirectional (outbound storyId=X OR inbound targetStoryId=X)
+  // Conditionally fetch dependencies — bidirectional (outbound storyId=X OR inbound dependsOnId=X)
   let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
   if (validated.include_dependencies) {
     dependencies = await deps.db
@@ -477,7 +477,7 @@ export async function kb_get_story(
       .where(
         or(
           eq(storyDependencies.storyId, validated.story_id),
-          eq(storyDependencies.targetStoryId, validated.story_id),
+          eq(storyDependencies.dependsOnId, validated.story_id),
         ),
       )
   }
@@ -829,7 +829,7 @@ export async function kb_get_next_story(
   const unsatisfiedDeps = await deps.db
     .select({
       storyId: storyDependencies.storyId,
-      targetStoryId: storyDependencies.targetStoryId,
+      dependsOnId: storyDependencies.dependsOnId,
       dependencyType: storyDependencies.dependencyType,
       satisfied: storyDependencies.satisfied,
     })
@@ -844,14 +844,14 @@ export async function kb_get_next_story(
     )
 
   // For unsatisfied dependencies, check if target story is completed
-  const targetStoryIds = [...new Set(unsatisfiedDeps.map(d => d.targetStoryId))]
+  const dependsOnIds = [...new Set(unsatisfiedDeps.map(d => d.dependsOnId))]
 
   let completedTargets: Set<string> = new Set()
-  if (targetStoryIds.length > 0) {
+  if (dependsOnIds.length > 0) {
     const targetStories = await deps.db
       .select({ storyId: stories.storyId })
       .from(stories)
-      .where(and(inArray(stories.storyId, targetStoryIds), eq(stories.state, 'completed')))
+      .where(and(inArray(stories.storyId, dependsOnIds), eq(stories.state, 'completed')))
 
     completedTargets = new Set(targetStories.map(t => t.storyId))
   }
@@ -860,14 +860,14 @@ export async function kb_get_next_story(
   const blockedStories = new Map<string, string[]>()
   for (const dep of unsatisfiedDeps) {
     // If the target story is completed, the dependency is effectively satisfied
-    if (completedTargets.has(dep.targetStoryId)) {
+    if (completedTargets.has(dep.dependsOnId)) {
       continue
     }
 
     if (!blockedStories.has(dep.storyId)) {
       blockedStories.set(dep.storyId, [])
     }
-    blockedStories.get(dep.storyId)!.push(dep.targetStoryId)
+    blockedStories.get(dep.storyId)!.push(dep.dependsOnId)
   }
 
   // Find the first candidate without unresolved dependencies

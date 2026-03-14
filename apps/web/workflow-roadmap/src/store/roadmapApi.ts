@@ -66,6 +66,29 @@ export interface PlanStory {
   updatedAt: string | null
 }
 
+export interface StoryDetails {
+  id: string
+  storyId: string
+  title: string
+  description: string | null
+  storyType: string
+  epic: string | null
+  wave: number | null
+  priority: string | null
+  complexity: string | null
+  storyPoints: number | null
+  state: string
+  metadata: {
+    surfaces?: { backend?: boolean; frontend?: boolean; database?: boolean; infra?: boolean }
+    tags?: string[]
+    experimentVariant?: 'control' | 'variant_a' | 'variant_b'
+    blocked_by?: string[]
+    blocks?: string[]
+  } | null
+  createdAt: string
+  updatedAt: string
+}
+
 export const roadmapApi = createApi({
   reducerPath: 'roadmapApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
@@ -93,6 +116,9 @@ export const roadmapApi = createApi({
     }),
     getStoriesByPlanSlug: builder.query<PlanStory[], string>({
       query: slug => `/roadmap/${slug}/stories`,
+    }),
+    getStoryById: builder.query<StoryDetails, string>({
+      query: storyId => `/stories/${storyId}`,
     }),
     reorderPlans: builder.mutation<
       { success: boolean },
@@ -137,6 +163,7 @@ export const {
   useGetPlansQuery,
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
+  useGetStoryByIdQuery,
   useReorderPlansMutation,
   useUpdatePlanMutation,
 } = roadmapApi

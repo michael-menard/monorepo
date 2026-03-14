@@ -1,0 +1,16 @@
+id: 'CDBE-1010'
+title: 'Valid Transitions Lookup Table and State Machine Trigger'
+status: backlog
+priority: medium
+phase: 1
+feature: |
+  Create valid_transitions lookup table defining all legal from_state→to_state pairs; implement INSERT trigger on story_state_history that rejects illegal transitions at DB level and closes the previous open row (sets exited_at, computes duration_seconds).
+goal: |
+  Enforce story state machine rules at the database level so invalid transitions are impossible regardless of caller.
+depends_on: []
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Must enumerate all legal transitions upfront — incomplete table causes false rejections. Trigger logic must be idempotent and handle NULL from_state for initial insert. Coordination needed with consolidate-db-normalized schema to confirm story_state_history columns.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

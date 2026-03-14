@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import { inArray } from 'drizzle-orm'
 import { populateLibraryCache, PopulateResultSchema } from '../populate-library-cache.js'
 

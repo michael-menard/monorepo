@@ -1,7 +1,7 @@
 {
   "name": "@repo/context-pack-sidecar",
   "version": "1.0.0",
-  "description": "Context pack sidecar service \u2014 assembles story context from KB cache and kb_search, exposes MCP tool + HTTP endpoint",
+  "description": "Context pack sidecar service — assembles story context from KB cache and kb_search, exposes MCP tool + HTTP endpoint",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,6 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
     "drizzle-orm": "^0.44.3",

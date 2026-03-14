@@ -23,7 +23,6 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/mcp-tools": "workspace:*",

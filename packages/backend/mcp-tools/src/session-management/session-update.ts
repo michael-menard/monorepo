@@ -17,7 +17,7 @@ import {
   contextSessions,
   type SelectContextSession,
   type InsertContextSession,
-} from '@repo/database-schema'
+} from '@repo/knowledge-base/src/db'
 import { SessionUpdateInputSchema, type SessionUpdateInput } from './__types__/index.js'
 
 /**

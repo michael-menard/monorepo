@@ -13,7 +13,7 @@
 import { eq, desc } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { stories } from '@repo/database-schema'
+import { stories } from '@repo/knowledge-base/src/db'
 import {
   StoryGetByStatusInputSchema,
   type StoryGetByStatusInput,

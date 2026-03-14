@@ -1,0 +1,16 @@
+id: 'CDBE-4030'
+title: 'Embedding Worker Process and Backfill'
+status: backlog
+priority: medium
+phase: 4
+feature: |
+  Implement a worker process that listens on NOTIFY channels fired by INSERT/UPDATE triggers on embedding-enabled tables, calls the embedding API (OpenAI), and writes vector values back; run backfill for all existing rows.
+goal: |
+  Keep embedding columns populated in near-real-time without blocking writes with synchronous API calls.
+depends_on: [CDBE-4020]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  NOTIFY/LISTEN is not durable — if the worker is down, notifications are lost; consider a persistent queue (SQS) as fallback. Backfill of large tables requires rate limiting against OpenAI API. Worker failure leaves embedding columns NULL — application must handle NULL embeddings gracefully. Significant infrastructure scope.
+sizing_warning: true
+created: '2026-03-14T16:01:29Z'

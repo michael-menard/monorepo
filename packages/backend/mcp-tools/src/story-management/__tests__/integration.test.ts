@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { randomUUID } from 'crypto'
 import { db } from '@repo/db'
-import { stories, storyStates, storyTransitions } from '@repo/database-schema'
+import { stories, storyStates, storyTransitions } from '@repo/knowledge-base/src/db'
 import { eq } from 'drizzle-orm'
 import { storyGetStatus } from '../story-get-status'
 import { storyUpdateStatus } from '../story-update-status'

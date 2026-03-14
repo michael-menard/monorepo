@@ -13,7 +13,7 @@
 import { eq, or, and, isNull } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { stories, storyStates, storyTransitions } from '@repo/database-schema'
+import { stories, storyStates, storyTransitions } from '@repo/knowledge-base/src/db'
 import {
   StoryUpdateStatusInputSchema,
   type StoryUpdateStatusInput,

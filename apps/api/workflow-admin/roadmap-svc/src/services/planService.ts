@@ -1,15 +1,17 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import {
-  plans,
-  planDetails,
-  stories,
-  storyBlockers,
-  storyPhaseHistory,
-  type Plan,
-} from '@repo/database-schema/schema'
+import { plans, planDetails, type Plan } from '@repo/knowledge-base/src/db'
 import { eq, desc, sql, inArray, type SQL, and, or, like, asc, isNull } from 'drizzle-orm'
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core'
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+  pgSchema,
+  boolean,
+  jsonb,
+} from 'drizzle-orm/pg-core'
 
 const pool = new Pool({
   connectionString:
@@ -17,6 +19,37 @@ const pool = new Pool({
 })
 
 export const database = drizzle(pool)
+
+const workflowSchema = pgSchema('workflow')
+
+export const stories = workflowSchema.table('stories', {
+  storyId: text('story_id').notNull(),
+  feature: text('feature').notNull(),
+  state: text('state').notNull(),
+  title: text('title').notNull(),
+  priority: text('priority'),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const storyDetails = workflowSchema.table('story_details', {
+  id: uuid('id').defaultRandom().notNull(),
+  storyId: text('story_id').notNull(),
+  storyDir: text('story_dir'),
+  storyFile: text('story_file'),
+  blockedReason: text('blocked_reason'),
+  blockedByStory: text('blocked_by_story'),
+  touchesBackend: boolean('touches_backend').default(false),
+  touchesFrontend: boolean('touches_frontend').default(false),
+  touchesDatabase: boolean('touches_database').default(false),
+  touchesInfra: boolean('touches_infra').default(false),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  fileSyncedAt: timestamp('file_synced_at', { withTimezone: true }),
+  fileHash: text('file_hash'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 const planStoryLinks = pgTable(
   'plan_story_links',
@@ -308,40 +341,97 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     return []
   }
 
-  const [activePhases, blockers] = await Promise.all([
-    database
-      .select({
-        storyId: storyPhaseHistory.storyId,
-        phase: storyPhaseHistory.phase,
-        status: storyPhaseHistory.status,
-      })
-      .from(storyPhaseHistory)
-      .where(
-        and(inArray(storyPhaseHistory.storyId, storyIds), eq(storyPhaseHistory.status, 'entered')),
-      ),
-    database
-      .select({
-        storyId: storyBlockers.storyId,
-      })
-      .from(storyBlockers)
-      .where(and(inArray(storyBlockers.storyId, storyIds), isNull(storyBlockers.resolvedAt))),
-  ])
+  const detailsResult = await database
+    .select({
+      storyId: storyDetails.storyId,
+      blockedByStory: storyDetails.blockedByStory,
+    })
+    .from(storyDetails)
+    .where(inArray(storyDetails.storyId, storyIds))
 
-  const activePhaseMap = new Map(
-    activePhases.map(p => [p.storyId, { phase: p.phase, status: p.status }]),
-  )
-  const blockerSet = new Set(blockers.map(b => b.storyId))
+  const detailsMap = new Map(detailsResult.map(d => [d.storyId, d]))
 
-  return linkedStories.map(story => ({
+  return linkedStories.map(story => {
+    const details = detailsMap.get(story.storyId)
+    return {
+      storyId: story.storyId,
+      title: story.title,
+      state: story.state,
+      priority: story.priority,
+      currentPhase: null,
+      phaseStatus: null,
+      isBlocked: story.state === 'blocked',
+      hasBlockers: !!details?.blockedByStory,
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt,
+    }
+  }) as PlanStory[]
+}
+
+export interface StoryDetails {
+  id: string
+  storyId: string
+  title: string
+  description: string | null
+  storyType: string
+  epic: string | null
+  wave: number | null
+  priority: string | null
+  complexity: string | null
+  storyPoints: number | null
+  state: string
+  metadata: {
+    surfaces?: { backend?: boolean; frontend?: boolean; database?: boolean; infra?: boolean }
+    tags?: string[]
+    experimentVariant?: 'control' | 'variant_a' | 'variant_b'
+    blocked_by?: string[]
+    blocks?: string[]
+  } | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function getStoryById(storyId: string): Promise<StoryDetails | null> {
+  const result = await database.select().from(stories).where(eq(stories.storyId, storyId)).limit(1)
+
+  if (result.length === 0) {
+    return null
+  }
+
+  const story = result[0]
+
+  const detailsResult = await database
+    .select()
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, storyId))
+    .limit(1)
+
+  const details = detailsResult.length > 0 ? detailsResult[0] : null
+
+  return {
+    id: story.storyId,
     storyId: story.storyId,
     title: story.title,
-    state: story.state,
+    description: story.description,
+    storyType: story.feature,
+    epic: story.feature,
+    wave: null,
     priority: story.priority,
-    currentPhase: activePhaseMap.get(story.storyId)?.phase ?? null,
-    phaseStatus: activePhaseMap.get(story.storyId)?.status ?? null,
-    isBlocked: story.state === 'blocked',
-    hasBlockers: blockerSet.has(story.storyId),
+    complexity: null,
+    storyPoints: null,
+    state: story.state,
+    metadata: details
+      ? {
+          surfaces: {
+            backend: details.touchesBackend ?? false,
+            frontend: details.touchesFrontend ?? false,
+            database: details.touchesDatabase ?? false,
+            infra: details.touchesInfra ?? false,
+          },
+          blocked_by: details.blockedByStory ? [details.blockedByStory] : undefined,
+        }
+      : null,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
-  })) as PlanStory[]
+  }
 }

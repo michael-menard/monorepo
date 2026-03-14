@@ -1,0 +1,16 @@
+id: 'CDBE-2030'
+title: 'ingest_story_from_yaml Stored Procedure'
+status: backlog
+priority: medium
+phase: 2
+feature: |
+  Implement ingest_story_from_yaml(story_yaml jsonb) as an idempotent upsert that parses a story YAML payload and inserts or updates the story, its metadata, tags, and dependencies in a single transaction.
+goal: |
+  Allow agents to push a raw story YAML document to the DB and have all relational records created or refreshed atomically.
+depends_on: [CDBE-2010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  JSONB parsing in PL/pgSQL is verbose and fragile against schema evolution — document the expected YAML→JSONB shape precisely. Idempotency requires careful ON CONFLICT handling for all child tables. Dependency upsert must not create circular references.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

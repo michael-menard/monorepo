@@ -1,0 +1,16 @@
+id: 'CDBE-1030'
+title: 'Artifact Write and Plan Archival Cascade Triggers'
+status: backlog
+priority: medium
+phase: 1
+feature: |
+  Trigger on artifact_versions INSERT to auto-archive previous version (set superseded_at) and bump stories.updated_at. Trigger on plan status update to archived to set all backlog stories in that plan to deferred.
+goal: |
+  Ensure artifact versioning integrity and plan-level story state are maintained automatically without agent intervention.
+depends_on: [CDBE-1010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Artifact trigger must correctly identify the prior version row — ordering by created_at or version number must be deterministic. Plan archival trigger may affect large story sets; ensure no row lock contention.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

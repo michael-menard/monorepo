@@ -17,6 +17,9 @@
 
 export { db, getPool, closePool, testConnection } from './client.js'
 export * from './schema.js'
+export * from './sets.js'
+export * from './inspiration.js'
+export * from './feature-flags.js'
 export * from './generated-schemas.js'
 export { insertWorkflowEvent } from './workflow-events.js'
 export type { WorkflowEventInput } from './workflow-events.js'
@@ -48,7 +51,12 @@ export {
 } from './workflow-events/helpers.js'
 
 // INFR-0050: Export Telemetry SDK
-export { initTelemetrySdk, getSdkInstance, validateConfig, DEFAULT_SDK_CONFIG } from './telemetry-sdk/index.js'
+export {
+  initTelemetrySdk,
+  getSdkInstance,
+  validateConfig,
+  DEFAULT_SDK_CONFIG,
+} from './telemetry-sdk/index.js'
 export type {
   TelemetrySdkConfig,
   TelemetrySdk,

@@ -19,7 +19,6 @@
     "@maxmind/geoip2-node": "6.3.4",
     "@repo/api-client": "workspace:*",
     "@repo/api-core": "workspace:*",
-    "@repo/database-schema": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/resilience": "workspace:*",

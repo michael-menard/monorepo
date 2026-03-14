@@ -2,7 +2,7 @@ import { eq, and, ilike, or, sql, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err, paginate } from '@repo/api-core'
-import type * as schema from '@repo/database-schema'
+import type * as schema from '@repo/db'
 import type { SetRepository, SetImageRepository } from '../ports/index.js'
 import type { Set, SetImage, UpdateSetInput, UpdateSetImageInput } from '../types.js'
 

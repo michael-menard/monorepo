@@ -12,7 +12,7 @@
 import { eq, and, sql, SQL } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { rules } from '@repo/database-schema'
+import { rules } from '@repo/knowledge-base/src/db'
 import { detectConflicts, normalizeRuleText } from './conflict-detector.js'
 import {
   type GetRulesQuery,

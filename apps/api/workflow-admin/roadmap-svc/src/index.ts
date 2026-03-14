@@ -6,6 +6,7 @@ import {
   reorderPlansPriority,
   updatePlan,
   getStoriesByPlanSlug,
+  getStoryById,
   type PlanListParams,
   type PlanUpdateInput,
 } from './services/planService'
@@ -115,6 +116,21 @@ app.patch('/api/v1/roadmap/reorder', async c => {
   } catch (error) {
     logger.error('Failed to reorder plans', { error, priority, items })
     return c.json({ error: 'Failed to reorder plans' }, 500)
+  }
+})
+
+app.get('/api/v1/stories/:storyId', async c => {
+  const storyId = c.req.param('storyId')
+
+  try {
+    const result = await getStoryById(storyId)
+    if (!result) {
+      return c.json({ error: 'Story not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to fetch story', { error, storyId })
+    return c.json({ error: 'Failed to fetch story' }, 500)
   }
 })
 

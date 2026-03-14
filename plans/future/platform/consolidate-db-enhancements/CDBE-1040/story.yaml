@@ -1,0 +1,16 @@
+id: 'CDBE-1040'
+title: 'Audit Trigger on Stories and Plans'
+status: backlog
+priority: medium
+phase: 1
+feature: |
+  Implement a row-level UPDATE trigger on workflow.stories and workflow.plans that writes changed column names, old values, and new values to telemetry.workflow_audit_log.
+goal: |
+  Provide a complete immutable audit trail of all story and plan mutations for debugging and compliance.
+depends_on: [CDBE-1010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Audit trigger on wide tables can generate high write volume; consider column-level filtering. Must confirm workflow_audit_log schema matches expected payload shape from consolidate-db-normalized.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

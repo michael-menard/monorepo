@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import { eq, inArray } from 'drizzle-orm'
 
 // vi.mock calls are hoisted to the top of the file by Vitest — they execute before imports.

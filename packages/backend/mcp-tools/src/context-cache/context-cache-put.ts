@@ -14,7 +14,7 @@
 import { sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks, type SelectContextPack } from '@repo/database-schema'
+import { contextPacks, type SelectContextPack } from '@repo/knowledge-base/src/db'
 import { ContextCachePutInputSchema, type ContextCachePutInput } from './__types__/index.js'
 
 /**

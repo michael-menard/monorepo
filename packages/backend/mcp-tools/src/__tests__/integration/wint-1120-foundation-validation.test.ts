@@ -15,7 +15,7 @@
  *
  * ARCH-001 Finding: wint.stories and "core.stories" are the SAME physical table.
  * StoryRepository (orchestrator) queries wint.stories via raw pg client (port 5432).
- * MCP tools query wint.stories via Drizzle ORM (@repo/database-schema exports).
+ * MCP tools query wint.stories via Drizzle ORM (@repo/knowledge-base/src/db exports).
  * Both target the same lego_dev database on port 5432.
  *
  * For AC-8/AC-9, we use db.execute() (Drizzle raw SQL) to replicate what StoryRepository
@@ -32,7 +32,7 @@ import * as fs from 'fs'
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { sql, eq } from 'drizzle-orm'
 import { db } from '@repo/db'
-import { stories, worktrees } from '@repo/database-schema'
+import { stories, worktrees } from '@repo/knowledge-base/src/db'
 import { storyGetStatus } from '../../story-management/story-get-status.js'
 import { storyUpdateStatus } from '../../story-management/story-update-status.js'
 import { storyGetByStatus } from '../../story-management/story-get-by-status.js'

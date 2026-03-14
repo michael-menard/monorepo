@@ -6,7 +6,7 @@
  * - Optional package name filter
  * - Zod validation at entry (fail fast)
  * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with features + capabilities schemas from @repo/database-schema
+ * - Uses Drizzle ORM with features + capabilities schemas from @repo/knowledge-base/src/db
  *
  * Security: AC-7 (Parameterized Queries Mandatory via Drizzle ORM), AC-8 (Zod Validation at Entry)
  *
@@ -16,7 +16,7 @@
 
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { features, capabilities } from '@repo/database-schema'
+import { features, capabilities } from '@repo/knowledge-base/src/db'
 import { eq, isNotNull } from 'drizzle-orm'
 import {
   GraphGetFrankenFeaturesInputSchema,

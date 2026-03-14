@@ -24,7 +24,6 @@
     "seed:cohesion-rules": "node dist/seeds/cohesion-rules.js"
   },
   "dependencies": {
-    "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/sidecar-http-utils": "workspace:*",

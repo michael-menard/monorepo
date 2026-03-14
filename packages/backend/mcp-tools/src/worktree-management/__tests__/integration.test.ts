@@ -16,7 +16,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { randomUUID } from 'crypto'
 import { db } from '@repo/db'
-import { stories, worktrees } from '@repo/database-schema'
+import { stories, worktrees } from '@repo/knowledge-base/src/db'
 import { eq, like } from 'drizzle-orm'
 import {
   worktreeRegister,

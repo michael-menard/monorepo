@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import { eq, and } from 'drizzle-orm'
 import { contextPackGet } from '../context-pack-get.js'
 import { ContextPackResponseSchema } from '@repo/context-pack-sidecar'

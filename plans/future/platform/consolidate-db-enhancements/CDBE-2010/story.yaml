@@ -1,0 +1,16 @@
+id: 'CDBE-2010'
+title: 'advance_story_state and assign_story Stored Procedures'
+status: backlog
+priority: medium
+phase: 2
+feature: |
+  Implement advance_story_state(story_id, to_state, agent_name, reason) that validates the transition, inserts a history row, and handles cascades; implement assign_story(story_id, agent_name, phase) that creates an assignment and links it to an invocation.
+goal: |
+  Give agents a single safe call for state advancement and assignment, eliminating manual multi-step DB operations.
+depends_on: [CDBE-1010, CDBE-1020]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  advance_story_state must invoke the same cascade logic as the triggers or delegate to them — risk of double-execution if trigger and procedure both fire. Careful sequencing required. assign_story requires an active invocation ID — agents must pass it or the procedure must resolve it.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

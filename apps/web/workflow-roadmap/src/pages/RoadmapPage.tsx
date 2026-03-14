@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { AppDataTable, Badge, MultiSelect, Checkbox, AppInput } from '@repo/app-component-library'
-import { useGetPlansQuery, type Plan } from '../store/roadmapApi'
+import type { AppDataTableColumn } from '@repo/app-component-library'
+import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../store/roadmapApi'
+import { GripVertical } from 'lucide-react'
 
 interface MultiSelectOption {
   value: string
@@ -39,18 +41,6 @@ const TYPE_OPTIONS: MultiSelectOption[] = [
   { label: 'Audit', value: 'audit' },
   { label: 'Spike', value: 'spike' },
 ]
-
-interface AppDataTableColumn<T> {
-  key: string
-  header: string | ((column: AppDataTableColumn<T>) => React.ReactNode)
-  render?: (item: T) => React.ReactNode
-  className?: string
-  responsive?: {
-    hideAt?: 'sm' | 'md' | 'lg' | 'xl'
-    priority?: number
-  }
-  sortable?: boolean
-}
 
 const columns: AppDataTableColumn<Plan>[] = [
   {
@@ -104,10 +94,12 @@ export function RoadmapPage() {
   const [excludeCompleted, setExcludeCompleted] = useState(true)
   const [search, setSearch] = useState('')
 
+  const [reorderPlans] = useReorderPlansMutation()
+
   const queryParams = useMemo(
     () => ({
       page: 1,
-      limit: 10,
+      limit: 100,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
       priority: selectedPriorities.length > 0 ? selectedPriorities : undefined,
       planType: selectedTypes.length > 0 ? selectedTypes : undefined,
@@ -124,6 +116,17 @@ export function RoadmapPage() {
     navigate({ to: '/plan/$slug', params: { slug: plan.planSlug } })
   }
 
+  const handleReorder = useCallback(
+    (items: Array<{ id: string; index: number }>) => {
+      const priority = selectedPriorities[0] || 'P1'
+      reorderPlans({
+        priority,
+        items: items.map(item => ({ id: item.id, priorityOrder: item.index })),
+      })
+    },
+    [reorderPlans, selectedPriorities],
+  )
+
   const errorMessage = error ? ('error' in error ? error.error : 'Failed to fetch plans') : null
 
   if (errorMessage) {
@@ -135,6 +138,9 @@ export function RoadmapPage() {
       </div>
     )
   }
+
+  const plans = data?.data || []
+  const showDraggable = selectedPriorities.length === 1
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -198,8 +204,14 @@ export function RoadmapPage() {
         </div>
       </div>
 
+      {showDraggable && (
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+          Drag rows to reorder. Select a single priority to enable reordering.
+        </div>
+      )}
+
       <AppDataTable
-        data={data?.data || []}
+        data={plans}
         columns={columns}
         onRowClick={handleRowClick}
         emptyMessage="No plans found"
@@ -210,6 +222,9 @@ export function RoadmapPage() {
           showPageInfo: true,
           showNavigationButtons: true,
         }}
+        draggable={showDraggable}
+        onReorder={handleReorder}
+        getRowId={plan => plan.id}
       />
     </div>
   )

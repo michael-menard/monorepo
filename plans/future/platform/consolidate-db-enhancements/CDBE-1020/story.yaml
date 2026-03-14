@@ -1,0 +1,16 @@
+id: 'CDBE-1020'
+title: 'Story Completion and Cancellation Cascade Triggers'
+status: backlog
+priority: medium
+phase: 1
+feature: |
+  Implement triggers that fire when a story transitions to completed or cancelled: resolve story_dependencies, check sibling completion, mark worktree merged/abandoned, soft-delete open assignments and blockers, flag stories blocked by a cancelled story.
+goal: |
+  Automate all downstream side effects of story completion and cancellation so agents do not manage relational state manually.
+depends_on: [CDBE-1010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  High complexity — touches story_dependencies, worktrees, assignments, and blockers in a single trigger context. Risk of partial cascade if any sub-operation fails; must wrap in explicit transaction. Cancellation cascade cannot auto-resolve stories blocked by the cancelled story — flag only.
+sizing_warning: true
+created: '2026-03-14T16:01:29Z'

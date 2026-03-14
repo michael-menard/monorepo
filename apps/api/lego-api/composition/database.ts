@@ -1,12 +1,12 @@
 /**
  * Database Composition
  *
- * Creates typed database client using shared schema from @repo/database-schema.
+ * Creates typed database client using shared schema from @repo/db.
  * This is the single source of truth for database access in lego-api.
  */
 
 import { createDb } from '@repo/api-core'
-import * as schema from '@repo/database-schema'
+import * as schema from '@repo/db'
 
 // Create typed database client with full schema
 export const db = createDb(schema)

@@ -6,13 +6,13 @@
  * - Dual ID support: UUID or human-readable format (WINT-0090)
  * - Zod validation at entry (fail fast)
  * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with stories schema from @repo/database-schema
+ * - Uses Drizzle ORM with stories schema from @repo/knowledge-base
  */
 
 import { eq, or } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { stories } from '@repo/database-schema'
+import { stories } from '@repo/knowledge-base/src/db'
 import {
   StoryGetStatusInputSchema,
   type StoryGetStatusInput,

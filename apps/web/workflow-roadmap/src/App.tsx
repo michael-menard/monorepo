@@ -11,6 +11,7 @@ import {
 import { store } from './store'
 import { RoadmapPage } from './pages/RoadmapPage'
 import { PlanDetailsPage } from './pages/PlanDetailsPage'
+import { StoryDetailsPage } from './pages/StoryDetailsPage'
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -44,7 +45,13 @@ const planDetailsRoute = createRoute({
   component: PlanDetailsPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, planDetailsRoute])
+const storyDetailsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/story/$storyId',
+  component: StoryDetailsPage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, planDetailsRoute, storyDetailsRoute])
 
 const router = createRouter({
   routeTree,

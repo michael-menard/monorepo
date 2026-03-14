@@ -14,7 +14,7 @@
 import { eq, and, gt, or, isNull, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks, type SelectContextPack } from '@repo/database-schema'
+import { contextPacks, type SelectContextPack } from '@repo/knowledge-base/src/db'
 import { ContextCacheGetInputSchema, type ContextCacheGetInput } from './__types__/index.js'
 
 /**

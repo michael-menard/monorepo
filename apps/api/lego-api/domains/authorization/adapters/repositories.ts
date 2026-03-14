@@ -2,7 +2,7 @@ import { eq, and, or, sql, isNull, gt } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Result } from '@repo/api-core'
 import { ok, err } from '@repo/api-core'
-import type * as schema from '@repo/database-schema'
+import type * as schema from '@repo/db'
 import type { UserQuotaRepository, UserAddonRepository } from '../ports/index.js'
 import type {
   UserQuotaRow,

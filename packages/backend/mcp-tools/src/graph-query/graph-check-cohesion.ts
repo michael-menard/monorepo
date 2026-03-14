@@ -6,14 +6,14 @@
  * - Dual ID support (UUID or feature name)
  * - Zod validation at entry (fail fast)
  * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with features and cohesionRules schemas from @repo/database-schema
+ * - Uses Drizzle ORM with features and cohesionRules schemas from @repo/knowledge-base/src/db
  *
  * Security: AC-2 (Parameterized Queries Mandatory), AC-10 (Zod Validation at Entry)
  */
 
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { features, cohesionRules } from '@repo/database-schema'
+import { features, cohesionRules } from '@repo/knowledge-base/src/db'
 import { eq, or } from 'drizzle-orm'
 import {
   GraphCheckCohesionInputSchema,

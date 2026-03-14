@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import { inArray, eq } from 'drizzle-orm'
 import {
   populateDomainKb,

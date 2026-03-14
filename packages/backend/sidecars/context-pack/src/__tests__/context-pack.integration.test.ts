@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/database-schema'
+import { contextPacks } from '@repo/knowledge-base/src/db'
 import { sql, eq, and } from 'drizzle-orm'
 import {
   assembleContextPack,

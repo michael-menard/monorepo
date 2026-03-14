@@ -1,0 +1,16 @@
+id: 'CDBE-5020'
+title: 'Partition workflow_events Table and Partition Management Job'
+status: backlog
+priority: medium
+phase: 5
+feature: |
+  Convert telemetry.workflow_events to monthly range-partitioned table on ts; implement automated partition management (pg_cron job or Lambda) to pre-create next month's partition and optionally detach/archive old partitions.
+goal: |
+  Complete the partitioning rollout and ensure future partitions are created automatically without manual intervention.
+depends_on: [CDBE-5010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Same table-rewrite risk as CDBE-5010. Partition management job must handle the case where the partition already exists (idempotent). If using pg_cron, must confirm it is enabled on the Aurora cluster. Detaching old partitions for archival requires a data retention policy decision not yet specified.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

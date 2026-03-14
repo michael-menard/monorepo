@@ -13,7 +13,7 @@
 import { logger } from '@repo/logger'
 import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { features, capabilities } from '@repo/database-schema'
+import { features, capabilities } from '@repo/knowledge-base/src/db'
 import type {
   CohesionAuditRequest,
   CohesionAuditResult,

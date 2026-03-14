@@ -1,7 +1,7 @@
 /**
  * Shared TypeScript Types for Unified WINT Schema
  *
- * This module re-exports auto-generated Zod schemas from @repo/database-schema
+ * This module re-exports auto-generated Zod schemas from @repo/knowledge-base/src/db
  * and provides a single source of truth for all WINT-related types.
  *
  * All schemas are auto-generated from Drizzle ORM tables using drizzle-zod,
@@ -26,7 +26,7 @@ export {
   selectStorySchema,
   type InsertStory,
   type SelectStory,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story state schemas for tracking the current state of a story (e.g., "in_progress", "completed").
@@ -37,7 +37,7 @@ export {
   selectStoryStateSchema,
   type InsertStoryState,
   type SelectStoryState,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story transition schemas for tracking state transitions with metadata.
@@ -48,7 +48,7 @@ export {
   selectStoryTransitionSchema,
   type InsertStoryTransition,
   type SelectStoryTransition,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story dependency schemas for tracking dependencies between stories.
@@ -59,7 +59,7 @@ export {
   selectStoryDependencySchema,
   type InsertStoryDependency,
   type SelectStoryDependency,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story artifact schemas for tracking generated files and outputs (e.g., PLAN.yaml, EVIDENCE.yaml).
@@ -70,7 +70,7 @@ export {
   selectStoryArtifactSchema,
   type InsertStoryArtifact,
   type SelectStoryArtifact,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story phase history schemas for tracking which phases a story has completed.
@@ -81,7 +81,7 @@ export {
   selectStoryPhaseHistorySchema,
   type InsertStoryPhaseHistory,
   type SelectStoryPhaseHistory,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story metadata version schemas for tracking changes to story metadata over time.
@@ -92,7 +92,7 @@ export {
   selectStoryMetadataVersionSchema,
   type InsertStoryMetadataVersion,
   type SelectStoryMetadataVersion,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story assignment schemas for tracking which agents/users are assigned to stories.
@@ -103,7 +103,7 @@ export {
   selectStoryAssignmentSchema,
   type InsertStoryAssignment,
   type SelectStoryAssignment,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Story blocker schemas for tracking impediments preventing story progress.
@@ -114,7 +114,7 @@ export {
   selectStoryBlockerSchema,
   type InsertStoryBlocker,
   type SelectStoryBlocker,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // CONTEXT CACHE GROUP - Context Management
@@ -129,7 +129,7 @@ export {
   selectContextPackSchema,
   type InsertContextPack,
   type SelectContextPack,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Context session schemas for tracking agent execution sessions.
@@ -140,7 +140,7 @@ export {
   selectContextSessionSchema,
   type InsertContextSession,
   type SelectContextSession,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Context cache hit schemas for tracking context retrieval performance.
@@ -151,7 +151,7 @@ export {
   selectContextCacheHitSchema,
   type InsertContextCacheHit,
   type SelectContextCacheHit,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // TELEMETRY GROUP - Agent Execution Tracking
@@ -166,7 +166,7 @@ export {
   selectAgentInvocationSchema,
   type InsertAgentInvocation,
   type SelectAgentInvocation,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Agent decision schemas for tracking autonomous decisions made by agents.
@@ -177,7 +177,7 @@ export {
   selectAgentDecisionSchema,
   type InsertAgentDecision,
   type SelectAgentDecision,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Agent outcome schemas for tracking agent execution results.
@@ -188,7 +188,7 @@ export {
   selectAgentOutcomeSchema,
   type InsertAgentOutcome,
   type SelectAgentOutcome,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * State transition schemas for tracking state machine transitions.
@@ -199,7 +199,7 @@ export {
   selectStateTransitionSchema,
   type InsertStateTransition,
   type SelectStateTransition,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // ML GROUP - Machine Learning Pipeline
@@ -214,7 +214,7 @@ export {
   selectTrainingDataSchema,
   type InsertTrainingData,
   type SelectTrainingData,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * ML model schemas for tracking trained machine learning models.
@@ -225,7 +225,7 @@ export {
   selectMlModelSchema,
   type InsertMlModel,
   type SelectMlModel,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Model prediction schemas for tracking ML model predictions.
@@ -236,7 +236,7 @@ export {
   selectModelPredictionSchema,
   type InsertModelPrediction,
   type SelectModelPrediction,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Model metric schemas for tracking model performance over time.
@@ -247,7 +247,7 @@ export {
   selectModelMetricSchema,
   type InsertModelMetric,
   type SelectModelMetric,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // GRAPH GROUP - Feature Graph and Relationships
@@ -262,7 +262,7 @@ export {
   selectFeatureSchema,
   type InsertFeature,
   type SelectFeature,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Capability schemas for tracking high-level system capabilities.
@@ -273,7 +273,7 @@ export {
   selectCapabilitySchema,
   type InsertCapability,
   type SelectCapability,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Feature relationship schemas for tracking dependencies between features.
@@ -284,7 +284,7 @@ export {
   selectFeatureRelationshipSchema,
   type InsertFeatureRelationship,
   type SelectFeatureRelationship,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Cohesion rule schemas for defining feature grouping rules.
@@ -295,7 +295,7 @@ export {
   selectCohesionRuleSchema,
   type InsertCohesionRule,
   type SelectCohesionRule,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // WORKFLOW GROUP - LangGraph Workflow Execution
@@ -310,7 +310,7 @@ export {
   selectWorkflowExecutionSchema,
   type InsertWorkflowExecution,
   type SelectWorkflowExecution,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Workflow checkpoint schemas for tracking workflow state snapshots.
@@ -321,7 +321,7 @@ export {
   selectWorkflowCheckpointSchema,
   type InsertWorkflowCheckpoint,
   type SelectWorkflowCheckpoint,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 /**
  * Workflow audit log schemas for tracking all workflow state changes.
@@ -332,7 +332,7 @@ export {
   selectWorkflowAuditLogSchema,
   type InsertWorkflowAuditLog,
   type SelectWorkflowAuditLog,
-} from '@repo/database-schema/schema/wint'
+} from '@repo/knowledge-base/src/db/schema/wint'
 
 // ============================================================================
 // LEGACY REPOSITORY SCHEMAS (002_workflow_tables.sql)

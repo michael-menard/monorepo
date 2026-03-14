@@ -6,14 +6,14 @@
  * - Auto-generates UUID invocationId if not provided
  * - Zod validation at entry point (fail fast on invalid input)
  * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with agentInvocations schema from @repo/database-schema
+ * - Uses Drizzle ORM with agentInvocations schema from @repo/knowledge-base/src/db
  * - Append-only write model — no updates or deletes
  */
 
 import { randomUUID } from 'crypto'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { agentInvocations } from '@repo/database-schema'
+import { agentInvocations } from '@repo/knowledge-base/src/db'
 import { WorkflowLogInvocationInputSchema } from './__types__/index.js'
 import type { WorkflowLogInvocationInput } from './__types__/index.js'
 

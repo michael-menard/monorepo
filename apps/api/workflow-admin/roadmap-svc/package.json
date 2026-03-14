@@ -14,7 +14,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@repo/database-schema": "workspace:*",
     "@repo/knowledge-base": "workspace:*",
     "@repo/logger": "workspace:*",
     "dotenv": "^16.4.5",

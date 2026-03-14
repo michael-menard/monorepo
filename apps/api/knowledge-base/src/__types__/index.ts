@@ -940,7 +940,7 @@ export type UpdateStoryInput = z.infer<typeof UpdateStorySchema>
 export const StoryDependencySchema = z.object({
   id: z.string().uuid().optional(),
   storyId: z.string().min(1, 'Story ID cannot be empty'),
-  targetStoryId: z.string().min(1, 'Target story ID cannot be empty'),
+  dependsOnId: z.string().min(1, 'Dependency story ID cannot be empty'),
   dependencyType: DependencyTypeSchema,
   satisfied: z.boolean().optional().default(false),
   createdAt: z.date().optional(),
@@ -953,7 +953,7 @@ export type StoryDependencyInput = z.infer<typeof StoryDependencySchema>
  */
 export const NewStoryDependencySchema = z.object({
   storyId: z.string().min(1, 'Story ID cannot be empty'),
-  targetStoryId: z.string().min(1, 'Target story ID cannot be empty'),
+  dependsOnId: z.string().min(1, 'Dependency story ID cannot be empty'),
   dependencyType: DependencyTypeSchema,
   satisfied: z.boolean().optional().default(false),
 })

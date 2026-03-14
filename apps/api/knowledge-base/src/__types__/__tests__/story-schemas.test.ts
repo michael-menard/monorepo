@@ -371,12 +371,12 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should accept valid dependency', () => {
         const dependency = {
           storyId: 'WISH-2047',
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
           dependencyType: 'depends_on',
         }
         const result = NewStoryDependencySchema.parse(dependency)
         expect(result.storyId).toBe('WISH-2047')
-        expect(result.targetStoryId).toBe('WISH-2046')
+        expect(result.dependsOnId).toBe('WISH-2046')
         expect(result.dependencyType).toBe('depends_on')
         expect(result.satisfied).toBe(false)
       })
@@ -384,7 +384,7 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should accept satisfied dependency', () => {
         const dependency = {
           storyId: 'KBAR-002',
-          targetStoryId: 'KBAR-001',
+          dependsOnId: 'KBAR-001',
           dependencyType: 'blocked_by',
           satisfied: true,
         }
@@ -394,13 +394,13 @@ describe('Story Schemas (KBAR-001)', () => {
 
       it('should reject missing storyId', () => {
         const dependency = {
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
           dependencyType: 'depends_on',
         }
         expect(() => NewStoryDependencySchema.parse(dependency)).toThrow()
       })
 
-      it('should reject missing targetStoryId', () => {
+      it('should reject missing dependsOnId', () => {
         const dependency = {
           storyId: 'WISH-2047',
           dependencyType: 'depends_on',
@@ -411,7 +411,7 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should reject missing dependencyType', () => {
         const dependency = {
           storyId: 'WISH-2047',
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
         }
         expect(() => NewStoryDependencySchema.parse(dependency)).toThrow()
       })
@@ -419,7 +419,7 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should reject invalid dependencyType', () => {
         const dependency = {
           storyId: 'WISH-2047',
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
           dependencyType: 'invalid',
         }
         expect(() => NewStoryDependencySchema.parse(dependency)).toThrow()
@@ -428,7 +428,7 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should reject empty storyId', () => {
         const dependency = {
           storyId: '',
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
           dependencyType: 'depends_on',
         }
         expect(() => NewStoryDependencySchema.parse(dependency)).toThrow()
@@ -440,7 +440,7 @@ describe('Story Schemas (KBAR-001)', () => {
         const dependency = {
           id: '550e8400-e29b-41d4-a716-446655440000',
           storyId: 'WISH-2047',
-          targetStoryId: 'WISH-2046',
+          dependsOnId: 'WISH-2046',
           dependencyType: 'follows_up_from',
         }
         // Note: follows_up_from is not valid, this should fail
@@ -452,7 +452,7 @@ describe('Story Schemas (KBAR-001)', () => {
         types.forEach(type => {
           const dependency = {
             storyId: 'WISH-2047',
-            targetStoryId: 'WISH-2046',
+            dependsOnId: 'WISH-2046',
             dependencyType: type,
           }
           const result = StoryDependencySchema.parse(dependency)

@@ -13,7 +13,7 @@
 import { eq, asc } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { stories } from '@repo/database-schema'
+import { stories } from '@repo/knowledge-base/src/db'
 import {
   StoryGetByFeatureInputSchema,
   type StoryGetByFeatureInput,
