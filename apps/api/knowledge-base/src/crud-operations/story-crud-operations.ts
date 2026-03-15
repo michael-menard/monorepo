@@ -626,7 +626,7 @@ export async function kb_update_story_status(
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
-    .returning()
+    .returning(storyColumns)
 
   const story = result[0] ?? null
 
@@ -852,7 +852,7 @@ export async function kb_update_story(
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
-    .returning()
+    .returning(storyColumns)
 
   const story = result[0] ?? null
 
@@ -918,7 +918,7 @@ export async function kb_create_story(
         updatedAt: now,
       })
       .onConflictDoNothing({ target: stories.storyId })
-      .returning()
+      .returning(storyColumns)
 
     if (insertResult.length > 0) {
       // Row was newly inserted — validate title requirement
@@ -965,7 +965,7 @@ export async function kb_create_story(
       .update(stories)
       .set(updates)
       .where(eq(stories.storyId, validated.story_id))
-      .returning()
+      .returning(storyColumns)
 
     if (validated.plan_slug) {
       await tx
