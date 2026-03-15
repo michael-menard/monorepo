@@ -144,14 +144,31 @@ function relativeTime(dateStr: string | null): string {
   return `${Math.floor(days / 365)}y ago`
 }
 
+const TAG_COLORS = [
+  'bg-cyan-500/20 text-cyan-300/70 border-cyan-500/30',
+  'bg-violet-500/20 text-violet-300/70 border-violet-500/30',
+  'bg-emerald-500/20 text-emerald-300/70 border-emerald-500/30',
+  'bg-amber-500/20 text-amber-300/70 border-amber-500/30',
+  'bg-pink-500/20 text-pink-300/70 border-pink-500/30',
+  'bg-sky-500/20 text-sky-300/70 border-sky-500/30',
+  'bg-orange-500/20 text-orange-300/70 border-orange-500/30',
+  'bg-teal-500/20 text-teal-300/70 border-teal-500/30',
+]
+
+function tagColor(tag: string): string {
+  let hash = 0
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0
+  return TAG_COLORS[hash % TAG_COLORS.length]
+}
+
 const columns = [
   {
-    key: 'planSlug',
-    header: 'Slug',
+    key: 'title',
+    header: 'Title',
     sortable: true,
     render: (plan: Plan) => (
       <div className="flex items-center gap-1.5">
-        <span className="font-mono text-sm text-cyan-400">{plan.planSlug}</span>
+        <span className="text-slate-100/70">{plan.title}</span>
         {plan.churnDepth > 0 && (
           <span
             className="text-xs text-amber-400 font-mono"
@@ -172,31 +189,69 @@ const columns = [
     ),
   },
   {
-    key: 'title',
-    header: 'Title',
-    sortable: true,
+    key: 'tags',
+    header: 'Tags',
+    responsive: { hideAt: 'xl' as const },
+    render: (plan: Plan) =>
+      plan.tags && plan.tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {plan.tags.map(tag => (
+            <span
+              key={tag}
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${tagColor(tag)}`}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null,
   },
   {
     key: 'status',
     header: 'Status',
     sortable: true,
-    render: (plan: Plan) => <AppBadge variant="outline">{plan.status}</AppBadge>,
+    render: (plan: Plan) => {
+      const statusColor: Record<string, string> = {
+        draft: '!bg-slate-700/40 !border-slate-600/40 !text-slate-300/70',
+        active: '!bg-blue-500/20 !border-blue-500/30 !text-blue-300/70',
+        accepted: '!bg-cyan-500/20 !border-cyan-500/30 !text-cyan-300/70',
+        'stories-created': '!bg-teal-500/20 !border-teal-500/30 !text-teal-300/70',
+        'in-progress': '!bg-violet-500/20 !border-violet-500/30 !text-violet-300/70',
+        implemented: '!bg-emerald-500/20 !border-emerald-500/30 !text-emerald-300/70',
+        superseded: '!bg-orange-500/20 !border-orange-500/30 !text-orange-300/70',
+        archived: '!bg-slate-600/20 !border-slate-500/30 !text-slate-400/70',
+        blocked: '!bg-red-500/20 !border-red-500/30 !text-red-300/70',
+      }
+      const colorClass = statusColor[plan.status ?? ''] ?? '!border-slate-600/50 !text-slate-400/70'
+      return (
+        <AppBadge variant="outline" className={colorClass}>
+          {plan.status}
+        </AppBadge>
+      )
+    },
   },
   {
     key: 'priority',
     header: 'Priority',
     sortable: true,
-    render: (plan: Plan) =>
-      plan.priority ? (
-        <AppBadge variant={plan.priority === 'P1' ? 'destructive' : 'secondary'}>
+    render: (plan: Plan) => {
+      if (!plan.priority) return null
+      const colorClass =
+        plan.priority === 'P1'
+          ? '!bg-red-500/40 !border-red-500/30 !text-white/40'
+          : plan.priority === 'P2'
+            ? '!bg-orange-500/40 !border-orange-500/30 !text-white/40'
+            : plan.priority === 'P3'
+              ? '!bg-amber-400/40 !border-amber-400/30 !text-white/40'
+              : plan.priority === 'P4'
+                ? '!bg-teal-500/40 !border-teal-500/30 !text-white/40'
+                : '!bg-blue-500/40 !border-blue-500/30 !text-white/40'
+      return (
+        <AppBadge variant="outline" className={colorClass}>
           {plan.priority}
         </AppBadge>
-      ) : null,
-  },
-  {
-    key: 'planType',
-    header: 'Type',
-    sortable: true,
+      )
+    },
   },
   {
     key: 'totalStories',
@@ -214,17 +269,6 @@ const columns = [
       </span>
     ),
     responsive: { hideAt: 'lg' as const },
-  },
-  {
-    key: 'createdAt',
-    header: 'Created',
-    sortable: true,
-    render: (plan: Plan) => (
-      <span className="text-xs text-slate-400 font-mono">
-        {new Date(plan.createdAt).toLocaleDateString()}
-      </span>
-    ),
-    responsive: { hideAt: 'xl' as const },
   },
 ]
 
@@ -301,7 +345,7 @@ export function RoadmapPage() {
           <Select value={status || ALL} onValueChange={v => dispatch(setStatus(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by status"
-              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
             >
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -321,7 +365,7 @@ export function RoadmapPage() {
           <Select value={priority || ALL} onValueChange={v => dispatch(setPriority(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by priority"
-              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
             >
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -341,7 +385,7 @@ export function RoadmapPage() {
           <Select value={type || ALL} onValueChange={v => dispatch(setType(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by type"
-              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
             >
               <SelectValue placeholder="Type" />
             </SelectTrigger>
