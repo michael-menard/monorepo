@@ -1,25 +1,24 @@
 schema: 1
-story_id: CDBN-3020
-timestamp: '2026-03-14T00:00:00Z'
+story_id: CDBE-0020
+timestamp: '2026-03-15T19:30:00.000Z'
 gen_mode: false
 touches:
   backend: true
   frontend: false
-  packages: true
+  packages: false
   db: true
   contracts: false
   ui: false
   infra: false
 touched_paths_globs:
-  - "apps/api/knowledge-base/**"
-  - "apps/api/workflow-admin/**"
-  - "packages/backend/database-schema/**"
+  - apps/api/**
+  - tests/**
 risk_flags:
   auth: false
   payments: false
-  migrations: true
+  migrations: false
   external_apis: false
   security: false
   performance: false
-summary: "Update telemetry operations and roadmap queries from wint.* schema to new workflow schema"
-elaboration: "completed"
+summary: Integration tests for cascade triggers (completion propagation, cancellation, artifact versioning, plan archival)
+elaboration: completed
