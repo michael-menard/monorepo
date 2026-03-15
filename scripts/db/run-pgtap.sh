@@ -41,14 +41,35 @@ TESTS_DIR="$(cd "$(dirname "$0")/../../tests/db" && pwd)"
 
 # ── Argument handling ─────────────────────────────────────────────────────────
 # Allow passing specific test files as arguments; otherwise discover all *.sql
+TEST_ARRAY=()
 if [ $# -gt 0 ]; then
-  TEST_FILES="$*"
+  for f in "$@"; do
+    # Reject paths containing ".." (directory traversal)
+    if [[ "$f" == *..* ]]; then
+      echo "ERROR: Rejected path containing '..': $f"
+      exit 1
+    fi
+    # Resolve to absolute path for prefix check
+    abs_f="$(cd "$(dirname "$f")" 2>/dev/null && pwd)/$(basename "$f")"
+    # Reject absolute paths that don't start with TESTS_DIR
+    if [[ "$f" == /* ]] && [[ "$f" != "$TESTS_DIR"* ]]; then
+      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
+      exit 1
+    fi
+    if [[ "$abs_f" != "$TESTS_DIR"* ]]; then
+      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
+      exit 1
+    fi
+    TEST_ARRAY+=("$f")
+  done
 else
   # Discover all SQL test files recursively under tests/db/
-  TEST_FILES="$(find "$TESTS_DIR" -name '*.sql' | sort)"
+  while IFS= read -r -d '' f; do
+    TEST_ARRAY+=("$f")
+  done < <(find "$TESTS_DIR" -name '*.sql' -print0 | sort -z)
 fi
 
-if [ -z "$TEST_FILES" ]; then
+if [ ${#TEST_ARRAY[@]} -eq 0 ]; then
   echo "No test files found under $TESTS_DIR — nothing to run."
   exit 0
 fi
@@ -76,4 +97,4 @@ PGPASSWORD="$PGTAP_DB_PASS" pg_prove \
   --dbname "$PGTAP_DB_NAME" \
   --username "$PGTAP_DB_USER" \
   --verbose \
-  $TEST_FILES
+  "${TEST_ARRAY[@]}"

@@ -110,6 +110,26 @@ See `fixtures/rollback-helper.sql` for a detailed explanation of the pattern.
 
 Full reference: <https://pgtap.org/documentation.html>
 
+## Security Considerations
+
+- **Test table naming**: All test-only tables must use the `_test_*` prefix to clearly distinguish
+  them from production schema objects and prevent accidental data leakage between environments.
+
+- **Localhost-only port binding**: The Docker Compose setup binds the pgtap postgres port to
+  `127.0.0.1` only (e.g. `127.0.0.1:5434:5432`). This prevents the ephemeral test database
+  from being reachable on any network interface other than loopback.
+
+- **Credentials are local-dev only (ephemeral)**: The default credentials configured in
+  `docker-compose.pgtap.yml` (`pgtap-local-only`) are intended solely for local development
+  against a short-lived throwaway container. They must never be used in production or
+  shared environments. CI uses `secrets.PGTAP_DB_PASSWORD` so the credential is not
+  stored in source control.
+
+- **pgtap output in CI logs**: The pg_prove output written to CI logs may include SQL snippets,
+  table names, and assertion descriptions. Avoid referencing production table names, sensitive
+  column names, or real data values inside test assertion messages or test file comments.
+  Keep test fixtures synthetic and clearly non-production.
+
 ## Environment Variables
 
 | Variable | Default | Description |
