@@ -1,140 +1,144 @@
-schema: 2
-story_id: ORCH-2010
-timestamp: '2026-03-18T19:10:00Z'
-subtask_source: story
+schema: 1
+story_id: CDBE-0010
+timestamp: '2026-03-15T00:00:00Z'
 steps:
   - id: 1
-    subtask_id: ST-1
     description: >-
-      Review existing afterAggregate tests in elaboration.test.ts to confirm coverage of all 4 current cases and
-      identify the null-config gap. No file changes — read-only audit step.
-    files: []
-    files_to_read:
-      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
-      - packages/backend/orchestrator/src/graphs/elaboration.ts
-    dependencies: []
-    slice: packages
-    verification: >-
-      No code to run — output is audit notes confirming existing 4 afterAggregate tests pass and documenting the
-      null-config gap.
-    acs_covered:
-      - AC-1
-      - AC-2
-  - id: 2
-    subtask_id: ST-2
-    description: >-
-      Write unit tests for afterStructurer in elaboration.test.ts. afterStructurer is exported from elaboration.ts and
-      has zero existing tests. Add a describe block 'afterStructurer routing function' with at minimum 3 test cases: (1)
-      routes to update_readiness when config.recalculateReadiness is true, (2) routes to save_to_db when
-      config.recalculateReadiness is false, (3) routes to save_to_db when config is null. Import afterStructurer
-      alongside the existing afterAggregate import at the bottom of the test file.
+      Create pgtap-enabled Docker Compose service (docker-compose.pgtap.yml) that extends the local postgres with pgtap
+      installed, so local dev can run SQL tests without modifying the shared compose files
     files:
-      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/graphs/elaboration.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - docker-compose.pgtap.yml
+    dependencies: []
+    slice: backend
+    verification: >-
+      docker compose -f docker-compose.pgtap.yml up -d && docker compose -f docker-compose.pgtap.yml exec pgtap-postgres
+      pg_prove --version
+  - id: 2
+    description: >-
+      Create the pgtap test runner shell script (scripts/db/run-pgtap.sh) that discovers and runs all *.sql test files
+      under tests/db/, wraps pg_prove, and exits non-zero on failure
+    files:
+      - scripts/db/run-pgtap.sh
     dependencies:
       - 1
-    slice: packages
-    verification: pnpm --filter orchestrator test -- graphs/elaboration
-    acs_covered:
-      - AC-1
-      - AC-2
+    slice: backend
+    verification: bash scripts/db/run-pgtap.sh --help || bash scripts/db/run-pgtap.sh (exits 0 with 0 tests if no test files yet)
   - id: 3
-    subtask_id: ST-3
     description: >-
-      Add null-config edge case test to the existing 'afterAggregate routing function' describe block in
-      elaboration.test.ts. The gap identified in elaboration: when state.config is null,
-      config?.structurerConfig?.enabled is falsy and config?.recalculateReadiness is falsy, so the function should
-      return 'save_to_db'. Add one test: 'routes to save_to_db when config is null'.
+      Create the transaction-rollback fixture helper (tests/db/fixtures/rollback-helper.sql) that wraps each test file
+      in BEGIN/ROLLBACK to ensure isolation, with inline documentation explaining the pattern
     files:
-      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/graphs/elaboration.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - tests/db/fixtures/rollback-helper.sql
+      - tests/db/README.md
     dependencies:
-      - 2
-    slice: packages
-    verification: pnpm --filter orchestrator test -- graphs/elaboration
-    acs_covered:
-      - AC-1
-      - AC-2
+      - 1
+    slice: backend
+    verification: File exists; README documents the transaction-rollback pattern per AC2
   - id: 4
-    subtask_id: ST-4
     description: >-
-      Run full verification: execute pnpm --filter orchestrator test -- graphs/elaboration and confirm all tests pass.
-      Then run pnpm check-types --filter @repo/orchestrator to confirm no type errors were introduced.
-    files: []
-    files_to_read: []
+      Create the example trigger unit test (tests/db/triggers/test_set_story_completed_at.sql) that validates the
+      set_story_completed_at() trigger: inserts a story, transitions state to completed, asserts completed_at is set,
+      and rolls back
+    files:
+      - tests/db/triggers/test_set_story_completed_at.sql
     dependencies:
       - 3
-    slice: packages
-    verification: pnpm --filter orchestrator test -- graphs/elaboration && pnpm check-types --filter @repo/orchestrator
-    acs_covered:
-      - AC-1
-      - AC-2
+    slice: backend
+    verification: bash scripts/db/run-pgtap.sh (all tests pass against pgtap postgres container)
+  - id: 5
+    description: >-
+      Add pgtap CI job to .github/workflows/pgtap.yml that spins up a postgres service container with pgtap installed,
+      applies the knowledge-base schema, and runs the full pgtap suite
+    files:
+      - .github/workflows/pgtap.yml
+    dependencies:
+      - 2
+      - 4
+    slice: backend
+    verification: >-
+      Workflow file is valid YAML and references the correct test runner script; can be validated locally with act or by
+      inspection
 files_to_change:
-  - path: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
-    action: modify
-    reason: >-
-      Add afterStructurer describe block (3 test cases) and null-config edge case to afterAggregate describe block (1
-      test case). Total: 4 new test cases.
+  - path: docker-compose.pgtap.yml
+    action: create
+    reason: pgtap-enabled postgres for local dev testing without touching shared compose files
+  - path: scripts/db/run-pgtap.sh
+    action: create
+    reason: Standardized test runner that discovers and executes all tests/db/**/*.sql files via pg_prove
+  - path: tests/db/fixtures/rollback-helper.sql
+    action: create
+    reason: Transaction-rollback fixture helper per AC2
+  - path: tests/db/README.md
+    action: create
+    reason: Documents the rollback fixture pattern and how to run pgtap locally and in CI per AC2
+  - path: tests/db/triggers/test_set_story_completed_at.sql
+    action: create
+    reason: Example trigger test per AC3
+  - .github/workflows/pgtap.yml: path
+    action: create
+    reason: CI pipeline job that runs pgtap on every PR per AC4
 commands_to_run:
-  - command: pnpm --filter orchestrator test -- graphs/elaboration
-    when: after each step that modifies test file, and as final verification
+  - command: docker compose -f docker-compose.pgtap.yml up -d
+    when: after step 1, to start local pgtap postgres
+    required: false
+  - command: bash scripts/db/run-pgtap.sh
+    when: after all code changes, to verify example test passes against local pgtap postgres
     required: true
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after all code changes
-    required: true
+  - command: docker compose -f docker-compose.pgtap.yml down
+    when: after test run, cleanup
+    required: false
 acceptance_criteria_map:
-  - ac_id: AC-1
-    planned_evidence: >-
-      Unit tests only target afterAggregate and afterStructurer from elaboration.ts — no exports added to
-      story-creation.ts, scope stays locked to currently-exported functions only
-    evidence_type: test
-  - ac_id: AC-2
-    planned_evidence: >-
-      Execution follows explicit subtask sequence ST-1 through ST-4 with verification command pnpm --filter orchestrator
-      test -- graphs/elaboration passing after each mutating step
-    evidence_type: test
-architectural_decisions: []
-complexity: simple
+  - ac_id: AC1
+    planned_evidence: docker-compose.pgtap.yml starts a postgres+pgtap container; scripts/db/run-pgtap.sh successfully invokes pg_prove
+    evidence_type: command
+  - ac_id: AC2
+    planned_evidence: tests/db/fixtures/rollback-helper.sql contains BEGIN/ROLLBACK wrapper; tests/db/README.md documents the pattern
+    evidence_type: file
+  - ac_id: AC3
+    planned_evidence: tests/db/triggers/test_set_story_completed_at.sql passes via pg_prove (bash scripts/db/run-pgtap.sh exits 0)
+    evidence_type: command
+  - ac_id: AC4
+    planned_evidence: .github/workflows/pgtap.yml exists with postgres service container and pgtap test run step
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should pgtap target the knowledge-base postgres (port 5433, pgvector image) or a dedicated standalone postgres
+      container?
+    decision: >-
+      Dedicated standalone docker-compose.pgtap.yml with a custom image (postgis/postgis or a pgtap-specific image). The
+      KB postgres is for agent state, not DB infrastructure testing. A dedicated container avoids polluting shared state
+      and can be torn down after tests.
+    rationale: 'Clean test isolation, no risk to KB data, can be used in CI via services: block'
+    decided_by: planner
+  - id: ARCH-002
+    question: >-
+      Which PostgreSQL image to use for pgtap? Options: (a) build custom FROM postgres:16 + apt-get install
+      postgresql-16-pgtap, (b) use itheory/pg-pgtap pre-built image
+    decision: >-
+      Use a Dockerfile that extends FROM postgres:16 and installs pgtap via apt-get, placed at infra/pgtap/Dockerfile.
+      This avoids external image dependencies and gives us full control. The docker-compose.pgtap.yml builds from this
+      Dockerfile.
+    rationale: >-
+      Reproducible, no external image trust issue, matches lesson from pgvector: always be explicit about extension
+      installation
+    decided_by: planner
+  - id: ARCH-003
+    question: Where should DB test files live?
+    decision: >-
+      tests/db/ at repo root, with sub-directories triggers/, fixtures/. This is outside apps/ and packages/ since pgtap
+      tests are pure SQL, not part of any Node package.
+    rationale: Keeps SQL tests separate from TypeScript test infrastructure; easy to glob for pg_prove
+    decided_by: planner
+complexity: moderate
 notes:
-  - 'Only one file is modified: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts'
-  - No production code changes — this story is test-only. No export keywords to add.
+  - pgtap is installed via apt-get install postgresql-16-pgtap in a custom Dockerfile extending postgres:16
   - >-
-    afterStructurer test cases must use the existing createTestState() helper from the same file and
-    ElaborationConfigSchema.parse() for config construction — consistent with the afterAggregate test pattern.
+    The example test targets set_story_completed_at() trigger which exists in the knowledge-base schema
+    (999_full_schema_baseline.sql). The CI job must apply that schema before running tests.
   - >-
-    Import afterStructurer at the bottom of the file alongside the existing afterAggregate import: import {
-    afterAggregate, afterStructurer } from '../elaboration.js'
-  - >-
-    afterStructurer is a pure synchronous function with exactly 2 branches: recalculateReadiness true →
-    update_readiness, else → save_to_db. Minimum 3 test cases: (1) true, (2) false, (3) null config.
-  - >-
-    afterAggregate null-config edge case: createTestState({ config: null }) → expect result to be 'save_to_db'. The
-    optional chaining in the source (config?.structurerConfig?.enabled, config?.recalculateReadiness) means null config
-    falls through all conditions to the final return.
-  - >-
-    ORCH-1010 provides createMockLLMProvider and createMockGraphState but these are not needed for ElaborationState
-    tests — the existing createTestState() in elaboration.test.ts is the right fixture builder.
-  - 'Verification command from elaboration: pnpm --filter orchestrator test -- graphs/elaboration'
-test_cases_detail:
-  afterStructurer:
-    - id: AS-1
-      description: routes to update_readiness when recalculateReadiness is true
-      state_setup: 'createTestState({ config: ElaborationConfigSchema.parse({ recalculateReadiness: true }) })'
-      expected: "'update_readiness'"
-    - id: AS-2
-      description: routes to save_to_db when recalculateReadiness is false
-      state_setup: 'createTestState({ config: ElaborationConfigSchema.parse({ recalculateReadiness: false }) })'
-      expected: "'save_to_db'"
-    - id: AS-3
-      description: routes to save_to_db when config is null
-      state_setup: 'createTestState({ config: null })'
-      expected: "'save_to_db'"
-  afterAggregate_new_edge_case:
-    - id: AA-5
-      description: routes to save_to_db when config is null (null guard path)
-      state_setup: 'createTestState({ config: null })'
-      expected: "'save_to_db'"
+    The CI job uses services: to run postgres as a sidecar, applies the schema baseline SQL, then runs bash
+    scripts/db/run-pgtap.sh
+  - No TypeScript code changes required — this story is purely SQL, shell, and CI YAML
+  - 'Lesson applied: pgtap tests run inside transactions and ROLLBACK at the end for isolation (per pgtap convention)'
+  - 'Lesson applied: graceful-skip not needed here because the CI job explicitly provisions its own DB with pgtap'
