@@ -22,14 +22,15 @@ Multiple filters can be combined: `/roadmap --priority=P1 --type=workflow`
 
 Plan types use a **compound `domain:subtype` key**. Known values:
 
-| Domain | Subtypes | Meaning |
-|--------|----------|---------|
-| `workflow` | `migration`, `feature`, `tooling`, `langgraph`, `testing` | Workflow/platform plans |
-| `lego` | `feature`, `refactor` | LEGO app (product) plans |
-| `monorepo` | `tooling`, `refactor` | Monorepo-wide infrastructure |
-| `tooling` | `workflow` | Tooling for workflow agents |
+| Domain     | Subtypes                                                  | Meaning                      |
+| ---------- | --------------------------------------------------------- | ---------------------------- |
+| `workflow` | `migration`, `feature`, `tooling`, `langgraph`, `testing` | Workflow/platform plans      |
+| `lego`     | `feature`, `refactor`                                     | LEGO app (product) plans     |
+| `monorepo` | `tooling`, `refactor`                                     | Monorepo-wide infrastructure |
+| `tooling`  | `workflow`                                                | Tooling for workflow agents  |
 
 When filtering with `--type=X`:
+
 - If `X` contains `:` → exact match on full compound type (e.g. `--type=workflow:migration`)
 - If `X` has no `:` → prefix match on domain (e.g. `--type=workflow` matches `workflow:migration`, `workflow:feature`, etc.)
 
@@ -39,12 +40,12 @@ When filtering with `--type=X`:
 
 Parse the user's input for optional filters:
 
-| Argument | Maps To | Behavior |
-|----------|---------|----------|
-| `--type=X` | `plan_type` filter | Exact if `X` contains `:`, prefix-match on domain otherwise |
-| `--priority=X` | `priority` filter | P1, P2, P3, P4, P5 |
-| `--prefix=X` | `story_prefix` filter | e.g., APIP, WINT, CDBN |
-| *(no args)* | no extra filters | all active plans |
+| Argument       | Maps To               | Behavior                                                    |
+| -------------- | --------------------- | ----------------------------------------------------------- |
+| `--type=X`     | `plan_type` filter    | Exact if `X` contains `:`, prefix-match on domain otherwise |
+| `--priority=X` | `priority` filter     | P1, P2, P3, P4, P5                                          |
+| `--prefix=X`   | `story_prefix` filter | e.g., APIP, WINT, CDBN                                      |
+| _(no args)_    | no extra filters      | all active plans                                            |
 
 ### Step 2 — Query KB
 
@@ -55,15 +56,20 @@ Parse the user's input for optional filters:
 - Use `limit: 50` for each call.
 
 **Fallback (if MCP tools unavailable):** Query the database directly:
+
 ```javascript
-const { Client } = require('./apps/api/knowledge-base/node_modules/pg');
-const c = new Client({ connectionString: 'postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase' });
+const { Client } = require('./apps/api/knowledge-base/node_modules/pg')
+const c = new Client({
+  connectionString: 'postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase',
+})
 ```
+
 SQL to fetch plans:
+
 ```sql
 SELECT plan_slug, title, LEFT(COALESCE(summary,''), 100) AS summary,
        plan_type, status, feature_dir, story_prefix, estimated_stories, priority, updated_at
-FROM public.plans
+FROM workflow.plans
 WHERE status IN ('in-progress','stories-created','draft','active','accepted')
   AND deleted_at IS NULL
   [AND priority = $1]              -- if --priority filter
@@ -77,6 +83,7 @@ ORDER BY
 ```
 
 Merge all results into a single list and sort by:
+
 1. Priority (P1 first)
 2. Status order: in-progress > stories-created > draft
 3. Plan slug alphabetically
@@ -90,6 +97,7 @@ Display results as a markdown table:
 ```
 
 **Column formatting:**
+
 - **Priority**: P1-P5
 - **Type**: full compound type value (e.g. `workflow:migration`, `lego:feature`)
 - **Status**: as-is

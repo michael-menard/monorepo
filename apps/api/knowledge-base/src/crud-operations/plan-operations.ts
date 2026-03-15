@@ -25,18 +25,14 @@ const planColumns = {
   summary: plans.summary,
   planType: plans.planType,
   status: plans.status,
-  featureDir: plans.featureDir,
   storyPrefix: plans.storyPrefix,
-  estimatedStories: plans.estimatedStories,
   priority: plans.priority,
   parentPlanId: plans.parentPlanId,
   tags: plans.tags,
   supersededBy: plans.supersededBy,
-  preBlockedStatus: plans.preBlockedStatus,
   createdAt: plans.createdAt,
   updatedAt: plans.updatedAt,
   deletedAt: plans.deletedAt,
-  deletedBy: plans.deletedBy,
 } as const
 
 // ============================================================================
@@ -184,14 +180,8 @@ export const KbUpsertPlanInputSchema = z.object({
     .optional()
     .default('draft'),
 
-  /** Target feature directory (e.g., 'plans/future/platform/autonomous-pipeline') */
-  feature_dir: z.string().optional(),
-
   /** Story ID prefix (e.g., 'APIP') */
   story_prefix: z.string().optional(),
-
-  /** Estimated number of stories */
-  estimated_stories: z.number().int().optional(),
 
   /** Priority level (P1 highest, P5 lowest, default P3) */
   priority: z.enum(['P1', 'P2', 'P3', 'P4', 'P5']).optional().default('P3'),
@@ -255,14 +245,8 @@ export const KbUpdatePlanInputSchema = z.object({
   /** New plan type - simple types or compound format {work_type}:{domain} */
   plan_type: z.string().optional(),
 
-  /** New feature directory */
-  feature_dir: z.string().nullable().optional(),
-
   /** New story prefix */
   story_prefix: z.string().nullable().optional(),
-
-  /** New estimated stories count */
-  estimated_stories: z.number().int().nullable().optional(),
 
   /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
   dependencies: z.array(z.string()).nullable().optional(),
@@ -474,7 +458,7 @@ export async function kb_list_plans(
   }
   if (validated.parent_plan_slug) {
     conditions.push(
-      sql`${plans.parentPlanId} = (SELECT id FROM public.plans WHERE plan_slug = ${validated.parent_plan_slug})`,
+      sql`${plans.parentPlanId} = (SELECT id FROM workflow.plans WHERE plan_slug = ${validated.parent_plan_slug})`,
     )
   }
 
@@ -533,9 +517,7 @@ export async function kb_upsert_plan(
     summary: validated.summary ?? null,
     planType: validated.plan_type ?? null,
     status: validated.status ?? 'draft',
-    featureDir: validated.feature_dir ?? null,
     storyPrefix: validated.story_prefix ?? null,
-    estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
     parentPlanId,
     tags: validated.tags ?? null,
@@ -655,10 +637,7 @@ export async function kb_update_plan(
   if (validated.tags !== undefined) updates.tags = validated.tags
   if (validated.title !== undefined) updates.title = validated.title
   if (validated.plan_type !== undefined) updates.planType = validated.plan_type
-  if (validated.feature_dir !== undefined) updates.featureDir = validated.feature_dir
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
-  if (validated.estimated_stories !== undefined)
-    updates.estimatedStories = validated.estimated_stories
   if (validated.superseded_by !== undefined) updates.supersededBy = validated.superseded_by
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
@@ -730,21 +709,17 @@ async function handlePlanImplemented(
       .where(and(eq(planDependencies.planSlug, planSlug), eq(planDependencies.satisfied, false)))
 
     if ((unsatisfied[0]?.count ?? 0) === 0) {
-      // All deps satisfied — unblock the plan (restore pre_blocked_status)
-      const blocked = await db
-        .select({ preBlockedStatus: plans.preBlockedStatus, status: plans.status })
+      // All deps satisfied — unblock the plan, restore to 'accepted'
+      const current = await db
+        .select({ status: plans.status })
         .from(plans)
         .where(eq(plans.planSlug, planSlug))
         .limit(1)
 
-      if (blocked[0]?.status === 'blocked' && blocked[0]?.preBlockedStatus) {
+      if (current[0]?.status === 'blocked') {
         await db
           .update(plans)
-          .set({
-            status: blocked[0].preBlockedStatus,
-            preBlockedStatus: null,
-            updatedAt: new Date(),
-          })
+          .set({ status: 'accepted', updatedAt: new Date() })
           .where(eq(plans.planSlug, planSlug))
 
         // Log the unblock event
@@ -791,11 +766,7 @@ export async function autoBlockPlanIfNeeded(
   // Block the plan
   await db
     .update(plans)
-    .set({
-      preBlockedStatus: current[0].status,
-      status: 'blocked',
-      updatedAt: new Date(),
-    })
+    .set({ status: 'blocked', updatedAt: new Date() })
     .where(eq(plans.planSlug, planSlug))
 
   // Log the block event
