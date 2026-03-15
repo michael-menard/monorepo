@@ -258,24 +258,24 @@ note: "First-match-wins means first ELIGIBLE experiment is used for routing. Ran
 
 ---
 
-## Test Suite 5: Story.yaml Integration
+## Test Suite 5: KB Metadata Integration
 
-### Test 5.1: experiment_variant written to story.yaml
+### Test 5.1: experiment_variant written to KB metadata
 
 **Given**: Story assigned to experiment variant "exp-fast-track"
-**When**: story.yaml is generated
-**Then**: Contains `experiment_variant: "exp-fast-track"` in frontmatter
+**When**: Story is generated
+**Then**: KB story metadata contains `experiment_variant: "exp-fast-track"`
 
-### Test 5.2: Control variant written to story.yaml
+### Test 5.2: Control variant written to KB metadata
 
 **Given**: Story assigned to control
-**When**: story.yaml is generated
-**Then**: Contains `experiment_variant: "control"` in frontmatter
+**When**: Story is generated
+**Then**: KB story metadata contains `experiment_variant: "control"`
 
 ### Test 5.3: Variant persisted through workflow
 
-**Given**: story.yaml with experiment_variant set
-**When**: Dev phases read story.yaml
+**Given**: KB story metadata with experiment_variant set
+**When**: Dev phases read KB story
 **Then**: experiment_variant is available for propagation to OUTCOME.yaml
 
 ---

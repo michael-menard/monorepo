@@ -4,7 +4,7 @@ updated: 2026-02-22
 version: 4.0.0
 type: leader
 permission_level: docs-only
-triggers: ["/pm-bootstrap-workflow"]
+triggers: ['/pm-bootstrap-workflow']
 skills_used:
   - /checkpoint
   - /token-log
@@ -33,42 +33,16 @@ Read context and analysis from `{FEATURE_DIR}/_bootstrap/`. Write all output to 
 ## Inputs
 
 ### KB Mode (from prompt)
+
 - `SETUP-CONTEXT` — prefix, feature_dir, project_name
 - `ANALYSIS` — stories, phases, dependencies, metrics
 
 ### File Mode (from disk)
+
 - `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`
 - `{FEATURE_DIR}/_bootstrap/ANALYSIS.yaml`
 
 ## Files to Generate
-
-### Story Files (both modes)
-
-For each story in ANALYSIS, create:
-
-```
-{feature_dir}/{story_id}/story.yaml
-```
-
-Story YAML format:
-
-```yaml
-id: "{PREFIX}-1010"
-title: "Story Title"
-status: backlog
-priority: medium
-phase: 1
-feature: "Brief description"
-goal: "One sentence goal"
-depends_on: []
-endpoints: []
-infrastructure: []
-risk_notes: "Known risks"
-sizing_warning: false
-created: "{ISO timestamp}"
-```
-
-Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
 
 ## KB Stories Insert
 
@@ -93,7 +67,7 @@ INSERT INTO stories (
   'backlog',
   '{phase number}',
   '{feature_dir}/{story_id}',
-  'story.yaml',
+  NULL,  -- story_file no longer used; KB is source of truth
   false,
   false, false, false
 )
@@ -116,15 +90,10 @@ Emit a fenced YAML block labelled `SUMMARY`:
 # SUMMARY
 schema: 2
 mode: kb
-plan_slug: "{plan_slug}"
-feature_dir: "{feature_dir}"
-prefix: "{PREFIX}"
-completed: "{ISO timestamp}"
-
-files_created:
-  - path: "{feature_dir}/{PREFIX}-1010/story.yaml"
-    type: story
-  # ... one entry per story
+plan_slug: '{plan_slug}'
+feature_dir: '{feature_dir}'
+prefix: '{PREFIX}'
+completed: '{ISO timestamp}'
 
 kb_stories_inserted: N
 
@@ -135,7 +104,7 @@ metrics:
   max_parallel: N
   phases: N
 
-next_step: "/elab-epic {PREFIX}"
+next_step: '/elab-epic {PREFIX}'
 ```
 
 ### File Mode — Write to Disk
@@ -144,11 +113,11 @@ Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| ANALYSIS missing/empty | BLOCKED: "No analysis data received — run Phase 1 first" |
-| File write failed | BLOCKED: "Cannot write to {path}" |
-| DB insert failed | Log warning: "KB insert failed — stories seeded via migrate:stories fallback" |
+| Error                  | Action                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| ANALYSIS missing/empty | BLOCKED: "No analysis data received — run Phase 1 first"                      |
+| File write failed      | BLOCKED: "Cannot write to {path}"                                             |
+| DB insert failed       | Log warning: "KB insert failed — stories seeded via migrate:stories fallback" |
 
 ## Signals
 
@@ -167,10 +136,10 @@ See: `.claude/agents/_shared/token-tracking.md`
 
 ### When to Query
 
-| Trigger | packType | packKey | Purpose |
-|---------|----------|---------|---------|
+| Trigger                            | packType       | packKey               | Purpose                                                      |
+| ---------------------------------- | -------------- | --------------------- | ------------------------------------------------------------ |
 | Workflow start (before generation) | `architecture` | `project-conventions` | Project conventions, coding standards, story format patterns |
-| Workflow start (before generation) | `codebase` | `agent_missions` | Agent mission summaries for story dependency alignment |
+| Workflow start (before generation) | `codebase`     | `agent_missions`      | Agent mission summaries for story dependency alignment       |
 
 ### Call Pattern
 

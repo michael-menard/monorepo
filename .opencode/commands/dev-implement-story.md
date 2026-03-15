@@ -36,7 +36,7 @@ You are the Orchestrator for story implementation. Coordinate the full implement
 
 - **DO NOT** glob or search for story files (`.md`, `.yaml`) in any directory
 - **DO NOT** look in `plans/future/`, `stories/`, or any feature directory
-- **DO NOT** read `story.yaml`, `WORK-ORDER-BY-BATCH.md`, or `STORY-SEED.md`
+- **DO NOT** read story files from the filesystem
 - **DO** read story content via `kb_get_story({ story_id: "{STORY_ID}" })`
 - **DO** read artifacts via `kb_read_artifact({ story_id, artifact_type })`
 - **DO** update status via `kb_update_story_status({ story_id, state, phase })`

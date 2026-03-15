@@ -4,7 +4,7 @@ updated: 2026-02-07
 version: 1.0.0
 type: leader
 permission_level: orchestrator
-triggers: ["/workflow-retro"]
+triggers: ['/workflow-retro']
 name: workflow-retro
 description: Analyze completed stories and generate workflow improvement proposals
 model: sonnet
@@ -30,6 +30,7 @@ Retrospective agent that analyzes completed story outcomes, detects patterns, lo
 ## Mission
 
 Establish continuous workflow improvement by:
+
 1. Loading story metrics from completed stories (OUTCOME.yaml if present, fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml)
 2. Comparing actual vs estimated metrics
 3. Detecting recurring patterns across stories
@@ -44,29 +45,31 @@ Before analysis, query KB for existing patterns and prior retrospective findings
 
 ### When to Query
 
-| Trigger | Query Pattern |
-|---------|--------------|
+| Trigger                 | Query Pattern                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
 | Starting retro analysis | `kb_search({ query: "workflow patterns lessons", tags: ["retro", "pattern"], limit: 10 })` |
-| Token variance detected | `kb_search({ query: "token budget estimation drift", role: "dev", limit: 5 })` |
-| High review cycles | `kb_search({ query: "review cycle failures lint build", role: "dev", limit: 5 })` |
+| Token variance detected | `kb_search({ query: "token budget estimation drift", role: "dev", limit: 5 })`             |
+| High review cycles      | `kb_search({ query: "review cycle failures lint build", role: "dev", limit: 5 })`          |
 
 ### When to Write
 
 Log patterns to KB when ANY of:
+
 - Pattern occurs in 3+ stories
 - Token variance exceeds 20% from estimate
 - Same AC/file fails review in 3+ stories
 - Agent correlation detected (e.g., backend-coder always triggers lint failures)
 
 **Write Pattern:**
+
 ```javascript
 kb_add_lesson({
-  title: "Pattern: {concise description}",
-  story_id: "{STORY_ID}",
-  category: "pattern",
-  what_happened: "{observation across N stories}",
-  recommendation: "{actionable improvement}",
-  tags: ["retro", "pattern", "{category}", "date:{YYYY-MM}", "source:workflow-retro"]
+  title: 'Pattern: {concise description}',
+  story_id: '{STORY_ID}',
+  category: 'pattern',
+  what_happened: '{observation across N stories}',
+  recommendation: '{actionable improvement}',
+  tags: ['retro', 'pattern', '{category}', 'date:{YYYY-MM}', 'source:workflow-retro'],
 })
 ```
 
@@ -94,25 +97,30 @@ kb_add_lesson({
 ### From Filesystem
 
 Scan these paths for completed stories (search all subdirs):
+
 - `{FEATURE_DIR}/done/{STORY_ID}/`
-- `plans/_complete/*/{STORY_ID}/`   ← stories in UAT, ready-for-qa, done stages
+- `plans/_complete/*/{STORY_ID}/` ← stories in UAT, ready-for-qa, done stages
 
 For each story, read in priority order:
 
 **Primary (use if present):**
+
 - `_implementation/OUTCOME.yaml` — aggregated metrics
 
 **Fallback (use when OUTCOME.yaml absent — these always exist):**
+
 - `_implementation/CHECKPOINT.yaml` — phase timing, iterations, status
 - KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
 - `_implementation/REVIEW.yaml` — code review findings, cycles, severity breakdown
 - `_implementation/EVIDENCE.yaml` — AC coverage, pass/fail per AC
 - `_implementation/TOKEN-LOG.md` — [BACKWARD-COMPAT ONLY] legacy per-phase token counts for stories predating KB migration; only read if KB storyTokenUsage returns no entries
 
-**Always read:**
-- `story.yaml` — estimated_tokens, ACs, story_type
+**Also read from KB:**
+
+- `kb_get_story({ story_id })` — estimated_tokens, ACs, story_type
 
 **Pending KB entries (scan, stamp, and surface):**
+
 - `_implementation/DEFERRED-KB-WRITE.yaml` — check `status: pending`
 - `_implementation/DEFERRED-KB-WRITES.yaml` — check `status: pending`
 - Also scan story root for `DEFERRED-KB-WRITE*.yaml`
@@ -129,13 +137,14 @@ Report any pending deferred write files found — they contain lessons that have
 
 Compare estimated vs actual token usage.
 
-| Metric | Threshold | Action |
-|--------|-----------|--------|
-| Variance > 20% | Pattern candidate | Log to KB if repeated |
-| Variance > 50% | Significant outlier | Flag for human review |
-| Consistent underestimation | Calibration needed | Propose budget adjustment |
+| Metric                     | Threshold           | Action                    |
+| -------------------------- | ------------------- | ------------------------- |
+| Variance > 20%             | Pattern candidate   | Log to KB if repeated     |
+| Variance > 50%             | Significant outlier | Flag for human review     |
+| Consistent underestimation | Calibration needed  | Propose budget adjustment |
 
 **Pattern Example:**
+
 ```
 Stories WISH-001, WISH-003, WISH-007 all exceeded budget by 30%+.
 Common factor: Complex backend integration.
@@ -146,13 +155,14 @@ Recommendation: Increase budget multiplier for integration stories by 1.3x.
 
 Track code review iterations and failure patterns.
 
-| Metric | Threshold | Action |
-|--------|-----------|--------|
-| Cycles > 2 | Above baseline | Analyze failure types |
-| Same failure 3x | Pattern detected | Log to KB |
-| Same file fails | File-specific pattern | Recommend pre-check |
+| Metric          | Threshold             | Action                |
+| --------------- | --------------------- | --------------------- |
+| Cycles > 2      | Above baseline        | Analyze failure types |
+| Same failure 3x | Pattern detected      | Log to KB             |
+| Same file fails | File-specific pattern | Recommend pre-check   |
 
 **Pattern Example:**
+
 ```
 routes.ts fails lint in 5/8 recent stories.
 Common issue: Missing type annotations on handler params.
@@ -163,13 +173,14 @@ Recommendation: Add lint pre-check to backend-coder.
 
 Detect agent pairs with correlated failures.
 
-| Correlation | Description | Action |
-|-------------|-------------|--------|
+| Correlation      | Description                               | Action                     |
+| ---------------- | ----------------------------------------- | -------------------------- |
 | Coder → Reviewer | Same coder triggers same reviewer failure | Improve coder instructions |
-| Phase → Phase | Late phase catches early phase issues | Shift left |
-| AC → Failure | Specific AC types always fail | Improve AC clarity |
+| Phase → Phase    | Late phase catches early phase issues     | Shift left                 |
+| AC → Failure     | Specific AC types always fail             | Improve AC clarity         |
 
 **Pattern Example:**
+
 ```
 When backend-coder implements auth routes, security review finds 80% issues.
 Recommendation: Add security checklist to backend-coder for auth-related work.
@@ -182,12 +193,13 @@ detected OUTSIDE the story's scope. They represent codebase-wide technical debt,
 
 Data source: `codebase_health` section in each story's review artifact (KB `review` artifact or REVIEW.yaml).
 
-| Metric | Source | Pattern Trigger |
-|--------|--------|-----------------|
-| `pre_existing_type_errors` | `review.codebase_health.pre_existing_type_errors` | Trending up across stories |
+| Metric                        | Source                                               | Pattern Trigger                       |
+| ----------------------------- | ---------------------------------------------------- | ------------------------------------- |
+| `pre_existing_type_errors`    | `review.codebase_health.pre_existing_type_errors`    | Trending up across stories            |
 | `pre_existing_build_failures` | `review.codebase_health.pre_existing_build_failures` | Any build failure in non-touched file |
 
 **Pattern Example:**
+
 ```
 Stories WKFL-010, WKFL-011, WKFL-012 each encountered 40+ pre-existing type errors.
 The count is growing: 12 → 28 → 47.
@@ -200,11 +212,11 @@ Note: If `codebase_health` is absent from a story's review data (older stories),
 
 Track which AC types pass/fail first try.
 
-| Pattern | Implication | Action |
-|---------|-------------|--------|
-| AC always passes | Well-specified | Model for other ACs |
-| AC always fails | Under-specified | Improve AC writing guidance |
-| AC flaky | Inconsistent interpretation | Add verification examples |
+| Pattern          | Implication                 | Action                      |
+| ---------------- | --------------------------- | --------------------------- |
+| AC always passes | Well-specified              | Model for other ACs         |
+| AC always fails  | Under-specified             | Improve AC writing guidance |
+| AC flaky         | Inconsistent interpretation | Add verification examples   |
 
 ---
 
@@ -228,7 +240,7 @@ Before analyzing any story:
    - Preferred: `OUTCOME.yaml`
    - Fallback: `CHECKPOINT.yaml` + KB storyTokenUsage + `REVIEW.yaml` + `EVIDENCE.yaml` (+ `TOKEN-LOG.md` as legacy-only last resort)
    - Note which source was used in the RETRO output (`data_source: outcome | fallback`)
-3. Load story.yaml for context (estimated_tokens, ACs, story_type)
+3. Load story context from KB: `kb_get_story({ story_id })` for estimated_tokens, ACs, story_type
 4. Query KB for existing patterns
 5. Scan `_implementation/` and story root for pending `DEFERRED-KB-WRITE*.yaml` files — collect, report, and stamp with `processed_at` + `imported: true`
 
@@ -238,44 +250,44 @@ For each story, calculate:
 
 ```yaml
 story_analysis:
-  story_id: "{STORY_ID}"
-  data_source: outcome | fallback   # which artifacts were used
+  story_id: '{STORY_ID}'
+  data_source: outcome | fallback # which artifacts were used
 
   token_metrics:
-    estimated: {N}
-    actual: {N}
-    variance_percent: {N}
+    estimated: { N }
+    actual: { N }
+    variance_percent: { N }
     rating: on_target | over_budget | under_budget
 
   review_metrics:
-    cycles: {N}
+    cycles: { N }
     baseline: 2
     above_baseline: true | false
     failure_breakdown:
-      lint: {N}
-      typecheck: {N}
-      security: {N}
-      build: {N}
+      lint: { N }
+      typecheck: { N }
+      security: { N }
+      build: { N }
 
   phase_metrics:
-    slowest_phase: "{phase}"
-    token_heaviest_phase: "{phase}"
-    failure_phases: ["{phase}", ...]
+    slowest_phase: '{phase}'
+    token_heaviest_phase: '{phase}'
+    failure_phases: ['{phase}', ...]
 
   decision_metrics:
-    auto_accepted: {N}
-    escalated: {N}
-    escalation_rate: {percent}
+    auto_accepted: { N }
+    escalated: { N }
+    escalation_rate: { percent }
 
-  codebase_health:              # from review artifact codebase_health section; null if not present
-    pre_existing_type_errors: {N}
-    pre_existing_build_failures: {N}
+  codebase_health: # from review artifact codebase_health section; null if not present
+    pre_existing_type_errors: { N }
+    pre_existing_build_failures: { N }
 
-  pending_deferred_writes:      # populated if DEFERRED-KB-WRITE*.yaml found
-    - file: "_implementation/DEFERRED-KB-WRITES.yaml"
-      entry_count: {N}
-      status: pending | stamped    # stamped = processed_at was written
-      processed_at: "{ISO timestamp}"
+  pending_deferred_writes: # populated if DEFERRED-KB-WRITE*.yaml found
+    - file: '_implementation/DEFERRED-KB-WRITES.yaml'
+      entry_count: { N }
+      status: pending | stamped # stamped = processed_at was written
+      processed_at: '{ISO timestamp}'
 ```
 
 ### Phase 3: Cross-Story Pattern Detection
@@ -286,24 +298,24 @@ Aggregate across stories:
 patterns:
   token_patterns:
     - type: consistent_overrun
-      stories: ["WISH-001", "WISH-003"]
-      avg_variance: {percent}
-      common_factor: "{description}"
+      stories: ['WISH-001', 'WISH-003']
+      avg_variance: { percent }
+      common_factor: '{description}'
       significance: high | medium | low
 
   review_patterns:
     - type: repeated_failure
       failure_type: lint
-      file_pattern: "routes.ts"
-      occurrences: {N}
-      stories: ["WISH-001", "WISH-003"]
+      file_pattern: 'routes.ts'
+      occurrences: { N }
+      stories: ['WISH-001', 'WISH-003']
       significance: high | medium | low
 
   agent_correlations:
     - coder: backend-coder
       reviewer: code-review-security
-      correlation_rate: {percent}
-      stories: ["WISH-002", "WISH-004"]
+      correlation_rate: { percent }
+      stories: ['WISH-002', 'WISH-004']
       significance: high | medium | low
 ```
 
@@ -314,22 +326,26 @@ For patterns meeting thresholds:
 ```javascript
 // Example: Token overrun pattern
 kb_add_lesson({
-  title: "Pattern: Integration stories exceed token budget by 30%",
-  story_id: "WKFL-001",  // Source story for this retro
-  category: "pattern",
-  what_happened: "Stories WISH-001, WISH-003, WISH-007 all exceeded budget by 30%+. Common factor: Complex backend integration with external APIs.",
-  recommendation: "Apply 1.3x multiplier to token estimates for stories tagged 'integration' or 'external-api'.",
-  tags: ["retro", "pattern", "token-budget", "date:2026-02", "source:workflow-retro"]
+  title: 'Pattern: Integration stories exceed token budget by 30%',
+  story_id: 'WKFL-001', // Source story for this retro
+  category: 'pattern',
+  what_happened:
+    'Stories WISH-001, WISH-003, WISH-007 all exceeded budget by 30%+. Common factor: Complex backend integration with external APIs.',
+  recommendation:
+    "Apply 1.3x multiplier to token estimates for stories tagged 'integration' or 'external-api'.",
+  tags: ['retro', 'pattern', 'token-budget', 'date:2026-02', 'source:workflow-retro'],
 })
 
 // Example: Review failure pattern
 kb_add_lesson({
-  title: "Pattern: routes.ts consistently fails lint review",
-  story_id: "WKFL-001",
-  category: "pattern",
-  what_happened: "routes.ts failed lint in 5/8 recent stories. Common issue: Missing type annotations on handler params.",
-  recommendation: "Add lint pre-check step to backend-coder agent for route handlers. Consider adding type annotation template.",
-  tags: ["retro", "pattern", "lint", "routes", "date:2026-02", "source:workflow-retro"]
+  title: 'Pattern: routes.ts consistently fails lint review',
+  story_id: 'WKFL-001',
+  category: 'pattern',
+  what_happened:
+    'routes.ts failed lint in 5/8 recent stories. Common issue: Missing type annotations on handler params.',
+  recommendation:
+    'Add lint pre-check step to backend-coder agent for route handlers. Consider adding type annotation template.',
+  tags: ['retro', 'pattern', 'lint', 'routes', 'date:2026-02', 'source:workflow-retro'],
 })
 ```
 
@@ -389,10 +405,10 @@ Scope: {single | batch | epic}
 
 ## KB Entries Created
 
-| Entry | Pattern | Tags |
-|-------|---------|------|
+| Entry  | Pattern                  | Tags                         |
+| ------ | ------------------------ | ---------------------------- |
 | kb_xxx | Token budget integration | retro, pattern, token-budget |
-| kb_yyy | Routes lint failure | retro, pattern, lint |
+| kb_yyy | Routes lint failure      | retro, pattern, lint         |
 
 ## Next Steps
 
@@ -405,11 +421,11 @@ Scope: {single | batch | epic}
 
 ## Output Files
 
-| File | Location | Description |
-|------|----------|-------------|
-| `RETRO-{STORY_ID}.yaml` | `{story_dir}/_implementation/` | Single-story analysis (presence = already analyzed) |
-| `WORKFLOW-RECOMMENDATIONS.md` | `{feature_dir}/` | Aggregate recommendations |
-| KB entries | Knowledge Base | Significant patterns |
+| File                          | Location                       | Description                                         |
+| ----------------------------- | ------------------------------ | --------------------------------------------------- |
+| `RETRO-{STORY_ID}.yaml`       | `{story_dir}/_implementation/` | Single-story analysis (presence = already analyzed) |
+| `WORKFLOW-RECOMMENDATIONS.md` | `{feature_dir}/`               | Aggregate recommendations                           |
+| KB entries                    | Knowledge Base                 | Significant patterns                                |
 
 The `RETRO-{STORY_ID}.yaml` file serves dual purpose: it IS the output AND the dedup guard. Its presence means the story has been analyzed. To re-analyze, pass `--force`.
 
@@ -417,12 +433,12 @@ The `RETRO-{STORY_ID}.yaml` file serves dual purpose: it IS the output AND the d
 
 ## Significance Thresholds
 
-| Pattern Type | Minimum Occurrences | Minimum Variance |
-|--------------|---------------------|------------------|
-| Token overrun | 3 stories | 20% |
-| Review failure | 3 stories | N/A |
-| Agent correlation | 3 stories | 60% correlation |
-| AC failure | 3 stories | 40% failure rate |
+| Pattern Type      | Minimum Occurrences | Minimum Variance |
+| ----------------- | ------------------- | ---------------- |
+| Token overrun     | 3 stories           | 20%              |
+| Review failure    | 3 stories           | N/A              |
+| Agent correlation | 3 stories           | 60% correlation  |
+| AC failure        | 3 stories           | 40% failure rate |
 
 Patterns below thresholds are noted in recommendations but not logged to KB.
 
@@ -431,6 +447,7 @@ Patterns below thresholds are noted in recommendations but not logged to KB.
 ## Completion Signal
 
 End with exactly one of:
+
 - `RETROSPECTIVE COMPLETE: {N} patterns detected, {M} KB entries created`
 - `RETROSPECTIVE COMPLETE: No significant patterns detected`
 - `RETROSPECTIVE FAILED: {reason}`
@@ -459,24 +476,24 @@ End with exactly one of:
 
 ### Triggered By
 
-| Trigger | Description |
-|---------|-------------|
-| `/workflow-retro {STORY_ID}` | Manual single-story retro |
-| `/workflow-retro --batch` | Batch retro on recent completions |
-| Post-QA-gate hook (future) | Auto-trigger after story completion |
+| Trigger                      | Description                         |
+| ---------------------------- | ----------------------------------- |
+| `/workflow-retro {STORY_ID}` | Manual single-story retro           |
+| `/workflow-retro --batch`    | Batch retro on recent completions   |
+| Post-QA-gate hook (future)   | Auto-trigger after story completion |
 
 ### Produces
 
-| Output | Consumer |
-|--------|----------|
-| `RETRO-{STORY_ID}.yaml` | Calibration agent (WKFL-002) |
-| KB pattern entries | Future retros, planning agents |
-| `WORKFLOW-RECOMMENDATIONS.md` | Human review, story creation |
+| Output                        | Consumer                       |
+| ----------------------------- | ------------------------------ |
+| `RETRO-{STORY_ID}.yaml`       | Calibration agent (WKFL-002)   |
+| KB pattern entries            | Future retros, planning agents |
+| `WORKFLOW-RECOMMENDATIONS.md` | Human review, story creation   |
 
 ### Reads
 
-| Input | Source |
-|-------|--------|
-| `OUTCOME.yaml` | dev-documentation-leader |
-| Prior KB patterns | Knowledge Base |
-| Story metadata | story.yaml |
+| Input             | Source                   |
+| ----------------- | ------------------------ |
+| `OUTCOME.yaml`    | dev-documentation-leader |
+| Prior KB patterns | Knowledge Base           |
+| Story metadata    | KB (`kb_get_story`)      |

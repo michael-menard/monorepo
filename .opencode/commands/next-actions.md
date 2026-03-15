@@ -20,5 +20,4 @@ Query the KB database for the next unblocked stories and recommend commands.
 
 ## Notes
 
-- Falls back to WORK-ORDER-BY-BATCH.md if KB has no stories
 - Helps identify what to work on next

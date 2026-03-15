@@ -167,10 +167,6 @@ REVIEW/FIX LOOP (max 3 iterations)
 
 ## Execution
 
-### Step 0: Claim Work Order
-
-Skip silently — WORK-ORDER-BY-BATCH.md is a feature-dir artifact and is no longer used.
-
 ### Step 0.6: Claim Story in KB
 
 1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "implementation" })`
@@ -337,6 +333,7 @@ Skip the rest of Step 1.3 and continue to Step 2.
      If user confirms (types exactly "abandon", case-sensitive):
      1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned', metadata: { abandoned_reason: 'conflict_takeover', taken_over_at: '<ISO_TIMESTAMP>' } })`
      2. Check result — if null or error (WINT-1160 AC-10):
+
         ```
         WARN: worktree_mark_complete returned null. Old worktree may not have been marked as abandoned.
         [y] Proceed anyway — create new worktree without confirmed abandonment
@@ -345,6 +342,7 @@ Skip the rest of Step 1.3 and continue to Step 2.
 
         - If user selects [y]: log warning and continue to step 3
         - If user selects [n]: STOP with message: "Take-over aborted. Use /wt:switch to resume the existing worktree, or re-run with --skip-worktree to bypass."
+
      3. Only if step 1 succeeded or user chose to proceed: call `/wt:new story/{STORY_ID} main` to create new worktree
      4. Register new worktree, continue to step 4
 

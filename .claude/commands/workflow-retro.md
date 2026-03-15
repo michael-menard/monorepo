@@ -3,7 +3,7 @@ created: 2026-02-07
 updated: 2026-02-07
 version: 1.0.0
 type: orchestrator
-agents: ["workflow-retro.agent.md"]
+agents: ['workflow-retro.agent.md']
 story_id: WKFL-001
 ---
 
@@ -25,16 +25,16 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 
 ## Arguments
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `STORY_ID` | No* | Story ID to analyze (required unless --batch or --scope) |
-| `--batch` | No | Analyze all recently completed stories |
-| `--scope=epic` | No | Analyze all done stories in specified epic |
-| `--days=N` | No | Days to look back for batch mode (default: 30) |
-| `--feature-dir` | No | Feature directory path (auto-detected if possible) |
-| `--force` | No | Re-analyze stories that already have RETRO-*.yaml (overwrite) |
+| Argument        | Required | Description                                                    |
+| --------------- | -------- | -------------------------------------------------------------- |
+| `STORY_ID`      | No\*     | Story ID to analyze (required unless --batch or --scope)       |
+| `--batch`       | No       | Analyze all recently completed stories                         |
+| `--scope=epic`  | No       | Analyze all done stories in specified epic                     |
+| `--days=N`      | No       | Days to look back for batch mode (default: 30)                 |
+| `--feature-dir` | No       | Feature directory path (auto-detected if possible)             |
+| `--force`       | No       | Re-analyze stories that already have RETRO-\*.yaml (overwrite) |
 
-*At least one of STORY_ID, --batch, or --scope is required.
+\*At least one of STORY_ID, --batch, or --scope is required.
 
 ---
 
@@ -47,11 +47,12 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 ```
 
 Analyze one completed story:
+
 1. Check if `_implementation/RETRO-WISH-2045.yaml` already exists — skip if present (unless --force)
 2. Locate story (check `done/`, `plans/_complete/` subdirs)
 3. Read OUTCOME.yaml if present; fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml (TOKEN-LOG.md as legacy-only last resort for pre-KB stories)
 4. Calculate token variance, review cycles, phase metrics
-5. Scan `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files — surface in output
+5. Scan `_implementation/` for pending DEFERRED-KB-WRITE\*.yaml files — surface in output
 6. Generate RETRO-{STORY_ID}.yaml
 7. Query KB for related patterns
 8. Update WORKFLOW-RECOMMENDATIONS.md if significant patterns found
@@ -63,10 +64,11 @@ Analyze one completed story:
 ```
 
 Analyze all stories completed in time range:
+
 1. Scan all feature directories for stories in `done/` and `plans/_complete/` stage subdirs
 2. **Skip stories where `RETRO-{STORY_ID}.yaml` already exists** (unless --force)
 3. For remaining stories, load metrics (OUTCOME.yaml preferred; fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml; TOKEN-LOG.md as legacy-only last resort)
-4. Scan each `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files
+4. Scan each `_implementation/` for pending DEFERRED-KB-WRITE\*.yaml files
 5. Aggregate patterns across stories
 6. Detect cross-story correlations
 7. Log significant patterns to KB
@@ -79,6 +81,7 @@ Analyze all stories completed in time range:
 ```
 
 Analyze all completed stories in one epic:
+
 1. Scan `{feature_dir}/done/` for all stories
 2. Build epic-specific patterns
 3. Compare to cross-epic baselines (if available)
@@ -90,17 +93,17 @@ Analyze all completed stories in one epic:
 
 ### Single Story
 
-| File | Location | Description |
-|------|----------|-------------|
+| File                    | Location                       | Description          |
+| ----------------------- | ------------------------------ | -------------------- |
 | `RETRO-{STORY_ID}.yaml` | `{story_dir}/_implementation/` | Story-level analysis |
 
 ### Batch/Epic
 
-| File | Location | Description |
-|------|----------|-------------|
-| `RETRO-{STORY_ID}.yaml` | Per story | Individual analyses |
-| `WORKFLOW-RECOMMENDATIONS.md` | `plans/future/workflow-learning/` | Aggregate proposals |
-| KB entries | Knowledge Base | Patterns meeting thresholds |
+| File                          | Location                          | Description                 |
+| ----------------------------- | --------------------------------- | --------------------------- |
+| `RETRO-{STORY_ID}.yaml`       | Per story                         | Individual analyses         |
+| `WORKFLOW-RECOMMENDATIONS.md` | `plans/future/workflow-learning/` | Aggregate proposals         |
+| KB entries                    | Knowledge Base                    | Patterns meeting thresholds |
 
 ---
 
@@ -126,19 +129,19 @@ inputs:
 
 Patterns must meet these thresholds to be logged to KB:
 
-| Pattern Type | Minimum Occurrences | Minimum Variance |
-|--------------|---------------------|------------------|
-| Token overrun | 3 stories | 20% |
-| Review failure | 3 stories | N/A |
-| Agent correlation | 3 stories | 60% |
-| AC failure rate | 3 stories | 40% |
+| Pattern Type      | Minimum Occurrences | Minimum Variance |
+| ----------------- | ------------------- | ---------------- |
+| Token overrun     | 3 stories           | 20%              |
+| Review failure    | 3 stories           | N/A              |
+| Agent correlation | 3 stories           | 60%              |
+| AC failure rate   | 3 stories           | 40%              |
 
 ---
 
 ## Prerequisites
 
 Story must be located (in `done/` or `plans/_complete/` stage subdirs) with:
-- `story.yaml` — Required
+
 - `_implementation/OUTCOME.yaml` — Preferred; fallback if absent
 - `_implementation/CHECKPOINT.yaml` — Used as fallback data source
 - KB `storyTokenUsage` entries — queried automatically
@@ -156,6 +159,7 @@ If neither OUTCOME.yaml nor CHECKPOINT.yaml is present, the story is skipped wit
 ```
 
 Output:
+
 ```
 RETROSPECTIVE COMPLETE: 2 patterns detected, 0 KB entries created
 - Token variance: +15% (below threshold)
@@ -170,6 +174,7 @@ RETROSPECTIVE COMPLETE: 2 patterns detected, 0 KB entries created
 ```
 
 Output:
+
 ```
 Skipping WISH-2040 — RETRO already exists (use --force to re-analyze)
 Skipping WISH-2041 — RETRO already exists (use --force to re-analyze)
@@ -213,6 +218,7 @@ hooks:
 ### Feed Into Calibration
 
 RETRO-{STORY_ID}.yaml files are consumed by:
+
 - Calibration agent (WKFL-002) for budget adjustment
 - Pattern miner (WKFL-006) for cross-epic analysis
 
@@ -220,8 +226,8 @@ RETRO-{STORY_ID}.yaml files are consumed by:
 
 ## Related Commands
 
-| Command | Description |
-|---------|-------------|
-| `/story-status` | Check story location/status |
-| `/token-report` | Generate token summary for story |
-| `/qa-gate` | QA gate decision (produces data for retro) |
+| Command         | Description                                |
+| --------------- | ------------------------------------------ |
+| `/story-status` | Check story location/status                |
+| `/token-report` | Generate token summary for story           |
+| `/qa-gate`      | QA gate decision (produces data for retro) |

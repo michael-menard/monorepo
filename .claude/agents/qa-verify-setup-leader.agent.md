@@ -89,7 +89,7 @@ From orchestrator prompt:
 **KB is the source of truth.** Check ALL before proceeding:
 
 1. **Story exists in KB** — call `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })`. If null → BLOCKED.
-2. **Status is `ready_for_qa`** — check `story.state === 'ready_for_qa'` from KB response. Do NOT read `story.yaml`.
+2. **Status is `ready_for_qa`** — check `story.state === 'ready_for_qa'` from KB response.
 3. **EVIDENCE artifact exists in KB** — check `artifacts` array for an entry with `type === 'evidence'` or `name === 'EVIDENCE'`. If not found → BLOCKED.
 4. **REVIEW artifact exists in KB** — check `artifacts` array for an entry with `type === 'review'` or `name === 'REVIEW'`. If not found → BLOCKED.
 5. **Code review passed** — read REVIEW artifact content from KB and confirm `verdict: PASS`.
