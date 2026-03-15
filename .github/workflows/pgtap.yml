@@ -1,0 +1,100 @@
+# .github/workflows/pgtap.yml
+#
+# pgtap Database Unit Tests
+#
+# Runs the pgtap SQL test suite on every pull request and on pushes to main.
+# Uses a postgres:16 service container with pgtap installed via pg_prove,
+# applies the knowledge-base schema baseline, then runs all tests under tests/db/.
+#
+# Acceptance Criteria Coverage:
+#   AC1 — pgtap installed and runnable in CI
+#   AC3 — Example trigger unit test passes
+#   AC4 — CI pipeline runs pgtap suite on each PR
+
+name: pgtap
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tests/db/**'
+      - 'scripts/db/run-pgtap.sh'
+      - 'apps/api/knowledge-base/src/db/migrations/**'
+      - '.github/workflows/pgtap.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'tests/db/**'
+      - 'scripts/db/run-pgtap.sh'
+      - 'apps/api/knowledge-base/src/db/migrations/**'
+      - '.github/workflows/pgtap.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pgtap:
+    name: pgtap DB Unit Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Custom image is not available in GitHub Actions service containers,
+        # so we use postgres:16 and install pgtap in a setup step.
+        image: postgres:16
+        env:
+          POSTGRES_USER: pgtap
+          POSTGRES_PASSWORD: pgtap
+          POSTGRES_DB: pgtap_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U pgtap -d pgtap_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PGTAP_DB_HOST: localhost
+      PGTAP_DB_PORT: 5434
+      PGTAP_DB_USER: pgtap
+      PGTAP_DB_PASS: pgtap
+      PGTAP_DB_NAME: pgtap_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pgtap and pg_prove
+        run: |
+          sudo apt-get update -qq
+          # Install pgtap PostgreSQL extension
+          sudo apt-get install -y postgresql-16-pgtap
+          # Install pg_prove (Perl-based TAP harness for pgtap)
+          sudo apt-get install -y libtap-parser-sourcehandler-pgtap-perl
+
+      - name: Install pgtap extension into test database
+        env:
+          PGPASSWORD: pgtap
+        run: |
+          psql -h localhost -p 5434 -U pgtap -d pgtap_test -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
+
+      - name: Apply knowledge-base schema baseline
+        env:
+          PGPASSWORD: pgtap
+        run: |
+          # Apply the full schema so trigger functions, tables, and extensions exist
+          psql -h localhost -p 5434 -U pgtap -d pgtap_test \
+            -f apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+
+      - name: Verify pg_prove is available
+        run: pg_prove --version
+
+      - name: Run pgtap test suite
+        run: bash scripts/db/run-pgtap.sh
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "pgtap run complete. Check the step above for pass/fail details."
