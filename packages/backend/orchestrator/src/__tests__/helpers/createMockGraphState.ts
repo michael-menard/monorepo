@@ -78,7 +78,7 @@ type MockGraphStateOptions = z.infer<typeof MockGraphStateOptionsSchema>
  */
 export function createMockGraphState(overrides?: Partial<GraphStateInput>): GraphState {
   // Parse base options (storyId + epicPrefix) from overrides
-  const baseOptions = MockGraphStateOptionsSchema.parse({
+  const baseOptions: MockGraphStateOptions = MockGraphStateOptionsSchema.parse({
     storyId: overrides?.storyId,
     epicPrefix: overrides?.epicPrefix,
   })
