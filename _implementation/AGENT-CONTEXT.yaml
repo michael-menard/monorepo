@@ -1,0 +1,34 @@
+story_id: CDBE-0010
+domain: database-infrastructure
+lessons:
+  - source: pgvector lesson
+    lesson: >-
+      Base postgres:16 image does not include extensions like pgvector. pgtap similarly requires apt-get install or a
+      custom Docker image. For local dev, prefer a custom Dockerfile or docker-compose override that installs pgtap via
+      apt-get (postgresql-16-pgtap) rather than assuming it exists in the base image.
+  - source: Integration test skip pattern
+    lesson: >-
+      CI pipelines often lack a live database. The established pattern is graceful skip — check DB availability before
+      running, skip with informative message when unavailable. For pgtap (which IS the DB test), the CI job should spin
+      up its own ephemeral postgres container with pgtap pre-installed, rather than depending on a shared DB.
+  - source: Sidecar integration test pattern
+    lesson: >-
+      When running tests against live postgres, use fileParallelism:false + singleThread to prevent connection conflicts
+      and ensure test isolation. pgtap tests run inside transactions that are rolled back — this is the gold standard
+      for DB test isolation.
+  - source: CI drizzle-kit gate lesson
+    lesson: >-
+      CI gates for DB infrastructure must be added to GitHub Actions workflows (not just turbo.json) because they
+      operate outside the JS package build graph.
+adrs: []
+pattern_discovery:
+  - >-
+    Trigger functions in knowledge-base schema: audit_story_changes(), set_story_completed_at(), set_story_started_at()
+    — these are the exemplar triggers the example test should validate.
+  - >-
+    Local postgres is at infra/compose.lego-app.yaml on port 5432 (postgres:16 bare image). KB postgres is at
+    apps/api/knowledge-base/docker-compose.yml on port 5433 (pgvector/pgvector:pg16). pgtap must target a postgres
+    instance where pgtap is installed — requires a dedicated test postgres or service override.
+  - >-
+    The CI workflow (ci.yml) uses ubuntu-latest + pnpm setup. A new pgtap job can run services: postgres with a custom
+    image that includes pgtap.
