@@ -66,7 +66,7 @@ const TYPE_OPTIONS = [
 
 const fromSelect = (v: string) => (v === ALL ? '' : v)
 
-function StoryGauge({ plan }: { plan: Plan }) {
+export function StoryGauge({ plan }: { plan: Plan }) {
   const total = plan.totalStories
   if (total === 0) return <span className="text-xs text-slate-500 font-mono">—</span>
 
