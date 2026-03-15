@@ -59,36 +59,6 @@ echo "Database: $PGTAP_DB_NAME"
 echo "User:     $PGTAP_DB_USER"
 echo ""
 
-# ── Check database availability (pg_isready guard) ───────────────────────────
-# If the database is not reachable, skip gracefully rather than failing hard.
-# This allows CI pipelines to succeed when the DB container is not running.
-if command -v pg_isready >/dev/null 2>&1; then
-  if ! pg_isready \
-    --host "$PGTAP_DB_HOST" \
-    --port "$PGTAP_DB_PORT" \
-    --dbname "$PGTAP_DB_NAME" \
-    --username "$PGTAP_DB_USER" \
-    --quiet 2>/dev/null; then
-    echo "SKIP: Database not available at $PGTAP_DB_HOST:$PGTAP_DB_PORT/$PGTAP_DB_NAME — pgtap tests skipped."
-    exit 0
-  fi
-else
-  # pg_isready not available: attempt a psql ping instead
-  if ! PGPASSWORD="$PGTAP_DB_PASS" psql \
-    --host "$PGTAP_DB_HOST" \
-    --port "$PGTAP_DB_PORT" \
-    --dbname "$PGTAP_DB_NAME" \
-    --username "$PGTAP_DB_USER" \
-    --command "SELECT 1" \
-    --quiet \
-    --no-align \
-    --tuples-only \
-    >/dev/null 2>&1; then
-    echo "SKIP: Database not available at $PGTAP_DB_HOST:$PGTAP_DB_PORT/$PGTAP_DB_NAME — pgtap tests skipped."
-    exit 0
-  fi
-fi
-
 # ── Check pg_prove is available ───────────────────────────────────────────────
 if ! command -v pg_prove >/dev/null 2>&1; then
   echo "ERROR: pg_prove not found in PATH."
