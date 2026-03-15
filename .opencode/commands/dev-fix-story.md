@@ -19,9 +19,17 @@ Apply fixes to a story that failed code review or has bugs.
 | `--max-iterations=N` | 3       | Max fix/verify loops  |
 | `--force-continue`   | false   | Proceed with warnings |
 
+## CRITICAL: KB-Only Architecture
+
+**Stories live EXCLUSIVELY in the KB database. There are NO story files on the filesystem.**
+
+- **DO NOT** glob or search for story files in any directory
+- **DO** read failure reports via `kb_read_artifact({ story_id, artifact_type: "review" })`
+- **DO** update status via `kb_update_story_status({ story_id, state, phase })`
+
 ## Workflow
 
-1. **Setup** - Parse failure report, create FIX-CONTEXT.md
+1. **Setup** - Parse failure report from KB, prepare fix context
 2. **Fix** - Apply fixes using backend/frontend coders
 3. **Verification** - Run build, typecheck, lint, tests
 4. **Documentation** - Update proof with fix evidence

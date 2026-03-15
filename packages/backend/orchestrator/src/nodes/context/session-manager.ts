@@ -22,7 +22,7 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import type { SelectContextSession } from '@repo/knowledge-base/src/db'
+import type { SelectContextSession } from '@repo/knowledge-base/db'
 import {
   SessionCreateInputSchema,
   SessionUpdateInputSchema,

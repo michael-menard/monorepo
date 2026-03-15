@@ -13,7 +13,7 @@
 import { randomUUID } from 'crypto'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { agentInvocations } from '@repo/knowledge-base/src/db'
+import { agentInvocations } from '@repo/knowledge-base/db'
 import { WorkflowLogInvocationInputSchema } from './__types__/index.js'
 import type { WorkflowLogInvocationInput } from './__types__/index.js'
 

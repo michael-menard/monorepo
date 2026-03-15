@@ -12,9 +12,17 @@ Execute full QA verification for a story.
 /qa-verify-story {STORY_ID}
 ```
 
+## CRITICAL: KB-Only Architecture
+
+**Stories live EXCLUSIVELY in the KB database. There are NO story files on the filesystem.**
+
+- **DO NOT** glob or search for story files (`.md`, `.yaml`) in any directory
+- **DO** read story/artifacts via `kb_get_story` and `kb_read_artifact`
+- **DO** update status via `kb_update_story_status({ story_id, state, phase })`
+
 ## Verification Steps
 
-1. **Setup** - Validate preconditions, move story to QA directory
+1. **Setup** - Validate preconditions via KB artifacts
 2. **Verification** - Execute all verification checks:
    - Build verification
    - TypeScript type checking

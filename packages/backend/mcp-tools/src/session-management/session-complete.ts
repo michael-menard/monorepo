@@ -17,7 +17,7 @@ import {
   contextSessions,
   type SelectContextSession,
   type InsertContextSession,
-} from '@repo/knowledge-base/src/db'
+} from '@repo/knowledge-base/db'
 import { SessionCompleteInputSchema, type SessionCompleteInput } from './__types__/index.js'
 
 /**

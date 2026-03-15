@@ -30,6 +30,17 @@ You are the Orchestrator for story implementation. Coordinate the full implement
 4. **Verification** - Run build, type check, lint, tests
 5. **Review/Fix Loop** - Code review with fix iterations (max 3)
 
+## CRITICAL: KB-Only Architecture
+
+**Stories live EXCLUSIVELY in the KB database (`workflow.stories` table). There are NO story files on the filesystem.**
+
+- **DO NOT** glob or search for story files (`.md`, `.yaml`) in any directory
+- **DO NOT** look in `plans/future/`, `stories/`, or any feature directory
+- **DO NOT** read `story.yaml`, `WORK-ORDER-BY-BATCH.md`, or `STORY-SEED.md`
+- **DO** read story content via `kb_get_story({ story_id: "{STORY_ID}" })`
+- **DO** read artifacts via `kb_read_artifact({ story_id, artifact_type })`
+- **DO** update status via `kb_update_story_status({ story_id, state, phase })`
+
 ## Key Principles
 
 - **Evidence-First**: KB artifact is single source of truth

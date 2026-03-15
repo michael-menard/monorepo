@@ -13,7 +13,7 @@
 
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { features, capabilities } from '@repo/knowledge-base/src/db'
+import { features, capabilities } from '@repo/knowledge-base/db'
 import { eq, or, isNotNull } from 'drizzle-orm'
 import {
   GraphGetCapabilityCoverageInputSchema,

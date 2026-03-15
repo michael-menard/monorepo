@@ -12,7 +12,7 @@
 import { randomUUID } from 'crypto'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextSessions, type SelectContextSession } from '@repo/knowledge-base/src/db'
+import { contextSessions, type SelectContextSession } from '@repo/knowledge-base/db'
 import { SessionCreateInputSchema, type SessionCreateInput } from './__types__/index.js'
 
 /**

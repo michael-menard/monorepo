@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/knowledge-base/src/db'
+import { contextPacks } from '@repo/knowledge-base/db'
 import { sql } from 'drizzle-orm'
 import { contextCacheInvalidate } from '../context-cache-invalidate.js'
 import { contextCachePut } from '../context-cache-put.js'

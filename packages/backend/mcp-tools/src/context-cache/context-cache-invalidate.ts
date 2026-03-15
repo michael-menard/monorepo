@@ -14,7 +14,7 @@
 import { eq, and, lt, sql, type SQL } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/knowledge-base/src/db'
+import { contextPacks } from '@repo/knowledge-base/db'
 import {
   ContextCacheInvalidateInputSchema,
   type ContextCacheInvalidateInput,

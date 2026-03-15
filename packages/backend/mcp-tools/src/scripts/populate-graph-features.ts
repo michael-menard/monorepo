@@ -296,7 +296,7 @@ export async function populateGraphFeatures(
 
 async function defaultDbInsertEpicFn(epic: EpicInsertInput): Promise<void> {
   const { db } = await import('@repo/db')
-  const { epics } = await import('@repo/database-schema')
+  const { epics } = await import('@repo/knowledge-base/db')
 
   await db
     .insert(epics)
@@ -310,7 +310,7 @@ async function defaultDbInsertEpicFn(epic: EpicInsertInput): Promise<void> {
 
 async function defaultDbInsertFeatureFn(feature: FeatureInsertInput): Promise<void> {
   const { db } = await import('@repo/db')
-  const { features } = await import('@repo/database-schema')
+  const { features } = await import('@repo/knowledge-base/db')
 
   await db
     .insert(features)

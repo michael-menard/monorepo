@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { Hono } from 'hono'
 import { logger } from '@repo/logger'
 import {
@@ -50,8 +51,9 @@ app.get('/api/v1/roadmap', async c => {
     const result = await getPlans(params)
     return c.json(result)
   } catch (error) {
-    logger.error('Failed to fetch plans', { error, params })
-    return c.json({ error: 'Failed to fetch plans' }, 500)
+    logger.error('Failed to fetch plans', { error: String(error), params })
+    console.error('Full error:', error)
+    return c.json({ error: 'Failed to fetch plans', detail: String(error) }, 500)
   }
 })
 
@@ -93,8 +95,9 @@ app.get('/api/v1/roadmap/:slug/stories', async c => {
     const result = await getStoriesByPlanSlug(slug)
     return c.json({ data: result })
   } catch (error) {
-    logger.error('Failed to fetch plan stories', { error, slug })
-    return c.json({ error: 'Failed to fetch plan stories' }, 500)
+    logger.error('Failed to fetch plan stories', { error: String(error), slug })
+    console.error('Full error:', error)
+    return c.json({ error: 'Failed to fetch plan stories', detail: String(error) }, 500)
   }
 })
 

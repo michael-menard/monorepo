@@ -13,7 +13,7 @@
 
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { features, cohesionRules } from '@repo/knowledge-base/src/db'
+import { features, cohesionRules } from '@repo/knowledge-base/db'
 import { eq, or } from 'drizzle-orm'
 import {
   GraphCheckCohesionInputSchema,

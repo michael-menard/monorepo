@@ -8,7 +8,7 @@
 
 import { randomUUID } from 'crypto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SelectContextSession } from '@repo/knowledge-base/src/db'
+import type { SelectContextSession } from '@repo/knowledge-base/db'
 import {
   createSessionManagerNode,
   type SessionManagerCleanupInput,

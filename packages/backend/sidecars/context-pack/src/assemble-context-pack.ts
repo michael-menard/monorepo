@@ -18,7 +18,7 @@ import { eq, and, gt, or, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/knowledge-base/src/db'
+import { contextPacks } from '@repo/knowledge-base/db'
 import {
   ContextPackRequestSchema,
   ContextPackResponseSchema,

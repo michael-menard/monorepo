@@ -12,7 +12,7 @@
 import { logger } from '@repo/logger'
 import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { capabilities } from '@repo/knowledge-base/src/db'
+import { capabilities } from '@repo/knowledge-base/db'
 import type { CohesionCheckResult, CapabilityCoverage } from './__types__/index.js'
 
 const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
