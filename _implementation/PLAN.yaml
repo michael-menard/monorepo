@@ -1,193 +1,144 @@
-schema: 2
-story_id: "CDBN-3020"
-timestamp: "2026-03-14T00:00:00Z"
-subtask_source: story
-
+schema: 1
+story_id: CDBE-0010
+timestamp: '2026-03-15T00:00:00Z'
 steps:
   - id: 1
-    subtask_id: "ST-1"
-    description: "Fix story-crud-operations.ts — remove storyDetails import, update storyColumns to match actual workflow.stories schema (drop id, epic, storyType, points, phase, iteration, blocked, fileSyncedAt, acceptanceCriteria, nonGoals, packages, embedding; map to storyId PK and available columns)"
+    description: >-
+      Create pgtap-enabled Docker Compose service (docker-compose.pgtap.yml) that extends the local postgres with pgtap
+      installed, so local dev can run SQL tests without modifying the shared compose files
     files:
-      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
-      - "apps/api/knowledge-base/src/db/schema.ts"
-    files_to_read:
-      - "apps/api/knowledge-base/src/db/schema.ts"
-      - "apps/api/knowledge-base/src/__types__/index.ts"
+      - docker-compose.pgtap.yml
     dependencies: []
     slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-1"
-      - "AC-2"
-      - "AC-3"
-
+    verification: >-
+      docker compose -f docker-compose.pgtap.yml up -d && docker compose -f docker-compose.pgtap.yml exec pgtap-postgres
+      pg_prove --version
   - id: 2
-    subtask_id: "ST-2"
-    description: "Fix planService.ts in roadmap-svc — remove planDetails and storyDetails table references (inline local table defs), rewrite getPlanBySlug, getStoriesByPlanSlug, and getStoryById to use only the plans and stories tables from workflow schema as exported by @repo/knowledge-base/db"
+    description: >-
+      Create the pgtap test runner shell script (scripts/db/run-pgtap.sh) that discovers and runs all *.sql test files
+      under tests/db/, wraps pg_prove, and exits non-zero on failure
     files:
-      - "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
-    files_to_read:
-      - "apps/api/knowledge-base/src/db/schema.ts"
-      - "apps/api/knowledge-base/src/db/index.ts"
+      - scripts/db/run-pgtap.sh
     dependencies:
       - 1
     slice: backend
-    verification: "pnpm check-types --filter @repo/roadmap-svc"
-    acs_covered:
-      - "AC-4"
-      - "AC-5"
-
+    verification: bash scripts/db/run-pgtap.sh --help || bash scripts/db/run-pgtap.sh (exits 0 with 0 tests if no test files yet)
   - id: 3
-    subtask_id: "ST-3"
-    description: "Update JSDoc/comment strings in telemetry-operations.ts — replace all 'wint.agent_invocations', 'wint.hitl_decisions', 'wint.story_outcomes' references with 'workflow.agent_invocations', 'workflow.hitl_decisions', 'workflow.story_outcomes'"
+    description: >-
+      Create the transaction-rollback fixture helper (tests/db/fixtures/rollback-helper.sql) that wraps each test file
+      in BEGIN/ROLLBACK to ensure isolation, with inline documentation explaining the pattern
     files:
-      - "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
-    files_to_read: []
-    dependencies: []
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-6"
-
-  - id: 4
-    subtask_id: "ST-4"
-    description: "Update MCP tool description strings in tool-schemas.ts — replace all 'wint.hitl_decisions', 'wint.story_outcomes', 'wint.agent_invocations' references in tool descriptions and comments with 'workflow.*' equivalents"
-    files:
-      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
-    files_to_read: []
-    dependencies:
-      - 3
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-7"
-
-  - id: 5
-    subtask_id: "ST-5"
-    description: "Update JSDoc comments in tool-handlers.ts — replace 'wint.hitl_decisions', 'wint.story_outcomes' comment references with 'workflow.*' equivalents"
-    files:
-      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
-    files_to_read: []
-    dependencies:
-      - 4
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-7"
-
-  - id: 6
-    subtask_id: "ST-6"
-    description: "Update story-outcomes integration test comments — replace 'wint.story_outcomes', 'wint.*' comment references with 'workflow.*' schema references; update test prerequisite comments to reference workflow schema migration"
-    files:
-      - "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
-    files_to_read: []
-    dependencies:
-      - 3
-    slice: backend
-    verification: "pnpm test --filter @repo/knowledge-base -- --run src/crud-operations/__tests__/story-outcomes.test.ts"
-    acs_covered:
-      - "AC-8"
-
-  - id: 7
-    subtask_id: "ST-7"
-    description: "Run full type-check and test suite for all modified packages to confirm zero type errors and all tests pass"
-    files: []
-    files_to_read: []
+      - tests/db/fixtures/rollback-helper.sql
+      - tests/db/README.md
     dependencies:
       - 1
-      - 2
-      - 3
-      - 4
-      - 5
-      - 6
     slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base && pnpm check-types --filter @repo/roadmap-svc && pnpm test --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-1"
-      - "AC-2"
-      - "AC-3"
-      - "AC-4"
-      - "AC-5"
-      - "AC-6"
-      - "AC-7"
-      - "AC-8"
-      - "AC-9"
-
+    verification: File exists; README documents the transaction-rollback pattern per AC2
+  - id: 4
+    description: >-
+      Create the example trigger unit test (tests/db/triggers/test_set_story_completed_at.sql) that validates the
+      set_story_completed_at() trigger: inserts a story, transitions state to completed, asserts completed_at is set,
+      and rolls back
+    files:
+      - tests/db/triggers/test_set_story_completed_at.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: bash scripts/db/run-pgtap.sh (all tests pass against pgtap postgres container)
+  - id: 5
+    description: >-
+      Add pgtap CI job to .github/workflows/pgtap.yml that spins up a postgres service container with pgtap installed,
+      applies the knowledge-base schema, and runs the full pgtap suite
+    files:
+      - .github/workflows/pgtap.yml
+    dependencies:
+      - 2
+      - 4
+    slice: backend
+    verification: >-
+      Workflow file is valid YAML and references the correct test runner script; can be validated locally with act or by
+      inspection
 files_to_change:
-  - path: "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
-    action: modify
-    reason: "Remove storyDetails import and storyDetailColumns selector; update storyColumns to use only columns present in current workflow.stories schema (storyId as PK, feature, title, description, state, priority, blockedReason, blockedByStory, startedAt, completedAt, fileHash)"
-  - path: "apps/api/knowledge-base/src/db/schema.ts"
-    action: modify
-    reason: "Verify/confirm storyDetails table is not exported — no code change expected unless an old storyDetails definition is lingering"
-  - path: "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
-    action: modify
-    reason: "Remove inline planDetails/storyDetails local table definitions and all queries that reference them; rewrite getPlanBySlug to return data from plans table only (no JOIN to planDetails); rewrite getStoriesByPlanSlug and getStoryById to use stories table columns available in workflow schema"
-  - path: "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
-    action: modify
-    reason: "Update JSDoc/comment strings from wint.* to workflow.* schema names to match current consolidated schema"
-  - path: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
-    action: modify
-    reason: "Update tool description strings from wint.* to workflow.* to match current schema"
-  - path: "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
-    action: modify
-    reason: "Update JSDoc comment strings from wint.* to workflow.* to match current schema"
-  - path: "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
-    action: modify
-    reason: "Update wint.* schema references in test comments/docs to workflow.* to match current schema"
-
+  - path: docker-compose.pgtap.yml
+    action: create
+    reason: pgtap-enabled postgres for local dev testing without touching shared compose files
+  - path: scripts/db/run-pgtap.sh
+    action: create
+    reason: Standardized test runner that discovers and executes all tests/db/**/*.sql files via pg_prove
+  - path: tests/db/fixtures/rollback-helper.sql
+    action: create
+    reason: Transaction-rollback fixture helper per AC2
+  - path: tests/db/README.md
+    action: create
+    reason: Documents the rollback fixture pattern and how to run pgtap locally and in CI per AC2
+  - path: tests/db/triggers/test_set_story_completed_at.sql
+    action: create
+    reason: Example trigger test per AC3
+  - .github/workflows/pgtap.yml: path
+    action: create
+    reason: CI pipeline job that runs pgtap on every PR per AC4
 commands_to_run:
-  - command: "pnpm check-types --filter @repo/knowledge-base"
-    when: "after ST-1 and after each subsequent backend step"
-    required: true
-  - command: "pnpm check-types --filter @repo/roadmap-svc"
-    when: "after ST-2"
-    required: true
-  - command: "pnpm test --filter @repo/knowledge-base"
-    when: "after all code changes"
-    required: true
-  - command: "pnpm build --filter @repo/knowledge-base"
-    when: "after all code changes"
+  - command: docker compose -f docker-compose.pgtap.yml up -d
+    when: after step 1, to start local pgtap postgres
     required: false
-
+  - command: bash scripts/db/run-pgtap.sh
+    when: after all code changes, to verify example test passes against local pgtap postgres
+    required: true
+  - command: docker compose -f docker-compose.pgtap.yml down
+    when: after test run, cleanup
+    required: false
 acceptance_criteria_map:
-  - ac_id: "AC-1"
-    planned_evidence: "pnpm check-types --filter @repo/knowledge-base passes with 0 errors — storyDetails import removed"
+  - ac_id: AC1
+    planned_evidence: docker-compose.pgtap.yml starts a postgres+pgtap container; scripts/db/run-pgtap.sh successfully invokes pg_prove
     evidence_type: command
-  - ac_id: "AC-2"
-    planned_evidence: "storyColumns in story-crud-operations.ts only references columns present in workflow.stories schema"
+  - ac_id: AC2
+    planned_evidence: tests/db/fixtures/rollback-helper.sql contains BEGIN/ROLLBACK wrapper; tests/db/README.md documents the pattern
     evidence_type: file
-  - ac_id: "AC-3"
-    planned_evidence: "pnpm test --filter @repo/knowledge-base -- --run src/__types__/__tests__/story-schemas.test.ts passes"
-    evidence_type: test
-  - ac_id: "AC-4"
-    planned_evidence: "pnpm check-types --filter @repo/roadmap-svc passes with 0 errors — planDetails/storyDetails references removed"
+  - ac_id: AC3
+    planned_evidence: tests/db/triggers/test_set_story_completed_at.sql passes via pg_prove (bash scripts/db/run-pgtap.sh exits 0)
     evidence_type: command
-  - ac_id: "AC-5"
-    planned_evidence: "planService.ts getPlanBySlug, getStoriesByPlanSlug, getStoryById all query only columns from current workflow.plans and workflow.stories schema"
+  - ac_id: AC4
+    planned_evidence: .github/workflows/pgtap.yml exists with postgres service container and pgtap test run step
     evidence_type: file
-  - ac_id: "AC-6"
-    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts returns 0"
-    evidence_type: command
-  - ac_id: "AC-7"
-    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/mcp-server/tool-schemas.ts && tool-handlers.ts returns 0"
-    evidence_type: command
-  - ac_id: "AC-8"
-    planned_evidence: "pnpm test --filter @repo/knowledge-base passes all tests (including story-outcomes.test.ts)"
-    evidence_type: test
-  - ac_id: "AC-9"
-    planned_evidence: "pnpm check-types:all passes with 0 type errors across all changed packages"
-    evidence_type: command
-
-architectural_decisions: []
-
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should pgtap target the knowledge-base postgres (port 5433, pgvector image) or a dedicated standalone postgres
+      container?
+    decision: >-
+      Dedicated standalone docker-compose.pgtap.yml with a custom image (postgis/postgis or a pgtap-specific image). The
+      KB postgres is for agent state, not DB infrastructure testing. A dedicated container avoids polluting shared state
+      and can be torn down after tests.
+    rationale: 'Clean test isolation, no risk to KB data, can be used in CI via services: block'
+    decided_by: planner
+  - id: ARCH-002
+    question: >-
+      Which PostgreSQL image to use for pgtap? Options: (a) build custom FROM postgres:16 + apt-get install
+      postgresql-16-pgtap, (b) use itheory/pg-pgtap pre-built image
+    decision: >-
+      Use a Dockerfile that extends FROM postgres:16 and installs pgtap via apt-get, placed at infra/pgtap/Dockerfile.
+      This avoids external image dependencies and gives us full control. The docker-compose.pgtap.yml builds from this
+      Dockerfile.
+    rationale: >-
+      Reproducible, no external image trust issue, matches lesson from pgvector: always be explicit about extension
+      installation
+    decided_by: planner
+  - id: ARCH-003
+    question: Where should DB test files live?
+    decision: >-
+      tests/db/ at repo root, with sub-directories triggers/, fixtures/. This is outside apps/ and packages/ since pgtap
+      tests are pure SQL, not part of any Node package.
+    rationale: Keeps SQL tests separate from TypeScript test infrastructure; easy to glob for pg_prove
+    decided_by: planner
 complexity: moderate
-
 notes:
-  - "story-crud-operations.ts has a compile-time broken reference to storyDetails from schema.ts — storyDetails table was removed in schema consolidation. ST-1 is the most critical fix."
-  - "planService.ts references planDetails (local inline table def that was deleted) and storyDetails (also deleted). The getPlanBySlug, getStoriesByPlanSlug, getStoryById functions need rewriting to use only available columns from workflow.plans and workflow.stories."
-  - "workflow.stories PK is storyId (text), not id (uuid). planService.ts stories table redef uses correct storyId pattern. story-crud-operations.ts uses stories.id which does not exist."
-  - "workflow.plans table has: id, planSlug, title, summary, planType, storyPrefix, tags, rawContent, contentHash, kbEntryId, parentPlanId, deletedAt, supersededBy, embedding, sections, status, priority, priorityOrder. No featureDir, estimatedStories, formatVersion, sourceFile."
-  - "telemetry-operations.ts, tool-schemas.ts, tool-handlers.ts changes are comment/string-only — no behavior changes, no risk of test regression."
-  - "story-outcomes.test.ts is an integration test requiring real postgres-knowledgebase on port 5433 (ADR-005). Comment updates only — test logic unchanged."
-  - "planService.ts PlanWithDetails interface references featureDir, estimatedStories which don't exist in plans table. These fields must be dropped from the response shape or mapped from available columns."
+  - pgtap is installed via apt-get install postgresql-16-pgtap in a custom Dockerfile extending postgres:16
+  - >-
+    The example test targets set_story_completed_at() trigger which exists in the knowledge-base schema
+    (999_full_schema_baseline.sql). The CI job must apply that schema before running tests.
+  - >-
+    The CI job uses services: to run postgres as a sidecar, applies the schema baseline SQL, then runs bash
+    scripts/db/run-pgtap.sh
+  - No TypeScript code changes required — this story is purely SQL, shell, and CI YAML
+  - 'Lesson applied: pgtap tests run inside transactions and ROLLBACK at the end for isolation (per pgtap convention)'
+  - 'Lesson applied: graceful-skip not needed here because the CI job explicitly provisions its own DB with pgtap'
