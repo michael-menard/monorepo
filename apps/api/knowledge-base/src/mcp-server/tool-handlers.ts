@@ -4066,14 +4066,14 @@ export async function handleKbUpdateStory(
     const result = await kb_update_story({ db: deps.db }, validated)
 
     // Re-generate story embedding if content fields changed (CDTS-2010)
-    if (result.story && result.updated && (validated.title || validated.acceptance_criteria)) {
+    if (result.story && result.updated && validated.title && result.story.title) {
       const story = result.story
       generateAndSaveStoryEmbedding(
         deps,
         validated.story_id,
-        story.title,
+        story.title!,
         story.feature,
-        story.acceptanceCriteria,
+        undefined,
         correlationId,
       ).catch(() => {}) // swallow — embedding is best-effort
     }

@@ -30,16 +30,11 @@ const storyColumns = {
   description: stories.description,
   state: stories.state,
   priority: stories.priority,
-  phase: stories.phase,
-  iteration: stories.iteration,
   blockedReason: stories.blockedReason,
   blockedByStory: stories.blockedByStory,
   startedAt: stories.startedAt,
   completedAt: stories.completedAt,
   fileHash: stories.fileHash,
-  acceptanceCriteria: stories.acceptanceCriteria,
-  embedding: stories.embedding,
-  deletedAt: stories.deletedAt,
   createdAt: stories.createdAt,
   updatedAt: stories.updatedAt,
 } as const
@@ -118,7 +113,7 @@ export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
  * regardless of flags.
  */
 export const KbGetStoryResultSchema = z.object({
-  story: z.custom<typeof stories.$inferSelect>().nullable(),
+  story: z.custom<Partial<typeof stories.$inferSelect>>().nullable(),
   artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
   dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
   message: z.string(),
@@ -459,7 +454,7 @@ export async function kb_list_stories(
   deps: StoryCrudDeps,
   input: KbListStoriesInput,
 ): Promise<{
-  stories: (typeof stories.$inferSelect)[]
+  stories: Partial<typeof stories.$inferSelect>[]
   total: number
   message: string
 }> {
@@ -553,7 +548,7 @@ export async function kb_update_story_status(
   deps: StoryCrudDeps,
   input: KbUpdateStoryStatusInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   updated: boolean
   message: string
 }> {
@@ -659,7 +654,7 @@ export async function kb_get_next_story(
   deps: StoryCrudDeps,
   input: KbGetNextStoryInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   candidates_count: number
   blocked_by_dependencies: string[]
   message: string
@@ -813,7 +808,7 @@ export async function kb_update_story(
   deps: StoryCrudDeps,
   input: KbUpdateStoryInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   updated: boolean
   message: string
 }> {
@@ -888,7 +883,7 @@ export async function kb_create_story(
   deps: StoryCrudDeps,
   input: KbCreateStoryInput,
 ): Promise<{
-  story: typeof stories.$inferSelect
+  story: Partial<typeof stories.$inferSelect>
   created: boolean
   message: string
 }> {
