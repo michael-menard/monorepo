@@ -26,10 +26,10 @@ services:
     image: pgtap-postgres:local
     container_name: pgtap-postgres
     ports:
-      - '${PGTAP_DB_PORT:-5434}:5432'
+      - '127.0.0.1:${PGTAP_DB_PORT:-5434}:5432'
     environment:
       POSTGRES_USER: ${PGTAP_DB_USER:-pgtap}
-      POSTGRES_PASSWORD: ${PGTAP_DB_PASS:-pgtap}
+      POSTGRES_PASSWORD: ${PGTAP_DB_PASS:-pgtap-local-only}
       POSTGRES_DB: ${PGTAP_DB_NAME:-pgtap_test}
     volumes:
       - pgtap_postgres_data:/var/lib/postgresql/data

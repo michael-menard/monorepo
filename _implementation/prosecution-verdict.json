@@ -1,0 +1,23 @@
+{
+  "story_id": "CDBE-0010",
+  "feature_id": "unknown",
+  "generated_at": "2026-03-15T19:45:00.000Z",
+  "verdict": "PROSECUTION BLOCKED",
+  "justification": "Graph cohesion check failed: no capability data available. graph.features table is empty (WINT-4030 may not have run), and no cohesion rules are present (WINT-4050 may not have run). Cannot prosecute without feature capability coverage. Prerequisite steps must complete before prosecution can proceed.",
+  "missing_capabilities": [],
+  "confidence": "N/A",
+  "evidence_source": "graph-checker-output",
+  "capability_counts": {
+    "create": 0,
+    "read": 0,
+    "update": 0,
+    "delete": 0
+  },
+  "warnings": [
+    "graph.features empty — WINT-4030 may not have run",
+    "No active cohesion rules found — WINT-4050 may not have run",
+    "no capability data — unable to prosecute"
+  ],
+  "warning_count": 3,
+  "blocked_reason": "prerequisite graph data unavailable"
+}
