@@ -18,6 +18,7 @@ import {
   boolean,
   integer,
   index,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
 export const vector = customType<{
@@ -52,7 +53,7 @@ export const knowledgeEntries = pgTable('knowledge_entries', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   archived: boolean('archived').default(false).notNull(),
   archivedAt: timestamp('archived_at'),
-  canonicalId: uuid('canonical_id').references(() => knowledgeEntries.id),
+  canonicalId: uuid('canonical_id').references((): AnyPgColumn => knowledgeEntries.id),
   isCanonical: boolean('is_canonical').default(false).notNull(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   deletedBy: text('deleted_by'),

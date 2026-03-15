@@ -63,13 +63,91 @@ const TYPE_OPTIONS = [
 
 const fromSelect = (v: string) => (v === ALL ? '' : v)
 
+function StoryGauge({ plan }: { plan: Plan }) {
+  const total = plan.totalStories
+  if (total === 0) return <span className="text-xs text-slate-500 font-mono">—</span>
+
+  const completedPct = Math.round((plan.completedStories / total) * 100)
+  const activePct = Math.round((plan.activeStories / total) * 100)
+  const blockedPct = Math.round((plan.blockedStories / total) * 100)
+  // backlog fills the remainder
+  const backlogPct = 100 - completedPct - activePct - blockedPct
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[80px]">
+      <div className="flex h-2 rounded-full overflow-hidden bg-slate-700 w-full">
+        {completedPct > 0 && (
+          <div
+            className="bg-emerald-500"
+            style={{ width: `${completedPct}%` }}
+            title={`${plan.completedStories} completed`}
+          />
+        )}
+        {activePct > 0 && (
+          <div
+            className="bg-blue-400"
+            style={{ width: `${activePct}%` }}
+            title={`${plan.activeStories} active`}
+          />
+        )}
+        {blockedPct > 0 && (
+          <div
+            className="bg-red-500"
+            style={{ width: `${blockedPct}%` }}
+            title={`${plan.blockedStories} blocked`}
+          />
+        )}
+        {backlogPct > 0 && (
+          <div className="bg-slate-600" style={{ width: `${backlogPct}%` }} title="backlog" />
+        )}
+      </div>
+      <span className="text-xs text-slate-400 font-mono">
+        {plan.completedStories}/{total}
+        {plan.blockedStories > 0 && (
+          <span className="text-red-400 ml-1">· {plan.blockedStories}✗</span>
+        )}
+      </span>
+    </div>
+  )
+}
+
+function relativeTime(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const ms = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(ms / 86400000)
+  if (days === 0) return 'today'
+  if (days === 1) return '1d ago'
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
+}
+
 const columns = [
   {
     key: 'planSlug',
     header: 'Slug',
     sortable: true,
     render: (plan: Plan) => (
-      <span className="font-mono text-sm text-cyan-400">{plan.planSlug}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-sm text-cyan-400">{plan.planSlug}</span>
+        {plan.churnDepth > 0 && (
+          <span
+            className="text-xs text-amber-400 font-mono"
+            title={`Supersedes ${plan.churnDepth} prior plan${plan.churnDepth > 1 ? 's' : ''}${plan.supersedesPlanSlug ? ` (replaces ${plan.supersedesPlanSlug})` : ''}`}
+          >
+            ↺{plan.churnDepth}
+          </span>
+        )}
+        {plan.hasRegression && (
+          <span
+            className="text-xs text-orange-500 font-mono"
+            title="This plan's status has regressed (moved backward)"
+          >
+            ⚠
+          </span>
+        )}
+      </div>
     ),
   },
   {
@@ -100,17 +178,32 @@ const columns = [
     sortable: true,
   },
   {
-    key: 'storyCount',
+    key: 'totalStories',
     header: 'Stories',
     sortable: true,
-    responsive: { hideAt: 'md' as const },
+    render: (plan: Plan) => <StoryGauge plan={plan} />,
+  },
+  {
+    key: 'lastStoryActivityAt',
+    header: 'Last Activity',
+    sortable: true,
+    render: (plan: Plan) => (
+      <span className="text-xs text-slate-400 font-mono">
+        {relativeTime(plan.lastStoryActivityAt)}
+      </span>
+    ),
+    responsive: { hideAt: 'lg' as const },
   },
   {
     key: 'createdAt',
     header: 'Created',
     sortable: true,
-    render: (plan: Plan) => new Date(plan.createdAt).toLocaleDateString(),
-    responsive: { hideAt: 'lg' as const },
+    render: (plan: Plan) => (
+      <span className="text-xs text-slate-400 font-mono">
+        {new Date(plan.createdAt).toLocaleDateString()}
+      </span>
+    ),
+    responsive: { hideAt: 'xl' as const },
   },
 ]
 

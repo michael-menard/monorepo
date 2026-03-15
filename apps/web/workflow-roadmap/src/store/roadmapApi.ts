@@ -8,12 +8,21 @@ export interface Plan {
   planType: string | null
   status: string
   storyPrefix: string | null
-  storyCount: number
   tags: string[] | null
   priority: string | null
   priorityOrder: number | null
+  supersedesPlanSlug: string | null
   createdAt: string
   updatedAt: string
+  // Story state breakdown
+  totalStories: number
+  completedStories: number
+  activeStories: number
+  blockedStories: number
+  lastStoryActivityAt: string | null
+  // Churn metrics
+  churnDepth: number
+  hasRegression: boolean
 }
 
 export interface PlanListResponse {

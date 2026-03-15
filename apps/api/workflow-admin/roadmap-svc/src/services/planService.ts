@@ -66,9 +66,33 @@ export const PlanListResultSchema = z.object({
   }),
 })
 
-// PlanListResult uses Plan[] from drizzle which is not a Zod type, so we extend the inferred shape
+export type PlanSummary = {
+  id: string
+  planSlug: string
+  title: string
+  summary: string | null
+  planType: string | null
+  storyPrefix: string | null
+  tags: string[] | null
+  status: string | null
+  priority: string | null
+  priorityOrder: number | null
+  supersedesPlanSlug: string | null
+  createdAt: Date
+  updatedAt: Date
+  // Computed from story links
+  totalStories: number
+  completedStories: number
+  activeStories: number
+  blockedStories: number
+  lastStoryActivityAt: Date | null
+  // Churn metrics
+  churnDepth: number
+  hasRegression: boolean
+}
+
 export type PlanListResult = Omit<z.infer<typeof PlanListResultSchema>, 'data'> & {
-  data: Plan[]
+  data: PlanSummary[]
 }
 
 export async function getPlans(params: PlanListParams): Promise<PlanListResult> {
@@ -133,12 +157,67 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
       status: plans.status,
       priority: plans.priority,
       priorityOrder: plans.priorityOrder,
+      supersedesPlanSlug: plans.supersedesPlanSlug,
       createdAt: plans.createdAt,
       updatedAt: plans.updatedAt,
-      storyCount: sql<number>`(
+      // Story state breakdown
+      totalStories: sql<number>`(
         select count(*)::int
         from workflow.plan_story_links psl
         where psl.plan_slug = plans.plan_slug
+      )`,
+      completedStories: sql<number>`(
+        select count(*)::int
+        from workflow.plan_story_links psl
+        join workflow.stories s on s.story_id = psl.story_id
+        where psl.plan_slug = plans.plan_slug
+          and s.state = 'completed'
+      )`,
+      activeStories: sql<number>`(
+        select count(*)::int
+        from workflow.plan_story_links psl
+        join workflow.stories s on s.story_id = psl.story_id
+        where psl.plan_slug = plans.plan_slug
+          and s.state in ('in_progress','in_review','in_qa','uat','needs_code_review')
+      )`,
+      blockedStories: sql<number>`(
+        select count(*)::int
+        from workflow.plan_story_links psl
+        join workflow.stories s on s.story_id = psl.story_id
+        where psl.plan_slug = plans.plan_slug
+          and s.state = 'blocked'
+      )`,
+      lastStoryActivityAt: sql<Date | null>`(
+        select max(s.updated_at)
+        from workflow.plan_story_links psl
+        join workflow.stories s on s.story_id = psl.story_id
+        where psl.plan_slug = plans.plan_slug
+      )`,
+      // Churn: how many prior plans does this one supersede (chain length)
+      churnDepth: sql<number>`(
+        with recursive chain as (
+          select supersedes_plan_slug, 1 as depth
+          from workflow.plans
+          where plan_slug = plans.plan_slug
+            and supersedes_plan_slug is not null
+          union all
+          select p.supersedes_plan_slug, chain.depth + 1
+          from workflow.plans p
+          join chain on p.plan_slug = chain.supersedes_plan_slug
+          where p.supersedes_plan_slug is not null
+            and chain.depth < 20
+        )
+        select coalesce(max(depth), 0) from chain
+      )`,
+      // Regression: has this plan ever gone backwards in status?
+      hasRegression: sql<boolean>`(
+        select exists(
+          select 1
+          from workflow.plan_status_history psh
+          where psh.plan_slug = plans.plan_slug
+            and psh.from_status in ('implemented','in-progress','stories-created','accepted')
+            and psh.to_status   in ('draft','active','blocked')
+        )
       )`,
     })
     .from(plans)
@@ -152,7 +231,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
     .offset(offset)
 
   return {
-    data: dataResult as Plan[],
+    data: dataResult as PlanSummary[],
     pagination: {
       page,
       limit,

@@ -118,6 +118,12 @@ export function createMockKnowledgeEntry(overrides?: Partial<KnowledgeEntry>): K
     verifiedBy: overrides?.verifiedBy ?? null,
     createdAt: overrides?.createdAt ?? now,
     updatedAt: overrides?.updatedAt ?? now,
+    archived: overrides?.archived ?? false,
+    archivedAt: overrides?.archivedAt ?? null,
+    canonicalId: overrides?.canonicalId ?? null,
+    isCanonical: overrides?.isCanonical ?? false,
+    deletedAt: overrides?.deletedAt ?? null,
+    deletedBy: overrides?.deletedBy ?? null,
   }
 }
 

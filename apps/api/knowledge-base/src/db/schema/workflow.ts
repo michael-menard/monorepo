@@ -23,6 +23,7 @@ import {
   numeric,
   index,
   uniqueIndex,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { knowledgeEntries, vector } from './kb.js'
 
@@ -142,9 +143,14 @@ export const plans = workflow.table('plans', {
   kbEntryId: uuid('kb_entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  parentPlanId: uuid('parent_plan_id').references(() => plans.id, { onDelete: 'set null' }),
+  parentPlanId: uuid('parent_plan_id').references((): AnyPgColumn => plans.id, {
+    onDelete: 'set null',
+  }),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  supersededBy: uuid('superseded_by').references(() => plans.id, { onDelete: 'set null' }),
+  supersededBy: uuid('superseded_by').references((): AnyPgColumn => plans.id, {
+    onDelete: 'set null',
+  }),
+  supersedesPlanSlug: text('supersedes_plan_slug'), // FK to plans.plan_slug enforced in migration SQL
   embedding: vector('embedding', { dimensions: 1536 }),
   sections: jsonb('sections'),
   status: text('status'),
@@ -229,6 +235,21 @@ export const planExecutionLog = workflow.table('plan_execution_log', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+export const planStatusHistory = workflow.table(
+  'plan_status_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    planSlug: text('plan_slug').notNull(), // FK to plans.plan_slug enforced in migration SQL
+    fromStatus: text('from_status'),
+    toStatus: text('to_status').notNull(),
+    changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planSlugIdx: index('idx_plan_status_history_plan_slug').on(table.planSlug),
+    changedAtIdx: index('idx_plan_status_history_changed_at').on(table.changedAt),
+  }),
+)
 
 export const workState = workflow.table('work_state', {
   id: uuid('id').primaryKey().defaultRandom(),
