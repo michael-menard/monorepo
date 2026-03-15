@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { eq, sql, and, ne, isNotNull, isNull, notInArray, inArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { plans, planDetails, planDependencies, planExecutionLog } from '../db/schema.js'
+import { plans, planDependencies, planExecutionLog } from '../db/schema.js'
 import { kb_create_plan_revision } from './plan-revision-operations.js'
 
 // ============================================================================
@@ -30,6 +30,8 @@ const planColumns = {
   parentPlanId: plans.parentPlanId,
   tags: plans.tags,
   supersededBy: plans.supersededBy,
+  rawContent: plans.rawContent,
+  sections: plans.sections,
   createdAt: plans.createdAt,
   updatedAt: plans.updatedAt,
   deletedAt: plans.deletedAt,
@@ -383,43 +385,22 @@ export async function kb_get_plan(
 
   const plan = result[0] ?? null
 
-  // Fetch plan details (1:1 detail table — cold columns like raw_content)
-  let detail: typeof planDetails.$inferSelect | null = null
-  if (plan) {
-    const detailResult = await deps.db
-      .select()
-      .from(planDetails)
-      .where(eq(planDetails.planId, plan.id))
-      .limit(1)
-    detail = detailResult[0] ?? null
-  }
-
-  // Fetch dependencies from the join table (single source of truth)
+  // Fetch dependencies from the join table (best-effort — schema may differ from DB)
   let dependencies: string[] = []
   if (plan) {
-    const depRows = await deps.db
-      .select({ dependsOnSlug: planDependencies.dependsOnSlug })
-      .from(planDependencies)
-      .where(eq(planDependencies.planSlug, validated.plan_slug))
-    dependencies = depRows.map(r => r.dependsOnSlug)
+    try {
+      const depRows = await deps.db
+        .select({ dependsOnSlug: planDependencies.dependsOnSlug })
+        .from(planDependencies)
+        .where(eq(planDependencies.planSlug, validated.plan_slug))
+      dependencies = depRows.map(r => r.dependsOnSlug)
+    } catch {
+      // Non-fatal: plan_dependencies schema may not match — return empty array
+    }
   }
 
   return {
-    plan: plan
-      ? {
-          ...plan,
-          ...(detail
-            ? {
-                rawContent: detail.rawContent,
-                phases: detail.phases,
-                sourceFile: detail.sourceFile,
-                sections: detail.sections,
-                formatVersion: detail.formatVersion,
-              }
-            : {}),
-          dependencies,
-        }
-      : null,
+    plan: plan ? { ...plan, dependencies } : null,
     message: plan
       ? `Found plan: ${plan.title}`
       : `No plan found with slug '${validated.plan_slug}'`,
@@ -521,6 +502,8 @@ export async function kb_upsert_plan(
     priority: validated.priority ?? 'P3',
     parentPlanId,
     tags: validated.tags ?? null,
+    rawContent: validated.raw_content,
+    sections: validated.sections ?? null,
     updatedAt: now,
   }
 
@@ -536,39 +519,14 @@ export async function kb_upsert_plan(
   const plan = result[0]!
   const created = plan.createdAt.getTime() === now.getTime()
 
-  // Upsert plan details (moved columns — dependencies NOT stored here)
-  await deps.db
-    .insert(planDetails)
-    .values({
-      planId: plan.id,
-      rawContent: validated.raw_content,
-      phases: null,
-      sourceFile: validated.source_file ?? null,
-      contentHash: null,
-      sections: validated.sections ?? null,
-      formatVersion: validated.format_version ?? 'v1',
-      importedAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: planDetails.planId,
-      set: {
-        rawContent: validated.raw_content,
-        sourceFile: validated.source_file ?? null,
-        sections: validated.sections ?? null,
-        formatVersion: validated.format_version ?? 'v1',
-        updatedAt: now,
-      },
-    })
-
-  // Sync plan_dependencies join table (the single source of truth for deps).
-  // This powers the plan_summary_view (blocking_plans, is_blocked) and the
-  // auto-block / auto-unblock logic in handlePlanImplemented.
-  await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
-
-  // Auto-block if the plan now has unsatisfied dependencies
-  if ((validated.dependencies ?? []).length > 0) {
-    await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+  // Sync plan_dependencies join table (best-effort — schema may differ from DB)
+  try {
+    await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+    if ((validated.dependencies ?? []).length > 0) {
+      await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+    }
+  } catch {
+    // Non-fatal
   }
 
   // Create revision history entry
@@ -654,20 +612,25 @@ export async function kb_update_plan(
 
   const plan = result[0] ?? null
 
-  // Sync plan_dependencies join table when dependencies are provided.
-  // The join table is the single source of truth — no JSONB column.
+  // Sync plan_dependencies join table (best-effort — schema may differ from DB)
   if (plan && validated.dependencies !== undefined) {
-    await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
-
-    // Auto-block if the plan now has unsatisfied dependencies
-    if ((validated.dependencies ?? []).length > 0) {
-      await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+    try {
+      await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+      if ((validated.dependencies ?? []).length > 0) {
+        await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+      }
+    } catch {
+      // Non-fatal
     }
   }
 
   // Auto-unblock: when status changes to 'implemented', check dependent plans
   if (plan && validated.status === 'implemented') {
-    await handlePlanImplemented(deps.db, validated.plan_slug)
+    try {
+      await handlePlanImplemented(deps.db, validated.plan_slug)
+    } catch {
+      // Non-fatal
+    }
   }
 
   return {

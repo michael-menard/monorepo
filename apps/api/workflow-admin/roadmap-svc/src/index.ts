@@ -132,8 +132,13 @@ app.get('/api/v1/stories/:storyId', async c => {
     }
     return c.json(result)
   } catch (error) {
-    logger.error('Failed to fetch story', { error, storyId })
-    return c.json({ error: 'Failed to fetch story' }, 500)
+    logger.error('Failed to fetch story', {
+      error: String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      storyId,
+    })
+    console.error('Full error:', error)
+    return c.json({ error: 'Failed to fetch story', detail: String(error) }, 500)
   }
 })
 

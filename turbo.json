@@ -61,6 +61,18 @@
       "outputs": ["test-results/**", "playwright-report/**"],
       "cache": false
     },
+    "test:roadmap": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "playwright.roadmap.config.ts",
+        "features/roadmap/**",
+        "steps/roadmap.steps.ts"
+      ],
+      "outputs": ["test-results/**", "cucumber-report/roadmap-report.*"],
+      "cache": false
+    },
     "preview": {
       "dependsOn": ["^build"],
       "cache": false,

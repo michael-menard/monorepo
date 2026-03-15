@@ -1,16 +1,27 @@
 import { z } from 'zod'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { plans, type Plan } from '@repo/knowledge-base/db'
+import { pgTable, text, timestamp, integer, jsonb, uuid } from 'drizzle-orm/pg-core'
+import { plans, planStoryLinks, type Plan } from '@repo/knowledge-base/db'
 import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
-import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
-  index,
-  pgSchema,
-} from 'drizzle-orm/pg-core'
+
+// Local schema for stories table - matches actual DB columns
+// (The @repo/knowledge-base/db schema has columns that don't exist in the actual DB)
+const stories = pgTable('stories', {
+  storyId: text('story_id').notNull(),
+  feature: text('feature').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  blockedReason: text('blocked_reason'),
+  blockedByStory: text('blocked_by_story'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  fileHash: text('file_hash'),
+  state: text('state'),
+  priority: text('priority'),
+})
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required')
@@ -18,42 +29,6 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 export const database = drizzle(pool)
-
-const workflowSchema = pgSchema('workflow')
-
-export const stories = workflowSchema.table('stories', {
-  storyId: text('story_id').notNull(),
-  feature: text('feature').notNull(),
-  state: text('state').notNull(),
-  title: text('title').notNull(),
-  description: text('description'),
-  priority: text('priority'),
-  blockedReason: text('blocked_reason'),
-  blockedByStory: text('blocked_by_story'),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  fileHash: text('file_hash'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
-
-const planStoryLinks = pgTable(
-  'plan_story_links',
-  {
-    id: uuid('id').defaultRandom().notNull(),
-    planSlug: text('plan_slug').notNull(),
-    storyId: text('story_id').notNull(),
-    linkType: text('link_type').default('mentioned').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-  },
-  (table: {
-    planSlug: ReturnType<typeof text>
-    storyId: ReturnType<typeof text>
-  }) => ({
-    planSlugIdx: index('idx_plan_story_links_plan_slug').on(table.planSlug),
-    storyIdIdx: index('idx_plan_story_links_story_id').on(table.storyId),
-  }),
-)
 
 export const PlanUpdateInputSchema = z.object({
   title: z.string().nullable().optional(),
@@ -115,7 +90,12 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   }
 
   if (tags && tags.length > 0) {
-    conditions.push(sql`${plans.tags} && ARRAY[${sql.join(tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
+    conditions.push(
+      sql`${plans.tags} && ARRAY[${sql.join(
+        tags.map(t => sql`${t}`),
+        sql`, `,
+      )}]::text[]`,
+    )
   }
 
   if (excludeCompleted) {
@@ -142,7 +122,25 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   const total = countResult[0]?.count || 0
 
   const dataResult = await database
-    .select()
+    .select({
+      id: plans.id,
+      planSlug: plans.planSlug,
+      title: plans.title,
+      summary: plans.summary,
+      planType: plans.planType,
+      storyPrefix: plans.storyPrefix,
+      tags: plans.tags,
+      status: plans.status,
+      priority: plans.priority,
+      priorityOrder: plans.priorityOrder,
+      createdAt: plans.createdAt,
+      updatedAt: plans.updatedAt,
+      storyCount: sql<number>`(
+        select count(*)::int
+        from workflow.plan_story_links psl
+        where psl.plan_slug = plans.plan_slug
+      )`,
+    })
     .from(plans)
     .where(whereClause)
     .orderBy(
@@ -292,16 +290,15 @@ export const PlanStorySchema = z.object({
 
 export type PlanStory = z.infer<typeof PlanStorySchema>
 
-const LinkedStoryRowSchema = z.object({
-  storyId: z.string(),
-  title: z.string(),
-  state: z.string(),
-  priority: z.string().nullable(),
-  blockedByStory: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-type LinkedStoryRow = z.infer<typeof LinkedStoryRowSchema>
+type LinkedStoryRow = {
+  storyId: string
+  title: string
+  state: string | null
+  priority: string | null
+  blockedByStory: string | null
+  createdAt: Date
+  updatedAt: Date
+}
 
 export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
   const linkedStories = await database
@@ -334,17 +331,33 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
 }
 
 export const StoryDetailsSchema = z.object({
+  id: z.string(),
   storyId: z.string(),
   title: z.string(),
   description: z.string().nullable(),
-  feature: z.string(),
+  storyType: z.string(),
+  epic: z.string().nullable(),
+  wave: z.number().nullable(),
   priority: z.string().nullable(),
+  complexity: z.string().nullable(),
+  storyPoints: z.number().nullable(),
   state: z.string(),
-  blockedReason: z.string().nullable(),
-  blockedByStory: z.string().nullable(),
-  startedAt: z.date().nullable(),
-  completedAt: z.date().nullable(),
-  fileHash: z.string().nullable(),
+  metadata: z
+    .object({
+      surfaces: z
+        .object({
+          backend: z.boolean().optional(),
+          frontend: z.boolean().optional(),
+          database: z.boolean().optional(),
+          infra: z.boolean().optional(),
+        })
+        .optional(),
+      tags: z.array(z.string()).optional(),
+      experimentVariant: z.enum(['control', 'variant_a', 'variant_b']).optional(),
+      blocked_by: z.array(z.string()).optional(),
+      blocks: z.array(z.string()).optional(),
+    })
+    .nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -361,17 +374,22 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
   const story = result[0]
 
   return {
+    id: story.storyId,
     storyId: story.storyId,
     title: story.title,
     description: story.description,
-    feature: story.feature,
+    storyType: story.feature,
+    epic: story.feature,
+    wave: null,
     priority: story.priority,
-    state: story.state,
-    blockedReason: story.blockedReason,
-    blockedByStory: story.blockedByStory,
-    startedAt: story.startedAt,
-    completedAt: story.completedAt,
-    fileHash: story.fileHash,
+    complexity: null,
+    storyPoints: null,
+    state: story.state ?? 'backlog',
+    metadata: story.blockedByStory
+      ? {
+          blocked_by: [story.blockedByStory],
+        }
+      : null,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Button } from '../_primitives/button'
 import {
@@ -16,8 +16,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
-  type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
 import {
@@ -68,7 +66,7 @@ function SortableRow<T>({
       className={`
         ${rowClassName || ''}
         ${striped && index % 2 === 1 ? 'bg-muted/25' : ''}
-        ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+        ${onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
         ${isDragging ? 'bg-muted' : ''}
       `.trim()}
     >
@@ -77,7 +75,7 @@ function SortableRow<T>({
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
           onClick={e => e.stopPropagation()}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -132,11 +130,11 @@ export interface AppDataTableProps<T> {
     direction: 'asc' | 'desc'
   }
   onSortChange?: (key: string, direction: 'asc' | 'desc') => void
+  onPageSizeChange?: (size: number) => void
   // Drag and drop props
   draggable?: boolean
   onReorder?: (items: Array<{ id: string; index: number }>) => void
   getRowId?: (item: T) => string
-  renderDragOverlay?: (item: T) => React.ReactNode
 }
 
 export function AppDataTable<T>({
@@ -154,7 +152,7 @@ export function AppDataTable<T>({
   draggable = false,
   onReorder,
   getRowId,
-  renderDragOverlay,
+  onPageSizeChange,
 }: AppDataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(pagination.pageSize || 10)
@@ -162,7 +160,12 @@ export function AppDataTable<T>({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
     defaultSort?.direction || 'asc',
   )
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [orderedData, setOrderedData] = useState<Array<T>>(data)
+
+  // Sync orderedData when the data prop changes (e.g. after API re-fetch)
+  useEffect(() => {
+    setOrderedData(data)
+  }, [data])
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -184,33 +187,24 @@ export function AppDataTable<T>({
     [getRowId],
   )
 
-  const activeItem = useCallback(() => {
-    if (!activeId) return null
-    return data.find((item, index) => getId(item, index) === activeId)
-  }, [activeId, data, getId])
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }, [])
-
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
-      setActiveId(null)
 
       if (!onReorder) return
 
       if (over && active.id !== over.id) {
-        const oldIndex = data.findIndex((item, index) => getId(item, index) === active.id)
-        const newIndex = data.findIndex((item, index) => getId(item, index) === over.id)
+        const oldIndex = orderedData.findIndex((item, index) => getId(item, index) === active.id)
+        const newIndex = orderedData.findIndex((item, index) => getId(item, index) === over.id)
 
         if (oldIndex !== -1 && newIndex !== -1) {
-          const reordered = arrayMove(data, oldIndex, newIndex)
+          const reordered = arrayMove(orderedData, oldIndex, newIndex)
+          setOrderedData(reordered)
           onReorder(reordered.map((item, index) => ({ id: getId(item, index), index })))
         }
       }
     },
-    [data, getId, onReorder],
+    [orderedData, getId, onReorder],
   )
 
   // Responsive column filtering
@@ -227,9 +221,9 @@ export function AppDataTable<T>({
 
   // Sorting
   const sortedData = useMemo(() => {
-    if (!sortable || !sortKey) return data
+    if (!sortable || !sortKey) return orderedData
 
-    const sorted = [...data].sort((a, b) => {
+    const sorted = [...orderedData].sort((a, b) => {
       const aValue = (a as any)[sortKey]
       const bValue = (b as any)[sortKey]
 
@@ -239,7 +233,7 @@ export function AppDataTable<T>({
     })
 
     return sorted
-  }, [data, sortable, sortKey, sortDirection])
+  }, [orderedData, sortable, sortKey, sortDirection])
 
   // Pagination
   const paginatedData = useMemo(() => {
@@ -288,21 +282,27 @@ export function AppDataTable<T>({
     }
   }
 
-  if (data.length === 0) {
-    return <div className={`text-center py-8 text-gray-500 ${className}`}>{emptyMessage}</div>
+  if (orderedData.length === 0) {
+    return (
+      <div className={`text-center py-8 text-muted-foreground ${className}`}>{emptyMessage}</div>
+    )
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-2 ${className}`}>
       {/* Pagination Controls - Top */}
       {pagination.enabled && (pagination.showPageSizeSelector || pagination.showPageInfo) ? (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-4 py-2">
           {pagination.showPageSizeSelector ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Show:</span>
+              <span className="text-sm text-muted-foreground">Show:</span>
               <Select
                 value={pageSize.toString()}
-                onValueChange={value => setPageSize(Number(value))}
+                onValueChange={value => {
+                  const size = Number(value)
+                  setPageSize(size)
+                  onPageSizeChange?.(size)
+                }}
               >
                 <SelectTrigger className="w-20">
                   <SelectValue />
@@ -315,12 +315,12 @@ export function AppDataTable<T>({
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-gray-600">entries</span>
+              <span className="text-sm text-muted-foreground">entries</span>
             </div>
           ) : null}
 
           {pagination.showPageInfo ? (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               Showing {startItem} to {endItem} of {sortedData.length} entries
             </div>
           ) : null}
@@ -333,7 +333,6 @@ export function AppDataTable<T>({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             <Table>
@@ -344,7 +343,7 @@ export function AppDataTable<T>({
                     <TableHead
                       key={column.key}
                       className={`${column.className || ''} ${getResponsiveClasses(column)} ${
-                        sortable && column.sortable ? 'cursor-pointer hover:bg-gray-50' : ''
+                        sortable && column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
                       }`}
                       onClick={() => handleSort(column.key)}
                     >
@@ -378,28 +377,6 @@ export function AppDataTable<T>({
                 </SortableContext>
               </TableBody>
             </Table>
-            <DragOverlay>
-              {activeItem() && renderDragOverlay ? (
-                renderDragOverlay(activeItem()!)
-              ) : activeItem() ? (
-                <Table>
-                  <TableBody>
-                    <TableRow className="bg-background shadow-lg">
-                      <TableCell className="w-10">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      {visibleColumns.map(column => (
-                        <TableCell key={column.key} className={column.className}>
-                          {column.render
-                            ? column.render(activeItem()!)
-                            : (activeItem() as any)[column.key]}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              ) : null}
-            </DragOverlay>
           </DndContext>
         ) : (
           <Table>
@@ -409,7 +386,7 @@ export function AppDataTable<T>({
                   <TableHead
                     key={column.key}
                     className={`${column.className || ''} ${getResponsiveClasses(column)} ${
-                      sortable && column.sortable ? 'cursor-pointer hover:bg-gray-50' : ''
+                      sortable && column.sortable ? 'cursor-pointer hover:bg-muted/50' : ''
                     }`}
                     onClick={() => handleSort(column.key)}
                   >
@@ -431,7 +408,7 @@ export function AppDataTable<T>({
                   className={`
                     ${rowClassName}
                     ${striped && index % 2 === 1 ? 'bg-muted/25' : ''}
-                    ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+                    ${onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
                   `.trim()}
                 >
                   {visibleColumns.map(column => (
@@ -451,8 +428,8 @@ export function AppDataTable<T>({
 
       {/* Pagination Controls - Bottom */}
       {pagination.enabled && pagination.showNavigationButtons && totalPages > 1 ? (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
           </div>
 

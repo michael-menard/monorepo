@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from '@tanstack/react-router'
 import {
   AppDataTable,
@@ -13,6 +14,16 @@ import {
   Label,
 } from '@repo/app-component-library'
 import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../store/roadmapApi'
+import {
+  setStatus,
+  setPriority,
+  setType,
+  setExcludeCompleted,
+  setSearch,
+  setSort,
+  setPageSize,
+} from '../store/roadmapFiltersSlice'
+import type { RootState } from '../store'
 
 const ALL = '_all'
 
@@ -56,6 +67,7 @@ const columns = [
   {
     key: 'planSlug',
     header: 'Slug',
+    sortable: true,
     render: (plan: Plan) => (
       <span className="font-mono text-sm text-cyan-400">{plan.planSlug}</span>
     ),
@@ -63,15 +75,18 @@ const columns = [
   {
     key: 'title',
     header: 'Title',
+    sortable: true,
   },
   {
     key: 'status',
     header: 'Status',
+    sortable: true,
     render: (plan: Plan) => <AppBadge variant="outline">{plan.status}</AppBadge>,
   },
   {
     key: 'priority',
     header: 'Priority',
+    sortable: true,
     render: (plan: Plan) =>
       plan.priority ? (
         <AppBadge variant={plan.priority === 'P1' ? 'destructive' : 'secondary'}>
@@ -82,15 +97,18 @@ const columns = [
   {
     key: 'planType',
     header: 'Type',
+    sortable: true,
   },
   {
-    key: 'estimatedStories',
+    key: 'storyCount',
     header: 'Stories',
+    sortable: true,
     responsive: { hideAt: 'md' as const },
   },
   {
     key: 'createdAt',
     header: 'Created',
+    sortable: true,
     render: (plan: Plan) => new Date(plan.createdAt).toLocaleDateString(),
     responsive: { hideAt: 'lg' as const },
   },
@@ -98,12 +116,10 @@ const columns = [
 
 export function RoadmapPage() {
   const navigate = useNavigate({ from: '/' })
+  const dispatch = useDispatch()
 
-  const [selectedStatus, setSelectedStatus] = useState('')
-  const [selectedPriority, setSelectedPriority] = useState('')
-  const [selectedType, setSelectedType] = useState('')
-  const [excludeCompleted, setExcludeCompleted] = useState(true)
-  const [search, setSearch] = useState('')
+  const { status, priority, type, excludeCompleted, search, sortKey, sortDirection, pageSize } =
+    useSelector((state: RootState) => state.roadmapFilters)
 
   const [reorderPlans] = useReorderPlansMutation()
 
@@ -111,13 +127,13 @@ export function RoadmapPage() {
     () => ({
       page: 1,
       limit: 100,
-      status: selectedStatus ? [selectedStatus] : undefined,
-      priority: selectedPriority ? [selectedPriority] : undefined,
-      planType: selectedType ? [selectedType] : undefined,
+      status: status ? [status] : undefined,
+      priority: priority ? [priority] : undefined,
+      planType: type ? [type] : undefined,
       excludeCompleted,
       search: search.trim() || undefined,
     }),
-    [selectedStatus, selectedPriority, selectedType, excludeCompleted, search],
+    [status, priority, type, excludeCompleted, search],
   )
 
   const { data, error } = useGetPlansQuery(queryParams)
@@ -129,11 +145,11 @@ export function RoadmapPage() {
   const handleReorder = useCallback(
     (items: Array<{ id: string; index: number }>) => {
       reorderPlans({
-        priority: selectedPriority || 'P1',
+        priority: priority || '',
         items: items.map(item => ({ id: item.id, priorityOrder: item.index })),
       })
     },
-    [reorderPlans, selectedPriority],
+    [reorderPlans, priority],
   )
 
   const errorMessage = error ? ('error' in error ? error.error : 'Failed to fetch plans') : null
@@ -149,7 +165,6 @@ export function RoadmapPage() {
   }
 
   const plans = data?.data || []
-  const showDraggable = !!selectedPriority
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -164,15 +179,12 @@ export function RoadmapPage() {
         <Input
           placeholder="Search plans..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => dispatch(setSearch(e.target.value))}
           className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
         />
 
         <div className="flex items-center gap-3">
-          <Select
-            value={selectedStatus ?? ALL}
-            onValueChange={v => setSelectedStatus(fromSelect(v))}
-          >
+          <Select value={status || ALL} onValueChange={v => dispatch(setStatus(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by status"
               className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
@@ -192,10 +204,7 @@ export function RoadmapPage() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={selectedPriority ?? ALL}
-            onValueChange={v => setSelectedPriority(fromSelect(v))}
-          >
+          <Select value={priority || ALL} onValueChange={v => dispatch(setPriority(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by priority"
               className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
@@ -215,7 +224,7 @@ export function RoadmapPage() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedType ?? ALL} onValueChange={v => setSelectedType(fromSelect(v))}>
+          <Select value={type || ALL} onValueChange={v => dispatch(setType(fromSelect(v)))}>
             <SelectTrigger
               aria-label="Filter by type"
               className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
@@ -239,7 +248,7 @@ export function RoadmapPage() {
             <Checkbox
               id="exclude-completed"
               checked={excludeCompleted}
-              onCheckedChange={checked => setExcludeCompleted(checked === true)}
+              onCheckedChange={checked => dispatch(setExcludeCompleted(checked === true))}
             />
             <Label
               htmlFor="exclude-completed"
@@ -251,11 +260,11 @@ export function RoadmapPage() {
         </div>
       </section>
 
-      {showDraggable && (
-        <p className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-sm text-cyan-400 font-mono">
-          ↕ Drag rows to reorder within this priority group.
-        </p>
-      )}
+      <p className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-sm text-cyan-400 font-mono">
+        {priority
+          ? `↕ Drag rows to reorder within priority ${priority}.`
+          : '↕ Drag rows to set priority order. Filter by a priority group to reorder within it.'}
+      </p>
 
       <section className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-hidden">
         <AppDataTable
@@ -265,12 +274,16 @@ export function RoadmapPage() {
           emptyMessage="No plans found"
           pagination={{
             enabled: true,
-            pageSize: 10,
+            pageSize,
             showPageSizeSelector: true,
             showPageInfo: true,
             showNavigationButtons: true,
           }}
-          draggable={showDraggable}
+          sortable
+          defaultSort={{ key: sortKey, direction: sortDirection }}
+          onSortChange={(key, direction) => dispatch(setSort({ key, direction }))}
+          onPageSizeChange={size => dispatch(setPageSize(size))}
+          draggable
           onReorder={handleReorder}
           getRowId={plan => plan.id}
         />

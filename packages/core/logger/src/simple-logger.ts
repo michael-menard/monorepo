@@ -33,12 +33,11 @@ class SimpleLogger {
     // Create Pino logger instance
     // Note: pino-pretty removed - it uses worker threads which are incompatible with Lambda
     // Write to stderr (fd 2) to avoid corrupting stdio-based protocols like MCP
-    this.pinoLogger = pino(
-      {
-        level: this.getPinoLevel(this.config.level),
-      },
-      pino.destination(2),
-    )
+    // pino.destination is Node-only — skip it in browser environments
+    const isBrowser = typeof window !== 'undefined'
+    this.pinoLogger = isBrowser
+      ? pino({ level: this.getPinoLevel(this.config.level) })
+      : pino({ level: this.getPinoLevel(this.config.level) }, pino.destination(2))
   }
 
   private shouldLog(level: LogLevel): boolean {

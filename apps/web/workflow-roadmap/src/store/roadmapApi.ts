@@ -7,9 +7,8 @@ export interface Plan {
   summary: string | null
   planType: string | null
   status: string
-  featureDir: string | null
   storyPrefix: string | null
-  estimatedStories: number | null
+  storyCount: number
   tags: string[] | null
   priority: string | null
   priorityOrder: number | null
@@ -34,9 +33,7 @@ export interface PlanDetails {
   summary: string | null
   planType: string | null
   status: string
-  featureDir: string | null
   storyPrefix: string | null
-  estimatedStories: number | null
   tags: string[] | null
   priority: string | null
   createdAt: string
@@ -116,6 +113,7 @@ export const roadmapApi = createApi({
     }),
     getStoriesByPlanSlug: builder.query<PlanStory[], string>({
       query: slug => `/roadmap/${slug}/stories`,
+      transformResponse: (response: { data: PlanStory[] }) => response.data,
     }),
     getStoryById: builder.query<StoryDetails, string>({
       query: storyId => `/stories/${storyId}`,
@@ -137,15 +135,7 @@ export const roadmapApi = createApi({
         input: Partial<
           Pick<
             PlanDetails,
-            | 'title'
-            | 'summary'
-            | 'planType'
-            | 'status'
-            | 'featureDir'
-            | 'storyPrefix'
-            | 'estimatedStories'
-            | 'tags'
-            | 'priority'
+            'title' | 'summary' | 'planType' | 'status' | 'storyPrefix' | 'tags' | 'priority'
           >
         >
       }

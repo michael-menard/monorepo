@@ -1,5 +1,5 @@
 import { useParams, Link } from '@tanstack/react-router'
-import { Badge, AppDataTable } from '@repo/app-component-library'
+import { AppBadge, AppDataTable, AppInput, CustomButton } from '@repo/app-component-library'
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 import { useState, useEffect, useRef, startTransition } from 'react'
 import {
@@ -77,8 +77,8 @@ function EditableField({
   if (!editable) {
     return (
       <div>
-        <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-        <dd>{value ?? '-'}</dd>
+        <dt className="text-sm font-medium text-slate-400">{label}</dt>
+        <dd className="text-slate-200">{value ?? '-'}</dd>
       </div>
     )
   }
@@ -86,23 +86,27 @@ function EditableField({
   if (isEditing) {
     return (
       <div>
-        <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
+        <dt className="text-sm font-medium text-slate-400">{label}</dt>
         <dd className="flex items-center gap-2">
-          <input
+          <AppInput
             type={type}
             value={editValue}
             onChange={handleChange}
-            className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-8 text-sm bg-slate-800/50 border-slate-600/50 text-slate-100"
           />
-          {isDebouncing && <span className="text-xs text-muted-foreground">Saving...</span>}
-          <button
+          {isDebouncing && <span className="text-xs text-slate-400 font-mono">saving...</span>}
+          <CustomButton
+            variant="ghost"
+            size="icon"
             onClick={handleSave}
-            className="p-1 h-8 w-8 text-green-600 hover:bg-green-50 rounded"
+            className="h-8 w-8 text-green-400 hover:text-green-300"
             title="Save"
           >
             <Check className="h-4 w-4" />
-          </button>
-          <button
+          </CustomButton>
+          <CustomButton
+            variant="ghost"
+            size="icon"
             onClick={() => {
               if (debounceRef.current) {
                 clearTimeout(debounceRef.current)
@@ -110,11 +114,11 @@ function EditableField({
               setIsDebouncing(false)
               onCancel()
             }}
-            className="p-1 h-8 w-8 text-red-600 hover:bg-red-50 rounded"
+            className="h-8 w-8 text-red-400 hover:text-red-300"
             title="Cancel"
           >
             <X className="h-4 w-4" />
-          </button>
+          </CustomButton>
         </dd>
       </div>
     )
@@ -122,19 +126,21 @@ function EditableField({
 
   return (
     <div>
-      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-sm font-medium text-slate-400">{label}</dt>
       <dd className="flex items-center gap-2 group">
-        <span>{value ?? '-'}</span>
-        <button
+        <span className="text-slate-200">{value ?? '-'}</span>
+        <CustomButton
+          variant="ghost"
+          size="icon"
           onClick={() => {
             setEditValue(String(value ?? ''))
             onStartEdit()
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-opacity"
+          className="opacity-0 group-hover:opacity-100 h-6 w-6 text-slate-500 hover:text-cyan-400"
           title="Edit"
         >
           <Pencil className="h-3 w-3" />
-        </button>
+        </CustomButton>
       </dd>
     </div>
   )
@@ -190,13 +196,14 @@ export function PlanDetailsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded w-5/6"></div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-slate-800 rounded w-32"></div>
+          <div className="h-8 bg-slate-800 rounded w-1/3"></div>
+          <div className="h-4 bg-slate-800 rounded w-1/4"></div>
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 space-y-3">
+            <div className="h-4 bg-slate-800 rounded"></div>
+            <div className="h-4 bg-slate-800 rounded"></div>
+            <div className="h-4 bg-slate-800 rounded w-5/6"></div>
           </div>
         </div>
       </div>
@@ -208,13 +215,13 @@ export function PlanDetailsPage() {
       <div className="container mx-auto px-4 py-8">
         <Link
           to="/"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+          className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Roadmap
         </Link>
-        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded">
-          Error: {errorMessage}
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg font-mono text-sm">
+          ERROR: {errorMessage}
         </div>
       </div>
     )
@@ -228,21 +235,21 @@ export function PlanDetailsPage() {
     <div className="container mx-auto px-4 py-8">
       <Link
         to="/"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Roadmap
       </Link>
 
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           {editingField === 'title' ? (
             <div className="flex items-center gap-2 flex-1">
-              <input
+              <AppInput
                 type="text"
                 value={titleValue}
                 onChange={e => handleTitleChange(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-3xl font-bold shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="text-3xl font-bold h-auto py-1 bg-slate-800/50 border-slate-600/50 text-slate-100"
                 autoFocus
                 onBlur={() => {
                   if (titleDebounceRef.current) {
@@ -253,9 +260,11 @@ export function PlanDetailsPage() {
                 }}
               />
               {isTitleDebouncing && (
-                <span className="text-xs text-muted-foreground">Saving...</span>
+                <span className="text-xs text-slate-400 font-mono">saving...</span>
               )}
-              <button
+              <CustomButton
+                variant="ghost"
+                size="icon"
                 onClick={() => {
                   if (titleDebounceRef.current) {
                     clearTimeout(titleDebounceRef.current)
@@ -263,37 +272,44 @@ export function PlanDetailsPage() {
                   setIsTitleDebouncing(false)
                   setEditingField(null)
                 }}
-                className="p-1 h-8 w-8 text-green-600 hover:bg-green-50 rounded"
+                className="h-8 w-8 text-green-400 hover:text-green-300"
                 title="Done"
               >
                 <Check className="h-4 w-4" />
-              </button>
+              </CustomButton>
             </div>
           ) : (
-            <h1 className="text-3xl font-bold flex-1">{data.title}</h1>
+            <h1 className="text-3xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex-1">
+              {data.title}
+            </h1>
           )}
-          <Badge variant="outline">{data.status}</Badge>
+          <AppBadge variant="outline">{data.status}</AppBadge>
           {data.priority ? (
-            <Badge variant={data.priority === 'P1' ? 'destructive' : 'secondary'}>
+            <AppBadge variant={data.priority === 'P1' ? 'destructive' : 'secondary'}>
               {data.priority}
-            </Badge>
+            </AppBadge>
           ) : null}
           {editingField !== 'title' && (
-            <button
+            <CustomButton
+              variant="ghost"
+              size="icon"
               onClick={() => setEditingField('title')}
-              className="p-1 h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+              className="h-6 w-6 text-slate-500 hover:text-cyan-400"
               title="Edit title"
             >
               <Pencil className="h-3 w-3" />
-            </button>
+            </CustomButton>
           )}
         </div>
-        <p className="text-muted-foreground font-mono text-sm">{data.planSlug}</p>
+        <p className="text-cyan-500/70 font-mono text-sm">{data.planSlug}</p>
       </div>
 
       <div className="grid gap-6">
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Overview</h2>
+        <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+          <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
+            Overview
+          </h2>
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <EditableField
               label="Type"
@@ -314,15 +330,6 @@ export function PlanDetailsPage() {
               editable
             />
             <EditableField
-              label="Feature Directory"
-              value={data.featureDir}
-              isEditing={editingField === 'featureDir'}
-              onStartEdit={() => setEditingField('featureDir')}
-              onSave={value => handleUpdate('featureDir', value)}
-              onCancel={() => setEditingField(null)}
-              editable
-            />
-            <EditableField
               label="Story Prefix"
               value={data.storyPrefix}
               isEditing={editingField === 'storyPrefix'}
@@ -331,51 +338,46 @@ export function PlanDetailsPage() {
               onCancel={() => setEditingField(null)}
               editable
             />
-            <EditableField
-              label="Estimated Stories"
-              value={data.estimatedStories}
-              isEditing={editingField === 'estimatedStories'}
-              onStartEdit={() => setEditingField('estimatedStories')}
-              onSave={value => handleUpdate('estimatedStories', value)}
-              onCancel={() => setEditingField(null)}
-              type="number"
-              editable
-            />
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">Created</dt>
-              <dd>{new Date(data.createdAt).toLocaleDateString()}</dd>
+              <dt className="text-sm font-medium text-slate-400">Created</dt>
+              <dd className="text-slate-200">{new Date(data.createdAt).toLocaleDateString()}</dd>
             </div>
             <div className="md:col-span-2">
-              <dt className="text-sm font-medium text-muted-foreground mb-2">Tags</dt>
+              <dt className="text-sm font-medium text-slate-400 mb-2">Tags</dt>
               <dd className="flex flex-wrap gap-2">
                 {data.tags && data.tags.length > 0 ? (
                   data.tags.map(tag => (
-                    <Badge key={tag} variant="secondary">
+                    <AppBadge key={tag} variant="secondary">
                       {tag}
-                    </Badge>
+                    </AppBadge>
                   ))
                 ) : (
-                  <span className="text-muted-foreground">-</span>
+                  <span className="text-slate-500">-</span>
                 )}
-                <button
+                <CustomButton
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setEditingField('tags')}
-                  className="p-1 h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+                  className="h-6 w-6 text-slate-500 hover:text-cyan-400"
                   title="Edit tags"
                 >
                   <Pencil className="h-3 w-3" />
-                </button>
+                </CustomButton>
               </dd>
             </div>
           </dl>
         </div>
 
-        <div className="bg-card border rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Stories</h2>
+        <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+          <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+            Stories
+          </h2>
           {isLoadingStories ? (
             <div className="animate-pulse space-y-2">
-              <div className="h-8 bg-muted rounded"></div>
-              <div className="h-8 bg-muted rounded"></div>
-              <div className="h-8 bg-muted rounded"></div>
+              <div className="h-8 bg-slate-800 rounded"></div>
+              <div className="h-8 bg-slate-800 rounded"></div>
+              <div className="h-8 bg-slate-800 rounded"></div>
             </div>
           ) : storiesData && storiesData.length > 0 ? (
             <AppDataTable
@@ -388,7 +390,7 @@ export function PlanDetailsPage() {
                     <Link
                       to="/story/$storyId"
                       params={{ storyId: row.storyId }}
-                      className="font-mono text-sm text-blue-600 hover:underline"
+                      className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
                     >
                       {row.storyId}
                     </Link>
@@ -401,7 +403,7 @@ export function PlanDetailsPage() {
                     <Link
                       to="/story/$storyId"
                       params={{ storyId: row.storyId }}
-                      className="hover:underline"
+                      className="hover:text-cyan-400 hover:underline transition-colors"
                     >
                       {row.title ?? '-'}
                     </Link>
@@ -412,7 +414,7 @@ export function PlanDetailsPage() {
                   header: 'State',
                   render: (row: PlanStory) => (
                     <div className="flex items-center gap-2">
-                      <Badge
+                      <AppBadge
                         variant={
                           row.state === 'completed'
                             ? 'default'
@@ -424,7 +426,7 @@ export function PlanDetailsPage() {
                         }
                       >
                         {row.state ?? '-'}
-                      </Badge>
+                      </AppBadge>
                       {row.isBlocked || row.hasBlockers ? (
                         <span title="Has blockers" className="text-destructive">
                           ⚠️
@@ -437,13 +439,17 @@ export function PlanDetailsPage() {
                   key: 'currentPhase',
                   header: 'Phase',
                   render: (row: PlanStory) =>
-                    row.currentPhase ? <Badge variant="outline">{row.currentPhase}</Badge> : '-',
+                    row.currentPhase ? (
+                      <AppBadge variant="outline">{row.currentPhase}</AppBadge>
+                    ) : (
+                      '-'
+                    ),
                 },
                 {
                   key: 'priority',
                   header: 'Priority',
                   render: (row: PlanStory) => (
-                    <Badge
+                    <AppBadge
                       variant={
                         row.priority === 'P0'
                           ? 'destructive'
@@ -453,81 +459,102 @@ export function PlanDetailsPage() {
                       }
                     >
                       {row.priority ?? '-'}
-                    </Badge>
+                    </AppBadge>
                   ),
                 },
               ]}
               emptyMessage="No stories linked to this plan yet."
             />
           ) : (
-            <p className="text-muted-foreground">No stories linked to this plan yet.</p>
+            <p className="text-slate-500">No stories linked to this plan yet.</p>
           )}
         </div>
 
         {data.summary ? (
-          <div className="bg-card border rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Summary</h2>
-            <p className="text-muted-foreground">{data.summary}</p>
+          <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+            <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 inline-block" />
+              Summary
+            </h2>
+            <p className="text-slate-300 leading-relaxed">{data.summary}</p>
           </div>
         ) : null}
 
         {data.details ? (
           <>
             {data.details.phases ? (
-              <div className="bg-card border rounded-lg p-6">
-                <h2 className="text-lg font-semibold mb-4">Phases</h2>
-                <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+              <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+                <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
+                  Phases
+                </h2>
+                <pre className="bg-black/40 border border-slate-700/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-slate-300">
                   {JSON.stringify(data.details.phases, null, 2)}
                 </pre>
               </div>
             ) : null}
 
             {data.details.sections ? (
-              <div className="bg-card border rounded-lg p-6">
-                <h2 className="text-lg font-semibold mb-4">Sections</h2>
-                <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+              <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+                <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
+                  Sections
+                </h2>
+                <pre className="bg-black/40 border border-slate-700/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-slate-300">
                   {JSON.stringify(data.details.sections, null, 2)}
                 </pre>
               </div>
             ) : null}
 
             {data.details.rawContent ? (
-              <div className="bg-card border rounded-lg p-6">
-                <h2 className="text-lg font-semibold mb-4">Full Content</h2>
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm whitespace-pre-wrap">
-                    {data.details.rawContent}
-                  </pre>
-                </div>
+              <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+                <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
+                  Full Content
+                </h2>
+                <pre className="bg-black/40 border border-slate-700/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-slate-300 whitespace-pre-wrap">
+                  {data.details.rawContent}
+                </pre>
               </div>
             ) : null}
 
-            <div className="bg-card border rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4">Metadata</h2>
+            <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+              <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-500 inline-block" />
+                Metadata
+              </h2>
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Format Version</dt>
-                  <dd className="font-mono text-sm">{data.details.formatVersion || '-'}</dd>
+                  <dt className="text-sm font-medium text-slate-400">Format Version</dt>
+                  <dd className="font-mono text-sm text-slate-200">
+                    {data.details.formatVersion || '-'}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Content Hash</dt>
-                  <dd className="font-mono text-sm">{data.details.contentHash || '-'}</dd>
+                  <dt className="text-sm font-medium text-slate-400">Content Hash</dt>
+                  <dd className="font-mono text-sm text-slate-200">
+                    {data.details.contentHash || '-'}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Source File</dt>
-                  <dd className="font-mono text-sm">{data.details.sourceFile || '-'}</dd>
+                  <dt className="text-sm font-medium text-slate-400">Source File</dt>
+                  <dd className="font-mono text-sm text-slate-200">
+                    {data.details.sourceFile || '-'}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Imported At</dt>
-                  <dd>
+                  <dt className="text-sm font-medium text-slate-400">Imported At</dt>
+                  <dd className="text-slate-200">
                     {data.details.importedAt
                       ? new Date(data.details.importedAt).toLocaleString()
                       : '-'}
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
-                  <dd>{new Date(data.details.updatedAt).toLocaleString()}</dd>
+                  <dt className="text-sm font-medium text-slate-400">Last Updated</dt>
+                  <dd className="text-slate-200">
+                    {new Date(data.details.updatedAt).toLocaleString()}
+                  </dd>
                 </div>
               </dl>
             </div>
