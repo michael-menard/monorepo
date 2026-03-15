@@ -13,7 +13,7 @@
 import { eq, desc } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { worktrees, stories } from '@repo/knowledge-base/src/db'
+import { worktrees, stories } from '@repo/knowledge-base/db'
 import {
   WorktreeListActiveInputSchema,
   type WorktreeListActiveInput,
@@ -70,7 +70,7 @@ export async function worktreeListActive(
         metadata: worktrees.metadata,
       })
       .from(worktrees)
-      .innerJoin(stories, eq(worktrees.storyId, stories.id))
+      .innerJoin(stories, eq(worktrees.storyId, stories.storyId))
       .where(eq(worktrees.status, 'active'))
       .orderBy(desc(worktrees.createdAt))
       .limit(parsed.limit)
@@ -79,6 +79,7 @@ export async function worktreeListActive(
     // Convert metadata from nullable to Record (default to empty object)
     return results.map(wt => ({
       ...wt,
+      status: wt.status as 'active',
       metadata: wt.metadata ?? {},
     }))
   } catch (error) {

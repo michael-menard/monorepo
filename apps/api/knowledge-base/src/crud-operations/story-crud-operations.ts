@@ -11,13 +11,7 @@ import { z } from 'zod'
 import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import {
-  stories,
-  storyArtifacts,
-  storyDependencies,
-  plans,
-  planStoryLinks,
-} from '../db/schema.js'
+import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
 import {
   StoryStateSchema,
   StoryPhaseSchema,
@@ -36,11 +30,16 @@ const storyColumns = {
   description: stories.description,
   state: stories.state,
   priority: stories.priority,
+  phase: stories.phase,
+  iteration: stories.iteration,
   blockedReason: stories.blockedReason,
   blockedByStory: stories.blockedByStory,
   startedAt: stories.startedAt,
   completedAt: stories.completedAt,
   fileHash: stories.fileHash,
+  acceptanceCriteria: stories.acceptanceCriteria,
+  embedding: stories.embedding,
+  deletedAt: stories.deletedAt,
   createdAt: stories.createdAt,
   updatedAt: stories.updatedAt,
 } as const

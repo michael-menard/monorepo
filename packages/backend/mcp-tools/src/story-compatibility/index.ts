@@ -102,7 +102,7 @@ export async function shimGetStoriesByFeature(
   const results = await storyGetByFeature(input)
 
   if (results.length === 0) {
-    logger.warn(`[shim] No stories found in database for epic '${input.epic}'`)
+    logger.warn(`[shim] No stories found in database for feature '${input.feature}'`)
   }
 
   return results

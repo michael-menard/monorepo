@@ -8,16 +8,16 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./db": {
-      "import": "./dist/db/index.js",
-      "types": "./dist/db/index.d.ts"
+      "import": "./src/db/index.ts",
+      "types": "./src/db/index.ts"
     },
     "./types": {
-      "import": "./dist/__types__/index.js",
-      "types": "./dist/__types__/index.d.ts"
+      "import": "./src/__types__/index.ts",
+      "types": "./src/__types__/index.ts"
     }
   },
   "scripts": {

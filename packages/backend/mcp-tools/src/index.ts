@@ -30,9 +30,6 @@ export type {
   ContextCacheInvalidateResult,
 } from './context-cache/__types__/index.js'
 
-// Re-export all graph query tools (WINT-0130)
-export * from './graph-query/index.js'
-
 // Re-export all worktree management tools (WINT-1130)
 export {
   worktreeRegister,

@@ -25,10 +25,10 @@ export const StoryIdSchema = z.union([
 
 /**
  * Story Get Status Input Schema
- * Retrieves current status of a story by UUID or human-readable ID
+ * Retrieves current status of a story by human-readable ID
  */
 export const StoryGetStatusInputSchema = z.object({
-  storyId: StoryIdSchema,
+  storyId: z.string().min(1),
 })
 
 export type StoryGetStatusInput = z.infer<typeof StoryGetStatusInputSchema>
@@ -36,40 +36,14 @@ export type StoryGetStatusInput = z.infer<typeof StoryGetStatusInputSchema>
 /**
  * Story Get Status Output Schema
  * Returns story status with metadata or null if not found
- *
- * DEBT-RU-002: The story state enum ['backlog','ready','in_progress','ready_for_qa',
- * 'in_qa','blocked','completed','cancelled'] is repeated 4 times in this file (StoryGetStatusOutputSchema,
- * StoryUpdateStatusInputSchema, StoryUpdateStatusOutputSchema, StoryGetByStatusOutputSchema /
- * StoryGetByFeatureOutputSchema). This is a pre-existing issue that predates WINT-1150.
- * No shared @repo/mcp-tools-types or @repo/backend-utils package currently exists to consolidate
- * this. A future refactor should extract a StoryStateSchema constant to eliminate the repetition.
- *
- * DEBT-RU-003: The priority enum ['P0','P1','P2','P3','P4'] is similarly repeated 3 times in this
- * file. Same root cause as DEBT-RU-002 — no shared package exists for cross-module enum constants.
- * Should be extracted alongside StoryStateSchema in the same future refactor.
  */
 export const StoryGetStatusOutputSchema = z
   .object({
-    id: z.string().uuid(),
     storyId: z.string(),
+    feature: z.string(),
     title: z.string(),
-    state: z.enum([
-      'backlog',
-      'ready',
-      'in_progress',
-      'ready_for_review',
-      'ready_for_qa',
-      'in_qa',
-      'blocked',
-      'completed',
-      'cancelled',
-      'failed_code_review',
-      'failed_qa',
-    ]),
-    priority: z.enum(['P0', 'P1', 'P2', 'P3', 'P4']),
-    storyType: z.string(),
-    epic: z.string().nullable(),
-    wave: z.number().int().nullable(),
+    state: z.string().nullable(),
+    priority: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
   })
@@ -82,7 +56,7 @@ export type StoryGetStatusOutput = z.infer<typeof StoryGetStatusOutputSchema>
  * Updates story state with transition tracking
  */
 export const StoryUpdateStatusInputSchema = z.object({
-  storyId: StoryIdSchema,
+  storyId: z.string().min(1),
   newState: z.enum([
     'backlog',
     'ready',
@@ -109,21 +83,8 @@ export type StoryUpdateStatusInput = z.infer<typeof StoryUpdateStatusInputSchema
  */
 export const StoryUpdateStatusOutputSchema = z
   .object({
-    id: z.string().uuid(),
     storyId: z.string(),
-    state: z.enum([
-      'backlog',
-      'ready',
-      'in_progress',
-      'ready_for_review',
-      'ready_for_qa',
-      'in_qa',
-      'blocked',
-      'completed',
-      'cancelled',
-      'failed_code_review',
-      'failed_qa',
-    ]),
+    state: z.string().nullable(),
     updatedAt: z.date(),
   })
   .nullable()
@@ -135,19 +96,7 @@ export type StoryUpdateStatusOutput = z.infer<typeof StoryUpdateStatusOutputSche
  * Retrieves stories filtered by state with pagination
  */
 export const StoryGetByStatusInputSchema = z.object({
-  state: z.enum([
-    'backlog',
-    'ready',
-    'in_progress',
-    'ready_for_review',
-    'ready_for_qa',
-    'in_qa',
-    'blocked',
-    'completed',
-    'cancelled',
-    'failed_code_review',
-    'failed_qa',
-  ]),
+  state: z.string().min(1),
   limit: z.number().int().min(1).max(1000, 'limit cannot exceed 1000').default(50),
   offset: z.number().int().min(0).default(0),
 })
@@ -160,26 +109,11 @@ export type StoryGetByStatusInput = z.infer<typeof StoryGetByStatusInputSchema>
  */
 export const StoryGetByStatusOutputSchema = z.array(
   z.object({
-    id: z.string().uuid(),
     storyId: z.string(),
+    feature: z.string(),
     title: z.string(),
-    state: z.enum([
-      'backlog',
-      'ready',
-      'in_progress',
-      'ready_for_review',
-      'ready_for_qa',
-      'in_qa',
-      'blocked',
-      'completed',
-      'cancelled',
-      'failed_code_review',
-      'failed_qa',
-    ]),
-    priority: z.enum(['P0', 'P1', 'P2', 'P3', 'P4']),
-    storyType: z.string(),
-    epic: z.string().nullable(),
-    wave: z.number().int().nullable(),
+    state: z.string().nullable(),
+    priority: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
   }),
@@ -189,10 +123,10 @@ export type StoryGetByStatusOutput = z.infer<typeof StoryGetByStatusOutputSchema
 
 /**
  * Story Get By Feature Input Schema
- * Retrieves stories filtered by epic (feature) with pagination
+ * Retrieves stories filtered by feature with pagination
  */
 export const StoryGetByFeatureInputSchema = z.object({
-  epic: z.string().min(1, 'epic is required'),
+  feature: z.string().min(1, 'feature is required'),
   limit: z.number().int().min(1).max(1000, 'limit cannot exceed 1000').default(50),
   offset: z.number().int().min(0).default(0),
 })
@@ -201,30 +135,15 @@ export type StoryGetByFeatureInput = z.infer<typeof StoryGetByFeatureInputSchema
 
 /**
  * Story Get By Feature Output Schema
- * Returns array of stories belonging to the specified epic
+ * Returns array of stories belonging to the specified feature
  */
 export const StoryGetByFeatureOutputSchema = z.array(
   z.object({
-    id: z.string().uuid(),
     storyId: z.string(),
+    feature: z.string(),
     title: z.string(),
-    state: z.enum([
-      'backlog',
-      'ready',
-      'in_progress',
-      'ready_for_review',
-      'ready_for_qa',
-      'in_qa',
-      'blocked',
-      'completed',
-      'cancelled',
-      'failed_code_review',
-      'failed_qa',
-    ]),
-    priority: z.enum(['P0', 'P1', 'P2', 'P3', 'P4']),
-    storyType: z.string(),
-    epic: z.string().nullable(),
-    wave: z.number().int().nullable(),
+    state: z.string().nullable(),
+    priority: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
   }),

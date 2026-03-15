@@ -10,17 +10,15 @@
  * - Resilient error handling
  */
 
-import { eq, and, or } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { worktrees, stories } from '@repo/knowledge-base/src/db'
+import { worktrees, stories } from '@repo/knowledge-base/db'
 import {
   WorktreeGetByStoryInputSchema,
   type WorktreeGetByStoryInput,
   type WorktreeGetByStoryOutput,
 } from './__types__/index.js'
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * Get active worktree for a story by UUID or human-readable ID
@@ -72,15 +70,8 @@ export async function worktreeGetByStory(
         metadata: worktrees.metadata,
       })
       .from(worktrees)
-      .innerJoin(stories, eq(worktrees.storyId, stories.id))
-      .where(
-        and(
-          UUID_REGEX.test(parsed.storyId)
-            ? or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId))
-            : eq(stories.storyId, parsed.storyId),
-          eq(worktrees.status, 'active'),
-        ),
-      )
+      .innerJoin(stories, eq(worktrees.storyId, stories.storyId))
+      .where(and(eq(stories.storyId, parsed.storyId), eq(worktrees.status, 'active')))
       .limit(1)
 
     if (!worktree) {
@@ -90,6 +81,7 @@ export async function worktreeGetByStory(
     // Convert metadata from nullable to Record (default to empty object)
     return {
       ...worktree,
+      status: worktree.status as 'active',
       metadata: worktree.metadata ?? {},
     }
   } catch (error) {

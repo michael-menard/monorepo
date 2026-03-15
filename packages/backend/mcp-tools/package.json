@@ -3,52 +3,52 @@
   "version": "1.0.0",
   "description": "MCP tools infrastructure for session management and workflow operations",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./session-management": {
-      "types": "./dist/session-management/index.d.ts",
-      "default": "./dist/session-management/index.js"
+      "types": "./src/session-management/index.ts",
+      "default": "./src/session-management/index.ts"
     },
     "./context-cache/__types__": {
-      "types": "./dist/context-cache/__types__/index.d.ts",
-      "default": "./dist/context-cache/__types__/index.js"
+      "types": "./src/context-cache/__types__/index.ts",
+      "default": "./src/context-cache/__types__/index.ts"
     },
     "./session-management/__types__": {
-      "types": "./dist/session-management/__types__/index.d.ts",
-      "default": "./dist/session-management/__types__/index.js"
+      "types": "./src/session-management/__types__/index.ts",
+      "default": "./src/session-management/__types__/index.ts"
     },
     "./context-cache/context-cache-get.js": {
-      "types": "./dist/context-cache/context-cache-get.d.ts",
-      "default": "./dist/context-cache/context-cache-get.js"
+      "types": "./src/context-cache/context-cache-get.ts",
+      "default": "./src/context-cache/context-cache-get.ts"
     },
     "./context-cache/context-cache-put.js": {
-      "types": "./dist/context-cache/context-cache-put.d.ts",
-      "default": "./dist/context-cache/context-cache-put.js"
+      "types": "./src/context-cache/context-cache-put.ts",
+      "default": "./src/context-cache/context-cache-put.ts"
     },
     "./context-cache/context-cache-invalidate.js": {
-      "types": "./dist/context-cache/context-cache-invalidate.d.ts",
-      "default": "./dist/context-cache/context-cache-invalidate.js"
+      "types": "./src/context-cache/context-cache-invalidate.ts",
+      "default": "./src/context-cache/context-cache-invalidate.ts"
     },
     "./session-management/session-create.js": {
-      "types": "./dist/session-management/session-create.d.ts",
-      "default": "./dist/session-management/session-create.js"
+      "types": "./src/session-management/session-create.ts",
+      "default": "./src/session-management/session-create.ts"
     },
     "./session-management/session-update.js": {
-      "types": "./dist/session-management/session-update.d.ts",
-      "default": "./dist/session-management/session-update.js"
+      "types": "./src/session-management/session-update.ts",
+      "default": "./src/session-management/session-update.ts"
     },
     "./session-management/session-complete.js": {
-      "types": "./dist/session-management/session-complete.d.ts",
-      "default": "./dist/session-management/session-complete.js"
+      "types": "./src/session-management/session-complete.ts",
+      "default": "./src/session-management/session-complete.ts"
     },
     "./session-management/session-cleanup.js": {
-      "types": "./dist/session-management/session-cleanup.d.ts",
-      "default": "./dist/session-management/session-cleanup.js"
+      "types": "./src/session-management/session-cleanup.ts",
+      "default": "./src/session-management/session-cleanup.ts"
     }
   },
   "scripts": {
@@ -64,12 +64,12 @@
   "dependencies": {
     "@repo/context-pack-sidecar": "workspace:*",
     "@repo/db": "workspace:*",
+    "@repo/knowledge-base": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/sidecar-rules-registry": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
     "drizzle-orm": "^0.44.3",
-    "zod": "^3.22.4",
-    "@repo/sidecar-rules-registry": "workspace:*"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "25.2.1",

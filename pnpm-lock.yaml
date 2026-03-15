@@ -1728,6 +1728,9 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.54.1
+        version: 1.58.2
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.1
@@ -1758,12 +1761,18 @@ importers:
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.24(postcss@8.5.8)
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       eslint:
         specifier: ^9.30.1
         version: 9.39.2(jiti@2.6.1)
       jsdom:
         specifier: ^26.0.0
         version: 26.1.0(canvas@3.2.1)
+      playwright-bdd:
+        specifier: 8.4.2
+        version: 8.4.2(@playwright/test@1.58.2)
       postcss:
         specifier: ^8.4.47
         version: 8.5.8
@@ -2017,6 +2026,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../db
+      '@repo/knowledge-base':
+        specifier: workspace:*
+        version: link:../../../apps/api/knowledge-base
       '@repo/logger':
         specifier: workspace:*
         version: link:../../core/logger
@@ -2457,6 +2469,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../db
+      '@repo/knowledge-base':
+        specifier: workspace:*
+        version: link:../../../../apps/api/knowledge-base
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -2513,6 +2528,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../db
+      '@repo/knowledge-base':
+        specifier: workspace:*
+        version: link:../../../../apps/api/knowledge-base
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../core/logger
