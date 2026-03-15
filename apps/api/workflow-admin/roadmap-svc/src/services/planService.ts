@@ -66,6 +66,11 @@ export const PlanListResultSchema = z.object({
   }),
 })
 
+export type StoryRef = {
+  storyId: string
+  title: string
+}
+
 export type PlanSummary = {
   id: string
   planSlug: string
@@ -89,6 +94,9 @@ export type PlanSummary = {
   // Churn metrics
   churnDepth: number
   hasRegression: boolean
+  // Next story to work on + blocked list
+  nextStory: StoryRef | null
+  blockedStoryList: StoryRef[]
 }
 
 export type PlanListResult = Omit<z.infer<typeof PlanListResultSchema>, 'data'> & {
@@ -218,6 +226,32 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
             and psh.from_status in ('implemented','in-progress','stories-created','accepted')
             and psh.to_status   in ('draft','active','blocked')
         )
+      )`,
+      // Next story to work on (lowest priority backlog/ready story)
+      nextStory: sql<StoryRef | null>`(
+        select row_to_json(t)
+        from (
+          select s.story_id as "storyId", s.title
+          from workflow.plan_story_links psl
+          join workflow.stories s on s.story_id = psl.story_id
+          where psl.plan_slug = plans.plan_slug
+            and (s.state is null or s.state not in (
+              'completed','in_progress','in_review','in_qa','uat','needs_code_review','blocked'
+            ))
+          order by s.priority asc nulls last, s.created_at asc
+          limit 1
+        ) t
+      )`,
+      // Blocked stories list
+      blockedStoryList: sql<StoryRef[]>`(
+        select coalesce(json_agg(t order by t."storyId"), '[]'::json)
+        from (
+          select s.story_id as "storyId", s.title
+          from workflow.plan_story_links psl
+          join workflow.stories s on s.story_id = psl.story_id
+          where psl.plan_slug = plans.plan_slug
+            and s.state = 'blocked'
+        ) t
       )`,
     })
     .from(plans)

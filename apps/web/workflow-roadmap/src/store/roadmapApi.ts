@@ -23,6 +23,9 @@ export interface Plan {
   // Churn metrics
   churnDepth: number
   hasRegression: boolean
+  // Hover detail
+  nextStory: { storyId: string; title: string } | null
+  blockedStoryList: Array<{ storyId: string; title: string }>
 }
 
 export interface PlanListResponse {
