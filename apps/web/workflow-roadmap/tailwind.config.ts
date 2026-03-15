@@ -6,7 +6,7 @@ const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
     './index.html',
-    '../../packages/core/app-component-library/src/**/*.{ts,tsx}',
+    '../../../packages/core/app-component-library/src/**/*.{ts,tsx}',
   ],
   safelist: [
     'animate-in',

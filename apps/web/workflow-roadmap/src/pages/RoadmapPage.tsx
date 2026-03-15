@@ -1,17 +1,23 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { AppDataTable, Badge, MultiSelect, Checkbox, AppInput } from '@repo/app-component-library'
-import type { AppDataTableColumn } from '@repo/app-component-library'
+import {
+  AppDataTable,
+  AppBadge,
+  Input,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  Checkbox,
+  Label,
+} from '@repo/app-component-library'
 import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../store/roadmapApi'
-import { GripVertical } from 'lucide-react'
 
-interface MultiSelectOption {
-  value: string
-  label: string
-  disabled?: boolean
-}
+const ALL = '_all'
 
-const STATUS_OPTIONS: MultiSelectOption[] = [
+const STATUS_OPTIONS = [
+  { label: 'All Statuses', value: ALL },
   { label: 'Draft', value: 'draft' },
   { label: 'Active', value: 'active' },
   { label: 'Accepted', value: 'accepted' },
@@ -23,7 +29,8 @@ const STATUS_OPTIONS: MultiSelectOption[] = [
   { label: 'Blocked', value: 'blocked' },
 ]
 
-const PRIORITY_OPTIONS: MultiSelectOption[] = [
+const PRIORITY_OPTIONS = [
+  { label: 'All Priorities', value: ALL },
   { label: 'P1', value: 'P1' },
   { label: 'P2', value: 'P2' },
   { label: 'P3', value: 'P3' },
@@ -31,7 +38,8 @@ const PRIORITY_OPTIONS: MultiSelectOption[] = [
   { label: 'P5', value: 'P5' },
 ]
 
-const TYPE_OPTIONS: MultiSelectOption[] = [
+const TYPE_OPTIONS = [
+  { label: 'All Types', value: ALL },
   { label: 'Feature', value: 'feature' },
   { label: 'Refactor', value: 'refactor' },
   { label: 'Migration', value: 'migration' },
@@ -42,11 +50,15 @@ const TYPE_OPTIONS: MultiSelectOption[] = [
   { label: 'Spike', value: 'spike' },
 ]
 
-const columns: AppDataTableColumn<Plan>[] = [
+const fromSelect = (v: string) => (v === ALL ? '' : v)
+
+const columns = [
   {
     key: 'planSlug',
     header: 'Slug',
-    render: plan => <span className="font-mono text-sm">{plan.planSlug}</span>,
+    render: (plan: Plan) => (
+      <span className="font-mono text-sm text-cyan-400">{plan.planSlug}</span>
+    ),
   },
   {
     key: 'title',
@@ -55,16 +67,16 @@ const columns: AppDataTableColumn<Plan>[] = [
   {
     key: 'status',
     header: 'Status',
-    render: plan => <Badge variant="outline">{plan.status}</Badge>,
+    render: (plan: Plan) => <AppBadge variant="outline">{plan.status}</AppBadge>,
   },
   {
     key: 'priority',
     header: 'Priority',
-    render: plan =>
+    render: (plan: Plan) =>
       plan.priority ? (
-        <Badge variant={plan.priority === 'P1' ? 'destructive' : 'secondary'}>
+        <AppBadge variant={plan.priority === 'P1' ? 'destructive' : 'secondary'}>
           {plan.priority}
-        </Badge>
+        </AppBadge>
       ) : null,
   },
   {
@@ -74,23 +86,22 @@ const columns: AppDataTableColumn<Plan>[] = [
   {
     key: 'estimatedStories',
     header: 'Stories',
-    responsive: { hideAt: 'md' },
+    responsive: { hideAt: 'md' as const },
   },
   {
     key: 'createdAt',
     header: 'Created',
-    render: plan => new Date(plan.createdAt).toLocaleDateString(),
-    responsive: { hideAt: 'lg' },
+    render: (plan: Plan) => new Date(plan.createdAt).toLocaleDateString(),
+    responsive: { hideAt: 'lg' as const },
   },
 ]
 
 export function RoadmapPage() {
   const navigate = useNavigate({ from: '/' })
 
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([])
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [selectedPriority, setSelectedPriority] = useState('')
+  const [selectedType, setSelectedType] = useState('')
   const [excludeCompleted, setExcludeCompleted] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -100,14 +111,13 @@ export function RoadmapPage() {
     () => ({
       page: 1,
       limit: 100,
-      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
-      priority: selectedPriorities.length > 0 ? selectedPriorities : undefined,
-      planType: selectedTypes.length > 0 ? selectedTypes : undefined,
-      tags: selectedTags.length > 0 ? selectedTags : undefined,
+      status: selectedStatus ? [selectedStatus] : undefined,
+      priority: selectedPriority ? [selectedPriority] : undefined,
+      planType: selectedType ? [selectedType] : undefined,
       excludeCompleted,
       search: search.trim() || undefined,
     }),
-    [selectedStatuses, selectedPriorities, selectedTypes, selectedTags, excludeCompleted, search],
+    [selectedStatus, selectedPriority, selectedType, excludeCompleted, search],
   )
 
   const { data, error } = useGetPlansQuery(queryParams)
@@ -118,114 +128,153 @@ export function RoadmapPage() {
 
   const handleReorder = useCallback(
     (items: Array<{ id: string; index: number }>) => {
-      const priority = selectedPriorities[0] || 'P1'
       reorderPlans({
-        priority,
+        priority: selectedPriority || 'P1',
         items: items.map(item => ({ id: item.id, priorityOrder: item.index })),
       })
     },
-    [reorderPlans, selectedPriorities],
+    [reorderPlans, selectedPriority],
   )
 
   const errorMessage = error ? ('error' in error ? error.error : 'Failed to fetch plans') : null
 
   if (errorMessage) {
     return (
-      <div className="p-4">
-        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded">
-          Error: {errorMessage}
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg font-mono text-sm">
+          ERROR: {errorMessage}
         </div>
       </div>
     )
   }
 
   const plans = data?.data || []
-  const showDraggable = selectedPriorities.length === 1
+  const showDraggable = !!selectedPriority
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Roadmap</h1>
-        <p className="text-muted-foreground mt-2">Browse and manage project plans</p>
-      </div>
+    <main className="container mx-auto px-4 py-8">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+          Roadmap
+        </h1>
+        <p className="text-slate-400 mt-1 font-mono text-sm">Browse and manage project plans</p>
+      </header>
 
-      <div className="mb-6 flex flex-wrap gap-4 items-end">
-        <div className="w-64">
-          <AppInput
-            placeholder="Search plans..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="w-48">
-          <MultiSelect
-            options={STATUS_OPTIONS}
-            selectedValues={selectedStatuses}
-            onSelectionChange={setSelectedStatuses}
-            placeholder="Status"
-          />
-        </div>
-        <div className="w-40">
-          <MultiSelect
-            options={PRIORITY_OPTIONS}
-            selectedValues={selectedPriorities}
-            onSelectionChange={setSelectedPriorities}
-            placeholder="Priority"
-          />
-        </div>
-        <div className="w-40">
-          <MultiSelect
-            options={TYPE_OPTIONS}
-            selectedValues={selectedTypes}
-            onSelectionChange={setSelectedTypes}
-            placeholder="Type"
-          />
-        </div>
-        <div className="w-48">
-          <MultiSelect
-            options={[]}
-            selectedValues={selectedTags}
-            onSelectionChange={setSelectedTags}
-            placeholder="Tags"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="exclude-completed"
-            checked={excludeCompleted}
-            onCheckedChange={checked => setExcludeCompleted(checked === true)}
-          />
-          <label
-            htmlFor="exclude-completed"
-            className="text-sm text-muted-foreground cursor-pointer"
+      <section className="mb-6 bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-4 flex flex-col gap-3">
+        <Input
+          placeholder="Search plans..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
+        />
+
+        <div className="flex items-center gap-3">
+          <Select
+            value={selectedStatus ?? ALL}
+            onValueChange={v => setSelectedStatus(fromSelect(v))}
           >
-            Hide completed
-          </label>
+            <SelectTrigger
+              aria-label="Filter by status"
+              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {STATUS_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={selectedPriority ?? ALL}
+            onValueChange={v => setSelectedPriority(fromSelect(v))}
+          >
+            <SelectTrigger
+              aria-label="Filter by priority"
+              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {PRIORITY_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedType ?? ALL} onValueChange={v => setSelectedType(fromSelect(v))}>
+            <SelectTrigger
+              aria-label="Filter by type"
+              className="bg-slate-800/60 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {TYPE_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Checkbox
+              id="exclude-completed"
+              checked={excludeCompleted}
+              onCheckedChange={checked => setExcludeCompleted(checked === true)}
+            />
+            <Label
+              htmlFor="exclude-completed"
+              className="text-sm text-slate-400 cursor-pointer select-none"
+            >
+              Hide completed
+            </Label>
+          </div>
         </div>
-      </div>
+      </section>
 
       {showDraggable && (
-        <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          Drag rows to reorder. Select a single priority to enable reordering.
-        </div>
+        <p className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-sm text-cyan-400 font-mono">
+          ↕ Drag rows to reorder within this priority group.
+        </p>
       )}
 
-      <AppDataTable
-        data={plans}
-        columns={columns}
-        onRowClick={handleRowClick}
-        emptyMessage="No plans found"
-        pagination={{
-          enabled: true,
-          pageSize: 10,
-          showPageSizeSelector: true,
-          showPageInfo: true,
-          showNavigationButtons: true,
-        }}
-        draggable={showDraggable}
-        onReorder={handleReorder}
-        getRowId={plan => plan.id}
-      />
-    </div>
+      <section className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-hidden">
+        <AppDataTable
+          data={plans}
+          columns={columns}
+          onRowClick={handleRowClick}
+          emptyMessage="No plans found"
+          pagination={{
+            enabled: true,
+            pageSize: 10,
+            showPageSizeSelector: true,
+            showPageInfo: true,
+            showNavigationButtons: true,
+          }}
+          draggable={showDraggable}
+          onReorder={handleReorder}
+          getRowId={plan => plan.id}
+        />
+      </section>
+    </main>
   )
 }
