@@ -1,133 +1,159 @@
 schema: 1
-story_id: WINT-4100
-timestamp: '2026-03-09T00:00:00Z'
-verdict: PASS
+story_id: CDBE-0020
+timestamp: '2026-03-15T20:00:00.000Z'
+verdict: FAIL
 tests_executed: true
 test_results:
   unit:
     pass: 0
     fail: 0
-    note: exempt — agent-prompt-only story, no TypeScript code
   integration:
     pass: 0
     fail: 0
-    note: N/A
   e2e:
     pass: 0
     fail: 0
-    note: exempt — agent-prompt-only story
-  http:
-    pass: 0
-    fail: 0
-    note: N/A — no backend changes
-test_exemption_reason: >-
-  WINT-4100 is an agent-prompt-only story. The deliverable is a markdown agent spec file
-  (.claude/agents/backlog-curator.agent.md). No TypeScript, no build artifacts, no test files. All test categories are
-  exempt per evidence artifact.
-coverage: N/A
+  pgtap:
+    test_cdbe1020_completion_cascade:
+      pass: 6
+      fail: 1
+      note: Assertion 1 (has_function cascade_story_completion) fails — CDBE-1020 trigger not deployed
+    test_cdbe1020_cancellation_cascade:
+      pass: 6
+      fail: 1
+      note: Assertion 1 (has_function cascade_story_cancellation) fails — CDBE-1020 trigger not deployed
+    test_cdbe1030_artifact_superseded_at:
+      pass: 0
+      fail: 1
+      aborted: 6
+      note: Assertion 1 fails (function not deployed), CREATE TRIGGER aborts transaction — remaining 6 assertions skipped
+    test_cdbe1030_plan_archival:
+      pass: 0
+      fail: 1
+      aborted: 6
+      note: Assertion 1 fails (function not deployed), CREATE TRIGGER aborts transaction — remaining 6 assertions skipped
+coverage: null
 coverage_meets_threshold: true
 test_quality:
-  verdict: PASS
-  anti_patterns: []
+  verdict: CONCERNS
+  anti_patterns:
+    - >-
+      test_cdbe1030_artifact_superseded_at.sql: CREATE TRIGGER referencing missing function causes transaction abort
+      when prerequisite (CDBE-1030) is not deployed. All assertions after the failed CREATE TRIGGER are silently skipped
+      rather than explicitly failed. Tests should use a conditional check or SAVEPOINT to isolate trigger attachment
+      failures from behavioral assertions.
+    - 'test_cdbe1030_plan_archival.sql: Same issue — CREATE TRIGGER abort causes 6 of 7 assertions to never execute.'
 acs_verified:
   - ac_id: AC-1
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-1
-    check: head -20 backlog-curator.agent.md
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
     notes: >-
-      YAML frontmatter confirmed: created=2026-03-08, updated=2026-03-08, version=1.0.0, type=worker, model=haiku,
-      name=backlog-curator, spawned_by=[pm-story-generation-leader, pm-story-adhoc-leader]
+      Both test files exist with correct BEGIN/ROLLBACK isolation and 7 assertions each. Assertions 2-7 pass in both
+      files (data model behavior correct). Assertion 1 (has_function) fails in both because CDBE-1020 triggers not
+      deployed. This is expected per story notes but AC-1 cannot be called PASS until CDBE-1020 is deployed.
   - ac_id: AC-2
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-2
-    check: Read file — Inputs section verified
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
     notes: >-
-      Required inputs table: scope, output_dir. Optional inputs table: scope_challenges_dir, deferred_writes_dir,
-      batch_limit — all present with correct descriptions and degradation notes.
+      test_cdbe1030_artifact_superseded_at.sql exists with correct structure. However, CREATE TRIGGER on test table
+      references the not-yet-deployed set_artifact_superseded_at() function, causing a transaction abort. Only assertion
+      1 executes (fails). 6 behavioral assertions never run. File structure is valid but test execution is blocked by
+      the missing trigger function.
   - ac_id: AC-3
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-3
-    check: Read file — Execution Phases section verified
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
     notes: >-
-      4 phases present: Phase 1 Load Deferred Items, Phase 2 Deduplicate and Rank, Phase 3 Generate PM Review Batch,
-      Phase 4 Produce Output.
+      test_cdbe1030_plan_archival.sql exists with correct structure. Same issue as AC-2 — CREATE TRIGGER abort blocks
+      all behavioral assertions. Only assertion 1 executes (fails).
   - ac_id: AC-4
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-4
-    check: grep 'kb_search' backlog-curator.agent.md
-    notes: 'Exact query found in Phase 1: kb_search({ query: "deferred moonshot", tags: ["deferred"], limit: 50 })'
+    status: FAIL
+    evidence_ref: 'QA-run: pgtap executed via docker exec'
+    notes: >-
+      Tests do NOT pass. Each CDBE-1020 test has 1 failing assertion (has_function). Each CDBE-1030 test has 1 failing
+      assertion plus 6 aborted assertions. EVIDENCE.yaml claimed tests could not be verified (DB_NOT_AVAILABLE) but
+      tests were actually executed during QA and they fail. AC-4 is blocked on CDBE-1020 and CDBE-1030 being deployed
+      first.
   - ac_id: AC-5
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-5
-    check: Read file — Graceful Degradation section verified
+    status: FAIL
+    evidence_ref: kb_get_story CDBE-0020 dependencies
     notes: >-
-      All 3 degradation cases documented: KB unavailable (falls back to filesystem, emits WARNINGS signal), no deferred
-      items found (emits zero-item batch + COMPLETE), scope-challenges absent (skips silently, no warning).
+      Story dependencies in KB: only CDBE-0010 declared. Required: explicit dependencies on CDBE-1020 and CDBE-1030. The
+      KB record does not have these dependency declarations. PLAN artifact noted this as a KB record change needed
+      (planned evidence: 'Story CDBE-0020 KB record has explicit blockedByStory or dependency entries referencing
+      CDBE-1020 and CDBE-1030') — this was not executed.
   - ac_id: AC-6
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-6
-    check: Read file — Phase 2 Deduplicate and Rank verified
+    status: FAIL
+    evidence_ref: scripts/db/run-pgtap.sh reviewed
     notes: >-
-      Dedup key: (story_id + SHA-256 hash of deferral description). Source field records all origins joined with '+'
-      (e.g., 'kb+scope-challenges').
+      run-pgtap.sh does NOT contain a pg_isready availability guard. The script proceeds directly to pg_prove without
+      checking DB availability. When DB is unavailable, pg_prove fails with connection errors rather than gracefully
+      exiting 0 with a SKIP message. PLAN step 6 required adding this guard but it was not implemented.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-7
-    check: Read file — Phase 3 Generate PM Review Batch verified
+    evidence_ref: >-
+      PLAN artifact in KB (7 steps with subtask IDs ST-1 through ST-7, file ownership, verification commands, and
+      canonical references)
     notes: >-
-      batch_limit configurable (default 10), truncated: true flag set when total_items_found > batch_limit, ranked list
-      sorted by recency descending.
-  - ac_id: AC-8
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-8
-    check: grep 'pm-review-batch.json' backlog-curator.agent.md
-    notes: >-
-      Schema section present with all required fields: generated_at, total_items_found, items_in_batch, truncated,
-      items[]. Field definitions table included.
-  - ac_id: AC-9
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-9
-    check: Read file — PM-REVIEW-REPORT.md Specification verified
-    notes: >-
-      Spec defined with ~5 lines per item. recommended_action enum: promote-to-story | close | defer-again. Truncation
-      note template included.
-  - ac_id: AC-10
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-10
-    check: grep -i 'does not auto-create|does not modify' backlog-curator.agent.md
-    notes: >-
-      Non-Goals section enumerates: no auto-create stories, no modify KB entries, no write to stories index, no run
-      scope-defender or graph-checker. Non-Negotiables section reinforces: MUST NOT create stories, modify KB entries,
-      or write to the stories index.
-  - ac_id: AC-11
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-11
-    check: grep 'LangGraph' backlog-curator.agent.md
-    notes: >-
-      LangGraph Porting Notes section present. Input contract table (5 state fields), 4-phase execution contract, output
-      contract table, future node path nodes/backlog/backlog-curate.ts documented.
-  - ac_id: AC-12
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-12
-    check: grep -c 'BACKLOG-CURATOR' returns 5 (not 3 as test plan states)
-    notes: >-
-      All 3 canonical completion signals defined in Completion Signals table: BACKLOG-CURATOR COMPLETE, BACKLOG-CURATOR
-      COMPLETE WITH WARNINGS, BACKLOG-CURATOR BLOCKED. The grep count of 5 (vs test plan expectation of 3) is due to 2
-      additional usage examples in the Graceful Degradation section — this is correct file structure, not a defect. Test
-      plan heuristic imprecision noted; AC itself is fully satisfied.
+      The PLAN artifact provides complete subtask decomposition with 7 sequenced steps, each with files, dependencies,
+      verification commands, and AC coverage mapping. Plan notes explicitly state: 'This PLAN.yaml itself serves as the
+      subtask decomposition — AC-7 is satisfied by the plan artifact.'
 architecture_compliant: true
-architecture_notes: >-
-  Agent-prompt-only deliverable. No code, no build, no TypeScript. Review artifact confirmed 0 errors, 0 warnings across
-  all 10 review workers. 1 pre-existing type error in @repo/app-sets-gallery is unrelated to this story.
-issues: []
-observations:
-  - type: test_plan_imprecision
-    ac_id: AC-12
-    detail: >-
-      Test plan check 3 expects grep -c 'BACKLOG-CURATOR' = 3. Actual count is 5. The 2 additional occurrences are valid
-      usage examples in the Graceful Degradation section (lines 52-53). All 3 required signals are correctly defined.
-      Not a defect.
-lessons_to_record: []
+issues:
+  - severity: BLOCKER
+    ac: AC-4
+    description: >-
+      Tests fail at runtime — all 4 pgtap test files have failing assertions. Two CDBE-1020 files fail assertion 1
+      (has_function). Two CDBE-1030 files fail assertion 1 and abort the remaining 6 assertions due to CREATE TRIGGER
+      referencing missing functions.
+  - severity: BLOCKER
+    ac: AC-5
+    description: >-
+      Story CDBE-0020 missing explicit KB dependency declarations on CDBE-1020 and CDBE-1030. Only CDBE-0010 is
+      declared. kb_update_story or equivalent was never called to add these dependencies.
+  - severity: BLOCKER
+    ac: AC-6
+    description: >-
+      scripts/db/run-pgtap.sh lacks the pg_isready DB availability guard. Running with no DB fails instead of gracefully
+      skipping. The plan specified this as step 6 but it was not implemented.
+  - severity: CONCERN
+    ac: AC-2 / AC-3
+    description: >-
+      CDBE-1030 test files cause full transaction abort when trigger function is missing (CREATE TRIGGER fails
+      mid-transaction). This causes 6 of 7 assertions to be silently skipped. A more resilient pattern would
+      conditionally skip trigger attachment or use SAVEPOINT isolation.
+  - severity: NOTE
+    ac: AC-1
+    description: >-
+      EVIDENCE.yaml only covers AC-1 through AC-3 (3 of 7 ACs). AC-4 through AC-7 have no evidence entries. The
+      EVIDENCE.yaml was incomplete before QA.
+lessons_to_record:
+  - lesson: >-
+      pgtap tests that use CREATE TRIGGER referencing a not-yet-deployed function will abort the entire transaction when
+      the function is missing. This silently skips all remaining assertions. Tests should use a guard (e.g., check
+      has_function() BEFORE attempting CREATE TRIGGER, or use a DO block with conditional logic) to avoid full abort.
+    category: anti_pattern
+    tags:
+      - pgtap
+      - database
+      - testing
+      - triggers
+  - lesson: >-
+      When EVIDENCE.yaml is written with DB_NOT_AVAILABLE, it should still enumerate all 7 ACs with their status.
+      Omitting AC-4 through AC-7 from EVIDENCE leaves QA without the primary source of truth for those criteria.
+    category: pattern
+    tags:
+      - evidence
+      - qa
+      - documentation
+  - lesson: >-
+      KB dependency declarations (AC-5 for CDBE-0020) must be explicitly executed via kb_update_story or
+      story_dependencies insert — noting it in the plan notes is insufficient. Implementation agents must execute KB
+      writes as part of the implementation phase.
+    category: blocker
+    tags:
+      - kb
+      - dependencies
+      - implementation
 tokens:
-  in: 9500
-  out: 1800
+  in: 48000
+  out: 4500
