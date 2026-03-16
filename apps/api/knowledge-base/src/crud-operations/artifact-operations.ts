@@ -1109,7 +1109,14 @@ export async function artifact_write(
     filePath,
   })
 
-  // ---- KB write (optional, failure-isolated) ----
+  // Artifact types that gate state transitions — KB write is mandatory for these.
+  // A silent failure here would allow a story to appear stuck (artifact missing)
+  // even though work was done. The precondition guard in kb_update_story_status
+  // depends on these being present in the KB before allowing the transition.
+  const GATED_ARTIFACT_TYPES = new Set(['elaboration', 'proof', 'review', 'qa_gate'])
+  const isGated = GATED_ARTIFACT_TYPES.has(validatedInput.artifact_type)
+
+  // ---- KB write (mandatory for gated types, optional+failure-isolated for others) ----
   let kbWritten: boolean | null = null
   let kbArtifactId: string | null = null
   let kbError: string | null = null
@@ -1144,6 +1151,20 @@ export async function artifact_write(
     } catch (err) {
       kbWritten = false
       kbError = err instanceof Error ? err.message : String(err)
+
+      if (isGated) {
+        // Gated artifact types must land in the KB — re-throw so the caller knows
+        // the precondition for the next state transition cannot be satisfied.
+        logger.error('artifact_write: KB write failed for gated artifact type (blocking)', {
+          storyId: validatedInput.story_id,
+          artifactType: validatedInput.artifact_type,
+          iteration,
+          error: kbError,
+        })
+        throw new Error(
+          `KB write required for gated artifact type '${validatedInput.artifact_type}': ${kbError}`,
+        )
+      }
 
       logger.warn('artifact_write: KB write failed (non-blocking)', {
         storyId: validatedInput.story_id,

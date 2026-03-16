@@ -368,8 +368,8 @@ describe('Round-trip serialization', () => {
         skip: false,
       },
       gateDecisions: {
-        codeReview: 'PASS' as const,
-        qaVerify: 'PENDING' as const,
+        review: 'PASS' as const,
+        verification: 'PENDING' as const,
       },
     } as GraphState
 

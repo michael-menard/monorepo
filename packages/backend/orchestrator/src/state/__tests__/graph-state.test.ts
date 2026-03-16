@@ -40,7 +40,7 @@ describe('GraphStateSchema', () => {
           },
         ],
         gateDecisions: {
-          codeReview: 'PASS',
+          review: 'PASS',
         },
         errors: [],
         stateHistory: [],
@@ -54,7 +54,7 @@ describe('GraphStateSchema', () => {
       expect(result.artifactPaths.storyDoc).toBe('/path/to/story.md')
       expect(result.routingFlags.proceed).toBe(true)
       expect(result.evidenceRefs).toHaveLength(1)
-      expect(result.gateDecisions.codeReview).toBe('PASS')
+      expect(result.gateDecisions.review).toBe('PASS')
     })
 
     it('HP-2: type inference works via z.infer<typeof GraphStateSchema>', () => {
@@ -120,10 +120,10 @@ describe('GraphStateSchema', () => {
           storyDoc: '/story.md',
           elaboration: '/elaboration.md',
           proof: '/proof.md',
-          codeReview: '/code-review.md',
-          qaVerify: '/qa-verify.md',
-          uiuxReview: '/uiux-review.md',
-          qaGate: '/qa-gate.md',
+          review: '/code-review.md',
+          verification: '/qa-verify.md',
+          uiux_notes: '/uiux-review.md',
+          qa_gate: '/qa-gate.md',
           evidence: '/evidence.zip',
         },
       })
@@ -174,17 +174,17 @@ describe('GraphStateSchema', () => {
         epicPrefix: 'wrkf',
         storyId: 'wrkf-1010',
         gateDecisions: {
-          codeReview: 'PASS',
-          qaVerify: 'FAIL',
-          uiuxReview: 'CONCERNS',
-          qaGate: 'PENDING',
+          review: 'PASS',
+          verification: 'FAIL',
+          uiux_notes: 'CONCERNS',
+          qa_gate: 'PENDING',
         },
       })
 
-      expect(result.gateDecisions.codeReview).toBe('PASS')
-      expect(result.gateDecisions.qaVerify).toBe('FAIL')
-      expect(result.gateDecisions.uiuxReview).toBe('CONCERNS')
-      expect(result.gateDecisions.qaGate).toBe('PENDING')
+      expect(result.gateDecisions.review).toBe('PASS')
+      expect(result.gateDecisions.verification).toBe('FAIL')
+      expect(result.gateDecisions.uiux_notes).toBe('CONCERNS')
+      expect(result.gateDecisions.qa_gate).toBe('PENDING')
     })
 
     it('HP-10: schemaVersion defaults to current version', () => {
@@ -235,7 +235,7 @@ describe('GraphStateSchema', () => {
           epicPrefix: 'wrkf',
           storyId: 'wrkf-1010',
           gateDecisions: {
-            codeReview: 'INVALID',
+            review: 'INVALID',
           },
         }),
       ).toThrow(ZodError)
@@ -357,10 +357,10 @@ describe('GraphStateSchema', () => {
         epicPrefix: 'wrkf',
         storyId: 'wrkf-1010',
         gateDecisions: {
-          codeReview: 'WAIVED',
-          qaVerify: 'WAIVED',
-          uiuxReview: 'WAIVED',
-          qaGate: 'WAIVED',
+          review: 'WAIVED',
+          verification: 'WAIVED',
+          uiux_notes: 'WAIVED',
+          qa_gate: 'WAIVED',
         },
       })
 
@@ -372,10 +372,10 @@ describe('GraphStateSchema', () => {
         epicPrefix: 'wrkf',
         storyId: 'wrkf-1010',
         gateDecisions: {
-          codeReview: 'PENDING',
-          qaVerify: 'PENDING',
-          uiuxReview: 'PENDING',
-          qaGate: 'PENDING',
+          review: 'PENDING',
+          verification: 'PENDING',
+          uiux_notes: 'PENDING',
+          qa_gate: 'PENDING',
         },
       })
 
@@ -450,10 +450,10 @@ describe('Enum Schemas', () => {
       'storyDoc',
       'elaboration',
       'proof',
-      'codeReview',
-      'qaVerify',
-      'uiuxReview',
-      'qaGate',
+      'review',
+      'verification',
+      'uiux_notes',
+      'qa_gate',
       'evidence',
     ]
 
@@ -471,7 +471,7 @@ describe('Enum Schemas', () => {
   })
 
   it('GateTypeSchema validates all gate types', () => {
-    const types = ['codeReview', 'qaVerify', 'uiuxReview', 'qaGate']
+    const types = ['review', 'verification', 'uiux_notes', 'qa_gate']
 
     types.forEach(type => {
       expect(GateTypeSchema.parse(type)).toBe(type)
