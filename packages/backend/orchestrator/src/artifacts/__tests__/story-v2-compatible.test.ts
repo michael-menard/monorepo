@@ -91,7 +91,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
         id: 'LNGG-0010',
         feature: 'platform',
         type: 'infrastructure',
-        state: 'in-progress',
+        state: 'in_progress',
         title: 'Story File Adapter',
         points: 5,
         priority: 'high',
@@ -131,7 +131,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
         expect(result.data.schema).toBe(1)
         expect(result.data.id).toBe('LNGG-0010')
         expect(result.data.feature).toBe('platform')
-        expect(result.data.state).toBe('in-progress')
+        expect(result.data.state).toBe('in_progress')
         expect(result.data.acs).toHaveLength(1)
       }
     })
@@ -158,24 +158,24 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
     })
 
     it('should get state from new story (state field)', () => {
-      const newStory = { id: 'TEST-002', title: 'Test', state: 'in-progress' } as StoryArtifact
+      const newStory = { id: 'TEST-002', title: 'Test', state: 'in_progress' } as StoryArtifact
 
       const state = getStoryState(newStory)
 
-      expect(state).toBe('in-progress')
+      expect(state).toBe('in_progress')
     })
 
     it('should prefer state over status when both present', () => {
       const mixed = {
         id: 'TEST-003',
         title: 'Test',
-        state: 'in-progress',
+        state: 'in_progress',
         status: 'uat',
       } as StoryArtifact
 
       const state = getStoryState(mixed)
 
-      expect(state).toBe('in-progress')
+      expect(state).toBe('in_progress')
     })
 
     it('should get feature from legacy story (epic field)', () => {
@@ -263,7 +263,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
       const newStory = {
         id: 'TEST-002',
         title: 'Test',
-        state: 'in-progress',
+        state: 'in_progress',
         feature: 'platform',
       } as StoryArtifact
 
@@ -311,13 +311,13 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
       const story = {
         id: 'TEST-001',
         title: 'Test',
-        state: 'in-progress',
+        state: 'in_progress',
         updated_at: '2026-02-13T00:00:00Z',
       } as StoryArtifact
 
-      const updated = updateStoryState(story, 'ready-for-qa')
+      const updated = updateStoryState(story, 'ready_for_qa')
 
-      expect(updated.state).toBe('ready-for-qa')
+      expect(updated.state).toBe('ready_for_qa')
       expect(updated.updated_at).not.toBe('2026-02-13T00:00:00Z')
     })
 
@@ -329,10 +329,10 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
         updated_at: '2026-02-13T00:00:00Z',
       } as StoryArtifact
 
-      const updated = updateStoryState(story, 'ready-for-qa')
+      const updated = updateStoryState(story, 'ready_for_qa')
 
-      expect(updated.state).toBe('ready-for-qa')
-      expect(updated.status).toBe('ready-for-qa')
+      expect(updated.state).toBe('ready_for_qa')
+      expect(updated.status).toBe('ready_for_qa')
     })
   })
 
@@ -346,12 +346,12 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
     })
 
     it('should check if story is complete', () => {
-      const done = { id: 'TEST-001', title: 'Test', state: 'done' } as StoryArtifact
-      const uat = { id: 'TEST-002', title: 'Test', status: 'uat' } as StoryArtifact
-      const inProgress = { id: 'TEST-003', title: 'Test', state: 'in-progress' } as StoryArtifact
+      const done = { id: 'TEST-001', title: 'Test', state: 'completed' } as StoryArtifact
+      const cancelled = { id: 'TEST-002', title: 'Test', state: 'cancelled' } as StoryArtifact
+      const inProgress = { id: 'TEST-003', title: 'Test', state: 'in_progress' } as StoryArtifact
 
       expect(isStoryComplete(done)).toBe(true)
-      expect(isStoryComplete(uat)).toBe(true)
+      expect(isStoryComplete(cancelled)).toBe(true)
       expect(isStoryComplete(inProgress)).toBe(false)
     })
 
@@ -359,16 +359,16 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
       const workable = {
         id: 'TEST-001',
         title: 'Test',
-        state: 'ready-to-work',
+        state: 'ready',
         blocked_by: null,
       } as StoryArtifact
       const blocked = {
         id: 'TEST-002',
         title: 'Test',
-        state: 'ready-to-work',
+        state: 'ready',
         blocked_by: 'TEST-001',
       } as StoryArtifact
-      const inProgress = { id: 'TEST-003', title: 'Test', state: 'in-progress' } as StoryArtifact
+      const inProgress = { id: 'TEST-003', title: 'Test', state: 'in_progress' } as StoryArtifact
 
       expect(isStoryWorkable(workable)).toBe(true)
       expect(isStoryWorkable(blocked)).toBe(false)
@@ -380,7 +380,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
     it('should create a new story in v1 format', () => {
       const story = createStoryArtifact('TEST-001', 'platform', 'Test Story', 'Test goal', {
         type: 'feature',
-        state: 'draft',
+        state: 'backlog',
         points: 3,
         priority: 'medium',
       })
@@ -391,7 +391,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
       expect(story.title).toBe('Test Story')
       expect(story.goal).toBe('Test goal')
       expect(story.type).toBe('feature')
-      expect(story.state).toBe('draft')
+      expect(story.state).toBe('backlog')
       expect(story.points).toBe(3)
       expect(story.priority).toBe('medium')
     })
@@ -400,7 +400,7 @@ describe('StoryArtifactSchema - Backward Compatibility', () => {
       const story = createStoryArtifact('TEST-001', 'platform', 'Test Story', 'Test goal')
 
       expect(story.type).toBe('feature')
-      expect(story.state).toBe('draft')
+      expect(story.state).toBe('backlog')
       expect(story.priority).toBe('medium')
       expect(story.blocked_by).toBe(null)
       expect(story.depends_on).toEqual([])

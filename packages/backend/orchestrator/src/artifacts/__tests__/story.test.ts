@@ -22,7 +22,7 @@ describe('StoryArtifactSchema', () => {
     id: 'WISH-001',
     feature: 'wishlist',
     type: 'feature',
-    state: 'draft',
+    state: 'backlog',
     title: 'Add wishlist item',
     points: 3,
     priority: 'medium',
@@ -142,7 +142,7 @@ describe('createStoryArtifact', () => {
     expect(story.title).toBe('Add item')
     expect(story.goal).toBe('Allow adding items')
     expect(story.type).toBe('feature')
-    expect(story.state).toBe('draft')
+    expect(story.state).toBe('backlog')
     expect(story.points).toBe(null)
     expect(story.priority).toBe('medium')
     expect(story.blocked_by).toBe(null)
@@ -272,9 +272,9 @@ describe('isStoryBlocked', () => {
 })
 
 describe('isStoryComplete', () => {
-  it('should return true for done state', () => {
+  it('should return true for completed state', () => {
     const story = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'done',
+      state: 'completed',
     })
     expect(isStoryComplete(story)).toBe(true)
   })
@@ -286,25 +286,25 @@ describe('isStoryComplete', () => {
     expect(isStoryComplete(story)).toBe(true)
   })
 
-  it('should return false for in-progress state', () => {
+  it('should return false for in_progress state', () => {
     const story = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'in-progress',
+      state: 'in_progress',
     })
     expect(isStoryComplete(story)).toBe(false)
   })
 })
 
 describe('isStoryWorkable', () => {
-  it('should return true for ready-to-work and not blocked', () => {
+  it('should return true for ready and not blocked', () => {
     const story = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'ready-to-work',
+      state: 'ready',
     })
     expect(isStoryWorkable(story)).toBe(true)
   })
 
   it('should return false when blocked', () => {
     const story = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'ready-to-work',
+      state: 'ready',
       blocked_by: 'WISH-000',
     })
     expect(isStoryWorkable(story)).toBe(false)
@@ -320,20 +320,20 @@ describe('isStoryWorkable', () => {
 
 describe('getStoryNextState', () => {
   it('should return next state for standard progression', () => {
-    const draft = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'draft',
-    })
-    expect(getStoryNextState(draft)).toBe('backlog')
-
     const backlog = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
       state: 'backlog',
     })
-    expect(getStoryNextState(backlog)).toBe('ready-to-work')
+    expect(getStoryNextState(backlog)).toBe('created')
+
+    const ready = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
+      state: 'ready',
+    })
+    expect(getStoryNextState(ready)).toBe('in_progress')
   })
 
   it('should return null for terminal states', () => {
     const done = createStoryArtifact('WISH-001', 'wishlist', 'Test', 'Test goal', {
-      state: 'done',
+      state: 'completed',
     })
     expect(getStoryNextState(done)).toBe(null)
 

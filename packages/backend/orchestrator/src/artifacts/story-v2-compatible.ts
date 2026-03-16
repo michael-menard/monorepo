@@ -383,7 +383,7 @@ export function createStoryArtifact(
     title,
     goal,
     type: options.type ?? 'feature',
-    state: options.state ?? 'draft',
+    state: options.state ?? 'backlog',
     points: options.points ?? null,
     priority: options.priority ?? 'medium',
     blocked_by: options.blocked_by ?? null,
@@ -480,7 +480,7 @@ export function isStoryBlocked(story: StoryArtifact): boolean {
  */
 export function isStoryComplete(story: StoryArtifact): boolean {
   const state = getStoryState(story)
-  return state === 'done' || state === 'cancelled' || state === 'uat'
+  return state === 'completed' || state === 'cancelled'
 }
 
 /**
@@ -488,7 +488,7 @@ export function isStoryComplete(story: StoryArtifact): boolean {
  */
 export function isStoryWorkable(story: StoryArtifact): boolean {
   const state = getStoryState(story)
-  return state === 'ready-to-work' && !isStoryBlocked(story)
+  return state === 'ready' && !isStoryBlocked(story)
 }
 
 /**
@@ -499,12 +499,14 @@ export function getStoryNextState(story: StoryArtifact): StoryState | null {
   if (!currentState) return null
 
   const progression: Record<string, StoryState> = {
-    draft: 'backlog',
-    backlog: 'ready-to-work',
-    'ready-to-work': 'in-progress',
-    'in-progress': 'ready-for-qa',
-    'ready-for-qa': 'uat',
-    uat: 'done',
+    backlog: 'created',
+    created: 'elab',
+    elab: 'ready',
+    ready: 'in_progress',
+    in_progress: 'needs_code_review',
+    needs_code_review: 'ready_for_qa',
+    ready_for_qa: 'in_qa',
+    in_qa: 'completed',
   }
   return (progression[currentState] as StoryState) ?? null
 }

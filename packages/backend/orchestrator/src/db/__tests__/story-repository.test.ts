@@ -24,7 +24,7 @@ function createMockDbClient(): DbClient & { mockRows: StoryRow[]; mockQueries: s
           story_id: values?.[0] as string || 'WISH-001', // Human-readable ID
           feature_id: values?.[1] as string || null,
           type: values?.[2] as string || 'feature',
-          state: values?.[3] as StoryRow['state'] || 'draft',
+          state: values?.[3] as StoryRow['state'] || 'backlog',
           title: values?.[4] as string || 'Test Story',
           goal: values?.[5] as string || 'Test goal',
           points: values?.[6] as number | null ?? null,
@@ -75,7 +75,7 @@ describe('StoryRepository', () => {
         story_id: 'WISH-001',
         feature_id: null,
         type: 'feature',
-        state: 'draft',
+        state: 'backlog',
         title: 'Test Story',
         goal: 'Test goal',
         points: 3,
@@ -94,7 +94,7 @@ describe('StoryRepository', () => {
 
       expect(result).not.toBe(null)
       expect(result?.id).toBe('WISH-001')
-      expect(result?.state).toBe('draft')
+      expect(result?.state).toBe('backlog')
       expect(result?.scope.packages).toEqual(['@repo/api-client'])
     })
 
@@ -114,7 +114,7 @@ describe('StoryRepository', () => {
         id: 'WISH-001',
         feature: 'wishlist',
         type: 'feature',
-        state: 'draft',
+        state: 'backlog',
         title: 'Test Story',
         goal: 'Test goal',
         points: 3,
@@ -153,7 +153,7 @@ describe('StoryRepository', () => {
         story_id: 'WISH-001',
         feature_id: null,
         type: 'feature',
-        state: 'draft',
+        state: 'backlog',
         title: 'Test Story',
         goal: 'Test goal',
         points: null,
@@ -198,7 +198,7 @@ describe('StoryRepository', () => {
     it('should query for ready-to-work and not blocked stories', async () => {
       await repo.getWorkableStories()
 
-      expect(mockClient.mockQueries[0]).toContain("state = 'ready-to-work'")
+      expect(mockClient.mockQueries[0]).toContain("state = 'ready'")
       expect(mockClient.mockQueries[0]).toContain('blocked_by IS NULL')
     })
 
@@ -212,9 +212,9 @@ describe('StoryRepository', () => {
 
   describe('getStoriesByState', () => {
     it('should filter by state', async () => {
-      await repo.getStoriesByState('in-progress')
+      await repo.getStoriesByState('in_progress')
 
-      expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('state = $1'), ['in-progress'])
+      expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('state = $1'), ['in_progress'])
     })
   })
 
@@ -236,7 +236,7 @@ describe('StoryRepository', () => {
         story_id: 'WISH-002',
         feature_id: null,
         type: 'feature',
-        state: 'ready-to-work',
+        state: 'ready',
         title: 'Test Story',
         goal: 'Test goal',
         points: null,
@@ -258,13 +258,12 @@ describe('StoryRepository', () => {
 
     it('should return appropriate action for each state', async () => {
       const states = [
-        { state: 'draft', expected: 'Generate story structure' },
-        { state: 'backlog', expected: 'Elaborate story' },
-        { state: 'ready-to-work', expected: 'Start implementation' },
-        { state: 'in-progress', expected: 'Continue implementation' },
-        { state: 'ready-for-qa', expected: 'Run QA verification' },
-        { state: 'uat', expected: 'Complete UAT testing' },
-        { state: 'done', expected: 'Story complete' },
+        { state: 'backlog', expected: 'Generate story' },
+        { state: 'created', expected: 'Elaborate story' },
+        { state: 'ready', expected: 'Start implementation' },
+        { state: 'in_progress', expected: 'Continue implementation' },
+        { state: 'ready_for_qa', expected: 'Run QA verification' },
+        { state: 'completed', expected: 'Story complete' },
         { state: 'cancelled', expected: 'Story cancelled' },
       ] as const
 

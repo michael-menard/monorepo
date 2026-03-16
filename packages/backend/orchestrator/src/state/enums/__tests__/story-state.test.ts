@@ -2,179 +2,102 @@ import { describe, it, expect } from 'vitest'
 import {
   StoryStateSchema,
   STORY_STATES,
+  TERMINAL_STATES,
+  ACTIVE_STATES,
+  WORKABLE_STATES,
   isTerminalState,
   isActiveState,
   isWorkableState,
   getNextState,
-  isValidTransition,
 } from '../story-state.js'
 
 describe('StoryStateSchema', () => {
-  it('should validate all story states', () => {
+  it('validates all 13 canonical states', () => {
     const states = [
-      'draft',
-      'backlog',
-      'ready-to-work',
-      'in-progress',
-      'ready-for-qa',
-      'uat',
-      'done',
-      'cancelled',
+      'backlog', 'created', 'elab', 'ready',
+      'in_progress', 'needs_code_review',
+      'ready_for_qa', 'in_qa', 'completed',
+      'failed_code_review', 'failed_qa',
+      'blocked', 'cancelled',
     ]
-
     for (const state of states) {
-      expect(StoryStateSchema.safeParse(state).success).toBe(true)
+      expect(StoryStateSchema.safeParse(state).success, `expected ${state} to be valid`).toBe(true)
     }
   })
 
-  it('should reject invalid states', () => {
-    const result = StoryStateSchema.safeParse('invalid')
-    expect(result.success).toBe(false)
+  it('rejects invalid states', () => {
+    for (const invalid of ['draft', 'done', 'uat', 'ready-to-work', 'in-progress', 'ready_to_work', 'deferred', 'in_review', 'ready_for_review']) {
+      expect(StoryStateSchema.safeParse(invalid).success, `expected ${invalid} to be rejected`).toBe(false)
+    }
   })
 
-  it('should export STORY_STATES array with all values', () => {
-    expect(STORY_STATES).toHaveLength(8)
-    expect(STORY_STATES).toContain('draft')
-    expect(STORY_STATES).toContain('done')
-    expect(STORY_STATES).toContain('cancelled')
+  it('exports STORY_STATES with all 13 values', () => {
+    expect(STORY_STATES).toHaveLength(13)
   })
 })
 
 describe('isTerminalState', () => {
-  it('should return true for done', () => {
-    expect(isTerminalState('done')).toBe(true)
+  it('returns true for terminal states', () => {
+    for (const s of TERMINAL_STATES) {
+      expect(isTerminalState(s)).toBe(true)
+    }
   })
 
-  it('should return true for cancelled', () => {
-    expect(isTerminalState('cancelled')).toBe(true)
-  })
-
-  it('should return false for non-terminal states', () => {
-    expect(isTerminalState('draft')).toBe(false)
-    expect(isTerminalState('in-progress')).toBe(false)
-    expect(isTerminalState('ready-to-work')).toBe(false)
+  it('returns false for non-terminal states', () => {
+    expect(isTerminalState('backlog')).toBe(false)
+    expect(isTerminalState('in_progress')).toBe(false)
+    expect(isTerminalState('ready')).toBe(false)
+    expect(isTerminalState('blocked')).toBe(false)
   })
 })
 
 describe('isActiveState', () => {
-  it('should return true for in-progress', () => {
-    expect(isActiveState('in-progress')).toBe(true)
+  it('returns true for active states', () => {
+    for (const s of ACTIVE_STATES) {
+      expect(isActiveState(s)).toBe(true)
+    }
   })
 
-  it('should return true for ready-for-qa', () => {
-    expect(isActiveState('ready-for-qa')).toBe(true)
-  })
-
-  it('should return true for uat', () => {
-    expect(isActiveState('uat')).toBe(true)
-  })
-
-  it('should return false for non-active states', () => {
-    expect(isActiveState('draft')).toBe(false)
+  it('returns false for pre-dev and terminal states', () => {
     expect(isActiveState('backlog')).toBe(false)
-    expect(isActiveState('ready-to-work')).toBe(false)
-    expect(isActiveState('done')).toBe(false)
+    expect(isActiveState('created')).toBe(false)
+    expect(isActiveState('ready')).toBe(false)
+    expect(isActiveState('completed')).toBe(false)
+    expect(isActiveState('cancelled')).toBe(false)
   })
 })
 
 describe('isWorkableState', () => {
-  it('should return true for ready-to-work', () => {
-    expect(isWorkableState('ready-to-work')).toBe(true)
+  it('returns true only for ready', () => {
+    for (const s of WORKABLE_STATES) {
+      expect(isWorkableState(s)).toBe(true)
+    }
   })
 
-  it('should return false for all other states', () => {
-    expect(isWorkableState('draft')).toBe(false)
+  it('returns false for all other states', () => {
     expect(isWorkableState('backlog')).toBe(false)
-    expect(isWorkableState('in-progress')).toBe(false)
-    expect(isWorkableState('done')).toBe(false)
+    expect(isWorkableState('in_progress')).toBe(false)
+    expect(isWorkableState('completed')).toBe(false)
   })
 })
 
 describe('getNextState', () => {
-  it('should return correct next state for standard progression', () => {
-    expect(getNextState('draft')).toBe('backlog')
-    expect(getNextState('backlog')).toBe('ready-to-work')
-    expect(getNextState('ready-to-work')).toBe('in-progress')
-    expect(getNextState('in-progress')).toBe('ready-for-qa')
-    expect(getNextState('ready-for-qa')).toBe('uat')
-    expect(getNextState('uat')).toBe('done')
+  it('returns correct next state in forward flow', () => {
+    expect(getNextState('backlog')).toBe('created')
+    expect(getNextState('created')).toBe('elab')
+    expect(getNextState('elab')).toBe('ready')
+    expect(getNextState('ready')).toBe('in_progress')
+    expect(getNextState('in_progress')).toBe('needs_code_review')
+    expect(getNextState('needs_code_review')).toBe('ready_for_qa')
+    expect(getNextState('ready_for_qa')).toBe('in_qa')
+    expect(getNextState('in_qa')).toBe('completed')
   })
 
-  it('should return null for terminal states', () => {
-    expect(getNextState('done')).toBe(null)
-    expect(getNextState('cancelled')).toBe(null)
-  })
-})
-
-describe('isValidTransition', () => {
-  describe('standard progression', () => {
-    it('should allow draft -> backlog', () => {
-      expect(isValidTransition('draft', 'backlog')).toBe(true)
-    })
-
-    it('should allow backlog -> ready-to-work', () => {
-      expect(isValidTransition('backlog', 'ready-to-work')).toBe(true)
-    })
-
-    it('should allow ready-to-work -> in-progress', () => {
-      expect(isValidTransition('ready-to-work', 'in-progress')).toBe(true)
-    })
-
-    it('should allow in-progress -> ready-for-qa', () => {
-      expect(isValidTransition('in-progress', 'ready-for-qa')).toBe(true)
-    })
-
-    it('should allow ready-for-qa -> uat', () => {
-      expect(isValidTransition('ready-for-qa', 'uat')).toBe(true)
-    })
-
-    it('should allow uat -> done', () => {
-      expect(isValidTransition('uat', 'done')).toBe(true)
-    })
-  })
-
-  describe('cancellation', () => {
-    it('should allow cancellation from any state', () => {
-      for (const state of STORY_STATES) {
-        expect(isValidTransition(state, 'cancelled')).toBe(true)
-      }
-    })
-  })
-
-  describe('rejection handling', () => {
-    it('should allow ready-for-qa -> in-progress (QA rejection)', () => {
-      expect(isValidTransition('ready-for-qa', 'in-progress')).toBe(true)
-    })
-
-    it('should allow uat -> ready-for-qa (UAT rejection)', () => {
-      expect(isValidTransition('uat', 'ready-for-qa')).toBe(true)
-    })
-  })
-
-  describe('emergency close', () => {
-    it('should allow active states to skip to done', () => {
-      expect(isValidTransition('in-progress', 'done')).toBe(true)
-      expect(isValidTransition('ready-for-qa', 'done')).toBe(true)
-      expect(isValidTransition('uat', 'done')).toBe(true)
-    })
-  })
-
-  describe('invalid transitions', () => {
-    it('should not allow transitions from terminal states', () => {
-      expect(isValidTransition('done', 'in-progress')).toBe(false)
-      expect(isValidTransition('done', 'backlog')).toBe(false)
-      // except to cancelled
-      expect(isValidTransition('done', 'cancelled')).toBe(true)
-    })
-
-    it('should not allow skipping states in normal progression', () => {
-      expect(isValidTransition('draft', 'in-progress')).toBe(false)
-      expect(isValidTransition('backlog', 'in-progress')).toBe(false)
-    })
-
-    it('should not allow going backwards in early stages', () => {
-      expect(isValidTransition('backlog', 'draft')).toBe(false)
-      expect(isValidTransition('ready-to-work', 'backlog')).toBe(false)
-    })
+  it('returns null for terminal and branching states', () => {
+    expect(getNextState('completed')).toBeNull()
+    expect(getNextState('cancelled')).toBeNull()
+    expect(getNextState('blocked')).toBeNull()
+    expect(getNextState('failed_code_review')).toBeNull()
+    expect(getNextState('failed_qa')).toBeNull()
   })
 })

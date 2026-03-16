@@ -31,7 +31,7 @@ export {
   isActiveState,
   isWorkableState,
   getNextState,
-  isValidTransition,
+  isRecoveryState,
 } from './enums/index.js'
 
 // Reference schemas and types
