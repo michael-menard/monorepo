@@ -17,6 +17,9 @@ import { z } from 'zod'
 import { Annotation, StateGraph, END, START, Send } from '@langchain/langgraph'
 import * as yaml from 'yaml'
 import { logger } from '@repo/logger'
+import { StoryTransitionService, ArtifactGateError } from '../db/story-transition-service.js'
+import type { StoryRepository } from '../db/story-repository.js'
+import type { WorkflowRepository } from '../db/workflow-repository.js'
 import {
   ALL_REVIEW_WORKERS,
   type ReviewWorkerName,
@@ -163,6 +166,15 @@ export const ReviewGraphResultSchema = z.object({
 export type ReviewGraphResult = z.infer<typeof ReviewGraphResultSchema>
 
 // ============================================================================
+// ReviewGraphConfig
+// ============================================================================
+
+export interface ReviewGraphConfig {
+  storyRepo?: StoryRepository
+  workflowRepo?: WorkflowRepository
+}
+
+// ============================================================================
 // Dispatcher (Conditional Edge Function using Send API)
 // ============================================================================
 
@@ -235,8 +247,9 @@ export function createWorkerStub(workerName: ReviewWorkerName) {
  * AC-10: maps changeSpecId to ranked patches via file-path matching.
  * AC-11: writes REVIEW.yaml to featureDir/in-progress/storyId/_implementation/REVIEW.yaml.
  * AC-14: PASS if all workers PASS, FAIL if any FAIL.
+ * AUDIT-3: persists review artifact to DB and advances story state.
  */
-export function createFanInNode() {
+export function createFanInNode(config: ReviewGraphConfig = {}) {
   return async (state: ReviewGraphState): Promise<Partial<ReviewGraphState>> => {
     logger.info('Fan-in aggregating worker results', {
       storyId: state.storyId,
@@ -311,12 +324,64 @@ export function createFanInNode() {
       logger.error('Failed to write REVIEW.yaml', { error: msg, storyId: state.storyId })
     }
 
-    return {
+    const fanInUpdate: Partial<ReviewGraphState> = {
       review,
       reviewYamlPath: writeSuccess ? reviewYamlPath : null,
       complete: true,
       warnings: writeSuccess ? [] : [`Failed to write REVIEW.yaml to ${reviewYamlPath}`],
     }
+
+    // Persist review artifact to DB (AUDIT-3 A2-002)
+    if (config.workflowRepo) {
+      try {
+        const issuesCount = review.total_errors + review.total_warnings
+        await config.workflowRepo.saveVerification(
+          state.storyId,
+          'review',
+          review,
+          review.verdict,
+          issuesCount,
+          'langgraph',
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        logger.error('Failed to save review verification to DB', {
+          storyId: state.storyId,
+          error: msg,
+        })
+        fanInUpdate.warnings = [
+          ...(fanInUpdate.warnings ?? []),
+          `Failed to save review to DB: ${msg}`,
+        ]
+      }
+    }
+
+    // Advance story state based on verdict (AUDIT-3 A3-001)
+    if (config.storyRepo) {
+      try {
+        const svc = new StoryTransitionService(config.storyRepo, config.workflowRepo)
+        const nextState = review.verdict === 'PASS' ? 'ready_for_qa' : 'failed_code_review'
+        await svc.advance(
+          state.storyId,
+          nextState,
+          'langgraph',
+          `Review verdict: ${review.verdict}`,
+        )
+      } catch (error) {
+        if (error instanceof ArtifactGateError) {
+          fanInUpdate.errors = [error.message]
+        } else {
+          const msg = error instanceof Error ? error.message : String(error)
+          logger.error('Failed to advance story state after review', {
+            storyId: state.storyId,
+            error: msg,
+          })
+          fanInUpdate.errors = [`Failed to advance state after review: ${msg}`]
+        }
+      }
+    }
+
+    return fanInUpdate
   }
 }
 
@@ -350,6 +415,7 @@ export function createReviewGraph(
     accessibility?: ReturnType<typeof createReviewAccessibilityNode>
     security?: ReturnType<typeof createReviewSecurityNode>
   } = {},
+  config: ReviewGraphConfig = {},
 ) {
   // Wrap each real worker to produce WorkerStateEntry for graph state
   const wrapWorker = (
@@ -403,7 +469,7 @@ export function createReviewGraph(
       'worker_security',
       wrapWorker('security', workerOverrides.security ?? createReviewSecurityNode()),
     )
-    .addNode('fan_in', createFanInNode())
+    .addNode('fan_in', createFanInNode(config))
     // Dispatcher as conditional edge from START using Send API (AC-7)
     .addConditionalEdges(START, createDispatcherNode())
     // Each worker → fan_in (fan-in barrier)
@@ -446,6 +512,10 @@ export async function runReview(params: {
   attempt?: number
   /** Injectable worker overrides for testing — replaces real workers */
   workerOverrides?: Parameters<typeof createReviewGraph>[0]
+  /** Story repository for state transitions */
+  storyRepo?: StoryRepository
+  /** Workflow repository for artifact persistence */
+  workflowRepo?: WorkflowRepository
 }): Promise<ReviewGraphResult> {
   const startTime = Date.now()
   const {
@@ -457,12 +527,14 @@ export async function runReview(params: {
     workersToSkip = [],
     attempt = 1,
     workerOverrides,
+    storyRepo,
+    workflowRepo,
   } = params
 
   // Thread ID convention per APIP ADR-001 (AC-17)
   const threadId = `${storyId}:review:${attempt}`
 
-  const graph = createReviewGraph(workerOverrides)
+  const graph = createReviewGraph(workerOverrides, { storyRepo, workflowRepo })
 
   const initialState: Partial<ReviewGraphState> = {
     storyId,

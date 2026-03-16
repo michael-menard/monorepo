@@ -12,9 +12,13 @@
 
 import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
+import { logger } from '@repo/logger'
 import { createToolNode } from '../runner/node-factory.js'
 import type { GraphState } from '../state/index.js'
 import { updateState } from '../runner/state-helpers.js'
+import { StoryTransitionService, ArtifactGateError } from '../db/story-transition-service.js'
+import type { StoryRepository } from '../db/story-repository.js'
+import type { WorkflowRepository } from '../db/workflow-repository.js'
 import {
   createQAGraph,
   QAGraphConfigSchema,
@@ -64,6 +68,10 @@ export const QAVerifyConfigSchema = z.object({
     .default('chromium-live'),
   /** Feature directory for artifact output */
   featureDir: z.string().default('plans/future/platform'),
+  /** Story repository for state transitions (optional, injected) */
+  storyRepo: z.unknown().optional(),
+  /** Workflow repository for artifact persistence (optional, injected) */
+  workflowRepo: z.unknown().optional(),
 })
 
 export type QAVerifyConfig = z.infer<typeof QAVerifyConfigSchema>
@@ -189,12 +197,39 @@ export function createQAVerifyInitializeNode(config: Partial<QAVerifyConfig> = {
         ...config,
       })
 
-      return {
+      const update: Partial<QAVerifyState> = {
         config: fullConfig,
         startedAt: new Date().toISOString(),
         errors: [],
         warnings: [],
       }
+
+      // Claim story: ready_for_qa → in_qa (no artifact gate needed)
+      const storyRepo = fullConfig.storyRepo as StoryRepository | undefined
+      const workflowRepo = fullConfig.workflowRepo as WorkflowRepository | undefined
+
+      if (storyRepo) {
+        try {
+          const svc = new StoryTransitionService(storyRepo, workflowRepo)
+          await svc.claim(state.storyId, 'in_qa', 'langgraph', 'QA verification started')
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error)
+          logger.error('Failed to claim story in qa-verify initialize', {
+            storyId: state.storyId,
+            error: msg,
+          })
+          return {
+            ...update,
+            errors: [`Failed to claim story: ${msg}`],
+            workflowComplete: true,
+            workflowSuccess: false,
+          }
+        }
+      } else {
+        update.warnings = ['storyRepo not injected — skipping state claim']
+      }
+
+      return update
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       return {
@@ -208,12 +243,51 @@ export function createQAVerifyInitializeNode(config: Partial<QAVerifyConfig> = {
 
 /**
  * Preconditions check node.
- * Verifies evidence and review artifacts are available.
+ * Verifies evidence (proof) and code review artifacts exist in DB.
  */
-export function createQAVerifyPreconditionsNode() {
-  return async (_state: QAVerifyState): Promise<Partial<QAVerifyState>> => {
-    // For now, preconditions pass by default
-    // In production, would check evidence/review artifacts exist
+export function createQAVerifyPreconditionsNode(config: Partial<QAVerifyConfig> = {}) {
+  return async (state: QAVerifyState): Promise<Partial<QAVerifyState>> => {
+    const workflowRepo = (state.config?.workflowRepo ?? config.workflowRepo) as
+      | WorkflowRepository
+      | undefined
+
+    if (!workflowRepo) {
+      // Graceful degradation — no repo means we can't check, so pass with warning
+      return {
+        preconditionsPassed: true,
+        warnings: ['preconditions: workflowRepo not injected — skipping artifact checks'],
+      }
+    }
+
+    const errors: string[] = []
+
+    try {
+      const proof = await workflowRepo.getLatestProof(state.storyId)
+      if (!proof) {
+        errors.push('Missing required proof artifact')
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      errors.push(`Failed to check proof artifact: ${msg}`)
+    }
+
+    try {
+      const review = await workflowRepo.getLatestVerification(state.storyId, 'review')
+      if (!review) {
+        errors.push('Missing required review artifact')
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      errors.push(`Failed to check review artifact: ${msg}`)
+    }
+
+    if (errors.length > 0) {
+      return {
+        preconditionsPassed: false,
+        errors,
+      }
+    }
+
     return {
       preconditionsPassed: true,
     }
@@ -287,16 +361,74 @@ export function createQASubgraphNode(config: Partial<QAVerifyConfig> = {}) {
 
 /**
  * State transition node.
- * Would update story state in DB based on QA verdict.
+ * Persists QA artifact to DB and advances story state based on verdict.
  */
-export function createQAStateTransitionNode() {
+export function createQAStateTransitionNode(config: Partial<QAVerifyConfig> = {}) {
   return async (state: QAVerifyState): Promise<Partial<QAVerifyState>> => {
-    if (!state.config?.modelClient) {
-      return {
-        warnings: ['state_transition: no storyRepo configured — skipping DB update'],
+    const storyRepo = (state.config?.storyRepo ?? config.storyRepo) as StoryRepository | undefined
+    const workflowRepo = (state.config?.workflowRepo ?? config.workflowRepo) as
+      | WorkflowRepository
+      | undefined
+
+    const update: Partial<QAVerifyState> = {}
+
+    // Persist QA artifact to DB
+    if (workflowRepo && state.qaResult?.qaArtifact) {
+      try {
+        const verdict = state.qaResult.verdict
+        const dbVerdict = verdict === 'PASS' ? 'PASS' : 'FAIL'
+        await workflowRepo.saveVerification(
+          state.storyId,
+          'qa_verify',
+          state.qaResult.qaArtifact,
+          dbVerdict,
+          0,
+          'langgraph',
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        logger.error('Failed to save QA verification to DB', { storyId: state.storyId, error: msg })
+        update.warnings = [`Failed to save QA artifact to DB: ${msg}`]
       }
     }
-    return {}
+
+    // Advance story state based on verdict
+    if (!storyRepo) {
+      return {
+        ...update,
+        warnings: [
+          ...(update.warnings ?? []),
+          'storyRepo not injected — skipping state transition',
+        ],
+      }
+    }
+
+    try {
+      const svc = new StoryTransitionService(storyRepo, workflowRepo)
+      const verdict = state.qaResult?.verdict
+      const nextState = verdict === 'PASS' ? 'completed' : 'failed_qa'
+      await svc.advance(
+        state.storyId,
+        nextState,
+        'langgraph',
+        `QA verdict: ${verdict ?? 'BLOCKED'}`,
+      )
+    } catch (error) {
+      if (error instanceof ArtifactGateError) {
+        return {
+          ...update,
+          errors: [error.message],
+        }
+      }
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error('Failed to advance story state after QA', { storyId: state.storyId, error: msg })
+      return {
+        ...update,
+        errors: [`Failed to advance state after QA: ${msg}`],
+      }
+    }
+
+    return update
   }
 }
 
@@ -351,9 +483,9 @@ export function afterStateTransition(_state: QAVerifyState): 'complete' {
 export function createQAVerifyGraph(config: Partial<QAVerifyConfig> = {}) {
   const graph = new StateGraph(QAVerifyStateAnnotation)
     .addNode('initialize', createQAVerifyInitializeNode(config))
-    .addNode('preconditions', createQAVerifyPreconditionsNode())
+    .addNode('preconditions', createQAVerifyPreconditionsNode(config))
     .addNode('qa_subgraph', createQASubgraphNode(config))
-    .addNode('state_transition', createQAStateTransitionNode())
+    .addNode('state_transition', createQAStateTransitionNode(config))
     .addNode('complete', createQAVerifyCompleteNode())
     .addEdge(START, 'initialize')
     .addConditionalEdges('initialize', afterQAVerifyInitialize, {
@@ -394,9 +526,18 @@ export async function runQAVerify(params: {
   review?: unknown
   config?: Partial<QAVerifyConfig>
   attempt?: number
+  /** Story repository for state transitions */
+  storyRepo?: StoryRepository
+  /** Workflow repository for artifact persistence */
+  workflowRepo?: WorkflowRepository
 }): Promise<QAVerifyResult> {
   const startTime = Date.now()
-  const { storyId, evidence = null, review = null, config = {}, attempt = 1 } = params
+  const { storyId, evidence = null, review = null, attempt = 1 } = params
+  const config: Partial<QAVerifyConfig> = {
+    ...params.config,
+    ...(params.storyRepo && { storyRepo: params.storyRepo }),
+    ...(params.workflowRepo && { workflowRepo: params.workflowRepo }),
+  }
 
   const threadId = `${storyId}:qa-verify:${attempt}`
   const graph = createQAVerifyGraph(config)

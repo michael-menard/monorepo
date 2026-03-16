@@ -69,7 +69,7 @@ export {
   isActiveState,
   isWorkableState,
   getNextState,
-  isValidTransition,
+  isRecoveryState,
   // Reference schemas and types
   EvidenceRefSchema,
   EvidenceTypeSchema,
@@ -454,6 +454,10 @@ export {
   // Workflow Repository
   WorkflowRepository,
   createWorkflowRepository,
+  // Story Transition Service (AUDIT-2 artifact gate)
+  StoryTransitionService,
+  ArtifactGateError,
+  createStoryTransitionService,
   ElaborationRecordSchema,
   PlanRecordSchema,
   VerificationRecordSchema,

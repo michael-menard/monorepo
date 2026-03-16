@@ -15,6 +15,13 @@ export { StoryRepository, createStoryRepository, type DbClient } from './story-r
 // Workflow Repository
 export { WorkflowRepository, createWorkflowRepository } from './workflow-repository.js'
 
+// Story Transition Service (AUDIT-2 artifact gate)
+export {
+  StoryTransitionService,
+  ArtifactGateError,
+  createStoryTransitionService,
+} from './story-transition-service.js'
+
 // Re-export schemas and types from shared types module
 export {
   StoryRowSchema,
