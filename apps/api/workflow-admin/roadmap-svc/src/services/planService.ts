@@ -27,6 +27,12 @@ const stories = workflowSchema.table('stories', {
   experimentVariant: text('experiment_variant'),
 })
 
+const storyContent = workflowSchema.table('story_content', {
+  storyId: text('story_id').notNull(),
+  sectionName: text('section_name').notNull(),
+  contentText: text('content_text'),
+})
+
 // View created by migration 1000_create_story_details_view.sql
 // Columns mirror the view definition — jsonb aggregates typed as jsonb.
 const storyDetailsView = workflowSchema.table('story_details', {
@@ -69,6 +75,60 @@ const storyDetailsView = workflowSchema.table('story_details', {
   dependencies: jsonb('dependencies'),
 })
 
+const artifactsSchema = pgSchema('artifacts')
+const artifactElaborations = artifactsSchema.table('artifact_elaborations', {
+  targetId: text('target_id').notNull(),
+  verdict: text('verdict'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+const artifactEvidence = artifactsSchema.table('artifact_evidence', {
+  targetId: text('target_id').notNull(),
+  acTotal: integer('ac_total'),
+  acMet: integer('ac_met'),
+  acStatus: text('ac_status'),
+  testPassCount: integer('test_pass_count'),
+  testFailCount: integer('test_fail_count'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+const artifactQaGates = artifactsSchema.table('artifact_qa_gates', {
+  targetId: text('target_id').notNull(),
+  decision: text('decision').notNull(),
+  reviewer: text('reviewer'),
+  findingCount: integer('finding_count'),
+  blockerCount: integer('blocker_count'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+const artifactCheckpoints = artifactsSchema.table('artifact_checkpoints', {
+  targetId: text('target_id').notNull(),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+const artifactReviews = artifactsSchema.table('artifact_reviews', {
+  targetId: text('target_id').notNull(),
+  verdict: text('verdict'),
+  findingCount: integer('finding_count'),
+  criticalCount: integer('critical_count'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+const artifactVerifications = artifactsSchema.table('artifact_verifications', {
+  targetId: text('target_id').notNull(),
+  verdict: text('verdict'),
+  findingCount: integer('finding_count'),
+  criticalCount: integer('critical_count'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+const storyDependenciesTable = workflowSchema.table('story_dependencies', {
+  storyId: text('story_id').notNull(),
+  dependsOnId: text('depends_on_id').notNull(),
+  dependencyType: text('dependency_type').notNull(),
+})
+
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required')
 }
@@ -105,6 +165,29 @@ export async function updateStory(
   await database.update(stories).set(updateData).where(eq(stories.storyId, storyId))
 
   return { storyId }
+}
+
+export async function updateStoryContentSection(
+  storyId: string,
+  sectionName: string,
+  contentText: string,
+): Promise<{ storyId: string; sectionName: string } | null> {
+  const existing = await database
+    .select({ sectionName: storyContent.sectionName })
+    .from(storyContent)
+    .where(and(eq(storyContent.storyId, storyId), eq(storyContent.sectionName, sectionName)))
+    .limit(1)
+
+  if (existing.length === 0) {
+    return null
+  }
+
+  await database
+    .update(storyContent)
+    .set({ contentText })
+    .where(and(eq(storyContent.storyId, storyId), eq(storyContent.sectionName, sectionName)))
+
+  return { storyId, sectionName }
 }
 
 export const PlanUpdateInputSchema = z.object({
@@ -592,18 +675,116 @@ export const StoryDetailsSchema = z.object({
       dependencyType: z.string(),
     }),
   ),
+  blockedByIds: z.array(z.string()),
+  blocksIds: z.array(z.string()),
+  branch: z.string().nullable(),
+  worktreePath: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  elaboration: z
+    .object({
+      verdict: z.string().nullable(),
+      risk: z.string().nullable(),
+      confidence: z.string().nullable(),
+      skillLevel: z.string().nullable(),
+      implementationEstimate: z.string().nullable(),
+      elabPhase: z.string().nullable(),
+      data: z.unknown().nullable(),
+    })
+    .nullable(),
+  evidence: z
+    .object({
+      acTotal: z.number().nullable(),
+      acMet: z.number().nullable(),
+      acStatus: z.string().nullable(),
+      testPassCount: z.number().nullable(),
+      testFailCount: z.number().nullable(),
+      data: z.unknown().nullable(),
+    })
+    .nullable(),
+  qaGate: z
+    .object({
+      decision: z.string(),
+      reviewer: z.string().nullable(),
+      findingCount: z.number().nullable(),
+      blockerCount: z.number().nullable(),
+      data: z.unknown().nullable(),
+    })
+    .nullable(),
+  review: z
+    .object({
+      verdict: z.string().nullable(),
+      findingCount: z.number().nullable(),
+      criticalCount: z.number().nullable(),
+      data: z.unknown().nullable(),
+    })
+    .nullable(),
+  verification: z
+    .object({
+      verdict: z.string().nullable(),
+      findingCount: z.number().nullable(),
+      criticalCount: z.number().nullable(),
+      data: z.unknown().nullable(),
+    })
+    .nullable(),
 })
 
 export type StoryDetails = z.infer<typeof StoryDetailsSchema>
 
 export async function getStoryById(storyId: string): Promise<StoryDetails | null> {
-  const rows = await database
-    .select()
-    .from(storyDetailsView)
-    .where(eq(storyDetailsView.storyId, storyId))
-    .limit(1)
+  const [
+    rows,
+    elabRows,
+    evidenceRows,
+    qaRows,
+    reverseDepsRows,
+    checkpointRows,
+    reviewRows,
+    verificationRows,
+  ] = await Promise.all([
+    database.select().from(storyDetailsView).where(eq(storyDetailsView.storyId, storyId)).limit(1),
+    database
+      .select()
+      .from(artifactElaborations)
+      .where(eq(artifactElaborations.targetId, storyId))
+      .orderBy(desc(artifactElaborations.createdAt))
+      .limit(1),
+    database
+      .select()
+      .from(artifactEvidence)
+      .where(eq(artifactEvidence.targetId, storyId))
+      .orderBy(desc(artifactEvidence.createdAt))
+      .limit(1),
+    database
+      .select()
+      .from(artifactQaGates)
+      .where(eq(artifactQaGates.targetId, storyId))
+      .orderBy(desc(artifactQaGates.createdAt))
+      .limit(1),
+    // Stories that depend on this story (i.e., this story blocks them)
+    database
+      .select({ storyId: storyDependenciesTable.storyId })
+      .from(storyDependenciesTable)
+      .where(eq(storyDependenciesTable.dependsOnId, storyId)),
+    database
+      .select({ data: artifactCheckpoints.data })
+      .from(artifactCheckpoints)
+      .where(eq(artifactCheckpoints.targetId, storyId))
+      .orderBy(desc(artifactCheckpoints.createdAt))
+      .limit(1),
+    database
+      .select()
+      .from(artifactReviews)
+      .where(eq(artifactReviews.targetId, storyId))
+      .orderBy(desc(artifactReviews.createdAt))
+      .limit(1),
+    database
+      .select()
+      .from(artifactVerifications)
+      .where(eq(artifactVerifications.targetId, storyId))
+      .orderBy(desc(artifactVerifications.createdAt))
+      .limit(1),
+  ])
 
   if (rows.length === 0) {
     return null
@@ -619,12 +800,28 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
     created_at: string
   }
   type LinkedPlan = { plan_slug: string; link_type: string }
-  type Dependency = { depends_on_id: string; dependency_type: string }
+  type Dependency = {
+    depends_on_id: string
+    dependency_type: string
+    depends_on_state: string | null
+  }
 
-  const contentSections = ((r.contentSections as ContentSection[]) ?? []).map(cs => ({
-    sectionName: cs.section_name,
-    contentText: cs.content_text,
-  }))
+  const allSections = (r.contentSections as ContentSection[]) ?? []
+
+  // Parse state_info: "{state} | {elab_phase} | {complexity} | {elab_verdict}"
+  const stateInfoText =
+    allSections.find(cs => cs.section_name === 'state_info')?.content_text ?? null
+  const stateInfoParts = stateInfoText ? stateInfoText.split('|').map(p => p.trim()) : []
+  const stateInfoComplexity = stateInfoParts[2] || null
+  const stateInfoElabPhase = stateInfoParts[1] || null
+  const stateInfoElabVerdict = stateInfoParts[3] || null
+
+  const contentSections = allSections
+    .filter(cs => cs.section_name !== 'state_info')
+    .map(cs => ({
+      sectionName: cs.section_name,
+      contentText: cs.content_text,
+    }))
   const stateHistory = ((r.stateHistory as StateHistoryEntry[]) ?? []).map(h => ({
     eventType: h.event_type,
     fromState: h.from_state,
@@ -638,6 +835,7 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
   const dependencies = ((r.dependencies as Dependency[]) ?? []).map(d => ({
     dependsOnId: d.depends_on_id,
     dependencyType: d.dependency_type,
+    dependsOnState: d.depends_on_state ?? null,
   }))
 
   return {
@@ -649,7 +847,7 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
     epic: r.feature ?? null,
     wave: null,
     priority: r.priority ?? null,
-    complexity: null,
+    complexity: stateInfoComplexity,
     storyPoints: null,
     state: r.state ?? 'backlog',
     blockedReason: r.blockedReason ?? null,
@@ -685,7 +883,86 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
         : null,
     linkedPlans,
     dependencies,
+    // blockedByIds: stories this story is blocked by (depends on, must complete first) — excludes completed
+    blockedByIds: dependencies
+      .filter(
+        d =>
+          (d.dependencyType === 'blocks' || d.dependencyType === 'requires') &&
+          d.dependsOnState !== 'completed',
+      )
+      .map(d => d.dependsOnId),
+    // blocksIds: stories that are waiting on this story to complete
+    blocksIds: reverseDepsRows.map(r2 => r2.storyId),
+    branch:
+      checkpointRows.length > 0
+        ? (((checkpointRows[0].data as Record<string, unknown> | null)?.branch as string) ?? null)
+        : null,
+    worktreePath:
+      checkpointRows.length > 0
+        ? (((checkpointRows[0].data as Record<string, unknown> | null)?.worktree_path as string) ??
+          null)
+        : null,
     createdAt: r.createdAt!,
     updatedAt: r.updatedAt!,
+    elaboration: (() => {
+      const verdict =
+        elabRows.length > 0 ? (elabRows[0].verdict ?? null) : (stateInfoElabVerdict ?? null)
+      const readiness =
+        elabRows.length > 0
+          ? ((elabRows[0].data as Record<string, unknown> | null)?.readiness as
+              | Record<string, unknown>
+              | null
+              | undefined)
+          : null
+      if (!verdict && !stateInfoElabPhase && !stateInfoComplexity) return null
+      return {
+        verdict,
+        risk: (readiness?.risk as string) ?? stateInfoComplexity,
+        confidence: (readiness?.confidence as string) ?? null,
+        skillLevel: (readiness?.skill_level as string) ?? null,
+        implementationEstimate: (readiness?.implementation_estimate as string) ?? null,
+        elabPhase: stateInfoElabPhase,
+        data: elabRows.length > 0 ? (elabRows[0].data ?? null) : null,
+      }
+    })(),
+    evidence:
+      evidenceRows.length > 0
+        ? {
+            acTotal: evidenceRows[0].acTotal ?? null,
+            acMet: evidenceRows[0].acMet ?? null,
+            acStatus: evidenceRows[0].acStatus ?? null,
+            testPassCount: evidenceRows[0].testPassCount ?? null,
+            testFailCount: evidenceRows[0].testFailCount ?? null,
+            data: evidenceRows[0].data ?? null,
+          }
+        : null,
+    qaGate:
+      qaRows.length > 0
+        ? {
+            decision: qaRows[0].decision,
+            reviewer: qaRows[0].reviewer ?? null,
+            findingCount: qaRows[0].findingCount ?? null,
+            blockerCount: qaRows[0].blockerCount ?? null,
+            data: qaRows[0].data ?? null,
+          }
+        : null,
+    review:
+      reviewRows.length > 0
+        ? {
+            verdict: reviewRows[0].verdict ?? null,
+            findingCount: reviewRows[0].findingCount ?? null,
+            criticalCount: reviewRows[0].criticalCount ?? null,
+            data: reviewRows[0].data ?? null,
+          }
+        : null,
+    verification:
+      verificationRows.length > 0
+        ? {
+            verdict: verificationRows[0].verdict ?? null,
+            findingCount: verificationRows[0].findingCount ?? null,
+            criticalCount: verificationRows[0].criticalCount ?? null,
+            data: verificationRows[0].data ?? null,
+          }
+        : null,
   }
 }

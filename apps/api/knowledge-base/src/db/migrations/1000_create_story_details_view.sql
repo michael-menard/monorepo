@@ -94,13 +94,18 @@ SELECT
     '[]'::jsonb
   ) AS linked_plans,
 
-  -- Dependencies
+  -- Dependencies (includes state of the depended-on story for filtering)
   COALESCE(
     (
       SELECT jsonb_agg(
-        jsonb_build_object('depends_on_id', d.depends_on_id, 'dependency_type', d.dependency_type)
+        jsonb_build_object(
+          'depends_on_id', d.depends_on_id,
+          'dependency_type', d.dependency_type,
+          'depends_on_state', ds.state
+        )
       )
       FROM workflow.story_dependencies d
+      JOIN workflow.stories ds ON ds.story_id = d.depends_on_id
       WHERE d.story_id = s.story_id
     ),
     '[]'::jsonb
@@ -120,3 +125,39 @@ LEFT JOIN LATERAL (
 -- Current work state (unique per story_id)
 LEFT JOIN workflow.work_state ws
   ON ws.story_id = s.story_id;
+
+-- ============================================================================
+-- INSTEAD OF UPDATE trigger
+--
+-- Routes scalar column updates back to workflow.stories.
+-- Aggregated columns (content_sections, state_history, linked_plans,
+-- dependencies, outcome_*, ws_*) are read-only through this view — write
+-- to the underlying tables directly for those.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION workflow.story_details_instead_of_update()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE workflow.stories SET
+    title              = NEW.title,
+    description        = NEW.description,
+    state              = NEW.state,
+    priority           = NEW.priority,
+    feature            = NEW.feature,
+    tags               = NEW.tags,
+    experiment_variant = NEW.experiment_variant,
+    blocked_reason     = NEW.blocked_reason,
+    blocked_by_story   = NEW.blocked_by_story,
+    started_at         = NEW.started_at,
+    completed_at       = NEW.completed_at,
+    file_hash          = NEW.file_hash,
+    updated_at         = now()
+  WHERE story_id = NEW.story_id;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER story_details_instead_of_update
+  INSTEAD OF UPDATE ON workflow.story_details
+  FOR EACH ROW EXECUTE FUNCTION workflow.story_details_instead_of_update();

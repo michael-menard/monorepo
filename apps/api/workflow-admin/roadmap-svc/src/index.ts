@@ -9,6 +9,7 @@ import {
   getStoriesByPlanSlug,
   getStoryById,
   updateStory,
+  updateStoryContentSection,
   type PlanListParams,
   type PlanUpdateInput,
   type StoryUpdateInput,
@@ -137,6 +138,27 @@ app.patch('/api/v1/stories/:storyId', async c => {
   } catch (error) {
     logger.error('Failed to update story', { error: String(error), storyId, input })
     return c.json({ error: 'Failed to update story', detail: String(error) }, 500)
+  }
+})
+
+app.patch('/api/v1/stories/:storyId/content/:sectionName', async c => {
+  const storyId = c.req.param('storyId')
+  const sectionName = c.req.param('sectionName')
+  const { contentText } = (await c.req.json()) as { contentText: string }
+
+  try {
+    const result = await updateStoryContentSection(storyId, sectionName, contentText)
+    if (!result) {
+      return c.json({ error: 'Section not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to update story content section', {
+      error: String(error),
+      storyId,
+      sectionName,
+    })
+    return c.json({ error: 'Failed to update story content section', detail: String(error) }, 500)
   }
 })
 

@@ -121,9 +121,53 @@ export interface StoryDetails {
     blockers: unknown
   } | null
   linkedPlans: Array<{ planSlug: string; linkType: string }>
-  dependencies: Array<{ dependsOnId: string; dependencyType: string }>
+  dependencies: Array<{
+    dependsOnId: string
+    dependencyType: string
+    dependsOnState: string | null
+  }>
   createdAt: string
   updatedAt: string
+  blockedByIds: string[]
+  blocksIds: string[]
+  branch: string | null
+  worktreePath: string | null
+  elaboration: {
+    verdict: string | null
+    risk: string | null
+    confidence: string | null
+    skillLevel: string | null
+    implementationEstimate: string | null
+    elabPhase: string | null
+    data: unknown
+  } | null
+  evidence: {
+    acTotal: number | null
+    acMet: number | null
+    acStatus: string | null
+    testPassCount: number | null
+    testFailCount: number | null
+    data: unknown
+  } | null
+  qaGate: {
+    decision: string
+    reviewer: string | null
+    findingCount: number | null
+    blockerCount: number | null
+    data: unknown
+  } | null
+  review: {
+    verdict: string | null
+    findingCount: number | null
+    criticalCount: number | null
+    data: unknown
+  } | null
+  verification: {
+    verdict: string | null
+    findingCount: number | null
+    criticalCount: number | null
+    data: unknown
+  } | null
 }
 
 export const roadmapApi = createApi({
@@ -196,6 +240,16 @@ export const roadmapApi = createApi({
         body: input,
       }),
     }),
+    updateStoryContentSection: builder.mutation<
+      { storyId: string; sectionName: string },
+      { storyId: string; sectionName: string; contentText: string }
+    >({
+      query: ({ storyId, sectionName, contentText }) => ({
+        url: `/stories/${storyId}/content/${sectionName}`,
+        method: 'PATCH',
+        body: { contentText },
+      }),
+    }),
   }),
 })
 
@@ -207,4 +261,5 @@ export const {
   useReorderPlansMutation,
   useUpdatePlanMutation,
   useUpdateStoryMutation,
+  useUpdateStoryContentSectionMutation,
 } = roadmapApi

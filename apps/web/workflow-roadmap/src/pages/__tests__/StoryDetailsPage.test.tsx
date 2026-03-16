@@ -31,9 +31,18 @@ describe('StoryDetails type', () => {
       stateHistory: [],
       currentWorkState: null,
       linkedPlans: [],
-      dependencies: [{ dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by' }],
+      dependencies: [{ dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by', dependsOnState: 'in_progress' }],
+      blockedByIds: ['BLOCKER-001'],
+      blocksIds: [],
+      branch: 'story/TEST-001',
+      worktreePath: 'tree/story/TEST-001',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-02T00:00:00.000Z',
+      elaboration: null,
+      evidence: null,
+      qaGate: null,
+      review: null,
+      verification: null,
     }
 
     expect(story.storyId).toBe('TEST-001')
@@ -69,8 +78,17 @@ describe('StoryDetails type', () => {
       currentWorkState: null,
       linkedPlans: [],
       dependencies: [],
+      blockedByIds: [],
+      blocksIds: [],
+      branch: null,
+      worktreePath: null,
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
+      elaboration: null,
+      evidence: null,
+      qaGate: null,
+      review: null,
+      verification: null,
     }
 
     expect(story.tags).toBeNull()
@@ -166,8 +184,8 @@ describe('Tags surface convention', () => {
 describe('Dependencies mapping', () => {
   it('filters blocked_by dependencies', () => {
     const dependencies = [
-      { dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by' },
-      { dependsOnId: 'BLOCKS-001', dependencyType: 'blocks' },
+      { dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by', dependsOnState: 'in_progress' },
+      { dependsOnId: 'BLOCKS-001', dependencyType: 'blocks', dependsOnState: 'completed' },
     ]
     const blockers = dependencies.filter(d => d.dependencyType === 'blocked_by')
     expect(blockers).toHaveLength(1)
