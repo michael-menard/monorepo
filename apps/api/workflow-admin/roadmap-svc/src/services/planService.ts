@@ -398,6 +398,7 @@ export const PlanStorySchema = z.object({
   phaseStatus: z.string().nullable(),
   isBlocked: z.boolean(),
   hasBlockers: z.boolean(),
+  blockedByStory: z.string().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
 })
@@ -442,6 +443,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     phaseStatus: null,
     isBlocked: story.state === 'blocked',
     hasBlockers: !!story.blockedByStory,
+    blockedByStory: story.blockedByStory ?? null,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   })) as PlanStory[]

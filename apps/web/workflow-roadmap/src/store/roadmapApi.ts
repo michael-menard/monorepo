@@ -72,6 +72,7 @@ export interface PlanStory {
   phaseStatus: string | null
   isBlocked: boolean
   hasBlockers: boolean
+  blockedByStory: string | null
   createdAt: string | null
   updatedAt: string | null
 }
