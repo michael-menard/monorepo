@@ -391,6 +391,7 @@ export async function updatePlan(
 export const PlanStorySchema = z.object({
   storyId: z.string(),
   title: z.string().nullable(),
+  description: z.string().nullable(),
   state: z.string().nullable(),
   priority: z.string().nullable(),
   currentPhase: z.string().nullable(),
@@ -406,6 +407,7 @@ export type PlanStory = z.infer<typeof PlanStorySchema>
 type LinkedStoryRow = {
   storyId: string
   title: string
+  description: string | null
   state: string | null
   priority: string | null
   blockedByStory: string | null
@@ -418,6 +420,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .select({
       storyId: stories.storyId,
       title: stories.title,
+      description: stories.description,
       state: stories.state,
       priority: stories.priority,
       blockedByStory: stories.blockedByStory,
@@ -432,6 +435,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
   return linkedStories.map((story: LinkedStoryRow) => ({
     storyId: story.storyId,
     title: story.title,
+    description: story.description ?? null,
     state: story.state,
     priority: story.priority,
     currentPhase: null,

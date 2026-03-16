@@ -65,6 +65,7 @@ export interface PlanDetails {
 export interface PlanStory {
   storyId: string
   title: string | null
+  description: string | null
   state: string | null
   priority: string | null
   currentPhase: string | null

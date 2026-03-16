@@ -1,13 +1,128 @@
 import { useParams, Link } from '@tanstack/react-router'
-import { AppBadge, AppDataTable, AppInput, CustomButton } from '@repo/app-component-library'
+import {
+  AppBadge,
+  AppDataTable,
+  AppInput,
+  CustomButton,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@repo/app-component-library'
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
-import { useState, useEffect, useRef, startTransition } from 'react'
+import { useState, useEffect, useRef, startTransition, useMemo } from 'react'
 import {
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
   useUpdatePlanMutation,
   type PlanStory,
 } from '../store/roadmapApi'
+
+interface StoryStats {
+  total: number
+  completed: number
+  active: number
+  backlog: number
+}
+
+function ActivityRings({ stats }: { stats: StoryStats }) {
+  const { total, completed, active, backlog } = stats
+  const completedPct = total > 0 ? completed / total : 0
+  const activePct = total > 0 ? active / total : 0
+  const backlogPct = total > 0 ? backlog / total : 0
+
+  const sw = 8
+  const gap = 4
+  const r1 = 44
+  const r2 = r1 - sw - gap
+  const r3 = r2 - sw - gap
+  const c1 = 2 * Math.PI * r1
+  const c2 = 2 * Math.PI * r2
+  const c3 = 2 * Math.PI * r3
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="w-1/2 aspect-square cursor-default">
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="xMidYMin meet"
+            className="-rotate-90 drop-shadow-lg"
+            aria-hidden="true"
+          >
+            {/* Track rings */}
+            <circle cx="50" cy="50" r={r1} fill="none" stroke="#060f1e" strokeWidth={sw} />
+            <circle cx="50" cy="50" r={r2} fill="none" stroke="#060f1e" strokeWidth={sw} />
+            <circle cx="50" cy="50" r={r3} fill="none" stroke="#060f1e" strokeWidth={sw} />
+            {/* Completed — emerald outer */}
+            <circle
+              cx="50"
+              cy="50"
+              r={r1}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth={sw}
+              strokeDasharray={c1}
+              strokeDashoffset={c1 * (1 - completedPct)}
+              strokeLinecap="round"
+            />
+            {/* Active — blue middle */}
+            <circle
+              cx="50"
+              cy="50"
+              r={r2}
+              fill="none"
+              stroke="#60a5fa"
+              strokeWidth={sw}
+              strokeDasharray={c2}
+              strokeDashoffset={c2 * (1 - activePct)}
+              strokeLinecap="round"
+            />
+            {/* Created/backlog — cyan inner */}
+            <circle
+              cx="50"
+              cy="50"
+              r={r3}
+              fill="none"
+              stroke="#22d3ee"
+              strokeWidth={sw}
+              strokeDasharray={c3}
+              strokeDashoffset={c3 * (1 - backlogPct)}
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent
+        side="left"
+        className="bg-slate-800 border border-slate-600 text-slate-100 p-3 font-mono text-xs space-y-2"
+      >
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+          <span className="text-slate-400">Completed</span>
+          <span className="text-emerald-400 ml-4">
+            {completed}/{total}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-blue-400 inline-block" />
+          <span className="text-slate-400">Active</span>
+          <span className="text-blue-400 ml-4">
+            {active}/{total}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-cyan-400 inline-block" />
+          <span className="text-slate-400">Created</span>
+          <span className="text-cyan-400 ml-4">
+            {backlog}/{total}
+          </span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 interface EditableFieldProps {
   label: string
@@ -152,6 +267,30 @@ export function PlanDetailsPage() {
   const [updatePlan] = useUpdatePlanMutation()
   const { data: storiesData, isLoading: isLoadingStories } = useGetStoriesByPlanSlugQuery(slug)
 
+  const storyStats = useMemo((): StoryStats | null => {
+    if (!storiesData || storiesData.length === 0) return null
+    const total = storiesData.length
+    const completed = storiesData.filter(s => s.state === 'completed').length
+    const active = storiesData.filter(s => s.state === 'in_progress' || s.state === 'in_qa').length
+    const backlog = total - completed - active
+    return { total, completed, active, backlog }
+  }, [storiesData])
+
+  const lastWorkedAt = useMemo(() => {
+    if (!storiesData || storiesData.length === 0) return null
+    const max = Math.max(
+      ...storiesData.map(s => (s.updatedAt ? new Date(s.updatedAt).getTime() : 0)),
+    )
+    if (max === 0) return null
+    const ms = Date.now() - max
+    const days = Math.floor(ms / 86400000)
+    if (days === 0) return 'today'
+    if (days === 1) return '1d ago'
+    if (days < 7) return `${days}d ago`
+    if (days < 30) return `${Math.floor(days / 7)}w ago`
+    return `${Math.floor(days / 30)}mo ago`
+  }, [storiesData])
+
   const [editingField, setEditingField] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
   const [isTitleDebouncing, setIsTitleDebouncing] = useState(false)
@@ -283,12 +422,6 @@ export function PlanDetailsPage() {
               {data.title}
             </h1>
           )}
-          <AppBadge variant="outline">{data.status}</AppBadge>
-          {data.priority ? (
-            <AppBadge variant={data.priority === 'P1' ? 'destructive' : 'secondary'}>
-              {data.priority}
-            </AppBadge>
-          ) : null}
           {editingField !== 'title' && (
             <CustomButton
               variant="ghost"
@@ -310,68 +443,107 @@ export function PlanDetailsPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
             Overview
           </h2>
-          <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <EditableField
-              label="Type"
-              value={data.planType}
-              isEditing={editingField === 'planType'}
-              onStartEdit={() => setEditingField('planType')}
-              onSave={value => handleUpdate('planType', value)}
-              onCancel={() => setEditingField(null)}
-              editable
-            />
-            <EditableField
-              label="Priority"
-              value={data.priority}
-              isEditing={editingField === 'priority'}
-              onStartEdit={() => setEditingField('priority')}
-              onSave={value => handleUpdate('priority', value)}
-              onCancel={() => setEditingField(null)}
-              editable
-            />
-            <EditableField
-              label="Story Prefix"
-              value={data.storyPrefix}
-              isEditing={editingField === 'storyPrefix'}
-              onStartEdit={() => setEditingField('storyPrefix')}
-              onSave={value => handleUpdate('storyPrefix', value)}
-              onCancel={() => setEditingField(null)}
-              editable
-            />
-            <div>
-              <dt className="text-sm font-medium text-slate-400">Created</dt>
-              <dd className="text-slate-200">{new Date(data.createdAt).toLocaleDateString()}</dd>
+          <div className="grid grid-cols-3 gap-x-8">
+            {/* Column 1: Type, Story Prefix, Priority, Created, Last Worked */}
+            <div className="flex flex-col gap-4">
+              <EditableField
+                label="Type"
+                value={data.planType}
+                isEditing={editingField === 'planType'}
+                onStartEdit={() => setEditingField('planType')}
+                onSave={value => handleUpdate('planType', value)}
+                onCancel={() => setEditingField(null)}
+                editable
+              />
+              <EditableField
+                label="Story Prefix"
+                value={data.storyPrefix}
+                isEditing={editingField === 'storyPrefix'}
+                onStartEdit={() => setEditingField('storyPrefix')}
+                onSave={value => handleUpdate('storyPrefix', value)}
+                onCancel={() => setEditingField(null)}
+                editable
+              />
+              <EditableField
+                label="Priority"
+                value={data.priority}
+                isEditing={editingField === 'priority'}
+                onStartEdit={() => setEditingField('priority')}
+                onSave={value => handleUpdate('priority', value)}
+                onCancel={() => setEditingField(null)}
+                editable
+              />
+              <div>
+                <dt className="text-sm font-medium text-slate-400">Created</dt>
+                <dd className="text-slate-200">{new Date(data.createdAt).toLocaleDateString()}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-slate-400">Last Worked</dt>
+                <dd className="font-mono text-sm text-slate-400">{lastWorkedAt ?? '—'}</dd>
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <dt className="text-sm font-medium text-slate-400 mb-2">Tags</dt>
-              <dd className="flex flex-wrap gap-2">
-                {data.tags && data.tags.length > 0 ? (
-                  data.tags.map(tag => (
-                    <AppBadge key={tag} variant="secondary">
-                      {tag}
-                    </AppBadge>
-                  ))
-                ) : (
-                  <span className="text-slate-500">-</span>
+
+            {/* Column 2: Summary, Tags */}
+            <div className="flex flex-col gap-4">
+              {data.summary && (
+                <div>
+                  <dt className="text-sm font-medium text-slate-400 mb-1">Summary</dt>
+                  <dd className="text-slate-300 text-sm leading-relaxed">{data.summary}</dd>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <AppBadge variant="outline">{data.status}</AppBadge>
+                {data.priority && (
+                  <AppBadge variant={data.priority === 'P1' ? 'destructive' : 'secondary'}>
+                    {data.priority}
+                  </AppBadge>
                 )}
-                <CustomButton
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setEditingField('tags')}
-                  className="h-6 w-6 text-slate-500 hover:text-cyan-400"
-                  title="Edit tags"
-                >
-                  <Pencil className="h-3 w-3" />
-                </CustomButton>
-              </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-slate-400 mb-2">Tags</dt>
+                <dd className="flex flex-wrap gap-2">
+                  {data.tags && data.tags.length > 0 ? (
+                    data.tags.map(tag => (
+                      <AppBadge key={tag} variant="secondary">
+                        {tag}
+                      </AppBadge>
+                    ))
+                  ) : (
+                    <span className="text-slate-500">-</span>
+                  )}
+                  <CustomButton
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingField('tags')}
+                    className="h-6 w-6 text-slate-500 hover:text-cyan-400"
+                    title="Edit tags"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </CustomButton>
+                </dd>
+              </div>
             </div>
-          </dl>
+
+            {/* Column 3: Activity rings */}
+            <div className="flex justify-end">
+              {storyStats ? (
+                <ActivityRings stats={storyStats} />
+              ) : (
+                <span className="text-xs text-slate-500 font-mono self-center">No stories</span>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
           <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
             Stories
+            {storiesData && storiesData.length > 0 && (
+              <span className="text-xs text-slate-500 font-mono font-normal">
+                ({storiesData.length})
+              </span>
+            )}
           </h2>
           {isLoadingStories ? (
             <div className="animate-pulse space-y-2">
@@ -405,7 +577,12 @@ export function PlanDetailsPage() {
                       params={{ storyId: row.storyId }}
                       className="hover:text-cyan-400 hover:underline transition-colors"
                     >
-                      {row.title ?? '-'}
+                      <div>{row.title ?? '-'}</div>
+                      {row.description && (
+                        <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                          {row.description}
+                        </div>
+                      )}
                     </Link>
                   ),
                 },
@@ -462,6 +639,23 @@ export function PlanDetailsPage() {
                     </AppBadge>
                   ),
                 },
+                {
+                  key: 'updatedAt',
+                  header: 'Last Activity',
+                  render: (row: PlanStory) => {
+                    if (!row.updatedAt)
+                      return <span className="text-xs text-slate-500 font-mono">—</span>
+                    const ms = Date.now() - new Date(row.updatedAt).getTime()
+                    const days = Math.floor(ms / 86400000)
+                    let label: string
+                    if (days === 0) label = 'today'
+                    else if (days === 1) label = '1d ago'
+                    else if (days < 7) label = `${days}d ago`
+                    else if (days < 30) label = `${Math.floor(days / 7)}w ago`
+                    else label = `${Math.floor(days / 30)}mo ago`
+                    return <span className="text-xs text-slate-400 font-mono">{label}</span>
+                  },
+                },
               ]}
               emptyMessage="No stories linked to this plan yet."
             />
@@ -469,16 +663,6 @@ export function PlanDetailsPage() {
             <p className="text-slate-500">No stories linked to this plan yet.</p>
           )}
         </div>
-
-        {data.summary ? (
-          <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
-            <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 inline-block" />
-              Summary
-            </h2>
-            <p className="text-slate-300 leading-relaxed">{data.summary}</p>
-          </div>
-        ) : null}
 
         {data.details ? (
           <>
