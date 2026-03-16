@@ -4,6 +4,10 @@ import {
   AppBadge,
   AppDataTable,
   AppInput,
+  AppTabs,
+  AppTabsList,
+  AppTabsTrigger,
+  AppTabsContent,
   CustomButton,
   Tooltip,
   TooltipTrigger,
@@ -17,7 +21,7 @@ import {
   Checkbox,
   Label,
 } from '@repo/app-component-library'
-import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Check, X, LayoutGrid, List, Copy, GanttChart } from 'lucide-react'
 import { useState, useEffect, useRef, startTransition, useMemo } from 'react'
 import {
   useGetPlanBySlugQuery,
@@ -276,6 +280,515 @@ function EditableField({
   )
 }
 
+const PIPELINE_STAGES = [
+  { id: 'backlog', label: 'Backlog', states: ['backlog', 'created'], dotColor: 'bg-slate-400' },
+  { id: 'ready', label: 'Ready', states: ['ready_to_work'], dotColor: 'bg-cyan-400' },
+  { id: 'progress', label: 'In Progress', states: ['in_progress'], dotColor: 'bg-blue-400' },
+  {
+    id: 'review',
+    label: 'Review',
+    states: ['needs_code_review', 'ready_for_review', 'failed_code_review'],
+    dotColor: 'bg-violet-400',
+  },
+  { id: 'qa', label: 'QA', states: ['ready_for_qa', 'in_qa'], dotColor: 'bg-amber-400' },
+  { id: 'uat', label: 'UAT', states: ['uat'], dotColor: 'bg-emerald-400' },
+  { id: 'done', label: 'Done', states: ['completed'], dotColor: 'bg-emerald-500' },
+]
+
+const PRIORITY_TEXT: Record<string, string> = {
+  P0: 'text-red-400',
+  P1: 'text-red-400/70',
+  P2: 'text-orange-400/70',
+  P3: 'text-amber-400/70',
+  P4: 'text-teal-400/70',
+}
+
+const PRIORITY_BAR: Record<string, string> = {
+  P0: 'bg-red-600',
+  P1: 'bg-red-500',
+  P2: 'bg-orange-500',
+  P3: 'bg-amber-400',
+  P4: 'bg-teal-500',
+}
+
+function TimelineView({ stories }: { stories: PlanStory[] }) {
+  const getStageIndex = (state?: string | null): number => {
+    const idx = PIPELINE_STAGES.findIndex(s => s.states.includes(state ?? ''))
+    return idx === -1 ? 0 : idx
+  }
+
+  const totalStages = PIPELINE_STAGES.length - 1
+
+  // Group stories by their current pipeline stage, preserving stage order
+  const groups = PIPELINE_STAGES.map(stage => ({
+    ...stage,
+    stories: stories.filter(s => stage.states.includes(s.state ?? '')),
+  })).filter(g => g.stories.length > 0)
+
+  if (stories.length === 0) {
+    return <p className="text-slate-500">No stories match the current filters.</p>
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-slate-400 font-medium">No pipeline activity</p>
+        <p className="text-slate-600 text-sm mt-1">Stories may be in backlog or completed.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Stage axis */}
+      <div className="flex mb-6">
+        <div className="w-52 shrink-0" />
+        <div className="flex-1 relative h-8">
+          {/* Baseline */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-slate-700/40" />
+          {PIPELINE_STAGES.map((stage, idx) => {
+            const pct = (idx / totalStages) * 100
+            return (
+              <div
+                key={stage.id}
+                className="absolute bottom-0 flex flex-col items-center"
+                style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
+              >
+                <span className="text-xs text-slate-500 font-mono whitespace-nowrap mb-1.5">
+                  {stage.label}
+                </span>
+                <div className={`h-2 w-px ${stage.dotColor} opacity-60`} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Phase groups */}
+      <div className="space-y-5">
+        {groups.map(group => (
+          <div key={group.id}>
+            {/* Group header */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-52 shrink-0 flex items-center gap-1.5 pl-1">
+                <div className={`h-1.5 w-1.5 rounded-full ${group.dotColor}`} />
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  {group.label}
+                </span>
+                <span className="text-xs text-slate-600 font-mono">({group.stories.length})</span>
+              </div>
+              <div className="flex-1 border-t border-slate-800" />
+            </div>
+
+            {/* Story rows */}
+            <div className="space-y-1.5">
+              {group.stories.map(story => {
+                const stageIdx = getStageIndex(story.state)
+                const pct = (stageIdx / totalStages) * 100
+                const barColor = PRIORITY_BAR[story.priority ?? ''] ?? 'bg-blue-500'
+
+                return (
+                  <div key={story.storyId} className="flex items-center gap-0">
+                    {/* Name */}
+                    <Link
+                      to="/story/$storyId"
+                      params={{ storyId: story.storyId }}
+                      className="w-52 shrink-0 flex flex-col px-2 py-1 hover:bg-slate-800/50 rounded transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {story.priority && (
+                          <span
+                            className={`text-xs font-mono font-bold ${PRIORITY_TEXT[story.priority] ?? 'text-slate-400'}`}
+                          >
+                            {story.priority}
+                          </span>
+                        )}
+                        <span className="font-mono text-xs text-cyan-400/80">{story.storyId}</span>
+                        {(story.isBlocked || story.hasBlockers) && (
+                          <span title="Has blockers" className="text-xs leading-none">
+                            ⚠️
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-500 truncate leading-tight">
+                        {story.title ?? '—'}
+                      </span>
+                    </Link>
+
+                    {/* Bar track */}
+                    <div className="flex-1 relative h-6">
+                      {/* Track */}
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="h-px w-full bg-slate-800" />
+                      </div>
+                      {/* Stage tick marks */}
+                      {PIPELINE_STAGES.map((stage, idx) => (
+                        <div
+                          key={stage.id}
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2 w-px bg-slate-700/60"
+                          style={{ left: `${(idx / totalStages) * 100}%` }}
+                        />
+                      ))}
+                      {/* Progress bar */}
+                      {pct > 0 && (
+                        <div
+                          className={`absolute top-1/2 left-0 -translate-y-1/2 h-2 rounded-full ${barColor} opacity-60`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      )}
+                      {/* Current position dot */}
+                      <div
+                        className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3.5 w-3.5 rounded-full ${barColor} ring-2 ring-slate-900 shadow-lg`}
+                        style={{ left: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DependencyGraph({ stories }: { stories: PlanStory[] }) {
+  const storyMap = new Map(stories.map(s => [s.storyId, s]))
+
+  const edges: Array<{ from: string; to: string }> = []
+  stories.forEach(s => {
+    if (s.blockedByStory) edges.push({ from: s.blockedByStory, to: s.storyId })
+  })
+
+  const levelMap = new Map<string, number>()
+  function getLevel(id: string, visiting: Set<string>): number {
+    if (levelMap.has(id)) return levelMap.get(id)!
+    if (visiting.has(id)) return 0
+    const next = new Set(visiting)
+    next.add(id)
+    const blocker = storyMap.get(id)?.blockedByStory
+    const lvl = blocker && storyMap.has(blocker) ? getLevel(blocker, next) + 1 : 0
+    levelMap.set(id, lvl)
+    return lvl
+  }
+  stories.forEach(s => getLevel(s.storyId, new Set()))
+
+  const levelGroups = new Map<number, PlanStory[]>()
+  stories.forEach(s => {
+    const lvl = levelMap.get(s.storyId) ?? 0
+    if (!levelGroups.has(lvl)) levelGroups.set(lvl, [])
+    levelGroups.get(lvl)!.push(s)
+  })
+  levelGroups.forEach(nodes =>
+    nodes.sort((a, b) => {
+      const ai = PIPELINE_STAGES.findIndex(p => p.states.includes(a.state ?? ''))
+      const bi = PIPELINE_STAGES.findIndex(p => p.states.includes(b.state ?? ''))
+      return bi - ai
+    }),
+  )
+
+  const NODE_W = 168
+  const NODE_H = 62
+  const H_GAP = 72
+  const V_GAP = 12
+  const PAD = 20
+
+  const maxLevel = levelGroups.size > 0 ? Math.max(...levelGroups.keys()) : 0
+  const maxNodes = Math.max(...Array.from(levelGroups.values()).map(g => g.length), 1)
+  const SVG_W = PAD * 2 + (maxLevel + 1) * NODE_W + maxLevel * H_GAP
+  const SVG_H = Math.max(PAD * 2 + maxNodes * NODE_H + (maxNodes - 1) * V_GAP, 200)
+
+  const nodePos = new Map<string, { x: number; y: number }>()
+  levelGroups.forEach((nodes, level) => {
+    const totalH = nodes.length * NODE_H + (nodes.length - 1) * V_GAP
+    const startY = PAD + (SVG_H - PAD * 2 - totalH) / 2
+    nodes.forEach((s, idx) => {
+      nodePos.set(s.storyId, {
+        x: PAD + level * (NODE_W + H_GAP),
+        y: startY + idx * (NODE_H + V_GAP),
+      })
+    })
+  })
+
+  const stateBarColor = (state?: string | null) => {
+    if (state === 'completed') return '#10b981'
+    if (state === 'in_progress') return '#60a5fa'
+    if (state === 'in_qa' || state === 'ready_for_qa') return '#fbbf24'
+    if (state === 'needs_code_review' || state === 'ready_for_review') return '#a78bfa'
+    if (state === 'failed_code_review') return '#ef4444'
+    if (state === 'ready_to_work') return '#22d3ee'
+    if (state === 'uat') return '#34d399'
+    return '#475569'
+  }
+
+  const priorityFill = (p?: string | null) => {
+    if (p === 'P0') return '#f87171'
+    if (p === 'P1') return '#f87171cc'
+    if (p === 'P2') return '#fb923ccc'
+    if (p === 'P3') return '#fbbf24cc'
+    if (p === 'P4') return '#2dd4bfcc'
+    return '#64748bcc'
+  }
+
+  if (stories.length === 0) {
+    return <p className="text-slate-500">No stories match the current filters.</p>
+  }
+
+  if (edges.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="text-3xl mb-3 text-slate-700">◈</div>
+        <p className="text-slate-400 font-medium">No dependencies</p>
+        <p className="text-slate-600 text-sm mt-1">None of the visible stories have blockers.</p>
+      </div>
+    )
+  }
+
+  const trunc = (s: string | null | undefined, n: number) =>
+    s ? (s.length > n ? s.slice(0, n) + '…' : s) : '—'
+
+  return (
+    <div className="overflow-auto rounded-lg bg-black/20 border border-slate-800/60">
+      <svg width={SVG_W} height={SVG_H} style={{ minWidth: SVG_W, display: 'block' }}>
+        {/* Edges */}
+        {edges.map(({ from, to }) => {
+          const f = nodePos.get(from)
+          const t = nodePos.get(to)
+          if (!f || !t) return null
+          const x1 = f.x + NODE_W
+          const y1 = f.y + NODE_H / 2
+          const x2 = t.x
+          const y2 = t.y + NODE_H / 2
+          const cx = (x1 + x2) / 2
+          return (
+            <g key={`${from}-${to}`}>
+              <path
+                d={`M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth="1.5"
+                strokeOpacity="0.35"
+              />
+              <path
+                d={`M ${x2 - 7} ${y2 - 4} L ${x2} ${y2} L ${x2 - 7} ${y2 + 4}`}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth="1.5"
+                strokeOpacity="0.35"
+              />
+            </g>
+          )
+        })}
+
+        {/* Nodes */}
+        {stories.map(story => {
+          const pos = nodePos.get(story.storyId)
+          if (!pos) return null
+          const isBlocked = story.isBlocked || story.hasBlockers
+          return (
+            <g key={story.storyId}>
+              <rect
+                x={pos.x}
+                y={pos.y}
+                width={NODE_W}
+                height={NODE_H}
+                rx="8"
+                fill="#1e293b"
+                stroke={isBlocked ? 'rgba(239,68,68,0.35)' : 'rgba(51,65,85,0.7)'}
+                strokeWidth="1"
+              />
+              {/* Left state bar */}
+              <rect
+                x={pos.x}
+                y={pos.y + 8}
+                width="3"
+                height={NODE_H - 16}
+                rx="1.5"
+                fill={stateBarColor(story.state)}
+                fillOpacity="0.8"
+              />
+              {/* Story ID */}
+              <text
+                x={pos.x + 11}
+                y={pos.y + 20}
+                fill="#22d3ee"
+                fontSize="10"
+                fontFamily="ui-monospace, monospace"
+                fontWeight="500"
+              >
+                {story.storyId}
+              </text>
+              {/* Priority */}
+              {story.priority && (
+                <text
+                  x={pos.x + NODE_W - 9}
+                  y={pos.y + 20}
+                  fill={priorityFill(story.priority)}
+                  fontSize="9"
+                  fontFamily="ui-monospace, monospace"
+                  textAnchor="end"
+                  fontWeight="600"
+                >
+                  {story.priority}
+                </text>
+              )}
+              {/* Title */}
+              <text
+                x={pos.x + 11}
+                y={pos.y + 36}
+                fill="#94a3b8"
+                fontSize="10"
+                fontFamily="ui-sans-serif, system-ui, sans-serif"
+              >
+                {trunc(story.title, 21)}
+              </text>
+              {/* State */}
+              <text
+                x={pos.x + 11}
+                y={pos.y + 51}
+                fill="#475569"
+                fontSize="9"
+                fontFamily="ui-monospace, monospace"
+              >
+                {story.state ?? '—'}
+              </text>
+              {isBlocked && (
+                <text
+                  x={pos.x + NODE_W - 9}
+                  y={pos.y + 51}
+                  fill="#ef4444"
+                  fontSize="10"
+                  textAnchor="end"
+                  fillOpacity="0.6"
+                >
+                  ⚠
+                </text>
+              )}
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+const KANBAN_COLUMNS = [
+  { id: 'ready_to_work', label: 'Ready to Work', states: ['ready_to_work'], color: 'bg-cyan-500' },
+  { id: 'in_progress', label: 'In Progress', states: ['in_progress'], color: 'bg-blue-500' },
+  {
+    id: 'code_review',
+    label: 'Code Review',
+    states: ['needs_code_review', 'ready_for_review', 'failed_code_review'],
+    color: 'bg-violet-500',
+  },
+  { id: 'qa', label: 'QA', states: ['ready_for_qa', 'in_qa'], color: 'bg-amber-500' },
+  { id: 'uat', label: 'UAT', states: ['uat'], color: 'bg-emerald-500' },
+]
+
+function KanbanView({ stories }: { stories: PlanStory[] }) {
+  const totalOnBoard = KANBAN_COLUMNS.reduce(
+    (sum, col) => sum + stories.filter(s => col.states.includes(s.state ?? '')).length,
+    0,
+  )
+
+  if (totalOnBoard === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="text-4xl mb-3">✓</div>
+        <p className="text-slate-400 font-medium">All clear</p>
+        <p className="text-slate-600 text-sm mt-1">
+          No stories are currently active in the pipeline.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-5 gap-4">
+      {KANBAN_COLUMNS.map(col => {
+        const cards = stories.filter(s => col.states.includes(s.state ?? ''))
+        return (
+          <div key={col.id} className="flex flex-col gap-2 min-w-0">
+            <div className="sticky top-4 z-10 bg-slate-900/95 backdrop-blur-sm rounded-lg py-1.5 px-1 -mx-1 mb-1">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${col.color} inline-block shrink-0`} />
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider truncate">
+                  {col.label}
+                </span>
+                <span className="ml-auto text-xs font-mono text-slate-500 shrink-0">
+                  {cards.length}
+                </span>
+              </div>
+              <div className="mt-1.5 h-0.5 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${col.color} opacity-50 transition-all duration-500`}
+                  style={{
+                    width: `${totalOnBoard > 0 ? (cards.length / totalOnBoard) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 min-h-[4rem]">
+              {cards.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-700/50 h-16 flex items-center justify-center">
+                  <span className="text-xs text-slate-600 font-mono">empty</span>
+                </div>
+              ) : (
+                cards.map(story => (
+                  <Link
+                    key={story.storyId}
+                    to="/story/$storyId"
+                    params={{ storyId: story.storyId }}
+                    className="block bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 hover:border-cyan-500/40 hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-xs text-cyan-400">{story.storyId}</span>
+                      {(story.isBlocked || story.hasBlockers) && (
+                        <span title="Has blockers" className="text-xs">
+                          ⚠️
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-200 leading-snug line-clamp-2 mb-2">
+                      {story.title ?? '—'}
+                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {story.priority && (
+                        <AppBadge
+                          variant="outline"
+                          className={
+                            story.priority === 'P0'
+                              ? '!bg-red-600/50 !border-red-500/40 !text-white/80'
+                              : story.priority === 'P1'
+                                ? '!bg-red-500/40 !border-red-500/30 !text-white/40'
+                                : story.priority === 'P2'
+                                  ? '!bg-orange-500/40 !border-orange-500/30 !text-white/40'
+                                  : story.priority === 'P3'
+                                    ? '!bg-amber-400/40 !border-amber-400/30 !text-white/40'
+                                    : story.priority === 'P4'
+                                      ? '!bg-teal-500/40 !border-teal-500/30 !text-white/40'
+                                      : '!bg-blue-500/40 !border-blue-500/30 !text-white/40'
+                          }
+                        >
+                          {story.priority}
+                        </AppBadge>
+                      )}
+                      {story.state && story.state !== col.states[0] && (
+                        <AppBadge variant="secondary">{story.state}</AppBadge>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function PlanDetailsPage() {
   const { slug } = useParams({ from: '/plan/$slug' })
   const { data, error, isLoading } = useGetPlanBySlugQuery(slug)
@@ -325,6 +838,28 @@ export function PlanDetailsPage() {
       return true
     })
   }, [storiesData, storySearch, storyStateFilter, storyPriorityFilter, hideCompleted])
+
+  const [activeTab, setActiveTab] = useState<'table' | 'kanban' | 'timeline' | 'deps'>('table')
+  const [slugCopied, setSlugCopied] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 't' || e.key === 'T') setActiveTab('table')
+      if (e.key === 'k' || e.key === 'K') setActiveTab('kanban')
+      if (e.key === 'g' || e.key === 'G') setActiveTab('timeline')
+      if (e.key === 'd' || e.key === 'D') setActiveTab('deps')
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const handleCopySlug = () => {
+    if (!data) return
+    navigator.clipboard.writeText(data.planSlug)
+    setSlugCopied(true)
+    setTimeout(() => setSlugCopied(false), 2000)
+  }
 
   const [editingField, setEditingField] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
@@ -469,7 +1004,23 @@ export function PlanDetailsPage() {
             </CustomButton>
           )}
         </div>
-        <p className="text-cyan-500/70 font-mono text-sm">{data.planSlug}</p>
+        <div className="flex items-center gap-2 group/slug">
+          <p className="text-cyan-500/70 font-mono text-sm">{data.planSlug}</p>
+          <CustomButton
+            variant="ghost"
+            size="icon"
+            onClick={handleCopySlug}
+            className="h-6 w-6 opacity-0 group-hover/slug:opacity-100 text-slate-500 hover:text-cyan-400 transition-all"
+            title="Copy slug"
+          >
+            {slugCopied ? (
+              <Check className="h-3 w-3 text-emerald-400" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </CustomButton>
+          {slugCopied && <span className="text-xs text-emerald-400 font-mono">copied!</span>}
+        </div>
       </div>
 
       <div className="grid gap-6">
@@ -571,268 +1122,658 @@ export function PlanDetailsPage() {
         </div>
 
         <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
-          <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
-            Stories
-            {storiesData && storiesData.length > 0 && (
-              <span className="text-xs text-slate-500 font-mono font-normal">
-                ({filteredStories.length}/{storiesData.length})
-              </span>
-            )}
-          </h2>
-          {!isLoadingStories && storiesData && storiesData.length > 0 && (
-            <div className="mb-4 flex flex-col gap-3">
-              <Input
-                placeholder="Search by ID or title..."
-                value={storySearch}
-                onChange={e => setStorySearch(e.target.value)}
-                className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
-              />
-              <div className="flex items-center gap-3">
-                <Select
-                  value={storyStateFilter || '_all'}
-                  onValueChange={v => setStoryStateFilter(v === '_all' ? '' : v)}
-                >
-                  <SelectTrigger
-                    aria-label="Filter by state"
-                    className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
-                  >
-                    <SelectValue placeholder="State" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
-                    <SelectItem value="_all" className="focus:bg-slate-700 focus:text-slate-100">
-                      All States
-                    </SelectItem>
-                    <SelectItem value="backlog" className="focus:bg-slate-700 focus:text-slate-100">
-                      Backlog
-                    </SelectItem>
-                    <SelectItem
-                      value="ready_to_work"
-                      className="focus:bg-slate-700 focus:text-slate-100"
+          {/* On xl+ screens: tabbed Table / Kanban. Below xl: table only. */}
+          <div className="hidden xl:block">
+            <AppTabs value={activeTab} onValueChange={v => setActiveTab(v as typeof activeTab)}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-slate-300 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+                  Stories
+                  {storiesData && storiesData.length > 0 && (
+                    <span className="text-xs text-slate-500 font-mono font-normal">
+                      ({filteredStories.length}/{storiesData.length})
+                    </span>
+                  )}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-600 font-mono hidden 2xl:block">
+                    T · K · G · D
+                  </span>
+                  <AppTabsList variant="pills" className="bg-slate-800/60">
+                    <AppTabsTrigger
+                      value="table"
+                      variant="pills"
+                      className="flex items-center gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100 text-slate-400"
                     >
-                      Ready to Work
-                    </SelectItem>
-                    <SelectItem
-                      value="in_progress"
-                      className="focus:bg-slate-700 focus:text-slate-100"
+                      <List className="h-3.5 w-3.5" />
+                      Table
+                    </AppTabsTrigger>
+                    <AppTabsTrigger
+                      value="kanban"
+                      variant="pills"
+                      className="flex items-center gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100 text-slate-400"
                     >
-                      In Progress
-                    </SelectItem>
-                    <SelectItem
-                      value="needs_code_review"
-                      className="focus:bg-slate-700 focus:text-slate-100"
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      Kanban
+                    </AppTabsTrigger>
+                    <AppTabsTrigger
+                      value="timeline"
+                      variant="pills"
+                      className="flex items-center gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100 text-slate-400"
                     >
-                      Needs Code Review
-                    </SelectItem>
-                    <SelectItem
-                      value="ready_for_review"
-                      className="focus:bg-slate-700 focus:text-slate-100"
+                      <GanttChart className="h-3.5 w-3.5" />
+                      Timeline
+                    </AppTabsTrigger>
+                    <AppTabsTrigger
+                      value="deps"
+                      variant="pills"
+                      className="flex items-center gap-1.5 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100 text-slate-400"
                     >
-                      Ready for Review
-                    </SelectItem>
-                    <SelectItem
-                      value="failed_code_review"
-                      className="focus:bg-slate-700 focus:text-slate-100"
-                    >
-                      Failed Code Review
-                    </SelectItem>
-                    <SelectItem
-                      value="ready_for_qa"
-                      className="focus:bg-slate-700 focus:text-slate-100"
-                    >
-                      Ready for QA
-                    </SelectItem>
-                    <SelectItem value="in_qa" className="focus:bg-slate-700 focus:text-slate-100">
-                      In QA
-                    </SelectItem>
-                    <SelectItem value="uat" className="focus:bg-slate-700 focus:text-slate-100">
-                      UAT
-                    </SelectItem>
-                    <SelectItem
-                      value="completed"
-                      className="focus:bg-slate-700 focus:text-slate-100"
-                    >
-                      Completed
-                    </SelectItem>
-                    <SelectItem value="blocked" className="focus:bg-slate-700 focus:text-slate-100">
-                      Blocked
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={storyPriorityFilter || '_all'}
-                  onValueChange={v => setStoryPriorityFilter(v === '_all' ? '' : v)}
-                >
-                  <SelectTrigger
-                    aria-label="Filter by priority"
-                    className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
-                  >
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
-                    <SelectItem value="_all" className="focus:bg-slate-700 focus:text-slate-100">
-                      All Priorities
-                    </SelectItem>
-                    <SelectItem value="P0" className="focus:bg-slate-700 focus:text-slate-100">
-                      P0
-                    </SelectItem>
-                    <SelectItem value="P1" className="focus:bg-slate-700 focus:text-slate-100">
-                      P1
-                    </SelectItem>
-                    <SelectItem value="P2" className="focus:bg-slate-700 focus:text-slate-100">
-                      P2
-                    </SelectItem>
-                    <SelectItem value="P3" className="focus:bg-slate-700 focus:text-slate-100">
-                      P3
-                    </SelectItem>
-                    <SelectItem value="P4" className="focus:bg-slate-700 focus:text-slate-100">
-                      P4
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center gap-2 ml-auto">
-                  <Checkbox
-                    id="hide-completed"
-                    checked={hideCompleted}
-                    onCheckedChange={checked => setHideCompleted(checked === true)}
-                  />
-                  <Label
-                    htmlFor="hide-completed"
-                    className="text-sm text-slate-400 cursor-pointer select-none"
-                  >
-                    Hide completed
-                  </Label>
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <circle cx="3" cy="8" r="2" />
+                        <circle cx="13" cy="3" r="2" />
+                        <circle cx="13" cy="13" r="2" />
+                        <path d="M5 8h3l2-3.5M5 8l5 3.5" />
+                      </svg>
+                      Deps
+                    </AppTabsTrigger>
+                  </AppTabsList>
                 </div>
               </div>
-            </div>
-          )}
-          {isLoadingStories ? (
-            <div className="animate-pulse space-y-2">
-              <div className="h-8 bg-slate-800 rounded"></div>
-              <div className="h-8 bg-slate-800 rounded"></div>
-              <div className="h-8 bg-slate-800 rounded"></div>
-            </div>
-          ) : filteredStories.length > 0 ? (
-            <AppDataTable
-              data={filteredStories}
-              columns={[
-                {
-                  key: 'storyId',
-                  header: 'Story ID',
-                  render: (row: PlanStory) => (
-                    <Link
-                      to="/story/$storyId"
-                      params={{ storyId: row.storyId }}
-                      className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
+              {!isLoadingStories && storiesData && storiesData.length > 0 && (
+                <div className="mb-4 flex flex-col gap-3">
+                  <Input
+                    placeholder="Search by ID or title..."
+                    value={storySearch}
+                    onChange={e => setStorySearch(e.target.value)}
+                    className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
+                  />
+                  <div className="flex items-center gap-3">
+                    <Select
+                      value={storyStateFilter || '_all'}
+                      onValueChange={v => setStoryStateFilter(v === '_all' ? '' : v)}
                     >
-                      {row.storyId}
-                    </Link>
-                  ),
-                },
-                {
-                  key: 'title',
-                  header: 'Title',
-                  render: (row: PlanStory) => (
-                    <Link
-                      to="/story/$storyId"
-                      params={{ storyId: row.storyId }}
-                      className="hover:text-cyan-400 hover:underline transition-colors"
-                    >
-                      <div>{row.title ?? '-'}</div>
-                      {row.description && (
-                        <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-                          {row.description}
-                        </div>
-                      )}
-                    </Link>
-                  ),
-                },
-                {
-                  key: 'state',
-                  header: 'State',
-                  render: (row: PlanStory) => (
-                    <div className="flex items-center gap-2">
-                      <AppBadge
-                        variant={
-                          row.state === 'completed'
-                            ? 'default'
-                            : row.state === 'blocked' || row.hasBlockers
-                              ? 'destructive'
-                              : row.state === 'in_progress' || row.state === 'in_qa'
-                                ? 'outline'
-                                : 'secondary'
-                        }
+                      <SelectTrigger
+                        aria-label="Filter by state"
+                        className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
                       >
-                        {row.state ?? '-'}
-                      </AppBadge>
-                      {row.isBlocked || row.hasBlockers ? (
-                        <span title="Has blockers" className="text-destructive">
-                          ⚠️
-                        </span>
-                      ) : null}
+                        <SelectValue placeholder="State" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+                        <SelectItem
+                          value="_all"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          All States
+                        </SelectItem>
+                        <SelectItem
+                          value="backlog"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Backlog
+                        </SelectItem>
+                        <SelectItem
+                          value="ready_to_work"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Ready to Work
+                        </SelectItem>
+                        <SelectItem
+                          value="in_progress"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          In Progress
+                        </SelectItem>
+                        <SelectItem
+                          value="needs_code_review"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Needs Code Review
+                        </SelectItem>
+                        <SelectItem
+                          value="ready_for_review"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Ready for Review
+                        </SelectItem>
+                        <SelectItem
+                          value="failed_code_review"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Failed Code Review
+                        </SelectItem>
+                        <SelectItem
+                          value="ready_for_qa"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Ready for QA
+                        </SelectItem>
+                        <SelectItem
+                          value="in_qa"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          In QA
+                        </SelectItem>
+                        <SelectItem value="uat" className="focus:bg-slate-700 focus:text-slate-100">
+                          UAT
+                        </SelectItem>
+                        <SelectItem
+                          value="completed"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Completed
+                        </SelectItem>
+                        <SelectItem
+                          value="blocked"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          Blocked
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={storyPriorityFilter || '_all'}
+                      onValueChange={v => setStoryPriorityFilter(v === '_all' ? '' : v)}
+                    >
+                      <SelectTrigger
+                        aria-label="Filter by priority"
+                        className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+                      >
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+                        <SelectItem
+                          value="_all"
+                          className="focus:bg-slate-700 focus:text-slate-100"
+                        >
+                          All Priorities
+                        </SelectItem>
+                        <SelectItem value="P0" className="focus:bg-slate-700 focus:text-slate-100">
+                          P0
+                        </SelectItem>
+                        <SelectItem value="P1" className="focus:bg-slate-700 focus:text-slate-100">
+                          P1
+                        </SelectItem>
+                        <SelectItem value="P2" className="focus:bg-slate-700 focus:text-slate-100">
+                          P2
+                        </SelectItem>
+                        <SelectItem value="P3" className="focus:bg-slate-700 focus:text-slate-100">
+                          P3
+                        </SelectItem>
+                        <SelectItem value="P4" className="focus:bg-slate-700 focus:text-slate-100">
+                          P4
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Checkbox
+                        id="hide-completed"
+                        checked={hideCompleted}
+                        onCheckedChange={checked => setHideCompleted(checked === true)}
+                      />
+                      <Label
+                        htmlFor="hide-completed"
+                        className="text-sm text-slate-400 cursor-pointer select-none"
+                      >
+                        Hide completed
+                      </Label>
                     </div>
-                  ),
-                },
-                {
-                  key: 'blockedByStory',
-                  header: 'Blocked By',
-                  render: (row: PlanStory) =>
-                    row.blockedByStory ? (
+                  </div>
+                </div>
+              )}
+              <AppTabsContent value="table">
+                {isLoadingStories ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 bg-slate-800 rounded"></div>
+                    <div className="h-8 bg-slate-800 rounded"></div>
+                    <div className="h-8 bg-slate-800 rounded"></div>
+                  </div>
+                ) : filteredStories.length > 0 ? (
+                  <AppDataTable
+                    data={filteredStories}
+                    columns={[
+                      {
+                        key: 'storyId',
+                        header: 'Story ID',
+                        render: (row: PlanStory) => (
+                          <Link
+                            to="/story/$storyId"
+                            params={{ storyId: row.storyId }}
+                            className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
+                          >
+                            {row.storyId}
+                          </Link>
+                        ),
+                      },
+                      {
+                        key: 'title',
+                        header: 'Title',
+                        render: (row: PlanStory) => (
+                          <Link
+                            to="/story/$storyId"
+                            params={{ storyId: row.storyId }}
+                            className="hover:text-cyan-400 hover:underline transition-colors"
+                          >
+                            <div>{row.title ?? '-'}</div>
+                            {row.description && (
+                              <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                                {row.description}
+                              </div>
+                            )}
+                          </Link>
+                        ),
+                      },
+                      {
+                        key: 'state',
+                        header: 'State',
+                        render: (row: PlanStory) => (
+                          <div className="flex items-center gap-2">
+                            <AppBadge
+                              variant={
+                                row.state === 'completed'
+                                  ? 'default'
+                                  : row.state === 'blocked' || row.hasBlockers
+                                    ? 'destructive'
+                                    : row.state === 'in_progress' || row.state === 'in_qa'
+                                      ? 'outline'
+                                      : 'secondary'
+                              }
+                            >
+                              {row.state ?? '-'}
+                            </AppBadge>
+                            {row.isBlocked || row.hasBlockers ? (
+                              <span title="Has blockers" className="text-destructive">
+                                ⚠️
+                              </span>
+                            ) : null}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'blockedByStory',
+                        header: 'Blocked By',
+                        render: (row: PlanStory) =>
+                          row.blockedByStory ? (
+                            <Link
+                              to="/story/$storyId"
+                              params={{ storyId: row.blockedByStory }}
+                              className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
+                            >
+                              {row.blockedByStory}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          ),
+                      },
+                      {
+                        key: 'priority',
+                        header: 'Priority',
+                        render: (row: PlanStory) => (
+                          <AppBadge
+                            variant={
+                              row.priority === 'P0'
+                                ? 'destructive'
+                                : row.priority === 'P1'
+                                  ? 'outline'
+                                  : 'secondary'
+                            }
+                          >
+                            {row.priority ?? '-'}
+                          </AppBadge>
+                        ),
+                      },
+                      {
+                        key: 'updatedAt',
+                        header: 'Last Activity',
+                        render: (row: PlanStory) => {
+                          if (!row.updatedAt)
+                            return <span className="text-xs text-slate-500 font-mono">—</span>
+                          const ms = Date.now() - new Date(row.updatedAt).getTime()
+                          const days = Math.floor(ms / 86400000)
+                          let label: string
+                          if (days === 0) label = 'today'
+                          else if (days === 1) label = '1d ago'
+                          else if (days < 7) label = `${days}d ago`
+                          else if (days < 30) label = `${Math.floor(days / 7)}w ago`
+                          else label = `${Math.floor(days / 30)}mo ago`
+                          return <span className="text-xs text-slate-400 font-mono">{label}</span>
+                        },
+                      },
+                    ]}
+                    emptyMessage="No stories match the current filters."
+                  />
+                ) : (
+                  <p className="text-slate-500">
+                    {storiesData && storiesData.length > 0
+                      ? 'No stories match the current filters.'
+                      : 'No stories linked to this plan yet.'}
+                  </p>
+                )}
+              </AppTabsContent>
+              <AppTabsContent value="kanban">
+                {isLoadingStories ? (
+                  <div className="animate-pulse grid grid-cols-5 gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="h-4 bg-slate-800 rounded w-24"></div>
+                        <div className="h-24 bg-slate-800 rounded"></div>
+                        <div className="h-24 bg-slate-800 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <KanbanView stories={filteredStories} />
+                )}
+              </AppTabsContent>
+              <AppTabsContent value="timeline">
+                {isLoadingStories ? (
+                  <div className="animate-pulse space-y-2">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="flex gap-4 items-center">
+                        <div className="h-8 bg-slate-800 rounded w-48 shrink-0"></div>
+                        <div className="h-px bg-slate-800 flex-1"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <TimelineView stories={filteredStories} />
+                )}
+              </AppTabsContent>
+              <AppTabsContent value="deps">
+                {isLoadingStories ? (
+                  <div className="animate-pulse space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex gap-8 items-center">
+                        <div className="h-14 bg-slate-800 rounded-lg w-44"></div>
+                        <div className="h-px bg-slate-800 w-16"></div>
+                        <div className="h-14 bg-slate-800 rounded-lg w-44"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <DependencyGraph stories={filteredStories} />
+                )}
+              </AppTabsContent>
+            </AppTabs>
+          </div>
+
+          {/* Below xl: table only, no tabs */}
+          <div className="xl:hidden">
+            <h2 className="text-base font-semibold mb-4 text-slate-300 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+              Stories
+              {storiesData && storiesData.length > 0 && (
+                <span className="text-xs text-slate-500 font-mono font-normal">
+                  ({filteredStories.length}/{storiesData.length})
+                </span>
+              )}
+            </h2>
+            {!isLoadingStories && storiesData && storiesData.length > 0 && (
+              <div className="mb-4 flex flex-col gap-3">
+                <Input
+                  placeholder="Search by ID or title..."
+                  value={storySearch}
+                  onChange={e => setStorySearch(e.target.value)}
+                  className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
+                />
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={storyStateFilter || '_all'}
+                    onValueChange={v => setStoryStateFilter(v === '_all' ? '' : v)}
+                  >
+                    <SelectTrigger
+                      aria-label="Filter by state"
+                      className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+                    >
+                      <SelectValue placeholder="State" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+                      <SelectItem value="_all" className="focus:bg-slate-700 focus:text-slate-100">
+                        All States
+                      </SelectItem>
+                      <SelectItem
+                        value="backlog"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Backlog
+                      </SelectItem>
+                      <SelectItem
+                        value="ready_to_work"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Ready to Work
+                      </SelectItem>
+                      <SelectItem
+                        value="in_progress"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        In Progress
+                      </SelectItem>
+                      <SelectItem
+                        value="needs_code_review"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Needs Code Review
+                      </SelectItem>
+                      <SelectItem
+                        value="ready_for_review"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Ready for Review
+                      </SelectItem>
+                      <SelectItem
+                        value="failed_code_review"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Failed Code Review
+                      </SelectItem>
+                      <SelectItem
+                        value="ready_for_qa"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Ready for QA
+                      </SelectItem>
+                      <SelectItem value="in_qa" className="focus:bg-slate-700 focus:text-slate-100">
+                        In QA
+                      </SelectItem>
+                      <SelectItem value="uat" className="focus:bg-slate-700 focus:text-slate-100">
+                        UAT
+                      </SelectItem>
+                      <SelectItem
+                        value="completed"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Completed
+                      </SelectItem>
+                      <SelectItem
+                        value="blocked"
+                        className="focus:bg-slate-700 focus:text-slate-100"
+                      >
+                        Blocked
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={storyPriorityFilter || '_all'}
+                    onValueChange={v => setStoryPriorityFilter(v === '_all' ? '' : v)}
+                  >
+                    <SelectTrigger
+                      aria-label="Filter by priority"
+                      className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+                    >
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+                      <SelectItem value="_all" className="focus:bg-slate-700 focus:text-slate-100">
+                        All Priorities
+                      </SelectItem>
+                      <SelectItem value="P0" className="focus:bg-slate-700 focus:text-slate-100">
+                        P0
+                      </SelectItem>
+                      <SelectItem value="P1" className="focus:bg-slate-700 focus:text-slate-100">
+                        P1
+                      </SelectItem>
+                      <SelectItem value="P2" className="focus:bg-slate-700 focus:text-slate-100">
+                        P2
+                      </SelectItem>
+                      <SelectItem value="P3" className="focus:bg-slate-700 focus:text-slate-100">
+                        P3
+                      </SelectItem>
+                      <SelectItem value="P4" className="focus:bg-slate-700 focus:text-slate-100">
+                        P4
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Checkbox
+                      id="hide-completed-sm"
+                      checked={hideCompleted}
+                      onCheckedChange={checked => setHideCompleted(checked === true)}
+                    />
+                    <Label
+                      htmlFor="hide-completed-sm"
+                      className="text-sm text-slate-400 cursor-pointer select-none"
+                    >
+                      Hide completed
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            )}
+            {isLoadingStories ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-8 bg-slate-800 rounded"></div>
+                <div className="h-8 bg-slate-800 rounded"></div>
+                <div className="h-8 bg-slate-800 rounded"></div>
+              </div>
+            ) : filteredStories.length > 0 ? (
+              <AppDataTable
+                data={filteredStories}
+                columns={[
+                  {
+                    key: 'storyId',
+                    header: 'Story ID',
+                    render: (row: PlanStory) => (
                       <Link
                         to="/story/$storyId"
-                        params={{ storyId: row.blockedByStory }}
-                        className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
+                        params={{ storyId: row.storyId }}
+                        className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
                       >
-                        {row.blockedByStory}
+                        {row.storyId}
                       </Link>
-                    ) : (
-                      <span className="text-slate-600">—</span>
                     ),
-                },
-                {
-                  key: 'priority',
-                  header: 'Priority',
-                  render: (row: PlanStory) => (
-                    <AppBadge
-                      variant={
-                        row.priority === 'P0'
-                          ? 'destructive'
-                          : row.priority === 'P1'
-                            ? 'outline'
-                            : 'secondary'
-                      }
-                    >
-                      {row.priority ?? '-'}
-                    </AppBadge>
-                  ),
-                },
-                {
-                  key: 'updatedAt',
-                  header: 'Last Activity',
-                  render: (row: PlanStory) => {
-                    if (!row.updatedAt)
-                      return <span className="text-xs text-slate-500 font-mono">—</span>
-                    const ms = Date.now() - new Date(row.updatedAt).getTime()
-                    const days = Math.floor(ms / 86400000)
-                    let label: string
-                    if (days === 0) label = 'today'
-                    else if (days === 1) label = '1d ago'
-                    else if (days < 7) label = `${days}d ago`
-                    else if (days < 30) label = `${Math.floor(days / 7)}w ago`
-                    else label = `${Math.floor(days / 30)}mo ago`
-                    return <span className="text-xs text-slate-400 font-mono">{label}</span>
                   },
-                },
-              ]}
-              emptyMessage="No stories match the current filters."
-            />
-          ) : (
-            <p className="text-slate-500">
-              {storiesData && storiesData.length > 0
-                ? 'No stories match the current filters.'
-                : 'No stories linked to this plan yet.'}
-            </p>
-          )}
+                  {
+                    key: 'title',
+                    header: 'Title',
+                    render: (row: PlanStory) => (
+                      <Link
+                        to="/story/$storyId"
+                        params={{ storyId: row.storyId }}
+                        className="hover:text-cyan-400 hover:underline transition-colors"
+                      >
+                        <div>{row.title ?? '-'}</div>
+                        {row.description && (
+                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                            {row.description}
+                          </div>
+                        )}
+                      </Link>
+                    ),
+                  },
+                  {
+                    key: 'state',
+                    header: 'State',
+                    render: (row: PlanStory) => (
+                      <div className="flex items-center gap-2">
+                        <AppBadge
+                          variant={
+                            row.state === 'completed'
+                              ? 'default'
+                              : row.state === 'blocked' || row.hasBlockers
+                                ? 'destructive'
+                                : row.state === 'in_progress' || row.state === 'in_qa'
+                                  ? 'outline'
+                                  : 'secondary'
+                          }
+                        >
+                          {row.state ?? '-'}
+                        </AppBadge>
+                        {row.isBlocked || row.hasBlockers ? (
+                          <span title="Has blockers" className="text-destructive">
+                            ⚠️
+                          </span>
+                        ) : null}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'blockedByStory',
+                    header: 'Blocked By',
+                    render: (row: PlanStory) =>
+                      row.blockedByStory ? (
+                        <Link
+                          to="/story/$storyId"
+                          params={{ storyId: row.blockedByStory }}
+                          className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
+                        >
+                          {row.blockedByStory}
+                        </Link>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      ),
+                  },
+                  {
+                    key: 'priority',
+                    header: 'Priority',
+                    render: (row: PlanStory) => (
+                      <AppBadge
+                        variant={
+                          row.priority === 'P0'
+                            ? 'destructive'
+                            : row.priority === 'P1'
+                              ? 'outline'
+                              : 'secondary'
+                        }
+                      >
+                        {row.priority ?? '-'}
+                      </AppBadge>
+                    ),
+                  },
+                  {
+                    key: 'updatedAt',
+                    header: 'Last Activity',
+                    render: (row: PlanStory) => {
+                      if (!row.updatedAt)
+                        return <span className="text-xs text-slate-500 font-mono">—</span>
+                      const ms = Date.now() - new Date(row.updatedAt).getTime()
+                      const days = Math.floor(ms / 86400000)
+                      let label: string
+                      if (days === 0) label = 'today'
+                      else if (days === 1) label = '1d ago'
+                      else if (days < 7) label = `${days}d ago`
+                      else if (days < 30) label = `${Math.floor(days / 7)}w ago`
+                      else label = `${Math.floor(days / 30)}mo ago`
+                      return <span className="text-xs text-slate-400 font-mono">{label}</span>
+                    },
+                  },
+                ]}
+                emptyMessage="No stories match the current filters."
+              />
+            ) : (
+              <p className="text-slate-500">
+                {storiesData && storiesData.length > 0
+                  ? 'No stories match the current filters.'
+                  : 'No stories linked to this plan yet.'}
+              </p>
+            )}
+          </div>
         </div>
 
         {data.details ? (
