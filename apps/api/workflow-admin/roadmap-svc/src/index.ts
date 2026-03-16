@@ -8,8 +8,10 @@ import {
   updatePlan,
   getStoriesByPlanSlug,
   getStoryById,
+  updateStory,
   type PlanListParams,
   type PlanUpdateInput,
+  type StoryUpdateInput,
 } from './services/planService'
 
 const app = new Hono()
@@ -119,6 +121,22 @@ app.patch('/api/v1/roadmap/reorder', async c => {
   } catch (error) {
     logger.error('Failed to reorder plans', { error, priority, items })
     return c.json({ error: 'Failed to reorder plans' }, 500)
+  }
+})
+
+app.patch('/api/v1/stories/:storyId', async c => {
+  const storyId = c.req.param('storyId')
+  const input = (await c.req.json()) as StoryUpdateInput
+
+  try {
+    const result = await updateStory(storyId, input)
+    if (!result) {
+      return c.json({ error: 'Story not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to update story', { error: String(error), storyId, input })
+    return c.json({ error: 'Failed to update story', detail: String(error) }, 500)
   }
 })
 

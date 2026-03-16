@@ -43,11 +43,14 @@ export const stories = workflow.table('stories', {
   fileHash: text('file_hash'),
   state: text('state'),
   priority: text('priority'),
-  phase: text('phase'),
-  iteration: integer('iteration').default(0),
-  acceptanceCriteria: jsonb('acceptance_criteria'),
-  embedding: vector('embedding', { dimensions: 1536 }),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  // tags: free-form and surface tags (surfaces encoded as 'surface:backend' etc.)
+  tags: text('tags').array(),
+  // experiment_variant: future A/B experiment tracking
+  experimentVariant: text('experiment_variant'),
+  // Removed: phase, iteration (derived from state + dependencies)
+  // Removed: acceptanceCriteria (stored in story_content, section_name='acceptance_criteria')
+  // Removed: metadata jsonb (never migrated; tags/surfaces now live here as proper columns)
+  // Removed: embedding, deletedAt (not yet needed)
 })
 
 export const worktrees = workflow.table('worktrees', {

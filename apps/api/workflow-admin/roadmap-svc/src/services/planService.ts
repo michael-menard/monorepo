@@ -1,13 +1,14 @@
 import { z } from 'zod'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { pgTable, text, timestamp, integer, jsonb, uuid } from 'drizzle-orm/pg-core'
+import { pgSchema, text, timestamp, integer, jsonb } from 'drizzle-orm/pg-core'
 import { plans, planStoryLinks, type Plan } from '@repo/knowledge-base/db'
 import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
 
-// Local schema for stories table - matches actual DB columns
-// (The @repo/knowledge-base/db schema has columns that don't exist in the actual DB)
-const stories = pgTable('stories', {
+// Local schema definitions — explicit schema prefix ensures queries resolve correctly
+// regardless of DB search_path. Kept in sync with actual DB columns only.
+const workflowSchema = pgSchema('workflow')
+const stories = workflowSchema.table('stories', {
   storyId: text('story_id').notNull(),
   feature: text('feature').notNull(),
   title: text('title').notNull(),
@@ -21,6 +22,51 @@ const stories = pgTable('stories', {
   fileHash: text('file_hash'),
   state: text('state'),
   priority: text('priority'),
+  // Added by 999_stories_add_tags_experiment_variant migration:
+  tags: text('tags').array(),
+  experimentVariant: text('experiment_variant'),
+})
+
+// View created by migration 1000_create_story_details_view.sql
+// Columns mirror the view definition — jsonb aggregates typed as jsonb.
+const storyDetailsView = workflowSchema.table('story_details', {
+  storyId: text('story_id'),
+  feature: text('feature'),
+  title: text('title'),
+  description: text('description'),
+  state: text('state'),
+  priority: text('priority'),
+  tags: text('tags').array(),
+  experimentVariant: text('experiment_variant'),
+  blockedReason: text('blocked_reason'),
+  blockedByStory: text('blocked_by_story'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  fileHash: text('file_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  // Outcome (null when no outcome row exists)
+  outcomeVerdict: text('outcome_verdict'),
+  outcomeQualityScore: integer('outcome_quality_score'),
+  outcomeReviewIterations: integer('outcome_review_iterations'),
+  outcomeQaIterations: integer('outcome_qa_iterations'),
+  outcomeDurationMs: integer('outcome_duration_ms'),
+  outcomeTotalInputTokens: integer('outcome_total_input_tokens'),
+  outcomeTotalOutputTokens: integer('outcome_total_output_tokens'),
+  outcomeTotalCachedTokens: integer('outcome_total_cached_tokens'),
+  outcomeEstimatedTotalCost: text('outcome_estimated_total_cost'),
+  outcomePrimaryBlocker: text('outcome_primary_blocker'),
+  outcomeCompletedAt: timestamp('outcome_completed_at', { withTimezone: true }),
+  // Work state (null when no work_state row exists)
+  wsBranch: text('ws_branch'),
+  wsPhase: text('ws_phase'),
+  wsNextSteps: jsonb('ws_next_steps'),
+  wsBlockers: jsonb('ws_blockers'),
+  // Pre-aggregated jsonb arrays
+  contentSections: jsonb('content_sections'),
+  stateHistory: jsonb('state_history'),
+  linkedPlans: jsonb('linked_plans'),
+  dependencies: jsonb('dependencies'),
 })
 
 if (!process.env.DATABASE_URL) {
@@ -29,6 +75,37 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 export const database = drizzle(pool)
+
+export const StoryUpdateInputSchema = z.object({
+  description: z.string().nullable().optional(),
+})
+
+export type StoryUpdateInput = z.infer<typeof StoryUpdateInputSchema>
+
+export async function updateStory(
+  storyId: string,
+  input: StoryUpdateInput,
+): Promise<{ storyId: string } | null> {
+  const existing = await database
+    .select({ storyId: stories.storyId })
+    .from(stories)
+    .where(eq(stories.storyId, storyId))
+    .limit(1)
+
+  if (existing.length === 0) {
+    return null
+  }
+
+  const updateData: Record<string, unknown> = { updatedAt: new Date() }
+
+  if (input.description !== undefined) {
+    updateData.description = input.description
+  }
+
+  await database.update(stories).set(updateData).where(eq(stories.storyId, storyId))
+
+  return { storyId }
+}
 
 export const PlanUpdateInputSchema = z.object({
   title: z.string().nullable().optional(),
@@ -461,22 +538,60 @@ export const StoryDetailsSchema = z.object({
   complexity: z.string().nullable(),
   storyPoints: z.number().nullable(),
   state: z.string(),
-  metadata: z
+  blockedReason: z.string().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
+  tags: z.array(z.string()).nullable(),
+  experimentVariant: z.string().nullable(),
+  outcome: z
     .object({
-      surfaces: z
-        .object({
-          backend: z.boolean().optional(),
-          frontend: z.boolean().optional(),
-          database: z.boolean().optional(),
-          infra: z.boolean().optional(),
-        })
-        .optional(),
-      tags: z.array(z.string()).optional(),
-      experimentVariant: z.enum(['control', 'variant_a', 'variant_b']).optional(),
-      blocked_by: z.array(z.string()).optional(),
-      blocks: z.array(z.string()).optional(),
+      finalVerdict: z.string(),
+      qualityScore: z.number(),
+      reviewIterations: z.number(),
+      qaIterations: z.number(),
+      durationMs: z.number(),
+      totalInputTokens: z.number(),
+      totalOutputTokens: z.number(),
+      totalCachedTokens: z.number(),
+      estimatedTotalCost: z.string(),
+      primaryBlocker: z.string().nullable(),
+      completedAt: z.date().nullable(),
     })
     .nullable(),
+  contentSections: z.array(
+    z.object({
+      sectionName: z.string(),
+      contentText: z.string().nullable(),
+    }),
+  ),
+  stateHistory: z.array(
+    z.object({
+      eventType: z.string(),
+      fromState: z.string().nullable(),
+      toState: z.string().nullable(),
+      createdAt: z.date(),
+    }),
+  ),
+  currentWorkState: z
+    .object({
+      branch: z.string().nullable(),
+      phase: z.string().nullable(),
+      nextSteps: z.unknown(),
+      blockers: z.unknown(),
+    })
+    .nullable(),
+  linkedPlans: z.array(
+    z.object({
+      planSlug: z.string(),
+      linkType: z.string(),
+    }),
+  ),
+  dependencies: z.array(
+    z.object({
+      dependsOnId: z.string(),
+      dependencyType: z.string(),
+    }),
+  ),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -484,32 +599,93 @@ export const StoryDetailsSchema = z.object({
 export type StoryDetails = z.infer<typeof StoryDetailsSchema>
 
 export async function getStoryById(storyId: string): Promise<StoryDetails | null> {
-  const result = await database.select().from(stories).where(eq(stories.storyId, storyId)).limit(1)
+  const rows = await database
+    .select()
+    .from(storyDetailsView)
+    .where(eq(storyDetailsView.storyId, storyId))
+    .limit(1)
 
-  if (result.length === 0) {
+  if (rows.length === 0) {
     return null
   }
 
-  const story = result[0]
+  const r = rows[0]
+
+  type ContentSection = { section_name: string; content_text: string | null }
+  type StateHistoryEntry = {
+    event_type: string
+    from_state: string | null
+    to_state: string | null
+    created_at: string
+  }
+  type LinkedPlan = { plan_slug: string; link_type: string }
+  type Dependency = { depends_on_id: string; dependency_type: string }
+
+  const contentSections = ((r.contentSections as ContentSection[]) ?? []).map(cs => ({
+    sectionName: cs.section_name,
+    contentText: cs.content_text,
+  }))
+  const stateHistory = ((r.stateHistory as StateHistoryEntry[]) ?? []).map(h => ({
+    eventType: h.event_type,
+    fromState: h.from_state,
+    toState: h.to_state,
+    createdAt: new Date(h.created_at),
+  }))
+  const linkedPlans = ((r.linkedPlans as LinkedPlan[]) ?? []).map(lp => ({
+    planSlug: lp.plan_slug,
+    linkType: lp.link_type,
+  }))
+  const dependencies = ((r.dependencies as Dependency[]) ?? []).map(d => ({
+    dependsOnId: d.depends_on_id,
+    dependencyType: d.dependency_type,
+  }))
 
   return {
-    id: story.storyId,
-    storyId: story.storyId,
-    title: story.title,
-    description: story.description,
-    storyType: story.feature,
-    epic: story.feature,
+    id: r.storyId!,
+    storyId: r.storyId!,
+    title: r.title!,
+    description: r.description ?? null,
+    storyType: r.feature!,
+    epic: r.feature ?? null,
     wave: null,
-    priority: story.priority,
+    priority: r.priority ?? null,
     complexity: null,
     storyPoints: null,
-    state: story.state ?? 'backlog',
-    metadata: story.blockedByStory
+    state: r.state ?? 'backlog',
+    blockedReason: r.blockedReason ?? null,
+    startedAt: r.startedAt ?? null,
+    completedAt: r.completedAt ?? null,
+    tags: r.tags ?? null,
+    experimentVariant: r.experimentVariant ?? null,
+    outcome: r.outcomeVerdict
       ? {
-          blocked_by: [story.blockedByStory],
+          finalVerdict: r.outcomeVerdict,
+          qualityScore: r.outcomeQualityScore ?? 0,
+          reviewIterations: r.outcomeReviewIterations ?? 0,
+          qaIterations: r.outcomeQaIterations ?? 0,
+          durationMs: r.outcomeDurationMs ?? 0,
+          totalInputTokens: r.outcomeTotalInputTokens ?? 0,
+          totalOutputTokens: r.outcomeTotalOutputTokens ?? 0,
+          totalCachedTokens: r.outcomeTotalCachedTokens ?? 0,
+          estimatedTotalCost: r.outcomeEstimatedTotalCost ?? '0.0000',
+          primaryBlocker: r.outcomePrimaryBlocker ?? null,
+          completedAt: r.outcomeCompletedAt ?? null,
         }
       : null,
-    createdAt: story.createdAt,
-    updatedAt: story.updatedAt,
+    contentSections,
+    stateHistory,
+    currentWorkState:
+      r.wsBranch != null || r.wsPhase != null
+        ? {
+            branch: r.wsBranch ?? null,
+            phase: r.wsPhase ?? null,
+            nextSteps: r.wsNextSteps,
+            blockers: r.wsBlockers,
+          }
+        : null,
+    linkedPlans,
+    dependencies,
+    createdAt: r.createdAt!,
+    updatedAt: r.updatedAt!,
   }
 }

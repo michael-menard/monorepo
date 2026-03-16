@@ -21,16 +21,17 @@ describe('StoryDetails type', () => {
       complexity: null,
       storyPoints: null,
       state: 'in_progress',
-      metadata: {
-        surfaces: {
-          backend: true,
-          frontend: true,
-          database: false,
-          infra: true,
-        },
-        blocked_by: ['BLOCKER-001'],
-        blocks: ['BLOCKED-001'],
-      },
+      blockedReason: null,
+      startedAt: '2024-01-01T00:00:00.000Z',
+      completedAt: null,
+      tags: ['surface:backend', 'surface:frontend', 'auth'],
+      experimentVariant: null,
+      outcome: null,
+      contentSections: [],
+      stateHistory: [],
+      currentWorkState: null,
+      linkedPlans: [],
+      dependencies: [{ dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by' }],
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-02T00:00:00.000Z',
     }
@@ -39,9 +40,9 @@ describe('StoryDetails type', () => {
     expect(story.title).toBe('Test Story')
     expect(story.state).toBe('in_progress')
     expect(story.priority).toBe('P2')
-    expect(story.metadata?.surfaces?.backend).toBe(true)
-    expect(story.metadata?.surfaces?.frontend).toBe(true)
-    expect(story.metadata?.blocked_by).toContain('BLOCKER-001')
+    expect(story.tags).toContain('surface:backend')
+    expect(story.tags).toContain('surface:frontend')
+    expect(story.dependencies[0].dependsOnId).toBe('BLOCKER-001')
   })
 
   it('should handle minimal story data', () => {
@@ -57,12 +58,22 @@ describe('StoryDetails type', () => {
       complexity: null,
       storyPoints: null,
       state: 'backlog',
-      metadata: null,
+      blockedReason: null,
+      startedAt: null,
+      completedAt: null,
+      tags: null,
+      experimentVariant: null,
+      outcome: null,
+      contentSections: [],
+      stateHistory: [],
+      currentWorkState: null,
+      linkedPlans: [],
+      dependencies: [],
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
     }
 
-    expect(story.metadata).toBeNull()
+    expect(story.tags).toBeNull()
     expect(story.description).toBeNull()
     expect(story.priority).toBeNull()
     expect(story.complexity).toBeNull()
@@ -130,72 +141,42 @@ describe('Priority to badge variant mapping', () => {
   })
 })
 
-describe('Surfaces mapping logic', () => {
-  it('should correctly map boolean touches to surfaces', () => {
-    const touchesBackend = true
-    const touchesFrontend = true
-    const touchesDatabase = false
-    const touchesInfra = true
+describe('Tags surface convention', () => {
+  const getSurfaces = (tags: string[] | null) =>
+    (tags ?? []).filter(t => t.startsWith('surface:')).map(t => t.slice('surface:'.length))
 
-    const surfaces = {
-      backend: touchesBackend,
-      frontend: touchesFrontend,
-      database: touchesDatabase,
-      infra: touchesInfra,
-    }
-
-    expect(surfaces.backend).toBe(true)
-    expect(surfaces.frontend).toBe(true)
-    expect(surfaces.database).toBe(false)
-    expect(surfaces.infra).toBe(true)
-
-    const surfaceKeys = Object.keys(surfaces).filter(
-      (key) => surfaces[key as keyof typeof surfaces],
-    )
-    expect(surfaceKeys).toContain('backend')
-    expect(surfaceKeys).toContain('frontend')
-    expect(surfaceKeys).toContain('infra')
-    expect(surfaceKeys).not.toContain('database')
+  it('extracts surface tags from tag array', () => {
+    const tags = ['surface:backend', 'surface:frontend', 'auth']
+    const surfaces = getSurfaces(tags)
+    expect(surfaces).toContain('backend')
+    expect(surfaces).toContain('frontend')
+    expect(surfaces).not.toContain('auth')
   })
 
-  it('should handle all false touches', () => {
-    const touchesBackend = false
-    const touchesFrontend = false
-    const touchesDatabase = false
-    const touchesInfra = false
+  it('returns empty array when no surface tags', () => {
+    const tags = ['auth', 'payments']
+    expect(getSurfaces(tags)).toHaveLength(0)
+  })
 
-    const surfaces = {
-      backend: touchesBackend,
-      frontend: touchesFrontend,
-      database: touchesDatabase,
-      infra: touchesInfra,
-    }
-
-    const hasAnySurface = Object.values(surfaces).some((v) => v)
-    expect(hasAnySurface).toBe(false)
+  it('handles null tags', () => {
+    expect(getSurfaces(null)).toHaveLength(0)
   })
 })
 
-describe('blocked_by mapping', () => {
-  it('should map blockedByStory to blocked_by array', () => {
-    const blockedByStory = 'BLOCKER-001'
-
-    const metadata = {
-      surfaces: { backend: false, frontend: false, database: false, infra: false },
-      blocked_by: blockedByStory ? [blockedByStory] : undefined,
-    }
-
-    expect(metadata.blocked_by).toEqual(['BLOCKER-001'])
+describe('Dependencies mapping', () => {
+  it('filters blocked_by dependencies', () => {
+    const dependencies = [
+      { dependsOnId: 'BLOCKER-001', dependencyType: 'blocked_by' },
+      { dependsOnId: 'BLOCKS-001', dependencyType: 'blocks' },
+    ]
+    const blockers = dependencies.filter(d => d.dependencyType === 'blocked_by')
+    expect(blockers).toHaveLength(1)
+    expect(blockers[0].dependsOnId).toBe('BLOCKER-001')
   })
 
-  it('should handle null blockedByStory', () => {
-    const blockedByStory = null
-
-    const metadata = {
-      surfaces: { backend: false, frontend: false, database: false, infra: false },
-      blocked_by: blockedByStory ? [blockedByStory] : undefined,
-    }
-
-    expect(metadata.blocked_by).toBeUndefined()
+  it('handles empty dependencies', () => {
+    const dependencies: Array<{ dependsOnId: string; dependencyType: string }> = []
+    const blockers = dependencies.filter(d => d.dependencyType === 'blocked_by')
+    expect(blockers).toHaveLength(0)
   })
 })

@@ -89,13 +89,39 @@ export interface StoryDetails {
   complexity: string | null
   storyPoints: number | null
   state: string
-  metadata: {
-    surfaces?: { backend?: boolean; frontend?: boolean; database?: boolean; infra?: boolean }
-    tags?: string[]
-    experimentVariant?: 'control' | 'variant_a' | 'variant_b'
-    blocked_by?: string[]
-    blocks?: string[]
+  blockedReason: string | null
+  startedAt: string | null
+  completedAt: string | null
+  tags: string[] | null
+  experimentVariant: string | null
+  outcome: {
+    finalVerdict: string
+    qualityScore: number
+    reviewIterations: number
+    qaIterations: number
+    durationMs: number
+    totalInputTokens: number
+    totalOutputTokens: number
+    totalCachedTokens: number
+    estimatedTotalCost: string
+    primaryBlocker: string | null
+    completedAt: string | null
   } | null
+  contentSections: Array<{ sectionName: string; contentText: string | null }>
+  stateHistory: Array<{
+    eventType: string
+    fromState: string | null
+    toState: string | null
+    createdAt: string
+  }>
+  currentWorkState: {
+    branch: string | null
+    phase: string | null
+    nextSteps: unknown
+    blockers: unknown
+  } | null
+  linkedPlans: Array<{ planSlug: string; linkType: string }>
+  dependencies: Array<{ dependsOnId: string; dependencyType: string }>
   createdAt: string
   updatedAt: string
 }
@@ -160,6 +186,16 @@ export const roadmapApi = createApi({
         body: input,
       }),
     }),
+    updateStory: builder.mutation<
+      { storyId: string },
+      { storyId: string; input: { description?: string | null } }
+    >({
+      query: ({ storyId, input }) => ({
+        url: `/stories/${storyId}`,
+        method: 'PATCH',
+        body: input,
+      }),
+    }),
   }),
 })
 
@@ -170,4 +206,5 @@ export const {
   useGetStoryByIdQuery,
   useReorderPlansMutation,
   useUpdatePlanMutation,
+  useUpdateStoryMutation,
 } = roadmapApi
