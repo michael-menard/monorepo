@@ -138,15 +138,38 @@ Three competing state models. Migration 002 has original states. Migration 022 h
 - Update trigger in migration 022 with correct transition rules
 - Write migration to move ghost-state stories to canonical equivalents
 
-### AUDIT-2 — Enforce Atomic Artifact Transitions _(CRITICAL)_
+### AUDIT-2 — Enforce Atomic Artifact Transitions _(CRITICAL)_ ✓ Findings complete 2026-03-16
 
 State transitions happen without artifact verification. Stories advance to states they haven't earned.
 
+**Findings:** `packages/backend/orchestrator/plans/audit/FINDINGS-2026-03-16.yaml`
+
+**Key findings:**
+
+- `kb_update_story_status` has zero artifact pre-condition checks (only terminal-state guard exists)
+- None of the three core LangGraph graphs (dev-implement, review, QA) ever call `kb_update_story_status` — state is fully disconnected from graph execution
+- Dev-implement `execute` and `collect_evidence` nodes are stubs (WINT-9070/9080)
+- Review graph writes REVIEW.yaml to filesystem only — no KB write, no state advance
+- Artifact type mismatch: orchestrator uses `codeReview`/`qaVerify`, KB expects `review`/`qa_gate`
+- Artifact tables correctly structured for precondition lookups — no schema changes needed
+
+**Recommended enforcement:** Option B (application-level guard in `kb_update_story_status`)
+
+**Implementation plan (5 steps):**
+
+1. Add `ARTIFACT_GATES` map + precondition query to `kb_update_story_status` (critical)
+2. Rename orchestrator artifact types `codeReview`→`review`, `qaVerify`→`qa_gate` (high)
+3. Add composite index on `artifacts.story_artifacts(story_id, artifact_type)` (high)
+4. Connect LangGraph graphs to `kb_update_story_status` — covered by AUDIT-3 (medium)
+5. Make KB artifact write non-optional for gated types (medium)
+
 **Actions:**
 
-- Audit every KB MCP tool that mutates story state
-- Add pre-condition check: artifact record must exist before state advances
-- Confirm artifact tables (elaboration, dev proof, code review, QA) are correctly structured
+- ✓ Audited every KB MCP tool that mutates story state
+- ✓ Confirmed artifact tables (elaboration, proof, review, qa_gate) are correctly structured
+- ⬜ Implement precondition guard in `kb_update_story_status`
+- ⬜ Fix artifact type name mismatch in orchestrator
+- ⬜ Add composite index migration
 
 ### AUDIT-3 — LangGraph Graph Parity with `.claude` Commands _(HIGH)_
 
@@ -219,23 +242,23 @@ No way to pause, drain, or stop the pipeline.
 
 ## Recommendation Priority Flags
 
-| #   | Recommendation                | Priority       | Status                                                  |
-| --- | ----------------------------- | -------------- | ------------------------------------------------------- |
-| 2   | Deterministic state machine   | **CRITICAL**   | Broken — 3 competing schemas                            |
-| 1   | Real scheduler / orchestrator | **CRITICAL**   | Missing — dispatch loop does not exist                  |
-| 6   | Standardized agent contracts  | **HIGH**       | Unknown — audit required                                |
-| 3   | Human interrupt layer         | **HIGH**       | Partially exists (stuck state), needs first-class pause |
-| 4   | Story confidence score        | **MEDIUM**     | Elab gap analysis exists, not yet a score               |
-| 9   | Observability layer           | **MEDIUM**     | Roadmap shell exists, needs minimum viable ops view     |
-| 15  | Runaway protection            | **MEDIUM**     | Must exist before first automated run                   |
-| 7   | Complexity budgeting          | **LOW-MEDIUM** | Elab handles this implicitly                            |
-| 5   | Failure intelligence          | **POST-MVP**   | workflow_events exists, not connected                   |
-| 8   | Work token system             | **POST-MVP**   | BullMQ slots approximate this                           |
-| 10  | Archive aggressively          | **POST-MVP**   | Plan triage sufficient for now                          |
-| 11  | Version story templates       | **POST-MVP**   | Worth adding after schema stabilizes                    |
-| 12  | Simulation mode               | **POST-MVP**   | Valuable but not blocking                               |
-| 13  | System memory                 | **POST-MVP**   | hitl_decisions infrastructure exists, not connected     |
-| 14  | Define true MVP               | **DONE**       | Defined in this session                                 |
+| #   | Recommendation                | Priority       | Status                                                                             |
+| --- | ----------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| 2   | Deterministic state machine   | **CRITICAL**   | AUDIT-1 ✓ complete (a88a8f54). AUDIT-2 ✓ findings done — guard not yet implemented |
+| 1   | Real scheduler / orchestrator | **CRITICAL**   | Missing — dispatch loop does not exist                                             |
+| 6   | Standardized agent contracts  | **HIGH**       | Unknown — audit required                                                           |
+| 3   | Human interrupt layer         | **HIGH**       | Partially exists (stuck state), needs first-class pause                            |
+| 4   | Story confidence score        | **MEDIUM**     | Elab gap analysis exists, not yet a score                                          |
+| 9   | Observability layer           | **MEDIUM**     | Roadmap shell exists, needs minimum viable ops view                                |
+| 15  | Runaway protection            | **MEDIUM**     | Must exist before first automated run                                              |
+| 7   | Complexity budgeting          | **LOW-MEDIUM** | Elab handles this implicitly                                                       |
+| 5   | Failure intelligence          | **POST-MVP**   | workflow_events exists, not connected                                              |
+| 8   | Work token system             | **POST-MVP**   | BullMQ slots approximate this                                                      |
+| 10  | Archive aggressively          | **POST-MVP**   | Plan triage sufficient for now                                                     |
+| 11  | Version story templates       | **POST-MVP**   | Worth adding after schema stabilizes                                               |
+| 12  | Simulation mode               | **POST-MVP**   | Valuable but not blocking                                                          |
+| 13  | System memory                 | **POST-MVP**   | hitl_decisions infrastructure exists, not connected                                |
+| 14  | Define true MVP               | **DONE**       | Defined in this session                                                            |
 
 ---
 

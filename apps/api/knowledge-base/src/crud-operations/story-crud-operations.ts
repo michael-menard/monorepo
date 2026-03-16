@@ -586,6 +586,40 @@ export async function kb_update_story_status(
     }
   }
 
+  // Artifact pre-condition gate: certain transitions require a KB artifact to exist first.
+  // Maps "fromState→toState" to the required artifact_type in artifacts.story_artifacts.
+  const ARTIFACT_GATES: Partial<Record<string, string>> = {
+    'elab→ready': 'elaboration',
+    'in_progress→needs_code_review': 'proof',
+    'needs_code_review→ready_for_qa': 'review',
+    'in_qa→completed': 'qa_gate',
+  }
+
+  if (validated.state !== undefined && currentState !== null) {
+    const gateKey = `${currentState}→${validated.state}`
+    const requiredArtifactType = ARTIFACT_GATES[gateKey]
+    if (requiredArtifactType) {
+      const found = await deps.db
+        .select({ id: storyArtifacts.id })
+        .from(storyArtifacts)
+        .where(
+          and(
+            eq(storyArtifacts.storyId, validated.story_id),
+            eq(storyArtifacts.artifactType, requiredArtifactType),
+          ),
+        )
+        .limit(1)
+
+      if (found.length === 0) {
+        return {
+          story: existing[0],
+          updated: false,
+          message: `Cannot transition story ${validated.story_id} from '${currentState}' to '${validated.state}': required artifact '${requiredArtifactType}' not found in KB`,
+        }
+      }
+    }
+  }
+
   // Build update object for stories
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),
