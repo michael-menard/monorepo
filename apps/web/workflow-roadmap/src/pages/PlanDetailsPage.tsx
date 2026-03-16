@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { useParams, Link } from '@tanstack/react-router'
 import {
   AppBadge,
@@ -56,7 +57,7 @@ function ActivityRings({ stats }: { stats: StoryStats }) {
             <circle cx="50" cy="50" r={r2} fill="none" stroke="#060f1e" strokeWidth={sw} />
             <circle cx="50" cy="50" r={r3} fill="none" stroke="#060f1e" strokeWidth={sw} />
             {/* Completed — emerald outer */}
-            <circle
+            <motion.circle
               cx="50"
               cy="50"
               r={r1}
@@ -64,11 +65,13 @@ function ActivityRings({ stats }: { stats: StoryStats }) {
               stroke="#10b981"
               strokeWidth={sw}
               strokeDasharray={c1}
-              strokeDashoffset={c1 * (1 - completedPct)}
               strokeLinecap="round"
+              initial={{ strokeDashoffset: c1 }}
+              animate={{ strokeDashoffset: c1 * (1 - completedPct) }}
+              transition={{ duration: 1.2, ease: 'easeOut', delay: 0 }}
             />
             {/* Active — blue middle */}
-            <circle
+            <motion.circle
               cx="50"
               cy="50"
               r={r2}
@@ -76,11 +79,13 @@ function ActivityRings({ stats }: { stats: StoryStats }) {
               stroke="#60a5fa"
               strokeWidth={sw}
               strokeDasharray={c2}
-              strokeDashoffset={c2 * (1 - activePct)}
               strokeLinecap="round"
+              initial={{ strokeDashoffset: c2 }}
+              animate={{ strokeDashoffset: c2 * (1 - activePct) }}
+              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.15 }}
             />
             {/* Created/backlog — cyan inner */}
-            <circle
+            <motion.circle
               cx="50"
               cy="50"
               r={r3}
@@ -88,8 +93,10 @@ function ActivityRings({ stats }: { stats: StoryStats }) {
               stroke="#22d3ee"
               strokeWidth={sw}
               strokeDasharray={c3}
-              strokeDashoffset={c3 * (1 - backlogPct)}
               strokeLinecap="round"
+              initial={{ strokeDashoffset: c3 }}
+              animate={{ strokeDashoffset: c3 * (1 - backlogPct) }}
+              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
             />
           </svg>
         </div>
