@@ -785,7 +785,9 @@ export async function kb_get_next_story(
     const targetStories = await deps.db
       .select({ storyId: stories.storyId })
       .from(stories)
-      .where(and(inArray(stories.storyId, dependsOnIds), eq(stories.state, 'completed')))
+      .where(
+        and(inArray(stories.storyId, dependsOnIds), inArray(stories.state, ['completed', 'UAT'])),
+      )
 
     completedTargets = new Set(targetStories.map(t => t.storyId))
   }

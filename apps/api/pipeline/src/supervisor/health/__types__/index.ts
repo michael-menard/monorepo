@@ -19,6 +19,9 @@ export type CircuitBreakerState = z.infer<typeof CircuitBreakerStateSchema>
 export const CircuitBreakerSummarySchema = z.object({
   elaboration: CircuitBreakerStateSchema,
   storyCreation: CircuitBreakerStateSchema,
+  implementation: CircuitBreakerStateSchema,
+  review: CircuitBreakerStateSchema,
+  qa: CircuitBreakerStateSchema,
 })
 export type CircuitBreakerSummary = z.infer<typeof CircuitBreakerSummarySchema>
 

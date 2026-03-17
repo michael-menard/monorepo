@@ -149,9 +149,40 @@ export const DevImplementStateAnnotation = Annotation.Root({
     reducer: (current, update) => [...current, ...update],
     default: () => [],
   }),
+
+  /** Current iteration count for escalation logic (F009) */
+  iterationCount: Annotation<number>({
+    reducer: overwrite,
+    default: () => 0,
+  }),
+
+  /** Maximum iterations before escalating (1 = escalate to Opus, 2 = abort to blocked) (F009) */
+  maxIterations: Annotation<number>({
+    reducer: overwrite,
+    default: () => 2,
+  }),
+
+  /** Current model tier — escalates from sonnet to opus at threshold 1 (F009) */
+  modelTier: Annotation<'sonnet' | 'opus'>({
+    reducer: overwrite,
+    default: () => 'sonnet',
+  }),
 })
 
 export type DevImplementState = typeof DevImplementStateAnnotation.State
+
+/**
+ * F009: Determine escalation path based on iteration count.
+ * Returns 'proceed', 'escalate_to_opus', or 'abort_to_blocked'.
+ */
+export function shouldEscalate(state: {
+  iterationCount: number
+  maxIterations: number
+}): 'proceed' | 'escalate_to_opus' | 'abort_to_blocked' {
+  if (state.iterationCount >= state.maxIterations) return 'abort_to_blocked'
+  if (state.iterationCount >= 1) return 'escalate_to_opus'
+  return 'proceed'
+}
 
 // ============================================================================
 // Extended GraphState interface

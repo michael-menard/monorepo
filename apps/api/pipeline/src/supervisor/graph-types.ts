@@ -82,3 +82,63 @@ export type StoryCreationResult = {
   completedAt: string
   [key: string]: unknown
 }
+
+/**
+ * DevImplementConfig — partial config for runDevImplement().
+ * Structural alias — supervisor passes minimal config.
+ */
+export type DevImplementConfig = {
+  featureDir?: string
+  worktreePath?: string
+  persistToDb?: boolean
+  runReview?: boolean
+  [key: string]: unknown
+}
+
+/**
+ * DevImplementResult — return type of runDevImplement().
+ */
+export type DevImplementResult = {
+  storyId: string
+  success: boolean
+  planLoaded: boolean
+  executeComplete: boolean
+  reviewResult: unknown
+  evidenceCollected: boolean
+  durationMs: number
+  completedAt: string
+  errors: string[]
+  warnings: string[]
+  [key: string]: unknown
+}
+
+/**
+ * ReviewGraphResult — return type of runReview().
+ */
+export type ReviewGraphResult = {
+  storyId: string
+  success: boolean
+  verdict?: string
+  reviewYamlPath?: string | null
+  durationMs: number
+  completedAt: string
+  errors: string[]
+  warnings: string[]
+  [key: string]: unknown
+}
+
+/**
+ * QAVerifyResult — return type of runQAVerify().
+ */
+export type QAVerifyResult = {
+  storyId: string
+  success: boolean
+  verdict: 'PASS' | 'FAIL' | 'BLOCKED'
+  qaArtifact: unknown
+  preconditionsPassed: boolean
+  durationMs: number
+  completedAt: string
+  errors: string[]
+  warnings: string[]
+  [key: string]: unknown
+}

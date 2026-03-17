@@ -23,6 +23,9 @@ export type { CircuitBreakerStatus } from '@repo/orchestrator'
 export interface GraphCircuitBreakers {
   elaboration: NodeCircuitBreaker
   storyCreation: NodeCircuitBreaker
+  implementation: NodeCircuitBreaker
+  review: NodeCircuitBreaker
+  qa: NodeCircuitBreaker
 }
 
 /**
@@ -47,6 +50,9 @@ export function createCircuitBreakers(
   return {
     elaboration: new NodeCircuitBreaker(cbConfig),
     storyCreation: new NodeCircuitBreaker(cbConfig),
+    implementation: new NodeCircuitBreaker(cbConfig),
+    review: new NodeCircuitBreaker(cbConfig),
+    qa: new NodeCircuitBreaker(cbConfig),
   }
 }
 

@@ -101,3 +101,18 @@ export {
   type SearchError,
   type RRFConfig,
 } from './search/index.js'
+
+// Story CRUD exports (subset for external consumers)
+export {
+  kb_update_story_status,
+  kb_get_story,
+  kb_list_stories,
+  KbUpdateStoryStatusInputSchema,
+  KbGetStoryInputSchema,
+  KbListStoriesInputSchema,
+  type StoryCrudDeps,
+  type KbUpdateStoryStatusInput,
+  type KbGetStoryInput,
+  type KbGetStoryResult,
+  type KbListStoriesInput,
+} from './crud-operations/story-crud-operations.js'
