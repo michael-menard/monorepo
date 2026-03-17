@@ -2,7 +2,7 @@
  * Populate Library Cache
  *
  * Reads CLAUDE.md and docs/tech-stack/*.md, extracts structured JSONB per library,
- * and writes 4 discrete cache entries to wint.context_packs via contextCachePut().
+ * and writes 4 discrete cache entries to workflow.context_packs via contextCachePut().
  *
  * @example Run from monorepo root
  * ```bash
@@ -178,7 +178,7 @@ function extractVitestPatterns(_doc: string): LibraryContent {
 /**
  * Populate library cache from CLAUDE.md and tech-stack docs.
  *
- * Writes 4 entries to wint.context_packs:
+ * Writes 4 entries to workflow.context_packs:
  * - codebase/lib-react19 (from docs/tech-stack/frontend.md)
  * - codebase/lib-tailwind (from docs/tech-stack/frontend.md + CLAUDE.md)
  * - codebase/lib-zod (from CLAUDE.md)

@@ -18,7 +18,7 @@ import { WorkflowLogInvocationInputSchema } from './__types__/index.js'
 import type { WorkflowLogInvocationInput } from './__types__/index.js'
 
 /**
- * Log an agent invocation in wint.agent_invocations
+ * Log an agent invocation in workflow.agent_invocations
  *
  * Inserts exactly one row per call. The invocationId column has a unique constraint;
  * callers are encouraged to provide a stable, predictable ID for idempotency

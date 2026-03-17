@@ -13,7 +13,7 @@
  *
  * AC-1: Baseline token estimates from BASELINE-TOKENS.yaml or hardcoded AC-6 fallback
  * AC-2: context_cache_stats() query loop for all pack types
- * AC-3: Pack content size from wint.context_packs (tokenCount preferred, char/4 fallback)
+ * AC-3: Pack content size from workflow.context_packs (tokenCount preferred, char/4 fallback)
  * AC-4: calculateTokenReduction pure function with formula documentation
  * AC-5: BENCHMARK-RESULTS.yaml artifact with per-agent table, aggregate, verdict
  * AC-6: Tuning recommendations when aggregate < 80%
@@ -404,14 +404,14 @@ describe('@integration WINT-2120: Token Reduction Benchmark (AC-2, AC-3, AC-5, A
       }
     }
 
-    // --- Step 3: Query pack content sizes from wint.context_packs (AC-3) ---
+    // --- Step 3: Query pack content sizes from workflow.context_packs (AC-3) ---
 
     const packSizesMap = new Map<string, PackSize>()
 
     try {
       const { drizzle } = await import('drizzle-orm/node-postgres')
       const { Pool } = await import('pg')
-      const { contextPacks } = await import('@repo/database-schema/schema/wint')
+      const { contextPacks } = await import('@repo/knowledge-base/db')
 
       const pool = new Pool({
         host: process.env['POSTGRES_HOST'] ?? 'localhost',

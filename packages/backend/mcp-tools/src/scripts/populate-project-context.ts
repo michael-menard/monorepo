@@ -3,7 +3,7 @@
  *
  * Reads CLAUDE.md and docs in docs/tech-stack/ and docs/testing/,
  * extracts structured JSONB per domain, and writes 5 discrete cache entries
- * to wint.context_packs via contextCachePut().
+ * to workflow.context_packs via contextCachePut().
  *
  * Each entry is a targeted, summarized JSONB pack — not a raw file dump —
  * optimized for agent injection under 2000 tokens per pack.
@@ -254,7 +254,7 @@ function extractTestingStrategy(_raw: string) {
 /**
  * Populate project context cache from CLAUDE.md and tech-stack docs.
  *
- * Writes 5 entries to wint.context_packs:
+ * Writes 5 entries to workflow.context_packs:
  * - architecture/project-conventions (from CLAUDE.md)
  * - architecture/tech-stack-backend (from docs/tech-stack/backend.md)
  * - architecture/tech-stack-frontend (from docs/tech-stack/frontend.md)

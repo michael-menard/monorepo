@@ -76,10 +76,8 @@ export const DEFAULT_HEALTH_GATE_THRESHOLDS: HealthGateThresholds =
  * Mirrors the wint.codebase_health table columns.
  * Re-exported here for use in orchestrator nodes without importing from database-schema.
  *
- * Note: In a fully wired workspace, this would be imported directly from
- * @repo/database-schema via CodebaseHealthSelectSchema. We define it here
- * as a parallel Zod schema to avoid circular workspace dependencies during
- * the initial APIP-4010 implementation phase.
+ * Note: @repo/database-schema does not exist — this is defined here as a
+ * local Zod schema. See APIP-4010 for context.
  */
 export const CodebaseHealthSnapshotSchema = z.object({
   // Primary key

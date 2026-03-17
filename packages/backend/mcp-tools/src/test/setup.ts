@@ -5,7 +5,7 @@
  * The @repo/db package (used by story-management and story-compatibility)
  * requires DATABASE_URL or POSTGRES_* vars to initialize its connection pool.
  *
- * The wint.* schema tables (stories, context_packs, etc.) live in the main
+ * The workflow.* schema tables (stories, context_packs, etc.) live in the main
  * lego database (port 5432), not the KB database (port 5433).
  *
  * Resolution order:
@@ -21,7 +21,7 @@ import { resolve } from 'path'
 config({ path: resolve(__dirname, '../../../../.env') })
 
 const TEST_ENV: Record<string, string> = {
-  // The wint schema tables live in the main lego database (port 5432).
+  // The workflow schema tables live in the main lego database (port 5432).
   // Root .env already has DATABASE_URL pointing there.
   DATABASE_URL:
     process.env.DATABASE_URL ??

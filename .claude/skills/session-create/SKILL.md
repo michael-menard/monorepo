@@ -1,6 +1,6 @@
 ---
 name: session-create
-description: Open a new context session at the start of a leader agent workflow. Records agentName, storyId, and phase in wint.contextSessions, emitting a structured SESSION CREATED block for downstream workers to inherit.
+description: Open a new context session at the start of a leader agent workflow. Records agentName, storyId, and phase in workflow.context_sessions, emitting a structured SESSION CREATED block for downstream workers to inherit.
 mcp_tools_available: [mcp__postgres-knowledgebase__sessionCreate]
 ---
 
@@ -21,16 +21,17 @@ Session tracking is **telemetry** — it must never gate or block a workflow. If
 
 ## Parameters
 
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `agentName` | Yes | _(current agent name)_ | The name of the leader agent opening the session |
-| `storyId` | No | null | Story ID for this workflow (e.g. `WINT-1234`) |
-| `phase` | No | null | Current workflow phase (e.g. `execute`, `plan`, `qa`) |
-| `sessionId` | No | _(auto-generated UUID)_ | Override the session UUID (rarely needed) |
+| Parameter   | Required | Default                 | Description                                           |
+| ----------- | -------- | ----------------------- | ----------------------------------------------------- |
+| `agentName` | Yes      | _(current agent name)_  | The name of the leader agent opening the session      |
+| `storyId`   | No       | null                    | Story ID for this workflow (e.g. `WINT-1234`)         |
+| `phase`     | No       | null                    | Current workflow phase (e.g. `execute`, `plan`, `qa`) |
+| `sessionId` | No       | _(auto-generated UUID)_ | Override the session UUID (rarely needed)             |
 
 ## What It Does
 
 This skill:
+
 1. Calls `mcp__postgres-knowledgebase__sessionCreate` with `agentName`, `storyId`, and `phase`
 2. Records the returned `session_id` and emits the structured `SESSION CREATED` output block
 3. Handles null returns (DB error) gracefully — emits `SESSION UNAVAILABLE` and continues
@@ -43,25 +44,25 @@ Call the MCP tool with required and optional fields:
 
 ```javascript
 const result = await mcp__postgres_knowledgebase__sessionCreate({
-  agentName: 'dev-execute-leader',   // required — name of THIS agent
-  storyId: 'WINT-2090',              // optional
-  phase: 'execute',                  // optional
+  agentName: 'dev-execute-leader', // required — name of THIS agent
+  storyId: 'WINT-2090', // optional
+  phase: 'execute', // optional
   // sessionId: crypto.randomUUID()  // omit to auto-generate
 })
 ```
 
 **SessionCreateInput fields:**
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `agentName` | string (min 1) | Yes | Name of the leader agent |
-| `sessionId` | UUID string | No | Auto-generated if omitted |
-| `storyId` | string \| null | No | Story identifier |
-| `phase` | string \| null | No | Workflow phase label |
-| `inputTokens` | int >= 0 | No | Default: 0 |
-| `outputTokens` | int >= 0 | No | Default: 0 |
-| `cachedTokens` | int >= 0 | No | Default: 0 |
-| `startedAt` | Date | No | Defaults to now() |
+| Field          | Type           | Required | Notes                     |
+| -------------- | -------------- | -------- | ------------------------- |
+| `agentName`    | string (min 1) | Yes      | Name of the leader agent  |
+| `sessionId`    | UUID string    | No       | Auto-generated if omitted |
+| `storyId`      | string \| null | No       | Story identifier          |
+| `phase`        | string \| null | No       | Workflow phase label      |
+| `inputTokens`  | int >= 0       | No       | Default: 0                |
+| `outputTokens` | int >= 0       | No       | Default: 0                |
+| `cachedTokens` | int >= 0       | No       | Default: 0                |
+| `startedAt`    | Date           | No       | Defaults to now()         |
 
 ### Step 2: Handle the result
 
@@ -135,12 +136,12 @@ The full session lifecycle across a multi-agent workflow:
 
 Session tracking is purely telemetry. The following conditions must NOT block the workflow:
 
-| Condition | Behavior |
-|-----------|----------|
-| DB connection unavailable | Emit `SESSION UNAVAILABLE — continuing without session tracking` and proceed |
-| `sessionCreate` returns null | Same as above |
-| MCP tool unavailable | Log warning, proceed without session |
-| Network timeout | Log warning, proceed without session |
+| Condition                    | Behavior                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| DB connection unavailable    | Emit `SESSION UNAVAILABLE — continuing without session tracking` and proceed |
+| `sessionCreate` returns null | Same as above                                                                |
+| MCP tool unavailable         | Log warning, proceed without session                                         |
+| Network timeout              | Log warning, proceed without session                                         |
 
 The leader's downstream work (plan execution, file writes, code generation) must continue regardless of session state.
 

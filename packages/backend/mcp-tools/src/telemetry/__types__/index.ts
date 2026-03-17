@@ -10,7 +10,7 @@ import { z } from 'zod'
 
 /**
  * Workflow Log Invocation Input Schema
- * Inserts a new record in wint.agent_invocations
+ * Inserts a new record in workflow.agent_invocations
  *
  * Required fields: agentName, status
  * Optional fields: invocationId (auto-generated UUID if not provided), storyId, phase,
@@ -32,7 +32,7 @@ export const WorkflowLogInvocationInputSchema = z.object({
 
   /**
    * Workflow phase this invocation belongs to.
-   * Standard values per wint.ts phase column comment.
+   * Standard values per workflow.ts phase column comment.
    */
   phase: z.enum(['setup', 'plan', 'execute', 'review', 'qa']).optional(),
 

@@ -578,14 +578,9 @@ export const workflowEvents = telemetrySchema.table(
   }),
 )
 
-// Note (KBAR-0010): KBAR schemas are defined in @repo/database-schema package
-// and exported from the schema/index.ts file. They are automatically discovered
-// by Drizzle when the db client is initialized with the full schema.
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Artifacts Schema (INFR-0110)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// NOTE: Artifacts schema, context sessions, and context packs are now imported directly
-// from @repo/database-schema to avoid cyclic dependency. Import them directly:
-// import { artifactsSchema, contextSessions, contextPacks } from '@repo/database-schema'
+// NOTE: artifacts, contextSessions, contextPacks, and cohesionRules are defined
+// in @repo/knowledge-base/db (workflow.* schema). Import them directly from there.

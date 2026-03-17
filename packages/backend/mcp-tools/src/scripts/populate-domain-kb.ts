@@ -3,7 +3,7 @@
  *
  * Reads ADR-LOG.md from plans/stories/ and queries the KB database (port 5433)
  * for lessons learned and blockers, then writes structured cache entries to
- * wint.context_packs via contextCachePut().
+ * workflow.context_packs via contextCachePut().
  *
  * Produces 6 packs:
  * - architecture/active-adrs      (from ADR-LOG.md)
@@ -394,7 +394,7 @@ async function defaultKbQueryFn(opts: {
 /**
  * Populate domain knowledge cache from ADR-LOG.md and KB lessons.
  *
- * Writes 6 entries to wint.context_packs:
+ * Writes 6 entries to workflow.context_packs:
  * - architecture/active-adrs
  * - lessons_learned/lessons-backend
  * - lessons_learned/lessons-frontend

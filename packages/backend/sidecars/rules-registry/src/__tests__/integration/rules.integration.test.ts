@@ -31,7 +31,7 @@ async function initDb(): Promise<boolean> {
     const dbModule = await import('@repo/db').catch(() => null)
     if (!dbModule) return false
 
-    const schemaModule = await import('@repo/database-schema').catch(() => null)
+    const schemaModule = await import('@repo/knowledge-base/db').catch(() => null)
     if (!schemaModule) return false
 
     const rulesModule = await import('../../rules-registry.js').catch(() => null)

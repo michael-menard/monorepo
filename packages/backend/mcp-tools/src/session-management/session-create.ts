@@ -1,6 +1,6 @@
 /**
  * Session Create MCP Tool
- * WINT-0110 AC-1: Creates new record in wint.contextSessions
+ * WINT-0110 AC-1: Creates new record in workflow.context_sessions
  *
  * Features:
  * - Auto-generates UUID sessionId if not provided
@@ -16,7 +16,7 @@ import { contextSessions, type SelectContextSession } from '@repo/knowledge-base
 import { SessionCreateInputSchema, type SessionCreateInput } from './__types__/index.js'
 
 /**
- * Create a new agent session in wint.contextSessions
+ * Create a new agent session in workflow.context_sessions
  *
  * @param input - Session creation parameters
  * @returns Created session record or null if DB error occurs

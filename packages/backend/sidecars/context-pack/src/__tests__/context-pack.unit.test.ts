@@ -197,7 +197,7 @@ vi.mock('@repo/db', () => ({
   },
 }))
 
-vi.mock('@repo/database-schema', () => ({
+vi.mock('@repo/knowledge-base/db', () => ({
   contextPacks: {
     packType: 'pack_type',
     packKey: 'pack_key',

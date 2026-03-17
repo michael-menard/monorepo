@@ -10,7 +10,7 @@ import { z } from 'zod'
 
 /**
  * Session Create Input Schema
- * Creates new record in wint.contextSessions
+ * Creates new record in workflow.context_sessions
  */
 export const SessionCreateInputSchema = z.object({
   sessionId: z.string().uuid('sessionId must be a valid UUID').optional(), // Auto-generated if not provided

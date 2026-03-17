@@ -4,7 +4,7 @@ updated: 2026-03-07
 version: 1.0.0
 type: worker
 name: context-warmer
-description: "Haiku-powered cache-warm skill executor — invokes cache warming sequence and returns warm-result summary"
+description: 'Haiku-powered cache-warm skill executor — invokes cache warming sequence and returns warm-result summary'
 model: haiku
 tools: [Read, Bash]
 ---
@@ -29,15 +29,15 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
 
 ### Required
 
-| Input | Source | Description |
-|-------|--------|-------------|
+| Input               | Source                            | Description                                                                                                            |
+| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Cache types to warm | Caller argument or default config | Array of cache type strings: `["project_context", "agent_missions", "domain_knowledge", "library_patterns"]` or subset |
-| Feature directory | Optional caller arg | Used by skill for path resolution (e.g., `plans/future/platform/wint`) |
+| Feature directory   | Optional caller arg               | Used by skill for path resolution (e.g., `plans/future/platform/wint`)                                                 |
 
 ### Optional
 
-| Input | Source | Description | Degradation if missing |
-|-------|--------|-------------|----------------------|
+| Input                        | Source          | Description                                                            | Degradation if missing                                           |
+| ---------------------------- | --------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | Skip unavailable caches flag | Caller argument | If true, skip any cache that is not yet available; if false, fail fast | Defaults to `false` (fail fast on first missing populate script) |
 
 ### Graceful Degradation
@@ -75,6 +75,7 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
 **Output:** Skill response object with per-cache results
 
 1. Call the `/cache-warm` skill with parameters:
+
    ```
    /cache-warm {
      cache_types: ["project_context", "agent_missions", "domain_knowledge", "library_patterns"],
@@ -84,6 +85,7 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
    ```
 
 2. Skill returns response object with structure:
+
    ```
    {
      timestamp: "ISO 8601",
@@ -135,17 +137,15 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
 **Output:** warm-result object + completion signal
 
 1. Construct warm-result object:
+
    ```yaml
    warm-result:
-     timestamp: "{ISO 8601}"
-     attempted: "{number of caches attempted}"
-     succeeded: "{number of successful caches}"
-     failed: "{number of failed caches}"
-     warnings: [
-       { cache_type: "...", error: "..." },
-       ...
-     ]
-     all_succeeded: "{true if failed == 0, false otherwise}"
+     timestamp: '{ISO 8601}'
+     attempted: '{number of caches attempted}'
+     succeeded: '{number of successful caches}'
+     failed: '{number of failed caches}'
+     warnings: [{ cache_type: '...', error: '...' }, ...]
+     all_succeeded: '{true if failed == 0, false otherwise}'
    ```
 
 2. Write warm-result to stdout or to `{feature_dir}/_implementation/WARM-RESULT.yaml` if feature_dir provided
@@ -178,17 +178,18 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
 
 ```yaml
 warm-result:
-  timestamp: "2026-03-07T12:00:00Z"
+  timestamp: '2026-03-07T12:00:00Z'
   attempted: 4
   succeeded: 3
   failed: 1
   warnings:
-    - cache_type: "library_patterns"
-      error: "Populate script exited with code 1"
+    - cache_type: 'library_patterns'
+      error: 'Populate script exited with code 1'
   all_succeeded: false
 ```
 
 Fields:
+
 - `attempted`: total number of cache warm operations initiated
 - `succeeded`: number that completed successfully
 - `failed`: number that encountered errors
@@ -201,13 +202,14 @@ Fields:
 
 The agent ends with exactly one of the following signals as its final output line:
 
-| Signal | Meaning | Example |
-|--------|---------|---------|
-| `CACHE-WARM COMPLETE` | All caches warmed successfully; no warnings | `CACHE-WARM COMPLETE` |
-| `CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings` | Some caches failed; N warnings recorded | `CACHE-WARM COMPLETE WITH WARNINGS: 1 warnings` |
-| `CACHE-WARM BLOCKED: {reason}` | Unrecoverable failure; caching did not proceed | `CACHE-WARM BLOCKED: cache-warm skill unavailable` |
+| Signal                                            | Meaning                                        | Example                                            |
+| ------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
+| `CACHE-WARM COMPLETE`                             | All caches warmed successfully; no warnings    | `CACHE-WARM COMPLETE`                              |
+| `CACHE-WARM COMPLETE WITH WARNINGS: {N} warnings` | Some caches failed; N warnings recorded        | `CACHE-WARM COMPLETE WITH WARNINGS: 1 warnings`    |
+| `CACHE-WARM BLOCKED: {reason}`                    | Unrecoverable failure; caching did not proceed | `CACHE-WARM BLOCKED: cache-warm skill unavailable` |
 
 **Reachability:**
+
 - `CACHE-WARM COMPLETE`: All cache operations succeeded
 - `CACHE-WARM COMPLETE WITH WARNINGS`: Phase 3 returns `failed > 0` (regardless of succeeded count)
 - `CACHE-WARM BLOCKED`: Phase 1 detects missing skill OR Phase 2 retry fails
@@ -220,7 +222,7 @@ This agent explicitly does NOT:
 
 1. **Directly invoke `populate-project-context.ts`, `populate-domain-kb.ts`, `populate-agent-missions.ts`, or other populate scripts** — All cache population is delegated to the `/cache-warm` skill (WINT-2070).
 
-2. **Write directly to `wint.context_packs` table** — The skill abstracts all database writes via `contextCachePut()` MCP tool.
+2. **Write directly to `workflow.context_packs` table** — The skill abstracts all database writes via `contextCachePut()` MCP tool.
 
 3. **Implement cache invalidation logic** — Cache invalidation is out of scope (deferred to WINT-2070 or later stories).
 
@@ -236,19 +238,19 @@ This section documents the contract for WINT-9090 (port context-warmer to LangGr
 
 The LangGraph node must receive the following state fields:
 
-| State Field | Type | Required | Description |
-|-------------|------|----------|-------------|
-| `cache_types` | array of strings | yes | Cache types to warm: `["project_context", "agent_missions", "domain_knowledge", "library_patterns"]` or subset |
-| `feature_dir` | string \| null | no | Feature directory path for resolving populate script locations |
-| `skip_unavailable` | boolean | no | If true, skip any unavailable cache populate script; if false, fail fast (default: false) |
+| State Field        | Type             | Required | Description                                                                                                    |
+| ------------------ | ---------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `cache_types`      | array of strings | yes      | Cache types to warm: `["project_context", "agent_missions", "domain_knowledge", "library_patterns"]` or subset |
+| `feature_dir`      | string \| null   | no       | Feature directory path for resolving populate script locations                                                 |
+| `skip_unavailable` | boolean          | no       | If true, skip any unavailable cache populate script; if false, fail fast (default: false)                      |
 
 ### Output Contract
 
-| Output | Type | Description |
-|--------|------|-------------|
-| `warm_result` | object | Structured result with `{ timestamp, attempted, succeeded, failed, warnings, all_succeeded }` |
-| `completion_signal` | enum | One of: `COMPLETE`, `COMPLETE_WITH_WARNINGS`, `BLOCKED` |
-| `blocked_reason` | string \| null | If blocked, the reason string; otherwise null |
+| Output              | Type           | Description                                                                                   |
+| ------------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `warm_result`       | object         | Structured result with `{ timestamp, attempted, succeeded, failed, warnings, all_succeeded }` |
+| `completion_signal` | enum           | One of: `COMPLETE`, `COMPLETE_WITH_WARNINGS`, `BLOCKED`                                       |
+| `blocked_reason`    | string \| null | If blocked, the reason string; otherwise null                                                 |
 
 ### Execution Contract
 

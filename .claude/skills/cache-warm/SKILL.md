@@ -1,6 +1,6 @@
 ---
 name: cache-warm
-description: Warm all four context-pack caches in the app database (wint.context_packs) by running the four populate scripts in sequence. Individual script failures are non-fatal. Use this skill at the start of a long session or after a schema/content change to ensure agents have fresh context packs available.
+description: Warm all four context-pack caches in the app database (workflow.context_packs) by running the four populate scripts in sequence. Individual script failures are non-fatal. Use this skill at the start of a long session or after a schema/content change to ensure agents have fresh context packs available.
 ---
 
 # /cache-warm — Warm the Context Pack Cache
@@ -8,6 +8,7 @@ description: Warm all four context-pack caches in the app database (wint.context
 ## Who Should Call This
 
 Any leader agent that needs fresh context packs before spawning workers:
+
 - `dev-implement-story` (start of execute phase)
 - `dev-fix-story` (start of fix phase)
 - `qa-verify-story` (start of QA phase)
@@ -15,7 +16,7 @@ Any leader agent that needs fresh context packs before spawning workers:
 
 ## Description
 
-Runs four populate scripts in sequence against the app database (`wint.context_packs`).
+Runs four populate scripts in sequence against the app database (`workflow.context_packs`).
 Each script is independent — a failure in one does not stop the others.
 After all scripts run, a summary block reports N/4 succeeded with per-script status.
 
@@ -79,7 +80,7 @@ Mark `domain-kb` as `SKIP (KB_DATABASE_URL not set)` for the summary block.
 
 **Script:** `packages/backend/mcp-tools/src/scripts/populate-project-context.ts`
 
-**What it does:** Reads `CLAUDE.md` and docs in `docs/tech-stack/` and `docs/testing/`, extracts structured JSONB per domain, and writes 5 cache entries to `wint.context_packs`.
+**What it does:** Reads `CLAUDE.md` and docs in `docs/tech-stack/` and `docs/testing/`, extracts structured JSONB per domain, and writes 5 cache entries to `workflow.context_packs`.
 
 **Command (run from monorepo root):**
 
@@ -98,7 +99,7 @@ If skipping, mark `domain-kb` as SKIP and proceed to Phase 4.
 
 **Script:** `packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts`
 
-**What it does:** Reads `ADR-LOG.md` and queries the KB database (port 5433) for lessons learned and blockers, then writes 6 cache entries to `wint.context_packs`.
+**What it does:** Reads `ADR-LOG.md` and queries the KB database (port 5433) for lessons learned and blockers, then writes 6 cache entries to `workflow.context_packs`.
 
 **Command (run from monorepo root):**
 
@@ -114,7 +115,7 @@ pnpm tsx packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
 
 **Script:** `packages/backend/mcp-tools/src/scripts/populate-library-cache.ts`
 
-**What it does:** Reads `CLAUDE.md` and `docs/tech-stack/*.md`, extracts structured JSONB per library (React 19, Tailwind, Zod, Vitest), and writes 4 cache entries to `wint.context_packs`.
+**What it does:** Reads `CLAUDE.md` and `docs/tech-stack/*.md`, extracts structured JSONB per library (React 19, Tailwind, Zod, Vitest), and writes 4 cache entries to `workflow.context_packs`.
 
 **Command (run from monorepo root):**
 
@@ -134,7 +135,7 @@ pnpm tsx packages/backend/mcp-tools/src/scripts/populate-library-cache.ts
 
 > NOTE: This script lives in `database-schema/src/seed/`, NOT in `mcp-tools/`. Use the exact path below.
 
-**What it does:** Discovers all non-archived `.agent.md` files from `.claude/agents/`, extracts mission/scope/signals from frontmatter and body content, and upserts compact mission summaries into `wint.context_packs` with `packType='agent_missions'`.
+**What it does:** Discovers all non-archived `.agent.md` files from `.claude/agents/`, extracts mission/scope/signals from frontmatter and body content, and upserts compact mission summaries into `workflow.context_packs` with `packType='agent_missions'`.
 
 **Command (run from monorepo root):**
 
@@ -151,11 +152,13 @@ pnpm tsx packages/backend/database-schema/src/seed/agent-mission-cache-populator
 After all four phases complete, emit the following summary block.
 
 Count:
+
 - **succeeded** = number of scripts that exited 0
 - **skipped** = number of scripts marked SKIP (not attempted)
 - **failed** = number of scripts that exited non-zero
 
 **Status values per script:**
+
 - `PASS` — script exited 0
 - `FAIL` — script exited non-zero (include one-line error reason)
 - `SKIP` — not run (include reason: `--skip=` flag or `KB_DATABASE_URL not set`)
@@ -175,7 +178,7 @@ Result: {N}/4 scripts succeeded  ({S} skipped, {F} failed)
 
 ── Cache Packs Written ─────────────────────────────────
   {Sum of succeeded/attempted counts from each script that PASSed, or "—" if all failed}
-  e.g. 19 packs written to wint.context_packs
+  e.g. 19 packs written to workflow.context_packs
 
 {If any FAIL:}
 ── Failures ───────────────────────────────────────────
@@ -196,12 +199,13 @@ CACHE-WARM PARTIAL: {N}/4 scripts succeeded.
 
 ## Environment Reference
 
-| Variable | Port | Database | Required by |
-|----------|------|----------|-------------|
-| `DATABASE_URL` | 5432 | `lego_dev` | All scripts (writes to `wint.context_packs`) |
-| `KB_DATABASE_URL` | 5433 | `lego_kb` | `populate-domain-kb.ts` only (reads lessons/blockers) |
+| Variable          | Port | Database   | Required by                                           |
+| ----------------- | ---- | ---------- | ----------------------------------------------------- |
+| `DATABASE_URL`    | 5432 | `lego_dev` | All scripts (writes to `workflow.context_packs`)      |
+| `KB_DATABASE_URL` | 5433 | `lego_kb`  | `populate-domain-kb.ts` only (reads lessons/blockers) |
 
 **Typical local values:**
+
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev
 KB_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/lego_kb
@@ -211,12 +215,12 @@ KB_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/lego_kb
 
 ## Script Reference
 
-| Short name | Full path | Packs written |
-|------------|-----------|---------------|
-| `project-context` | `packages/backend/mcp-tools/src/scripts/populate-project-context.ts` | 5 |
-| `domain-kb` | `packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts` | 6 |
-| `library-cache` | `packages/backend/mcp-tools/src/scripts/populate-library-cache.ts` | 4 |
-| `agent-missions` | `packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts` | 1 per agent |
+| Short name        | Full path                                                                    | Packs written |
+| ----------------- | ---------------------------------------------------------------------------- | ------------- |
+| `project-context` | `packages/backend/mcp-tools/src/scripts/populate-project-context.ts`         | 5             |
+| `domain-kb`       | `packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts`               | 6             |
+| `library-cache`   | `packages/backend/mcp-tools/src/scripts/populate-library-cache.ts`           | 4             |
+| `agent-missions`  | `packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts` | 1 per agent   |
 
 ---
 
@@ -224,7 +228,7 @@ KB_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/lego_kb
 
 Individual script failures are **non-fatal**. The skill continues to the next script regardless of outcome.
 
-The only blocking condition is a missing `DATABASE_URL` — without it, no script can write to `wint.context_packs`.
+The only blocking condition is a missing `DATABASE_URL` — without it, no script can write to `workflow.context_packs`.
 
 If `KB_DATABASE_URL` is absent, `populate-domain-kb.ts` is automatically skipped (it would fail without the KB connection anyway).
 
@@ -232,11 +236,11 @@ If `KB_DATABASE_URL` is absent, `populate-domain-kb.ts` is automatically skipped
 
 ## When to Re-Run
 
-| Trigger | Scripts to re-run |
-|---------|------------------|
-| New `.agent.md` added or modified | `agent-missions` |
-| ADR-LOG.md updated | `domain-kb` |
-| `CLAUDE.md` or `docs/tech-stack/*.md` changed | `project-context`, `library-cache` |
-| First time on a new machine | All 4 |
-| Packs missing from `wint.context_packs` | All 4 |
-| After `wint.context_packs` table truncated | All 4 |
+| Trigger                                        | Scripts to re-run                  |
+| ---------------------------------------------- | ---------------------------------- |
+| New `.agent.md` added or modified              | `agent-missions`                   |
+| ADR-LOG.md updated                             | `domain-kb`                        |
+| `CLAUDE.md` or `docs/tech-stack/*.md` changed  | `project-context`, `library-cache` |
+| First time on a new machine                    | All 4                              |
+| Packs missing from `workflow.context_packs`    | All 4                              |
+| After `workflow.context_packs` table truncated | All 4                              |

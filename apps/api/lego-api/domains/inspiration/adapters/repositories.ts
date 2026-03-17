@@ -13,12 +13,12 @@ import type { Inspiration, AlbumWithMetadata } from '../types.js'
 
 // Type for the schema with inspiration tables
 type InspirationSchema = {
-  inspirations: typeof import('@repo/database-schema').inspirations
-  inspirationAlbums: typeof import('@repo/database-schema').inspirationAlbums
-  inspirationAlbumItems: typeof import('@repo/database-schema').inspirationAlbumItems
-  albumParents: typeof import('@repo/database-schema').albumParents
-  inspirationMocs: typeof import('@repo/database-schema').inspirationMocs
-  albumMocs: typeof import('@repo/database-schema').albumMocs
+  inspirations: typeof import('@repo/db').inspirations
+  inspirationAlbums: typeof import('@repo/db').inspirationAlbums
+  inspirationAlbumItems: typeof import('@repo/db').inspirationAlbumItems
+  albumParents: typeof import('@repo/db').albumParents
+  inspirationMocs: typeof import('@repo/db').inspirationMocs
+  albumMocs: typeof import('@repo/db').albumMocs
 }
 
 /**
@@ -904,7 +904,7 @@ export function createAlbumParentRepository(
 export function createMocLinkRepository(
   db: PgDatabase<Record<string, never>>,
   schema: InspirationSchema & {
-    mocInstructions: typeof import('@repo/database-schema').mocInstructions
+    mocInstructions: typeof import('@repo/db').mocInstructions
   },
 ): MocLinkRepository {
   return {

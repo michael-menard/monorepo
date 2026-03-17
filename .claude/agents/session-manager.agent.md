@@ -25,6 +25,7 @@ Session tracking is **telemetry** — it must never gate or block a workflow. Al
 ## Inputs
 
 From orchestrator context:
+
 - `action`: One of `create`, `update`, `complete`, `cleanup`
 - `agentName`: Name of the invoking leader agent
 - `storyId`: Story ID for session context (optional for cleanup)
@@ -32,6 +33,7 @@ From orchestrator context:
 - `sessionId`: UUID of existing session (required for update, complete, cleanup)
 
 From MCP tools:
+
 - `mcp__postgres_knowledgebase__sessionCreate`
 - `mcp__postgres_knowledgebase__sessionUpdate`
 - `mcp__postgres_knowledgebase__sessionComplete`
@@ -39,6 +41,7 @@ From MCP tools:
 - `mcp__postgres_knowledgebase__sessionCleanup`
 
 From skills:
+
 - `/session-create` (WINT-2090) — leader session creation protocol
 - `/session-inherit` (WINT-2090) — worker session inheritance protocol
 
@@ -112,7 +115,7 @@ When `sessionCreate` returns `null` (DB unavailable):
 action: create
 session_id: null
 result: warned
-message: "sessionCreate returned null — continuing without session tracking"
+message: 'sessionCreate returned null — continuing without session tracking'
 ```
 
 ---
@@ -128,9 +131,9 @@ Update token metrics using **incremental mode** (always):
 await mcp__postgres_knowledgebase__sessionUpdate({
   sessionId: '{sessionId}',
   mode: 'incremental',
-  inputTokens: {inputTokens},
-  outputTokens: {outputTokens},
-  cachedTokens: {cachedTokens},
+  inputTokens: { inputTokens },
+  outputTokens: { outputTokens },
+  cachedTokens: { cachedTokens },
 })
 ```
 
@@ -141,6 +144,7 @@ Always use `mode: 'incremental'`. This is the correct and required default for c
 ### Error Handling — Throw Cases
 
 `sessionUpdate` **throws** (not returns null) when:
+
 - Session not found (`sessionId` does not exist)
 - Session already completed (`endedAt IS NOT NULL`)
 
@@ -158,9 +162,9 @@ Output on throw:
 
 ```yaml
 action: update
-session_id: "{sessionId}"
+session_id: '{sessionId}'
 result: warned
-message: "sessionUpdate threw: {error.message} — update skipped"
+message: 'sessionUpdate threw: {error.message} — update skipped'
 ```
 
 ### DB Error Handling
@@ -179,9 +183,9 @@ Complete the session with optional final token counts:
 ```javascript
 await mcp__postgres_knowledgebase__sessionComplete({
   sessionId: '{sessionId}',
-  inputTokens: {finalInputTokens},   // optional
-  outputTokens: {finalOutputTokens}, // optional
-  cachedTokens: {finalCachedTokens}, // optional
+  inputTokens: { finalInputTokens }, // optional
+  outputTokens: { finalOutputTokens }, // optional
+  cachedTokens: { finalCachedTokens }, // optional
 })
 ```
 
@@ -205,9 +209,9 @@ Output on already-completed:
 
 ```yaml
 action: complete
-session_id: "{sessionId}"
+session_id: '{sessionId}'
 result: skipped
-message: "Session already completed — idempotent guard"
+message: 'Session already completed — idempotent guard'
 ```
 
 ### DB Error Handling
@@ -252,13 +256,14 @@ After reporting the dry-run preview, require explicit confirmation before actual
 ```javascript
 const result = await mcp__postgres_knowledgebase__sessionCleanup({
   retentionDays: 90,
-  dryRun: false,  // MUST be explicitly set
+  dryRun: false, // MUST be explicitly set
 })
 ```
 
 ### Active Session Protection
 
 `sessionCleanup` only deletes sessions where:
+
 - `endedAt IS NOT NULL` (completed sessions)
 - `endedAt < (now() - retentionDays)`
 
@@ -276,10 +281,10 @@ Every action emits a structured YAML completion signal:
 
 ```yaml
 action: create
-session_id: "{uuid}"
-agent_name: "{agentName}"
-story_id: "{storyId}"
-phase: "{phase}"
+session_id: '{uuid}'
+agent_name: '{agentName}'
+story_id: '{storyId}'
+phase: '{phase}'
 result: success | warned | failed
 leaked_session_resolved: true | false
 token_totals:
@@ -292,24 +297,24 @@ token_totals:
 
 ```yaml
 action: update
-session_id: "{uuid}"
+session_id: '{uuid}'
 result: success | warned | skipped
 tokens_added:
-  input: {inputTokens}
-  output: {outputTokens}
-  cached: {cachedTokens}
+  input: { inputTokens }
+  output: { outputTokens }
+  cached: { cachedTokens }
 ```
 
 ### Session Completion Output
 
 ```yaml
 action: complete
-session_id: "{uuid}"
+session_id: '{uuid}'
 result: success | skipped | warned
 final_tokens:
-  input: {totalInputTokens}
-  output: {totalOutputTokens}
-  cached: {totalCachedTokens}
+  input: { totalInputTokens }
+  output: { totalOutputTokens }
+  cached: { totalCachedTokens }
 ```
 
 ### Session Cleanup Output
@@ -318,8 +323,8 @@ final_tokens:
 action: cleanup
 result: success | skipped
 dry_run: true | false
-deleted_count: {N}
-cutoff_date: "{ISO date}"
+deleted_count: { N }
+cutoff_date: '{ISO date}'
 active_sessions_protected: true
 ```
 
@@ -333,7 +338,7 @@ active_sessions_protected: true
 - **Do NOT delete active sessions** (`endedAt IS NULL`). Active sessions are NEVER eligible for cleanup deletion, regardless of age or retention policy.
 - **MUST default cleanup to `dryRun: true`**. Actual deletion (`dryRun: false`) requires explicit confirmation after reviewing the dry-run preview. Never auto-proceed to actual deletion.
 - Do NOT spawn sub-agents (this is a worker).
-- Do NOT modify the `wint.contextSessions` schema.
+- Do NOT modify the `workflow.context_sessions` schema.
 - Do NOT assume a `status` column exists — active sessions are identified by `endedAt IS NULL`.
 - MUST use `mode: 'incremental'` for all `sessionUpdate` calls.
 - Session tracking is telemetry — never gate or block a workflow on session failures.
@@ -431,9 +436,9 @@ interface SessionCompleteNodeOutput {
 ```typescript
 // Input state
 interface SessionCleanupNodeInput {
-  retentionDays?: number  // Default: 90
-  dryRun?: boolean        // Default: true
-  confirmed?: boolean     // Must be true for dryRun: false
+  retentionDays?: number // Default: 90
+  dryRun?: boolean // Default: true
+  confirmed?: boolean // Must be true for dryRun: false
 }
 
 // Output state
