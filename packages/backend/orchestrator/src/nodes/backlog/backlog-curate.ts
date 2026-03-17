@@ -33,6 +33,29 @@ import type { GraphState } from '../../state/index.js'
 // ============================================================================
 
 /**
+ * Raw item from the KB, as returned by kb_search.
+ */
+export const KbRawItemSchema = z.object({
+  story_id: z.string().optional(),
+  description: z.string().optional(),
+  deferral_reason: z.string().optional(),
+  deferred_at: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+})
+
+export type KbRawItem = z.infer<typeof KbRawItemSchema>
+
+/**
+ * Injectable KB search function type.
+ * AC-4: When unavailable, node falls back to filesystem scan.
+ */
+export type KbSearchFn = (params: {
+  query: string
+  tags: string[]
+  limit: number
+}) => Promise<KbRawItem[]>
+
+/**
  * Configuration schema for the Backlog Curator node.
  * AC-1: BacklogCuratorConfigSchema.
  */
@@ -46,34 +69,11 @@ export const BacklogCuratorConfigSchema = z.object({
   kbSearch: z
     .function()
     .args(z.object({ query: z.string(), tags: z.array(z.string()), limit: z.number() }))
-    .returns(z.promise(z.array(z.unknown())))
+    .returns(z.promise(z.array(KbRawItemSchema)))
     .optional(),
 })
 
 export type BacklogCuratorConfig = z.infer<typeof BacklogCuratorConfigSchema>
-
-/**
- * Injectable KB search function type.
- * AC-4: When unavailable, node falls back to filesystem scan.
- */
-export type KbSearchFn = (params: {
-  query: string
-  tags: string[]
-  limit: number
-}) => Promise<KbRawItem[]>
-
-/**
- * Raw item from the KB, as returned by kb_search.
- */
-export const KbRawItemSchema = z.object({
-  story_id: z.string().optional(),
-  description: z.string().optional(),
-  deferral_reason: z.string().optional(),
-  deferred_at: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-})
-
-export type KbRawItem = z.infer<typeof KbRawItemSchema>
 
 /**
  * A single deferred item from any source before deduplication.
@@ -186,6 +186,9 @@ type BacklogCuratorState = z.infer<typeof BacklogCuratorStateSchema>
 function toStateUpdate(
   updates: Partial<BacklogCuratorState> & Record<string, unknown>,
 ): Partial<GraphState> {
+  // Cast required: curator-specific keys (backlogCuratorResult, backlogCuratorComplete)
+  // are registered as LangGraph Annotations but not on the base GraphState interface.
+  // Safe because createToolNode merges these into the graph state via LangGraph reducers.
   return updates as unknown as Partial<GraphState>
 }
 
@@ -268,7 +271,7 @@ export async function loadDeferredItems(
 /**
  * Filters KB raw items by scope.
  */
-function filterByScope(items: unknown[], scope: string): unknown[] {
+function filterByScope(items: KbRawItem[], scope: string): KbRawItem[] {
   if (scope === 'all') return items
   return items.filter(item => {
     const parsed = KbRawItemSchema.safeParse(item)
@@ -399,7 +402,7 @@ export function deduplicateAndRank(items: RawDeferredItem[]): DeduplicatedItem[]
     const key = `${item.story_id}::${hash}`
 
     if (seen.has(key)) {
-      // Merge sources
+      // Merge sources — non-null safe: guarded by seen.has(key) above
       const existing = seen.get(key)!
       const sources = new Set(existing.source.split('+'))
       sources.add(item.source)
@@ -656,9 +659,9 @@ export function createBacklogCuratorNode(
         })
 
         return toStateUpdate({
-          baclogCuratorResult: result,
+          backlogCuratorResult: result,
           warnings: allWarnings,
-          baclogCuratorComplete: true,
+          backlogCuratorComplete: true,
         } as Partial<BacklogCuratorState> & Record<string, unknown>)
       } catch (err) {
         // AC-4: Never throw — return error in warnings
@@ -668,7 +671,7 @@ export function createBacklogCuratorNode(
         logger.error('Backlog Curator: unexpected error', { storyId, error: msg })
 
         return toStateUpdate({
-          baclogCuratorResult: {
+          backlogCuratorResult: {
             outputDir,
             totalItemsFound: 0,
             itemsInBatch: 0,
@@ -677,7 +680,7 @@ export function createBacklogCuratorNode(
             completedAt: new Date().toISOString(),
           } satisfies BacklogCuratorResult,
           warnings: allWarnings,
-          baclogCuratorComplete: true,
+          backlogCuratorComplete: true,
         } as Partial<BacklogCuratorState> & Record<string, unknown>)
       }
     },

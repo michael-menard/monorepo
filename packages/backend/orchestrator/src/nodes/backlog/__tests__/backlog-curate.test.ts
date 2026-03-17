@@ -453,7 +453,7 @@ describe('Integration: createBacklogCuratorNode (full handler)', () => {
     const node = createBacklogCuratorNode({ kbSearch })
     const result = await node(makeState() as never)
 
-    const stateResult = (result as Record<string, unknown>)['baclogCuratorResult'] as Record<string, unknown>
+    const stateResult = (result as Record<string, unknown>)['backlogCuratorResult'] as Record<string, unknown>
     expect(stateResult).toBeDefined()
     expect(stateResult['totalItemsFound']).toBe(1)
     expect(stateResult['itemsInBatch']).toBe(1)
@@ -467,7 +467,7 @@ describe('Integration: createBacklogCuratorNode (full handler)', () => {
     const node = createBacklogCuratorNode()
     const result = await node(makeState() as never)
 
-    const stateResult = (result as Record<string, unknown>)['baclogCuratorResult'] as Record<string, unknown>
+    const stateResult = (result as Record<string, unknown>)['backlogCuratorResult'] as Record<string, unknown>
     expect(stateResult).toBeDefined()
     expect(stateResult['totalItemsFound']).toBe(0)
     const warnings = stateResult['warnings'] as string[]
@@ -485,7 +485,7 @@ describe('Integration: createBacklogCuratorNode (full handler)', () => {
     const node = createBacklogCuratorNode()
     const result = await node(makeState({ outputDir: undefined }) as never)
 
-    const stateResult = (result as Record<string, unknown>)['baclogCuratorResult'] as Record<string, unknown>
+    const stateResult = (result as Record<string, unknown>)['backlogCuratorResult'] as Record<string, unknown>
     const warnings = stateResult['warnings'] as string[]
     expect(warnings.some((w: string) => w.includes('outputDir not set'))).toBe(true)
   })
@@ -502,7 +502,7 @@ describe('Integration: createBacklogCuratorNode (full handler)', () => {
     const node = createBacklogCuratorNode({ kbSearch, batchLimit: 5 })
     const result = await node(makeState() as never)
 
-    const stateResult = (result as Record<string, unknown>)['baclogCuratorResult'] as Record<string, unknown>
+    const stateResult = (result as Record<string, unknown>)['backlogCuratorResult'] as Record<string, unknown>
     expect(stateResult['itemsInBatch']).toBe(5)
     expect(stateResult['totalItemsFound']).toBe(20)
   })

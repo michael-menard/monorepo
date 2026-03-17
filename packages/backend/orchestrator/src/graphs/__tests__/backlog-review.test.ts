@@ -146,7 +146,7 @@ describe('createMLScoreNode — injectable skip pattern (AC-6)', () => {
     // Skips — passes through unchanged stories
     expect(result.mlScoredStories).toEqual(stories)
     expect(result.warnings).toBeDefined()
-    expect(result.warnings!.some(w => w.includes('WINT-9070'))).toBe(true)
+    expect(result.warnings!.some(w => w.includes('mlScoringNode not injected'))).toBe(true)
   })
 
   it('calls injected ml node and returns scored stories', async () => {
@@ -270,7 +270,7 @@ describe('runBacklogReview', () => {
     const result = await runBacklogReview({ epicPrefix: 'WINT', config: {} })
     expect(result.success).toBe(true)
     expect(result.reordered).toBe(true)
-    expect(result.warnings.some(w => w.includes('WINT-9070'))).toBe(true)
+    expect(result.warnings.some(w => w.includes('mlScoringNode not injected'))).toBe(true)
     expect(result.warnings.some(w => w.includes('WINT-9080'))).toBe(true)
   })
 
