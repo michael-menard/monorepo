@@ -5,7 +5,9 @@
  * load_backlog → ml_score → curator_analyze → reorder → persist → complete
  *
  * ml_score and curator_analyze use injectable stub pattern for pending
- * WINT-9070/9080 dependencies — skip gracefully with warnings when not provided.
+ * WINT-9080 dependency — skips gracefully with warning when not provided.
+ * The backlog-curator deferred-item node (WINT-9070) is injected separately
+ * via baclogCuratorNode and is distinct from ML scoring.
  *
  * WINT-9110: backlog-review.ts (AC-6)
  *
@@ -33,10 +35,20 @@ export const BacklogReviewConfigSchema = z.object({
   checkpointer: z.unknown().optional(),
   /** Telemetry node (WINT-9100, optional, injected) */
   telemetryNode: z.unknown().optional(),
-  /** ML scoring node (WINT-9070, optional, injected — skips gracefully if absent) */
+  /**
+   * ML scoring node (optional, injected — skips gracefully if absent).
+   * NOTE: This is NOT WINT-9070. The backlog-curator deferred-item node (WINT-9070)
+   * is a separate concern injected via baclogCuratorNode below.
+   */
   mlScoringNode: z.unknown().optional(),
   /** Curator analysis node (WINT-9080, optional, injected — skips gracefully if absent) */
   curatorAnalyzeNode: z.unknown().optional(),
+  /**
+   * Backlog curator node (WINT-9070, optional, injected).
+   * Implements deferred-item collection (NOT ML scoring).
+   * Separate from mlScoringNode — these are distinct deliverables.
+   */
+  baclogCuratorNode: z.unknown().optional(),
   /** Epic prefix to filter backlog stories */
   epicPrefix: z.string().default(''),
   /** Maximum stories to load */
@@ -219,8 +231,9 @@ export function createLoadBacklogNode() {
 
 /**
  * ML score node.
- * Scores stories using ML model (WINT-9070, injectable).
+ * Scores stories using an injectable ML model.
  * Skips gracefully with warning when not injected (AC-6).
+ * NOTE: Not WINT-9070 — the backlog-curator deferred-item node is separate (baclogCuratorNode).
  */
 export function createMLScoreNode(config: Partial<BacklogReviewConfig> = {}) {
   return async (state: BacklogReviewState): Promise<Partial<BacklogReviewState>> => {
@@ -230,7 +243,7 @@ export function createMLScoreNode(config: Partial<BacklogReviewConfig> = {}) {
       // Skip gracefully with warning (AC-6 requirement)
       return {
         mlScoredStories: state.backlogStories,
-        warnings: ['ml_score: WINT-9070 not injected — skipping ML scoring'],
+        warnings: ['ml_score: mlScoringNode not injected — skipping ML scoring'],
       }
     }
 
