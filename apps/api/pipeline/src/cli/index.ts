@@ -12,12 +12,16 @@
  *   queue jobs [--status <s>] List jobs with tabular output; optional --status filter
  *   supervisor status         Show supervisor state (idle/processing) with active/last jobs
  *   graph status              Show job counts grouped by pipeline phase
+ *   emergency pause           STOP: pause queue — no new jobs dispatched (active jobs finish)
+ *   emergency drain           STOP: drain all waiting jobs from the queue
+ *   emergency quarantine <storyId> <reason>  Block a story and remove its queued job
  *
  * Options:
  *   --help                    Print this help message and exit 0
  */
 
 import { z } from 'zod'
+import { pausePipeline, drainPipeline, quarantineStory } from '../emergency-controls.js'
 import {
   createPipelineConnection,
   createPipelineQueue,
@@ -40,6 +44,11 @@ Commands:
   queue jobs [--status <s>] List jobs (optional --status filter: waiting|active|completed|failed|delayed)
   supervisor status         Show supervisor state and recent jobs
   graph status              Show job counts by pipeline phase
+  emergency pause           STOP: pause queue — no new jobs dispatched (active jobs finish)
+  emergency drain           STOP: drain all waiting jobs from the queue
+  emergency quarantine <storyId> <reason>  Block a story and remove its queued job
+
+Emergency controls require REDIS_URL (and KB_DB_PASSWORD for quarantine).
 
 Options:
   --help                    Print this help message and exit 0
@@ -81,7 +90,7 @@ function sanitizeRedisUrl(rawUrl: string): string {
 async function cmdQueueStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
   try {
     const counts = await pq.bullQueue.getJobCounts(
       'waiting',
@@ -113,7 +122,7 @@ type JobStatus = z.infer<typeof JobStatusSchema>
 async function cmdQueueJobs(statusFilter?: JobStatus): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
   try {
     const statuses: JobStatus[] = statusFilter
       ? [statusFilter]
@@ -183,7 +192,7 @@ function formatAge(ms: number): string {
 async function cmdSupervisorStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
   try {
     const [activeJobs, completedJobs, failedJobs] = await Promise.all([
       pq.bullQueue.getActive(),
@@ -239,7 +248,7 @@ const PIPELINE_STAGES: PipelinePhase[] = ['elaboration', 'implementation', 'revi
 async function cmdGraphStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
   try {
     const jobs = await pq.bullQueue.getJobs(
       ['waiting', 'active', 'completed', 'failed', 'delayed'],
@@ -294,6 +303,67 @@ function handleRedisError(err: unknown): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Emergency commands (AUDIT-8)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function cmdEmergencyPause(): Promise<void> {
+  const redisUrl = getRedisUrl()
+  const conn = createPipelineConnection(redisUrl)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  try {
+    const result = await pausePipeline(pq.bullQueue)
+    console.log('Pipeline paused.')
+    console.log(`  queue paused:  ${result.queuePaused}`)
+    console.log(`  worker paused: ${result.workerPaused}`)
+    console.log('To resume: run `queue.resume()` or restart the supervisor process.')
+  } finally {
+    await pq.bullQueue.close()
+    await conn.quit()
+  }
+}
+
+async function cmdEmergencyDrain(): Promise<void> {
+  const redisUrl = getRedisUrl()
+  const conn = createPipelineConnection(redisUrl)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  try {
+    const result = await drainPipeline(pq.bullQueue)
+    console.log('Pipeline drained.')
+    console.log(`  waiting jobs removed: ${result.jobsRemoved}`)
+  } finally {
+    await pq.bullQueue.close()
+    await conn.quit()
+  }
+}
+
+async function cmdEmergencyQuarantine(storyId: string, reason: string): Promise<void> {
+  if (!process.env.KB_DB_PASSWORD) {
+    console.error(
+      'Error: KB_DB_PASSWORD is required for quarantine (needs to update story state in KB)',
+    )
+    process.exit(1)
+  }
+
+  const { getDbClient } = await import('@repo/knowledge-base')
+  const kbDeps = { db: getDbClient() }
+
+  const redisUrl = getRedisUrl()
+  const conn = createPipelineConnection(redisUrl)
+  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+
+  try {
+    const result = await quarantineStory(kbDeps, pq.bullQueue, storyId, reason)
+    console.log(`Story ${storyId} quarantined.`)
+    console.log(`  KB blocked:  ${result.storyBlocked}`)
+    console.log(`  job removed: ${result.jobRemoved}`)
+    console.log(`  jobs searched: ${result.jobsSearched}`)
+  } finally {
+    await pq.bullQueue.close()
+    await conn.quit()
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main dispatcher
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -341,6 +411,27 @@ async function main(): Promise<void> {
   if (group === 'graph') {
     if (subcommand === 'status') {
       await cmdGraphStatus()
+      return
+    }
+  }
+
+  if (group === 'emergency') {
+    if (subcommand === 'pause') {
+      await cmdEmergencyPause()
+      return
+    }
+    if (subcommand === 'drain') {
+      await cmdEmergencyDrain()
+      return
+    }
+    if (subcommand === 'quarantine') {
+      const [storyId, ...reasonParts] = rest
+      if (!storyId || reasonParts.length === 0) {
+        console.error('Usage: emergency quarantine <storyId> <reason>')
+        console.error('  Example: emergency quarantine ORCH-2010 "runaway agent detected"')
+        process.exit(1)
+      }
+      await cmdEmergencyQuarantine(storyId, reasonParts.join(' '))
       return
     }
   }
