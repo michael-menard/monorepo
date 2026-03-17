@@ -20,8 +20,9 @@ const mockDashboard = {
     {
       story_id: 'APIP-2020',
       title: 'Test In-Progress Story',
-      state: 'in-progress',
-      priority: 'p1',
+      feature: 'apip',
+      state: 'in_progress',
+      priority: 'P1',
       blocked_by: null,
       updated_at: new Date().toISOString(),
     },
@@ -36,6 +37,7 @@ const mockDashboard = {
     },
   ],
   blocked_queue: [],
+  needs_attention: [],
   generated_at: new Date().toISOString(),
 }
 

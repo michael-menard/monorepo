@@ -1,7 +1,7 @@
 /**
  * usePipelineMonitor Hook
  *
- * Polling-only hook that fetches /api/v2/monitor/pipeline on mount
+ * Polling-only hook that fetches /monitor/pipeline on mount
  * and every VITE_MONITOR_REFRESH_INTERVAL ms (default 30000ms).
  *
  * Features:
@@ -10,7 +10,7 @@
  * - Loading and error state management
  * - No SSE / EventSource code (AC-12: SSE deferred to APIP-2025)
  *
- * Story: APIP-2020
+ * Story: APIP-2020, AUDIT-7
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -23,6 +23,7 @@ import { z } from 'zod'
 export const PipelineStorySchema = z.object({
   story_id: z.string(),
   title: z.string(),
+  feature: z.string(),
   state: z.string(),
   priority: z.string().nullable(),
   blocked_by: z.string().nullable(),
@@ -50,10 +51,23 @@ export const BlockedStorySchema = z.object({
 
 export type BlockedStory = z.infer<typeof BlockedStorySchema>
 
+export const NeedsAttentionStorySchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  feature: z.string(),
+  state: z.string(),
+  priority: z.string().nullable(),
+  blocked_reason: z.string().nullable(),
+  updated_at: z.string(),
+})
+
+export type NeedsAttentionStory = z.infer<typeof NeedsAttentionStorySchema>
+
 export const PipelineDashboardResponseSchema = z.object({
   pipeline_view: z.array(PipelineStorySchema),
   cost_summary: z.array(CostSummaryRowSchema),
   blocked_queue: z.array(BlockedStorySchema),
+  needs_attention: z.array(NeedsAttentionStorySchema),
   generated_at: z.string(),
 })
 

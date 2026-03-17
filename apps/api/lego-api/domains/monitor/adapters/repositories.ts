@@ -1,20 +1,15 @@
 /**
  * Monitor Domain - Repository Adapters
  *
- * Raw SQL read queries against wint.* tables via Drizzle sql template tag.
- * Adapts to the actual dev database schema.
+ * Raw SQL read queries against workflow.* and analytics.* tables via Drizzle sql template tag.
  *
- * Schema notes:
- * - wint.stories: id (uuid), story_id (text), title, state (enum), priority (enum),
- *   metadata (jsonb), created_at, updated_at
- * - wint.story_blockers: id, story_id (uuid FK), blocker_type, blocker_description,
- *   detected_at, resolved_at, severity, created_at, updated_at
- * - wint.token_usage: id, story_id (uuid FK), phase, tokens_input, tokens_output,
- *   total_tokens, model, agent_name, created_at
+ * Schema:
+ * - workflow.stories: story_id (text PK), feature, state, title, priority, created_at, updated_at
+ * - workflow.story_details: story_id, blocked_reason, blocked_by_story, started_at, completed_at
+ * - workflow.story_dependencies: story_id, depends_on_id, dependency_type
+ * - analytics.story_token_usage: story_id, feature, phase, input_tokens, output_tokens, total_tokens
  *
- * NOTE: state and priority are PostgreSQL enum types, so comparisons need ::text cast.
- *
- * Story: APIP-2020
+ * Story: APIP-2020, AUDIT-7
  */
 
 import { sql } from 'drizzle-orm'
@@ -29,6 +24,7 @@ import { logger } from '@repo/logger'
 export const PipelineStorySchema = z.object({
   story_id: z.string(),
   title: z.string(),
+  feature: z.string(),
   state: z.string(),
   priority: z.string().nullable(),
   blocked_by: z.string().nullable(),
@@ -56,10 +52,24 @@ export const BlockedStorySchema = z.object({
 
 export type BlockedStory = z.infer<typeof BlockedStorySchema>
 
+// Stories needing human attention: failed_code_review, failed_qa, blocked
+export const NeedsAttentionStorySchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  feature: z.string(),
+  state: z.string(),
+  priority: z.string().nullable(),
+  blocked_reason: z.string().nullable(),
+  updated_at: z.string(),
+})
+
+export type NeedsAttentionStory = z.infer<typeof NeedsAttentionStorySchema>
+
 export const PipelineDashboardResponseSchema = z.object({
   pipeline_view: z.array(PipelineStorySchema),
   cost_summary: z.array(CostSummaryRowSchema),
   blocked_queue: z.array(BlockedStorySchema),
+  needs_attention: z.array(NeedsAttentionStorySchema),
   generated_at: z.string(),
 })
 
@@ -83,77 +93,108 @@ export function createMonitorRepository(db: NodePgDatabase<any>): MonitorReposit
       try {
         logger.info('MonitorRepository: fetching pipeline dashboard')
 
-        // Pipeline view: active stories with blocker info
-        // Cast state::text for comparison since state is an enum type
-        // Sorted in-progress first (AC-1)
+        // ── Pipeline view: active states only, sorted by state priority then priority ──
+        // Covers: ready, in_progress, code review (multi-name variants), QA states
         const pipelineResult = await db.execute(sql`
           SELECT
             s.story_id,
             s.title,
-            s.state::text AS state,
-            s.priority::text AS priority,
-            sb.blocker_description AS blocked_by,
+            s.feature,
+            s.state,
+            s.priority,
+            sd.blocked_reason AS blocked_by,
             s.updated_at
-          FROM wint.stories s
-          LEFT JOIN wint.story_blockers sb
-            ON sb.story_id = s.id
-            AND sb.resolved_at IS NULL
-          WHERE s.state::text NOT IN ('done', 'cancelled')
+          FROM workflow.stories s
+          LEFT JOIN workflow.story_details sd ON sd.story_id = s.story_id
+          WHERE s.state IN (
+            'ready',
+            'in_progress',
+            'needs_code_review',
+            'in_review',
+            'ready_for_review',
+            'ready_for_qa',
+            'in_qa'
+          )
           ORDER BY
-            CASE s.state::text
-              WHEN 'in-progress' THEN 1
-              WHEN 'in_progress' THEN 1
-              WHEN 'ready-to-work' THEN 2
-              WHEN 'ready_to_work' THEN 2
-              WHEN 'ready-for-qa' THEN 3
-              WHEN 'ready_for_qa' THEN 3
-              WHEN 'uat' THEN 4
-              WHEN 'backlog' THEN 5
-              WHEN 'draft' THEN 6
-              ELSE 7
-            END ASC,
-            CASE s.priority::text
-              WHEN 'P0' THEN 1 WHEN 'p0' THEN 1 WHEN 'critical' THEN 1
-              WHEN 'P1' THEN 2 WHEN 'p1' THEN 2 WHEN 'high' THEN 2
-              WHEN 'P2' THEN 3 WHEN 'p2' THEN 3 WHEN 'medium' THEN 3
-              WHEN 'P3' THEN 4 WHEN 'p3' THEN 4 WHEN 'low' THEN 4
+            CASE s.state
+              WHEN 'in_progress'        THEN 1
+              WHEN 'needs_code_review'  THEN 2
+              WHEN 'in_review'          THEN 2
+              WHEN 'ready_for_review'   THEN 2
+              WHEN 'ready_for_qa'       THEN 3
+              WHEN 'in_qa'              THEN 3
+              WHEN 'ready'              THEN 4
               ELSE 5
+            END ASC,
+            CASE s.priority
+              WHEN 'P1' THEN 1 WHEN 'critical' THEN 1 WHEN 'high' THEN 1
+              WHEN 'P2' THEN 2 WHEN 'medium' THEN 2
+              WHEN 'P3' THEN 3 WHEN 'low' THEN 3
+              ELSE 4
             END ASC,
             s.updated_at DESC
         `)
 
-        // Cost summary: SUM(total_tokens) grouped by story_id and phase (AC-2)
-        // JOINs UUID FK with wint.stories to get human-readable story_id
+        // ── Cost summary: token usage per story/phase ──
+        // analytics.story_token_usage uses input_tokens/output_tokens (not tokens_input/tokens_output)
         const costResult = await db.execute(sql`
           SELECT
-            s.story_id,
-            tu.phase,
-            COALESCE(SUM(tu.total_tokens), 0) AS total_tokens,
-            COALESCE(SUM(tu.tokens_input), 0) AS tokens_input,
-            COALESCE(SUM(tu.tokens_output), 0) AS tokens_output
-          FROM wint.token_usage tu
-          JOIN wint.stories s ON tu.story_id = s.id
-          GROUP BY s.story_id, tu.phase
-          ORDER BY s.story_id ASC, tu.phase ASC
+            stu.story_id,
+            stu.phase,
+            COALESCE(SUM(stu.total_tokens), 0)  AS total_tokens,
+            COALESCE(SUM(stu.input_tokens), 0)  AS tokens_input,
+            COALESCE(SUM(stu.output_tokens), 0) AS tokens_output
+          FROM analytics.story_token_usage stu
+          GROUP BY stu.story_id, stu.phase
+          ORDER BY stu.story_id ASC, stu.phase ASC
         `)
 
-        // Blocked queue: stories with active (unresolved) blockers (AC-3)
+        // ── Blocked queue: stories currently in 'blocked' state ──
         const blockedResult = await db.execute(sql`
           SELECT
             s.story_id,
             s.title,
-            s.state::text AS state,
-            sb.blocker_description AS blocked_by
-          FROM wint.stories s
-          JOIN wint.story_blockers sb ON sb.story_id = s.id
-          WHERE sb.resolved_at IS NULL
+            s.state,
+            sd.blocked_reason AS blocked_by
+          FROM workflow.stories s
+          LEFT JOIN workflow.story_details sd ON sd.story_id = s.story_id
+          WHERE s.state = 'blocked'
           ORDER BY
-            CASE s.priority::text
-              WHEN 'P0' THEN 1 WHEN 'p0' THEN 1 WHEN 'critical' THEN 1
-              WHEN 'P1' THEN 2 WHEN 'p1' THEN 2 WHEN 'high' THEN 2
-              WHEN 'P2' THEN 3 WHEN 'p2' THEN 3 WHEN 'medium' THEN 3
-              WHEN 'P3' THEN 4 WHEN 'p3' THEN 4 WHEN 'low' THEN 4
-              ELSE 5
+            CASE s.priority
+              WHEN 'P1' THEN 1 WHEN 'critical' THEN 1 WHEN 'high' THEN 1
+              WHEN 'P2' THEN 2 WHEN 'medium' THEN 2
+              WHEN 'P3' THEN 3 WHEN 'low' THEN 3
+              ELSE 4
+            END ASC,
+            s.updated_at DESC
+        `)
+
+        // ── Needs attention: failed_code_review, failed_qa, blocked ──
+        // These require human intervention before pipeline can resume.
+        const needsAttentionResult = await db.execute(sql`
+          SELECT
+            s.story_id,
+            s.title,
+            s.feature,
+            s.state,
+            s.priority,
+            sd.blocked_reason,
+            s.updated_at
+          FROM workflow.stories s
+          LEFT JOIN workflow.story_details sd ON sd.story_id = s.story_id
+          WHERE s.state IN ('failed_code_review', 'failed_qa', 'blocked')
+          ORDER BY
+            CASE s.state
+              WHEN 'failed_qa'          THEN 1
+              WHEN 'failed_code_review' THEN 2
+              WHEN 'blocked'            THEN 3
+              ELSE 4
+            END ASC,
+            CASE s.priority
+              WHEN 'P1' THEN 1 WHEN 'critical' THEN 1 WHEN 'high' THEN 1
+              WHEN 'P2' THEN 2 WHEN 'medium' THEN 2
+              WHEN 'P3' THEN 3 WHEN 'low' THEN 3
+              ELSE 4
             END ASC,
             s.updated_at DESC
         `)
@@ -163,6 +204,7 @@ export function createMonitorRepository(db: NodePgDatabase<any>): MonitorReposit
           return PipelineStorySchema.parse({
             story_id: r['story_id'],
             title: r['title'],
+            feature: r['feature'] ?? '',
             state: r['state'],
             priority: r['priority'] ?? null,
             blocked_by: r['blocked_by'] ?? null,
@@ -194,10 +236,27 @@ export function createMonitorRepository(db: NodePgDatabase<any>): MonitorReposit
           })
         })
 
+        const needs_attention = (needsAttentionResult.rows as unknown[]).map(row => {
+          const r = row as Record<string, unknown>
+          return NeedsAttentionStorySchema.parse({
+            story_id: r['story_id'],
+            title: r['title'],
+            feature: r['feature'] ?? '',
+            state: r['state'],
+            priority: r['priority'] ?? null,
+            blocked_reason: r['blocked_reason'] ?? null,
+            updated_at:
+              r['updated_at'] instanceof Date
+                ? (r['updated_at'] as Date).toISOString()
+                : String(r['updated_at']),
+          })
+        })
+
         return PipelineDashboardResponseSchema.parse({
           pipeline_view,
           cost_summary,
           blocked_queue,
+          needs_attention,
           generated_at: new Date().toISOString(),
         })
       } catch (error) {
