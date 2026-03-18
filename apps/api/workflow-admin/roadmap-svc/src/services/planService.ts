@@ -559,6 +559,9 @@ export const PlanStorySchema = z.object({
   isBlocked: z.boolean(),
   hasBlockers: z.boolean(),
   blockedByStory: z.string().nullable(),
+  dependencies: z.array(z.string()),
+  dependents: z.array(z.string()),
+  wave: z.number(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
 })
@@ -574,6 +577,25 @@ type LinkedStoryRow = {
   blockedByStory: string | null
   createdAt: Date
   updatedAt: Date
+}
+
+function computeWaves(storyIds: Set<string>, depsMap: Map<string, string[]>): Map<string, number> {
+  const waves = new Map<string, number>()
+  const computing = new Set<string>()
+
+  function getWave(id: string): number {
+    if (waves.has(id)) return waves.get(id)!
+    if (computing.has(id)) return 0 // cycle guard
+    computing.add(id)
+    const deps = (depsMap.get(id) ?? []).filter(d => storyIds.has(d))
+    const wave = deps.length === 0 ? 0 : Math.max(...deps.map(getWave)) + 1
+    waves.set(id, wave)
+    computing.delete(id)
+    return wave
+  }
+
+  for (const id of storyIds) getWave(id)
+  return waves
 }
 
 export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
@@ -593,20 +615,60 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .where(eq(planStoryLinks.planSlug, slug))
     .orderBy(asc(stories.priority), desc(stories.createdAt))
 
-  return linkedStories.map((story: LinkedStoryRow) => ({
-    storyId: story.storyId,
-    title: story.title,
-    description: story.description ?? null,
-    state: story.state,
-    priority: story.priority,
-    currentPhase: null,
-    phaseStatus: null,
-    isBlocked: story.state === 'blocked',
-    hasBlockers: !!story.blockedByStory,
-    blockedByStory: story.blockedByStory ?? null,
-    createdAt: story.createdAt,
-    updatedAt: story.updatedAt,
-  })) as PlanStory[]
+  if (linkedStories.length === 0) return []
+
+  const storyIds = new Set(linkedStories.map(s => s.storyId))
+
+  // Fetch all dependencies for these stories from story_dependencies
+  const allDeps = await database
+    .select({
+      storyId: storyDependenciesTable.storyId,
+      dependsOnId: storyDependenciesTable.dependsOnId,
+    })
+    .from(storyDependenciesTable)
+    .where(
+      or(
+        inArray(storyDependenciesTable.storyId, [...storyIds]),
+        inArray(storyDependenciesTable.dependsOnId, [...storyIds]),
+      )!,
+    )
+
+  // Build maps: storyId -> [stories it depends on], storyId -> [stories that depend on it]
+  const depsMap = new Map<string, string[]>()
+  const dependentsMap = new Map<string, string[]>()
+  for (const dep of allDeps) {
+    if (storyIds.has(dep.storyId)) {
+      if (!depsMap.has(dep.storyId)) depsMap.set(dep.storyId, [])
+      depsMap.get(dep.storyId)!.push(dep.dependsOnId)
+    }
+    if (storyIds.has(dep.dependsOnId)) {
+      if (!dependentsMap.has(dep.dependsOnId)) dependentsMap.set(dep.dependsOnId, [])
+      dependentsMap.get(dep.dependsOnId)!.push(dep.storyId)
+    }
+  }
+
+  const waves = computeWaves(storyIds, depsMap)
+
+  return linkedStories.map((story: LinkedStoryRow) => {
+    const deps = depsMap.get(story.storyId) ?? []
+    return {
+      storyId: story.storyId,
+      title: story.title,
+      description: story.description ?? null,
+      state: story.state,
+      priority: story.priority,
+      currentPhase: null,
+      phaseStatus: null,
+      isBlocked: story.state === 'blocked',
+      hasBlockers: deps.length > 0,
+      blockedByStory: story.blockedByStory ?? null,
+      dependencies: deps,
+      dependents: dependentsMap.get(story.storyId) ?? [],
+      wave: waves.get(story.storyId) ?? 0,
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt,
+    }
+  }) as PlanStory[]
 }
 
 export const StoryDetailsSchema = z.object({

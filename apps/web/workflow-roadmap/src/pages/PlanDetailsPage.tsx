@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { useParams, Link } from '@tanstack/react-router'
 import {
   AppBadge,
-  AppDataTable,
   AppInput,
   AppTabs,
   AppTabsList,
@@ -30,6 +29,8 @@ import {
   useUpdatePlanMutation,
   type PlanStory,
 } from '../store/roadmapApi'
+import { useStorySSE } from '../hooks/useStorySSE'
+import { StoriesTable } from '../components/StoriesTable'
 
 interface StoryStats {
   total: number
@@ -537,86 +538,65 @@ function TimelineView({ stories }: { stories: PlanStory[] }) {
 function DependencyGraph({ stories }: { stories: PlanStory[] }) {
   const storyMap = new Map(stories.map(s => [s.storyId, s]))
 
-  const edges: Array<{ from: string; to: string }> = []
+  // Group by wave (from API, fallback to 0)
+  const waveGroups = new Map<number, PlanStory[]>()
   stories.forEach(s => {
-    if (s.blockedByStory) edges.push({ from: s.blockedByStory, to: s.storyId })
+    const w = s.wave ?? 0
+    if (!waveGroups.has(w)) waveGroups.set(w, [])
+    waveGroups.get(w)!.push(s)
   })
-
-  const levelMap = new Map<string, number>()
-  function getLevel(id: string, visiting: Set<string>): number {
-    if (levelMap.has(id)) return levelMap.get(id)!
-    if (visiting.has(id)) return 0
-    const next = new Set(visiting)
-    next.add(id)
-    const blocker = storyMap.get(id)?.blockedByStory
-    const lvl = blocker && storyMap.has(blocker) ? getLevel(blocker, next) + 1 : 0
-    levelMap.set(id, lvl)
-    return lvl
-  }
-  stories.forEach(s => getLevel(s.storyId, new Set()))
-
-  const levelGroups = new Map<number, PlanStory[]>()
-  stories.forEach(s => {
-    const lvl = levelMap.get(s.storyId) ?? 0
-    if (!levelGroups.has(lvl)) levelGroups.set(lvl, [])
-    levelGroups.get(lvl)!.push(s)
-  })
-  levelGroups.forEach(nodes =>
-    nodes.sort((a, b) => {
-      const ai = PIPELINE_STAGES.findIndex(p => p.states.includes(a.state ?? ''))
-      const bi = PIPELINE_STAGES.findIndex(p => p.states.includes(b.state ?? ''))
-      return bi - ai
+  // Sort stories within each wave: by priority then storyId
+  waveGroups.forEach(group =>
+    group.sort((a, b) => {
+      const pa = a.priority ?? 'P9'
+      const pb = b.priority ?? 'P9'
+      if (pa !== pb) return pa.localeCompare(pb)
+      return a.storyId.localeCompare(b.storyId)
     }),
   )
+  const waves = [...waveGroups.keys()].sort((a, b) => a - b)
 
-  const NODE_W = 168
-  const NODE_H = 62
-  const H_GAP = 72
-  const V_GAP = 12
-  const PAD = 20
+  const isComplete = (state?: string | null) =>
+    state === 'completed' || state === 'uat' || state === 'cancelled'
 
-  const maxLevel = levelGroups.size > 0 ? Math.max(...levelGroups.keys()) : 0
-  const maxNodes = Math.max(...Array.from(levelGroups.values()).map(g => g.length), 1)
-  const SVG_W = PAD * 2 + (maxLevel + 1) * NODE_W + maxLevel * H_GAP
-  const SVG_H = Math.max(PAD * 2 + maxNodes * NODE_H + (maxNodes - 1) * V_GAP, 200)
-
-  const nodePos = new Map<string, { x: number; y: number }>()
-  levelGroups.forEach((nodes, level) => {
-    const totalH = nodes.length * NODE_H + (nodes.length - 1) * V_GAP
-    const startY = PAD + (SVG_H - PAD * 2 - totalH) / 2
-    nodes.forEach((s, idx) => {
-      nodePos.set(s.storyId, {
-        x: PAD + level * (NODE_W + H_GAP),
-        y: startY + idx * (NODE_H + V_GAP),
-      })
-    })
-  })
-
-  const stateBarColor = (state?: string | null) => {
-    if (state === 'completed') return '#10b981'
-    if (state === 'in_progress') return '#60a5fa'
-    if (state === 'in_qa' || state === 'ready_for_qa') return '#fbbf24'
-    if (state === 'needs_code_review' || state === 'ready_for_review') return '#a78bfa'
-    if (state === 'failed_code_review') return '#ef4444'
-    if (state === 'ready_to_work') return '#22d3ee'
-    if (state === 'uat') return '#34d399'
-    return '#475569'
+  const stateColor = (state?: string | null) => {
+    if (state === 'completed' || state === 'uat') return 'bg-emerald-500/80'
+    if (state === 'in_progress') return 'bg-blue-500/80'
+    if (state === 'in_qa' || state === 'ready_for_qa') return 'bg-amber-500/80'
+    if (state === 'needs_code_review' || state === 'ready_for_review') return 'bg-violet-500/80'
+    if (state === 'failed_code_review' || state === 'failed_qa') return 'bg-red-500/80'
+    if (state === 'blocked') return 'bg-red-500/80'
+    if (state === 'ready' || state === 'ready_to_work') return 'bg-cyan-500/80'
+    return 'bg-slate-500/80'
   }
 
-  const priorityFill = (p?: string | null) => {
-    if (p === 'P0') return '#f87171'
-    if (p === 'P1') return '#f87171cc'
-    if (p === 'P2') return '#fb923ccc'
-    if (p === 'P3') return '#fbbf24cc'
-    if (p === 'P4') return '#2dd4bfcc'
-    return '#64748bcc'
+  const stateBorderColor = (state?: string | null) => {
+    if (state === 'completed' || state === 'uat') return 'border-emerald-500/30'
+    if (state === 'in_progress') return 'border-blue-500/30'
+    if (state === 'in_qa' || state === 'ready_for_qa') return 'border-amber-500/30'
+    if (state === 'needs_code_review' || state === 'ready_for_review') return 'border-violet-500/30'
+    if (state === 'failed_code_review' || state === 'failed_qa') return 'border-red-500/30'
+    if (state === 'blocked') return 'border-red-500/30'
+    if (state === 'ready' || state === 'ready_to_work') return 'border-cyan-500/30'
+    return 'border-slate-700/60'
+  }
+
+  const priorityColor = (p?: string | null) => {
+    if (p === 'P0' || p === 'P1') return 'text-red-400'
+    if (p === 'P2') return 'text-orange-400'
+    if (p === 'P3') return 'text-yellow-400'
+    return 'text-slate-500'
   }
 
   if (stories.length === 0) {
     return <p className="text-slate-500">No stories match the current filters.</p>
   }
 
-  if (edges.length === 0) {
+  // Check if there are any dependencies at all
+  const hasDeps =
+    stories.some(s => (s.dependencies ?? []).length > 0 || s.blockedByStory) || waves.length > 1
+
+  if (!hasDeps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="text-3xl mb-3 text-slate-700">◈</div>
@@ -626,130 +606,128 @@ function DependencyGraph({ stories }: { stories: PlanStory[] }) {
     )
   }
 
+  // Find first wave with incomplete work
+  const firstActionableWave = waves.find(w => waveGroups.get(w)!.some(s => !isComplete(s.state)))
+
   const trunc = (s: string | null | undefined, n: number) =>
     s ? (s.length > n ? s.slice(0, n) + '…' : s) : '—'
 
   return (
-    <div className="overflow-auto rounded-lg bg-black/20 border border-slate-800/60">
-      <svg width={SVG_W} height={SVG_H} style={{ minWidth: SVG_W, display: 'block' }}>
-        {/* Edges */}
-        {edges.map(({ from, to }) => {
-          const f = nodePos.get(from)
-          const t = nodePos.get(to)
-          if (!f || !t) return null
-          const x1 = f.x + NODE_W
-          const y1 = f.y + NODE_H / 2
-          const x2 = t.x
-          const y2 = t.y + NODE_H / 2
-          const cx = (x1 + x2) / 2
-          return (
-            <g key={`${from}-${to}`}>
-              <path
-                d={`M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`}
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="1.5"
-                strokeOpacity="0.35"
-              />
-              <path
-                d={`M ${x2 - 7} ${y2 - 4} L ${x2} ${y2} L ${x2 - 7} ${y2 + 4}`}
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="1.5"
-                strokeOpacity="0.35"
-              />
-            </g>
-          )
-        })}
+    <div className="space-y-4">
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-xs text-slate-500 px-1">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-cyan-500/80" />
+          Actionable
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-500/80" />
+          In Progress
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
+          Done
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-slate-500/80" />
+          Waiting
+        </span>
+      </div>
 
-        {/* Nodes */}
-        {stories.map(story => {
-          const pos = nodePos.get(story.storyId)
-          if (!pos) return null
-          const isBlocked = story.isBlocked || story.hasBlockers
-          return (
-            <g key={story.storyId}>
-              <rect
-                x={pos.x}
-                y={pos.y}
-                width={NODE_W}
-                height={NODE_H}
-                rx="8"
-                fill="#1e293b"
-                stroke={isBlocked ? 'rgba(239,68,68,0.35)' : 'rgba(51,65,85,0.7)'}
-                strokeWidth="1"
-              />
-              {/* Left state bar */}
-              <rect
-                x={pos.x}
-                y={pos.y + 8}
-                width="3"
-                height={NODE_H - 16}
-                rx="1.5"
-                fill={stateBarColor(story.state)}
-                fillOpacity="0.8"
-              />
-              {/* Story ID */}
-              <text
-                x={pos.x + 11}
-                y={pos.y + 20}
-                fill="#22d3ee"
-                fontSize="10"
-                fontFamily="ui-monospace, monospace"
-                fontWeight="500"
+      {waves.map(wave => {
+        const group = waveGroups.get(wave)!
+        const allDone = group.every(s => isComplete(s.state))
+        const isActionable = wave === firstActionableWave
+
+        return (
+          <div
+            key={wave}
+            className={`rounded-lg border ${allDone ? 'border-slate-800/40 bg-black/10' : isActionable ? 'border-cyan-500/20 bg-cyan-950/10' : 'border-slate-800/60 bg-black/20'}`}
+          >
+            {/* Wave header */}
+            <div
+              className={`flex items-center gap-2 px-4 py-2 border-b ${allDone ? 'border-slate-800/30' : 'border-slate-800/50'}`}
+            >
+              <span
+                className={`font-mono text-xs font-semibold ${isActionable ? 'text-cyan-400' : allDone ? 'text-emerald-500/60' : 'text-slate-500'}`}
               >
-                {story.storyId}
-              </text>
-              {/* Priority */}
-              {story.priority && (
-                <text
-                  x={pos.x + NODE_W - 9}
-                  y={pos.y + 20}
-                  fill={priorityFill(story.priority)}
-                  fontSize="9"
-                  fontFamily="ui-monospace, monospace"
-                  textAnchor="end"
-                  fontWeight="600"
-                >
-                  {story.priority}
-                </text>
+                Wave {wave}
+              </span>
+              {isActionable && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                  NEXT
+                </span>
               )}
-              {/* Title */}
-              <text
-                x={pos.x + 11}
-                y={pos.y + 36}
-                fill="#94a3b8"
-                fontSize="10"
-                fontFamily="ui-sans-serif, system-ui, sans-serif"
-              >
-                {trunc(story.title, 21)}
-              </text>
-              {/* State */}
-              <text
-                x={pos.x + 11}
-                y={pos.y + 51}
-                fill="#475569"
-                fontSize="9"
-                fontFamily="ui-monospace, monospace"
-              >
-                {story.state ?? '—'}
-              </text>
-              {isBlocked && (
-                <text
-                  x={pos.x + NODE_W - 9}
-                  y={pos.y + 51}
-                  fill="#ef4444"
-                  fontSize="10"
-                  textAnchor="end"
-                  fillOpacity="0.6"
-                >
-                  ⚠
-                </text>
+              {allDone && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500/60">
+                  DONE
+                </span>
               )}
-            </g>
-          )
-        })}
-      </svg>
+              <span className="text-[10px] text-slate-600 ml-auto">
+                {group.filter(s => isComplete(s.state)).length}/{group.length} complete
+              </span>
+            </div>
+
+            {/* Story cards */}
+            <div className="p-3 flex flex-wrap gap-2">
+              {group.map(story => {
+                const done = isComplete(story.state)
+                const deps = story.dependencies ?? []
+                const depsInPlan = deps.filter(d => storyMap.has(d))
+                const unresolvedDeps = depsInPlan.filter(d => !isComplete(storyMap.get(d)?.state))
+
+                return (
+                  <Link
+                    key={story.storyId}
+                    to="/story/$storyId"
+                    params={{ storyId: story.storyId }}
+                    className={`relative rounded-md border px-3 py-2 min-w-[200px] max-w-[280px] cursor-pointer transition-colors hover:bg-slate-800/40 no-underline ${done ? `opacity-50 ${stateBorderColor(story.state)}` : stateBorderColor(story.state)} bg-slate-900/60`}
+                  >
+                    {/* State indicator bar */}
+                    <div
+                      className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-full ${stateColor(story.state)}`}
+                    />
+
+                    {/* Header: ID + Priority */}
+                    <div className="flex items-center justify-between pl-2">
+                      <span className="font-mono text-[11px] font-medium text-cyan-400">
+                        {story.storyId}
+                      </span>
+                      {story.priority && (
+                        <span
+                          className={`font-mono text-[10px] font-semibold ${priorityColor(story.priority)}`}
+                        >
+                          {story.priority}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <div className="pl-2 mt-0.5 text-[11px] text-slate-400 leading-tight">
+                      {trunc(story.title, 40)}
+                    </div>
+
+                    {/* State + deps */}
+                    <div className="pl-2 mt-1.5 flex items-center gap-2">
+                      <span className="text-[9px] font-mono text-slate-600">
+                        {story.state ?? 'backlog'}
+                      </span>
+                      {unresolvedDeps.length > 0 && (
+                        <span
+                          className="text-[9px] text-red-400/60 truncate max-w-[140px]"
+                          title={`Blocked by: ${unresolvedDeps.join(', ')}`}
+                        >
+                          blocked by {unresolvedDeps.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -874,7 +852,10 @@ export function PlanDetailsPage() {
   const { slug } = useParams({ from: '/plan/$slug' })
   const { data, error, isLoading } = useGetPlanBySlugQuery(slug)
   const [updatePlan] = useUpdatePlanMutation()
-  const { data: storiesData, isLoading: isLoadingStories } = useGetStoriesByPlanSlugQuery(slug)
+  const { data: storiesData, isLoading: isLoadingStories } = useGetStoriesByPlanSlugQuery(slug, {
+    pollingInterval: 30_000,
+  })
+  useStorySSE()
 
   const storyStats = useMemo((): StoryStats | null => {
     if (!storiesData || storiesData.length === 0) return null
@@ -1421,119 +1402,7 @@ export function PlanDetailsPage() {
                     <div className="h-8 bg-slate-800 rounded"></div>
                   </div>
                 ) : filteredStories.length > 0 ? (
-                  <AppDataTable
-                    data={filteredStories}
-                    columns={[
-                      {
-                        key: 'storyId',
-                        header: 'Story ID',
-                        render: (row: PlanStory) => (
-                          <Link
-                            to="/story/$storyId"
-                            params={{ storyId: row.storyId }}
-                            className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
-                          >
-                            {row.storyId}
-                          </Link>
-                        ),
-                      },
-                      {
-                        key: 'title',
-                        header: 'Title',
-                        render: (row: PlanStory) => (
-                          <Link
-                            to="/story/$storyId"
-                            params={{ storyId: row.storyId }}
-                            className="hover:text-cyan-400 hover:underline transition-colors"
-                          >
-                            <div>{row.title ?? '-'}</div>
-                            {row.description && (
-                              <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-                                {row.description}
-                              </div>
-                            )}
-                          </Link>
-                        ),
-                      },
-                      {
-                        key: 'state',
-                        header: 'State',
-                        render: (row: PlanStory) => (
-                          <div className="flex items-center gap-2">
-                            <AppBadge
-                              variant={
-                                row.state === 'completed'
-                                  ? 'default'
-                                  : row.state === 'blocked' || row.hasBlockers
-                                    ? 'destructive'
-                                    : row.state === 'in_progress' || row.state === 'in_qa'
-                                      ? 'outline'
-                                      : 'secondary'
-                              }
-                            >
-                              {row.state ?? '-'}
-                            </AppBadge>
-                            {row.isBlocked || row.hasBlockers ? (
-                              <span title="Has blockers" className="text-destructive">
-                                ⚠️
-                              </span>
-                            ) : null}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'blockedByStory',
-                        header: 'Blocked By',
-                        render: (row: PlanStory) =>
-                          row.blockedByStory ? (
-                            <Link
-                              to="/story/$storyId"
-                              params={{ storyId: row.blockedByStory }}
-                              className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
-                            >
-                              {row.blockedByStory}
-                            </Link>
-                          ) : (
-                            <span className="text-slate-600">—</span>
-                          ),
-                      },
-                      {
-                        key: 'priority',
-                        header: 'Priority',
-                        render: (row: PlanStory) => (
-                          <AppBadge
-                            variant={
-                              row.priority === 'P0'
-                                ? 'destructive'
-                                : row.priority === 'P1'
-                                  ? 'outline'
-                                  : 'secondary'
-                            }
-                          >
-                            {row.priority ?? '-'}
-                          </AppBadge>
-                        ),
-                      },
-                      {
-                        key: 'updatedAt',
-                        header: 'Last Activity',
-                        render: (row: PlanStory) => {
-                          if (!row.updatedAt)
-                            return <span className="text-xs text-slate-500 font-mono">—</span>
-                          const ms = Date.now() - new Date(row.updatedAt).getTime()
-                          const days = Math.floor(ms / 86400000)
-                          let label: string
-                          if (days === 0) label = 'today'
-                          else if (days === 1) label = '1d ago'
-                          else if (days < 7) label = `${days}d ago`
-                          else if (days < 30) label = `${Math.floor(days / 7)}w ago`
-                          else label = `${Math.floor(days / 30)}mo ago`
-                          return <span className="text-xs text-slate-400 font-mono">{label}</span>
-                        },
-                      },
-                    ]}
-                    emptyMessage="No stories match the current filters."
-                  />
+                  <StoriesTable data={filteredStories} />
                 ) : (
                   <p className="text-slate-500">
                     {storiesData && storiesData.length > 0
@@ -1739,119 +1608,7 @@ export function PlanDetailsPage() {
                 <div className="h-8 bg-slate-800 rounded"></div>
               </div>
             ) : filteredStories.length > 0 ? (
-              <AppDataTable
-                data={filteredStories}
-                columns={[
-                  {
-                    key: 'storyId',
-                    header: 'Story ID',
-                    render: (row: PlanStory) => (
-                      <Link
-                        to="/story/$storyId"
-                        params={{ storyId: row.storyId }}
-                        className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
-                      >
-                        {row.storyId}
-                      </Link>
-                    ),
-                  },
-                  {
-                    key: 'title',
-                    header: 'Title',
-                    render: (row: PlanStory) => (
-                      <Link
-                        to="/story/$storyId"
-                        params={{ storyId: row.storyId }}
-                        className="hover:text-cyan-400 hover:underline transition-colors"
-                      >
-                        <div>{row.title ?? '-'}</div>
-                        {row.description && (
-                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-                            {row.description}
-                          </div>
-                        )}
-                      </Link>
-                    ),
-                  },
-                  {
-                    key: 'state',
-                    header: 'State',
-                    render: (row: PlanStory) => (
-                      <div className="flex items-center gap-2">
-                        <AppBadge
-                          variant={
-                            row.state === 'completed'
-                              ? 'default'
-                              : row.state === 'blocked' || row.hasBlockers
-                                ? 'destructive'
-                                : row.state === 'in_progress' || row.state === 'in_qa'
-                                  ? 'outline'
-                                  : 'secondary'
-                          }
-                        >
-                          {row.state ?? '-'}
-                        </AppBadge>
-                        {row.isBlocked || row.hasBlockers ? (
-                          <span title="Has blockers" className="text-destructive">
-                            ⚠️
-                          </span>
-                        ) : null}
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'blockedByStory',
-                    header: 'Blocked By',
-                    render: (row: PlanStory) =>
-                      row.blockedByStory ? (
-                        <Link
-                          to="/story/$storyId"
-                          params={{ storyId: row.blockedByStory }}
-                          className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
-                        >
-                          {row.blockedByStory}
-                        </Link>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      ),
-                  },
-                  {
-                    key: 'priority',
-                    header: 'Priority',
-                    render: (row: PlanStory) => (
-                      <AppBadge
-                        variant={
-                          row.priority === 'P0'
-                            ? 'destructive'
-                            : row.priority === 'P1'
-                              ? 'outline'
-                              : 'secondary'
-                        }
-                      >
-                        {row.priority ?? '-'}
-                      </AppBadge>
-                    ),
-                  },
-                  {
-                    key: 'updatedAt',
-                    header: 'Last Activity',
-                    render: (row: PlanStory) => {
-                      if (!row.updatedAt)
-                        return <span className="text-xs text-slate-500 font-mono">—</span>
-                      const ms = Date.now() - new Date(row.updatedAt).getTime()
-                      const days = Math.floor(ms / 86400000)
-                      let label: string
-                      if (days === 0) label = 'today'
-                      else if (days === 1) label = '1d ago'
-                      else if (days < 7) label = `${days}d ago`
-                      else if (days < 30) label = `${Math.floor(days / 7)}w ago`
-                      else label = `${Math.floor(days / 30)}mo ago`
-                      return <span className="text-xs text-slate-400 font-mono">{label}</span>
-                    },
-                  },
-                ]}
-                emptyMessage="No stories match the current filters."
-              />
+              <StoriesTable data={filteredStories} />
             ) : (
               <p className="text-slate-500">
                 {storiesData && storiesData.length > 0

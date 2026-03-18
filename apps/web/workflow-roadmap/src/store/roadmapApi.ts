@@ -73,6 +73,9 @@ export interface PlanStory {
   isBlocked: boolean
   hasBlockers: boolean
   blockedByStory: string | null
+  dependencies: string[]
+  dependents: string[]
+  wave: number
   createdAt: string | null
   updatedAt: string | null
 }
@@ -173,6 +176,7 @@ export interface StoryDetails {
 export const roadmapApi = createApi({
   reducerPath: 'roadmapApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
+  tagTypes: ['Plans', 'Stories', 'Story'],
   endpoints: builder => ({
     getPlans: builder.query<
       PlanListResponse,
@@ -191,16 +195,20 @@ export const roadmapApi = createApi({
         url: '/roadmap',
         params,
       }),
+      providesTags: ['Plans'],
     }),
     getPlanBySlug: builder.query<PlanDetails, string>({
       query: slug => `/roadmap/${slug}`,
+      providesTags: (_r, _e, slug) => [{ type: 'Plans', id: slug }],
     }),
     getStoriesByPlanSlug: builder.query<PlanStory[], string>({
       query: slug => `/roadmap/${slug}/stories`,
       transformResponse: (response: { data: PlanStory[] }) => response.data,
+      providesTags: ['Stories'],
     }),
     getStoryById: builder.query<StoryDetails, string>({
       query: storyId => `/stories/${storyId}`,
+      providesTags: (_r, _e, storyId) => [{ type: 'Story', id: storyId }],
     }),
     reorderPlans: builder.mutation<
       { success: boolean },
