@@ -829,7 +829,7 @@ describe('runElaboration', () => {
 // ============================================================================
 
 // Import afterAggregate for direct routing tests (AC-15)
-import { afterAggregate } from '../elaboration.js'
+import { afterAggregate, afterStructurer } from '../elaboration.js'
 import type { StructurerConfig } from '../../nodes/elaboration/structurer.js'
 
 describe('afterAggregate routing function (AC-15)', () => {
@@ -899,6 +899,44 @@ describe('afterAggregate routing function (AC-15)', () => {
 
     // structurerConfig.enabled takes priority
     expect(result).toBe('structurer')
+  })
+
+  it('AA-5: routes to save_to_db when config is null (null guard path)', () => {
+    const state = createTestState({ config: null })
+
+    const result = afterAggregate(state)
+
+    expect(result).toBe('save_to_db')
+  })
+})
+
+describe('afterStructurer routing function (ORCH-2010)', () => {
+  it('AS-1: routes to update_readiness when recalculateReadiness is true', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({ recalculateReadiness: true }),
+    })
+
+    const result = afterStructurer(state)
+
+    expect(result).toBe('update_readiness')
+  })
+
+  it('AS-2: routes to save_to_db when recalculateReadiness is false', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({ recalculateReadiness: false }),
+    })
+
+    const result = afterStructurer(state)
+
+    expect(result).toBe('save_to_db')
+  })
+
+  it('AS-3: routes to save_to_db when config is null (null guard path)', () => {
+    const state = createTestState({ config: null })
+
+    const result = afterStructurer(state)
+
+    expect(result).toBe('save_to_db')
   })
 })
 
