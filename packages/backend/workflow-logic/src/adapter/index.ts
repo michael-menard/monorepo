@@ -1,6 +1,6 @@
 /**
  * Status adapter: maps WorkflowStoryStatus (17-value hyphenated) to
- * DbStoryStatus (8-value snake_case) for database persistence.
+ * DbStoryStatus (canonical 13-state snake_case) for database persistence.
  *
  * This is a pure total function — every WorkflowStoryStatus maps to
  * exactly one DbStoryStatus.
@@ -24,26 +24,26 @@ const WORKFLOW_TO_DB: Record<WorkflowStoryStatus, DbStoryStatus> = {
   // Backlog group → backlog
   pending: 'backlog',
   generated: 'backlog',
-  'in-elaboration': 'backlog',
-  'needs-refinement': 'backlog',
-  'needs-split': 'backlog',
+  'in-elaboration': 'elab',
+  'needs-refinement': 'elab',
+  'needs-split': 'elab',
 
-  // Ready for development → ready_to_work
-  'ready-to-work': 'ready_to_work',
+  // Ready for development → ready
+  'ready-to-work': 'ready',
 
-  // Development statuses → in_progress
+  // Development statuses
   'in-progress': 'in_progress',
-  'ready-for-code-review': 'in_progress',
-  'code-review-failed': 'in_progress',
+  'ready-for-code-review': 'needs_code_review',
+  'code-review-failed': 'failed_code_review',
   'needs-work': 'in_progress',
 
   // QA statuses → ready_for_qa / in_qa
   'ready-for-qa': 'ready_for_qa',
   'in-qa': 'in_qa',
-  uat: 'in_qa',
+  uat: 'completed',
 
   // Terminal statuses
-  completed: 'done',
+  completed: 'completed',
   blocked: 'blocked',
   cancelled: 'cancelled',
   superseded: 'cancelled',

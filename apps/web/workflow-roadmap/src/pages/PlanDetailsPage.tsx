@@ -57,7 +57,7 @@ function ActivityRings({ stats }: { stats: StoryStats }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="w-1/2 aspect-square cursor-default">
+        <div className="w-[200px] aspect-square cursor-default">
           <svg
             width="100%"
             height="100%"
@@ -1091,7 +1091,7 @@ export function PlanDetailsPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 inline-block" />
             Overview
           </h2>
-          <div className="grid grid-cols-3 gap-x-8">
+          <div className="grid grid-cols-[auto_1fr_auto] gap-x-12">
             {/* Column 1: Type, Story Prefix, Priority, Created, Last Worked */}
             <div className="flex flex-col gap-4">
               <EditableField
@@ -1178,7 +1178,7 @@ export function PlanDetailsPage() {
             </div>
 
             {/* Column 3: Activity rings */}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-center pl-12">
               {storyStats ? (
                 <ActivityRings stats={storyStats} />
               ) : (

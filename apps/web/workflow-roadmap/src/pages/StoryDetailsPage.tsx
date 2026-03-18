@@ -32,6 +32,7 @@ import {
   useUpdateStoryMutation,
   useUpdateStoryContentSectionMutation,
 } from '../store/roadmapApi'
+import { useStorySSE } from '../hooks/useStorySSE'
 
 const PIPELINE_STAGES = [
   {
@@ -336,7 +337,8 @@ function ArtifactJsonViewer({
 
 export function StoryDetailsPage() {
   const { storyId } = useParams({ from: '/story/$storyId' })
-  const { data, error, isLoading } = useGetStoryByIdQuery(storyId)
+  const { data, error, isLoading } = useGetStoryByIdQuery(storyId, { pollingInterval: 30_000 })
+  useStorySSE()
   const [updateStory] = useUpdateStoryMutation()
   const [updateSection] = useUpdateStoryContentSectionMutation()
   const [editingDescription, setEditingDescription] = useState(false)

@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { Hono } from 'hono'
 import { logger } from '@repo/logger'
+import { sseRoutes } from './routes/sse'
 import {
   getPlans,
   getPlanBySlug,
@@ -16,6 +17,8 @@ import {
 } from './services/planService'
 
 const app = new Hono()
+
+app.route('/', sseRoutes)
 
 app.get('/', c => {
   return c.json({

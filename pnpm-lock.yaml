@@ -1697,6 +1697,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.130.2
         version: 1.159.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tanstack/react-table':
+        specifier: 8.21.3
+        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2512,6 +2515,9 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../core/logger
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -2519,6 +2525,9 @@ importers:
       '@types/node':
         specifier: 25.2.1
         version: 25.2.1
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3)))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
@@ -23751,7 +23760,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@25.3.3)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.3.3)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:

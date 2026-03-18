@@ -2,7 +2,7 @@
  * Canonical type definitions for workflow-logic package.
  *
  * WorkflowStoryStatus: 17-value hyphenated model (source of truth for agent/orchestrator layer)
- * DbStoryStatus: 8-value snake_case model (maps to database storage)
+ * DbStoryStatus: canonical 13-state snake_case model (maps to database storage)
  *
  * @module __types__
  */
@@ -52,22 +52,32 @@ export const WorkflowStoryStatusSchema = z.enum([
 export type WorkflowStoryStatus = z.infer<typeof WorkflowStoryStatusSchema>
 
 // ============================================================================
-// DbStoryStatus — 8-value snake_case model
-// Source: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+// DbStoryStatus — canonical 13-state snake_case model
+// Source: packages/backend/orchestrator/src/state/enums/story-state.ts
 // ============================================================================
 
 /**
  * Story status values as stored in the database.
- * These are the snake_case values used by the DB layer.
+ * These are the canonical snake_case values used by the DB layer.
  */
 export const DbStoryStatusSchema = z.enum([
+  // Pre-development
   'backlog',
-  'ready_to_work',
+  'created',
+  'elab',
+  'ready',
+  // Development
   'in_progress',
+  'needs_code_review',
+  // QA
   'ready_for_qa',
   'in_qa',
+  'completed',
+  // Recovery
+  'failed_code_review',
+  'failed_qa',
+  // Operational
   'blocked',
-  'done',
   'cancelled',
 ])
 
