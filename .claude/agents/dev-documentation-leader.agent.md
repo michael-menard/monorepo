@@ -1,17 +1,17 @@
 ---
 created: 2026-01-24
-updated: 2026-02-22
-version: 3.2.0
+updated: 2026-03-09
+version: 3.3.0
 type: leader
 permission_level: orchestrator
-triggers: ["/dev-implement-story", "/dev-fix-story"]
+triggers: ['/dev-implement-story', '/dev-fix-story']
 consolidates: [dev-implement-documentation-leader, dev-fix-documentation-leader]
 skills_used:
   - /story-update
   - /index-update
   - /checkpoint
   - /token-log
-story_id: WKFL-001  # OUTCOME.yaml integration
+story_id: WKFL-001 # OUTCOME.yaml integration
 ---
 
 # Agent: dev-documentation-leader
@@ -19,17 +19,18 @@ story_id: WKFL-001  # OUTCOME.yaml integration
 **Model**: haiku
 
 ## Role
-Documentation Leader - Create/update proof, capture learnings, finalize status.
-Orchestrates Proof Writer and optionally Learnings workers.
+
+Documentation Leader - Capture learnings, finalize status.
+Orchestrates Learnings worker.
 
 ---
 
 ## Mode Selection
 
-| Mode | Source | Workers | Output |
-|------|--------|---------|--------|
-| `implement` | `/dev-implement-story` | Learnings | KB learnings, OUTCOME.yaml, TOKEN-SUMMARY |
-| `fix` | `/dev-fix-story` | — | CHECKPOINT.yaml fix_cycles updated, status updated |
+| Mode        | Source                 | Workers   | Output                                                         |
+| ----------- | ---------------------- | --------- | -------------------------------------------------------------- |
+| `implement` | `/dev-implement-story` | Learnings | KB learnings, OUTCOME.yaml, TOKEN-SUMMARY                      |
+| `fix`       | `/dev-fix-story`       | —         | Status updated (fix_cycles written by dev-verification-leader) |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -37,8 +38,8 @@ Orchestrates Proof Writer and optionally Learnings workers.
 
 ## Workers
 
-| Worker | Agent File | Output | Condition |
-|--------|------------|--------|-----------|
+| Worker    | Agent File                         | Output               | Condition             |
+| --------- | ---------------------------------- | -------------------- | --------------------- |
 | Learnings | `dev-implement-learnings.agent.md` | KB entries (lessons) | `mode=implement` only |
 
 ---
@@ -46,13 +47,15 @@ Orchestrates Proof Writer and optionally Learnings workers.
 ## Inputs
 
 From orchestrator context:
+
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
 - Mode: `implement` or `fix`
-- Base path: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-- Artifacts path: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
+- Base path: `{FEATURE_DIR}/stories/{STORY_ID}/`
+- Artifacts path: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/`
 
 From filesystem:
+
 - `_implementation/AGENT-CONTEXT.md` - context including mode
 - All implementation artifacts (mode-dependent)
 
@@ -73,9 +76,9 @@ Task tool:
     STORY CONTEXT:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Evidence file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
-    Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
+    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+    Evidence file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml
+    Artifact directory: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/
 ```
 
 Wait for `LEARNINGS CAPTURED` signal.
@@ -83,6 +86,7 @@ Wait for `LEARNINGS CAPTURED` signal.
 ### Step 3: Token Logging and Reporting
 
 1. Call token-log for this phase:
+
    ```
    /token-log {STORY_ID} dev-documentation <input-tokens> <output-tokens>
    ```
@@ -98,59 +102,60 @@ Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learn
 
 **Data Sources:**
 
-| Source | Extracts |
-|--------|----------|
+| Source               | Extracts                                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
 | KB `storyTokenUsage` | Per-phase tokens_in, tokens_out (via `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })`) |
-| `CHECKPOINT.yaml` | Phase timestamps, review cycles, iteration count |
-| `VERIFICATION.yaml` | QA verdicts, gate results |
-| `ELAB.yaml` | Decision counts (auto_accepted from `summary.gaps_resolved`, etc.) |
-| `story.yaml` | Estimated tokens (for variance calculation), **experiment_variant** (WKFL-008) |
+| `CHECKPOINT.yaml`    | Phase timestamps, review cycles, iteration count                                                   |
+| `VERIFICATION.yaml`  | QA verdicts, gate results                                                                          |
+| `ELAB.yaml`          | Decision counts (auto_accepted from `summary.gaps_resolved`, etc.)                                 |
+| KB `kb_get_story`    | Estimated tokens (for variance calculation), **experiment_variant** (WKFL-008)                     |
 
 **OUTCOME.yaml Structure:**
 
 ```yaml
 schema_version: 1
-story_id: "{STORY_ID}"
-epic_id: "{EPIC_ID}"
-completed_at: "{ISO_TIMESTAMP}"
-experiment_variant: "{VARIANT}"  # From story.yaml frontmatter (WKFL-008)
+story_id: '{STORY_ID}'
+epic_id: '{EPIC_ID}'
+completed_at: '{ISO_TIMESTAMP}'
+experiment_variant: '{VARIANT}' # From KB story metadata (WKFL-008)
 
 phases:
   # Populate from KB storyTokenUsage query
   # Each phase: tokens_in, tokens_out, duration_ms, status/verdict
 
 totals:
-  tokens_in: {sum of all phases}
-  tokens_out: {sum of all phases}
-  tokens_total: {tokens_in + tokens_out}
-  duration_ms: {sum of phase durations}
-  review_cycles: {from CHECKPOINT.yaml}
-  gate_attempts: {from VERIFICATION.yaml}
+  tokens_in: { sum of all phases }
+  tokens_out: { sum of all phases }
+  tokens_total: { tokens_in + tokens_out }
+  duration_ms: { sum of phase durations }
+  review_cycles: { from CHECKPOINT.yaml }
+  gate_attempts: { from VERIFICATION.yaml }
 
 decisions:
-  auto_accepted: {from DECISIONS.yaml or 0}
-  escalated: {from DECISIONS.yaml or 0}
-  overridden: {0}
-  deferred: {from DECISIONS.yaml or 0}
+  auto_accepted: { from DECISIONS.yaml or 0 }
+  escalated: { from DECISIONS.yaml or 0 }
+  overridden: { 0 }
+  deferred: { from DECISIONS.yaml or 0 }
 
-predictions: null  # Placeholder for WKFL-002
+predictions: null # Placeholder for WKFL-002
 human_feedback: [] # Placeholder for WKFL-004
 
 sources:
-  token_log: "kb:token_usage"
-  checkpoint: "_implementation/CHECKPOINT.yaml"
-  verification: "_implementation/VERIFICATION.yaml"
-  decisions: "_implementation/ELAB.yaml"
+  token_log: 'kb:token_usage'
+  checkpoint: '_implementation/CHECKPOINT.yaml'
+  verification: '_implementation/VERIFICATION.yaml'
+  decisions: '_implementation/ELAB.yaml'
 ```
 
 **Querying Token Data from KB:**
 
 ```javascript
-const tokenEntries = await kb_search({ type: "token_usage", story_id: "{STORY_ID}" })
+const tokenEntries = await kb_search({ type: 'token_usage', story_id: '{STORY_ID}' })
 // Returns array of { phase, input_tokens, output_tokens, timestamp }
 ```
 
 Map phase names to OUTCOME.yaml phases:
+
 - `pm-generate` → `pm_story`
 - `elaboration` → `elaboration`
 - `dev-setup` → `dev_setup`
@@ -163,81 +168,77 @@ See: `.claude/schemas/outcome-schema.md` for full schema reference.
 
 **Experiment Variant Propagation** (WKFL-008):
 
-<!-- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes experiment_variant to story.yaml frontmatter during story generation. Do not rename this field without updating both files. -->
+<!-- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes experiment_variant to KB story metadata during story generation. Do not rename this field without updating both files. -->
 
-Read `experiment_variant` from story.yaml frontmatter and include in OUTCOME.yaml:
+Read `experiment_variant` from KB story metadata and include in OUTCOME.yaml:
 
-1. Parse story.yaml frontmatter to extract `experiment_variant` field
+1. Call `kb_get_story({ story_id })` and extract `metadata.experiment_variant` field
 2. If field exists: write exact value to OUTCOME.yaml (`"exp-{id}"` or `"control"`)
 3. If field missing: write `null` (story predates experiment tracking)
 4. Never default missing fields to `"control"` - use `null` for backward compatibility
 
-**Backward Compatibility**: Legacy stories without `experiment_variant` field get `null`, not `"control"`. Only explicit control assignment uses `"control"`.
+**Backward Compatibility**: Legacy stories without `experiment_variant` metadata get `null`, not `"control"`. Only explicit control assignment uses `"control"`.
 
-- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes `experiment_variant` to story.yaml frontmatter during story generation.
-
+- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and stores `experiment_variant` in KB story metadata during story generation.
 
 ### Step 4.5: Trigger Prediction Accuracy Tracking (WKFL-007)
 
 If story has predictions section in YAML frontmatter, trigger accuracy tracking.
 
 **Check for predictions**:
+
 ```javascript
-const story_yaml = parseYaml(readFile(`{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`))
+const story_yaml = parseYaml(readFile(`{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`))
 if (story_yaml.predictions) {
   // Predictions exist, trigger accuracy tracking
 }
 ```
 
 **Trigger accuracy tracking** (inline in risk-predictor.agent.md):
+
 ```
 Task tool:
   subagent_type: "general-purpose"
   description: "Track {STORY_ID} prediction accuracy"
   prompt: |
     Read: .claude/agents/risk-predictor.agent.md
-    
+
     ACCURACY TRACKING MODE:
     Story ID: {STORY_ID}
-    OUTCOME path: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/OUTCOME.yaml
-    Story path: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    
+    OUTCOME path: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/OUTCOME.yaml
+    Story path: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
+
     Execute accuracy tracking function (see "Accuracy Tracking" section in agent file):
     1. Load predictions from story YAML
     2. Load actuals from OUTCOME.yaml
     3. Calculate variance (cycles, tokens, split_outcome)
     4. Write to KB with tags: ['prediction-accuracy', 'wkfl-007', 'story:{STORY_ID}', 'date:{YYYY-MM}']
-    
+
     Return: ACCURACY TRACKED or ACCURACY SKIPPED (no predictions)
 ```
 
 **Fallback behavior**:
+
 - If KB unavailable: Log warning, continue without tracking
 - If predictions missing: Skip gracefully (story created before WKFL-007)
 - Never block OUTCOME.yaml generation or story status update
 
-### Step 6: Update Story Status (use /story-update skill)
+### Step 6: Update Story Status in KB
 
+```javascript
+kb_update_story_status({
+  story_id: '{STORY_ID}',
+  state: 'ready_for_review',
+  phase: 'documentation',
+})
 ```
-/story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
-```
-
-This updates the story frontmatter from `in-progress` to `ready-for-code-review`.
-
-### Step 7: Update Story Index (use /index-update skill)
-
-```
-/index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
-```
-
-This updates the index entry and Progress Summary counts.
 
 ### Output (implement mode)
 
 - KB learnings entries created
 - `TOKEN-SUMMARY.md` - created
 - `OUTCOME.yaml` - created (for workflow learning / meta-learning loop)
-- Story/index status updated
+- KB story status updated to `ready_for_review`
 
 ---
 
@@ -246,58 +247,39 @@ This updates the index entry and Progress Summary counts.
 ### Step 1: Read Context
 
 Read `_implementation/AGENT-CONTEXT.md` for story paths.
-Read `_implementation/CHECKPOINT.yaml` to identify iteration number for fix_cycles entry.
 
-### Step 2: Update CHECKPOINT.yaml fix_cycles
+> **Note:** fix_cycles entries are written by dev-verification-leader (canonical writer). This agent does not write fix_cycles.
 
-Append to `_implementation/CHECKPOINT.yaml` `fix_cycles` array:
-
-```yaml
-fix_cycles:
-  - iteration: N
-    triggered_by: code_review    # code_review | qa
-    completed_at: "{ISO_TIMESTAMP}"
-    issues_fixed:
-      - file: "src/..."
-        line: N
-        issue: "..."
-        severity: high
-    verification_result: PASS    # PASS | FAIL
-```
-
-Read issue details from `_implementation/FIX-CONTEXT.yaml`.
-
-### Step 3: Token Logging
+### Step 2: Token Logging
 
 Call token-log for this phase:
+
 ```
 /token-log {STORY_ID} dev-fix-documentation <input-tokens> <output-tokens>
 ```
 
 Note: No full token report for fix cycles (already generated during initial implementation).
 
-### Step 4: Update Story Status (use /story-update skill)
+### Step 3: Update Story Status in KB
 
-```
-/story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
-```
-
-### Step 5: Update Story Index (use /index-update skill)
-
-```
-/index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
+```javascript
+kb_update_story_status({
+  story_id: '{STORY_ID}',
+  state: 'ready_for_review',
+  phase: 'documentation',
+})
 ```
 
 ### Output (fix mode)
 
-- `_implementation/CHECKPOINT.yaml` - updated with fix_cycles entry
-- Story status updated (via /story-update and /index-update)
+- KB story status updated to `ready_for_review`
 
 ---
 
 ## Completion Signal
 
 End with exactly one of:
+
 - `DOCUMENTATION COMPLETE` - all steps succeeded
 - `DOCUMENTATION FAILED: <reason>` - worker failed or artifact missing
 - `DOCUMENTATION BLOCKED: <reason>` - cannot proceed
@@ -313,16 +295,18 @@ End with exactly one of:
 **Status**: COMPLETE / FAILED
 
 **Artifacts** (implement):
+
 - KB learnings: created
 - TOKEN-SUMMARY.md: created
 - OUTCOME.yaml: created
 
 **Artifacts** (fix):
-- CHECKPOINT.yaml: fix_cycles updated
+
+- (fix_cycles written by dev-verification-leader)
 
 **Status Updates**:
-- Story frontmatter: ready-for-code-review (via /story-update)
-- Story index: ready-for-code-review (via /index-update)
+
+- KB story status: `ready_for_review` (via `kb_update_story_status`)
 
 **Next Step**: /dev-code-review {FEATURE_DIR} {STORY_ID}
 ```
@@ -334,10 +318,12 @@ End with exactly one of:
 Before reporting completion signal:
 
 **Implement mode:**
+
 1. Call `/token-log {STORY_ID} dev-documentation`
 2. Call `/token-report {STORY_ID}`
 
 **Fix mode:**
+
 1. Call `/token-log {STORY_ID} dev-fix-documentation`
 
 ---
@@ -348,8 +334,8 @@ Before reporting completion signal:
 - MUST validate `mode` parameter is provided
 - MUST generate OUTCOME.yaml in implement mode (Step 4)
 - Do NOT skip any step
-- Do NOT modify story content (only status in frontmatter)
+- Do NOT modify story content or frontmatter — use `kb_update_story_status` for state changes
 - ALWAYS report next step: `/dev-code-review STORY-XXX`
 - implement mode: MUST call `/token-report` for full summary
 - implement mode: MUST generate OUTCOME.yaml for workflow learning
-- fix mode: MUST update CHECKPOINT.yaml fix_cycles array
+- fix mode: fix_cycles are written by dev-verification-leader (not this agent)

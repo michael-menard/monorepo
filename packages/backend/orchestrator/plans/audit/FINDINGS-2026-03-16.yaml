@@ -1,0 +1,272 @@
+schema: 1
+timestamp: 2026-03-16T20:35:32.202Z
+audit_id: AUDIT-2
+title: Enforce Atomic Artifact Transitions
+mode: manual
+scope: full
+status: findings_complete
+auditor: claude-sonnet-4-6
+
+summary:
+  total_findings: 7
+  by_severity:
+    critical: 4
+    high: 1
+    medium: 1
+    low: 1
+  new_since_last: 7
+  recurring: 0
+  fixed_since_last: 0
+  headline: >
+    No artifact pre-condition checks exist anywhere in the system. Stories can
+    advance through all four gated transitions without any artifact existing.
+    Additionally none of the three core LangGraph graphs ever call
+    kb_update_story_status — story state is entirely disconnected from graph
+    execution. Two of four required artifact type names in the orchestrator
+    don't match the KB schema.
+
+findings:
+  - id: A2-001
+    severity: critical
+    title: kb_update_story_status has zero artifact pre-condition checks
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    lines: 547-638
+    detail: >
+      The only guard in kb_update_story_status is the terminal-state check
+      (lines 572-587), which prevents transitions OUT of completed/cancelled/deferred.
+      There is no lookup of artifacts.story_artifacts before allowing any transition.
+      Any caller can advance a story from in_progress to needs_code_review,
+      needs_code_review to ready_for_qa, or in_qa to completed without any
+      artifact existing. The MCP tool handler (tool-handlers.ts line 3994) adds
+      authorization enforcement and input validation but no artifact check.
+    impact: Any story can reach any state without earning it.
+    recommended_fix: >
+      Add ARTIFACT_GATES constant and precondition query inside
+      kb_update_story_status, after the terminal-state guard, before building
+      the updates object. See implementation_plan step 1.
+
+  - id: A2-002
+    severity: critical
+    title: Dev-implement LangGraph graph never advances story state and has stub nodes
+    file: packages/backend/orchestrator/src/graphs/dev-implement.ts
+    detail: >
+      No kb_update_story_status call exists anywhere in the dev-implement graph.
+      State is never advanced from in_progress to needs_code_review.
+      Two nodes are stubs: createExecuteNode returns executeComplete=true without
+      doing anything (WINT-9070 placeholder), and createCollectEvidenceNode returns
+      evidenceCollected=true without doing anything (WINT-9080 placeholder).
+      The save_to_db node has a placeholder comment 'Would call storyRepo/workflowRepo
+      here' and only runs when persistToDb=true (defaults to false).
+    impact: >
+      Even when the dev-implement graph runs to completion, no state transition
+      happens and no artifact is written to the KB.
+
+  - id: A2-003
+    severity: critical
+    title: Review LangGraph graph never advances story state or writes KB artifact
+    file: packages/backend/orchestrator/src/graphs/review.ts
+    detail: >
+      The review graph has real worker implementations (10 parallel workers via
+      Send API: lint, style, syntax, typecheck, build, react, typescript,
+      reusability, accessibility, security). The fan-in node writes REVIEW.yaml to
+      the filesystem using an atomic rename. However there is no kb_write_artifact
+      call and no kb_update_story_status call. The review artifact exists only on
+      the filesystem; the KB is never notified. State is never advanced from
+      needs_code_review to ready_for_qa.
+    impact: >
+      The review graph is the most complete of the three but is still fully
+      disconnected from KB state. Artifact enforcement cannot work even if added
+      to kb_update_story_status because the artifact will never be in the KB.
+
+  - id: A2-004
+    severity: critical
+    title: QA LangGraph graph never advances story state
+    file: packages/backend/orchestrator/src/graphs/qa.ts
+    detail: >
+      The QA graph has real node implementations: check_preconditions,
+      run_unit_tests, run_e2e_tests, verify_acs, gate_decision, write_qa_artifact.
+      The write_qa_artifact node exists and may produce a QaVerify artifact.
+      However there is no kb_update_story_status call in qa.ts. State is never
+      advanced from in_qa to completed or failed_qa.
+    impact: >
+      QA graph may complete its verification work but never closes the loop by
+      advancing story state.
+
+  - id: A2-005
+    severity: high
+    title: Artifact type name mismatch between orchestrator and KB
+    file: packages/backend/orchestrator/src/state/enums/artifact-type.ts
+    detail: >
+      The orchestrator ArtifactTypeSchema uses camelCase names that differ from
+      the KB ArtifactTypeSchema (apps/api/knowledge-base/src/__types__/index.ts).
+      Mismatched names for two required artifact types:
+        orchestrator 'codeReview'  != KB 'review'
+        orchestrator 'qaVerify'    != KB 'qa_gate'
+      Matching names:
+        orchestrator 'elaboration' == KB 'elaboration'
+        orchestrator 'proof'       == KB 'proof'
+      Any artifact written by the orchestrator using 'codeReview' or 'qaVerify'
+      would not be found by a precondition lookup for 'review' or 'qa_gate'.
+    impact: >
+      Even if artifact writes were added to the review and QA graphs, the
+      precondition lookup would fail because the stored artifact_type string
+      would not match what the gate is checking for.
+
+  - id: A2-006
+    severity: medium
+    title: artifact_write treats KB write as optional and failure-isolated
+    file: apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    lines: 1112-1155
+    detail: >
+      The artifact_write function (dual-write tool) writes to filesystem first
+      (primary) and treats the KB write as best-effort. If KB write fails, the
+      error is logged and the result returns kb_written=false, but the overall
+      operation returns success. The write_to_kb flag defaults to true but can be
+      set to false. This means an artifact can appear to 'exist' on the filesystem
+      but not be in the KB, and any KB-based precondition check would fail even
+      though work was genuinely done.
+    impact: >
+      The KB is supposed to be the sole source of truth. Optional KB writes
+      violate that principle for gated artifact types.
+
+  - id: A2-007
+    severity: low
+    title: terminal-state guard includes stale 'deferred' state
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    lines: 574
+    detail: >
+      The TERMINAL_STATES constant includes 'deferred' but migration 1001
+      mapped all deferred stories to 'cancelled'. The canonical 13-state model
+      does not include 'deferred'.
+    impact: Minor — only triggers if a story is somehow still in deferred state.
+
+artifact_table_analysis:
+  tables_exist: true
+  correctly_structured: true
+  jump_table: artifacts.story_artifacts
+  supports_precondition_lookup: true
+  lookup_query: >
+    SELECT id FROM artifacts.story_artifacts
+    WHERE story_id = $1 AND artifact_type = $2 LIMIT 1
+  missing_index: >
+    No composite index on (story_id, artifact_type) exists. Should be added
+    before the first automated run to support fast precondition lookups.
+
+required_artifact_mapping:
+  - transition: elab → ready
+    kb_artifact_type: elaboration
+    orchestrator_artifact_type: elaboration
+    types_match: true
+  - transition: in_progress → needs_code_review
+    kb_artifact_type: proof
+    orchestrator_artifact_type: proof
+    types_match: true
+  - transition: needs_code_review → ready_for_qa
+    kb_artifact_type: review
+    orchestrator_artifact_type: codeReview
+    types_match: false
+    fix: rename orchestrator 'codeReview' → 'review'
+  - transition: in_qa → completed
+    kb_artifact_type: qa_gate
+    orchestrator_artifact_type: qaVerify
+    types_match: false
+    fix: rename orchestrator 'qaVerify' → 'qa_gate'
+
+recommended_enforcement: B
+enforcement_justification: >
+  Option B (application-level guard in kb_update_story_status) is recommended
+  as the primary mechanism. Reasons:
+  1. kb_update_story_status is the single chokepoint for all state advances.
+     Adding the guard there covers every caller: MCP tools, LangGraph, future agents.
+  2. The existing terminal-state guard sets the exact pattern to follow.
+  3. DB-level trigger (Option A) would require cross-schema queries (workflow
+     trigger reading artifacts schema) and is significantly more complex.
+  4. No current LangGraph graph calls kb_update_story_status, so the guard
+     adds zero regressions to existing code paths.
+  Hybrid approach: App-level guard now, optional DB backstop trigger as a
+  future story after the pipeline is running.
+
+implementation_plan:
+  - step: 1
+    priority: critical
+    title: Add artifact precondition gate to kb_update_story_status
+    file: apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    where: After terminal-state guard (~line 587), before building updates object
+    description: >
+      Add ARTIFACT_GATES constant mapping transition keys to required artifact
+      types. Query artifacts.story_artifacts before applying the transition.
+      Return updated=false with a clear diagnostic message if artifact is missing.
+    code_sketch: |
+      const ARTIFACT_GATES: Partial<Record<string, string>> = {
+        'elab→ready':                     'elaboration',
+        'in_progress→needs_code_review':  'proof',
+        'needs_code_review→ready_for_qa': 'review',
+        'in_qa→completed':                'qa_gate',
+      }
+
+      if (validated.state !== undefined && currentState !== null) {
+        const gateKey = `${currentState}→${validated.state}`
+        const requiredType = ARTIFACT_GATES[gateKey]
+        if (requiredType) {
+          const found = await deps.db
+            .select({ id: storyArtifacts.id })
+            .from(storyArtifacts)
+            .where(
+              and(
+                eq(storyArtifacts.storyId, validated.story_id),
+                eq(storyArtifacts.artifactType, requiredType),
+              ),
+            )
+            .limit(1)
+          if (found.length === 0) {
+            return {
+              story: existing[0],
+              updated: false,
+              message: `Cannot transition ${validated.story_id} '${currentState}' → '${validated.state}': required artifact '${requiredType}' not found in KB`,
+            }
+          }
+        }
+      }
+
+  - step: 2
+    priority: high
+    title: Fix artifact type name mismatch in orchestrator
+    file: packages/backend/orchestrator/src/state/enums/artifact-type.ts
+    description: >
+      Rename 'codeReview' to 'review' and 'qaVerify' to 'qa_gate' to match
+      KB ArtifactTypeSchema. Also verify 'uiuxReview' vs KB 'uiux_notes'.
+      Search for all usages of ArtifactType across the orchestrator package
+      and update string references.
+
+  - step: 3
+    priority: high
+    title: Add composite index on artifacts.story_artifacts
+    migration: apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql
+    sql: |
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_story_artifacts_lookup
+        ON artifacts.story_artifacts(story_id, artifact_type);
+
+  - step: 4
+    priority: medium
+    title: Connect LangGraph graphs to kb_update_story_status
+    description: >
+      Each graph needs a terminal node that:
+        1. Writes its artifact to the KB via kb_write_artifact
+        2. Advances state via kb_update_story_status
+      This is the AUDIT-3 scope but is a prerequisite for the precondition
+      guard to be testable end-to-end.
+
+  - step: 5
+    priority: medium
+    title: Make KB artifact write non-optional for gated artifact types
+    file: apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+    description: >
+      When artifact_type is one of the four gated types (elaboration, proof,
+      review, qa_gate), treat KB write failures as hard errors rather than
+      silently returning kb_written=false. The KB must be the source of truth.
+
+metrics:
+  files_scanned: 8
+  files_with_findings: 5
+trend_data:
+  previous_run: FINDINGS-2026-03-12.yaml

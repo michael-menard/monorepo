@@ -1,14 +1,11 @@
 ---
 created: 2026-01-24
-updated: 2026-02-25
-version: 3.4.0
+updated: 2026-03-14
+version: 4.0.0
 type: leader
 permission_level: orchestrator
-triggers: ["/qa-verify-story"]
+triggers: ['/qa-verify-story']
 skills_used:
-  - /story-move
-  - /story-update
-  - /index-update
   - /token-log
   - /wt:merge-pr
 kb_tools:
@@ -31,15 +28,15 @@ Update story status based on verdict, move story to appropriate directory, spawn
 
 ## Inputs
 
-- Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
-- `feature_dir`, `story_id`, `base_path`, `verification_file`
-
 Read from Knowledge Base:
+
 ```javascript
-const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "verification" })
+const verification = await kb_read_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'verification',
+})
 // verdict = verification.content.verdict (PASS or FAIL)
 ```
 
@@ -50,12 +47,17 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
 0. **Merge PR and Clean Up Worktree**
 
    **Step A: Read checkpoint from KB for `pr_number`**
+
    ```javascript
-   const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
-   const pr_number = checkpoint?.content?.pr_number  // may be absent
+   const checkpoint = await kb_read_artifact({
+     story_id: '{STORY_ID}',
+     artifact_type: 'checkpoint',
+   })
+   const pr_number = checkpoint?.content?.pr_number // may be absent
    ```
 
    **Step B: Look up worktree**
+
    ```
    Call: worktree_get_by_story({storyId: STORY_ID})
    ```
@@ -64,68 +66,51 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
    - If `null` → skip silently, continue to Step 1 below
 
    **Step D: Invoke wt:merge-pr**
+
    ```
    Invoke: /wt:merge-pr {STORY_ID} {pr_number}
    ```
+
    - On success: call `worktree_mark_complete({worktreeId: record.id, status: 'merged'})`
    - On failure: call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'merge_failed'}})` + emit WARNING
 
    **Continue PASS flow regardless of outcome** (non-blocking)
 
-1. **Update status to uat** (use /story-update skill)
-   ```
-   /story-update {FEATURE_DIR} {STORY_ID} uat
-   ```
+1. **Update verification artifact in KB with gate decision**
 
-2. **Update verification artifact in KB with gate decision**
    ```javascript
    artifact_write({
-     story_id: "{STORY_ID}",
-     artifact_type: "verification",
-     phase: "qa_verification",
+     story_id: '{STORY_ID}',
+     artifact_type: 'verification',
+     phase: 'qa_verification',
      iteration: 0,
-     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
-         decision: "PASS",
-         reason: "All ACs verified, tests pass, architecture compliant",
-         blocking_issues: []
-       }
-     }
+         decision: 'PASS',
+         reason: 'All ACs verified, tests pass, architecture compliant',
+         blocking_issues: [],
+       },
+     },
    })
    ```
 
    **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA PASS flow continues — do not block or roll back the verdict.
 
-3. **Story stays in UAT** (already moved during setup)
-
-4. **Update Story Index** (use /index-update skill)
-   ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=uat --clear-deps
-   ```
-
-   The `--clear-deps` flag:
-   - Removes {STORY_ID} from downstream stories' `**Depends On:**` lists
-   - Updates Progress Summary counts
-   - Recalculates "Ready to Start" section — newly unblocked stories appear here
-
-   **Note:** Use `--status=uat` (not `completed`) — stories stop at `uat` in this workflow.
-   `completed` is reserved for manual sign-off after UAT acceptance.
-
-5. **Capture QA findings to KB** (KBMEM-015)
+2. **Capture QA findings to KB** (KBMEM-015)
 
    Use structured KB tools to capture learnings:
 
    **a. Capture lessons learned** (if notable insights):
+
    ```javascript
    kb_add_lesson({
-     title: "Effective test pattern for {domain}",
-     story_id: "{STORY_ID}",
-     category: "testing",  // or "performance", "security", etc.
-     what_happened: "Described the testing approach used",
-     resolution: "Key insight or pattern that worked well",
-     tags: ["qa", "test-strategy"]
+     title: 'Effective test pattern for {domain}',
+     story_id: '{STORY_ID}',
+     category: 'testing', // or "performance", "security", etc.
+     what_happened: 'Described the testing approach used',
+     resolution: 'Key insight or pattern that worked well',
+     tags: ['qa', 'test-strategy'],
    })
    ```
 
@@ -136,14 +121,15 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
    - Test flakiness was diagnosed and fixed
 
    **b. Create follow-up tasks** (if improvements identified):
+
    ```javascript
    kb_add_task({
-     title: "Improve test coverage for {area}",
-     task_type: "improvement",
-     source_story_id: "{STORY_ID}",
-     source_phase: "qa-verify",
-     source_agent: "qa-verify-completion-leader",
-     tags: ["testing", "coverage"]
+     title: 'Improve test coverage for {area}',
+     task_type: 'improvement',
+     source_story_id: '{STORY_ID}',
+     source_phase: 'qa-verify',
+     source_agent: 'qa-verify-completion-leader',
+     tags: ['testing', 'coverage'],
    })
    ```
 
@@ -151,129 +137,103 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
    - Standard verification with no surprises
    - Findings are story-specific with no reuse value
 
-6. **Archive working-set.md** (on PASS)
+3. **Archive working-set.md** (on PASS)
+
    ```javascript
-   // Read current working-set.md content
    kb_archive_working_set({
-     story_id: "{STORY_ID}",
-     content: "<working-set.md content>"
+     story_id: '{STORY_ID}',
+     content: '<working-set.md content>',
    })
-   // Write archive_content to _implementation/WORKING-SET-ARCHIVE.md
    ```
 
-7. **Update Story Status in KB** (mark completed)
+4. **Update Story Status in KB** (mark completed)
+
    ```javascript
    kb_update_story_status({
-     story_id: "{STORY_ID}",
-     state: "completed",
-     phase: "qa_verification"
+     story_id: '{STORY_ID}',
+     state: 'completed',
+     phase: 'qa_verification',
    })
    ```
 
-8. **Log tokens**
+5. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-9. **Emit signal**: `QA PASS`
+6. **Emit signal**: `QA PASS`
 
 ### If verdict is FAIL:
 
-1. **Update status to failed-qa** (use /story-update skill)
-   ```
-   /story-update {FEATURE_DIR} {STORY_ID} failed-qa
-   ```
+1. **Update verification artifact in KB with gate decision**
 
-2. **Update verification artifact in KB with gate decision**
    ```javascript
    artifact_write({
-     story_id: "{STORY_ID}",
-     artifact_type: "verification",
-     phase: "qa_verification",
+     story_id: '{STORY_ID}',
+     artifact_type: 'verification',
+     phase: 'qa_verification',
      iteration: 0,
-     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
-         decision: "FAIL",
-         reason: "<one line summary of failure>",
-         blocking_issues: ["<issue 1>", "<issue 2>"]
-       }
-     }
+         decision: 'FAIL',
+         reason: '<one line summary of failure>',
+         blocking_issues: ['<issue 1>', '<issue 2>'],
+       },
+     },
    })
    ```
 
    **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA FAIL flow continues — do not block on KB write failure.
 
-3. **Move story to failed-qa directory** (use /story-move skill)
-   ```
-   /story-move {FEATURE_DIR} {STORY_ID} failed-qa
-   ```
-
-4. **Update Story Index** (use /index-update skill)
-   ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=failed-qa
-   ```
-
-5. **Capture tasks for deferred issues** (KBMEM-015)
+2. **Capture tasks for deferred issues** (KBMEM-015)
    If issues are identified that should be tracked for later:
+
    ```javascript
    kb_add_task({
-     title: "QA Issue: {brief description}",
-     description: "{detailed issue from VERIFICATION.yaml}",
-     task_type: "bug",  // or "improvement" for non-blocking issues
-     source_story_id: "{STORY_ID}",
-     source_phase: "qa-verify",
-     source_agent: "qa-verify-completion-leader",
-     priority: "p1",  // set based on severity
-     tags: ["qa-fail", "needs-fix"]
+     title: 'QA Issue: {brief description}',
+     description: '{detailed issue from VERIFICATION.yaml}',
+     task_type: 'bug', // or "improvement" for non-blocking issues
+     source_story_id: '{STORY_ID}',
+     source_phase: 'qa-verify',
+     source_agent: 'qa-verify-completion-leader',
+     priority: 'p1', // set based on severity
+     tags: ['qa-fail', 'needs-fix'],
    })
    ```
 
-6. **Update working-set.md with blockers**
-   Add failing issues to the blockers section:
-   ```markdown
-   ## Open Blockers
+3. **Update Story Status in KB** (mark needs work)
 
-   - **QA Verification Failed**: {reason from gate}. _Waiting on: fix iteration_
-   ```
-
-7. **Update Story Status in KB** (mark needs work)
    ```javascript
    kb_update_story_status({
-     story_id: "{STORY_ID}",
-     state: "in_progress",
-     phase: "qa_verification",
+     story_id: '{STORY_ID}',
+     state: 'in_progress',
+     phase: 'qa_verification',
      blocked: true,
-     blocked_reason: "{reason from gate}"
+     blocked_reason: '{reason from gate}',
    })
    ```
 
-8. **Log tokens**
+4. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-9. **Emit signal**: `QA FAIL`
+5. **Emit signal**: `QA FAIL`
 
 ## Output Format
 
-Follow `.claude/agents/_shared/lean-docs.md`:
-
 ```yaml
 phase: completion
-feature_dir: {FEATURE_DIR}
-story_id: {STORY_ID}
+story_id: { STORY_ID }
 verdict: PASS | FAIL
 status_updated: uat | failed-qa
-moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/failed-qa/{STORY_ID}
-index_updated: true
-kb_findings_captured: true | false | skipped  # only on PASS, false if no notable findings
+kb_findings_captured: true | false | skipped # only on PASS, false if no notable findings
 tokens_logged: true
-worktree_cleanup: completed | deferred | skipped | not_found  # only on PASS
-pr_merged: true | false | skipped  # only on PASS
+worktree_cleanup: completed | deferred | skipped | not_found # only on PASS
+pr_merged: true | false | skipped # only on PASS
 ```
 
 ## Signals
 
-- `QA PASS` - Story verified, moved to UAT, index updated
-- `QA FAIL` - Story failed verification, moved to failed-qa/
+- `QA PASS` - Story verified, status set to uat in KB
+- `QA FAIL` - Story failed verification, status set to failed_qa in KB
 - `COMPLETION BLOCKED: <reason>` - Cannot complete (e.g., file system error)
 
 ## Token Tracking

@@ -18,7 +18,7 @@ Execute design system compliance checks, accessibility scans, and performance au
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/*/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
+Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 - `feature_dir`, `story_id`, `base_path`, `ui_routes`
 
 Read authoritative rules from:
@@ -91,7 +91,7 @@ Evidence: Screenshot paths (save to `_implementation/screenshots/`).
 ## Output Format
 Follow `.claude/agents/_shared/lean-docs.md`
 
-Write to `{FEATURE_DIR}/*/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
+Write to `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
 
 ```yaml
 feature_dir: {FEATURE_DIR}

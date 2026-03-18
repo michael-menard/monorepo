@@ -18,6 +18,7 @@
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type { StoryArtifact, SurfaceType } from '../artifacts/story.js'
+import type { StoryState } from '../state/enums/story-state.js'
 import type { Plan } from '../artifacts/plan.js'
 import type { Evidence } from '../artifacts/evidence.js'
 import type { StoryRepository } from '../db/story-repository.js'
@@ -618,15 +619,7 @@ export class YamlArtifactBridge {
       // Update existing story
       await this.storyRepo.updateStoryState(
         story.id,
-        story.state as
-          | 'draft'
-          | 'backlog'
-          | 'ready-to-work'
-          | 'in-progress'
-          | 'ready-for-qa'
-          | 'uat'
-          | 'done'
-          | 'cancelled',
+        story.state as StoryState,
         this.config.dbActor,
         'Synced from YAML',
       )
@@ -644,15 +637,7 @@ export class YamlArtifactBridge {
           | 'spike'
           | 'infrastructure'
           | 'documentation',
-        state: story.state as
-          | 'draft'
-          | 'backlog'
-          | 'ready-to-work'
-          | 'in-progress'
-          | 'ready-for-qa'
-          | 'uat'
-          | 'done'
-          | 'cancelled',
+        state: story.state as StoryState,
         title: story.title,
         goal: story.goal,
         points: story.points ?? null,

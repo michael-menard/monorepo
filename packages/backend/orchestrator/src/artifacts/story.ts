@@ -182,7 +182,7 @@ export function createStoryArtifact(
     title,
     goal,
     type: options.type ?? 'feature',
-    state: options.state ?? 'draft',
+    state: options.state ?? 'backlog',
     points: options.points ?? null,
     priority: options.priority ?? 'medium',
     blocked_by: options.blocked_by ?? null,
@@ -255,14 +255,14 @@ export function isStoryBlocked(story: StoryArtifact): boolean {
  * Check if story is complete
  */
 export function isStoryComplete(story: StoryArtifact): boolean {
-  return story.state === 'done' || story.state === 'cancelled'
+  return story.state === 'completed' || story.state === 'cancelled'
 }
 
 /**
  * Check if story is workable (ready to be picked up)
  */
 export function isStoryWorkable(story: StoryArtifact): boolean {
-  return story.state === 'ready-to-work' && !isStoryBlocked(story)
+  return story.state === 'ready' && !isStoryBlocked(story)
 }
 
 /**
@@ -270,12 +270,14 @@ export function isStoryWorkable(story: StoryArtifact): boolean {
  */
 export function getStoryNextState(story: StoryArtifact): StoryState | null {
   const progression: Partial<Record<StoryState, StoryState>> = {
-    draft: 'backlog',
-    backlog: 'ready-to-work',
-    'ready-to-work': 'in-progress',
-    'in-progress': 'ready-for-qa',
-    'ready-for-qa': 'uat',
-    uat: 'done',
+    backlog: 'created',
+    created: 'elab',
+    elab: 'ready',
+    ready: 'in_progress',
+    in_progress: 'needs_code_review',
+    needs_code_review: 'ready_for_qa',
+    ready_for_qa: 'in_qa',
+    in_qa: 'completed',
   }
   return progression[story.state] ?? null
 }

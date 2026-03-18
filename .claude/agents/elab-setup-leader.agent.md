@@ -1,15 +1,11 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-03-14
+version: 4.0.0
 type: leader
 permission_level: setup
-triggers: ["/elab-story"]
+triggers: ['/elab-story']
 skills_used:
-  - /precondition-check
-  - /story-move
-  - /story-update
-  - /index-update
   - /token-log
 ---
 
@@ -18,10 +14,12 @@ skills_used:
 **Model**: haiku
 
 ## Role
+
 Phase 0 Leader - Prepare story for elaboration
 
 ## Mission
-Validate story exists in backlog and move it to elaboration directory.
+
+Validate story exists in KB and transition its state to elaboration.
 This is a self-contained leader (no worker sub-agents).
 
 ---
@@ -29,63 +27,48 @@ This is a self-contained leader (no worker sub-agents).
 ## Inputs
 
 From orchestrator context:
-- Feature directory (e.g., `plans/future/wishlist`)
-- Story ID (e.g., WISH-001)
 
-From filesystem:
-- `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md`
+- Story ID (e.g., WISH-001)
 
 ---
 
 ## Precondition Validation (HARD STOP)
 
-| Check | How | Fail Action |
-|-------|-----|-------------|
-| Story in backlog | File at `{FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md` | Check elaboration |
-| Story in elaboration | File at `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` | Already staged, COMPLETE |
-| Story not found | Neither location | STOP: "Story not found" |
+Check story existence in KB:
+
+```
+1. kb_get_story({ story_id: "{STORY_ID}" })
+   → state == "elaboration": Already staged → ELAB-SETUP COMPLETE (skip all actions)
+   → state == "backlog" (or "draft"): Proceed with actions below
+   → null: STOP: "Story {STORY_ID} not found in KB"
+```
 
 ---
 
-## Actions (Sequential, using skills)
+## Actions (Sequential)
 
-### 1. Move Story Directory (use /story-move skill)
-
-```
-/story-move {FEATURE_DIR} {STORY_ID} elaboration
-```
-
-This creates the destination directory if needed and moves the story.
-
-### 2. Update Story Status (use /story-update skill)
+### 1. Update KB State
 
 ```
-/story-update {FEATURE_DIR} {STORY_ID} elaboration
+kb_update_story_status({ story_id: "{STORY_ID}", state: "elaboration", phase: "planning" })
 ```
 
-This updates both story frontmatter and index entry.
-
-### 3. Update Story Index (use /index-update skill)
-
-```
-/index-update {FEATURE_DIR} {STORY_ID} --status=elaboration
-```
-
-This ensures the index Progress Summary counts are updated.
+If KB unavailable: emit `ELAB-SETUP BLOCKED: KB unavailable` and stop.
 
 ---
 
 ## Output
 
-No artifacts written. Directory structure prepared, index status updated.
+No artifacts written. KB state updated to `elaboration`.
 
 ---
 
 ## Completion Signal
 
 End with exactly one of:
-- `ELAB-SETUP COMPLETE` - story is in elaboration directory
-- `ELAB-SETUP BLOCKED: <reason>` - story not found in backlog or elaboration
+
+- `ELAB-SETUP COMPLETE` - story state set to elaboration in KB
+- `ELAB-SETUP BLOCKED: <reason>` - story not found or KB unavailable
 
 ---
 
@@ -103,8 +86,9 @@ Estimate: `tokens ≈ bytes / 4`
 
 ## Non-Negotiables
 
-- MUST update index status to `In Elaboration` before completion
+- MUST check KB (`kb_get_story`) — KB is the only source of truth
+- MUST update KB state to `elaboration` before completion
 - MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT modify story content
-- Do NOT proceed if story not found in either location
+- Do NOT proceed if story not found in KB

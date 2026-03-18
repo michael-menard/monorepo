@@ -62,10 +62,10 @@ export const KbAddInputSchema = z.object({
    * Optional story ID this entry is linked to.
    * Examples: 'WISH-2045', 'KBMEM-001'
    */
-  story_id: z.string().optional().nullable(),
+  story_id: z.string().nullable().optional(),
 
   /** Optional tags for categorization */
-  tags: z.array(z.string()).optional().nullable(),
+  tags: z.array(z.string()).nullable().optional(),
 })
 
 export type KbAddInput = z.infer<typeof KbAddInputSchema>
@@ -134,25 +134,25 @@ export const KbUpdateInputSchema = z
     entry_type: KnowledgeEntryTypeSchema.optional(),
 
     /** New story ID (null clears, undefined leaves unchanged) */
-    story_id: z.string().optional().nullable(),
+    story_id: z.string().nullable().optional(),
 
     /** New tags (null clears tags, undefined leaves unchanged) */
-    tags: z.array(z.string()).optional().nullable(),
+    tags: z.array(z.string()).nullable().optional(),
 
     /** Update verification status */
     verified: z.boolean().optional(),
 
     /** Who verified the entry */
-    verified_by: z.string().optional().nullable(),
+    verified_by: z.string().nullable().optional(),
 
     /** Mark entry as archived (superseded by a canonical entry) */
     archived: z.boolean().optional(),
 
     /** Timestamp when the entry was archived */
-    archived_at: z.date().optional().nullable(),
+    archived_at: z.date().nullable().optional(),
 
     /** UUID of the canonical entry that replaced this archived entry */
-    canonical_id: z.string().uuid().optional().nullable(),
+    canonical_id: z.string().uuid().nullable().optional(),
 
     /** Whether this entry is a canonical (merged) entry from compression */
     is_canonical: z.boolean().optional(),

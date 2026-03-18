@@ -34,7 +34,6 @@
     "@langchain/langgraph": "^0.2.0",
     "@langchain/ollama": "^0.1.0",
     "@langchain/openai": "0.3.17",
-    "@repo/database-schema": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/mcp-tools": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
@@ -54,6 +53,7 @@
     "@types/pg": "8.16.0",
     "@vitest/coverage-v8": "^3.2.4",
     "bullmq": "^5.0.0",
+    "drizzle-orm": "^0.44.7",
     "tsx": "4.21.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.4"

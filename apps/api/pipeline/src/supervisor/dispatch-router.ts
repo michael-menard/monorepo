@@ -26,7 +26,12 @@ import type {
   StoryCreationConfig,
   ElaborationResult,
   StoryCreationResult,
+  DevImplementConfig,
+  DevImplementResult,
+  ReviewGraphResult,
+  QAVerifyResult,
 } from './graph-types.js'
+import type { StorySnapshotPayload } from './__types__/index.js'
 import type { PipelineJobData, PipelineSupervisorConfig } from './__types__/index.js'
 import { WallClockTimeoutError, withWallClockTimeout } from './wall-clock-timeout.js'
 import { createCircuitBreakers, type GraphCircuitBreakers } from './graph-circuit-breakers.js'
@@ -48,12 +53,33 @@ export type RunStoryCreationFn = (
   config: Partial<StoryCreationConfig>,
 ) => Promise<StoryCreationResult>
 
+export type RunDevImplementFn = (params: {
+  storyId: string
+  config?: Partial<DevImplementConfig>
+  attempt?: number
+}) => Promise<DevImplementResult>
+
+export type RunReviewFn = (params: {
+  storyId: string
+  worktreePath: string
+  featureDir: string
+  attempt?: number
+}) => Promise<ReviewGraphResult>
+
+export type RunQAVerifyFn = (params: {
+  storyId: string
+  attempt?: number
+}) => Promise<QAVerifyResult>
+
 /**
  * Injectable graph runners — swapped in tests to avoid real graph execution.
  */
 export interface GraphRunners {
   runElaboration: RunElaborationFn
   runStoryCreation: RunStoryCreationFn
+  runDevImplement: RunDevImplementFn
+  runReview: RunReviewFn
+  runQAVerify: RunQAVerifyFn
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,8 +153,14 @@ export async function dispatchJob(
   })
 
   const circuitBreakers = getOrCreateCircuitBreakers(config)
-  const circuitBreaker =
-    data.stage === 'elaboration' ? circuitBreakers.elaboration : circuitBreakers.storyCreation
+  const cbMap: Record<string, typeof circuitBreakers.elaboration> = {
+    elaboration: circuitBreakers.elaboration,
+    'story-creation': circuitBreakers.storyCreation,
+    implementation: circuitBreakers.implementation,
+    review: circuitBreakers.review,
+    qa: circuitBreakers.qa,
+  }
+  const circuitBreaker = cbMap[data.stage] ?? circuitBreakers.elaboration
 
   // AC-8: Circuit breaker check — if OPEN, re-queue as delayed (not failed)
   if (!circuitBreaker.canExecute()) {
@@ -171,16 +203,44 @@ export async function dispatchJob(
 
   try {
     // Build graph invocation promise based on stage
-    let graphPromise: Promise<ElaborationResult | StoryCreationResult>
+    let graphPromise: Promise<
+      | ElaborationResult
+      | StoryCreationResult
+      | DevImplementResult
+      | ReviewGraphResult
+      | QAVerifyResult
+    >
 
     if (data.stage === 'elaboration') {
       // AC-4, AC-13: Extract SynthesizedStory from job.data.payload; pass to runElaboration
       // previousStory is null for Phase 0 (APIP-ADR)
       graphPromise = graphRunners.runElaboration(data.payload as SynthesizedStory, null, {})
-    } else {
+    } else if (data.stage === 'story-creation') {
       // AC-5, AC-13: Extract StoryRequest from job.data.payload; pass to runStoryCreation
       // Do NOT call createStoryCreationGraph() directly — use runStoryCreation() runner (AC-5)
       graphPromise = graphRunners.runStoryCreation(data.payload as StoryRequest, null, {})
+    } else if (data.stage === 'implementation') {
+      graphPromise = graphRunners.runDevImplement({
+        storyId: data.storyId,
+        attempt: data.attemptNumber,
+      })
+    } else if (data.stage === 'review') {
+      const payload = data.payload as StorySnapshotPayload & {
+        worktreePath?: string
+        featureDir?: string
+      }
+      graphPromise = graphRunners.runReview({
+        storyId: data.storyId,
+        worktreePath: payload.worktreePath ?? '',
+        featureDir: payload.featureDir ?? 'plans/future/platform',
+        attempt: data.attemptNumber,
+      })
+    } else {
+      // qa
+      graphPromise = graphRunners.runQAVerify({
+        storyId: data.storyId,
+        attempt: data.attemptNumber,
+      })
     }
 
     // AC-6, AC-15: Wrap with wall clock timeout via Promise.race()
@@ -291,5 +351,9 @@ export function getCircuitBreakerSummary(
       cbs.elaboration.getState() as import('./health/__types__/index.js').CircuitBreakerState,
     storyCreation:
       cbs.storyCreation.getState() as import('./health/__types__/index.js').CircuitBreakerState,
+    implementation:
+      cbs.implementation.getState() as import('./health/__types__/index.js').CircuitBreakerState,
+    review: cbs.review.getState() as import('./health/__types__/index.js').CircuitBreakerState,
+    qa: cbs.qa.getState() as import('./health/__types__/index.js').CircuitBreakerState,
   }
 }

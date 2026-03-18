@@ -31,6 +31,17 @@ export const StructurerConfigSchema = z.object({
   maxChangesPerItem: z.number().int().positive().default(50),
   /** Node execution timeout in milliseconds */
   nodeTimeoutMs: z.number().positive().default(60000),
+  /** Affinity configuration for model affinity queries (APIP-3050) */
+  affinityConfig: z
+    .object({
+      /** Whether affinity queries are enabled */
+      affinityEnabled: z.boolean().default(false),
+      /** Minimum confidence threshold for affinity matches */
+      minAffinityConfidence: z.number().min(0).max(1).default(0.7),
+      /** Maximum weight given to affinity in scoring */
+      maxAffinityWeight: z.number().min(0).max(1).default(0.8),
+    })
+    .default({}),
 })
 
 export type StructurerConfig = z.infer<typeof StructurerConfigSchema>
@@ -362,9 +373,13 @@ function toStateUpdate(updates: StructurerElaborationState): Partial<GraphState>
  * AC-4: createStructurerNode factory using createToolNode.
  *
  * @param config - Structurer configuration (partial — defaults applied)
+ * @param _affinityDb - Affinity database client (optional, for model affinity queries)
  * @returns Configured LangGraph node function
  */
-export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
+export function createStructurerNode(
+  config: Partial<StructurerConfig> = {},
+  _affinityDb?: unknown,
+) {
   const fullConfig = StructurerConfigSchema.parse(config)
 
   return createToolNode('structurer', async (state: GraphState): Promise<Partial<GraphState>> => {

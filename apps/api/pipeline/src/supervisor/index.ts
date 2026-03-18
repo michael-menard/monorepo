@@ -17,6 +17,11 @@ import { Worker, type Job } from 'bullmq'
 import { Redis } from 'ioredis'
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { kb_update_story_status, type StoryCrudDeps } from '@repo/knowledge-base'
+import {
+  WorktreeConflictDetector,
+  type StoryConflictDescriptor,
+} from '../conflicts/worktree-conflict-detector.js'
 import {
   PipelineJobDataSchema,
   type PipelineSupervisorConfig,
@@ -26,12 +31,10 @@ import { dispatchJob, getCircuitBreakerSummary } from './dispatch-router.js'
 import { createHealthServer, type HealthServer } from './health/server.js'
 import { registerDrainHandlers } from './drain/index.js'
 import { createBlockerNotificationModule } from './blocker-notification/index.js'
-
 // APIP-3080: Concurrency imports
 import { ConcurrencyController } from './concurrency/concurrency-controller.js'
 import { generateWorktreePath } from './concurrency/worktree-path.js'
 import { createWorktree, removeWorktree } from './worktree-lifecycle.js'
-import { WorktreeConflictDetector, type StoryConflictDescriptor } from '../conflicts/worktree-conflict-detector.js'
 
 // Use ioredis Redis type directly — same underlying type as RedisClient in lego-api
 export type RedisClient = Redis
@@ -84,6 +87,12 @@ export class PipelineSupervisor {
   private _activeJobs = 0
   private readonly startTimeMs: number
 
+  // F004: KB DB client for state advancement callbacks
+  private readonly kbDeps: StoryCrudDeps | null
+
+  // F008: Scheduler stop callback (registered by bootstrap)
+  private _schedulerStop: (() => void) | null = null
+
   // APIP-2030: Health server
   private healthServer: HealthServer | null = null
 
@@ -97,15 +106,21 @@ export class PipelineSupervisor {
     config: Partial<PipelineSupervisorConfig> = {},
 
     db: NodePgDatabase<any> | null = null,
+    kbDeps: StoryCrudDeps | null = null,
   ) {
     this.redisClient = redisClient
     this.config = PipelineSupervisorConfigSchema.parse(config)
     this.db = db
+    this.kbDeps = kbDeps
     this.startTimeMs = Date.now()
 
     // APIP-3080: Initialize concurrency controller and conflict detector
     this.concurrencyController = new ConcurrencyController(
-      this.config.concurrency ?? { maxWorktrees: 1, conflictPolicy: 'reject' as const, worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 } },
+      this.config.concurrency ?? {
+        maxWorktrees: 1,
+        conflictPolicy: 'reject' as const,
+        worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 },
+      },
     )
     this.conflictDetector = new WorktreeConflictDetector()
 
@@ -197,12 +212,40 @@ export class PipelineSupervisor {
       },
     )
 
+    // F004: Map stage → next KB state on successful completion
+    const STAGE_TO_NEXT_STATE: Record<string, string> = {
+      implementation: 'needs_code_review',
+      review: 'ready_for_qa',
+      qa: 'UAT',
+      elaboration: 'ready',
+    }
+
     this.worker.on('completed', job => {
       logger.info('Worker job completed', { jobId: job.id })
 
+      // F004: Advance KB story state on successful completion (fire-and-forget)
+      const storyId = job.data?.storyId as string | undefined
+      const stage = job.data?.stage as string | undefined
+      if (storyId && stage && this.kbDeps) {
+        const nextState = STAGE_TO_NEXT_STATE[stage]
+        if (nextState) {
+          kb_update_story_status(this.kbDeps, {
+            story_id: storyId,
+            state: nextState as any,
+          }).catch(err => {
+            logger.warn('kb_state_advance_failed', {
+              event: 'kb_state_advance_failed',
+              storyId,
+              stage,
+              nextState,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          })
+        }
+      }
+
       // APIP-2010 AC-4, AC-9: Resolve blocker on successful completion (fire-and-forget)
       if (notificationModule !== null) {
-        const storyId = job.data?.storyId as string | undefined
         if (storyId) {
           notificationModule.resolveBlocker(storyId).catch(err => {
             logger.warn('blocker_resolve_failed', {
@@ -221,12 +264,26 @@ export class PipelineSupervisor {
         error: error instanceof Error ? error.message : String(error),
       })
 
+      const storyId = job?.data?.storyId as string | undefined
+      const isFinalFailure = job !== undefined && job.attemptsMade >= (job.opts?.attempts ?? 1)
+
+      // F004: Set story to blocked in KB on final failure (fire-and-forget)
+      if (storyId && isFinalFailure && this.kbDeps) {
+        kb_update_story_status(this.kbDeps, {
+          story_id: storyId,
+          blocked_reason: error instanceof Error ? error.message : String(error),
+        }).catch(err => {
+          logger.warn('kb_blocked_update_failed', {
+            event: 'kb_blocked_update_failed',
+            storyId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        })
+      }
+
       // APIP-2010 AC-1, AC-2, AC-9: Insert blocker on PERMANENT failure (fire-and-forget)
       // Only insert on final failure (attemptsMade >= maxAttempts), not transient retries
       if (notificationModule !== null && job !== undefined) {
-        const storyId = job.data?.storyId as string | undefined
-        const isFinalFailure = job.attemptsMade >= (job.opts?.attempts ?? 1)
-
         if (storyId && isFinalFailure) {
           notificationModule.insertBlocker(storyId, error, job.data).catch(err => {
             logger.warn('blocker_insert_failed', {
@@ -287,15 +344,28 @@ export class PipelineSupervisor {
   }
 
   /**
+   * Register a callback to stop the scheduler loop on drain.
+   * F008: Called by bootstrap() after constructing SchedulerLoop.
+   */
+  registerSchedulerStop(cb: () => void): void {
+    this._schedulerStop = cb
+  }
+
+  /**
    * Enter drain mode.
    *
    * Sets draining flag immediately (reflected in GET /health) then delegates
    * to the drain state machine which handles timeouts and process.exit().
    *
    * APIP-2030 AC-1: Triggered by SIGTERM via registerDrainHandlers().
+   * F008: Also stops the scheduler loop.
    */
   enterDrainMode(): void {
     this._draining = true
+    // F008: Stop scheduler loop so no new jobs are dispatched during drain
+    if (this._schedulerStop) {
+      this._schedulerStop()
+    }
     logger.info('drain_mode_activated', {
       event: 'drain_mode_activated',
       activeJobs: this._activeJobs,
@@ -339,7 +409,13 @@ export class PipelineSupervisor {
       const maxWorktrees = this.config.concurrency?.maxWorktrees ?? 1
 
       if (maxWorktrees > 1 && this.config.repoRoot) {
-        await this.processJobWithConcurrency(job, jobData, storyId, touchedPathPrefixes, notificationModule)
+        await this.processJobWithConcurrency(
+          job,
+          jobData,
+          storyId,
+          touchedPathPrefixes,
+          notificationModule,
+        )
       } else {
         // Original APIP-0020 serial path — no worktree isolation
         await this.processJobSerial(job, jobData, notificationModule)
@@ -354,11 +430,7 @@ export class PipelineSupervisor {
    * Original serial processing path (APIP-0020).
    * No worktree isolation — dispatches directly.
    */
-  private async processJobSerial(
-    job: Job,
-    _jobData: any,
-    notificationModule: any,
-  ): Promise<void> {
+  private async processJobSerial(job: Job, _jobData: any, notificationModule: any): Promise<void> {
     // APIP-2010 AC-3, AC-9: Pass onCircuitOpen callback to dispatchJob (fire-and-forget)
     const onCircuitOpen =
       notificationModule !== null
@@ -474,7 +546,11 @@ export class PipelineSupervisor {
         logger.info('Story processing complete (concurrent)', { storyId, worktreePath })
       } catch (processingError) {
         slot.breaker.recordFailure()
-        logger.error('Story processing failed (concurrent)', { storyId, worktreePath, error: processingError })
+        logger.error('Story processing failed (concurrent)', {
+          storyId,
+          worktreePath,
+          error: processingError,
+        })
         throw processingError
       }
     } finally {
@@ -570,30 +646,75 @@ export function getOrCreateRedisClient(): Redis {
  *
  * APIP-2030: Health server and drain handlers are registered by supervisor.start().
  * APIP-2010: Reads notification env vars and passes to config.
+ * F001+F008: Starts SchedulerLoop if KB env vars are present.
  */
 export async function bootstrap(): Promise<void> {
   const redisClient = getOrCreateRedisClient()
+  const queueName = process.env.PIPELINE_QUEUE_NAME ?? 'apip-pipeline'
 
-  const supervisor = new PipelineSupervisor(redisClient, {
-    queueName: process.env.PIPELINE_QUEUE_NAME ?? 'pipeline',
-    stageTimeoutMs: process.env.PIPELINE_STAGE_TIMEOUT_MS
-      ? parseInt(process.env.PIPELINE_STAGE_TIMEOUT_MS, 10)
-      : undefined,
-    drainTimeoutMs: process.env.SUPERVISOR_DRAIN_TIMEOUT_MS
-      ? parseInt(process.env.SUPERVISOR_DRAIN_TIMEOUT_MS, 10)
-      : undefined,
-    healthPort: process.env.SUPERVISOR_HEALTH_PORT
-      ? parseInt(process.env.SUPERVISOR_HEALTH_PORT, 10)
-      : undefined,
-    // APIP-2010 AC-8: Notification config from env vars
-    webhookUrl: process.env.PIPELINE_NOTIFICATION_WEBHOOK_URL ?? undefined,
-    slackToken: process.env.NOTIFICATION_SLACK_TOKEN ?? undefined,
-    notificationThreshold: process.env.PIPELINE_NOTIFICATION_THRESHOLD
-      ? parseInt(process.env.PIPELINE_NOTIFICATION_THRESHOLD, 10)
-      : undefined,
-  })
+  // F004: Create KB deps if KB DB password is available
+  let kbDeps: import('@repo/knowledge-base').StoryCrudDeps | null = null
+  if (process.env.KB_DB_PASSWORD) {
+    const { getDbClient } = await import('@repo/knowledge-base')
+    kbDeps = { db: getDbClient() }
+  }
+
+  const supervisor = new PipelineSupervisor(
+    redisClient,
+    {
+      queueName,
+      stageTimeoutMs: process.env.PIPELINE_STAGE_TIMEOUT_MS
+        ? parseInt(process.env.PIPELINE_STAGE_TIMEOUT_MS, 10)
+        : undefined,
+      drainTimeoutMs: process.env.SUPERVISOR_DRAIN_TIMEOUT_MS
+        ? parseInt(process.env.SUPERVISOR_DRAIN_TIMEOUT_MS, 10)
+        : undefined,
+      healthPort: process.env.SUPERVISOR_HEALTH_PORT
+        ? parseInt(process.env.SUPERVISOR_HEALTH_PORT, 10)
+        : undefined,
+      // APIP-2010 AC-8: Notification config from env vars
+      webhookUrl: process.env.PIPELINE_NOTIFICATION_WEBHOOK_URL ?? undefined,
+      slackToken: process.env.NOTIFICATION_SLACK_TOKEN ?? undefined,
+      notificationThreshold: process.env.PIPELINE_NOTIFICATION_THRESHOLD
+        ? parseInt(process.env.PIPELINE_NOTIFICATION_THRESHOLD, 10)
+        : undefined,
+    },
+    null,
+    kbDeps,
+  )
 
   await supervisor.start()
+
+  // F001: Start scheduler loop if KB DB is available
+  if (kbDeps) {
+    const { Queue } = await import('bullmq')
+    const schedulerQueue = new Queue(queueName, { connection: redisClient as any })
+
+    const { SchedulerLoop } = await import('../scheduler/index.js')
+    const scheduler = new SchedulerLoop(schedulerQueue, kbDeps, {
+      pollIntervalMs: process.env.SCHEDULER_POLL_INTERVAL_MS
+        ? parseInt(process.env.SCHEDULER_POLL_INTERVAL_MS, 10)
+        : 30_000,
+      maxConcurrent: process.env.SCHEDULER_MAX_CONCURRENT
+        ? parseInt(process.env.SCHEDULER_MAX_CONCURRENT, 10)
+        : 3,
+    })
+
+    // F008: Wire scheduler stop to drain
+    supervisor.registerSchedulerStop(() => scheduler.stop())
+
+    // Start non-blocking — scheduler runs until aborted
+    scheduler.start().catch(err => {
+      logger.error('scheduler_fatal_error', {
+        event: 'scheduler_fatal_error',
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+
+    logger.info('SchedulerLoop started', { queueName, pollIntervalMs: 30_000 })
+  } else {
+    logger.info('SchedulerLoop skipped — KB_DB_PASSWORD not set')
+  }
 
   logger.info('PipelineSupervisor bootstrap complete — waiting for jobs')
 }

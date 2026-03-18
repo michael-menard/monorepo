@@ -1,7 +1,0 @@
-skipped: true
-reason: >
-  APIP-5001 is a pure backend/infrastructure story. No UI components are introduced or
-  modified. The only user-facing artifact is documentation in README.md and pnpm script
-  ergonomics (db:test:start, db:migrate:test). No Playwright UI tests are applicable.
-  Operator ergonomics noted in test plan (MC-2) — pnpm command naming should follow
-  KB postgres conventions for consistency.

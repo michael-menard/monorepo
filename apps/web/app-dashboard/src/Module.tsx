@@ -33,7 +33,9 @@ export type AppDashboardModuleProps = z.infer<typeof AppDashboardModulePropsSche
  */
 export function AppDashboardModule({ className, route }: AppDashboardModuleProps) {
   // Route to /monitor if specified
-  const isMonitorRoute = route === '/monitor' || (typeof window !== 'undefined' && window.location.pathname.includes('/monitor'))
+  const isMonitorRoute =
+    route === '/monitor' ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('/monitor'))
 
   return (
     <ModuleLayout className={className}>

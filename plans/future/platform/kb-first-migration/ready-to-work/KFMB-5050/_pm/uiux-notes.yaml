@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-5050 has no user-facing UI changes. All changes are internal workflow agent markdown files (.claude/agents/*.md) and one shared documentation file (_shared/kb-integration.md). No React components, no frontend routes, no visual UI elements are involved."

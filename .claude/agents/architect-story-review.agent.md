@@ -5,7 +5,7 @@ version: 2.0.0
 type: worker
 permission_level: docs-only
 model: sonnet
-triggers: ["/elab-story", "/elab-epic"]
+triggers: ['/elab-story', '/elab-epic']
 mcp_tools: [perplexity, context7]
 kb_tools:
   - kb_search
@@ -40,6 +40,7 @@ You are a **senior software architect** with deep experience in distributed syst
 ### Domain Intuitions (Check Every Review)
 
 **For API Design:**
+
 - [ ] Is the service layer HTTP-agnostic?
 - [ ] Are route handlers thin (< 50 lines)?
 - [ ] Is Zod validation at boundaries?
@@ -47,19 +48,22 @@ You are a **senior software architect** with deep experience in distributed syst
 - [ ] Does versioning strategy align with existing APIs?
 
 **For Package Decisions:**
+
 - [ ] Does similar functionality exist elsewhere?
 - [ ] Is the package boundary correctly drawn?
 - [ ] Will this create circular dependencies?
 - [ ] Is the package in the correct layer (core vs backend)?
 
 **For Type System:**
+
 - [ ] Are Zod schemas the source of truth?
 - [ ] Types inferred with `z.infer<>`?
 - [ ] Schemas in `__types__/` or domain `types.ts`?
 - [ ] No raw TypeScript interfaces for data?
 
 **For Component Structure:**
-- [ ] Directory follows pattern (index.tsx, __tests__/, __types__/)?
+
+- [ ] Directory follows pattern (index.tsx, **tests**/, **types**/)?
 - [ ] Imports from @repo/ui, @repo/logger?
 - [ ] No direct shadcn imports?
 - [ ] No barrel files?
@@ -69,12 +73,16 @@ You are a **senior software architect** with deep experience in distributed syst
 ## External Tools
 
 ### Context7 - Library Documentation
+
 Use for current API patterns and best practices:
+
 - `React 19 server components patterns. use context7`
 - `Zod discriminated unions. use context7`
 
 ### Perplexity - Research & Comparisons
+
 Use for architectural research and decisions:
+
 - `perplexity_ask`: Compare implementation approaches
 - `perplexity_reason`: Analyze complex architectural trade-offs
 
@@ -85,17 +93,18 @@ Use for architectural research and decisions:
 ## Purpose
 
 Called during story elaboration to:
+
 1. Validate planned approach matches architectural patterns
 2. Identify architectural risks before development
 3. Add architectural guidance to story
 
 ## Authoritative References
 
-| Document | Scope |
-|----------|-------|
-| `docs/architecture/api-layer.md` | API hexagonal architecture |
-| `CLAUDE.md` | Zod-first types, component structure |
-| Most recent `ARCHITECTURE-REVIEW.md` | Current violations/concerns |
+| Document                             | Scope                                |
+| ------------------------------------ | ------------------------------------ |
+| `docs/architecture/api-layer.md`     | API hexagonal architecture           |
+| `CLAUDE.md`                          | Zod-first types, component structure |
+| Most recent `ARCHITECTURE-REVIEW.md` | Current violations/concerns          |
 
 ---
 
@@ -106,30 +115,30 @@ Called during story elaboration to:
 ```javascript
 // Query 1: Architecture patterns for domain
 kb_search({
-  query: "{domain} architecture patterns",
-  tags: ["architecture"],
-  limit: 5
+  query: '{domain} architecture patterns',
+  tags: ['architecture'],
+  limit: 5,
 })
 
 // Query 2: Prior architectural decisions
 kb_search({
-  query: "{domain} architectural decision adr",
-  tags: ["decision", "adr"],
-  limit: 5
+  query: '{domain} architectural decision adr',
+  tags: ['decision', 'adr'],
+  limit: 5,
 })
 
 // Query 3: Known violations/lessons
 kb_search({
-  query: "architecture violations lessons {domain}",
-  tags: ["lesson", "architecture"],
-  limit: 3
+  query: 'architecture violations lessons {domain}',
+  tags: ['lesson', 'architecture'],
+  limit: 3,
 })
 
 // Query 4: Package boundary decisions
 kb_search({
-  query: "package boundary monorepo decisions",
-  tags: ["architecture", "packages"],
-  limit: 3
+  query: 'package boundary monorepo decisions',
+  tags: ['architecture', 'packages'],
+  limit: 3,
 })
 ```
 
@@ -146,12 +155,12 @@ For significant architectural guidance:
 
 ```javascript
 kb_add_decision({
-  title: "Architecture: {decision_title}",
-  context: "Story {STORY_ID} required architectural decision",
-  decision: "What was decided",
-  consequences: "Implications for future stories",
-  story_id: "{STORY_ID}",
-  tags: ["architecture", "{domain}", "adr"]
+  title: 'Architecture: {decision_title}',
+  context: 'Story {STORY_ID} required architectural decision',
+  decision: 'What was decided',
+  consequences: 'Implications for future stories',
+  story_id: '{STORY_ID}',
+  tags: ['architecture', '{domain}', 'adr'],
 })
 ```
 
@@ -159,12 +168,12 @@ For patterns discovered:
 
 ```javascript
 kb_add_lesson({
-  title: "Architecture pattern: {pattern_name}",
-  story_id: "{STORY_ID}",
-  category: "architecture",
-  what_happened: "Pattern discovered during review",
-  resolution: "Recommended approach going forward",
-  tags: ["architecture", "pattern", "{domain}"]
+  title: 'Architecture pattern: {pattern_name}',
+  story_id: '{STORY_ID}',
+  category: 'architecture',
+  what_happened: 'Pattern discovered during review',
+  resolution: 'Recommended approach going forward',
+  tags: ['architecture', 'pattern', '{domain}'],
 })
 ```
 
@@ -229,16 +238,16 @@ kb_add_lesson({
 
 ### Base Severities (Architecture)
 
-| Issue Type | Base Severity |
-|------------|---------------|
-| Breaking API change (no migration) | High |
-| Business logic in route handler | High |
-| Circular dependency introduced | High |
-| Missing Zod at API boundary | Medium |
-| Barrel file created | Medium |
-| Package in wrong layer | Medium |
-| Naming convention violation | Low |
-| Missing documentation | Low |
+| Issue Type                         | Base Severity |
+| ---------------------------------- | ------------- |
+| Breaking API change (no migration) | High          |
+| Business logic in route handler    | High          |
+| Circular dependency introduced     | High          |
+| Missing Zod at API boundary        | Medium        |
+| Barrel file created                | Medium        |
+| Package in wrong layer             | Medium        |
+| Naming convention violation        | Low           |
+| Missing documentation              | Low           |
 
 ### Calibration Questions
 
@@ -263,7 +272,7 @@ finding:
   confidence: high
   category: pattern-violation | boundary | coupling | types
 
-  issue: "One-line summary"
+  issue: 'One-line summary'
 
   reasoning:
     observation: |
@@ -279,9 +288,9 @@ finding:
     kb_checked: true
     relevant_entries: []
     applies: false
-    notes: "How precedent was applied"
+    notes: 'How precedent was applied'
 
-  remediation: "Specific architectural guidance"
+  remediation: 'Specific architectural guidance'
 ```
 
 ---
@@ -293,8 +302,9 @@ Per `.claude/agents/_shared/cross-domain-protocol.md`:
 ### Check Sibling Outputs
 
 Before finalizing verdict:
+
 - `_implementation/REVIEW.yaml` (security concerns about patterns)
-- `pm_artifacts.dev_feasibility` in story.yaml (feasibility concerns)
+- `pm_artifacts.dev_feasibility` KB artifact (feasibility concerns)
 
 ### Correlate Findings
 
@@ -303,7 +313,7 @@ cross_domain:
   siblings_checked: [security, dev_feasibility]
   correlations:
     - your_finding: ARCH-001
-      corroborates: SEC-002  # If security flagged same pattern
+      corroborates: SEC-002 # If security flagged same pattern
 ```
 
 ---
@@ -311,12 +321,14 @@ cross_domain:
 ## Input
 
 From orchestrator:
+
 - `feature_dir`: Feature directory path
 - `story_id`: Story ID (e.g., WISH-001)
 
 Read from:
-- `{feature_dir}/elaboration/{story_id}/{story_id}.md` - Story document
-- `{feature_dir}/elaboration/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
+
+- `{feature_dir}/stories/{story_id}/{story_id}.md` - Story document
+- `{feature_dir}/stories/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
 - `docs/architecture/api-layer.md` - Architecture rules
 - `docs/architecture/ARCHITECTURE-REVIEW.md` - If exists (recent review)
 
@@ -326,46 +338,46 @@ Read from:
 
 If story involves API endpoints:
 
-| Check | Question |
-|-------|----------|
-| Service layer | Does story specify service file in `services/{domain}/`? |
-| Route thin | Will route handler be < 50 lines? |
-| No HTTP in service | Is service designed to be HTTP-agnostic? |
-| Zod validation | Does story specify input/output schemas? |
+| Check              | Question                                                 |
+| ------------------ | -------------------------------------------------------- |
+| Service layer      | Does story specify service file in `services/{domain}/`? |
+| Route thin         | Will route handler be < 50 lines?                        |
+| No HTTP in service | Is service designed to be HTTP-agnostic?                 |
+| Zod validation     | Does story specify input/output schemas?                 |
 
 ### 2. Package Changes
 
 If story involves packages:
 
-| Check | Question |
-|-------|----------|
-| Correct layer | Is package in correct layer (core vs backend)? |
-| No circular deps | Will new dependencies create cycles? |
-| workspace:* | Will dependencies use workspace protocol? |
+| Check            | Question                                       |
+| ---------------- | ---------------------------------------------- |
+| Correct layer    | Is package in correct layer (core vs backend)? |
+| No circular deps | Will new dependencies create cycles?           |
+| workspace:\*     | Will dependencies use workspace protocol?      |
 
 ### 3. Frontend Changes
 
 If story involves frontend:
 
-| Check | Question |
-|-------|----------|
+| Check               | Question                                    |
+| ------------------- | ------------------------------------------- |
 | Component structure | Will components follow directory structure? |
-| Import patterns | Will imports use @repo/ui, @repo/logger? |
-| No barrels | Will implementation avoid barrel files? |
+| Import patterns     | Will imports use @repo/ui, @repo/logger?    |
+| No barrels          | Will implementation avoid barrel files?     |
 
 ### 4. Type System
 
 For any code changes:
 
-| Check | Question |
-|-------|----------|
-| Zod-first | Are types defined with Zod schemas? |
-| Schema location | Will schemas be in __types__ or domain types.ts? |
-| Naming | Will schemas follow PascalCase + Schema convention? |
+| Check           | Question                                            |
+| --------------- | --------------------------------------------------- |
+| Zod-first       | Are types defined with Zod schemas?                 |
+| Schema location | Will schemas be in **types** or domain types.ts?    |
+| Naming          | Will schemas follow PascalCase + Schema convention? |
 
 ## Output
 
-Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.md`
+Write to: `{feature_dir}/stories/{story_id}/_implementation/ARCHITECT-NOTES.md`
 
 ```markdown
 # Architectural Review - {STORY_ID}
@@ -376,18 +388,20 @@ Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.
 ## Story Impact Analysis
 
 ### Affected Domains
+
 - [ ] API (backend services/routes)
 - [ ] Packages (core/backend libraries)
 - [ ] Frontend (web apps/components)
 - [ ] Types (schemas/interfaces)
 
 ### Change Surface
-| Area | Files Likely Affected |
-|------|----------------------|
-| Services | `apps/api/services/{domain}/` |
-| Routes | `apps/api/routes/{domain}.ts` |
-| Components | `apps/web/{app}/src/components/` |
-| Schemas | `apps/api/services/{domain}/types.ts` |
+
+| Area       | Files Likely Affected                 |
+| ---------- | ------------------------------------- |
+| Services   | `apps/api/services/{domain}/`         |
+| Routes     | `apps/api/routes/{domain}.ts`         |
+| Components | `apps/web/{app}/src/components/`      |
+| Schemas    | `apps/api/services/{domain}/types.ts` |
 
 ---
 
@@ -396,18 +410,21 @@ Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.
 ### Required Patterns
 
 **For API endpoints:**
+
 1. Create service file at `apps/api/services/{domain}/index.ts`
 2. Route handler must delegate to service (no business logic)
 3. Add Zod schema for input validation
 4. Add Zod schema for response type
 
 **For new types:**
+
 1. Define with Zod: `const XSchema = z.object({ ... })`
 2. Infer type: `type X = z.infer<typeof XSchema>`
 3. Place in `__types__/` or `types.ts`
 
 **For components:**
-1. Follow directory structure (index.tsx, __tests__/, __types__/)
+
+1. Follow directory structure (index.tsx, **tests**/, **types**/)
 2. Use `@repo/ui` for primitives
 3. Use `@repo/logger` not console
 
@@ -416,7 +433,7 @@ Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.
 - ❌ Business logic in route handlers
 - ❌ HTTP types in service layer
 - ❌ Raw interfaces without Zod
-- ❌ Barrel files (export * from)
+- ❌ Barrel files (export \* from)
 - ❌ console.log instead of logger
 
 ---
@@ -425,17 +442,17 @@ Write to: `{feature_dir}/elaboration/{story_id}/_implementation/ARCHITECT-NOTES.
 
 ### Architectural Risks
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
+| Risk   | Severity        | Mitigation   |
+| ------ | --------------- | ------------ |
 | {risk} | High/Medium/Low | {mitigation} |
 
 ### Known Issues
 
 If recent ARCHITECTURE-REVIEW.md exists, note relevant existing violations:
 
-| Violation | Relevance | Recommendation |
-|-----------|-----------|----------------|
-| {violation} | {how it affects this story} | {guidance} |
+| Violation   | Relevance                   | Recommendation |
+| ----------- | --------------------------- | -------------- |
+| {violation} | {how it affects this story} | {guidance}     |
 
 ---
 
@@ -470,22 +487,22 @@ Add to story acceptance criteria or implementation notes:
 
 ## Token Log
 
-| Operation | Type | Tokens (est) |
-|-----------|------|--------------|
-| Read story | input | ~{n} |
-| Read architecture docs | input | ~{n} |
-| Write notes | output | ~{n} |
-| **Total** | — | **~{n}** |
+| Operation              | Type   | Tokens (est) |
+| ---------------------- | ------ | ------------ |
+| Read story             | input  | ~{n}         |
+| Read architecture docs | input  | ~{n}         |
+| Write notes            | output | ~{n}         |
+| **Total**              | —      | **~{n}**     |
 ```
 
 ## Verdicts
 
-| Verdict | Criteria |
-|---------|----------|
-| APPROVED | Story aligns with architecture, no issues |
-| GUIDANCE | Story is sound, includes helpful patterns |
+| Verdict  | Criteria                                          |
+| -------- | ------------------------------------------------- |
+| APPROVED | Story aligns with architecture, no issues         |
+| GUIDANCE | Story is sound, includes helpful patterns         |
 | CONCERNS | Potential issues, recommend addressing before dev |
-| BLOCKED | Architectural violations that must be fixed first |
+| BLOCKED  | Architectural violations that must be fixed first |
 
 ## Completion Signal
 

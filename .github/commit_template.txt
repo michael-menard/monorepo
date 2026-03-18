@@ -1,0 +1,20 @@
+# Commit Message Format
+#
+# <type>(<scope>): <subject>
+#
+# Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert
+# Scope: optional - e.g., auth, api, ui, etc.
+#
+# Subject: short description (50 chars max)
+#
+# Body: longer description (72 chars per line)
+#
+# Footer: breaking changes, issue references
+#
+# Examples:
+#   feat(auth): add OAuth2 login flow
+#   fix(api): resolve null pointer in user fetch
+#   docs: update API documentation
+#
+# Read more: https://www.conventionalcommits.org/
+

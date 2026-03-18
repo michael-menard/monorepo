@@ -208,3 +208,39 @@ Proceed with generation? [Y/n]
 ## Token Tracking
 
 See: `.claude/agents/_shared/token-tracking.md`
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache at workflow start** to retrieve pre-distilled project conventions and known blockers.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Workflow start (before analysis) | `architecture` | `project-conventions` | Project conventions, coding standards, patterns |
+| Workflow start (before analysis) | `lessons_learned` | `blockers-known` | Known blockers and anti-patterns to avoid |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without project conventions cache
+  → if hit: inject content.conventions (first 5 entries) and content.summary into analysis context
+
+context_cache_get({ packType: 'lessons_learned', packKey: 'blockers-known' })
+  → if null: log warning via @repo/logger, continue without blockers cache
+  → if hit: inject content.blockers (first 5 entries) into analysis risk evaluation
+```
+
+### Content Injection Limits
+
+- Inject: `summary`, `conventions` (first 5 entries), `blockers` (first 5 entries)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~2000 tokens total across all packs
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for {packType}/{packKey} — proceeding without cache context"` via `@repo/logger`. Continue analysis execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block analysis execution.

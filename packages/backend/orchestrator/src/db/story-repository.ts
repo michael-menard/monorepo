@@ -201,7 +201,7 @@ export class StoryRepository {
           blocked_by, depends_on, follow_up_from, packages, surfaces,
           non_goals, created_at, updated_at
         FROM wint.stories
-        WHERE state = 'ready-to-work' AND blocked_by IS NULL
+        WHERE state = 'ready' AND blocked_by IS NULL
         ORDER BY
           CASE priority
             WHEN 'p0' THEN 1
@@ -316,13 +316,18 @@ export class StoryRepository {
     }
 
     const actionMap: Record<StoryState, string> = {
-      draft: 'Generate story structure (/pm-story generate)',
-      backlog: 'Elaborate story (/elab-story)',
-      'ready-to-work': 'Start implementation (/dev-implement-story)',
-      'in-progress': 'Continue implementation or submit for review',
-      'ready-for-qa': 'Run QA verification (/qa-verify-story)',
-      uat: 'Complete UAT testing',
-      done: 'Story complete - no action needed',
+      backlog: 'Generate story (/pm-story generate)',
+      created: 'Elaborate story (/elab-story)',
+      elab: 'Elaboration in progress',
+      ready: 'Start implementation (/dev-implement-story)',
+      in_progress: 'Continue implementation',
+      needs_code_review: 'Run code review (/dev-code-review)',
+      ready_for_qa: 'Run QA verification (/qa-verify-story)',
+      in_qa: 'QA verification in progress',
+      completed: 'Story complete - no action needed',
+      failed_code_review: 'Fix code review issues (/dev-fix-story)',
+      failed_qa: 'Fix QA failures',
+      blocked: 'Resolve blocker',
       cancelled: 'Story cancelled - no action needed',
     }
 

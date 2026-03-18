@@ -221,16 +221,10 @@ export async function readAffinityProfiles(
       return { map: resultMap, fallbackUsed: false }
     }
 
-    // Dynamically import wint schema to avoid hard coupling at module load time
-    const { modelAffinity } = await import('@repo/database-schema/schema/wint')
-    const { and, eq } = await import('drizzle-orm')
-
     const dbClient = db as {
-      select: () => {
-        from: (table: unknown) => {
-          where: (condition: unknown) => Promise<AffinityRow[]>
-        }
-      }
+      execute: (query: { queryChunks?: unknown; sql?: string; params?: unknown[] }) => Promise<{
+        rows: unknown[]
+      }>
     }
 
     for (const [pairKey, itemIds] of pairToItemIds) {
@@ -241,12 +235,16 @@ export async function readAffinityProfiles(
       let rows: AffinityRow[] = []
 
       try {
-        rows = await dbClient
-          .select()
-          .from(modelAffinity)
-          .where(
-            and(eq(modelAffinity.changeType, changeType), eq(modelAffinity.fileType, fileType)),
-          )
+        // TODO(AUDIT-5): verify wint.model_affinity table exists in target DB
+        const { sql } = await import('drizzle-orm')
+        const result = await dbClient.execute(
+          sql`SELECT model_id AS "modelId", change_type AS "changeType", file_type AS "fileType",
+                     success_rate AS "successRate", sample_count AS "sampleCount",
+                     confidence_level AS "confidenceLevel"
+              FROM wint.model_affinity
+              WHERE change_type = ${changeType} AND file_type = ${fileType}`,
+        )
+        rows = result.rows as AffinityRow[]
       } catch (queryError) {
         const queryMsg = queryError instanceof Error ? queryError.message : String(queryError)
         logger.warn('readAffinityProfiles: DB query error for pair', {

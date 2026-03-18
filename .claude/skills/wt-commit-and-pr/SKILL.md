@@ -13,13 +13,13 @@ Commits all staged changes in the current worktree, pushes to the remote, and cr
 ## Usage
 ```
 /wt:commit-and-pr {STORY_ID} "{STORY_TITLE}"
-/wt:commit-and-pr {STORY_ID} "{STORY_TITLE}" {PROOF_PATH} {EVIDENCE_PATH}
+/wt:commit-and-pr {STORY_ID} "{STORY_TITLE}" {EVIDENCE_PATH}
 ```
 
 ### Examples
 ```
 /wt:commit-and-pr WINT-1012 "Add worktree management"
-/wt:commit-and-pr WINT-1012 "Add worktree management" _implementation/PROOF-WINT-1012.md _implementation/EVIDENCE.yaml
+/wt:commit-and-pr WINT-1012 "Add worktree management" _implementation/EVIDENCE.yaml
 ```
 
 ## Parameters
@@ -28,7 +28,6 @@ Commits all staged changes in the current worktree, pushes to the remote, and cr
 |-----------|----------|---------|-------------|
 | `STORY_ID` | Yes | — | Story identifier (e.g., `WINT-1012`) |
 | `STORY_TITLE` | Yes | — | Human-readable story title for commit message and PR |
-| `PROOF_PATH` | No | — | Path to PROOF file for PR body summary |
 | `EVIDENCE_PATH` | No | — | Path to EVIDENCE.yaml for AC checklist in PR body |
 
 ## What It Does
@@ -72,9 +71,8 @@ This slash command:
    ```
 
    The PR body is built from:
-   - Summary extracted from PROOF file (if `PROOF_PATH` provided)
    - AC checklist extracted from EVIDENCE.yaml (if `EVIDENCE_PATH` provided)
-   - Default body if neither artifact is available
+   - Default body if artifact is not available
 
    **If PR already exists**: Report "updated with new commits" and capture the existing PR number/URL.
 

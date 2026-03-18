@@ -392,7 +392,7 @@ async function seedTasks(db: Db): Promise<void> {
 }
 
 async function seedStories(db: Db): Promise<void> {
-  const existing = await db.select({ id: stories.id }).from(stories).limit(1)
+  const existing = await db.select({ storyId: stories.storyId }).from(stories).limit(1)
   if (existing.length > 0) {
     log('  stories — table has data, skipping', 'yellow')
     return

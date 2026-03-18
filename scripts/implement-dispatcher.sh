@@ -84,6 +84,8 @@ if [[ ! -f "$FEATURE_DIR/stories.index.md" ]]; then
   exit 1
 fi
 
+source "$(dirname "$0")/lib/story-utils.sh"
+
 LOG_DIR="/tmp/${PLAN_SLUG}-impl-logs"
 
 # Create log dir early so piping to tee works
@@ -162,26 +164,12 @@ if [[ -n "$ONLY_LIST" ]]; then
 fi
 
 # ── Helper functions ────────────────────────────────────────────────
-
-find_story_dir() {
-  local STORY_ID="$1"
-  # Search all pipeline stages in progression order
-  for stage_dir in "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/needs-code-review "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/failed-code-review "$FEATURE_DIR"/failed-qa "$FEATURE_DIR"/UAT "$FEATURE_DIR"/done; do
-    if [[ -d "${stage_dir}/${STORY_ID}" ]]; then
-      echo "${stage_dir}/${STORY_ID}"
-      return 0
-    fi
-  done
-  return 1
-}
-
-is_elaborated() {
-  local STORY_DIR="$1"
-  [[ -d "${STORY_DIR}/_implementation" ]] || [[ -f "${STORY_DIR}/_implementation/ELAB.yaml" ]]
-}
+# find_story_dir, is_elaborated — sourced from scripts/lib/story-utils.sh
 
 is_completed() {
   local STORY_ID="$1"
+  # KSOT-3010: With flat layout, check KB state or detect-state artifacts.
+  # Legacy directory checks kept as fallback.
   [[ -d "$FEATURE_DIR/UAT/${STORY_ID}" ]] || [[ -d "$FEATURE_DIR/done/${STORY_ID}" ]]
 }
 
@@ -219,32 +207,8 @@ count_by_state() {
   echo "$COUNT"
 }
 
-check_log_for_failure() {
-  local LOG_FILE="$1"
-  local PHASE="$2"
-  if [[ ! -f "$LOG_FILE" ]]; then
-    echo "FAIL:signal:no-log-file"
-    return 0
-  fi
-  local MATCH
-  MATCH=$(grep -oEi "HARD STOP|SETUP BLOCKED|Phase 0 Validation Failed|cannot proceed|PLANNING BLOCKED|PLANNING FAILED|EXECUTION BLOCKED|DOCUMENTATION BLOCKED" "$LOG_FILE" | head -1) || true
-  if [[ -n "$MATCH" ]]; then
-    echo "FAIL:signal:$MATCH"
-  else
-    echo "OK"
-  fi
-}
-
-verify_stage_transition() {
-  local STORY_ID="$1"
-  shift
-  for stage in "$@"; do
-    if [[ -d "$FEATURE_DIR/${stage}/${STORY_ID}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
+# check_log_for_failure, verify_stage_transition, validate_artifact_schema, validate_phase_gate
+# — sourced from scripts/lib/story-utils.sh
 
 # ── Worker function (runs in background for each story) ─────────────
 process_story() {
@@ -265,6 +229,19 @@ process_story() {
     local LOG_CHECK
     LOG_CHECK=$(check_log_for_failure "$IMPL_LOG" "implement")
     if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" needs-code-review in-progress; then
+      # Gate check: EVIDENCE.yaml must have required fields
+      local STORY_DIR_IMPL
+      STORY_DIR_IMPL=$(find_story_dir "$STORY_ID" 2>/dev/null) || true
+      if [[ -n "$STORY_DIR_IMPL" ]]; then
+        local IMPL_STAGE_IMPL
+        IMPL_STAGE_IMPL=$(basename "$(dirname "$STORY_DIR_IMPL")")
+        if ! validate_phase_gate "${STORY_DIR_IMPL}/_implementation" "$STORY_ID" "in-progress" "needs-code-review" 2>&1; then
+          echo "[dispatch] IMPL GATE:   $STORY_ID (EVIDENCE.yaml gate failed — treating as impl failure)"
+          IMPL_RESULT="fail"
+          set_state "$STORY_ID" "failed:impl"
+          return 1
+        fi
+      fi
       IMPL_RESULT="ok"
       echo "[dispatch] IMPL OK:     $STORY_ID"
     else
@@ -288,8 +265,24 @@ process_story() {
     LOG_CHECK=$(check_log_for_failure "$REVIEW_LOG" "review")
     # A review producing a FAIL verdict (failed-code-review) is a valid outcome
     if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" ready-for-qa failed-code-review; then
-      REVIEW_RESULT="ok"
-      echo "[dispatch] REVW OK:     $STORY_ID"
+      # Gate check: REVIEW.yaml must have valid verdict for whichever stage was reached
+      local STORY_DIR_REVW
+      STORY_DIR_REVW=$(find_story_dir "$STORY_ID" 2>/dev/null) || true
+      if [[ -n "$STORY_DIR_REVW" ]]; then
+        local REVW_STAGE
+        REVW_STAGE=$(basename "$(dirname "$STORY_DIR_REVW")")
+        if ! validate_phase_gate "${STORY_DIR_REVW}/_implementation" "$STORY_ID" "needs-code-review" "$REVW_STAGE" 2>&1; then
+          echo "[dispatch] REVW GATE:   $STORY_ID (REVIEW.yaml gate failed for needs-code-review -> $REVW_STAGE)"
+          REVIEW_RESULT="fail"
+          # Continue to QA anyway — don't return
+        else
+          REVIEW_RESULT="ok"
+          echo "[dispatch] REVW OK:     $STORY_ID"
+        fi
+      else
+        REVIEW_RESULT="ok"
+        echo "[dispatch] REVW OK:     $STORY_ID"
+      fi
     else
       REVIEW_RESULT="fail"
       echo "[dispatch] REVW FAIL:   $STORY_ID ($LOG_CHECK) (see $REVIEW_LOG)"
@@ -309,8 +302,23 @@ process_story() {
     local LOG_CHECK
     LOG_CHECK=$(check_log_for_failure "$QA_LOG" "qa")
     if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" UAT failed-qa; then
-      QA_RESULT="ok"
-      echo "[dispatch] QA   OK:     $STORY_ID"
+      # Gate check: VERIFICATION.yaml must have valid verdict for the reached stage
+      local STORY_DIR_QA
+      STORY_DIR_QA=$(find_story_dir "$STORY_ID" 2>/dev/null) || true
+      if [[ -n "$STORY_DIR_QA" ]]; then
+        local QA_STAGE
+        QA_STAGE=$(basename "$(dirname "$STORY_DIR_QA")")
+        if ! validate_phase_gate "${STORY_DIR_QA}/_implementation" "$STORY_ID" "ready-for-qa" "$QA_STAGE" 2>&1; then
+          echo "[dispatch] QA   GATE:   $STORY_ID (VERIFICATION.yaml gate failed for ready-for-qa -> $QA_STAGE)"
+          QA_RESULT="fail"
+        else
+          QA_RESULT="ok"
+          echo "[dispatch] QA   OK:     $STORY_ID"
+        fi
+      else
+        QA_RESULT="ok"
+        echo "[dispatch] QA   OK:     $STORY_ID"
+      fi
     else
       QA_RESULT="fail"
       echo "[dispatch] QA   FAIL:   $STORY_ID ($LOG_CHECK) (see $QA_LOG)"

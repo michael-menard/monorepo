@@ -41,7 +41,7 @@ vi.mock('@repo/db', () => ({
   },
 }))
 
-vi.mock('@repo/database-schema', () => ({
+vi.mock('@repo/knowledge-base/db', () => ({
   features: mockFeatures,
   cohesionRules: mockCohesionRules,
 }))

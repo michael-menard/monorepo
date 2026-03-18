@@ -65,7 +65,6 @@ FORBIDDEN:
 ```
 
 **Agents**:
-- `dev-implement-proof-writer`
 - `dev-implement-learnings`
 - `elab-epic-aggregation-leader`
 - `elab-epic-updates-leader`

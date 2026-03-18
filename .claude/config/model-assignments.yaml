@@ -146,3 +146,192 @@ kb-writer: ollama:llama3.2:8b
 # KEEP ON CLAUDE - Requires diagnostic reasoning
 # ==============================================================================
 dev-fix-fix-leader: sonnet
+
+# ==============================================================================
+# Architect Workers - Structure Analysis
+# Tier 2: Structural pattern analysis, import boundaries, dependency graphs
+# Use Ollama codellama:13b (mid-tier, adequate for structural checks)
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+architect-barrel-worker: ollama:codellama:13b
+architect-boundary-worker: ollama:codellama:13b
+architect-circular-worker: ollama:codellama:13b
+architect-component-worker: ollama:codellama:13b
+architect-hexagonal-worker: ollama:codellama:13b
+architect-import-worker: ollama:codellama:13b
+architect-interface-worker: ollama:codellama:13b
+architect-route-worker: ollama:codellama:13b
+architect-schema-worker: ollama:codellama:13b
+architect-service-worker: ollama:codellama:13b
+architect-workspace-worker: ollama:codellama:13b
+architect-zod-worker: ollama:codellama:13b
+
+# ==============================================================================
+# Architect Leaders - Cross-cutting Architecture Decisions
+# Tier 1: Requires contextual reasoning across systems
+# KEEP ON CLAUDE SONNET
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+architect-aggregation-leader: sonnet
+architect-api-leader: sonnet
+architect-frontend-leader: sonnet
+architect-packages-leader: sonnet
+architect-setup-leader: ollama:qwen2.5-coder:7b    # Setup validation → Tier 3
+architect-story-review: sonnet
+architect-types-leader: sonnet
+
+# ==============================================================================
+# Audit Workers - Code Health Analysis
+# Tier 2: Structured analysis against known patterns; Ollama adequate
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+audit-accessibility: ollama:codellama:13b
+audit-code-quality: ollama:codellama:13b
+audit-duplication: ollama:codellama:13b
+audit-performance: ollama:codellama:13b
+audit-react: ollama:codellama:13b
+audit-test-coverage: ollama:codellama:13b
+audit-typescript: ollama:codellama:13b
+audit-ui-ux: ollama:codellama:13b
+
+# ==============================================================================
+# Audit Leaders & High-Stakes Audit Agents
+# Tier 1: Aggregation, moderation, debt mapping, devils advocate require reasoning
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+audit-aggregate-leader: sonnet
+audit-debt-map-leader: sonnet
+audit-devils-advocate: sonnet
+audit-moderator: sonnet
+audit-promote-leader: sonnet
+audit-trends-leader: sonnet
+audit-security: sonnet                              # KEEP ON CLAUDE - security analysis
+
+# ==============================================================================
+# Code Review Extensions
+# Tier 2: Pattern-based quality checks beyond lint/syntax
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+code-review-accessibility: ollama:codellama:13b
+code-review-react: ollama:codellama:13b
+code-review-reusability: ollama:codellama:13b
+code-review-typescript: ollama:codellama:13b
+
+# ==============================================================================
+# Metrics Agents - Quantitative Telemetry Collection
+# Tier 3: Deterministic counting and aggregation; no reasoning required
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+churn-index-metrics-agent: ollama:qwen2.5-coder:7b
+leakage-metrics-agent: ollama:qwen2.5-coder:7b
+pcar-metrics-agent: ollama:qwen2.5-coder:7b
+ttdc-metrics-agent: ollama:qwen2.5-coder:7b
+turn-count-metrics-agent: ollama:qwen2.5-coder:7b
+
+# ==============================================================================
+# Pipeline Coordination Agents
+# Tier 1: Workflow state reasoning, lifecycle management decisions
+# KEEP ON CLAUDE SONNET
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+dev-execute-leader: sonnet
+dev-plan-leader: sonnet
+dev-verification-leader: sonnet
+review-aggregate-leader: sonnet
+scrum-master-loop-leader: sonnet
+session-manager: sonnet
+uat-orchestrator: sonnet
+workflow-retro: sonnet
+
+# ==============================================================================
+# Risk & Confidence Agents
+# Tier 1: Multi-factor risk reasoning requires complex judgment
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+confidence-calibrator: sonnet
+risk-predictor: sonnet
+scope-defender: sonnet
+
+# ==============================================================================
+# Knowledge Management Agents
+# Tier 3: Structured reads/writes; minimal reasoning needed
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+doc-sync: ollama:qwen2.5-coder:7b
+kb-compressor: ollama:llama3.2:8b
+pattern-miner: ollama:llama3.2:8b
+
+# ==============================================================================
+# UAT & Scrum Agents
+# Mixed tiers based on task complexity
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+scrum-master-setup-leader: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
+uat-precondition-check: ollama:qwen2.5-coder:7b     # Deterministic checks → Tier 3
+
+# ==============================================================================
+# Elab Autonomous & Delta Agents
+# Tier 1: Autonomous decision-making requires complex reasoning
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+elab-autonomous-decider: sonnet
+elab-delta-review-agent: sonnet
+elab-epic-reviews-leader: sonnet
+elab-escape-hatch-agent: sonnet
+elab-phase-contract-agent: sonnet
+
+# ==============================================================================
+# Evidence & Quality Agents
+# Tier 1: Evidence judgment requires reasoning; quick-review varies
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+evidence-judge: sonnet
+quick-review: sonnet                                # Code review context → Tier 1
+quick-security: sonnet                              # Security analysis → KEEP ON CLAUDE
+quick-test: ollama:codellama:13b                   # Test execution checks → Tier 2
+
+# ==============================================================================
+# Reality Intake Agents
+# Tier 3: Structured data collection; Tier 1 for analysis
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+reality-intake-collector: sonnet                    # Analysis and synthesis → Tier 1
+reality-intake-setup: ollama:qwen2.5-coder:7b      # Setup validation → Tier 3
+
+# ==============================================================================
+# Heuristic & Experiment Agents
+# Tier 1: Pattern evolution and experiment analysis require reasoning
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+experiment-analyzer: sonnet
+heuristic-evolver: sonnet
+improvement-proposer: sonnet
+
+# ==============================================================================
+# Gap & Hygiene Agents
+# Tier 2/1: Gap analytics needs reasoning; hygiene is structural
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+gap-analytics-agent: sonnet
+gap-hygiene-agent: ollama:codellama:13b
+
+# ==============================================================================
+# UI/UX Review Agents
+# Mixed tiers based on complexity
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+ui-ux-review-report-leader: sonnet
+ui-ux-review-reviewer: sonnet
+ui-ux-review-setup-leader: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
+
+# ==============================================================================
+# General / Catch-all Agents
+# ADDED: WINT-0220 v1.1.0
+# ==============================================================================
+pm: sonnet                                         # PM reasoning → Tier 1
+qa: ollama:codellama:13b                           # QA structural checks → Tier 2
+uiux: sonnet                                       # UX reasoning → Tier 1
+commitment-gate-agent: sonnet                      # Alias for commitment-gate (critical decisions)
+story-attack-agent: sonnet                         # Alias for story-attack
+story-synthesize-agent: sonnet                     # Alias for story-synthesize
+readiness-score-agent: sonnet                      # Readiness scoring → Tier 1

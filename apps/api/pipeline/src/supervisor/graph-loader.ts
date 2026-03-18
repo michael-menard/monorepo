@@ -13,7 +13,14 @@
  * APIP-0020: Supervisor Loop (Plain TypeScript)
  */
 
-import type { GraphRunners, RunElaborationFn, RunStoryCreationFn } from './dispatch-router.js'
+import type {
+  GraphRunners,
+  RunElaborationFn,
+  RunStoryCreationFn,
+  RunDevImplementFn,
+  RunReviewFn,
+  RunQAVerifyFn,
+} from './dispatch-router.js'
 
 /**
  * Load production graph runners from the orchestrator graphs dist.
@@ -40,5 +47,8 @@ export async function loadGraphRunners(): Promise<GraphRunners> {
   return {
     runElaboration: mod.runElaboration as RunElaborationFn,
     runStoryCreation: mod.runStoryCreation as RunStoryCreationFn,
+    runDevImplement: mod.runDevImplement as RunDevImplementFn,
+    runReview: mod.runReview as RunReviewFn,
+    runQAVerify: mod.runQAVerify as RunQAVerifyFn,
   }
 }

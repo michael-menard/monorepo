@@ -61,7 +61,7 @@ export const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  DB_POOL_SIZE: z.coerce.number().int().positive().max(20).default(5),
+  DB_POOL_SIZE: z.coerce.number().int().positive().max(20).default(3),
   // Search-specific timeouts (KNOW-0052 AC6)
   KB_SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(DEFAULT_TIMEOUTS.KB_SEARCH),
   KB_GET_RELATED_TIMEOUT_MS: z.coerce
@@ -385,10 +385,14 @@ export function setupShutdownHandlers(
     handleShutdown('uncaughtException')
   })
 
-  // Handle unhandled promise rejections
+  // Handle unhandled promise rejections — log but don't exit.
+  // Killing the process here would permanently destroy the MCP session since
+  // Claude Code won't restart a stdio MCP server mid-session.
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled rejection', { reason, promise: String(promise) })
-    handleShutdown('unhandledRejection')
+    logger.error('Unhandled rejection (non-fatal, server continuing)', {
+      reason,
+      promise: String(promise),
+    })
   })
 
   logger.info('Shutdown handlers registered', {

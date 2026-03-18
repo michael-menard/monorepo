@@ -8,10 +8,34 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, and, ne, isNotNull, notInArray, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, isNull, notInArray, inArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { plans } from '../db/schema.js'
+import { plans, planDependencies, planExecutionLog } from '../db/schema.js'
+import { kb_create_plan_revision } from './plan-revision-operations.js'
+
+// ============================================================================
+// Explicit column selectors — guard against schema-vs-DB drift
+// ============================================================================
+
+const planColumns = {
+  id: plans.id,
+  planSlug: plans.planSlug,
+  title: plans.title,
+  summary: plans.summary,
+  planType: plans.planType,
+  status: plans.status,
+  storyPrefix: plans.storyPrefix,
+  priority: plans.priority,
+  parentPlanId: plans.parentPlanId,
+  tags: plans.tags,
+  supersededBy: plans.supersededBy,
+  rawContent: plans.rawContent,
+  sections: plans.sections,
+  createdAt: plans.createdAt,
+  updatedAt: plans.updatedAt,
+  deletedAt: plans.deletedAt,
+} as const
 
 // ============================================================================
 // Helpers
@@ -66,6 +90,60 @@ async function resolveParentPlanId(
   return result[0]!.id
 }
 
+/**
+ * Sync the `plan_dependencies` join table to match a desired set of dependency slugs.
+ *
+ * Performs a diff: inserts missing rows, deletes stale rows, and leaves existing
+ * rows untouched. The join table is the single source of truth for plan blocking
+ * dependencies, powering `plan_summary_view`, auto-block, and auto-unblock.
+ *
+ * Passing an empty array clears all dependency rows for the plan.
+ * Passing null/undefined is a no-op (caller should guard).
+ */
+async function syncPlanDependencies(
+  db: NodePgDatabase<typeof schema>,
+  planSlug: string,
+  desiredSlugs: string[],
+): Promise<void> {
+  // Fetch current rows from the join table
+  const currentRows = await db
+    .select({ dependsOnSlug: planDependencies.dependsOnSlug })
+    .from(planDependencies)
+    .where(eq(planDependencies.planSlug, planSlug))
+
+  const currentSet = new Set(currentRows.map(r => r.dependsOnSlug))
+  const desiredSet = new Set(desiredSlugs)
+
+  // Slugs to insert (in desired but not in current)
+  const toInsert = desiredSlugs.filter(s => !currentSet.has(s))
+
+  // Slugs to delete (in current but not in desired)
+  const toDelete = currentRows.map(r => r.dependsOnSlug).filter(s => !desiredSet.has(s))
+
+  // Delete stale rows
+  if (toDelete.length > 0) {
+    await db
+      .delete(planDependencies)
+      .where(
+        and(
+          eq(planDependencies.planSlug, planSlug),
+          inArray(planDependencies.dependsOnSlug, toDelete),
+        ),
+      )
+  }
+
+  // Insert missing rows
+  if (toInsert.length > 0) {
+    await db.insert(planDependencies).values(
+      toInsert.map(depSlug => ({
+        planSlug,
+        dependsOnSlug: depSlug,
+        satisfied: false,
+      })),
+    )
+  }
+}
+
 // ============================================================================
 // Upsert Input Schema
 // ============================================================================
@@ -86,10 +164,8 @@ export const KbUpsertPlanInputSchema = z.object({
   /** First paragraph — quick description */
   summary: z.string().optional(),
 
-  /** Category of plan */
-  plan_type: z
-    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
-    .optional(),
+  /** Category of plan - simple types or compound format {work_type}:{domain} */
+  plan_type: z.string().optional(),
 
   /** Status lifecycle */
   status: z
@@ -101,18 +177,13 @@ export const KbUpsertPlanInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional()
     .default('draft'),
 
-  /** Target feature directory (e.g., 'plans/future/platform/autonomous-pipeline') */
-  feature_dir: z.string().optional(),
-
   /** Story ID prefix (e.g., 'APIP') */
   story_prefix: z.string().optional(),
-
-  /** Estimated number of stories */
-  estimated_stories: z.number().int().optional(),
 
   /** Priority level (P1 highest, P5 lowest, default P3) */
   priority: z.enum(['P1', 'P2', 'P3', 'P4', 'P5']).optional().default('P3'),
@@ -128,6 +199,12 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan) */
   parent_plan_slug: z.string().optional(),
+
+  /** Parsed heading breakdown [{heading, level, startLine}] */
+  sections: z.array(z.record(z.unknown())).optional(),
+
+  /** Format version for content parsing (yaml_frontmatter, inline_header, etc.) */
+  format_version: z.string().optional(),
 })
 
 export type KbUpsertPlanInput = z.infer<typeof KbUpsertPlanInputSchema>
@@ -157,6 +234,7 @@ export const KbUpdatePlanInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional(),
 
@@ -166,25 +244,20 @@ export const KbUpdatePlanInputSchema = z.object({
   /** New title */
   title: z.string().min(1).optional(),
 
-  /** New plan type */
-  plan_type: z
-    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
-    .optional(),
-
-  /** New feature directory */
-  feature_dir: z.string().optional().nullable(),
+  /** New plan type - simple types or compound format {work_type}:{domain} */
+  plan_type: z.string().optional(),
 
   /** New story prefix */
-  story_prefix: z.string().optional().nullable(),
-
-  /** New estimated stories count */
-  estimated_stories: z.number().int().optional().nullable(),
+  story_prefix: z.string().nullable().optional(),
 
   /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
-  dependencies: z.array(z.string()).optional().nullable(),
+  dependencies: z.array(z.string()).nullable().optional(),
 
   /** Parent plan slug (null to clear, string to set) */
-  parent_plan_slug: z.string().optional().nullable(),
+  parent_plan_slug: z.string().nullable().optional(),
+
+  /** UUID of the plan that supersedes/replaces this one */
+  superseded_by: z.string().uuid().nullable().optional(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -217,6 +290,7 @@ export const KbListPlansInputSchema = z.object({
       'implemented',
       'superseded',
       'archived',
+      'blocked',
     ])
     .optional(),
 
@@ -297,21 +371,36 @@ export async function kb_get_plan(
   deps: PlanCrudDeps,
   input: KbGetPlanInput,
 ): Promise<{
-  plan: typeof plans.$inferSelect | null
+  plan: (Partial<typeof plans.$inferSelect> & { dependencies?: string[] }) | null
   message: string
 }> {
   const validated = KbGetPlanInputSchema.parse(input)
 
+  // Use explicit column selection to avoid schema-vs-DB drift
   const result = await deps.db
-    .select()
+    .select(planColumns)
     .from(plans)
-    .where(eq(plans.planSlug, validated.plan_slug))
+    .where(and(eq(plans.planSlug, validated.plan_slug), isNull(plans.deletedAt)))
     .limit(1)
 
   const plan = result[0] ?? null
 
+  // Fetch dependencies from the join table (best-effort — schema may differ from DB)
+  let dependencies: string[] = []
+  if (plan) {
+    try {
+      const depRows = await deps.db
+        .select({ dependsOnSlug: planDependencies.dependsOnSlug })
+        .from(planDependencies)
+        .where(eq(planDependencies.planSlug, validated.plan_slug))
+      dependencies = depRows.map(r => r.dependsOnSlug)
+    } catch {
+      // Non-fatal: plan_dependencies schema may not match — return empty array
+    }
+  }
+
   return {
-    plan,
+    plan: plan ? { ...plan, dependencies } : null,
     message: plan
       ? `Found plan: ${plan.title}`
       : `No plan found with slug '${validated.plan_slug}'`,
@@ -334,7 +423,7 @@ export async function kb_list_plans(
 }> {
   const validated = KbListPlansInputSchema.parse(input)
 
-  const conditions: SQL[] = []
+  const conditions: SQL[] = [isNull(plans.deletedAt)]
 
   if (validated.status) {
     conditions.push(eq(plans.status, validated.status))
@@ -350,7 +439,7 @@ export async function kb_list_plans(
   }
   if (validated.parent_plan_slug) {
     conditions.push(
-      sql`${plans.parentPlanId} = (SELECT id FROM plans WHERE plan_slug = ${validated.parent_plan_slug})`,
+      sql`${plans.parentPlanId} = (SELECT id FROM workflow.plans WHERE plan_slug = ${validated.parent_plan_slug})`,
     )
   }
 
@@ -364,44 +453,14 @@ export async function kb_list_plans(
 
   const total = countResult[0]?.count ?? 0
 
-  // Select columns based on include_content flag
-  const selectColumns = validated.include_content
-    ? undefined // select all
-    : {
-        id: plans.id,
-        planSlug: plans.planSlug,
-        title: plans.title,
-        summary: plans.summary,
-        planType: plans.planType,
-        status: plans.status,
-        featureDir: plans.featureDir,
-        storyPrefix: plans.storyPrefix,
-        estimatedStories: plans.estimatedStories,
-        priority: plans.priority,
-        phases: plans.phases,
-        dependencies: plans.dependencies,
-        parentPlanId: plans.parentPlanId,
-        tags: plans.tags,
-        sourceFile: plans.sourceFile,
-        createdAt: plans.createdAt,
-        updatedAt: plans.updatedAt,
-      }
-
-  const result = selectColumns
-    ? await deps.db
-        .select(selectColumns)
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(plans.createdAt)
-    : await deps.db
-        .select()
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(plans.createdAt)
+  // Always use explicit columns; include_content adds planDetails join
+  const result = await deps.db
+    .select(planColumns)
+    .from(plans)
+    .where(whereClause)
+    .limit(validated.limit)
+    .offset(validated.offset)
+    .orderBy(plans.createdAt)
 
   return {
     plans: result,
@@ -436,24 +495,21 @@ export async function kb_upsert_plan(
   const values = {
     planSlug: validated.plan_slug,
     title: validated.title,
-    rawContent: validated.raw_content,
     summary: validated.summary ?? null,
     planType: validated.plan_type ?? null,
     status: validated.status ?? 'draft',
-    featureDir: validated.feature_dir ?? null,
     storyPrefix: validated.story_prefix ?? null,
-    estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
-    dependencies: validated.dependencies ?? null,
     parentPlanId,
     tags: validated.tags ?? null,
-    sourceFile: validated.source_file ?? null,
+    rawContent: validated.raw_content,
+    sections: validated.sections ?? null,
     updatedAt: now,
   }
 
   const result = await deps.db
     .insert(plans)
-    .values({ ...values, importedAt: now, createdAt: now })
+    .values({ ...values, createdAt: now })
     .onConflictDoUpdate({
       target: plans.planSlug,
       set: { ...values },
@@ -462,6 +518,29 @@ export async function kb_upsert_plan(
 
   const plan = result[0]!
   const created = plan.createdAt.getTime() === now.getTime()
+
+  // Sync plan_dependencies join table (best-effort — schema may differ from DB)
+  try {
+    await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+    if ((validated.dependencies ?? []).length > 0) {
+      await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  // Create revision history entry
+  try {
+    await kb_create_plan_revision(deps, {
+      plan_slug: validated.plan_slug,
+      raw_content: validated.raw_content,
+      sections: validated.sections,
+      change_reason: created ? 'Initial import' : 'Content update via upsert',
+      changed_by: 'kb_upsert_plan',
+    })
+  } catch {
+    // Non-fatal: revision history is best-effort
+  }
 
   return {
     plan,
@@ -490,7 +569,7 @@ export async function kb_update_plan(
 
   // Check if plan exists
   const existing = await deps.db
-    .select()
+    .select(planColumns)
     .from(plans)
     .where(eq(plans.planSlug, validated.plan_slug))
     .limit(1)
@@ -516,11 +595,8 @@ export async function kb_update_plan(
   if (validated.tags !== undefined) updates.tags = validated.tags
   if (validated.title !== undefined) updates.title = validated.title
   if (validated.plan_type !== undefined) updates.planType = validated.plan_type
-  if (validated.feature_dir !== undefined) updates.featureDir = validated.feature_dir
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
-  if (validated.estimated_stories !== undefined)
-    updates.estimatedStories = validated.estimated_stories
-  if (validated.dependencies !== undefined) updates.dependencies = validated.dependencies
+  if (validated.superseded_by !== undefined) updates.supersededBy = validated.superseded_by
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null
@@ -536,11 +612,138 @@ export async function kb_update_plan(
 
   const plan = result[0] ?? null
 
+  // Sync plan_dependencies join table (best-effort — schema may differ from DB)
+  if (plan && validated.dependencies !== undefined) {
+    try {
+      await syncPlanDependencies(deps.db, validated.plan_slug, validated.dependencies ?? [])
+      if ((validated.dependencies ?? []).length > 0) {
+        await autoBlockPlanIfNeeded(deps.db, validated.plan_slug)
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  // Auto-unblock: when status changes to 'implemented', check dependent plans
+  if (plan && validated.status === 'implemented') {
+    try {
+      await handlePlanImplemented(deps.db, validated.plan_slug)
+    } catch {
+      // Non-fatal
+    }
+  }
+
   return {
     plan,
     updated: true,
     message: `Plan '${validated.plan_slug}' updated successfully`,
   }
+}
+
+// ============================================================================
+// Auto-Block / Auto-Unblock Helpers
+// ============================================================================
+
+/**
+ * When a plan reaches 'implemented', mark the dependency as satisfied
+ * and unblock any dependent plans whose deps are now all satisfied.
+ */
+async function handlePlanImplemented(
+  db: NodePgDatabase<typeof schema>,
+  implementedSlug: string,
+): Promise<void> {
+  // Mark all dependencies on this plan as satisfied
+  await db
+    .update(planDependencies)
+    .set({ satisfied: true })
+    .where(eq(planDependencies.dependsOnSlug, implementedSlug))
+
+  // Find all plans that depend on this one
+  const dependentSlugs = await db
+    .select({ planSlug: planDependencies.planSlug })
+    .from(planDependencies)
+    .where(eq(planDependencies.dependsOnSlug, implementedSlug))
+
+  // For each dependent plan, check if ALL its deps are now satisfied
+  for (const { planSlug } of dependentSlugs) {
+    const unsatisfied = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(planDependencies)
+      .where(and(eq(planDependencies.planSlug, planSlug), eq(planDependencies.satisfied, false)))
+
+    if ((unsatisfied[0]?.count ?? 0) === 0) {
+      // All deps satisfied — unblock the plan, restore to 'accepted'
+      const current = await db
+        .select({ status: plans.status })
+        .from(plans)
+        .where(eq(plans.planSlug, planSlug))
+        .limit(1)
+
+      if (current[0]?.status === 'blocked') {
+        await db
+          .update(plans)
+          .set({ status: 'accepted', updatedAt: new Date() })
+          .where(eq(plans.planSlug, planSlug))
+
+        // Log the unblock event
+        try {
+          await db.insert(planExecutionLog).values({
+            planSlug,
+            entryType: 'unblocked',
+            message: `Auto-unblocked: dependency '${implementedSlug}' reached implemented`,
+            metadata: { trigger: implementedSlug },
+          })
+        } catch {
+          // Non-fatal
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Auto-block a plan when it has unsatisfied dependencies.
+ * Saves current status to pre_blocked_status and sets status to 'blocked'.
+ */
+export async function autoBlockPlanIfNeeded(
+  db: NodePgDatabase<typeof schema>,
+  planSlug: string,
+): Promise<boolean> {
+  // Check for unsatisfied dependencies
+  const unsatisfied = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(planDependencies)
+    .where(and(eq(planDependencies.planSlug, planSlug), eq(planDependencies.satisfied, false)))
+
+  if ((unsatisfied[0]?.count ?? 0) === 0) return false
+
+  // Check current status — don't re-block if already blocked
+  const current = await db
+    .select({ status: plans.status })
+    .from(plans)
+    .where(eq(plans.planSlug, planSlug))
+    .limit(1)
+
+  if (!current[0] || current[0].status === 'blocked') return false
+
+  // Block the plan
+  await db
+    .update(plans)
+    .set({ status: 'blocked', updatedAt: new Date() })
+    .where(eq(plans.planSlug, planSlug))
+
+  // Log the block event
+  try {
+    await db.insert(planExecutionLog).values({
+      planSlug,
+      entryType: 'blocked',
+      message: `Auto-blocked: has unsatisfied dependencies`,
+    })
+  } catch {
+    // Non-fatal
+  }
+
+  return true
 }
 
 /**
@@ -558,7 +761,7 @@ export async function kb_get_roadmap(
   deps: PlanCrudDeps,
   input: KbGetRoadmapInput,
 ): Promise<{
-  plans: Array<Partial<typeof plans.$inferSelect>>
+  plans: Array<Partial<typeof plans.$inferSelect> & { dependencies: string[] }>
   total: number
   message: string
 }> {
@@ -586,49 +789,43 @@ export async function kb_get_roadmap(
 
   const total = countResult[0]?.count ?? 0
 
-  // Select columns based on include_content flag
-  const selectColumns = validated.include_content
-    ? undefined // select all
-    : {
-        id: plans.id,
-        planSlug: plans.planSlug,
-        title: plans.title,
-        summary: plans.summary,
-        planType: plans.planType,
-        status: plans.status,
-        featureDir: plans.featureDir,
-        storyPrefix: plans.storyPrefix,
-        estimatedStories: plans.estimatedStories,
-        priority: plans.priority,
-        phases: plans.phases,
-        dependencies: plans.dependencies,
-        parentPlanId: plans.parentPlanId,
-        tags: plans.tags,
-        sourceFile: plans.sourceFile,
-        createdAt: plans.createdAt,
-        updatedAt: plans.updatedAt,
-      }
-
   const orderBy = [plans.priority, plans.status, plans.planSlug]
 
-  const result = selectColumns
-    ? await deps.db
-        .select(selectColumns)
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(...orderBy)
-    : await deps.db
-        .select()
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(...orderBy)
+  // Fetch plans (no left-join on planDetails — dependencies come from join table)
+  const result = await deps.db
+    .select(planColumns)
+    .from(plans)
+    .where(whereClause)
+    .limit(validated.limit)
+    .offset(validated.offset)
+    .orderBy(...orderBy)
+
+  // Batch-fetch dependencies from the join table for all returned plans
+  const slugs = result.map(r => r.planSlug)
+  const depRows =
+    slugs.length > 0
+      ? await deps.db
+          .select({
+            planSlug: planDependencies.planSlug,
+            dependsOnSlug: planDependencies.dependsOnSlug,
+          })
+          .from(planDependencies)
+          .where(inArray(planDependencies.planSlug, slugs))
+      : []
+
+  // Group by plan slug
+  const depsBySlug = new Map<string, string[]>()
+  for (const row of depRows) {
+    const arr = depsBySlug.get(row.planSlug) ?? []
+    arr.push(row.dependsOnSlug)
+    depsBySlug.set(row.planSlug, arr)
+  }
 
   return {
-    plans: result,
+    plans: result.map(r => ({
+      ...r,
+      dependencies: depsBySlug.get(r.planSlug) ?? [],
+    })),
     total,
     message: `Roadmap: ${result.length} active plans (${total} total)`,
   }

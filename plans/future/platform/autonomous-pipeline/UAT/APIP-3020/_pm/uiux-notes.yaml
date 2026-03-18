@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-3020 has no UI surface. The Pattern Miner is a headless background cron job and the wint.model_affinity table is a backend-only database schema. No React components, no HTTP endpoints, no operator-facing UI are part of this story. Operator log visibility (structured @repo/logger output) is addressed in APIP-5005 (Minimal Operator CLI). No Playwright tests required."

@@ -154,7 +154,7 @@ Lightweight update of an existing plan's metadata fields.
 |----------|----------|-------------|
 | plan_slug | yes | The slug of the plan to update |
 | `--priority=X` | no | New priority (P1-P5) |
-| `--status=X` | no | New status (draft, accepted, stories-created, in-progress, implemented, superseded, archived) |
+| `--status=X` | no | New status (draft, active, accepted, stories-created, in-progress, implemented, superseded, archived, blocked) |
 | `--prefix=X` | no | New story prefix |
 | `--type=X` | no | New plan type |
 | `--tags=a,b,c` | no | New tags (comma-separated, replaces existing) |

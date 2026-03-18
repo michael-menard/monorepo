@@ -12,7 +12,75 @@ import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'driz
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
-import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
+import {
+  StoryStateSchema,
+  StoryPhaseSchema,
+  StoryPrioritySchema,
+  StoryTypeSchema,
+} from '../__types__/index.js'
+
+// ============================================================================
+// Explicit column selectors — guard against schema-vs-DB drift
+// ============================================================================
+
+const storyColumns = {
+  storyId: stories.storyId,
+  feature: stories.feature,
+  title: stories.title,
+  description: stories.description,
+  state: stories.state,
+  priority: stories.priority,
+  blockedReason: stories.blockedReason,
+  blockedByStory: stories.blockedByStory,
+  startedAt: stories.startedAt,
+  completedAt: stories.completedAt,
+  fileHash: stories.fileHash,
+  createdAt: stories.createdAt,
+  updatedAt: stories.updatedAt,
+} as const
+
+const storyArtifactColumns = {
+  id: storyArtifacts.id,
+  storyId: storyArtifacts.storyId,
+  artifactType: storyArtifacts.artifactType,
+  artifactName: storyArtifacts.artifactName,
+  kbEntryId: storyArtifacts.kbEntryId,
+  phase: storyArtifacts.phase,
+  iteration: storyArtifacts.iteration,
+  summary: storyArtifacts.summary,
+  detailTable: storyArtifacts.detailTable,
+  detailId: storyArtifacts.detailId,
+  createdAt: storyArtifacts.createdAt,
+  updatedAt: storyArtifacts.updatedAt,
+} as const
+
+const storyDependencyColumns = {
+  id: storyDependencies.id,
+  storyId: storyDependencies.storyId,
+  dependsOnId: storyDependencies.dependsOnId,
+  dependencyType: storyDependencies.dependencyType,
+  createdAt: storyDependencies.createdAt,
+} as const
+
+// ============================================================================
+// Shared Schemas
+// ============================================================================
+
+/**
+ * Recursive schema for arbitrary JSON values stored in JSONB columns.
+ * Replaces z.any() for acceptance_criteria and similar JSONB fields.
+ */
+type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue }
+const JSONValueSchema: z.ZodType<JSONValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(JSONValueSchema),
+    z.record(JSONValueSchema),
+  ]),
+)
 
 // ============================================================================
 // Input Schemas
@@ -45,7 +113,7 @@ export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
  * regardless of flags.
  */
 export const KbGetStoryResultSchema = z.object({
-  story: z.custom<typeof stories.$inferSelect>().nullable(),
+  story: z.custom<Partial<typeof stories.$inferSelect>>().nullable(),
   artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
   dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
   message: z.string(),
@@ -60,7 +128,7 @@ export const KbListStoriesInputSchema = z.object({
   /** Filter by feature prefix (e.g., 'wish') */
   feature: z.string().optional(),
 
-  /** Filter by epic name (e.g., 'platform') */
+  /** Filter by epic name (e.g., 'platform') — note: epic is not a column on workflow.stories; this filter is ignored */
   epic: z.string().optional(),
 
   /** Filter by workflow state (singular; ignored when states[] is provided) */
@@ -69,10 +137,10 @@ export const KbListStoriesInputSchema = z.object({
   /** Filter by multiple workflow states (takes precedence over singular state) */
   states: z.array(StoryStateSchema).optional(),
 
-  /** Filter by implementation phase */
+  /** Filter by implementation phase — note: phase is not a column on workflow.stories; this filter is ignored */
   phase: StoryPhaseSchema.optional(),
 
-  /** Filter by blocked status */
+  /** Filter by blocked status — note: blocked is not a column on workflow.stories; this filter is ignored */
   blocked: z.boolean().optional(),
 
   /** Filter by priority */
@@ -94,6 +162,9 @@ export const KbListStoriesInputSchema = z.object({
     ])
     .optional(),
 
+  /** Filter stories linked to this specific plan slug via plan_story_links */
+  plan_slug: z.string().optional(),
+
   /** Maximum results (1-100, default 20) */
   limit: z.number().int().min(1).max(100).optional().default(20),
 
@@ -113,23 +184,23 @@ export const KbUpdateStoryStatusInputSchema = z.object({
   /** New workflow state */
   state: StoryStateSchema.optional(),
 
-  /** New implementation phase */
+  /** New implementation phase — note: phase is not a column on workflow.stories; this field is accepted but not persisted */
   phase: StoryPhaseSchema.optional(),
 
-  /** New iteration count */
+  /** New iteration count — note: iteration is not a column on workflow.stories; this field is accepted but not persisted */
   iteration: z.number().int().min(0).optional(),
 
-  /** Set blocked status */
+  /** Set blocked status — note: blocked is not a column on workflow.stories; this field is accepted but not persisted */
   blocked: z.boolean().optional(),
 
   /** Reason for being blocked */
-  blocked_reason: z.string().optional().nullable(),
+  blocked_reason: z.string().nullable().optional(),
 
   /** Story ID that blocks this one */
-  blocked_by_story: z.string().optional().nullable(),
+  blocked_by_story: z.string().nullable().optional(),
 
   /** New priority */
-  priority: StoryPrioritySchema.optional().nullable(),
+  priority: StoryPrioritySchema.nullable().optional(),
 })
 
 export type KbUpdateStoryStatusInput = z.infer<typeof KbUpdateStoryStatusInputSchema>
@@ -137,26 +208,42 @@ export type KbUpdateStoryStatusInput = z.infer<typeof KbUpdateStoryStatusInputSc
 /**
  * Input schema for kb_update_story tool.
  *
- * Updates story metadata fields (epic, feature, title, priority, points).
+ * Updates story metadata fields (feature, title, priority).
  */
 export const KbUpdateStoryInputSchema = z.object({
   /** Story ID to update (e.g., 'LNGG-0010') */
   story_id: z.string().min(1, 'Story ID cannot be empty'),
 
-  /** New epic value */
-  epic: z.string().optional().nullable(),
+  /** New epic value — note: epic is not a column on workflow.stories; this field is accepted but not persisted */
+  epic: z.string().nullable().optional(),
 
   /** New feature value */
-  feature: z.string().optional().nullable(),
+  feature: z.string().nullable().optional(),
 
   /** New title */
   title: z.string().optional(),
 
   /** New priority */
-  priority: StoryPrioritySchema.optional().nullable(),
+  priority: StoryPrioritySchema.nullable().optional(),
 
-  /** New story points */
-  points: z.number().int().min(0).optional().nullable(),
+  /** New story points — note: points is not a column on workflow.stories; this field is accepted but not persisted */
+  points: z.number().int().min(0).nullable().optional(),
+
+  /** Human-readable story description */
+  description: z.string().nullable().optional(),
+
+  /**
+   * Acceptance criteria as JSONB (arbitrary structure).
+   * Note: acceptanceCriteria is not a column on workflow.stories; this field is accepted but not persisted.
+   * Pass null to explicitly clear. Omit to leave unchanged.
+   */
+  acceptance_criteria: JSONValueSchema.nullable().optional(),
+
+  /** Non-goals for this story (text array). Note: nonGoals is not a column on workflow.stories; not persisted. */
+  non_goals: z.array(z.string()).nullable().optional(),
+
+  /** Packages touched by this story (text array). Note: packages is not a column on workflow.stories; not persisted. */
+  packages: z.array(z.string()).nullable().optional(),
 })
 
 export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
@@ -199,6 +286,89 @@ export const KbGetNextStoryInputSchema = z.object({
 
 export type KbGetNextStoryInput = z.infer<typeof KbGetNextStoryInputSchema>
 
+/**
+ * Input schema for kb_create_story tool.
+ *
+ * Upserts a story by story_id — creates a new record if the ID does not exist,
+ * or merges the provided fields into the existing record (partial-merge semantics).
+ * Fields not supplied in the input are NOT overwritten.
+ */
+export const KbCreateStoryInputSchema = z.object({
+  /** Story ID (required, used as upsert key) */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** Story title (required for create, optional on update) */
+  title: z.string().min(1, 'Story title cannot be empty').optional(),
+
+  /** Feature prefix (e.g., 'kfmb', 'wish') */
+  feature: z.string().nullable().optional(),
+
+  /** Epic name — note: epic is not a column on workflow.stories; accepted but not persisted */
+  epic: z.string().nullable().optional(),
+
+  /** Relative path to story directory — not a column on workflow.stories; accepted but not persisted */
+  story_dir: z.string().nullable().optional(),
+
+  /** Story file name — not a column on workflow.stories; accepted but not persisted */
+  story_file: z.string().optional(),
+
+  /** Type of story: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt' — not a column on workflow.stories; accepted but not persisted */
+  story_type: StoryTypeSchema.nullable().optional(),
+
+  /** Story points estimate — not a column on workflow.stories; accepted but not persisted */
+  points: z.number().int().min(0).nullable().optional(),
+
+  /** Priority level: 'critical' | 'high' | 'medium' | 'low' */
+  priority: StoryPrioritySchema.nullable().optional(),
+
+  /** Workflow state */
+  state: StoryStateSchema.optional(),
+
+  /** Implementation phase — not a column on workflow.stories; accepted but not persisted */
+  phase: StoryPhaseSchema.optional(),
+
+  /** Whether story is blocked — not a column on workflow.stories; accepted but not persisted */
+  blocked: z.boolean().optional(),
+
+  /** Reason for being blocked */
+  blocked_reason: z.string().nullable().optional(),
+
+  /** Story ID that blocks this one */
+  blocked_by_story: z.string().nullable().optional(),
+
+  /** Scope flag: touches backend code — not a column on workflow.stories; accepted but not persisted */
+  touches_backend: z.boolean().optional(),
+
+  /** Scope flag: touches frontend code — not a column on workflow.stories; accepted but not persisted */
+  touches_frontend: z.boolean().optional(),
+
+  /** Scope flag: touches database — not a column on workflow.stories; accepted but not persisted */
+  touches_database: z.boolean().optional(),
+
+  /** Scope flag: touches infrastructure — not a column on workflow.stories; accepted but not persisted */
+  touches_infra: z.boolean().optional(),
+
+  /** Human-readable story description */
+  description: z.string().nullable().optional(),
+
+  /**
+   * Acceptance criteria as JSONB (arbitrary structure).
+   * Note: acceptanceCriteria is not a column on workflow.stories; not persisted.
+   */
+  acceptance_criteria: JSONValueSchema.nullable().optional(),
+
+  /** Non-goals for this story — not a column on workflow.stories; not persisted */
+  non_goals: z.array(z.string()).nullable().optional(),
+
+  /** Packages touched by this story — not a column on workflow.stories; not persisted */
+  packages: z.array(z.string()).nullable().optional(),
+
+  /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
+  plan_slug: z.string().nullable().optional(),
+})
+
+export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>
+
 // ============================================================================
 // Dependencies
 // ============================================================================
@@ -225,7 +395,7 @@ export async function kb_get_story(
   const validated = KbGetStoryInputSchema.parse(input)
 
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -246,21 +416,21 @@ export async function kb_get_story(
   let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
   if (validated.include_artifacts) {
     artifacts = await deps.db
-      .select()
+      .select(storyArtifactColumns)
       .from(storyArtifacts)
       .where(eq(storyArtifacts.storyId, validated.story_id))
   }
 
-  // Conditionally fetch dependencies — bidirectional (outbound storyId=X OR inbound targetStoryId=X)
+  // Conditionally fetch dependencies — bidirectional (outbound storyId=X OR inbound dependsOnId=X)
   let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
   if (validated.include_dependencies) {
     dependencies = await deps.db
-      .select()
+      .select(storyDependencyColumns)
       .from(storyDependencies)
       .where(
         or(
           eq(storyDependencies.storyId, validated.story_id),
-          eq(storyDependencies.targetStoryId, validated.story_id),
+          eq(storyDependencies.dependsOnId, validated.story_id),
         ),
       )
   }
@@ -284,7 +454,7 @@ export async function kb_list_stories(
   deps: StoryCrudDeps,
   input: KbListStoriesInput,
 ): Promise<{
-  stories: (typeof stories.$inferSelect)[]
+  stories: Partial<typeof stories.$inferSelect>[]
   total: number
   message: string
 }> {
@@ -297,23 +467,25 @@ export async function kb_list_stories(
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
-  if (validated.epic) {
-    conditions.push(eq(stories.epic, validated.epic))
-  }
   // states[] takes precedence over singular state
   if (validated.states?.length) {
     conditions.push(inArray(stories.state, validated.states))
   } else if (validated.state) {
     conditions.push(eq(stories.state, validated.state))
   }
-  if (validated.phase) {
-    conditions.push(eq(stories.phase, validated.phase))
-  }
-  if (validated.blocked !== undefined) {
-    conditions.push(eq(stories.blocked, validated.blocked))
-  }
   if (validated.priority) {
     conditions.push(eq(stories.priority, validated.priority))
+  }
+
+  // Filter by plan slug (direct match on plan_story_links)
+  if (validated.plan_slug) {
+    conditions.push(
+      sql`${stories.storyId} IN (
+        SELECT ${planStoryLinks.storyId}
+        FROM ${planStoryLinks}
+        WHERE ${eq(planStoryLinks.planSlug, validated.plan_slug)}
+      )`,
+    )
   }
 
   // Filter by plan tag or plan status via plan_story_links join
@@ -351,7 +523,7 @@ export async function kb_list_stories(
 
   // Get paginated results
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(desc(stories.updatedAt))
@@ -376,7 +548,7 @@ export async function kb_update_story_status(
   deps: StoryCrudDeps,
   input: KbUpdateStoryStatusInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   updated: boolean
   message: string
 }> {
@@ -384,7 +556,7 @@ export async function kb_update_story_status(
 
   // Check if story exists
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -399,7 +571,7 @@ export async function kb_update_story_status(
 
   // Terminal-state guard: prevent transitions OUT of terminal states
   // Same-state transitions are always allowed (idempotent)
-  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa']
+  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred']
   const currentState = existing[0].state
   if (
     validated.state !== undefined &&
@@ -414,7 +586,41 @@ export async function kb_update_story_status(
     }
   }
 
-  // Build update object
+  // Artifact pre-condition gate: certain transitions require a KB artifact to exist first.
+  // Maps "fromState→toState" to the required artifact_type in artifacts.story_artifacts.
+  const ARTIFACT_GATES: Partial<Record<string, string>> = {
+    'elab→ready': 'elaboration',
+    'in_progress→needs_code_review': 'proof',
+    'needs_code_review→ready_for_qa': 'review',
+    'in_qa→completed': 'qa_gate',
+  }
+
+  if (validated.state !== undefined && currentState !== null) {
+    const gateKey = `${currentState}→${validated.state}`
+    const requiredArtifactType = ARTIFACT_GATES[gateKey]
+    if (requiredArtifactType) {
+      const found = await deps.db
+        .select({ id: storyArtifacts.id })
+        .from(storyArtifacts)
+        .where(
+          and(
+            eq(storyArtifacts.storyId, validated.story_id),
+            eq(storyArtifacts.artifactType, requiredArtifactType),
+          ),
+        )
+        .limit(1)
+
+      if (found.length === 0) {
+        return {
+          story: existing[0],
+          updated: false,
+          message: `Cannot transition story ${validated.story_id} from '${currentState}' to '${validated.state}': required artifact '${requiredArtifactType}' not found in KB`,
+        }
+      }
+    }
+  }
+
+  // Build update object for stories
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),
   }
@@ -431,24 +637,6 @@ export async function kb_update_story_status(
     }
   }
 
-  if (validated.phase !== undefined) {
-    updates.phase = validated.phase
-  }
-
-  if (validated.iteration !== undefined) {
-    updates.iteration = validated.iteration
-  }
-
-  if (validated.blocked !== undefined) {
-    updates.blocked = validated.blocked
-
-    // Clear blocked fields when unblocking
-    if (!validated.blocked) {
-      updates.blockedReason = null
-      updates.blockedByStory = null
-    }
-  }
-
   if (validated.blocked_reason !== undefined) {
     updates.blockedReason = validated.blocked_reason
   }
@@ -457,16 +645,22 @@ export async function kb_update_story_status(
     updates.blockedByStory = validated.blocked_by_story
   }
 
+  // Clear blocked fields when unblocking (blocked=false signals intent to clear)
+  if (validated.blocked === false) {
+    updates.blockedReason = null
+    updates.blockedByStory = null
+  }
+
   if (validated.priority !== undefined) {
     updates.priority = validated.priority
   }
 
-  // Perform update
+  // Perform update on stories
   const result = await deps.db
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
-    .returning()
+    .returning(storyColumns)
 
   const story = result[0] ?? null
 
@@ -480,10 +674,9 @@ export async function kb_update_story_status(
  * Get the next available story in an epic.
  *
  * Finds stories that are:
- * - In the specified epic
+ * - In the specified epic (matched via feature prefix since epic is not on workflow.stories)
  * - In 'ready' state (or 'backlog' if include_backlog is true)
- * - Not blocked
- * - Have all dependencies satisfied
+ * - Have no blocking dependencies
  *
  * Returns stories sorted by priority (critical first), then by created_at (oldest first).
  *
@@ -495,7 +688,7 @@ export async function kb_get_next_story(
   deps: StoryCrudDeps,
   input: KbGetNextStoryInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   candidates_count: number
   blocked_by_dependencies: string[]
   message: string
@@ -505,10 +698,9 @@ export async function kb_get_next_story(
   // Build state filter
   const validStates = validated.include_backlog ? ['ready', 'backlog'] : ['ready']
 
-  // Build base conditions
+  // Build base conditions — epic filter mapped to feature since epic is not on workflow.stories
   const conditions: SQL<unknown>[] = [
-    eq(stories.epic, validated.epic),
-    eq(stories.blocked, false),
+    eq(stories.feature, validated.epic),
     inArray(stories.state, validStates),
   ]
 
@@ -541,9 +733,9 @@ export async function kb_get_next_story(
 
   const whereCondition = and(...conditions)
 
-  // Get candidate stories (unblocked, in correct state)
+  // Get candidate stories (in correct state)
   const candidates = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(
@@ -567,51 +759,51 @@ export async function kb_get_next_story(
     }
   }
 
-  // Get all unsatisfied dependencies for candidate stories
+  // Get all dependencies for candidate stories
   const candidateIds = candidates.map(c => c.storyId)
 
-  const unsatisfiedDeps = await deps.db
+  const deps_ = await deps.db
     .select({
       storyId: storyDependencies.storyId,
-      targetStoryId: storyDependencies.targetStoryId,
+      dependsOnId: storyDependencies.dependsOnId,
       dependencyType: storyDependencies.dependencyType,
-      satisfied: storyDependencies.satisfied,
     })
     .from(storyDependencies)
     .where(
       and(
         inArray(storyDependencies.storyId, candidateIds),
-        eq(storyDependencies.satisfied, false),
         // Only consider blocking dependency types
         inArray(storyDependencies.dependencyType, ['depends_on', 'blocked_by']),
       ),
     )
 
-  // For unsatisfied dependencies, check if target story is completed
-  const targetStoryIds = [...new Set(unsatisfiedDeps.map(d => d.targetStoryId))]
+  // For dependencies, check if target story is completed
+  const dependsOnIds = [...new Set(deps_.map(d => d.dependsOnId))]
 
   let completedTargets: Set<string> = new Set()
-  if (targetStoryIds.length > 0) {
+  if (dependsOnIds.length > 0) {
     const targetStories = await deps.db
       .select({ storyId: stories.storyId })
       .from(stories)
-      .where(and(inArray(stories.storyId, targetStoryIds), eq(stories.state, 'completed')))
+      .where(
+        and(inArray(stories.storyId, dependsOnIds), inArray(stories.state, ['completed', 'UAT'])),
+      )
 
     completedTargets = new Set(targetStories.map(t => t.storyId))
   }
 
   // Build map of stories blocked by unresolved dependencies
   const blockedStories = new Map<string, string[]>()
-  for (const dep of unsatisfiedDeps) {
+  for (const dep of deps_) {
     // If the target story is completed, the dependency is effectively satisfied
-    if (completedTargets.has(dep.targetStoryId)) {
+    if (completedTargets.has(dep.dependsOnId)) {
       continue
     }
 
     if (!blockedStories.has(dep.storyId)) {
       blockedStories.set(dep.storyId, [])
     }
-    blockedStories.get(dep.storyId)!.push(dep.targetStoryId)
+    blockedStories.get(dep.storyId)!.push(dep.dependsOnId)
   }
 
   // Find the first candidate without unresolved dependencies
@@ -640,9 +832,9 @@ export async function kb_get_next_story(
 }
 
 /**
- * Update story metadata fields (epic, feature, title, priority, points).
+ * Update story metadata fields (feature, title, priority, description).
  *
- * Use this to correct metadata like epic assignment without touching workflow state.
+ * Use this to correct metadata like feature assignment without touching workflow state.
  *
  * @param deps - Database dependencies
  * @param input - Fields to update
@@ -652,14 +844,14 @@ export async function kb_update_story(
   deps: StoryCrudDeps,
   input: KbUpdateStoryInput,
 ): Promise<{
-  story: typeof stories.$inferSelect | null
+  story: Partial<typeof stories.$inferSelect> | null
   updated: boolean
   message: string
 }> {
   const validated = KbUpdateStoryInputSchema.parse(input)
 
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -676,12 +868,8 @@ export async function kb_update_story(
     updatedAt: new Date(),
   }
 
-  if (validated.epic !== undefined) {
-    updates.epic = validated.epic
-  }
-
   if (validated.feature !== undefined) {
-    updates.feature = validated.feature
+    updates.feature = validated.feature ?? undefined
   }
 
   if (validated.title !== undefined) {
@@ -692,15 +880,15 @@ export async function kb_update_story(
     updates.priority = validated.priority
   }
 
-  if (validated.points !== undefined) {
-    updates.points = validated.points
+  if (validated.description !== undefined) {
+    updates.description = validated.description
   }
 
   const result = await deps.db
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
-    .returning()
+    .returning(storyColumns)
 
   const story = result[0] ?? null
 
@@ -708,5 +896,135 @@ export async function kb_update_story(
     story,
     updated: true,
     message: `Updated story ${validated.story_id}`,
+  }
+}
+
+/**
+ * Create or update a story record (upsert by story_id).
+ *
+ * Implements partial-merge semantics:
+ *   - If the story does not exist, it is created with the supplied fields.
+ *   - If the story already exists, only the fields explicitly supplied in the
+ *     input are written — omitted fields retain their current DB values.
+ *
+ * This is intentionally different from kb_upsert_plan which overwrites all
+ * fields on conflict. Here we must never clobber existing metadata during
+ * re-bootstrap calls that only supply a subset of fields.
+ *
+ * @param deps - Database dependencies
+ * @param input - Story fields to create/merge
+ * @returns Upserted story and whether it was newly created
+ */
+export async function kb_create_story(
+  deps: StoryCrudDeps,
+  input: KbCreateStoryInput,
+): Promise<{
+  story: Partial<typeof stories.$inferSelect>
+  created: boolean
+  message: string
+}> {
+  const validated = KbCreateStoryInputSchema.parse(input)
+
+  const now = new Date()
+
+  // ---------------------------------------------------------------------------
+  // Atomic INSERT ON CONFLICT(story_id) DO NOTHING
+  // Eliminates the SELECT-then-INSERT race condition.
+  // If the insert succeeds (new row), wasCreated = true.
+  // If the insert is a no-op (conflict), wasCreated = false and we fall through
+  // to the partial-merge UPDATE path.
+  // ---------------------------------------------------------------------------
+  let wasCreated = false
+
+  const transactionResult = await deps.db.transaction(async tx => {
+    // Attempt atomic insert — do nothing on conflict (story already exists)
+    const insertResult = await tx
+      .insert(stories)
+      .values({
+        storyId: validated.story_id,
+        // title is required for new stories — validated after insert attempt
+        title: validated.title ?? '',
+        feature: validated.feature ?? 'unknown',
+        state: validated.state ?? null,
+        priority: validated.priority ?? null,
+        description: validated.description ?? null,
+        blockedReason: validated.blocked_reason ?? null,
+        blockedByStory: validated.blocked_by_story ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: stories.storyId })
+      .returning(storyColumns)
+
+    if (insertResult.length > 0) {
+      // Row was newly inserted — validate title requirement
+      if (!validated.title) {
+        // Roll back by deleting the placeholder row, then throw
+        await tx.delete(stories).where(eq(stories.storyId, validated.story_id))
+        throw new Error(
+          `title is required when creating a new story (story_id: ${validated.story_id})`,
+        )
+      }
+
+      if (validated.plan_slug) {
+        await tx
+          .insert(planStoryLinks)
+          .values({
+            planSlug: validated.plan_slug,
+            storyId: validated.story_id,
+            linkType: 'spawned_from',
+          })
+          .onConflictDoNothing()
+      }
+
+      return { row: insertResult[0]!, isNew: true }
+    }
+
+    // Conflict: story already exists — perform partial-merge UPDATE
+    const updates: Partial<typeof stories.$inferInsert> = { updatedAt: now }
+
+    if (validated.title !== undefined) updates.title = validated.title
+    if (validated.feature !== undefined) updates.feature = validated.feature ?? undefined
+    if (validated.state !== undefined) updates.state = validated.state
+    if (validated.priority !== undefined) updates.priority = validated.priority
+    if (validated.description !== undefined) updates.description = validated.description
+    if (validated.blocked_reason !== undefined) updates.blockedReason = validated.blocked_reason
+    if (validated.blocked_by_story !== undefined)
+      updates.blockedByStory = validated.blocked_by_story
+    // Clear stale blocker metadata when unblocking
+    if (validated.blocked === false) {
+      updates.blockedReason = null
+      updates.blockedByStory = null
+    }
+
+    const updateResult = await tx
+      .update(stories)
+      .set(updates)
+      .where(eq(stories.storyId, validated.story_id))
+      .returning(storyColumns)
+
+    if (validated.plan_slug) {
+      await tx
+        .insert(planStoryLinks)
+        .values({
+          planSlug: validated.plan_slug,
+          storyId: validated.story_id,
+          linkType: 'spawned_from',
+        })
+        .onConflictDoNothing()
+    }
+
+    return { row: updateResult[0]!, isNew: false }
+  })
+
+  wasCreated = transactionResult.isNew
+  const story = transactionResult.row
+
+  return {
+    story,
+    created: wasCreated,
+    message: wasCreated
+      ? `Story ${validated.story_id} created successfully`
+      : `Story ${validated.story_id} updated successfully`,
   }
 }

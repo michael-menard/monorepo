@@ -1,0 +1,16 @@
+id: 'CDBE-3010'
+title: 'stories_current View'
+status: backlog
+priority: medium
+phase: 3
+feature: |
+  Create workflow.stories_current as a SQL view that joins stories to their latest state row from story_state_history, exposing current_state, entered_at, and all story columns without requiring a manual join.
+goal: |
+  Provide agents and application code a single query target for current story state, eliminating repeated lateral join boilerplate.
+depends_on: [CDBE-1010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  View must handle stories with no state history row gracefully (LEFT JOIN, NULL current_state). Performance depends on index on story_state_history(story_id, exited_at IS NULL) — confirm index exists.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

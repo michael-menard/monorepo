@@ -38,8 +38,7 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import type { BaseMessage } from '@langchain/core/messages'
-import type { AIMessage } from '@langchain/core/messages'
+import type { BaseMessage, AIMessage } from '@langchain/core/messages'
 import { ModelRouterFactory } from '../models/unified-interface.js'
 import { TokenBucket } from './token-bucket.js'
 import { BudgetAccumulator } from './budget-accumulator.js'
@@ -135,10 +134,7 @@ export const PipelineModelRouterConfigSchema = z.object({
   affinitySuccessRateThreshold: z.number().min(0).max(1).optional(),
   affinityMinSampleSize: z.number().int().nonnegative().optional(),
   // AC-1: Cold-start / exploration fields (APIP-3070)
-  conservativeOpenRouterModel: z
-    .string()
-    .min(1)
-    .default('openrouter/anthropic/claude-3-haiku'),
+  conservativeOpenRouterModel: z.string().min(1).default('openrouter/anthropic/claude-3-haiku'),
   explorationBudgetFraction: z.number().min(0).max(1).default(0.1),
   explorationMinSuccessRateFloor: z.number().min(0).max(1).default(0.3),
   manualSeedEnabled: z.boolean().default(false),
@@ -181,7 +177,6 @@ export class PipelineModelRouter {
   private readonly conservativeOpenRouterModel: string
   private readonly explorationBudgetFraction: number
   private readonly explorationMinSuccessRateFloor: number
-  private readonly manualSeedEnabled: boolean
   private readonly randomFn: () => number
   private readonly hasAnyQualifyingProfile: (() => Promise<boolean>) | undefined
   // AC-2: cold-start flag (null = not yet evaluated)
@@ -197,7 +192,6 @@ export class PipelineModelRouter {
       this.conservativeOpenRouterModel = 'openrouter/anthropic/claude-3-haiku'
       this.explorationBudgetFraction = 0.1
       this.explorationMinSuccessRateFloor = 0.3
-      this.manualSeedEnabled = false
       this.randomFn = Math.random
       this.hasAnyQualifyingProfile = undefined
     } else {
@@ -205,13 +199,11 @@ export class PipelineModelRouter {
       this.affinityReader = config?.affinityReader
       this.affinitySuccessRateThreshold =
         config?.affinitySuccessRateThreshold ?? DEFAULT_AFFINITY_SUCCESS_RATE_THRESHOLD
-      this.affinityMinSampleSize =
-        config?.affinityMinSampleSize ?? DEFAULT_AFFINITY_MIN_SAMPLE_SIZE
+      this.affinityMinSampleSize = config?.affinityMinSampleSize ?? DEFAULT_AFFINITY_MIN_SAMPLE_SIZE
       this.conservativeOpenRouterModel =
         config?.conservativeOpenRouterModel ?? 'openrouter/anthropic/claude-3-haiku'
       this.explorationBudgetFraction = config?.explorationBudgetFraction ?? 0.1
       this.explorationMinSuccessRateFloor = config?.explorationMinSuccessRateFloor ?? 0.3
-      this.manualSeedEnabled = config?.manualSeedEnabled ?? false
       this.randomFn = config?.randomFn ?? Math.random
       this.hasAnyQualifyingProfile = config?.hasAnyQualifyingProfile
     }
@@ -232,13 +224,7 @@ export class PipelineModelRouter {
    * @throws ProviderChainExhaustedError if all providers fail
    */
   async dispatch(options: PipelineDispatchOptions): Promise<PipelineDispatchResult> {
-    const {
-      storyId,
-      agentId,
-      messages,
-      changeType = 'unknown',
-      fileType = 'unknown',
-    } = options
+    const { storyId, agentId, messages, changeType = 'unknown', fileType = 'unknown' } = options
 
     // -------------------------------------------------------------------------
     // Tier 1: Check DB assignment override for this agentId (all modes)
@@ -291,7 +277,7 @@ export class PipelineModelRouter {
    */
   private async _dispatchFourTier(
     storyId: string,
-    agentId: string,
+    _agentId: string,
     messages: BaseMessage[],
     changeType: string,
     fileType: string,
@@ -735,9 +721,7 @@ export class PipelineModelRouter {
     this.budgetAccumulator.record(storyId, totalTokens)
 
     const responseText =
-      typeof aiMessage.content === 'string'
-        ? aiMessage.content
-        : JSON.stringify(aiMessage.content)
+      typeof aiMessage.content === 'string' ? aiMessage.content : JSON.stringify(aiMessage.content)
 
     logger.info('pipeline_model_router', {
       event: 'dispatch_success',
@@ -802,7 +786,7 @@ export class PipelineModelRouter {
   /**
    * Get a LangChain BaseChatModel instance for the given provider and model string.
    */
-  private async _getModelInstance(provider: EscalationProvider, modelString: string) {
+  private async _getModelInstance(_provider: EscalationProvider, modelString: string) {
     const router = await ModelRouterFactory.getInstance()
     const llmProvider = await router.getProvider(modelString)
     return llmProvider.getModel(modelString)

@@ -398,7 +398,13 @@ export { AppToggleGroup, AppToggleGroupItem } from './toggles/AppToggleGroup'
 export type { AppToggleGroupProps, AppToggleGroupItemProps } from './toggles/AppToggleGroup'
 
 // Tooltip
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './_primitives/tooltip'
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+  TooltipPortal,
+} from './_primitives/tooltip'
 
 // Accordion
 export {

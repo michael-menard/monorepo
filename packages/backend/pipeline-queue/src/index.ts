@@ -14,7 +14,24 @@ import { PipelineJobDataSchema } from './__types__/index.js'
 import type { PipelineJobData } from './__types__/index.js'
 
 export { PipelineJobDataSchema } from './__types__/index.js'
-export type { PipelineJobData, PipelinePhase } from './__types__/index.js'
+export type {
+  PipelineJobData,
+  PipelinePhase,
+  StorySnapshotPayload,
+  ElaborationJobData,
+  StoryCreationJobData,
+  ImplementationJobData,
+  ReviewJobData,
+  QaJobData,
+} from './__types__/index.js'
+export {
+  StorySnapshotPayloadSchema,
+  ElaborationJobDataSchema,
+  StoryCreationJobDataSchema,
+  ImplementationJobDataSchema,
+  ReviewJobDataSchema,
+  QaJobDataSchema,
+} from './__types__/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Constants
@@ -134,7 +151,7 @@ export function createPipelineQueue(
         queueName,
         jobName: name,
         storyId: parsed.storyId,
-        phase: parsed.phase,
+        stage: parsed.stage,
       })
       return bullQueue.add(name, parsed, opts)
     },

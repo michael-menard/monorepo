@@ -20,16 +20,16 @@ Compile review findings into final UI-UX-REVIEW report.
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/*/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
+Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 - `feature_dir`, `story_id`, `base_path`
 
-Read from `{FEATURE_DIR}/*/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
+Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
 - All check results and findings
 
 ## Output Format
 Follow `.claude/agents/_shared/lean-docs.md`
 
-Write to `{FEATURE_DIR}/*/{STORY_ID}/UI-UX-REVIEW-{STORY_ID}.md`:
+Write to `{FEATURE_DIR}/stories/{STORY_ID}/UI-UX-REVIEW-{STORY_ID}.md`:
 
 ```markdown
 # UI/UX Review: {STORY_ID}

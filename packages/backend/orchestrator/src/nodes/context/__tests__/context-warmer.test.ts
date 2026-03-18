@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SelectContextPack } from '@repo/database-schema'
+import type { SelectContextPack } from '@repo/knowledge-base/db'
 import {
   createContextWarmerNode,
   type ContextWarmerGetInput,

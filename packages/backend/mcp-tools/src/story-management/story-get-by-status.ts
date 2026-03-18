@@ -13,7 +13,7 @@
 import { eq, desc } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { stories } from '@repo/database-schema'
+import { stories } from '@repo/knowledge-base/db'
 import {
   StoryGetByStatusInputSchema,
   type StoryGetByStatusInput,
@@ -25,22 +25,6 @@ import {
  *
  * @param input - State filter and pagination parameters
  * @returns Array of stories in the specified state
- *
- * @example Get all in-progress stories
- * ```typescript
- * const inProgress = await storyGetByStatus({
- *   state: 'in_progress',
- * })
- * ```
- *
- * @example Get ready-to-work stories with pagination
- * ```typescript
- * const readyStories = await storyGetByStatus({
- *   state: 'ready_to_work',
- *   limit: 100,
- *   offset: 50,
- * })
- * ```
  */
 export async function storyGetByStatus(
   input: StoryGetByStatusInput,
@@ -49,7 +33,6 @@ export async function storyGetByStatus(
   const parsed = StoryGetByStatusInputSchema.parse(input)
 
   try {
-    // Query stories by state with pagination (AC-4, AC-5)
     const results = await db
       .select()
       .from(stories)
@@ -59,14 +42,11 @@ export async function storyGetByStatus(
       .offset(parsed.offset)
 
     return results.map(story => ({
-      id: story.id,
       storyId: story.storyId,
+      feature: story.feature,
       title: story.title,
       state: story.state,
       priority: story.priority,
-      storyType: story.storyType,
-      epic: story.epic,
-      wave: story.wave,
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
     }))

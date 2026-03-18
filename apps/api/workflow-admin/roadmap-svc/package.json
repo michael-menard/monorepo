@@ -1,0 +1,31 @@
+{
+  "name": "@repo/roadmap-svc",
+  "version": "1.0.0",
+  "description": "Roadmap Workflow API - Bun + Hono backend for workflow roadmap",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "tsc",
+    "lint": "eslint --fix src/",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@repo/knowledge-base": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.7.0",
+    "pg": "^8.12.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 /* eslint-enable import/order */
 
-// Hoist mock functions for @repo/db and @repo/database-schema
+// Hoist mock functions for @repo/db and @repo/knowledge-base/db
 const {
   mockSelect,
   mockFrom,
@@ -39,7 +39,7 @@ vi.mock('@repo/db', () => ({
   },
 }))
 
-vi.mock('@repo/database-schema', () => ({
+vi.mock('@repo/knowledge-base/db', () => ({
   features: mockFeatures,
   capabilities: mockCapabilities,
 }))

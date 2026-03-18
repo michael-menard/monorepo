@@ -19,8 +19,8 @@ For API/backend changes, ensure contracts are accurate and verifiable:
 - Story ID (e.g., `WISH-001`)
 
 Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
 - Working tree code changes
 
 ## When to run
@@ -32,7 +32,7 @@ Read from story directory:
 
 ## Output (MUST WRITE)
 Write exactly to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CONTRACTS.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CONTRACTS.md`
 
 ## Required CONTRACTS.md Structure
 # Swagger Updates
@@ -59,5 +59,5 @@ For each executed request:
 
 ## Blockers
 If blocked, write details to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BLOCKERS.md`
 and STOP.

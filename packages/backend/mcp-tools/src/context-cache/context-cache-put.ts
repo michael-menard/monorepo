@@ -14,7 +14,7 @@
 import { sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextPacks, type SelectContextPack } from '@repo/database-schema'
+import { contextPacks, type SelectContextPack } from '@repo/knowledge-base/db'
 import { ContextCachePutInputSchema, type ContextCachePutInput } from './__types__/index.js'
 
 /**
@@ -92,7 +92,7 @@ export async function contextCachePut(
       })
       .returning()
 
-    return pack
+    return pack as SelectContextPack
   } catch (error) {
     // Database errors or validation failures: log warning, return null
     logger.warn('[mcp-tools] Context cache put failed', {

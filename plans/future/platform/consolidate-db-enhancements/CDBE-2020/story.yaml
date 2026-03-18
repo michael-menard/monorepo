@@ -1,0 +1,16 @@
+id: 'CDBE-2020'
+title: 'resolve_blocker and complete_artifact Stored Procedures'
+status: backlog
+priority: medium
+phase: 2
+feature: |
+  Implement resolve_blocker(blocker_id, resolution_notes) that soft-deletes the blocker and checks if the story is now fully unblocked; implement complete_artifact(story_id, artifact_type, phase, checksum, ...) that atomically upserts the artifact and all child rows.
+goal: |
+  Encapsulate blocker resolution and artifact completion as atomic operations so agents cannot leave partial state.
+depends_on: [CDBE-1030]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  complete_artifact upsert must handle concurrent calls from parallel agents — use INSERT ... ON CONFLICT DO UPDATE with appropriate lock level. resolve_blocker must correctly identify all remaining active blockers before marking story unblocked.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

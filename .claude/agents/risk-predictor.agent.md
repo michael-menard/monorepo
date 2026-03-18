@@ -31,6 +31,7 @@ The schema reference in the frontmatter (`packages/backend/orchestrator/src/arti
 ## Mission
 
 Generate risk predictions to inform PM scoping decisions:
+
 1. **split_risk** - Probability story will split mid-implementation (0.0–1.0)
 2. **review_cycles** - Expected code review iterations (float)
 3. **token_estimate** - Predicted total token cost (integer)
@@ -45,15 +46,18 @@ Output is written as YAML predictions section merged into story file by pm-story
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story identifier
 - `story_seed_path`: Path to STORY-SEED.md
 - `epic`: Epic/domain (for similar story search)
 
 From filesystem:
+
 - STORY-SEED.md at `{story_seed_path}` (contains ACs, scope description)
 - PATTERNS-{month}.yaml from WKFL-006 (optional, degrades gracefully if missing)
 
 From Knowledge Base:
+
 - Similar stories via `kb_search` with tags: ['outcome']
 - OUTCOME.yaml files for similar stories
 
@@ -90,6 +94,7 @@ From Knowledge Base:
 **Actions**:
 
 1. **Attempt to read PATTERNS-{current_month}.yaml**:
+
    ```javascript
    const current_month = new Date().toISOString().slice(0, 7) // e.g. "2026-02"
    const patterns_path = `plans/future/workflow-learning/patterns/PATTERNS-${current_month}.yaml`
@@ -117,22 +122,23 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
 **Actions**:
 
 1. **Query KB for similar stories**:
+
    ```javascript
    const results = kb_search({
      query: story_title + ' ' + scope_keywords.join(' '),
      tags: ['outcome'],
-     limit: 5
+     limit: 5,
    })
    ```
 
 2. **Filter to completed stories with outcome data**:
+
    ```javascript
-   const similar_stories = results
-     .filter(r => r.similarity_score > 0.70)
-     .slice(0, 5)
+   const similar_stories = results.filter(r => r.similarity_score > 0.7).slice(0, 5)
    ```
 
 3. **Load OUTCOME.yaml for each similar story to extract actual_tokens**:
+
    ```javascript
    const story_data = []
    for (const story of similar_stories) {
@@ -142,14 +148,14 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
-         actual_tokens: outcome?.totals?.tokens_total || null
+         actual_tokens: outcome?.totals?.tokens_total || null,
        })
      } catch (error) {
        logger.warn(`Failed to load OUTCOME.yaml for ${story.story_id}`)
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
-         actual_tokens: null
+         actual_tokens: null,
        })
      }
    }
@@ -173,15 +179,15 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
 split_risk = 0.1
 
 // AC count boosts
-if (ac_count > 5)  split_risk += 0.2   // first threshold
-if (ac_count > 8)  split_risk += 0.3   // second threshold (additive, not replacement)
+if (ac_count > 5) split_risk += 0.2 // first threshold
+if (ac_count > 8) split_risk += 0.3 // second threshold (additive, not replacement)
 
 // Scope complexity boosts
 if (scope_keywords.includes('backend') && scope_keywords.includes('frontend')) {
-  split_risk += 0.2   // cross-boundary full-stack
+  split_risk += 0.2 // cross-boundary full-stack
 }
 if (story_title.toLowerCase().includes('refactor')) {
-  split_risk += 0.15  // refactors tend to scope-creep
+  split_risk += 0.15 // refactors tend to scope-creep
 }
 
 // Clamp to [0.0, 1.0]
@@ -189,6 +195,7 @@ split_risk = Math.min(1.0, Math.max(0.0, split_risk))
 ```
 
 **Edge Cases**:
+
 - 0 ACs → split_risk starts at 0.1 (base), no AC boosts applied → split_risk = 0.1
 - 50+ ACs → clamped to 1.0
 - Missing scope section → AC count and title heuristics only (no scope boosts)
@@ -212,9 +219,10 @@ if (scope_keywords.includes('security')) {
 if (similar_stories.length > 0) {
   const stories_with_cycles = similar_stories.filter(s => s.actual_cycles != null)
   if (stories_with_cycles.length > 0) {
-    const similar_avg = stories_with_cycles.reduce((sum, s) => sum + s.actual_cycles, 0) / stories_with_cycles.length
+    const similar_avg =
+      stories_with_cycles.reduce((sum, s) => sum + s.actual_cycles, 0) / stories_with_cycles.length
     // Weighted: 60% heuristic, 40% historical
-    review_cycles = (review_cycles * 0.6) + (similar_avg * 0.4)
+    review_cycles = review_cycles * 0.6 + similar_avg * 0.4
   }
 }
 
@@ -233,7 +241,8 @@ const stories_with_tokens = similar_stories.filter(s => s.actual_tokens != null)
 
 if (stories_with_tokens.length > 0) {
   // Average of similar story tokens with 10% buffer
-  const avg_tokens = stories_with_tokens.reduce((sum, s) => sum + s.actual_tokens, 0) / stories_with_tokens.length
+  const avg_tokens =
+    stories_with_tokens.reduce((sum, s) => sum + s.actual_tokens, 0) / stories_with_tokens.length
   token_estimate = Math.round(avg_tokens * 1.1)
 } else {
   // Bootstrap default — no historical data available
@@ -249,13 +258,14 @@ if (stories_with_tokens.length > 0) {
 
 ```javascript
 const count = similar_stories.length
-if (count >= 5)      confidence = 'high'
+if (count >= 5) confidence = 'high'
 else if (count >= 2) confidence = 'medium'
 else if (count === 1) confidence = 'low'
-else                 confidence = 'none'   // no similar stories found — primary v1 path
+else confidence = 'none' // no similar stories found — primary v1 path
 ```
 
 **Interpretation**:
+
 - **high**: 5+ similar stories with outcome data
 - **medium**: 2–4 similar stories
 - **low**: exactly 1 similar story
@@ -273,7 +283,7 @@ import { z } from 'zod'
 const SimilarStorySchema = z.object({
   id: z.string(),
   similarity: z.number().min(0).max(1),
-  actual_tokens: z.number().int().nullable()
+  actual_tokens: z.number().int().nullable(),
 })
 
 const StoryPredictionsSchema = z.object({
@@ -282,7 +292,7 @@ const StoryPredictionsSchema = z.object({
   token_estimate: z.number().int().min(1000),
   confidence: z.enum(['high', 'medium', 'low', 'none']),
   similar_stories: z.array(SimilarStorySchema).max(5),
-  model_version: z.literal('1.0.0')
+  model_version: z.literal('1.0.0'),
 })
 
 type StoryPredictions = z.infer<typeof StoryPredictionsSchema>
@@ -303,19 +313,19 @@ predictions:
     - id: AUTH-015
       similarity: 0.82
       actual_tokens: 195000
-  model_version: "1.0.0"
+  model_version: '1.0.0'
 ```
 
 **Bootstrap output** (primary v1 path — no WKFL-006 patterns, no similar stories):
 
 ```yaml
 predictions:
-  split_risk: 0.1    # base only, or higher if title/scope heuristics apply
+  split_risk: 0.1 # base only, or higher if title/scope heuristics apply
   review_cycles: 1.5
   token_estimate: 150000
   confidence: none
   similar_stories: []
-  model_version: "1.0.0"
+  model_version: '1.0.0'
 ```
 
 ---
@@ -329,10 +339,11 @@ predictions:
 **Logic**:
 
 1. **Load predictions from story YAML**:
+
    ```javascript
-   const story_yaml = parseYaml(readFile(`{feature_dir}/in-progress/{story_id}/{story_id}.md`))
+   const story_yaml = parseYaml(readFile(`{feature_dir}/stories/{story_id}/{story_id}.md`))
    const predictions = story_yaml.predictions
-   
+
    if (!predictions) {
      logger.info('No predictions found for story, skipping accuracy tracking')
      return 'ACCURACY SKIPPED: no predictions'
@@ -340,53 +351,56 @@ predictions:
    ```
 
 2. **Load actuals from OUTCOME.yaml**:
+
    ```javascript
    const outcome = parseYaml(readFile(outcome_path))
    const actuals = {
      split: outcome.split_occurred || false,
      review_cycles: outcome.phases?.dev_implementation?.review_cycles || null,
-     tokens: outcome.totals?.tokens_total || null
+     tokens: outcome.totals?.tokens_total || null,
    }
    ```
 
 3. **Calculate prediction_accuracy**:
+
    ```javascript
    // Four-way classification for split_risk
    const split_classification =
-     predictions.split_risk > 0.5 && actuals.split     ? 'true_positive'
-   : predictions.split_risk > 0.5 && !actuals.split    ? 'false_positive'
-   : predictions.split_risk <= 0.5 && !actuals.split   ? 'true_negative'
-   :                                                      'false_negative'
+     predictions.split_risk > 0.5 && actuals.split
+       ? 'true_positive'
+       : predictions.split_risk > 0.5 && !actuals.split
+         ? 'false_positive'
+         : predictions.split_risk <= 0.5 && !actuals.split
+           ? 'true_negative'
+           : 'false_negative'
 
    const prediction_accuracy = {
      split_risk: split_classification,
      // Numeric delta: actual - predicted (positive = underestimated)
-     review_cycles: actuals.review_cycles != null
-       ? actuals.review_cycles - predictions.review_cycles
-       : null,
+     review_cycles:
+       actuals.review_cycles != null ? actuals.review_cycles - predictions.review_cycles : null,
      // Ratio: actual / predicted (1.0 = perfect, >1 = underestimated)
-     token_estimate: actuals.tokens != null
-       ? actuals.tokens / predictions.token_estimate
-       : null
+     token_estimate: actuals.tokens != null ? actuals.tokens / predictions.token_estimate : null,
    }
    ```
 
 4. **Write accuracy blocks to OUTCOME.yaml**:
+
    ```yaml
    predictions:
-     split_risk: {predictions.split_risk}
-     review_cycles: {predictions.review_cycles}
-     token_estimate: {predictions.token_estimate}
+     split_risk: { predictions.split_risk }
+     review_cycles: { predictions.review_cycles }
+     token_estimate: { predictions.token_estimate }
 
    actuals:
-     split: {actuals.split}
-     review_cycles: {actuals.review_cycles}
-     tokens: {actuals.tokens}
+     split: { actuals.split }
+     review_cycles: { actuals.review_cycles }
+     tokens: { actuals.tokens }
 
    prediction_accuracy:
      split_risk: true_positive | false_positive | true_negative | false_negative
-     review_cycles: {numeric delta: actual - predicted}
-     token_estimate: {ratio: actual / predicted}
+     review_cycles: { numeric delta: actual - predicted }
+     token_estimate: { ratio: actual / predicted }
    ```
 
 5. **Write to KB for model improvement**:
@@ -399,14 +413,14 @@ predictions:
        predictions: predictions,
        actuals: actuals,
        prediction_accuracy: prediction_accuracy,
-       confidence: predictions.confidence
+       confidence: predictions.confidence,
      },
      tags: [
        'prediction-accuracy',
        'wkfl-007',
        `story:${story_id}`,
-       `date:${new Date().toISOString().slice(0, 7)}`
-     ]
+       `date:${new Date().toISOString().slice(0, 7)}`,
+     ],
    })
    ```
 
@@ -419,20 +433,20 @@ The following blocks are added to OUTCOME.yaml (extends WKFL-001 schema) after s
 ```yaml
 # --- WKFL-007 accuracy tracking extension ---
 
-predictions:           # mirrors story.yaml predictions at story start
+predictions: # mirrors KB story predictions at story start
   split_risk: 0.72
   review_cycles: 2.3
   token_estimate: 180000
 
-actuals:               # populated from OUTCOME.yaml totals + phase data
+actuals: # populated from OUTCOME.yaml totals + phase data
   split: false
   review_cycles: 3
   tokens: 167000
 
-prediction_accuracy:   # four-way classification + numeric deltas
-  split_risk: false_positive   # true_positive | false_positive | true_negative | false_negative
-  review_cycles: 0.7           # numeric delta: actual - predicted (positive = agent underestimated)
-  token_estimate: 0.93         # ratio: actual / predicted (1.0 = perfect)
+prediction_accuracy: # four-way classification + numeric deltas
+  split_risk: false_positive # true_positive | false_positive | true_negative | false_negative
+  review_cycles: 0.7 # numeric delta: actual - predicted (positive = agent underestimated)
+  token_estimate: 0.93 # ratio: actual / predicted (1.0 = perfect)
 ```
 
 **Population**: dev-documentation-leader.agent.md Step 5.5 triggers this after OUTCOME.yaml generation.
@@ -444,14 +458,14 @@ prediction_accuracy:   # four-way classification + numeric deltas
 
 **Principle**: Predictor NEVER blocks story generation.
 
-| Failure Scenario | Fallback Behavior | Confidence |
-|------------------|-------------------|-----------|
-| WKFL-006 patterns missing (primary v1 path) | Heuristics-only mode, patterns_available=false | none (bootstrap) |
-| KB unavailable | Conservative defaults (split_risk heuristic only, 150K tokens) | none |
-| No similar stories | Use global defaults | none |
-| OUTCOME.yaml parse error | Skip that story, continue with others | depends on data |
-| STORY-SEED.md malformed | Log warning, use conservative estimates | none |
-| Any unhandled error | Return fallback predictions, log error | none |
+| Failure Scenario                            | Fallback Behavior                                              | Confidence       |
+| ------------------------------------------- | -------------------------------------------------------------- | ---------------- |
+| WKFL-006 patterns missing (primary v1 path) | Heuristics-only mode, patterns_available=false                 | none (bootstrap) |
+| KB unavailable                              | Conservative defaults (split_risk heuristic only, 150K tokens) | none             |
+| No similar stories                          | Use global defaults                                            | none             |
+| OUTCOME.yaml parse error                    | Skip that story, continue with others                          | depends on data  |
+| STORY-SEED.md malformed                     | Log warning, use conservative estimates                        | none             |
+| Any unhandled error                         | Return fallback predictions, log error                         | none             |
 
 **Fallback Implementation**:
 
@@ -467,7 +481,7 @@ try {
     token_estimate: 150000,
     confidence: 'none',
     similar_stories: [],
-    model_version: '1.0.0'
+    model_version: '1.0.0',
   }
 }
 ```
@@ -485,11 +499,13 @@ try {
 ## Token Optimization
 
 **High-Cost Operations**:
+
 1. Loading full story files → mitigate by loading OUTCOME.yaml only
 2. KB search returning too many results → limit to 5, filter by similarity > 0.70
 3. Loading WKFL-006 patterns repeatedly → cache in memory per session
 
 **Optimization Patterns**:
+
 - Query KB with targeted tags ['outcome'] for similar stories
 - Read STORY-SEED.md only (not full story file)
 - task_contract: shallow reasoning — lightweight heuristic analysis

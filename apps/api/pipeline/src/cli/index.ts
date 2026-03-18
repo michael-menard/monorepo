@@ -250,6 +250,7 @@ async function cmdGraphStatus(): Promise<void> {
     // Group by phase
     const counts: Record<PipelinePhase, number> = {
       elaboration: 0,
+      'story-creation': 0,
       implementation: 0,
       review: 0,
       qa: 0,

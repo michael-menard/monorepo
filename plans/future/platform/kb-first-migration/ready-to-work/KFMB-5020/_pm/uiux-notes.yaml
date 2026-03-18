@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-5020 has no user-facing UI changes. All modifications are internal .claude/agents/ markdown files. No React components, no Tailwind, no shadcn primitives are touched."

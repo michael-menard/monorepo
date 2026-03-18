@@ -13,10 +13,32 @@ import { z } from 'zod'
 import { ConcurrencyConfigSchema, DEFAULT_CONCURRENCY_CONFIG } from './concurrency-config.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Re-use Zod-native representations of graph input types.
-// We don't import the orchestrator types directly here to avoid heavy transitive
-// deps in the __types__ layer — the supervisor modules import from @repo/orchestrator.
-// These schemas represent the minimum shape required for dispatch.
+// Re-export job payload schemas from @repo/pipeline-queue (canonical source).
+// F002: pipeline-queue is now the single source of truth for job schemas.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  PipelineJobDataSchema,
+  ElaborationJobDataSchema,
+  StoryCreationJobDataSchema,
+  ImplementationJobDataSchema,
+  ReviewJobDataSchema,
+  QaJobDataSchema,
+  StorySnapshotPayloadSchema,
+} from '@repo/pipeline-queue'
+
+export type {
+  PipelineJobData,
+  ElaborationJobData,
+  StoryCreationJobData,
+  ImplementationJobData,
+  ReviewJobData,
+  QaJobData,
+  StorySnapshotPayload,
+} from '@repo/pipeline-queue'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local payload type aliases (preserved for dispatch-router internal use)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -34,7 +56,7 @@ export const SynthesizedStoryPayloadSchema = z
     readinessScore: z.number().int().min(0).max(100),
     isReady: z.boolean(),
   })
-  .passthrough() // allow additional fields from the full SynthesizedStory schema
+  .passthrough()
 
 export type SynthesizedStoryPayload = z.infer<typeof SynthesizedStoryPayloadSchema>
 
@@ -52,56 +74,6 @@ export const StoryRequestPayloadSchema = z
   .passthrough()
 
 export type StoryRequestPayload = z.infer<typeof StoryRequestPayloadSchema>
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Discriminated Union Job Payload (AC-2, AC-13)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Elaboration job data schema.
- * stage:'elaboration' → payload must be a SynthesizedStory.
- */
-export const ElaborationJobDataSchema = z.object({
-  storyId: z.string().min(1),
-  stage: z.literal('elaboration'),
-  attemptNumber: z.number().int().min(1),
-  payload: SynthesizedStoryPayloadSchema,
-  priority: z.number().int().optional(),
-  /** APIP-3080: Path prefixes touched by this story (for conflict detection) */
-  touchedPathPrefixes: z.array(z.string().min(1)).default([]),
-})
-
-export type ElaborationJobData = z.infer<typeof ElaborationJobDataSchema>
-
-/**
- * Story-creation job data schema.
- * stage:'story-creation' → payload must be a StoryRequest.
- */
-export const StoryCreationJobDataSchema = z.object({
-  storyId: z.string().min(1),
-  stage: z.literal('story-creation'),
-  attemptNumber: z.number().int().min(1),
-  payload: StoryRequestPayloadSchema,
-  priority: z.number().int().optional(),
-  /** APIP-3080: Path prefixes touched by this story (for conflict detection) */
-  touchedPathPrefixes: z.array(z.string().min(1)).default([]),
-})
-
-export type StoryCreationJobData = z.infer<typeof StoryCreationJobDataSchema>
-
-/**
- * Discriminated union of all valid pipeline job payloads.
- * Zod parses with z.discriminatedUnion on the 'stage' field.
- *
- * AC-2: Includes storyId, stage, attemptNumber at minimum.
- * AC-13: payload field carries the stage-specific story object.
- */
-export const PipelineJobDataSchema = z.discriminatedUnion('stage', [
-  ElaborationJobDataSchema,
-  StoryCreationJobDataSchema,
-])
-
-export type PipelineJobData = z.infer<typeof PipelineJobDataSchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supervisor Configuration Schema

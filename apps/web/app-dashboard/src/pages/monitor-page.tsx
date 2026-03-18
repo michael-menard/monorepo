@@ -1,14 +1,14 @@
 /**
  * MonitorDashboardPage
  *
- * Composes PipelineViewPanel, CostPanel, BlockedQueuePanel via usePipelineMonitor.
- * Shows a live/polling status indicator.
+ * Composes PipelineViewPanel, NeedsAttentionPanel, CostPanel, BlockedQueuePanel
+ * via usePipelineMonitor. Shows a live/polling status indicator.
  *
  * AC-5: polling status indicator showing last fetch time
  * AC-7: delegated to panel components
  * AC-8: page-level ARIA label, delegated to panels
  *
- * Story: APIP-2020
+ * Story: APIP-2020, AUDIT-7
  */
 
 import { z } from 'zod'
@@ -16,6 +16,7 @@ import { usePipelineMonitor } from '../hooks/usePipelineMonitor'
 import { PipelineViewPanel } from '../components/PipelineViewPanel'
 import { CostPanel } from '../components/CostPanel'
 import { BlockedQueuePanel } from '../components/BlockedQueuePanel'
+import { NeedsAttentionPanel } from '../components/NeedsAttentionPanel'
 
 // ============================================================================
 // Zod Schemas
@@ -44,9 +45,9 @@ function formatRelativeTime(date: Date): string {
 // ============================================================================
 
 /**
- * MonitorDashboardPage
+ * MonitorPage
  *
- * The /monitor route page. Polls the pipeline API and renders all three panels.
+ * The /monitor route page. Polls the pipeline API and renders all panels.
  */
 export function MonitorPage({ className }: MonitorPageProps) {
   const { data, isLoading, isStale, error, lastFetchedAt, refetch } = usePipelineMonitor()
@@ -73,15 +74,13 @@ export function MonitorPage({ className }: MonitorPageProps) {
           aria-live="polite"
           aria-atomic="true"
         >
-          {isStale && (
+          {isStale ? (
             <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
               Stale data —
             </span>
-          )}
+          ) : null}
           {lastFetchedAt ? (
-            <span className="text-xs">
-              Data from {formatRelativeTime(lastFetchedAt)}
-            </span>
+            <span className="text-xs">Data from {formatRelativeTime(lastFetchedAt)}</span>
           ) : isLoading ? (
             <span className="text-xs">Loading...</span>
           ) : null}
@@ -103,10 +102,20 @@ export function MonitorPage({ className }: MonitorPageProps) {
 
       {/* Dashboard panels */}
       <div className="space-y-6">
-        {/* Pipeline View (AC-1: in-progress first) */}
+        {/* Pipeline Kanban (AC-1: in-progress first column) */}
         <section aria-label="Active pipeline stories">
           <PipelineViewPanel
             stories={data?.pipeline_view ?? []}
+            isLoading={isLoading}
+            error={error}
+            onRetry={handleRetry}
+          />
+        </section>
+
+        {/* Needs Attention — failed/blocked stories requiring human action */}
+        <section aria-label="Stories needing human attention">
+          <NeedsAttentionPanel
+            items={data?.needs_attention ?? []}
             isLoading={isLoading}
             error={error}
             onRetry={handleRetry}

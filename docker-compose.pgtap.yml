@@ -1,0 +1,45 @@
+# Docker Compose for pgtap — PostgreSQL Unit Testing
+#
+# Provides a standalone postgres:16 container with pgtap installed.
+# This is SEPARATE from the knowledge-base postgres (port 5433) to
+# avoid polluting shared KB state during test runs.
+#
+# Architecture:
+#   host -> pgtap-postgres (port 5434) -- ephemeral, for tests only
+#
+# Usage:
+#   docker compose -f docker-compose.pgtap.yml up -d     # Start
+#   bash scripts/db/run-pgtap.sh                          # Run tests
+#   docker compose -f docker-compose.pgtap.yml down       # Stop + remove
+#   docker compose -f docker-compose.pgtap.yml down -v    # Also remove volume
+#
+# Credentials (local dev only — not production):
+#   PGTAP_DB_USER  (default: pgtap)
+#   PGTAP_DB_PASS  (default: pgtap)
+#   PGTAP_DB_NAME  (default: pgtap_test)
+
+services:
+  pgtap-postgres:
+    build:
+      context: ./infra/pgtap
+      dockerfile: Dockerfile
+    image: pgtap-postgres:local
+    container_name: pgtap-postgres
+    ports:
+      - '${PGTAP_DB_PORT:-5434}:5432'
+    environment:
+      POSTGRES_USER: ${PGTAP_DB_USER:-pgtap}
+      POSTGRES_PASSWORD: ${PGTAP_DB_PASS:-pgtap}
+      POSTGRES_DB: ${PGTAP_DB_NAME:-pgtap_test}
+    volumes:
+      - pgtap_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${PGTAP_DB_USER:-pgtap} -d ${PGTAP_DB_NAME:-pgtap_test}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  pgtap_postgres_data:
+    name: pgtap_postgres_data

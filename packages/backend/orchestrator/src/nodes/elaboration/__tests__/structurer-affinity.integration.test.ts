@@ -97,28 +97,18 @@ async function createTestDb() {
  */
 async function insertTestFixture(db: unknown): Promise<string | null> {
   try {
-    const { modelAffinity } = await import('@repo/database-schema/schema/wint')
+    const { sql } = await import('drizzle-orm')
     const drizzleDb = db as {
-      insert: (table: unknown) => {
-        values: (row: unknown) => {
-          returning: (fields?: unknown) => Promise<Array<{ id: string }>>
-        }
-      }
+      execute: (query: unknown) => Promise<{ rows: Array<{ id: string }> }>
     }
 
-    const result = await drizzleDb
-      .insert(modelAffinity)
-      .values({
-        modelId: 'haiku',
-        changeType: 'create',
-        fileType: 'tsx',
-        successRate: '0.92',
-        sampleCount: 45,
-        confidenceLevel: 'high',
-      })
-      .returning()
+    const result = await drizzleDb.execute(
+      sql`INSERT INTO wint.model_affinity (model_id, change_type, file_type, success_rate, sample_count, confidence_level)
+          VALUES ('haiku', 'create', 'tsx', 0.92, 45, 'high')
+          RETURNING id`,
+    )
 
-    return result[0]?.id ?? null
+    return result.rows[0]?.id ?? null
   } catch {
     return null
   }
@@ -129,14 +119,11 @@ async function insertTestFixture(db: unknown): Promise<string | null> {
  */
 async function deleteTestFixture(db: unknown, id: string): Promise<void> {
   try {
-    const { modelAffinity } = await import('@repo/database-schema/schema/wint')
-    const { eq } = await import('drizzle-orm')
+    const { sql } = await import('drizzle-orm')
     const drizzleDb = db as {
-      delete: (table: unknown) => {
-        where: (condition: unknown) => Promise<void>
-      }
+      execute: (query: unknown) => Promise<void>
     }
-    await drizzleDb.delete(modelAffinity).where(eq(modelAffinity.id, id))
+    await drizzleDb.execute(sql`DELETE FROM wint.model_affinity WHERE id = ${id}`)
   } catch {
     // Best-effort cleanup
   }

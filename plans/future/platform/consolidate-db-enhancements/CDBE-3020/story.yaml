@@ -1,0 +1,16 @@
+id: 'CDBE-3020'
+title: 'Roadmap Materialized View and Refresh Trigger'
+status: backlog
+priority: medium
+phase: 3
+feature: |
+  Create workflow.roadmap as a materialized view joining plans with story counts, next unblocked stories, and estimated completion; implement trigger or function to REFRESH MATERIALIZED VIEW CONCURRENTLY on plan and story changes.
+goal: |
+  Deliver pre-aggregated roadmap data for fast agent queries without repeated expensive joins across plans and stories.
+depends_on: [CDBE-3010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  REFRESH MATERIALIZED VIEW CONCURRENTLY requires a unique index on the view — must define one. Refresh-on-write triggers can cause lock contention under high write load; consider throttled refresh or scheduled refresh instead. next_unblocked_story computation may be expensive.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

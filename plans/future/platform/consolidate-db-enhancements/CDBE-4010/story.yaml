@@ -1,0 +1,16 @@
+id: 'CDBE-4010'
+title: 'pgvector Extension and Embedding Columns on Workflow Tables'
+status: backlog
+priority: medium
+phase: 4
+feature: |
+  Enable pgvector extension; add embedding vector(1536) columns and HNSW indexes to workflow.story_embeddings and workflow.plan_embeddings tables (or create them if they do not exist); create the embedding section lookup.
+goal: |
+  Establish the pgvector foundation and embedding storage for workflow entities so similarity search is possible.
+depends_on: []
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Aurora PostgreSQL pgvector support requires PostgreSQL 15.2+ — confirm Aurora version. HNSW index build on large tables is memory-intensive and can be slow; plan for index build time during migration. vector(1536) is OpenAI ada-002 dimensionality — confirm embedding model choice.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

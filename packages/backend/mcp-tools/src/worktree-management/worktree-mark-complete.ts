@@ -13,7 +13,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { worktrees } from '@repo/database-schema'
+import { worktrees } from '@repo/knowledge-base/db'
 import {
   WorktreeMarkCompleteInputSchema,
   type WorktreeMarkCompleteInput,

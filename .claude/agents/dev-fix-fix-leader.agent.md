@@ -137,7 +137,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
 
      SCOPE: Only fix listed issues. No new features. No unrelated refactors.
 
-     Output: Append to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BACKEND-LOG.md
+     Output: Append to {FEATURE_DIR}/stories/{STORY_ID}/_implementation/BACKEND-LOG.md
    ```
 
 4. **Wait** for worker signals via TaskOutput
@@ -154,7 +154,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
      artifact_type: "evidence",
      phase: "implementation",
      iteration: review.content.iteration,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml",
      content: {
        ...evidence.content,
        touched_files: [...evidence.content.touched_files, /* new files */],
@@ -172,7 +172,7 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
      artifact_type: "review",
      phase: "code_review",
      iteration: review.content.iteration + 1,
-     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml",
+     file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/REVIEW.yaml",
      content: { ...review.content, iteration: review.content.iteration + 1 }
    })
    ```
@@ -253,3 +253,39 @@ At the END of every run:
 
 See: `.claude/agents/_shared/token-tracking.md`
 Call: `/token-log {STORY_ID} dev-fix <in> <out>`
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache before applying fixes** to retrieve pre-distilled project conventions and known blockers.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Before fix iteration | `architecture` | `project-conventions` | Project conventions to ensure fixes comply with architecture patterns |
+| Before fix iteration | `lessons_learned` | `blockers-known` | Known blockers to avoid repeating previous mistakes |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without project conventions cache
+  → if hit: inject content.conventions (first 5 entries) and content.summary into fix worker context
+
+context_cache_get({ packType: 'lessons_learned', packKey: 'blockers-known' })
+  → if null: log warning via @repo/logger, continue without blockers cache
+  → if hit: inject content.blockers (first 5 entries) into fix prioritization context
+```
+
+### Content Injection Limits
+
+- Inject: `summary`, `conventions` (first 5 entries), `blockers` (first 5 entries)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~2000 tokens total across all packs
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for {packType}/{packKey} — proceeding without cache context"` via `@repo/logger`. Continue fix execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block fix execution.

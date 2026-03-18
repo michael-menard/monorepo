@@ -886,7 +886,7 @@ export function createElaborationSaveToDbNode(
       }
 
       // Update story state based on elaboration result
-      const newState = passed ? 'ready-to-work' : 'backlog'
+      const newState = passed ? 'ready' : 'backlog'
       const reason = passed
         ? 'Passed elaboration'
         : `Elaboration found ${gapsCount} issue(s) requiring attention`

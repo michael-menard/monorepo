@@ -192,13 +192,11 @@ async function main() {
       continue
     }
 
-    // Insert story (no story_dir, no story_file — KB-native)
+    // Insert stories header (no story_dir, no story_file — KB-native)
     await pool!.query(
       `INSERT INTO stories (
-        story_id, feature, epic, title, story_type, priority, state,
-        touches_backend, touches_frontend, touches_database, touches_infra
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      RETURNING id`,
+        story_id, feature, epic, title, story_type, priority, state
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         fields.story_id,
         fields.feature,
@@ -207,6 +205,17 @@ async function main() {
         fields.story_type,
         fields.priority,
         fields.state,
+      ],
+    )
+
+    // Insert story_details (touches_* and other detail columns moved here)
+    await pool!.query(
+      `INSERT INTO story_details (
+        story_id, touches_backend, touches_frontend, touches_database, touches_infra, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW())
+      ON CONFLICT (story_id) DO NOTHING`,
+      [
+        fields.story_id,
         fields.touches_backend,
         fields.touches_frontend,
         fields.touches_database,

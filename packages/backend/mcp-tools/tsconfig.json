@@ -10,5 +10,13 @@
     "allowImportingTsExtensions": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/graph-query/**/*",
+    "src/scripts/infer-capabilities.ts",
+    "src/scripts/populate-graph-features.ts"
+  ]
 }

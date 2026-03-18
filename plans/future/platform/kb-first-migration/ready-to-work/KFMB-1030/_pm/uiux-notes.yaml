@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-1030 is a pure DB schema and CRUD layer story. All changes are SQL migrations, Drizzle table definitions, Zod enum extensions, and TypeScript CRUD routing logic. No frontend components, no HTTP endpoints with UI-facing payloads, and no user-facing views are touched. UI/UX review is not applicable."

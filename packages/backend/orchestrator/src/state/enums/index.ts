@@ -13,6 +13,10 @@ export {
   isTerminalState,
   isActiveState,
   isWorkableState,
+  isRecoveryState,
   getNextState,
-  isValidTransition,
+  TERMINAL_STATES,
+  ACTIVE_STATES,
+  WORKABLE_STATES,
+  PRE_DEV_STATES,
 } from './story-state.js'

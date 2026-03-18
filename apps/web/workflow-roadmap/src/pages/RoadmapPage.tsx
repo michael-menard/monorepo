@@ -1,0 +1,451 @@
+import { useMemo, useCallback } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
+import { useNavigate } from '@tanstack/react-router'
+import {
+  AppDataTable,
+  AppBadge,
+  Input,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  Checkbox,
+  Label,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@repo/app-component-library'
+import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../store/roadmapApi'
+import {
+  setStatus,
+  setPriority,
+  setType,
+  setExcludeCompleted,
+  setSearch,
+  setSort,
+  setPageSize,
+} from '../store/roadmapFiltersSlice'
+import type { RootState } from '../store'
+
+const ALL = '_all'
+
+const STATUS_OPTIONS = [
+  { label: 'All Statuses', value: ALL },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Active', value: 'active' },
+  { label: 'Accepted', value: 'accepted' },
+  { label: 'Stories Created', value: 'stories-created' },
+  { label: 'In Progress', value: 'in-progress' },
+  { label: 'Implemented', value: 'implemented' },
+  { label: 'Superseded', value: 'superseded' },
+  { label: 'Archived', value: 'archived' },
+  { label: 'Blocked', value: 'blocked' },
+]
+
+const PRIORITY_OPTIONS = [
+  { label: 'All Priorities', value: ALL },
+  { label: 'P1', value: 'P1' },
+  { label: 'P2', value: 'P2' },
+  { label: 'P3', value: 'P3' },
+  { label: 'P4', value: 'P4' },
+  { label: 'P5', value: 'P5' },
+]
+
+const TYPE_OPTIONS = [
+  { label: 'All Types', value: ALL },
+  { label: 'Feature', value: 'feature' },
+  { label: 'Refactor', value: 'refactor' },
+  { label: 'Migration', value: 'migration' },
+  { label: 'Infra', value: 'infra' },
+  { label: 'Tooling', value: 'tooling' },
+  { label: 'Workflow', value: 'workflow' },
+  { label: 'Audit', value: 'audit' },
+  { label: 'Spike', value: 'spike' },
+]
+
+const fromSelect = (v: string) => (v === ALL ? '' : v)
+
+export function StoryGauge({ plan }: { plan: Plan }) {
+  const total = plan.totalStories
+  if (total === 0) return <span className="text-xs text-slate-500 font-mono">—</span>
+
+  const completedPct = Math.round((plan.completedStories / total) * 100)
+  const activePct = Math.round((plan.activeStories / total) * 100)
+  const blockedPct = Math.round((plan.blockedStories / total) * 100)
+  const backlogPct = 100 - completedPct - activePct - blockedPct
+  const backlogCount = total - plan.completedStories - plan.activeStories - plan.blockedStories
+
+  const bar = (
+    <div className="flex h-2 rounded-full overflow-hidden bg-slate-700 w-full min-w-[80px] cursor-default">
+      {completedPct > 0 && <div className="bg-emerald-500" style={{ width: `${completedPct}%` }} />}
+      {activePct > 0 && <div className="bg-blue-400" style={{ width: `${activePct}%` }} />}
+      {blockedPct > 0 && <div className="bg-red-500" style={{ width: `${blockedPct}%` }} />}
+      {backlogPct > 0 && <div className="bg-slate-600" style={{ width: `${backlogPct}%` }} />}
+    </div>
+  )
+
+  return (
+    <Tooltip>
+      <TooltipTrigger className="w-full">{bar}</TooltipTrigger>
+      <TooltipContent
+        side="top"
+        className="bg-slate-800 border border-slate-600 text-slate-100 p-3 max-w-xs font-mono text-xs space-y-2"
+      >
+        <div className="flex gap-3 flex-wrap">
+          <span className="text-emerald-400">{plan.completedStories} done</span>
+          {plan.activeStories > 0 && (
+            <span className="text-blue-400">{plan.activeStories} active</span>
+          )}
+          {plan.blockedStories > 0 && (
+            <span className="text-red-400">{plan.blockedStories} blocked</span>
+          )}
+          {backlogCount > 0 && <span className="text-slate-400">{backlogCount} backlog</span>}
+          <span className="text-slate-500">/ {total}</span>
+        </div>
+
+        {plan.nextStory && (
+          <div>
+            <div className="text-slate-500 uppercase text-[10px] tracking-wider mb-0.5">
+              Next up
+            </div>
+            <div className="text-cyan-400">{plan.nextStory.storyId}</div>
+            <div className="text-slate-300 truncate">{plan.nextStory.title}</div>
+          </div>
+        )}
+
+        {plan.blockedStoryList?.length > 0 && (
+          <div>
+            <div className="text-slate-500 uppercase text-[10px] tracking-wider mb-0.5">
+              Blocked
+            </div>
+            {plan.blockedStoryList.map(s => (
+              <div key={s.storyId} className="flex gap-1.5">
+                <span className="text-red-400">{s.storyId}</span>
+                <span className="text-slate-300 truncate">{s.title}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function relativeTime(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const ms = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(ms / 86400000)
+  if (days === 0) return 'today'
+  if (days === 1) return '1d ago'
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
+}
+
+const TAG_COLORS = [
+  'bg-cyan-500/20 text-cyan-300/70 border-cyan-500/30',
+  'bg-violet-500/20 text-violet-300/70 border-violet-500/30',
+  'bg-emerald-500/20 text-emerald-300/70 border-emerald-500/30',
+  'bg-amber-500/20 text-amber-300/70 border-amber-500/30',
+  'bg-pink-500/20 text-pink-300/70 border-pink-500/30',
+  'bg-sky-500/20 text-sky-300/70 border-sky-500/30',
+  'bg-orange-500/20 text-orange-300/70 border-orange-500/30',
+  'bg-teal-500/20 text-teal-300/70 border-teal-500/30',
+]
+
+function tagColor(tag: string): string {
+  let hash = 0
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0
+  return TAG_COLORS[hash % TAG_COLORS.length]
+}
+
+const columns = [
+  {
+    key: 'title',
+    header: 'Title',
+    sortable: true,
+    render: (plan: Plan) => (
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-100/70">{plan.title}</span>
+        {plan.churnDepth > 0 && (
+          <span
+            className="text-xs text-amber-400 font-mono"
+            title={`Supersedes ${plan.churnDepth} prior plan${plan.churnDepth > 1 ? 's' : ''}${plan.supersedesPlanSlug ? ` (replaces ${plan.supersedesPlanSlug})` : ''}`}
+          >
+            ↺{plan.churnDepth}
+          </span>
+        )}
+        {plan.hasRegression && (
+          <span
+            className="text-xs text-orange-500 font-mono"
+            title="This plan's status has regressed (moved backward)"
+          >
+            ⚠
+          </span>
+        )}
+      </div>
+    ),
+  },
+  {
+    key: 'tags',
+    header: 'Tags',
+    responsive: { hideAt: 'xl' as const },
+    render: (plan: Plan) =>
+      plan.tags && plan.tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {plan.tags.map(tag => (
+            <span
+              key={tag}
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${tagColor(tag)}`}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null,
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    sortable: true,
+    render: (plan: Plan) => {
+      const statusColor: Record<string, string> = {
+        draft: '!bg-slate-700/40 !border-slate-600/40 !text-slate-300/70',
+        active: '!bg-blue-500/20 !border-blue-500/30 !text-blue-300/70',
+        accepted: '!bg-cyan-500/20 !border-cyan-500/30 !text-cyan-300/70',
+        'stories-created': '!bg-teal-500/20 !border-teal-500/30 !text-teal-300/70',
+        'in-progress': '!bg-violet-500/20 !border-violet-500/30 !text-violet-300/70',
+        implemented: '!bg-emerald-500/20 !border-emerald-500/30 !text-emerald-300/70',
+        superseded: '!bg-orange-500/20 !border-orange-500/30 !text-orange-300/70',
+        archived: '!bg-slate-600/20 !border-slate-500/30 !text-slate-400/70',
+        blocked: '!bg-red-500/20 !border-red-500/30 !text-red-300/70',
+      }
+      const colorClass = statusColor[plan.status ?? ''] ?? '!border-slate-600/50 !text-slate-400/70'
+      return (
+        <AppBadge variant="outline" className={colorClass}>
+          {plan.status}
+        </AppBadge>
+      )
+    },
+  },
+  {
+    key: 'priority',
+    header: 'Priority',
+    sortable: true,
+    render: (plan: Plan) => {
+      if (!plan.priority) return null
+      const colorClass =
+        plan.priority === 'P1'
+          ? '!bg-red-500/40 !border-red-500/30 !text-white/40'
+          : plan.priority === 'P2'
+            ? '!bg-orange-500/40 !border-orange-500/30 !text-white/40'
+            : plan.priority === 'P3'
+              ? '!bg-amber-400/40 !border-amber-400/30 !text-white/40'
+              : plan.priority === 'P4'
+                ? '!bg-teal-500/40 !border-teal-500/30 !text-white/40'
+                : '!bg-blue-500/40 !border-blue-500/30 !text-white/40'
+      return (
+        <AppBadge variant="outline" className={colorClass}>
+          {plan.priority}
+        </AppBadge>
+      )
+    },
+  },
+  {
+    key: 'totalStories',
+    header: 'Stories',
+    sortable: true,
+    render: (plan: Plan) => <StoryGauge plan={plan} />,
+  },
+  {
+    key: 'lastStoryActivityAt',
+    header: 'Last Activity',
+    sortable: true,
+    render: (plan: Plan) => (
+      <span className="text-xs text-slate-400 font-mono">
+        {relativeTime(plan.lastStoryActivityAt)}
+      </span>
+    ),
+    responsive: { hideAt: 'lg' as const },
+  },
+]
+
+export function RoadmapPage() {
+  const navigate = useNavigate({ from: '/' })
+  const dispatch = useDispatch()
+
+  const { status, priority, type, excludeCompleted, search, sortKey, sortDirection, pageSize } =
+    useSelector((state: RootState) => state.roadmapFilters)
+
+  const [reorderPlans] = useReorderPlansMutation()
+
+  const queryParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 100,
+      status: status ? [status] : undefined,
+      priority: priority ? [priority] : undefined,
+      planType: type ? [type] : undefined,
+      excludeCompleted,
+      search: search.trim() || undefined,
+    }),
+    [status, priority, type, excludeCompleted, search],
+  )
+
+  const { data, error } = useGetPlansQuery(queryParams)
+
+  const handleRowClick = (plan: Plan) => {
+    navigate({ to: '/plan/$slug', params: { slug: plan.planSlug } })
+  }
+
+  const handleReorder = useCallback(
+    (items: Array<{ id: string; index: number }>) => {
+      reorderPlans({
+        priority: priority || '',
+        items: items.map(item => ({ id: item.id, priorityOrder: item.index })),
+      })
+    },
+    [reorderPlans, priority],
+  )
+
+  const errorMessage = error ? ('error' in error ? error.error : 'Failed to fetch plans') : null
+
+  if (errorMessage) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg font-mono text-sm">
+          ERROR: {errorMessage}
+        </div>
+      </div>
+    )
+  }
+
+  const plans = data?.data || []
+
+  return (
+    <main className="container mx-auto px-4 py-8">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+          Roadmap
+        </h1>
+        <p className="text-slate-400 mt-1 font-mono text-sm">Browse and manage project plans</p>
+      </header>
+
+      <section className="mb-6 bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-4 flex flex-col gap-3">
+        <Input
+          placeholder="Search plans..."
+          value={search}
+          onChange={e => dispatch(setSearch(e.target.value))}
+          className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
+        />
+
+        <div className="flex items-center gap-3">
+          <Select value={status || ALL} onValueChange={v => dispatch(setStatus(fromSelect(v)))}>
+            <SelectTrigger
+              aria-label="Filter by status"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {STATUS_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={priority || ALL} onValueChange={v => dispatch(setPriority(fromSelect(v)))}>
+            <SelectTrigger
+              aria-label="Filter by priority"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {PRIORITY_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={type || ALL} onValueChange={v => dispatch(setType(fromSelect(v)))}>
+            <SelectTrigger
+              aria-label="Filter by type"
+              className="bg-slate-800/40 border-slate-600/50 text-slate-100 focus:ring-cyan-500/50"
+            >
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-600 text-slate-100">
+              {TYPE_OPTIONS.map(opt => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="focus:bg-slate-700 focus:text-slate-100"
+                >
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Checkbox
+              id="exclude-completed"
+              checked={excludeCompleted}
+              onCheckedChange={checked => dispatch(setExcludeCompleted(checked === true))}
+            />
+            <Label
+              htmlFor="exclude-completed"
+              className="text-sm text-slate-400 cursor-pointer select-none"
+            >
+              Hide completed
+            </Label>
+          </div>
+        </div>
+      </section>
+
+      <p className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-sm text-cyan-400 font-mono">
+        {priority
+          ? `↕ Drag rows to reorder within priority ${priority}.`
+          : '↕ Drag rows to set priority order. Filter by a priority group to reorder within it.'}
+      </p>
+
+      <section className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-hidden">
+        <AppDataTable
+          data={plans}
+          columns={columns}
+          onRowClick={handleRowClick}
+          emptyMessage="No plans found"
+          pagination={{
+            enabled: true,
+            pageSize,
+            showPageSizeSelector: true,
+            showPageInfo: true,
+            showNavigationButtons: true,
+          }}
+          sortable
+          defaultSort={{ key: sortKey, direction: sortDirection }}
+          onSortChange={(key, direction) => dispatch(setSort({ key, direction }))}
+          onPageSizeChange={size => dispatch(setPageSize(size))}
+          draggable
+          onReorder={handleReorder}
+          getRowId={plan => plan.id}
+        />
+      </section>
+    </main>
+  )
+}

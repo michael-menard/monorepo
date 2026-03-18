@@ -1,0 +1,75 @@
+-- tests/db/fixtures/rollback-helper.sql
+--
+-- Transaction-Rollback Fixture Helper
+-- ====================================
+--
+-- PURPOSE
+-- -------
+-- This file documents and implements the transaction-rollback pattern used by
+-- all pgtap tests in this repository.  Every test file SHOULD begin and end
+-- with the wrapper shown below so that test data never persists to the database
+-- after the test run completes.
+--
+-- PATTERN
+-- -------
+-- Each test file wraps its test body in an explicit transaction:
+--
+--   BEGIN;                         -- open a transaction
+--   SELECT plan(N);                -- declare the expected number of assertions
+--
+--   -- ... test assertions here ...
+--
+--   SELECT * FROM finish();        -- summarise results; raises exception on failure
+--   ROLLBACK;                      -- undo ALL inserts/updates made during the test
+--
+-- WHY ROLLBACK?
+-- -------------
+-- pgtap runs directly inside PostgreSQL.  Without ROLLBACK:
+--   - Each test file's INSERT/UPDATE statements would remain in the database
+--   - Subsequent test files could see data from earlier ones, causing flaky tests
+--   - The pgtap_test database would accumulate test garbage over time
+--
+-- With ROLLBACK:
+--   - Each test file is fully isolated regardless of execution order
+--   - The database is left in a clean state after every run
+--   - Tests can be re-run repeatedly without manual cleanup
+--
+-- NOTES
+-- -----
+-- - SELECT finish() raises an exception if the test count does not match plan(N).
+--   The exception causes PostgreSQL to abort the transaction, which triggers
+--   the ROLLBACK automatically — isolation is preserved even on test failure.
+--
+-- - If a test needs to commit data (e.g. to verify a deferred constraint),
+--   use a SAVEPOINT / ROLLBACK TO SAVEPOINT pattern instead of omitting ROLLBACK.
+--
+-- - Tests that call CREATE EXTENSION or CREATE TABLE must ensure those DDL
+--   statements are idempotent (use IF NOT EXISTS) since DDL inside a transaction
+--   is rolled back along with the DML.
+--
+-- TEMPLATE
+-- --------
+-- Copy this template into a new test file and fill in the assertions:
+--
+-- ┌─────────────────────────────────────────────────────────────────────────┐
+-- │ BEGIN;                                                                  │
+-- │                                                                         │
+-- │ SELECT plan(N); -- replace N with the actual number of assertions       │
+-- │                                                                         │
+-- │ -- Setup: create any rows needed for this test                          │
+-- │ INSERT INTO ...;                                                         │
+-- │                                                                         │
+-- │ -- Assertions                                                            │
+-- │ SELECT ok(                                                               │
+-- │   (SELECT some_column FROM some_table WHERE id = '...') = 'expected',  │
+-- │   'Description of what we are testing'                                  │
+-- │ );                                                                       │
+-- │                                                                         │
+-- │ SELECT * FROM finish();                                                  │
+-- │ ROLLBACK;                                                                │
+-- └─────────────────────────────────────────────────────────────────────────┘
+
+-- This file is a documentation artifact.
+-- It contains no executable SQL beyond this comment, because the pattern
+-- is implemented directly in each test file.
+-- See tests/db/triggers/test_set_story_completed_at.sql for a complete example.

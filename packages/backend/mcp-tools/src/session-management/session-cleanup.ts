@@ -14,7 +14,7 @@
 import { and, isNotNull, lt, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextSessions } from '@repo/database-schema'
+import { contextSessions } from '@repo/knowledge-base/db'
 import {
   SessionCleanupInputSchema,
   type SessionCleanupInput,

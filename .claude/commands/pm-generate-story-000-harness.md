@@ -13,7 +13,7 @@ Generate the Story Workflow Harness (STORY-000). Do NOT implement directly.
 ## Purpose
 
 The harness story validates the end-to-end workflow mechanics before feature work begins.
-It proves: story lifecycle, QA gates, dev proof artifacts, local verification, reuse-first rules.
+It proves: story lifecycle, QA gates, dev evidence artifacts, local verification, reuse-first rules.
 
 ## Phases
 

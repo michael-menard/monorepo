@@ -30,9 +30,30 @@ import {
   artifactProofs,
   artifactQaGates,
   artifactCompletionReports,
+  artifactStorySeeds,
+  artifactTestPlans,
+  artifactDevFeasibility,
+  artifactUiuxNotes,
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
+import { extractArtifactSummary } from './artifact-summary.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const artifactColumns = {
+  id: storyArtifacts.id,
+  storyId: storyArtifacts.storyId,
+  artifactType: storyArtifacts.artifactType,
+  artifactName: storyArtifacts.artifactName,
+  kbEntryId: storyArtifacts.kbEntryId,
+  phase: storyArtifacts.phase,
+  iteration: storyArtifacts.iteration,
+  summary: storyArtifacts.summary,
+  detailTable: storyArtifacts.detailTable,
+  detailId: storyArtifacts.detailId,
+  createdAt: storyArtifacts.createdAt,
+  updatedAt: storyArtifacts.updatedAt,
+} as const
 
 // ============================================================================
 // Constants
@@ -55,6 +76,10 @@ export const ARTIFACT_TYPES = [
   'review',
   'qa_gate',
   'completion_report',
+  'story_seed',
+  'test_plan',
+  'dev_feasibility',
+  'uiux_notes',
 ] as const
 
 /**
@@ -87,6 +112,10 @@ const ARTIFACT_TYPE_TO_TABLE: Record<string, string> = {
   proof: 'artifact_proofs',
   qa_gate: 'artifact_qa_gates',
   completion_report: 'artifact_completion_reports',
+  story_seed: 'artifact_story_seeds',
+  test_plan: 'artifact_test_plans',
+  dev_feasibility: 'artifact_dev_feasibility',
+  uiux_notes: 'artifact_uiux_notes',
 }
 
 // ============================================================================
@@ -110,16 +139,16 @@ export const KbWriteArtifactInputSchema = z.object({
   content: z.record(z.unknown()),
 
   /** Implementation phase this artifact belongs to */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Iteration number for fix cycles (default: 0) */
   iteration: z.number().int().min(0).optional().default(0),
 
   /** Human-readable name for the artifact (auto-generated if not provided) */
-  artifact_name: z.string().optional().nullable(),
+  artifact_name: z.string().nullable().optional(),
 
   /** JSONB summary for quick access (subset of content) */
-  summary: z.record(z.unknown()).optional().nullable(),
+  summary: z.record(z.unknown()).nullable().optional(),
 })
 
 export type KbWriteArtifactInput = z.infer<typeof KbWriteArtifactInputSchema>
@@ -155,10 +184,10 @@ export const KbListArtifactsInputSchema = z.object({
   story_id: z.string().min(1, 'Story ID cannot be empty'),
 
   /** Filter by phase */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Filter by artifact type */
-  artifact_type: ArtifactTypeSchema.optional().nullable(),
+  artifact_type: ArtifactTypeSchema.nullable().optional(),
 
   /** Include content in response (default: false for performance) */
   include_content: z.boolean().optional().default(false),
@@ -423,6 +452,10 @@ function getDetailTableRef(detailTable: string): DetailTableRef | null {
     artifact_proofs: artifactProofs,
     artifact_qa_gates: artifactQaGates,
     artifact_completion_reports: artifactCompletionReports,
+    artifact_story_seeds: artifactStorySeeds,
+    artifact_test_plans: artifactTestPlans,
+    artifact_dev_feasibility: artifactDevFeasibility,
+    artifact_uiux_notes: artifactUiuxNotes,
   }
   return tableMap[detailTable] ?? null
 }
@@ -455,6 +488,10 @@ function generateArtifactName(artifactType: string, iteration: number): string {
     review: 'REVIEW',
     qa_gate: 'QA-GATE',
     completion_report: 'COMPLETION-REPORT',
+    story_seed: 'STORY-SEED',
+    test_plan: 'TEST-PLAN',
+    dev_feasibility: 'DEV-FEASIBILITY',
+    uiux_notes: 'UIUX-NOTES',
   }
 
   const baseName = typeNames[artifactType] ?? artifactType.toUpperCase()
@@ -644,7 +681,7 @@ export async function kb_write_artifact(
 
   // Check if artifact exists (using story_id + artifact_type + artifact_name + iteration)
   const existing = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(
       and(
@@ -696,6 +733,9 @@ export async function kb_write_artifact(
   // Update existing: update detail row, then jump table
   const existingRow = existing[0]
 
+  let resolvedDetailTable = existingRow.detailTable
+  let resolvedDetailId = existingRow.detailId
+
   if (existingRow.detailTable && existingRow.detailId) {
     // Update existing detail row
     await updateDetailRow(
@@ -714,8 +754,8 @@ export async function kb_write_artifact(
       validatedInput.content,
       validatedInput.story_id,
     )
-    existingRow.detailTable = detailTable
-    existingRow.detailId = detailId
+    resolvedDetailTable = detailTable
+    resolvedDetailId = detailId
   }
 
   const result = await db
@@ -724,8 +764,8 @@ export async function kb_write_artifact(
       artifactName,
       phase: validatedInput.phase ?? existingRow.phase,
       summary: validatedInput.summary ?? existingRow.summary,
-      detailTable: existingRow.detailTable,
-      detailId: existingRow.detailId,
+      detailTable: resolvedDetailTable,
+      detailId: resolvedDetailId,
       updatedAt: now,
     })
     .where(eq(storyArtifacts.id, existingRow.id))
@@ -768,7 +808,6 @@ export async function kb_read_artifact(
 
   // If artifact_name specified, add it to conditions
   if (validatedInput.artifact_name) {
-    eq(storyArtifacts.artifactName, validatedInput.artifact_name)
     conditions.push(eq(storyArtifacts.artifactName, validatedInput.artifact_name))
   }
 
@@ -779,7 +818,7 @@ export async function kb_read_artifact(
 
   // Query jump table, ordered by iteration desc to get latest
   const result = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(and(...conditions))
     .orderBy(desc(storyArtifacts.iteration))
@@ -836,7 +875,7 @@ export async function kb_list_artifacts(
 
   // Query jump table
   const result = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(and(...conditions))
     .orderBy(desc(storyArtifacts.createdAt))
@@ -882,7 +921,7 @@ export async function kb_delete_artifact(
 
   // Read jump table row to get detail_table + detail_id
   const jumpRows = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(eq(storyArtifacts.id, artifactId))
     .limit(1)
@@ -984,13 +1023,16 @@ export const ArtifactWriteInputSchema = z.object({
   story_dir: z.string().min(1, 'story_dir cannot be empty'),
 
   /** Implementation phase this artifact belongs to */
-  phase: StoryPhaseSchema.optional().nullable(),
+  phase: StoryPhaseSchema.nullable().optional(),
 
   /** Iteration number for fix cycles (default: 0) */
   iteration: z.number().int().min(0).optional().default(0),
 
   /** Whether to also write to KB database (default: true) */
   write_to_kb: z.boolean().optional().default(true),
+
+  /** Explicit summary override. When provided, takes precedence over auto-extracted summary. */
+  summary: z.record(z.unknown()).optional(),
 })
 
 export type ArtifactWriteInput = z.infer<typeof ArtifactWriteInputSchema>
@@ -1067,10 +1109,22 @@ export async function artifact_write(
     filePath,
   })
 
-  // ---- KB write (optional, failure-isolated) ----
+  // Artifact types that gate state transitions — KB write is mandatory for these.
+  // A silent failure here would allow a story to appear stuck (artifact missing)
+  // even though work was done. The precondition guard in kb_update_story_status
+  // depends on these being present in the KB before allowing the transition.
+  const GATED_ARTIFACT_TYPES = new Set(['elaboration', 'proof', 'review', 'qa_gate'])
+  const isGated = GATED_ARTIFACT_TYPES.has(validatedInput.artifact_type)
+
+  // ---- KB write (mandatory for gated types, optional+failure-isolated for others) ----
   let kbWritten: boolean | null = null
   let kbArtifactId: string | null = null
   let kbError: string | null = null
+
+  // Auto-extract summary; caller-provided summary takes precedence (AC-5, AC-6)
+  const resolvedSummary =
+    validatedInput.summary ??
+    extractArtifactSummary(validatedInput.artifact_type, validatedInput.content)
 
   if (validatedInput.write_to_kb) {
     try {
@@ -1081,6 +1135,7 @@ export async function artifact_write(
           content: validatedInput.content,
           phase: validatedInput.phase ?? null,
           iteration,
+          summary: resolvedSummary,
         },
         deps,
       )
@@ -1096,6 +1151,20 @@ export async function artifact_write(
     } catch (err) {
       kbWritten = false
       kbError = err instanceof Error ? err.message : String(err)
+
+      if (isGated) {
+        // Gated artifact types must land in the KB — re-throw so the caller knows
+        // the precondition for the next state transition cannot be satisfied.
+        logger.error('artifact_write: KB write failed for gated artifact type (blocking)', {
+          storyId: validatedInput.story_id,
+          artifactType: validatedInput.artifact_type,
+          iteration,
+          error: kbError,
+        })
+        throw new Error(
+          `KB write required for gated artifact type '${validatedInput.artifact_type}': ${kbError}`,
+        )
+      }
 
       logger.warn('artifact_write: KB write failed (non-blocking)', {
         storyId: validatedInput.story_id,

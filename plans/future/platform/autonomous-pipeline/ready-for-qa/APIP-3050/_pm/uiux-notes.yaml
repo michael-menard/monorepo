@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-3050 is a headless orchestrator node enhancement with no user-facing UI. The story modifies internal Structurer node logic and schema only. No frontend components, no operator dashboard changes (those are APIP-5005), no HTTP endpoints. ADR-006 confirms E2E Playwright tests do not apply. The only future visibility surface is the operator CLI (APIP-5005), but that is a separate story."

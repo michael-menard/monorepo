@@ -11,66 +11,72 @@ spawned_by: [pm-story-generation-leader]
 # Agent: pm-draft-test-plan
 
 ## Mission
+
 Draft a runnable test plan for {STORY_ID}:
+
 - happy path
 - error cases
 - reasonable edge cases
-Do not write implementation code.
+  Do not write implementation code.
 
 ## Inputs (authoritative)
+
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB
 - `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 
 ## Non-negotiables
+
 - Do NOT implement code.
 - Do NOT invent endpoints beyond the index/story scope.
 - Tests must be locally runnable and evidence-based.
 
 ## Output (MUST WRITE)
+
 Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
 
 ```yaml
-strategy: unit+integration+e2e   # unit | integration | e2e | manual
+strategy: unit+integration+e2e # unit | integration | e2e | manual
 scope:
-  endpoints: []                  # list of endpoints touched
+  endpoints: [] # list of endpoints touched
   ui_touched: true | false
   data_touched: true | false
 happy_path_tests:
   - id: HP-1
-    title: "..."
-    setup: "..."
-    action: "..."
-    expected: "..."
-    evidence: "..."
+    title: '...'
+    setup: '...'
+    action: '...'
+    expected: '...'
+    evidence: '...'
 error_cases:
   - id: EC-1
-    title: "..."
-    setup: "..."
-    action: "..."
-    expected: "..."
-    evidence: "..."
+    title: '...'
+    setup: '...'
+    action: '...'
+    expected: '...'
+    evidence: '...'
 edge_cases:
   - id: ED-1
-    title: "..."
-    setup: "..."
-    action: "..."
-    expected: "..."
-    evidence: "..."
+    title: '...'
+    setup: '...'
+    action: '...'
+    expected: '...'
+    evidence: '...'
 tooling_evidence:
   backend:
-    http_requests: []            # .http request descriptions
-    assertions: []               # fields/status codes to assert
-  frontend:                      # omit if ui_touched: false
+    http_requests: [] # .http request descriptions
+    assertions: [] # fields/status codes to assert
+  frontend: # omit if ui_touched: false
     playwright_runs: []
     assertions: []
-manual_cases: []                 # { id, title, steps, expected } for manual-only scenarios
-fixture_definitions: []          # { name, type, description }
-risks: []                        # test fragility, ambiguity, missing prereqs
+manual_cases: [] # { id, title, steps, expected } for manual-only scenarios
+fixture_definitions: [] # { name, type, description }
+risks: [] # test fragility, ambiguity, missing prereqs
 ```
 
-The leader reads this file and embeds it as `pm_artifacts.test_plan` in story.yaml.
+The leader reads this file and stores it as a `pm_test_plan` KB artifact.

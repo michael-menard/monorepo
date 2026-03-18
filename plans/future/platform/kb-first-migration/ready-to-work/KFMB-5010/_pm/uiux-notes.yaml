@@ -1,2 +1,0 @@
-skipped: true
-reason: "KFMB-5010 modifies only internal agent instruction files (.claude/agents/*.md). No user-facing interface is touched. No UI components, routes, or Tailwind styles are modified. ADR-006 skip condition applies: frontend_impacted: false."

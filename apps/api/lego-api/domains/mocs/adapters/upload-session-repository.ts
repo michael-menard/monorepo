@@ -9,7 +9,7 @@
 import { randomUUID } from 'crypto'
 import { eq, and } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import * as schema from '@repo/database-schema'
+import * as schema from '@repo/db'
 import type { UploadSessionRepository, UploadSession } from '../ports/index.js'
 
 type Schema = typeof schema

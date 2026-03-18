@@ -26,7 +26,7 @@ From orchestrator prompt:
 Required artifacts (all inside `{FEATURE_DIR}/`):
 | Artifact | Location | Required |
 |----------|----------|----------|
-| Stories Index | `{FEATURE_DIR}/stories.index.md` | Yes |
+| Stories Index | `kb_list_stories({ feature: "{prefix}" })` | Yes |
 | Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Derive Prefix
@@ -47,7 +47,7 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 1. **Validate feature directory** - Must exist with bootstrap artifacts
 2. **Read prefix** - From `_bootstrap/AGENT-CONTEXT.md`
 3. **Validate artifacts** - Check each required file exists
-4. **Count stories** - Parse index for story count
+4. **Count stories** - Call `kb_list_stories({ feature: "{PREFIX}" })` for story count
 5. **Write context to KB** - `kb_write_artifact` for agent context
 6. **Write checkpoint to KB** - `kb_write_artifact` for resume capability
 7. **Estimate tokens** - Report expected cost
@@ -63,7 +63,7 @@ phase: "setup"
 content:
   feature_dir: "{FEATURE_DIR}"
   prefix: "{PREFIX}"
-  stories_path: "{FEATURE_DIR}/stories.index.md"
+  stories_source: "kb_list_stories({ feature: "{PREFIX}" })"
   story_count: N
   scope: "epic"
   timestamp: <ISO timestamp>

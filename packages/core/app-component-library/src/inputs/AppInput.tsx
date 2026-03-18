@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { logger } from '@repo/logger'
-import { Input, InputProps } from '../_primitives/input'
+import { Input } from '../_primitives/input'
 import {
   SANITIZATION_PROFILES,
   SanitizationConfig,
@@ -25,7 +25,10 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-export interface AppInputProps extends Omit<InputProps, 'onChange' | 'onBlur'> {
+export interface AppInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'onChange' | 'onBlur'
+> {
   /** Custom sanitization configuration */
   sanitizationConfig?: SanitizationConfig
   /** Whether to sanitize on every change or only on blur */

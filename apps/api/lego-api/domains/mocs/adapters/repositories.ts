@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { eq, and, like, count, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import type * as schema from '@repo/database-schema'
+import type * as schema from '@repo/db'
 import slugifyLib from 'slugify'
 const slugify = slugifyLib.default || slugifyLib
 import type {

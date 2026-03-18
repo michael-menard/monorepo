@@ -1,0 +1,16 @@
+id: 'CDBE-3030'
+title: 'token_dashboard Materialized View and Daily Refresh'
+status: backlog
+priority: medium
+phase: 3
+feature: |
+  Create telemetry.token_dashboard as a materialized view aggregating token usage and cost by story, agent, model, and day; implement a scheduled daily refresh mechanism.
+goal: |
+  Surface aggregated cost and token data for dashboards without scanning raw telemetry tables at query time.
+depends_on: [CDBE-3020]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Scheduled refresh requires pg_cron (Aurora PostgreSQL supports it) or an external scheduler — confirm Aurora version supports pg_cron. Materialized view over partitioned token_usage table (Phase 5) requires the partition setup to be in place first for correct aggregation, but view can be created before partitioning with a refresh after Phase 5.
+sizing_warning: false
+created: '2026-03-14T16:01:29Z'

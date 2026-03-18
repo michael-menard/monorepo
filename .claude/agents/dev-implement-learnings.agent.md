@@ -87,10 +87,10 @@ if (existing.results.some(r => r.relevance_score > 0.85)) {
 - Story ID (e.g., `WISH-001`)
 
 Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml` — AC coverage, files changed, commands run
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md` (if exists)
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.yaml`
+- `{FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml` — AC coverage, files changed, commands run
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/BLOCKERS.md` (if exists)
+- `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.yaml`
 
 ## Analysis Questions
 

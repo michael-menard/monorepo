@@ -30,19 +30,8 @@ vi.mock('@repo/logger', () => ({
   },
 }))
 
-// Mock @repo/database-schema/schema/wint
-const mockModelAffinity = { changeType: 'changeType', fileType: 'fileType' }
-vi.mock('@repo/database-schema/schema/wint', () => ({
-  modelAffinity: mockModelAffinity,
-}))
-
-// Mock drizzle-orm
-const mockAnd = vi.fn((...args) => ({ type: 'and', args }))
-const mockEq = vi.fn((col, val) => ({ type: 'eq', col, val }))
-vi.mock('drizzle-orm', () => ({
-  and: mockAnd,
-  eq: mockEq,
-}))
+// Note: affinity-reader.ts uses db.execute(sql`...`) with raw SQL against wint.model_affinity.
+// No Drizzle table schema import is needed.
 
 // ============================================================================
 // Fixtures
@@ -69,11 +58,7 @@ function makeAffinityRow(overrides: Partial<{
 
 function makeDb(rows: ReturnType<typeof makeAffinityRow>[] = [makeAffinityRow()]) {
   return {
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(rows),
-      }),
-    }),
+    execute: vi.fn().mockResolvedValue({ rows }),
   }
 }
 
@@ -215,10 +200,8 @@ describe('readAffinityProfiles — HP-2: query deduplication', () => {
   })
 
   it('queries DB once for two items with same (changeType, fileType) pair', async () => {
-    const mockWhere = vi.fn().mockResolvedValue([makeAffinityRow()])
-    const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
-    const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
-    const db = { select: mockSelect }
+    const mockExecute = vi.fn().mockResolvedValue({ rows: [makeAffinityRow()] })
+    const db = { execute: mockExecute }
 
     const items = [
       { id: 'CO-1', changeType: 'create', filePath: 'src/components/A.tsx' },
@@ -228,17 +211,15 @@ describe('readAffinityProfiles — HP-2: query deduplication', () => {
     const result = await readAffinityProfiles(items, db, 'test-story')
 
     // DB queried only once (one pair: create/tsx)
-    expect(mockWhere).toHaveBeenCalledTimes(1)
+    expect(mockExecute).toHaveBeenCalledTimes(1)
     // Both items should have guidance from the single query
     expect(result.map.get('CO-1')).not.toBeNull()
     expect(result.map.get('CO-2')).not.toBeNull()
   })
 
   it('queries DB twice for items with different (changeType, fileType) pairs', async () => {
-    const mockWhere = vi.fn().mockResolvedValue([makeAffinityRow()])
-    const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
-    const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
-    const db = { select: mockSelect }
+    const mockExecute = vi.fn().mockResolvedValue({ rows: [makeAffinityRow()] })
+    const db = { execute: mockExecute }
 
     const items = [
       { id: 'CO-1', changeType: 'create', filePath: 'src/components/A.tsx' },
@@ -248,7 +229,7 @@ describe('readAffinityProfiles — HP-2: query deduplication', () => {
     await readAffinityProfiles(items, db, 'test-story')
 
     // DB queried twice (two pairs: create/tsx, modify/ts)
-    expect(mockWhere).toHaveBeenCalledTimes(2)
+    expect(mockExecute).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -264,11 +245,8 @@ describe('readAffinityProfiles — EC-1: DB error thrown', () => {
   it('calls logger.warn and returns fallbackUsed:true on DB error', async () => {
     const { logger } = await import('@repo/logger')
 
-    const mockWhere = vi.fn().mockRejectedValue(new Error('DB connection failed'))
     const db = {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ where: mockWhere }),
-      }),
+      execute: vi.fn().mockRejectedValue(new Error('DB connection failed')),
     }
 
     const items = [{ id: 'CO-1', changeType: 'create', filePath: 'src/Feature.tsx' }]
@@ -283,11 +261,7 @@ describe('readAffinityProfiles — EC-1: DB error thrown', () => {
 
   it('returns all null guidance when DB throws', async () => {
     const db = {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockRejectedValue(new Error('timeout')),
-        }),
-      }),
+      execute: vi.fn().mockRejectedValue(new Error('timeout')),
     }
 
     const items = [{ id: 'CO-1', changeType: 'create', filePath: 'src/Feature.tsx' }]

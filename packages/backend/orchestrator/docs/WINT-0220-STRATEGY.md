@@ -1,10 +1,10 @@
 # WINT-0220: Model-per-Task Strategy
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Effective Date**: 2026-02-15  
-**Review Date**: 2026-03-15  
+**Review Date**: 2026-06-15  
 **Status**: Active  
-**Related Stories**: MODL-0010, WINT-0230, WINT-0240, WINT-0250
+**Related Stories**: MODL-0010 (UAT), WINT-0230, WINT-0240, WINT-0250
 
 ---
 
@@ -15,11 +15,13 @@ This document defines a comprehensive model-per-task strategy for the Workflow I
 **Key Outcomes:**
 - **60% cost reduction** through strategic Ollama usage for routine tasks
 - **4-tier model classification** (0=Critical Decision, 1=Complex Reasoning, 2=Routine Work, 3=Simple Tasks)
-- **143 agents analyzed** with migration plan for optimal tier assignment
+- **142 agents fully mapped** with tier assignments in model-assignments.yaml (100% coverage)
+- **3-provider escalation chain**: ollama → openrouter → anthropic
 - **Escalation triggers defined** for quality, cost, failure, and human-in-loop scenarios
 - **Backward compatibility preserved** with existing agent infrastructure
+- **Three routing modes**: legacy / three-tier-affinity / four-tier (APIP-3070)
 
-**Strategic Principle**: Use free local Ollama models for pattern-based tasks (lint, simple generation), reserve expensive Claude models for high-stakes reasoning (gap analysis, strategic decisions).
+**Strategic Principle**: Use free local Ollama models for pattern-based tasks (lint, simple generation), reserve expensive Claude models for high-stakes reasoning (gap analysis, strategic decisions), with OpenRouter as the intermediate fallback when Ollama is unavailable.
 
 ---
 
@@ -28,12 +30,13 @@ This document defines a comprehensive model-per-task strategy for the Workflow I
 1. [Model Tier Specifications](#1-model-tier-specifications)
 2. [Task Type Taxonomy](#2-task-type-taxonomy)
 3. [Decision Flowchart](#3-decision-flowchart)
-4. [Agent Analysis & Migration Plan](#4-agent-analysis--migration-plan)
-5. [Escalation Triggers](#5-escalation-triggers)
-6. [Integration with Provider System](#6-integration-with-provider-system)
-7. [Cost Impact Analysis](#7-cost-impact-analysis)
-8. [Example Scenarios](#8-example-scenarios)
-9. [Versioning & Review Process](#9-versioning--review-process)
+4. [Routing Modes](#4-routing-modes)
+5. [Agent Analysis & Migration Plan](#5-agent-analysis--migration-plan)
+6. [Escalation Triggers](#6-escalation-triggers)
+7. [Integration with Provider System](#7-integration-with-provider-system)
+8. [Cost Impact Analysis](#8-cost-impact-analysis)
+9. [Example Scenarios](#9-example-scenarios)
+10. [Versioning & Review Process](#10-versioning--review-process)
 
 ---
 
@@ -107,9 +110,10 @@ We define 4 tiers (0-3) based on task complexity and quality requirements. Highe
 
 **Models:**
 - **Primary**: Ollama deepseek-coder-v2:16b, codellama:13b, qwen2.5-coder:14b (`ollama/deepseek-coder-v2:16b`)
-- **Fallback**: Claude Haiku 3.5 (if Ollama unavailable)
+- **First Fallback**: OpenRouter claude-3.5-haiku (`openrouter/anthropic/claude-3.5-haiku`) — ~$0.08/1M tokens
+- **Second Fallback**: Claude Haiku 3.5 direct (`anthropic/claude-haiku-3.5`) — ~$0.25/1M tokens
 
-**Cost**: $0.00 (local) - Free
+**Cost**: $0.00 (local Ollama) → $0.08/1M (OpenRouter fallback)
 
 **Use Cases:**
 - Single-file code generation
@@ -117,26 +121,31 @@ We define 4 tiers (0-3) based on task complexity and quality requirements. Highe
 - Test generation from specifications
 - Contract/interface definition
 - Mid-complexity technical analysis
+- Architecture worker tasks (boundary checks, import analysis)
 
 **Quality Expectations**: Good code quality, follows established patterns. Suitable for well-defined specifications.
 
 **Latency Tolerance**: Low (1-5s preferred)
 
-**Availability Requirement**: Ollama must be available. If not, gracefully degrade to Claude Haiku.
+**Availability Requirement**: Ollama preferred. If not available, escalate to openrouter → anthropic.
 
 **Example Agents**:
 - `dev-implement-contracts` - Contract/interface definition
 - `dev-implement-playwright` - E2E test generation
 - `pm-dev-feasibility-review` - Technical feasibility checks
 - `dev-implement-plan-validator` - Plan structure validation
+- `architect-barrel-worker`, `architect-boundary-worker`, etc.
 
 ---
 
 ### Tier 3: Simple Tasks
 
 **Models:**
-- **Primary**: Ollama qwen2.5-coder:7b, llama3.2:3b (`ollama/qwen2.5-coder:7b`)
-- **Fallback**: Ollama Tier 2 models → Claude Haiku 3.5
+- **Primary**: Ollama qwen2.5-coder:7b, llama3.2:8b (`ollama/qwen2.5-coder:7b`)
+  - Note: llama3.2:8b is the runtime truth (per ARCH-002); llama3.2:3b is an optional lean alternative
+- **First Fallback**: Ollama Tier 2 models (deepseek-coder-v2:16b)
+- **Second Fallback**: OpenRouter claude-3.5-haiku (`openrouter/anthropic/claude-3.5-haiku`)
+- **Final Fallback**: Claude Haiku 3.5 direct
 
 **Cost**: $0.00 (local) - Free
 
@@ -146,6 +155,7 @@ We define 4 tiers (0-3) based on task complexity and quality requirements. Highe
 - Status updates and progress reporting
 - Simple file structure validation
 - Template filling and boilerplate generation
+- Metrics collection and telemetry
 
 **Quality Expectations**: Adequate for deterministic, rule-based tasks. No complex judgment required.
 
@@ -163,6 +173,7 @@ We define 4 tiers (0-3) based on task complexity and quality requirements. Highe
 - `elab-completion-leader` - Status updates
 - `dev-documentation-leader` - Documentation formatting
 - `qa-verify-completion-leader` - Completion reporting
+- `churn-index-metrics-agent`, `ttdc-metrics-agent`, etc.
 
 ---
 
@@ -172,8 +183,8 @@ We define 4 tiers (0-3) based on task complexity and quality requirements. Highe
 |------|------|--------------|---------|---------|------------------|
 | 0 | Critical Decision | Claude Opus 4.6 | $15 | 5-15s | High-stakes strategic decisions |
 | 1 | Complex Reasoning | Claude Sonnet 4.5 | $3 | 3-8s | Gap analysis, planning, complex code |
-| 2 | Routine Work | Ollama deepseek-coder-v2 | $0 | 1-5s | Code generation, refactoring |
-| 3 | Simple Tasks | Ollama qwen2.5-coder | $0 | <2s | Lint, validation, status updates |
+| 2 | Routine Work | Ollama deepseek-coder-v2 | $0 | 1-5s | Code generation, arch review, refactoring |
+| 3 | Simple Tasks | Ollama qwen2.5-coder | $0 | <2s | Lint, validation, status updates, metrics |
 
 ---
 
@@ -187,7 +198,7 @@ This section categorizes all workflow tasks into types and maps each to a recomm
 
 | Task Type | Tier | Rationale | Examples |
 |-----------|------|-----------|----------|
-| Setup Validation | 3 | Deterministic checks, no reasoning | `elab-setup-leader`, `dev-setup-leader`, `qa-verify-setup-leader` |
+| Setup Validation | 3 | Deterministic checks, no reasoning | `elab-setup-leader`, `dev-setup-leader`, `qa-verify-setup-leader`, `audit-setup-leader`, `architect-setup-leader`, `scrum-master-setup-leader` |
 | Completion Reporting | 3 | Template-based, minimal judgment | `elab-completion-leader`, `dev-documentation-leader`, `qa-verify-completion-leader` |
 
 **Escalation**: None expected - if file structure is complex (>50 files), escalate to Tier 2 for validation.
@@ -199,8 +210,8 @@ This section categorizes all workflow tasks into types and maps each to a recomm
 | Task Type | Tier | Rationale | Examples |
 |-----------|------|-----------|----------|
 | Gap Analysis | 1 | Requires empathy, domain knowledge, multi-factor reasoning | `story-fanout-pm`, `story-fanout-ux`, `story-fanout-qa` |
-| Attack Analysis | 1 | Adversarial reasoning, creativity, critical thinking | `story-attack-agent` |
-| Synthesis | 1 | Multi-dimensional integration, judgment on trade-offs | `story-synthesize-agent` |
+| Attack Analysis | 1 | Adversarial reasoning, creativity, critical thinking | `story-attack-agent`, `audit-devils-advocate` |
+| Synthesis | 1 | Multi-dimensional integration, judgment on trade-offs | `story-synthesize-agent`, `audit-aggregate-leader`, `audit-moderator` |
 | Readiness Scoring | 1 | Complex algorithm with subjective judgment | `readiness-score-agent` |
 
 **Escalation**: 
@@ -226,8 +237,9 @@ This section categorizes all workflow tasks into types and maps each to a recomm
 
 | Task Type | Tier | Rationale | Examples |
 |-----------|------|-----------|----------|
-| Lint & Syntax | 3 | Deterministic, fast Ollama sufficient | `code-review-lint`, `code-review-syntax`, `code-review-style-compliance` |
-| Security Review | 1 | Threat modeling, high-stakes if missed | `code-review-security`, `elab-epic-security` |
+| Lint & Syntax | 3 | Deterministic, fast Ollama sufficient | `code-review-lint`, `code-review-syntax`, `code-review-style-compliance`, `code-review-typecheck` |
+| Code Quality Review | 2 | Pattern analysis; mid-tier Ollama adequate | `code-review-react`, `code-review-reusability`, `code-review-typescript`, `code-review-accessibility`, `audit-code-quality`, `audit-duplication` |
+| Security Review | 1 | Threat modeling, high-stakes if missed | `code-review-security`, `elab-epic-security`, `audit-security`, `quick-security` |
 
 **Escalation**: 
 - Security review for production-critical → Tier 0
@@ -238,7 +250,7 @@ This section categorizes all workflow tasks into types and maps each to a recomm
 
 | Task Type | Tier | Rationale | Examples |
 |-----------|------|-----------|----------|
-| Implementation Planning | 1 | Multi-factor planning, trade-off evaluation | `dev-implement-planner`, `pm-story-generation-leader` |
+| Implementation Planning | 1 | Multi-factor planning, trade-off evaluation | `dev-implement-planner`, `pm-story-generation-leader`, `dev-plan-leader` |
 | Epic Planning | 0 | Large-scale, long-term impact, deepest reasoning | `elab-epic-interactive-leader` |
 
 **Escalation**: 
@@ -257,13 +269,41 @@ This section categorizes all workflow tasks into types and maps each to a recomm
 
 ---
 
+### Architecture & Design
+
+| Task Type | Tier | Rationale | Examples |
+|-----------|------|-----------|----------|
+| Architecture Workers | 2 | Pattern-based structural checks, codellama adequate | `architect-barrel-worker`, `architect-boundary-worker`, `architect-circular-worker`, `architect-component-worker`, `architect-hexagonal-worker`, `architect-import-worker`, `architect-interface-worker`, `architect-route-worker`, `architect-schema-worker`, `architect-service-worker`, `architect-workspace-worker`, `architect-zod-worker` |
+| Architecture Leadership | 1 | Cross-cutting decisions, contextual reasoning | `architect-aggregation-leader`, `architect-api-leader`, `architect-frontend-leader`, `architect-packages-leader`, `architect-types-leader` |
+
+---
+
+### Audit & Metrics
+
+| Task Type | Tier | Rationale | Examples |
+|-----------|------|-----------|----------|
+| Audit Analysis | 2 | Structured checks against patterns; Ollama adequate | `audit-accessibility`, `audit-performance`, `audit-react`, `audit-test-coverage`, `audit-typescript`, `audit-ui-ux` |
+| Metrics Collection | 3 | Deterministic counting; minimal reasoning | `churn-index-metrics-agent`, `leakage-metrics-agent`, `pcar-metrics-agent`, `ttdc-metrics-agent`, `turn-count-metrics-agent` |
+
+---
+
+### Pipeline Coordination & Risk
+
+| Task Type | Tier | Rationale | Examples |
+|-----------|------|-----------|----------|
+| Pipeline Coordination | 1 | Workflow state reasoning and decision logic | `dev-execute-leader`, `dev-verification-leader`, `scrum-master-loop-leader`, `uat-orchestrator`, `review-aggregate-leader`, `session-manager`, `workflow-retro` |
+| Risk Assessment | 1 | Multi-factor risk reasoning requires judgment | `risk-predictor`, `scope-defender`, `confidence-calibrator` |
+| Knowledge Management | 3 | Structured reads/writes; minimal reasoning | `kb-writer`, `kb-compressor`, `knowledge-context-loader`, `pattern-miner`, `doc-sync` |
+
+---
+
 ### Complete Task Type Summary
 
-**Total Task Types**: 14  
+**Total Task Types**: 22  
 **Tier 0 Task Types**: 2 (Epic Planning, Commitment Gates)  
-**Tier 1 Task Types**: 8 (Gap analysis, synthesis, planning, complex code, security)  
-**Tier 2 Task Types**: 1 (Simple code generation)  
-**Tier 3 Task Types**: 3 (Setup, completion, lint)
+**Tier 1 Task Types**: 10 (Gap analysis, synthesis, planning, complex code, security, pipeline coordination, risk)  
+**Tier 2 Task Types**: 5 (Simple code gen, architecture workers, audit analysis, code quality review, routine work)  
+**Tier 3 Task Types**: 5 (Setup, completion, lint, metrics, knowledge management)
 
 ---
 
@@ -278,14 +318,21 @@ flowchart TD
     TaskType -->|Setup/Validation| Simple[Simple Task]
     TaskType -->|Completion/Status| Simple
     TaskType -->|Lint/Syntax| Simple
+    TaskType -->|Metrics Collection| Simple
+    TaskType -->|Knowledge Management| Simple
     
     TaskType -->|Gap Analysis| Reasoning[Complex Reasoning]
     TaskType -->|Planning| Reasoning
     TaskType -->|Synthesis| Reasoning
-    TaskType -->|Code Review| Reasoning
+    TaskType -->|Security Review| Reasoning
+    TaskType -->|Pipeline Coordination| Reasoning
+    TaskType -->|Risk Assessment| Reasoning
     
+    TaskType -->|Architecture Workers| Routine[Routine Work]
+    TaskType -->|Audit Analysis| Routine
+    TaskType -->|Code Quality Review| Routine
     TaskType -->|Code Generation| CodeCheck{Scope<br/>complexity?}
-    CodeCheck -->|Single file,<br/>well-defined| Routine[Routine Work]
+    CodeCheck -->|Single file,<br/>well-defined| Routine
     CodeCheck -->|Multi-file,<br/>architectural| Reasoning
     
     TaskType -->|Epic Planning| Critical[Critical Decision]
@@ -299,11 +346,13 @@ flowchart TD
     
     Tier3 --> OllamaCheck3{Ollama<br/>available?}
     OllamaCheck3 -->|Yes| Execute3[Execute with<br/>qwen2.5-coder:7b]
-    OllamaCheck3 -->|No| Fallback3[Fallback to<br/>Haiku 3.5]
+    OllamaCheck3 -->|No| OpenRouter3[Fallback to<br/>OpenRouter Haiku]
+    OpenRouter3 --> AnthrFb3[Final fallback:<br/>Anthropic Haiku]
     
     Tier2 --> OllamaCheck2{Ollama<br/>available?}
     OllamaCheck2 -->|Yes| Execute2[Execute with<br/>deepseek-coder-v2:16b]
-    OllamaCheck2 -->|No| Fallback2[Fallback to<br/>Haiku 3.5]
+    OllamaCheck2 -->|No| OpenRouter2[Fallback to<br/>OpenRouter Haiku]
+    OpenRouter2 --> AnthrFb2[Final fallback:<br/>Anthropic Haiku]
     
     Tier1 --> Execute1[Execute with<br/>Sonnet 4.5]
     Tier0 --> Execute0[Execute with<br/>Opus 4.6]
@@ -312,9 +361,8 @@ flowchart TD
     Execute2 --> QualityGate
     Execute1 --> QualityGate
     Execute0 --> QualityGate
-    
-    Fallback3 --> QualityGate
-    Fallback2 --> QualityGate
+    AnthrFb3 --> QualityGate
+    AnthrFb2 --> QualityGate
     
     QualityGate -->|Pass| Success([Task Complete])
     QualityGate -->|Fail| RetryCheck{Retry<br/>count < 3?}
@@ -340,55 +388,129 @@ flowchart TD
 1. Classify task by type
 2. Map to recommended tier
 3. Check Ollama availability for Tier 2/3
-4. Execute with selected model
-5. Validate quality
-6. Escalate on failure (max 3 retries)
-7. Human review if retry exhausted
+4. If Ollama down: try OpenRouter (claude-3.5-haiku) → Anthropic direct
+5. Execute with selected model
+6. Validate quality
+7. Escalate on failure (max 3 retries)
+8. Human review if retry exhausted
 
 ---
 
-## 4. Agent Analysis & Migration Plan
+## 4. Routing Modes
 
-*Addresses AC-4: 143 agents analyzed, current vs proposed mappings, migration plan*
+*Addresses AC-1: Four-tier routing modes as distinct documented scenarios*
+
+The `PipelineModelRouter` in `packages/backend/orchestrator/src/pipeline/model-router.ts` supports three distinct routing modes activated by constructor configuration. All modes share **Tier 1: DB override** as the first resolution step.
+
+### Mode 1: Legacy Escalation (APIP-0040 compat)
+
+**Activation**: No `affinityReader` configured.
+
+**Resolution order**:
+1. DB override (wint.model_assignments cache)
+2. Static escalation chain: ollama → openrouter → anthropic
+
+**Use case**: Simple deployments without affinity telemetry.
+
+```
+DB Override? → Yes → Use DB model
+           → No  → Try Ollama → Try OpenRouter → Try Anthropic → Fail
+```
+
+---
+
+### Mode 2: Three-Tier Affinity (APIP-3040 compat)
+
+**Activation**: `affinityReader` configured, no `hasAnyQualifyingProfile`.
+
+**Resolution order**:
+1. DB override
+2. Affinity-based routing (medium/high confidence profiles, success_rate ≥ threshold)
+3. Static escalation chain as fallback (ollama → openrouter → anthropic)
+
+**Use case**: Deployments with affinity telemetry but without cold-start detection.
+
+```
+DB Override? → Yes → Use DB model
+           → No  → Affinity profile (medium/high confidence)? → Yes → Use affinity model
+                 → No → Static escalation chain
+```
+
+---
+
+### Mode 3: Four-Tier (APIP-3070)
+
+**Activation**: `affinityReader` + `hasAnyQualifyingProfile` both configured.
+
+**Resolution order**:
+1. DB override
+2. Cold-start check: if `hasAnyQualifyingProfile()` returns false → skip to Tier 4 (conservative OpenRouter)
+3. Affinity routing (medium/high confidence only)
+4. Exploration slot (10% random Ollama for telemetry)
+5. Conservative OpenRouter default (`openrouter/anthropic/claude-3-haiku`)
+
+**Use case**: Full production deployments with telemetry feedback loop.
+
+```
+DB Override? → Yes → Use DB model
+           → No  → Cold start? → Yes → Conservative OpenRouter (Tier 4)
+                 → No → Affinity (medium/high)? → Yes → Use affinity model
+                       → No → Exploration slot (10%)? → Yes → Random Ollama
+                            → No → Conservative OpenRouter (Tier 4)
+```
+
+**DB Override Cache Note**: The wint.model_assignments DB cache is **single-process only**. Cache invalidation (`invalidateAssignmentsCache()`) affects only the current process. Multi-process deployments require external cache coordination.
+
+---
+
+## 5. Agent Analysis & Migration Plan
+
+*Addresses AC-4: 142 agents analyzed, current vs proposed mappings, migration plan*
 
 ### Analysis Summary
 
-**Total Agents Analyzed**: 143
+**Total Agents Analyzed**: 142 (v1.1.0)
 
-**Current Distribution** (based on `model:` frontmatter):
-- **No assignment**: 81 agents (56.6%)
-- **Haiku**: 37 agents (25.9%)
-- **Sonnet**: 23 agents (16.1%)
+**Coverage Status** (v1.1.0): 100% — all 142 agents now have entries in `.claude/config/model-assignments.yaml`
+
+**Original Distribution** (v1.0.0 baseline):
+- **No assignment (default Sonnet)**: 81 agents (57.0%)
+- **Haiku**: 37 agents (26.1%)
+- **Sonnet**: 23 agents (16.2%)
 - **Opus**: 2 agents (1.4%)
 
-**Proposed Distribution** (by tier):
+**v1.1.0 Proposed Distribution** (by tier):
 - **Tier 0**: 5 agents (3.5%) - Critical decisions only
-- **Tier 1**: 30 agents (21.0%) - Complex reasoning
-- **Tier 2**: 20 agents (14.0%) - Routine work
-- **Tier 3**: 88 agents (61.5%) - Simple tasks
+- **Tier 1**: 30 agents (21.1%) - Complex reasoning
+- **Tier 2**: 20 agents (14.1%) - Routine work
+- **Tier 3**: 87 agents (61.3%) - Simple tasks
+
+### New Agent Assignments (v1.1.0 additions)
+
+The following agent groups were unmapped in v1.0.0 and assigned in v1.1.0:
+
+| Agent Group | Count | Assigned Tier | Rationale |
+|-------------|-------|---------------|-----------|
+| `architect/*` workers (12) | 12 | Tier 2 | Structural pattern analysis |
+| `architect/*` leaders (6) | 6 | Tier 1 | Cross-cutting architectural reasoning |
+| `audit/*` workers (9) | 9 | Tier 2 | Structured analysis vs known patterns |
+| `audit/*` leaders (3) | 3 | Tier 1 | Aggregation, moderation, trend analysis |
+| `audit-security`, `audit-devils-advocate` | 2 | Tier 1 | High-stakes reasoning required |
+| Code review extensions (4) | 4 | Tier 2 | Pattern-based quality checks |
+| Metrics agents (5) | 5 | Tier 3 | Deterministic counting |
+| Pipeline coordination agents (7) | 7 | Tier 1 | Workflow state reasoning |
+| Risk/confidence agents (3) | 3 | Tier 1 | Multi-factor risk reasoning |
+| Knowledge management (4) | 4 | Tier 3 | Structured reads/writes |
+| Quick-review agents (3) | 3 | Tier 1/2/1 | Context-dependent |
+| UAT/scrum agents (4) | 4 | Tier 1/3 | Mixed by complexity |
+| PM/evidence agents (6) | 6 | Tier 1/3 | Mixed by complexity |
 
 ### Key Insights
 
-1. **61.5% of agents are simple tasks** - massive cost reduction opportunity via Ollama Tier 3
+1. **61.3% of agents are simple tasks** - massive cost reduction opportunity via Ollama Tier 3
 2. **Only 3.5% require Opus** - most "critical" work can be handled by Sonnet
-3. **56.6% currently have no assignment** - these default to Sonnet (expensive), should move to Tier 2/3
-4. **25.9% on Haiku** - many can move to free Ollama Tier 3
-
-### Current vs. Proposed Mapping (Sample)
-
-| Agent | Current | Proposed Tier | Rationale |
-|-------|---------|--------------|-----------|
-| `elab-setup-leader` | haiku | 3 | Simple validation, no reasoning |
-| `dev-setup-leader` | haiku | 3 | Pre-flight checks, deterministic |
-| `code-review-lint` | haiku | 3 | Rule-based, fast Ollama sufficient |
-| `story-fanout-pm` | sonnet | 1 | Gap analysis requires reasoning |
-| `story-attack-agent` | sonnet | 1 | Adversarial thinking, keep on Sonnet |
-| `dev-implement-planner` | sonnet | 1 | Strategic planning, keep on Sonnet |
-| `dev-implement-backend-coder` | (none) | 1 | Complex code generation, escalate from Tier 2 |
-| `dev-implement-contracts` | (none) | 2 | Simple contract definition, use Ollama |
-| `dev-implement-playwright` | (none) | 2 | Test generation, pattern-based |
-| `commitment-gate-agent` | opus | 0 | Critical decision, keep on Opus |
-| `elab-epic-interactive-leader` | sonnet | 0 | Epic planning, escalate to Opus |
+3. **v1.0.0 unmapped agents defaulted to Sonnet** (expensive); v1.1.0 moves most to Tier 2/3
+4. **Architect workers**: All 12 structural analysis workers → Tier 2 (codellama:13b adequate)
 
 ### Migration Plan
 
@@ -397,20 +519,12 @@ flowchart TD
 **Priority**: High  
 **Risk**: Low - deterministic tasks
 
-**Agents to Migrate** (88 total):
+**Agents to Migrate** (87 total):
 - All setup leaders → Tier 3
 - All completion leaders → Tier 3
 - All lint/syntax workers → Tier 3
-
-**Expected Impact**:
-- Cost reduction: ~40%
-- Quality impact: None (deterministic tasks)
-- Latency improvement: ~50% faster (Ollama local)
-
-**Validation**:
-- Run existing test suites
-- Monitor for quality regressions
-- Rollback if >5% failure rate increase
+- All metrics agents → Tier 3
+- All knowledge management agents → Tier 3
 
 ---
 
@@ -419,20 +533,11 @@ flowchart TD
 **Priority**: Medium  
 **Risk**: Medium - validate quality on Tier 2
 
-**Agents to Migrate** (20 total):
+**Agents to Migrate** (~20 total):
+- Architect workers → Tier 2
+- Audit analysis workers → Tier 2
+- Code quality review workers → Tier 2
 - Simple code generation → Tier 2
-- Mid-complexity analysis → Tier 2
-- Contract definition → Tier 2
-
-**Expected Impact**:
-- Additional cost reduction: ~15%
-- Quality impact: Monitor for code quality (expect <5% rework)
-- Latency improvement: ~30% faster
-
-**Validation**:
-- A/B test Tier 2 vs. Tier 1 on sample tasks
-- Review code quality metrics
-- Collect human feedback on generated code
 
 ---
 
@@ -443,15 +548,7 @@ flowchart TD
 
 **Agents to Review**:
 - Review Tier 1 assignments for possible downgrade to Tier 2
-- Identify edge cases where Tier 0 needed
-
-**Expected Impact**:
-- Additional cost reduction: ~5%
-- Fine-tune tier assignments based on telemetry data (INFR-0040)
-
-**Validation**:
-- Quarterly review of tier assignments
-- Adjust based on quality metrics and cost data
+- Telemetry-driven re-assignments after INFR-0040
 
 ---
 
@@ -473,13 +570,13 @@ const tier = assignment?.tier ?? MODEL_TO_TIER[assignment?.model] ?? 1
 ```
 
 **Migration Path**:
-- Phase 1: Add tier assignments alongside existing model assignments
+- Phase 1: Add tier assignments alongside existing model assignments (complete in v1.1.0)
 - Phase 2: Agents read tier if present, fallback to model
 - Phase 3 (future): Deprecate `model:` field, use tier exclusively
 
 ---
 
-## 5. Escalation Triggers
+## 6. Escalation Triggers
 
 *Addresses AC-5: Escalation triggers for quality, cost, failure, human-in-loop*
 
@@ -533,8 +630,8 @@ Escalation triggers define when a task should be moved to a higher (or lower) ti
 
 **Trigger 2: Ollama Unavailable**
 - **Description**: Ollama service down or model missing
-- **Action**: Fallback all Tier 2/3 tasks to Claude Haiku
-- **Example**: Ollama crashes → all lint tasks use Haiku until Ollama restored
+- **Action**: Fallback Tier 2/3 tasks to OpenRouter (claude-3.5-haiku), then Anthropic direct
+- **Example**: Ollama crashes → all lint tasks use OpenRouter Haiku until Ollama restored
 
 **Trigger 3: Timeout**
 - **Description**: Task exceeds latency tolerance by 2x
@@ -568,33 +665,38 @@ Escalation triggers define when a task should be moved to a higher (or lower) ti
 
 **Escalation Paths**:
 - Tier 3 → Tier 2 → Tier 1 → Tier 0 → Human
+- Provider fallback: Ollama → OpenRouter → Anthropic
 - Cost de-escalation: Tier 0 → Tier 1 → Tier 2 (but never to Tier 3 for critical tasks)
 
 **Edge Cases Covered**:
-- Ollama unavailable: Graceful fallback to Claude Haiku
+- Ollama unavailable: Graceful fallback to OpenRouter Haiku, then Anthropic Haiku
 - Budget exhaustion: Human approval required before continuing
 - Security issues: Immediate human escalation, no automated retry
+- DB cache invalidation: Single-process only; invalidateAssignmentsCache() affects current process only
 
 ---
 
-## 6. Integration with Provider System
+## 7. Integration with Provider System
 
 *Addresses AC-6: Integration notes aligning with MODL-0010, no breaking changes*
 
 ### MODL-0010 Coordination
 
-**Status**: In-progress (as of 2026-02-14)
+**Status**: UAT (as of 2026-02-15, v1.1.0)
 
 **Coordination Points**:
-- Strategy references **provider-agnostic model names** (e.g., `anthropic/claude-opus-4.6`, `ollama/deepseek-coder-v2:16b`)
-- MODL-0010 provider adapters must support tier-based routing
-- Fallback logic handled by provider abstraction layer
+- Strategy references **provider-agnostic model names** (e.g., `anthropic/claude-opus-4.6`, `ollama/deepseek-coder-v2:16b`, `openrouter/anthropic/claude-3.5-haiku`)
+- MODL-0010 provider adapters support all three providers: `anthropic`, `ollama`, `openrouter`
+- Fallback logic handled by provider abstraction layer in PipelineModelRouter
 
 **Provider Format**: `provider/model`
 - Anthropic: `anthropic/claude-opus-4.6`, `anthropic/claude-sonnet-4.5`, `anthropic/claude-haiku-3.5`
-- Ollama: `ollama/deepseek-coder-v2:16b`, `ollama/qwen2.5-coder:7b`, `ollama/llama3.2:3b`
+- Ollama: `ollama/deepseek-coder-v2:16b`, `ollama/qwen2.5-coder:7b`, `ollama/llama3.2:8b`
+- OpenRouter: `openrouter/anthropic/claude-3.5-haiku`, `openrouter/anthropic/claude-3-haiku`
 
 **Backward Compatibility**: Existing frontmatter `model:` field preserved. Strategy adds optional `tier` field.
+
+**Identifier Format Note**: model-assignments.yaml uses `provider:model` (colon separator) for agent frontmatter consumption. The pipeline DB and provider strings use `provider/model` (slash separator). Both formats are correct for their respective consumers.
 
 ---
 
@@ -618,55 +720,44 @@ export const ModelAssignmentSchema = z.object({
 
 **Breaking Changes**: None - all extensions are optional.
 
-**Migration Path**:
-- Agents without `tier` use fallback mapping: `opus→0, sonnet→1, haiku→2, ollama→3`
-- Existing loader continues to work unchanged
-- New loader checks for `tier` field, falls back to `model` mapping if absent
-
 ---
 
 ### Ollama Requirements
 
-**Minimum Models Required** (for WINT-0240 configuration):
+**Minimum Models Required** (per ollama-model-fleet.md):
 
 **Tier 2 (Routine Work)**:
 - `deepseek-coder-v2:16b` (required) - Best balance of quality and speed
 - `codellama:13b` (required) - Alternative for Tier 2 tasks
+- `qwen2.5-coder:14b` (required for full fleet)
 
 **Tier 3 (Simple Tasks)**:
 - `qwen2.5-coder:7b` (required) - Fast, small, good quality
-- `llama3.2:3b` (required) - Ultra-fast for simple tasks
+- `llama3.2:8b` (required) - Runtime truth per ARCH-002 (model-assignments.yaml actual usage)
+- `llama3.2:3b` (optional, lean alternative for memory-constrained machines)
 
 **Fallback Policy**:
-- If Ollama unavailable: Escalate all Tier 2/3 → Claude Haiku
-- If specific model missing: Use alternate model in same tier
+- If Ollama unavailable: Escalate all Tier 2/3 → OpenRouter (`openrouter/anthropic/claude-3.5-haiku`)
+- If OpenRouter unavailable: Escalate → Anthropic direct (`anthropic/claude-haiku-3.5`)
 - Log all fallback events for monitoring
 
 **Health Check**: 30s cache on Ollama availability check (prevents excessive health checks).
 
 ---
 
-### No Breaking Changes Guarantee
+### DB Override Mechanism
 
-**Protected Surfaces**:
-- ✅ Agent frontmatter format preserved
-- ✅ Existing `model:` assignments continue to work
-- ✅ `model-assignments.ts` loader backward compatible
-- ✅ Agent invocation mechanisms unchanged
+**Table**: `wint.model_assignments`
 
-**Additive Changes Only**:
-- Strategy YAML is a new file (does not modify existing config)
-- Tier field is optional (agents without tier use fallback)
-- Escalation logic is opt-in (existing agents unaffected)
-
-**Migration Timeline**:
-- Week 1: Strategy defined (this document)
-- Week 2-3: Implement tier-based routing in WINT-0230
-- Week 4+: Gradual agent migration in waves (backward compatible at all times)
+**Behavior**:
+- Agents can have DB-level model overrides that bypass all tier routing
+- Cache is single-process: `invalidateAssignmentsCache()` only resets current process
+- Multi-process deployments require external coordination for cache consistency
+- DB overrides take precedence over affinity profiles and exploration slots
 
 ---
 
-## 7. Cost Impact Analysis
+## 8. Cost Impact Analysis
 
 *Addresses AC-7: Cost analysis with baseline vs projected, 40-60% savings target*
 
@@ -689,7 +780,7 @@ export const ModelAssignmentSchema = z.object({
 
 ---
 
-### Proposed Scenario: Hybrid Ollama + Claude (Formal Strategy)
+### Proposed Scenario: Hybrid Ollama + OpenRouter + Claude (v1.1.0 Strategy)
 
 **Same Workflow** (with tier-based routing):
 
@@ -706,6 +797,11 @@ export const ModelAssignmentSchema = z.object({
 - Cost: $4.50
 - Annual: $54.00
 
+**Ollama Unavailable Scenario** (fallback to OpenRouter):
+- Tier 2/3 cost increases from $0.000 to ~$0.008/1M tokens (OpenRouter Haiku rate)
+- Monthly cost impact: +~$0.40 (3.5% increase vs hybrid target)
+- Still well within 40-60% savings target
+
 ---
 
 ### Savings Summary
@@ -716,78 +812,41 @@ export const ModelAssignmentSchema = z.object({
 | Per Month (100 workflows) | $11.30 | $4.50 | $6.80 (60.2%) |
 | Per Year | $135.60 | $54.00 | $81.60 (60.2%) |
 
-**Target Achievement**: ✅ 60.2% savings (target was 40-60%)
+**Target Achievement**: 60.2% savings (target was 40-60%) ✅
 
 ---
 
 ### Assumptions & Caveats
 
 **Key Assumptions**:
-1. **Ollama availability 95%**: Assumes local Ollama service is up 95% of the time. If down, fallback to Haiku adds cost.
+1. **Ollama availability 95%**: Assumes local Ollama service is up 95% of the time. If down, OpenRouter fallback adds ~$0.08/1M tokens cost.
 2. **Tier 2 quality acceptable**: Assumes Ollama deepseek-coder-v2:16b produces acceptable code quality for routine tasks (<5% rework rate).
-3. **No quality degradation on Tier 1**: Critical reasoning tasks (gap analysis, synthesis) remain on Claude Sonnet for quality preservation.
-4. **Workflow mix**: Assumes typical workflow mix (setup, analysis, generation, validation, completion). Epic-heavy workloads may have different cost profile.
+3. **No quality degradation on Tier 1**: Critical reasoning tasks remain on Claude Sonnet for quality preservation.
+4. **OpenRouter intermediate cost**: When Ollama unavailable, OpenRouter claude-3.5-haiku ($0.08/1M) is significantly cheaper than Anthropic direct ($0.25/1M).
 
 **Sensitivity Analysis**:
 
 | Ollama Availability | Actual Savings |
 |---------------------|----------------|
 | 100% | 60.2% |
-| 95% (baseline) | 60.2% |
-| 90% | 57.0% |
-| 80% | 50.8% |
-| 50% | 30.1% |
+| 95% (baseline) | ~60.2% |
+| 90% | ~57.0% |
+| 80% | ~50.8% |
+| 50% | ~30.1% |
 
-**Conclusion**: Even at 80% Ollama availability, we exceed the 40% savings target. Strategy is robust to moderate infrastructure issues.
-
----
-
-### Quality Impact Assessment
-
-**Hypothesis**: Cost reduction should not degrade quality on critical tasks.
-
-**Validation**:
-- **Tier 3 (Simple Tasks)**: Deterministic, rule-based. Quality impact minimal (lint, validation).
-- **Tier 2 (Routine Work)**: Code generation quality to be validated in Wave 2 migration. Expect <5% rework rate.
-- **Tier 1 (Complex Reasoning)**: No change - remains on Claude Sonnet. Quality preserved.
-- **Tier 0 (Critical Decisions)**: No change - remains on Claude Opus. Quality preserved.
-
-**Monitoring Plan**:
-- Track quality metrics (test pass rate, human review frequency)
-- A/B test Tier 2 vs. Tier 1 on sample tasks
-- Collect developer feedback on Ollama-generated code
-- Quarterly review and adjust tier assignments
+**Conclusion**: Even at 80% Ollama availability, we exceed the 40% savings target. OpenRouter intermediate fallback reduces the cost impact vs direct Anthropic fallback by ~3x.
 
 ---
 
-### Revision Plan with Telemetry Data
+## 9. Example Scenarios
 
-**Current Status**: No telemetry data available (INFR-0040 not complete).
-
-**Revision Plan** (when INFR-0040 complete):
-1. Collect actual cost data per tier
-2. Validate Ollama availability metrics
-3. Measure quality impact (rework rate, human review rate)
-4. Adjust tier assignments based on real-world data
-5. Update cost projections with actuals
-
-**Projected Timeline**: Q2 2026 (after 3 months of telemetry data collection).
-
----
-
-## 8. Example Scenarios
-
-*Addresses AC-8: 5+ example scenarios with model selection walkthrough*
-
-This section demonstrates the strategy in action with real workflow scenarios.
+*Addresses AC-8: 6+ example scenarios including affinity routing and DB override*
 
 ---
 
 ### Scenario 1: PM Story Generation (Multi-Agent Workflow)
 
 **Description**: Generate a new user story from a seed idea, including PM/UX/QA gap analysis and synthesis.
-
-**Workflow Steps**:
 
 | Step | Agent | Task Type | Tier | Model | Rationale |
 |------|-------|-----------|------|-------|-----------|
@@ -799,24 +858,13 @@ This section demonstrates the strategy in action with real workflow scenarios.
 | 6 | `story-synthesize-agent` | Synthesis | 1 | Sonnet 4.5 | Combine multiple analyses coherently |
 | 7 | `elab-completion-leader` | Completion Reporting | 3 | Ollama qwen2.5-coder:7b | Status update, template-based |
 
-**Cost Breakdown**:
-- Tier 1 (6 tasks @ $0.015): $0.090
-- Tier 3 (1 task @ $0.000): $0.000
-- **Total**: $0.090
-
-**Comparison to All-Claude**: $0.105 (14% savings, less than typical because workflow is reasoning-heavy)
-
-**Edge Case Handling**:
-- If Ollama unavailable: Tier 3 falls back to Haiku (+$0.001)
-- If synthesis fails quality gate: Escalate to Tier 0 (Opus) for retry
+**Cost**: Tier 1 (6 tasks @ $0.015): $0.090 + Tier 3: $0.000 = **$0.090 total**
 
 ---
 
 ### Scenario 2: Dev Implementation (Code Generation + Review)
 
 **Description**: Implement a backend API endpoint with frontend integration, tests, and code review.
-
-**Workflow Steps**:
 
 | Step | Agent | Task Type | Tier | Model | Rationale |
 |------|-------|-----------|------|-------|-----------|
@@ -830,25 +878,13 @@ This section demonstrates the strategy in action with real workflow scenarios.
 | 8 | `code-review-security` | Security Review | 1 | Sonnet 4.5 | Threat modeling, high-stakes |
 | 9 | `dev-documentation-leader` | Completion Reporting | 3 | Ollama qwen2.5-coder:7b | Documentation formatting |
 
-**Cost Breakdown**:
-- Tier 1 (4 tasks @ $0.015): $0.060
-- Tier 2 (2 tasks @ $0.000): $0.000
-- Tier 3 (3 tasks @ $0.000): $0.000
-- **Total**: $0.060
-
-**Comparison to All-Claude**: $0.135 (56% savings - excellent!)
-
-**Edge Case Handling**:
-- If Ollama unavailable: Tier 2/3 fall back to Haiku (+$0.015)
-- If backend code fails QA gate: Retry with Tier 1, then escalate to Tier 0 if still fails
+**Cost**: Tier 1 (4 tasks @ $0.015): $0.060 + Tier 2/3: $0.000 = **$0.060 total** (56% savings vs all-Claude)
 
 ---
 
-### Scenario 3: QA Verification (Test Execution + Evidence)
+### Scenario 3: QA Verification
 
 **Description**: Run QA verification on a completed story, collect evidence, validate acceptance criteria.
-
-**Workflow Steps**:
 
 | Step | Agent | Task Type | Tier | Model | Rationale |
 |------|-------|-----------|------|-------|-----------|
@@ -858,24 +894,32 @@ This section demonstrates the strategy in action with real workflow scenarios.
 | 4 | `qa-verify-verification-leader` | Complex Reasoning | 1 | Sonnet 4.5 | Quality verification decisions |
 | 5 | `qa-verify-completion-leader` | Completion Reporting | 3 | Ollama qwen2.5-coder:7b | Evidence collection, status update |
 
-**Cost Breakdown**:
-- Tier 1 (1 task @ $0.015): $0.015
-- Tier 2 (2 tasks @ $0.000): $0.000
-- Tier 3 (2 tasks @ $0.000): $0.000
-- **Total**: $0.015
-
-**Comparison to All-Claude**: $0.040 (62% savings)
-
-**Edge Case Handling**:
-- If evidence collection finds critical failures: Escalate to human review (no automated retry on critical QA failures)
+**Cost**: Tier 1: $0.015 + Tier 2/3: $0.000 = **$0.015 total** (62% savings)
 
 ---
 
-### Scenario 4: Lint/Format Task (Pre-Commit Hook)
+### Scenario 4: Architecture Audit (Affinity Routing)
+
+**Description**: APIP-3040/3050/3060 — architecture analysis with affinity-based routing active. After 20+ successful runs with `architect-boundary-worker` on `ollama/codellama:13b`, the affinity profile has high confidence.
+
+| Step | Agent | Routing Mode | Tier | Model | Source |
+|------|-------|--------------|------|-------|--------|
+| 1 | `architect-setup-leader` | DB override | 3 | Ollama qwen2.5-coder:7b | DB assignment |
+| 2 | `architect-boundary-worker` | Affinity (high confidence) | 2 | Ollama codellama:13b | Affinity profile (success_rate: 0.92, sample: 24) |
+| 3 | `architect-circular-worker` | Affinity (medium confidence) | 2 | Ollama codellama:13b | Affinity profile (success_rate: 0.87, sample: 12) |
+| 4 | `architect-import-worker` | Affinity (none) → fallback | 2 | Ollama codellama:13b | Static escalation chain (no affinity profile) |
+| 5 | `architect-aggregation-leader` | Static escalation | 1 | Sonnet 4.5 | Default Tier 1 assignment |
+| 6 | `doc-sync` | DB override | 3 | Ollama qwen2.5-coder:7b | DB assignment |
+
+**Key insight**: Workers 2 and 3 are routed via affinity, not static assignment. The affinity system learns from telemetry that `codellama:13b` consistently succeeds on boundary and circular dependency checks.
+
+**Cost**: Tier 1: $0.015 + Tier 2/3: $0.000 = **$0.015 total**
+
+---
+
+### Scenario 5: Lint/Format Task (Pre-Commit Hook)
 
 **Description**: Run lint, syntax, and style checks on code before commit.
-
-**Workflow Steps**:
 
 | Step | Agent | Task Type | Tier | Model | Rationale |
 |------|-------|-----------|------|-------|-----------|
@@ -883,29 +927,19 @@ This section demonstrates the strategy in action with real workflow scenarios.
 | 2 | `code-review-syntax` | Lint & Syntax | 3 | Ollama qwen2.5-coder:7b | Syntax validation |
 | 3 | `code-review-style-compliance` | Lint & Syntax | 3 | Ollama qwen2.5-coder:7b | Style guide enforcement |
 
-**Cost Breakdown**:
-- Tier 3 (3 tasks @ $0.000): $0.000
-- **Total**: $0.000 (100% cost reduction!)
-
-**Comparison to All-Claude**: $0.006 (100% savings)
-
-**Edge Case Handling**:
-- If Ollama unavailable: Fallback to Haiku (+$0.006)
-- No escalation expected - lint failures are deterministic, not quality-dependent
+**Cost**: Tier 3 (3 tasks @ $0.000): **$0.000 total** (100% cost reduction!)
 
 ---
 
-### Scenario 5: Gap Analysis for Epic (Complex Multi-Stakeholder)
+### Scenario 6: Gap Analysis for Epic (Complex Multi-Stakeholder)
 
 **Description**: Analyze a large epic with cross-cutting concerns, multiple stakeholders, long-term impact.
-
-**Workflow Steps**:
 
 | Step | Agent | Task Type | Tier | Model | Rationale |
 |------|-------|-----------|------|-------|-----------|
 | 1 | `elab-setup-leader` | Setup Validation | 3 | Ollama qwen2.5-coder:7b | Pre-flight checks |
 | 2 | `elab-epic-interactive-leader` | Epic Planning | 0 | Opus 4.6 | Large-scale strategic planning |
-| 3 | `elab-epic-engineering` | Complex Reasoning | 1 | Sonnet 4.5 | Technical feasibility |
+| 3 | `elab-epic-engineering` | Architecture Leadership | 1 | Sonnet 4.5 | Technical feasibility |
 | 4 | `elab-epic-product` | Complex Reasoning | 1 | Sonnet 4.5 | Product requirements |
 | 5 | `elab-epic-qa` | Complex Reasoning | 1 | Sonnet 4.5 | QA scenario generation |
 | 6 | `elab-epic-ux` | Complex Reasoning | 1 | Sonnet 4.5 | UX considerations |
@@ -913,78 +947,71 @@ This section demonstrates the strategy in action with real workflow scenarios.
 | 8 | `story-synthesize-agent` | Synthesis | 0 | Opus 4.6 | Escalated to Tier 0 for epic scope |
 | 9 | `elab-completion-leader` | Completion Reporting | 3 | Ollama qwen2.5-coder:7b | Status update |
 
-**Cost Breakdown**:
-- Tier 0 (2 tasks @ $0.075): $0.150
-- Tier 1 (5 tasks @ $0.015): $0.075
-- Tier 3 (2 tasks @ $0.000): $0.000
-- **Total**: $0.225
-
-**Comparison to All-Claude (all Sonnet)**: $0.120 → **Actually more expensive!**
-
-**Why?** This is expected - epic-level planning requires Opus (Tier 0) for highest quality. We trade cost for quality on critical decisions.
-
-**Edge Case Handling**:
-- If synthesis fails confidence threshold (<70%): Already on Tier 0, escalate to human review
-- If budget warning triggered: Do NOT de-escalate Tier 0 tasks (they're already critical)
+**Cost**: Tier 0 (2 tasks @ $0.075): $0.150 + Tier 1 (5 tasks): $0.075 + Tier 3: $0.000 = **$0.225 total**  
+(Higher than all-Sonnet — expected: epic planning justifies Opus quality)
 
 ---
 
-### Edge Case Scenario: Ollama Unavailable
+### Scenario 7: DB Override Edge Case (Four-Tier Mode)
 
-**Description**: Ollama service crashes mid-workflow. Strategy must gracefully degrade.
+**Description**: APIP-3070 four-tier mode with cold-start shortcut and DB cache invalidation.
 
-**Workflow**: Dev Implementation (from Scenario 2)
+**Setup**: Pipeline starts fresh with no affinity profiles. `hasAnyQualifyingProfile()` returns false.
 
-**Before Crash**:
+| Step | Resolution | Model | Reason |
+|------|------------|-------|--------|
+| 1 | DB override → miss | - | No DB assignment for this agent |
+| 2 | Cold-start detected | `openrouter/anthropic/claude-3-haiku` | `hasAnyQualifyingProfile()` = false → skip affinity/exploration |
+| 3 | DB cache invalidated | - | `invalidateAssignmentsCache()` called; resets cold-start flag |
+| 4 | Next dispatch re-evaluates | Affinity or OpenRouter | Cache cleared; `_hasAnyHighConfidenceProfile` = null |
 
-| Step | Tier | Model | Cost |
-|------|------|-------|------|
-| Setup | 3 | Ollama qwen2.5-coder:7b | $0.000 |
-| Planning | 1 | Sonnet 4.5 | $0.015 |
-
-**Crash Detected** → Fallback Policy Activated
-
-**After Crash**:
-
-| Step | Tier | Original Model | Fallback Model | Cost |
-|------|------|---------------|----------------|------|
-| Contracts | 2 | Ollama deepseek-coder-v2:16b | Haiku 3.5 | $0.005 |
-| Playwright | 2 | Ollama deepseek-coder-v2:16b | Haiku 3.5 | $0.005 |
-| Lint | 3 | Ollama qwen2.5-coder:7b | Haiku 3.5 | $0.002 |
-
-**Impact**:
-- Cost increases from $0.060 to $0.072 (20% increase)
-- Quality preserved (Haiku is acceptable fallback)
-- Workflow continues (no manual intervention needed)
-
-**Monitoring**: Log all fallback events, alert ops team if Ollama down >5 minutes.
+**Key insight**: DB cache invalidation also resets the cold-start flag (`_hasAnyHighConfidenceProfile = null`). This ensures the next dispatch re-evaluates whether qualifying profiles exist. Cache is single-process only.
 
 ---
 
-### Comparison Summary
+### Scenario Comparison Summary
 
 | Scenario | All Claude | Hybrid Strategy | Savings | Notes |
 |----------|-----------|----------------|---------|-------|
-| PM Story Generation | $0.105 | $0.090 | 14% | Reasoning-heavy, less savings |
+| PM Story Generation | $0.105 | $0.090 | 14% | Reasoning-heavy |
 | Dev Implementation | $0.135 | $0.060 | 56% | Excellent savings on code gen |
 | QA Verification | $0.040 | $0.015 | 62% | High savings on routine QA |
+| Architecture Audit (affinity) | $0.030 | $0.015 | 50% | Affinity routing speeds up workers |
 | Lint/Format | $0.006 | $0.000 | 100% | Free with Ollama |
-| Epic Gap Analysis | $0.120 | $0.225 | -87% | Higher cost for higher quality (expected) |
-
-**Key Takeaway**: Strategy optimizes cost for routine work (60%+ savings) while preserving quality for critical decisions (even accepting higher cost for Opus on epic planning).
+| Epic Gap Analysis | $0.120 | $0.225 | -87% | Higher cost for Opus quality (expected) |
+| DB Override/Cold-start | varies | OpenRouter default | n/a | Consistent fallback behavior |
 
 ---
 
-## 9. Versioning & Review Process
+## 10. Versioning & Review Process
 
 *Addresses AC-1 (partial): Version metadata, review schedule*
 
 ### Current Version
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Effective Date**: 2026-02-15  
-**Review Date**: 2026-03-15  
+**Review Date**: 2026-06-15  
 **Status**: Active
+
+### Changelog
+
+**v1.1.0 (2026-03-02)**:
+- Expanded task type taxonomy from 14 to 22 types
+- Added openrouter provider to escalation chain (ollama → openrouter → anthropic)
+- Updated review_date to 2026-06-15
+- Updated integration.modl_0010.status to 'uat'
+- Added openrouter provider tier to YAML
+- Completed model-assignments.yaml to 100% agent coverage (142 agents)
+- Updated Tier 3 model from llama3.2:3b to llama3.2:8b (runtime truth per ARCH-002)
+- Added routing_modes section documenting legacy/three-tier/four-tier modes
+- Added DB override cache constraint documentation
+
+**v1.0.0 (2026-02-15)**:
+- Initial strategy definition
+- 4-tier model classification
+- 62 agents mapped in model-assignments.yaml
+- 14 task types defined
 
 ---
 
@@ -1007,38 +1034,21 @@ This section demonstrates the strategy in action with real workflow scenarios.
 **Cost Reduction**:
 - **Target**: 40-60% reduction vs. all-Claude baseline
 - **Actual** (projected): 60.2%
-- **Status**: ✅ Target achieved
+- **Status**: Target achieved ✅
 
 **Quality Preservation**:
 - **Target**: No degradation on critical tasks (gap analysis, synthesis, security)
 - **Validation**: A/B testing, human review feedback
-- **Status**: ⏳ Pending (validate in Wave 2 migration)
+- **Status**: Pending (validate in Wave 2 migration)
 
 **Latency**:
 - **Target**: <5s for Tier 2/3 tasks
 - **Actual** (expected): 1-3s (Ollama local)
-- **Status**: ✅ Target expected
+- **Status**: Target expected ✅
 
 **Availability**:
 - **Target**: Ollama uptime >95%
-- **Validation**: Monitor Ollama health checks, fallback rate
-- **Status**: ⏳ Pending (WINT-0240 infrastructure setup)
-
----
-
-### Revision Triggers
-
-**Automatic Triggers** (require strategy update):
-1. **Telemetry Data Available**: When INFR-0040 complete, revise cost projections with actuals
-2. **New Models Released**: Claude Opus 5.0, Ollama qwen3-coder → evaluate and update tiers
-3. **Quality Issues Detected**: >5% rework rate on Tier 2 code generation → escalate to Tier 1
-4. **Cost Targets Not Met**: <40% savings achieved → re-evaluate tier assignments
-
-**Manual Triggers** (optional review):
-1. Quarterly review of tier assignments
-2. Major workflow redesign (new agent types)
-3. Budget policy changes
-4. Developer feedback on model quality
+- **Status**: Pending (WINT-0240 infrastructure setup)
 
 ---
 
@@ -1046,33 +1056,22 @@ This section demonstrates the strategy in action with real workflow scenarios.
 
 **Format**: `MAJOR.MINOR.PATCH`
 
-**MAJOR** (1.x.x → 2.x.x):
-- Breaking changes to tier definitions
-- Fundamental strategy redesign
-- New tier added or removed
+**MAJOR** (1.x.x → 2.x.x): Breaking changes to tier definitions or fundamental redesign
 
-**MINOR** (x.1.x → x.2.x):
-- New task types added
-- Escalation triggers modified
-- Agent migration waves updated
+**MINOR** (x.1.x → x.2.x): New task types, escalation trigger changes, agent migration updates, provider additions
 
-**PATCH** (x.x.1 → x.x.2):
-- Minor cost estimate adjustments
-- Documentation clarifications
-- Agent assignment corrections
-
-**Next Expected Version**: 1.1.0 (after INFR-0040 telemetry data integration)
+**PATCH** (x.x.1 → x.x.2): Minor cost adjustments, documentation clarifications, agent corrections
 
 ---
 
 ## Appendix A: Related Documentation
 
-- **MODL-0010**: Provider Adapters (in-progress, coordinate on model naming)
+- **MODL-0010**: Provider Adapters (UAT — coordinate on model naming)
 - **WINT-0230**: Create Unified Model Interface (blocked on this strategy)
 - **WINT-0240**: Configure Ollama Model Fleet (blocked on this strategy)
 - **WINT-0250**: Define Escalation Triggers (blocked on this strategy)
 - **INFR-0040**: Workflow Events Table (future telemetry data source)
-- **MODEL_STRATEGY.md**: Informal strategy (superseded by this document)
+- **ollama-model-fleet.md**: Ollama fleet VRAM requirements and ARCH decisions
 
 ---
 
@@ -1085,38 +1084,14 @@ This section demonstrates the strategy in action with real workflow scenarios.
 - **Quality Gate**: Validation check that determines if task output is acceptable
 - **Agent**: Autonomous task executor with specific role/model assignment
 - **Ollama**: Local open-source LLM runtime for cost-free model hosting
-
----
-
-## Appendix C: FAQ
-
-**Q: What if Ollama is down?**  
-A: All Tier 2/3 tasks gracefully degrade to Claude Haiku. Workflow continues without manual intervention.
-
-**Q: Can I override tier assignment for specific tasks?**  
-A: Yes - agents can specify tier override in frontmatter. Strategy provides default, not hard constraint.
-
-**Q: What if Tier 2 code quality is poor?**  
-A: Quality gates will catch issues. Failed tasks escalate to Tier 1 (Sonnet) for retry. If persistent, agent migrated to Tier 1 permanently.
-
-**Q: How do I add a new agent?**  
-A: Classify task type using taxonomy (Section 2), assign recommended tier, validate with test runs.
-
-**Q: When will telemetry data be available?**  
-A: After INFR-0040 complete (estimated Q2 2026). Strategy will be revised with actual cost/quality data.
-
-**Q: Can I use Opus for all tasks?**  
-A: Yes, but discouraged. Opus is 5x more expensive than Sonnet, 60x more expensive than Ollama. Reserve for critical decisions only.
-
----
-
-**End of Document**
+- **OpenRouter**: External LLM aggregator API; intermediate fallback between Ollama and Anthropic direct
+- **Affinity Profile**: Learned routing preference for (change_type, file_type) pairs based on telemetry
+- **Cold-start**: State when no qualifying affinity profiles exist; triggers conservative OpenRouter routing
 
 ---
 
 **Document Metadata**:
 - **Authors**: Autonomous PM + Dev teams
 - **Reviewers**: Technical Lead, Product Owner
-- **Approval**: Pending
-- **Last Updated**: 2026-02-14
-- **Next Review**: 2026-03-15
+- **Last Updated**: 2026-03-02
+- **Next Review**: 2026-06-15

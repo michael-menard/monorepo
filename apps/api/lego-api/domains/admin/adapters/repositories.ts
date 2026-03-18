@@ -1,6 +1,6 @@
 import { desc, eq, and, type SQL } from 'drizzle-orm'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
-import type * as schema from '@repo/database-schema'
+import type * as schema from '@repo/db'
 import type { AuditLogRepository, UserQuotaReadPort } from '../ports/index.js'
 import type { AuditLogEntry, AuditActionType, AuditResult } from '../types.js'
 

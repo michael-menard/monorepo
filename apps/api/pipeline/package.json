@@ -19,6 +19,7 @@
     "db:test:stop": "docker compose -f ../../infra/langgraph-server/compose.test-db.yaml down"
   },
   "dependencies": {
+    "@repo/knowledge-base": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/orchestrator": "workspace:*",
     "@repo/pipeline-queue": "workspace:*",

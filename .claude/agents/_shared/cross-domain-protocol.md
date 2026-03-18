@@ -10,12 +10,14 @@ Specialist agents should be aware of sibling agent findings to produce coherent,
 ## Why Cross-Domain Awareness Matters
 
 Without cross-domain awareness:
+
 - Agents may contradict each other
 - Related findings are not connected
 - Same issue reported differently by multiple agents
 - Conflicting guidance confuses developers
 
 With cross-domain awareness:
+
 - Findings reference and corroborate each other
 - Severity can be upgraded when multiple domains agree
 - Conflicts are explicitly flagged for resolution
@@ -27,27 +29,27 @@ With cross-domain awareness:
 
 ### Which Agents to Check
 
-| Your Domain | Check These Siblings (if available) |
-|-------------|-------------------------------------|
-| **Security** | Architecture (auth patterns), QA (security test coverage) |
-| **Architecture** | Security (pattern risks), Dev Feasibility (implementation concerns) |
-| **UI/UX** | Accessibility, Performance, QA (E2E coverage) |
-| **QA Verification** | All domains (to verify claims are testable) |
-| **Product** | Engineering (feasibility), UX (usability) |
-| **Engineering** | Security (risks), Architecture (patterns) |
+| Your Domain         | Check These Siblings (if available)                                 |
+| ------------------- | ------------------------------------------------------------------- |
+| **Security**        | Architecture (auth patterns), QA (security test coverage)           |
+| **Architecture**    | Security (pattern risks), Dev Feasibility (implementation concerns) |
+| **UI/UX**           | Accessibility, Performance, QA (E2E coverage)                       |
+| **QA Verification** | All domains (to verify claims are testable)                         |
+| **Product**         | Engineering (feasibility), UX (usability)                           |
+| **Engineering**     | Security (risks), Architecture (patterns)                           |
 
 ### Where to Find Sibling Outputs
 
 ```yaml
 sibling_output_locations:
-  security: "{story_dir}/_implementation/REVIEW.yaml"
-  architecture: "{story_dir}/_implementation/ARCHITECT-NOTES.md"
-  uiux: "{story_dir}/_implementation/UI-UX-FINDINGS.yaml"
-  qa: "{story_dir}/_implementation/VERIFICATION.yaml"
-  dev_feasibility: "{story_dir}/pm_artifacts.dev_feasibility"  # embedded in story.yaml frontmatter
+  security: '{story_dir}/_implementation/REVIEW.yaml'
+  architecture: '{story_dir}/_implementation/ARCHITECT-NOTES.md'
+  uiux: '{story_dir}/_implementation/UI-UX-FINDINGS.yaml'
+  qa: '{story_dir}/_implementation/VERIFICATION.yaml'
+  dev_feasibility: 'KB artifact type: pm_dev_feasibility' # stored in KB
 
   # For epic-level reviews
-  epic_reviews: "{epic_dir}/_epic-elab/REVIEW-{PERSPECTIVE}.yaml"
+  epic_reviews: '{epic_dir}/_epic-elab/REVIEW-{PERSPECTIVE}.yaml'
 ```
 
 ---
@@ -62,12 +64,12 @@ Before finalizing your verdict, check if sibling agents have reviewed:
 sibling_check:
   security:
     checked: true
-    file: "_implementation/REVIEW.yaml"
+    file: '_implementation/REVIEW.yaml'
     exists: true
   architecture:
     checked: true
-    file: "_implementation/ARCHITECT-NOTES.md"
-    exists: false  # Not yet run
+    file: '_implementation/ARCHITECT-NOTES.md'
+    exists: false # Not yet run
 ```
 
 ### Step 2: Identify Related Findings
@@ -78,9 +80,9 @@ Look for findings that relate to your domain:
 related_findings:
   - sibling: security
     finding_id: SEC-001
-    issue: "Missing input validation on POST /api/wishlist"
-    relates_to: "Your ARCH-002 finding about Zod at boundaries"
-    relationship: corroborates  # corroborates | conflicts | extends
+    issue: 'Missing input validation on POST /api/wishlist'
+    relates_to: 'Your ARCH-002 finding about Zod at boundaries'
+    relationship: corroborates # corroborates | conflicts | extends
 ```
 
 ### Step 3: Document Cross-References
@@ -92,15 +94,15 @@ cross_domain:
   siblings_checked:
     - security: true
     - architecture: true
-    - uiux: false  # Not applicable for backend story
+    - uiux: false # Not applicable for backend story
 
   correlations:
     - your_finding: ARCH-002
       corroborates: SEC-001
-      impact: "Both agree: Zod validation missing at API boundary"
-      severity_impact: "Maintains High (security + architecture agree)"
+      impact: 'Both agree: Zod validation missing at API boundary'
+      severity_impact: 'Maintains High (security + architecture agree)'
 
-  conflicts: []  # Empty if no conflicts
+  conflicts: [] # Empty if no conflicts
 ```
 
 ---
@@ -114,10 +116,10 @@ When your finding aligns with a sibling finding:
 ```yaml
 correlation:
   your_finding: ARCH-002
-  your_issue: "Missing Zod schema at API boundary"
+  your_issue: 'Missing Zod schema at API boundary'
 
   sibling_finding: SEC-001
-  sibling_issue: "No input validation on POST endpoint"
+  sibling_issue: 'No input validation on POST endpoint'
 
   relationship: same_underlying_issue
 
@@ -131,10 +133,10 @@ correlation:
 ```yaml
 correlation:
   your_finding: SEC-003
-  your_issue: "XSS risk in user-generated content display"
+  your_issue: 'XSS risk in user-generated content display'
 
   sibling_finding: UX-001
-  sibling_issue: "dangerouslySetInnerHTML without sanitization"
+  sibling_issue: 'dangerouslySetInnerHTML without sanitization'
 
   relationship: complementary_evidence
 
@@ -146,6 +148,7 @@ correlation:
 ### Severity Upgrade Rule
 
 When multiple domains flag the same issue:
+
 - 2 domains agree → Consider +1 severity
 - 3+ domains agree → Strongly consider +1 severity
 
@@ -155,7 +158,7 @@ severity_upgrade:
   original_severity: medium
   domains_agreeing: [security, architecture]
   upgraded_severity: high
-  reason: "Two independent domains identified same risk"
+  reason: 'Two independent domains identified same risk'
 ```
 
 ---
@@ -169,18 +172,18 @@ When your finding contradicts a sibling finding:
 ```yaml
 disagreement:
   your_finding: SEC-005
-  your_position: "This pattern introduces injection risk"
+  your_position: 'This pattern introduces injection risk'
   your_evidence:
-    - "Line 34: unsanitized input flows to query builder"
-    - "No parameterized queries used"
+    - 'Line 34: unsanitized input flows to query builder'
+    - 'No parameterized queries used'
 
   sibling_finding: ARCH-001
-  sibling_position: "Pattern is acceptable for this use case"
+  sibling_position: 'Pattern is acceptable for this use case'
   sibling_evidence:
-    - "Follows existing codebase pattern"
-    - "Input is from trusted admin source"
+    - 'Follows existing codebase pattern'
+    - 'Input is from trusted admin source'
 
-  conflict_type: risk_assessment  # risk_assessment | pattern_interpretation | priority
+  conflict_type: risk_assessment # risk_assessment | pattern_interpretation | priority
 ```
 
 ### Escalation Decision
@@ -188,7 +191,7 @@ disagreement:
 ```yaml
 conflict_resolution:
   approach: escalate_to_aggregator
-  reason: "Conflicting expert opinions require human decision"
+  reason: 'Conflicting expert opinions require human decision'
 
   your_action: |
     Include your finding with full evidence.
@@ -199,6 +202,7 @@ conflict_resolution:
 ### Never Suppress Your Finding
 
 Even if a sibling agent disagrees:
+
 - Include your finding
 - Note the disagreement
 - Let the aggregator/human resolve
@@ -213,28 +217,28 @@ When aggregating findings from multiple specialists:
 
 ```yaml
 conflict_resolution_steps:
-  1_identify: "List all conflicts between specialists"
-  2_compare_evidence: "Which has stronger evidence?"
-  3_check_domain_expertise: "Which is the authoritative domain for this issue?"
-  4_check_kb: "Any precedent for this pattern?"
+  1_identify: 'List all conflicts between specialists'
+  2_compare_evidence: 'Which has stronger evidence?'
+  3_check_domain_expertise: 'Which is the authoritative domain for this issue?'
+  4_check_kb: 'Any precedent for this pattern?'
   5_decide:
-    - clear_winner: "Accept finding with stronger evidence/authority"
-    - unclear: "Escalate to human with both perspectives"
+    - clear_winner: 'Accept finding with stronger evidence/authority'
+    - unclear: 'Escalate to human with both perspectives'
 ```
 
 ### Domain Authority
 
 For conflict resolution, domain authority matters:
 
-| Issue Type | Authoritative Domain |
-|------------|---------------------|
-| Security vulnerability | Security |
-| Pattern violation | Architecture |
-| Accessibility | UI/UX |
-| Performance impact | UI/UX (frontend), Engineering (backend) |
-| Testability | QA |
-| Scope/requirements | Product |
-| Feasibility | Engineering |
+| Issue Type             | Authoritative Domain                    |
+| ---------------------- | --------------------------------------- |
+| Security vulnerability | Security                                |
+| Pattern violation      | Architecture                            |
+| Accessibility          | UI/UX                                   |
+| Performance impact     | UI/UX (frontend), Engineering (backend) |
+| Testability            | QA                                      |
+| Scope/requirements     | Product                                 |
+| Feasibility            | Engineering                             |
 
 ### Aggregation Output
 
@@ -247,8 +251,8 @@ aggregated_findings:
 
   resolved_conflicts:
     - finding_ids: [SEC-005, ARCH-001]
-      resolution: "Security authority - treated as injection risk"
-      action: "Added to mvp_blockers"
+      resolution: 'Security authority - treated as injection risk'
+      action: 'Added to mvp_blockers'
 ```
 
 ---
@@ -261,13 +265,13 @@ aggregated_findings:
 findings:
   - id: SEC-001
     severity: high
-    issue: "Missing input validation"
+    issue: 'Missing input validation'
 
     cross_domain:
       corroborates:
         - finding: ARCH-002
           agent: architect-story-review
-          summary: "Same issue from architecture perspective"
+          summary: 'Same issue from architecture perspective'
       conflicts_with: []
 ```
 
@@ -283,7 +287,7 @@ verdict:
     conflicts: 0
 
     unified_findings:
-      - issue: "Input validation at API boundary"
+      - issue: 'Input validation at API boundary'
         domains: [security, architecture]
         unified_severity: high
 ```
@@ -312,6 +316,7 @@ Before finalizing verdict, check sibling agent outputs per
 `.claude/agents/_shared/cross-domain-protocol.md`
 
 ### Required Checks
+
 - [ ] Read sibling outputs if they exist
 - [ ] Identify corroborating findings
 - [ ] Flag any conflicts
