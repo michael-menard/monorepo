@@ -2,7 +2,7 @@
  * Unit tests for toDbStoryStatus
  *
  * Verifies that all 17 WorkflowStoryStatus values map to the correct
- * DbStoryStatus (8 snake_case values), and that invalid inputs throw.
+ * DbStoryStatus (canonical 13-state model), and that invalid inputs throw.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -21,40 +21,44 @@ describe('toDbStoryStatus', () => {
     expect(toDbStoryStatus('generated')).toBe('backlog')
   })
 
-  it('in-elaboration → backlog', () => {
-    expect(toDbStoryStatus('in-elaboration')).toBe('backlog')
+  // =========================================================================
+  // Elaboration group → 'elab'
+  // =========================================================================
+
+  it('in-elaboration → elab', () => {
+    expect(toDbStoryStatus('in-elaboration')).toBe('elab')
   })
 
-  it('needs-refinement → backlog', () => {
-    expect(toDbStoryStatus('needs-refinement')).toBe('backlog')
+  it('needs-refinement → elab', () => {
+    expect(toDbStoryStatus('needs-refinement')).toBe('elab')
   })
 
-  it('needs-split → backlog', () => {
-    expect(toDbStoryStatus('needs-split')).toBe('backlog')
+  it('needs-split → elab', () => {
+    expect(toDbStoryStatus('needs-split')).toBe('elab')
   })
 
   // =========================================================================
-  // Ready for development → 'ready_to_work'
+  // Ready for development → 'ready'
   // =========================================================================
 
-  it('ready-to-work → ready_to_work', () => {
-    expect(toDbStoryStatus('ready-to-work')).toBe('ready_to_work')
+  it('ready-to-work → ready', () => {
+    expect(toDbStoryStatus('ready-to-work')).toBe('ready')
   })
 
   // =========================================================================
-  // Development statuses → 'in_progress'
+  // Development statuses
   // =========================================================================
 
   it('in-progress → in_progress', () => {
     expect(toDbStoryStatus('in-progress')).toBe('in_progress')
   })
 
-  it('ready-for-code-review → in_progress', () => {
-    expect(toDbStoryStatus('ready-for-code-review')).toBe('in_progress')
+  it('ready-for-code-review → needs_code_review', () => {
+    expect(toDbStoryStatus('ready-for-code-review')).toBe('needs_code_review')
   })
 
-  it('code-review-failed → in_progress', () => {
-    expect(toDbStoryStatus('code-review-failed')).toBe('in_progress')
+  it('code-review-failed → failed_code_review', () => {
+    expect(toDbStoryStatus('code-review-failed')).toBe('failed_code_review')
   })
 
   it('needs-work → in_progress', () => {
@@ -73,16 +77,16 @@ describe('toDbStoryStatus', () => {
     expect(toDbStoryStatus('in-qa')).toBe('in_qa')
   })
 
-  it('uat → in_qa', () => {
-    expect(toDbStoryStatus('uat')).toBe('in_qa')
+  it('uat → completed', () => {
+    expect(toDbStoryStatus('uat')).toBe('completed')
   })
 
   // =========================================================================
   // Terminal statuses
   // =========================================================================
 
-  it('completed → done', () => {
-    expect(toDbStoryStatus('completed')).toBe('done')
+  it('completed → completed', () => {
+    expect(toDbStoryStatus('completed')).toBe('completed')
   })
 
   it('blocked → blocked', () => {

@@ -2928,13 +2928,13 @@ Example (list all blocked stories):
 Example (list stories in code review for "wish" feature):
 {
   "feature": "wish",
-  "state": "in_review"
+  "state": "needs_code_review"
 }
 
 Example (list all actionable platform stories):
 {
   "epic": "platform",
-  "states": ["ready_for_qa", "failed_qa", "failed_code_review", "in_review", "ready_for_review", "ready", "in_progress", "backlog"]
+  "states": ["ready_for_qa", "failed_qa", "failed_code_review", "needs_code_review", "ready", "in_progress", "backlog"]
 }
 
 Example (list high priority stories):
@@ -2983,7 +2983,7 @@ Parameters:
 - blocked_by_story (optional): Story ID that blocks this one
 - priority (optional): New priority
 
-States: backlog, ready, in_progress, ready_for_review, in_review, ready_for_qa, in_qa, completed, cancelled, deferred
+States: backlog, created, elab, ready, in_progress, needs_code_review, ready_for_qa, in_qa, completed, failed_code_review, failed_qa, blocked, cancelled
 Phases: setup, analysis, planning, implementation, code_review, qa_verification, completion
 
 Returns: Updated story object

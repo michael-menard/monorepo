@@ -6,7 +6,7 @@
  *
  * Exports:
  * - WorkflowStoryStatusSchema, WorkflowStoryStatus (17-value hyphenated model)
- * - DbStoryStatusSchema, DbStoryStatus (8-value snake_case model)
+ * - DbStoryStatusSchema, DbStoryStatus (canonical 13-state snake_case model)
  * - getValidTransitions(currentStatus) → WorkflowStoryStatus[]
  * - toDbStoryStatus(status) → DbStoryStatus
  * - getStatusFromDirectory(dirName) → WorkflowStoryStatus | null

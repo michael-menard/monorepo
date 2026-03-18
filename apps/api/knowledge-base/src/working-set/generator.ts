@@ -67,14 +67,12 @@ export const WorkingSetConfigSchema = z.object({
     .enum([
       'planning',
       'in-elaboration',
-      'ready-to-work',
       'implementation',
       'ready-for-code-review',
       'review',
       'ready-for-qa',
       'in-qa',
       'verification',
-      'uat',
       'complete',
     ])
     .optional(),

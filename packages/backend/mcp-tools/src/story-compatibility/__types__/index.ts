@@ -21,7 +21,7 @@ export const SWIM_LANE_TO_STATE = {
   elaboration: 'in_progress',
   'ready-to-work': 'ready',
   'in-progress': 'in_progress',
-  'needs-code-review': 'ready_for_review',
+  'needs-code-review': 'needs_code_review',
   'failed-code-review': 'failed_code_review',
   'ready-for-qa': 'ready_for_qa',
   'failed-qa': 'failed_qa',

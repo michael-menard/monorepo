@@ -61,25 +61,36 @@ describe('Story Schemas (KBAR-001)', () => {
     })
 
     describe('StoryStateSchema', () => {
-      it('should accept all valid states', () => {
+      it('should accept all 13 canonical states', () => {
         const states = [
           'backlog',
+          'created',
+          'elab',
           'ready',
           'in_progress',
-          'ready_for_review',
-          'in_review',
+          'needs_code_review',
           'ready_for_qa',
           'in_qa',
           'completed',
+          'failed_code_review',
+          'failed_qa',
+          'blocked',
           'cancelled',
-          'deferred',
         ]
         states.forEach(state => {
           expect(StoryStateSchema.parse(state)).toBe(state)
         })
       })
 
-      it('should reject invalid states', () => {
+      it('should reject ghost states', () => {
+        expect(() => StoryStateSchema.parse('ready_for_review')).toThrow()
+        expect(() => StoryStateSchema.parse('in_review')).toThrow()
+        expect(() => StoryStateSchema.parse('deferred')).toThrow()
+        expect(() => StoryStateSchema.parse('uat')).toThrow()
+        expect(() => StoryStateSchema.parse('ready_to_work')).toThrow()
+      })
+
+      it('should reject other invalid states', () => {
         expect(() => StoryStateSchema.parse('open')).toThrow()
         expect(() => StoryStateSchema.parse('done')).toThrow()
         expect(() => StoryStateSchema.parse('in-progress')).toThrow()

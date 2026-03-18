@@ -642,14 +642,12 @@ export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>
 export const WorkPhaseSchema = z.enum([
   'planning',
   'in-elaboration',
-  'ready-to-work',
   'implementation',
   'ready-for-code-review',
   'review',
   'ready-for-qa',
   'in-qa',
   'verification',
-  'uat',
   'complete',
 ])
 export type WorkPhase = z.infer<typeof WorkPhaseSchema>
@@ -774,22 +772,30 @@ export type StoryPriority = z.infer<typeof StoryPrioritySchema>
 /**
  * Valid story workflow states.
  *
- * Lifecycle: backlog → ready → in_progress → ready_for_review → in_review →
- *            ready_for_qa → in_qa → completed/cancelled/deferred
+ * Lifecycle: backlog → created → elab → ready → in_progress → needs_code_review →
+ *            ready_for_qa → in_qa → completed
+ * Recovery: failed_code_review, failed_qa
+ * Operational: blocked, cancelled
  */
 export const StoryStateSchema = z.enum([
+  // Pre-development
   'backlog',
+  'created',
+  'elab',
   'ready',
+  // Development
   'in_progress',
-  'ready_for_review',
-  'in_review',
+  'needs_code_review',
+  // QA
   'ready_for_qa',
   'in_qa',
   'completed',
-  'cancelled',
-  'deferred',
+  // Recovery
   'failed_code_review',
   'failed_qa',
+  // Operational
+  'blocked',
+  'cancelled',
 ])
 export type StoryState = z.infer<typeof StoryStateSchema>
 
