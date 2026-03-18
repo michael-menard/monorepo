@@ -1,0 +1,18 @@
+{
+  "story_id": "ORCH-2010",
+  "feature_id": null,
+  "generated_at": "2026-03-18T19:30:45.000Z",
+  "verdict": null,
+  "justification": "Prosecution blocked: graph.features is empty. WINT-4030 (graph feature discovery) must run first to populate the feature registry before any feature can be prosecuted for CRUD capability coverage. No features available for evaluation.",
+  "missing_capabilities": [],
+  "confidence": null,
+  "evidence_source": "graph-check-results.json",
+  "capability_counts": null,
+  "warnings": [
+    "graph.features_empty",
+    "wint-4030_prerequisite_not_run",
+    "wint-4050_prerequisite_not_run"
+  ],
+  "warning_count": 3,
+  "blocking_reason": "no features in graph.features — run WINT-4030 first"
+}

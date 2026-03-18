@@ -1,193 +1,140 @@
 schema: 2
-story_id: "CDBN-3020"
-timestamp: "2026-03-14T00:00:00Z"
+story_id: ORCH-2010
+timestamp: '2026-03-18T19:10:00Z'
 subtask_source: story
-
 steps:
   - id: 1
-    subtask_id: "ST-1"
-    description: "Fix story-crud-operations.ts — remove storyDetails import, update storyColumns to match actual workflow.stories schema (drop id, epic, storyType, points, phase, iteration, blocked, fileSyncedAt, acceptanceCriteria, nonGoals, packages, embedding; map to storyId PK and available columns)"
-    files:
-      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
-      - "apps/api/knowledge-base/src/db/schema.ts"
+    subtask_id: ST-1
+    description: >-
+      Review existing afterAggregate tests in elaboration.test.ts to confirm coverage of all 4 current cases and
+      identify the null-config gap. No file changes — read-only audit step.
+    files: []
     files_to_read:
-      - "apps/api/knowledge-base/src/db/schema.ts"
-      - "apps/api/knowledge-base/src/__types__/index.ts"
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
     dependencies: []
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
+    slice: packages
+    verification: >-
+      No code to run — output is audit notes confirming existing 4 afterAggregate tests pass and documenting the
+      null-config gap.
     acs_covered:
-      - "AC-1"
-      - "AC-2"
-      - "AC-3"
-
+      - AC-1
+      - AC-2
   - id: 2
-    subtask_id: "ST-2"
-    description: "Fix planService.ts in roadmap-svc — remove planDetails and storyDetails table references (inline local table defs), rewrite getPlanBySlug, getStoriesByPlanSlug, and getStoryById to use only the plans and stories tables from workflow schema as exported by @repo/knowledge-base/db"
+    subtask_id: ST-2
+    description: >-
+      Write unit tests for afterStructurer in elaboration.test.ts. afterStructurer is exported from elaboration.ts and
+      has zero existing tests. Add a describe block 'afterStructurer routing function' with at minimum 3 test cases: (1)
+      routes to update_readiness when config.recalculateReadiness is true, (2) routes to save_to_db when
+      config.recalculateReadiness is false, (3) routes to save_to_db when config is null. Import afterStructurer
+      alongside the existing afterAggregate import at the bottom of the test file.
     files:
-      - "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
     files_to_read:
-      - "apps/api/knowledge-base/src/db/schema.ts"
-      - "apps/api/knowledge-base/src/db/index.ts"
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
     dependencies:
       - 1
-    slice: backend
-    verification: "pnpm check-types --filter @repo/roadmap-svc"
+    slice: packages
+    verification: pnpm --filter orchestrator test -- graphs/elaboration
     acs_covered:
-      - "AC-4"
-      - "AC-5"
-
+      - AC-1
+      - AC-2
   - id: 3
-    subtask_id: "ST-3"
-    description: "Update JSDoc/comment strings in telemetry-operations.ts — replace all 'wint.agent_invocations', 'wint.hitl_decisions', 'wint.story_outcomes' references with 'workflow.agent_invocations', 'workflow.hitl_decisions', 'workflow.story_outcomes'"
+    subtask_id: ST-3
+    description: >-
+      Add null-config edge case test to the existing 'afterAggregate routing function' describe block in
+      elaboration.test.ts. The gap identified in elaboration: when state.config is null,
+      config?.structurerConfig?.enabled is falsy and config?.recalculateReadiness is falsy, so the function should
+      return 'save_to_db'. Add one test: 'routes to save_to_db when config is null'.
     files:
-      - "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
-    files_to_read: []
-    dependencies: []
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm --filter orchestrator test -- graphs/elaboration
     acs_covered:
-      - "AC-6"
-
+      - AC-1
+      - AC-2
   - id: 4
-    subtask_id: "ST-4"
-    description: "Update MCP tool description strings in tool-schemas.ts — replace all 'wint.hitl_decisions', 'wint.story_outcomes', 'wint.agent_invocations' references in tool descriptions and comments with 'workflow.*' equivalents"
-    files:
-      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
-    files_to_read: []
-    dependencies:
-      - 3
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-7"
-
-  - id: 5
-    subtask_id: "ST-5"
-    description: "Update JSDoc comments in tool-handlers.ts — replace 'wint.hitl_decisions', 'wint.story_outcomes' comment references with 'workflow.*' equivalents"
-    files:
-      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
-    files_to_read: []
-    dependencies:
-      - 4
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base"
-    acs_covered:
-      - "AC-7"
-
-  - id: 6
-    subtask_id: "ST-6"
-    description: "Update story-outcomes integration test comments — replace 'wint.story_outcomes', 'wint.*' comment references with 'workflow.*' schema references; update test prerequisite comments to reference workflow schema migration"
-    files:
-      - "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
-    files_to_read: []
-    dependencies:
-      - 3
-    slice: backend
-    verification: "pnpm test --filter @repo/knowledge-base -- --run src/crud-operations/__tests__/story-outcomes.test.ts"
-    acs_covered:
-      - "AC-8"
-
-  - id: 7
-    subtask_id: "ST-7"
-    description: "Run full type-check and test suite for all modified packages to confirm zero type errors and all tests pass"
+    subtask_id: ST-4
+    description: >-
+      Run full verification: execute pnpm --filter orchestrator test -- graphs/elaboration and confirm all tests pass.
+      Then run pnpm check-types --filter @repo/orchestrator to confirm no type errors were introduced.
     files: []
     files_to_read: []
     dependencies:
-      - 1
-      - 2
       - 3
-      - 4
-      - 5
-      - 6
-    slice: backend
-    verification: "pnpm check-types --filter @repo/knowledge-base && pnpm check-types --filter @repo/roadmap-svc && pnpm test --filter @repo/knowledge-base"
+    slice: packages
+    verification: pnpm --filter orchestrator test -- graphs/elaboration && pnpm check-types --filter @repo/orchestrator
     acs_covered:
-      - "AC-1"
-      - "AC-2"
-      - "AC-3"
-      - "AC-4"
-      - "AC-5"
-      - "AC-6"
-      - "AC-7"
-      - "AC-8"
-      - "AC-9"
-
+      - AC-1
+      - AC-2
 files_to_change:
-  - path: "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+  - path: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
     action: modify
-    reason: "Remove storyDetails import and storyDetailColumns selector; update storyColumns to use only columns present in current workflow.stories schema (storyId as PK, feature, title, description, state, priority, blockedReason, blockedByStory, startedAt, completedAt, fileHash)"
-  - path: "apps/api/knowledge-base/src/db/schema.ts"
-    action: modify
-    reason: "Verify/confirm storyDetails table is not exported — no code change expected unless an old storyDetails definition is lingering"
-  - path: "apps/api/workflow-admin/roadmap-svc/src/services/planService.ts"
-    action: modify
-    reason: "Remove inline planDetails/storyDetails local table definitions and all queries that reference them; rewrite getPlanBySlug to return data from plans table only (no JOIN to planDetails); rewrite getStoriesByPlanSlug and getStoryById to use stories table columns available in workflow schema"
-  - path: "apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts"
-    action: modify
-    reason: "Update JSDoc/comment strings from wint.* to workflow.* schema names to match current consolidated schema"
-  - path: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
-    action: modify
-    reason: "Update tool description strings from wint.* to workflow.* to match current schema"
-  - path: "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
-    action: modify
-    reason: "Update JSDoc comment strings from wint.* to workflow.* to match current schema"
-  - path: "apps/api/knowledge-base/src/crud-operations/__tests__/story-outcomes.test.ts"
-    action: modify
-    reason: "Update wint.* schema references in test comments/docs to workflow.* to match current schema"
-
+    reason: >-
+      Add afterStructurer describe block (3 test cases) and null-config edge case to afterAggregate describe block (1
+      test case). Total: 4 new test cases.
 commands_to_run:
-  - command: "pnpm check-types --filter @repo/knowledge-base"
-    when: "after ST-1 and after each subsequent backend step"
+  - command: pnpm --filter orchestrator test -- graphs/elaboration
+    when: after each step that modifies test file, and as final verification
     required: true
-  - command: "pnpm check-types --filter @repo/roadmap-svc"
-    when: "after ST-2"
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after all code changes
     required: true
-  - command: "pnpm test --filter @repo/knowledge-base"
-    when: "after all code changes"
-    required: true
-  - command: "pnpm build --filter @repo/knowledge-base"
-    when: "after all code changes"
-    required: false
-
 acceptance_criteria_map:
-  - ac_id: "AC-1"
-    planned_evidence: "pnpm check-types --filter @repo/knowledge-base passes with 0 errors — storyDetails import removed"
-    evidence_type: command
-  - ac_id: "AC-2"
-    planned_evidence: "storyColumns in story-crud-operations.ts only references columns present in workflow.stories schema"
-    evidence_type: file
-  - ac_id: "AC-3"
-    planned_evidence: "pnpm test --filter @repo/knowledge-base -- --run src/__types__/__tests__/story-schemas.test.ts passes"
+  - ac_id: AC-1
+    planned_evidence: >-
+      Unit tests only target afterAggregate and afterStructurer from elaboration.ts — no exports added to
+      story-creation.ts, scope stays locked to currently-exported functions only
     evidence_type: test
-  - ac_id: "AC-4"
-    planned_evidence: "pnpm check-types --filter @repo/roadmap-svc passes with 0 errors — planDetails/storyDetails references removed"
-    evidence_type: command
-  - ac_id: "AC-5"
-    planned_evidence: "planService.ts getPlanBySlug, getStoriesByPlanSlug, getStoryById all query only columns from current workflow.plans and workflow.stories schema"
-    evidence_type: file
-  - ac_id: "AC-6"
-    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/crud-operations/telemetry-operations.ts returns 0"
-    evidence_type: command
-  - ac_id: "AC-7"
-    planned_evidence: "grep -c 'wint\\.' apps/api/knowledge-base/src/mcp-server/tool-schemas.ts && tool-handlers.ts returns 0"
-    evidence_type: command
-  - ac_id: "AC-8"
-    planned_evidence: "pnpm test --filter @repo/knowledge-base passes all tests (including story-outcomes.test.ts)"
+  - ac_id: AC-2
+    planned_evidence: >-
+      Execution follows explicit subtask sequence ST-1 through ST-4 with verification command pnpm --filter orchestrator
+      test -- graphs/elaboration passing after each mutating step
     evidence_type: test
-  - ac_id: "AC-9"
-    planned_evidence: "pnpm check-types:all passes with 0 type errors across all changed packages"
-    evidence_type: command
-
 architectural_decisions: []
-
-complexity: moderate
-
+complexity: simple
 notes:
-  - "story-crud-operations.ts has a compile-time broken reference to storyDetails from schema.ts — storyDetails table was removed in schema consolidation. ST-1 is the most critical fix."
-  - "planService.ts references planDetails (local inline table def that was deleted) and storyDetails (also deleted). The getPlanBySlug, getStoriesByPlanSlug, getStoryById functions need rewriting to use only available columns from workflow.plans and workflow.stories."
-  - "workflow.stories PK is storyId (text), not id (uuid). planService.ts stories table redef uses correct storyId pattern. story-crud-operations.ts uses stories.id which does not exist."
-  - "workflow.plans table has: id, planSlug, title, summary, planType, storyPrefix, tags, rawContent, contentHash, kbEntryId, parentPlanId, deletedAt, supersededBy, embedding, sections, status, priority, priorityOrder. No featureDir, estimatedStories, formatVersion, sourceFile."
-  - "telemetry-operations.ts, tool-schemas.ts, tool-handlers.ts changes are comment/string-only — no behavior changes, no risk of test regression."
-  - "story-outcomes.test.ts is an integration test requiring real postgres-knowledgebase on port 5433 (ADR-005). Comment updates only — test logic unchanged."
-  - "planService.ts PlanWithDetails interface references featureDir, estimatedStories which don't exist in plans table. These fields must be dropped from the response shape or mapped from available columns."
+  - 'Only one file is modified: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts'
+  - No production code changes — this story is test-only. No export keywords to add.
+  - >-
+    afterStructurer test cases must use the existing createTestState() helper from the same file and
+    ElaborationConfigSchema.parse() for config construction — consistent with the afterAggregate test pattern.
+  - >-
+    Import afterStructurer at the bottom of the file alongside the existing afterAggregate import: import {
+    afterAggregate, afterStructurer } from '../elaboration.js'
+  - >-
+    afterStructurer is a pure synchronous function with exactly 2 branches: recalculateReadiness true →
+    update_readiness, else → save_to_db. Minimum 3 test cases: (1) true, (2) false, (3) null config.
+  - >-
+    afterAggregate null-config edge case: createTestState({ config: null }) → expect result to be 'save_to_db'. The
+    optional chaining in the source (config?.structurerConfig?.enabled, config?.recalculateReadiness) means null config
+    falls through all conditions to the final return.
+  - >-
+    ORCH-1010 provides createMockLLMProvider and createMockGraphState but these are not needed for ElaborationState
+    tests — the existing createTestState() in elaboration.test.ts is the right fixture builder.
+  - 'Verification command from elaboration: pnpm --filter orchestrator test -- graphs/elaboration'
+test_cases_detail:
+  afterStructurer:
+    - id: AS-1
+      description: routes to update_readiness when recalculateReadiness is true
+      state_setup: 'createTestState({ config: ElaborationConfigSchema.parse({ recalculateReadiness: true }) })'
+      expected: "'update_readiness'"
+    - id: AS-2
+      description: routes to save_to_db when recalculateReadiness is false
+      state_setup: 'createTestState({ config: ElaborationConfigSchema.parse({ recalculateReadiness: false }) })'
+      expected: "'save_to_db'"
+    - id: AS-3
+      description: routes to save_to_db when config is null
+      state_setup: 'createTestState({ config: null })'
+      expected: "'save_to_db'"
+  afterAggregate_new_edge_case:
+    - id: AA-5
+      description: routes to save_to_db when config is null (null guard path)
+      state_setup: 'createTestState({ config: null })'
+      expected: "'save_to_db'"
