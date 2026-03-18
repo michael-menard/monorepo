@@ -13,10 +13,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  ThrashIcon,
 } from '@repo/app-component-library'
 import type { PlanStory } from '../store/roadmapApi'
+import { getConfig } from '../config'
 
 const col = createColumnHelper<PlanStory>()
+
+type FromPlanInfo = { slug: string; title: string }
 
 function relativeTime(iso: string | null) {
   if (!iso) return <span className="text-xs text-slate-500 font-mono">&mdash;</span>
@@ -43,93 +47,120 @@ function priorityBadgeVariant(priority: string | null) {
   return 'secondary' as const
 }
 
-const columns = [
-  col.accessor('storyId', {
-    header: 'Story ID',
-    size: 120,
-    cell: info => (
-      <Link
-        to="/story/$storyId"
-        params={{ storyId: info.getValue() }}
-        className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
-      >
-        {info.getValue()}
-      </Link>
-    ),
-  }),
-  col.accessor('title', {
-    header: 'Title',
-    size: 300,
-    cell: info => {
-      const row = info.row.original
-      return (
+function createColumns(fromPlan?: FromPlanInfo) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stateUpdater = fromPlan ? (((prev: any) => ({ ...prev, fromPlan })) as any) : undefined
+  return [
+    col.accessor('storyId', {
+      header: 'Story ID',
+      size: 120,
+      cell: info => (
         <Link
           to="/story/$storyId"
-          params={{ storyId: row.storyId }}
-          className="block no-underline transition-colors group/title"
+          params={{ storyId: info.getValue() }}
+          state={stateUpdater}
+          className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
         >
-          <div className="line-clamp-2 group-hover/title:text-cyan-400 group-hover/title:underline">
-            {row.title ?? '-'}
-          </div>
-          {row.description ? (
-            <div className="text-xs text-slate-500 mt-0.5 break-words line-clamp-2">
-              {row.description}
+          {info.getValue()}
+        </Link>
+      ),
+    }),
+    col.accessor('title', {
+      header: 'Title',
+      size: 300,
+      cell: info => {
+        const row = info.row.original
+        return (
+          <Link
+            to="/story/$storyId"
+            params={{ storyId: row.storyId }}
+            state={stateUpdater}
+            className="block no-underline transition-colors group/title"
+          >
+            <div className="line-clamp-2 group-hover/title:text-cyan-400 group-hover/title:underline">
+              {row.title ?? '-'}
             </div>
-          ) : null}
-        </Link>
-      )
-    },
-  }),
-  col.accessor('state', {
-    header: 'State',
-    size: 130,
-    cell: info => {
-      const row = info.row.original
-      return (
-        <div className="flex items-center gap-2">
-          <AppBadge variant={stateBadgeVariant(row)}>{row.state ?? '-'}</AppBadge>
-          {row.isBlocked || row.hasBlockers ? (
-            <span title="Has blockers" className="text-destructive">
-              ⚠️
-            </span>
-          ) : null}
-        </div>
-      )
-    },
-  }),
-  col.accessor('blockedByStory', {
-    header: 'Blocked By',
-    size: 130,
-    cell: info => {
-      const val = info.getValue()
-      return val ? (
-        <Link
-          to="/story/$storyId"
-          params={{ storyId: val }}
-          className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
-        >
-          {val}
-        </Link>
-      ) : (
-        <span className="text-slate-600">&mdash;</span>
-      )
-    },
-  }),
-  col.accessor('priority', {
-    header: 'Priority',
-    size: 90,
-    cell: info => (
-      <AppBadge variant={priorityBadgeVariant(info.getValue())}>{info.getValue() ?? '-'}</AppBadge>
-    ),
-  }),
-  col.accessor('updatedAt', {
-    header: 'Last Activity',
-    size: 110,
-    cell: info => relativeTime(info.getValue()),
-  }),
-]
+            {row.description ? (
+              <div className="text-xs text-slate-500 mt-0.5 break-words line-clamp-2">
+                {row.description}
+              </div>
+            ) : null}
+          </Link>
+        )
+      },
+    }),
+    col.accessor('state', {
+      header: 'State',
+      size: 130,
+      cell: info => {
+        const row = info.row.original
+        return (
+          <div className="flex items-center gap-2">
+            <AppBadge variant={stateBadgeVariant(row)}>{row.state ?? '-'}</AppBadge>
+            {row.isBlocked || row.hasBlockers ? (
+              <span title="Has blockers" className="text-destructive">
+                ⚠️
+              </span>
+            ) : null}
+            {row.thrashCount >= getConfig().thrashThreshold ? (
+              <span
+                title={`Thrashing: ${row.thrashCount} status regression${row.thrashCount === 1 ? '' : 's'}`}
+              >
+                <ThrashIcon size={16} className="text-amber-500" />
+              </span>
+            ) : null}
+          </div>
+        )
+      },
+    }),
+    col.accessor('blockedByStory', {
+      header: 'Blocked By',
+      size: 130,
+      cell: info => {
+        const val = info.getValue()
+        return val ? (
+          <Link
+            to="/story/$storyId"
+            params={{ storyId: val }}
+            state={stateUpdater}
+            className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
+          >
+            {val}
+          </Link>
+        ) : (
+          <span className="text-slate-600">&mdash;</span>
+        )
+      },
+    }),
+    col.accessor('priority', {
+      header: 'Priority',
+      size: 90,
+      cell: info => (
+        <AppBadge variant={priorityBadgeVariant(info.getValue())}>
+          {info.getValue() ?? '-'}
+        </AppBadge>
+      ),
+    }),
+    col.accessor('updatedAt', {
+      header: 'Last Activity',
+      size: 110,
+      cell: info => relativeTime(info.getValue()),
+    }),
+  ]
+}
 
-export function StoriesTable({ data }: { data: PlanStory[] }) {
+export function StoriesTable({
+  data,
+  planSlug,
+  planTitle,
+}: {
+  data: PlanStory[]
+  planSlug?: string
+  planTitle?: string
+}) {
+  const columns = createColumns(
+    planSlug ? { slug: planSlug, title: planTitle ?? planSlug } : undefined,
+  )
   const table = useReactTable({
     data,
     columns,

@@ -1,4 +1,4 @@
-import { useParams, Link } from '@tanstack/react-router'
+import { useParams, useLocation, Link } from '@tanstack/react-router'
 import {
   AppBadge,
   CustomButton,
@@ -356,6 +356,8 @@ function ArtifactJsonViewer({
 
 export function StoryDetailsPage() {
   const { storyId } = useParams({ from: '/story/$storyId' })
+  const location = useLocation()
+  const fromPlan = (location.state as { fromPlan?: { slug: string; title: string } })?.fromPlan
   const { data, error, isLoading } = useGetStoryByIdQuery(storyId, { pollingInterval: 30_000 })
   useStorySSE()
   const [updateStory] = useUpdateStoryMutation()
@@ -418,13 +420,14 @@ export function StoryDetailsPage() {
         : null
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <button
-          onClick={() => window.history.back()}
+        <Link
+          to={fromPlan ? '/plan/$slug' : '/'}
+          params={fromPlan ? { slug: fromPlan.slug } : undefined}
           className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </button>
+          {fromPlan ? fromPlan.title : 'Roadmap'}
+        </Link>
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg font-mono text-sm space-y-1">
           <div>
             ERROR:{' '}
@@ -455,14 +458,36 @@ export function StoryDetailsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Back */}
-      <button
-        onClick={() => window.history.back()}
-        className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back
-      </button>
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="mb-6">
+        <ol className="flex items-center gap-1.5 text-sm text-slate-400">
+          <li>
+            <Link to="/" className="hover:text-cyan-400 transition-colors">
+              Roadmap
+            </Link>
+          </li>
+          {fromPlan && (
+            <>
+              <li aria-hidden="true">
+                <ChevronRight className="h-3.5 w-3.5" />
+              </li>
+              <li>
+                <Link
+                  to="/plan/$slug"
+                  params={{ slug: fromPlan.slug }}
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  {fromPlan.title}
+                </Link>
+              </li>
+            </>
+          )}
+          <li aria-hidden="true">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </li>
+          <li className="text-slate-200 font-mono">{data.storyId}</li>
+        </ol>
+      </nav>
 
       {/* Header */}
       <div className="mb-6">
