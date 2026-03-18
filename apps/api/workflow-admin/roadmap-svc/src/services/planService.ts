@@ -7,8 +7,8 @@ import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-or
 
 // Local schema definitions — explicit schema prefix ensures queries resolve correctly
 // regardless of DB search_path. Kept in sync with actual DB columns only.
-const workflowSchema = pgSchema('workflow')
-const stories = workflowSchema.table('stories', {
+export const workflowSchema = pgSchema('workflow')
+export const stories = workflowSchema.table('stories', {
   storyId: text('story_id').notNull(),
   feature: text('feature').notNull(),
   title: text('title').notNull(),
@@ -123,7 +123,7 @@ const artifactVerifications = artifactsSchema.table('artifact_verifications', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
-const storyDependenciesTable = workflowSchema.table('story_dependencies', {
+export const storyDependenciesTable = workflowSchema.table('story_dependencies', {
   storyId: text('story_id').notNull(),
   dependsOnId: text('depends_on_id').notNull(),
   dependencyType: text('dependency_type').notNull(),
@@ -548,6 +548,17 @@ export async function updatePlan(
   return getPlanBySlug(slug)
 }
 
+const DepEntrySchema = z.object({
+  dependsOnId: z.string(),
+  dependencyType: z.string(),
+  dependsOnState: z.string().nullable(),
+})
+
+const DependentSchema = z.object({
+  storyId: z.string(),
+  dependencyType: z.string(),
+})
+
 export const PlanStorySchema = z.object({
   storyId: z.string(),
   title: z.string().nullable(),
@@ -559,9 +570,11 @@ export const PlanStorySchema = z.object({
   isBlocked: z.boolean(),
   hasBlockers: z.boolean(),
   blockedByStory: z.string().nullable(),
-  dependencies: z.array(z.string()),
-  dependents: z.array(z.string()),
+  dependencies: z.array(DepEntrySchema),
+  dependents: z.array(DependentSchema),
   wave: z.number(),
+  thrashCount: z.number(),
+  isExternal: z.boolean(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
 })
@@ -575,11 +588,15 @@ type LinkedStoryRow = {
   state: string | null
   priority: string | null
   blockedByStory: string | null
+  thrashCount: number
   createdAt: Date
   updatedAt: Date
 }
 
-function computeWaves(storyIds: Set<string>, depsMap: Map<string, string[]>): Map<string, number> {
+export function computeWaves(
+  storyIds: Set<string>,
+  depsMap: Map<string, string[]>,
+): Map<string, number> {
   const waves = new Map<string, number>()
   const computing = new Set<string>()
 
@@ -609,6 +626,33 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       blockedByStory: stories.blockedByStory,
       createdAt: stories.createdAt,
       updatedAt: stories.updatedAt,
+      thrashCount: sql<number>`(
+        select count(*)::int
+        from workflow.story_state_history h
+        where h.story_id = ${stories.storyId}
+          and h.event_type = 'state_change'
+          and h.from_state is not null
+          and h.to_state is not null
+          and (
+            case h.from_state
+              when 'backlog' then 0 when 'created' then 1 when 'ready' then 2
+              when 'in_progress' then 3 when 'needs_code_review' then 4
+              when 'ready_for_review' then 5 when 'in_review' then 6
+              when 'ready_for_qa' then 7 when 'in_qa' then 8
+              when 'UAT' then 9 when 'completed' then 10
+              else 0
+            end
+          ) > (
+            case h.to_state
+              when 'backlog' then 0 when 'created' then 1 when 'ready' then 2
+              when 'in_progress' then 3 when 'needs_code_review' then 4
+              when 'ready_for_review' then 5 when 'in_review' then 6
+              when 'ready_for_qa' then 7 when 'in_qa' then 8
+              when 'UAT' then 9 when 'completed' then 10
+              else 0
+            end
+          )
+      )`,
     })
     .from(planStoryLinks)
     .innerJoin(stories, eq(planStoryLinks.storyId, stories.storyId))
@@ -617,41 +661,116 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
 
   if (linkedStories.length === 0) return []
 
-  const storyIds = new Set(linkedStories.map(s => s.storyId))
+  const planStoryIds = new Set(linkedStories.map(s => s.storyId))
+  const allStoryIds = new Set(planStoryIds)
 
-  // Fetch all dependencies for these stories from story_dependencies
-  const allDeps = await database
-    .select({
-      storyId: storyDependenciesTable.storyId,
-      dependsOnId: storyDependenciesTable.dependsOnId,
-    })
-    .from(storyDependenciesTable)
-    .where(
-      or(
-        inArray(storyDependenciesTable.storyId, [...storyIds]),
-        inArray(storyDependenciesTable.dependsOnId, [...storyIds]),
-      )!,
-    )
+  // All story rows keyed by storyId (plan stories + external)
+  const allStoryRows = new Map<string, LinkedStoryRow>()
+  for (const s of linkedStories) allStoryRows.set(s.storyId, s)
 
-  // Build maps: storyId -> [stories it depends on], storyId -> [stories that depend on it]
-  const depsMap = new Map<string, string[]>()
-  const dependentsMap = new Map<string, string[]>()
-  for (const dep of allDeps) {
-    if (storyIds.has(dep.storyId)) {
-      if (!depsMap.has(dep.storyId)) depsMap.set(dep.storyId, [])
-      depsMap.get(dep.storyId)!.push(dep.dependsOnId)
+  // Accumulate all dependency rows across iterations
+  type DepRow = { storyId: string; dependsOnId: string; dependencyType: string }
+  const allDepRows: DepRow[] = []
+
+  // Iterative frontier expansion: discover external dependencies
+  let frontier = new Set(planStoryIds)
+  for (let iter = 0; iter < 10 && frontier.size > 0; iter++) {
+    // Fetch deps where any frontier story appears as storyId or dependsOnId
+    const depRows = await database
+      .select({
+        storyId: storyDependenciesTable.storyId,
+        dependsOnId: storyDependenciesTable.dependsOnId,
+        dependencyType: storyDependenciesTable.dependencyType,
+      })
+      .from(storyDependenciesTable)
+      .where(
+        or(
+          inArray(storyDependenciesTable.storyId, [...frontier]),
+          inArray(storyDependenciesTable.dependsOnId, [...frontier]),
+        )!,
+      )
+    allDepRows.push(...depRows)
+
+    // Find external story IDs not yet in our set
+    const newExternalIds = new Set<string>()
+    for (const dep of depRows) {
+      if (!allStoryIds.has(dep.dependsOnId)) newExternalIds.add(dep.dependsOnId)
+      if (!allStoryIds.has(dep.storyId)) newExternalIds.add(dep.storyId)
     }
-    if (storyIds.has(dep.dependsOnId)) {
-      if (!dependentsMap.has(dep.dependsOnId)) dependentsMap.set(dep.dependsOnId, [])
-      dependentsMap.get(dep.dependsOnId)!.push(dep.storyId)
+
+    if (newExternalIds.size === 0) break
+
+    // Fetch external story rows
+    const externalRows = await database
+      .select({
+        storyId: stories.storyId,
+        title: stories.title,
+        description: stories.description,
+        state: stories.state,
+        priority: stories.priority,
+        blockedByStory: stories.blockedByStory,
+        createdAt: stories.createdAt,
+        updatedAt: stories.updatedAt,
+        thrashCount: sql<number>`0`,
+      })
+      .from(stories)
+      .where(inArray(stories.storyId, [...newExternalIds]))
+
+    for (const row of externalRows) {
+      allStoryRows.set(row.storyId, row)
+      allStoryIds.add(row.storyId)
+    }
+
+    // Next iteration expands from newly discovered stories
+    frontier = newExternalIds
+  }
+
+  // Deduplicate dep rows
+  const depKey = (d: DepRow) => `${d.storyId}|${d.dependsOnId}`
+  const seenDeps = new Set<string>()
+  const uniqueDeps: DepRow[] = []
+  for (const d of allDepRows) {
+    const k = depKey(d)
+    if (!seenDeps.has(k)) {
+      seenDeps.add(k)
+      uniqueDeps.push(d)
     }
   }
 
-  const waves = computeWaves(storyIds, depsMap)
+  // Build maps: storyId -> [dependency objects], storyId -> [dependent objects]
+  type DepEntry = z.infer<typeof DepEntrySchema>
+  type Dependent = z.infer<typeof DependentSchema>
+  const depsMap = new Map<string, DepEntry[]>()
+  const dependentsMap = new Map<string, Dependent[]>()
+  // Flat ID-only map for wave computation
+  const depsIdMap = new Map<string, string[]>()
+  for (const dep of uniqueDeps) {
+    if (allStoryIds.has(dep.storyId)) {
+      if (!depsMap.has(dep.storyId)) depsMap.set(dep.storyId, [])
+      depsMap.get(dep.storyId)!.push({
+        dependsOnId: dep.dependsOnId,
+        dependencyType: dep.dependencyType,
+        dependsOnState: allStoryRows.get(dep.dependsOnId)?.state ?? null,
+      })
+      if (!depsIdMap.has(dep.storyId)) depsIdMap.set(dep.storyId, [])
+      depsIdMap.get(dep.storyId)!.push(dep.dependsOnId)
+    }
+    if (allStoryIds.has(dep.dependsOnId)) {
+      if (!dependentsMap.has(dep.dependsOnId)) dependentsMap.set(dep.dependsOnId, [])
+      dependentsMap.get(dep.dependsOnId)!.push({
+        storyId: dep.storyId,
+        dependencyType: dep.dependencyType,
+      })
+    }
+  }
 
-  return linkedStories.map((story: LinkedStoryRow) => {
-    const deps = depsMap.get(story.storyId) ?? []
-    return {
+  const waves = computeWaves(allStoryIds, depsIdMap)
+
+  // Build response: plan stories + external stories
+  const result: PlanStory[] = []
+  for (const [storyId, story] of allStoryRows) {
+    const deps = depsMap.get(storyId) ?? []
+    result.push({
       storyId: story.storyId,
       title: story.title,
       description: story.description ?? null,
@@ -663,12 +782,16 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       hasBlockers: deps.length > 0,
       blockedByStory: story.blockedByStory ?? null,
       dependencies: deps,
-      dependents: dependentsMap.get(story.storyId) ?? [],
-      wave: waves.get(story.storyId) ?? 0,
+      dependents: dependentsMap.get(storyId) ?? [],
+      wave: waves.get(storyId) ?? 0,
+      thrashCount: story.thrashCount ?? 0,
+      isExternal: !planStoryIds.has(storyId),
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
-    }
-  }) as PlanStory[]
+    } satisfies PlanStory)
+  }
+
+  return result
 }
 
 export const StoryDetailsSchema = z.object({

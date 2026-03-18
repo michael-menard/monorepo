@@ -56,7 +56,16 @@ describe('roadmapApi cache tags', () => {
 
   it('invalidateTags accepts all defined tag types', () => {
     // This would fail at compile time if tags were misconfigured
-    const action = roadmapApi.util.invalidateTags(['Plans', 'Stories', 'Story'])
-    expect(action.payload).toHaveLength(3)
+    const action = roadmapApi.util.invalidateTags(['Plans', 'Stories', 'Story', 'Dashboard'])
+    expect(action.payload).toHaveLength(4)
+  })
+
+  it('getDashboard endpoint exists', () => {
+    expect(endpoints.getDashboard).toBeDefined()
+  })
+
+  it('Dashboard tag type is defined', () => {
+    const action = roadmapApi.util.invalidateTags(['Dashboard'])
+    expect(action.payload).toEqual(['Dashboard'])
   })
 })

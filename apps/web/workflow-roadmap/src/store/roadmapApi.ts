@@ -73,9 +73,15 @@ export interface PlanStory {
   isBlocked: boolean
   hasBlockers: boolean
   blockedByStory: string | null
-  dependencies: string[]
-  dependents: string[]
+  dependencies: Array<{
+    dependsOnId: string
+    dependencyType: string
+    dependsOnState: string | null
+  }>
+  dependents: Array<{ storyId: string; dependencyType: string }>
   wave: number
+  thrashCount: number
+  isExternal: boolean
   createdAt: string | null
   updatedAt: string | null
 }
@@ -173,11 +179,59 @@ export interface StoryDetails {
   } | null
 }
 
+export interface DashboardResponse {
+  flowHealth: {
+    totalStories: number
+    distribution: Array<{ state: string; count: number }>
+    blockedCount: number
+  }
+  unblockedQueue: Array<{
+    storyId: string
+    title: string
+    priority: string | null
+    state: string | null
+    plans: Array<{ planSlug: string; title: string }>
+    fanOut: number
+    daysInState: number
+  }>
+  planProgress: Array<{
+    planSlug: string
+    title: string
+    status: string | null
+    priority: string | null
+    totalStories: number
+    completedStories: number
+    activeStories: number
+    blockedStories: number
+    daysSinceActivity: number | null
+    health: 'green' | 'yellow' | 'red'
+  }>
+  agingStories: Array<{
+    storyId: string
+    title: string
+    state: string
+    daysInState: number
+    plans: Array<{ planSlug: string; title: string }>
+  }>
+  impactRanking: Array<{
+    storyId: string
+    title: string
+    state: string | null
+    priority: string | null
+    fanOut: number
+    plans: Array<{ planSlug: string; title: string }>
+  }>
+}
+
 export const roadmapApi = createApi({
   reducerPath: 'roadmapApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
-  tagTypes: ['Plans', 'Stories', 'Story'],
+  tagTypes: ['Plans', 'Stories', 'Story', 'Dashboard'],
   endpoints: builder => ({
+    getDashboard: builder.query<DashboardResponse, void>({
+      query: () => '/dashboard',
+      providesTags: ['Dashboard'],
+    }),
     getPlans: builder.query<
       PlanListResponse,
       {
@@ -262,6 +316,7 @@ export const roadmapApi = createApi({
 })
 
 export const {
+  useGetDashboardQuery,
   useGetPlansQuery,
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
