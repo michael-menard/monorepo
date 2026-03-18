@@ -21,6 +21,7 @@ import {
   jsonb,
   integer,
   numeric,
+  serial,
   index,
   uniqueIndex,
   type AnyPgColumn,
@@ -491,6 +492,25 @@ export const trainingData = workflow.table('training_data', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const validTransitions = workflow.table(
+  'valid_transitions',
+  {
+    id: serial('id').primaryKey(),
+    fromState: text('from_state'),
+    toState: text('to_state').notNull(),
+    label: text('label').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // NOTE: The actual unique index (idx_valid_transitions_unique) uses a
+    // COALESCE(from_state, '__NULL__') functional expression and is created
+    // in migration 1004 SQL. Drizzle cannot express functional indexes, so
+    // we omit it here to avoid creating a conflicting simple unique index.
+    // Uniqueness is enforced at the DB level by the migration index.
+    fromStateIdx: index('idx_valid_transitions_from_state').on(table.fromState),
+  }),
+)
+
 export type Story = typeof stories.$inferSelect
 export type NewStory = typeof stories.$inferInsert
 export type StoryOutcome = typeof storyOutcomes.$inferSelect
@@ -503,3 +523,5 @@ export type SelectContextSession = typeof contextSessions.$inferSelect
 export type InsertContextSession = typeof contextSessions.$inferInsert
 export type SelectContextPack = typeof contextPacks.$inferSelect
 export type InsertContextPack = typeof contextPacks.$inferInsert
+export type ValidTransition = typeof validTransitions.$inferSelect
+export type NewValidTransition = typeof validTransitions.$inferInsert
