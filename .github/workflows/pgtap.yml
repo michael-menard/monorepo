@@ -45,7 +45,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: pgtap
-          POSTGRES_PASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap-test-only' }}
+          POSTGRES_PASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
           POSTGRES_DB: pgtap_test
         ports:
           - 5434:5432
@@ -59,7 +59,7 @@ jobs:
       PGTAP_DB_HOST: localhost
       PGTAP_DB_PORT: 5434
       PGTAP_DB_USER: pgtap
-      PGTAP_DB_PASS: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap-test-only' }}
+      PGTAP_DB_PASS: ${{ secrets.PGTAP_DB_PASSWORD }}
       PGTAP_DB_NAME: pgtap_test
 
     steps:
@@ -76,13 +76,13 @@ jobs:
 
       - name: Install pgtap extension into test database
         env:
-          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap-test-only' }}
+          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
         run: |
           psql -h localhost -p 5434 -U pgtap -d pgtap_test -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
 
       - name: Apply knowledge-base schema baseline
         env:
-          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap-test-only' }}
+          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
         run: |
           # Apply the full schema so trigger functions, tables, and extensions exist
           psql -h localhost -p 5434 -U pgtap -d pgtap_test \

@@ -10,11 +10,11 @@
 #   bash scripts/db/run-pgtap.sh tests/db/triggers/test_set_story_completed_at.sql
 #                                              # Run a single test file
 #
-# Environment variables (can be set or use defaults for local docker-compose.pgtap.yml):
+# Environment variables (set in .env.local — copy from .env.pgtap.example):
 #   PGTAP_DB_HOST  (default: localhost)
 #   PGTAP_DB_PORT  (default: 5434)
 #   PGTAP_DB_USER  (default: pgtap)
-#   PGTAP_DB_PASS  (default: pgtap)
+#   PGTAP_DB_PASS  (required — no default; set in .env.local or export before running)
 #   PGTAP_DB_NAME  (default: pgtap_test)
 #
 # Dependencies:
@@ -34,7 +34,7 @@ fi
 PGTAP_DB_HOST="${PGTAP_DB_HOST:-localhost}"
 PGTAP_DB_PORT="${PGTAP_DB_PORT:-5434}"
 PGTAP_DB_USER="${PGTAP_DB_USER:-pgtap}"
-PGTAP_DB_PASS="${PGTAP_DB_PASS:-pgtap}"
+PGTAP_DB_PASS="${PGTAP_DB_PASS:?PGTAP_DB_PASS must be set — copy .env.pgtap.example to .env.local and load it}"
 PGTAP_DB_NAME="${PGTAP_DB_NAME:-pgtap_test}"
 
 TESTS_DIR="$(cd "$(dirname "$0")/../../tests/db" && pwd)"
@@ -91,10 +91,16 @@ if ! command -v pg_prove >/dev/null 2>&1; then
 fi
 
 # ── Run tests ─────────────────────────────────────────────────────────────────
+# --verbose logs all SQL output; suppress in CI to avoid leaking schema structure
+VERBOSE_FLAG=()
+if [ "${CI:-}" != "true" ]; then
+  VERBOSE_FLAG=(--verbose)
+fi
+
 PGPASSWORD="$PGTAP_DB_PASS" pg_prove \
   --host "$PGTAP_DB_HOST" \
   --port "$PGTAP_DB_PORT" \
   --dbname "$PGTAP_DB_NAME" \
   --username "$PGTAP_DB_USER" \
-  --verbose \
+  "${VERBOSE_FLAG[@]}" \
   "${TEST_ARRAY[@]}"
