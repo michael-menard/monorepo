@@ -25,6 +25,8 @@ import {
   Pencil,
   Check,
   X,
+  Copy,
+  CheckCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -165,6 +167,23 @@ function StateBadge({ state }: { state: string }) {
           ? 'outline'
           : 'secondary'
   return <AppBadge variant={variant}>{state.replace(/_/g, ' ')}</AppBadge>
+}
+
+function CopyIdButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+      className="opacity-0 group-hover/sid:opacity-100 transition-opacity text-cyan-500/50 hover:text-cyan-400 cursor-pointer"
+      aria-label={`Copy ${text} to clipboard`}
+    >
+      {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  )
 }
 
 function sectionPrefix(name: string): string {
@@ -448,8 +467,11 @@ export function StoryDetailsPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3 flex-wrap">
-          <span className="font-mono text-sm text-cyan-500/70 border border-cyan-500/30 rounded px-2 py-0.5 shrink-0">
-            {data.storyId}
+          <span className="group/sid inline-flex items-center gap-1.5 shrink-0">
+            <span className="font-mono text-sm text-cyan-500/70 border border-cyan-500/30 rounded px-2 py-0.5">
+              {data.storyId}
+            </span>
+            <CopyIdButton text={data.storyId} />
           </span>
         </div>
         <h1 className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-4 leading-snug">
@@ -1190,82 +1212,80 @@ export function StoryDetailsPage() {
               )}
 
               {/* Current Work State */}
-              {(data.currentWorkState || data.branch) && (
-                <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
-                  <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 inline-block" />
-                    Work State
-                  </h2>
-                  <dl className="space-y-3">
-                    {(data.currentWorkState?.branch ?? data.branch) && (
+              <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
+                <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 inline-block" />
+                  Work State
+                </h2>
+                <dl className="space-y-3">
+                  {(data.currentWorkState?.branch ?? data.branch) && (
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                        <GitBranch className="h-3 w-3" /> Branch
+                      </dt>
+                      <dd className="font-mono text-xs text-cyan-400/80 break-all">
+                        {data.currentWorkState?.branch ?? data.branch}
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                      <GitBranch className="h-3 w-3" /> Source Branch
+                    </dt>
+                    <dd className="font-mono text-xs text-slate-400/80 break-all">
+                      {data.currentWorkState?.sourceBranch ?? data.sourceBranch ?? 'main'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                      <GitBranch className="h-3 w-3" /> Worktree
+                    </dt>
+                    <dd className="font-mono text-xs text-slate-400/80 break-all">
+                      {data.worktreePath || '—'}
+                    </dd>
+                  </div>
+                  {data.currentWorkState?.phase && (
+                    <div>
+                      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
+                        Phase
+                      </dt>
+                      <dd className="text-sm text-slate-200">{data.currentWorkState?.phase}</dd>
+                    </div>
+                  )}
+                  {Array.isArray(data.currentWorkState?.nextSteps) &&
+                    (data.currentWorkState?.nextSteps as string[]).length > 0 && (
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                          <GitBranch className="h-3 w-3" /> Branch
+                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
+                          Next Steps
                         </dt>
-                        <dd className="font-mono text-xs text-cyan-400/80 break-all">
-                          {data.currentWorkState?.branch ?? data.branch}
+                        <dd className="space-y-1">
+                          {(data.currentWorkState?.nextSteps as string[]).map((step, i) => (
+                            <div key={i} className="flex items-start gap-2 text-xs text-slate-400">
+                              <ChevronRight className="h-3 w-3 text-cyan-500/40 mt-0.5 shrink-0" />
+                              {step}
+                            </div>
+                          ))}
                         </dd>
                       </div>
                     )}
-                    {data.worktreePath && !data.currentWorkState && (
+                  {Array.isArray(data.currentWorkState?.blockers) &&
+                    (data.currentWorkState?.blockers as string[]).length > 0 && (
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                          <GitBranch className="h-3 w-3" /> Worktree
+                        <dt className="text-xs font-medium text-red-500/70 uppercase tracking-wider mb-1">
+                          Blockers
                         </dt>
-                        <dd className="font-mono text-xs text-slate-400/80 break-all">
-                          {data.worktreePath}
+                        <dd className="space-y-1">
+                          {(data.currentWorkState?.blockers as string[]).map((b, i) => (
+                            <div key={i} className="flex items-start gap-2 text-xs text-red-400/80">
+                              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                              {b}
+                            </div>
+                          ))}
                         </dd>
                       </div>
                     )}
-                    {data.currentWorkState?.phase && (
-                      <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
-                          Phase
-                        </dt>
-                        <dd className="text-sm text-slate-200">{data.currentWorkState?.phase}</dd>
-                      </div>
-                    )}
-                    {Array.isArray(data.currentWorkState?.nextSteps) &&
-                      (data.currentWorkState?.nextSteps as string[]).length > 0 && (
-                        <div>
-                          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
-                            Next Steps
-                          </dt>
-                          <dd className="space-y-1">
-                            {(data.currentWorkState?.nextSteps as string[]).map((step, i) => (
-                              <div
-                                key={i}
-                                className="flex items-start gap-2 text-xs text-slate-400"
-                              >
-                                <ChevronRight className="h-3 w-3 text-cyan-500/40 mt-0.5 shrink-0" />
-                                {step}
-                              </div>
-                            ))}
-                          </dd>
-                        </div>
-                      )}
-                    {Array.isArray(data.currentWorkState?.blockers) &&
-                      (data.currentWorkState?.blockers as string[]).length > 0 && (
-                        <div>
-                          <dt className="text-xs font-medium text-red-500/70 uppercase tracking-wider mb-1">
-                            Blockers
-                          </dt>
-                          <dd className="space-y-1">
-                            {(data.currentWorkState?.blockers as string[]).map((b, i) => (
-                              <div
-                                key={i}
-                                className="flex items-start gap-2 text-xs text-red-400/80"
-                              >
-                                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-                                {b}
-                              </div>
-                            ))}
-                          </dd>
-                        </div>
-                      )}
-                  </dl>
-                </div>
-              )}
+                </dl>
+              </div>
 
               {/* Tags (surfaces + plain tags) */}
               {tags.length > 0 && (
