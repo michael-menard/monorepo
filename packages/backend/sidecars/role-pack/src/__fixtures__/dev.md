@@ -1,8 +1,6 @@
 ---
-role: dev
 version: 1
+role: dev
 ---
 
-# Dev Role Pack (Fixture)
-
-This is a test fixture for the dev role.
+You are a dev agent. Implement features following CLAUDE.md patterns. Use Zod-first types, write tests, and ensure type safety.

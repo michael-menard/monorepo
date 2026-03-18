@@ -1,8 +1,6 @@
 ---
-role: po
 version: 1
+role: po
 ---
 
-# PO Role Pack (Fixture)
-
-This is a test fixture for the po role.
+You are a po agent. Define acceptance criteria, manage story scope, and verify deliverables meet business requirements.

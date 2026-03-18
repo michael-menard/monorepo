@@ -3,88 +3,92 @@
  * WINT-2010: Create Role Pack Sidecar Service
  *
  * Reads .claude/prompts/role-packs/{role}.md files.
- * Parses frontmatter for version using regex.
- * Caches results in-memory per role.
+ * Parses frontmatter using gray-matter (same approach as @repo/database-schema parseFrontmatter).
+ * Caches results in memory per role; cache is invalidated on process restart.
  */
 
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { z } from 'zod'
+import { readFile } from 'fs/promises'
+import { join } from 'path'
+import matter from 'gray-matter'
 import { logger } from '@repo/logger'
-import { type Role } from './__types__/index.js'
+import type { Role, CachedPack } from './__types__/index.js'
 
-const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---/
-
-const CachedPackSchema = z.object({
-  content: z.string(),
-  version: z.number().optional(),
-})
-
-type CachedPack = z.infer<typeof CachedPackSchema>
-
-// In-memory cache: role -> CachedPack
+/** In-memory cache: role → { content, version } */
 const cache = new Map<Role, CachedPack>()
 
 /**
- * Parse version from YAML frontmatter string.
- * Extracts `version: <value>` using regex — no gray-matter dependency.
+ * Default path to role pack files (relative to process.cwd())
+ * Can be overridden via ROLE_PACK_DIR env var for testing/UAT.
  */
-function parseVersion(frontmatter: string): number | undefined {
-  const match = frontmatter.match(/^version:\s*["']?([0-9.]+)["']?/m)
-  if (!match) return undefined
-  const parsed = parseFloat(match[1])
-  return isNaN(parsed) ? undefined : parsed
+function getRolePackDir(): string {
+  return process.env['ROLE_PACK_DIR'] ?? join(process.cwd(), '.claude', 'prompts', 'role-packs')
 }
 
 /**
- * Resolve the absolute path to a role pack file.
- * Walks up from this file to find the monorepo root, then looks in .claude/prompts/role-packs/.
+ * Parse frontmatter from markdown content using gray-matter.
+ * Returns { content, version } where version is extracted from frontmatter data.
+ * Returns null on parse error.
  */
-function resolveRolePackPath(role: Role): string {
-  // Allow override via env for testing
-  const baseDir = process.env.ROLE_PACK_DIR ?? resolve(process.cwd(), '.claude/prompts/role-packs')
-  return resolve(baseDir, `${role}.md`)
+function parsePack(
+  fileContent: string,
+  role: Role,
+): { content: string; version: number | null } | null {
+  try {
+    const { data, content } = matter(fileContent)
+    const rawVersion = (data as Record<string, unknown>)['version']
+    const version = typeof rawVersion === 'number' ? rawVersion : null
+    return { content: content.trim(), version }
+  } catch (err) {
+    const error = err as Error
+    logger.warn('[sidecar-role-pack] Failed to parse frontmatter', {
+      role,
+      error: error.message,
+    })
+    return null
+  }
 }
 
 /**
- * Read a role pack file, parse its frontmatter, and cache the result.
+ * Read a role pack file from disk, parse frontmatter, and cache the result.
  *
- * @param role - The role to read (dev | po | qa | da)
- * @returns Cached pack with content and optional version, or null on miss/error
+ * @param role - The role to read (dev, po, qa, da)
+ * @param rolePackDir - Optional override for the role pack directory (for tests)
+ * @returns CachedPack with content and version, or null on miss/error
  */
-export async function readRolePack(role: Role): Promise<CachedPack | null> {
-  // Cache hit
-  if (cache.has(role)) {
-    return cache.get(role)!
+export async function readRolePack(
+  role: Role,
+  rolePackDir?: string,
+): Promise<CachedPack | null> {
+  // Return from cache if available
+  const cached = cache.get(role)
+  if (cached !== undefined) {
+    return cached
   }
 
-  const filePath = resolveRolePackPath(role)
+  const dir = rolePackDir ?? getRolePackDir()
+  const filePath = join(dir, `${role}.md`)
 
   try {
-    const raw = await readFile(filePath, 'utf-8')
+    const fileContent = await readFile(filePath, 'utf-8')
+    const parsed = parsePack(fileContent, role)
 
-    let version: number | undefined
-    const fmMatch = raw.match(FRONTMATTER_RE)
-    if (fmMatch) {
-      version = parseVersion(fmMatch[1])
+    if (parsed === null) {
+      logger.warn('[sidecar-role-pack] Role pack parse failed — returning null', { role, filePath })
+      return null
     }
 
-    const pack: CachedPack = { content: raw, version }
+    const pack: CachedPack = { content: parsed.content, version: parsed.version }
     cache.set(role, pack)
     return pack
-  } catch (error) {
-    const isNotFound =
-      error instanceof Error &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
-
-    if (isNotFound) {
+  } catch (err) {
+    const error = err as Error & { code?: string }
+    if (error.code === 'ENOENT') {
       logger.warn('[sidecar-role-pack] Role pack file not found', { role, filePath })
     } else {
-      logger.warn('[sidecar-role-pack] Failed to read role pack file', {
+      logger.warn('[sidecar-role-pack] Role pack file read error', {
         role,
         filePath,
-        error: error instanceof Error ? error.message : String(error),
+        error: error.message,
       })
     }
     return null
@@ -92,8 +96,7 @@ export async function readRolePack(role: Role): Promise<CachedPack | null> {
 }
 
 /**
- * Clear the in-memory cache.
- * Primarily for testing — allows fresh reads without restarting the process.
+ * Clear the in-memory cache (used in tests to reset state between runs).
  */
 export function clearRolePackCache(): void {
   cache.clear()

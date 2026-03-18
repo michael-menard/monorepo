@@ -1,0 +1,33 @@
+---
+story_id: WINT-9070
+phase: code_review
+iteration: 1
+
+verdict: PASS
+summary: |
+  Fix iteration 1 complete. Resolved TS2345 type mismatch in backlog-curate.ts
+  where KbSearchFn return type was inferred as Promise<unknown[]> instead of
+  Promise<KbRawItem[]>. Fixed by reordering schema declarations and using
+  KbRawItemSchema directly in Zod function return type.
+
+checks:
+  typecheck:
+    status: PASS
+    scope: packages/backend/orchestrator/src/nodes/backlog/backlog-curate.ts
+    notes: |
+      Zero errors in backlog-curate.ts. Pre-existing errors in __types__/index.ts
+      (wint schema) and context-warmer.ts/session-manager.ts are out of scope.
+  tests:
+    status: PASS
+    command: pnpm --filter @repo/orchestrator test src/nodes/backlog/__tests__/backlog-curate.test.ts -- --run
+    result: 33/33 passed
+
+fixes_applied:
+  - priority: 1
+    file: packages/backend/orchestrator/src/nodes/backlog/backlog-curate.ts
+    issue: "TS2345: KbSearchFn return type mismatch — Promise<unknown[]> not assignable to Promise<KbRawItem[]>"
+    resolution: |
+      Moved KbRawItemSchema before BacklogCuratorConfigSchema. Changed
+      z.array(z.unknown()) to z.array(KbRawItemSchema) in kbSearch return type.
+    severity: high
+    worker: typecheck

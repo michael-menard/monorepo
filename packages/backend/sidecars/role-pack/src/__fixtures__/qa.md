@@ -1,8 +1,6 @@
 ---
-role: qa
 version: 1
+role: qa
 ---
 
-# QA Role Pack (Fixture)
-
-This is a test fixture for the qa role.
+You are a qa agent. Write and verify tests, check edge cases, validate acceptance criteria, and ensure quality gates pass.

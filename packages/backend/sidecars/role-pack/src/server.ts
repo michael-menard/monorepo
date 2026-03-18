@@ -1,31 +1,31 @@
 /**
- * HTTP Server for Role Pack Sidecar
+ * Role Pack Sidecar HTTP Server
  * WINT-2010: Create Role Pack Sidecar Service
  *
- * Starts a Node.js http server on PORT (default: 3090).
- * Uses Node.js built-in http module — no Hono or Express.
+ * Starts a lightweight Node.js HTTP server on PORT (default: 3090).
+ * Run: node dist/server.js
  */
 
-import { createServer } from 'node:http'
+import { createServer } from 'http'
 import { logger } from '@repo/logger'
 import { handleRolePackRequest } from './http-handler.js'
 
-const PORT = parseInt(process.env.PORT ?? '3090', 10)
+const PORT = parseInt(process.env['PORT'] ?? '3090', 10)
 
 const server = createServer((req, res) => {
-  handleRolePackRequest(req, res).catch(error => {
-    logger.warn('[sidecar-role-pack] Unhandled error in request handler', {
-      error: error instanceof Error ? error.message : String(error),
+  handleRolePackRequest(req, res).catch(err => {
+    logger.warn('[sidecar-role-pack] Unhandled request error', {
+      error: err instanceof Error ? err.message : String(err),
     })
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ ok: false, error: 'Internal server error' }))
+      res.end(JSON.stringify({ error: 'Internal server error' }))
     }
   })
 })
 
 server.listen(PORT, () => {
-  logger.info(`[sidecar-role-pack] Server listening on port ${PORT}`)
+  logger.info('[sidecar-role-pack] Server started', { port: PORT })
 })
 
 export { server }

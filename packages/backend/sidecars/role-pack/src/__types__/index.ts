@@ -1,5 +1,5 @@
 /**
- * Zod Schemas for Role Pack Sidecar Service
+ * Zod schemas for Role Pack Sidecar Service
  * WINT-2010: Create Role Pack Sidecar Service
  *
  * Uses Zod-first approach per CLAUDE.md — no TypeScript interfaces.
@@ -8,17 +8,15 @@
 import { z } from 'zod'
 
 /**
- * Valid role values per AC-10
- * NOTE: 'pm' is explicitly excluded
+ * Valid role values matching actual WINT-0210 output files.
+ * Note: 'pm' is NOT included — 'da' (devil's advocate) is used instead per AC-10.
  */
-export const RoleSchema = z.enum(['dev', 'po', 'qa', 'da'], {
-  errorMap: () => ({ message: 'role must be one of: dev, po, qa, da' }),
-})
+export const RoleSchema = z.enum(['dev', 'po', 'qa', 'da'])
 
 export type Role = z.infer<typeof RoleSchema>
 
 /**
- * Input schema for rolePackGet MCP tool
+ * Input schema for the rolePackGet MCP tool
  */
 export const RolePackGetInputSchema = z.object({
   role: RoleSchema,
@@ -28,30 +26,37 @@ export const RolePackGetInputSchema = z.object({
 export type RolePackGetInput = z.infer<typeof RolePackGetInputSchema>
 
 /**
- * Output schema for rolePackGet MCP tool
+ * Output schema for the rolePackGet MCP tool — content string or null
  */
-export const RolePackGetOutputSchema = z.object({
-  role: RoleSchema,
-  content: z.string(),
-  version: z.number().int().positive().optional(),
-})
+export const RolePackGetOutputSchema = z.string().nullable()
 
 export type RolePackGetOutput = z.infer<typeof RolePackGetOutputSchema>
 
 /**
- * HTTP response schema for GET /role-pack
+ * Cached pack structure stored in memory
  */
-export const RolePackHttpResponseSchema = z.discriminatedUnion('ok', [
-  z.object({
-    ok: z.literal(true),
-    role: RoleSchema,
-    content: z.string(),
-    version: z.number().int().positive().optional(),
-  }),
-  z.object({
-    ok: z.literal(false),
-    error: z.string(),
-  }),
-])
+export const CachedPackSchema = z.object({
+  content: z.string(),
+  version: z.number().int().nullable(),
+})
+
+export type CachedPack = z.infer<typeof CachedPackSchema>
+
+/**
+ * HTTP success response body schema
+ */
+export const RolePackHttpResponseSchema = z.object({
+  content: z.string(),
+})
 
 export type RolePackHttpResponse = z.infer<typeof RolePackHttpResponseSchema>
+
+/**
+ * HTTP error response body schema
+ */
+export const RolePackHttpErrorSchema = z.object({
+  error: z.string(),
+  available: z.number().int().optional(),
+})
+
+export type RolePackHttpError = z.infer<typeof RolePackHttpErrorSchema>

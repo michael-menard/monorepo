@@ -1,99 +1,105 @@
 /**
  * Tests for role-pack-reader.ts
- * WINT-2010 AC coverage: AC-3 (file read), AC-4 (cache), AC-5 (miss/error)
+ * WINT-2010: Create Role Pack Sidecar Service
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFile } from 'node:fs/promises'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { join } from 'path'
+
+// Mock @repo/logger before imports
+vi.mock('@repo/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
+// Mock fs/promises at top level before any imports
+const mockReadFile = vi.fn()
+vi.mock('fs/promises', () => ({
+  readFile: (...args: unknown[]) => mockReadFile(...args),
+}))
+
+// Now import the module under test
 import { readRolePack, clearRolePackCache } from '../role-pack-reader.js'
+import { logger } from '@repo/logger'
 
-vi.mock('node:fs/promises')
-
-const mockReadFile = vi.mocked(readFile)
-
-const DEV_FIXTURE = `---
-role: dev
-version: 1
----
-
-# Dev Role Pack
-
-Some content here.
-`
+const FIXTURE_DIR = join(new URL('..', import.meta.url).pathname, '__fixtures__')
 
 describe('readRolePack', () => {
   beforeEach(() => {
     clearRolePackCache()
-    vi.resetAllMocks()
+    vi.clearAllMocks()
+    mockReadFile.mockReset()
   })
 
-  afterEach(() => {
-    clearRolePackCache()
-  })
+  it('reads and parses a role pack file with version frontmatter', async () => {
+    mockReadFile.mockResolvedValueOnce('---\nversion: 1\nrole: dev\n---\n\nYou are a dev agent.')
 
-  it('returns pack content and version on happy path', async () => {
-    mockReadFile.mockResolvedValueOnce(DEV_FIXTURE as any)
-
-    const result = await readRolePack('dev')
+    const result = await readRolePack('dev', '/fake/dir')
 
     expect(result).not.toBeNull()
-    expect(result!.content).toBe(DEV_FIXTURE)
+    expect(result!.content).toBe('You are a dev agent.')
     expect(result!.version).toBe(1)
   })
 
-  it('returns null when file is not found (ENOENT)', async () => {
-    const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
-    mockReadFile.mockRejectedValueOnce(err)
+  it('caches the result on second call (readFile called only once)', async () => {
+    mockReadFile.mockResolvedValue('---\nversion: 1\n---\n\nCached content.')
 
-    const result = await readRolePack('po')
+    const first = await readRolePack('qa', '/fake/dir')
+    const second = await readRolePack('qa', '/fake/dir')
 
-    expect(result).toBeNull()
-  })
-
-  it('returns null when file read throws a generic error', async () => {
-    mockReadFile.mockRejectedValueOnce(new Error('Permission denied'))
-
-    const result = await readRolePack('qa')
-
-    expect(result).toBeNull()
-  })
-
-  it('returns cached result on second call without re-reading the file', async () => {
-    mockReadFile.mockResolvedValueOnce(DEV_FIXTURE as any)
-
-    const first = await readRolePack('dev')
-    const second = await readRolePack('dev')
-
-    expect(first).toBe(second) // same reference from cache
+    expect(first).toEqual(second)
     expect(mockReadFile).toHaveBeenCalledTimes(1)
   })
 
-  it('parses version from frontmatter correctly', async () => {
-    const fixture = `---
-role: da
-version: 2
----
+  it('returns null and warns when file not found (ENOENT)', async () => {
+    const err = Object.assign(new Error('File not found'), { code: 'ENOENT' })
+    mockReadFile.mockRejectedValueOnce(err)
 
-# DA content
-`
-    mockReadFile.mockResolvedValueOnce(fixture as any)
+    const result = await readRolePack('po', '/fake/dir')
 
-    const result = await readRolePack('da')
-
-    expect(result!.version).toBe(2)
+    expect(result).toBeNull()
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[sidecar-role-pack] Role pack file not found',
+      expect.objectContaining({ role: 'po' }),
+    )
   })
 
-  it('returns undefined version when frontmatter has no version field', async () => {
-    const fixture = `---
-role: dev
----
+  it('returns null and warns on generic read error', async () => {
+    mockReadFile.mockRejectedValueOnce(new Error('Permission denied'))
 
-# No version
-`
-    mockReadFile.mockResolvedValueOnce(fixture as any)
+    const result = await readRolePack('da', '/fake/dir')
 
-    const result = await readRolePack('dev')
+    expect(result).toBeNull()
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[sidecar-role-pack] Role pack file read error',
+      expect.objectContaining({ role: 'da', error: 'Permission denied' }),
+    )
+  })
 
-    expect(result!.version).toBeUndefined()
+  it('returns content with null version when frontmatter has no version field', async () => {
+    mockReadFile.mockResolvedValueOnce('---\nrole: dev\n---\n\nNo version here.')
+
+    const result = await readRolePack('dev', '/fake/dir')
+
+    expect(result).not.toBeNull()
+    expect(result!.version).toBeNull()
+    expect(result!.content).toBe('No version here.')
+  })
+
+  it('reads fixture files correctly from fixture dir (real fs)', async () => {
+    // Restore real readFile for this test
+    mockReadFile.mockImplementationOnce(async (path: string) => {
+      const { readFile: realReadFile } = await vi.importActual<typeof import('fs/promises')>('fs/promises')
+      return realReadFile(path, 'utf-8')
+    })
+
+    const result = await readRolePack('dev', FIXTURE_DIR)
+
+    expect(result).not.toBeNull()
+    expect(result!.version).toBe(1)
+    expect(result!.content.length).toBeGreaterThan(0)
   })
 })
