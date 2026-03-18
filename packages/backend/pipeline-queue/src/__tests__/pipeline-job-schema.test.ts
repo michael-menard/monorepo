@@ -7,102 +7,183 @@ import { PipelineJobDataSchema } from '../__types__/index.js'
 
 describe('PipelineJobDataSchema', () => {
   describe('valid payloads', () => {
-    it('accepts a minimal valid payload', () => {
+    it('accepts a minimal elaboration payload', () => {
       const result = PipelineJobDataSchema.parse({
         storyId: 'APIP-0010',
-        phase: 'elaboration',
+        stage: 'elaboration',
+        attemptNumber: 1,
+        payload: {},
       })
       expect(result.storyId).toBe('APIP-0010')
-      expect(result.phase).toBe('elaboration')
+      expect(result.stage).toBe('elaboration')
       expect(result.priority).toBeUndefined()
-      expect(result.metadata).toBeUndefined()
+      expect(result.touchedPathPrefixes).toEqual([])
     })
 
-    it('accepts all valid phase values', () => {
-      const phases = ['elaboration', 'implementation', 'review', 'qa', 'merge'] as const
-      for (const phase of phases) {
-        const result = PipelineJobDataSchema.parse({ storyId: 'APIP-0010', phase })
-        expect(result.phase).toBe(phase)
+    it('accepts all valid stage values', () => {
+      const stages = [
+        'elaboration',
+        'story-creation',
+        'implementation',
+        'review',
+        'qa',
+      ] as const
+      for (const stage of stages) {
+        const payload =
+          stage === 'implementation' || stage === 'review' || stage === 'qa'
+            ? {
+                storyId: 'STORY-001',
+                title: 'Test Story',
+              }
+            : {}
+        const result = PipelineJobDataSchema.parse({
+          storyId: 'APIP-0010',
+          stage,
+          attemptNumber: 1,
+          payload,
+        })
+        expect(result.stage).toBe(stage)
       }
     })
 
     it('accepts optional priority field', () => {
       const result = PipelineJobDataSchema.parse({
         storyId: 'APIP-0010',
-        phase: 'implementation',
+        stage: 'elaboration',
+        attemptNumber: 1,
+        payload: {},
         priority: 1,
       })
       expect(result.priority).toBe(1)
     })
 
-    it('accepts optional metadata field', () => {
+    it('accepts touchedPathPrefixes field', () => {
       const result = PipelineJobDataSchema.parse({
         storyId: 'APIP-0010',
-        phase: 'review',
-        metadata: { iteration: 2, tags: ['urgent'] },
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'APIP-0010',
+          title: 'My Story',
+        },
+        touchedPathPrefixes: ['packages/backend', 'apps/api'],
       })
-      expect(result.metadata).toEqual({ iteration: 2, tags: ['urgent'] })
+      expect(result.touchedPathPrefixes).toEqual(['packages/backend', 'apps/api'])
     })
 
-    it('accepts both priority and metadata together', () => {
+    it('accepts implementation payload with story snapshot', () => {
       const result = PipelineJobDataSchema.parse({
         storyId: 'APIP-0020',
-        phase: 'qa',
+        stage: 'implementation',
+        attemptNumber: 2,
+        payload: {
+          storyId: 'APIP-0020',
+          title: 'BullMQ Work Queue Setup',
+          description: 'Setup BullMQ pipeline queue',
+          feature: 'apip',
+          state: 'in_progress',
+        },
         priority: 5,
-        metadata: { reviewer: 'claude-opus' },
       })
       expect(result.storyId).toBe('APIP-0020')
-      expect(result.priority).toBe(5)
-      expect(result.metadata).toEqual({ reviewer: 'claude-opus' })
+      expect(result.stage).toBe('implementation')
+      if (result.stage === 'implementation') {
+        expect(result.payload.storyId).toBe('APIP-0020')
+      }
     })
   })
 
   describe('invalid payloads', () => {
     it('rejects empty storyId', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ storyId: '', phase: 'elaboration' }),
+        PipelineJobDataSchema.parse({
+          storyId: '',
+          stage: 'elaboration',
+          attemptNumber: 1,
+          payload: {},
+        }),
       ).toThrow()
     })
 
     it('rejects missing storyId', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ phase: 'elaboration' }),
+        PipelineJobDataSchema.parse({
+          stage: 'elaboration',
+          attemptNumber: 1,
+          payload: {},
+        }),
       ).toThrow()
     })
 
-    it('rejects missing phase', () => {
+    it('rejects missing stage', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ storyId: 'APIP-0010' }),
+        PipelineJobDataSchema.parse({ storyId: 'APIP-0010', attemptNumber: 1, payload: {} }),
       ).toThrow()
     })
 
-    it('rejects invalid phase value', () => {
+    it('rejects invalid stage value', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ storyId: 'APIP-0010', phase: 'deployment' }),
+        PipelineJobDataSchema.parse({
+          storyId: 'APIP-0010',
+          stage: 'deployment',
+          attemptNumber: 1,
+          payload: {},
+        }),
       ).toThrow()
     })
 
     it('rejects non-integer priority', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ storyId: 'APIP-0010', phase: 'qa', priority: 1.5 }),
+        PipelineJobDataSchema.parse({
+          storyId: 'APIP-0010',
+          stage: 'qa',
+          attemptNumber: 1,
+          payload: { storyId: 'APIP-0010', title: 'T' },
+          priority: 1.5,
+        }),
       ).toThrow()
     })
 
     it('rejects null storyId', () => {
       expect(() =>
-        PipelineJobDataSchema.parse({ storyId: null, phase: 'merge' }),
+        PipelineJobDataSchema.parse({
+          storyId: null,
+          stage: 'elaboration',
+          attemptNumber: 1,
+          payload: {},
+        }),
+      ).toThrow()
+    })
+
+    it('rejects missing attemptNumber', () => {
+      expect(() =>
+        PipelineJobDataSchema.parse({
+          storyId: 'APIP-0010',
+          stage: 'elaboration',
+          payload: {},
+        }),
       ).toThrow()
     })
   })
 
   describe('safeParse', () => {
     it('returns success: false for invalid payload without throwing', () => {
-      const result = PipelineJobDataSchema.safeParse({ storyId: 'APIP-0010', phase: 'unknown' })
+      const result = PipelineJobDataSchema.safeParse({
+        storyId: 'APIP-0010',
+        stage: 'unknown',
+        attemptNumber: 1,
+        payload: {},
+      })
       expect(result.success).toBe(false)
     })
 
     it('returns success: true for valid payload', () => {
-      const result = PipelineJobDataSchema.safeParse({ storyId: 'APIP-0010', phase: 'merge' })
+      const result = PipelineJobDataSchema.safeParse({
+        storyId: 'APIP-0010',
+        stage: 'story-creation',
+        attemptNumber: 1,
+        payload: {},
+      })
       expect(result.success).toBe(true)
     })
   })

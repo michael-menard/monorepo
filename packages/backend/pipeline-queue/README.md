@@ -10,36 +10,85 @@ pipeline queue with validated job payloads.
 
 ## Queue Contract
 
-| Item | Value |
-|------|-------|
-| Queue name | `apip-pipeline` (exported as `PIPELINE_QUEUE_NAME`) |
-| Backing store | Redis / AWS ElastiCache |
-| BullMQ version | v5+ |
-| ioredis version | v5+ |
+| Item            | Value                                               |
+| --------------- | --------------------------------------------------- |
+| Queue name      | `apip-pipeline` (exported as `PIPELINE_QUEUE_NAME`) |
+| Backing store   | Redis / AWS ElastiCache                             |
+| BullMQ version  | v5+                                                 |
+| ioredis version | v5+                                                 |
 
 **`PIPELINE_QUEUE_NAME = 'apip-pipeline'` is a stable contract.** Once workers begin
 consuming from this queue (APIP-0020+), the queue name must not change.
 
 ## Payload Schema
 
-All jobs on the pipeline queue must conform to `PipelineJobDataSchema`:
+All jobs on the pipeline queue must conform to `PipelineJobDataSchema`, a **discriminated union**
+on the `stage` field. Each variant shares a common set of required fields and may specialize the
+`payload` type.
+
+### Common fields (all stages)
+
+| Field                 | Type                     | Description                                                     |
+| --------------------- | ------------------------ | --------------------------------------------------------------- |
+| `storyId`             | `string` (min 1)         | Required. Story identifier, e.g. `"APIP-0010"`                  |
+| `stage`               | `string` literal         | Required. Discriminant field — determines which variant is used |
+| `attemptNumber`       | `number` (int, min 1)    | Required. Tracks retry count for escalation logic               |
+| `payload`             | object                   | Required. Stage-specific context (see per-stage types below)    |
+| `priority`            | `number` (int, optional) | Optional. Lower = higher BullMQ priority                        |
+| `touchedPathPrefixes` | `string[]`               | Optional. Paths modified by this job (defaults to `[]`)         |
+
+### Stage variants
 
 ```typescript
 import { PipelineJobDataSchema } from '@repo/pipeline-queue'
 
-// Schema definition (Zod):
-const PipelineJobDataSchema = z.object({
-  storyId: z.string().min(1),      // Required. Story identifier, e.g. "APIP-0010"
-  phase:   z.enum([                 // Required. Pipeline phase to execute
-    'elaboration',
-    'implementation',
-    'review',
-    'qa',
-    'merge',
-  ]),
-  priority: z.number().int().optional(),        // Optional. Lower = higher BullMQ priority
-  metadata: z.record(z.unknown()).optional(),   // Optional. Phase-specific context
-})
+// Discriminated union — stage field selects the variant
+const PipelineJobDataSchema = z.discriminatedUnion('stage', [
+  ElaborationJobDataSchema, // stage: 'elaboration'
+  StoryCreationJobDataSchema, // stage: 'story-creation'
+  ImplementationJobDataSchema, // stage: 'implementation'
+  ReviewJobDataSchema, // stage: 'review'
+  QaJobDataSchema, // stage: 'qa'
+])
+```
+
+#### Elaboration / Story-creation jobs
+
+`payload` is `z.record(z.unknown())` — a free-form object for stage-specific context.
+
+```typescript
+import type { ElaborationJobData } from '@repo/pipeline-queue'
+
+const job: ElaborationJobData = {
+  storyId: 'APIP-0010',
+  stage: 'elaboration',
+  attemptNumber: 1,
+  payload: { iteration: 0 },
+  touchedPathPrefixes: [],
+}
+```
+
+#### Implementation / Review / QA jobs
+
+`payload` is `StorySnapshotPayloadSchema` — a structured story snapshot:
+
+```typescript
+import type { ImplementationJobData } from '@repo/pipeline-queue'
+
+const job: ImplementationJobData = {
+  storyId: 'APIP-0010',
+  stage: 'implementation',
+  attemptNumber: 1,
+  payload: {
+    storyId: 'APIP-0010',
+    title: 'BullMQ Work Queue Setup',
+    description: 'Setup BullMQ pipeline queue',
+    feature: 'apip',
+    state: 'in_progress',
+  },
+  priority: 5,
+  touchedPathPrefixes: ['packages/backend/pipeline-queue'],
+}
 ```
 
 Zod validation is applied at **enqueue time** inside `createPipelineQueue().add()`. Invalid
@@ -52,23 +101,46 @@ one for blocking operations). Use `createPipelineConnection` to create a fresh c
 each Queue or Worker — do not share connections between them.
 
 ```typescript
-import { createPipelineConnection, createPipelineQueue, PIPELINE_QUEUE_NAME } from '@repo/pipeline-queue'
+import {
+  createPipelineConnection,
+  createPipelineQueue,
+  PIPELINE_QUEUE_NAME,
+} from '@repo/pipeline-queue'
 
 // Producer setup
 const queueConnection = createPipelineConnection(process.env.REDIS_URL!)
 const pipelineQueue = createPipelineQueue(queueConnection)
 
-// Enqueue a job
+// Enqueue an elaboration job
 await pipelineQueue.add('run-elaboration', {
   storyId: 'APIP-0010',
-  phase: 'elaboration',
-  metadata: { iteration: 0 },
+  stage: 'elaboration',
+  attemptNumber: 1,
+  payload: { iteration: 0 },
+})
+
+// Enqueue an implementation job (requires story snapshot payload)
+await pipelineQueue.add('run-implementation', {
+  storyId: 'APIP-0010',
+  stage: 'implementation',
+  attemptNumber: 1,
+  payload: {
+    storyId: 'APIP-0010',
+    title: 'BullMQ Work Queue Setup',
+  },
+  touchedPathPrefixes: ['packages/backend'],
 })
 
 // Worker setup (separate connection)
 import { Worker } from 'bullmq'
 const workerConnection = createPipelineConnection(process.env.REDIS_URL!)
-const worker = new Worker(PIPELINE_QUEUE_NAME, async job => { /* ... */ }, { connection: workerConnection })
+const worker = new Worker(
+  PIPELINE_QUEUE_NAME,
+  async job => {
+    /* ... */
+  },
+  { connection: workerConnection },
+)
 ```
 
 ### Connection Configuration
@@ -94,11 +166,11 @@ Without AOF, any Redis restart will drop all pending and delayed pipeline jobs.
 
 ## Default Job Options
 
-| Option | Value |
-|--------|-------|
-| `attempts` | 3 |
-| `backoff.type` | `'exponential'` |
-| `backoff.delay` | `1000` ms |
+| Option          | Value           |
+| --------------- | --------------- |
+| `attempts`      | 3               |
+| `backoff.type`  | `'exponential'` |
+| `backoff.delay` | `1000` ms       |
 
 ## Bull Board Setup
 
