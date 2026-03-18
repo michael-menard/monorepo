@@ -120,11 +120,17 @@ const indexRoute = createRoute({
 
 const roadmapRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/roadmap/$',
+  path: '/roadmap',
   component: RoadmapModulePage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, roadmapRoute])
+const roadmapSplatRoute = createRoute({
+  getParentRoute: () => roadmapRoute,
+  path: '$',
+  component: () => null,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, roadmapRoute.addChildren([roadmapSplatRoute])])
 
 const router = createRouter({
   routeTree,
