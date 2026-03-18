@@ -13,10 +13,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { runElaboration } from '../../graphs/elaboration.js'
 import type { ElaborationConfig } from '../../graphs/elaboration.js'
-import type { SynthesizedStory } from '../../nodes/story/synthesize.js'
-import type { FinalAcceptanceCriterion } from '../../nodes/story/synthesize.js'
-import type { TestHint } from '../../nodes/story/synthesize.js'
-import type { KnownUnknown } from '../../nodes/story/synthesize.js'
+import type {
+  SynthesizedStory,
+  FinalAcceptanceCriterion,
+  TestHint,
+  KnownUnknown,
+} from '../../nodes/story/synthesize.js'
 import type { DeltaDetectionResult } from '../../nodes/elaboration/delta-detect.js'
 import type { DeltaReviewResult } from '../../nodes/elaboration/delta-review.js'
 import type { EscapeHatchResult } from '../../nodes/elaboration/escape-hatch.js'
