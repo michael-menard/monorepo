@@ -45,8 +45,10 @@ describe.skipIf(skipIntegration)('Pipeline Queue Integration (requires REDIS_URL
 
     const jobPayload: PipelineJobData = {
       storyId: 'APIP-0010-integration',
-      phase: 'elaboration',
-      metadata: { test: true },
+      stage: 'elaboration',
+      attemptNumber: 1,
+      payload: { test: true },
+      touchedPathPrefixes: [],
     }
 
     // Enqueue job
@@ -65,8 +67,10 @@ describe.skipIf(skipIntegration)('Pipeline Queue Integration (requires REDIS_URL
           try {
             const parsed = PipelineJobDataSchema.parse(workerJob.data)
             expect(parsed.storyId).toBe('APIP-0010-integration')
-            expect(parsed.phase).toBe('elaboration')
-            expect(parsed.metadata).toEqual({ test: true })
+            expect(parsed.stage).toBe('elaboration')
+            if (parsed.stage === 'elaboration') {
+              expect(parsed.payload).toEqual({ test: true })
+            }
             resolve()
           } catch (err) {
             reject(err)
@@ -97,7 +101,12 @@ describe.skipIf(skipIntegration)('Pipeline Queue Integration (requires REDIS_URL
     const pq = createPipelineQueue(queueConnection, `${PIPELINE_QUEUE_NAME}-validation-test`)
 
     await expect(
-      pq.add('run-phase', { storyId: '', phase: 'elaboration' }),
+      pq.add('run-phase', {
+        storyId: '',
+        stage: 'elaboration',
+        attemptNumber: 1,
+        payload: {},
+      }),
     ).rejects.toThrow()
 
     await pq.bullQueue.close()

@@ -162,27 +162,34 @@ describe('createPipelineQueue', () => {
   })
 
   describe('add() — Zod validation at enqueue time (AC-3)', () => {
-    it('calls bullQueue.add with valid job data', async () => {
+    it('calls bullQueue.add with valid elaboration job data', async () => {
       const mockConn = createPipelineConnection('redis://localhost:6379')
       vi.clearAllMocks()
       mockQueueAdd.mockResolvedValue({ id: 'job-1' })
       const pq = createPipelineQueue(mockConn)
-      await pq.add('process', { storyId: 'APIP-0010', phase: 'elaboration' })
-      expect(mockQueueAdd).toHaveBeenCalledWith(
-        'process',
-        { storyId: 'APIP-0010', phase: 'elaboration' },
-        undefined,
-      )
+      const jobData = {
+        storyId: 'APIP-0010',
+        stage: 'elaboration' as const,
+        attemptNumber: 1,
+        payload: {},
+      }
+      await pq.add('process', jobData)
+      expect(mockQueueAdd).toHaveBeenCalledWith('process', expect.objectContaining(jobData), undefined)
     })
 
-    it('throws ZodError for invalid job data before calling bullQueue.add', async () => {
+    it('throws ZodError for invalid job data (empty storyId) before calling bullQueue.add', async () => {
       const mockConn = createPipelineConnection('redis://localhost:6379')
       vi.clearAllMocks()
       mockQueueAdd.mockResolvedValue({ id: 'job-1' })
       const pq = createPipelineQueue(mockConn)
       let thrown: unknown
       try {
-        await pq.add('process', { storyId: '', phase: 'elaboration' })
+        await pq.add('process', {
+          storyId: '',
+          stage: 'elaboration',
+          attemptNumber: 1,
+          payload: {},
+        })
       } catch (err) {
         thrown = err
       }
@@ -190,15 +197,20 @@ describe('createPipelineQueue', () => {
       expect(mockQueueAdd).not.toHaveBeenCalled()
     })
 
-    it('throws ZodError for invalid phase without calling bullQueue.add', async () => {
+    it('throws ZodError for invalid stage without calling bullQueue.add', async () => {
       const mockConn = createPipelineConnection('redis://localhost:6379')
       vi.clearAllMocks()
       mockQueueAdd.mockResolvedValue({ id: 'job-1' })
       const pq = createPipelineQueue(mockConn)
       let thrown: unknown
       try {
-        // @ts-expect-error — intentionally passing invalid phase to test runtime validation
-        await pq.add('process', { storyId: 'APIP-0010', phase: 'deploy' })
+        await pq.add('process', {
+          storyId: 'APIP-0010',
+          // @ts-expect-error — intentionally passing invalid stage to test runtime validation
+          stage: 'deploy',
+          attemptNumber: 1,
+          payload: {},
+        })
       } catch (err) {
         thrown = err
       }
@@ -212,7 +224,16 @@ describe('createPipelineQueue', () => {
       mockQueueAdd.mockResolvedValue({ id: 'job-1' })
       const pq = createPipelineQueue(mockConn)
       const opts = { delay: 5000 }
-      await pq.add('process', { storyId: 'APIP-0010', phase: 'merge' }, opts)
+      await pq.add(
+        'process',
+        {
+          storyId: 'APIP-0010',
+          stage: 'story-creation',
+          attemptNumber: 1,
+          payload: {},
+        },
+        opts,
+      )
       expect(mockQueueAdd).toHaveBeenCalledWith('process', expect.any(Object), opts)
     })
   })
