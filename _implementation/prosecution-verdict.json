@@ -1,18 +1,23 @@
 {
-  "story_id": "ORCH-2010",
-  "feature_id": null,
-  "generated_at": "2026-03-18T19:30:45.000Z",
-  "verdict": null,
-  "justification": "Prosecution blocked: graph.features is empty. WINT-4030 (graph feature discovery) must run first to populate the feature registry before any feature can be prosecuted for CRUD capability coverage. No features available for evaluation.",
+  "story_id": "CDBE-0010",
+  "feature_id": "unknown",
+  "generated_at": "2026-03-15T19:45:00.000Z",
+  "verdict": "PROSECUTION BLOCKED",
+  "justification": "Graph cohesion check failed: no capability data available. graph.features table is empty (WINT-4030 may not have run), and no cohesion rules are present (WINT-4050 may not have run). Cannot prosecute without feature capability coverage. Prerequisite steps must complete before prosecution can proceed.",
   "missing_capabilities": [],
-  "confidence": null,
-  "evidence_source": "graph-check-results.json",
-  "capability_counts": null,
+  "confidence": "N/A",
+  "evidence_source": "graph-checker-output",
+  "capability_counts": {
+    "create": 0,
+    "read": 0,
+    "update": 0,
+    "delete": 0
+  },
   "warnings": [
-    "graph.features_empty",
-    "wint-4030_prerequisite_not_run",
-    "wint-4050_prerequisite_not_run"
+    "graph.features empty — WINT-4030 may not have run",
+    "No active cohesion rules found — WINT-4050 may not have run",
+    "no capability data — unable to prosecute"
   ],
   "warning_count": 3,
-  "blocking_reason": "no features in graph.features — run WINT-4030 first"
+  "blocked_reason": "prerequisite graph data unavailable"
 }

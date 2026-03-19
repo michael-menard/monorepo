@@ -10,11 +10,11 @@
 #   bash scripts/db/run-pgtap.sh tests/db/triggers/test_set_story_completed_at.sql
 #                                              # Run a single test file
 #
-# Environment variables (can be set or use defaults for local docker-compose.pgtap.yml):
+# Environment variables (set in .env.local — copy from .env.pgtap.example):
 #   PGTAP_DB_HOST  (default: localhost)
 #   PGTAP_DB_PORT  (default: 5434)
 #   PGTAP_DB_USER  (default: pgtap)
-#   PGTAP_DB_PASS  (default: pgtap)
+#   PGTAP_DB_PASS  (required — no default; set in .env.local or export before running)
 #   PGTAP_DB_NAME  (default: pgtap_test)
 #
 # Dependencies:
@@ -34,21 +34,42 @@ fi
 PGTAP_DB_HOST="${PGTAP_DB_HOST:-localhost}"
 PGTAP_DB_PORT="${PGTAP_DB_PORT:-5434}"
 PGTAP_DB_USER="${PGTAP_DB_USER:-pgtap}"
-PGTAP_DB_PASS="${PGTAP_DB_PASS:-pgtap}"
+PGTAP_DB_PASS="${PGTAP_DB_PASS:?PGTAP_DB_PASS must be set — copy .env.pgtap.example to .env.local and load it}"
 PGTAP_DB_NAME="${PGTAP_DB_NAME:-pgtap_test}"
 
 TESTS_DIR="$(cd "$(dirname "$0")/../../tests/db" && pwd)"
 
 # ── Argument handling ─────────────────────────────────────────────────────────
 # Allow passing specific test files as arguments; otherwise discover all *.sql
+TEST_ARRAY=()
 if [ $# -gt 0 ]; then
-  TEST_FILES="$*"
+  for f in "$@"; do
+    # Reject paths containing ".." (directory traversal)
+    if [[ "$f" == *..* ]]; then
+      echo "ERROR: Rejected path containing '..': $f"
+      exit 1
+    fi
+    # Resolve to absolute path for prefix check
+    abs_f="$(cd "$(dirname "$f")" 2>/dev/null && pwd)/$(basename "$f")"
+    # Reject absolute paths that don't start with TESTS_DIR
+    if [[ "$f" == /* ]] && [[ "$f" != "$TESTS_DIR"* ]]; then
+      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
+      exit 1
+    fi
+    if [[ "$abs_f" != "$TESTS_DIR"* ]]; then
+      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
+      exit 1
+    fi
+    TEST_ARRAY+=("$f")
+  done
 else
   # Discover all SQL test files recursively under tests/db/
-  TEST_FILES="$(find "$TESTS_DIR" -name '*.sql' | sort)"
+  while IFS= read -r -d '' f; do
+    TEST_ARRAY+=("$f")
+  done < <(find "$TESTS_DIR" -name '*.sql' -print0 | sort -z)
 fi
 
-if [ -z "$TEST_FILES" ]; then
+if [ ${#TEST_ARRAY[@]} -eq 0 ]; then
   echo "No test files found under $TESTS_DIR — nothing to run."
   exit 0
 fi
@@ -58,36 +79,6 @@ echo "Host:     $PGTAP_DB_HOST:$PGTAP_DB_PORT"
 echo "Database: $PGTAP_DB_NAME"
 echo "User:     $PGTAP_DB_USER"
 echo ""
-
-# ── Check database availability (pg_isready guard) ───────────────────────────
-# If the database is not reachable, skip gracefully rather than failing hard.
-# This allows CI pipelines to succeed when the DB container is not running.
-if command -v pg_isready >/dev/null 2>&1; then
-  if ! pg_isready \
-    --host "$PGTAP_DB_HOST" \
-    --port "$PGTAP_DB_PORT" \
-    --dbname "$PGTAP_DB_NAME" \
-    --username "$PGTAP_DB_USER" \
-    --quiet 2>/dev/null; then
-    echo "SKIP: Database not available at $PGTAP_DB_HOST:$PGTAP_DB_PORT/$PGTAP_DB_NAME — pgtap tests skipped."
-    exit 0
-  fi
-else
-  # pg_isready not available: attempt a psql ping instead
-  if ! PGPASSWORD="$PGTAP_DB_PASS" psql \
-    --host "$PGTAP_DB_HOST" \
-    --port "$PGTAP_DB_PORT" \
-    --dbname "$PGTAP_DB_NAME" \
-    --username "$PGTAP_DB_USER" \
-    --command "SELECT 1" \
-    --quiet \
-    --no-align \
-    --tuples-only \
-    >/dev/null 2>&1; then
-    echo "SKIP: Database not available at $PGTAP_DB_HOST:$PGTAP_DB_PORT/$PGTAP_DB_NAME — pgtap tests skipped."
-    exit 0
-  fi
-fi
 
 # ── Check pg_prove is available ───────────────────────────────────────────────
 if ! command -v pg_prove >/dev/null 2>&1; then
@@ -100,10 +91,16 @@ if ! command -v pg_prove >/dev/null 2>&1; then
 fi
 
 # ── Run tests ─────────────────────────────────────────────────────────────────
+# --verbose logs all SQL output; suppress in CI to avoid leaking schema structure
+VERBOSE_FLAG=()
+if [ "${CI:-}" != "true" ]; then
+  VERBOSE_FLAG=(--verbose)
+fi
+
 PGPASSWORD="$PGTAP_DB_PASS" pg_prove \
   --host "$PGTAP_DB_HOST" \
   --port "$PGTAP_DB_PORT" \
   --dbname "$PGTAP_DB_NAME" \
   --username "$PGTAP_DB_USER" \
-  --verbose \
-  $TEST_FILES
+  "${VERBOSE_FLAG[@]}" \
+  "${TEST_ARRAY[@]}"

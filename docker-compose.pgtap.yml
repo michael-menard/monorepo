@@ -13,9 +13,10 @@
 #   docker compose -f docker-compose.pgtap.yml down       # Stop + remove
 #   docker compose -f docker-compose.pgtap.yml down -v    # Also remove volume
 #
-# Credentials (local dev only — not production):
+# Credentials — set in .env.local (git-ignored, never committed):
+#   Copy .env.pgtap.example to .env.local and fill in values.
 #   PGTAP_DB_USER  (default: pgtap)
-#   PGTAP_DB_PASS  (default: pgtap)
+#   PGTAP_DB_PASS  — required; no hardcoded default in docker-compose
 #   PGTAP_DB_NAME  (default: pgtap_test)
 
 services:
@@ -26,10 +27,10 @@ services:
     image: pgtap-postgres:local
     container_name: pgtap-postgres
     ports:
-      - '${PGTAP_DB_PORT:-5434}:5432'
+      - '127.0.0.1:${PGTAP_DB_PORT:-5434}:5432'
     environment:
       POSTGRES_USER: ${PGTAP_DB_USER:-pgtap}
-      POSTGRES_PASSWORD: ${PGTAP_DB_PASS:-pgtap}
+      POSTGRES_PASSWORD: ${PGTAP_DB_PASS:?PGTAP_DB_PASS must be set in .env.local — see .env.pgtap.example}
       POSTGRES_DB: ${PGTAP_DB_NAME:-pgtap_test}
     volumes:
       - pgtap_postgres_data:/var/lib/postgresql/data

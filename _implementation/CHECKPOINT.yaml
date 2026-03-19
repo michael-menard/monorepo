@@ -1,6 +1,45 @@
-current_phase: execute
-last_successful_phase: plan
+schema: 1
+story_id: CDBE-0010
+timestamp: '2026-03-15T12:30:00Z'
+current_phase: fix
+last_successful_phase: code_review
+iteration: 2
+max_iterations: 3
 blocked: false
-iteration: 0
-story_id: ORCH-2010
-timestamp: '2026-03-18T19:15:00Z'
+forced: false
+warnings: []
+gen_mode: false
+worktree_path: tree/story/CDBE-0010
+branch: story/CDBE-0010
+fix_cycles:
+  - schema_version: 1
+    iteration: 2
+    triggered_by: code_review
+    started_at: '2026-03-18T23:45:00Z'
+    completed_at: '2026-03-18T23:50:00Z'
+    issues_fixed:
+      - file: scripts/db/run-pgtap.sh
+        line: 37
+        issue: Missing error-if-unset pattern for PGTAP_DB_PASS; removed hardcoded password fallback
+        severity: high
+      - file: scripts/db/run-pgtap.sh
+        line: 100
+        issue: Ensured all variable expansions properly quoted to prevent shell injection
+        severity: high
+      - file: .github/workflows/pgtap.yml
+        line: 48
+        issue: Removed hardcoded password fallback; now uses GitHub Secret only
+        severity: high
+      - file: docker-compose.pgtap.yml
+        line: 33
+        issue: Added error-if-unset pattern for POSTGRES_PASSWORD credential
+        severity: high
+      - file: docker-compose.pgtap.yml
+        line: 30
+        issue: Verified port binding restricted to 127.0.0.1 (localhost only)
+        severity: medium
+      - file: scripts/db/run-pgtap.sh
+        line: 96
+        issue: Added conditional verbose flag suppression when CI=true
+        severity: medium
+    verification_result: PASS

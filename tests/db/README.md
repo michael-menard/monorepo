@@ -21,6 +21,8 @@ tests/db/
 
 1. **Docker** — to run the pgtap postgres container.
 2. **pg\_prove** — the pgtap test runner (Perl-based TAP harness).
+3. **Credentials** — copy `.env.pgtap.example` to `.env.local` in the repo root and set `PGTAP_DB_PASS`.
+   `.env.local` is git-ignored. Never commit credentials.
 
 Install pg\_prove:
 
@@ -47,20 +49,27 @@ applies the knowledge-base schema baseline, and runs `bash scripts/db/run-pgtap.
 ## Running Tests Locally
 
 ```bash
-# 1. Start the pgtap postgres container (first time builds the image)
+# 0. Set credentials (one-time setup)
+cp .env.pgtap.example .env.local
+# Edit .env.local and set PGTAP_DB_PASS to any local-only value
+
+# 1. Load credentials into shell
+export $(grep -v '^#' .env.local | xargs)
+
+# 2. Start the pgtap postgres container (first time builds the image)
 docker compose -f docker-compose.pgtap.yml up -d
 
-# 2. Wait for healthy (a few seconds on first run while pgtap installs)
+# 3. Wait for healthy (a few seconds on first run while pgtap installs)
 docker compose -f docker-compose.pgtap.yml ps
 
-# 3. Apply the schema baseline so triggers and functions exist
-PGPASSWORD=pgtap psql -h localhost -p 5434 -U pgtap -d pgtap_test \
+# 4. Apply the schema baseline so triggers and functions exist
+PGPASSWORD="$PGTAP_DB_PASS" psql -h localhost -p 5434 -U pgtap -d pgtap_test \
   -f apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
 
-# 4. Run all pgtap tests
+# 5. Run all pgtap tests
 bash scripts/db/run-pgtap.sh
 
-# 5. Tear down when done
+# 6. Tear down when done
 docker compose -f docker-compose.pgtap.yml down
 ```
 
@@ -110,6 +119,31 @@ See `fixtures/rollback-helper.sql` for a detailed explanation of the pattern.
 
 Full reference: <https://pgtap.org/documentation.html>
 
+## Security Considerations
+
+- **Credential management**: Never hardcode database passwords in scripts, docker-compose files,
+  or workflow files. Local credentials live in `.env.local` (git-ignored). CI credentials are
+  stored in the `PGTAP_DB_PASSWORD` GitHub Secret. See `.env.pgtap.example` for the required
+  variables. If `PGTAP_DB_PASS` is not set, `docker-compose.pgtap.yml` will error and refuse
+  to start — this is intentional to prevent accidental runs without credentials.
+
+- **Test table naming**: All test-only tables must use the `_test_*` prefix to clearly distinguish
+  them from production schema objects and prevent accidental data leakage between environments.
+
+- **Localhost-only port binding**: The Docker Compose setup binds the pgtap postgres port to
+  `127.0.0.1` only (e.g. `127.0.0.1:5434:5432`). This prevents the ephemeral test database
+  from being reachable on any network interface other than loopback.
+
+- **Credentials are local-dev only (ephemeral)**: Credentials in `.env.local` are intended solely
+  for local development against a short-lived throwaway container. They must never be used in
+  production or shared environments. CI uses `secrets.PGTAP_DB_PASSWORD` so the credential is
+  not stored in source control.
+
+- **pgtap output in CI logs**: `--verbose` mode (which logs all SQL output) is suppressed in CI
+  (`CI=true`) to avoid leaking schema structure. It is enabled locally for developer convenience.
+  Avoid referencing production table names, sensitive column names, or real data values inside
+  test assertion messages or test file comments. Keep test fixtures synthetic and non-production.
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -117,5 +151,5 @@ Full reference: <https://pgtap.org/documentation.html>
 | `PGTAP_DB_HOST` | `localhost` | Postgres host |
 | `PGTAP_DB_PORT` | `5434` | Postgres port (avoids conflict with KB postgres on 5433) |
 | `PGTAP_DB_USER` | `pgtap` | Postgres user |
-| `PGTAP_DB_PASS` | `pgtap` | Postgres password |
+| `PGTAP_DB_PASS` | — (required) | Postgres password — set in `.env.local`; CI uses `PGTAP_DB_PASSWORD` secret |
 | `PGTAP_DB_NAME` | `pgtap_test` | Postgres database |
