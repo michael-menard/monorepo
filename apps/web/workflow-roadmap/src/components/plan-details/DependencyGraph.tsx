@@ -36,7 +36,6 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
     setCopiedId(storyId)
     setTimeout(() => setCopiedId(prev => (prev === storyId ? null : prev)), 1500)
   }
-  const storyMap = new Map(stories.map(s => [s.storyId, s]))
   // Stories that belong to this plan (not external) — used to detect cross-plan blockers
   const planStoryIds = new Set(stories.filter(s => !s.isExternal).map(s => s.storyId))
 
@@ -89,9 +88,6 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
 
   // Find first wave with incomplete work
   const firstActionableWave = waves.find(w => waveGroups.get(w)!.some(s => !isComplete(s.state)))
-
-  const trunc = (s: string | null | undefined, n: number) =>
-    s ? (s.length > n ? s.slice(0, n) + '…' : s) : '—'
 
   return (
     <div className="space-y-4">
