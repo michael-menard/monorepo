@@ -4,7 +4,7 @@
 -- Requires:    pgTAP extension, migrations 1005, 1010, 999, 1081 applied
 -- Usage:       psql $KB_DATABASE_URL -f pgtap/1081_cdbe3020_roadmap_matview_test.sql | pg_prove
 --
--- Test plan (12 assertions):
+-- Test plan (14 assertions):
 --   HP-1: has_materialized_view — matview exists in workflow schema
 --   HP-2: column set — all 10 expected columns present
 --   HP-3: story counts — total=4, completed=1, active=1, blocked=1 for fixture plan (4 sub-assertions)
