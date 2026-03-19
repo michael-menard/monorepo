@@ -26,9 +26,8 @@
  * PIPE-4010: AC-1 (dependency gate) and AC-9 (test story selection)
  */
 
-import { createClient } from 'redis'
 import pg from 'pg'
-import { resolve } from 'path'
+import { createClient } from 'redis'
 import { logger } from '@repo/logger'
 
 const { Pool } = pg
@@ -174,7 +173,6 @@ async function checkGraphRunners(): Promise<boolean> {
 
   let mod: Record<string, unknown>
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mod = (await import(/* @vite-ignore */ graphsPath)) as Record<string, unknown>
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
