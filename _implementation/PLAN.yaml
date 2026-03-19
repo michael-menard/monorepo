@@ -1,150 +1,440 @@
 schema: 1
-story_id: PIPE-4010
-timestamp: '2026-03-19T12:00:00Z'
+story_id: CDBE-5010
+timestamp: '2026-03-19T00:00:00Z'
+title: Partition agent_invocations and token_usage Tables
+migration_number: 1100
+migration_filename: 1100_cdbe5010_partition_telemetry.sql
+pgtap_filename: 1100_cdbe5010_partition_telemetry_test.sql
+notes:
+  - Migration 1090 is already taken by CDBE-3030 token_dashboard matview; migration number for this story is 1100.
+  - >-
+    PostgreSQL cannot ALTER TABLE ... PARTITION BY on a non-empty table. The rename+copy strategy is required: rename
+    old table, create partitioned parent with same name, INSERT INTO new SELECT FROM old, drop old.
+  - >-
+    Drizzle ORM does not natively model table inheritance / partitioned tables — the schema files should use a comment
+    noting partitioning is managed in SQL migrations rather than attempting to express PARTITION BY in Drizzle. The
+    Drizzle table definition itself can remain unchanged since partitioned tables have identical column signatures.
+  - >-
+    Per-partition uniqueness on (invocation_id, started_at) is accepted. Cross-partition uniqueness is enforced at the
+    application level. This is a deliberate decision from the elaboration phase.
+  - >-
+    The DEFAULT partition catches historical rows whose started_at / logged_at values are unknown or outside the
+    declared monthly ranges.
+  - >-
+    Partition names use the format <table>_y<YYYY>m<MM> (e.g., agent_invocations_y2026m03) for clarity and
+    sort-lexicographic alignment.
+  - >-
+    The token_dashboard materialized view (migration 1090) queries workflow.agent_invocations and
+    analytics.story_token_usage — both are kept at the same schema-qualified names, so the view is unaffected.
+  - >-
+    hitl_decisions.invocation_id is ON DELETE SET NULL (nullable FK). After re-partitioning, the FK must target the new
+    partitioned parent table using (id, started_at). However, PostgreSQL FKs referencing partitioned tables require the
+    referenced columns to form a unique key on the parent. Since the PK is now (id, started_at), the FK from child
+    tables (agent_outcomes, agent_decisions, hitl_decisions) must reference the full PK tuple (id, started_at). This
+    means child tables also need started_at columns as FK companions, OR the FK remains on id alone if a unique index on
+    id alone is maintained on the partition parent. IMPORTANT: PostgreSQL 12+ supports FKs to partitioned tables but
+    only when the referenced columns are the full partition key or a superset. Since the FK source columns in
+    agent_outcomes/agent_decisions/hitl_decisions only have invocation_id (uuid), a partial unique index on just id is
+    needed on the parent to satisfy the FK. We will create a unique index on (id) across the partitioned table using a
+    UNIQUE index on just id per partition. However, per-partition UNIQUE on id is sufficient for FK support. This is a
+    critical constraint — the FK target must be unique; since id is uuid and gen_random_uuid() each partition's id
+    values are globally unique, a per-partition unique index on (id) satisfies the FK requirement.
+  - >-
+    AC-2 note: The composite PK (id, started_at) is the physical partition key requirement. The simple FK from child
+    tables to invocation_id is maintained via a separate UNIQUE index on id alone per partition. This allows the FK to
+    remain as invocation_id → agent_invocations(id) without requiring the child tables to carry started_at.
 steps:
   - id: 1
     description: >-
-      Export runReview from orchestrator graphs/index.ts — the graph-loader.ts dynamically loads dist/graphs/index.js
-      and expects runReview to be exported. It currently is not, so the review dispatch path will fail with undefined at
-      runtime.
+      Create migration file 1100_cdbe5010_partition_telemetry.sql — Part 1: Partition workflow.agent_invocations. Drop
+      dependent FKs, rename original table to _old, create partitioned parent with composite PK (id, started_at) and
+      unique index on (id) per partition, create DEFAULT + current-month + next-month partitions, INSERT INTO new SELECT
+      FROM old, recreate FKs pointing to new parent, drop _old table.
     files:
-      - packages/backend/orchestrator/src/graphs/index.ts
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
     dependencies: []
-    slice: packages
+    slice: backend
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
   - id: 2
     description: >-
-      Create pre-flight verification script at apps/api/pipeline/scripts/preflight-check.ts. Checks: (a) KB deps
-      satisfied — all 4 dependency stories in completed state, (b) Redis connectivity, (c) Aurora/KB DB connectivity,
-      (d) orchestrator graphs module resolves runDevImplement/runReview/runQAVerify at the dynamic dist path, (e)
-      selected test story is in ready state with valid elaboration artifact. Exits non-zero with actionable messages on
-      any failure.
+      Continue migration file — Part 2: Partition analytics.story_token_usage. Rename original to _old, create
+      partitioned parent with composite PK (id, logged_at), create DEFAULT + current-month + next-month partitions,
+      INSERT INTO new SELECT FROM old, drop _old table. No FK reconstruction needed (no dependent FKs exist).
     files:
-      - apps/api/pipeline/scripts/preflight-check.ts
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
     dependencies:
       - 1
     slice: backend
+    acs_covered:
+      - AC-1
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
   - id: 3
     description: >-
-      Extend OPS-RUNBOOK.md with a 'First Supervised Run' section covering AC-10: (a) startup sequence with exact
-      commands, (b) monitoring dashboard — CLI commands and log events to watch, (c) kill switch — exact emergency stop
-      sequence, (d) rollback — how to reset a story back to ready state, (e) proof artifact verification — how to
-      confirm dev stage produced real (non-stub) code. Keep as a markdown append to the existing file.
+      Continue migration file — Part 3: Data integrity verification. SELECT row counts from new partitioned tables vs
+      snapshot counts captured before migration; raise exception if counts do not match. Verify no orphaned FK rows in
+      agent_outcomes, agent_decisions, hitl_decisions after re-partitioning.
     files:
-      - apps/api/pipeline/OPS-RUNBOOK.md
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
     dependencies:
       - 2
     slice: backend
+    acs_covered:
+      - AC-7
   - id: 4
     description: >-
-      Write an integration test that validates the end-to-end graph-loader contract: (a) loadGraphRunners() resolves to
-      an object with all 5 required functions (runElaboration, runStoryCreation, runDevImplement, runReview,
-      runQAVerify), (b) each runner is callable (typeof === function), (c) runReview is present after Step 1 fix. This
-      test serves as AC-3 observability evidence — a test that would have caught the missing runReview export.
+      Create pgTAP test file 1100_cdbe5010_partition_telemetry_test.sql covering all AC-8 requirements: partition
+      routing, partition pruning via EXPLAIN, index validity, FK behavior on cascades, FK behavior on set null, data
+      completeness after INSERT.
     files:
-      - apps/api/pipeline/src/supervisor/__tests__/graph-loader-contract.test.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+    dependencies:
+      - 3
+    slice: backend
+    acs_covered:
+      - AC-8
+  - id: 5
+    description: >-
+      Update Drizzle schema files workflow.ts and analytics.ts with comments documenting that partitioning is managed
+      via migration 1100. No column-level changes needed since partitioned tables have identical column signatures. Add
+      inline SQL comment references to the composite PK constraint for developer awareness.
+    files:
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - apps/api/knowledge-base/src/db/schema/analytics.ts
     dependencies:
       - 1
     slice: backend
+    acs_covered:
+      - AC-1
+      - AC-2
 files_to_change:
-  - path: packages/backend/orchestrator/src/graphs/index.ts
-    action: modify
-    reason: >-
-      Add runReview export so graph-loader.ts can load it from dist/graphs/index.js at runtime. Currently missing — will
-      cause undefined runner for review stage dispatch.
-  - path: apps/api/pipeline/scripts/preflight-check.ts
+  - path: apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
     action: create
     reason: >-
-      AC-1 and AC-9: Pre-flight verification script that validates all integration points before supervised run. Checks
-      KB deps, Redis, Aurora, graph-loader, and test story selection.
-  - path: apps/api/pipeline/OPS-RUNBOOK.md
+      Primary migration: partition workflow.agent_invocations and analytics.story_token_usage using rename+copy strategy
+      with DEFAULT + monthly named partitions
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+    action: create
+    reason: 'pgTAP tests for AC-8: partition routing, pruning, index validity, FK behavior, data completeness'
+  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
     action: modify
     reason: >-
-      AC-10: Add First Supervised Run section with startup sequence, monitoring dashboard, kill switch, rollback, and
-      proof artifact verification steps.
-  - path: apps/api/pipeline/src/supervisor/__tests__/graph-loader-contract.test.ts
-    action: create
+      Add comment on agentInvocations table noting composite PK (id, started_at) and that RANGE partitioning is managed
+      via migration 1100
+  - path: apps/api/knowledge-base/src/db/schema/analytics.ts
+    action: modify
     reason: >-
-      Integration contract test that validates graph-loader exports all 5 required runners including runReview. Prevents
-      regression of the missing-export bug.
+      Add comment on storyTokenUsage table noting composite PK (id, logged_at) and that RANGE partitioning is managed
+      via migration 1100
+migration_detailed_plan:
+  file: apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+  sections:
+    - section: 0 — Safety preamble
+      sql_summary: "DO block: verify current_database() = 'knowledgebase', raise exception if not."
+    - section: 1 — Snapshot row counts (before migration)
+      sql_summary: >-
+        Capture row counts into local variables for post-migration verification. SELECT COUNT(*) FROM
+        workflow.agent_invocations INTO v_ai_count. SELECT COUNT(*) FROM analytics.story_token_usage INTO v_stu_count.
+    - section: 2 — Drop FKs referencing workflow.agent_invocations
+      sql_summary: >-
+        ALTER TABLE workflow.agent_outcomes DROP CONSTRAINT IF EXISTS agent_outcomes_invocation_id_fkey. ALTER TABLE
+        workflow.agent_decisions DROP CONSTRAINT IF EXISTS agent_decisions_invocation_id_fkey. ALTER TABLE
+        workflow.hitl_decisions DROP CONSTRAINT IF EXISTS hitl_decisions_invocation_id_fkey.
+    - section: 3 — Rename original agent_invocations to _old
+      sql_summary: ALTER TABLE workflow.agent_invocations RENAME TO agent_invocations_old.
+    - section: '4 — Create partitioned parent: workflow.agent_invocations'
+      sql_summary: >-
+        CREATE TABLE workflow.agent_invocations (same columns as original, but PRIMARY KEY (id, started_at)) PARTITION
+        BY RANGE (started_at). All columns identical to original schema: id, invocation_id, agent_name, story_id, phase,
+        input_payload, output_payload, duration_ms, input_tokens, output_tokens, status, error_message, started_at,
+        completed_at, created_at, cached_tokens, total_tokens, estimated_cost, model_name.
+    - section: 5 — Create partitions for agent_invocations
+      sql_summary: >-
+        CREATE TABLE workflow.agent_invocations_default PARTITION OF workflow.agent_invocations DEFAULT. CREATE TABLE
+        workflow.agent_invocations_y2026m03 PARTITION OF workflow.agent_invocations FOR VALUES FROM ('2026-03-01') TO
+        ('2026-04-01'). CREATE TABLE workflow.agent_invocations_y2026m04 PARTITION OF workflow.agent_invocations FOR
+        VALUES FROM ('2026-04-01') TO ('2026-05-01').
+    - section: 6 — Create per-partition UNIQUE index on (invocation_id, started_at) and unique index on (id) for FK support
+      sql_summary: >-
+        For each partition (default, y2026m03, y2026m04): CREATE UNIQUE INDEX ON workflow.agent_invocations_<partition>
+        (invocation_id, started_at). CREATE UNIQUE INDEX ON workflow.agent_invocations_<partition> (id) — this supports
+        the existing FK pattern from child tables where only invocation_id (uuid) is available and started_at is not
+        present on child tables. Additional performance indexes: (agent_name), (story_id), (started_at), (status),
+        (agent_name, started_at), (agent_name, story_id) — created on parent; PostgreSQL propagates to partitions.
+    - section: 7 — Copy data from _old into new partitioned table
+      sql_summary: INSERT INTO workflow.agent_invocations SELECT * FROM workflow.agent_invocations_old.
+    - section: 8 — Verify agent_invocations row count
+      sql_summary: >-
+        SELECT COUNT(*) FROM workflow.agent_invocations INTO v_ai_new_count. IF v_ai_new_count <> v_ai_count THEN RAISE
+        EXCEPTION '1100: agent_invocations row count mismatch: expected %, got %', v_ai_count, v_ai_new_count. END IF.
+    - section: 9 — Recreate FKs referencing new partitioned agent_invocations
+      sql_summary: >-
+        ALTER TABLE workflow.agent_outcomes ADD CONSTRAINT agent_outcomes_invocation_id_fkey FOREIGN KEY (invocation_id)
+        REFERENCES workflow.agent_invocations(id) ON DELETE CASCADE. ALTER TABLE workflow.agent_decisions ADD CONSTRAINT
+        agent_decisions_invocation_id_fkey FOREIGN KEY (invocation_id) REFERENCES workflow.agent_invocations(id) ON
+        DELETE CASCADE. ALTER TABLE workflow.hitl_decisions ADD CONSTRAINT hitl_decisions_invocation_id_fkey FOREIGN KEY
+        (invocation_id) REFERENCES workflow.agent_invocations(id) ON DELETE SET NULL. NOTE: These FKs reference (id)
+        alone. They work because each partition has a UNIQUE index on (id).
+    - section: 10 — Drop _old agent_invocations table
+      sql_summary: DROP TABLE workflow.agent_invocations_old.
+    - section: 11 — Rename original story_token_usage to _old
+      sql_summary: ALTER TABLE analytics.story_token_usage RENAME TO story_token_usage_old.
+    - section: '12 — Create partitioned parent: analytics.story_token_usage'
+      sql_summary: >-
+        CREATE TABLE analytics.story_token_usage (same columns as original, but PRIMARY KEY (id, logged_at)) PARTITION
+        BY RANGE (logged_at). Columns: id, story_id, feature, phase, agent, iteration, input_tokens, output_tokens,
+        total_tokens, logged_at, created_at. Also include estimated_cost (present in DB via 999_add_telemetry_tables but
+        not yet in Drizzle schema — must match the actual DB column).
+    - section: 13 — Create partitions for story_token_usage
+      sql_summary: >-
+        CREATE TABLE analytics.story_token_usage_default PARTITION OF analytics.story_token_usage DEFAULT. CREATE TABLE
+        analytics.story_token_usage_y2026m03 PARTITION OF analytics.story_token_usage FOR VALUES FROM ('2026-03-01') TO
+        ('2026-04-01'). CREATE TABLE analytics.story_token_usage_y2026m04 PARTITION OF analytics.story_token_usage FOR
+        VALUES FROM ('2026-04-01') TO ('2026-05-01').
+    - section: 14 — Create indexes on story_token_usage parent/partitions
+      sql_summary: >-
+        Per-partition unique index on (id, logged_at) is already covered by the PK. Additional: CREATE INDEX ON
+        analytics.story_token_usage (story_id). CREATE INDEX ON analytics.story_token_usage (feature). CREATE INDEX ON
+        analytics.story_token_usage (phase). CREATE INDEX ON analytics.story_token_usage (logged_at). CREATE INDEX ON
+        analytics.story_token_usage (feature, phase). CREATE INDEX ON analytics.story_token_usage (phase, logged_at).
+        Recreate the CHECK constraint: story_token_usage_phase_check if it existed on the original (check
+        pg_constraint).
+    - section: 15 — Copy data from _old into new partitioned story_token_usage
+      sql_summary: INSERT INTO analytics.story_token_usage SELECT * FROM analytics.story_token_usage_old.
+    - section: 16 — Verify story_token_usage row count
+      sql_summary: >-
+        SELECT COUNT(*) FROM analytics.story_token_usage INTO v_stu_new_count. IF v_stu_new_count <> v_stu_count THEN
+        RAISE EXCEPTION '1100: story_token_usage row count mismatch: expected %, got %', v_stu_count, v_stu_new_count.
+        END IF.
+    - section: 17 — Verify no orphaned FKs
+      sql_summary: >-
+        SELECT COUNT(*) FROM workflow.agent_outcomes o LEFT JOIN workflow.agent_invocations ai ON ai.id =
+        o.invocation_id WHERE ai.id IS NULL INTO v_orphaned_outcomes. IF v_orphaned_outcomes > 0 THEN RAISE EXCEPTION
+        '1100: % orphaned agent_outcomes rows after migration', v_orphaned_outcomes. END IF. Same check for
+        agent_decisions and hitl_decisions (noting hitl.invocation_id is nullable — use WHERE o.invocation_id IS NOT
+        NULL AND ai.id IS NULL).
+    - section: 18 — Drop _old story_token_usage table
+      sql_summary: DROP TABLE analytics.story_token_usage_old.
+    - section: 19 — Completion notice
+      sql_summary: >-
+        DO block: report row counts in both tables, partition counts, RAISE NOTICE '1100: Migration complete.
+        agent_invocations: % rows across % partitions. story_token_usage: % rows across % partitions.'.
+    - section: 20 — COMMENTS
+      sql_summary: >-
+        COMMENT ON TABLE workflow.agent_invocations IS '1100: RANGE-partitioned on started_at. PK (id, started_at).
+        Monthly partitions named agent_invocations_y<YYYY>m<MM>. DEFAULT partition for historical data. FKs from
+        agent_outcomes, agent_decisions, hitl_decisions reference (id) via per-partition unique index.'. COMMENT ON
+        TABLE analytics.story_token_usage IS '1100: RANGE-partitioned on logged_at. PK (id, logged_at). Monthly
+        partitions named story_token_usage_y<YYYY>m<MM>. DEFAULT partition for historical data. No dependent FKs.'.
+pgtap_detailed_plan:
+  file: apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+  total_assertions: 20
+  test_groups:
+    - group: 'HP-1: Table structure'
+      tests:
+        - "HP-1a: workflow.agent_invocations is a partitioned table (relkind = 'p' in pg_class)"
+        - "HP-1b: analytics.story_token_usage is a partitioned table (relkind = 'p' in pg_class)"
+        - "HP-1c: workflow.agent_invocations_default exists (relkind = 'r')"
+        - "HP-1d: analytics.story_token_usage_default exists (relkind = 'r')"
+    - group: 'HP-2: Partition routing — agent_invocations'
+      tests:
+        - 'HP-2a: INSERT into agent_invocations with started_at in 2026-03 routes to agent_invocations_y2026m03'
+        - >-
+          HP-2b: INSERT into agent_invocations with started_at = '2025-01-01' (historical) routes to
+          agent_invocations_default
+    - group: 'HP-3: Partition routing — story_token_usage'
+      tests:
+        - 'HP-3a: INSERT into story_token_usage with logged_at in 2026-03 routes to story_token_usage_y2026m03'
+        - >-
+          HP-3b: INSERT into story_token_usage with logged_at = '2024-06-01' (historical) routes to
+          story_token_usage_default
+    - group: 'HP-4: Partition pruning via EXPLAIN'
+      tests:
+        - >-
+          HP-4a: EXPLAIN SELECT FROM agent_invocations WHERE started_at = '2026-03-15' contains
+          'agent_invocations_y2026m03' (partition pruning active)
+        - >-
+          HP-4b: EXPLAIN SELECT FROM story_token_usage WHERE logged_at = '2026-03-15' contains
+          'story_token_usage_y2026m03' (partition pruning active)
+    - group: 'HP-5: Index validity'
+      tests:
+        - 'HP-5a: Unique index on (invocation_id, started_at) exists on agent_invocations_y2026m03'
+        - 'HP-5b: Unique index on (id) exists on agent_invocations_y2026m03 (supports FK)'
+        - 'HP-5c: Index on (story_id) exists on story_token_usage_y2026m03'
+    - group: 'HP-6: FK behavior — CASCADE'
+      tests:
+        - 'HP-6a: INSERT agent_outcomes row referencing agent_invocations (id) succeeds'
+        - 'HP-6b: DELETE agent_invocations row cascades to agent_outcomes (agent_outcomes row gone)'
+    - group: 'HP-7: FK behavior — SET NULL'
+      tests:
+        - 'HP-7a: INSERT hitl_decisions row referencing agent_invocations (id) succeeds'
+        - 'HP-7b: DELETE agent_invocations row sets hitl_decisions.invocation_id = NULL'
+    - group: 'HP-8: Data completeness'
+      tests:
+        - >-
+          HP-8a: Total row count in partitioned agent_invocations matches pre-migration snapshot (use fixture data
+          inserted before migration in test, or verify via count comparison)
+        - 'HP-8b: Total row count in partitioned story_token_usage matches pre-migration snapshot'
+  fixture_strategy: >-
+    All test fixtures use story_id='TEST-5010-*' prefixed rows inserted into workflow.stories with ON CONFLICT DO
+    NOTHING. Tests run inside BEGIN...ROLLBACK to leave DB clean.
+ordering_of_operations:
+  - BEGIN transaction
+  - Capture pre-migration row counts
+  - 'Drop FK: agent_outcomes_invocation_id_fkey'
+  - 'Drop FK: agent_decisions_invocation_id_fkey'
+  - 'Drop FK: hitl_decisions_invocation_id_fkey'
+  - Rename workflow.agent_invocations → workflow.agent_invocations_old
+  - CREATE TABLE workflow.agent_invocations (partitioned, PK (id, started_at)) PARTITION BY RANGE (started_at)
+  - CREATE TABLE workflow.agent_invocations_default PARTITION OF ... DEFAULT
+  - CREATE TABLE workflow.agent_invocations_y2026m03 PARTITION OF ... FOR VALUES FROM ('2026-03-01') TO ('2026-04-01')
+  - CREATE TABLE workflow.agent_invocations_y2026m04 PARTITION OF ... FOR VALUES FROM ('2026-04-01') TO ('2026-05-01')
+  - CREATE UNIQUE INDEX per-partition on (invocation_id, started_at) — AC-3
+  - CREATE UNIQUE INDEX per-partition on (id) — FK support
+  - CREATE performance indexes on parent (propagates to partitions)
+  - INSERT INTO workflow.agent_invocations SELECT * FROM workflow.agent_invocations_old
+  - Verify agent_invocations row count (raise exception on mismatch)
+  - ADD CONSTRAINT agent_outcomes_invocation_id_fkey ... REFERENCES workflow.agent_invocations(id) ON DELETE CASCADE
+  - ADD CONSTRAINT agent_decisions_invocation_id_fkey ... REFERENCES workflow.agent_invocations(id) ON DELETE CASCADE
+  - ADD CONSTRAINT hitl_decisions_invocation_id_fkey ... REFERENCES workflow.agent_invocations(id) ON DELETE SET NULL
+  - DROP TABLE workflow.agent_invocations_old
+  - Rename analytics.story_token_usage → analytics.story_token_usage_old
+  - CREATE TABLE analytics.story_token_usage (partitioned, PK (id, logged_at)) PARTITION BY RANGE (logged_at)
+  - CREATE TABLE analytics.story_token_usage_default PARTITION OF ... DEFAULT
+  - CREATE TABLE analytics.story_token_usage_y2026m03 PARTITION OF ... FOR VALUES FROM ('2026-03-01') TO ('2026-04-01')
+  - CREATE TABLE analytics.story_token_usage_y2026m04 PARTITION OF ... FOR VALUES FROM ('2026-04-01') TO ('2026-05-01')
+  - CREATE indexes on story_token_usage parent
+  - INSERT INTO analytics.story_token_usage SELECT * FROM analytics.story_token_usage_old
+  - Verify story_token_usage row count (raise exception on mismatch)
+  - Verify no orphaned FK rows in agent_outcomes, agent_decisions, hitl_decisions
+  - DROP TABLE analytics.story_token_usage_old
+  - Completion RAISE NOTICE
+  - COMMIT
 commands_to_run:
-  - command: pnpm build --filter @repo/orchestrator
-    when: after modifying packages/backend/orchestrator/src/graphs/index.ts
-    required: true
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after modifying packages/backend/orchestrator/src/graphs/index.ts
-    required: true
-  - command: pnpm test --filter @repo/pipeline
+  - command: pnpm check-types --filter @repo/knowledge-base
     when: after all code changes
     required: true
-  - command: pnpm check-types --filter @repo/pipeline
+  - command: pnpm test --filter @repo/knowledge-base
     when: after all code changes
     required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    when: migration run in maintenance window against local dev DB first
+    required: false
+    note: Manual step — not CI automated
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql | pg_prove
+    when: after migration applied, before considering AC-8 satisfied
+    required: false
+    note: Manual step — requires pgTAP extension installed
 acceptance_criteria_map:
   - ac_id: AC-1
-    planned_evidence: preflight-check.ts script — checks all 4 dependency stories are in completed state in KB before reporting PASS
+    planned_evidence: >-
+      Migration section 4: CREATE TABLE workflow.agent_invocations PARTITION BY RANGE (started_at). Migration section
+      12: CREATE TABLE analytics.story_token_usage PARTITION BY RANGE (logged_at). pgTAP HP-1a and HP-1b assert
+      relkind='p'.
     evidence_type: command
   - ac_id: AC-2
     planned_evidence: >-
-      Runtime observable via scheduler_dispatched log event. No code change required — scheduler already emits this
-      event in dispatchStory().
-    evidence_type: manual
+      Migration section 4: PRIMARY KEY (id, started_at) on agent_invocations parent. Migration sections 2 and 9: drop
+      and recreate FKs from agent_outcomes, agent_decisions, hitl_decisions. pgTAP HP-6a, HP-6b, HP-7a, HP-7b verify FK
+      behavior.
+    evidence_type: command
   - ac_id: AC-3
     planned_evidence: >-
-      graph-loader-contract.test.ts validates runDevImplement is loaded. Runtime evidence: proof artifact content
-      inspection post-run.
-    evidence_type: test
+      Migration section 6: CREATE UNIQUE INDEX ON each partition (invocation_id, started_at). pgTAP HP-5a verifies
+      unique index exists on y2026m03 partition.
+    evidence_type: command
   - ac_id: AC-4
     planned_evidence: >-
-      Runtime observable via review_artifact_written log event (no code change) + graph-loader-contract.test.ts
-      validates runReview is loaded after index.ts fix.
-    evidence_type: test
+      Migration sections 3, 7, 10 (agent_invocations) and 11, 15, 18 (story_token_usage) implement rename → create
+      partitioned → INSERT SELECT → drop _old. All within BEGIN/COMMIT.
+    evidence_type: command
   - ac_id: AC-5
-    planned_evidence: Runtime observable via qa_artifact_written log event. No code change required — QA dispatch already wired.
-    evidence_type: manual
+    planned_evidence: >-
+      Migration sections 5 and 13: CREATE TABLE ..._default PARTITION OF ... DEFAULT. pgTAP HP-2b and HP-3b verify
+      historical rows route to DEFAULT partition.
+    evidence_type: command
   - ac_id: AC-6
     planned_evidence: >-
-      Runtime observable via KB state transition sequence. No code change required — supervisor's completed handler
-      advances states.
-    evidence_type: manual
+      Migration sections 5 and 13: y2026m03 (current month) and y2026m04 (next month) partitions created for both
+      tables. pgTAP HP-2a, HP-3a verify current-month routing.
+    evidence_type: command
   - ac_id: AC-7
     planned_evidence: >-
-      Existing StoryTransitionService artifact gate enforces this. No code change required — gate already checks for
-      proof artifact before needs_code_review.
-    evidence_type: manual
+      Migration sections 8, 16, 17: row count assertions (RAISE EXCEPTION on mismatch) and orphaned FK verification. All
+      within same transaction as data migration.
+    evidence_type: command
   - ac_id: AC-8
     planned_evidence: >-
-      Retrospective written post-run as KB completion_report artifact. No code change required — format defined in
-      elaboration KB entry.
-    evidence_type: manual
-  - ac_id: AC-9
-    planned_evidence: >-
-      preflight-check.ts script — step (e) validates selected test story is in ready state with valid elaboration
-      artifact. Selection criteria documented in runbook.
-    evidence_type: command
-  - ac_id: AC-10
-    planned_evidence: >-
-      OPS-RUNBOOK.md First Supervised Run section — covers startup sequence, monitoring, kill switch, rollback, and
-      stub-check procedure.
-    evidence_type: file
-architectural_decisions: []
-complexity: moderate
-notes:
+      pgTAP file: HP-1 (partition table structure), HP-2/HP-3 (partition routing), HP-4 (EXPLAIN pruning), HP-5 (index
+      validity), HP-6/HP-7 (FK cascade/set-null), HP-8 (data completeness). 20 total assertions.
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      How should FKs from agent_outcomes, agent_decisions, hitl_decisions reference the new partitioned
+      agent_invocations when only invocation_id (uuid) is present on child tables — not started_at?
+    decision: >-
+      Create a per-partition UNIQUE index on (id) in addition to the composite PK (id, started_at). PostgreSQL allows
+      FKs to reference any unique key (not just the PK), so child tables can continue referencing agent_invocations(id)
+      directly. This avoids requiring started_at on every child table, which would be a much larger schema change out of
+      scope for this story.
+    rationale: >-
+      Minimizes schema blast radius. Child tables (agent_outcomes, agent_decisions, hitl_decisions) are not partitioned
+      and their FKs only carry invocation_id. Adding started_at to all child tables would require additional migrations
+      and Drizzle schema changes. The per-partition unique index on (id) is sufficient for PostgreSQL FK validation.
+    decided_by: plan-leader
+    trade_offs: >-
+      The unique index on (id) per partition is technically redundant with the PK for single-partition queries, but it
+      is the correct PostgreSQL pattern for enabling FK from non-partitioned child to partitioned parent when the FK
+      column set is a subset of the partition key.
+  - id: ARCH-002
+    question: >-
+      Should the materialized view analytics.token_dashboard (migration 1090) be refreshed or recreated after
+      partitioning?
+    decision: >-
+      No action required. The materialized view queries workflow.agent_invocations and analytics.story_token_usage by
+      their schema-qualified names. Since partitioned tables have the same names, the view continues to work. A manual
+      REFRESH MATERIALIZED VIEW CONCURRENTLY analytics.token_dashboard is recommended post-migration to ensure fresh
+      data but is not blocking.
+    rationale: >-
+      Transparent schema replacement — the partitioned table has the same name, columns, and constraints as the original
+      from the view's perspective.
+    decided_by: plan-leader
+    trade_offs: None. This is a non-issue.
+  - id: ARCH-003
+    question: Should the migration run inside a single BEGIN/COMMIT transaction or be split into separate transactions?
+    decision: >-
+      Single BEGIN/COMMIT transaction for each table's migration. The rename → create → insert → verify → drop sequence
+      must be atomic. If row count verification fails, the entire migration rolls back cleanly.
+    rationale: Atomicity requirement from AC-7. PostgreSQL DDL is transactional, so BEGIN/COMMIT wraps the full migration safely.
+    decided_by: plan-leader
+    trade_offs: >-
+      For very large tables, a single transaction holds locks for the duration of the INSERT SELECT. On production this
+      may require a maintenance window. The story context defers maintenance window decisions to the implementer — this
+      is noted in the migration file header comment.
+complexity: complex
+warnings:
   - >-
-    CRITICAL INTEGRATION GAP: runReview is exported from review.ts but NOT from graphs/index.ts. graph-loader.ts loads
-    dist/graphs/index.js dynamically — mod.runReview will be undefined at runtime. Step 1 fixes this before all other
-    steps.
+    The story_token_usage table has an estimated_cost column present in the DB (via 999_add_telemetry_tables.sql line
+    94) but NOT reflected in the Drizzle analytics.ts schema. The migration must include this column in the new
+    partitioned CREATE TABLE DDL to match the actual DB. The Drizzle schema can optionally be updated to add it, but
+    that is a separate concern.
+  - Migration number 1090 is already taken. Use 1100.
   - >-
-    This is an integration/validation story. Most ACs are satisfied by runtime observation, not new code. The three
-    deliverables are: (1) the runReview export fix, (2) the preflight script, (3) the runbook extension.
+    Partition pruning via EXPLAIN requires constraint_exclusion = 'partition' (default in PG 12+) or
+    enable_partition_pruning = on (default). No configuration change needed for standard installs.
   - >-
-    The execute node in dev-implement.ts is still a stub (WINT-9070 reference). AC-3 requires real LLM invocation — this
-    is a known dependency on PIPE-3010 being completed before the supervised run begins. The preflight script checks for
-    PIPE-3010 completion.
-  - >-
-    The graph-loader-contract test (Step 4) uses vi.mock to avoid loading the real LangGraph dist during CI. It
-    validates the module export shape, not actual LLM execution.
-  - No DB migrations are required for this story.
-  - >-
-    dispatchQaStory F006 deviation (no KB state advance before QA enqueue) is known tech debt. Operator will see
-    duplicate rejection logs during QA polling. This is expected behavior — documented in OPS-RUNBOOK First Supervised
-    Run section.
+    The DEFAULT partition absorbs any row with started_at / logged_at outside all declared ranges. If data has NULL
+    timestamps, they will NOT route to DEFAULT (NULL is not in any range). Ensure the NOT NULL constraint on started_at
+    and logged_at is preserved on the partitioned parent.

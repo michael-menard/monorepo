@@ -1,13 +1,12 @@
 schema: 1
-story_id: PIPE-4010
-forced: false
-blocked: false
-gen_mode: false
+story_id: CDBE-5010
+timestamp: '2026-03-19T00:00:00Z'
+current_phase: execute
+last_successful_phase: plan
+phase: implementation
 iteration: 0
-timestamp: '2026-03-19T12:00:00Z'
-current_phase: plan
-last_successful_phase: setup
 max_iterations: 3
-warnings:
-  - PIPE-3010 must be in completed state before supervised run begins — execute node is still a stub per AC-3
-plan_artifact_id: bd42e7e0-6af4-4e5d-b739-2a7691d80bdf
+blocked: false
+forced: false
+warnings: []
+gen_mode: false

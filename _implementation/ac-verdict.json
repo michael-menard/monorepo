@@ -1,81 +1,11 @@
 {
-  "story_id": "PIPE-4010",
-  "generated_at": "2026-03-19T09:35:00Z",
-  "overall_verdict": "CHALLENGE",
+  "story_id": "CDBE-5010",
+  "generated_at": "2026-03-19T03:10:00Z",
+  "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "All 4 dependency stories (PIPE-0030, PIPE-3020, PIPE-3010, PIPE-2050) are in `completed` state in KB before the supervised run begins. Operator must verify via KB query before starting supervisor and scheduler.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes what preflight-check.ts will do, but provides no proof it was executed, no test results, and no deterministic command output validating the dependency states. The script is created but execution evidence is missing.",
-      "proof_required": "Provide actual output from preflight-check.ts showing PASS result, with KB query results for each dependency story showing completed/UAT state and timestamps. Or provide test case that exercises this check with mock KB data."
-    },
-    {
-      "ac_id": "AC-2",
-      "ac_text": "Scheduler dispatches the selected test story to BullMQ within one polling cycle of the story being in `ready` state. Observable via scheduler_dispatched log event.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence uses subjective language ('Runtime observable'). No actual log output provided, no test demonstrating the event is emitted, no deterministic proof the scheduler dispatches successfully.",
-      "proof_required": "Provide actual scheduler_dispatched log event output with story ID, timestamp, and BullMQ job ID. Or provide test case showing SchedulerLoop.dispatchStory() emits this event with deterministic result."
-    },
-    {
-      "ac_id": "AC-3",
-      "ac_text": "LangGraph dev-implement graph executes with real LLM invocation (not stub), producing a proof artifact. Verified by checking proof artifact content does NOT contain path='stub' evidence.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "graph-loader-contract.test.ts validates the runner is LOADED, not that it EXECUTES with real LLM. Evidence references 'Runtime evidence: proof artifact content inspection post-run' but this is future-tense and speculative — no actual run results or proof artifact content provided.",
-      "proof_required": "Provide actual proof artifact from a completed dev-implement run showing: (a) no path='stub' evidence items, (b) concrete LLM invocation results (model name, completion tokens, generated code), (c) timestamp and KB artifact ID."
-    },
-    {
-      "ac_id": "AC-4",
-      "ac_text": "Code review graph executes after dev stage completes and produces a review artifact stored in KB. Observable via review_artifact_written log event.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence only validates that runReview export is present, not that the graph executes or produces an artifact. No review_artifact_written log event output provided, no KB artifact ID shown, no deterministic execution result.",
-      "proof_required": "Provide actual review_artifact_written log event or review artifact from KB showing: (a) artifact ID, (b) story ID, (c) review findings summary, (d) timestamp. Or provide test case demonstrating the review graph produces an artifact."
-    },
-    {
-      "ac_id": "AC-5",
-      "ac_text": "QA verification graph executes after review stage completes and produces a qa_verify artifact stored in KB. Observable via qa_artifact_written log event.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes code wiring and test presence but provides no actual execution proof. 'Runtime observable' is subjective. No qa_artifact_written log output, no QA artifact from KB, no deterministic test count or result.",
-      "proof_required": "Provide actual qa_artifact_written log event or QA artifact from KB showing: (a) artifact ID, (b) story ID, (c) verification verdict, (d) test results with counts, (e) timestamp."
-    },
-    {
-      "ac_id": "AC-6",
-      "ac_text": "Test story transitions through all required states in sequence: ready → in_progress → needs_code_review → ready_for_qa → in_qa → completed. Each transition is recorded in KB with timestamp.",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence uses vague language ('Runtime observable'). No actual state transition log provided, no timestamps, no KB query results showing the sequence. The code exists but its execution in this end-to-end context is unproven.",
-      "proof_required": "Provide complete state transition log for the test story showing: (a) each state change, (b) timestamp for each transition, (c) KB update records. Can be shown via KB query results or audit log from story_history table."
-    },
-    {
-      "ac_id": "AC-7",
-      "ac_text": "All artifact gates pass with real artifacts — no state transition advances without the required artifact present in KB. The StoryTransitionService artifact gate must fire for each transition (proof required before needs_code_review; review artifact required before ready_for_qa; qa_verify artifact required before completed).",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes existing code ('Existing StoryTransitionService artifact gate enforces this') but provides no proof the gate actually fires during the run. No test demonstrating gate enforcement, no log events showing gate checks, no artifact validation results.",
-      "proof_required": "Provide proof for each gate: (1) story attempted transition to needs_code_review WITH proof artifact present → accepted; (2) story attempted transition to ready_for_qa WITH review artifact present → accepted; (3) story attempted transition to completed WITH qa_verify artifact present → accepted. Show via KB state change records or audit logs."
-    },
-    {
-      "ac_id": "AC-8",
-      "ac_text": "Retrospective document is produced within 24h of run completion and stored as a KB artifact (completion_report type) capturing: what worked, what failed, latency per stage (in seconds), cost per stage (in USD), and follow-up stories identified.",
+      "ac_text": "Migration creates workflow.agent_invocations and analytics.story_token_usage as partitioned parent tables with RANGE partitioning on started_at and logged_at respectively",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -84,18 +14,68 @@
       "proof_required": null
     },
     {
-      "ac_id": "AC-9",
-      "ac_text": "Test story is selected from the `ready` pool before run begins. Selection criteria: (a) story is in `ready` state in KB, (b) has a valid elaboration artifact with ChangeSpec[] in planContent, (c) has no unresolved dependencies, (d) is backend-only with small scope (no external API changes, no DB migrations, no cross-service dependencies). The selected test story ID must be documented in the operator runbook before starting the run.",
-      "verdict": "CHALLENGE",
+      "ac_id": "AC-2",
+      "ac_text": "PRIMARY KEY includes partition key; FKs drop and recreate with CASCADE (agent_outcomes, agent_decisions) and SET NULL (hitl_decisions) on agent_invocations parent",
+      "verdict": "ACCEPT",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence references preflight-check.ts which 'validates' criteria but provides no actual validation results or test output. References OPS-RUNBOOK documentation but no proof the script was executed or the test story was selected and documented.",
-      "proof_required": "Provide: (a) output from preflight-check.ts showing selected test story ID, (b) KB query results proving the story is in ready state with valid elaboration and no blocked dependencies, (c) OPS-RUNBOOK excerpt showing the selected test story ID documented before run started."
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
     },
     {
-      "ac_id": "AC-10",
-      "ac_text": "Operator runbook is written before the run begins and documents: (a) startup sequence — start supervisor process, start scheduler loop, verify both are running via pipeline-cli status command; (b) monitoring dashboard — which CLI commands or log streams to watch during the run; (c) kill switch procedure — how to stop the supervisor and scheduler gracefully if the run needs to be aborted; (d) rollback steps — how to reset a test story back to `ready` state if it gets stuck in an intermediate state; (e) how to verify the proof artifact is real (not stub) after dev stage completes.",
+      "ac_id": "AC-3",
+      "ac_text": "Unique index on (invocation_id, started_at) created per partition; pgTAP HP-5a verifies index on y2026m03",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "Data migration uses rename-create-copy-drop strategy within single BEGIN/COMMIT transaction for both tables",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "DEFAULT partitions created for agent_invocations and story_token_usage; pgTAP HP-2b and HP-3b verify historical rows route to default",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "Monthly partitions created for current (y2026m03) and next (y2026m04) months; pgTAP HP-2a and HP-3a verify 2026-03-15 routing",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "Row count verification within migration (sections 8, 16) with RAISE EXCEPTION on mismatch; orphan FK check in section 17; all within transaction",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "pgTAP test file contains exactly 20 assertions across 8 groups (HP-1 through HP-8); tests run in BEGIN...ROLLBACK for clean state",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -104,8 +84,12 @@
       "proof_required": null
     }
   ],
-  "total_acs": 10,
-  "accepted": 2,
-  "challenged": 8,
-  "rejected": 0
+  "total_acs": 8,
+  "accepted": 8,
+  "challenged": 0,
+  "rejected": 0,
+  "warnings": [
+    "story_file_missing: CDBE-5010.md not found; evaluated with ac_text from EVIDENCE.yaml only",
+    "role_pack_missing: qa.md not found; used embedded QA constraints"
+  ]
 }
