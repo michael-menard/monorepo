@@ -1,143 +1,132 @@
 schema: 1
-story_id: PIPE-2040
-timestamp: '2026-03-19T03:31:00Z'
+story_id: CDBE-4020
+timestamp: '2026-03-19T05:30:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 22
+    pass: 0
     fail: 0
   integration:
     pass: 0
     fail: 0
-    skipped: 8
+  pgtap:
+    pass: 15
+    fail: 0
   e2e:
     pass: 0
     fail: 0
+    status: exempt
   http:
     pass: 0
     fail: 0
-pre_existing_failures:
-  count: 4
-  cause: >-
-    @repo/database-schema/schema/wint missing — dead wint/kbar schema referenced in orchestrator package (pre-existing,
-    unrelated to PIPE-2040)
-  suites:
-    - src/__tests__/unit/concurrency-controller.test.ts
-    - src/supervisor/__tests__/circuit-breakers.test.ts
-    - src/supervisor/__tests__/dispatch-router.test.ts
-    - src/supervisor/__tests__/supervisor-blockers.test.ts
-coverage: not_measured
+    status: not_applicable
+coverage: null
 coverage_meets_threshold: true
-coverage_notes: >-
-  coverage --flag has v8 version mismatch (coverage-v8 v1 vs vitest v3) — pre-existing env issue. Test file covers all
-  branches: slot gating, dispatch ordering, strict filter, abort signal, eligibility query, escalation routing. All 22
-  tests pass at full resolution.
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes:
-    - Tests use vi.spyOn and mockResolvedValueOnce for sequential DB call mocking — correct pattern
-    - No setTimeout anti-patterns — async resolved via await/Promise
-    - dispatchStory mock patching approach is noted in elaboration gap-1 as acceptable (non-blocking)
+  notes: >-
+    pgTAP test suite is well-structured: 15 assertions covering column type (5), HNSW index existence (5), and
+    nullability (5) for all 5 tables. No anti-patterns detected. Tests use ROLLBACK to avoid side effects.
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    evidence_ref: EVIDENCE.yaml:ac_evidence[0]
     notes: >-
-      jobId passed to queue.add() as '{storyId}:implementation:{attemptNumber}' on line 300 of scheduler/index.ts.
-      Verified in test: 'passes jobId to queue.add() for BullMQ deduplication (AC-1, AC-2)'
+      Migration safety preamble verified at lines 22-29 of migration file. DO block checks current_database() =
+      'knowledgebase', raises EXCEPTION with migration-prefixed message on mismatch.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    evidence_ref: EVIDENCE.yaml:ac_evidence[1]
     notes: >-
-      BullMQ deduplication via unique jobId format confirmed. Test 'uses correct jobId format for retry attempts (AC-2,
-      ED-1)' verifies attempt > 1 format (PIPE-099:implementation:3)
+      ALTER TABLE ... ADD COLUMN IF NOT EXISTS embedding public.vector(1536) confirmed for all 5 tables. pgTAP tests 1-5
+      (col_type_is) pass in live re-run.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    evidence_ref: EVIDENCE.yaml:ac_evidence[2]
     notes: >-
-      strictFinishBeforeNewStart field added to SchedulerConfigSchema with z.boolean().default(false). Verified in
-      __types__/index.ts line 27. Test 'defaults strictFinishBeforeNewStart to false' confirms default.
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw with m=16, ef_construction=64, vector_cosine_ops confirmed
+      for all 5 tables. pgTAP tests 6-10 (HNSW index existence) pass in live re-run.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    evidence_ref: EVIDENCE.yaml:ac_evidence[3]
     notes: >-
-      applyStrictFinishFilter() method exists (lines 225-235 of index.ts). Called from runOnce() when
-      strictFinishBeforeNewStart:true. Filters eligible list to only stories with in_progress plan siblings.
+      Idempotency verified via second migration run producing only 'already exists, skipping' NOTICEs. IF NOT EXISTS
+      guards on both ALTER TABLE and CREATE INDEX CONCURRENTLY confirmed in source.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    evidence_ref: EVIDENCE.yaml:ac_evidence[4]
     notes: >-
-      Test 'defers new-plan stories when strictFinishBeforeNewStart:true and in_progress siblings exist' confirms
-      STORY-B is deferred when only STORY-A has in_progress siblings. dispatchSpy called exactly once with storyA.
+      COMMENT ON COLUMN and COMMENT ON INDEX with '1011:' prefix confirmed for all 5 tables and 5 indexes in migration
+      file (lines 80-150).
   - ac_id: AC-6
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    evidence_ref: EVIDENCE.yaml:ac_evidence[5]
     notes: >-
-      Test 'dispatches all eligible stories when strictFinishBeforeNewStart:false' confirms default behavior dispatches
-      both storyA and storyB. dispatchSpy called twice.
+      kb.ts verified: embedding: vector('embedding', { dimensions: 1536 }) present on adrs (line 84), codeStandards
+      (line 120), cohesionRules (line 134), lessonsLearned (line 156), rules (line 172). All 10 type exports
+      (Select/Insert pairs) present at lines 181-190. Zero new type errors in kb.ts.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    evidence_ref: EVIDENCE.yaml:ac_evidence[6]
     notes: >-
-      dispatchStory() calls kb_update_story_status BEFORE queue.add(). Test 'does NOT call queue.add() when
-      kb_update_story_status returns updated:false' confirms early return when KB advance fails. Double-dispatch
-      prevention confirmed.
+      pgTAP test file confirmed with 15 assertions. Live re-run executed: all 15 pass — ok 1 through ok 15, ROLLBACK
+      clean.
   - ac_id: AC-8
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
+    evidence_ref: EVIDENCE.yaml:ac_evidence[7]
     notes: >-
-      F005 regression test 'promotes stories with in_progress siblings to the front' confirms STORY-B is dispatched
-      first (index 0 of dispatchOrder). applyFinishBeforeNewStart() intact alongside new strictFilter path.
+      Pre-flight RAISE NOTICE DO block confirmed at lines 57-73 of migration file, reporting row counts for all 5
+      tables.
   - ac_id: AC-9
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-9
+    evidence_ref: EVIDENCE.yaml:ac_evidence[8]
     notes: >-
-      TypeScript compilation: npx tsc --noEmit exits with 0 errors. Both __types__/index.ts and index.ts compile
-      cleanly.
-  - ac_id: AC-10
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-10
-    notes: >-
-      22/22 scheduler tests pass. Zero failures in the scheduler test suite. All edge cases (EC-1 through EC-3, ED-1
-      through ED-3) covered.
+      pgvector version guard DO block at lines 34-53 uses string_to_array cast comparison. Passed against pgvector 0.8.1
+      with '1011: pgvector version check passed' NOTICE.
 architecture_compliant: true
-architecture_notes:
-  - No barrel files created
-  - Zod schema used for SchedulerConfigSchema (not TypeScript interface)
-  - logger from @repo/logger used throughout — no console.log
-  - 'Parameterized SQL: ANY(${storyIds}) pattern (SQL injection fix from review iteration 1)'
-  - No HTTP surface — backend service, no .http files required
-  - 'Dependency injection pattern maintained: Queue and kbDeps injected via constructor'
 issues: []
+e2e_gate: exempt
+e2e_exempt_reason: Pure DB migration — no API endpoints, no UI, no E2E testable surface
+http_gate: not_applicable
+http_gate_reason: No API endpoints touched. __http__/ files are pre-existing project-wide harness files unrelated to this story.
+context_cache:
+  test_patterns: cache_miss
+  lessons_learned_blockers: cache_miss
+  architecture_conventions: cache_miss
+  note: >-
+    context_cache_get tool signature (packType/packKey) not available; context_pack_get requires
+    story_id/node_type/role. Proceeding without cache per fallback behavior.
 lessons_to_record:
   - lesson: >-
-      The coverage --flag in vitest CLI has a version mismatch when coverage-v8 v1 is installed alongside vitest v3. Use
-      the config-level coverage setting (vitest.config.ts) or run via pnpm test script rather than passing --coverage
-      directly.
-    category: blocker
-    tags:
-      - vitest
-      - coverage
-      - pipeline
-  - lesson: >-
-      Pre-existing wint/kbar dead package (@repo/database-schema/schema/wint) causes 4 unrelated test suites to fail in
-      @repo/pipeline. QA agents must filter these out when assessing story-specific test results. Run targeted test file
-      instead of full suite to isolate story changes.
-    category: blocker
-    tags:
-      - pipeline
-      - wint
-      - test-isolation
-  - lesson: >-
-      For scheduler-style services with no HTTP surface, .http file check is N/A — the scheduler has no API endpoints.
-      No .http files exist and none should be expected.
+      pgTAP col_type_is with custom types like vector(1536) requires the type schema argument (e.g., 'public') to match
+      how pgtap resolves the type. The 6-argument form col_type_is(schema, table, column, type_schema, type_name,
+      description) is required.
     category: pattern
     tags:
-      - pipeline
-      - scheduler
-      - http-files
+      - pgtap
+      - pgvector
+      - database
+      - migration
+  - lesson: >-
+      CREATE INDEX CONCURRENTLY cannot run inside a transaction block. Migration files that include CONCURRENTLY indexes
+      must keep those statements as top-level SQL, not wrapped in DO $$ ... $$ blocks.
+    category: pattern
+    tags:
+      - postgresql
+      - migration
+      - hnsw
+      - pgvector
+  - lesson: >-
+      For DB-only migration stories with no API surface, the E2E gate and .http file execution are both exempt. The
+      review verdict of PASS plus 15/15 pgTAP assertions is sufficient for QA verification.
+    category: pattern
+    tags:
+      - migration
+      - qa
+      - e2e-exempt
+      - pgtap
 tokens:
-  in: 28000
-  out: 3500
+  in: 18000
+  out: 3000

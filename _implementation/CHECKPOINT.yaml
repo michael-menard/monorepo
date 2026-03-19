@@ -1,12 +1,12 @@
-schema: 1
-story_id: CDBE-4020
-timestamp: '2026-03-19T04:00:00Z'
-current_phase: execute
-last_successful_phase: plan
-iteration: 0
-blocked: false
-forced: false
-max_iterations: 3
-worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/CDBE-4020
 branch: story/CDBE-4020
-warnings: []
+forced: false
+blocked: false
+e2e_gate: exempt
+iteration: 0
+current_phase: qa-verify
+last_successful_phase: qa-verify
+worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/CDBE-4020
+max_iterations: 3
+e2e_exempt_reason: Pure DB migration — no API endpoints, no UI, no E2E testable surface
+qa_verdict: PASS
+qa_timestamp: '2026-03-19T05:30:00Z'
