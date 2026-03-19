@@ -320,6 +320,14 @@ export const agents = workflow.table('agents', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// PARTITIONED TABLE — managed via migration 1100_cdbe5010_partition_telemetry.sql
+// Physical DB: RANGE-partitioned on started_at. Composite PK (id, started_at).
+// Drizzle ORM does not natively express PARTITION BY — this definition reflects the column
+// signature only. Partitioning, per-partition unique indexes, and FK reconstruction are
+// handled entirely in SQL migration 1100.
+// Partitions: agent_invocations_default (historical), agent_invocations_y<YYYY>m<MM> (monthly).
+// FKs from agent_outcomes, agent_decisions, hitl_decisions reference (id) via per-partition
+// UNIQUE INDEX ON (id) — see ARCH-001 in PLAN.yaml for rationale.
 export const agentInvocations = workflow.table('agent_invocations', {
   id: uuid('id').primaryKey().defaultRandom(),
   invocationId: text('invocation_id').notNull().unique(),

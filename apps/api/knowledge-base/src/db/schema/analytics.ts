@@ -12,6 +12,12 @@ import { pgSchema, text, timestamp, uuid, integer, numeric } from 'drizzle-orm/p
 
 const analytics = pgSchema('analytics')
 
+// PARTITIONED TABLE — managed via migration 1100_cdbe5010_partition_telemetry.sql
+// Physical DB: RANGE-partitioned on logged_at. Composite PK (id, logged_at).
+// Drizzle ORM does not natively express PARTITION BY — this definition reflects the column
+// signature only. Partitioning and indexes are handled entirely in SQL migration 1100.
+// Partitions: story_token_usage_default (historical), story_token_usage_y<YYYY>m<MM> (monthly).
+// No dependent FKs — this table is append-only analytics data.
 export const storyTokenUsage = analytics.table('story_token_usage', {
   id: uuid('id').primaryKey().defaultRandom(),
   storyId: text('story_id').notNull(),
