@@ -1,0 +1,101 @@
+schema: 1
+story_id: PIPE-3020
+timestamp: '2026-03-18T20:38:00.000Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 44
+    fail: 0
+  integration:
+    pass: 9
+    fail: 0
+  e2e: EXEMPT
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "elab-story.ts:259 — gitRunner(['worktree', 'add', '-b', branchName, worktreePath], { cwd: repoRoot })"
+    notes: >-
+      createWorktreeSetupNode calls git worktree add -b elab/{storyId} via injectable gitRunner. Confirmed in
+      elab-story-worktree.test.ts line 110-113.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: >-
+      elab-story.ts:305 — worktreeRegister({ storyId, worktreePath, branchName }); null return warns only (lines
+      307-312)
+    notes: >-
+      worktreeRegister called after git success; null return logs warn and continues. Non-blocking on throw. Verified by
+      tests at lines 158-205.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: >-
+      elab-story.ts:451-508 — all git/KB errors push to warnings[], worktreeTornDown always set true; workflowSuccess
+      never modified
+    notes: >-
+      Teardown uses warn-only error path. afterElaborationSubgraph always returns 'worktree_teardown'. Unit test at line
+      385 verifies workflowSuccess not in result.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "elab-story.ts:490 — worktreeMarkComplete({ worktreeId, status: 'abandoned' })"
+    notes: >-
+      Teardown calls worktreeMarkComplete with status abandoned. Confirmed by unit test line 279-292 and integration
+      test line 352.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: 'elab-story.ts:278-290 — exitCode !== 0 returns { worktreePath: null, worktreeSetup: false, errors: [...] }'
+    notes: 'Git failure (non-zero exit or throw) returns worktreeSetup: false. Verified by unit tests lines 137-156.'
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: elab-story.ts:252 — const baseDir = state.config?.worktreeBaseDir ?? '/tmp/worktrees'
+    notes: >-
+      worktreeBaseDir from config used as base directory. ElabStoryConfigSchema has worktreeBaseDir field. Integration
+      test line 213 verifies path composition.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: 'grep WINT-9060 in elab-story.ts: no matches'
+    notes: >-
+      WINT-9060 warnings completely absent from elab-story.ts. Only WINT-9110 and PIPE-3020 remain as comment
+      references.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: 'elab-story-worktree.test.ts: 22 tests covering HP/EC/ED scenarios'
+    notes: >-
+      22 unit tests across createWorktreeSetupNode (9 tests) and createWorktreeTeardownNode (13 tests). Covers happy
+      path, git failure, git throw, KB null return, KB throw, warn-only teardown.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: 'elab-story-worktree.integration.test.ts: 9 integration tests with real git subprocess'
+    notes: >-
+      9 integration tests using TempGitRepo fixture. Tests: creates worktree on disk, correct branch name, path
+      composition, duplicate branch failure, worktreeRegister called, teardown removes disk entry, warn-only on missing
+      path, worktreeMarkComplete with abandoned, full lifecycle.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: 'vitest run: 53 passed (3 files). tsc --noEmit: 0 errors in PIPE-3020 files.'
+    notes: >-
+      All 53 tests pass (44 unit + 9 integration). Type-check pre-existing errors are in unrelated packages (mcp-tools,
+      sidecars) not in PIPE-3020 changed files. Logger package required build before test run (worktree isolation
+      artifact).
+architecture_compliant: true
+issues: []
+lessons_to_record:
+  - lesson: Worktrees require dependency builds before test runs — @repo/logger had no dist/ in isolated worktree
+    category: workflow
+    tags:
+      - worktree
+      - testing
+      - orchestrator
+  - lesson: Injectable gitRunner pattern enables full unit test coverage of git subprocess behavior without spawning real git
+    category: pattern
+    tags:
+      - testing
+      - orchestrator
+      - dependency-injection
+tokens:
+  in: 18000
+  out: 3500

@@ -1,0 +1,71 @@
+{
+  "story_id": "PIPE-3020",
+  "generated_at": "2026-03-18T20:45:00.000Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "createWorktreeSetupNode accepts optional { gitRunner, repoRoot } parameters for testability (injectable GitRunner pattern matches create-worktree.ts)",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "createWorktreeSetupNode runs git worktree add -b elab/{storyId} {worktreePath} where worktreePath = path.join(worktreeBaseDir, storyId)",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "On git worktree add success, worktreeRegister is called with { storyId, worktreePath, branchName }. On failure (non-zero exit code or exception), worktreeRegister is NOT called and worktreeSetup is false. Registration failure is non-blocking (returns null → logger.warn only, setup still succeeds).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "createWorktreeTeardownNode accepts optional { gitRunner, repoRoot } parameters. When worktreeSetup is false or worktreePath is null, teardown returns immediately with worktreeTornDown: true (no git or KB calls).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "createWorktreeTeardownNode: (1) calls worktreeGetByStory to look up KB record, (2) runs git worktree remove --force {worktreePath}, (3) calls worktreeMarkComplete with { worktreeId, status: 'abandoned' }. All errors are warn-only — never changes workflowSuccess. worktreeTornDown is always true.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "Existing elab-story.test.ts tests continue to pass after the implementation change (no regressions). createElabStoryGraph compiles, runElabStory runs end-to-end, teardown always executes (AC-3 invariant preserved).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 6,
+  "accepted": 6,
+  "challenged": 0,
+  "rejected": 0
+}
