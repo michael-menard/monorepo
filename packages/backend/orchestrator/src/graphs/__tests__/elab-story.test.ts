@@ -14,6 +14,7 @@ import {
   ElabStoryResultSchema,
   type ElabStoryState,
   type ElabStoryConfig,
+  type GitRunner,
 } from '../elab-story.js'
 
 // Mock elaboration.ts to avoid live LLM calls
@@ -75,6 +76,32 @@ vi.mock('@repo/logger', () => ({
   },
 }))
 
+// Mock @repo/mcp-tools to avoid DB connection requirements (PIPE-3020)
+vi.mock('@repo/mcp-tools', () => ({
+  worktreeRegister: vi.fn().mockResolvedValue({
+    id: 'stub-uuid-1234',
+    storyId: 'WINT-9110',
+    worktreePath: '/tmp/worktrees/WINT-9110',
+    branchName: 'elab/WINT-9110',
+    status: 'active',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }),
+  worktreeGetByStory: vi.fn().mockResolvedValue({
+    id: 'stub-uuid-1234',
+    storyId: 'WINT-9110',
+    worktreePath: '/tmp/worktrees/WINT-9110',
+    branchName: 'elab/WINT-9110',
+    status: 'active',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    mergedAt: null,
+    abandonedAt: null,
+    metadata: {},
+  }),
+  worktreeMarkComplete: vi.fn().mockResolvedValue({ success: true }),
+}))
+
 // ============================================================================
 // Test Helpers
 // ============================================================================
@@ -113,6 +140,16 @@ function createTestState(overrides: Partial<ElabStoryState> = {}): ElabStoryStat
 
 function createTestConfig(overrides: Partial<ElabStoryConfig> = {}): ElabStoryConfig {
   return ElabStoryConfigSchema.parse(overrides)
+}
+
+/** Injectable git runner that always succeeds (no real git subprocess) */
+function makeSuccessGitRunner(): GitRunner {
+  return vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
+}
+
+/** Injectable git runner that always fails */
+function makeFailGitRunner(): GitRunner {
+  return vi.fn().mockResolvedValue({ exitCode: 1, stdout: '', stderr: 'fatal: branch exists' })
 }
 
 // ============================================================================
@@ -230,16 +267,28 @@ describe('createElabStoryInitializeNode', () => {
 })
 
 describe('createWorktreeSetupNode', () => {
-  it('sets up a stub worktree path and returns warning', async () => {
-    const node = createWorktreeSetupNode()
+  beforeEach(() => vi.clearAllMocks())
+
+  it('sets worktreeSetup: true and worktreePath when git succeeds (injectable runner)', async () => {
+    const gitRunner = makeSuccessGitRunner()
+    const node = createWorktreeSetupNode({ gitRunner, repoRoot: '/repo' })
     const state = createTestState({
       config: createTestConfig({ worktreeBaseDir: '/tmp/test-trees' }),
     })
     const result = await node(state)
     expect(result.worktreeSetup).toBe(true)
     expect(result.worktreePath).toContain('WINT-9110')
-    expect(result.warnings).toBeDefined()
-    expect(result.warnings!.length).toBeGreaterThan(0)
+  })
+
+  it('sets worktreeSetup: false when git fails', async () => {
+    const gitRunner = makeFailGitRunner()
+    const node = createWorktreeSetupNode({ gitRunner, repoRoot: '/repo' })
+    const state = createTestState({
+      config: createTestConfig({ worktreeBaseDir: '/tmp/test-trees' }),
+    })
+    const result = await node(state)
+    expect(result.worktreeSetup).toBe(false)
+    expect(result.worktreePath).toBeNull()
   })
 })
 
@@ -255,18 +304,35 @@ describe('createElaborationSubgraphNode', () => {
 })
 
 describe('createWorktreeTeardownNode', () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it('tears down even when worktree was not set up', async () => {
-    const node = createWorktreeTeardownNode()
+    const gitRunner = makeSuccessGitRunner()
+    const node = createWorktreeTeardownNode({ gitRunner, repoRoot: '/repo' })
     const state = createTestState({ worktreeSetup: false })
     const result = await node(state)
     expect(result.worktreeTornDown).toBe(true)
   })
 
   it('tears down when worktree was set up', async () => {
-    const node = createWorktreeTeardownNode()
+    const gitRunner = makeSuccessGitRunner()
+    const node = createWorktreeTeardownNode({ gitRunner, repoRoot: '/repo' })
     const state = createTestState({ worktreeSetup: true, worktreePath: '/tmp/worktrees/WINT-9110' })
     const result = await node(state)
     expect(result.worktreeTornDown).toBe(true)
+  })
+
+  it('is warn-only — teardown errors do NOT affect workflowSuccess', async () => {
+    const gitRunner = makeFailGitRunner()
+    const node = createWorktreeTeardownNode({ gitRunner, repoRoot: '/repo' })
+    const state = createTestState({
+      worktreeSetup: true,
+      worktreePath: '/tmp/worktrees/WINT-9110',
+      workflowSuccess: true,
+    })
+    const result = await node(state)
+    expect(result.worktreeTornDown).toBe(true)
+    expect('workflowSuccess' in result).toBe(false)
   })
 })
 
@@ -333,6 +399,8 @@ describe('createElabStoryGraph', () => {
 // ============================================================================
 
 describe('runElabStory', () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it('returns ElabStoryResult shape', async () => {
     const result = await runElabStory({
       storyId: 'WINT-9110',
