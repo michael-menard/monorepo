@@ -1,0 +1,15 @@
+forced: false
+pr_url: https://github.com/michael-menard/monorepo/pull/558
+schema: 1
+blocked: false
+e2e_gate: exempt
+story_id: PIPE-4010
+warnings: []
+iteration: 0
+pr_number: 558
+current_phase: qa-verify
+max_iterations: 3
+e2e_exemption_reason: >-
+  Integration/validation story — no UI or API surface changes; E2E tests not applicable. Story delivers a preflight
+  script, runbook, missing export fix, and contract tests.
+last_successful_phase: review

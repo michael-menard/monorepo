@@ -308,6 +308,27 @@ export {
   type GraphStateWithBacklogReview,
 } from './backlog-review.js'
 
+// Review Graph (APIP-1050)
+export {
+  // Graph factory and runner
+  createReviewGraph,
+  runReview,
+  // Node factories
+  createDispatcherNode as createReviewDispatcherNode,
+  createWorkerStub as createReviewWorkerStub,
+  createFanInNode as createReviewFanInNode,
+  // Utility
+  shouldEscalate as reviewShouldEscalate,
+  // Schemas
+  ReviewGraphResultSchema,
+  // State annotation
+  ReviewGraphStateAnnotation,
+  // Types
+  type ReviewGraphState,
+  type ReviewGraphResult,
+  type ReviewGraphConfig,
+} from './review.js'
+
 // Batch Process Graph — Send API fan-out (WINT-9060)
 export {
   // Graph factory and runner
