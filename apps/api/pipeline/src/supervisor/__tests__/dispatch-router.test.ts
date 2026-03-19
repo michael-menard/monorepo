@@ -2,7 +2,7 @@
  * Unit tests for dispatch-router.ts
  *
  * Covers all AC-10 scenarios:
- * AC-10a: Dispatch routing to correct graph by stage (HP-1, HP-2, HP-3)
+ * AC-10a: Dispatch routing to correct graph by stage (HP-1, HP-2, HP-3, HP-4, HP-5, HP-6)
  * AC-10b: Wall clock timeout fires → failed + log event (EC-1)
  * AC-10c: PERMANENT error classification → immediate fail (EC-2)
  * AC-10d: TRANSIENT error → retry path (EC-3)
@@ -12,15 +12,16 @@
  * ED-2: start() idempotency
  * ED-3: Structured log fields on all lifecycle events
  * EC-5: Unknown stage → Zod validation error → immediate fail (tested in supervisor)
+ *
+ * PIPE-2020: Extended coverage for implementation, review, and qa stages.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import type { Job } from 'bullmq'
 import { ZodError } from 'zod'
-import { dispatchJob, resetDispatcherState, type GraphRunners } from '../dispatch-router.js'
-import { WallClockTimeoutError } from '../wall-clock-timeout.js'
-import { PipelineSupervisorConfigSchema, type PipelineJobData } from '../__types__/index.js'
 import { logger } from '@repo/logger'
+import { dispatchJob, resetDispatcherState, type GraphRunners } from '../dispatch-router.js'
+import { PipelineSupervisorConfigSchema, type PipelineJobData } from '../__types__/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -58,6 +59,42 @@ const MockStoryCreationResult = {
   completedAt: new Date().toISOString(),
 }
 
+const MockDevImplementResult = {
+  storyId: 'TEST-003',
+  success: true,
+  planLoaded: true,
+  executeComplete: true,
+  reviewResult: null,
+  evidenceCollected: true,
+  durationMs: 500,
+  completedAt: new Date().toISOString(),
+  errors: [],
+  warnings: [],
+}
+
+const MockReviewResult = {
+  storyId: 'TEST-004',
+  success: true,
+  verdict: 'APPROVED',
+  reviewYamlPath: null,
+  durationMs: 300,
+  completedAt: new Date().toISOString(),
+  errors: [],
+  warnings: [],
+}
+
+const MockQAVerifyResult = {
+  storyId: 'TEST-005',
+  success: true,
+  verdict: 'PASS' as const,
+  qaArtifact: null,
+  preconditionsPassed: true,
+  durationMs: 400,
+  completedAt: new Date().toISOString(),
+  errors: [],
+  warnings: [],
+}
+
 const mockSynthesizedStoryPayload = {
   storyId: 'TEST-001',
   title: 'Test Story',
@@ -74,6 +111,40 @@ const mockStoryRequestPayload = {
   description: 'A new feature request',
   domain: 'backend',
   tags: [],
+}
+
+const mockStorySnapshotPayload = {
+  storyId: 'TEST-003',
+  title: 'Implementation Story',
+  description: 'A story ready for implementation',
+  feature: 'platform',
+  state: 'ready',
+}
+
+const mockReviewPayload = {
+  storyId: 'TEST-004',
+  title: 'Review Story',
+  description: 'A story ready for review',
+  feature: 'platform',
+  state: 'needs_code_review',
+  worktreePath: '/path/to/worktree',
+  featureDir: 'plans/future/platform',
+}
+
+const mockReviewPayloadNoWorktree = {
+  storyId: 'TEST-004',
+  title: 'Review Story',
+  description: 'A story ready for review',
+  feature: 'platform',
+  state: 'needs_code_review',
+}
+
+const mockQaPayload = {
+  storyId: 'TEST-005',
+  title: 'QA Story',
+  description: 'A story ready for QA verification',
+  feature: 'platform',
+  state: 'ready_for_qa',
 }
 
 const defaultConfig = PipelineSupervisorConfigSchema.parse({
@@ -126,20 +197,81 @@ function createStoryCreationJobData(
 }
 
 /**
+ * Create a valid implementation job payload.
+ * PIPE-2020: Added for new stage coverage.
+ */
+function createImplementationJobData(
+  overrides: Partial<PipelineJobData> = {},
+): PipelineJobData {
+  return {
+    storyId: 'TEST-003',
+    stage: 'implementation',
+    attemptNumber: 1,
+    payload: mockStorySnapshotPayload,
+    ...overrides,
+  } as PipelineJobData
+}
+
+/**
+ * Create a valid review job payload.
+ * PIPE-2020: Added for new stage coverage.
+ */
+function createReviewJobData(
+  overrides: Partial<PipelineJobData> = {},
+): PipelineJobData {
+  return {
+    storyId: 'TEST-004',
+    stage: 'review',
+    attemptNumber: 1,
+    payload: mockReviewPayload,
+    ...overrides,
+  } as PipelineJobData
+}
+
+/**
+ * Create a valid qa job payload.
+ * PIPE-2020: Added for new stage coverage.
+ */
+function createQaJobData(
+  overrides: Partial<PipelineJobData> = {},
+): PipelineJobData {
+  return {
+    storyId: 'TEST-005',
+    stage: 'qa',
+    attemptNumber: 1,
+    payload: mockQaPayload,
+    ...overrides,
+  } as PipelineJobData
+}
+
+/**
  * Create injectable graph runners with mocks.
+ * PIPE-2020: Extended to return all 5 runners with individual spies.
  */
 function createMockRunners(overrides: Partial<GraphRunners> = {}): GraphRunners & {
   elaborationSpy: MockInstance
   storyCreationSpy: MockInstance
+  devImplementSpy: MockInstance
+  reviewSpy: MockInstance
+  qaVerifySpy: MockInstance
 } {
   const elaborationSpy = vi.fn().mockResolvedValue(MockElaborationResult)
   const storyCreationSpy = vi.fn().mockResolvedValue(MockStoryCreationResult)
+  const devImplementSpy = vi.fn().mockResolvedValue(MockDevImplementResult)
+  const reviewSpy = vi.fn().mockResolvedValue(MockReviewResult)
+  const qaVerifySpy = vi.fn().mockResolvedValue(MockQAVerifyResult)
 
   return {
     runElaboration: elaborationSpy,
     runStoryCreation: storyCreationSpy,
+    runDevImplement: devImplementSpy,
+    runReview: reviewSpy,
+    runQAVerify: qaVerifySpy,
     elaborationSpy,
     storyCreationSpy,
+    devImplementSpy,
+    reviewSpy,
+    qaVerifySpy,
     ...overrides,
   }
 }
@@ -318,6 +450,185 @@ describe('dispatchJob', () => {
     })
   })
 
+  // ─── HP-4, AC-10a: Implementation routing ────────────────────────────────
+  // PIPE-2020: New tests for implementation stage dispatch.
+
+  describe('HP-4: implementation job routes to runDevImplement()', () => {
+    it('calls runDevImplement() with storyId and attemptNumber', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.devImplementSpy).toHaveBeenCalledOnce()
+      expect(runners.devImplementSpy).toHaveBeenCalledWith({
+        storyId: 'TEST-003',
+        attempt: 1,
+      })
+    })
+
+    it('does NOT call runElaboration() or runStoryCreation() for implementation jobs', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.elaborationSpy).not.toHaveBeenCalled()
+      expect(runners.storyCreationSpy).not.toHaveBeenCalled()
+    })
+
+    it('does NOT call runReview() or runQAVerify() for implementation jobs', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.reviewSpy).not.toHaveBeenCalled()
+      expect(runners.qaVerifySpy).not.toHaveBeenCalled()
+    })
+
+    it('logs completed event after successful implementation', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      const completedCall = vi.mocked(logger).info.mock.calls.find(
+        call => call[0] === 'completed',
+      )
+      expect(completedCall).toBeDefined()
+      expect(completedCall![1]).toMatchObject({
+        event: 'completed',
+        storyId: 'TEST-003',
+        stage: 'implementation',
+      })
+    })
+  })
+
+  // ─── HP-5, AC-10a: Review routing ────────────────────────────────────────
+  // PIPE-2020: New tests for review stage dispatch with worktreePath fallback.
+
+  describe('HP-5: review job routes to runReview()', () => {
+    it('calls runReview() with storyId, worktreePath, featureDir, and attemptNumber', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.reviewSpy).toHaveBeenCalledOnce()
+      expect(runners.reviewSpy).toHaveBeenCalledWith({
+        storyId: 'TEST-004',
+        worktreePath: '/path/to/worktree',
+        featureDir: 'plans/future/platform',
+        attempt: 1,
+      })
+    })
+
+    it('falls back to empty string for worktreePath when not provided in payload', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData({
+        payload: mockReviewPayloadNoWorktree,
+      } as Partial<PipelineJobData>)
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.reviewSpy).toHaveBeenCalledOnce()
+      expect(runners.reviewSpy).toHaveBeenCalledWith({
+        storyId: 'TEST-004',
+        worktreePath: '',
+        featureDir: 'plans/future/platform',
+        attempt: 1,
+      })
+    })
+
+    it('does NOT call runElaboration(), runStoryCreation(), runDevImplement(), or runQAVerify() for review jobs', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.elaborationSpy).not.toHaveBeenCalled()
+      expect(runners.storyCreationSpy).not.toHaveBeenCalled()
+      expect(runners.devImplementSpy).not.toHaveBeenCalled()
+      expect(runners.qaVerifySpy).not.toHaveBeenCalled()
+    })
+
+    it('logs completed event after successful review', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      const completedCall = vi.mocked(logger).info.mock.calls.find(
+        call => call[0] === 'completed',
+      )
+      expect(completedCall).toBeDefined()
+      expect(completedCall![1]).toMatchObject({
+        event: 'completed',
+        storyId: 'TEST-004',
+        stage: 'review',
+      })
+    })
+  })
+
+  // ─── HP-6, AC-10a: QA routing ────────────────────────────────────────────
+  // PIPE-2020: New tests for qa stage dispatch.
+
+  describe('HP-6: qa job routes to runQAVerify()', () => {
+    it('calls runQAVerify() with storyId and attemptNumber', async () => {
+      const job = createMockJob()
+      const data = createQaJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.qaVerifySpy).toHaveBeenCalledOnce()
+      expect(runners.qaVerifySpy).toHaveBeenCalledWith({
+        storyId: 'TEST-005',
+        attempt: 1,
+      })
+    })
+
+    it('does NOT call any other runner for qa jobs', async () => {
+      const job = createMockJob()
+      const data = createQaJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      expect(runners.elaborationSpy).not.toHaveBeenCalled()
+      expect(runners.storyCreationSpy).not.toHaveBeenCalled()
+      expect(runners.devImplementSpy).not.toHaveBeenCalled()
+      expect(runners.reviewSpy).not.toHaveBeenCalled()
+    })
+
+    it('logs completed event after successful qa', async () => {
+      const job = createMockJob()
+      const data = createQaJobData()
+      const runners = createMockRunners()
+
+      await dispatchJob(job, data, defaultConfig, runners)
+
+      const completedCall = vi.mocked(logger).info.mock.calls.find(
+        call => call[0] === 'completed',
+      )
+      expect(completedCall).toBeDefined()
+      expect(completedCall![1]).toMatchObject({
+        event: 'completed',
+        storyId: 'TEST-005',
+        stage: 'qa',
+      })
+    })
+  })
+
   // ─── EC-1, AC-10b: Wall clock timeout ────────────────────────────────────
 
   describe('EC-1: Wall clock timeout → wall_clock_timeout failure', () => {
@@ -338,6 +649,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: hangingRunner,
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       const timeoutConfig = PipelineSupervisorConfigSchema.parse({
@@ -363,6 +677,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: hangingRunner,
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       const timeoutConfig = PipelineSupervisorConfigSchema.parse({
@@ -385,6 +702,84 @@ describe('dispatchJob', () => {
         threadId: 'APIP-001:elaboration:1',
       })
     })
+
+    // PIPE-2020: Wall clock timeout for implementation stage
+    it('EC-1 implementation: throws wall_clock_timeout when implementation graph hangs', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const hangingRunner = vi.fn().mockImplementation(
+        () => new Promise<never>(() => { /* hang */ }),
+      )
+      const runners: GraphRunners = {
+        runElaboration: vi.fn(),
+        runStoryCreation: vi.fn(),
+        runDevImplement: hangingRunner,
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
+      }
+
+      const timeoutConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        stageTimeoutMs: 100,
+      })
+
+      const dispatchPromise = dispatchJob(job, data, timeoutConfig, runners)
+      vi.advanceTimersByTime(200)
+
+      await expect(dispatchPromise).rejects.toThrow('wall_clock_timeout')
+    })
+
+    // PIPE-2020: Wall clock timeout for review stage
+    it('EC-1 review: throws wall_clock_timeout when review graph hangs', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData()
+      const hangingRunner = vi.fn().mockImplementation(
+        () => new Promise<never>(() => { /* hang */ }),
+      )
+      const runners: GraphRunners = {
+        runElaboration: vi.fn(),
+        runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: hangingRunner,
+        runQAVerify: vi.fn(),
+      }
+
+      const timeoutConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        stageTimeoutMs: 100,
+      })
+
+      const dispatchPromise = dispatchJob(job, data, timeoutConfig, runners)
+      vi.advanceTimersByTime(200)
+
+      await expect(dispatchPromise).rejects.toThrow('wall_clock_timeout')
+    })
+
+    // PIPE-2020: Wall clock timeout for qa stage
+    it('EC-1 qa: throws wall_clock_timeout when qa graph hangs', async () => {
+      const job = createMockJob()
+      const data = createQaJobData()
+      const hangingRunner = vi.fn().mockImplementation(
+        () => new Promise<never>(() => { /* hang */ }),
+      )
+      const runners: GraphRunners = {
+        runElaboration: vi.fn(),
+        runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: hangingRunner,
+      }
+
+      const timeoutConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        stageTimeoutMs: 100,
+      })
+
+      const dispatchPromise = dispatchJob(job, data, timeoutConfig, runners)
+      vi.advanceTimersByTime(200)
+
+      await expect(dispatchPromise).rejects.toThrow('wall_clock_timeout')
+    })
   })
 
   // ─── EC-2, AC-10c: PERMANENT error → immediate fail ──────────────────────
@@ -397,6 +792,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: vi.fn().mockRejectedValue(permanentError),
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       await expect(dispatchJob(job, data, defaultConfig, runners)).rejects.toThrow(
@@ -411,6 +809,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: vi.fn().mockRejectedValue(permanentError),
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       await dispatchJob(job, data, defaultConfig, runners).catch(() => { /* expected */ })
@@ -439,6 +840,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: vi.fn().mockRejectedValue(zodError),
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       await dispatchJob(job, data, defaultConfig, runners).catch(() => { /* expected */ })
@@ -463,6 +867,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: vi.fn().mockRejectedValue(transientError),
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       await expect(dispatchJob(job, data, defaultConfig, runners)).rejects.toThrow(
@@ -477,6 +884,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: vi.fn().mockRejectedValue(transientError),
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       await dispatchJob(job, data, defaultConfig, runners).catch(() => { /* expected */ })
@@ -546,6 +956,107 @@ describe('dispatchJob', () => {
         stage: 'elaboration',
       })
     })
+
+    // PIPE-2020: Circuit breaker for implementation stage
+    it('CB implementation: calls job.moveToDelayed() when implementation circuit is OPEN', async () => {
+      const job = createMockJob()
+      const data = createImplementationJobData()
+      const runners = createMockRunners()
+
+      const lowThresholdConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        circuitBreakerFailureThreshold: 1,
+      })
+
+      // Trip the implementation circuit
+      runners.devImplementSpy.mockRejectedValueOnce(new TypeError('Trip implementation'))
+      await dispatchJob(job, data, lowThresholdConfig, runners).catch(() => { /* trip */ })
+
+      vi.clearAllMocks()
+      const job2 = createMockJob('job-002')
+
+      // Circuit should now be OPEN — dispatch should NOT call implementation graph
+      await dispatchJob(job2, data, lowThresholdConfig, runners)
+
+      expect(runners.devImplementSpy).not.toHaveBeenCalled()
+      expect(job2.moveToDelayed).toHaveBeenCalledOnce()
+    })
+
+    // PIPE-2020: Circuit breaker for review stage
+    it('CB review: calls job.moveToDelayed() when review circuit is OPEN', async () => {
+      const job = createMockJob()
+      const data = createReviewJobData()
+      const runners = createMockRunners()
+
+      const lowThresholdConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        circuitBreakerFailureThreshold: 1,
+      })
+
+      // Trip the review circuit
+      runners.reviewSpy.mockRejectedValueOnce(new TypeError('Trip review'))
+      await dispatchJob(job, data, lowThresholdConfig, runners).catch(() => { /* trip */ })
+
+      vi.clearAllMocks()
+      const job2 = createMockJob('job-002')
+
+      // Circuit should now be OPEN — dispatch should NOT call review graph
+      await dispatchJob(job2, data, lowThresholdConfig, runners)
+
+      expect(runners.reviewSpy).not.toHaveBeenCalled()
+      expect(job2.moveToDelayed).toHaveBeenCalledOnce()
+    })
+
+    // PIPE-2020: Circuit breaker for qa stage
+    it('CB qa: calls job.moveToDelayed() when qa circuit is OPEN', async () => {
+      const job = createMockJob()
+      const data = createQaJobData()
+      const runners = createMockRunners()
+
+      const lowThresholdConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        circuitBreakerFailureThreshold: 1,
+      })
+
+      // Trip the qa circuit
+      runners.qaVerifySpy.mockRejectedValueOnce(new TypeError('Trip qa'))
+      await dispatchJob(job, data, lowThresholdConfig, runners).catch(() => { /* trip */ })
+
+      vi.clearAllMocks()
+      const job2 = createMockJob('job-002')
+
+      // Circuit should now be OPEN — dispatch should NOT call qa graph
+      await dispatchJob(job2, data, lowThresholdConfig, runners)
+
+      expect(runners.qaVerifySpy).not.toHaveBeenCalled()
+      expect(job2.moveToDelayed).toHaveBeenCalledOnce()
+    })
+
+    // PIPE-2020: Circuit breakers are stage-isolated — tripping one does not trip others
+    it('CB isolation: tripping implementation circuit does NOT affect review circuit', async () => {
+      const implData = createImplementationJobData()
+      const reviewData = createReviewJobData()
+      const runners = createMockRunners()
+
+      const lowThresholdConfig = PipelineSupervisorConfigSchema.parse({
+        ...defaultConfig,
+        circuitBreakerFailureThreshold: 1,
+      })
+
+      // Trip the implementation circuit
+      const job1 = createMockJob('job-001')
+      runners.devImplementSpy.mockRejectedValueOnce(new TypeError('Trip implementation'))
+      await dispatchJob(job1, implData, lowThresholdConfig, runners).catch(() => { /* trip */ })
+
+      vi.clearAllMocks()
+
+      // Review circuit should still be CLOSED — review job should dispatch normally
+      const job2 = createMockJob('job-002')
+      await dispatchJob(job2, reviewData, lowThresholdConfig, runners)
+
+      expect(runners.reviewSpy).toHaveBeenCalledOnce()
+      expect(job2.moveToDelayed).not.toHaveBeenCalled()
+    })
   })
 
   // ─── AC-15: Two-catch pattern ─────────────────────────────────────────────
@@ -568,6 +1079,9 @@ describe('dispatchJob', () => {
       const runners: GraphRunners = {
         runElaboration: hangingRunner,
         runStoryCreation: vi.fn(),
+        runDevImplement: vi.fn(),
+        runReview: vi.fn(),
+        runQAVerify: vi.fn(),
       }
 
       const timeoutConfig = PipelineSupervisorConfigSchema.parse({
