@@ -1,51 +1,131 @@
 {
-  "story_id": "CDBE-0010",
-  "generated_at": "2026-03-19T00:15:00Z",
+  "story_id": "CDBE-4010",
+  "generated_at": "2026-03-19T02:10:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
-      "ac_id": "AC1",
-      "ac_text": "pgtap installed and runnable in local dev and CI",
+      "ac_id": "AC-1",
+      "ac_text": "A migration file 1009_cdbe4010_pgvector_embedding_tables.sql exists and includes a DB safety preamble DO block verifying current_database() = 'knowledgebase'",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 4,
-      "strong_evidence_count": 4,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC2",
-      "ac_text": "Transaction-rollback test fixture helper documented",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC3",
-      "ac_text": "Example trigger unit test passing",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC4",
-      "ac_text": "CI pipeline runs pgtap suite on each PR",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
+      "evidence_evaluated": 1,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "workflow.story_embeddings table exists with correct columns and UNIQUE constraint on story_id",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "workflow.plan_embeddings table exists with correct columns and UNIQUE constraint on plan_id",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "HNSW indexes on embedding columns with m=16, ef_construction=64 parameters documented and verified",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "workflow.embedding_section_lookup reference table exists with schema confirmed during elaboration",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "Migration is fully idempotent with CREATE TABLE/INDEX IF NOT EXISTS guards",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "Tables registered in workflow.ts with vector customType and TypeScript types exported; pnpm check-types passes",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "COMMENT ON TABLE statements with migration number prefix exist for all three tables",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "pgtap test file with 13 assertions verifying table existence, column types, HNSW indexes, FK constraints, and UNIQUE constraints",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "findSimilarStories() updated to query workflow.story_embeddings JOIN workflow.stories; deleted_at filter removed; Vitest test verifies corrected SQL references",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "SimilarStoryResult replaced with Zod schema and z.infer<> type inference; no TypeScript interface",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "pgtap test includes assertion verifying wrong-dimension vector insert is rejected with error code 22000",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     }
   ],
-  "total_acs": 4,
-  "accepted": 4,
+  "total_acs": 12,
+  "accepted": 12,
   "challenged": 0,
   "rejected": 0
 }

@@ -1,0 +1,162 @@
+worker: reusability
+verdict: PASS
+errors: 0
+warnings: 1
+findings:
+  - file: apps/api/knowledge-base/src/db/migrations/1009_cdbe4010_pgvector_embedding_tables.sql
+    line: 1
+    severity: warning
+    rule: migration-safety-preamble
+    message: >
+      Migration follows established safety patterns (database check, RAISE NOTICE).
+      Safety preamble present and correct on lines 16-25.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/db/migrations/1009_cdbe4010_pgvector_embedding_tables.sql
+    line: 27
+    severity: warning
+    rule: section-organization
+    message: >
+      Migration is well-sectioned with clear DO $$ blocks and descriptive headers.
+      Sections are properly labeled (── 0. Safety preamble, ── 1. workflow.story_embeddings, etc.).
+      This matches the reference pattern from migration 1007.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/db/migrations/pgtap/1009_cdbe4010_pgvector_embedding_tables_test.sql
+    line: 1
+    severity: warning
+    rule: pgtap-test-structure
+    message: >
+      pgtap test follows gold standard structure: BEGIN/ROLLBACK (line 18/178),
+      SELECT plan(13) declaration (line 20), descriptive test messages throughout.
+      All 13 tests are properly documented in header comments (lines 9-16).
+      Matches reference pattern from migration 1007 pgtap test exactly.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/db/migrations/pgtap/1009_cdbe4010_pgvector_embedding_tables_test.sql
+    line: 153
+    severity: warning
+    rule: test-edge-case-coverage
+    message: >
+      Excellent edge case coverage: Test 13 (lines 157-170) validates wrong-dimension
+      vector rejection using throws_ok with error code '22000' (dimension mismatch).
+      This matches the constraint enforcement pattern from reference tests.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/db/schema/workflow.ts
+    line: 499
+    severity: warning
+    rule: schema-customtype-reuse
+    message: >
+      Drizzle schema correctly reuses vector customType imported from kb.ts (line 29).
+      storyEmbeddings (line 499-508) and planEmbeddings (line 510-519) both use
+      vector('embedding', { dimensions: 1536 }) which delegates to shared customType.
+      This avoids duplication and follows DRY principle.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/db/schema/workflow.ts
+    line: 521
+    severity: warning
+    rule: schema-table-design
+    message: >
+      embeddingSectionLookup table (lines 521-525) is correctly designed as
+      reference lookup with serial PK, unique section_name, and display_order.
+      Follows established pattern from workflow.ts existing tables (e.g., validTransitions).
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/story-similarity.ts
+    line: 1
+    severity: warning
+    rule: zod-first-types
+    message: >
+      Code correctly uses Zod schema (SimilarStoryResultSchema, lines 17-23)
+      instead of TypeScript interface. Type inference via z.infer<> on line 25.
+      Matches CLAUDE.md requirement: "ALWAYS use Zod schemas for types".
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/story-similarity.ts
+    line: 45
+    severity: warning
+    rule: sql-query-correctness
+    message: >
+      SQL query correctly joins workflow.story_embeddings with workflow.stories
+      on line 52-53 (correct schema namespacing). Cosine similarity via <=> operator
+      on line 51 with correct vector conversion. featureFilter correctly references
+      s.feature (line 55) from stories table, not embedding table. Query structure matches
+      embedding search patterns from pgvector documentation.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/story-similarity.ts
+    line: 61
+    severity: warning
+    rule: logging-pattern
+    message: >
+      Logging uses @repo/logger (line 11) instead of console.log.
+      logger.debug() call (lines 61-65) includes relevant context:
+      resultCount, elapsed_ms, featureFilter. Matches CLAUDE.md logging requirement.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/__tests__/story-similarity.test.ts
+    line: 1
+    severity: warning
+    rule: test-coverage-structure
+    message: >
+      Test suite is well-organized with three main describe blocks:
+      SimilarStoryResultSchema (AC-11), findSimilarStories (AC-10), buildStoryEmbeddingText.
+      Uses Vitest + vi.mock() for logger (lines 23-30). All tests use semantic assertions.
+      Minimum 6 tests for critical function, matching pattern from reference tests.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/__tests__/story-similarity.test.ts
+    line: 71
+    severity: warning
+    rule: test-sql-validation
+    message: >
+      Tests correctly validate SQL structure by inspecting stringified sql`` template
+      (lines 81-91). Asserts presence of "workflow.story_embeddings" and "workflow.stories",
+      absence of "public.stories" and "deleted_at". This is a sound approach to testing
+      query composition without running actual database queries.
+    auto_fixable: false
+
+  - file: apps/api/knowledge-base/src/search/__tests__/story-similarity.test.ts
+    line: 94
+    severity: warning
+    rule: test-feature-filter-correctness
+    message: >
+      Test on lines 94-107 validates featureFilter uses s.feature (correct table alias)
+      rather than se.feature. This catches a potential schema reference bug that could cause
+      query failure. Good pattern for testing parameterized queries.
+    auto_fixable: false
+
+summary:
+  migration_pattern: PASS
+    - Safety preamble with database check and RAISE NOTICE (lines 16-25)
+    - Clear sectioned DO $$ blocks with descriptive headers (── notation)
+    - Completion notice logged on line 92
+  pgtap_pattern: PASS
+    - BEGIN/ROLLBACK wrapping (lines 18/178)
+    - SELECT plan(N) on line 20
+    - Descriptive test messages throughout
+    - Edge case coverage with throws_ok (line 164)
+    - Matches reference 1007 pgtap test exactly
+  drizzle_schema: PASS
+    - Reuses vector customType from kb.ts (line 29 import)
+    - Both embedding tables use consistent dimensions (1536)
+    - embeddingSectionLookup follows established pattern
+    - Type inference via $inferSelect on lines 560-565
+  code_reuse: PASS
+    - No duplication of vector customType definition
+    - findSimilarStories uses shared db parameter type (NodePgDatabase<typeof schema>)
+    - buildStoryEmbeddingText is a pure utility function with no dependencies
+  no_duplication: PASS
+    - All vector column definitions delegate to shared customType
+    - Single source of truth for embedding dimensions (1536)
+    - Logger is imported once and used consistently
+    - Zod schema is defined once, type inferred once
+
+notes:
+  - All touched files follow established patterns from reference migrations (1007) and existing schema
+  - Code adheres strictly to CLAUDE.md requirements: Zod-first types, @repo/logger, no console.log
+  - Test coverage is comprehensive with edge cases (wrong-dimension vectors, null handling, feature filtering)
+  - No barrel files, no duplication, no anti-patterns detected
+  - Migration is idempotent-safe (uses CREATE TABLE IF NOT EXISTS, CREATE INDEX CONCURRENTLY IF NOT EXISTS)
