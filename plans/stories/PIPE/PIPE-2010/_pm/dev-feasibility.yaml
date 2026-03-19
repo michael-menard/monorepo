@@ -1,0 +1,141 @@
+feasible: true
+confidence: high
+rationale: >
+  The schema changes are additive: we extend an existing Zod object schema using .extend() to
+  add two optional fields. The discriminated union structure is unchanged. The dispatch-router
+  fix is a one-line type import swap (remove cast, import ReviewPayload). All test additions
+  follow established patterns in pipeline-job-schema.test.ts. README update is straightforward.
+  Risk is low because no structural or breaking changes are needed.
+
+complexity: low
+
+change_surface:
+  areas:
+    - 'packages/backend/pipeline-queue/src/__types__/index.ts'
+    - 'packages/backend/pipeline-queue/src/index.ts'
+    - 'apps/api/pipeline/src/supervisor/dispatch-router.ts'
+    - 'packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts'
+    - 'packages/backend/pipeline-queue/README.md'
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      ReviewWorkerInput (orchestrator types.ts) declares worktreePath as z.string().min(1) (required),
+      but ReviewPayloadSchema in pipeline-queue will declare it as z.string().optional().
+      The dispatch-router must validate/default the value before passing to runReview() — the
+      current code already defaults to '' which the schema will now enforce.
+    mitigation: >
+      dispatch-router.ts review branch already uses `payload.worktreePath ?? ''` — this pattern
+      is preserved after removing the type cast. Document the required/optional mismatch in README.
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pnpm check-types passes with zero TypeScript errors across all packages'
+  - 'pnpm test --filter @repo/pipeline-queue passes (all existing + new tests)'
+  - "grep -rn 'as StorySnapshotPayload &' apps/api/pipeline/src returns no results (cast removed)"
+  - 'ReviewPayloadSchema and QaPayloadSchema visible in pipeline-queue/src/index.ts exports'
+
+subtasks:
+  - id: ST-1
+    title: 'Define ReviewPayloadSchema extending StorySnapshotPayloadSchema'
+    goal: >
+      Add ReviewPayloadSchema to packages/backend/pipeline-queue/src/__types__/index.ts
+      using .extend() to add worktreePath and featureDir as optional strings.
+      Update ReviewJobDataSchema.payload to use ReviewPayloadSchema.
+    files_to_read:
+      - 'packages/backend/pipeline-queue/src/__types__/index.ts'
+    files_to_modify:
+      - 'packages/backend/pipeline-queue/src/__types__/index.ts'
+    acs:
+      - 'AC-1'
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline-queue'
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Verify QaPayloadSchema shape and update QaJobDataSchema.payload'
+    goal: >
+      Read packages/backend/orchestrator/src/nodes/review/types.ts and dispatch-router.ts
+      RunQAVerifyFn signature to confirm QA graph only needs storyId+attempt.
+      Define QaPayloadSchema (alias or explicit extension of StorySnapshotPayloadSchema).
+      Update QaJobDataSchema.payload to use QaPayloadSchema.
+    files_to_read:
+      - 'apps/api/pipeline/src/supervisor/dispatch-router.ts'
+      - 'packages/backend/orchestrator/src/nodes/review/types.ts'
+    files_to_modify:
+      - 'packages/backend/pipeline-queue/src/__types__/index.ts'
+    acs:
+      - 'AC-2'
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/pipeline-queue'
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: 'Export ReviewPayloadSchema and QaPayloadSchema from pipeline-queue/src/index.ts'
+    goal: >
+      Add ReviewPayloadSchema, QaPayloadSchema, ReviewPayload (type), and QaPayload (type)
+      to the export list in packages/backend/pipeline-queue/src/index.ts.
+    files_to_read:
+      - 'packages/backend/pipeline-queue/src/index.ts'
+    files_to_modify:
+      - 'packages/backend/pipeline-queue/src/index.ts'
+    acs:
+      - 'AC-4'
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/pipeline-queue'
+    estimated_tokens: 2000
+
+  - id: ST-4
+    title: 'Remove unsafe type cast in dispatch-router.ts review branch'
+    goal: >
+      Replace `data.payload as StorySnapshotPayload & { worktreePath?: string; featureDir?: string }`
+      at dispatch-router.ts lines 228–235 with typed `data.payload` using the inferred
+      ReviewPayload type from @repo/pipeline-queue.
+    files_to_read:
+      - 'apps/api/pipeline/src/supervisor/dispatch-router.ts'
+    files_to_modify:
+      - 'apps/api/pipeline/src/supervisor/dispatch-router.ts'
+    acs:
+      - 'AC-3'
+    depends_on: ST-3
+    verification: "pnpm check-types --filter @repo/pipeline && grep -n 'as StorySnapshotPayload &' apps/api/pipeline/src/supervisor/dispatch-router.ts | wc -l | grep '^0$'"
+    estimated_tokens: 3000
+
+  - id: ST-5
+    title: 'Add new test cases to pipeline-job-schema.test.ts for review payload with optional fields'
+    goal: >
+      Add HP-1 through HP-3, EC-1, EC-2, and ED-1 test cases from the test plan.
+      Cover: valid review payload with worktreePath+featureDir, valid without optional fields,
+      valid QA payload, rejection of missing payload.storyId, rejection of non-string worktreePath.
+    files_to_read:
+      - 'packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts'
+    files_to_modify:
+      - 'packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts'
+    acs:
+      - 'AC-5'
+      - 'AC-6'
+      - 'AC-7'
+    depends_on: ST-1
+    verification: 'pnpm test --filter @repo/pipeline-queue'
+    estimated_tokens: 4000
+
+  - id: ST-6
+    title: 'Update pipeline-queue README.md to document ReviewPayloadSchema and QaPayloadSchema'
+    goal: >
+      Add a section documenting ReviewPayloadSchema (StorySnapshotPayload + optional worktreePath,
+      featureDir) and QaPayloadSchema to packages/backend/pipeline-queue/README.md.
+      Add a note on the required/optional mismatch between ReviewPayloadSchema.worktreePath
+      (optional in BullMQ payload) vs ReviewWorkerInput.worktreePath (required in orchestrator).
+      Record the AC-9 decision on SynthesizedStoryPayloadSchema/StoryRequestPayloadSchema.
+    files_to_read:
+      - 'packages/backend/pipeline-queue/README.md'
+    files_to_modify:
+      - 'packages/backend/pipeline-queue/README.md'
+    acs:
+      - 'AC-8'
+      - 'AC-9'
+    depends_on: ST-4
+    verification: "cat packages/backend/pipeline-queue/README.md | grep -c 'ReviewPayloadSchema' | grep -v '^0$'"
+    estimated_tokens: 3000

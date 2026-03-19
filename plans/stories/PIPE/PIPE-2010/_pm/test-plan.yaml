@@ -1,0 +1,170 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: 'PipelineJobDataSchema.parse() accepts review payload with worktreePath and featureDir'
+    setup: 'Import PipelineJobDataSchema from @repo/pipeline-queue'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2010',
+          title: 'My Story',
+          worktreePath: '/tmp/worktrees/PIPE-2010',
+          featureDir: 'plans/future/platform',
+        },
+      })
+    expected: "Parse succeeds; result.stage === 'review'; result.payload.worktreePath === '/tmp/worktrees/PIPE-2010'; result.payload.featureDir === 'plans/future/platform'"
+    evidence: 'Vitest assertion in pipeline-job-schema.test.ts'
+
+  - id: HP-2
+    title: 'PipelineJobDataSchema.parse() accepts review payload WITHOUT optional worktreePath/featureDir'
+    setup: 'Import PipelineJobDataSchema from @repo/pipeline-queue'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2010',
+          title: 'My Story',
+        },
+      })
+    expected: 'Parse succeeds; result.payload.worktreePath === undefined; result.payload.featureDir === undefined'
+    evidence: 'Vitest assertion in pipeline-job-schema.test.ts'
+
+  - id: HP-3
+    title: 'PipelineJobDataSchema.parse() accepts QA payload with standard StorySnapshotPayload'
+    setup: 'Import PipelineJobDataSchema from @repo/pipeline-queue'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'qa',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2010',
+          title: 'My Story',
+        },
+      })
+    expected: "Parse succeeds; result.stage === 'qa'; result.payload.storyId === 'PIPE-2010'"
+    evidence: 'Vitest assertion in pipeline-job-schema.test.ts'
+
+  - id: HP-4
+    title: 'ReviewPayloadSchema and QaPayloadSchema are exported from @repo/pipeline-queue'
+    setup: 'Import from packages/backend/pipeline-queue/src/index.ts'
+    action: "import { ReviewPayloadSchema, QaPayloadSchema } from '@repo/pipeline-queue'"
+    expected: 'Both schemas are importable without error'
+    evidence: 'TypeScript compilation passes (pnpm check-types)'
+
+  - id: HP-5
+    title: 'dispatch-router.ts review branch uses typed ReviewPayload without type cast'
+    setup: 'Read dispatch-router.ts review branch (lines ~228–235)'
+    action: 'Compile apps/api/pipeline with updated dispatch-router.ts'
+    expected: "No TypeScript errors; no 'as StorySnapshotPayload &' cast present"
+    evidence: 'pnpm check-types --filter @repo/pipeline passes; grep confirms no unsafe cast'
+
+error_cases:
+  - id: EC-1
+    title: 'PipelineJobDataSchema.parse() rejects review payload with missing required storyId'
+    setup: 'Import PipelineJobDataSchema'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          title: 'Missing storyId',
+        },
+      })
+    expected: "ZodError thrown; error path includes 'payload.storyId'"
+    evidence: 'Vitest toThrow() assertion in pipeline-job-schema.test.ts'
+
+  - id: EC-2
+    title: 'PipelineJobDataSchema.parse() rejects review payload with worktreePath as non-string'
+    setup: 'Import PipelineJobDataSchema'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2010',
+          title: 'My Story',
+          worktreePath: 123,
+        },
+      })
+    expected: "ZodError thrown; error path includes 'payload.worktreePath'"
+    evidence: 'Vitest toThrow() assertion'
+
+  - id: EC-3
+    title: 'createPipelineQueue().add() rejects an invalid review payload at enqueue time'
+    setup: 'Create a mock PipelineQueue with a spy on parse'
+    action: 'Call queue.add() with a review job missing payload.storyId'
+    expected: 'ZodError thrown before job is added to BullMQ'
+    evidence: 'Existing integration test pattern in pipeline-queue.integration.test.ts'
+
+edge_cases:
+  - id: ED-1
+    title: 'Review payload with only worktreePath (featureDir omitted) is valid'
+    setup: 'Import PipelineJobDataSchema'
+    action: |
+      PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2010',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: { storyId: 'PIPE-2010', title: 'T', worktreePath: '/tmp/wt' },
+      })
+    expected: 'Parse succeeds; featureDir === undefined'
+    evidence: 'Vitest assertion'
+
+  - id: ED-2
+    title: 'StorySnapshotPayloadSchema.passthrough() behavior preserved — extra fields flow through'
+    setup: 'Import StorySnapshotPayloadSchema'
+    action: |
+      StorySnapshotPayloadSchema.parse({
+        storyId: 'X', title: 'T', extraField: 'value',
+      })
+    expected: 'Parse succeeds; extraField is preserved in output'
+    evidence: 'Vitest assertion confirms passthrough() not accidentally removed'
+
+  - id: ED-3
+    title: 'All existing stage discriminants remain accepted after schema extension'
+    setup: 'Import PipelineJobDataSchema'
+    action: 'Parse payloads for each of the five stages: elaboration, story-creation, implementation, review, qa'
+    expected: 'All five parse successfully; no stage discriminant values changed'
+    evidence: 'Existing HP tests in pipeline-job-schema.test.ts remain passing (AC-7)'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "result.stage === 'review'"
+      - 'result.payload.worktreePath (optional string)'
+      - 'result.payload.featureDir (optional string)'
+      - 'ZodError on missing payload.storyId'
+      - 'pnpm check-types passes'
+      - 'pnpm test --filter @repo/pipeline-queue passes'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: 'minimalReviewPayload'
+    type: 'object'
+    description: "{ storyId: 'PIPE-2010', title: 'My Story' } — review payload without optional worktree fields"
+  - name: 'fullReviewPayload'
+    type: 'object'
+    description: "{ storyId: 'PIPE-2010', title: 'My Story', worktreePath: '/tmp/wt', featureDir: 'plans/future/platform' }"
+  - name: 'qaPayload'
+    type: 'object'
+    description: "{ storyId: 'PIPE-2010', title: 'My Story' } — QA payload (StorySnapshotPayload shape)"
+
+risks:
+  - 'ReviewWorkerInput from orchestrator types.ts requires worktreePath as z.string().min(1) (required), but BullMQ job payload stores it as optional — downstream caller must validate before passing to graph; document this in README'
+  - 'StorySnapshotPayloadSchema.passthrough() means extra unknown fields are NOT rejected at parse time — this is intentional (backward compat) but must not be changed accidentally'
+  - 'QaPayloadSchema: runQAVerify() only needs storyId and attempt — the existing StorySnapshotPayload is a superset; if QaPayloadSchema is defined as an alias for StorySnapshotPayload, this must be explicitly documented'

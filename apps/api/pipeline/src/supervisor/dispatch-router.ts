@@ -31,7 +31,6 @@ import type {
   ReviewGraphResult,
   QAVerifyResult,
 } from './graph-types.js'
-import type { StorySnapshotPayload } from './__types__/index.js'
 import type { PipelineJobData, PipelineSupervisorConfig } from './__types__/index.js'
 import { WallClockTimeoutError, withWallClockTimeout } from './wall-clock-timeout.js'
 import { createCircuitBreakers, type GraphCircuitBreakers } from './graph-circuit-breakers.js'
@@ -225,14 +224,11 @@ export async function dispatchJob(
         attempt: data.attemptNumber,
       })
     } else if (data.stage === 'review') {
-      const payload = data.payload as StorySnapshotPayload & {
-        worktreePath?: string
-        featureDir?: string
-      }
+      // PIPE-2010: data.payload is now typed as ReviewPayload — no cast needed
       graphPromise = graphRunners.runReview({
         storyId: data.storyId,
-        worktreePath: payload.worktreePath ?? '',
-        featureDir: payload.featureDir ?? 'plans/future/platform',
+        worktreePath: data.payload.worktreePath ?? '',
+        featureDir: data.payload.featureDir ?? 'plans/future/platform',
         attempt: data.attemptNumber,
       })
     } else {

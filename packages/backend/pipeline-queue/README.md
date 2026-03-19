@@ -68,7 +68,7 @@ const job: ElaborationJobData = {
 }
 ```
 
-#### Implementation / Review / QA jobs
+#### Implementation jobs
 
 `payload` is `StorySnapshotPayloadSchema` — a structured story snapshot:
 
@@ -90,6 +90,66 @@ const job: ImplementationJobData = {
   touchedPathPrefixes: ['packages/backend/pipeline-queue'],
 }
 ```
+
+#### Review jobs
+
+`payload` is `ReviewPayloadSchema` — extends `StorySnapshotPayloadSchema` with optional worktree context:
+
+| Field          | Type                       | Description                                          |
+| -------------- | -------------------------- | ---------------------------------------------------- |
+| `storyId`      | `string` (min 1)           | Required. Story identifier                           |
+| `title`        | `string` (min 1)           | Required. Story title                                |
+| `description`  | `string` (default '')      | Optional. Story description                          |
+| `feature`      | `string` (default '')      | Optional. Feature prefix                             |
+| `state`        | `string` (default 'ready') | Optional. Story state                                |
+| `worktreePath` | `string` (optional)        | Optional. Absolute path to worktree for review graph |
+| `featureDir`   | `string` (optional)        | Optional. Feature directory path for review graph    |
+
+```typescript
+import type { ReviewJobData } from '@repo/pipeline-queue'
+
+const job: ReviewJobData = {
+  storyId: 'PIPE-2020',
+  stage: 'review',
+  attemptNumber: 1,
+  payload: {
+    storyId: 'PIPE-2020',
+    title: 'Dispatch Router',
+    worktreePath: '/tmp/worktrees/PIPE-2020',
+    featureDir: 'plans/future/platform/pipeline-orchestrator-activation',
+  },
+}
+```
+
+`worktreePath` and `featureDir` are required by the review graph worker (`ReviewWorkerInputSchema`)
+but optional at the BullMQ boundary because the scheduler may enqueue before a worktree is allocated.
+The dispatch router defaults to `''` / `'plans/future/platform'` if absent.
+
+#### QA jobs
+
+`payload` is `QaPayloadSchema` — identical to `StorySnapshotPayloadSchema`. `RunQAVerifyFn` only
+needs `storyId` + `attempt` from job-level fields; the payload carries story context for
+logging/reporting.
+
+```typescript
+import type { QaJobData } from '@repo/pipeline-queue'
+
+const job: QaJobData = {
+  storyId: 'PIPE-2030',
+  stage: 'qa',
+  attemptNumber: 1,
+  payload: {
+    storyId: 'PIPE-2030',
+    title: 'Completion Callbacks',
+  },
+}
+```
+
+**Decision (PIPE-2010 AC-9):** `SynthesizedStoryPayloadSchema` and `StoryRequestPayloadSchema` in
+`apps/api/pipeline/src/supervisor/__types__/index.ts` are **retained as local documentation**. They
+document the expected shapes for `elaboration` and `story-creation` payloads respectively. They are
+NOT moved to `@repo/pipeline-queue` because those stages intentionally use `z.record(z.unknown())`
+in the canonical schema until ORCH stories formalize the graph input contracts.
 
 Zod validation is applied at **enqueue time** inside `createPipelineQueue().add()`. Invalid
 payloads throw a `ZodError` before the job reaches Redis — the queue never stores malformed data.

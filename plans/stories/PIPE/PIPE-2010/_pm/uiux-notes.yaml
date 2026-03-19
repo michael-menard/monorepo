@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  This is a backend shared-package schema story with no UI surface.
+  All changes are confined to packages/backend/pipeline-queue (Zod schema definitions)
+  and apps/api/pipeline/src/supervisor/dispatch-router.ts (type cast removal).
+  No frontend components, pages, or user-visible features are affected.
