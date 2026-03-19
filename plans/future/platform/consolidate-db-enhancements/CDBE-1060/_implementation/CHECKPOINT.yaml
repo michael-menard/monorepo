@@ -1,0 +1,12 @@
+story_id: CDBE-1060
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+blocked: false
+updated: '2026-03-18'
+notes: >
+  Execution complete. Two SQL files created:
+  1. apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+  2. apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql
+  All 14 ACs addressed. 28 pgtap tests written.
+  E2E exempt (pure database migration). Build exempt (SQL only).

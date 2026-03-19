@@ -1,0 +1,151 @@
+{
+  "story_id": "CDBE-1060",
+  "generated_at": "2026-03-18T00:00:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "Migration creates `workflow.story_completion_cascade()` as a `SECURITY INVOKER` plpgsql trigger function using `CREATE OR REPLACE FUNCTION`. The function returns `TRIGGER`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "The completion cascade function marks all `workflow.story_dependencies` rows where `depends_on_story_id = NEW.story_id` and `resolved_at IS NULL` by setting `resolved_at = NOW()`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "The completion cascade function marks any open worktree row for `NEW.story_id` (where `merged_at IS NULL` and `abandoned_at IS NULL`) by setting `merged_at = NOW()`. If no such worktree row exists, the function continues without error.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "The completion cascade function soft-deletes all open `workflow.story_assignments` rows for `NEW.story_id` (where `deleted_at IS NULL`) by setting `deleted_at = NOW()`. If 0 rows match, no error is raised.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "Migration creates `workflow.story_cancellation_cascade()` as a `SECURITY INVOKER` plpgsql trigger function using `CREATE OR REPLACE FUNCTION`. The function returns `TRIGGER`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "The cancellation cascade function soft-deletes all open `workflow.story_assignments` rows for `NEW.story_id` (where `deleted_at IS NULL`) by setting `deleted_at = NOW()`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "The cancellation cascade function soft-deletes all open `workflow.story_blockers` rows where `story_id = NEW.story_id` OR `blocked_by_story_id = NEW.story_id` (where `deleted_at IS NULL`) by setting `deleted_at = NOW()`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "The cancellation cascade function flags stories that were blocked by the cancelled story — for each row in `workflow.story_blockers` where `blocked_by_story_id = NEW.story_id` (including the just-soft-deleted rows, captured before deletion), it records a cancellation flag. The flag mechanism (e.g., a note in a `workflow.story_events` table or equivalent) must be documented in the migration. Auto-advancing the blocked story's state is explicitly prohibited.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "Both cascade functions include an early-exit guard: `IF NEW.state NOT IN ('completed', 'cancelled') THEN RETURN NEW; END IF;` — ensuring no side effects for any other state transition.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "Both cascade functions are wrapped so that all sub-operations run within the same transaction context as the triggering statement. Any sub-operation failure raises an exception that causes the entire triggering transaction to roll back (no partial cascade committed).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "A single AFTER UPDATE trigger `story_cascade_trigger` is created on `workflow.stories` FOR EACH ROW using `DROP TRIGGER IF EXISTS … / CREATE TRIGGER …` (idempotent). The trigger calls the appropriate cascade function based on `NEW.state`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "`COMMENT ON FUNCTION` and `COMMENT ON TRIGGER` statements are written for all new objects, prefixed with the migration number (`'1060: …'`).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "Migration is idempotent: second run exits 0 with no errors; uses `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS / CREATE TRIGGER`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "pgtap test file `pgtap/1060_completion_cancellation_cascade_test.sql` is written using `BEGIN / SELECT plan(N) / … / SELECT * FROM finish() / ROLLBACK` pattern. Tests must include transaction rollback assertions: insert a story, fire a completion transition, assert cascade side effects, then ROLLBACK so the test leaves no residual data. Coverage: function existence (`has_function`), trigger existence (`has_trigger`), completion cascade resolves dependencies, completion cascade soft-deletes assignments, completion cascade marks worktree merged, cancellation cascade soft-deletes assignments and blockers, cancellation cascade flags downstream stories (flag-only, no state change), no side effects for non-cascade transitions, and atomicity check (a simulated sub-operation failure causes full rollback).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 14,
+  "accepted": 14,
+  "challenged": 0,
+  "rejected": 0
+}

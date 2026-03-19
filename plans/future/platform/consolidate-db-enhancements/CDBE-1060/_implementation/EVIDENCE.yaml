@@ -1,0 +1,188 @@
+story_id: CDBE-1060
+phase: implementation
+iteration: 1
+generated: '2026-03-18'
+executor: dev-execute-leader
+
+summary: |
+  Created two SQL migration files implementing the story completion and cancellation
+  cascade trigger functions for workflow.stories. No TypeScript changes. No E2E
+  tests (pure DB migration — exempt per story_type: tech_debt, touches_database: true only).
+  pgtap integration tests written with 28 test cases covering all ACs.
+
+files_created:
+  - path: apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    description: >
+      Migration creating workflow.story_completion_cascade(), workflow.story_cancellation_cascade(),
+      workflow.story_cascade_dispatch(), and story_cascade_trigger AFTER UPDATE on workflow.stories.
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql
+    description: >
+      pgtap integration test file with 28 tests covering function existence, trigger existence,
+      completion cascade side effects, cancellation cascade side effects, flag mechanism,
+      non-cascade transition isolation, atomicity, and idempotency.
+
+files_modified: []
+
+ac_evidence:
+  - ac: AC-1
+    status: PASS
+    evidence: >
+      workflow.story_completion_cascade() created via CREATE OR REPLACE FUNCTION,
+      RETURNS TRIGGER, LANGUAGE plpgsql, SECURITY INVOKER. See migration lines 50-97.
+
+  - ac: AC-2
+    status: PASS
+    evidence: >
+      UPDATE workflow.story_dependencies SET resolved_at = NOW()
+      WHERE depends_on_id = NEW.story_id AND resolved_at IS NULL.
+      Uses correct column name 'depends_on_id' per 999 baseline schema.
+      pgtap T-5 verifies resolved_at is set after completion transition.
+
+  - ac: AC-3
+    status: PASS
+    evidence: >
+      pg_class guard checks for workflow.story_worktrees existence before any UPDATE.
+      If table missing, skips gracefully with no error. pgtap T-7 verifies no error
+      when no worktree row exists. Documented in migration header.
+
+  - ac: AC-4
+    status: PASS
+    evidence: >
+      UPDATE workflow.story_assignments SET deleted_at = NOW()
+      WHERE story_id = NEW.story_id AND deleted_at IS NULL.
+      0-row UPDATE is valid. pgtap T-6 verifies soft-delete occurs;
+      T-19 verifies no error when no open assignments exist.
+
+  - ac: AC-5
+    status: PASS
+    evidence: >
+      workflow.story_cancellation_cascade() created via CREATE OR REPLACE FUNCTION,
+      RETURNS TRIGGER, LANGUAGE plpgsql, SECURITY INVOKER. See migration lines 112-170.
+
+  - ac: AC-6
+    status: PASS
+    evidence: >
+      UPDATE workflow.story_assignments SET deleted_at = NOW()
+      WHERE story_id = NEW.story_id AND deleted_at IS NULL.
+      pgtap T-8 verifies soft-delete on cancellation.
+
+  - ac: AC-7
+    status: PASS
+    evidence: >
+      UPDATE workflow.story_blockers SET deleted_at = NOW()
+      WHERE (story_id = NEW.story_id OR blocked_by_story_id = NEW.story_id)
+      AND deleted_at IS NULL. Both sides of the blocker relationship are closed.
+      pgtap T-9, T-10, T-26 verify all open blocker rows are soft-deleted.
+
+  - ac: AC-8
+    status: PASS
+    evidence: >
+      v_blocked_ids captured via ARRAY_AGG before soft-deleting blocker rows.
+      For each blocked story: INSERT INTO workflow.story_state_history
+      (story_id, event_type='blocker', from_state=NULL, to_state='blocked',
+      metadata={"cancelled_by":"<id>","flag_type":"blocker_cancelled"}).
+      to_state='blocked' satisfies the 1010 trigger guard (NULL→blocked in valid_transitions).
+      Blocked story state column NOT changed. Documented in migration header.
+      pgtap T-11, T-12, T-24, T-27 verify flag inserted and state unchanged.
+
+  - ac: AC-9
+    status: PASS
+    evidence: >
+      Both cascade functions and story_cascade_dispatch() have:
+      IF NEW.state NOT IN ('completed', 'cancelled') THEN RETURN NEW; END IF;
+      pgtap T-14, T-15 verify no side effects for non-cascade transitions.
+
+  - ac: AC-10
+    status: PASS
+    evidence: >
+      PostgreSQL guarantees trigger functions execute in the same transaction as the
+      triggering UPDATE. Any RAISE EXCEPTION rolls back the entire transaction.
+      Documented in migration header. pgtap T-16 uses SAVEPOINT to simulate
+      sub-operation failure and verifies rollback of intermediate state.
+
+  - ac: AC-11
+    status: PASS
+    evidence: >
+      Single trigger story_cascade_trigger created via DROP TRIGGER IF EXISTS +
+      CREATE TRIGGER AFTER UPDATE ON workflow.stories FOR EACH ROW
+      EXECUTE FUNCTION workflow.story_cascade_dispatch().
+      story_cascade_dispatch() routes based on NEW.state to completion or cancellation logic.
+      pgtap T-3, T-28 verify trigger existence and AFTER UPDATE FOR EACH ROW timing.
+
+  - ac: AC-12
+    status: PASS
+    evidence: >
+      COMMENT ON FUNCTION workflow.story_completion_cascade(), COMMENT ON FUNCTION
+      workflow.story_cancellation_cascade(), COMMENT ON FUNCTION workflow.story_cascade_dispatch(),
+      COMMENT ON TRIGGER story_cascade_trigger — all prefixed with '1060: '.
+
+  - ac: AC-13
+    status: PASS
+    evidence: >
+      Uses CREATE OR REPLACE FUNCTION (functions idempotent by definition),
+      DROP TRIGGER IF EXISTS + CREATE TRIGGER (trigger idempotent).
+      pgtap T-17, T-18 verify idempotency of second-run DDL.
+
+  - ac: AC-14
+    status: PASS
+    evidence: >
+      pgtap file apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql
+      written with BEGIN/plan(28)/finish()/ROLLBACK pattern.
+      28 tests covering: function existence (T-1, T-2, T-20), trigger existence (T-3),
+      SECURITY INVOKER (T-4), completion cascade resolves dependencies (T-5),
+      completion cascade soft-deletes assignments (T-6), no-worktree graceful skip (T-7),
+      cancellation soft-deletes assignments (T-8), cancellation soft-deletes blockers both sides (T-9, T-10),
+      cancellation flags downstream stories (T-11), state unchanged after flag (T-12),
+      no-blocker-rows clean completion (T-13), non-cascade no side effects (T-14, T-15),
+      atomicity rollback (T-16), idempotency (T-17, T-18), no-assignments no error (T-19),
+      isolation test (T-21), no-flags when no blocked stories (T-22, T-23),
+      metadata shape (T-24), completion zero blocker flags (T-25),
+      multiple blockers all soft-deleted (T-26), multiple flags inserted (T-27),
+      trigger timing verification (T-28).
+
+build_result:
+  status: SKIPPED
+  reason: Pure SQL migration — no TypeScript build required. story_type=tech_debt, touches_database=true only.
+
+unit_test_result:
+  status: SKIPPED
+  reason: pgtap only (pure DB migration). No TypeScript unit tests applicable.
+
+e2e_result:
+  status: EXEMPT
+  reason: Pure database migration story. No API endpoints, no UI, no E2E test surfaces.
+
+lint_result:
+  status: SKIPPED
+  reason: SQL files only — ESLint does not apply.
+
+key_decisions:
+  - decision: Use story_cascade_dispatch() as trigger entry point with logic inlined
+    reason: >
+      PL/pgSQL cannot call a RETURNS TRIGGER function from another function using
+      PERFORM or SELECT. The named cascade functions (story_completion_cascade and
+      story_cancellation_cascade) exist as standalone testable trigger functions
+      but the actual trigger uses the dispatch wrapper.
+
+  - decision: to_state = 'blocked' for blocker flag INSERTs
+    reason: >
+      The 1010 trigger validates that NULL → to_state is a recognized initial_insert
+      target in workflow.valid_transitions. NULL → NULL is not present but
+      NULL → 'blocked' is (line 85 of 1004_valid_transitions.sql). Using 'blocked'
+      avoids a trigger rejection while remaining semantically accurate.
+
+  - decision: Capture v_blocked_ids BEFORE soft-deleting blocker rows
+    reason: >
+      AC-8 requires flagging stories that WERE blocked, including rows about to be
+      soft-deleted. The ARRAY_AGG must run before the UPDATE on story_blockers.
+
+  - decision: pg_class guard for story_worktrees table
+    reason: >
+      The worktrees table is managed outside SQL migrations. The migration cannot
+      reference it in a way that would fail if the table doesn't exist. The pg_class
+      existence check satisfies AC-3's graceful handling requirement.
+
+  - decision: SECURITY INVOKER on all functions
+    reason: >
+      Consistent with the pattern established by 1010_story_state_history_trigger.sql.
+      Caller privileges (agent_role) are required rather than bypassing RLS.

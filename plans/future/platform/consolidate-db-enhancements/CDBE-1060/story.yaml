@@ -1,0 +1,21 @@
+id: 'CDBE-1060'
+title: 'Story Completion and Cancellation Cascade Trigger Functions'
+status: in_progress
+priority: high
+points: 5
+story_type: tech_debt
+phase: setup
+split_from: 'CDBE-1020'
+split_part: '2 of 2'
+feature: |
+  Implement story_completion_cascade() and story_cancellation_cascade() trigger functions with a single AFTER UPDATE trigger on workflow.stories. Full pgtap integration test suite with transaction rollback assertions. Explicit non-goal: flag-only on cancellation, no auto-advance.
+goal: |
+  Automate all downstream side effects of story completion and cancellation with guaranteed transactional atomicity.
+depends_on: [CDBE-1010, CDBE-1050]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  High complexity — touches story_dependencies, worktrees, assignments, and blockers in a single trigger context. Cascade must be atomic; partial cascade failure must roll back all side effects. Worktree table name must be verified at implementation time. Flag mechanism for downstream stories must be chosen and documented.
+sizing_warning: false
+created: '2026-03-18'
+setup_completed: '2026-03-18'
