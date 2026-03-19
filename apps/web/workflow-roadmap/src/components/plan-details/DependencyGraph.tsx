@@ -4,6 +4,28 @@ import { Copy, CheckCheck } from 'lucide-react'
 import { getStoryStateColor, getPriorityColor } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
 
+const STATE_BADGE: Record<string, string> = {
+  backlog: 'bg-slate-700/40 border-slate-600/40 text-slate-300',
+  created: 'bg-slate-600/30 border-slate-500/40 text-slate-300',
+  elab: 'bg-purple-500/20 border-purple-500/30 text-purple-300',
+  ready: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
+  ready_to_work: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
+  in_progress: 'bg-blue-500/20 border-blue-500/30 text-blue-300',
+  needs_code_review: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300',
+  ready_for_review: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300',
+  in_review: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300',
+  ready_for_qa: 'bg-amber-500/20 border-amber-500/30 text-amber-300',
+  in_qa: 'bg-amber-500/20 border-amber-500/30 text-amber-300',
+  uat: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
+  completed: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
+  cancelled: 'bg-red-500/20 border-red-500/30 text-red-300',
+  blocked: 'bg-red-500/20 border-red-500/30 text-red-300',
+  failed_qa: 'bg-red-500/20 border-red-500/30 text-red-300',
+  failed_code_review: 'bg-red-500/20 border-red-500/30 text-red-300',
+  deferred: 'bg-slate-600/30 border-slate-500/40 text-slate-300',
+}
+const DEFAULT_BADGE = 'bg-slate-700/40 border-slate-600/40 text-slate-300'
+
 export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -162,7 +184,7 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                     key={story.storyId}
                     to="/story/$storyId"
                     params={{ storyId: story.storyId }}
-                    className={`relative rounded-md ${story.isExternal ? 'border-dashed' : ''} border px-3 py-2 min-w-[200px] max-w-[280px] cursor-pointer transition-colors hover:bg-slate-800/40 no-underline ${done ? `opacity-50 ${cardBorder}` : cardBorder} bg-slate-900/60`}
+                    className={`relative flex flex-col rounded-md ${story.isExternal ? 'border-dashed' : ''} border px-3 py-3 min-w-[200px] max-w-[280px] min-h-[120px] cursor-pointer transition-colors hover:bg-slate-800/40 no-underline ${done ? `opacity-50 ${cardBorder}` : cardBorder} bg-slate-900/60`}
                   >
                     {/* State indicator bar */}
                     <div
@@ -200,14 +222,16 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                     </div>
 
                     {/* Title */}
-                    <div className="pl-2 mt-0.5 text-[11px] text-slate-400 leading-tight">
-                      {trunc(story.title, 40)}
+                    <div className="pl-2 mt-1 text-[11px] text-slate-400 leading-snug line-clamp-4">
+                      {story.title ?? '—'}
                     </div>
 
-                    {/* State */}
-                    <div className="pl-2 mt-1.5 flex items-center justify-between">
-                      <span className="text-[9px] font-mono text-slate-600">
-                        {story.state ?? 'backlog'}
+                    {/* State + blockers */}
+                    <div className="mt-auto pt-2 flex items-end justify-between">
+                      <span
+                        className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-semibold font-mono ${STATE_BADGE[story.state ?? 'backlog'] ?? DEFAULT_BADGE}`}
+                      >
+                        {(story.state ?? 'backlog').replace(/_/g, ' ')}
                       </span>
                       <div className="flex items-center gap-1.5">
                         {inPlanBlockers.length > 0 && (
