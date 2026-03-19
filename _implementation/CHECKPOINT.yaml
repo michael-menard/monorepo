@@ -1,18 +1,13 @@
 schema: 1
-story_id: CDBE-3020
-timestamp: '2026-03-19T20:30:00Z'
-current_phase: execute
-last_successful_phase: plan
-iteration: 1
+story_id: PIPE-4010
+forced: false
 blocked: false
-
-phases_completed:
-  - setup
-  - plan
-  - execute
-
-notes:
-  - Pure SQL story — 2 files created (migration + pgtap test)
-  - Migration 1081_cdbe3020_roadmap_matview.sql applied and idempotency confirmed
-  - pgtap tests 12/12 passing
-  - E2E gate exempt (story_type db, no TypeScript/frontend changes)
+gen_mode: false
+iteration: 0
+timestamp: '2026-03-19T12:00:00Z'
+current_phase: plan
+last_successful_phase: setup
+max_iterations: 3
+warnings:
+  - PIPE-3010 must be in completed state before supervised run begins — execute node is still a stub per AC-3
+plan_artifact_id: bd42e7e0-6af4-4e5d-b739-2a7691d80bdf

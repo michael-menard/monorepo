@@ -1,200 +1,150 @@
 schema: 1
-story_id: CDBE-3020
-timestamp: '2026-03-19T19:00:00Z'
+story_id: PIPE-4010
+timestamp: '2026-03-19T12:00:00Z'
 steps:
   - id: 1
     description: >-
-      Write migration SQL: workflow.roadmap materialized view DDL, unique index, refresh trigger function +
-      STATEMENT-level triggers, GRANT statements, COMMENT ON documentation, initial REFRESH call
+      Export runReview from orchestrator graphs/index.ts — the graph-loader.ts dynamically loads dist/graphs/index.js
+      and expects runReview to be exported. It currently is not, so the review dispatch path will fail with undefined at
+      runtime.
     files:
-      - apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-    files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/999_add_plan_churn_tracking.sql
-      - apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
-      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
-      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
-      - apps/api/knowledge-base/src/db/migrations/1090_cdbe3030_token_dashboard_matview.sql
+      - packages/backend/orchestrator/src/graphs/index.ts
     dependencies: []
-    slice: db
-    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-    acs_covered:
-      - AC-1
-      - AC-2
-      - AC-3
-      - AC-4
-      - AC-5
-      - AC-6
-      - AC-7
-      - AC-8
-      - AC-9
-      - AC-10
-      - AC-11
-      - AC-13
-      - AC-14
+    slice: packages
   - id: 2
     description: >-
-      Write pgtap test file: matview existence, column set, story count accuracy, next_unblocked_story_id correctness,
-      estimated_completion_pct, unique index, trigger function existence, REFRESH lives_ok outside transaction wrapper
+      Create pre-flight verification script at apps/api/pipeline/scripts/preflight-check.ts. Checks: (a) KB deps
+      satisfied — all 4 dependency stories in completed state, (b) Redis connectivity, (c) Aurora/KB DB connectivity,
+      (d) orchestrator graphs module resolves runDevImplement/runReview/runQAVerify at the dynamic dist path, (e)
+      selected test story is in ready state with valid elaboration artifact. Exits non-zero with actionable messages on
+      any failure.
     files:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
-    files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe3030_token_dashboard_matview_test.sql
+      - apps/api/pipeline/scripts/preflight-check.ts
     dependencies:
       - 1
-    slice: db
-    verification: >-
-      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql |
-      pg_prove
-    acs_covered:
-      - AC-12
+    slice: backend
+  - id: 3
+    description: >-
+      Extend OPS-RUNBOOK.md with a 'First Supervised Run' section covering AC-10: (a) startup sequence with exact
+      commands, (b) monitoring dashboard — CLI commands and log events to watch, (c) kill switch — exact emergency stop
+      sequence, (d) rollback — how to reset a story back to ready state, (e) proof artifact verification — how to
+      confirm dev stage produced real (non-stub) code. Keep as a markdown append to the existing file.
+    files:
+      - apps/api/pipeline/OPS-RUNBOOK.md
+    dependencies:
+      - 2
+    slice: backend
+  - id: 4
+    description: >-
+      Write an integration test that validates the end-to-end graph-loader contract: (a) loadGraphRunners() resolves to
+      an object with all 5 required functions (runElaboration, runStoryCreation, runDevImplement, runReview,
+      runQAVerify), (b) each runner is callable (typeof === function), (c) runReview is present after Step 1 fix. This
+      test serves as AC-3 observability evidence — a test that would have caught the missing runReview export.
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/graph-loader-contract.test.ts
+    dependencies:
+      - 1
+    slice: backend
 files_to_change:
-  - path: apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+  - path: packages/backend/orchestrator/src/graphs/index.ts
+    action: modify
+    reason: >-
+      Add runReview export so graph-loader.ts can load it from dist/graphs/index.js at runtime. Currently missing — will
+      cause undefined runner for review stage dispatch.
+  - path: apps/api/pipeline/scripts/preflight-check.ts
     action: create
     reason: >-
-      New migration implementing workflow.roadmap materialized view with 10 columns (plan_slug, total_stories,
-      completed_stories, active_stories, blocked_stories, last_story_activity_at, churn_depth, has_regression,
-      estimated_completion_pct, next_unblocked_story_id), unique index on plan_slug, refresh trigger function with
-      pg_trigger_depth guard, STATEMENT-level triggers on workflow.plan_story_links and workflow.stories, GRANT to
-      agent/lambda/reporting roles, COMMENT ON all objects, and initial REFRESH
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
+      AC-1 and AC-9: Pre-flight verification script that validates all integration points before supervised run. Checks
+      KB deps, Redis, Aurora, graph-loader, and test story selection.
+  - path: apps/api/pipeline/OPS-RUNBOOK.md
+    action: modify
+    reason: >-
+      AC-10: Add First Supervised Run section with startup sequence, monitoring dashboard, kill switch, rollback, and
+      proof artifact verification steps.
+  - path: apps/api/pipeline/src/supervisor/__tests__/graph-loader-contract.test.ts
     action: create
     reason: >-
-      pgTAP test suite covering all 7 happy-path and 3 error-case assertions: matview existence, column set correctness,
-      story count aggregation accuracy, next_unblocked_story_id selection, estimated_completion_pct calculation, unique
-      index, trigger function existence, and idempotency
+      Integration contract test that validates graph-loader exports all 5 required runners including runReview. Prevents
+      regression of the missing-export bug.
 commands_to_run:
-  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-    when: after migration is written
+  - command: pnpm build --filter @repo/orchestrator
+    when: after modifying packages/backend/orchestrator/src/graphs/index.ts
     required: true
-  - command: >-
-      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql |
-      pg_prove
-    when: after test file is written
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after modifying packages/backend/orchestrator/src/graphs/index.ts
     required: true
-  - command: >-
-      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql && psql
-      $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-    when: idempotency check — run migration twice to verify second run exits 0
+  - command: pnpm test --filter @repo/pipeline
+    when: after all code changes
+    required: true
+  - command: pnpm check-types --filter @repo/pipeline
+    when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
-    planned_evidence: >-
-      Migration file contains DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap followed by CREATE MATERIALIZED VIEW
-      workflow.roadmap AS ...; migration runs without error
+    planned_evidence: preflight-check.ts script — checks all 4 dependency stories are in completed state in KB before reporting PASS
     evidence_type: command
   - ac_id: AC-2
     planned_evidence: >-
-      pgTAP HP-2: SELECT column_name FROM information_schema.columns WHERE table_schema='workflow' AND
-      table_name='roadmap' returns all 10 expected columns
-    evidence_type: test
+      Runtime observable via scheduler_dispatched log event. No code change required — scheduler already emits this
+      event in dispatchStory().
+    evidence_type: manual
   - ac_id: AC-3
     planned_evidence: >-
-      pgTAP HP-3: total_stories=3, completed_stories=1, active_stories=1, blocked_stories=1 for a test plan with known
-      fixture stories
+      graph-loader-contract.test.ts validates runDevImplement is loaded. Runtime evidence: proof artifact content
+      inspection post-run.
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      pgTAP HP-5: next_unblocked_story_id returns the story_id of the 'ready' test story (not completed/blocked/active);
-      state exclusion set matches planService.ts exactly
+      Runtime observable via review_artifact_written log event (no code change) + graph-loader-contract.test.ts
+      validates runReview is loaded after index.ts fix.
     evidence_type: test
   - ac_id: AC-5
-    planned_evidence: >-
-      pgTAP HP-4: estimated_completion_pct = 33.3 for 1 completed of 3 total; pgTAP EC-3: NULL returned when
-      total_stories = 0
-    evidence_type: test
+    planned_evidence: Runtime observable via qa_artifact_written log event. No code change required — QA dispatch already wired.
+    evidence_type: manual
   - ac_id: AC-6
-    planned_evidence: "pgTAP HP-6: has_index('workflow','roadmap','idx_roadmap_plan_slug',...) passes"
-    evidence_type: test
+    planned_evidence: >-
+      Runtime observable via KB state transition sequence. No code change required — supervisor's completed handler
+      advances states.
+    evidence_type: manual
   - ac_id: AC-7
     planned_evidence: >-
-      Migration file contains GRANT SELECT ON workflow.roadmap TO agent_role, lambda_role, reporting_role; role has
-      query access
-    evidence_type: file
+      Existing StoryTransitionService artifact gate enforces this. No code change required — gate already checks for
+      proof artifact before needs_code_review.
+    evidence_type: manual
   - ac_id: AC-8
     planned_evidence: >-
-      Migration file contains CREATE OR REPLACE FUNCTION workflow.refresh_roadmap_matview() with pg_trigger_depth() > 1
-      guard and REFRESH MATERIALIZED VIEW workflow.roadmap; pgTAP HP-7:
-      has_function('workflow','refresh_roadmap_matview') passes
-    evidence_type: test
+      Retrospective written post-run as KB completion_report artifact. No code change required — format defined in
+      elaboration KB entry.
+    evidence_type: manual
   - ac_id: AC-9
     planned_evidence: >-
-      Migration file contains DROP TRIGGER IF EXISTS + CREATE TRIGGER ... AFTER INSERT OR UPDATE OR DELETE ON
-      workflow.plan_story_links FOR EACH STATEMENT and same on workflow.stories
-    evidence_type: file
+      preflight-check.ts script — step (e) validates selected test story is in ready state with valid elaboration
+      artifact. Selection criteria documented in runbook.
+    evidence_type: command
   - ac_id: AC-10
     planned_evidence: >-
-      Migration file contains COMMENT ON MATERIALIZED VIEW workflow.roadmap IS '3020: ...' and COMMENT ON COLUMN
-      workflow.roadmap.<col> IS '3020: ...' for all 10 columns
+      OPS-RUNBOOK.md First Supervised Run section — covers startup sequence, monitoring, kill switch, rollback, and
+      stub-check procedure.
     evidence_type: file
-  - ac_id: AC-11
-    planned_evidence: >-
-      Migration file begins with DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION ... END IF
-      ... END $$; safety preamble before any DDL
-    evidence_type: file
-  - ac_id: AC-12
-    planned_evidence: >-
-      pgtap test file exists at pgtap/1081_cdbe3020_roadmap_matview_test.sql; covers HP-1 through HP-7 and EC-1 through
-      EC-3; REFRESH called outside BEGIN/ROLLBACK wrapper via lives_ok() or DO block
-    evidence_type: test
-  - ac_id: AC-13
-    planned_evidence: >-
-      Migration run twice consecutively exits 0 with no errors; second run finds DROP IF EXISTS idempotent, unique index
-      CREATE IF NOT EXISTS idempotent, trigger DROP+CREATE idempotent
-    evidence_type: command
-  - ac_id: AC-14
-    planned_evidence: Git diff contains only 2 new SQL files; no .ts, .tsx, .json, or other file types are modified
-    evidence_type: file
-architectural_decisions:
-  - id: ARCH-001
-    question: What type does next_unblocked_story_id use — TEXT (story_id only) or JSONB ({story_id, title} snapshot)?
-    decision: TEXT (story_id only) — column named next_unblocked_story_id
-    rationale: >-
-      JSONB snapshots go stale when story titles change. The matview refresh triggers on plan_story_links and stories
-      state changes, not on title changes. Service layer joins for title are cheap (index lookup). This was an
-      autonomous elaboration decision (decision-1) confirmed at elab iteration 1.
-    decided_by: elab-autonomous-decider (2026-03-19)
-    source: elaboration gap-101
-  - id: ARCH-002
-    question: REFRESH MATERIALIZED VIEW CONCURRENTLY or non-CONCURRENTLY in the trigger function?
-    decision: Non-CONCURRENTLY — REFRESH MATERIALIZED VIEW workflow.roadmap (no CONCURRENTLY keyword)
-    rationale: >-
-      REFRESH MATERIALIZED VIEW CONCURRENTLY cannot run inside a transaction context (which triggers always are).
-      Non-CONCURRENTLY acquires an exclusive lock but is MVP-acceptable. The unique index (AC-6) future-proofs a
-      CONCURRENTLY upgrade if called from a non-transaction context (e.g., pg_cron).
-    decided_by: elab-analyst (2026-03-19)
-    source: elaboration architecture_notes + gap-104
-  - id: ARCH-003
-    question: Should CREATE UNIQUE INDEX use CONCURRENTLY to avoid locking?
-    decision: No CONCURRENTLY — use CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_slug ON workflow.roadmap (plan_slug)
-    rationale: >-
-      CREATE INDEX CONCURRENTLY cannot run inside a transaction block. The matview is empty at index creation time (WITH
-      NO DATA or freshly dropped), so the non-concurrent form completes instantly with no blocking.
-    decided_by: elab-analyst (2026-03-19)
-    source: elaboration architecture_notes
+architectural_decisions: []
 complexity: moderate
 notes:
   - >-
-    Migration slot 1081 confirmed available — 1080 is plan_story_links_sort_order, 1090 is CDBE-3030
-    token_dashboard_matview
-  - CDBE-3010 dependency completed — workflow.stories_current view deployed in migration 1030
+    CRITICAL INTEGRATION GAP: runReview is exported from review.ts but NOT from graphs/index.ts. graph-loader.ts loads
+    dist/graphs/index.js dynamically — mod.runReview will be undefined at runtime. Step 1 fixes this before all other
+    steps.
   - >-
-    The matview must be created WITH NO DATA then immediately REFRESH-ed after the unique index is created; the unique
-    index must exist before the initial populate so CONCURRENTLY is possible in future
-  - Trigger function returns NULL (required for AFTER triggers that have no row-level semantics)
+    This is an integration/validation story. Most ACs are satisfied by runtime observation, not new code. The three
+    deliverables are: (1) the runReview export fix, (2) the preflight script, (3) the runbook extension.
   - >-
-    pg_trigger_depth() guard: check > 1 (not > 0) to allow the first trigger invocation to proceed — depth 1 is the
-    trigger itself, depth > 1 indicates recursion
+    The execute node in dev-implement.ts is still a stub (WINT-9070 reference). AC-3 requires real LLM invocation — this
+    is a known dependency on PIPE-3010 being completed before the supervised run begins. The preflight script checks for
+    PIPE-3010 completion.
   - >-
-    pgtap REFRESH constraint: REFRESH MATERIALIZED VIEW cannot run inside BEGIN/ROLLBACK. The test file must use a
-    pattern where REFRESH is called outside the transaction wrapper or uses a DO block before BEGIN
+    The graph-loader-contract test (Step 4) uses vi.mock to avoid loading the real LangGraph dist during CI. It
+    validates the module export shape, not actual LLM execution.
+  - No DB migrations are required for this story.
   - >-
-    The 999_add_plan_churn_tracking.sql story_counts CTE groups by plan_slug — the matview must JOIN
-    workflow.plan_story_links to workflow.stories by story_id, exactly matching this pattern
-  - >-
-    10 columns in the matview: plan_slug, total_stories, completed_stories, active_stories, blocked_stories,
-    last_story_activity_at, churn_depth, has_regression, estimated_completion_pct, next_unblocked_story_id
-  - >-
-    Trigger tables: workflow.plan_story_links (INSERT/UPDATE/DELETE) and workflow.stories (INSERT/UPDATE/DELETE), both
-    AFTER FOR EACH STATEMENT
-  - No TypeScript changes — pure SQL story per AC-14
+    dispatchQaStory F006 deviation (no KB state advance before QA enqueue) is known tech debt. Operator will see
+    duplicate rejection logs during QA polling. This is expected behavior — documented in OPS-RUNBOOK First Supervised
+    Run section.

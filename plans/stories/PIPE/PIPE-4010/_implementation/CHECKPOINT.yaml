@@ -1,0 +1,17 @@
+forced: false
+schema: 1
+blocked: false
+gen_mode: false
+story_id: PIPE-4010
+warnings:
+  - PIPE-3010 must be in completed state before supervised run begins — execute node is still a stub per AC-3
+  - >-
+    Story state gate requires proof artifact before needs_code_review — this is an integration/validation story,
+    evidence artifact serves as proof
+iteration: 0
+timestamp: '2026-03-19T02:57:00.000Z'
+current_phase: execute
+max_iterations: 3
+plan_artifact_id: bd42e7e0-6af4-4e5d-b739-2a7691d80bdf
+evidence_artifact_id: ca2e7c7e-4a8f-48ad-b261-4492a7ab635a
+last_successful_phase: plan
