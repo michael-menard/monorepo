@@ -282,18 +282,7 @@ export class EmbeddingWorker {
       return results
     }
 
-    // Build text representation for each row
-    const rowTexts = rows.map(row => {
-      return contentColumns
-        .map(col => {
-          const val = row[col]
-          if (val === null || val === undefined) return ''
-          if (typeof val === 'object') return JSON.stringify(val)
-          return String(val)
-        })
-        .filter(Boolean)
-        .join(' ')
-    })
+    const rowTexts = this._buildRowTexts(rows, contentColumns)
 
     // Generate embeddings in batch
     let embeddings: number[][]
@@ -463,18 +452,7 @@ export class EmbeddingWorker {
 
       if (rows.length === 0) break
 
-      // Build texts
-      const rowTexts = rows.map(row =>
-        contentColumns
-          .map(col => {
-            const val = row[col]
-            if (val === null || val === undefined) return ''
-            if (typeof val === 'object') return JSON.stringify(val)
-            return String(val)
-          })
-          .filter(Boolean)
-          .join(' '),
-      )
+      const rowTexts = this._buildRowTexts(rows, contentColumns)
 
       // Generate embeddings using the backfill client (rate-limited: maxConcurrentRequests=3)
       let embeddings: number[][]
@@ -520,6 +498,26 @@ export class EmbeddingWorker {
     }
 
     return { table, rowsProcessed: totalProcessed }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /** Build embeddable text for each row by concatenating content columns. */
+  private _buildRowTexts(
+    rows: Array<{ [col: string]: string }>,
+    contentColumns: string[],
+  ): string[] {
+    return rows.map(row =>
+      contentColumns
+        .map(col => {
+          const val = row[col]
+          if (val === null || val === undefined) return ''
+          if (typeof val === 'object') return JSON.stringify(val)
+          return String(val)
+        })
+        .filter(Boolean)
+        .join(' '),
+    )
   }
 
   // ── Graceful shutdown ───────────────────────────────────────────────────────
