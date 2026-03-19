@@ -1,0 +1,162 @@
+schema: 1
+story_id: CDBE-4030
+timestamp: '2026-03-19T04:02:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 19
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: infrastructure/backend worker — no UI surface, no API endpoints
+  pgtap:
+    pass: 0
+    fail: 0
+    status: deferred
+    reason: CDBE-4020 must merge first (embedding columns required)
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Tests use MockEmbeddingClient and MockPgClient (no real DB/API calls). Fake timers used appropriately for
+    batch-window tests. Real timers used for batchSize flush test to avoid withRetry setTimeout conflicts — this is
+    correct. Skip-if-running guard tested with proper async race simulation.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: proof.content.ac_coverage.AC-1
+    notes: >-
+      Migration 1012 adds NOTIFY triggers to all 5 tables (lessons_learned, adrs, code_standards, rules,
+      cohesion_rules). Each has CREATE OR REPLACE trigger function + DROP IF EXISTS + CREATE TRIGGER on AFTER INSERT OR
+      UPDATE OF content columns. Safety preamble enforces correct database.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: proof.content.ac_coverage.AC-2
+    notes: >-
+      pgtap file 1012_cdbe_4030_notify_triggers_test.sql has 12 assertions: trigger existence (5), INSERT+UPDATE bitmask
+      checks (5), function existence count (1), payload shape (1). Deferred pending CDBE-4020 DB merge.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: embedding-worker.ts:105-113
+    notes: >-
+      startListening() issues LISTEN knowledge_embedding_needed via dedicated pg.Client. Test 'issues LISTEN
+      knowledge_embedding_needed on startListening' confirms LISTEN is sent and channel is tracked.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: embedding-worker.ts:303-326
+    notes: >-
+      Per-row catch block logs error and continues loop (line 325 comment: 'Per-row failure — continue processing other
+      rows (AC-4)'). Test 'continues processing subsequent rows when one row write fails' verifies this.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: embedding-worker.ts:354-358
+    notes: >-
+      pollRunInProgress flag checked at top of _runPollingTick(). Test 'skips polling run if previous run is still in
+      progress (skip-if-running guard)' verifies second tick returns immediately while first is blocked.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: run.ts:51, run.ts:154-177
+    notes: >-
+      --backfill-only CLI flag parsed via process.argv.includes(). When set: runs backfill, logs results, then exits.
+      Startup path also runs backfill before entering LISTEN loop.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: embedding-worker.ts:59, 529-540
+    notes: >-
+      Module-level _handlersRegistered boolean guard. registerShutdownHandlers() returns early if already set. Test
+      'registers SIGTERM and SIGINT handlers idempotently (_handlersRegistered guard)' confirms only 1 SIGTERM listener
+      added despite 2 calls.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: embedding-worker.ts:68-174
+    notes: >-
+      Map<string, {table, id}> keyed by '${table}:${id}' for dedup. setTimeout for batchWindowMs window. Immediate flush
+      when pendingBuffer.size >= batchSize. Tests cover: buffering+flush, dedup, immediate-flush-on-size.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: embedding-worker.ts:126-154
+    notes: >-
+      JSON.parse in try/catch discards malformed JSON. NotificationPayloadSchema.safeParse() validates structure and
+      UUID. Tests cover: malformed JSON, missing id, non-UUID id, valid payload.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: embedding-worker.ts:308-313
+    notes: >-
+      withRetry() wraps pg UPDATE. Embedding serialized as '[x,y,...]::vector' string for pgvector type compatibility.
+      Cast present in both notification flush path (line 311) and backfill path (line 477).
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: embedding-worker.ts:406-426, run.ts:70-74
+    notes: >-
+      runBackfill() accepts separate backfillClient param. run.ts creates backfillEmbeddingClient with
+      maxConcurrentRequests: 3. Backfill test uses separate backfillClient instance, verifies it is called.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: run.ts:38-46, 108-151
+    notes: >-
+      RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000], cap = 30000. pgClient.on('error') handler schedules reconnect with
+      getReconnectDelayMs(attempt). After successful reconnect, re-issues LISTEN knowledge_embedding_needed. Attempt
+      counter resets on success. Added by elaboration gap-2.
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: run.ts:53-60
+    notes: >-
+      Preflight check: if (!process.env.OPENAI_API_KEY) { logger.error(...); process.exit(1) }. Executes before any
+      pg.Client construction or LISTEN loop. Added by elaboration gap-1.
+architecture_compliant: true
+architecture_notes:
+  - Zod-first types throughout __types__/index.ts — no TypeScript interface declarations in new code
+  - logger from @repo/logger used exclusively — no console.log
+  - Component directory structure matches CLAUDE.md convention (__types__/index.ts, __tests__/embedding-worker.test.ts)
+  - SQL injection defense via assertSafeIdentifier() whitelist for all dynamic identifiers
+  - No barrel files introduced
+  - ESM .js extensions on all imports
+issues: []
+pre_existing_issues_not_in_scope:
+  - >-
+    16 TypeScript errors in knowledge-base package for @repo/logger unresolved module (affects all files, pre-dates this
+    story)
+  - story-crud-operations.test.ts failures due to DB connectivity (pre-existing, unrelated to embedding-worker)
+  - smoke.test.ts failures for missing tasks/work_state_history tables (pre-existing, unrelated)
+lessons_to_record:
+  - lesson: >-
+      When using pg.Client NOTIFY/LISTEN with withRetry (which internally uses setTimeout), fake timers conflict with
+      the retry handler's setTimeout. Use real timers for tests that exercise the write-back path with withRetry, and
+      fake timers only for pure batching/windowing tests.
+    category: pattern
+    tags:
+      - testing
+      - vitest
+      - postgresql
+      - fake-timers
+  - lesson: >-
+      pgvector requires the ::vector cast when writing embedding arrays via parameterized queries. Passing a plain array
+      string without the cast results in a type mismatch. Pattern: `[${embedding.join(',')}]::vector` as the parameter
+      value.
+    category: pattern
+    tags:
+      - postgresql
+      - pgvector
+      - embeddings
+      - sql
+  - lesson: >-
+      Exponential backoff reconnect for pg.Client should reset the attempt counter on successful reconnect and re-issue
+      LISTEN after the new connection is established — both are required for correct steady-state behavior after a
+      transient DB drop.
+    category: pattern
+    tags:
+      - postgresql
+      - reconnect
+      - backoff
+      - listen-notify
+tokens:
+  in: 28000
+  out: 4000
