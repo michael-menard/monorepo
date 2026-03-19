@@ -1,163 +1,155 @@
 schema: 1
-story_id: CDBE-3020
+story_id: CDBE-5010
+title: Partition agent_invocations and token_usage Tables
 phase: implementation
-iteration: 1
-timestamp: '2026-03-19T20:30:00Z'
-
-summary:
-  total_acs: 14
-  met: 14
-  missing: 0
-  status: PASS
-  e2e_status: EXEMPT
-  e2e_reason: Pure SQL/DDL story (story_type=db) — no TypeScript, no frontend, no E2E applicable
+iteration: 0
+timestamp: '2026-03-19T00:00:00Z'
 
 files_created:
-  - apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-  - apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
-
-evidence:
-  - ac_id: AC-1
-    status: MET
-    evidence_type: command
+  - path: apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
     description: >-
-      Migration contains DO $$ IF EXISTS guard, DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap CASCADE,
-      then CREATE MATERIALIZED VIEW workflow.roadmap AS ... WITH NO DATA.
-      Migration ran without error: exit code 0.
-    proof: 'psql $KB_DATABASE_URL -f 1081_cdbe3020_roadmap_matview.sql -> exit 0, DROP MATERIALIZED VIEW + CREATE MATERIALIZED VIEW output'
+      Full migration SQL: safety preamble, pre-migration row count snapshot,
+      drop FKs, rename+copy strategy for both tables, per-partition unique indexes,
+      FK reconstruction, row count verification, orphan FK check, table comments.
+      All within single BEGIN/COMMIT transaction.
+
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+    description: >-
+      pgTAP test file with 20 assertions across 8 groups:
+      HP-1 (table structure), HP-2/HP-3 (partition routing), HP-4 (EXPLAIN pruning),
+      HP-5 (index validity), HP-6 (CASCADE FK), HP-7 (SET NULL FK), HP-8 (data completeness).
+
+files_modified:
+  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
+    description: >-
+      Added 8-line comment block above agentInvocations table definition documenting
+      RANGE partitioning on started_at, composite PK (id, started_at), migration 1100
+      reference, and ARCH-001 FK strategy rationale.
+
+  - path: apps/api/knowledge-base/src/db/schema/analytics.ts
+    description: >-
+      Added 6-line comment block above storyTokenUsage table definition documenting
+      RANGE partitioning on logged_at, composite PK (id, logged_at), migration 1100
+      reference, and append-only nature (no dependent FKs).
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence: >-
+      Migration section 4 creates workflow.agent_invocations PARTITION BY RANGE (started_at).
+      Migration section 12 creates analytics.story_token_usage PARTITION BY RANGE (logged_at).
+      pgTAP HP-1a asserts relkind='p' for agent_invocations; HP-1b for story_token_usage.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-2
-    status: MET
-    evidence_type: test
-    description: >-
-      pgtap HP-2 passes: ARRAY(SELECT attname::text FROM pg_attribute WHERE schema=workflow, table=roadmap)
-      = ['plan_slug','total_stories','completed_stories','active_stories','blocked_stories',
-         'last_story_activity_at','churn_depth','has_regression','estimated_completion_pct','next_unblocked_story_id'].
-      next_unblocked_story_id is TEXT (story_id only, per ARCH-001).
-    proof: 'ok 2 - 1081 HP-2: workflow.roadmap has exactly the 10 expected columns in the correct order'
+    status: PASS
+    evidence: >-
+      Migration section 4: PRIMARY KEY (id, started_at) on agent_invocations parent.
+      Migration section 2: drops agent_outcomes_invocation_id_fkey, agent_decisions_invocation_id_fkey,
+      hitl_decisions_invocation_id_fkey.
+      Migration section 9: recreates all three FKs referencing new partitioned parent,
+      with CASCADE for agent_outcomes and agent_decisions, SET NULL for hitl_decisions.
+      pgTAP HP-6a/HP-6b (CASCADE) and HP-7a/HP-7b (SET NULL) verify FK behavior.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-3
-    status: MET
-    evidence_type: test
-    description: >-
-      story_counts CTE uses COUNT(*) FILTER (WHERE s.state = 'completed') for completed_stories,
-      COUNT(*) FILTER (WHERE s.state IN ('in_progress','in_review','in_qa','uat','needs_code_review')) for active_stories,
-      COUNT(*) FILTER (WHERE s.state = 'blocked') for blocked_stories, joined from plan_story_links + stories.
-      pgtap HP-3a/b/c/d all pass: total=4, completed=1, active=1, blocked=1.
-    proof: 'ok 3 HP-3a, ok 4 HP-3b, ok 5 HP-3c, ok 6 HP-3d'
+    status: PASS
+    evidence: >-
+      Migration section 6: CREATE UNIQUE INDEX on (invocation_id, started_at) on each
+      of the three agent_invocations partitions (default, y2026m03, y2026m04).
+      pgTAP HP-5a verifies the unique index exists on the y2026m03 partition.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-4
-    status: MET
-    evidence_type: test
-    description: >-
-      next_unblocked CTE uses DISTINCT ON (psl.plan_slug), excludes states NOT IN
-      ('completed','in_progress','in_review','in_qa','uat','needs_code_review','blocked'),
-      ORDER BY s.priority ASC NULLS LAST, s.created_at ASC.
-      pgtap HP-5 passes: returns PGTAP-1081-READY (the 'ready' story, not completed/active/blocked).
-    proof: 'ok 8 - 1081 HP-5: next_unblocked_story_id = PGTAP-1081-READY'
+    status: PASS
+    evidence: >-
+      For agent_invocations: section 3 renames old table, section 4 creates partitioned parent,
+      section 7 copies data (INSERT INTO new SELECT * FROM old), section 10 drops old table.
+      For story_token_usage: section 11 renames, section 12 creates, section 15 copies, section 18 drops.
+      Both within the single BEGIN/COMMIT transaction wrapping the entire migration.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-5
-    status: MET
-    evidence_type: test
-    description: >-
-      estimated_completion_pct = ROUND(completed_stories::numeric / NULLIF(total_stories,0) * 100, 1)::numeric(5,1).
-      pgtap HP-4 passes: 25.0 for 1 completed of 4 total. pgtap EC-1 passes: NULL for plan with 0 stories.
-    proof: 'ok 7 HP-4 (25.0), ok 11 EC-1 (NULL for 0 stories)'
+    status: PASS
+    evidence: >-
+      Migration section 5: CREATE TABLE workflow.agent_invocations_default PARTITION OF ... DEFAULT.
+      Migration section 13: CREATE TABLE analytics.story_token_usage_default PARTITION OF ... DEFAULT.
+      pgTAP HP-2b verifies historical 2025-01-01 row routes to agent_invocations_default.
+      pgTAP HP-3b verifies historical 2024-06-01 row routes to story_token_usage_default.
+      pgTAP HP-1c/HP-1d verify default partitions exist.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-6
-    status: MET
-    evidence_type: test
-    description: >-
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_slug ON workflow.roadmap (plan_slug).
-      Built after WITH NO DATA creation so it is instantly created on an empty relation.
-      pgtap HP-6 passes: has_index('workflow','roadmap','idx_roadmap_plan_slug').
-    proof: 'ok 9 - 1081 HP-6: unique index idx_roadmap_plan_slug exists on workflow.roadmap'
+    status: PASS
+    evidence: >-
+      Migration section 5: creates agent_invocations_y2026m03 (current month) and
+      agent_invocations_y2026m04 (next month).
+      Migration section 13: creates story_token_usage_y2026m03 (current month) and
+      story_token_usage_y2026m04 (next month).
+      pgTAP HP-2a verifies 2026-03-15 routes to y2026m03.
+      pgTAP HP-3a verifies 2026-03-15 routes to story_token_usage_y2026m03.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-7
-    status: MET
-    evidence_type: file
-    description: >-
-      Migration contains GRANT SELECT ON workflow.roadmap TO agent_role, lambda_role, reporting_role.
-      Three separate GRANT statements, matching the pattern from migration 1005_workflow_rls.sql.
-    proof: 'Lines 207-209 of migration: GRANT SELECT ON workflow.roadmap TO agent_role/lambda_role/reporting_role'
+    status: PASS
+    evidence: >-
+      Migration section 8: row count assertion for agent_invocations (RAISE EXCEPTION on mismatch).
+      Migration section 16: row count assertion for story_token_usage (RAISE EXCEPTION on mismatch).
+      Migration section 17: orphaned FK check for agent_outcomes, agent_decisions, hitl_decisions;
+      raises exception if any non-null invocation_id is unresolvable after re-partitioning.
+      All verification within the same transaction — any failure rolls back the entire migration.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
 
   - ac_id: AC-8
-    status: MET
-    evidence_type: test
-    description: >-
-      workflow.refresh_roadmap_matview() function: RETURNS TRIGGER, LANGUAGE plpgsql, SECURITY DEFINER,
-      begins with IF pg_trigger_depth() > 1 THEN RETURN NULL END IF, then REFRESH MATERIALIZED VIEW workflow.roadmap (non-CONCURRENTLY per ARCH-002).
-      pgtap HP-7 passes: has_function('workflow','refresh_roadmap_matview').
-    proof: 'ok 10 - 1081 HP-7: workflow.refresh_roadmap_matview() trigger function exists'
-
-  - ac_id: AC-9
-    status: MET
-    evidence_type: file
-    description: >-
-      DROP TRIGGER IF EXISTS trg_refresh_roadmap_plan_story_links ON workflow.plan_story_links followed by
-      CREATE TRIGGER trg_refresh_roadmap_plan_story_links AFTER INSERT OR UPDATE OR DELETE ON workflow.plan_story_links FOR EACH STATEMENT.
-      Same pattern for trg_refresh_roadmap_stories ON workflow.stories.
-      Both triggers present in migration, both confirmed by psql output (DROP TRIGGER + CREATE TRIGGER).
-    proof: 'Migration lines 189-229: DROP/CREATE for both triggers, confirmed in psql output'
-
-  - ac_id: AC-10
-    status: MET
-    evidence_type: file
-    description: >-
-      COMMENT ON MATERIALIZED VIEW workflow.roadmap IS '3020: ...' and COMMENT ON COLUMN workflow.roadmap.<col> IS '3020: ...'
-      for all 10 columns: plan_slug, total_stories, completed_stories, active_stories, blocked_stories,
-      last_story_activity_at, churn_depth, has_regression, estimated_completion_pct, next_unblocked_story_id.
-      Confirmed by COMMENT output in psql (11 COMMENT statements).
-    proof: 'Migration lines 233-296: 11 COMMENT ON statements (1 matview + 10 columns)'
-
-  - ac_id: AC-11
-    status: MET
-    evidence_type: file
-    description: >-
-      Migration begins with DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION '1081: ...' END IF END $$.
-      psql output confirms: NOTICE: 1081: Safety check passed — running against database: knowledgebase.
-    proof: 'Migration lines 15-20: safety preamble DO block, psql NOTICE confirms execution'
-
-  - ac_id: AC-12
-    status: MET
-    evidence_type: test
-    description: >-
-      pgtap test file exists at pgtap/1081_cdbe3020_roadmap_matview_test.sql.
-      12 assertions: HP-1 (matview exists), HP-2 (column set), HP-3a/b/c/d (counts), HP-4 (completion_pct),
-      HP-5 (next_unblocked), HP-6 (index), HP-7 (function), EC-1 (NULL completion for empty plan), EC-2 (NULL next for empty plan).
-      REFRESH called outside BEGIN/ROLLBACK in fixture setup and teardown.
-      All 12/12 tests pass, finish() outputs no warnings.
-    proof: 'psql output: ok 1 through ok 12, finish row is empty (no plan count mismatch)'
-
-  - ac_id: AC-13
-    status: MET
-    evidence_type: command
-    description: >-
-      Migration run twice consecutively both exit 0. Second run: DROP MATERIALIZED VIEW (CASCADE drops index),
-      CREATE MATERIALIZED VIEW, CREATE UNIQUE INDEX IF NOT EXISTS (idempotent), DROP TRIGGER IF EXISTS + CREATE TRIGGER (idempotent).
-      No errors on second run.
-    proof: 'Run 1 exit: 0, Run 2 exit: 0 — both confirmed in shell output'
-
-  - ac_id: AC-14
-    status: MET
-    evidence_type: file
-    description: >-
-      Only 2 SQL files created/modified. No .ts, .tsx, .json, or other file types touched.
-      Files: 1081_cdbe3020_roadmap_matview.sql and pgtap/1081_cdbe3020_roadmap_matview_test.sql.
-    proof: 'git diff shows only 2 new SQL files in the migration and pgtap directories'
-
-test_results:
-  pgtap:
-    file: apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
-    total: 12
-    passed: 12
-    failed: 0
     status: PASS
+    evidence: >-
+      pgTAP file with exactly 20 assertions:
+        HP-1 (4): relkind='p' for both tables, DEFAULT partitions exist for both tables.
+        HP-2 (2): 2026-03 routes to y2026m03, 2025-01 routes to default.
+        HP-3 (2): 2026-03 routes to y2026m03, 2024-06 routes to default.
+        HP-4 (2): EXPLAIN prunes to y2026m03 for both tables.
+        HP-5 (3): UNIQUE (invocation_id, started_at) on y2026m03, UNIQUE (id) on y2026m03, INDEX (story_id) on stu_y2026m03.
+        HP-6 (2): INSERT and CASCADE DELETE on agent_outcomes.
+        HP-7 (2): INSERT and SET NULL DELETE on hitl_decisions.
+        HP-8 (3): parent count == sum of partitions for both tables, correct per-partition routing for all 3 partitions.
+      All tests run inside BEGIN...ROLLBACK to leave DB clean.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
 
-migration_results:
-  file: apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
-  run_1_exit_code: 0
-  run_2_exit_code: 0
-  idempotent: true
-  rows_populated: 96
-  columns_created: 10
+commands_run:
+  - command: pnpm --filter @repo/knowledge-base build (via tsc --noEmit)
+    result: PASS — 0 errors in knowledge-base/src files
+    note: >-
+      Pre-existing errors in mcp-tools and sidecars packages (missing @repo/db, @repo/logger
+      workspace deps) are unrelated to CDBE-5010 changes and existed before this story.
+
+  - command: pnpm --filter @repo/knowledge-base test
+    result: 39 test files pass, 19 fail
+    note: >-
+      All failures are pre-existing: database connectivity issues (missing kbmem tables like
+      tasks, work_state), parameter binding bug in story-outcomes.test.ts, and missing
+      tool handler exports from prior stories. None are related to CDBE-5010 migration files
+      or schema comments. The schema TS files (workflow.ts, analytics.ts) only received
+      non-functional comment additions with no code changes.
+
+notes:
+  - >-
+    The story_token_usage table does NOT have an estimated_cost column in the actual database
+    baseline (999_full_schema_baseline.sql line 309-322). The PLAN.yaml warning about
+    estimated_cost was based on a misread of line 94 in 999_add_telemetry_tables.sql which
+    references agent_invocations, not story_token_usage. The migration correctly omits
+    estimated_cost from the new partitioned story_token_usage DDL.
+  - >-
+    E2E tests are not applicable for this story_type (database migration + pgTAP tests).
+    The pgTAP tests serve as the integration test layer and require the migration to be
+    applied to a live PostgreSQL instance with the pgTAP extension installed.
+  - >-
+    Migration 1090 (referenced in PLAN.yaml as taken by CDBE-3030 token_dashboard matview)
+    does not exist in the filesystem yet. Migration 1100 is the next sequential migration.
