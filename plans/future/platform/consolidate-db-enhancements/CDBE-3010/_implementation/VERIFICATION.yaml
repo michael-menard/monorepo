@@ -1,0 +1,151 @@
+schema: 1
+story_id: CDBE-3010
+timestamp: '2026-03-19T05:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: pure DDL story — no TypeScript files touched
+  integration:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: pure DDL story — no API handlers
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: pure DDL story, no API/UI — AC-12 explicit exemption
+  pgtap:
+    pass: 7
+    fail: 0
+    status: pass
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: >-
+  Coverage threshold (45%) does not apply — pure DDL story with no TypeScript. pgtap is the sole test harness per AC-9
+  and story Test Plan.
+test_quality:
+  verdict: PASS
+  notes: >-
+    pgtap file follows canonical BEGIN/ROLLBACK pattern from 1010_story_state_history_trigger_test.sql. Tests cover view
+    existence (has_view), one-open-row scenario (HP-2a/HP-2b), no-history-row scenario (HP-3a/HP-3b), multi-row scenario
+    (HP-4), and idempotency (EC-2/lives_ok). All 7 tests match story Test Plan. ON CONFLICT DO NOTHING guard prevents
+    fixture collisions.
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-1
+    notes: 'Migration line 35: CREATE OR REPLACE VIEW workflow.stories_current AS — idempotent by design, no DROP required.'
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-2
+    notes: >-
+      Migration lines 37-51 confirm all 15 explicit columns: story_id, feature, state, title, priority, description,
+      tags, experiment_variant, blocked_reason, blocked_by_story, started_at, completed_at, file_hash, created_at,
+      updated_at. No s.* wildcard used.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-3
+    notes: >-
+      Migration lines 64-71: LEFT JOIN LATERAL (SELECT to_state, created_at FROM workflow.story_state_history WHERE
+      story_id = s.story_id AND exited_at IS NULL ORDER BY created_at DESC LIMIT 1) h ON true. Line 54: h.to_state AS
+      current_state.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-4
+    notes: 'Migration line 57: h.created_at AS entered_at — sourced from same LATERAL subquery as current_state.'
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-5
+    notes: >-
+      LEFT JOIN semantics on LATERAL guarantee NULL for both current_state and entered_at when no open history row
+      exists. Verified by pgtap tests HP-3a and HP-3b (TEST-3010-NO-HIST story).
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-6
+    notes: >-
+      Migration lines 77-81: COMMENT ON VIEW workflow.stories_current IS '3010: Narrow scalar sibling...' — migration
+      number cited, purpose described.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-7
+    notes: >-
+      Migration lines 83-85: COMMENT ON COLUMN workflow.stories_current.current_state prefixed '3010:'. Lines 87-89:
+      COMMENT ON COLUMN workflow.stories_current.entered_at prefixed '3010:'. Both present.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-8
+    notes: >-
+      Migration lines 15-20: DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION '1030: ...' END
+      IF; END $$; — pattern matches established CDBN-1050 lesson.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-9
+    notes: >-
+      pgtap file at correct path. 7 tests in BEGIN/SELECT plan(7)/ROLLBACK structure: has_view (test 1), HP-2a
+      current_state (test 2), HP-2b entered_at not null (test 3), HP-3a current_state null (test 4), HP-3b entered_at
+      null (test 5), HP-4 multi-row open wins (test 6), EC-2 idempotency lives_ok (test 7). All 7 pass per evidence.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-10
+    notes: >-
+      CREATE OR REPLACE VIEW is inherently idempotent. pgtap test 7 (EC-2) explicitly validates this with lives_ok()
+      running the full CREATE OR REPLACE VIEW statement a second time within the transaction.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-11
+    notes: >-
+      Migration lines 62-63 comment confirms idx_story_state_history_open_rows (story_id, created_at DESC WHERE
+      exited_at IS NULL) deployed in migration 1010 is leveraged. No new index created.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_verdicts.AC-12
+    notes: >-
+      Touched files: 2 SQL files only (1030_cdbe3010_stories_current_view.sql,
+      pgtap/1030_cdbe3010_stories_current_view_test.sql). No TypeScript, no API routes, no MCP handlers, no UI
+      components created or modified.
+architecture_compliant: true
+architecture_notes: >-
+  View uses SECURITY INVOKER (PostgreSQL default) — correct per story architecture notes. No v_ prefix on view name —
+  consistent with workflow.story_details sibling naming convention. Explicit column list prevents silent schema drift.
+  Safety preamble follows established CDBN-1050 pattern. Migration slot 1030 used correctly. No grants added — existing
+  agent_role/lambda_role/reporting_role grants from migration 1005 are inherited.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For pure DDL stories (SQL view migrations), pgtap is the complete test harness — unit, integration, e2e, and build
+      checks are all legitimately exempt. The evidence/QA artifacts should record this as status: exempt with an
+      explicit reason referencing the relevant AC (e.g. AC-12).
+    category: pattern
+    tags:
+      - ddl
+      - pgtap
+      - test-strategy
+      - exemption
+  - lesson: >-
+      CREATE OR REPLACE VIEW satisfies both AC-1 (idempotency) and AC-10 (second-run safety) with a single DDL form. No
+      DROP VIEW guard is needed. Idempotency should also be tested in pgtap with lives_ok() to provide a runnable proof.
+    category: pattern
+    tags:
+      - ddl
+      - idempotency
+      - pgtap
+      - sql
+  - lesson: >-
+      LEFT JOIN LATERAL with ON true is the canonical pattern for joining a single latest-row per foreign key in
+      PostgreSQL views. It cleanly handles the NULL case (no matching rows) without COALESCE and leverages partial
+      indexes efficiently.
+    category: pattern
+    tags:
+      - sql
+      - lateral-join
+      - postgresql
+      - view
+tokens:
+  in: 8200
+  out: 1800

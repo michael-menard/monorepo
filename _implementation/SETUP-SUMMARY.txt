@@ -1,0 +1,160 @@
+================================================================================
+CDBE-3010 DEVELOPMENT SETUP - COMPLETION SUMMARY
+================================================================================
+
+Story ID: CDBE-3010
+Title: stories_current View — Single Query Target for Current Story State
+Setup Mode: implement (non-gen_mode)
+Setup Date: 2026-03-19T04:45:19Z
+Setup Agent: dev-setup-leader (haiku model)
+
+================================================================================
+SETUP ACTIONS COMPLETED
+================================================================================
+
+[✓] Checkpoint Artifact Written
+    - Iteration: 0
+    - Phase: setup
+    - Current phase: setup
+    - Last successful phase: null
+    - Max iterations: 3
+    - Blocked: false
+    - Gen mode: false
+
+[✓] Scope Artifact Written
+    - Iteration: 0
+    - Phase: setup
+    - Touches: backend (migrations), database (SQL view)
+    - Risk flags: migrations, performance
+    - Touched paths: apps/api/knowledge-base/src/db/migrations/**
+    - Summary: Create workflow.stories_current view for single-query access to current state
+
+[✓] Dependency Verification
+    - Primary dependency: CDBE-1010 (story_state_history table + exited_at + partial index)
+    - Status: COMPLETED ✓
+    - Index verified: idx_story_state_history_open_rows (story_id, created_at DESC WHERE exited_at IS NULL)
+    - Conclusion: No blockers
+
+[✓] Migration Slot Verification
+    - Requested slot: 1030
+    - Status: AVAILABLE ✓
+    - Files in directory: 19 (no 1030_* collision)
+    - Fallback slots: 1031, 1032, ...
+
+[✓] Reference Files Identified
+    - LATERAL join pattern: 1000_create_story_details_view.sql (lines 117–123)
+    - CREATE OR REPLACE VIEW: 999_add_plan_churn_tracking.sql (line 65)
+    - pgtap test structure: 1010_story_state_history_trigger_test.sql (lines 10–201)
+    - Safety preamble: Established CDBN-1050 lesson
+
+[✓] Constraints Extracted
+    - Migration safety: current_database() = 'knowledgebase' verification required
+    - Idempotency: CREATE OR REPLACE VIEW (no DROP)
+    - Column exposure: Explicit column list (not s.*)
+    - RLS: Inherited from underlying tables (SECURITY INVOKER)
+    - Index dependency: idx_story_state_history_open_rows (migration 1010)
+    - No API/TypeScript scope: Pure DDL only
+
+[✓] Documentation Created
+    - SETUP-LOG.md (5869 bytes): Comprehensive setup log with all actions, verification, and next steps
+    - WORKING-SET.md (4039 bytes): Implementation constraints, reference patterns, and scope clarification
+
+================================================================================
+ACCEPTANCE CRITERIA COVERAGE
+================================================================================
+
+Story acceptance criteria (AC-1 through AC-12) documented in:
+1. CDBE-3010.md (original story file)
+2. STORY-SEED.md (elaborated story seed)
+3. SETUP-LOG.md (setup phase summary)
+4. WORKING-SET.md (implementation phase constraints)
+
+All 12 ACs are in scope for implementation phase:
+✓ AC-1: CREATE OR REPLACE VIEW workflow.stories_current
+✓ AC-2: Explicit column list from workflow.stories
+✓ AC-3: current_state from h.to_state (latest open row)
+✓ AC-4: entered_at from h.created_at
+✓ AC-5: NULL semantics for stories with no history row
+✓ AC-6: COMMENT ON VIEW with migration number
+✓ AC-7: COMMENT ON COLUMN for current_state and entered_at
+✓ AC-8: Safety preamble DO block (current_database check)
+✓ AC-9: pgtap test file with four scenarios
+✓ AC-10: Idempotency testing
+✓ AC-11: Partial index leverage (idx_story_state_history_open_rows)
+✓ AC-12: No API routes, MCP tools, TypeScript services, or UI components
+
+================================================================================
+NON-GOALS VALIDATION
+================================================================================
+
+✓ Do not add INSTEAD OF UPDATE trigger — view is read-only
+✓ Do not add RLS policies to view — inherited from underlying tables
+✓ Do not modify workflow.story_details — distinct wide aggregation view
+✓ Do not add current_state to workflow.stories table — view is the abstraction
+✓ Do not expose from_state — current_state + entered_at sufficient
+✓ Do not create MCP tool, API handler, or TypeScript service
+✓ Do not create new indexes — idx_story_state_history_open_rows sufficient
+
+================================================================================
+RISK ASSESSMENT (ALL MITIGATED)
+================================================================================
+
+[LOW] Migration slot collision
+  → Mitigation: Slot 1030 confirmed available; fallbacks 1031+
+
+[LOW] RLS privilege complications
+  → Mitigation: View inherits SECURITY INVOKER; no new grants needed
+
+[LOW] Performance on large state_history
+  → Mitigation: Partial index (idx_story_state_history_open_rows) optimizes LATERAL
+
+[LOW] Idempotency failure
+  → Mitigation: CREATE OR REPLACE VIEW is inherently idempotent
+
+[LOW] Schema drift in future
+  → Mitigation: Explicit column list (not s.*) guards against surprises
+
+================================================================================
+IMPLEMENTATION READINESS
+================================================================================
+
+Setup phase: COMPLETE ✓
+
+The story is ready for implementation. Two files need to be created:
+
+1. apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+   - Safety preamble DO block
+   - CREATE OR REPLACE VIEW with explicit column list
+   - LATERAL join for latest open row (exited_at IS NULL)
+   - COMMENT statements with migration number prefix
+   - Estimated: ~60 lines
+
+2. apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+   - View existence assertion (has_view)
+   - Test story with history row → current_state populated
+   - Test story without history row → current_state NULL
+   - Test story with closed + open rows → only open row returned
+   - Idempotency assertions
+   - Estimated: ~80 lines
+
+All reference patterns are documented in WORKING-SET.md.
+All constraints are documented in SETUP-LOG.md.
+All ACs are clear and implementable.
+
+================================================================================
+NEXT PHASE: IMPLEMENTATION
+================================================================================
+
+Follow the next steps documented in SETUP-LOG.md and WORKING-SET.md.
+
+Implementation worker agent will:
+1. Create migration file with proper DDL
+2. Create pgtap test file with comprehensive test coverage
+3. Run migration on KB database
+4. Run pgtap tests for verification
+5. Verify idempotency
+6. Document proof of work
+
+No blockers. Story is ready to implement.
+
+================================================================================

@@ -1,243 +1,156 @@
 schema: 2
-story_id: CDBE-4030
-timestamp: '2026-03-19T03:30:00Z'
+story_id: CDBE-3010
+timestamp: '2026-03-19T04:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
     description: >-
-      Author SQL migration adding pg_notify trigger functions to all five knowledge tables (lessons_learned, adrs,
-      code_standards, rules, cohesion_rules) for INSERT and relevant UPDATE events. Include pgtap test file verifying
-      trigger existence and payload shape on all five tables.
+      Write migration SQL: 1030_cdbe3010_stories_current_view.sql — CREATE OR REPLACE VIEW workflow.stories_current with
+      explicit column list from workflow.stories, LEFT JOIN LATERAL over story_state_history for the open row (exited_at
+      IS NULL), exposing current_state (h.to_state) and entered_at (h.created_at). Include safety preamble DO block
+      (knowledgebase DB check), COMMENT ON VIEW, and COMMENT ON COLUMN for current_state and entered_at.
     files:
-      - apps/api/knowledge-base/src/db/migrations/1012_cdbe_4030_knowledge_embedding_notify.sql
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1012_cdbe_4030_notify_triggers_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/1003_story_notify.sql
-      - apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1000_create_story_details_view.sql
+      - apps/api/knowledge-base/src/db/migrations/999_add_plan_churn_tracking.sql
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
     dependencies: []
     slice: backend
-    verification: Apply migration to knowledgebase DB (port 5433); run pgtap test file against knowledgebase DB
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
     acs_covered:
       - AC-1
       - AC-2
-  - id: 2
-    subtask_id: ST-2
-    description: >-
-      Implement the embedding-worker.ts module with injectable pg.Client and EmbeddingClient, LISTEN subscription to
-      knowledge_embedding_needed channel, notification batching (time window 50ms + size 25 triggers, deduplication by
-      table+id), EmbeddingClient.generateEmbeddingsBatch() call, withRetry UPDATE write-back per row, per-row error
-      handling (log + continue, no re-queue), and full Zod types in __types__/index.ts. Write unit tests covering
-      batching logic, per-row failure handling, and Zod schema validation.
-    files:
-      - apps/api/knowledge-base/src/embedding-worker/__types__/index.ts
-      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
-      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
-    files_to_read:
-      - apps/api/knowledge-base/src/embedding-client/index.ts
-      - apps/api/knowledge-base/src/embedding-client/batch-processor.ts
-      - apps/api/knowledge-base/src/db/client.ts
-    dependencies: []
-    slice: backend
-    verification: pnpm test --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base
-    acs_covered:
       - AC-3
       - AC-4
-      - AC-8
-      - AC-9
-      - AC-10
-      - AC-11
-  - id: 3
-    subtask_id: ST-3
-    description: >-
-      Extend embedding-worker.ts with polling fallback (configurable interval 5min, skip-if-running in-memory guard,
-      per-table NULL sweep LIMIT 100, embedding + write-back per batch), backfill function (batch-with-delay,
-      configurable batchSize 50 + delayMs 500, callable at startup and standalone, logs per-table counts), graceful
-      shutdown (SIGTERM + SIGINT handlers with module-level _handlersRegistered guard, finish in-flight batch, release
-      pg.Client, exit code 0), and startup log entries. Add run.ts entrypoint with: OPENAI_API_KEY preflight check (exit
-      1 if absent), pg.Client construction + connect, exponential backoff reconnect handler (1s/2s/4s/8s cap 30s)
-      re-issuing LISTEN after reconnect, startup backfill call, then LISTEN loop. Extend unit tests with polling skip
-      guard, backfill batch-with-delay, and shutdown sequence.
-    files:
-      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
-      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
-      - apps/api/knowledge-base/src/embedding-worker/run.ts
-    files_to_read:
-      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
-      - apps/api/pipeline/src/scheduler/index.ts
-    dependencies:
-      - 2
-    slice: backend
-    verification: pnpm test --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base
-    acs_covered:
       - AC-5
       - AC-6
       - AC-7
+      - AC-8
+      - AC-10
       - AC-11
       - AC-12
-      - AC-13
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Write pgtap test file: 1030_cdbe3010_stories_current_view_test.sql — covering has_view() assertion, three data
+      scenarios (one open row, no history rows, multiple rows with one open), and idempotency (lives_ok on CREATE OR
+      REPLACE VIEW). All wrapped in BEGIN/ROLLBACK with test story fixtures using ON CONFLICT DO NOTHING. Plan count: 7
+      assertions.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove
+    acs_covered:
+      - AC-9
+      - AC-10
 files_to_change:
-  - path: apps/api/knowledge-base/src/db/migrations/1012_cdbe_4030_knowledge_embedding_notify.sql
+  - path: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
     action: create
     reason: >-
-      SQL migration adding NOTIFY trigger functions to all five knowledge tables (AC-1). Uses DB safety preamble DO
-      block pattern from 1007_pipe_0020_ghost_state_audit.sql. Targets knowledgebase DB (port 5433). Idempotent.
-      Sequence 1012 — next after 1011.
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1012_cdbe_4030_notify_triggers_test.sql
+      Migration DDL — CREATE OR REPLACE VIEW workflow.stories_current with LATERAL join over story_state_history for
+      current_state + entered_at scalars. Safety preamble, explicit column list, COMMENT statements. Idempotent by
+      design (CREATE OR REPLACE). AC-1 through AC-8, AC-10, AC-11, AC-12.
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
     action: create
     reason: >-
-      pgtap test file verifying NOTIFY trigger existence on all five tables for INSERT and UPDATE, and payload shape
-      with table + id fields (AC-2). Follows structure from 1007_pipe_0020_ghost_state_audit_test.sql.
-  - path: apps/api/knowledge-base/src/embedding-worker/__types__/index.ts
-    action: create
-    reason: >-
-      Zod schemas for worker config (WorkerConfigSchema: pollIntervalMs, batchSize, batchWindowMs, backfillBatchSize,
-      backfillDelayMs), notification payload (NotificationPayloadSchema: table string, id uuid), and embedding write
-      result (EmbeddingWriteResultSchema). No TypeScript interfaces — z.infer<> only (AC-8, AC-10).
-  - path: apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
-    action: create
-    reason: >-
-      Core worker module. Injectable EmbeddingClient + pg.Client. LISTEN subscription, notification batching (dedup by
-      table+id, flush on batchWindowMs or batchSize), EmbeddingClient.generateEmbeddingsBatch() call, withRetry UPDATE
-      write-back. Per-row error handling. Polling fallback with in-memory running flag. Backfill function
-      (batch-with-delay). Startup log entries. Graceful shutdown handlers (SIGTERM/SIGINT with _handlersRegistered
-      guard). (AC-3, AC-4, AC-5, AC-6, AC-7, AC-11)
-  - path: apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
-    action: create
-    reason: >-
-      Unit tests using MockEmbeddingClient and MockPgClient (no real DB or OpenAI calls). Covers: batching (window +
-      size triggers), per-row failure (worker continues), polling skip-if-running guard, backfill batch-with-delay loop,
-      graceful shutdown sequence, Zod schema validation for notification payloads. (AC-9)
-  - path: apps/api/knowledge-base/src/embedding-worker/run.ts
-    action: create
-    reason: >-
-      Process entrypoint. OPENAI_API_KEY preflight check (exit 1 with logger error if absent). pg.Client construction +
-      connect + startup log. client.on('error', ...) handler with exponential backoff reconnect (1s/2s/4s/8s cap 30s) +
-      LISTEN re-subscription after each successful reconnect. Startup backfill call. LISTEN loop. SIGTERM/SIGINT
-      registration (with _handlersRegistered guard). (AC-12, AC-13)
+      pgtap test file — view existence assertion, three data scenarios (one open row, no history, multiple rows),
+      idempotency verification. BEGIN/ROLLBACK wrapper with test fixtures. AC-9, AC-10.
 commands_to_run:
-  - command: pnpm check-types --filter @repo/knowledge-base
-    when: after ST-2 and ST-3 code changes
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+    when: after ST-1 is authored
     required: true
-  - command: pnpm test --filter @repo/knowledge-base
-    when: after ST-2 and ST-3 code changes
-    required: true
-  - command: pnpm build --filter @repo/knowledge-base
-    when: after all code changes
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove
+    when: after ST-2 is authored and ST-1 migration has been applied
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
-    planned_evidence: >-
-      SQL migration file 1012_cdbe_4030_knowledge_embedding_notify.sql applied to knowledgebase DB without error;
-      triggers visible in pg_trigger catalog for all five tables
-    evidence_type: command
+    planned_evidence: Migration file uses CREATE OR REPLACE VIEW workflow.stories_current AS — visible in file; second psql run exits 0
+    evidence_type: file
   - ac_id: AC-2
     planned_evidence: >-
-      pgtap test file 1012_cdbe_4030_notify_triggers_test.sql passes — trigger existence assertions for INSERT + UPDATE
-      on all five tables, payload shape verification
-    evidence_type: command
+      File: explicit column list in SELECT — story_id, feature, state, title, priority, description, tags,
+      experiment_variant, blocked_reason, blocked_by_story, started_at, completed_at, file_hash, created_at, updated_at
+      (no s.*)
+    evidence_type: file
   - ac_id: AC-3
     planned_evidence: >-
-      Unit test: embedding-worker.test.ts — LISTEN subscription, batching window + size triggers,
-      generateEmbeddingsBatch call, UPDATE write-back assertions on MockPgClient
-    evidence_type: test
+      File: LEFT JOIN LATERAL (SELECT to_state, created_at FROM workflow.story_state_history WHERE story_id = s.story_id
+      AND exited_at IS NULL ORDER BY created_at DESC LIMIT 1) h ON true; current_state = h.to_state in SELECT list
+    evidence_type: file
   - ac_id: AC-4
-    planned_evidence: >-
-      Unit test: per-row failure injection via MockEmbeddingClient — worker continues processing subsequent rows,
-      failure logged, no re-queue
-    evidence_type: test
+    planned_evidence: 'File: entered_at = h.created_at in SELECT list of the same LATERAL subquery'
+    evidence_type: file
   - ac_id: AC-5
     planned_evidence: >-
-      Unit test: polling fallback tick fires, queries NULL rows per table, calls generateEmbeddingsBatch, writes back;
-      skip-if-running guard test
+      pgtap test HP-3: story with no history rows yields current_state IS NULL and entered_at IS NULL; LEFT JOIN
+      semantics confirmed by test passing
     evidence_type: test
   - ac_id: AC-6
-    planned_evidence: >-
-      Unit test: backfill function processes rows in configurable batch size with inter-batch delay; zero-NULL-rows
-      no-op test
-    evidence_type: test
+    planned_evidence: 'File: COMMENT ON VIEW workflow.stories_current IS ''3010: ...'' present in migration SQL'
+    evidence_type: file
   - ac_id: AC-7
     planned_evidence: >-
-      Unit test: SIGTERM handler called — in-flight batch completes, pg.Client released, process.exit(0) called;
-      _handlersRegistered guard prevents double-registration
-    evidence_type: test
+      File: COMMENT ON COLUMN workflow.stories_current.current_state and COMMENT ON COLUMN
+      workflow.stories_current.entered_at both present with '3010:' prefix
+    evidence_type: file
   - ac_id: AC-8
     planned_evidence: >-
-      File: __types__/index.ts — WorkerConfigSchema, NotificationPayloadSchema, EmbeddingWriteResultSchema all present;
-      z.infer<> used exclusively; no TypeScript interface keyword
+      File: DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION ... END IF; END $$; block at top
+      of migration
     evidence_type: file
   - ac_id: AC-9
     planned_evidence: >-
-      pnpm test --filter @repo/knowledge-base passes; unit tests cover batching, polling guard, backfill, shutdown, Zod
-      rejection of malformed payloads
+      pgtap test file at pgtap/1030_cdbe3010_stories_current_view_test.sql passes: has_view(), HP-2 (one open row), HP-3
+      (no history), HP-4 (multi-row, open wins), EC-2 (idempotency lives_ok)
     evidence_type: test
   - ac_id: AC-10
     planned_evidence: >-
-      pnpm check-types --filter @repo/knowledge-base exits 0; grep for 'interface ' in embedding-worker/ returns no
-      results
+      psql exits 0 on second run of migration (CREATE OR REPLACE VIEW is inherently idempotent); pgtap lives_ok
+      assertion for idempotency passes
     evidence_type: command
   - ac_id: AC-11
     planned_evidence: >-
-      Log assertions in unit test: startup logs DB connection established, LISTEN active, backfill starting, backfill
-      complete with row counts
-    evidence_type: test
+      File: LATERAL join predicate includes exited_at IS NULL — leverages idx_story_state_history_open_rows partial
+      index. No new index DDL in migration.
+    evidence_type: file
   - ac_id: AC-12
-    planned_evidence: >-
-      Unit test: simulate client.on('error') — reconnect handler fires with exponential backoff delays, LISTEN re-issued
-      after each successful reconnect, outcomes logged; worker does not exit
-    evidence_type: test
-  - ac_id: AC-13
-    planned_evidence: >-
-      Unit test: OPENAI_API_KEY absent from process.env — logger.error called with preflight message, process.exit(1)
-      called before LISTEN loop
-    evidence_type: test
-architectural_decisions:
-  - id: ARCH-001
-    question: >-
-      Should ST-2 depend on ST-1 completing first, or can the TypeScript module be authored and unit-tested against
-      mocks in parallel?
-    decision: >-
-      ST-2 has NO dependency on ST-1. The embedding-worker TypeScript module and its tests can be authored and
-      unit-tested against mock pg.Client and mock EmbeddingClient without ST-1's migration being applied to any DB. ST-1
-      and ST-2 are parallel. Only ST-3 depends on ST-2.
-    rationale: >-
-      Elaboration audit (subtask_decomposition: CONDITIONAL) identified that ST-2 depending on ST-1 was overconstrained
-      and created an unnecessary serialization bottleneck. The TypeScript implementation has no runtime dependency on
-      the DB migration during unit testing.
-    decided_by: autonomous_elaboration
-  - id: ARCH-002
-    question: >-
-      Should run.ts accept a --backfill-only CLI flag or should a separate run-backfill.ts entrypoint be created for
-      standalone backfill invocation?
-    decision: >-
-      run.ts accepts a CLI approach: check process.argv for '--backfill-only'. If present, run the backfill function,
-      log results, and exit. This avoids creating a second entrypoint file and keeps the backfill-as-standalone-script
-      AC-6 requirement satisfied within the single entrypoint.
-    rationale: >-
-      Elaboration opportunity opp-6 flagged this ambiguity. A single entrypoint with a flag is simpler and avoids code
-      duplication. A separate run-backfill.ts would require duplicating pg.Client setup and EmbeddingClient
-      initialization logic.
-    decided_by: autonomous_elaboration
-complexity: complex
+    planned_evidence: Only 2 SQL files created; no TypeScript, no MCP tool handlers, no API routes, no UI components touched
+    evidence_type: file
+architectural_decisions: []
+complexity: simple
 notes:
   - >-
-    CDBE-4020 is a hard runtime blocker for ST-1 — migration 1012 cannot be applied until CDBE-4020's embedding columns
-    exist on the five knowledge tables. However, ST-1 SQL can be authored and ST-2/ST-3 TypeScript can be written and
-    unit-tested while CDBE-4020 is still in_progress.
+    Migration slot 1030 is confirmed free — no file at apps/api/knowledge-base/src/db/migrations/1030*.sql exists at
+    planning time.
   - >-
-    Next migration sequence is 1012 — verified against the worktree (1011 is highest numbered sequence, 1050 is reserved
-    for cascade trigger prerequisites).
+    Safety preamble DO block pattern: DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION '1030:
+    This migration must run against the ''knowledgebase'' database. Current database: %', current_database(); END IF;
+    RAISE NOTICE '1030: Safety check passed — running against database: %', current_database(); END $$;
   - >-
-    EmbeddingClient has an 'interface EmbeddingClientConfig' declaration in its own file (not CDBE-4030 scope). AC-10
-    gates new code only — do NOT introduce any new interface declarations; use z.infer<> exclusively.
+    LATERAL join pattern from 1000_create_story_details_view.sql lines 117-123: LEFT JOIN LATERAL (SELECT * FROM
+    workflow.story_outcomes o2 WHERE o2.story_id = s.story_id ORDER BY o2.created_at DESC LIMIT 1) o ON true. Adapt to
+    story_state_history with exited_at IS NULL predicate and SELECT to_state, created_at only.
   - >-
-    module-level _handlersRegistered boolean guard is the correct pattern for SIGTERM/SIGINT handler idempotency in
-    run.ts (per KB lesson 198c7642).
+    Explicit column list in AC-2 matches the columns visible in 1000_create_story_details_view.sql lines 17-30 plus
+    started_at, completed_at, file_hash (present in workflow.stories per Reality Baseline).
   - >-
-    backfill EmbeddingClient should be instantiated with maxConcurrentRequests: 3 (not the default 10) to respect OpenAI
-    rate limits during large backfill runs.
+    The enforce_story_state_history_transition trigger will fire during pgtap test fixture inserts. Use the valid
+    transition sequence: NULL → backlog (initial), then backlog → created (second open row). The trigger closes the
+    prior open row on each new insert, so to have a multi-row scenario with one open row, insert NULL → backlog then
+    backlog → created — the first row will have exited_at set by the trigger.
   - >-
-    Elaboration verdict: PASS. Two ACs added (AC-12: reconnect, AC-13: preflight). Six opportunities logged to KB. No
-    blocking architectural decisions remain.
-  - ST-1 and ST-2 are parallel (no dependency between them). ST-3 depends on ST-2 only.
+    pgtap plan count: 1 (has_view) + 2 (HP-2: current_state + entered_at) + 2 (HP-3: both NULL) + 1 (HP-4: correct open
+    row value) + 1 (EC-2: idempotency lives_ok) = 7 assertions. Use SELECT plan(7).
+  - No Vitest tests, no pnpm build, no pnpm check-types commands needed — pure DDL story.
+  - ST-2 depends on ST-1 (reads the migration file for the idempotency test). Execution must serialize ST-1 → ST-2.

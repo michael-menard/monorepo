@@ -1,216 +1,138 @@
-# Setup Log for ST-3010
+# CDBE-3010 Setup Log
 
-**Timestamp**: 2026-03-08T07:08:12Z
-**Agent**: dev-setup-leader
-**Model**: Claude Haiku 4.5
-**Story ID**: ST-3010
-**Feature Directory**: plans/future/platform/story-generation-small-llm-compat
-**Mode**: implement
-**Gen Mode**: true
-**Autonomy Level**: aggressive
+**Story ID**: CDBE-3010  
+**Title**: stories_current View — Single Query Target for Current Story State  
+**Mode**: implement  
+**Setup Date**: 2026-03-19T04:45:19Z  
+**Iteration**: 0  
 
 ---
 
-## Execution Summary
+## Setup Actions Completed
 
-### Phase: Setup (Iteration 0)
-
-#### Status: COMPLETE ✓
-
----
-
-## Timeline
-
-| Timestamp | Action | Status |
-|-----------|--------|--------|
-| 2026-03-08T07:08:12Z | Agent initialized | SUCCESS |
-| 2026-03-08T07:08:12Z | Read agent spec (dev-setup-leader.agent.md) | SUCCESS |
-| 2026-03-08T07:08:12Z | Read story frontmatter (ST-3010) | SUCCESS |
-| 2026-03-08T07:08:12Z | Verify working directory structure | SUCCESS |
-| 2026-03-08T07:08:12Z | Create CHECKPOINT.yaml artifact | SUCCESS |
-| 2026-03-08T07:08:12Z | Create SCOPE.yaml artifact | SUCCESS |
-| 2026-03-08T07:08:12Z | Create WORKING-SET-SYNC.md documentation | SUCCESS |
-| 2026-03-08T07:08:12Z | Create SETUP-COMPLETE.md summary | SUCCESS |
-| 2026-03-08T07:08:12Z | Create SETUP-TOKEN-LOG.md | SUCCESS |
-| 2026-03-08T07:08:12Z | Create SETUP-LOG.md | SUCCESS |
-
----
-
-## Story Details
-
-**Title**: Dev Plan Leader: Map Story Subtasks 1:1 to PLAN.yaml Steps
-
-**Type**: Verification/Audit
-
-**Summary**: Verify that dev-plan-leader.agent.md v1.3.0 correctly maps story subtasks 1:1 to PLAN.yaml steps with proper validation rules.
-
-**Key Facts**:
-- Already fully implemented in v1.3.0 (per risk_notes)
-- This is a verification story to audit existing implementation
-- Focus areas: Step 3, Step 4, Step 5 of dev-plan-leader.agent.md
-- Scope: Agent file modification only (no new files)
-- Risk: All risk flags false (no security, auth, payment, migration, external API, or performance concerns)
-
----
-
-## Scope Analysis
-
-**Touched Paths**:
-- `.claude/agents/dev-plan-leader.agent.md`
-- `.claude/agents/_shared/**`
-
-**Impact Classification**:
-- Backend: NO
-- Frontend: NO
-- Packages: NO
-- Database: NO
-- Contracts/Schemas: NO
-- UI: NO
-- Infrastructure: NO
-
-**Risk Assessment**: LOW
-- All risk flags: false
-- Primary risk: Scope may already be satisfied (mitigation: thorough verification)
-
----
-
-## Artifacts Generated
-
-### 1. CHECKPOINT.yaml
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/CHECKPOINT.yaml`
-- **Schema**: 1
-- **Current Phase**: setup
+### 1. Checkpoint Artifact (KB)
+- **Phase**: setup
 - **Iteration**: 0
 - **Max Iterations**: 3
-- **Gen Mode**: true
-- **Status**: File created successfully
+- **Status**: WRITTEN
+- **Timestamp**: 2026-03-19T04:45:19Z
 
-### 2. SCOPE.yaml
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/SCOPE.yaml`
-- **Schema**: 1
-- **Elaboration**: completed
-- **Risk Flags**: All false
-- **Status**: File created successfully
+**Content Summary**:
+```
+current_phase: setup
+last_successful_phase: null
+blocked: false
+gen_mode: false
+```
 
-### 3. WORKING-SET-SYNC.md
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/WORKING-SET-SYNC.md`
-- **Purpose**: Sync working set constraints and next steps
-- **Status**: File created successfully
+### 2. Scope Artifact (KB)
+- **Phase**: setup
+- **Iteration**: 0
+- **Status**: WRITTEN
+- **Timestamp**: 2026-03-19T04:45:19Z
 
-### 4. SETUP-COMPLETE.md
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/SETUP-COMPLETE.md`
-- **Purpose**: Detailed setup completion summary and next phase guidance
-- **Status**: File created successfully
+**Content Summary**:
+```
+Touches:
+  - backend: true (migrations)
+  - db: true (SQL view creation)
+  - migrations: true (risk flag)
+  - performance: true (risk flag — LATERAL join uses partial index)
 
-### 5. SETUP-TOKEN-LOG.md
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/SETUP-TOKEN-LOG.md`
-- **Estimated Input Tokens**: 3,850
-- **Estimated Output Tokens**: 2,050
-- **Total Estimated**: 5,900 tokens
-- **Status**: File created successfully
+Touched Paths:
+  - apps/api/knowledge-base/src/db/migrations/**
 
-### 6. SETUP-LOG.md
-- **Location**: `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/SETUP-LOG.md`
-- **Purpose**: This log file
-- **Status**: File created successfully
+Summary: Create workflow.stories_current view for read-only single-query access to current story state
+```
 
----
+### 3. Dependency Verification
+- **Primary Dependency**: CDBE-1010 (story_state_history table + exited_at column + idx_story_state_history_open_rows)
+  - **Status**: COMPLETED ✓
+  - **Evidence**: Migration 1010_story_state_history_trigger.sql deployed in main branch
+  - **Index**: `idx_story_state_history_open_rows` confirmed present on story_state_history (story_id, created_at DESC WHERE exited_at IS NULL)
 
-## Knowledge Base Integration
+### 4. Migration Slot Verification
+- **Requested Slot**: 1030
+- **Status**: AVAILABLE ✓
+- **Evidence**: `ls apps/api/knowledge-base/src/db/migrations/` shows no existing 1030_*.sql file
+- **Alternative slots available**: 1031, 1032, ... (if 1030 becomes unavailable)
 
-### Constraints Inherited
+### 5. Reference Files Identified
+| Pattern | Source File | Lines | Usage |
+|---------|-------------|-------|-------|
+| LATERAL join for latest row | 1000_create_story_details_view.sql | 117–123 | Copy LATERAL join idiom for story_state_history open-row lookup |
+| CREATE OR REPLACE VIEW | 999_add_plan_churn_tracking.sql | 65 | Idempotent view definition pattern |
+| pgtap test structure | pgtap/1010_story_state_history_trigger_test.sql | Lines 10–201 | pgtap file template: BEGIN; plan(N); assertions; finish(); ROLLBACK; |
+| Safety preamble DO block | CDBN-1050 lesson | Established pattern | Verify current_database() = 'knowledgebase' before DDL |
 
-**Technical Constraints** (from CLAUDE.md):
-1. Use Zod schemas for all types - never use TypeScript interfaces
-2. No barrel files (no index.ts re-exports)
-3. Use @repo/logger, not console
-4. Named exports preferred
-5. Agent file modifications only
-
-**Story-Specific Constraints**:
-- Implementation already exists in v1.3.0
-- Focus: Verify Step 3, Step 4, Step 5
-- Required elements:
-  - Read ## Subtasks and ## Canonical References from story file
-  - Emit schema: 2 PLAN.yaml when subtasks present
-  - Self-validation rules for subtask-sourced plans
-
----
-
-## Setup Actions Performed
-
-### Skipped (gen_mode=true)
-Per protocol for generated stories, the following were skipped:
-- Step 1: Move story directory (orchestrator already positioned)
-- Step 2: Update story status via /story-update skill (orchestrator already updated)
-- Step 3: Update story index via /index-update skill (orchestrator already updated)
-
-### Completed
-- Step 4: Write CHECKPOINT.yaml artifact ✓
-- Step 5: Write SCOPE.yaml artifact ✓
-- Step 6: Sync working set constraints ✓
-- Step 8: Update story status in KB (documented) ✓
+### 6. Constraints Identified (from Story Seed)
+- **Migration safety**: Must verify `current_database() = 'knowledgebase'` in a DO block before executing DDL (lesson from CDBN-1050)
+- **RLS on story_state_history**: Active (migration 1005). View will inherit caller privileges (SECURITY INVOKER default).
+- **Idempotency**: Must use `CREATE OR REPLACE VIEW` (not `CREATE VIEW`) — no DROP required
+- **Column exposure**: Explicit column list preferred over `s.*` to avoid schema change surprises
+- **No API/TypeScript scope**: Pure DDL story — no MCP tools, Lambda handlers, or UI components
+- **Index prerequisite**: `idx_story_state_history_open_rows` is the performance foundation — confirmed deployed
 
 ---
 
-## Execution Notes
+## Next Steps (for Implementation Phase)
 
-### Autonomy Level: aggressive
-- Permitted to make autonomous decisions about scope interpretation
-- Batch mode: false (single story, not batch)
-- Gen mode: true (story generated by orchestrator)
+1. **Read Story Requirements** (already done during setup)
+   - AC-1 through AC-12 confirmed
+   - Non-goals: no INSTEAD OF UPDATE trigger, no RLS policies on the view, no schema changes to workflow.stories
 
-### Working Directory
-- `/Users/michaelmenard/Development/monorepo/tree/story/ST-3010`
+2. **Create Migration File**: `1030_cdbe3010_stories_current_view.sql`
+   - Safety preamble DO block verifying current_database()
+   - CREATE OR REPLACE VIEW workflow.stories_current with explicit column list
+   - LATERAL join over story_state_history for latest open row (exited_at IS NULL)
+   - COMMENT ON VIEW and COMMENT ON COLUMN statements with migration number prefix
 
-### Git State
-- Main branch active
-- Worktree for ST-3010 active
-- Story files staged for generation workflow
+3. **Create pgtap Test File**: `pgtap/1030_cdbe3010_stories_current_view_test.sql`
+   - View existence assertion (has_view)
+   - Test story with history row → current_state populated
+   - Test story with no history row → current_state NULL
+   - Test story with closed + open rows → only open row returned
+   - Idempotency assertions
 
----
-
-## Validation Checklist
-
-- [x] Story frontmatter read (first 50 lines only)
-- [x] Working directory verified
-- [x] CHECKPOINT.yaml created with correct schema and story_id
-- [x] SCOPE.yaml created with accurate scope analysis
-- [x] All risk flags evaluated (all false)
-- [x] Touched paths identified (.claude/agents/dev-plan-leader.agent.md)
-- [x] Working set constraints documented
-- [x] No precondition failures
-- [x] No blockers identified
-- [x] Setup artifacts all created successfully
-- [x] Token log documented
+4. **Verify Deployment**
+   - Run migration: `psql $KB_DATABASE_URL -f migrations/1030_cdbe3010_stories_current_view.sql`
+   - Run tests: `psql $KB_DATABASE_URL -f migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove`
+   - Verify idempotency: Re-run migration a second time, expect zero errors
 
 ---
 
-## Next Phase: Execution
+## Knowledge Base Queries Applied
 
-The dev-implement-leader agent will now:
-1. Read and analyze dev-plan-leader.agent.md v1.3.0
-2. Verify Steps 3-5 implementation meets story requirements
-3. Audit test coverage for subtask mapping
-4. Verify all acceptance criteria are satisfied
-5. Create verification tests if coverage insufficient
-6. Document findings in VERIFICATION.yaml
-7. Proceed to review phase if all checks pass
+None — no KB search was necessary. All context derived from:
+- Story file (CDBE-3010.md)
+- Story seed (STORY-SEED.md)
+- Reference migrations in codebase
+- Lessons learned from past CDBE stories
 
 ---
 
-## Blockers/Issues
+## Risk Assessment
 
-**None identified**
-
-- Story setup successful
-- All artifacts created
-- No missing dependencies
-- No configuration issues
-- No KB failures
+| Risk | Severity | Mitigation |
+|------|----------|-----------|
+| Migration slot collision | LOW | Slot 1030 confirmed available; 1031+ as fallback |
+| RLS privileges for view consumers | LOW | View inherits caller privileges; no new grants needed (migration 1005 already permits) |
+| Performance on large state_history | LOW | Partial index (idx_story_state_history_open_rows) optimizes LATERAL join for exited_at IS NULL |
+| Idempotency failure | LOW | CREATE OR REPLACE VIEW is inherently idempotent; pgtap test confirms re-run exits 0 |
+| Schema drift | LOW | Using explicit column list (not s.*) guards against surprises on underlying table growth |
 
 ---
 
-**Setup Status**: COMPLETE
-**Ready for Execution**: YES
-**Blocked**: NO
+## Worktree Setup
+
+- **Path**: `/Users/michaelmenard/Development/monorepo/tree/story/CDBE-3010`
+- **Status**: EXISTS ✓
+- **Purpose**: Isolated working directory for this story's files and artifacts
+
+---
+
+## Summary
+
+CDBE-3010 setup is complete. The story is a pure DDL migration that creates a read-only `workflow.stories_current` view, exposing current story state and entry timestamp via an efficient LATERAL join over the existing partial index. All dependencies are satisfied, migration slot is available, and patterns are well-established in the codebase.
+
+Ready for implementation phase.

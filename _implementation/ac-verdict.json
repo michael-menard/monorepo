@@ -1,11 +1,11 @@
 {
-  "story_id": "CDBE-4030",
-  "generated_at": "2026-03-19T00:00:00Z",
+  "story_id": "CDBE-3010",
+  "generated_at": "2026-03-18T00:00:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "A SQL migration adds NOTIFY trigger functions to all five knowledge tables (lessons_learned, adrs, code_standards, rules, cohesion_rules) that fire on INSERT and relevant UPDATE events. The trigger calls pg_notify('knowledge_embedding_needed', json_build_object('table', '<table_name>', 'id', NEW.id::text)::text). Migration includes DB safety preamble (DO block per 1007_pipe_0020_ghost_state_audit.sql pattern), is idempotent, and targets knowledgebase DB only (port 5433).",
+      "ac_text": "Migration uses CREATE OR REPLACE VIEW workflow.stories_current AS",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -15,7 +15,7 @@
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "A pgtap test file verifies: (a) trigger exists on all five tables for INSERT, (b) trigger exists on all five tables for UPDATE, (c) NOTIFY channel payload contains table and id fields.",
+      "ac_text": "Explicit column list with no s.* wildcard",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -25,7 +25,7 @@
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "A worker module (embedding-worker.ts or equivalent) exposes a class/function that: accepts EmbeddingClient and a pg.Client as constructor/config parameters (injectable for testing), subscribes to knowledge_embedding_needed via LISTEN, batches incoming notifications by table within a configurable window (default: 50ms or 25 items), generates embeddings via EmbeddingClient.generateEmbeddingsBatch(), and writes results back via UPDATE <table> SET embedding = $1, updated_at = NOW() WHERE id = $2.",
+      "ac_text": "LEFT JOIN LATERAL with correct subquery",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -35,7 +35,7 @@
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "The worker handles failures gracefully: individual row failures are logged via @repo/logger and do not crash the worker loop; the notification is NOT re-queued (stateless delivery — lost notifications are covered by the polling fallback); transient OpenAI errors are retried via EmbeddingClient's built-in retry logic.",
+      "ac_text": "h.created_at AS entered_at in SELECT list",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -45,7 +45,7 @@
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "A polling fallback runs on a configurable interval (default: 5 minutes). On each tick, it queries each of the five tables for WHERE embedding IS NULL LIMIT 100, generates embeddings for the batch, and writes them back. This run is skipped if the previous run has not completed (no overlap).",
+      "ac_text": "NULL returns for story with no history",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -55,7 +55,7 @@
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "A backfill function (callable at worker startup and as a standalone script) processes all embedding IS NULL rows across all five tables in batches of configurable size (default: 50), with a configurable inter-batch delay (default: 500ms) to respect OpenAI rate limits.",
+      "ac_text": "COMMENT ON VIEW present with 3010 prefix",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -65,7 +65,7 @@
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "The worker process handles SIGTERM and SIGINT gracefully: finishes any in-flight batch, releases the LISTEN pg.Client, and exits with code 0.",
+      "ac_text": "COMMENT ON COLUMN with 3010 prefix",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -75,7 +75,7 @@
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "All Zod schemas are defined in __types__/index.ts for: worker config (pollIntervalMs, batchSize, batchWindowMs, backfillBatchSize, backfillDelayMs), notification payload schema ({ table: z.string(), id: z.string().uuid() }), and embedding write result.",
+      "ac_text": "Safety check block with NOTICE output",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -85,7 +85,7 @@
     },
     {
       "ac_id": "AC-9",
-      "ac_text": "Unit tests cover: notification batching logic (window + size triggers), polling fallback skip-if-running guard, backfill batch-with-delay loop, graceful shutdown sequence. Tests use injected mock EmbeddingClient and mock pg.Client — no real DB or OpenAI calls in unit tests.",
+      "ac_text": "pgtap test file exists with 7/7 assertions passing",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -95,7 +95,7 @@
     },
     {
       "ac_id": "AC-10",
-      "ac_text": "pnpm check-types --filter @repo/knowledge-base exits 0 after all changes. No use of TypeScript interface — all types via z.infer<>.",
+      "ac_text": "Migration idempotency verified",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -105,7 +105,7 @@
     },
     {
       "ac_id": "AC-11",
-      "ac_text": "Worker startup log (via @repo/logger) records: DB connection established, LISTEN subscription active, backfill starting, backfill complete (with row counts per table).",
+      "ac_text": "LATERAL join uses exited_at IS NULL predicate",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -115,17 +115,7 @@
     },
     {
       "ac_id": "AC-12",
-      "ac_text": "pg.Client reconnect on connection drop — run.ts registers a client.on('error', ...) handler that reconnects with exponential backoff (e.g., attempts at 1s, 2s, 4s, 8s, capped at 30s) and re-issues LISTEN after each successful reconnect. The worker does NOT exit on a connection drop. Reconnect attempts and outcomes are logged via @repo/logger. EC-2 integration test must pass: simulate connection drop, verify LISTEN is re-established and worker continues processing.",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-13",
-      "ac_text": "run.ts performs a startup preflight check before entering the LISTEN loop: verify OPENAI_API_KEY is present in process.env. If absent, log a clear error via @repo/logger (e.g., 'Startup preflight failed: OPENAI_API_KEY is not set') and exit with code 1. This prevents a silent unhandled synchronous throw from EmbeddingClient.createEmbeddingClient() propagating without actionable output.",
+      "ac_text": "Only 2 SQL files created; no TypeScript, etc.",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -134,8 +124,8 @@
       "proof_required": null
     }
   ],
-  "total_acs": 13,
-  "accepted": 13,
+  "total_acs": 12,
+  "accepted": 12,
   "challenged": 0,
   "rejected": 0
 }
