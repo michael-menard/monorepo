@@ -1,13 +1,8 @@
 schema: 1
-story_id: PIPE-2020
-timestamp: '2026-03-18T00:00:00Z'
-current_phase: plan
-last_successful_phase: setup
-iteration: 0
+story_id: PIPE-2040
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+timestamp: '2026-03-18T19:15:00Z'
 blocked: false
-forced: false
-warnings:
-  - 'ST-6 is verification-only: PIPE-2010 already removed the type cast'
-gen_mode: false
-worktree_path: tree/story/PIPE-2020
-branch: story/PIPE-2020
+notes: All 4 subtasks implemented and verified. Type check and scheduler tests pass.

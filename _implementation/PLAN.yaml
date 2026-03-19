@@ -1,197 +1,162 @@
 schema: 2
-story_id: PIPE-2020
-timestamp: '2026-03-18T00:00:00Z'
+story_id: PIPE-2040
+timestamp: '2026-03-18T12:00:00Z'
 subtask_source: story
-complexity: moderate
 steps:
   - id: 1
     subtask_id: ST-1
-    description: >-
-      Extend createMockRunners() to include runDevImplement, runReview, and runQAVerify stubs. Add
-      MockDevImplementResult, MockReviewResult, MockQaResult fixture constants. Update the return type annotation to
-      expose devImplementSpy, reviewSpy, and qaVerifySpy alongside existing elaborationSpy and storyCreationSpy.
-      Existing tests must remain green.
+    description: Add strictFinishBeforeNewStart field to SchedulerConfigSchema
     files:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
     files_to_read:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-      - apps/api/pipeline/src/supervisor/graph-types.ts
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
     dependencies: []
     slice: backend
-    verification: pnpm test --filter @repo/pipeline
+    verification: pnpm check-types --filter @repo/pipeline
     acs_covered:
-      - AC-1
+      - AC-3
   - id: 2
     subtask_id: ST-2
-    description: >-
-      Add factory functions createImplementationJobData(), createReviewJobData(), and createQaJobData().
-      createReviewJobData() must accept optional worktreePath and featureDir params. Use ImplementationJobDataSchema,
-      ReviewJobDataSchema, QaJobDataSchema from the __types__ imports. Follow exact pattern of
-      createElaborationJobData() and createStoryCreationJobData().
+    description: Add BullMQ jobId option to dispatchStory() queue.add() call
     files:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/scheduler/index.ts
     files_to_read:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-      - apps/api/pipeline/src/supervisor/__types__/index.ts
+      - apps/api/pipeline/src/scheduler/index.ts
+      - packages/backend/pipeline-queue/src/index.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/pipeline
+    acs_covered:
+      - AC-1
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement applyStrictFinishFilter() private method and wire into runOnce() gated on
+      config.strictFinishBeforeNewStart
+    files:
+      - apps/api/pipeline/src/scheduler/index.ts
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
     dependencies:
       - 1
     slice: backend
     verification: pnpm check-types --filter @repo/pipeline
     acs_covered:
-      - AC-2
-  - id: 3
-    subtask_id: ST-3
-    description: >-
-      Add three happy-path describe blocks: HP-4 (implementation routes to runDevImplement), HP-5 (review routes to
-      runReview with worktreePath/featureDir args + fallback sub-test), HP-6 (qa routes to runQAVerify). Each block
-      verifies: correct runner called with correct args, other 4 runners not called, completed log event has
-      storyId/stage/threadId/attemptNumber/durationMs.
-    files:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-    files_to_read:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-      - apps/api/pipeline/src/supervisor/dispatch-router.ts
-    dependencies:
-      - 2
-    slice: backend
-    verification: pnpm test --filter @repo/pipeline
-    acs_covered:
-      - AC-3
       - AC-4
-      - AC-5
-      - AC-9
+      - AC-8
   - id: 4
     subtask_id: ST-4
-    description: >-
-      Add wall clock timeout describe blocks for implementation, review, and qa stages (EC-impl, EC-review, EC-qa).
-      Pattern from EC-1 lines 321-388: vi.useFakeTimers() in beforeEach, hangingRunner that never resolves for the
-      specific stage, vi.advanceTimersByTime(200), assert rejects with 'wall_clock_timeout', assert timeout log event
-      has correct threadId in format {storyId}:{stage}:{attemptNumber}.
+    description: Add unit tests for jobId, F006 preservation, and strictFinishBeforeNewStart
     files:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
     files_to_read:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+      - apps/api/pipeline/src/scheduler/index.ts
     dependencies:
+      - 2
       - 3
     slice: backend
     verification: pnpm test --filter @repo/pipeline
     acs_covered:
+      - AC-2
+      - AC-5
       - AC-6
-  - id: 5
-    subtask_id: ST-5
-    description: >-
-      Add circuit breaker describe blocks for implementation, review, and qa stages (CB-impl, CB-review, CB-qa). Pattern
-      from EC-4 lines 493-548: circuitBreakerFailureThreshold:1, first dispatch fails with TypeError to trip circuit,
-      vi.clearAllMocks(), second dispatch hits open circuit. Assert job.moveToDelayed() called on second dispatch,
-      circuit_open logged with correct stage (NOT elaboration).
-    files:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-    files_to_read:
-      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-    dependencies:
-      - 3
-    slice: backend
-    verification: pnpm test --filter @repo/pipeline
-    acs_covered:
       - AC-7
-  - id: 6
-    subtask_id: ST-6
-    description: >-
-      Verify the unsafe type cast is already removed (PIPE-2010 already merged it). Run grep -n 'as StorySnapshotPayload
-      &' apps/api/pipeline/src/supervisor/dispatch-router.ts to confirm zero results. Run pnpm check-types to confirm
-      TypeScript compiles cleanly. This step is verification-only — no code changes expected.
-    files:
-      - apps/api/pipeline/src/supervisor/dispatch-router.ts
-    files_to_read:
-      - apps/api/pipeline/src/supervisor/dispatch-router.ts
-    dependencies:
-      - 5
-    slice: backend
-    verification: >-
-      grep -n 'as StorySnapshotPayload &' apps/api/pipeline/src/supervisor/dispatch-router.ts | wc -l (expect 0); pnpm
-      check-types --filter @repo/pipeline
-    acs_covered:
-      - AC-8
-      - AC-11
+      - AC-9
+      - AC-10
 files_to_change:
-  - path: apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+  - path: apps/api/pipeline/src/scheduler/__types__/index.ts
+    action: modify
+    reason: 'Add strictFinishBeforeNewStart: z.boolean().default(false) field to SchedulerConfigSchema (AC-3)'
+  - path: apps/api/pipeline/src/scheduler/index.ts
     action: modify
     reason: >-
-      Primary deliverable: extend createMockRunners() + add factory functions + add HP-4/5/6 happy path blocks + add
-      timeout and circuit breaker tests for 3 new stages
-  - path: apps/api/pipeline/src/supervisor/dispatch-router.ts
+      Add jobId to queue.add() in dispatchStory() (AC-1); add applyStrictFinishFilter() private method and wire into
+      runOnce() (AC-4, AC-8)
+  - path: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
     action: modify
-    reason: Verify type cast removal (AC-8) — likely no changes needed since PIPE-2010 already removed it
+    reason: >-
+      Add tests for jobId dispatch (AC-2), F006 no-dispatch-on-updated-false (AC-7), strictFinishBeforeNewStart
+      true/false modes (AC-5, AC-6)
 commands_to_run:
-  - command: pnpm test --filter @repo/pipeline
-    when: after each subtask
-    required: true
   - command: pnpm check-types --filter @repo/pipeline
-    when: after ST-6 verification
+    when: after ST-1 and ST-2/ST-3 code changes
+    required: true
+  - command: pnpm test --filter @repo/pipeline
+    when: after all code changes (ST-4)
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
-    planned_evidence: createMockRunners() returns all 5 runner stubs with spy references; TypeScript compiles; existing tests pass
+    planned_evidence: >-
+      dispatchStory() calls queue.add with third arg { jobId: `${storyId}:implementation:${attemptNumber}` } — verified
+      by AC-2 unit test and type check
     evidence_type: test
   - ac_id: AC-2
-    planned_evidence: createImplementationJobData(), createReviewJobData(), createQaJobData() factory functions present and typed
+    planned_evidence: >-
+      Unit test: scheduler.test.ts — assert queue.add called with expect.objectContaining({ jobId:
+      'STORY-001:implementation:1' })
     evidence_type: test
   - ac_id: AC-3
     planned_evidence: >-
-      describe('HP-4: implementation job routes to runDevImplement()') block: runDevImplement called with {storyId,
-      attempt}, others not called
+      SchedulerConfigSchema in __types__/index.ts gains strictFinishBeforeNewStart field; pnpm check-types passes;
+      existing callers unaffected because default:false
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      describe('HP-5: review job routes to runReview()') block: runReview called with {storyId, worktreePath,
-      featureDir, attempt}, others not called; sub-test for fallback
+      applyStrictFinishFilter() in scheduler/index.ts filters eligible list when strictFinishBeforeNewStart:true and
+      in_progress plan siblings exist — verified by AC-5 unit test
     evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      describe('HP-6: qa job routes to runQAVerify()') block: runQAVerify called with {storyId, attempt}, others not
-      called
+      Unit test: STORY-A (plan with in_progress sibling) dispatched; STORY-B (plan with no in_progress sibling) deferred
+      when strictFinishBeforeNewStart:true
     evidence_type: test
   - ac_id: AC-6
-    planned_evidence: >-
-      3 timeout describe blocks (EC-impl, EC-review, EC-qa): hanging runner causes wall_clock_timeout error + timeout
-      log with correct threadId
+    planned_evidence: 'Unit test: both STORY-A and STORY-B dispatched when strictFinishBeforeNewStart:false (default)'
     evidence_type: test
   - ac_id: AC-7
-    planned_evidence: >-
-      3 circuit breaker describe blocks (CB-impl, CB-review, CB-qa): tripped circuit calls moveToDelayed + logs
-      circuit_open for correct stage
+    planned_evidence: 'Unit test: queue.add NOT called when kb_update_story_status returns updated:false — F006 preserved'
     evidence_type: test
   - ac_id: AC-8
-    planned_evidence: grep -n 'as StorySnapshotPayload &' dispatch-router.ts returns 0 results
-    evidence_type: command
-  - ac_id: AC-9
-    planned_evidence: completed log assertions in HP-4/5/6 verify storyId, stage, threadId, attemptNumber, durationMs
+    planned_evidence: >-
+      Existing applyFinishBeforeNewStart() priority reordering tests pass without regression after
+      applyStrictFinishFilter() is added
     evidence_type: test
-  - ac_id: AC-10
-    planned_evidence: pnpm test --filter @repo/pipeline exits 0 with all tests passing
-    evidence_type: command
-  - ac_id: AC-11
+  - ac_id: AC-9
     planned_evidence: pnpm check-types --filter @repo/pipeline exits 0
     evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: pnpm test --filter @repo/pipeline exits 0 with all tests in scheduler.test.ts passing
+    evidence_type: command
 architectural_decisions: []
+complexity: simple
 notes:
   - >-
-    PIPE-2010 is already merged: ReviewPayloadSchema and QaPayloadSchema exist in @repo/pipeline-queue, and the unsafe
-    type cast in the review branch is already gone. ST-6 is purely a verification step.
+    ST-1 and ST-2 have no dependencies on each other and can be coded in either order; ST-3 depends on ST-1 (needs
+    strictFinishBeforeNewStart in config type); ST-4 depends on ST-2 and ST-3
   - >-
-    createMockRunners() currently returns only runElaboration and runStoryCreation stubs. TypeScript GraphRunners
-    interface requires all 5. The extension must be done first (ST-1) before any new stage tests are written.
+    applyStrictFinishFilter() implementation strategy: reuse the hasSiblingInProgress Set that
+    applyFinishBeforeNewStart() already builds via its SQL query. The strict filter is invoked BEFORE the priority
+    reorder in runOnce() — only call applyFinishBeforeNewStart() on the already-filtered list. This avoids a second DB
+    round-trip.
   - >-
-    EC-1 timeout tests in the existing file pass partial GraphRunners { runElaboration: hangingRunner, runStoryCreation:
-    vi.fn() } — this works structurally. New timeout tests should follow the same pattern but with the correct stage
-    runner as the hanging one.
+    Concrete runOnce() call order: (1) getEligibleStories, (2) if strictFinishBeforeNewStart: applyStrictFinishFilter,
+    (3) if finishBeforeNewStart: applyFinishBeforeNewStart on the (possibly filtered) list, (4) slice to slotsAvailable,
+    (5) dispatch
   - >-
-    Thread ID format {storyId}:{stage}:{attemptNumber} is IRREVERSIBLE ADR. All threadId assertions must be exact: e.g.,
-    'PIPE-2020:implementation:1'.
+    applyStrictFinishFilter() needs its own DB query — it cannot share the hasSiblingInProgress Set from
+    applyFinishBeforeNewStart() because the two methods run independently. The query is identical in shape to the one in
+    applyFinishBeforeNewStart(): SELECT psl.story_id FROM workflow.plan_story_links WHERE story_id = ANY(...) AND EXISTS
+    (in_progress sibling). Add a private helper that returns the Set to share between both methods.
   - >-
-    The review branch fallback: worktreePath ?? '' and featureDir ?? 'plans/future/platform'. HP-5 needs both a
-    with-payload test (explicit paths) and without-payload test (verifies fallback defaults).
+    Test setup for ST-4 AC-5/AC-6: makeKbDeps() currently returns a single vi.fn().mockResolvedValue for db.execute. The
+    strict filter test needs db.execute to return different rows on its second call (first call = getEligibleStories
+    result, second call = hasSiblingInProgress query). Use vi.fn().mockResolvedValueOnce(...).mockResolvedValueOnce(...)
+    chaining in the test.
   - >-
-    Circuit breaker cbMap in dispatch-router.ts has separate entries for implementation, review, qa. CB tests must
-    assert circuit_open with stage:'implementation', stage:'review', stage:'qa' respectively — not stage:'elaboration'.
-  - No new packages, imports, or dependencies needed. All test infrastructure already exists in the file.
+    For the F006 test (AC-7): the current test file patches dispatchStory directly instead of mocking
+    kb_update_story_status at module level. The new test should use vi.mock('@repo/knowledge-base', ...) at the top of
+    the describe block, or mock the kbDeps.db.execute to simulate the KB call path. Since kb_update_story_status is
+    imported from @repo/knowledge-base as a named function, vi.mock is the correct approach.
+  - No new packages required. All changes are within apps/api/pipeline.

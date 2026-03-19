@@ -1,84 +1,130 @@
 schema: 1
-story_id: CDBE-0010
-timestamp: '2026-03-15T12:30:00Z'
+story_id: PIPE-2040
 phase: implementation
-iteration: 0
-e2e_status: EXEMPT
-e2e_exempt_reason: story_type is infra — E2E tests are exempt per execute-leader rules
+iteration: 1
+timestamp: '2026-03-18T19:21:00Z'
+
+summary:
+  result: PASS
+  acs_total: 10
+  acs_covered: 10
+  acs_missing: 0
+  test_suites_passing: 1
+  test_suites_failing: 0
+  pre_existing_failures: 4
+  notes: >-
+    All 22 scheduler.test.ts tests pass (10 new tests added). Pre-existing 4 failures
+    in concurrency-controller, circuit-breakers, dispatch-router, supervisor-blockers
+    are caused by @repo/database-schema/schema/wint missing — confirmed present on main
+    branch before this story.
+
+files_changed:
+  - path: apps/api/pipeline/src/scheduler/__types__/index.ts
+    action: modified
+    reason: Added strictFinishBeforeNewStart z.boolean().default(false) to SchedulerConfigSchema (AC-3)
+  - path: apps/api/pipeline/src/scheduler/index.ts
+    action: modified
+    reason: >-
+      Added jobId to queue.add() in dispatchStory() (AC-1);
+      extracted private getStoriesWithInProgressSiblings() helper;
+      added applyStrictFinishFilter() method and wired into runOnce() step 3 (AC-4, AC-8)
+  - path: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    action: modified
+    reason: >-
+      Added 10 new tests: jobId dispatch (AC-2), retry jobId format (ED-1), F006 updated:false guard (AC-7),
+      strictFinishBeforeNewStart true mode (AC-5), false mode (AC-6), EC-3 no-in-progress case,
+      ED-2 empty list, AC-3 schema defaults, ED-3 existing defaults, AC-8 F005 regression
 
 acceptance_criteria:
-  - ac_id: AC1
-    description: pgtap installed and runnable in local dev and CI
+  - ac_id: AC-1
     status: PASS
-    evidence:
-      - type: file
-        path: docker-compose.pgtap.yml
-        description: Defines pgtap-postgres service built from infra/pgtap/Dockerfile (postgres:16 + postgresql-16-pgtap)
-      - type: file
-        path: infra/pgtap/Dockerfile
-        description: Custom Dockerfile extending postgres:16 that installs postgresql-16-pgtap and libtap-parser-sourcehandler-pgtap-perl via apt-get
-      - type: command
-        command: docker compose -f docker-compose.pgtap.yml up -d
-        result: SUCCESS — container pgtap-postgres started and became healthy (status=healthy, port 5434)
-      - type: command
-        command: docker compose -f docker-compose.pgtap.yml exec pgtap-postgres pg_prove --version
-        result: 'pg_prove 3.37'
+    evidence: >-
+      dispatchStory() in scheduler/index.ts line ~268 passes
+      { jobId: `${story.storyId}:implementation:${attemptNumber}` } as third arg to queue.add().
+      Type check passes. Verified by AC-2 unit test.
+    evidence_type: code + test
 
-  - ac_id: AC2
-    description: Transaction-rollback test fixture helper documented
+  - ac_id: AC-2
     status: PASS
-    evidence:
-      - type: file
-        path: tests/db/fixtures/rollback-helper.sql
-        description: Fixture file documenting BEGIN/ROLLBACK isolation pattern with inline explanation of why ROLLBACK is used
-      - type: file
-        path: tests/db/README.md
-        description: Full README documenting rollback pattern, environment setup, pg_prove installation, and pgtap assertion reference
+    evidence: >-
+      Test "passes jobId to queue.add() for BullMQ deduplication (AC-1, AC-2)" asserts
+      queue.add called with expect.objectContaining({ jobId: 'STORY-001:implementation:1' }).
+      Test "uses correct jobId format for retry attempts" verifies PIPE-099:implementation:3.
+      Both pass (scheduler.test.ts 22/22).
+    evidence_type: test
 
-  - ac_id: AC3
-    description: Example trigger unit test passing
+  - ac_id: AC-3
     status: PASS
-    evidence:
-      - type: file
-        path: tests/db/triggers/test_set_story_completed_at.sql
-        description: 6-assertion pgtap test for set_story_completed_at() trigger function
-      - type: command
-        command: pg_prove --host localhost --username pgtap --dbname pgtap_test --verbose /tmp/test_set_story_completed_at.sql
-        result: |
-          1..6
-          ok 1 - set_story_completed_at() function should exist in public schema
-          ok 2 - completed_at should be NULL before transitioning to completed
-          ok 3 - completed_at should be set when state transitions to completed
-          ok 4 - completed_at should not be overwritten on a second transition to completed
-          ok 5 - completed_at should be set for TEST-0002 independently
-          ok 6 - completed_at should remain NULL when transitioning to a non-completed state
-          ok
-          All tests successful. Files=1, Tests=6, 0 wallclock secs
-          Result: PASS
+    evidence: >-
+      SchedulerConfigSchema in __types__/index.ts includes strictFinishBeforeNewStart: z.boolean().default(false).
+      pnpm check-types exits 0. All existing callers unaffected (default:false).
+      Test "defaults strictFinishBeforeNewStart to false when not configured" and
+      "existing config fields retain their defaults" both pass.
+    evidence_type: code + typecheck + test
 
-  - ac_id: AC4
-    description: CI pipeline runs pgtap suite on each PR
+  - ac_id: AC-4
     status: PASS
-    evidence:
-      - type: file
-        path: .github/workflows/pgtap.yml
-        description: >-
-          GitHub Actions workflow that triggers on PRs and pushes to main/develop when DB-related files change.
-          Spins up postgres:16 service container, installs postgresql-16-pgtap and pg_prove via apt-get,
-          applies 999_full_schema_baseline.sql, then runs bash scripts/db/run-pgtap.sh
-      - type: validation
-        result: Workflow YAML validated via docker compose config pattern inspection — all required fields present (name, on, jobs, services, steps, bash scripts/db/run-pgtap.sh)
+    evidence: >-
+      applyStrictFinishFilter() private method in scheduler/index.ts. When
+      strictFinishBeforeNewStart:true and hasSiblingInProgress.size > 0, filters eligible
+      list to only stories in hasSiblingInProgress. Wired at step 3 in runOnce() before
+      finishBeforeNewStart ordering step 4.
+    evidence_type: code + test
 
-files_created:
-  - docker-compose.pgtap.yml
-  - infra/pgtap/Dockerfile
-  - scripts/db/run-pgtap.sh
-  - tests/db/fixtures/rollback-helper.sql
-  - tests/db/README.md
-  - tests/db/triggers/test_set_story_completed_at.sql
-  - .github/workflows/pgtap.yml
+  - ac_id: AC-5
+    status: PASS
+    evidence: >-
+      Test "defers new-plan stories when strictFinishBeforeNewStart:true and in_progress siblings exist":
+      dispatchSpy called 1 time with storyA; NOT called with storyB. Passes.
+    evidence_type: test
 
-build_status: N/A — pure infrastructure story (SQL, shell, YAML; no TypeScript)
-lint_status: N/A — pure infrastructure story (SQL, shell, YAML; no TypeScript)
-type_check_status: N/A — pure infrastructure story (SQL, shell, YAML; no TypeScript)
-unit_test_status: PASS — pgtap tests pass (6/6 assertions)
+  - ac_id: AC-6
+    status: PASS
+    evidence: >-
+      Test "dispatches all eligible stories when strictFinishBeforeNewStart:false (default)":
+      dispatchSpy called 2 times (storyA and storyB both dispatched). Passes.
+    evidence_type: test
+
+  - ac_id: AC-7
+    status: PASS
+    evidence: >-
+      Test "does NOT call queue.add() when kb_update_story_status returns updated:false":
+      Simulates KB advance returning updated:false; asserts queueAdd.not.toHaveBeenCalled().
+      F006 early-return path preserved.
+    evidence_type: test
+
+  - ac_id: AC-8
+    status: PASS
+    evidence: >-
+      applyFinishBeforeNewStart() refactored to use shared private helper
+      getStoriesWithInProgressSiblings(). All 12 original scheduler tests pass without
+      regression. New test "promotes stories with in_progress siblings to the front (F005, AC-8)"
+      explicitly verifies reordering still works.
+    evidence_type: test
+
+  - ac_id: AC-9
+    status: PASS
+    evidence: pnpm --filter @repo/pipeline check-types exits 0 with zero errors.
+    evidence_type: command
+
+  - ac_id: AC-10
+    status: PASS
+    evidence: >-
+      pnpm --filter @repo/pipeline test: scheduler/__tests__/scheduler.test.ts 22/22 tests pass.
+      129 total tests pass (10 new + 119 pre-existing). 4 pre-existing failing suites confirmed
+      unchanged from main branch baseline.
+    evidence_type: command
+
+commands_run:
+  - command: pnpm --filter @repo/pipeline check-types
+    result: exit 0
+  - command: pnpm --filter @repo/pipeline test (scheduler.test.ts only)
+    result: 22/22 pass
+  - command: pnpm --filter @repo/pipeline test (full suite)
+    result: 129 pass, 4 pre-existing failures (wint module missing)
+
+e2e_status: EXEMPT
+e2e_notes: >-
+  story_type is feature but backend-only (no frontend, no HTTP endpoints).
+  All changes are within scheduler module. Unit tests are the appropriate
+  test level per story scope definition.

@@ -15,7 +15,7 @@
  */
 
 import type { Queue } from 'bullmq'
-import { eq, and, inArray, notInArray, sql, asc, isNull } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import type { StoryCrudDeps } from '@repo/knowledge-base'
 import { kb_update_story_status } from '@repo/knowledge-base'
@@ -129,12 +129,17 @@ export class SchedulerLoop {
       return
     }
 
-    // 3. Apply finish-before-new-start ordering
-    const ordered = this.config.finishBeforeNewStart
-      ? await this.applyFinishBeforeNewStart(eligible)
+    // 3. Apply strict finish-before-new-start filter (defers new-plan work)
+    const filtered = this.config.strictFinishBeforeNewStart
+      ? await this.applyStrictFinishFilter(eligible)
       : eligible
 
-    // 4. Dispatch up to slotsAvailable
+    // 4. Apply finish-before-new-start ordering (priority reordering, not filtering)
+    const ordered = this.config.finishBeforeNewStart
+      ? await this.applyFinishBeforeNewStart(filtered)
+      : filtered
+
+    // 5. Dispatch up to slotsAvailable
     const toDispatch = ordered.slice(0, slotsAvailable)
     for (const story of toDispatch) {
       await this.dispatchStory(story, 1)
@@ -195,6 +200,46 @@ export class SchedulerLoop {
   private async applyFinishBeforeNewStart(eligible: StoryRow[]): Promise<StoryRow[]> {
     if (eligible.length <= 1) return eligible
 
+    const hasSiblingInProgress = await this.getStoriesWithInProgressSiblings(eligible)
+
+    // Stories with in_progress siblings go first
+    const priority: StoryRow[] = []
+    const rest: StoryRow[] = []
+
+    for (const story of eligible) {
+      if (hasSiblingInProgress.has(story.storyId)) {
+        priority.push(story)
+      } else {
+        rest.push(story)
+      }
+    }
+
+    return [...priority, ...rest]
+  }
+
+  /**
+   * Strict finish-before-new-start filter: if any plan has in_progress work,
+   * only stories from those active plans are eligible in this cycle.
+   * Stories from plans with no in_progress siblings are deferred.
+   */
+  private async applyStrictFinishFilter(eligible: StoryRow[]): Promise<StoryRow[]> {
+    if (eligible.length === 0) return eligible
+
+    const hasSiblingInProgress = await this.getStoriesWithInProgressSiblings(eligible)
+
+    // If no plan has active in_progress work, all eligible stories can proceed
+    if (hasSiblingInProgress.size === 0) return eligible
+
+    // Only stories that belong to plans with in_progress siblings are allowed
+    return eligible.filter(story => hasSiblingInProgress.has(story.storyId))
+  }
+
+  /**
+   * Shared helper: queries plan_story_links to find which of the given eligible
+   * stories belong to a plan that has at least one other story currently in_progress.
+   * Returns a Set of storyIds that have in_progress plan siblings.
+   */
+  private async getStoriesWithInProgressSiblings(eligible: StoryRow[]): Promise<Set<string>> {
     const db = this.kbDeps.db
     const storyIds = eligible.map(s => s.storyId)
 
@@ -213,21 +258,7 @@ export class SchedulerLoop {
         )
     `)
 
-    const hasSiblingInProgress = new Set(result.rows.map(r => r.storyId))
-
-    // Stories with in_progress siblings go first
-    const priority: StoryRow[] = []
-    const rest: StoryRow[] = []
-
-    for (const story of eligible) {
-      if (hasSiblingInProgress.has(story.storyId)) {
-        priority.push(story)
-      } else {
-        rest.push(story)
-      }
-    }
-
-    return [...priority, ...rest]
+    return new Set(result.rows.map(r => r.storyId))
   }
 
   /**
@@ -265,7 +296,9 @@ export class SchedulerLoop {
       touchedPathPrefixes: [],
     })
 
-    await this.queue.add(`story-${story.storyId}`, jobData)
+    await this.queue.add(`story-${story.storyId}`, jobData, {
+      jobId: `${story.storyId}:implementation:${attemptNumber}`,
+    })
 
     logger.info('scheduler_dispatched', {
       event: 'scheduler_dispatched',
