@@ -19,6 +19,12 @@ export const SchedulerConfigSchema = z.object({
   finishBeforeNewStart: z.boolean().default(true),
   /** BullMQ queue name to enqueue jobs on */
   queueName: z.string().min(1).default('apip-pipeline'),
+  /**
+   * Strict finish-before-new-start enforcement: when true, stories from plans with
+   * no in_progress siblings are deferred until all active plans have finished their
+   * in_progress work. When false (default), all eligible stories are dispatched.
+   */
+  strictFinishBeforeNewStart: z.boolean().default(false),
 })
 
 export type SchedulerConfig = z.infer<typeof SchedulerConfigSchema>
