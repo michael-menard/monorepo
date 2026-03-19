@@ -1,11 +1,11 @@
 {
-  "story_id": "PIPE-3010",
-  "generated_at": "2026-03-18T00:00:00Z",
-  "overall_verdict": "CHALLENGE",
+  "story_id": "CDBE-5010",
+  "generated_at": "2026-03-19T03:10:00Z",
+  "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "A SQL migration adds NOTIFY trigger functions to all five knowledge tables (lessons_learned, adrs, code_standards, rules, cohesion_rules) that fire on INSERT and relevant UPDATE events. The trigger calls pg_notify('knowledge_embedding_needed', json_build_object('table', '<table_name>', 'id', NEW.id::text)::text). Migration includes DB safety preamble (DO block per 1007_pipe_0020_ghost_state_audit.sql pattern), is idempotent, and targets knowledgebase DB only (port 5433).",
+      "ac_text": "Migration creates workflow.agent_invocations and analytics.story_token_usage as partitioned parent tables with RANGE partitioning on started_at and logged_at respectively",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -15,7 +15,7 @@
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "A pgtap test file verifies: (a) trigger exists on all five tables for INSERT, (b) trigger exists on all five tables for UPDATE, (c) NOTIFY channel payload contains table and id fields.",
+      "ac_text": "PRIMARY KEY includes partition key; FKs drop and recreate with CASCADE (agent_outcomes, agent_decisions) and SET NULL (hitl_decisions) on agent_invocations parent",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -25,7 +25,7 @@
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "A worker module (embedding-worker.ts or equivalent) exposes a class/function that: accepts EmbeddingClient and a pg.Client as constructor/config parameters (injectable for testing), subscribes to knowledge_embedding_needed via LISTEN, batches incoming notifications by table within a configurable window (default: 50ms or 25 items), generates embeddings via EmbeddingClient.generateEmbeddingsBatch(), and writes results back via UPDATE <table> SET embedding = $1, updated_at = NOW() WHERE id = $2.",
+      "ac_text": "Unique index on (invocation_id, started_at) created per partition; pgTAP HP-5a verifies index on y2026m03",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -35,97 +35,47 @@
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "The worker handles failures gracefully: individual row failures are logged via @repo/logger and do not crash the worker loop; the notification is NOT re-queued (stateless delivery — lost notifications are covered by the polling fallback); transient OpenAI errors are retried via EmbeddingClient's built-in retry logic.",
-      "verdict": "CHALLENGE",
+      "ac_text": "Data migration uses rename-create-copy-drop strategy within single BEGIN/COMMIT transaction for both tables",
+      "verdict": "ACCEPT",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes test behavior but lacks explicit test count or tests_passed field. Summary demonstrates the scenario conceptually but does not provide numeric verification (passing/failing count).",
-      "proof_required": "Provide test_count and tests_passed fields showing the number of tests that executed and passed for failure handling scenarios."
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "A polling fallback runs on a configurable interval (default: 5 minutes). On each tick, it queries each of the five tables for WHERE embedding IS NULL LIMIT 100, generates embeddings for the batch, and writes them back. This run is skipped if the previous run has not completed (no overlap).",
-      "verdict": "CHALLENGE",
+      "ac_text": "DEFAULT partitions created for agent_invocations and story_token_usage; pgTAP HP-2b and HP-3b verify historical rows route to default",
+      "verdict": "ACCEPT",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes polling logic but lacks explicit test count or tests_passed field. Summary demonstrates scenarios (NULL query, skip-if-running guard) but provides no numeric test results.",
-      "proof_required": "Provide test_count and tests_passed fields documenting the number of tests that executed and passed for polling fallback scenarios."
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "A backfill function (callable at worker startup and as a standalone script) processes all embedding IS NULL rows across all five tables in batches of configurable size (default: 50), with a configurable inter-batch delay (default: 500ms) to respect OpenAI rate limits.",
-      "verdict": "CHALLENGE",
+      "ac_text": "Monthly partitions created for current (y2026m03) and next (y2026m04) months; pgTAP HP-2a and HP-3a verify 2026-03-15 routing",
+      "verdict": "ACCEPT",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes backfill behavior but lacks explicit test count or tests_passed field. Summary demonstrates batch and delay logic but provides no numeric test results.",
-      "proof_required": "Provide test_count and tests_passed fields documenting the number of tests that executed and passed for backfill functionality."
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "The worker process handles SIGTERM and SIGINT gracefully: finishes any in-flight batch, releases the LISTEN pg.Client, and exits with code 0.",
-      "verdict": "CHALLENGE",
+      "ac_text": "Row count verification within migration (sections 8, 16) with RAISE EXCEPTION on mismatch; orphan FK check in section 17; all within transaction",
+      "verdict": "ACCEPT",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes shutdown behavior but lacks explicit test count or tests_passed field. Summary demonstrates the scenario but provides no numeric test results.",
-      "proof_required": "Provide test_count and tests_passed fields documenting the number of tests that executed and passed for graceful shutdown scenarios."
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "All Zod schemas are defined in __types__/index.ts for: worker config (pollIntervalMs, batchSize, batchWindowMs, backfillBatchSize, backfillDelayMs), notification payload schema ({ table: z.string(), id: z.string().uuid() }), and embedding write result.",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-9",
-      "ac_text": "Unit tests cover: notification batching logic (window + size triggers), polling fallback skip-if-running guard, backfill batch-with-delay loop, graceful shutdown sequence. Tests use injected mock EmbeddingClient and mock pg.Client — no real DB or OpenAI calls in unit tests.",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-10",
-      "ac_text": "pnpm check-types --filter @repo/knowledge-base exits 0 after all changes. No use of TypeScript interface — all types via z.infer<>.",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-11",
-      "ac_text": "Worker startup log (via @repo/logger) records: DB connection established, LISTEN subscription active, backfill starting, backfill complete (with row counts per table).",
-      "verdict": "CHALLENGE",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 0,
-      "weak_evidence_count": 1,
-      "challenge_reason": "Evidence describes logging patterns but is description-only without explicit test count or deterministic verification result. Summary demonstrates logging calls but provides no test_count/tests_passed field.",
-      "proof_required": "Provide test_count and tests_passed fields if logging is verified by unit tests, or provide a deterministic command/file artifact validating the logging output."
-    },
-    {
-      "ac_id": "AC-12",
-      "ac_text": "pg.Client reconnect on connection drop — run.ts registers a client.on('error', ...) handler that reconnects with exponential backoff (e.g., attempts at 1s, 2s, 4s, 8s, capped at 30s) and re-issues LISTEN after each successful reconnect. The worker does NOT exit on a connection drop. Reconnect attempts and outcomes are logged via @repo/logger. EC-2 integration test must pass: simulate connection drop, verify LISTEN is re-established and worker continues processing.",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-13",
-      "ac_text": "run.ts performs a startup preflight check before entering the LISTEN loop: verify OPENAI_API_KEY is present in process.env. If absent, log a clear error via @repo/logger (e.g., 'Startup preflight failed: OPENAI_API_KEY is not set') and exit with code 1. This prevents a silent unhandled synchronous throw from EmbeddingClient.createEmbeddingClient() propagating without actionable output.",
+      "ac_text": "pgTAP test file contains exactly 20 assertions across 8 groups (HP-1 through HP-8); tests run in BEGIN...ROLLBACK for clean state",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -134,11 +84,12 @@
       "proof_required": null
     }
   ],
-  "total_acs": 13,
+  "total_acs": 8,
   "accepted": 8,
-  "challenged": 5,
+  "challenged": 0,
   "rejected": 0,
   "warnings": [
-    "story_id_mismatch: EVIDENCE.yaml contains story_id='CDBE-4030' but evaluation requested for story_id='PIPE-3010'. Evidence bundle evaluated as-is; verify that correct story's evidence was placed in this worktree."
+    "story_file_missing: CDBE-5010.md not found; evaluated with ac_text from EVIDENCE.yaml only",
+    "role_pack_missing: qa.md not found; used embedded QA constraints"
   ]
 }
