@@ -1,8 +1,12 @@
 schema: 1
-story_id: PIPE-2040
+story_id: CDBE-4020
+timestamp: '2026-03-19T04:00:00Z'
 current_phase: execute
 last_successful_phase: plan
-iteration: 1
-timestamp: '2026-03-18T19:15:00Z'
+iteration: 0
 blocked: false
-notes: All 4 subtasks implemented and verified. Type check and scheduler tests pass.
+forced: false
+max_iterations: 3
+worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/CDBE-4020
+branch: story/CDBE-4020
+warnings: []

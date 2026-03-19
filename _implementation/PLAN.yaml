@@ -1,162 +1,165 @@
 schema: 2
-story_id: PIPE-2040
-timestamp: '2026-03-18T12:00:00Z'
+story_id: CDBE-4020
+timestamp: '2026-03-19T03:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
-    description: Add strictFinishBeforeNewStart field to SchedulerConfigSchema
+    description: >-
+      Author migration SQL: DB safety preamble, pgvector version guard, pre-flight row count RAISE NOTICE for all five
+      tables, ALTER TABLE ADD COLUMN IF NOT EXISTS embedding public.vector(1536) for each table, COMMENT ON COLUMN for
+      each column, and CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw for each table (outside any transaction
+      block, with m=16 ef_construction=64).
     files:
-      - apps/api/pipeline/src/scheduler/__types__/index.ts
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
     files_to_read:
-      - apps/api/pipeline/src/scheduler/__types__/index.ts
+      - apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql
+      - apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql
     dependencies: []
     slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
-    acs_covered:
-      - AC-3
-  - id: 2
-    subtask_id: ST-2
-    description: Add BullMQ jobId option to dispatchStory() queue.add() call
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - packages/backend/pipeline-queue/src/index.ts
-    dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
+    verification: >-
+      Apply to knowledgebase DB (port 5435) — zero errors, confirm RAISE NOTICE output for all 5 tables; apply a second
+      time to verify idempotency (zero errors, no duplicate objects in pg_indexes)
     acs_covered:
       - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-8
+      - AC-9
+    blocker_note: >-
+      Do not begin ST-1 until CDBE-4010 is merged (pgvector extension + vector customType confirmation). CDBE-4010 is
+      currently in_qa.
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Update kb.ts Drizzle schema: add embedding: vector('embedding', { dimensions: 1536 }) to the adrs, codeStandards,
+      cohesionRules, lessonsLearned, and rules table definitions. Re-export inferred select and insert types for each
+      modified table.
+    files:
+      - apps/api/knowledge-base/src/db/schema/kb.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/db/schema/kb.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
+    acs_covered:
+      - AC-6
   - id: 3
     subtask_id: ST-3
     description: >-
-      Implement applyStrictFinishFilter() private method and wire into runOnce() gated on
-      config.strictFinishBeforeNewStart
+      Write pgtap test file asserting: (a) embedding column exists on all five tables with type USER-DEFINED (vector)
+      via col_type_is, (b) HNSW indexes exist on all five tables with pg_indexes.indexdef containing 'USING hnsw', (c)
+      embedding column is nullable on all five tables via col_is_nullable. Follow gold-standard structure from
+      1007_pipe_0020_ghost_state_audit_test.sql.
     files:
-      - apps/api/pipeline/src/scheduler/index.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
     files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - apps/api/pipeline/src/scheduler/__types__/index.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
     dependencies:
       - 1
     slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
+    verification: pg_prove output shows all assertions pass against knowledgebase DB with migration 1011 applied
     acs_covered:
-      - AC-4
-      - AC-8
-  - id: 4
-    subtask_id: ST-4
-    description: Add unit tests for jobId, F006 preservation, and strictFinishBeforeNewStart
-    files:
-      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-      - apps/api/pipeline/src/scheduler/index.ts
-    dependencies:
-      - 2
-      - 3
-    slice: backend
-    verification: pnpm test --filter @repo/pipeline
-    acs_covered:
-      - AC-2
-      - AC-5
-      - AC-6
       - AC-7
-      - AC-9
-      - AC-10
 files_to_change:
-  - path: apps/api/pipeline/src/scheduler/__types__/index.ts
-    action: modify
-    reason: 'Add strictFinishBeforeNewStart: z.boolean().default(false) field to SchedulerConfigSchema (AC-3)'
-  - path: apps/api/pipeline/src/scheduler/index.ts
+  - path: apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+    action: create
+    reason: >-
+      New migration adding embedding vector(1536) columns and HNSW indexes to the five knowledge tables (AC-1 through
+      AC-5, AC-8, AC-9)
+  - path: apps/api/knowledge-base/src/db/schema/kb.ts
     action: modify
     reason: >-
-      Add jobId to queue.add() in dispatchStory() (AC-1); add applyStrictFinishFilter() private method and wire into
-      runOnce() (AC-4, AC-8)
-  - path: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    action: modify
+      Add embedding column to adrs, codeStandards, cohesionRules, lessonsLearned, and rules table definitions; re-export
+      inferred types (AC-6)
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+    action: create
     reason: >-
-      Add tests for jobId dispatch (AC-2), F006 no-dispatch-on-updated-false (AC-7), strictFinishBeforeNewStart
-      true/false modes (AC-5, AC-6)
+      pgtap test file verifying embedding column existence, HNSW index existence, and column nullability across all five
+      tables (AC-7)
 commands_to_run:
-  - command: pnpm check-types --filter @repo/pipeline
-    when: after ST-1 and ST-2/ST-3 code changes
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after kb.ts update (ST-2)
     required: true
-  - command: pnpm test --filter @repo/pipeline
-    when: after all code changes (ST-4)
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+    when: after ST-1 (apply to knowledgebase DB, port 5435 — NOT lego_dev)
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+    when: second run for idempotency check (after first apply)
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql |
+      pg_prove
+    when: after migration 1011 is applied (ST-3 verification)
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      dispatchStory() calls queue.add with third arg { jobId: `${storyId}:implementation:${attemptNumber}` } — verified
-      by AC-2 unit test and type check
-    evidence_type: test
+      Migration file exists with DO block checking current_database() = 'knowledgebase'; EC-1 test: apply to lego_dev
+      raises EXCEPTION
+    evidence_type: manual
   - ac_id: AC-2
     planned_evidence: >-
-      Unit test: scheduler.test.ts — assert queue.add called with expect.objectContaining({ jobId:
-      'STORY-001:implementation:1' })
-    evidence_type: test
+      Migration SQL contains ALTER TABLE ... ADD COLUMN IF NOT EXISTS embedding public.vector(1536) for all five tables;
+      confirmed via pg_attribute query after apply
+    evidence_type: command
   - ac_id: AC-3
     planned_evidence: >-
-      SchedulerConfigSchema in __types__/index.ts gains strictFinishBeforeNewStart field; pnpm check-types passes;
-      existing callers unaffected because default:false
-    evidence_type: test
+      Migration SQL contains CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw (embedding public.vector_cosine_ops)
+      with m=16 ef_construction=64 comment for all five tables
+    evidence_type: command
   - ac_id: AC-4
-    planned_evidence: >-
-      applyStrictFinishFilter() in scheduler/index.ts filters eligible list when strictFinishBeforeNewStart:true and
-      in_progress plan siblings exist — verified by AC-5 unit test
-    evidence_type: test
+    planned_evidence: Second migration run produces zero errors; pg_indexes shows exactly one HNSW index per table
+    evidence_type: command
   - ac_id: AC-5
-    planned_evidence: >-
-      Unit test: STORY-A (plan with in_progress sibling) dispatched; STORY-B (plan with no in_progress sibling) deferred
-      when strictFinishBeforeNewStart:true
-    evidence_type: test
+    planned_evidence: 'Migration SQL contains COMMENT ON COLUMN with 1011: prefix for all five embedding columns'
+    evidence_type: manual
   - ac_id: AC-6
-    planned_evidence: 'Unit test: both STORY-A and STORY-B dispatched when strictFinishBeforeNewStart:false (default)'
-    evidence_type: test
+    planned_evidence: >-
+      kb.ts updated with embedding column on all five table definitions; pnpm check-types --filter @repo/knowledge-base
+      exits 0
+    evidence_type: command
   - ac_id: AC-7
-    planned_evidence: 'Unit test: queue.add NOT called when kb_update_story_status returns updated:false — F006 preserved'
+    planned_evidence: >-
+      pgtap test file with col_type_is, HNSW indexdef assertions, and col_is_nullable for all five tables; pg_prove
+      output: all tests pass
     evidence_type: test
   - ac_id: AC-8
-    planned_evidence: >-
-      Existing applyFinishBeforeNewStart() priority reordering tests pass without regression after
-      applyStrictFinishFilter() is added
-    evidence_type: test
+    planned_evidence: Migration SQL contains RAISE NOTICE with row count for each of the five tables (visible in psql output)
+    evidence_type: manual
   - ac_id: AC-9
-    planned_evidence: pnpm check-types --filter @repo/pipeline exits 0
-    evidence_type: command
-  - ac_id: AC-10
-    planned_evidence: pnpm test --filter @repo/pipeline exits 0 with all tests in scheduler.test.ts passing
-    evidence_type: command
+    planned_evidence: >-
+      Migration SQL contains DO block checking extversion >= 0.5.0; EC-2 test: old pgvector raises EXCEPTION before any
+      HNSW creation
+    evidence_type: manual
 architectural_decisions: []
-complexity: simple
+complexity: moderate
 notes:
   - >-
-    ST-1 and ST-2 have no dependencies on each other and can be coded in either order; ST-3 depends on ST-1 (needs
-    strictFinishBeforeNewStart in config type); ST-4 depends on ST-2 and ST-3
+    Migration slot 1011 confirmed: last migration in worktree is 1010_story_state_history_trigger.sql. Filename must be
+    1011_cdbe4020_embedding_columns_knowledge_tables.sql.
   - >-
-    applyStrictFinishFilter() implementation strategy: reuse the hasSiblingInProgress Set that
-    applyFinishBeforeNewStart() already builds via its SQL query. The strict filter is invoked BEFORE the priority
-    reorder in runOnce() — only call applyFinishBeforeNewStart() on the already-filtered list. This avoids a second DB
-    round-trip.
+    CDBE-4010 is currently in_qa — ST-1 must NOT begin until CDBE-4010 is merged. ST-2 (kb.ts) can proceed in parallel
+    and does not depend on CDBE-4010.
   - >-
-    Concrete runOnce() call order: (1) getEligibleStories, (2) if strictFinishBeforeNewStart: applyStrictFinishFilter,
-    (3) if finishBeforeNewStart: applyFinishBeforeNewStart on the (possibly filtered) list, (4) slice to slotsAvailable,
-    (5) dispatch
+    CREATE INDEX CONCURRENTLY statements must be top-level SQL — NOT inside any BEGIN/COMMIT block. PostgreSQL enforces
+    this at the engine level.
+  - All five target tables are in the public schema (not workflow schema). Use public.vector_cosine_ops operator class.
   - >-
-    applyStrictFinishFilter() needs its own DB query — it cannot share the hasSiblingInProgress Set from
-    applyFinishBeforeNewStart() because the two methods run independently. The query is identical in shape to the one in
-    applyFinishBeforeNewStart(): SELECT psl.story_id FROM workflow.plan_story_links WHERE story_id = ANY(...) AND EXISTS
-    (in_progress sibling). Add a private helper that returns the Set to share between both methods.
+    HNSW parameters: m=16, ef_construction=64 — consistent with CDBE-4010 and confirmed by KB entry 5918e276 for tables
+    under 10,000 rows.
+  - The vector customType is already defined and exported in kb.ts lines 24-39 — reuse directly, no redefinition.
   - >-
-    Test setup for ST-4 AC-5/AC-6: makeKbDeps() currently returns a single vi.fn().mockResolvedValue for db.execute. The
-    strict filter test needs db.execute to return different rows on its second call (first call = getEligibleStories
-    result, second call = hasSiblingInProgress query). Use vi.fn().mockResolvedValueOnce(...).mockResolvedValueOnce(...)
-    chaining in the test.
+    Drizzle does not support functional indexes for HNSW — indexes exist in migration SQL only, not in kb.ts table
+    definitions.
+  - 'Elaboration verdict: PASS (9/9 audit checks), all opportunities auto-resolved to KB, no gaps, no ACs added.'
   - >-
-    For the F006 test (AC-7): the current test file patches dispatchStory directly instead of mocking
-    kb_update_story_status at module level. The new test should use vi.mock('@repo/knowledge-base', ...) at the top of
-    the describe block, or mock the kbDeps.db.execute to simulate the KB call path. Since kb_update_story_status is
-    imported from @repo/knowledge-base as a named function, vi.mock is the correct approach.
-  - No new packages required. All changes are within apps/api/pipeline.
+    Reuse safety preamble from 1007_pipe_0020_ghost_state_audit.sql lines 28-35 verbatim (swap migration number to
+    1011).
