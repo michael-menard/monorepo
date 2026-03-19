@@ -1,0 +1,123 @@
+feasible: true
+confidence: high
+rationale: >
+  This is a well-bounded DDL + seed-data migration story. The transition rules are already
+  fully encoded in migration 1001's IF/ELSIF trigger logic — this story simply externalizes
+  them into a queryable lookup table. No application code changes are required beyond
+  registering the new table in Drizzle schema (workflow.ts). All patterns (idempotent DDL,
+  COMMENT ON, CREATE TABLE IF NOT EXISTS, INSERT ... ON CONFLICT DO NOTHING) are already
+  established in migrations 1001-1003. Risk is low, implementation surface is small.
+complexity: low
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/db/migrations/ # new 1004_valid_transitions.sql file
+    - apps/api/knowledge-base/src/db/schema/workflow.ts # add validTransitions table export
+  endpoints: []
+  deploy_touchpoints:
+    - Run migration runner: apps/api/knowledge-base/scripts/run-migrations.sh
+    - Verify migration applied: SELECT * FROM public.schema_migrations WHERE filename LIKE '1004%'
+risks:
+  - finding: >
+      Migration slot 1004 may be taken by a concurrent story if another CDBE story is
+      generated between seeding and implementation.
+    mitigation: >
+      Verify at implementation time that slot 1004 is free. If taken, use next available
+      integer and update the AC accordingly. Document any deviation in migration file header.
+
+  - finding: >
+      NULL from_state uniqueness: PostgreSQL UNIQUE constraints treat NULLs as distinct,
+      meaning a plain UNIQUE(from_state, to_state) constraint will NOT catch duplicate
+      NULL from_state rows. The correct approach must be chosen at implementation time.
+    mitigation: >
+      Use one of: (a) a partial unique index WHERE from_state IS NOT NULL plus a separate
+      partial index WHERE from_state IS NULL, or (b) a functional unique index on
+      COALESCE(from_state, '__NULL__'). Preferred: option (b) for simplicity.
+      Document chosen approach in migration header comment.
+
+  - finding: >
+      Transition enumeration completeness: if any from_state → to_state pair is missed
+      during seed data construction, CDBE-1010's trigger JOIN will silently block valid
+      transitions.
+    mitigation: >
+      Perform a side-by-side diff of migration 1001 IF/ELSIF block (lines 64-95) against
+      the INSERT statements. Require explicit peer-review sign-off (AC-8) before CDBE-1010
+      begins. AC-9 pgtap tests serve as a secondary completeness gate.
+
+missing_requirements: []
+evidence_expectations:
+  - Migration script applies cleanly against DB with migrations 1000-1003 applied
+  - SELECT COUNT(*) from workflow.valid_transitions returns expected row count after migration
+  - pnpm check-types --filter @repo/knowledge-base passes after Drizzle schema update
+  - Migration is idempotent (run twice, count unchanged, no errors)
+  - PR review comment confirming transition enumeration completeness (AC-8)
+
+subtasks:
+  - id: ST-1
+    title: Write 1004_valid_transitions.sql migration
+    goal: >
+      Create workflow.valid_transitions table with correct columns, UNIQUE constraint,
+      seed all legal from_state → to_state pairs from migration 1001 trigger logic,
+      add COMMENT ON TABLE, ensure idempotency throughout.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql # new file
+    acs:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-7
+    depends_on: none
+    verification: apps/api/knowledge-base/scripts/run-migrations.sh (apply and re-apply)
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: Register validTransitions in Drizzle workflow schema
+    goal: >
+      Add a Drizzle table definition for workflow.valid_transitions to workflow.ts,
+      following the storyStateHistory pattern, so that Drizzle can reference it in
+      queries and TypeScript type generation is accurate.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
+    acs:
+      - AC-6
+    depends_on: ST-1
+    verification: pnpm check-types --filter @repo/knowledge-base
+    estimated_tokens: 2000
+
+  - id: ST-3
+    title: Write pgtap tests for valid_transitions table
+    goal: >
+      Write SQL assertions (pgtap or equivalent) that verify: table exists, row count
+      matches expected, NULL from_state row exists, at least 3 forward-flow spot-checks pass,
+      idempotency confirmed, and no ghost states are present.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/tests/ # new pgtap test file (path TBD per project convention)
+    acs:
+      - AC-9
+    depends_on: ST-1
+    verification: Run pgtap test suite against DB with migration 1004 applied
+    estimated_tokens: 3000
+
+  - id: ST-4
+    title: Peer review and sign-off on transition enumeration completeness
+    goal: >
+      Submit PR for migration 1004 review. Reviewer performs side-by-side diff of
+      migration 1001 IF/ELSIF block against seeded rows. Sign-off is documented in PR
+      comment before CDBE-1010 proceeds.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    files_to_modify: []
+    acs:
+      - AC-8
+    depends_on: ST-1
+    verification: PR comment from reviewer confirming completeness
+    estimated_tokens: 1000

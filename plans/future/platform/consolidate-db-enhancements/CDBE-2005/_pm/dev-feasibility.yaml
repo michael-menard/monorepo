@@ -1,0 +1,116 @@
+feasible: true
+confidence: high
+rationale: >
+  CDBE-2005 is a focused, single-file SQL migration. The implementation pattern is
+  well-established by migrations 1001 and 1004 in apps/api/knowledge-base/src/db/migrations/.
+  The table schema is fully defined in the ACs. The validate_caller() function follows
+  the exact structural pattern of validate_story_state_transition() in migration 1001.
+  The pgtap test pattern is established by test_cdbe1030_artifact_superseded_at.sql.
+  No TypeScript changes are required. This is low-risk, high-confidence work.
+complexity: low
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (new migration file)'
+    - 'tests/db/triggers/ (new pgtap test file)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Run migration against KB database: workflow.allowed_agents table + validate_caller() function'
+    - 'Migration must run before any CDBE-2010 migration'
+    - 'Safe to deploy independently of Phase 1 trigger stories (no Phase 1 dependencies)'
+
+risks:
+  - finding: 'Agent identity list in AC-4 may be incomplete'
+    mitigation: >
+      Scan .claude/agents/*.agent.md to identify all agent files that call Phase 2 stored
+      procedures. Cross-reference with access-control.ts AgentRoleSchema. Seed must be
+      comprehensive — any missing agent identity will cause runtime rejection by Phase 2
+      stored procedures. The seed block uses ON CONFLICT DO NOTHING so adding rows later
+      is safe via a follow-up migration.
+  - finding: 'Numeric migration prefix ordering must position CDBE-2005 before CDBE-2010'
+    mitigation: >
+      Inspect current highest migration number in apps/api/knowledge-base/src/db/migrations/.
+      The last migration is 1004_valid_transitions.sql. Use prefix 1005 for CDBE-2005.
+      Any CDBE-2010 migration must use prefix >= 1006. Document in migration file header.
+
+missing_requirements:
+  - 'AC-4 requires confirmed list of all agent identities — dev must scan .claude/agents/*.agent.md and cross-reference access-control.ts before writing seed rows'
+  - 'Exact numeric prefix for migration file must be chosen at implementation time to avoid collisions with other in-flight CDBE migrations'
+
+evidence_expectations:
+  - 'pgtap test file at tests/db/triggers/test_cdbe2005_allowed_agents.sql with minimum 4 assertions passing'
+  - 'Migration file idempotency verified by running it twice — row counts unchanged on second run'
+  - 'pnpm check-types passes (no TypeScript changes expected, but verify migration tooling if any TS wrappers exist)'
+
+subtasks:
+  - id: ST-1
+    title: 'Write CREATE TABLE DDL for workflow.allowed_agents'
+    goal: >
+      Define the allowed_agents table in the workflow schema with all required columns,
+      primary key, COMMENT ON TABLE, and COMMENT ON COLUMN for each column. Follow
+      1004_valid_transitions.sql table definition pattern exactly.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql (new file)'
+    acs:
+      - 'AC-1'
+      - 'AC-2'
+      - 'AC-3'
+      - 'AC-10'
+    depends_on: none
+    verification: 'psql: \d workflow.allowed_agents — verify all columns and types present'
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: 'Write idempotent seed DO $$ block for known agent identities'
+    goal: >
+      Seed workflow.allowed_agents with all known agent identities using the DO $$ ...
+      INSERT WHERE NOT EXISTS ... END $$ idempotent pattern from migration 1004.
+      Confirm agent list by scanning .claude/agents/*.agent.md files.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql'
+      - 'apps/api/knowledge-base/src/mcp-server/access-control.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql'
+    acs:
+      - 'AC-4'
+    depends_on: ST-1
+    verification: 'SELECT COUNT(*) FROM workflow.allowed_agents WHERE active = true; expect >= 5'
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: 'Write workflow.validate_caller() PL/pgSQL function'
+    goal: >
+      Create the validate_caller(caller_agent_id text) RETURNS void function that performs
+      a lookup in workflow.allowed_agents WHERE active = true and raises P0001 with
+      "Unauthorized caller: <agent_id>" for any unrecognized or inactive caller.
+      Follow validate_story_state_transition() structural pattern from migration 1001.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql'
+    acs:
+      - 'AC-5'
+    depends_on: ST-1
+    verification: "psql: SELECT workflow.validate_caller('pm-story-seed-agent'); — no error. SELECT workflow.validate_caller('bad-agent'); — raises P0001."
+    estimated_tokens: 3000
+
+  - id: ST-4
+    title: 'Write pgtap test file for validate_caller and table structure'
+    goal: >
+      Create tests/db/triggers/test_cdbe2005_allowed_agents.sql with BEGIN/ROLLBACK
+      isolation, has_function assertion, throws_ok for unknown agent, lives_ok for
+      known active agent, throws_ok for inactive agent. Use SAVEPOINT pattern from
+      test_cdbe1030_artifact_superseded_at.sql for function-not-yet-deployed guard.
+    files_to_read:
+      - 'tests/db/triggers/test_cdbe1030_artifact_superseded_at.sql'
+    files_to_modify:
+      - 'tests/db/triggers/test_cdbe2005_allowed_agents.sql (new file)'
+    acs:
+      - 'AC-6'
+      - 'AC-7'
+      - 'AC-8'
+      - 'AC-9'
+    depends_on: ST-3
+    verification: 'pg_prove tests/db/triggers/test_cdbe2005_allowed_agents.sql — all assertions pass'
+    estimated_tokens: 4000

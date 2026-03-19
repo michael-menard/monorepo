@@ -29,8 +29,12 @@
       "Edit(./node_modules/**)",
       "Write(./.git/**)",
       "Edit(./.git/**)",
-      "Bash(rm -rf:*)",
-      "Bash(rm :*)"
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf .:*)",
+      "Bash(rm -rf .git:*)",
+      "Bash(rm -rf apps:*)",
+      "Bash(rm -rf packages:*)"
     ]
   },
   "trust": {

@@ -21,6 +21,12 @@ export default defineConfig({
     port: 3001,
     host: true,
     proxy: {
+      // Roadmap service (plans, stories, dashboard)
+      '/api/v1': {
+        target: 'http://localhost:3004',
+        changeOrigin: true,
+      },
+      // Default API gateway
       '/api': {
         target: 'http://localhost:9000',
         changeOrigin: true,
@@ -48,6 +54,7 @@ export default defineConfig({
       '@repo/cache',
       '@repo/logger',
       '@repo/accessibility',
+      '@repo/workflow-roadmap',
     ],
   },
   define: {

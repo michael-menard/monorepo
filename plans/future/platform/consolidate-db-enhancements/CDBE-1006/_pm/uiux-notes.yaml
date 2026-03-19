@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  CDBE-1006 is a pure database security migration story. It creates a SQL migration file
+  (1005_workflow_rls.sql) and a pgtap test file. No UI components, pages, routes, or
+  frontend packages are touched. No user-facing surface exists for this story.

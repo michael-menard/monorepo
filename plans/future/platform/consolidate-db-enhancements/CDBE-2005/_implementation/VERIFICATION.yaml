@@ -1,0 +1,123 @@
+schema: 1
+story_id: CDBE-2005
+timestamp: '2026-03-18T00:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: Database-only story, no UI surface
+  pgtap:
+    pass: 8
+    fail: 0
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    pgtap test uses BEGIN/ROLLBACK isolation, SAVEPOINT guard, has_function assertion, throws_ok x3, lives_ok x1 — all
+    correct patterns per canonical reference test_cdbe1030_artifact_superseded_at.sql
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-1
+    notes: >-
+      Confirmed in migration file line 18-24: CREATE TABLE IF NOT EXISTS workflow.allowed_agents with agent_id text
+      PRIMARY KEY, agent_name text NOT NULL, allowed_procedures text[] NOT NULL, active boolean NOT NULL DEFAULT true,
+      created_at timestamptz NOT NULL DEFAULT NOW()
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-2
+    notes: >-
+      Confirmed: CREATE TABLE IF NOT EXISTS (line 18) + INSERT ... WHERE NOT EXISTS pattern in DO $$ block (lines
+      57-246). Idempotent by design.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-3
+    notes: >-
+      Confirmed: COMMENT ON TABLE (line 26) + COMMENT ON COLUMN for all 5 columns (agent_id line 31, agent_name line 35,
+      allowed_procedures line 38, active line 43, created_at line 47)
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-4
+    notes: >-
+      Confirmed: 150 seed rows inserted. Minimum required agents present: pm-story-seed-agent, dev-implement-* family
+      (10 agents covering dev-implementation), qa-verify-* family (3 agents covering qa-verify), orchestrator-agent,
+      pipeline-supervisor. Agent IDs match actual .claude/agents/*.agent.md basenames.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-5
+    notes: >-
+      Confirmed: CREATE OR REPLACE FUNCTION workflow.validate_caller(caller_agent_id text) RETURNS void (lines 253-268).
+      Raises SQLSTATE P0001 with message 'Unauthorized caller: <agent_id>' when not in allowed_agents WHERE active =
+      true. Returns void on success.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-6
+    notes: "Confirmed: test file line 74-79, throws_ok with 'rogue-process', P0001, 'Unauthorized caller: rogue-process'"
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-7
+    notes: "Confirmed: test file line 68-71, lives_ok for 'pm-story-seed-agent' (known active agent)"
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-8
+    notes: >-
+      Confirmed: test file line 82-87, throws_ok for '_test-inactive-agent' (inserted with active=false at SAVEPOINT),
+      P0001, 'Unauthorized caller: _test-inactive-agent'
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-9
+    notes: >-
+      Confirmed: BEGIN at line 23, ROLLBACK at line 98, has_function('workflow','validate_caller',ARRAY['text'],...) at
+      line 30-35, SAVEPOINT before_behavioral_tests at line 61
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: proof.content.acceptance_criteria.AC-10
+    notes: >-
+      Confirmed: File is apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql — prefix 1005, correct
+      directory, deploy header documents ordering before CDBE-2010/2020/2030
+architecture_compliant: true
+architecture_notes: >-
+  Migration follows established patterns from 1001 and 1004. workflow schema used consistently. No FK cross-schema
+  dependencies. validate_caller is RETURNS void with PERFORM invocation pattern. SECURITY DEFINER flags in code review
+  were correctly assessed as false positives matching existing migration patterns.
+review_verdict: PASS
+review_notes: >-
+  Code review artifact shows PASS verdict, 0 errors, 1 non-blocking warning (GIN index for allowed_procedures — deferred
+  to Phase 2 scope). 4 workers passed: build, style, security, reusability.
+e2e_exempt: true
+e2e_exempt_reason: Database-only story — no UI surface, no TypeScript, no frontend. E2E tests explicitly exempt per story scope.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      pgtap NULL caller test uses throws_ok with NULL message arg (third positional arg) — this correctly matches any
+      error message for the NULL input case rather than asserting a specific message, since NULL formatting in the error
+      message may vary by Postgres version
+    category: pattern
+    tags:
+      - pgtap
+      - database
+      - sql
+      - testing
+  - lesson: >-
+      Seeding 150 agent rows in a single VALUES block with WHERE NOT EXISTS is robust idempotency — avoids the ON
+      CONFLICT path while being explicit about which rows are expected at migration time
+    category: pattern
+    tags:
+      - database
+      - migration
+      - idempotency
+      - sql
+tokens:
+  in: 8500
+  out: 1800

@@ -1,0 +1,135 @@
+feasible: true
+confidence: medium
+rationale: >
+  The three public graph entry points (runBootstrap, runStoryCreation, runElaboration) are
+  clearly defined and accept Partial<Config> objects with injectable deps. The pattern for
+  module-level vi.mock of story-creation.js is already proven in bootstrap.test.ts.
+  The primary feasibility risk is that story-creation graph nodes do NOT appear to accept
+  an injectable LLM provider through config — no llmProvider field was found in
+  StoryCreationConfigSchema (lines 53-89 of story-creation.ts). This means the two-graph
+  chain test (AC-3) cannot safely call runStoryCreation with a mocked LLM via config;
+  individual LLM-dependent nodes must be mocked at module level instead. This increases
+  mock surface but is achievable using the same vi.mock pattern.
+complexity: high
+change_surface:
+  areas:
+    - 'packages/backend/orchestrator/src/__tests__/integration/'
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      story-creation.ts StoryCreationConfigSchema has no llmProvider injectable field.
+      LLM-dependent nodes (seed, fanout-pm, fanout-ux, fanout-qa, attack, synthesize)
+      call LLM internally. Without an injectable LLM in config, AC-3 two-graph chain test
+      must use module-level vi.mock for each LLM-dependent node file, or accept that the
+      nodes will call real LLM APIs (not acceptable).
+    mitigation: >
+      Use module-level vi.mock for individual node files inside story-creation (e.g.,
+      vi.mock('../../nodes/story/seed.js', ...), vi.mock('../../nodes/story/fanout-pm.js', ...))
+      OR use vi.mock('../graphs/story-creation.js') to mock the entire graph at module level
+      for the chain test as well. Prefer the whole-graph mock strategy for simplicity.
+      This means AC-3 tests graph handoff shape, not internal story-creation logic.
+
+  - finding: >
+      Module-level vi.mock for story-creation.js in the bootstrap group may conflict with
+      needing story-creation available unmocked for the two-graph chain group. Vitest does
+      not allow conditional vi.mock per-test in the same file without vi.resetModules().
+    mitigation: >
+      Split into two test files: pipeline-e2e-bootstrap.integration.test.ts (uses vi.mock
+      for story-creation) and pipeline-e2e-chain.integration.test.ts (calls runStoryCreation
+      with node-level mocks or whole-graph mock). This eliminates vi.resetModules() complexity.
+      Seed recommends this split as the preferred resolution.
+
+  - finding: >
+      runElaboration signature requires a SynthesizedStory as first argument. If story-creation
+      is mocked at graph level, the mock must return a correctly-shaped SynthesizedStory.
+      SynthesizedStory type is imported from nodes/story/synthesize.js — must read that
+      file to confirm required fields before writing fixtures.
+    mitigation: >
+      Read packages/backend/orchestrator/src/nodes/story/synthesize.ts before writing
+      createPipelineTestSynthesizedStory factory. Use the same pattern as createTestStory
+      in elaboration.test.ts which already handles this shape.
+
+missing_requirements:
+  - >
+    AC-3 as written assumes runStoryCreation can be called with injectable LLM mock via
+    config. Source inspection shows no llmProvider in StoryCreationConfigSchema. PM must
+    clarify: is AC-3 testing real graph orchestration (requires node-level mocks) or
+    graph handoff shape (requires whole-graph story-creation mock, same as AC-2 pattern)?
+    Implementation will proceed with whole-graph mock strategy as fallback.
+
+evidence_expectations:
+  - 'pnpm test --filter @repo/orchestrator -- pipeline-e2e passes (no timeouts, no live API calls)'
+  - 'pnpm check-types --filter @repo/orchestrator passes with no new type errors'
+  - 'BootstrapResultSchema.parse(result) resolves without throwing on HP-1'
+  - 'ElaborationResultSchema.parse(result) resolves without throwing on HP-2'
+
+subtasks:
+  - id: ST-1
+    title: 'Create test file structure and fixture factories'
+    goal: >
+      Create packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts
+      with vi.mock blocks (logger, story-creation), describe structure, and inline fixture
+      factories (createPipelineTestStoryRequest, createPipelineTestSynthesizedStory).
+    files_to_read:
+      - 'packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts'
+      - 'packages/backend/orchestrator/src/graphs/__tests__/bootstrap.test.ts'
+      - 'packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts'
+      - 'packages/backend/orchestrator/src/nodes/story/synthesize.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts'
+    acs: ['AC-6', 'AC-7', 'AC-9']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/orchestrator'
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: 'Implement bootstrap handoff test (AC-2)'
+    goal: >
+      Write the "Bootstrap handoff" describe block. Call runBootstrap with persistToDb: false
+      and requireHiTL: false. story-creation mocked at module level returns valid
+      StoryCreationResult shape. Assert BootstrapResultSchema validates the response with
+      success: true, storyId match, storyCreationResult non-null, errors empty.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/bootstrap.ts'
+      - 'packages/backend/orchestrator/src/graphs/story-creation.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts'
+    acs: ['AC-2', 'AC-5', 'AC-7']
+    depends_on: ST-1
+    verification: 'pnpm test --filter @repo/orchestrator -- pipeline-e2e'
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: 'Implement two-graph story-creation → elaboration chain test (AC-3)'
+    goal: >
+      Write the "Two-graph pipeline chain" describe block. Use vi.mock for story-creation
+      at module level (or node-level mocks) to return a valid SynthesizedStory. Call
+      runElaboration with that result and persistToDb: false, recalculateReadiness: false.
+      Assert ElaborationResultSchema validates with success: true.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/elaboration.ts'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockLLMProvider.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts'
+    acs: ['AC-3', 'AC-5', 'AC-8']
+    depends_on: ST-2
+    verification: 'pnpm test --filter @repo/orchestrator -- pipeline-e2e'
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: 'Implement error path test, type check, and timing validation (AC-4, AC-10, AC-11, AC-12)'
+    goal: >
+      Write error path describe block: bootstrap with story-creation mock throwing returns
+      BootstrapResult with success: false and non-empty errors (no uncaught exceptions).
+      Run full type check. Run test suite with --reporter=verbose to confirm total < 10s.
+      Confirm bootstrap.ts and elaboration.ts coverage does not decrease.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/pipeline-e2e.integration.test.ts'
+    acs: ['AC-4', 'AC-10', 'AC-11', 'AC-12']
+    depends_on: ST-3
+    verification: 'pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- pipeline-e2e --reporter=verbose'
+    estimated_tokens: 4000

@@ -1,0 +1,121 @@
+{
+  "story_id": "APIP-0010",
+  "generated_at": "2026-03-18T19:00:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "Package name @repo/pipeline-queue confirmed. Build: tsc exits 0.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "PipelineJobDataSchema is a discriminated union on 'stage' with 5 variants: elaboration, story-creation, implementation, review, qa. Zod schema confirmed. 14 schema tests pass.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "createPipelineQueue wraps Queue with PipelineJobDataSchema.parse() at enqueue. defaultJobOptions: attempts=3, backoff.type=exponential, backoff.delay=1000ms. ZodError thrown before bullQueue.add is called on invalid data.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "enableOfflineQueue: false confirmed. No lazyConnect confirmed. No singleton — new connection per call confirmed. maxRetriesPerRequest: null confirmed (required by BullMQ v5+).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "PIPELINE_QUEUE_NAME = 'apip-pipeline'. Test explicitly asserts this value. Exported as stable contract.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "README contains full Bull Board mount instructions with createBullBoard, BullMQAdapter, ExpressAdapter code example. Note that Bull Board is not bundled — consumers install separately.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "pnpm --filter @repo/pipeline-queue test exits 0. 14 schema tests + 16 factory tests. Independently verified.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "Integration test exists with test.skipIf(!process.env.REDIS_URL) guard. Two integration tests: enqueue/dequeue round-trip with PipelineJobDataSchema validation, and Zod rejection before enqueue. Tests skip cleanly without REDIS_URL.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "Both pnpm type-check and pnpm test exit 0. Independently verified.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "Package name is @repo/pipeline-queue. pnpm-workspace.yaml includes packages/backend/* wildcard. Package builds to dist/index.js with correct exports field in package.json.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "README documents: queue name (apip-pipeline), PipelineJobDataSchema discriminated union, two-connection model (separate connections for Queue and Worker), AOF persistence requirement, ElastiCache notes. All elements present.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 11,
+  "accepted": 11,
+  "challenged": 0,
+  "rejected": 0
+}

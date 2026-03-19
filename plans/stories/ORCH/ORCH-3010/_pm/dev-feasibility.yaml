@@ -1,0 +1,99 @@
+feasible: true
+confidence: high
+rationale: >
+  ORCH-3010 requires adding a single new integration test file. No production code
+  changes are needed. All required building blocks exist: runElaboration() public API,
+  ElaborationConfigSchema, fixture patterns in elaboration.test.ts, and the integration
+  test file convention established by change-loop.integration.test.ts. The delta cluster
+  nodes (delta_detect, delta_review, escape_hatch) are pure computation — no LLM mocking
+  is required, making this a straightforward pure-vitest integration test. The primary risk
+  is calibrating the escape hatch triggerThreshold correctly for AC-5, which requires
+  reading escape-hatch.ts confidence calculation logic.
+
+complexity: low
+
+change_surface:
+  areas:
+    - 'packages/backend/orchestrator/src/__tests__/integration/'
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      Escape hatch confidence calculation in escape-hatch.ts may not produce a confidence
+      value above 0.1 just from 3+ sections changed, depending on the implementation of
+      cross_cutting confidence scoring. If confidence is always low for cross_cutting,
+      AC-5 may need a different approach to force the trigger.
+    mitigation: >
+      Read escape-hatch.ts evaluateEscapeHatch() source to understand confidence scoring
+      formula before writing AC-5 test. Adjust triggerThreshold or craft story diff
+      to reliably produce confidence >= triggerThreshold. Set triggerThreshold: 0.01
+      as a floor if needed.
+  - finding: >
+      ORCH-2010 is in_progress modifying elaboration.ts to export edge routing functions.
+      If it introduces a breaking change to ElaborationConfigSchema or ElaborationResultSchema
+      types, ORCH-3010 tests may fail to compile.
+    mitigation: >
+      Implement ORCH-3010 after ORCH-2010 is merged. ORCH-3010's test file does not
+      modify elaboration.ts, so there is no write conflict — only potential import-type
+      drift.
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pnpm test --filter orchestrator on the integration test file passes with all tests green'
+  - 'pnpm check-types --filter orchestrator passes with no new TypeScript errors'
+  - 'Test suite runtime under 5 seconds (confirmed by Vitest output)'
+  - 'No test imports from barrel files (import from specific source paths)'
+
+subtasks:
+  - id: ST-1
+    title: 'Create integration test file with fixture builders'
+    goal: >
+      Create src/__tests__/integration/elaboration-delta-cluster.integration.test.ts
+      with createElaborationTestStory and createMultiSectionModifiedStory fixture builders,
+      vi.mock(@repo/logger) at top level, and createElaborationConfig helper.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts'
+      - 'packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockGraphState.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+    acs: ['AC-1', 'AC-2', 'AC-6', 'AC-7']
+    depends_on: none
+    verification: 'pnpm check-types --filter orchestrator'
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: 'Write happy-path and no-change-path integration tests'
+    goal: >
+      Implement HP-1 (single AC added — delta detected, no escape hatch), HP-2
+      (no-change — zero totalChanges, review skipped), and HP-3 (null previousStory —
+      all items treated as added). Assert on ElaborationResult fields.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/elaboration.ts'
+      - 'packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts'
+      - 'packages/backend/orchestrator/src/nodes/elaboration/delta-review.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+    acs: ['AC-3', 'AC-4', 'AC-8']
+    depends_on: ST-1
+    verification: 'pnpm test --filter orchestrator -- elaboration-delta-cluster'
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: 'Write escape-hatch-triggered integration test and run full type check'
+    goal: >
+      Implement EC-1 (escape hatch triggered with low triggerThreshold and cross-cutting
+      multi-section diff). Read escape-hatch.ts confidence scoring to calibrate the story
+      diff. Assert escapeHatchResult.triggered: true and aggregatedFindings.escapeHatchTriggered: true.
+      Then run pnpm check-types and pnpm test for the full orchestrator package.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/nodes/elaboration/escape-hatch.ts'
+      - 'packages/backend/orchestrator/src/nodes/elaboration/__tests__/escape-hatch.test.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+    acs: ['AC-5', 'AC-9', 'AC-10']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter orchestrator && pnpm test --filter orchestrator'
+    estimated_tokens: 5000

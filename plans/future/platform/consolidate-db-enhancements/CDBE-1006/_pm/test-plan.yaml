@@ -1,0 +1,266 @@
+strategy: manual+integration
+# This is a DB-only security migration story. No unit tests apply.
+# Primary validation is via pgtap (SQL-level) and manual migration runner verification.
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  db_objects_touched:
+    - workflow.stories (RLS enabled)
+    - workflow.plans (RLS enabled)
+    - workflow.story_state_history (RLS enabled)
+    - workflow.workflow_audit_log (RLS enabled)
+    - agent_role (new DB role)
+    - lambda_role (new DB role)
+    - reporting_role (new DB role)
+  migration_file: apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+  pgtap_file: apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql
+
+happy_path_tests:
+  - id: HP-1
+    title: Migration applies cleanly as kbuser from a clean state
+    setup: |
+      Database has migrations 1000–1004 applied. Migration 1005 has NOT been applied.
+      kbuser is the connecting role.
+    action: |
+      Run: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    expected: |
+      - No SQL errors
+      - RAISE NOTICE lines confirm roles created and RLS enabled
+      - pg_roles contains agent_role, lambda_role, reporting_role
+      - pg_class.relrowsecurity = true for workflow.stories, workflow.plans,
+        workflow.story_state_history, workflow.workflow_audit_log
+      - pg_policies contains at least one entry per table per role
+    evidence: psql exit code 0; RAISE NOTICE output visible; SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('stories','plans','story_state_history','workflow_audit_log') returns all true
+
+  - id: HP-2
+    title: Migration is idempotent — re-running produces no errors
+    setup: Migration 1005 has already been applied once (HP-1 passes).
+    action: |
+      Run migration 1005 a second time:
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    expected: |
+      - No errors
+      - RAISE NOTICE messages confirm "already exists, skipping" or equivalent
+      - No duplicate rows in pg_policies
+      - Role count in pg_roles unchanged
+    evidence: psql exit code 0; SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'workflow' returns same count as after first run
+
+  - id: HP-3
+    title: lambda_role can SELECT, INSERT, UPDATE, DELETE on workflow.stories
+    setup: Migration 1005 applied. lambda_role exists.
+    action: |
+      In psql, SET ROLE lambda_role; then execute:
+      SELECT * FROM workflow.stories LIMIT 1;
+      INSERT INTO workflow.stories (...) VALUES (...);
+      UPDATE workflow.stories SET state = 'created' WHERE id = <test_id>;
+      DELETE FROM workflow.stories WHERE id = <test_id>;
+    expected: All four DML operations succeed without permission errors.
+    evidence: pgtap test HP-3 passes; manual psql SET ROLE lambda_role confirms each operation
+
+  - id: HP-4
+    title: reporting_role can SELECT from all four tables
+    setup: Migration 1005 applied. reporting_role exists.
+    action: |
+      SET ROLE reporting_role;
+      SELECT * FROM workflow.stories LIMIT 1;
+      SELECT * FROM workflow.plans LIMIT 1;
+      SELECT * FROM workflow.story_state_history LIMIT 1;
+      SELECT * FROM workflow.workflow_audit_log LIMIT 1;
+    expected: All four SELECT queries return results (or empty rows) without permission errors.
+    evidence: pgtap HP-4 assertions pass; no permission denied errors
+
+  - id: HP-5
+    title: kbuser bypasses RLS and can access all rows regardless of policies
+    setup: Migration 1005 applied. kbuser is a superuser or has BYPASSRLS.
+    action: |
+      Connect as kbuser. Query each of the four tables with no filters.
+    expected: |
+      kbuser can SELECT, INSERT, UPDATE, DELETE on all four tables without restriction.
+      RLS policies do not affect kbuser.
+    evidence: SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'kbuser' returns (true, true) OR (false, true)
+
+  - id: HP-6
+    title: pgtap test suite passes with correct plan count
+    setup: Migration 1005 applied. pgTAP extension installed.
+    action: |
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql | pg_prove
+    expected: All assertions pass. "ok N - description" lines with no failures.
+    evidence: pg_prove exits 0; "All tests successful" output
+
+error_cases:
+  - id: EC-1
+    title: reporting_role cannot INSERT into workflow.stories
+    setup: Migration 1005 applied. reporting_role exists.
+    action: |
+      SET ROLE reporting_role;
+      INSERT INTO workflow.stories (id, title, state) VALUES ('test', 'test story', 'backlog');
+    expected: |
+      ERROR: permission denied for table stories
+      (PostgreSQL error code 42501)
+    evidence: pgtap throws_ok asserts error code 42501; manual psql confirms
+
+  - id: EC-2
+    title: reporting_role cannot UPDATE workflow.plans
+    setup: Migration 1005 applied. reporting_role exists.
+    action: |
+      SET ROLE reporting_role;
+      UPDATE workflow.plans SET title = 'hacked' WHERE id = <any_id>;
+    expected: 'ERROR: permission denied for table plans (42501)'
+    evidence: pgtap throws_ok EC-2 assertion
+
+  - id: EC-3
+    title: reporting_role cannot DELETE from workflow.story_state_history
+    setup: Migration 1005 applied. reporting_role exists.
+    action: |
+      SET ROLE reporting_role;
+      DELETE FROM workflow.story_state_history WHERE id = <any_id>;
+    expected: 'ERROR: permission denied for table story_state_history (42501)'
+    evidence: pgtap throws_ok EC-3 assertion
+
+  - id: EC-4
+    title: agent_role cannot DELETE from workflow.stories
+    setup: Migration 1005 applied. agent_role exists with INSERT/SELECT only.
+    action: |
+      SET ROLE agent_role;
+      DELETE FROM workflow.stories WHERE id = <any_id>;
+    expected: 'ERROR: permission denied for table stories (42501)'
+    evidence: pgtap throws_ok EC-4 assertion (AC-13 coverage)
+
+  - id: EC-5
+    title: agent_role cannot UPDATE workflow.workflow_audit_log (append-only enforcement)
+    setup: Migration 1005 applied. agent_role has only SELECT on workflow_audit_log.
+    action: |
+      SET ROLE agent_role;
+      UPDATE workflow.workflow_audit_log SET status = 'tampered' WHERE id = <any_id>;
+    expected: 'ERROR: permission denied for table workflow_audit_log (42501)'
+    evidence: pgtap throws_ok EC-5 assertion
+
+  - id: EC-6
+    title: Enabling RLS without policies would deny all non-superuser access (guard check)
+    setup: Test environment only. Simulate enabling RLS on a test table without creating policies.
+    action: |
+      ALTER TABLE workflow.test_rls_check ENABLE ROW LEVEL SECURITY;
+      SET ROLE lambda_role;
+      SELECT * FROM workflow.test_rls_check;
+    expected: |
+      ERROR: permission denied (implicit DENY when no policies exist for non-superuser).
+      This confirms that the migration MUST create policies before or atomically with enabling RLS.
+    evidence: Manual verification only (not in pgtap — this is a design validation test)
+
+edge_cases:
+  - id: ED-1
+    title: Migration applied when roles already exist from a prior partial run
+    setup: |
+      Manually execute only the role creation DO blocks from 1005_workflow_rls.sql
+      (simulating partial migration). Then run the full migration.
+    expected: |
+      Full migration completes without error.
+      No "role already exists" errors — the DO block IF NOT EXISTS guard handles this.
+      Policies are created if missing; no duplicates if already present.
+    evidence: psql exit 0; pg_policies count unchanged from expected; RAISE NOTICE shows "skipping" for existing objects
+
+  - id: ED-2
+    title: Migration applied when RLS is already enabled on a table (partial prior run)
+    setup: |
+      Manually run: ALTER TABLE workflow.stories ENABLE ROW LEVEL SECURITY;
+      Then run full migration 1005.
+    expected: No error. ALTER TABLE ... ENABLE ROW LEVEL SECURITY is idempotent in PostgreSQL.
+    evidence: psql exit 0; no duplicate enable errors
+
+  - id: ED-3
+    title: kbuser superuser status edge case — BYPASSRLS vs superuser automatic bypass
+    setup: Check pg_roles for kbuser superuser status.
+    action: SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'kbuser';
+    expected: |
+      If rolsuper = true: kbuser bypasses RLS automatically; BYPASSRLS grant is redundant but harmless.
+      If rolsuper = false: BYPASSRLS grant must be explicitly set (confirmed by migration).
+      Either way, kbuser can access all rows after migration.
+    evidence: Manual verification at implementation time; document finding in migration comment
+
+  - id: ED-4
+    title: policy_name collision — two policies with the same name on same table
+    setup: Run migration once, then manually create a policy with the same name via psql.
+    action: Run migration again (idempotency test with collision).
+    expected: |
+      DO block checks pg_policies and finds existing policy — skips CREATE POLICY.
+      No "policy already exists" error.
+    evidence: pgtap idempotency test; pg_policies count unchanged
+
+  - id: ED-5
+    title: Downstream CDBE-1010 trigger still fires after RLS is enabled
+    setup: Migration 1005 applied. Migration 1001 (state_transition trigger) already deployed.
+    action: |
+      As kbuser or lambda_role, attempt an illegal state transition:
+      UPDATE workflow.stories SET state = 'completed' WHERE state = 'backlog';
+    expected: |
+      The validate_story_state_transition trigger STILL fires and rejects the illegal transition.
+      RLS does not interfere with trigger execution.
+      (Note: trigger runs SECURITY DEFINER — it may bypass RLS on the rows it accesses.
+       This is expected behaviour and must be documented in migration comments.)
+    evidence: Trigger raises exception; UPDATE fails; document SECURITY DEFINER bypass in migration header
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid WHERE nspname = 'workflow' AND relname IN ('stories','plans','story_state_history','workflow_audit_log') — all four rows must have relrowsecurity=true
+      - SELECT COUNT(*) FROM pg_roles WHERE rolname IN ('agent_role','lambda_role','reporting_role') — must equal 3
+      - SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'workflow' — must be >= 12 (at least 3 per table for 4 tables)
+      - SELECT rolbypassrls FROM pg_roles WHERE rolname = 'kbuser' — must be true (or rolsuper=true)
+      - pgtap test file runs via: psql $KB_DATABASE_URL -f pgtap/1005_workflow_rls_test.sql | pg_prove
+  frontend:
+    # omitted — ui_touched: false
+
+manual_cases:
+  - id: MC-1
+    title: Verify migration runner (run-migrations.sh) applies 1005 cleanly
+    steps:
+      - Run: bash apps/api/knowledge-base/scripts/run-migrations.sh
+      - Check that 1005_workflow_rls.sql appears in the run log
+      - Verify no errors in output
+      - Confirm kbuser can still perform a SELECT on workflow.stories after migration
+    expected: Migration runner applies 1005 successfully; kbuser operations unaffected
+
+  - id: MC-2
+    title: Confirm no telemetry schema reference anywhere in migration file
+    steps:
+      - Open 1005_workflow_rls.sql in an editor
+      - Search for "telemetry" — must return zero matches
+      - Confirm workflow.workflow_audit_log is the target throughout
+    expected: Zero occurrences of "telemetry" in migration file
+
+  - id: MC-3
+    title: CDBE-1006 PR merged BEFORE CDBE-1010 PR is opened (deployment gate)
+    steps:
+      - Verify CDBE-1006 PR is merged and migration applied to target environment
+      - Only then open CDBE-1010 PR
+    expected: AC-14 satisfied — RLS is in place before trigger deployment
+
+fixture_definitions:
+  - name: rls_test_story
+    type: SQL INSERT
+    description: A workflow.stories row inserted as kbuser before RLS tests, used for SELECT/UPDATE/DELETE permission checks under restricted roles
+  - name: rls_test_plan
+    type: SQL INSERT
+    description: A workflow.plans row inserted as kbuser before RLS tests
+  - name: rls_test_audit
+    type: SQL INSERT
+    description: A workflow.workflow_audit_log row inserted as kbuser before reporting_role SELECT tests
+
+risks:
+  - id: RISK-1
+    description: kbuser superuser status is unknown at story generation time
+    mitigation: At implementation start, run SELECT rolsuper FROM pg_roles WHERE rolname = 'kbuser'. If superuser, BYPASSRLS is automatic and the explicit GRANT is redundant but harmless. If not superuser, the explicit GRANT BYPASSRLS is required.
+  - id: RISK-2
+    description: pgtap SET LOCAL ROLE may fail if the test runner itself does not have CREATEROLE or the role does not exist
+    mitigation: Ensure migration 1005 is applied BEFORE running pgtap tests. pgtap tests must run after the roles are created.
+  - id: RISK-3
+    description: Implicit DENY risk — enabling RLS without policies blocks all non-superusers
+    mitigation: Each table's RLS enable and policy creation must be in the same DO block, applied atomically. Test by running the enable-only portion in a transaction and verifying access fails.
+  - id: RISK-4
+    description: Migration slot 1005 may be taken by a concurrent sibling story
+    mitigation: At implementation start, run ls apps/api/knowledge-base/src/db/migrations/ and use the next free integer.
+  - id: RISK-5
+    description: pgtap throws_ok tests may silently pass if role does not exist (no error raised vs. expected)
+    mitigation: Add a has_role() assertion before each throws_ok block to confirm role exists. Reference 1004_valid_transitions_test.sql pattern.

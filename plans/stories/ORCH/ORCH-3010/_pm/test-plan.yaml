@@ -1,0 +1,174 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Happy path — single AC added between elaboration cycles'
+    setup: >
+      Create `previousStory` with 2 ACs (AC-1, AC-2).
+      Create `currentStory` with 3 ACs (AC-1, AC-2, AC-3 added).
+      Config: recalculateReadiness: false, persistToDb: false, all defaults.
+    action: >
+      Call runElaboration(currentStory, previousStory, config) via the public API.
+    expected: >
+      Result: success: true.
+      deltaDetectionResult.detected: true, stats.totalChanges: 1.
+      deltaReviewResult.reviewed: true, at least one section reviewed.
+      escapeHatchResult.evaluated: true, escapeHatchResult.triggered: false.
+      aggregatedFindings.passed: true.
+    evidence: >
+      Vitest assertion on ElaborationResultSchema-validated return value.
+      Check each field individually for clarity.
+
+  - id: HP-2
+    title: 'No-change path — identical currentStory and previousStory'
+    setup: >
+      Create `previousStory` with 2 ACs.
+      Set `currentStory` = deep clone of previousStory (same ACs, no mutations).
+      Config: recalculateReadiness: false, persistToDb: false.
+    action: >
+      Call runElaboration(currentStory, previousStory, config).
+    expected: >
+      Result: success: true.
+      deltaDetectionResult.detected: true (detection ran).
+      deltaDetectionResult.stats.totalChanges: 0.
+      deltaReviewResult is null or has no sections reviewed (zero-change short-circuit).
+      aggregatedFindings.passed: true.
+    evidence: >
+      Assert deltaDetectionResult.stats.totalChanges === 0.
+      Assert result.success === true.
+
+  - id: HP-3
+    title: 'First elaboration — no previous story (null previousStory)'
+    setup: >
+      Create `currentStory` with 2 ACs, testHints, knownUnknowns.
+      Pass previousStory: null (first-run scenario).
+      Config: recalculateReadiness: false, persistToDb: false.
+    action: >
+      Call runElaboration(currentStory, null, config).
+    expected: >
+      Result: success: true.
+      All current story items are treated as "added" by delta detection.
+      deltaDetectionResult.stats.totalChanges equals AC count + other section items.
+      aggregatedFindings.passed: true (no previous to compare against).
+    evidence: >
+      Assert result.success === true.
+      Assert deltaDetectionResult.stats.totalChanges > 0.
+
+error_cases:
+  - id: EC-1
+    title: 'Escape hatch triggered — large cross-cutting change above threshold'
+    setup: >
+      Create `previousStory` with 2 ACs, 1 testHint, 1 knownUnknown.
+      Create `currentStory` with 4 ACs (2 new), 3 testHints (2 new), 3 knownUnknowns (2 new) — 3+ sections changed.
+      Config: recalculateReadiness: false, persistToDb: false,
+      escapeHatchConfig: { triggerThreshold: 0.1, evaluateCrossCutting: true }.
+    action: >
+      Call runElaboration(currentStory, previousStory, config).
+    expected: >
+      escapeHatchResult.triggered: true.
+      aggregatedFindings.escapeHatchTriggered: true.
+    evidence: >
+      Assert escapeHatchResult.triggered === true.
+      Assert aggregatedFindings.escapeHatchTriggered === true.
+
+  - id: EC-2
+    title: 'Delta review finds critical finding — TBD placeholder in AC'
+    setup: >
+      Create `previousStory` with 1 AC (AC-1: "Define acceptance criterion TBD").
+      Create `currentStory` with modified AC-1 (same TBD placeholder but text altered slightly).
+      Config: recalculateReadiness: false, persistToDb: false,
+      deltaReviewConfig: { failOnCritical: true }.
+    action: >
+      Call runElaboration(currentStory, previousStory, config).
+    expected: >
+      deltaReviewResult.reviewed: true.
+      Result may contain findings with severity "critical" due to TBD placeholder.
+      aggregatedFindings.passed: false if failOnCritical triggered.
+    evidence: >
+      Assert deltaReviewResult.reviewed === true.
+      Assert result does not throw (runElaboration handles errors internally).
+
+edge_cases:
+  - id: ED-1
+    title: 'Empty story — no ACs, no testHints, no knownUnknowns'
+    setup: >
+      Create `currentStory` with acceptanceCriteria: [], testHints: [], knownUnknowns: [], constraints: [].
+      previousStory: null.
+      Config: recalculateReadiness: false, persistToDb: false.
+    action: >
+      Call runElaboration(currentStory, null, config).
+    expected: >
+      result.success: true (no crash on empty sections).
+      deltaDetectionResult.stats.totalChanges: 0.
+    evidence: >
+      Assert result.success === true without throwing.
+
+  - id: ED-2
+    title: 'Escape hatch NOT triggered when threshold is high (0.99)'
+    setup: >
+      Create large cross-cutting diff spanning 3+ sections.
+      Config: recalculateReadiness: false, persistToDb: false,
+      escapeHatchConfig: { triggerThreshold: 0.99 }.
+    action: >
+      Call runElaboration(currentStory, previousStory, config).
+    expected: >
+      escapeHatchResult.triggered: false even with large diff (threshold too high to trip).
+    evidence: >
+      Assert escapeHatchResult.triggered === false.
+
+  - id: ED-3
+    title: 'Timing — entire test suite completes in under 5 seconds'
+    setup: >
+      All integration tests run with no external I/O (no LLM, no DB).
+      Vitest suite-level timer via Date.now() or Vitest timeout.
+    action: >
+      Run pnpm test --filter orchestrator on just this test file.
+    expected: >
+      All tests complete well under 5000ms total (pure computation).
+    evidence: >
+      Vitest test runner output shows pass with timing under 5s.
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'ElaborationResultSchema.parse(result) — no throw means type-safe output'
+      - 'result.success === true for happy path scenarios'
+      - 'result.deltaDetectionResult.stats.totalChanges for delta count assertions'
+      - 'result.escapeHatchResult.triggered for escape hatch path assertions'
+      - 'result.aggregatedFindings.passed for aggregation assertions'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: createElaborationTestStory
+    type: factory function
+    description: >
+      Creates a valid SynthesizedStory with configurable ACs, testHints, knownUnknowns,
+      and constraints. Extends the createTestStory pattern from elaboration.test.ts.
+      Accepts overrides object. Located in src/__tests__/integration/ alongside the test file.
+  - name: createMultiSectionModifiedStory
+    type: factory function
+    description: >
+      Creates a SynthesizedStory that differs from a baseline across 3+ sections
+      (acceptanceCriteria, testHints, knownUnknowns). Used for escape hatch trigger scenarios.
+      Adds 2 ACs, 2 testHints, 2 knownUnknowns relative to previousStory baseline.
+  - name: createElaborationConfig
+    type: factory function
+    description: >
+      Wraps ElaborationConfigSchema.parse() with test-safe defaults:
+      recalculateReadiness: false, persistToDb: false. Accepts config overrides
+      for escapeHatchConfig.triggerThreshold, etc.
+
+risks:
+  - 'AC-5 escape hatch trigger calibration: the cross_cutting confidence calculation
+    in escape-hatch.ts may not produce confidence > 0.1 even with 3+ sections changed.
+    Requires reading the escape-hatch.ts confidence computation to calibrate triggerThreshold.'
+  - 'AC-4 no-change path: need to confirm whether runElaboration short-circuits delta review
+    when totalChanges === 0 or whether it still runs deltaReview with empty sections.'
+  - 'The change-loop.integration.test.ts precedent uses setTimeout 180_000ms — for this story
+    the delta cluster tests are pure computation; the timeout should be much lower (10_000ms).'

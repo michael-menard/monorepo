@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  CDBE-2005 is a pure database infrastructure story. It creates the workflow.allowed_agents
+  reference table and the workflow.validate_caller() PL/pgSQL helper function via a SQL
+  migration file. There are no frontend components, no HTTP endpoints, no MCP tool wrappers,
+  and no user-facing UI of any kind. No UI/UX review is applicable.

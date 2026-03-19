@@ -1,0 +1,162 @@
+strategy: integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: Migration creates workflow.valid_transitions table
+    setup: Run migration 1004_valid_transitions.sql against a fresh DB (or one that has 1000-1003 applied)
+    action: SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'workflow' AND table_name = 'valid_transitions') AS table_exists;
+    expected: table_exists = true
+    evidence: pgtap assertion pgtap.has_table('workflow', 'valid_transitions', 'valid_transitions table should exist')
+
+  - id: HP-2
+    title: Seeded row count matches expected transition count
+    setup: Migration has been applied with all seed rows
+    action: SELECT COUNT(*) FROM workflow.valid_transitions;
+    expected: >
+      Count equals the exact number of enumerated transitions from migration 1001:
+      - NULL → backlog (1)
+      - Forward flow (9 pairs): backlog→created, created→elab, elab→ready, elab→backlog, ready→in_progress,
+        in_progress→needs_code_review, needs_code_review→ready_for_qa, needs_code_review→failed_code_review,
+        ready_for_qa→in_qa, in_qa→completed, in_qa→failed_qa (11 pairs)
+      - Cancel from any canonical non-terminal state (backlog, created, elab, ready, in_progress,
+        needs_code_review, ready_for_qa, in_qa, failed_code_review, failed_qa, blocked) = 11 pairs
+      - Block from any non-terminal state (all except completed, cancelled) = 11 pairs
+      - Unblock back to workable state: blocked→backlog, blocked→ready, blocked→in_progress, blocked→elab (4 pairs)
+      - Recovery: failed_code_review→in_progress, failed_code_review→needs_code_review,
+        failed_qa→in_progress, failed_qa→ready_for_qa (4 pairs)
+      Total expected: approximately 42 rows (exact count to be confirmed during implementation by
+      side-by-side diff against migration 1001 trigger logic)
+    evidence: SELECT COUNT(*) = expected_count assertion in pgtap
+
+  - id: HP-3
+    title: NULL from_state row exists for initial story creation
+    setup: Migration applied
+    action: SELECT COUNT(*) FROM workflow.valid_transitions WHERE from_state IS NULL AND to_state = 'backlog';
+    expected: Count = 1
+    evidence: pgtap assertion on exact row existence
+
+  - id: HP-4
+    title: Spot check forward-flow pairs present
+    setup: Migration applied
+    action: >
+      SELECT COUNT(*) FROM workflow.valid_transitions
+      WHERE (from_state = 'backlog' AND to_state = 'created')
+         OR (from_state = 'in_progress' AND to_state = 'needs_code_review')
+         OR (from_state = 'in_qa' AND to_state = 'completed');
+    expected: Count = 3
+    evidence: pgtap row-by-row assertions for each pair
+
+  - id: HP-5
+    title: Drizzle schema recognizes validTransitions table
+    setup: Migration applied; Drizzle schema updated with validTransitions export
+    action: Run pnpm check-types --filter @repo/knowledge-base; reference validTransitions in a type-only import
+    expected: No TypeScript errors
+    evidence: Type-check passes cleanly
+
+  - id: HP-6
+    title: UNIQUE constraint prevents duplicate transition rows
+    setup: Migration applied
+    action: >
+      INSERT INTO workflow.valid_transitions (from_state, to_state, description)
+      VALUES ('backlog', 'created', 'duplicate test')
+      ON CONFLICT DO NOTHING;
+      SELECT COUNT(*) FROM workflow.valid_transitions WHERE from_state = 'backlog' AND to_state = 'created';
+    expected: Count = 1 (no duplicate inserted)
+    evidence: Row count assertion; conflict handled without error
+
+error_cases:
+  - id: EC-1
+    title: NULL from_state uniqueness — duplicate NULL row rejected
+    setup: Migration applied; one NULL→backlog row already exists
+    action: >
+      INSERT INTO workflow.valid_transitions (from_state, to_state, description)
+      VALUES (NULL, 'backlog', 'second null row attempt');
+    expected: >
+      Insert fails with unique violation (or is silently ignored via ON CONFLICT DO NOTHING if
+      constraint is functional index). Verify with SELECT COUNT(*) = 1 for NULL from_state rows.
+    evidence: pgtap exception test or row count assertion
+
+  - id: EC-2
+    title: Ghost state not present in transitions
+    setup: Migration applied
+    action: >
+      SELECT COUNT(*) FROM workflow.valid_transitions
+      WHERE from_state IN ('uat', 'done', 'in_review', 'ready_for_review',
+                           'deferred', 'ready_to_work', 'elaboration', 'draft')
+         OR to_state IN ('uat', 'done', 'in_review', 'ready_for_review',
+                         'deferred', 'ready_to_work', 'elaboration', 'draft');
+    expected: Count = 0 (no ghost states in table)
+    evidence: pgtap assertion with descriptive message
+
+  - id: EC-3
+    title: uat not present as to_state terminal
+    setup: Migration applied
+    action: SELECT COUNT(*) FROM workflow.valid_transitions WHERE to_state = 'uat';
+    expected: Count = 0 (uat is a WorkPhaseSchema value, not a story state)
+    evidence: pgtap assertion
+
+edge_cases:
+  - id: ED-1
+    title: Idempotency — running migration twice produces no error and no duplicate rows
+    setup: Migration applied once already
+    action: Re-run migration 1004_valid_transitions.sql; then SELECT COUNT(*) FROM workflow.valid_transitions
+    expected: Migration completes without error; row count is identical to first run
+    evidence: Run migration runner with the file twice; count assertion before/after
+
+  - id: ED-2
+    title: COMMENT ON TABLE is present
+    setup: Migration applied
+    action: SELECT obj_description('workflow.valid_transitions'::regclass, 'pg_class');
+    expected: Comment text contains '1004:' prefix and describes the table purpose
+    evidence: pgtap comment assertion
+
+  - id: ED-3
+    title: Table is queryable via Drizzle client with correct column names
+    setup: Migration applied; Drizzle schema updated
+    action: Execute a Drizzle query selecting id, from_state, to_state, description, created_at
+    expected: Query succeeds; column names match Drizzle definition
+    evidence: TypeScript compilation + runtime query in integration test
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - workflow.valid_transitions table exists after migration
+      - row count matches enumerated transition total
+      - NULL from_state row exists (from_state IS NULL, to_state = 'backlog')
+      - no ghost states present as from_state or to_state
+      - UNIQUE constraint enforced for (from_state, to_state)
+      - migration is idempotent (re-run produces no change)
+      - COMMENT ON TABLE is set with 1004: prefix
+  frontend:
+    playwright_runs: []
+    assertions: []
+
+manual_cases:
+  - id: MC-1
+    title: Peer review of transition enumeration completeness
+    steps:
+      - Open migration 1001_canonical_story_states.sql and locate the IF/ELSIF block (lines 64-95)
+      - Open 1004_valid_transitions.sql and compare every IF branch to a seeded row
+      - Verify forward flow, cancel-from-any, block/unblock, and recovery paths are all represented
+      - Sign off in PR comment confirming the enumeration is complete
+    expected: PR comment from reviewer confirming enumeration matches migration 1001 trigger exactly
+
+fixture_definitions:
+  - name: applied_migrations_1000_to_1003
+    type: database state
+    description: DB with migrations 1000-1003 applied but 1004 not yet applied
+  - name: applied_migrations_1000_to_1004
+    type: database state
+    description: DB with all migrations including 1004 applied
+
+risks:
+  - Transition count hardcoded in tests may drift if migration 1001 trigger logic is later amended —
+    tests should derive expected count from a documented source
+  - NULL uniqueness constraint design (partial index vs functional index) affects how EC-1 behaves;
+    test should be written after implementation confirms the approach
+  - pgtap may not be installed in all CI environments — check test harness setup in CDBE-0020 for
+    the established pattern

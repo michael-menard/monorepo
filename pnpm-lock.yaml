@@ -1570,6 +1570,9 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@repo/workflow-roadmap':
+        specifier: workspace:*
+        version: link:../workflow-roadmap
       '@tanstack/react-router':
         specifier: ^1.130.2
         version: 1.159.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

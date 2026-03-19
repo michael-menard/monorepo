@@ -1,0 +1,91 @@
+schema: 1
+story_id: 'ORCH-3010'
+version: 1
+timestamp: '2026-03-18T19:25:00Z'
+
+acceptance_criteria:
+  - ac_id: 'AC-3'
+    ac_text: 'delta_detect detects story changes between iterations'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+        description: 'HP-1 test: detects added AC between iterations, stats.addedCount >= 1, stats.totalChanges > 0'
+
+  - ac_id: 'AC-4'
+    ac_text: 'delta_detect returns totalChanges: 0 when stories are identical'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+        description: 'HP-2 test: identical stories produce stats.totalChanges === 0'
+
+  - ac_id: 'AC-5'
+    ac_text: 'escape_hatch triggers when cross-cutting threshold is met'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+        description: 'EC-1 test: 3 sections changed + triggerThreshold: 0.1 triggers escape hatch, aggregatedFindings.escapeHatchTriggered: true'
+
+  - ac_id: 'AC-8'
+    ac_text: 'All tests complete within 5 seconds'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+        description: 'AC-8 timing test: elapsed < 5000ms, durationMs < 5000, enforced by vitest 5000ms timeout on all 8 tests'
+
+  - ac_id: 'AC-11'
+    ac_text: 'delta_review fails on critical findings (TBD pattern)'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+        description: "EC-2 test: AC with 'TBD' text triggers critical finding, findingsBySeverity.critical > 0, aggregatedFindings.passed: false"
+
+touched_files:
+  - path: 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+    action: created
+    lines: 330
+    description: 'Integration test suite for elaboration delta cluster (delta_detect → delta_review → escape_hatch)'
+
+commands_run:
+  - command: 'pnpm test --filter orchestrator -- elaboration-delta-cluster'
+    result: SUCCESS
+    output: '8 tests passed in 99ms'
+    timestamp: '2026-03-18T19:25:43Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 8, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: 'story_type: test-only — this story adds integration tests, no user-facing UI or API endpoint changes'
+  tests_written: true
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+
+notable_decisions:
+  - 'HP-2 assertion updated: delta review runs with 0 changes detected (detected always true in success path) but produces empty sectionsReviewed, so assertion checks review.sectionsReviewed.length === 0 rather than null'
+  - 'All tests use structurerConfig: { enabled: false } to prevent LLM calls per implementation notes'
+  - "storyId set to 'orch-3010' to match regex /^[a-z]+-\\d+$/i as required by EscapeHatchResultSchema"
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 45000, out: 8000 }

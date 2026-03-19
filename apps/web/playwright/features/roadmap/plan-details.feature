@@ -85,3 +85,14 @@ Feature: Plan Details Page
   Scenario: Not found state for invalid plan
     Given I navigate to a non-existent plan
     Then I should see an error message
+
+  @regression
+  Scenario: Dependency Graph tab renders wave headers and story cards
+    Given I click on the Deps tab
+    Then I should see wave headers with story cards
+
+  @regression
+  Scenario: Dependency Graph tab shows empty state for plan without dependencies
+    Given I am on the plan details page for "agent-as-judge-phase-gate-system"
+    Given I click on the Deps tab
+    Then I should see "No stories match the current filters" or "No dependencies"

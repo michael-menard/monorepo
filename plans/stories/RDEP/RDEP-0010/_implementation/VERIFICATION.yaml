@@ -1,0 +1,70 @@
+schema: 1
+story_id: RDEP-0010
+timestamp: '2026-03-18T18:47:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 49
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    notes: >-
+      DepEntrySchema at planService.ts:551-554 defines z.object({dependsOnId: z.string(), dependencyType: z.string()}).
+      DB schema (lines 128-129), query projection (lines 665-666), and response shape (lines 789-790) all use structured
+      objects. Frontend roadmapApi.ts and PlanDetailsPage.tsx access d.dependsOnId correctly.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: >-
+      computeWaves.test.ts: 8 passing tests confirmed by re-run. Covers: all-independent (wave 0), linear chain
+      (A->B->C, waves 0/1/2), parallel independent (A,B wave 0; C depends on both, wave 1), diamond pattern, cycle
+      detection guard (no infinite loop, finite values returned), external deps ignored, empty input, single story. All
+      AC-2 scenarios explicitly tested.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: >-
+      plan-details.feature lines 90-98: two scenarios present — (1) Dependency Graph tab renders wave headers and story
+      cards for workflow-intelligence-wint plan, (2) empty state for agent-as-judge plan without dependencies. Step
+      definitions in roadmap.steps.ts lines 336-371 verify Wave N headers, story card links, and empty state message.
+architecture_compliant: true
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For already-implemented stories, running test suites across all touched packages (both backend and frontend) in a
+      single QA pass confirms no regressions beyond the specific feature tests — roadmap-svc (49 tests) and
+      workflow-roadmap (124 tests) both passed cleanly.
+    category: pattern
+    tags:
+      - qa
+      - roadmap
+      - already-implemented
+  - lesson: >-
+      Zod schema DepEntrySchema for structured dependency objects (dependsOnId, dependencyType) is the correct pattern
+      for this codebase — never raw string arrays for multi-field join data.
+    category: pattern
+    tags:
+      - zod
+      - api-shape
+      - roadmap
+      - dependencies
+tokens:
+  in: 8500
+  out: 1800

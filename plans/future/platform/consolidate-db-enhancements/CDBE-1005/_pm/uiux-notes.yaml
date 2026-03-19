@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  CDBE-1005 is a pure database schema migration story. No user-facing UI components,
+  no frontend surfaces, and no API endpoints are created or modified. There is nothing
+  to evaluate from a UI/UX or design system perspective.
