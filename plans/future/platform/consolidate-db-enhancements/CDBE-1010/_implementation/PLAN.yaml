@@ -1,0 +1,221 @@
+schema: 2
+story_id: CDBE-1010
+timestamp: '2026-03-19T01:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Add exited_at and duration_seconds columns to workflow.story_state_history with idempotent ADD COLUMN IF NOT
+      EXISTS pattern. Also add composite index on (story_id, exited_at, created_at DESC) for trigger UPDATE performance
+      (noted in opp-3).
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+    dependencies: []
+    slice: backend
+    verification: >-
+      SELECT column_name FROM information_schema.columns WHERE table_schema = 'workflow' AND table_name =
+      'story_state_history' AND column_name IN ('exited_at', 'duration_seconds');
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Create the SECURITY INVOKER trigger function workflow.validate_story_state_history_insert() using CREATE OR
+      REPLACE FUNCTION. Function must: (1) reject illegal transitions via NOT EXISTS subquery against valid_transitions,
+      (2) handle NULL from_state for initial inserts, (3) close the previous open row by setting exited_at and computing
+      duration_seconds, (4) use event_type='transition' for new inserts. Add COMMENT ON FUNCTION documenting SECURITY
+      INVOKER and migration number.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      SELECT proname, prosecdef FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE nspname
+      = 'workflow' AND proname = 'validate_story_state_history_insert';
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Attach the BEFORE INSERT trigger enforce_story_state_history_transition on workflow.story_state_history using DROP
+      TRIGGER IF EXISTS + CREATE TRIGGER (idempotent). Add COMMENT ON TRIGGER with migration number.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      SELECT tgname FROM pg_trigger JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid JOIN pg_namespace ON
+      pg_class.relnamespace = pg_namespace.oid WHERE nspname = 'workflow' AND relname = 'story_state_history' AND tgname
+      = 'enforce_story_state_history_transition';
+    acs_covered:
+      - AC-10
+      - AC-11
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Fix the event_type='state_changed' bug in migration 1001's record_state_transition function: (1) CREATE OR REPLACE
+      FUNCTION workflow.record_state_transition() changing 'state_changed' to 'state_change', (2) UPDATE existing rows
+      in story_state_history SET event_type='state_change' WHERE event_type='state_changed'. Also verify agent_role has
+      UPDATE permission on story_state_history and add GRANT if missing.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      SELECT prosrc FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE nspname = 'workflow'
+      AND proname = 'record_state_transition';
+    acs_covered:
+      - AC-12
+      - AC-13
+      - AC-14
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write the complete pgtap test file covering: column existence (exited_at, duration_seconds), trigger existence,
+      legal transition inserts (HP-1 through HP-4: NULL from_state, forward flow, recovery, cancel), illegal transition
+      rejection (EC-1 through EC-3: completed→in_progress, cancelled→backlog, arbitrary illegal), NULL from_state as
+      initial insert allowed (ED-1), open row closure on second insert (ED-2 - most recent closed), idempotent re-run
+      (ED-3). Use throws_ok with SQLSTATE '23514' for check_violation.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1004_valid_transitions_test.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql
+    dependencies:
+      - 4
+    slice: backend
+    verification: SELECT 'pgtap test file exists' WHERE EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'has_column');
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+      - AC-12
+      - AC-13
+      - AC-14
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    action: create
+    reason: >-
+      Main migration: ADD COLUMN exited_at/duration_seconds, CREATE FUNCTION validate_story_state_history_insert
+      (SECURITY INVOKER), CREATE TRIGGER enforce_story_state_history_transition, fix record_state_transition event_type
+      bug, grant agent_role UPDATE if missing
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+    action: create
+    reason: >-
+      pgtap test suite covering all 14 ACs: column checks, trigger existence, legal/illegal transitions, NULL from_state
+      handling, open row closure, idempotency
+commands_to_run:
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    when: after migration file is written
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+      | pg_prove
+    when: after migration is applied
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: ADD COLUMN IF NOT EXISTS exited_at timestamptz in migration; has_column pgtap assertion in test
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: ADD COLUMN IF NOT EXISTS duration_seconds numeric in migration; has_column pgtap assertion in test
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: COMMENT ON FUNCTION documents SECURITY INVOKER explicitly; prosecdef=false verified in pgtap
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: trigger function uses NOT EXISTS subquery against valid_transitions; pgtap legal transition inserts succeed
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: NULL from_state insert succeeds in pgtap HP-1 test (initial insert path)
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: trigger raises check_violation (23514) for illegal transitions; pgtap EC-1 through EC-3 throws_ok tests
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: open row exited_at is set and duration_seconds computed on second insert; pgtap ED-2 ok() assertion
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: only most recent open row is closed when multiple exist; pgtap ED-2 checks exactly one row updated
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: new insert uses event_type='transition' (not 'state_change' or 'state_changed'); pgtap asserts event_type value
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      BEFORE INSERT trigger enforce_story_state_history_transition exists on workflow.story_state_history; has_trigger
+      pgtap assertion
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: DROP TRIGGER IF EXISTS + CREATE TRIGGER pattern in migration; migration idempotent re-run does not error
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: record_state_transition function body uses 'state_change' after migration; prosrc pgtap assertion
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      UPDATE story_state_history SET event_type='state_change' WHERE event_type='state_changed' in migration; zero
+      'state_changed' rows remain
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      agent_role UPDATE grant verified in migration comment; GRANT UPDATE added if not present from 1005; pgtap UPDATE
+      attempt succeeds under agent_role SAVEPOINT
+    evidence_type: test
+architectural_decisions: []
+complexity: moderate
+notes:
+  - Migration slot 1010 confirmed available (no 1010_*.sql exists in migrations directory).
+  - >-
+    SECURITY INVOKER is explicit per AC-3: trigger function must NOT use SECURITY DEFINER. The COMMENT ON FUNCTION must
+    state this explicitly.
+  - >-
+    The valid_transitions table from migration 1004 is queried via NOT EXISTS subquery — no hardcoded IF chains.
+    from_state IS NULL must be handled by checking COALESCE(NEW.from_state, '__NULL__') matching the index pattern used
+    in 1004.
+  - >-
+    event_type CHECK constraint on story_state_history allows 'state_change' (not 'state_changed'). Migration 1001
+    writes 'state_changed' which violates the constraint. Fix: CREATE OR REPLACE FUNCTION + UPDATE existing rows.
+  - >-
+    opp-3 performance index on (story_id, exited_at, created_at DESC) is included in ST-1 as it directly supports the
+    trigger UPDATE subquery and is low effort.
+  - >-
+    agent_role UPDATE permission on story_state_history: migration 1005 grants SELECT, INSERT to agent_role but NOT
+    UPDATE. Migration 1010 must add: GRANT UPDATE ON workflow.story_state_history TO agent_role.
+  - >-
+    pgtap test plan: HP-1 (NULL→backlog), HP-2 (backlog→created forward flow), HP-3 (failed_qa→ready_for_qa recovery),
+    HP-4 (in_progress→cancelled cancel); EC-1 (completed→in_progress), EC-2 (cancelled→backlog), EC-3
+    (in_progress→backlog); ED-1 (NULL from_state allowed), ED-2 (open row closure), ED-3 (idempotent migration re-run).
+  - >-
+    story_state_history.story_id has FK to workflow.stories(story_id) — test inserts must use a valid story_id. Use a
+    known seeded story or INSERT a test story in a SAVEPOINT, then ROLLBACK.
