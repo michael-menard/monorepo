@@ -1,194 +1,163 @@
 schema: 1
-story_id: PIPE-2050
-timestamp: '2026-03-19T07:00:00Z'
+story_id: CDBE-3020
 phase: implementation
-iteration: 0
-status: complete
+iteration: 1
+timestamp: '2026-03-19T20:30:00Z'
 
-acceptance_criteria:
+summary:
+  total_acs: 14
+  met: 14
+  missing: 0
+  status: PASS
+  e2e_status: EXEMPT
+  e2e_reason: Pure SQL/DDL story (story_type=db) — no TypeScript, no frontend, no E2E applicable
+
+files_created:
+  - apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+  - apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
+
+evidence:
   - ac_id: AC-1
-    status: PASS
-    evidence_type: test
-    summary: >-
-      getEligibleReviewStories(limit) implemented in scheduler/index.ts.
-      SQL CTE queries WHERE s.state = 'ready_for_qa' with same unresolved_deps CTE
-      structure as getEligibleStories(). Unit test HP-5 passes:
-      "HP-5: returns stories in ready_for_qa state from DB execute result".
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    status: MET
+    evidence_type: command
+    description: >-
+      Migration contains DO $$ IF EXISTS guard, DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap CASCADE,
+      then CREATE MATERIALIZED VIEW workflow.roadmap AS ... WITH NO DATA.
+      Migration ran without error: exit code 0.
+    proof: 'psql $KB_DATABASE_URL -f 1081_cdbe3020_roadmap_matview.sql -> exit 0, DROP MATERIALIZED VIEW + CREATE MATERIALIZED VIEW output'
 
   - ac_id: AC-2
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      dispatchReviewStory(story, attemptNumber) implemented. Calls kb_update_story_status
-      advancing ready_for_qa → in_qa (canonical single-hop transition per story-state-machine.ts)
-      BEFORE calling queue.add(). If KB advance returns updated:false, logs warning and returns
-      early (F006 preservation). Enqueues ReviewJobDataSchema job. jobId: '{storyId}:review:{attempt}'.
-      Unit tests HP-1 (ordering), ED-1 (jobId format), EC-1 (F006 skip) pass.
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      pgtap HP-2 passes: ARRAY(SELECT attname::text FROM pg_attribute WHERE schema=workflow, table=roadmap)
+      = ['plan_slug','total_stories','completed_stories','active_stories','blocked_stories',
+         'last_story_activity_at','churn_depth','has_regression','estimated_completion_pct','next_unblocked_story_id'].
+      next_unblocked_story_id is TEXT (story_id only, per ARCH-001).
+    proof: 'ok 2 - 1081 HP-2: workflow.roadmap has exactly the 10 expected columns in the correct order'
 
   - ac_id: AC-3
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      runOnce() extended with review dispatch branch. Calculates slotsRemaining after
-      implementation dispatch, calls getEligibleReviewStories(), applies applyFinishBeforeNewStart
-      and applyStrictFinishFilter with same config flags, dispatches up to slotsRemaining.
-      Unit test HP-3 passes: "HP-3: dispatches review story when implementation slots are
-      partially filled".
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      story_counts CTE uses COUNT(*) FILTER (WHERE s.state = 'completed') for completed_stories,
+      COUNT(*) FILTER (WHERE s.state IN ('in_progress','in_review','in_qa','uat','needs_code_review')) for active_stories,
+      COUNT(*) FILTER (WHERE s.state = 'blocked') for blocked_stories, joined from plan_story_links + stories.
+      pgtap HP-3a/b/c/d all pass: total=4, completed=1, active=1, blocked=1.
+    proof: 'ok 3 HP-3a, ok 4 HP-3b, ok 5 HP-3c, ok 6 HP-3d'
 
   - ac_id: AC-4
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      getEligibleQaStories(limit) implemented. SQL CTE queries WHERE s.state = 'in_qa'
-      with same unresolved_deps structure. Dependency-blocked in_qa stories are excluded.
-      Unit test HP-6 passes: "HP-6: returns stories in in_qa state from DB execute result".
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      next_unblocked CTE uses DISTINCT ON (psl.plan_slug), excludes states NOT IN
+      ('completed','in_progress','in_review','in_qa','uat','needs_code_review','blocked'),
+      ORDER BY s.priority ASC NULLS LAST, s.created_at ASC.
+      pgtap HP-5 passes: returns PGTAP-1081-READY (the 'ready' story, not completed/active/blocked).
+    proof: 'ok 8 - 1081 HP-5: next_unblocked_story_id = PGTAP-1081-READY'
 
   - ac_id: AC-5
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      dispatchQaStory(story, attemptNumber) implemented. F006 DEVIATION (ARCH-001/AC-14):
-      does NOT call kb_update_story_status — no valid canonical intermediate state exists
-      between in_qa and completed/failed_qa/blocked. BullMQ jobId deduplication
-      ('{storyId}:qa:{attempt}') serves as idempotency fence. Enqueues QaJobDataSchema job.
-      Unit test HP-2 passes: "HP-2: enqueues QA job WITHOUT calling kb_update_story_status".
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      estimated_completion_pct = ROUND(completed_stories::numeric / NULLIF(total_stories,0) * 100, 1)::numeric(5,1).
+      pgtap HP-4 passes: 25.0 for 1 completed of 4 total. pgtap EC-1 passes: NULL for plan with 0 stories.
+    proof: 'ok 7 HP-4 (25.0), ok 11 EC-1 (NULL for 0 stories)'
 
   - ac_id: AC-6
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      runOnce() extended with QA dispatch branch after review. Calculates final slotsRemaining
-      after implementation + review dispatch, dispatches QA stories up to remaining slots.
-      Unit test HP-4 passes: "HP-4: dispatches QA story in same runOnce() cycle".
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_slug ON workflow.roadmap (plan_slug).
+      Built after WITH NO DATA creation so it is instantly created on an empty relation.
+      pgtap HP-6 passes: has_index('workflow','roadmap','idx_roadmap_plan_slug').
+    proof: 'ok 9 - 1081 HP-6: unique index idx_roadmap_plan_slug exists on workflow.roadmap'
 
   - ac_id: AC-7
-    status: PASS
-    evidence_type: test
-    summary: >-
-      finishBeforeNewStart and strictFinishBeforeNewStart flags apply to all three dispatch
-      stages uniformly. applyFinishBeforeNewStart() and applyStrictFinishFilter() called with
-      review/QA eligible lists. Unit test ED-4 passes: "ED-4: strictFinishBeforeNewStart applies
-      uniformly to review dispatch (AC-7)". Shared slot ceiling enforced across all 3 stages.
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    status: MET
+    evidence_type: file
+    description: >-
+      Migration contains GRANT SELECT ON workflow.roadmap TO agent_role, lambda_role, reporting_role.
+      Three separate GRANT statements, matching the pattern from migration 1005_workflow_rls.sql.
+    proof: 'Lines 207-209 of migration: GRANT SELECT ON workflow.roadmap TO agent_role/lambda_role/reporting_role'
 
   - ac_id: AC-8
-    status: PASS
+    status: MET
     evidence_type: test
-    summary: >-
-      Unit test EC-1 passes: "EC-1: does NOT call queue.add when KB state advance returns
-      updated:false (F006 preservation)". Also verified via HP-3 which confirms dispatchReviewStory
-      is called during runOnce() when a slot is available after implementation dispatch.
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    description: >-
+      workflow.refresh_roadmap_matview() function: RETURNS TRIGGER, LANGUAGE plpgsql, SECURITY DEFINER,
+      begins with IF pg_trigger_depth() > 1 THEN RETURN NULL END IF, then REFRESH MATERIALIZED VIEW workflow.roadmap (non-CONCURRENTLY per ARCH-002).
+      pgtap HP-7 passes: has_function('workflow','refresh_roadmap_matview').
+    proof: 'ok 10 - 1081 HP-7: workflow.refresh_roadmap_matview() trigger function exists'
 
   - ac_id: AC-9
-    status: PASS
-    evidence_type: test
-    summary: >-
-      Unit test HP-4 passes: "HP-4: dispatches QA story in same runOnce() cycle". Verifies
-      dispatchQaStory is called with in_qa story when slots available after implementation
-      and review stages.
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    status: MET
+    evidence_type: file
+    description: >-
+      DROP TRIGGER IF EXISTS trg_refresh_roadmap_plan_story_links ON workflow.plan_story_links followed by
+      CREATE TRIGGER trg_refresh_roadmap_plan_story_links AFTER INSERT OR UPDATE OR DELETE ON workflow.plan_story_links FOR EACH STATEMENT.
+      Same pattern for trg_refresh_roadmap_stories ON workflow.stories.
+      Both triggers present in migration, both confirmed by psql output (DROP TRIGGER + CREATE TRIGGER).
+    proof: 'Migration lines 189-229: DROP/CREATE for both triggers, confirmed in psql output'
 
   - ac_id: AC-10
-    status: PASS
-    evidence_type: test
-    summary: >-
-      Unit test EC-1 + HP-1 confirm dispatchReviewStory does NOT call queue.add when KB advance
-      fails, and does call queue.add in correct order when KB advance succeeds. Exact mirror of
-      PIPE-2040 AC-7 pattern.
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    status: MET
+    evidence_type: file
+    description: >-
+      COMMENT ON MATERIALIZED VIEW workflow.roadmap IS '3020: ...' and COMMENT ON COLUMN workflow.roadmap.<col> IS '3020: ...'
+      for all 10 columns: plan_slug, total_stories, completed_stories, active_stories, blocked_stories,
+      last_story_activity_at, churn_depth, has_regression, estimated_completion_pct, next_unblocked_story_id.
+      Confirmed by COMMENT output in psql (11 COMMENT statements).
+    proof: 'Migration lines 233-296: 11 COMMENT ON statements (1 matview + 10 columns)'
 
   - ac_id: AC-11
-    status: PASS
-    evidence_type: test
-    summary: >-
-      Unit tests ED-1 (review jobId format) and QA jobId test pass. jobId formats:
-      'STORY-001:review:1' and 'STORY-001:qa:1'. Retry format verified: 'PIPE-099:review:3',
-      'PIPE-100:qa:3'. All 42 scheduler tests pass.
-    test_file: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    test_count: 42
-    tests_passed: 42
+    status: MET
+    evidence_type: file
+    description: >-
+      Migration begins with DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION '1081: ...' END IF END $$.
+      psql output confirms: NOTICE: 1081: Safety check passed — running against database: knowledgebase.
+    proof: 'Migration lines 15-20: safety preamble DO block, psql NOTICE confirms execution'
 
   - ac_id: AC-12
-    status: PASS
-    evidence_type: command
-    summary: >-
-      pnpm --filter @repo/pipeline check-types exits 0. No TypeScript errors introduced.
-      Verified by running tsc --noEmit on the main monorepo with updated scheduler/index.ts.
-      All three new methods (getEligibleReviewStories, getEligibleQaStories, dispatchReviewStory,
-      dispatchQaStory) type-check cleanly. ReviewJobDataSchema and QaJobDataSchema imported
-      from @repo/pipeline-queue.
-    command: pnpm --filter @repo/pipeline check-types
+    status: MET
+    evidence_type: test
+    description: >-
+      pgtap test file exists at pgtap/1081_cdbe3020_roadmap_matview_test.sql.
+      12 assertions: HP-1 (matview exists), HP-2 (column set), HP-3a/b/c/d (counts), HP-4 (completion_pct),
+      HP-5 (next_unblocked), HP-6 (index), HP-7 (function), EC-1 (NULL completion for empty plan), EC-2 (NULL next for empty plan).
+      REFRESH called outside BEGIN/ROLLBACK in fixture setup and teardown.
+      All 12/12 tests pass, finish() outputs no warnings.
+    proof: 'psql output: ok 1 through ok 12, finish row is empty (no plan count mismatch)'
 
   - ac_id: AC-13
-    status: PASS
-    evidence_type: test
-    summary: >-
-      pnpm vitest run apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts: 42/42 tests
-      pass. No regressions in existing tests. Pre-existing failures in other pipeline test suites
-      (circuit-breakers, dispatch-router, supervisor-blockers, concurrency-controller) are caused
-      by a pre-existing @repo/database-schema/schema/wint missing module issue — not introduced
-      by this story.
-    command: pnpm vitest run apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    test_count: 42
-    tests_passed: 42
+    status: MET
+    evidence_type: command
+    description: >-
+      Migration run twice consecutively both exit 0. Second run: DROP MATERIALIZED VIEW (CASCADE drops index),
+      CREATE MATERIALIZED VIEW, CREATE UNIQUE INDEX IF NOT EXISTS (idempotent), DROP TRIGGER IF EXISTS + CREATE TRIGGER (idempotent).
+      No errors on second run.
+    proof: 'Run 1 exit: 0, Run 2 exit: 0 — both confirmed in shell output'
 
   - ac_id: AC-14
-    status: PASS
+    status: MET
     evidence_type: file
-    summary: >-
-      Architecture decision ARCH-001 documented prominently in dispatchQaStory() with multi-line
-      comment block referencing PIPE-2050 AC-14, explaining the F006 deviation, the BullMQ jobId
-      deduplication fence, and pointing to PIPE-2030 as the future fix. Unit test HP-2 explicitly
-      asserts db.execute is NOT called during dispatchQaStory (confirming no KB advance).
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
+    description: >-
+      Only 2 SQL files created/modified. No .ts, .tsx, .json, or other file types touched.
+      Files: 1081_cdbe3020_roadmap_matview.sql and pgtap/1081_cdbe3020_roadmap_matview_test.sql.
+    proof: 'git diff shows only 2 new SQL files in the migration and pgtap directories'
 
-files_modified:
-  - apps/api/pipeline/src/scheduler/index.ts
-  - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+test_results:
+  pgtap:
+    file: apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
+    total: 12
+    passed: 12
+    failed: 0
+    status: PASS
 
-test_summary:
-  command: pnpm vitest run apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-  total: 42
-  passed: 42
-  failed: 0
-  pre_existing_failures: >-
-    4 other pipeline test suites (circuit-breakers.test.ts, dispatch-router.test.ts,
-    supervisor-blockers.test.ts, concurrency-controller.test.ts) fail due to pre-existing
-    missing @repo/database-schema/schema/wint module dependency — not introduced by PIPE-2050.
-
-architectural_decisions_implemented:
-  - id: ARCH-001
-    status: implemented
-    notes: >-
-      dispatchQaStory() skips KB state advance. F006 deviation documented in code comments.
-      BullMQ jobId '{storyId}:qa:{attempt}' is idempotency fence. HP-2 test verifies no
-      db.execute call during QA dispatch.
-  - id: ARCH-002
-    status: resolved_simpler
-    notes: >-
-      State machine check confirmed ready_for_qa → in_qa is a SINGLE valid hop.
-      kb_update_story_status makes ONE call (not two as ARCH-002 warned).
-      The two-hop concern (needs_code_review → ready_for_qa → in_qa) was for review
-      DISPATCH trigger state. The story queries ready_for_qa and advances to in_qa directly.
+migration_results:
+  file: apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+  run_1_exit_code: 0
+  run_2_exit_code: 0
+  idempotent: true
+  rows_populated: 96
+  columns_created: 10

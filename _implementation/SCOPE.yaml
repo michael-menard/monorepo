@@ -1,25 +1,89 @@
 schema: 1
-story_id: CDBN-3020
-timestamp: '2026-03-14T00:00:00Z'
+story_id: CDBE-3020
+timestamp: '2026-03-19T18:30:00Z'
+phase: setup
+iteration: 0
 gen_mode: false
+
+title: Roadmap Materialized View and Refresh Trigger
+
 touches:
-  backend: true
+  backend: false
   frontend: false
-  packages: true
+  packages: false
   db: true
   contracts: false
   ui: false
   infra: false
+
 touched_paths_globs:
-  - "apps/api/knowledge-base/**"
-  - "apps/api/workflow-admin/**"
-  - "packages/backend/database-schema/**"
+  - 'packages/backend/db/migrations/'
+  - 'packages/backend/db/sql/'
+  - 'packages/backend/db/__tests__/'
+
 risk_flags:
   auth: false
   payments: false
   migrations: true
   external_apis: false
   security: false
-  performance: false
-summary: "Update telemetry operations and roadmap queries from wint.* schema to new workflow schema"
-elaboration: "completed"
+  performance: true
+
+summary: Create workflow.roadmap materialized view with story counts, next unblocked stories, and estimated completion; implement refresh trigger.
+
+elaboration: completed
+
+acceptance_criteria_count: 14
+
+key_acs:
+  - AC1: Materialized view DDL with column set (plan_id, plan_title, story_count, completed_count, next_unblocked_story_id, estimated_completion_pct)
+  - AC2: story_counts CTE joining story_state_transitions with state counts
+  - AC3: next_unblocked subquery selecting MIN(story_order) where state NOT IN (completed states)
+  - AC4: estimated_completion_pct calculation
+  - AC5: Unique index on (plan_id, story_order)
+  - AC6: GRANT SELECT on all roles matching existing patterns
+  - AC7: Trigger function with pg_trigger_depth guard
+  - AC8: STATEMENT-level triggers on plans and stories tables
+  - AC9: COMMENT ON for view and trigger function
+  - AC10: Safety preamble and idempotency guards
+  - AC11-14: pgTAP tests and documentation
+
+dependencies:
+  - story_id: CDBE-3010
+    status: complete
+    reason: Dependency work must complete before materialized view logic
+
+test_strategy: pgTAP only (pure DDL + PL/pgSQL, no TypeScript changes)
+
+reusable_assets:
+  - source: migrations/999_add_plan_churn_tracking.sql
+    asset: story_counts CTE pattern
+    usage: Base structure for story count aggregation
+  - source: migrations/CDBE-1030 migration
+    asset: Safety preamble with idempotency guards
+    usage: Transaction safety and CREATE IF NOT EXISTS patterns
+  - source: migrations/CDBE-1010 migration
+    asset: Trigger function pattern with pg_trigger_depth
+    usage: Prevent infinite trigger recursion
+  - source: migrations/CDBE-1030_test
+    asset: pgTAP test structure and patterns
+    usage: Test framework and assertion patterns
+  - source: migrations/CDBE-1005 migration
+    asset: GRANT pattern for database roles
+    usage: Apply consistent permission model
+  - source: packages/backend/orchestrator/src/services/planService.ts
+    asset: nextStory selection logic
+    usage: Reference for unblocked story ordering logic
+
+migration_info:
+  estimated_slot: 1081
+  type: DDL + PL/pgSQL
+  requires_downtime: false
+  rollback_strategy: DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap CASCADE
+
+notes: |
+  - All 14 ACs address specific requirements; no TypeScript changes per spec
+  - Elaboration verdict is CONDITIONAL_PASS, indicating ready to implement
+  - CDBE-3010 dependency completed; unblock immediate implementation
+  - Focus on correctness of next_unblocked_story selection logic
+  - Performance review needed during code review phase
