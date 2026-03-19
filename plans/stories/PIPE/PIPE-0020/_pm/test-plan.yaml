@@ -1,0 +1,137 @@
+strategy: sql+pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  db_tables_touched:
+    - workflow.stories
+    - workflow.story_state_history
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Zero ghost-state rows remain after migration runs'
+    setup: 'KB database (port 5433) has migration 1001 applied. Some stories may have ghost-state values if inserted after 1001 ran.'
+    action: 'Apply migration 1007_pipe_0020_ghost_state_audit.sql via psql against the knowledgebase DB'
+    expected: "SELECT COUNT(*) FROM workflow.stories WHERE state NOT IN ('backlog','created','elab','ready','in_progress','needs_code_review','ready_for_qa','in_qa','completed','cancelled','blocked','failed_code_review','failed_qa') returns 0"
+    evidence: 'pgtap test assertion HP-1 passes; RAISE NOTICE output shows ghost_rows_found and rows_updated counts'
+
+  - id: HP-2
+    title: 'story_state_history audit records created for every migrated row'
+    setup: "At least one story in a ghost state (e.g. state = 'uat') exists before migration runs"
+    action: "Apply migration; query story_state_history WHERE metadata->>'migrated_by' = 'PIPE-0020'"
+    expected: "One history row per migrated story. Each has event_type = 'state_change', correct from_state (original ghost value), correct to_state (canonical), metadata contains migrated_by and migration_date"
+    evidence: "pgtap test assertion HP-2 passes; SELECT count(*) FROM workflow.story_state_history WHERE metadata->>'migrated_by' = 'PIPE-0020' equals rows_updated count"
+
+  - id: HP-3
+    title: 'Migration RAISE NOTICE reports accurate row counts'
+    setup: 'DB has N ghost-state rows before migration'
+    action: 'Apply migration; capture psql output'
+    expected: 'RAISE NOTICE lines include: ghost_rows_found = N, rows_updated = N, history_rows_inserted = N'
+    evidence: 'psql output contains all three RAISE NOTICE count lines; values are non-negative integers'
+
+  - id: HP-4
+    title: 'Database safety preamble blocks execution on wrong DB'
+    setup: 'Run migration against lego_dev (port 5432) instead of knowledgebase (port 5433)'
+    action: 'Execute migration file against wrong database'
+    expected: 'Migration raises RAISE EXCEPTION with message about current_database() check; no rows modified'
+    evidence: 'psql exit code non-zero; no rows in workflow.stories updated'
+
+error_cases:
+  - id: EC-1
+    title: "Migration uses wrong event_type value 'state_changed' (regression guard)"
+    setup: "Migration file is written with event_type = 'state_changed' (trailing d)"
+    action: "Attempt to INSERT into story_state_history with event_type = 'state_changed'"
+    expected: 'CHECK constraint violation raised by PostgreSQL: violates check constraint on event_type column'
+    evidence: "psql error message includes 'violates check constraint'; INSERT is rolled back"
+
+  - id: EC-2
+    title: 'Ghost-state UPDATE blocked by enforce_state_transition trigger'
+    setup: 'Stories in ghost states (e.g. uat) exist and enforce_state_transition trigger is active'
+    action: "Attempt direct UPDATE workflow.stories SET state = 'completed' WHERE state = 'uat' without disabling trigger"
+    expected: "Trigger raises EXCEPTION 'Invalid state transition: uat → completed'"
+    evidence: 'psql error output; row count = 0 updated'
+
+  - id: EC-3
+    title: 'Second migration run does not insert duplicate history rows'
+    setup: 'Migration has been applied once; story_state_history already has PIPE-0020 metadata rows'
+    action: 'Apply migration a second time (idempotency run)'
+    expected: 'INSERT ... ON CONFLICT DO NOTHING prevents duplicate rows; RAISE NOTICE reports rows_updated = 0, history_rows_inserted = 0'
+    evidence: 'pgtap idempotency test passes using SAVEPOINT; row counts match expected zeros'
+
+edge_cases:
+  - id: ED-1
+    title: 'Zero ghost-state rows exist at migration time (no-op path)'
+    setup: 'Migration 1001 already ran and no new ghost-state rows were inserted. Ghost row count = 0.'
+    action: 'Apply migration'
+    expected: 'Migration completes without error; RAISE NOTICE reports ghost_rows_found = 0, rows_updated = 0, history_rows_inserted = 0; pgtap assertions all pass'
+    evidence: 'RAISE NOTICE output visible in psql; zero-row case verified in pgtap test'
+
+  - id: ED-2
+    title: 'All 8 distinct ghost state values present simultaneously'
+    setup: 'Insert test stories with all 8 ghost states: uat, done, in_review, ready_for_review, deferred, ready_to_work, elaboration, draft'
+    action: 'Apply migration'
+    expected: 'All 8 ghost states migrated to their canonical equivalents; 8 corresponding history rows created with correct from_state/to_state pairs'
+    evidence: 'pgtap assertions verify each mapping individually; total rows_updated = 8 in RAISE NOTICE'
+
+  - id: ED-3
+    title: 'story_state_history ON CONFLICT key covers (story_id, event_type, from_state, to_state)'
+    setup: 'A PIPE-0020 history row for a given story already exists (partial run scenario)'
+    action: 'Re-apply migration INSERT with same story_id, event_type, from_state, to_state values'
+    expected: 'ON CONFLICT DO NOTHING silently skips duplicate; no error raised; count = same as before'
+    evidence: 'Row count unchanged after second INSERT attempt; no constraint violation error'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'SELECT COUNT(*) FROM workflow.stories WHERE state NOT IN canonical_list = 0'
+      - "SELECT COUNT(*) FROM workflow.story_state_history WHERE metadata->>'migrated_by' = 'PIPE-0020' = rows_updated"
+      - "All PIPE-0020 history rows have event_type = 'state_change' (exact match, no trailing d)"
+      - 'RAISE NOTICE output captures ghost_rows_found, rows_updated, history_rows_inserted counts'
+      - 'Second run RAISE NOTICE shows 0 rows updated, 0 history rows inserted'
+  frontend:
+    # omitted: ui_touched = false
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify event_type check constraint enforcement status against existing rows'
+    steps:
+      - 'Connect to KB database: psql $KB_DATABASE_URL'
+      - "Run: SELECT COUNT(*) FROM workflow.story_state_history WHERE event_type = 'state_changed'"
+      - 'If count > 0: the check constraint was added after those rows were inserted (NOT VALID or postdated)'
+      - "Document finding: existing 'state_changed' rows bypass constraint retroactively; new inserts are enforced"
+      - 'Record this as the event_type discrepancy finding in the elaboration artifact per AC-10'
+    expected: "Finding documented; confirms PIPE-0020 must use 'state_change' (no trailing d) for new inserts"
+
+  - id: MC-2
+    title: 'Verify actual ghost-state row count before implementation'
+    steps:
+      - 'Connect to KB database: psql $KB_DATABASE_URL'
+      - "Run: SELECT state, COUNT(*) FROM workflow.stories WHERE state NOT IN ('backlog','created','elab','ready','in_progress','needs_code_review','ready_for_qa','in_qa','completed','cancelled','blocked','failed_code_review','failed_qa') GROUP BY state"
+      - 'Record result. If 0 rows: migration is verification-only (no UPDATEs needed, just pgtap assertions)'
+      - 'If rows found: implement full UPDATE + history INSERT path per AC-1 through AC-3'
+    expected: 'Actual ghost-state count known before writing migration; implementation path chosen accordingly'
+
+fixture_definitions:
+  - name: ghost_state_story_uat
+    type: sql_insert
+    description: "workflow.stories row with state = 'uat' for testing uat → completed migration path"
+  - name: ghost_state_story_done
+    type: sql_insert
+    description: "workflow.stories row with state = 'done' for testing done → completed migration path"
+  - name: ghost_state_story_in_review
+    type: sql_insert
+    description: "workflow.stories row with state = 'in_review' for testing in_review → needs_code_review path"
+  - name: ghost_state_story_ready_to_work
+    type: sql_insert
+    description: "workflow.stories row with state = 'ready_to_work' for testing ready_to_work → ready path"
+  - name: existing_pipe0020_history_row
+    type: sql_insert
+    description: 'Pre-existing story_state_history row with metadata->migrated_by = PIPE-0020 to test idempotency guard'
+
+risks:
+  - 'enforce_state_transition trigger may block ghost-state UPDATEs if ghost values remain — migration must disable trigger for its UPDATE scope or use SET session_replication_role'
+  - 'ON CONFLICT DO NOTHING requires a unique constraint or index on story_state_history for the conflict target — verify unique constraint exists or use alternative idempotency guard'
+  - 'If pgtap is not installed on local dev KB database, tests cannot run locally — may require CI-only execution'
+  - 'event_type check constraint validity against existing rows with state_changed (trailing d) is ambiguous until MC-1 manual verification is done'
+  - 'Migration slot 1007 assumed available — implementer must verify with ls migrations/ | sort | tail -5 before creating file'

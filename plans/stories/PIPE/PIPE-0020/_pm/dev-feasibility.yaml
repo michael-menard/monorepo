@@ -1,0 +1,113 @@
+feasible: true
+confidence: high
+rationale: >
+  PIPE-0020 is a well-scoped SQL-only migration. The deliverable is a single migration file and
+  a pgtap test file. All patterns are established by migrations 1004 and 1005. The primary
+  technical risks (trigger blocking ghost-state UPDATEs, event_type constraint mismatch) are
+  identified and have clear mitigation paths. The only ambiguity is whether any ghost-state rows
+  actually remain — if 0 rows exist the migration is a verification-only no-op, which reduces
+  complexity further.
+
+complexity: low
+
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/'
+  endpoints: []
+  deploy_touchpoints:
+    - 'psql $KB_DATABASE_URL -f migrations/1007_pipe_0020_ghost_state_audit.sql'
+    - 'psql $KB_DATABASE_URL -f migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql | pg_prove'
+
+risks:
+  - finding: 'enforce_state_transition trigger blocks direct UPDATE of ghost-state rows (ghost states are not in valid transition table)'
+    mitigation: >
+      Wrap ghost-state UPDATEs with:
+        ALTER TABLE workflow.stories DISABLE TRIGGER enforce_state_transition;
+        UPDATE ...;
+        ALTER TABLE workflow.stories ENABLE TRIGGER enforce_state_transition;
+      All within a single transaction. This is safe because the ghost state rows are being
+      corrected to canonical values — the trigger enforces forward transitions on live data
+      which is the right behaviour post-migration.
+
+  - finding: 'story_state_history ON CONFLICT requires a unique constraint/index on conflict target columns'
+    mitigation: >
+      Verify whether a unique constraint or index on (story_id, event_type, from_state, to_state)
+      or a subset thereof exists. If not, use a pre-flight EXISTS check instead of ON CONFLICT syntax:
+        INSERT INTO workflow.story_state_history (...)
+        SELECT ... WHERE NOT EXISTS (SELECT 1 FROM workflow.story_state_history WHERE metadata->>''migrated_by'' = ''PIPE-0020'' AND story_id = s.story_id)
+      This achieves idempotency without requiring a dedicated unique index.
+
+  - finding: 'Migration slot 1007 must be verified before use'
+    mitigation: >
+      Run: ls apps/api/knowledge-base/src/db/migrations/ | sort | grep -E ''^[0-9]'' | tail -5
+      before creating the file. As of codebase scan, slots 1001-1006 are in use. If a 1007 file
+      already exists (parallel work or hotfix), use the next available slot (1008, etc.).
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'psql execution of migration file against knowledgebase (port 5433) exits with code 0'
+  - 'RAISE NOTICE output confirms ghost_rows_found, rows_updated, history_rows_inserted counts'
+  - 'pg_prove against pgtap test file shows all tests pass'
+  - 'SELECT COUNT(*) FROM workflow.stories WHERE state NOT IN canonical_list = 0 after migration'
+  - "All PIPE-0020 sourced story_state_history rows have event_type = 'state_change' (verified by pgtap)"
+
+subtasks:
+  - id: ST-1
+    title: 'Verify migration slot and pre-flight ghost-state row count'
+    goal: >
+      Confirm the next available migration slot number (expected 1007) and run the pre-flight
+      query against the KB database to determine how many ghost-state rows actually exist.
+      This shapes the implementation path: 0 rows → verification-only migration; N rows → full
+      UPDATE + history INSERT path.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/ (ls output)'
+      - 'apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql'
+    files_to_modify: []
+    acs: ['AC-4', 'AC-8']
+    depends_on: none
+    verification: "ls apps/api/knowledge-base/src/db/migrations/ | sort | grep -E '^[0-9]' | tail -5"
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: 'Write migration file 1007_pipe_0020_ghost_state_audit.sql'
+    goal: >
+      Create the migration file with:
+      (a) database safety preamble (current_database() = ''knowledgebase'' check),
+      (b) pre-flight RAISE NOTICE reporting ghost row count,
+      (c) trigger disable/enable wrapper for ghost-state UPDATEs,
+      (d) idempotent UPDATEs for all 8 ghost-state mappings (uat→completed, done→completed,
+          in_review→needs_code_review, ready_for_review→needs_code_review, deferred→cancelled,
+          ready_to_work→ready, elaboration→elab, draft→backlog),
+      (e) story_state_history INSERT with event_type=''state_change'' and metadata JSONB,
+      (f) final RAISE NOTICE with rows_updated and history_rows_inserted counts.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql (NEW)'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-8', 'AC-9', 'AC-10']
+    depends_on: ST-1
+    verification: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql'
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: 'Write pgtap test file 1007_pipe_0020_ghost_state_audit_test.sql'
+    goal: >
+      Create the pgtap test file with:
+      (a) SELECT plan(N) with exact test count,
+      (b) assertion: zero ghost-state rows remain after migration,
+      (c) assertion: all PIPE-0020 history rows use event_type = ''state_change'' (no trailing d),
+      (d) idempotency assertion using SAVEPOINT: run migration logic twice, verify zero net row delta,
+      (e) ROLLBACK at end to leave DB clean.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1004_valid_transitions_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql (NEW)'
+    acs: ['AC-5', 'AC-6', 'AC-7']
+    depends_on: ST-2
+    verification: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql | pg_prove'
+    estimated_tokens: 5000
