@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { pgSchema, text, timestamp, integer, jsonb } from 'drizzle-orm/pg-core'
 import { plans, planStoryLinks, type Plan } from '@repo/knowledge-base/db'
-import { eq, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
+import { eq, ne, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
 
 // Local schema definitions — explicit schema prefix ensures queries resolve correctly
 // regardless of DB search_path. Kept in sync with actual DB columns only.
@@ -662,7 +662,7 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     })
     .from(planStoryLinks)
     .innerJoin(stories, eq(planStoryLinks.storyId, stories.storyId))
-    .where(eq(planStoryLinks.planSlug, slug))
+    .where(and(eq(planStoryLinks.planSlug, slug), ne(stories.state, 'cancelled')))
     .orderBy(
       asc(sql`coalesce(${planStoryLinks.sortOrder}, 9999)`),
       asc(stories.priority),
@@ -1084,8 +1084,8 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
     blockedByIds: dependencies
       .filter(
         d =>
-          (d.dependencyType === 'blocks' || d.dependencyType === 'requires') &&
-          d.dependsOnState !== 'completed',
+          (d.dependencyType === 'depends_on' || d.dependencyType === 'blocked_by') &&
+          !['completed', 'UAT', 'cancelled'].includes(d.dependsOnState ?? ''),
       )
       .map(d => d.dependsOnId),
     // blocksIds: stories that are waiting on this story to complete
