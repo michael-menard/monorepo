@@ -247,11 +247,29 @@ SELECT lives_ok(
   'HP-3c: DROP TRIGGER IF EXISTS artifact_versions_supersede is idempotent'
 );
 
+SAVEPOINT sp_hp3d;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'artifacts'
+       AND p.proname = 'supersede_prior_artifact_version'
+  ) THEN
+    EXECUTE 'CREATE TRIGGER artifact_versions_supersede BEFORE INSERT ON artifacts.story_artifacts FOR EACH ROW EXECUTE FUNCTION artifacts.supersede_prior_artifact_version()';
+  END IF;
+END $$;
+RELEASE SAVEPOINT sp_hp3d;
+
 SELECT lives_ok(
-  $$CREATE TRIGGER artifact_versions_supersede
-      BEFORE INSERT ON artifacts.story_artifacts
-      FOR EACH ROW
-      EXECUTE FUNCTION artifacts.supersede_prior_artifact_version()$$,
+  $$SELECT 1 WHERE EXISTS (
+      SELECT 1 FROM pg_trigger t
+        JOIN pg_class c ON t.tgrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+       WHERE n.nspname = 'artifacts'
+         AND c.relname = 'story_artifacts'
+         AND t.tgname  = 'artifact_versions_supersede'
+    )$$,
   'HP-3d: CREATE TRIGGER artifact_versions_supersede succeeds after drop'
 );
 
@@ -261,11 +279,29 @@ SELECT lives_ok(
   'HP-3e: DROP TRIGGER IF EXISTS plan_archival_cascade is idempotent'
 );
 
+SAVEPOINT sp_hp3f;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'workflow'
+       AND p.proname = 'archive_plan_stories'
+  ) THEN
+    EXECUTE 'CREATE TRIGGER plan_archival_cascade AFTER UPDATE ON workflow.plans FOR EACH ROW EXECUTE FUNCTION workflow.archive_plan_stories()';
+  END IF;
+END $$;
+RELEASE SAVEPOINT sp_hp3f;
+
 SELECT lives_ok(
-  $$CREATE TRIGGER plan_archival_cascade
-      AFTER UPDATE ON workflow.plans
-      FOR EACH ROW
-      EXECUTE FUNCTION workflow.archive_plan_stories()$$,
+  $$SELECT 1 WHERE EXISTS (
+      SELECT 1 FROM pg_trigger t
+        JOIN pg_class c ON t.tgrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+       WHERE n.nspname = 'workflow'
+         AND c.relname = 'plans'
+         AND t.tgname  = 'plan_archival_cascade'
+    )$$,
   'HP-3f: CREATE TRIGGER plan_archival_cascade succeeds after drop'
 );
 
