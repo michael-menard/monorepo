@@ -1,0 +1,119 @@
+# dev-feasibility.yaml — CDBE-2010: advance_story_state and assign_story Stored Procedures
+feasible: true
+confidence: high
+rationale: >
+  All required database objects exist: workflow.valid_transitions (1004), workflow.story_state_history
+  with 1010 trigger, workflow.allowed_agents with validate_caller() (1005), workflow.story_assignments (1050).
+  The delegation model is clean — procedure inserts into story_state_history, which fires the 1010
+  BEFORE INSERT trigger. No cascade logic is re-implemented. Pattern is directly established by
+  prior CDBE migrations. The only open risk is public.agent_invocations existence (may be dropped by
+  cleanup migration) — AC-10 already specifies graceful handling. CDBE-2030 blocking inversion
+  needs PM clarification but does not block implementation since advance_story_state has no
+  logical dependency on resolve_blocker.
+complexity: medium
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/db/migrations/
+    - tests/db/triggers/
+  endpoints: []
+  deploy_touchpoints:
+    - 'psql -f 1013_cdbe2010_stored_procedures.sql (idempotent, safe to re-run)'
+    - 'pg_prove tests/db/triggers/test_cdbe2010_stored_procedures.sql'
+
+risks:
+  - finding: 'public.agent_invocations may be absent (dropped by 999_cleanup_duplicate_tables.sql)'
+    mitigation: >
+      AC-10 already states: if public.agent_invocations does not exist or no active invocation
+      is found, assign_story proceeds without error. Implement with DO block + pg_catalog check
+      or exception handler. Dev must verify existence with \d public.agent_invocations at
+      implementation time. If absent, scope invocation linking to NO-OP (log only).
+  - finding: 'CDBE-2030 is listed in KB as blocking CDBE-2010 — likely an inverted dependency'
+    mitigation: >
+      PM must resolve this before implementation starts. If inverted, update KB dependency chain.
+      Implementation itself does not require resolve_blocker (CDBE-2030 scope).
+  - finding: 'Migration slot 1013 must be available'
+    mitigation: >
+      Dev verifies with ls apps/api/knowledge-base/src/db/migrations/ | grep ^1013 at start.
+      If taken, use next available slot (1014, etc.) and update migration filename accordingly.
+
+missing_requirements:
+  - >
+    PM should confirm whether the invocation-linking in assign_story (AC-10) should be implemented
+    as: (a) a column on story_assignments, (b) a separate link table row, or (c) a NO-OP if
+    public.agent_invocations is absent. Current AC-10 says 'mechanism TBD by dev' — acceptable
+    for MVP but should be clarified.
+
+evidence_expectations:
+  - 'pgtap output shows all assertions pass (lives_ok + throws_ok + has_function)'
+  - 'Migration idempotency: second psql run exits 0'
+  - 'SELECT state FROM workflow.stories WHERE story_id = <test-story> confirms state updated'
+  - 'SELECT COUNT(*) FROM workflow.story_state_history WHERE story_id = <test-story> = 2 (double-execution guard)'
+  - 'SELECT COUNT(*) FROM workflow.story_assignments WHERE story_id = <test-story> = 1'
+
+subtasks:
+  - id: ST-1
+    title: 'Verify migration slot and public.agent_invocations existence'
+    goal: >
+      Confirm next available migration number (expected 1013) and verify whether
+      public.agent_invocations exists post-cleanup migration. This determines AC-10 implementation path.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/ (ls)
+      - apps/api/knowledge-base/src/db/migrations/999_cleanup_duplicate_tables.sql
+    files_to_modify: []
+    acs: ['AC-10', 'AC-12']
+    depends_on: none
+    verification: 'ls apps/api/knowledge-base/src/db/migrations/ | grep ^1013; psql -c "\d public.agent_invocations"'
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: 'Implement workflow.advance_story_state stored procedure'
+    goal: >
+      Create the advance_story_state PL/pgSQL function in migration 1013.
+      Must call validate_caller first, validate transition via NOT EXISTS against valid_transitions,
+      INSERT into story_state_history (triggering 1010 BEFORE INSERT), then UPDATE stories.state.
+      Must NOT duplicate cascade logic owned by the 1010 trigger.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql (create)
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-11', 'AC-12']
+    depends_on: ST-1
+    verification: 'psql -v ON_ERROR_STOP=1 -f 1013_cdbe2010_stored_procedures.sql'
+    estimated_tokens: 12000
+
+  - id: ST-3
+    title: 'Implement workflow.assign_story stored procedure'
+    goal: >
+      Add assign_story to the same migration file 1013. Must call validate_caller first,
+      INSERT into story_assignments, and optionally link to public.agent_invocations
+      (graceful if absent per AC-10). Add COMMENT ON FUNCTION and GRANT EXECUTE to agent_role.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1050_cascade_trigger_prerequisites.sql
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql (lines 779-799)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    acs: ['AC-7', 'AC-8', 'AC-9', 'AC-10', 'AC-11', 'AC-12', 'AC-14']
+    depends_on: ST-2
+    verification: 'psql -v ON_ERROR_STOP=1 -f 1013_cdbe2010_stored_procedures.sql (second run for idempotency)'
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: 'Write pgtap test file for both stored procedures'
+    goal: >
+      Create tests/db/triggers/test_cdbe2010_stored_procedures.sql following the
+      BEGIN / SELECT plan(N) / ... / SELECT * FROM finish() / ROLLBACK pattern.
+      Cover has_function for both procedures, throws_ok for P0001 (unauthorized caller),
+      throws_ok for 23514 (illegal transition), lives_ok for valid advance_story_state,
+      lives_ok for valid assign_story. Use SAVEPOINT+DO for any DDL referencing
+      undeployed functions. Include double-execution guard test (HP-3).
+    files_to_read:
+      - tests/db/triggers/test_cdbe2005_allowed_agents.sql
+      - tests/db/triggers/test_cdbe1030_artifact_superseded_at.sql
+    files_to_modify:
+      - tests/db/triggers/test_cdbe2010_stored_procedures.sql (create)
+    acs: ['AC-13']
+    depends_on: ST-3
+    verification: 'pg_prove tests/db/triggers/test_cdbe2010_stored_procedures.sql'
+    estimated_tokens: 10000

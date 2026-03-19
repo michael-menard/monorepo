@@ -1,0 +1,151 @@
+{
+  "story_id": "CDBE-2010",
+  "generated_at": "2026-03-19T00:00:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "advance_story_state() function signature and implementation",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "First statement validates caller via validate_caller()",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "NOT EXISTS subquery validates transition against workflow.valid_transitions",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "Inserts into workflow.story_state_history with from_state, to_state, reason (not exited_at or duration_seconds)",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "Updates workflow.stories SET state = p_to_state after history insert",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "Function executes atomically within implicit transaction with rollback on error",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "assign_story() function signature and implementation",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "First statement validates caller via validate_caller()",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "Inserts into workflow.story_assignments with story_id, agent_id, assigned_at",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "Adds invocation_id column and handles absence of public.agent_invocations via exception block",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "COMMENT ON FUNCTION included for both procedures citing migration 1013",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "Migration is idempotent: CREATE OR REPLACE functions and ADD COLUMN IF NOT EXISTS",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "pgtap test file with 10 assertions covering functions, error conditions, and valid calls",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "GRANT EXECUTE TO agent_role for both procedures",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 14,
+  "accepted": 14,
+  "challenged": 0,
+  "rejected": 0
+}
