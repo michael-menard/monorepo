@@ -39,6 +39,21 @@ const TABLE_CONTENT_COLUMNS: Record<KnowledgeTable, string[]> = {
   cohesion_rules: ['rule_name', 'conditions'],
 }
 
+// ── SQL injection defense ────────────────────────────────────────────────────
+// Compile-time whitelist of safe table and column names. All dynamic SQL
+// identifiers are validated against these sets before interpolation.
+const SAFE_TABLES = new Set<string>(KNOWLEDGE_TABLES)
+const SAFE_COLUMNS = new Set<string>(
+  Object.values(TABLE_CONTENT_COLUMNS).flat().concat(['id', 'embedding', 'updated_at']),
+)
+
+function assertSafeIdentifier(value: string, kind: 'table' | 'column'): void {
+  const allowlist = kind === 'table' ? SAFE_TABLES : SAFE_COLUMNS
+  if (!allowlist.has(value)) {
+    throw new Error(`[embedding-worker] Unsafe SQL ${kind} name rejected: ${value}`)
+  }
+}
+
 // ── Signal handler guard ──────────────────────────────────────────────────────
 // module-level flag prevents double-registration of SIGTERM/SIGINT handlers.
 let _handlersRegistered = false
@@ -235,8 +250,11 @@ export class EmbeddingWorker {
   ): Promise<EmbeddingWriteResult[]> {
     const results: EmbeddingWriteResult[] = []
 
-    // Fetch content for all ids in this table
+    // Validate table and column names against compile-time whitelist (SQL injection defense)
+    assertSafeIdentifier(table, 'table')
     const contentColumns = TABLE_CONTENT_COLUMNS[table]
+    for (const col of contentColumns) assertSafeIdentifier(col, 'column')
+
     const selectCols = contentColumns.join(', ')
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ')
 
@@ -301,7 +319,7 @@ export class EmbeddingWorker {
         await withRetry(() =>
           this.pgClient.query(
             `UPDATE ${table} SET embedding = $1, updated_at = NOW() WHERE id = $2`,
-            [`[${embedding.join(',')}]`, row.id],
+            [`[${embedding.join(',')}]::vector`, row.id],
           ),
         )
         results.push({ table, id: row.id, success: true })
@@ -422,8 +440,10 @@ export class EmbeddingWorker {
     table: KnowledgeTable,
     backfillClient: EmbeddingClient,
   ): Promise<BackfillResult> {
+    assertSafeIdentifier(table, 'table')
     let totalProcessed = 0
     const contentColumns = TABLE_CONTENT_COLUMNS[table]
+    for (const col of contentColumns) assertSafeIdentifier(col, 'column')
     const selectCols = contentColumns.join(', ')
 
     while (!this.shutdownRequested) {
@@ -476,7 +496,7 @@ export class EmbeddingWorker {
           await withRetry(() =>
             this.pgClient.query(
               `UPDATE ${table} SET embedding = $1, updated_at = NOW() WHERE id = $2`,
-              [`[${embedding.join(',')}]`, row.id],
+              [`[${embedding.join(',')}]::vector`, row.id],
             ),
           )
           totalProcessed++
