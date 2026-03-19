@@ -1,165 +1,243 @@
 schema: 2
-story_id: CDBE-4020
-timestamp: '2026-03-19T03:00:00Z'
+story_id: CDBE-4030
+timestamp: '2026-03-19T03:30:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
     description: >-
-      Author migration SQL: DB safety preamble, pgvector version guard, pre-flight row count RAISE NOTICE for all five
-      tables, ALTER TABLE ADD COLUMN IF NOT EXISTS embedding public.vector(1536) for each table, COMMENT ON COLUMN for
-      each column, and CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw for each table (outside any transaction
-      block, with m=16 ef_construction=64).
+      Author SQL migration adding pg_notify trigger functions to all five knowledge tables (lessons_learned, adrs,
+      code_standards, rules, cohesion_rules) for INSERT and relevant UPDATE events. Include pgtap test file verifying
+      trigger existence and payload shape on all five tables.
     files:
-      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+      - apps/api/knowledge-base/src/db/migrations/1012_cdbe_4030_knowledge_embedding_notify.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1012_cdbe_4030_notify_triggers_test.sql
     files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1003_story_notify.sql
       - apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql
-      - apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
     dependencies: []
     slice: backend
-    verification: >-
-      Apply to knowledgebase DB (port 5435) — zero errors, confirm RAISE NOTICE output for all 5 tables; apply a second
-      time to verify idempotency (zero errors, no duplicate objects in pg_indexes)
+    verification: Apply migration to knowledgebase DB (port 5433); run pgtap test file against knowledgebase DB
     acs_covered:
       - AC-1
       - AC-2
-      - AC-3
-      - AC-4
-      - AC-5
-      - AC-8
-      - AC-9
-    blocker_note: >-
-      Do not begin ST-1 until CDBE-4010 is merged (pgvector extension + vector customType confirmation). CDBE-4010 is
-      currently in_qa.
   - id: 2
     subtask_id: ST-2
     description: >-
-      Update kb.ts Drizzle schema: add embedding: vector('embedding', { dimensions: 1536 }) to the adrs, codeStandards,
-      cohesionRules, lessonsLearned, and rules table definitions. Re-export inferred select and insert types for each
-      modified table.
+      Implement the embedding-worker.ts module with injectable pg.Client and EmbeddingClient, LISTEN subscription to
+      knowledge_embedding_needed channel, notification batching (time window 50ms + size 25 triggers, deduplication by
+      table+id), EmbeddingClient.generateEmbeddingsBatch() call, withRetry UPDATE write-back per row, per-row error
+      handling (log + continue, no re-queue), and full Zod types in __types__/index.ts. Write unit tests covering
+      batching logic, per-row failure handling, and Zod schema validation.
     files:
-      - apps/api/knowledge-base/src/db/schema/kb.ts
+      - apps/api/knowledge-base/src/embedding-worker/__types__/index.ts
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
+      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/schema/kb.ts
+      - apps/api/knowledge-base/src/embedding-client/index.ts
+      - apps/api/knowledge-base/src/embedding-client/batch-processor.ts
+      - apps/api/knowledge-base/src/db/client.ts
     dependencies: []
     slice: backend
-    verification: pnpm check-types --filter @repo/knowledge-base
+    verification: pnpm test --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base
     acs_covered:
-      - AC-6
+      - AC-3
+      - AC-4
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
   - id: 3
     subtask_id: ST-3
     description: >-
-      Write pgtap test file asserting: (a) embedding column exists on all five tables with type USER-DEFINED (vector)
-      via col_type_is, (b) HNSW indexes exist on all five tables with pg_indexes.indexdef containing 'USING hnsw', (c)
-      embedding column is nullable on all five tables via col_is_nullable. Follow gold-standard structure from
-      1007_pipe_0020_ghost_state_audit_test.sql.
+      Extend embedding-worker.ts with polling fallback (configurable interval 5min, skip-if-running in-memory guard,
+      per-table NULL sweep LIMIT 100, embedding + write-back per batch), backfill function (batch-with-delay,
+      configurable batchSize 50 + delayMs 500, callable at startup and standalone, logs per-table counts), graceful
+      shutdown (SIGTERM + SIGINT handlers with module-level _handlersRegistered guard, finish in-flight batch, release
+      pg.Client, exit code 0), and startup log entries. Add run.ts entrypoint with: OPENAI_API_KEY preflight check (exit
+      1 if absent), pg.Client construction + connect, exponential backoff reconnect handler (1s/2s/4s/8s cap 30s)
+      re-issuing LISTEN after reconnect, startup backfill call, then LISTEN loop. Extend unit tests with polling skip
+      guard, backfill batch-with-delay, and shutdown sequence.
     files:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
+      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
+      - apps/api/knowledge-base/src/embedding-worker/run.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
+      - apps/api/pipeline/src/scheduler/index.ts
     dependencies:
-      - 1
+      - 2
     slice: backend
-    verification: pg_prove output shows all assertions pass against knowledgebase DB with migration 1011 applied
+    verification: pnpm test --filter @repo/knowledge-base && pnpm check-types --filter @repo/knowledge-base
     acs_covered:
+      - AC-5
+      - AC-6
       - AC-7
+      - AC-11
+      - AC-12
+      - AC-13
 files_to_change:
-  - path: apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+  - path: apps/api/knowledge-base/src/db/migrations/1012_cdbe_4030_knowledge_embedding_notify.sql
     action: create
     reason: >-
-      New migration adding embedding vector(1536) columns and HNSW indexes to the five knowledge tables (AC-1 through
-      AC-5, AC-8, AC-9)
-  - path: apps/api/knowledge-base/src/db/schema/kb.ts
-    action: modify
-    reason: >-
-      Add embedding column to adrs, codeStandards, cohesionRules, lessonsLearned, and rules table definitions; re-export
-      inferred types (AC-6)
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+      SQL migration adding NOTIFY trigger functions to all five knowledge tables (AC-1). Uses DB safety preamble DO
+      block pattern from 1007_pipe_0020_ghost_state_audit.sql. Targets knowledgebase DB (port 5433). Idempotent.
+      Sequence 1012 — next after 1011.
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1012_cdbe_4030_notify_triggers_test.sql
     action: create
     reason: >-
-      pgtap test file verifying embedding column existence, HNSW index existence, and column nullability across all five
-      tables (AC-7)
+      pgtap test file verifying NOTIFY trigger existence on all five tables for INSERT and UPDATE, and payload shape
+      with table + id fields (AC-2). Follows structure from 1007_pipe_0020_ghost_state_audit_test.sql.
+  - path: apps/api/knowledge-base/src/embedding-worker/__types__/index.ts
+    action: create
+    reason: >-
+      Zod schemas for worker config (WorkerConfigSchema: pollIntervalMs, batchSize, batchWindowMs, backfillBatchSize,
+      backfillDelayMs), notification payload (NotificationPayloadSchema: table string, id uuid), and embedding write
+      result (EmbeddingWriteResultSchema). No TypeScript interfaces — z.infer<> only (AC-8, AC-10).
+  - path: apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts
+    action: create
+    reason: >-
+      Core worker module. Injectable EmbeddingClient + pg.Client. LISTEN subscription, notification batching (dedup by
+      table+id, flush on batchWindowMs or batchSize), EmbeddingClient.generateEmbeddingsBatch() call, withRetry UPDATE
+      write-back. Per-row error handling. Polling fallback with in-memory running flag. Backfill function
+      (batch-with-delay). Startup log entries. Graceful shutdown handlers (SIGTERM/SIGINT with _handlersRegistered
+      guard). (AC-3, AC-4, AC-5, AC-6, AC-7, AC-11)
+  - path: apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts
+    action: create
+    reason: >-
+      Unit tests using MockEmbeddingClient and MockPgClient (no real DB or OpenAI calls). Covers: batching (window +
+      size triggers), per-row failure (worker continues), polling skip-if-running guard, backfill batch-with-delay loop,
+      graceful shutdown sequence, Zod schema validation for notification payloads. (AC-9)
+  - path: apps/api/knowledge-base/src/embedding-worker/run.ts
+    action: create
+    reason: >-
+      Process entrypoint. OPENAI_API_KEY preflight check (exit 1 with logger error if absent). pg.Client construction +
+      connect + startup log. client.on('error', ...) handler with exponential backoff reconnect (1s/2s/4s/8s cap 30s) +
+      LISTEN re-subscription after each successful reconnect. Startup backfill call. LISTEN loop. SIGTERM/SIGINT
+      registration (with _handlersRegistered guard). (AC-12, AC-13)
 commands_to_run:
   - command: pnpm check-types --filter @repo/knowledge-base
-    when: after kb.ts update (ST-2)
+    when: after ST-2 and ST-3 code changes
     required: true
-  - command: >-
-      psql $KB_DATABASE_URL -f
-      apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
-    when: after ST-1 (apply to knowledgebase DB, port 5435 — NOT lego_dev)
+  - command: pnpm test --filter @repo/knowledge-base
+    when: after ST-2 and ST-3 code changes
     required: true
-  - command: >-
-      psql $KB_DATABASE_URL -f
-      apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
-    when: second run for idempotency check (after first apply)
-    required: true
-  - command: >-
-      psql $KB_DATABASE_URL -f
-      apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql |
-      pg_prove
-    when: after migration 1011 is applied (ST-3 verification)
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      Migration file exists with DO block checking current_database() = 'knowledgebase'; EC-1 test: apply to lego_dev
-      raises EXCEPTION
-    evidence_type: manual
+      SQL migration file 1012_cdbe_4030_knowledge_embedding_notify.sql applied to knowledgebase DB without error;
+      triggers visible in pg_trigger catalog for all five tables
+    evidence_type: command
   - ac_id: AC-2
     planned_evidence: >-
-      Migration SQL contains ALTER TABLE ... ADD COLUMN IF NOT EXISTS embedding public.vector(1536) for all five tables;
-      confirmed via pg_attribute query after apply
+      pgtap test file 1012_cdbe_4030_notify_triggers_test.sql passes — trigger existence assertions for INSERT + UPDATE
+      on all five tables, payload shape verification
     evidence_type: command
   - ac_id: AC-3
     planned_evidence: >-
-      Migration SQL contains CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw (embedding public.vector_cosine_ops)
-      with m=16 ef_construction=64 comment for all five tables
-    evidence_type: command
+      Unit test: embedding-worker.test.ts — LISTEN subscription, batching window + size triggers,
+      generateEmbeddingsBatch call, UPDATE write-back assertions on MockPgClient
+    evidence_type: test
   - ac_id: AC-4
-    planned_evidence: Second migration run produces zero errors; pg_indexes shows exactly one HNSW index per table
-    evidence_type: command
+    planned_evidence: >-
+      Unit test: per-row failure injection via MockEmbeddingClient — worker continues processing subsequent rows,
+      failure logged, no re-queue
+    evidence_type: test
   - ac_id: AC-5
-    planned_evidence: 'Migration SQL contains COMMENT ON COLUMN with 1011: prefix for all five embedding columns'
-    evidence_type: manual
+    planned_evidence: >-
+      Unit test: polling fallback tick fires, queries NULL rows per table, calls generateEmbeddingsBatch, writes back;
+      skip-if-running guard test
+    evidence_type: test
   - ac_id: AC-6
     planned_evidence: >-
-      kb.ts updated with embedding column on all five table definitions; pnpm check-types --filter @repo/knowledge-base
-      exits 0
-    evidence_type: command
+      Unit test: backfill function processes rows in configurable batch size with inter-batch delay; zero-NULL-rows
+      no-op test
+    evidence_type: test
   - ac_id: AC-7
     planned_evidence: >-
-      pgtap test file with col_type_is, HNSW indexdef assertions, and col_is_nullable for all five tables; pg_prove
-      output: all tests pass
+      Unit test: SIGTERM handler called — in-flight batch completes, pg.Client released, process.exit(0) called;
+      _handlersRegistered guard prevents double-registration
     evidence_type: test
   - ac_id: AC-8
-    planned_evidence: Migration SQL contains RAISE NOTICE with row count for each of the five tables (visible in psql output)
-    evidence_type: manual
+    planned_evidence: >-
+      File: __types__/index.ts — WorkerConfigSchema, NotificationPayloadSchema, EmbeddingWriteResultSchema all present;
+      z.infer<> used exclusively; no TypeScript interface keyword
+    evidence_type: file
   - ac_id: AC-9
     planned_evidence: >-
-      Migration SQL contains DO block checking extversion >= 0.5.0; EC-2 test: old pgvector raises EXCEPTION before any
-      HNSW creation
-    evidence_type: manual
-architectural_decisions: []
-complexity: moderate
+      pnpm test --filter @repo/knowledge-base passes; unit tests cover batching, polling guard, backfill, shutdown, Zod
+      rejection of malformed payloads
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      pnpm check-types --filter @repo/knowledge-base exits 0; grep for 'interface ' in embedding-worker/ returns no
+      results
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: >-
+      Log assertions in unit test: startup logs DB connection established, LISTEN active, backfill starting, backfill
+      complete with row counts
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      Unit test: simulate client.on('error') — reconnect handler fires with exponential backoff delays, LISTEN re-issued
+      after each successful reconnect, outcomes logged; worker does not exit
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: >-
+      Unit test: OPENAI_API_KEY absent from process.env — logger.error called with preflight message, process.exit(1)
+      called before LISTEN loop
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should ST-2 depend on ST-1 completing first, or can the TypeScript module be authored and unit-tested against
+      mocks in parallel?
+    decision: >-
+      ST-2 has NO dependency on ST-1. The embedding-worker TypeScript module and its tests can be authored and
+      unit-tested against mock pg.Client and mock EmbeddingClient without ST-1's migration being applied to any DB. ST-1
+      and ST-2 are parallel. Only ST-3 depends on ST-2.
+    rationale: >-
+      Elaboration audit (subtask_decomposition: CONDITIONAL) identified that ST-2 depending on ST-1 was overconstrained
+      and created an unnecessary serialization bottleneck. The TypeScript implementation has no runtime dependency on
+      the DB migration during unit testing.
+    decided_by: autonomous_elaboration
+  - id: ARCH-002
+    question: >-
+      Should run.ts accept a --backfill-only CLI flag or should a separate run-backfill.ts entrypoint be created for
+      standalone backfill invocation?
+    decision: >-
+      run.ts accepts a CLI approach: check process.argv for '--backfill-only'. If present, run the backfill function,
+      log results, and exit. This avoids creating a second entrypoint file and keeps the backfill-as-standalone-script
+      AC-6 requirement satisfied within the single entrypoint.
+    rationale: >-
+      Elaboration opportunity opp-6 flagged this ambiguity. A single entrypoint with a flag is simpler and avoids code
+      duplication. A separate run-backfill.ts would require duplicating pg.Client setup and EmbeddingClient
+      initialization logic.
+    decided_by: autonomous_elaboration
+complexity: complex
 notes:
   - >-
-    Migration slot 1011 confirmed: last migration in worktree is 1010_story_state_history_trigger.sql. Filename must be
-    1011_cdbe4020_embedding_columns_knowledge_tables.sql.
+    CDBE-4020 is a hard runtime blocker for ST-1 — migration 1012 cannot be applied until CDBE-4020's embedding columns
+    exist on the five knowledge tables. However, ST-1 SQL can be authored and ST-2/ST-3 TypeScript can be written and
+    unit-tested while CDBE-4020 is still in_progress.
   - >-
-    CDBE-4010 is currently in_qa — ST-1 must NOT begin until CDBE-4010 is merged. ST-2 (kb.ts) can proceed in parallel
-    and does not depend on CDBE-4010.
+    Next migration sequence is 1012 — verified against the worktree (1011 is highest numbered sequence, 1050 is reserved
+    for cascade trigger prerequisites).
   - >-
-    CREATE INDEX CONCURRENTLY statements must be top-level SQL — NOT inside any BEGIN/COMMIT block. PostgreSQL enforces
-    this at the engine level.
-  - All five target tables are in the public schema (not workflow schema). Use public.vector_cosine_ops operator class.
+    EmbeddingClient has an 'interface EmbeddingClientConfig' declaration in its own file (not CDBE-4030 scope). AC-10
+    gates new code only — do NOT introduce any new interface declarations; use z.infer<> exclusively.
   - >-
-    HNSW parameters: m=16, ef_construction=64 — consistent with CDBE-4010 and confirmed by KB entry 5918e276 for tables
-    under 10,000 rows.
-  - The vector customType is already defined and exported in kb.ts lines 24-39 — reuse directly, no redefinition.
+    module-level _handlersRegistered boolean guard is the correct pattern for SIGTERM/SIGINT handler idempotency in
+    run.ts (per KB lesson 198c7642).
   - >-
-    Drizzle does not support functional indexes for HNSW — indexes exist in migration SQL only, not in kb.ts table
-    definitions.
-  - 'Elaboration verdict: PASS (9/9 audit checks), all opportunities auto-resolved to KB, no gaps, no ACs added.'
+    backfill EmbeddingClient should be instantiated with maxConcurrentRequests: 3 (not the default 10) to respect OpenAI
+    rate limits during large backfill runs.
   - >-
-    Reuse safety preamble from 1007_pipe_0020_ghost_state_audit.sql lines 28-35 verbatim (swap migration number to
-    1011).
+    Elaboration verdict: PASS. Two ACs added (AC-12: reconnect, AC-13: preflight). Six opportunities logged to KB. No
+    blocking architectural decisions remain.
+  - ST-1 and ST-2 are parallel (no dependency between them). ST-3 depends on ST-2 only.
