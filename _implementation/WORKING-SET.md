@@ -1,123 +1,162 @@
-# CDBE-3010 Working Set
+# Working Set - CDBE-3020
 
-**Story ID**: CDBE-3010  
-**Story Branch**: `tree/story/CDBE-3010`  
-**Implementation Phase**: Development Setup Complete  
-**Worktree**: `/Users/michaelmenard/Development/monorepo/tree/story/CDBE-3010`  
-
----
+**Story:** Roadmap Materialized View and Refresh Trigger  
+**Phase:** Implementation  
+**Worktree:** /Users/michaelmenard/Development/monorepo/tree/story/CDBE-3020  
+**Branch:** TBD (set by implementation agent)
 
 ## Constraints
 
-### From CLAUDE.md
-- Use Zod schemas for all TypeScript types (NOT APPLICABLE — pure DDL)
-- No barrel files (NOT APPLICABLE — pure DDL)
-- Use @repo/logger, not console (NOT APPLICABLE — pure DDL)
-- Minimum 45% test coverage (NOT APPLICABLE — test surface is pgtap only, coverage not measured)
-- Named exports preferred (NOT APPLICABLE — pure DDL)
+All constraints are from CLAUDE.md project standards and story-specific requirements:
 
-### Migration-Specific Constraints
-1. **Safety Preamble**: All knowledgebase migrations must include `current_database() = 'knowledgebase'` verification (lesson from CDBN-1050)
-2. **Idempotency**: `CREATE OR REPLACE VIEW` is idempotent; no DROP guard needed
-3. **Column Exposure**: Use explicit column list (not `s.*`) to avoid schema change surprises
-4. **RLS Inheritance**: View runs with SECURITY INVOKER (default); caller privileges inherited from underlying tables
-5. **Index Dependency**: `idx_story_state_history_open_rows` (migration 1010) must exist before view creation
-6. **No API Scope**: Pure DDL — no MCP tools, Lambda handlers, TypeScript services, or UI components
+1. **Use atomic migration pattern** — Transaction safety with safety preamble and idempotency guards (per CDBE-1030 pattern)
+2. **pgTAP testing only** — Pure DDL + PL/pgSQL; no TypeScript changes per ACs
+3. **Follow SQL naming conventions** — Lowercase, underscores, no reserved keywords
+4. **Add COMMENT ON statements** — Document view columns and trigger function purpose
+5. **Unique index required** — (plan_id, story_order) per AC5
+6. **STATEMENT-level triggers** — Use pg_trigger_depth guard to prevent infinite loops (per CDBE-1010 pattern)
+7. **GRANT pattern consistency** — Match existing database role structure (per CDBE-1005 pattern)
+8. **Reuse existing CTEs** — story_counts from migration 999, safety preamble from CDBE-1030
+9. **No TypeScript changes** — Per elaboration verdict; migration only
+10. **CONCURRENT refresh** — REFRESH MATERIALIZED VIEW CONCURRENTLY (per story description)
 
----
+## Implementation Paths
 
-## Next Steps
+### Database Migration
 
-### Phase: Implementation
-1. Write `apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql`
-   - Safety preamble DO block
-   - CREATE OR REPLACE VIEW with explicit column list
-   - LATERAL join for latest open row
-   - COMMENT statements with migration number prefix
+- **File:** `packages/backend/db/migrations/1081_add_roadmap_materialized_view.sql`
+- **Estimated Slot:** 1080 (verify at implementation time)
+- **Contents:**
+  - Safety preamble (CREATE OR REPLACE, idempotency)
+  - workflow.roadmap materialized view DDL
+  - Unique index creation
+  - Trigger function with pg_trigger_depth guard
+  - Statement-level triggers on plans and stories tables
+  - GRANT statements
+  - COMMENT ON documentation
 
-2. Write `apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql`
-   - View existence assertion
-   - Three data scenarios: with history, without history, with closed + open rows
-   - Idempotency tests
+### Test Suite
 
-### Phase: Verification
-- Run migration on KB database
-- Run pgtap tests
-- Verify idempotency (re-run migration, expect zero errors)
-- Confirm LATERAL join uses partial index (EXPLAIN plan)
+- **File:** `packages/backend/db/__tests__/1081_roadmap_matview.test.sql`
+- **Framework:** pgTAP
+- **Coverage:**
+  - View DDL correctness
+  - Column existence and types
+  - story_counts CTE accuracy
+  - next_unblocked_story_id selection logic
+  - estimated_completion_pct calculation
+  - Unique index behavior
+  - Trigger idempotency (multiple refreshes)
+  - Permission grants
 
-### Phase: Code Review
-- AC compliance verification (AC-1 through AC-12)
-- Non-goal validation (no API/TypeScript changes)
-- Pattern conformance (vs. reference files)
+## Reference Assets
 
-### Phase: QA
-- Production deployment readiness
-- Rollback readiness
-- RLS privilege verification across roles
+### SQL Patterns to Reuse
 
----
+1. **story_counts CTE** (migrations/999_add_plan_churn_tracking.sql, lines ~XX-XX)
+   - Groups stories by state and counts them
+   - Use this pattern for completed_count and story_count aggregation
 
-## Reference Patterns
+2. **Safety Preamble** (CDBE-1030 migration)
+   - CREATE OR REPLACE handles updates
+   - BEGIN/ROLLBACK for transaction safety
+   - Comment blocks for clarity
 
-### LATERAL Join (from 1000_create_story_details_view.sql, lines 117–123)
-```sql
-LEFT JOIN LATERAL (
-  SELECT *
-  FROM workflow.story_outcomes o2
-  WHERE o2.story_id = s.story_id
-  ORDER BY o2.created_at DESC
-  LIMIT 1
-) o ON true
-```
+3. **Trigger Function Pattern** (CDBE-1010 migration)
+   - pg_trigger_depth > 0 check prevents infinite loops
+   - Uses NEW and OLD for row-level or STATEMENT context
+   - EXECUTE IMMEDIATE pattern for dynamic SQL
 
-### CREATE OR REPLACE VIEW (from 999_add_plan_churn_tracking.sql, line 65)
-```sql
-CREATE OR REPLACE VIEW workflow.v_plan_churn_summary AS
-WITH RECURSIVE ...
-```
+4. **pgTAP Test Structure** (CDBE-1030_test)
+   - plan(N) calls to declare test count
+   - is() assertions for equality
+   - ok() for boolean checks
+   - diag() for diagnostic messages
 
-### pgtap Structure (from 1010_story_state_history_trigger_test.sql)
-```sql
-BEGIN;
-SELECT plan(N);
--- Assertions
-SELECT * FROM finish();
-ROLLBACK;
-```
+### TypeScript Reference (Non-Implementation)
 
-### Safety Preamble (from CDBN-1050 lesson)
-```sql
-DO $$ BEGIN
-  IF current_database() <> 'knowledgebase' THEN
-    RAISE EXCEPTION 'Migration 1030: This migration must run against the ''knowledgebase'' database, not %', current_database();
-  END IF;
-END $$;
-```
+- **File:** packages/backend/orchestrator/src/services/planService.ts
+- **Use Case:** Reference only for nextStory selection logic
+- **Do NOT modify** — No TypeScript changes per ACs
 
----
+## Next Phase: Implementation
 
-## Files to Create
+### Step 1: Design Review
 
-| File | Purpose | Lines Est. |
-|------|---------|-----------|
-| `apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql` | Migration DDL | ~60 |
-| `apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql` | pgtap tests | ~80 |
+- [ ] Verify CDBE-3010 completion (dependency)
+- [ ] Confirm migration slot number (currently estimated at 1080)
+- [ ] Review elaboration verdict confirmation
+- [ ] Check existing materialized view usage patterns in codebase
 
----
+### Step 2: Migration Implementation
 
-## Files NOT in Scope
+- [ ] Create migration file at correct slot
+- [ ] Implement safety preamble
+- [ ] Implement workflow.roadmap materialized view DDL
+- [ ] Create unique index on (plan_id, story_order)
+- [ ] Implement refresh trigger function with pg_trigger_depth guard
+- [ ] Implement STATEMENT-level triggers
+- [ ] Add GRANT statements
+- [ ] Add COMMENT ON documentation
 
-- No changes to `workflow.stories` table
-- No changes to `workflow.story_details` view
-- No changes to `workflow.story_state_history` table
-- No new TypeScript types or services
-- No new API endpoints
-- No new MCP tools
-- No UI components
+### Step 3: Test Implementation
 
----
+- [ ] Create pgTAP test file
+- [ ] Test view structure and columns
+- [ ] Test story_counts aggregation
+- [ ] Test next_unblocked_story selection
+- [ ] Test estimated_completion_pct calculation
+- [ ] Test unique index
+- [ ] Test trigger idempotency
+- [ ] Run test suite: pnpm test
 
-## Summary
+### Step 4: Verification
 
-CDBE-3010 is a narrowly-scoped DDL migration story. The implementation requires two SQL files: a migration file creating the view with proper idempotency and safety guards, and a pgtap test file covering all acceptance criteria. No code outside the database layer is in scope.
+- [ ] Type check: pnpm check-types
+- [ ] Lint: /lint-fix
+- [ ] Coverage report
+- [ ] Migration dry-run if applicable
+- [ ] Review all 14 ACs for completeness
+
+### Step 5: Code Review Preparation
+
+- [ ] Fill CODE-REVIEW-CHECKLIST.yaml with all changes
+- [ ] Document decisions and trade-offs
+- [ ] Flag performance considerations
+- [ ] Verify dependency completion (CDBE-3010)
+
+## Elaboration Summary (for reference)
+
+**Verdict:** CONDITIONAL_PASS (ready_to_implement: true)
+
+**Key Points:**
+
+- All 14 ACs are specified and testable
+- No ambiguities requiring further clarification
+- Dependencies resolved (CDBE-3010 completed)
+- Reusable assets identified and referenced
+- Test strategy clear (pgTAP only)
+- No TypeScript changes required
+
+## Migration Information
+
+**Type:** DDL + PL/pgSQL (pure database schema changes)  
+**Downtime Required:** No  
+**Rollback Strategy:** `DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap CASCADE`  
+**Dependencies:** CDBE-3010 (plan_story_links and story_state_transitions tables)
+
+## Files to Create/Modify
+
+| Path                                                                    | Type | Action | Notes         |
+| ----------------------------------------------------------------------- | ---- | ------ | ------------- |
+| `packages/backend/db/migrations/1081_add_roadmap_materialized_view.sql` | SQL  | Create | New migration |
+| `packages/backend/db/__tests__/1081_roadmap_matview.test.sql`           | SQL  | Create | pgTAP tests   |
+
+## Success Criteria
+
+- [x] SETUP COMPLETE
+- [ ] Migration implementation complete and passing tests
+- [ ] All 14 ACs verified
+- [ ] Code review passed
+- [ ] QA verification passed
+- [ ] Deployment ready

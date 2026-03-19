@@ -1,280 +1,200 @@
-schema: 2
-story_id: PIPE-2050
-timestamp: '2026-03-19T06:00:00Z'
-subtask_source: story
+schema: 1
+story_id: CDBE-3020
+timestamp: '2026-03-19T19:00:00Z'
 steps:
   - id: 1
-    subtask_id: ST-1
     description: >-
-      Implement getEligibleReviewStories(limit) — raw SQL CTE querying stories WHERE state = 'needs_code_review' with no
-      unresolved dependencies, priority-ordered. Mirrors getEligibleStories() pattern exactly. No shared extraction —
-      replicate per design constraints.
+      Write migration SQL: workflow.roadmap materialized view DDL, unique index, refresh trigger function +
+      STATEMENT-level triggers, GRANT statements, COMMENT ON documentation, initial REFRESH call
     files:
-      - apps/api/pipeline/src/scheduler/index.ts
+      - apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
     files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - packages/backend/orchestrator/src/state/story-state-machine.ts
+      - apps/api/knowledge-base/src/db/migrations/999_add_plan_churn_tracking.sql
+      - apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+      - apps/api/knowledge-base/src/db/migrations/1090_cdbe3030_token_dashboard_matview.sql
     dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
+    slice: db
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
     acs_covered:
       - AC-1
-  - id: 2
-    subtask_id: ST-2
-    description: >-
-      Resolve AC-14 QA dispatch trigger state collision FIRST (document Architecture Decision in plan notes), then
-      implement getEligibleQaStories(limit) querying stories WHERE state = 'in_qa' AND dispatched_for_review IS NOT SET
-      (state fence). Resolution: QA dispatch skips KB state advance (no valid canonical target from in_qa for a
-      'dispatching' sentinel — valid transitions are completed/failed_qa/blocked). Use BullMQ jobId deduplication as the
-      idempotency fence instead: jobId format '{storyId}:qa:{attempt}' prevents double-dispatch since BullMQ rejects
-      duplicate jobIds. Document the deviation from F006 in code comments.
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - packages/backend/orchestrator/src/state/story-state-machine.ts
-      - packages/backend/pipeline-queue/src/__types__/index.ts
-    dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
-    acs_covered:
-      - AC-3
-      - AC-14
-  - id: 3
-    subtask_id: ST-3
-    description: >-
-      Implement dispatchReviewStory(story, attempt) — F006 atomic dispatch: advance KB state needs_code_review →
-      ready_for_qa (intermediate) then → in_qa before enqueuing. Actually: the canonical transition is needs_code_review
-      → ready_for_qa first (via needs_code_review→ready_for_qa), then the scheduler advances ready_for_qa → in_qa and
-      enqueues the review job. The KB advance target is 'in_qa' via a two-hop transition:
-      needs_code_review→ready_for_qa→in_qa. Use kb_update_story_status with target state 'in_qa'. Enqueue
-      ReviewJobDataSchema job with jobId '{storyId}:review:{attempt}'. Pass worktreePath: '' (dispatch-router.ts
-      defaults handle missing worktree).
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - packages/backend/pipeline-queue/src/__types__/index.ts
-      - apps/api/pipeline/src/supervisor/dispatch-router.ts
-      - packages/backend/orchestrator/src/state/story-state-machine.ts
-    dependencies:
-      - 1
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
-    acs_covered:
       - AC-2
-  - id: 4
-    subtask_id: ST-4
-    description: >-
-      Implement dispatchQaStory(story, attempt) — DEVIATION from F006: skip KB state advance (no valid canonical target
-      state from in_qa for 'qa dispatching' sentinel per AC-14 resolution). Enqueue QaJobDataSchema job with jobId
-      '{storyId}:qa:{attempt}'. BullMQ deduplication via jobId serves as the idempotency fence. Log
-      scheduler_dispatched_qa event with storyId, stage:'qa', attemptNumber. Comment the F006 deviation prominently.
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-      - packages/backend/pipeline-queue/src/__types__/index.ts
-    dependencies:
-      - 2
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
-    acs_covered:
-      - AC-5
-  - id: 5
-    subtask_id: ST-5
-    description: >-
-      Extend runOnce() to dispatch review and QA stages after implementation dispatch. Structure: (1) calculate
-      slotsAvailable, (2) dispatch implementation up to slotsAvailable, (3) recalculate slotsRemaining = slotsAvailable
-      - dispatchedCount, (4) dispatch review up to slotsRemaining, (5) recalculate again, (6) dispatch QA up to final
-      remaining. Each stage calls its own getEligible* + applyFinishBeforeNewStart + applyStrictFinishFilter (same
-      config flags apply to all stages). Early-exit per stage when no eligible stories (log
-      scheduler_no_eligible_{stage}). runOnce() returns void.
-    files:
-      - apps/api/pipeline/src/scheduler/index.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/index.ts
-    dependencies:
-      - 3
-    slice: backend
-    verification: pnpm check-types --filter @repo/pipeline
-    acs_covered:
+      - AC-3
       - AC-4
+      - AC-5
       - AC-6
       - AC-7
-  - id: 6
-    subtask_id: ST-6
-    description: >-
-      Write unit tests for all new scheduler behaviors in scheduler.test.ts. Extend existing test helpers (makeStory,
-      makeQueue, makeKbDeps) — do NOT replace them. Test scenarios: HP-1 (dispatchReviewStory advances KB to in_qa
-      before enqueue), HP-2 (dispatchQaStory enqueues qa job WITHOUT KB state advance — verifies AC-14 resolution), HP-3
-      (runOnce dispatches review after implementation fills some slots), HP-4 (runOnce dispatches QA in same cycle),
-      HP-5 (getEligibleReviewStories returns needs_code_review stories), HP-6 (getEligibleQaStories returns in_qa
-      stories), EC-1 (dispatchReviewStory KB advance fails → no enqueue), EC-2 (dispatchQaStory skips KB advance
-      regardless — always enqueues if story present), EC-3 (all 3 stages compete for slots — correct slot accounting),
-      EC-4 (strictFinishBeforeNewStart applies to review dispatch), ED-1 (review jobId format
-      {storyId}:review:{attempt}), ED-2 (qa jobId format {storyId}:qa:{attempt}), ED-3 (scheduler_no_eligible_review
-      logged), ED-4 (scheduler_no_eligible_qa logged).
-    files:
-      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    files_to_read:
-      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-      - apps/api/pipeline/src/scheduler/index.ts
-    dependencies:
-      - 5
-    slice: backend
-    verification: pnpm test --filter @repo/pipeline && pnpm check-types --filter @repo/pipeline
-    acs_covered:
       - AC-8
       - AC-9
       - AC-10
       - AC-11
-      - AC-12
       - AC-13
+      - AC-14
+  - id: 2
+    description: >-
+      Write pgtap test file: matview existence, column set, story count accuracy, next_unblocked_story_id correctness,
+      estimated_completion_pct, unique index, trigger function existence, REFRESH lives_ok outside transaction wrapper
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe3030_token_dashboard_matview_test.sql
+    dependencies:
+      - 1
+    slice: db
+    verification: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql |
+      pg_prove
+    acs_covered:
+      - AC-12
 files_to_change:
-  - path: apps/api/pipeline/src/scheduler/index.ts
-    action: modify
+  - path: apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+    action: create
     reason: >-
-      Add getEligibleReviewStories(), getEligibleQaStories(), dispatchReviewStory(), dispatchQaStory(), extend runOnce()
-      with review+QA dispatch branches. AC-14 resolution: dispatchQaStory() skips KB state advance (BullMQ jobId dedup
-      as fence). All new methods documented per pattern.
-  - path: apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
-    action: modify
+      New migration implementing workflow.roadmap materialized view with 10 columns (plan_slug, total_stories,
+      completed_stories, active_stories, blocked_stories, last_story_activity_at, churn_depth, has_regression,
+      estimated_completion_pct, next_unblocked_story_id), unique index on plan_slug, refresh trigger function with
+      pg_trigger_depth guard, STATEMENT-level triggers on workflow.plan_story_links and workflow.stories, GRANT to
+      agent/lambda/reporting roles, COMMENT ON all objects, and initial REFRESH
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql
+    action: create
     reason: >-
-      Extend existing test suite with 14 new test cases covering review/QA dispatch, slot accounting, AC-14 deviation,
-      and log event assertions.
+      pgTAP test suite covering all 7 happy-path and 3 error-case assertions: matview existence, column set correctness,
+      story count aggregation accuracy, next_unblocked_story_id selection, estimated_completion_pct calculation, unique
+      index, trigger function existence, and idempotency
 commands_to_run:
-  - command: pnpm check-types --filter @repo/pipeline
-    when: after each subtask
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+    when: after migration is written
     required: true
-  - command: pnpm test --filter @repo/pipeline
-    when: after ST-6 (all code changes complete)
+  - command: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1081_cdbe3020_roadmap_matview_test.sql |
+      pg_prove
+    when: after test file is written
     required: true
-  - command: pnpm build --filter @repo/pipeline
-    when: after all code changes
+  - command: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql && psql
+      $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1081_cdbe3020_roadmap_matview.sql
+    when: idempotency check — run migration twice to verify second run exits 0
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      Method getEligibleReviewStories(limit) exists in scheduler/index.ts; SQL CTE queries WHERE state =
-      'needs_code_review'; unit test HP-5 passes
-    evidence_type: test
+      Migration file contains DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap followed by CREATE MATERIALIZED VIEW
+      workflow.roadmap AS ...; migration runs without error
+    evidence_type: command
   - ac_id: AC-2
     planned_evidence: >-
-      Method dispatchReviewStory(story, attempt) exists; calls kb_update_story_status advancing to in_qa BEFORE
-      queue.add(); enqueues ReviewJobDataSchema job; unit test HP-1 verifies KB-before-enqueue ordering
+      pgTAP HP-2: SELECT column_name FROM information_schema.columns WHERE table_schema='workflow' AND
+      table_name='roadmap' returns all 10 expected columns
     evidence_type: test
   - ac_id: AC-3
-    planned_evidence: Method getEligibleQaStories(limit) exists; SQL CTE queries WHERE state = 'in_qa'; unit test HP-6 passes
+    planned_evidence: >-
+      pgTAP HP-3: total_stories=3, completed_stories=1, active_stories=1, blocked_stories=1 for a test plan with known
+      fixture stories
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      runOnce() calls getEligibleQaStories() after implementation and review dispatch; slot accounting respected; unit
-      test HP-4 passes
+      pgTAP HP-5: next_unblocked_story_id returns the story_id of the 'ready' test story (not completed/blocked/active);
+      state exclusion set matches planService.ts exactly
     evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      Method dispatchQaStory(story, attempt) exists; enqueues QaJobDataSchema job; does NOT call kb_update_story_status
-      (AC-14 resolution); jobId format '{storyId}:qa:{attempt}'; unit test HP-2 verifies no KB call
+      pgTAP HP-4: estimated_completion_pct = 33.3 for 1 completed of 3 total; pgTAP EC-3: NULL returned when
+      total_stories = 0
     evidence_type: test
   - ac_id: AC-6
-    planned_evidence: >-
-      runOnce() dispatches review jobs in same cycle as implementation; unit test HP-3 passes showing cross-stage
-      dispatch in single runOnce() call
+    planned_evidence: "pgTAP HP-6: has_index('workflow','roadmap','idx_roadmap_plan_slug',...) passes"
     evidence_type: test
   - ac_id: AC-7
     planned_evidence: >-
-      BullMQ jobId for review jobs uses format '{storyId}:review:{attempt}'; slot accounting across all 3 stages is
-      correct (never exceeds maxConcurrent); unit test ED-1 + EC-3 pass
-    evidence_type: test
+      Migration file contains GRANT SELECT ON workflow.roadmap TO agent_role, lambda_role, reporting_role; role has
+      query access
+    evidence_type: file
   - ac_id: AC-8
     planned_evidence: >-
-      dispatchReviewStory() returns early (no enqueue) when KB state advance returns updated:false; unit test EC-1
-      passes
+      Migration file contains CREATE OR REPLACE FUNCTION workflow.refresh_roadmap_matview() with pg_trigger_depth() > 1
+      guard and REFRESH MATERIALIZED VIEW workflow.roadmap; pgTAP HP-7:
+      has_function('workflow','refresh_roadmap_matview') passes
     evidence_type: test
   - ac_id: AC-9
-    planned_evidence: All new test scenarios (HP-1 through HP-6, EC-1 through EC-4, ED-1 through ED-4) pass in scheduler.test.ts
-    evidence_type: test
+    planned_evidence: >-
+      Migration file contains DROP TRIGGER IF EXISTS + CREATE TRIGGER ... AFTER INSERT OR UPDATE OR DELETE ON
+      workflow.plan_story_links FOR EACH STATEMENT and same on workflow.stories
+    evidence_type: file
   - ac_id: AC-10
-    planned_evidence: pnpm check-types --filter @repo/pipeline exits 0; no TypeScript errors introduced
-    evidence_type: command
+    planned_evidence: >-
+      Migration file contains COMMENT ON MATERIALIZED VIEW workflow.roadmap IS '3020: ...' and COMMENT ON COLUMN
+      workflow.roadmap.<col> IS '3020: ...' for all 10 columns
+    evidence_type: file
   - ac_id: AC-11
     planned_evidence: >-
-      pnpm test --filter @repo/pipeline passes; no regressions in existing tests (F001, F005, F006, F008, F009 tests all
-      still pass)
-    evidence_type: test
+      Migration file begins with DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION ... END IF
+      ... END $$; safety preamble before any DDL
+    evidence_type: file
   - ac_id: AC-12
     planned_evidence: >-
-      scheduler_no_eligible_review and scheduler_no_eligible_qa log events emitted when no eligible stories; unit tests
-      ED-3/ED-4 verify logger calls
+      pgtap test file exists at pgtap/1081_cdbe3020_roadmap_matview_test.sql; covers HP-1 through HP-7 and EC-1 through
+      EC-3; REFRESH called outside BEGIN/ROLLBACK wrapper via lives_ok() or DO block
     evidence_type: test
   - ac_id: AC-13
-    planned_evidence: pnpm build --filter @repo/pipeline exits 0
+    planned_evidence: >-
+      Migration run twice consecutively exits 0 with no errors; second run finds DROP IF EXISTS idempotent, unique index
+      CREATE IF NOT EXISTS idempotent, trigger DROP+CREATE idempotent
     evidence_type: command
   - ac_id: AC-14
-    planned_evidence: >-
-      Architecture decision documented in code comment on dispatchQaStory(): BullMQ jobId dedup as idempotency fence, KB
-      advance skipped with explanation. Unit test HP-2 explicitly asserts no kb_update_story_status call for QA
-      dispatch.
+    planned_evidence: Git diff contains only 2 new SQL files; no .ts, .tsx, .json, or other file types are modified
     evidence_type: file
 architectural_decisions:
   - id: ARCH-001
-    question: >-
-      AC-14: How to resolve the QA dispatch trigger state collision — in_qa is used as both 'waiting for review'
-      sentinel (after review dispatch) and 'ready for QA' sentinel. dispatchQaStory() cannot call kb_update_story_status
-      with a valid canonical target from in_qa.
-    decision: >-
-      dispatchQaStory() skips the KB state advance entirely. BullMQ jobId deduplication ('{storyId}:qa:{attempt}')
-      serves as the idempotency fence, preventing double-dispatch. A story in in_qa that has already been dispatched as
-      a QA job will have its jobId rejected by BullMQ on the next poll cycle. This is an explicit documented deviation
-      from the F006 atomic dispatch pattern.
+    question: What type does next_unblocked_story_id use — TEXT (story_id only) or JSONB ({story_id, title} snapshot)?
+    decision: TEXT (story_id only) — column named next_unblocked_story_id
     rationale: >-
-      The canonical state machine has no valid intermediate 'qa_dispatching' state between in_qa and
-      completed/failed_qa/blocked. Adding a new state would require a DB migration (non-goal per story scope). The
-      BullMQ jobId fence is sufficient for MVP: PIPE-4010 (first supervised run) requires PIPE-2030 completion callbacks
-      which will advance state out of in_qa properly. Until then, the QA dispatch branch is guarded by BullMQ dedup.
-    decided_by: dev_plan_leader
+      JSONB snapshots go stale when story titles change. The matview refresh triggers on plan_story_links and stories
+      state changes, not on title changes. Service layer joins for title are cheap (index lookup). This was an
+      autonomous elaboration decision (decision-1) confirmed at elab iteration 1.
+    decided_by: elab-autonomous-decider (2026-03-19)
+    source: elaboration gap-101
   - id: ARCH-002
-    question: >-
-      dispatchReviewStory() needs to advance from needs_code_review to in_qa — but the state machine has
-      needs_code_review → ready_for_qa → in_qa (two hops). Can kb_update_story_status perform a multi-hop transition in
-      one call?
-    decision: >-
-      kb_update_story_status validates against the canonical state machine. It does NOT support multi-hop transitions.
-      Therefore dispatchReviewStory() must call kb_update_story_status twice: first advancing needs_code_review →
-      ready_for_qa, then ready_for_qa → in_qa. If the first advance succeeds but the second fails, the story is left in
-      ready_for_qa (valid state — not a stuck/invalid state). The queue.add() call happens only after BOTH advances
-      succeed.
+    question: REFRESH MATERIALIZED VIEW CONCURRENTLY or non-CONCURRENTLY in the trigger function?
+    decision: Non-CONCURRENTLY — REFRESH MATERIALIZED VIEW workflow.roadmap (no CONCURRENTLY keyword)
     rationale: >-
-      The state machine enforces single-step transitions. Leaving a story in ready_for_qa on partial failure is safe —
-      the scheduler's next poll cycle will re-pick it (getEligibleReviewStories() queries needs_code_review, so
-      ready_for_qa stories are NOT re-picked — but they are not dispatched either). This is a minor gap but acceptable
-      for MVP: PIPE-2030 will implement proper completion callbacks. For now, a manual intervention can advance
-      ready_for_qa → in_qa if needed.
-    decided_by: dev_plan_leader
+      REFRESH MATERIALIZED VIEW CONCURRENTLY cannot run inside a transaction context (which triggers always are).
+      Non-CONCURRENTLY acquires an exclusive lock but is MVP-acceptable. The unique index (AC-6) future-proofs a
+      CONCURRENTLY upgrade if called from a non-transaction context (e.g., pg_cron).
+    decided_by: elab-analyst (2026-03-19)
+    source: elaboration architecture_notes + gap-104
+  - id: ARCH-003
+    question: Should CREATE UNIQUE INDEX use CONCURRENTLY to avoid locking?
+    decision: No CONCURRENTLY — use CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_slug ON workflow.roadmap (plan_slug)
+    rationale: >-
+      CREATE INDEX CONCURRENTLY cannot run inside a transaction block. The matview is empty at index creation time (WITH
+      NO DATA or freshly dropped), so the non-concurrent form completes instantly with no blocking.
+    decided_by: elab-analyst (2026-03-19)
+    source: elaboration architecture_notes
 complexity: moderate
 notes:
   - >-
-    Only 2 files are modified: scheduler/index.ts and scheduler.test.ts. All changes are additive (new methods +
-    runOnce() extension).
+    Migration slot 1081 confirmed available — 1080 is plan_story_links_sort_order, 1090 is CDBE-3030
+    token_dashboard_matview
+  - CDBE-3010 dependency completed — workflow.stories_current view deployed in migration 1030
   - >-
-    ARCH-002 reveals a two-hop transition issue for dispatchReviewStory(). The implementer must verify whether
-    kb_update_story_status accepts direct needs_code_review → in_qa (skipping ready_for_qa) or requires the two-hop
-    approach. Check story-crud-operations.ts and the DB trigger behavior. If direct skip is possible, prefer it for
-    atomicity.
+    The matview must be created WITH NO DATA then immediately REFRESH-ed after the unique index is created; the unique
+    index must exist before the initial populate so CONCURRENTLY is possible in future
+  - Trigger function returns NULL (required for AFTER triggers that have no row-level semantics)
   - >-
-    The story mandates NO SchedulerConfigSchema changes for review/QA dispatch — the existing finishBeforeNewStart and
-    strictFinishBeforeNewStart flags apply to all stages.
+    pg_trigger_depth() guard: check > 1 (not > 0) to allow the first trigger invocation to proceed — depth 1 is the
+    trigger itself, depth > 1 indicates recursion
   - >-
-    Do NOT add a reviewQueue or qaQueue parameter — all stages share the single injected Queue instance (same BullMQ
-    queue with different stage discriminators in job data).
+    pgtap REFRESH constraint: REFRESH MATERIALIZED VIEW cannot run inside BEGIN/ROLLBACK. The test file must use a
+    pattern where REFRESH is called outside the transaction wrapper or uses a DO block before BEGIN
   - >-
-    The sql CTE template for getEligibleReviewStories() and getEligibleQaStories() should match getEligibleStories()
-    structure exactly, with only the WHERE state = ... clause changed.
+    The 999_add_plan_churn_tracking.sql story_counts CTE groups by plan_slug — the matview must JOIN
+    workflow.plan_story_links to workflow.stories by story_id, exactly matching this pattern
   - >-
-    For getEligibleQaStories(), the dependency CTE should still exclude stories with unresolved depends_on/blocked_by
-    dependencies — a story in in_qa that is blocked should not be dispatched.
+    10 columns in the matview: plan_slug, total_stories, completed_stories, active_stories, blocked_stories,
+    last_story_activity_at, churn_depth, has_regression, estimated_completion_pct, next_unblocked_story_id
   - >-
-    AC-14 resolution (ARCH-001): document the F006 deviation prominently in dispatchQaStory() with a comment block
-    referencing PIPE-2050 AC-14 and PIPE-2030 as the future fix.
-  - Existing tests must not be broken. ST-6 extends the test file — do not reorganize existing describe blocks.
+    Trigger tables: workflow.plan_story_links (INSERT/UPDATE/DELETE) and workflow.stories (INSERT/UPDATE/DELETE), both
+    AFTER FOR EACH STATEMENT
+  - No TypeScript changes — pure SQL story per AC-14
