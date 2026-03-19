@@ -91,6 +91,11 @@ BEGIN
 END;
 $$;
 
+COMMENT ON FUNCTION analytics.refresh_token_dashboard() IS
+  '3030: Refreshes analytics.token_dashboard using CONCURRENTLY mode (non-blocking reads). '
+  'Callable by an external scheduler (Lambda/CloudWatch Events). '
+  'Requires at least one prior full REFRESH before CONCURRENTLY mode is available.';
+
 -- ============================================================================
 -- GRANTS
 -- ============================================================================
