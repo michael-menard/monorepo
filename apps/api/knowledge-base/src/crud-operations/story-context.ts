@@ -2,16 +2,16 @@
  * kb_get_story_context - Composite Story Context Tool (CDTS-2020)
  *
  * Returns a complete context package for a story in one call:
- * story + details + artifacts + linked knowledge + similar stories + constraints.
+ * story + artifacts + linked knowledge + similar stories + constraints.
  *
  * Uses parallel queries for performance (<500ms target).
  */
 
 import { logger } from '@repo/logger'
-import { eq, and, isNull, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { z } from 'zod'
-import { stories, storyDetails, storyArtifacts } from '../db/schema.js'
+import { stories, storyArtifacts } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import type { EmbeddingClient } from '../embedding-client/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
@@ -55,10 +55,11 @@ export async function kb_get_story_context(input: KbGetStoryContextInput, deps: 
   const startTime = Date.now()
 
   // 1. Fetch story header (required — 404 if not found)
+  // Note: workflow.stories does not have a deleted_at column
   const storyResult = await db
     .select()
     .from(stories)
-    .where(and(eq(stories.storyId, validated.story_id), isNull(stories.deletedAt)))
+    .where(eq(stories.storyId, validated.story_id))
     .limit(1)
 
   const story = storyResult[0]
@@ -75,62 +76,58 @@ export async function kb_get_story_context(input: KbGetStoryContextInput, deps: 
   }
 
   // 2. Parallel queries for remaining data
-  const [detailResult, artifactsResult, linkedKnowledgeResult, constraintsResult] =
-    await Promise.all([
-      // Story details
-      db.select().from(storyDetails).where(eq(storyDetails.storyId, validated.story_id)).limit(1),
+  const [artifactsResult, linkedKnowledgeResult, constraintsResult] = await Promise.all([
+    // Story artifacts
+    db
+      .select({
+        id: storyArtifacts.id,
+        storyId: storyArtifacts.storyId,
+        artifactType: storyArtifacts.artifactType,
+        artifactName: storyArtifacts.artifactName,
+        phase: storyArtifacts.phase,
+        iteration: storyArtifacts.iteration,
+        summary: storyArtifacts.summary,
+        createdAt: storyArtifacts.createdAt,
+        updatedAt: storyArtifacts.updatedAt,
+      })
+      .from(storyArtifacts)
+      .where(eq(storyArtifacts.storyId, validated.story_id)),
 
-      // Story artifacts
-      db
-        .select({
-          id: storyArtifacts.id,
-          storyId: storyArtifacts.storyId,
-          artifactType: storyArtifacts.artifactType,
-          artifactName: storyArtifacts.artifactName,
-          phase: storyArtifacts.phase,
-          iteration: storyArtifacts.iteration,
-          summary: storyArtifacts.summary,
-          createdAt: storyArtifacts.createdAt,
-          updatedAt: storyArtifacts.updatedAt,
-        })
-        .from(storyArtifacts)
-        .where(eq(storyArtifacts.storyId, validated.story_id)),
+    // Linked knowledge entries (via story_knowledge_links JOIN knowledge_entries)
+    db.execute(sql`
+      SELECT
+        skl.link_type,
+        skl.confidence,
+        ke.id as kb_id,
+        ke.content,
+        ke.role,
+        ke.entry_type,
+        ke.tags,
+        ke.verified
+      FROM public.story_knowledge_links skl
+      JOIN public.knowledge_entries ke ON ke.id = skl.kb_entry_id
+      WHERE skl.story_id = ${validated.story_id}
+        AND ke.deleted_at IS NULL
+      ORDER BY skl.confidence DESC NULLS LAST
+      LIMIT ${validated.max_kb_entries}
+    `),
 
-      // Linked knowledge entries (via story_knowledge_links JOIN knowledge_entries)
-      db.execute(sql`
-        SELECT
-          skl.link_type,
-          skl.confidence,
-          ke.id as kb_id,
-          ke.content,
-          ke.role,
-          ke.entry_type,
-          ke.tags,
-          ke.verified
-        FROM public.story_knowledge_links skl
-        JOIN public.knowledge_entries ke ON ke.id = skl.kb_entry_id
-        WHERE skl.story_id = ${validated.story_id}
-          AND ke.deleted_at IS NULL
-        ORDER BY skl.confidence DESC NULLS LAST
-        LIMIT ${validated.max_kb_entries}
-      `),
-
-      // Applicable constraints (entry_type = 'constraint', matching story or global)
-      db.execute(sql`
-        SELECT
-          id,
-          content,
-          tags,
-          story_id,
-          verified
-        FROM public.knowledge_entries
-        WHERE deleted_at IS NULL
-          AND entry_type = 'constraint'
-          AND (story_id = ${validated.story_id} OR story_id IS NULL)
-        ORDER BY verified DESC, created_at DESC
-        LIMIT 20
-      `),
-    ])
+    // Applicable constraints (entry_type = 'constraint', matching story or global)
+    db.execute(sql`
+      SELECT
+        id,
+        content,
+        tags,
+        story_id,
+        verified
+      FROM public.knowledge_entries
+      WHERE deleted_at IS NULL
+        AND entry_type = 'constraint'
+        AND (story_id = ${validated.story_id} OR story_id IS NULL)
+      ORDER BY verified DESC, created_at DESC
+      LIMIT 20
+    `),
+  ])
 
   // 3. Similar stories (optional, requires embedding)
   let similarStories: Awaited<ReturnType<typeof findSimilarStories>> = []
@@ -187,7 +184,7 @@ export async function kb_get_story_context(input: KbGetStoryContextInput, deps: 
 
   return {
     story: storyWithoutEmbedding,
-    detail: detailResult[0] ?? null,
+    detail: null,
     artifacts: artifactsResult,
     linked_knowledge: linkedKnowledgeResult.rows,
     similar_stories: similarStories,

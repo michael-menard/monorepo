@@ -50,7 +50,9 @@ export const stories = workflow.table('stories', {
   experimentVariant: text('experiment_variant'),
   // Removed: phase, iteration (derived from state + dependencies)
   // Removed: metadata jsonb (never migrated; tags/surfaces now live here as proper columns)
-  // Removed: embedding, deletedAt (not yet needed)
+  // Removed: deletedAt (not needed on workflow.stories)
+  // CDBN-2024: embedding column added here — not inherited from predecessor
+  embedding: vector('embedding', { dimensions: 1536 }),
   // KFMB-1020: structured story content columns
   acceptanceCriteria: jsonb('acceptance_criteria'),
   nonGoals: text('non_goals').array(),

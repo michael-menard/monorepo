@@ -8,12 +8,15 @@
  * @see CDBE-4010 for embedding table foundation
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { z } from 'zod'
 import type * as schema from '../db/schema.js'
 
+/**
+ * Result shape for similar story queries.
+ */
 export const SimilarStoryResultSchema = z.object({
   story_id: z.string(),
   title: z.string(),

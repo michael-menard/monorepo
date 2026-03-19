@@ -19,7 +19,6 @@ export {
   stories,
   tasks,
   workStateHistory,
-  storyDetails,
   deferredWrites,
   taskAuditLog,
   storyAuditLog,

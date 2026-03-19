@@ -11,7 +11,6 @@ import {
   text,
   timestamp,
   uuid,
-  boolean,
   jsonb,
   index,
   integer,
@@ -74,37 +73,6 @@ export const workStateHistory = pgTable(
   table => ({
     storyIdx: index('idx_work_state_history_story').on(table.storyId),
     archivedAtIdx: index('idx_work_state_history_archived_at').on(table.archivedAt),
-  }),
-)
-
-// ============================================================================
-// Story Details Table (1:1 detail table for stories)
-// ============================================================================
-
-export const storyDetails = pgTable(
-  'story_details',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    storyId: text('story_id')
-      .notNull()
-      .unique()
-      .references(() => stories.storyId, { onDelete: 'restrict' }),
-    storyDir: text('story_dir'),
-    storyFile: text('story_file').default('story.yaml'),
-    blockedReason: text('blocked_reason'),
-    blockedByStory: text('blocked_by_story'),
-    touchesBackend: boolean('touches_backend').default(false),
-    touchesFrontend: boolean('touches_frontend').default(false),
-    touchesDatabase: boolean('touches_database').default(false),
-    touchesInfra: boolean('touches_infra').default(false),
-    startedAt: timestamp('started_at'),
-    completedAt: timestamp('completed_at'),
-    fileSyncedAt: timestamp('file_synced_at'),
-    fileHash: text('file_hash'),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  },
-  table => ({
-    storyIdIdx: index('idx_story_details_story_id').on(table.storyId),
   }),
 )
 
