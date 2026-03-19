@@ -1,144 +1,197 @@
-schema: 1
-story_id: CDBE-0010
-timestamp: '2026-03-15T00:00:00Z'
+schema: 2
+story_id: PIPE-2020
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+complexity: moderate
 steps:
   - id: 1
+    subtask_id: ST-1
     description: >-
-      Create pgtap-enabled Docker Compose service (docker-compose.pgtap.yml) that extends the local postgres with pgtap
-      installed, so local dev can run SQL tests without modifying the shared compose files
+      Extend createMockRunners() to include runDevImplement, runReview, and runQAVerify stubs. Add
+      MockDevImplementResult, MockReviewResult, MockQaResult fixture constants. Update the return type annotation to
+      expose devImplementSpy, reviewSpy, and qaVerifySpy alongside existing elaborationSpy and storyCreationSpy.
+      Existing tests must remain green.
     files:
-      - docker-compose.pgtap.yml
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/supervisor/graph-types.ts
     dependencies: []
     slice: backend
-    verification: >-
-      docker compose -f docker-compose.pgtap.yml up -d && docker compose -f docker-compose.pgtap.yml exec pgtap-postgres
-      pg_prove --version
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-1
   - id: 2
+    subtask_id: ST-2
     description: >-
-      Create the pgtap test runner shell script (scripts/db/run-pgtap.sh) that discovers and runs all *.sql test files
-      under tests/db/, wraps pg_prove, and exits non-zero on failure
+      Add factory functions createImplementationJobData(), createReviewJobData(), and createQaJobData().
+      createReviewJobData() must accept optional worktreePath and featureDir params. Use ImplementationJobDataSchema,
+      ReviewJobDataSchema, QaJobDataSchema from the __types__ imports. Follow exact pattern of
+      createElaborationJobData() and createStoryCreationJobData().
     files:
-      - scripts/db/run-pgtap.sh
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/supervisor/__types__/index.ts
     dependencies:
       - 1
     slice: backend
-    verification: bash scripts/db/run-pgtap.sh --help || bash scripts/db/run-pgtap.sh (exits 0 with 0 tests if no test files yet)
+    verification: pnpm check-types --filter @repo/pipeline
+    acs_covered:
+      - AC-2
   - id: 3
+    subtask_id: ST-3
     description: >-
-      Create the transaction-rollback fixture helper (tests/db/fixtures/rollback-helper.sql) that wraps each test file
-      in BEGIN/ROLLBACK to ensure isolation, with inline documentation explaining the pattern
+      Add three happy-path describe blocks: HP-4 (implementation routes to runDevImplement), HP-5 (review routes to
+      runReview with worktreePath/featureDir args + fallback sub-test), HP-6 (qa routes to runQAVerify). Each block
+      verifies: correct runner called with correct args, other 4 runners not called, completed log event has
+      storyId/stage/threadId/attemptNumber/durationMs.
     files:
-      - tests/db/fixtures/rollback-helper.sql
-      - tests/db/README.md
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/supervisor/dispatch-router.ts
     dependencies:
-      - 1
+      - 2
     slice: backend
-    verification: File exists; README documents the transaction-rollback pattern per AC2
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-9
   - id: 4
+    subtask_id: ST-4
     description: >-
-      Create the example trigger unit test (tests/db/triggers/test_set_story_completed_at.sql) that validates the
-      set_story_completed_at() trigger: inserts a story, transitions state to completed, asserts completed_at is set,
-      and rolls back
+      Add wall clock timeout describe blocks for implementation, review, and qa stages (EC-impl, EC-review, EC-qa).
+      Pattern from EC-1 lines 321-388: vi.useFakeTimers() in beforeEach, hangingRunner that never resolves for the
+      specific stage, vi.advanceTimersByTime(200), assert rejects with 'wall_clock_timeout', assert timeout log event
+      has correct threadId in format {storyId}:{stage}:{attemptNumber}.
     files:
-      - tests/db/triggers/test_set_story_completed_at.sql
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
     dependencies:
       - 3
     slice: backend
-    verification: bash scripts/db/run-pgtap.sh (all tests pass against pgtap postgres container)
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-6
   - id: 5
+    subtask_id: ST-5
     description: >-
-      Add pgtap CI job to .github/workflows/pgtap.yml that spins up a postgres service container with pgtap installed,
-      applies the knowledge-base schema, and runs the full pgtap suite
+      Add circuit breaker describe blocks for implementation, review, and qa stages (CB-impl, CB-review, CB-qa). Pattern
+      from EC-4 lines 493-548: circuitBreakerFailureThreshold:1, first dispatch fails with TypeError to trip circuit,
+      vi.clearAllMocks(), second dispatch hits open circuit. Assert job.moveToDelayed() called on second dispatch,
+      circuit_open logged with correct stage (NOT elaboration).
     files:
-      - .github/workflows/pgtap.yml
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
     dependencies:
-      - 2
-      - 4
+      - 3
+    slice: backend
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-7
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Verify the unsafe type cast is already removed (PIPE-2010 already merged it). Run grep -n 'as StorySnapshotPayload
+      &' apps/api/pipeline/src/supervisor/dispatch-router.ts to confirm zero results. Run pnpm check-types to confirm
+      TypeScript compiles cleanly. This step is verification-only — no code changes expected.
+    files:
+      - apps/api/pipeline/src/supervisor/dispatch-router.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/dispatch-router.ts
+    dependencies:
+      - 5
     slice: backend
     verification: >-
-      Workflow file is valid YAML and references the correct test runner script; can be validated locally with act or by
-      inspection
+      grep -n 'as StorySnapshotPayload &' apps/api/pipeline/src/supervisor/dispatch-router.ts | wc -l (expect 0); pnpm
+      check-types --filter @repo/pipeline
+    acs_covered:
+      - AC-8
+      - AC-11
 files_to_change:
-  - path: docker-compose.pgtap.yml
-    action: create
-    reason: pgtap-enabled postgres for local dev testing without touching shared compose files
-  - path: scripts/db/run-pgtap.sh
-    action: create
-    reason: Standardized test runner that discovers and executes all tests/db/**/*.sql files via pg_prove
-  - path: tests/db/fixtures/rollback-helper.sql
-    action: create
-    reason: Transaction-rollback fixture helper per AC2
-  - path: tests/db/README.md
-    action: create
-    reason: Documents the rollback fixture pattern and how to run pgtap locally and in CI per AC2
-  - path: tests/db/triggers/test_set_story_completed_at.sql
-    action: create
-    reason: Example trigger test per AC3
-  - .github/workflows/pgtap.yml: path
-    action: create
-    reason: CI pipeline job that runs pgtap on every PR per AC4
+  - path: apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    action: modify
+    reason: >-
+      Primary deliverable: extend createMockRunners() + add factory functions + add HP-4/5/6 happy path blocks + add
+      timeout and circuit breaker tests for 3 new stages
+  - path: apps/api/pipeline/src/supervisor/dispatch-router.ts
+    action: modify
+    reason: Verify type cast removal (AC-8) — likely no changes needed since PIPE-2010 already removed it
 commands_to_run:
-  - command: docker compose -f docker-compose.pgtap.yml up -d
-    when: after step 1, to start local pgtap postgres
-    required: false
-  - command: bash scripts/db/run-pgtap.sh
-    when: after all code changes, to verify example test passes against local pgtap postgres
+  - command: pnpm test --filter @repo/pipeline
+    when: after each subtask
     required: true
-  - command: docker compose -f docker-compose.pgtap.yml down
-    when: after test run, cleanup
-    required: false
+  - command: pnpm check-types --filter @repo/pipeline
+    when: after ST-6 verification
+    required: true
 acceptance_criteria_map:
-  - ac_id: AC1
-    planned_evidence: docker-compose.pgtap.yml starts a postgres+pgtap container; scripts/db/run-pgtap.sh successfully invokes pg_prove
+  - ac_id: AC-1
+    planned_evidence: createMockRunners() returns all 5 runner stubs with spy references; TypeScript compiles; existing tests pass
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: createImplementationJobData(), createReviewJobData(), createQaJobData() factory functions present and typed
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      describe('HP-4: implementation job routes to runDevImplement()') block: runDevImplement called with {storyId,
+      attempt}, others not called
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      describe('HP-5: review job routes to runReview()') block: runReview called with {storyId, worktreePath,
+      featureDir, attempt}, others not called; sub-test for fallback
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      describe('HP-6: qa job routes to runQAVerify()') block: runQAVerify called with {storyId, attempt}, others not
+      called
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      3 timeout describe blocks (EC-impl, EC-review, EC-qa): hanging runner causes wall_clock_timeout error + timeout
+      log with correct threadId
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      3 circuit breaker describe blocks (CB-impl, CB-review, CB-qa): tripped circuit calls moveToDelayed + logs
+      circuit_open for correct stage
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: grep -n 'as StorySnapshotPayload &' dispatch-router.ts returns 0 results
     evidence_type: command
-  - ac_id: AC2
-    planned_evidence: tests/db/fixtures/rollback-helper.sql contains BEGIN/ROLLBACK wrapper; tests/db/README.md documents the pattern
-    evidence_type: file
-  - ac_id: AC3
-    planned_evidence: tests/db/triggers/test_set_story_completed_at.sql passes via pg_prove (bash scripts/db/run-pgtap.sh exits 0)
+  - ac_id: AC-9
+    planned_evidence: completed log assertions in HP-4/5/6 verify storyId, stage, threadId, attemptNumber, durationMs
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: pnpm test --filter @repo/pipeline exits 0 with all tests passing
     evidence_type: command
-  - ac_id: AC4
-    planned_evidence: .github/workflows/pgtap.yml exists with postgres service container and pgtap test run step
-    evidence_type: file
-architectural_decisions:
-  - id: ARCH-001
-    question: >-
-      Should pgtap target the knowledge-base postgres (port 5433, pgvector image) or a dedicated standalone postgres
-      container?
-    decision: >-
-      Dedicated standalone docker-compose.pgtap.yml with a custom image (postgis/postgis or a pgtap-specific image). The
-      KB postgres is for agent state, not DB infrastructure testing. A dedicated container avoids polluting shared state
-      and can be torn down after tests.
-    rationale: 'Clean test isolation, no risk to KB data, can be used in CI via services: block'
-    decided_by: planner
-  - id: ARCH-002
-    question: >-
-      Which PostgreSQL image to use for pgtap? Options: (a) build custom FROM postgres:16 + apt-get install
-      postgresql-16-pgtap, (b) use itheory/pg-pgtap pre-built image
-    decision: >-
-      Use a Dockerfile that extends FROM postgres:16 and installs pgtap via apt-get, placed at infra/pgtap/Dockerfile.
-      This avoids external image dependencies and gives us full control. The docker-compose.pgtap.yml builds from this
-      Dockerfile.
-    rationale: >-
-      Reproducible, no external image trust issue, matches lesson from pgvector: always be explicit about extension
-      installation
-    decided_by: planner
-  - id: ARCH-003
-    question: Where should DB test files live?
-    decision: >-
-      tests/db/ at repo root, with sub-directories triggers/, fixtures/. This is outside apps/ and packages/ since pgtap
-      tests are pure SQL, not part of any Node package.
-    rationale: Keeps SQL tests separate from TypeScript test infrastructure; easy to glob for pg_prove
-    decided_by: planner
-complexity: moderate
+  - ac_id: AC-11
+    planned_evidence: pnpm check-types --filter @repo/pipeline exits 0
+    evidence_type: command
+architectural_decisions: []
 notes:
-  - pgtap is installed via apt-get install postgresql-16-pgtap in a custom Dockerfile extending postgres:16
   - >-
-    The example test targets set_story_completed_at() trigger which exists in the knowledge-base schema
-    (999_full_schema_baseline.sql). The CI job must apply that schema before running tests.
+    PIPE-2010 is already merged: ReviewPayloadSchema and QaPayloadSchema exist in @repo/pipeline-queue, and the unsafe
+    type cast in the review branch is already gone. ST-6 is purely a verification step.
   - >-
-    The CI job uses services: to run postgres as a sidecar, applies the schema baseline SQL, then runs bash
-    scripts/db/run-pgtap.sh
-  - No TypeScript code changes required — this story is purely SQL, shell, and CI YAML
-  - 'Lesson applied: pgtap tests run inside transactions and ROLLBACK at the end for isolation (per pgtap convention)'
-  - 'Lesson applied: graceful-skip not needed here because the CI job explicitly provisions its own DB with pgtap'
+    createMockRunners() currently returns only runElaboration and runStoryCreation stubs. TypeScript GraphRunners
+    interface requires all 5. The extension must be done first (ST-1) before any new stage tests are written.
+  - >-
+    EC-1 timeout tests in the existing file pass partial GraphRunners { runElaboration: hangingRunner, runStoryCreation:
+    vi.fn() } — this works structurally. New timeout tests should follow the same pattern but with the correct stage
+    runner as the hanging one.
+  - >-
+    Thread ID format {storyId}:{stage}:{attemptNumber} is IRREVERSIBLE ADR. All threadId assertions must be exact: e.g.,
+    'PIPE-2020:implementation:1'.
+  - >-
+    The review branch fallback: worktreePath ?? '' and featureDir ?? 'plans/future/platform'. HP-5 needs both a
+    with-payload test (explicit paths) and without-payload test (verifies fallback defaults).
+  - >-
+    Circuit breaker cbMap in dispatch-router.ts has separate entries for implementation, review, qa. CB tests must
+    assert circuit_open with stage:'implementation', stage:'review', stage:'qa' respectively — not stage:'elaboration'.
+  - No new packages, imports, or dependencies needed. All test infrastructure already exists in the file.
