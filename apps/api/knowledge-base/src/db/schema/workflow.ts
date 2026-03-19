@@ -49,9 +49,12 @@ export const stories = workflow.table('stories', {
   // experiment_variant: future A/B experiment tracking
   experimentVariant: text('experiment_variant'),
   // Removed: phase, iteration (derived from state + dependencies)
-  // Removed: acceptanceCriteria (stored in story_content, section_name='acceptance_criteria')
   // Removed: metadata jsonb (never migrated; tags/surfaces now live here as proper columns)
   // Removed: embedding, deletedAt (not yet needed)
+  // KFMB-1020: structured story content columns
+  acceptanceCriteria: jsonb('acceptance_criteria'),
+  nonGoals: text('non_goals').array(),
+  packages: text('packages').array(),
 })
 
 export const worktrees = workflow.table('worktrees', {

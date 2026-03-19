@@ -1,0 +1,95 @@
+feasible: true
+confidence: high
+rationale: >
+  The artifact gate enforcement is already fully implemented in story-crud-operations.ts
+  at lines 589-621. All four ARTIFACT_GATES entries cover the canonical transitions.
+  The work is adding integration tests against real PostgreSQL — well-understood
+  pattern already established in story-crud-operations.test.ts and
+  artifact-operations.integration.test.ts. No new migrations, no schema changes,
+  no API surface changes required.
+complexity: low
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/crud-operations/__tests__/'
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: 'kb_write_artifact may not accept proof/review artifact types if not in GATED_ARTIFACT_TYPES'
+    mitigation: >
+      Check artifact-operations.ts GATED_ARTIFACT_TYPES set. If proof/review are not
+      present, use direct DB insert into storyArtifacts in test setup (mirroring
+      artifact-operations.integration.test.ts pattern). Alternatively confirm
+      kb_write_artifact accepts all artifact types and only gates the write_to_kb
+      path, not the type itself.
+  - finding: 'Story state must be set correctly before each gate test — kb_update_story_status requires FROM state match'
+    mitigation: >
+      Use kb_create_story then direct DB state override, or chain kb_update_story_status
+      calls through intermediate valid states to reach the desired from-state. Verify
+      that ungated transitions allow state bootstrapping.
+missing_requirements: []
+evidence_expectations:
+  - 'All 8 gate direction tests (4 gates x 2 directions) pass with real PostgreSQL'
+  - 'Assertion on result.message string content for rejection path'
+  - 'Assertion on state unchanged after rejection (via kb_get_story)'
+  - 'Assertion on ungated transitions not blocked'
+subtasks:
+  - id: ST-1
+    title: 'Set up test file describe block and fixtures for artifact gate tests'
+    goal: >
+      Add a new describe block "kb_update_story_status — artifact gate enforcement"
+      to story-crud-operations.test.ts with shared setup helpers for artifact
+      creation and state bootstrapping.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/artifact-operations.integration.test.ts'
+      - 'apps/api/knowledge-base/src/crud-operations/artifact-operations.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8']
+    depends_on: none
+    verification: 'pnpm vitest run apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    estimated_tokens: 6000
+  - id: ST-2
+    title: 'Write gate rejection tests (no artifact → updated: false)'
+    goal: >
+      Implement tests EC-1 through EC-4: each test creates a story in the
+      from-state without the required artifact, calls kb_update_story_status,
+      and asserts updated===false with message containing the artifact type name.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    acs: ['AC-1', 'AC-3', 'AC-5', 'AC-7', 'AC-9', 'AC-10']
+    depends_on: ST-1
+    verification: 'pnpm vitest run apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    estimated_tokens: 5000
+  - id: ST-3
+    title: 'Write gate success tests (artifact present → updated: true)'
+    goal: >
+      Implement tests HP-1 through HP-4: each test creates a story in the
+      from-state, writes the required artifact via kb_write_artifact (or direct
+      DB insert), calls kb_update_story_status, and asserts updated===true with
+      correct target state.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/crud-operations/artifact-operations.ts'
+      - 'apps/api/knowledge-base/src/db/schema.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    acs: ['AC-2', 'AC-4', 'AC-6', 'AC-8']
+    depends_on: ST-1
+    verification: 'pnpm vitest run apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+    estimated_tokens: 5000
+  - id: ST-4
+    title: 'Write ungated transition tests and qa_gate naming comment'
+    goal: >
+      Implement HP-5, HP-6, ED-3, ED-4 (ungated transitions succeed without artifact).
+      Add a comment in ARTIFACT_GATES reconciling "qa_gate" vs "qa_verify" naming.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts'
+      - 'apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts'
+    acs: ['AC-11', 'AC-12']
+    depends_on: ST-3
+    verification: 'pnpm vitest run apps/api/knowledge-base/src/crud-operations/__tests__/story-crud-operations.test.ts && pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 3000

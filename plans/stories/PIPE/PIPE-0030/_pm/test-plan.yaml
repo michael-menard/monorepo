@@ -1,0 +1,125 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: 'in_progress → needs_code_review succeeds with proof artifact'
+    setup: 'Create test story via kb_create_story in state in_progress. Write a proof artifact via kb_write_artifact for the story.'
+    action: 'Call kb_update_story_status with story_id and state=needs_code_review'
+    expected: 'Returns { updated: true, story.state: "needs_code_review", message includes story_id }'
+    evidence: 'Assert result.updated === true and result.story.state === "needs_code_review"'
+  - id: HP-2
+    title: 'needs_code_review → ready_for_qa succeeds with review artifact'
+    setup: 'Create test story via kb_create_story in state needs_code_review. Write a review artifact via kb_write_artifact.'
+    action: 'Call kb_update_story_status with state=ready_for_qa'
+    expected: 'Returns { updated: true, story.state: "ready_for_qa" }'
+    evidence: 'Assert result.updated === true and result.story.state === "ready_for_qa"'
+  - id: HP-3
+    title: 'in_qa → completed succeeds with qa_gate artifact'
+    setup: 'Create test story in state in_qa. Write a qa_gate artifact.'
+    action: 'Call kb_update_story_status with state=completed'
+    expected: 'Returns { updated: true, story.state: "completed" }'
+    evidence: 'Assert result.updated === true and result.story.state === "completed"'
+  - id: HP-4
+    title: 'elab → ready succeeds with elaboration artifact'
+    setup: 'Create test story in state elab. Write an elaboration artifact.'
+    action: 'Call kb_update_story_status with state=ready'
+    expected: 'Returns { updated: true, story.state: "ready" }'
+    evidence: 'Assert result.updated === true and result.story.state === "ready"'
+  - id: HP-5
+    title: 'Ungated transition backlog → created succeeds without any artifact'
+    setup: 'Create test story in state backlog (default).'
+    action: 'Call kb_update_story_status with state=created'
+    expected: 'Returns { updated: true, story.state: "created" }'
+    evidence: 'Assert result.updated === true — no artifact check for this gate'
+  - id: HP-6
+    title: 'Ungated transition ready → in_progress succeeds without any artifact'
+    setup: 'Create test story in state ready.'
+    action: 'Call kb_update_story_status with state=in_progress'
+    expected: 'Returns { updated: true, story.state: "in_progress" }'
+    evidence: 'Assert result.updated === true and result.story.startedAt is non-null'
+error_cases:
+  - id: EC-1
+    title: 'in_progress → needs_code_review rejected when no proof artifact'
+    setup: 'Create test story in state in_progress. Do NOT write any artifact.'
+    action: 'Call kb_update_story_status with state=needs_code_review'
+    expected: 'Returns { updated: false, message includes "proof" }'
+    evidence: 'Assert result.updated === false and result.message.includes("proof")'
+  - id: EC-2
+    title: 'needs_code_review → ready_for_qa rejected when no review artifact'
+    setup: 'Create test story in state needs_code_review. Do NOT write any artifact.'
+    action: 'Call kb_update_story_status with state=ready_for_qa'
+    expected: 'Returns { updated: false, message includes "review" }'
+    evidence: 'Assert result.updated === false and result.message.includes("review")'
+  - id: EC-3
+    title: 'in_qa → completed rejected when no qa_gate artifact'
+    setup: 'Create test story in state in_qa. Do NOT write any artifact.'
+    action: 'Call kb_update_story_status with state=completed'
+    expected: 'Returns { updated: false, message includes "qa_gate" }'
+    evidence: 'Assert result.updated === false and result.message.includes("qa_gate")'
+  - id: EC-4
+    title: 'elab → ready rejected when no elaboration artifact'
+    setup: 'Create test story in state elab. Do NOT write any artifact.'
+    action: 'Call kb_update_story_status with state=ready'
+    expected: 'Returns { updated: false, message includes "elaboration" }'
+    evidence: 'Assert result.updated === false and result.message.includes("elaboration")'
+edge_cases:
+  - id: ED-1
+    title: 'Gate rejection leaves story state unchanged'
+    setup: 'Create test story in state in_progress. No proof artifact.'
+    action: 'Attempt kb_update_story_status to needs_code_review; then call kb_get_story'
+    expected: 'kb_get_story returns story with state still in_progress'
+    evidence: 'Assert getResult.story.state === "in_progress" after gate rejection'
+  - id: ED-2
+    title: 'Gate rejection message includes artifact type name for caller clarity'
+    setup: 'Create test story in state needs_code_review. No review artifact.'
+    action: 'Call kb_update_story_status with state=ready_for_qa'
+    expected: 'result.message contains "review" and "not found in KB"'
+    evidence: 'String assertion on message field; callers rely on this for MCP surfacing'
+  - id: ED-3
+    title: 'Story in wrong state does not trigger wrong gate'
+    setup: 'Create test story in state created (no relevant gate). No artifacts.'
+    action: 'Call kb_update_story_status with state=elab'
+    expected: 'Returns { updated: true } — created→elab is not gated'
+    evidence: 'Assert result.updated === true'
+  - id: ED-4
+    title: 'Ungated needs_code_review → failed_code_review proceeds without artifact'
+    setup: 'Create test story in state needs_code_review. No artifact.'
+    action: 'Call kb_update_story_status with state=failed_code_review'
+    expected: 'Returns { updated: true, story.state: "failed_code_review" }'
+    evidence: 'Assert result.updated === true — only ready_for_qa gate is checked from needs_code_review'
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'result.updated === true for happy path'
+      - 'result.updated === false for gate rejection'
+      - 'result.message includes artifact type name on rejection'
+      - 'result.story.state equals target state after successful transition'
+      - 'result.story.state unchanged after gate rejection (verified via kb_get_story)'
+manual_cases: []
+fixture_definitions:
+  - name: TEST_PREFIX
+    type: string
+    description: 'Timestamp-based prefix (TEST-{Date.now()}) to namespace test story IDs away from real data'
+  - name: testStoryIds
+    type: string[]
+    description: 'Tracker array for afterEach cleanup of all created test stories'
+  - name: proof artifact
+    type: storyArtifact
+    description: 'Written via kb_write_artifact with artifact_type=proof for target story'
+  - name: review artifact
+    type: storyArtifact
+    description: 'Written via kb_write_artifact with artifact_type=review for target story'
+  - name: qa_gate artifact
+    type: storyArtifact
+    description: 'Written via kb_write_artifact with artifact_type=qa_gate for target story'
+  - name: elaboration artifact
+    type: storyArtifact
+    description: 'Written via kb_write_artifact with artifact_type=elaboration for target story'
+risks:
+  - 'artifact_write in test setup may require a story_dir argument — use a temp path, mock fs in test file'
+  - 'cascade delete of story_artifacts on story delete must be verified; if not, explicit cleanup of artifact rows needed in afterEach'
+  - 'kb_write_artifact may reject artifact_type=proof if not in GATED_ARTIFACT_TYPES set — verify or use direct DB insert as fallback'
