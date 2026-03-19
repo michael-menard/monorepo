@@ -1,0 +1,198 @@
+schema: 2
+story_id: CDBE-2010
+timestamp: '2026-03-19T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Verify migration slot 1013 is available and confirm public.agent_invocations existence status
+    files: []
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1012_cdbe_4030_knowledge_embedding_notify.sql
+      - apps/api/knowledge-base/src/db/migrations/999_cleanup_duplicate_tables.sql
+    dependencies: []
+    slice: backend
+    verification: ls apps/api/knowledge-base/src/db/migrations/ | sort | grep 101
+    acs_covered:
+      - AC-10
+      - AC-12
+  - id: 2
+    subtask_id: ST-2
+    description: Implement workflow.advance_story_state stored procedure in migration 1013_cdbe2010_stored_procedures.sql
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: grep -c 'advance_story_state' apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-11
+      - AC-12
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement workflow.assign_story stored procedure appended to the same migration file, including invocation_id
+      column on story_assignments and GRANT EXECUTE to agent_role
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1050_cascade_trigger_prerequisites.sql
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    dependencies:
+      - 2
+    slice: backend
+    verification: grep -c 'assign_story' apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    acs_covered:
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+      - AC-12
+      - AC-14
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write pgtap test file tests/db/triggers/test_cdbe2010_stored_procedures.sql covering has_function, throws_ok, and
+      lives_ok assertions for both procedures
+    files:
+      - tests/db/triggers/test_cdbe2010_stored_procedures.sql
+    files_to_read:
+      - tests/db/triggers/test_cdbe2005_allowed_agents.sql
+      - tests/db/triggers/test_cdbe1030_artifact_superseded_at.sql
+      - apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: grep -c 'SELECT plan' tests/db/triggers/test_cdbe2010_stored_procedures.sql
+    acs_covered:
+      - AC-13
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    action: create
+    reason: >-
+      New migration implementing both advance_story_state and assign_story stored procedures in the workflow schema
+      (AC-1 through AC-14)
+  - path: tests/db/triggers/test_cdbe2010_stored_procedures.sql
+    action: create
+    reason: pgtap test file covering has_function, throws_ok (P0001, 23514), and lives_ok assertions per AC-13
+commands_to_run:
+  - command: psql $DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    when: after migration file is written
+    required: true
+  - command: psql $DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1013_cdbe2010_stored_procedures.sql
+    when: second run (idempotency check)
+    required: true
+  - command: psql $DATABASE_URL -f tests/db/triggers/test_cdbe2010_stored_procedures.sql
+    when: after migration is deployed
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: Migration file contains CREATE OR REPLACE FUNCTION workflow.advance_story_state(...) RETURNS void LANGUAGE plpgsql
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: Function body contains PERFORM workflow.validate_caller(p_caller_agent_id) as first statement before any mutations
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      Function contains NOT EXISTS subquery against workflow.valid_transitions with RAISE EXCEPTION USING ERRCODE =
+      '23514'
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      Function INSERTs into workflow.story_state_history with (story_id, event_type, from_state, to_state, reason); does
+      NOT set exited_at or duration_seconds
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      Function UPDATEs workflow.stories SET state = p_to_state after history INSERT; BEFORE UPDATE trigger fires as
+      third validation layer
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: No explicit BEGIN/COMMIT — implicit transaction wrapping; throws_ok pgtap test confirms atomic rollback on error
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: Migration file contains CREATE OR REPLACE FUNCTION workflow.assign_story(...) RETURNS void LANGUAGE plpgsql
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: assign_story body contains PERFORM workflow.validate_caller(p_caller_agent_id) as first statement
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: Function INSERTs into workflow.story_assignments with (story_id, agent_id, assigned_at = NOW())
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      Migration adds invocation_id column (nullable text) to workflow.story_assignments; assign_story attempts SELECT
+      from public.agent_invocations in an EXCEPTION block — sets invocation_id if found, silently proceeds if table
+      absent or no match
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: COMMENT ON FUNCTION present for both advance_story_state and assign_story citing migration number 1013
+    evidence_type: file
+  - ac_id: AC-12
+    planned_evidence: Second psql run of migration file exits 0 with no errors (CREATE OR REPLACE FUNCTION is idempotent)
+    evidence_type: command
+  - ac_id: AC-13
+    planned_evidence: >-
+      pgtap test file with BEGIN/SELECT plan(N)/.../finish()/ROLLBACK pattern covering has_function (2), throws_ok (4),
+      lives_ok (3+), ok (count check)
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      Migration contains GRANT EXECUTE ON FUNCTION workflow.advance_story_state(...) TO agent_role and GRANT EXECUTE ON
+      FUNCTION workflow.assign_story(...) TO agent_role
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      AC-10: If public.agent_invocations exists, how should the invocation link be stored — (a) column on
+      story_assignments, (b) separate link row, or (c) log-only NO-OP?
+    decision: >-
+      Option (a): Add nullable invocation_id text column to workflow.story_assignments via ALTER TABLE ADD COLUMN IF NOT
+      EXISTS in migration 1013. assign_story populates it via an EXCEPTION-guarded SELECT when public.agent_invocations
+      exists.
+    rationale: >-
+      Story explicitly states 'column on story_assignments preferred' in Open Questions. Simplest approach — no
+      additional table, no extra join, and the conditional EXCEPTION block handles the dropped-table case gracefully per
+      Edge Case 3.
+    decided_by: story-direction
+complexity: moderate
+notes:
+  - >-
+    Migration slot 1013 confirmed available — 1012 is the highest existing numbered migration
+    (1012_cdbe_4030_knowledge_embedding_notify.sql). Non-sequential slots (1020, 1030, 1050, 1060) are pre-existing and
+    unrelated.
+  - >-
+    public.agent_invocations was dropped by 999_cleanup_duplicate_tables.sql per story context. The EXCEPTION block
+    guard in assign_story handles this: 'undefined_table' (SQLSTATE 42P01) is caught and silently ignored.
+  - >-
+    advance_story_state does NOT set exited_at or duration_seconds — the 1010 BEFORE INSERT trigger on
+    story_state_history owns that logic exclusively.
+  - >-
+    The 1001 BEFORE UPDATE trigger on workflow.stories acts as a third validation layer and will also reject illegal
+    transitions — no divergence risk since advance_story_state validates via valid_transitions first.
+  - >-
+    Both functions use SECURITY INVOKER (default) — no explicit SECURITY DEFINER needed. agent_role already has INSERT
+    on story_state_history and UPDATE on stories from prior migrations.
+  - >-
+    story_assignments table schema from 1050: (id uuid, story_id text, agent_id text, assigned_at timestamptz,
+    deleted_at timestamptz). Migration 1013 adds invocation_id text NULL via ALTER TABLE ADD COLUMN IF NOT EXISTS.
+  - >-
+    pgtap test plan count: 2 has_function + 4 throws_ok (EC-1/EC-2 for advance, EC-3 for illegal transition, EC-4 for
+    assign_story) + 3 lives_ok (HP-1 advance, HP-2 assign, ED-1 absent agent_invocations) + 1 ok (HP-3 exited_at count)
+    = 10 assertions minimum.
+  - >-
+    SAVEPOINT+DO guard pattern from test_cdbe1030_artifact_superseded_at.sql is not needed here — both functions are
+    created in the same migration being tested, so they are guaranteed to exist when tests run.
+  - No TypeScript, no Vitest, no MSW — pure SQL migration + pgtap only per story Test Plan strategy.

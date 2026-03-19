@@ -1,0 +1,230 @@
+# test-plan.yaml — CDBE-2010: advance_story_state and assign_story Stored Procedures
+# Strategy: pgtap (SQL-only). No Vitest, no MSW, no React Testing Library.
+# All tests use BEGIN / SELECT plan(N) / ... / SELECT * FROM finish() / ROLLBACK isolation.
+
+strategy: pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  database_objects:
+    - workflow.advance_story_state(text, text, text, text, text)
+    - workflow.assign_story(text, text, text, text)
+    - workflow.story_state_history (INSERT path)
+    - workflow.story_assignments (INSERT path)
+    - workflow.stories.state (UPDATE path)
+
+happy_path_tests:
+  - id: HP-1
+    title: 'advance_story_state — authorized caller + legal transition succeeds'
+    setup: |
+      Ensure workflow.allowed_agents contains 'pm-story-generation-leader' (active=true).
+      Ensure workflow.valid_transitions has (backlog → created) row.
+      Ensure workflow.stories has a test story in 'backlog' state.
+      Ensure workflow.story_state_history has an open row for the test story (from_state=NULL, to_state='backlog').
+    action: |
+      CALL workflow.advance_story_state(
+        p_story_id     => 'CDBE-TEST-001',
+        p_to_state     => 'created',
+        p_agent_name   => 'pm-story-generation-leader',
+        p_reason       => 'Test: backlog → created',
+        p_caller_agent_id => 'pm-story-generation-leader'
+      );
+    expected: |
+      - Function returns without exception (lives_ok)
+      - workflow.stories.state = 'created' for story CDBE-TEST-001
+      - workflow.story_state_history has a new row: from_state='backlog', to_state='created', exited_at IS NULL
+      - Previous open row (from_state=NULL, to_state='backlog') has exited_at IS NOT NULL and duration_seconds IS NOT NULL (set by 1010 trigger)
+    evidence: |
+      SELECT state FROM workflow.stories WHERE story_id = 'CDBE-TEST-001';
+      SELECT from_state, to_state, exited_at, duration_seconds
+        FROM workflow.story_state_history
+       WHERE story_id = 'CDBE-TEST-001'
+       ORDER BY created_at DESC;
+
+  - id: HP-2
+    title: 'assign_story — authorized caller + valid story_id creates assignment row'
+    setup: |
+      Ensure workflow.allowed_agents contains 'dev-execute-leader' (active=true).
+      Ensure workflow.stories has a test story 'CDBE-TEST-001'.
+    action: |
+      CALL workflow.assign_story(
+        p_story_id       => 'CDBE-TEST-001',
+        p_agent_name     => 'dev-execute-leader',
+        p_phase          => 'implementation',
+        p_caller_agent_id => 'dev-execute-leader'
+      );
+    expected: |
+      - Function returns without exception (lives_ok)
+      - workflow.story_assignments has a new row: story_id='CDBE-TEST-001', agent_id='dev-execute-leader', deleted_at IS NULL
+    evidence: |
+      SELECT story_id, agent_id, assigned_at, deleted_at
+        FROM workflow.story_assignments
+       WHERE story_id = 'CDBE-TEST-001'
+         AND agent_id = 'dev-execute-leader';
+
+  - id: HP-3
+    title: 'advance_story_state — 1010 trigger fires exactly once (double-execution guard)'
+    setup: |
+      Insert test story 'CDBE-TEST-002' in 'backlog' state.
+      Insert initial open history row: from_state=NULL, to_state='backlog'.
+    action: |
+      CALL workflow.advance_story_state(
+        p_story_id        => 'CDBE-TEST-002',
+        p_to_state        => 'created',
+        p_agent_name      => 'pm-story-generation-leader',
+        p_reason          => 'Test: double-execution guard',
+        p_caller_agent_id => 'pm-story-generation-leader'
+      );
+    expected: |
+      - Exactly ONE row in story_state_history has exited_at IS NOT NULL for 'CDBE-TEST-002'
+      - Only ONE new row with from_state='backlog', to_state='created', exited_at IS NULL
+      - COUNT of all history rows for 'CDBE-TEST-002' = 2 (the initial row + the new row)
+    evidence: |
+      SELECT COUNT(*) FROM workflow.story_state_history WHERE story_id = 'CDBE-TEST-002';
+      SELECT COUNT(*) FROM workflow.story_state_history
+       WHERE story_id = 'CDBE-TEST-002' AND exited_at IS NOT NULL;
+
+  - id: HP-4
+    title: 'Migration idempotency — second run exits 0 with no errors'
+    setup: 'Run migration 1013 once successfully.'
+    action: 'Run migration 1013 a second time (psql -v ON_ERROR_STOP=1).'
+    expected: 'Exit code 0. No errors. CREATE OR REPLACE FUNCTION produces no error. GRANT produces no error.'
+    evidence: 'psql exit code; psql NOTICE output shows completion message.'
+
+error_cases:
+  - id: EC-1
+    title: 'advance_story_state — unknown caller_agent_id raises P0001'
+    setup: "Ensure 'unknown-agent-xyz' is NOT in workflow.allowed_agents."
+    action: |
+      SELECT throws_ok(
+        $$CALL workflow.advance_story_state(
+          'CDBE-TEST-001', 'created', 'pm-story-generation-leader',
+          'test reason', 'unknown-agent-xyz')$$,
+        'P0001',
+        NULL,
+        'advance_story_state: unknown caller should raise P0001'
+      );
+    expected: 'SQLSTATE P0001 raised. No mutation occurred on stories or story_state_history.'
+    evidence: 'throws_ok assertion passes in pgtap output.'
+
+  - id: EC-2
+    title: 'advance_story_state — inactive caller_agent_id raises P0001'
+    setup: |
+      INSERT INTO workflow.allowed_agents (agent_id, agent_name, allowed_procedures, active)
+      VALUES ('inactive-test-agent', 'Inactive Test Agent', '{}', false)
+      ON CONFLICT (agent_id) DO NOTHING;
+    action: |
+      SELECT throws_ok(
+        $$CALL workflow.advance_story_state(
+          'CDBE-TEST-001', 'created', 'pm-story-generation-leader',
+          'test reason', 'inactive-test-agent')$$,
+        'P0001',
+        NULL,
+        'advance_story_state: inactive caller should raise P0001'
+      );
+    expected: 'SQLSTATE P0001 raised. Inactive caller rejected before any mutation.'
+    evidence: 'throws_ok assertion passes. No mutation in stories or story_state_history.'
+
+  - id: EC-3
+    title: 'advance_story_state — illegal state transition raises 23514'
+    setup: |
+      Ensure test story 'CDBE-TEST-001' is in 'backlog' state.
+      Confirm workflow.valid_transitions has NO row for (backlog → completed).
+    action: |
+      SELECT throws_ok(
+        $$CALL workflow.advance_story_state(
+          'CDBE-TEST-001', 'completed', 'pm-story-generation-leader',
+          'test reason', 'pm-story-generation-leader')$$,
+        '23514',
+        NULL,
+        'advance_story_state: illegal transition backlog→completed should raise 23514'
+      );
+    expected: "SQLSTATE 23514 raised. Error message contains 'Illegal state transition'."
+    evidence: 'throws_ok assertion passes. No row inserted in story_state_history.'
+
+  - id: EC-4
+    title: 'assign_story — unknown caller_agent_id raises P0001'
+    setup: "Ensure 'bogus-agent' is NOT in workflow.allowed_agents."
+    action: |
+      SELECT throws_ok(
+        $$CALL workflow.assign_story(
+          'CDBE-TEST-001', 'dev-execute-leader', 'implementation', 'bogus-agent')$$,
+        'P0001',
+        NULL,
+        'assign_story: unknown caller should raise P0001'
+      );
+    expected: 'SQLSTATE P0001 raised. No row inserted in story_assignments.'
+    evidence: 'throws_ok assertion passes.'
+
+edge_cases:
+  - id: ED-1
+    title: 'assign_story — public.agent_invocations absent: proceeds without error'
+    setup: |
+      If public.agent_invocations is absent (dropped by cleanup migration), assign_story must
+      not raise an exception. Test with any valid caller + valid story.
+    action: |
+      SELECT lives_ok(
+        $$CALL workflow.assign_story(
+          'CDBE-TEST-001', 'dev-execute-leader', 'implementation', 'dev-execute-leader')$$,
+        'assign_story: absent public.agent_invocations must not raise an error'
+      );
+    expected: 'No exception raised. Story assignment row created. Invocation linking silently skipped.'
+    evidence: 'lives_ok assertion passes. Row present in story_assignments.'
+
+  - id: ED-2
+    title: 'advance_story_state — caller authentication occurs BEFORE any mutation'
+    setup: |
+      Inspect that stories and story_state_history are unchanged after an unauthorized call attempt.
+    action: |
+      Note story count and state before attempt.
+      Call advance_story_state with unknown caller (expect P0001).
+      Note story count and state after failed attempt.
+    expected: 'State unchanged. No new history rows created. Count of story_state_history unchanged.'
+    evidence: |
+      COUNT(*) comparison of story_state_history before/after failed call.
+
+  - id: ED-3
+    title: 'advance_story_state — BEFORE UPDATE trigger on stories (1001) fires as second validation'
+    setup: |
+      Patch workflow.valid_transitions to allow a fake transition that the 1001 trigger rejects.
+      (If 1001 trigger uses hardcoded IF chains that differ from valid_transitions, this reveals drift.)
+    action: 'Attempt advance_story_state with a transition valid_transitions allows but 1001 rejects.'
+    expected: |
+      Transaction aborts — 1001 trigger raises exception. No partial write survives.
+      This demonstrates the two-layer safety net (procedure + 1001 trigger).
+    evidence: 'Exception raised. Story state unchanged. No history row committed.'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "pgtap: has_function('workflow', 'advance_story_state', ARRAY['text','text','text','text','text'])"
+      - "pgtap: has_function('workflow', 'assign_story', ARRAY['text','text','text','text'])"
+      - 'pgtap: throws_ok for P0001 (unauthorized caller)'
+      - 'pgtap: throws_ok for 23514 (illegal transition)'
+      - 'pgtap: lives_ok for valid advance_story_state call'
+      - 'pgtap: lives_ok for valid assign_story call'
+      - 'pgtap: SELECT count verification for double-execution guard (HP-3)'
+      - 'pgtap: idempotency check (HP-4)'
+  frontend:
+    # Omitted — ui_touched: false
+
+manual_cases: []
+
+fixture_definitions:
+  - name: test_story_cdbe_2010
+    type: workflow.stories row
+    description: 'A test story row in backlog state (story_id=CDBE-TEST-001) inserted within BEGIN/ROLLBACK block.'
+  - name: test_story_open_history_row
+    type: workflow.story_state_history row
+    description: 'Initial open history row (from_state=NULL, to_state=backlog) for CDBE-TEST-001 inserted within BEGIN/ROLLBACK block.'
+  - name: inactive_agent_row
+    type: workflow.allowed_agents row
+    description: 'Inactive test agent (agent_id=inactive-test-agent, active=false) inserted within SAVEPOINT/ROLLBACK TO SAVEPOINT block.'
+
+risks:
+  - 'public.agent_invocations may not exist (dropped by cleanup migration) — assign_story AC-10 must handle gracefully; test must cover both paths'
+  - 'The 1001 BEFORE UPDATE trigger on stories may use hardcoded IF chains that drift from valid_transitions table — ED-3 test intentionally exposes this'
+  - 'Migration slot 1013 may be taken by another migration deployed concurrently — dev must verify at implementation time with ls migrations/'
+  - 'SAVEPOINT+DO guard required when referencing advance_story_state or assign_story in pgtap if migration not yet deployed'

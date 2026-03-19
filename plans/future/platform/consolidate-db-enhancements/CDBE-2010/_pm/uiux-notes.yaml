@@ -1,0 +1,7 @@
+# uiux-notes.yaml — CDBE-2010: advance_story_state and assign_story Stored Procedures
+skipped: true
+reason: >
+  Pure database migration story. No UI components, no API endpoints, no frontend surfaces.
+  advance_story_state and assign_story are PL/pgSQL stored procedures in the workflow
+  schema with no user-facing behavior. No Playwright evidence, no component patterns,
+  no accessibility requirements applicable.
