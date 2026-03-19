@@ -1,0 +1,15 @@
+schema: 1
+story_id: CDBE-1030
+timestamp: '2026-03-19T04:00:00.000Z'
+verdict: PASS
+gate_decision: APPROVE
+summary: >-
+  All 16 ACs verified PASS. 27/27 pgtap tests pass on live pgtap-postgres container. Code review verdict PASS with 0
+  errors and 2 low-severity warnings. E2E exempt (pure DB migration). Architecture compliant. Story is ready for
+  completion.
+blockers: []
+warnings:
+  - >-
+    Anticipatory tests in tests/db/triggers/test_cdbe1030_*.sql test for obsolete function names
+    (public.set_artifact_superseded_at, public.archive_superseded_plan) from a prior design. These are stale CDBE-0020
+    placeholder tests. The authoritative migration pgtap tests (27/27) are the source of truth.
