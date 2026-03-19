@@ -17,7 +17,7 @@ import { Worker, type Job } from 'bullmq'
 import { Redis } from 'ioredis'
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { kb_update_story_status, type StoryCrudDeps } from '@repo/knowledge-base'
+import { kb_update_story_status, type StoryCrudDeps, type StoryState } from '@repo/knowledge-base'
 import {
   WorktreeConflictDetector,
   type StoryConflictDescriptor,
@@ -213,10 +213,10 @@ export class PipelineSupervisor {
     )
 
     // F004: Map stage → next KB state on successful completion
-    const STAGE_TO_NEXT_STATE: Record<string, string> = {
+    const STAGE_TO_NEXT_STATE: Record<string, StoryState> = {
       implementation: 'needs_code_review',
       review: 'ready_for_qa',
-      qa: 'UAT',
+      qa: 'completed',
       elaboration: 'ready',
     }
 
@@ -231,7 +231,7 @@ export class PipelineSupervisor {
         if (nextState) {
           kb_update_story_status(this.kbDeps, {
             story_id: storyId,
-            state: nextState as any,
+            state: nextState,
           }).catch(err => {
             logger.warn('kb_state_advance_failed', {
               event: 'kb_state_advance_failed',
@@ -271,6 +271,7 @@ export class PipelineSupervisor {
       if (storyId && isFinalFailure && this.kbDeps) {
         kb_update_story_status(this.kbDeps, {
           story_id: storyId,
+          state: 'blocked',
           blocked_reason: error instanceof Error ? error.message : String(error),
         }).catch(err => {
           logger.warn('kb_blocked_update_failed', {

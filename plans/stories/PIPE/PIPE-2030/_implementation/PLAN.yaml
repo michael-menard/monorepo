@@ -1,0 +1,149 @@
+schema: 2
+story_id: PIPE-2030
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Fix STAGE_TO_NEXT_STATE qa mapping from 'UAT' to 'completed' in supervisor/index.ts
+    files:
+      - apps/api/pipeline/src/supervisor/index.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/__types__/index.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/pipeline
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 2
+    subtask_id: ST-2
+    description: "Fix worker.on('failed') final-failure path to include state: 'blocked' in kb_update_story_status call"
+    files:
+      - apps/api/pipeline/src/supervisor/index.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/pipeline
+    acs_covered:
+      - AC-3
+      - AC-4
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Write unit tests for worker.on('completed') callback: all 4 stages produce correct next-state values including qa
+      -> completed
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-blockers.test.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-5
+      - AC-7
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write unit tests for worker.on('failed') callback: final vs transient failure, state: 'blocked' assertion, no
+      wint.* references
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-blockers.test.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm test --filter @repo/pipeline
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+files_to_change:
+  - path: apps/api/pipeline/src/supervisor/index.ts
+    action: modify
+    reason: >-
+      Fix STAGE_TO_NEXT_STATE['qa'] from 'UAT' to 'completed' (ST-1/AC-1). Add state: 'blocked' to worker.on('failed')
+      kb_update_story_status call (ST-2/AC-4). Remove 'as any' cast after fix (AC-2).
+  - path: apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    action: create
+    reason: >-
+      New unit test file covering completed callback (all 4 stages, AC-5) and failed callback (final vs transient,
+      AC-6). Follows supervisor-blockers.test.ts BullMQ mock pattern.
+commands_to_run:
+  - command: pnpm check-types --filter @repo/pipeline
+    when: after modifying supervisor/index.ts
+    required: true
+  - command: pnpm test --filter @repo/pipeline
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/pipeline
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Code change: STAGE_TO_NEXT_STATE in supervisor/index.ts maps qa to 'completed'. Verified by type-check passing
+      without 'as any' cast.
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: >-
+      Type check passes with no 'as any' cast needed on state field — all four mapped states are valid StoryStateSchema
+      members.
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test HP-1 through HP-4: all four stage completions call kb_update_story_status with correct state.
+      Fire-and-forget .catch() pattern preserved.
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test HP-5: final failure kb_update_story_status called with { state: 'blocked', blocked_reason: <non-empty
+      string> }.
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit tests HP-1 through HP-4 in supervisor-callbacks.test.ts: mock kbDeps, trigger completed event, assert correct
+      state for each stage including qa -> 'completed' (not 'UAT') and implementation -> 'needs_code_review'.
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit tests HP-5, EC-3 in supervisor-callbacks.test.ts: final failure asserts state: 'blocked' + non-empty
+      blocked_reason; transient failure (attemptsMade < attempts) asserts kb NOT called.
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: pnpm test --filter @repo/pipeline exits 0 with all tests passing including new supervisor-callbacks.test.ts suite.
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: grep -r 'wint\.' apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts returns no matches.
+    evidence_type: command
+architectural_decisions: []
+complexity: simple
+notes:
+  - "ST-1 is a one-line fix: change 'UAT' to 'completed' at line 219 of supervisor/index.ts."
+  - >-
+    ST-2 adds state: 'blocked' to the kb_update_story_status call at lines 272-274. The 'as any' cast at line 234 for
+    the completed path should also be removed after ST-1 since all mapped states are now valid StoryStateSchema members.
+  - >-
+    Test file supervisor-callbacks.test.ts must NOT import PipelineSupervisor directly and start it (requires real
+    Redis). Instead, extract the callback logic by mocking the Worker class and capturing the event handler functions
+    registered via worker.on(), following the pattern from supervisor-blockers.test.ts.
+  - >-
+    BullMQ Worker mock: mock 'bullmq' module so new Worker(...) returns a mock with .on() that captures handlers. Then
+    invoke captured handlers directly in tests.
+  - >-
+    Fire-and-forget pattern: tests must flush the microtask queue (await Promise.resolve()) before asserting
+    kb_update_story_status was called.
+  - >-
+    StoryStateSchema valid states confirmed from apps/api/knowledge-base/src/__types__/index.ts lines 780-799:
+    'completed' is valid, 'UAT' and 'uat' are NOT valid.
+  - No architectural decisions required — all choices are pre-specified in the story ACs and subtask details.
+  - No wint.* references should be introduced anywhere in the modified or created files (AC-8).

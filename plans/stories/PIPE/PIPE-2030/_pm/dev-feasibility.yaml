@@ -1,0 +1,109 @@
+feasible: true
+confidence: high
+rationale: >
+  The F004 implementation already exists in apps/api/pipeline/src/supervisor/index.ts.
+  This story is a narrowly scoped bug fix to two specific defects in that implementation:
+  (1) STAGE_TO_NEXT_STATE['qa'] = 'UAT' is an invalid StoryStateSchema state — one-line fix
+  to change to 'completed'; (2) worker.on('failed') final-failure path sets blocked_reason
+  but not state: 'blocked' — a deliberate decision must be documented or the field added.
+  The majority of effort is writing unit tests to cover both callback paths. No architectural
+  changes required. No new packages. No deploy changes.
+complexity: low
+change_surface:
+  areas:
+    - apps/api/pipeline/src/supervisor (single file fix)
+    - apps/api/pipeline/src/supervisor/__tests__ (new/expanded unit tests)
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      BullMQ Worker instantiation in start() requires a live Redis connection. Extracting
+      callback logic for testability may require refactoring, or tests must mock the Worker
+      class constructor to avoid Redis dependency.
+    mitigation: >
+      Follow the existing pattern in supervisor-blockers.test.ts. If Worker mock is not
+      already established, extract the completed/failed callback logic into named functions
+      that can be called directly in tests without instantiating Worker.
+
+missing_requirements:
+  - >
+    AC-4 requires a decision: should final job failure transition story to state: 'blocked'?
+    The current code omits state (only sets blocked_reason). PM or architect must confirm
+    intent. Resolution hint from seed: add state: 'blocked' if transition is desired.
+    Dev should treat this as "add state: 'blocked'" based on the comment in F004 code
+    ("F004: Set story to blocked in KB on final failure") which implies intent.
+
+evidence_expectations:
+  - 'pnpm test --filter @repo/pipeline passes with new tests covering all 4 stages'
+  - 'pnpm check-types --filter @repo/pipeline passes with no new errors'
+  - 'StoryStateSchema.safeParse("completed").success === true (validated in test or assertion)'
+  - 'No wint.* references in git diff output'
+
+subtasks:
+  - id: ST-1
+    title: 'Fix STAGE_TO_NEXT_STATE qa mapping from UAT to completed'
+    goal: >
+      Correct the one-line bug at apps/api/pipeline/src/supervisor/index.ts line 219.
+      Change qa: 'UAT' to qa: 'completed'. Verify the cast `as any` can be removed
+      now that all four values are valid StoryStateSchema states.
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/index.ts
+      - apps/api/knowledge-base/src/__types__/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/supervisor/index.ts
+    acs: ['AC-1', 'AC-2']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: 'Confirm and fix failed callback state transition to blocked'
+    goal: >
+      In worker.on("failed"), confirm the intent of the final-failure KB call.
+      Add state: "blocked" to the kb_update_story_status call if the intent is
+      to transition the story to blocked state on permanent failure. Add an
+      explanatory comment if deliberate omission is chosen.
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/index.ts
+      - apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts
+    files_to_modify:
+      - apps/api/pipeline/src/supervisor/index.ts
+    acs: ['AC-3', 'AC-4']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 2000
+
+  - id: ST-3
+    title: 'Add unit tests for completed callback covering all 4 stages'
+    goal: >
+      Write Vitest unit tests in apps/api/pipeline/src/supervisor/__tests__/ that mock
+      kbDeps, simulate the worker completed event for each stage value, and assert
+      kb_update_story_status is called with the correct state. Cover the kbDeps=null
+      guard and unknown-stage no-op paths.
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-blockers.test.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    acs: ['AC-5', 'AC-7']
+    depends_on: ST-1
+    verification: 'pnpm test --filter @repo/pipeline'
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: 'Add unit tests for failed callback covering final-failure and transient paths'
+    goal: >
+      Write Vitest unit tests for the worker.on("failed") handler. Cover: (1) final failure
+      with kbDeps — assert kb_update_story_status called with state: "blocked" and
+      blocked_reason; (2) transient failure — assert KB NOT called; (3) kbDeps null —
+      assert KB NOT called; (4) undefined job — assert no crash.
+    files_to_read:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-blockers.test.ts
+      - apps/api/pipeline/src/supervisor/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    acs: ['AC-6', 'AC-7', 'AC-8']
+    depends_on: ST-2
+    verification: 'pnpm test --filter @repo/pipeline'
+    estimated_tokens: 5000
