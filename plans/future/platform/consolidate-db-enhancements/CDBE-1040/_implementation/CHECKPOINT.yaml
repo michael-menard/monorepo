@@ -1,0 +1,17 @@
+schema: 1
+story_id: CDBE-1040
+timestamp: '2026-03-19T00:00:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    ARCH-002: points and epic columns (AC-14 auditable list) not in current workflow.stories schema.
+    Migration adds them via ADD COLUMN IF NOT EXISTS. RESOLVED — migration applied successfully.
+  - >-
+    workflow.plans schema has 'summary' not 'description' (AC-14 listed 'description').
+    Migration audits 'summary'. Discrepancy documented in COMMENT ON FUNCTION.
+gen_mode: false
