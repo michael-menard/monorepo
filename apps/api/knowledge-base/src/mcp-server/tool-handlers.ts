@@ -12,17 +12,14 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { sql, eq } from 'drizzle-orm'
+import { sql, eq, and, gt, or, isNull } from 'drizzle-orm'
 import {
   worktreeRegister,
   worktreeGetByStory,
   worktreeListActive,
   worktreeMarkComplete,
-  contextPackGet,
-  logInvocation,
-  WorkflowLogInvocationInputSchema,
-} from '@repo/mcp-tools'
-import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
+} from '../worktree-management/index.js'
+import { logInvocation, WorkflowLogInvocationInputSchema } from '../telemetry/index.js'
 import {
   kb_add,
   kb_get,
@@ -64,7 +61,7 @@ import {
   parseAuditConfig,
   type AuditUserContext,
 } from '../audit/index.js'
-import { knowledgeEntries, stories } from '../db/schema.js'
+import { knowledgeEntries, stories, contextPacks } from '../db/schema.js'
 import { computeContentHash } from '../embedding-client/cache-manager.js'
 import {
   kb_add_task,
@@ -113,13 +110,21 @@ import {
   kb_update_story_status,
   kb_update_story,
   kb_get_next_story,
+  kb_add_dependency,
+  kb_get_story_plan_links,
   KbCreateStoryInputSchema,
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
+  KbAddDependencyInputSchema,
+  KbGetStoryPlanLinksInputSchema,
 } from '../crud-operations/story-crud-operations.js'
+import {
+  kb_ingest_story_from_yaml,
+  KbIngestStoryFromYamlInputSchema,
+} from '../crud-operations/story-ingest-operations.js'
 import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-operations.js'
 import {
   kb_get_plan,
@@ -160,6 +165,11 @@ import {
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
 import { withRetry } from '../db/client.js'
+import {
+  ContextPackRequestSchema,
+  ContextPackResponseSchema,
+  type ContextPackResponse,
+} from './__types__/context-pack.js'
 import {
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
@@ -4144,6 +4154,141 @@ export async function handleKbGetNextStory(
 }
 
 // ============================================================================
+// Story Dependency & Plan Link Handlers
+// ============================================================================
+
+/**
+ * Handle kb_add_dependency tool invocation.
+ */
+export async function handleKbAddDependency(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_dependency tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    depends_on_id: inputObj?.depends_on_id,
+    dependency_type: inputObj?.dependency_type,
+  })
+
+  try {
+    enforceAuthorization('kb_add_dependency' as ToolName, context)
+    const validated = KbAddDependencyInputSchema.parse(input)
+    const result = await kb_add_dependency({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_add_dependency succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      depends_on_id: validated.depends_on_id,
+      created: result.created,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_add_dependency failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_story_plan_links tool invocation.
+ */
+export async function handleKbGetStoryPlanLinks(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_story_plan_links tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    enforceAuthorization('kb_get_story_plan_links' as ToolName, context)
+    const validated = KbGetStoryPlanLinksInputSchema.parse(input)
+    const result = await kb_get_story_plan_links({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_story_plan_links succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      link_count: result.links.length,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_story_plan_links failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Story Ingest Handler (CDBE-2030)
+// ============================================================================
+
+/**
+ * Handle kb_ingest_story_from_yaml tool invocation.
+ */
+export async function handleKbIngestStoryFromYaml(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  const storyYaml = inputObj?.story_yaml as Record<string, unknown> | undefined
+  logger.info('kb_ingest_story_from_yaml tool invoked', {
+    correlation_id: correlationId,
+    story_id: storyYaml?.story_id,
+    caller_agent_id: inputObj?.caller_agent_id,
+  })
+
+  try {
+    enforceAuthorization('kb_ingest_story_from_yaml' as ToolName, context)
+    const validated = KbIngestStoryFromYamlInputSchema.parse(input)
+    const result = await kb_ingest_story_from_yaml({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_ingest_story_from_yaml succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_yaml['story_id'],
+      inserted_stories: result.inserted_stories,
+      updated_stories: result.updated_stories,
+      upserted_content: result.upserted_content,
+      upserted_details: result.upserted_details,
+      inserted_dependencies: result.inserted_dependencies,
+      skipped_dependencies: result.skipped_dependencies,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_ingest_story_from_yaml failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
 // Token Logging Handler
 // ============================================================================
 
@@ -5178,6 +5323,11 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_update_story_status: handleKbUpdateStoryStatus,
   kb_update_story: handleKbUpdateStory,
   kb_get_next_story: handleKbGetNextStory,
+  // Story dependency and plan link tools
+  kb_add_dependency: handleKbAddDependency,
+  kb_get_story_plan_links: handleKbGetStoryPlanLinks,
+  // Story ingest tool (CDBE-2030)
+  kb_ingest_story_from_yaml: handleKbIngestStoryFromYaml,
   // Token logging tools
   kb_log_tokens: handleKbLogTokens,
   // Analytics tools
@@ -5315,7 +5465,7 @@ export async function handleToolCall(
  */
 export async function handleContextPackGet(
   input: unknown,
-  _deps: ToolHandlerDeps,
+  deps: ToolHandlerDeps,
   context?: ToolCallContext,
 ): Promise<McpToolResult> {
   const startTime = Date.now()
@@ -5332,13 +5482,44 @@ export async function handleContextPackGet(
   try {
     enforceAuthorization('context_pack_get' as ToolName, context)
     const validated = ContextPackRequestSchema.parse(input)
-    const result = await contextPackGet(validated)
+
+    // Inline cache lookup — replaces contextPackGet from @repo/mcp-tools
+    const packKey = `${validated.story_id}:${validated.node_type}:${validated.role}`
+    const [cached] = await deps.db
+      .select()
+      .from(contextPacks)
+      .where(
+        and(
+          eq(contextPacks.packType, 'story'),
+          eq(contextPacks.packKey, packKey),
+          or(gt(contextPacks.expiresAt, sql`NOW()`), isNull(contextPacks.expiresAt))!,
+        ),
+      )
+      .limit(1)
+
+    let result: ContextPackResponse | null = null
+    if (cached) {
+      // Increment hit count
+      await deps.db
+        .update(contextPacks)
+        .set({
+          hitCount: sql`${contextPacks.hitCount} + 1`,
+          lastHitAt: sql`NOW()`,
+        })
+        .where(eq(contextPacks.id, cached.id))
+
+      const parsed = ContextPackResponseSchema.safeParse(cached.content)
+      if (parsed.success) {
+        result = parsed.data
+      }
+    }
 
     logger.info('context_pack_get succeeded', {
       correlation_id: correlationId,
       story_id: validated.story_id,
       node_type: validated.node_type,
       role: validated.role,
+      cache_hit: result !== null,
       query_time_ms: Date.now() - startTime,
     })
 

@@ -17,12 +17,12 @@ import {
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
-  WorkflowLogInvocationInputSchema,
   type WorktreeRegisterInput,
   type WorktreeGetByStoryInput,
   type WorktreeListActiveInput,
   type WorktreeMarkCompleteInput,
-} from '@repo/mcp-tools'
+} from '../worktree-management/index.js'
+import { WorkflowLogInvocationInputSchema } from '../telemetry/index.js'
 import {
   KbAddInputSchema,
   KbGetInputSchema,
@@ -39,6 +39,8 @@ import {
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
+  KbAddDependencyInputSchema,
+  KbGetStoryPlanLinksInputSchema,
   type KbCreateStoryInput,
   type KbGetStoryInput,
   type KbGetStoryResult,
@@ -46,7 +48,10 @@ import {
   type KbUpdateStoryStatusInput,
   type KbUpdateStoryInput,
   type KbGetNextStoryInput,
+  type KbAddDependencyInput,
+  type KbGetStoryPlanLinksInput,
 } from '../crud-operations/story-crud-operations.js'
+import { KbIngestStoryFromYamlInputSchema } from '../crud-operations/story-ingest-operations.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
 import {
   KbLogTokensInputSchema,
@@ -90,6 +95,8 @@ export {
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
+  KbAddDependencyInputSchema,
+  KbGetStoryPlanLinksInputSchema,
   KbLogTokensInputSchema,
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
@@ -103,6 +110,8 @@ export type {
   KbUpdateStoryStatusInput,
   KbUpdateStoryInput,
   KbGetNextStoryInput,
+  KbAddDependencyInput,
+  KbGetStoryPlanLinksInput,
   KbLogTokensInput,
   KbGetTokenSummaryInput,
   KbGetBottleneckAnalysisInput,
@@ -3111,6 +3120,132 @@ Example (next story from plans focused on testing):
   inputSchema: zodToMcpSchema(KbGetNextStoryInputSchema),
 }
 
+/**
+ * kb_add_dependency tool definition.
+ *
+ * Adds a dependency relationship between two stories.
+ */
+export const kbAddDependencyToolDefinition: McpToolDefinition = {
+  name: 'kb_add_dependency',
+  description: `Add a dependency relationship between two stories in the KB.
+
+Idempotent: if the exact (story_id, depends_on_id, dependency_type) triple already exists,
+the call succeeds with created=false. Self-referential dependencies are rejected.
+
+Parameters:
+- story_id (required): The story that has the dependency (e.g., 'WISH-0120')
+- depends_on_id (required): The story that is depended upon (e.g., 'WISH-0110')
+- dependency_type (required): One of 'depends_on', 'blocked_by', 'follow_up_from', 'enables'
+
+Returns: { created: boolean, message: string }
+
+Example (split dependency chain):
+{
+  "story_id": "WISH-0120",
+  "depends_on_id": "WISH-0110",
+  "dependency_type": "depends_on"
+}
+
+Example (follow-up from parent):
+{
+  "story_id": "WISH-2060",
+  "depends_on_id": "WISH-2045",
+  "dependency_type": "follow_up_from"
+}`,
+  inputSchema: zodToMcpSchema(KbAddDependencyInputSchema),
+}
+
+/**
+ * kb_get_story_plan_links tool definition.
+ *
+ * Reverse lookup: finds which plans a story is linked to.
+ */
+export const kbGetStoryPlanLinksToolDefinition: McpToolDefinition = {
+  name: 'kb_get_story_plan_links',
+  description: `Get all plan linkages for a story (reverse lookup from story → plans).
+
+Returns the plan slugs and link types for all plan_story_links rows referencing this story.
+Use this to discover which plan a parent story belongs to, so split/follow-on stories
+can be linked to the same plan.
+
+Parameters:
+- story_id (required): Story ID to look up (e.g., 'WISH-2045')
+
+Returns: { links: [{ plan_slug, link_type }], message: string }
+
+Example:
+{
+  "story_id": "WISH-2045"
+}`,
+  inputSchema: zodToMcpSchema(KbGetStoryPlanLinksInputSchema),
+}
+
+// ============================================================================
+// Story Ingest Tool (CDBE-2030)
+// ============================================================================
+
+/**
+ * kb_ingest_story_from_yaml tool definition.
+ *
+ * Idempotent upsert of a story from a JSONB payload via stored procedure.
+ */
+export const kbIngestStoryFromYamlToolDefinition: McpToolDefinition = {
+  name: 'kb_ingest_story_from_yaml',
+  description: `Ingest a story from a YAML payload into the KB using an idempotent stored procedure.
+
+Calls workflow.ingest_story_from_yaml() which upserts workflow.stories, story_details,
+story_content, and story_dependencies in a single transaction.
+
+Required keys in story_yaml:
+- story_id (string): Unique story identifier (e.g., 'CDBE-2030')
+- title (string): Story title
+- feature (string): Feature prefix (e.g., 'cdbe')
+
+Optional keys in story_yaml:
+- state (string): Workflow state (default: 'backlog')
+- priority (string): 'critical' | 'high' | 'medium' | 'low'
+- description (string): Human-readable description
+- blocked_reason (string): Reason for being blocked
+- blocked_by_story (string): Story ID that blocks this one
+- story_dir (string): Relative path to story directory
+- story_file (string): Story file name
+- touches_backend (boolean): Scope flag
+- touches_frontend (boolean): Scope flag
+- touches_database (boolean): Scope flag
+- touches_infra (boolean): Scope flag
+- content (array): [{ section_name, content_text, source_format? }]
+- dependencies (array): [{ depends_on_id, dependency_type? }]
+
+Returns observability counts: inserted_stories, updated_stories, upserted_content,
+upserted_details, inserted_dependencies, skipped_dependencies.
+
+Raises:
+- P0001: caller_agent_id is not in workflow.allowed_agents
+- P0003: story_yaml missing required keys (story_id, title, feature)
+- P0004: dependency cycle detected in merged graph
+- P0005: dependency chain exceeds max depth 5
+
+Example:
+{
+  "caller_agent_id": "dev-implement-leader",
+  "story_yaml": {
+    "story_id": "CDBE-2030",
+    "title": "ingest_story_from_yaml Stored Procedure",
+    "feature": "cdbe",
+    "state": "ready",
+    "priority": "high",
+    "touches_database": true,
+    "content": [
+      { "section_name": "description", "content_text": "Implements idempotent upsert...", "source_format": "markdown" }
+    ],
+    "dependencies": [
+      { "depends_on_id": "CDBE-1010", "dependency_type": "depends_on" }
+    ]
+  }
+}`,
+  inputSchema: zodToMcpSchema(KbIngestStoryFromYamlInputSchema),
+}
+
 // ============================================================================
 // Token Logging Tool
 // ============================================================================
@@ -4084,6 +4219,11 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbUpdateStoryStatusToolDefinition,
   kbUpdateStoryToolDefinition,
   kbGetNextStoryToolDefinition,
+  // Story dependency and plan link tools
+  kbAddDependencyToolDefinition,
+  kbGetStoryPlanLinksToolDefinition,
+  // Story ingest tool (CDBE-2030)
+  kbIngestStoryFromYamlToolDefinition,
   // Token logging tools
   kbLogTokensToolDefinition,
   // Analytics tools
@@ -4140,7 +4280,7 @@ export function getToolNames(): string[] {
 // Context Pack Tool (WINT-2020)
 // ============================================================================
 
-import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
+import { ContextPackRequestSchema } from './__types__/context-pack.js'
 
 /**
  * context_pack_get tool definition.
