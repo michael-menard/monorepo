@@ -1,0 +1,129 @@
+schema: 1
+story_id: CDBE-1030
+timestamp: '2026-03-19T04:00:00.000Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  pgtap:
+    pass: 27
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+  http:
+    pass: 0
+    fail: 0
+    status: not_applicable
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: Pure PostgreSQL migration — coverage threshold N/A; 27/27 pgtap tests cover all ACs
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    All 27 tests re-run live against pgtap-postgres container (port 5434). Tests use BEGIN/ROLLBACK isolation, SAVEPOINT
+    idempotency guards, and cover both happy-path and edge-case scenarios. Note: CDBE-0020 wrote anticipatory
+    placeholder tests (tests/db/triggers/test_cdbe1030_*.sql) against an old design (public.set_artifact_superseded_at,
+    public.archive_superseded_plan) that was never implemented; the authoritative tests are in
+    migrations/pgtap/1020_artifact_cascade_triggers_test.sql and all pass.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-1]
+    notes: superseded_at column confirmed in information_schema; pgtap HP-1a test passes
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-2]
+    notes: artifacts.supersede_prior_artifact_version() function confirmed in pg_proc; HP-1e SECURITY INVOKER check passes
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-3]
+    notes: ED-2 tests confirm second insert supersedes first; ED-1 confirms first insert is no-op
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-4]
+    notes: artifact_versions_supersede trigger confirmed via pg_trigger; HP-1c passes
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-5]
+    notes: HP-2 test confirms workflow.stories.updated_at is touched on artifact supersession
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-6]
+    notes: workflow.archive_plan_stories() function confirmed; HP-1f SECURITY INVOKER check passes
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-7]
+    notes: plan_archival_cascade trigger confirmed; ED-4 confirms backlog stories move to deferred
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-8]
+    notes: ED-4d/e confirm non-backlog stories and unlinked stories are not moved
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-9]
+    notes: ED-5 confirms non-archive status changes (in-progress) do not move stories; ED-3 confirms empty plan no-op
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-10]
+    notes: COMMENT ON statements present for all objects in migration SQL
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-11]
+    notes: DROP TRIGGER IF EXISTS + CREATE TRIGGER pattern used for both triggers
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-12]
+    notes: idx_story_artifacts_active_versions partial index confirmed via pg_indexes; HP-1b passes
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-13]
+    notes: HP-3 tests wrap CREATE TRIGGER DDL in SAVEPOINT+DO blocks; all idempotency tests pass
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-14]
+    notes: Pre-condition guard DO block in migration SQL; will raise EXCEPTION P0002 if transition missing
+  - ac_id: AC-15
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-15]
+    notes: >-
+      backlog->deferred row confirmed in workflow.valid_transitions; ED-6 pgtap test passes; DB query confirmed row
+      present
+  - ac_id: AC-16
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[AC-16]
+    notes: GRANT UPDATE (superseded_at) ON artifacts.story_artifacts TO agent_role present in migration SQL
+architecture_compliant: true
+architecture_notes: >-
+  Pure SQL migration; no TypeScript, React, or API changes. SECURITY INVOKER correctly used (not SECURITY DEFINER). No
+  wint.* or kbar.* references. SQL formatting consistent with migration 1010 pattern (96/100 per code review). Minor
+  low-severity note from code review: != used instead of IS DISTINCT FROM in one guard — non-blocking, and IS DISTINCT
+  FROM is actually used in the status-change guard for archive_plan_stories.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Anticipatory pgtap tests written against placeholder function names may fail after implementation settles on
+      different schemas/names
+    category: testing
+    tags:
+      - pgtap
+      - db-migrations
+      - placeholder-tests
+  - lesson: >-
+      SAVEPOINT+DO block pattern for CREATE TRIGGER idempotency tests in pgtap prevents a dropped-trigger state from
+      aborting the entire test transaction
+    category: pattern
+    tags:
+      - pgtap
+      - idempotency
+      - triggers
+tokens:
+  in: 18000
+  out: 3500
