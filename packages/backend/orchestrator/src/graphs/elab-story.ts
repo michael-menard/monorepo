@@ -6,12 +6,17 @@
  * Teardown always runs even when elaboration fails (AC-3).
  *
  * WINT-9110: elab-story.ts wrapping elaboration.ts as subgraph
+ * PIPE-3020: Wire real git worktree lifecycle
  *
  * Thread ID convention: `${storyId}:elab-story:${attempt}`
  */
 
+import * as path from 'path'
+import { spawn } from 'child_process'
 import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
+import { logger } from '@repo/logger'
+import { worktreeRegister, worktreeGetByStory, worktreeMarkComplete } from '@repo/mcp-tools'
 import { createToolNode } from '../runner/node-factory.js'
 import type { GraphState } from '../state/index.js'
 import { updateState } from '../runner/state-helpers.js'
@@ -20,6 +25,42 @@ import {
   ElaborationResultSchema,
   type ElaborationResult,
 } from './elaboration.js'
+
+// ============================================================================
+// GitRunner type (matches create-worktree.ts / cleanup-worktree.ts pattern)
+// ============================================================================
+
+export type GitRunner = (
+  args: string[],
+  opts: { cwd: string; env?: Record<string, string> },
+) => Promise<{ exitCode: number; stdout: string; stderr: string }>
+
+// ============================================================================
+// Default git runner (spawn-based for testability)
+// ============================================================================
+
+export function defaultGitRunner(
+  args: string[],
+  opts: { cwd: string; env?: Record<string, string> },
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const env = opts.env ?? (process.env as Record<string, string>)
+    const proc = spawn('git', args, { cwd: opts.cwd, env })
+    let stdout = ''
+    let stderr = ''
+
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString()
+    })
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString()
+    })
+    proc.on('close', code => {
+      resolve({ exitCode: code ?? 1, stdout, stderr })
+    })
+    proc.on('error', reject)
+  })
+}
 
 // ============================================================================
 // Config Schema
@@ -196,20 +237,92 @@ export function createElabStoryInitializeNode(config: Partial<ElabStoryConfig> =
 
 /**
  * Worktree setup node.
- * In production this would call the worktree creation tool (WINT-9060).
- * Gracefully skips if the dependency is not injected.
+ * Creates a real git worktree at {worktreeBaseDir}/{storyId} using branch elab/{storyId}.
+ * Registers the worktree in the KB database (non-blocking on failure).
+ *
+ * Factory signature accepts injectable gitRunner and repoRoot for testability.
  */
-export function createWorktreeSetupNode() {
+export function createWorktreeSetupNode(opts: { gitRunner?: GitRunner; repoRoot?: string } = {}) {
+  const gitRunner = opts.gitRunner ?? defaultGitRunner
+  const repoRoot = opts.repoRoot ?? process.cwd()
+
   return async (state: ElabStoryState): Promise<Partial<ElabStoryState>> => {
-    // Injectable worktree tool not yet available (WINT-9060)
-    // Skip gracefully with warning
+    const startTime = Date.now()
+    const { storyId } = state
     const baseDir = state.config?.worktreeBaseDir ?? '/tmp/worktrees'
-    const worktreePath = `${baseDir}/${state.storyId}`
+    const worktreePath = path.join(baseDir, storyId)
+    const branchName = `elab/${storyId}`
+
+    // ---- Step 1: git worktree add -b elab/{storyId} {worktreePath} ----
+    let gitResult: { exitCode: number; stdout: string; stderr: string }
+    try {
+      gitResult = await gitRunner(['worktree', 'add', '-b', branchName, worktreePath], {
+        cwd: repoRoot,
+        env: process.env as Record<string, string>,
+      })
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      logger.warn('elab_worktree_setup_failed', {
+        storyId,
+        stage: 'elab',
+        durationMs: Date.now() - startTime,
+        error: errMsg,
+      })
+      return {
+        worktreePath: null,
+        worktreeSetup: false,
+        errors: [`git worktree add threw: ${errMsg}`],
+      }
+    }
+
+    if (gitResult.exitCode !== 0) {
+      const errMsg = gitResult.stderr || gitResult.stdout || 'git worktree add failed'
+      logger.warn('elab_worktree_setup_failed', {
+        storyId,
+        stage: 'elab',
+        durationMs: Date.now() - startTime,
+        error: errMsg,
+      })
+      return {
+        worktreePath: null,
+        worktreeSetup: false,
+        errors: [`git worktree add failed: ${errMsg}`],
+      }
+    }
+
+    const durationMs = Date.now() - startTime
+
+    logger.info('elab_worktree_created', {
+      storyId,
+      stage: 'elab',
+      durationMs,
+      worktreePath,
+      branchName,
+    })
+
+    // ---- Step 2: Register worktree in KB database (non-blocking on failure) ----
+    try {
+      const registered = await worktreeRegister({ storyId, worktreePath, branchName })
+      if (!registered) {
+        logger.warn('elab_worktree_register_skipped', {
+          storyId,
+          stage: 'elab',
+          durationMs: Date.now() - startTime,
+          reason: 'worktreeRegister returned null (story may not exist in KB)',
+        })
+      }
+    } catch (regError) {
+      logger.warn('elab_worktree_register_failed', {
+        storyId,
+        stage: 'elab',
+        durationMs: Date.now() - startTime,
+        error: regError instanceof Error ? regError.message : String(regError),
+      })
+    }
 
     return {
       worktreePath,
       worktreeSetup: true,
-      warnings: ['Worktree setup: WINT-9060 not yet available — using stub path'],
     }
   }
 }
@@ -285,20 +398,112 @@ export function createElaborationSubgraphNode(config: Partial<ElabStoryConfig> =
 /**
  * Worktree teardown node.
  * ALWAYS runs — even when elaboration fails (AC-3).
+ *
+ * Steps:
+ * 1. Look up active worktree in KB via worktreeGetByStory
+ * 2. git worktree remove --force {worktreePath}
+ * 3. Mark worktree as abandoned in KB via worktreeMarkComplete
+ *
+ * All errors emit logger.warn() only — NEVER changes workflowSuccess.
  */
-export function createWorktreeTeardownNode() {
+export function createWorktreeTeardownNode(
+  opts: { gitRunner?: GitRunner; repoRoot?: string } = {},
+) {
+  const gitRunner = opts.gitRunner ?? defaultGitRunner
+  const repoRoot = opts.repoRoot ?? process.cwd()
+
   return async (state: ElabStoryState): Promise<Partial<ElabStoryState>> => {
-    // Injectable worktree tool not yet available (WINT-9060)
-    if (!state.worktreeSetup) {
+    const startTime = Date.now()
+    const { storyId, worktreePath, worktreeSetup } = state
+    const warnings: string[] = []
+
+    if (!worktreeSetup || !worktreePath) {
       return {
         worktreeTornDown: true,
-        warnings: ['Worktree teardown: no worktree was set up'],
+        warnings: ['Worktree teardown: no worktree was set up — skipping'],
+      }
+    }
+
+    // ---- Step 1: Look up worktree in KB (to get the UUID for mark-complete) ----
+    let worktreeId: string | null = null
+    try {
+      const record = await worktreeGetByStory({ storyId })
+      if (record) {
+        worktreeId = record.id
+      } else {
+        logger.warn('elab_worktree_teardown_no_kb_record', {
+          storyId,
+          stage: 'elab',
+          durationMs: Date.now() - startTime,
+          worktreePath,
+        })
+      }
+    } catch (lookupError) {
+      logger.warn('elab_worktree_teardown_lookup_failed', {
+        storyId,
+        stage: 'elab',
+        durationMs: Date.now() - startTime,
+        error: lookupError instanceof Error ? lookupError.message : String(lookupError),
+      })
+    }
+
+    // ---- Step 2: git worktree remove --force {worktreePath} ----
+    try {
+      const removeResult = await gitRunner(['worktree', 'remove', '--force', worktreePath], {
+        cwd: repoRoot,
+        env: process.env as Record<string, string>,
+      })
+
+      if (removeResult.exitCode !== 0) {
+        const warning = `git worktree remove failed: ${removeResult.stderr || removeResult.stdout}`
+        logger.warn('elab_worktree_remove_failed', {
+          storyId,
+          stage: 'elab',
+          durationMs: Date.now() - startTime,
+          worktreePath,
+          warning,
+        })
+        warnings.push(warning)
+      } else {
+        logger.info('elab_worktree_removed', {
+          storyId,
+          stage: 'elab',
+          durationMs: Date.now() - startTime,
+          worktreePath,
+        })
+      }
+    } catch (removeError) {
+      const warning = `git worktree remove threw: ${removeError instanceof Error ? removeError.message : String(removeError)}`
+      logger.warn('elab_worktree_remove_threw', {
+        storyId,
+        stage: 'elab',
+        durationMs: Date.now() - startTime,
+        worktreePath,
+        warning,
+      })
+      warnings.push(warning)
+    }
+
+    // ---- Step 3: Mark worktree as abandoned in KB ----
+    if (worktreeId) {
+      try {
+        await worktreeMarkComplete({ worktreeId, status: 'abandoned' })
+      } catch (markError) {
+        const warning = `worktreeMarkComplete threw: ${markError instanceof Error ? markError.message : String(markError)}`
+        logger.warn('elab_worktree_mark_complete_failed', {
+          storyId,
+          stage: 'elab',
+          durationMs: Date.now() - startTime,
+          worktreeId,
+          warning,
+        })
+        warnings.push(warning)
       }
     }
 
     return {
       worktreeTornDown: true,
-      warnings: ['Worktree teardown: WINT-9060 not yet available — stub teardown'],
+      warnings,
     }
   }
 }

@@ -1,0 +1,180 @@
+schema_version: '1'
+story_id: PIPE-3020
+phase: implementation
+iteration: 1
+generated_at: '2026-03-18T19:23:00.000Z'
+
+summary:
+  total_acs: 6
+  mapped: 6
+  missing: 0
+  overall_verdict: PASS
+
+acceptance_criteria:
+  - id: AC-1
+    description: >
+      createWorktreeSetupNode accepts optional { gitRunner, repoRoot } parameters
+      for testability (injectable GitRunner pattern matches create-worktree.ts)
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Unit test verifies createWorktreeSetupNode calls git with injectable runner
+          and correct cwd (repoRoot). 10 unit tests cover setup node.
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+      - type: command
+        description: >
+          pnpm test: 22 unit tests pass in elab-story-worktree.test.ts, 22 pass
+          in elab-story.test.ts, 9 integration tests pass
+        result: PASS
+
+  - id: AC-2
+    description: >
+      createWorktreeSetupNode runs git worktree add -b elab/{storyId} {worktreePath}
+      where worktreePath = path.join(worktreeBaseDir, storyId)
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Unit test 'calls git worktree add with correct branch and path' verifies
+          exact git args: ['worktree', 'add', '-b', 'elab/PIPE-3020', '/tmp/worktrees/PIPE-3020'].
+          Integration test 'creates worktree on branch elab/{storyId}' verifies
+          real branch creation via `git branch --list`.
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+          packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+      - type: command
+        description: Integration tests pass with real git subprocess
+        result: PASS
+
+  - id: AC-3
+    description: >
+      On git worktree add success, worktreeRegister is called with { storyId, worktreePath,
+      branchName }. On failure (non-zero exit code or exception), worktreeRegister is
+      NOT called and worktreeSetup is false. Registration failure is non-blocking
+      (returns null → logger.warn only, setup still succeeds).
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Tests: 'calls worktreeRegister after successful git worktree add',
+          'does NOT call worktreeRegister when git worktree add fails',
+          'is non-blocking when worktreeRegister returns null',
+          'is non-blocking when worktreeRegister throws'
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+      - type: command
+        description: All 22 unit tests pass
+        result: PASS
+
+  - id: AC-4
+    description: >
+      createWorktreeTeardownNode accepts optional { gitRunner, repoRoot } parameters.
+      When worktreeSetup is false or worktreePath is null, teardown returns immediately
+      with worktreeTornDown: true (no git or KB calls).
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Tests: 'skips git and KB when worktreeSetup is false',
+          'skips git and KB when worktreePath is null'. Both verify no gitRunner
+          or KB calls when no worktree was set up.
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+      - type: command
+        description: Unit tests pass
+        result: PASS
+
+  - id: AC-5
+    description: >
+      createWorktreeTeardownNode: (1) calls worktreeGetByStory to look up KB record,
+      (2) runs git worktree remove --force {worktreePath}, (3) calls worktreeMarkComplete
+      with { worktreeId, status: 'abandoned' }. All errors are warn-only — never
+      changes workflowSuccess. worktreeTornDown is always true.
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Tests: 'calls git worktree remove --force with correct path',
+          'calls worktreeGetByStory to look up KB record',
+          'calls worktreeMarkComplete with abandoned status',
+          'sets worktreeTornDown: true on success',
+          'sets worktreeTornDown: true even when git remove fails (warn-only)',
+          'sets worktreeTornDown: true even when git runner throws (warn-only)',
+          'does not call worktreeMarkComplete when KB lookup returns null',
+          'does not call worktreeMarkComplete when KB lookup throws (warn-only)',
+          'sets worktreeTornDown: true when worktreeMarkComplete throws (warn-only)',
+          'NEVER modifies workflowSuccess — teardown errors are warn-only (AC-3)'
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+      - type: test
+        description: >
+          Integration tests: 'removes the worktree from disk',
+          'sets worktreeTornDown: true even when worktree path does not exist on disk',
+          'calls worktreeMarkComplete with abandoned after teardown',
+          'full lifecycle: setup → teardown leaves no worktree on disk'
+        path: >
+          packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+      - type: command
+        description: All 9 integration tests and 22 unit tests pass
+        result: PASS
+
+  - id: AC-6
+    description: >
+      Existing elab-story.test.ts tests continue to pass after the implementation
+      change (no regressions). createElabStoryGraph compiles, runElabStory runs
+      end-to-end, teardown always executes (AC-3 invariant preserved).
+    verdict: PASS
+    evidence:
+      - type: test
+        description: >
+          Updated elab-story.test.ts with @repo/mcp-tools mock and injectable
+          gitRunner. All 22 existing tests continue to pass including graph
+          compilation, runElabStory end-to-end, AC-3 teardown invariant.
+        path: >
+          packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts
+      - type: command
+        description: '53 tests pass total: 22 unit (elab-story.test.ts) + 22 unit (elab-story-worktree.test.ts) + 9 integration'
+        result: PASS
+
+build_verification:
+  type_check:
+    verdict: PASS
+    details: >
+      tsc --noEmit reports no errors for elab-story.ts. Pre-existing errors
+      in other files (missing knowledge-base/db) are unrelated to this story.
+  unit_tests:
+    verdict: PASS
+    count: 44
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+  integration_tests:
+    verdict: PASS
+    count: 9
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+
+files_modified:
+  - path: packages/backend/orchestrator/src/graphs/elab-story.ts
+    change: >
+      Replaced stub createWorktreeSetupNode (lines 202-215) with real git worktree add
+      + KB registration. Replaced stub createWorktreeTeardownNode (lines 289-304) with
+      real git worktree remove + worktreeGetByStory lookup + worktreeMarkComplete.
+      Added GitRunner type, defaultGitRunner, imports for path/spawn/@repo/mcp-tools.
+  - path: packages/backend/orchestrator/src/graphs/__tests__/elab-story.test.ts
+    change: >
+      Added vi.mock('@repo/mcp-tools') to prevent DB connection errors. Updated
+      createWorktreeSetupNode and createWorktreeTeardownNode tests to use injectable
+      gitRunner. Exported GitRunner type from elab-story.ts for test use.
+  - path: packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+    change: New file — 22 unit tests for worktree setup/teardown node behavior
+  - path: packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+    change: New file — 9 integration tests with real git subprocess against isolated temp repos
+
+e2e_tests:
+  verdict: EXEMPT
+  reason: >
+    story_type is infra (orchestrator graph code). No browser-facing features.
+    E2E tests are not applicable for this change.
