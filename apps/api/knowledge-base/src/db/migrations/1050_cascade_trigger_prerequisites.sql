@@ -342,7 +342,46 @@ GRANT SELECT, INSERT, UPDATE ON workflow.story_blockers TO agent_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON workflow.story_blockers TO lambda_role;
 GRANT SELECT ON workflow.story_blockers TO reporting_role;
 
--- ── 7. Completion notice ────────────────────────────────────────────────────────
+-- ── 7. COMMENT ON POLICY entries ─────────────────────────────────────────────
+-- Following 1005 pattern: each policy gets a descriptive comment with migration prefix.
+
+-- story_assignments policies
+COMMENT ON POLICY agent_role_select_story_assignments ON workflow.story_assignments IS
+  '1050: agent_role SELECT on workflow.story_assignments — PERMISSIVE, USING (true).';
+COMMENT ON POLICY agent_role_insert_story_assignments ON workflow.story_assignments IS
+  '1050: agent_role INSERT on workflow.story_assignments — PERMISSIVE, WITH CHECK (true).';
+COMMENT ON POLICY agent_role_update_story_assignments ON workflow.story_assignments IS
+  '1050: agent_role UPDATE on workflow.story_assignments — PERMISSIVE, USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NULL). Prevents mutation of soft-deleted rows.';
+COMMENT ON POLICY lambda_role_select_story_assignments ON workflow.story_assignments IS
+  '1050: lambda_role SELECT on workflow.story_assignments — PERMISSIVE, USING (true).';
+COMMENT ON POLICY lambda_role_insert_story_assignments ON workflow.story_assignments IS
+  '1050: lambda_role INSERT on workflow.story_assignments — PERMISSIVE, WITH CHECK (true).';
+COMMENT ON POLICY lambda_role_update_story_assignments ON workflow.story_assignments IS
+  '1050: lambda_role UPDATE on workflow.story_assignments — PERMISSIVE.';
+COMMENT ON POLICY lambda_role_delete_story_assignments ON workflow.story_assignments IS
+  '1050: lambda_role DELETE on workflow.story_assignments — PERMISSIVE.';
+COMMENT ON POLICY reporting_role_select_story_assignments ON workflow.story_assignments IS
+  '1050: reporting_role SELECT on workflow.story_assignments — PERMISSIVE, read-only.';
+
+-- story_blockers policies
+COMMENT ON POLICY agent_role_select_story_blockers ON workflow.story_blockers IS
+  '1050: agent_role SELECT on workflow.story_blockers — PERMISSIVE, USING (true).';
+COMMENT ON POLICY agent_role_insert_story_blockers ON workflow.story_blockers IS
+  '1050: agent_role INSERT on workflow.story_blockers — PERMISSIVE, WITH CHECK (true).';
+COMMENT ON POLICY agent_role_update_story_blockers ON workflow.story_blockers IS
+  '1050: agent_role UPDATE on workflow.story_blockers — PERMISSIVE, USING (deleted_at IS NULL) WITH CHECK (deleted_at IS NULL). Prevents mutation of soft-deleted rows.';
+COMMENT ON POLICY lambda_role_select_story_blockers ON workflow.story_blockers IS
+  '1050: lambda_role SELECT on workflow.story_blockers — PERMISSIVE, USING (true).';
+COMMENT ON POLICY lambda_role_insert_story_blockers ON workflow.story_blockers IS
+  '1050: lambda_role INSERT on workflow.story_blockers — PERMISSIVE, WITH CHECK (true).';
+COMMENT ON POLICY lambda_role_update_story_blockers ON workflow.story_blockers IS
+  '1050: lambda_role UPDATE on workflow.story_blockers — PERMISSIVE.';
+COMMENT ON POLICY lambda_role_delete_story_blockers ON workflow.story_blockers IS
+  '1050: lambda_role DELETE on workflow.story_blockers — PERMISSIVE.';
+COMMENT ON POLICY reporting_role_select_story_blockers ON workflow.story_blockers IS
+  '1050: reporting_role SELECT on workflow.story_blockers — PERMISSIVE, read-only.';
+
+-- ── 8. Completion notice ────────────────────────────────────────────────────────
 
 DO $$
 DECLARE

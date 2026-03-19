@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(19);
+SELECT plan(20);
 
 -- ── 1. Table existence ──────────────────────────────────────────────────────────
 
@@ -116,6 +116,16 @@ SELECT ok(
       AND policyname LIKE 'reporting_role_%'
   ),
   'AC-10: RLS policy for reporting_role exists on story_assignments'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'workflow'
+      AND tablename = 'story_blockers'
+      AND policyname LIKE 'reporting_role_%'
+  ),
+  'AC-10: RLS policy for reporting_role exists on story_blockers'
 );
 
 SELECT * FROM finish();
