@@ -1,0 +1,181 @@
+schema: 1
+story_id: CDBE-1040
+phase: implementation
+iteration: 0
+timestamp: '2026-03-19T00:00:00Z'
+overall_verdict: PASS
+e2e_exempt: true
+e2e_exempt_reason: DB-only migration story — no API or frontend surfaces. pgtap tests are the verification gate.
+
+summary: >-
+  Migration 1040_audit_trigger.sql applied successfully to KB database (port 5435) and
+  pgtap test database (port 5434). All 27 pgtap tests pass. Migration is idempotent
+  (second run verified clean). Two files created: main migration and pgtap test file.
+
+files_created:
+  - path: apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    status: created
+    lines: ~320
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql
+    status: created
+    lines: ~280
+
+migration_run:
+  first_run:
+    exit_code: 0
+    objects_created:
+      - workflow.stories.blocked_reason (ADD COLUMN IF NOT EXISTS)
+      - workflow.stories.blocked_by_story (ADD COLUMN IF NOT EXISTS)
+      - workflow.stories.points (ADD COLUMN IF NOT EXISTS)
+      - workflow.stories.epic (ADD COLUMN IF NOT EXISTS)
+      - workflow.story_mutation_audit_log (CREATE TABLE IF NOT EXISTS)
+      - workflow.redact_sensitive_value() (CREATE OR REPLACE FUNCTION)
+      - workflow.audit_story_mutations() (CREATE OR REPLACE FUNCTION)
+      - workflow.audit_story_mutations trigger on workflow.stories (DROP IF EXISTS + CREATE)
+      - workflow.audit_plan_mutations() (CREATE OR REPLACE FUNCTION)
+      - workflow.audit_plan_mutations trigger on workflow.plans (DROP IF EXISTS + CREATE)
+      - GRANTs to agent_role and lambda_role
+    completion_notice: >-
+      1040: Migration 1040 complete. story_mutation_audit_log table: t,
+      redact_sensitive_value function: t, audit_story_mutations function: t,
+      audit_plan_mutations function: t, audit_story_mutations trigger: t,
+      audit_plan_mutations trigger: t, stories.points column: t, stories.epic column: t.
+  second_run_idempotency:
+    exit_code: 0
+    result: Clean — all IF NOT EXISTS guards fired, no errors
+
+pgtap_results:
+  test_count: 27
+  pass_count: 27
+  fail_count: 0
+  finish_output: '(0 rows) — no failures'
+  database: pgtap_test (port 5434)
+
+ac_evidence:
+  - ac_id: AC-1
+    verdict: PASS
+    evidence: >-
+      workflow.redact_sensitive_value(p_column_name text, p_value text) RETURNS text
+      created in 1040_audit_trigger.sql. pgtap T-7 confirms [REDACTED] returned for
+      'api_key'. pgtap T-8 confirms original value returned for 'title'.
+    evidence_type: file+test
+
+  - ac_id: AC-2
+    verdict: PASS
+    evidence: >-
+      Hardcoded constant array v_sensitive_patterns := ARRAY['api_key', 'token', 'secret',
+      'credential', 'password'] within redact_sensitive_value function body.
+      COMMENT ON FUNCTION documents the architectural decision (ARCH-001).
+    evidence_type: file
+
+  - ac_id: AC-3
+    verdict: PASS
+    evidence: >-
+      workflow.audit_story_mutations() RETURNS TRIGGER function created in
+      1040_audit_trigger.sql with AFTER UPDATE FOR EACH ROW on workflow.stories.
+      pgtap T-3 verifies UPDATE produces audit row with correct new_value.
+    evidence_type: file+test
+
+  - ac_id: AC-4
+    verdict: PASS
+    evidence: >-
+      workflow.audit_plan_mutations() RETURNS TRIGGER function created in
+      1040_audit_trigger.sql with AFTER UPDATE FOR EACH ROW on workflow.plans.
+      pgtap T-4 verifies UPDATE produces audit row with correct new_value.
+    evidence_type: file+test
+
+  - ac_id: AC-5
+    verdict: PASS
+    evidence: >-
+      DROP TRIGGER IF EXISTS audit_story_mutations ON workflow.stories +
+      CREATE TRIGGER audit_story_mutations AFTER UPDATE ON workflow.stories in
+      1040_audit_trigger.sql. pgtap T-1 has_trigger confirms trigger exists.
+    evidence_type: file+test
+
+  - ac_id: AC-6
+    verdict: PASS
+    evidence: >-
+      DROP TRIGGER IF EXISTS audit_plan_mutations ON workflow.plans +
+      CREATE TRIGGER audit_plan_mutations AFTER UPDATE ON workflow.plans in
+      1040_audit_trigger.sql. pgtap T-2 has_trigger confirms trigger exists.
+    evidence_type: file+test
+
+  - ac_id: AC-7
+    verdict: PASS
+    evidence: >-
+      IS DISTINCT FROM guard per column in both trigger function bodies.
+      pgtap T-5a confirms only 1 audit row produced for 2 UPDATEs to same value.
+      pgtap T-5b confirms no audit row where old_value = new_value = 'sentinel'.
+    evidence_type: test
+
+  - ac_id: AC-8
+    verdict: PASS
+    evidence: >-
+      workflow.redact_sensitive_value() called on both OLD and NEW values in every
+      INSERT statement in both trigger bodies. pgtap T-6 confirms [REDACTED] returned
+      for column name containing 'token'.
+    evidence_type: file+test
+
+  - ac_id: AC-9
+    verdict: PASS
+    evidence: >-
+      COMMENT ON FUNCTION for redact_sensitive_value, audit_story_mutations,
+      audit_plan_mutations; COMMENT ON TRIGGER for both triggers; COMMENT ON TABLE
+      for workflow.story_mutation_audit_log; COMMENT ON COLUMN for all 7 table columns
+      — all present in 1040_audit_trigger.sql.
+    evidence_type: file
+
+  - ac_id: AC-10
+    verdict: PASS
+    evidence: >-
+      CREATE OR REPLACE FUNCTION (3 functions), DROP TRIGGER IF EXISTS (2 triggers),
+      CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS (4 columns), DO $$ guard
+      for GRANT statements. Second migration run exits 0 with all IF NOT EXISTS
+      guards firing cleanly.
+    evidence_type: command
+
+  - ac_id: AC-11
+    verdict: PASS
+    evidence: >-
+      All 27 pgtap tests pass: trigger existence (T-1, T-2), schema structure (T-13
+      through T-18), column existence (T-25, T-26), SECURITY INVOKER (T-10 through T-12),
+      function unit tests (T-7, T-8), behavioral (T-3, T-4, T-5a, T-5b, T-6, T-24),
+      INSERT no-op (T-9), idempotency (T-19 through T-23).
+    evidence_type: test
+
+  - ac_id: AC-12
+    verdict: PASS
+    evidence: >-
+      Both triggers declared AFTER UPDATE FOR EACH ROW (no INSERT or DELETE clause).
+      pgtap T-9 confirms INSERT to workflow.stories produces 0 audit rows.
+    evidence_type: file+test
+
+  - ac_id: AC-13
+    verdict: PASS
+    evidence: >-
+      No 1040_*.sql file existed prior to this migration (verified at plan time and
+      confirmed by migration applying successfully as a new file).
+    evidence_type: manual
+
+  - ac_id: AC-14
+    verdict: PASS
+    evidence: >-
+      Explicit comment block at top of audit_story_mutations() enumerating auditable
+      columns: state, priority, title, description, blocked_reason, blocked_by_story,
+      points, feature, epic. Plans function enumerates: status, title, summary, priority.
+      ADD COLUMN IF NOT EXISTS adds points, epic (and blocked_reason, blocked_by_story
+      for cross-environment compatibility).
+    evidence_type: file
+
+notes:
+  - >-
+    workflow.plans schema has 'summary' not 'description' (AC-14 listed 'description').
+    Migration audits 'summary' column — this is documented in COMMENT ON FUNCTION for
+    audit_plan_mutations(). The AC-14 discrepancy is noted but does not affect functionality.
+  - >-
+    GRANT statements wrapped in DO $$ IF EXISTS guard for cross-environment compatibility
+    (pgtap DB lacks lambda_role). Both roles granted on KB DB.
+  - >-
+    pgtap test plan is 27 (T-5 expanded to T-5a/T-5b to test IS DISTINCT FROM guard
+    from two angles; PostgreSQL DML-in-CTE limitation required restructuring from
+    original plan).
