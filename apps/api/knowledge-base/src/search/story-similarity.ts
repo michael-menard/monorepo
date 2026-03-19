@@ -2,26 +2,27 @@
  * Story Similarity Search using pgvector
  *
  * Finds stories similar to a given query using embedding cosine similarity.
- * Uses the same text-embedding-3-small model as knowledge_entries.
+ * Queries workflow.story_embeddings JOIN workflow.stories for correct schema.
  *
  * @see CDTS-2010 for implementation requirements
+ * @see CDBE-4010 for embedding table foundation
  */
 
 import { logger } from '@repo/logger'
 import { sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { z } from 'zod'
 import type * as schema from '../db/schema.js'
 
-/**
- * Result shape for similar story queries.
- */
-export interface SimilarStoryResult {
-  story_id: string
-  title: string
-  feature: string | null
-  state: string | null
-  similarity_score: number
-}
+export const SimilarStoryResultSchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  feature: z.string().nullable(),
+  state: z.string().nullable(),
+  similarity_score: z.number(),
+})
+
+export type SimilarStoryResult = z.infer<typeof SimilarStoryResultSchema>
 
 /**
  * Find stories similar to a query string using embedding cosine similarity.
@@ -43,16 +44,16 @@ export async function findSimilarStories(
 
   const result = await db.execute(sql`
     SELECT
-      story_id,
-      title,
-      feature,
-      state,
-      1 - (embedding <=> ${embeddingStr}::vector) as similarity_score
-    FROM public.stories
-    WHERE deleted_at IS NULL
-      AND embedding IS NOT NULL
-      ${featureFilter ? sql`AND feature = ${featureFilter}` : sql``}
-    ORDER BY embedding <=> ${embeddingStr}::vector ASC
+      s.story_id,
+      s.title,
+      s.feature,
+      s.state,
+      1 - (se.embedding <=> ${embeddingStr}::vector) as similarity_score
+    FROM workflow.story_embeddings se
+    JOIN workflow.stories s ON s.story_id = se.story_id
+    WHERE se.embedding IS NOT NULL
+      ${featureFilter ? sql`AND s.feature = ${featureFilter}` : sql``}
+    ORDER BY se.embedding <=> ${embeddingStr}::vector ASC
     LIMIT ${limit}
   `)
 

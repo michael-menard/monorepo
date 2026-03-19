@@ -496,6 +496,34 @@ export const trainingData = workflow.table('training_data', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const storyEmbeddings = workflow.table('story_embeddings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: text('story_id')
+    .notNull()
+    .references(() => stories.storyId, { onDelete: 'cascade' }),
+  embedding: vector('embedding', { dimensions: 1536 }),
+  model: text('model').notNull().default('text-embedding-3-small'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const planEmbeddings = workflow.table('plan_embeddings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planId: uuid('plan_id')
+    .notNull()
+    .references(() => plans.id, { onDelete: 'cascade' }),
+  embedding: vector('embedding', { dimensions: 1536 }),
+  model: text('model').notNull().default('text-embedding-3-small'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const embeddingSectionLookup = workflow.table('embedding_section_lookup', {
+  id: serial('id').primaryKey(),
+  sectionName: text('section_name').notNull().unique(),
+  displayOrder: integer('display_order').notNull().default(0),
+})
+
 export const validTransitions = workflow.table(
   'valid_transitions',
   {
@@ -529,3 +557,9 @@ export type SelectContextPack = typeof contextPacks.$inferSelect
 export type InsertContextPack = typeof contextPacks.$inferInsert
 export type ValidTransition = typeof validTransitions.$inferSelect
 export type NewValidTransition = typeof validTransitions.$inferInsert
+export type StoryEmbedding = typeof storyEmbeddings.$inferSelect
+export type NewStoryEmbedding = typeof storyEmbeddings.$inferInsert
+export type PlanEmbedding = typeof planEmbeddings.$inferSelect
+export type NewPlanEmbedding = typeof planEmbeddings.$inferInsert
+export type EmbeddingSectionLookup = typeof embeddingSectionLookup.$inferSelect
+export type NewEmbeddingSectionLookup = typeof embeddingSectionLookup.$inferInsert
