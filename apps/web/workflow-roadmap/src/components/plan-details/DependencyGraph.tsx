@@ -1,8 +1,19 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { Copy, CheckCheck } from 'lucide-react'
 import { getStoryStateColor, getPriorityColor } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
 
 export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyStoryId = (e: React.MouseEvent, storyId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigator.clipboard.writeText(storyId)
+    setCopiedId(storyId)
+    setTimeout(() => setCopiedId(prev => (prev === storyId ? null : prev)), 1500)
+  }
   const storyMap = new Map(stories.map(s => [s.storyId, s]))
   // Stories that belong to this plan (not external) — used to detect cross-plan blockers
   const planStoryIds = new Set(stories.filter(s => !s.isExternal).map(s => s.storyId))
@@ -161,8 +172,22 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                     {/* Header: ID + Priority + EXT/CROSS-PLAN badges */}
                     <div className="flex items-center justify-between pl-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-medium text-cyan-400">
-                          {story.storyId}
+                        <span className="group/sid flex items-center gap-1">
+                          <span className="font-mono text-sm font-semibold text-cyan-400">
+                            {story.storyId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={e => copyStoryId(e, story.storyId)}
+                            className="opacity-0 group-hover/sid:opacity-100 transition-opacity text-cyan-500/50 hover:text-cyan-400 cursor-pointer"
+                            aria-label={`Copy ${story.storyId} to clipboard`}
+                          >
+                            {copiedId === story.storyId ? (
+                              <CheckCheck className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                         </span>
                       </div>
                       {story.priority && (
