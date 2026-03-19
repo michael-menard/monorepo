@@ -209,7 +209,7 @@ SELECT throws_ok(
 ROLLBACK TO SAVEPOINT before_agent_update_wal_test;
 RESET ROLE;
 
--- ── 11. Specific named policies exist (idempotency verification) ──────────────
+-- ── 12. Specific named policies exist (idempotency verification) ──────────────
 
 SELECT ok(
   EXISTS (
