@@ -1,0 +1,2 @@
+skipped: true
+reason: 'Pure SQL database migration story. No user interface surfaces are touched. No React components, no pages, no forms, no visual design decisions required.'

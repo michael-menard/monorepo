@@ -1,0 +1,153 @@
+schema: 1
+story_id: PIPE-0020
+timestamp: '2026-03-19T02:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    note: EXEMPT — DB-only migration, no endpoints or UI
+  pgtap:
+    pass: 7
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+    note: No HTTP endpoints — not applicable
+coverage: null
+coverage_meets_threshold: true
+coverage_note: DB-only SQL migration — no TypeScript coverage metric applicable. pgtap 7/7 covers all AC test assertions.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    pgtap test file uses correct plan(7), ROLLBACK at end, temp table for idempotency check (not SAVEPOINT — both valid
+    per pgtap lesson from CDBE-2005), throws_ok for constraint violation check. No anti-patterns detected.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE:ac_coverage.AC-1 + migration lines 96-118 + pgtap test 1 (line 26)
+    notes: >-
+      All 8 ghost-state UPDATE statements verified in migration. pgtap test 1 asserts COUNT(*)=0 for all 8 ghost states.
+      Evidence: ghost_rows_found=70, rows_updated=70, ghost_rows_remaining=0 after run.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE:ac_coverage.AC-2 + migration lines 139-361 + pgtap tests 3-4
+    notes: >-
+      All 8 history backfill INSERT blocks verified in migration. Each uses event_type='state_change' (no trailing d),
+      correct from_state/to_state pairs matching ghost-state mapping table, and metadata JSONB with
+      migrated_by='PIPE-0020', migration_date, original_state. pgtap test 3 confirms all PIPE-0020 rows use correct
+      event_type. pgtap test 4 confirms all rows have required metadata fields. Evidence: 70 history rows inserted.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE:ac_coverage.AC-3 + migration lines 153-165 (representative NOT EXISTS block) + pgtap tests 6-7
+    notes: >-
+      Every INSERT block uses NOT EXISTS guard scoped to (h.metadata->>'migrated_by')='PIPE-0020' for the given story —
+      not ON CONFLICT DO NOTHING (correct per elaboration gap-1 resolution). Idempotency run: ghost_rows_found=0,
+      rows_updated=0, history_rows_inserted=0. pgtap tests 6-7 confirm re-run inserts 0 new rows and total count
+      unchanged.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE:ac_coverage.AC-4 + migration lines 28-35
+    notes: >-
+      Safety preamble verified: DO $$ block checks current_database() <> 'knowledgebase' and raises EXCEPTION with
+      current_database() value if not matching. RAISE NOTICE on success. Follows established KB migration convention.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: >-
+      EVIDENCE:ac_coverage.AC-5 + PROOF:pgtap_passed=7/7 + file at
+      apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
+    notes: >-
+      pgtap test file exists and contains SELECT plan(7), 7 test assertions, SELECT * FROM finish(), ROLLBACK. Proof
+      confirms 7/7 pass against KB database.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE:pgtap_results.tests[0] + pgtap test file lines 26-37
+    notes: >-
+      pgtap test 1 uses canonical exclusion query: COUNT(*) FROM workflow.stories WHERE state::text IN
+      ('uat','done','in_review','ready_for_review','deferred','ready_to_work','elaboration','draft') = 0. Test 2
+      specifically asserts uat and done individually. Both pass.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE:pgtap_results.tests[2] + pgtap test file lines 53-63
+    notes: >-
+      pgtap test 3 asserts COUNT(*)=0 WHERE migrated_by='PIPE-0020' AND event_type <> 'state_change'. This is a negative
+      assertion: zero rows violate the event_type requirement. Correct approach — no PIPE-0020 rows use wrong
+      event_type.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE:migration_results + migration line 368
+    notes: >-
+      RAISE NOTICE '1007: ghost_rows_found=%, rows_updated=%, history_rows_inserted=%' with exact integer counts
+      (captured via GET DIAGNOSTICS for rows_updated, COUNT(*) for others). Review fix confirmed rows_updated uses GET
+      DIAGNOSTICS (not hardcoded 0 — was fixed in iteration 1). Evidence confirms first run: ghost_rows_found=70,
+      rows_updated=70, history_rows_inserted=70.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE:files_modified=[] + EVIDENCE:files_created (2 .sql files only)
+    notes: >-
+      files_modified is empty array. files_created contains only two .sql files. No TypeScript, no Drizzle schema, no
+      frontend files. Confirmed by review workers_skipped: lint, style, typecheck, build, react, typescript,
+      accessibility — all skipped as not applicable.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: ELABORATION:named_findings[0] + story file 'Findings to Document' section
+    notes: >-
+      Elaboration artifact named_findings[0] documents both migration 1001 (record_state_transition function) AND
+      migration 1003 (story_notify function, line 13) as having event_type='state_changed' defect. Story file 'Findings
+      to Document' section explicitly names both. Follow-on recommendation covers fixing both trigger functions. AC-10
+      expanded in elaboration gap-2 resolution.
+architecture_compliant: true
+architecture_notes:
+  - DB-only SQL migration — TypeScript architecture rules not applicable
+  - Safety preamble follows established KB migration convention
+  - Trigger disable/enable properly bounded within DO $$ block
+  - event_type='state_change' matches story_state_history CHECK constraint
+  - NOT EXISTS guard correct for table lacking unique constraint beyond PK
+  - Migration slot 1007 confirmed as next available at implementation time
+  - pgtap test follows SELECT plan(N) / ROLLBACK convention per 1004_valid_transitions_test.sql pattern
+e2e_gate: EXEMPT
+e2e_gate_reason: DB-only migration story — no endpoints, no UI, no HTTP adapters
+issues: []
+lessons_to_record:
+  - lesson: >-
+      When a story's AC references ON CONFLICT DO NOTHING for idempotency, always verify a unique constraint actually
+      exists on the target table before implementation. story_state_history has only a PK on id — no unique constraint
+      on (story_id, event_type, from_state, to_state) — making ON CONFLICT unavailable. NOT EXISTS guard is the correct
+      alternative.
+    category: blocker
+    tags:
+      - postgresql
+      - idempotency
+      - migration
+      - story_state_history
+  - lesson: >-
+      When documenting event_type constraint mismatches in trigger functions, scan ALL migration files that insert into
+      the affected table — not just the first-found migration. Migration 1001 and migration 1003 both had the same
+      'state_changed' defect.
+    category: pattern
+    tags:
+      - postgresql
+      - migrations
+      - audit-trail
+      - event_type
+  - lesson: >-
+      For pgtap idempotency tests, a temp table with before/after count columns is a valid alternative to SAVEPOINT when
+      testing cross-INSERT idempotency. The before/after count pattern avoids SAVEPOINT complexity while still asserting
+      row delta = 0.
+    category: pattern
+    tags:
+      - pgtap
+      - idempotency
+      - testing
+      - migrations
+tokens:
+  in: 18000
+  out: 3500

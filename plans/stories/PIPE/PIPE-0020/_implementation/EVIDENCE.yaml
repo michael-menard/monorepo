@@ -1,0 +1,89 @@
+story_id: PIPE-0020
+phase: implementation
+iteration: 1
+generated_at: '2026-03-18T00:00:00Z'
+agent: dev-execute-leader
+
+summary: |
+  DB-only migration story. Two SQL files created:
+  1. Migration 1007_pipe_0020_ghost_state_audit.sql — migrates 70 ghost-state rows to
+     canonical states and backfills story_state_history audit trail.
+  2. pgtap test 1007_pipe_0020_ghost_state_audit_test.sql — 7 tests, all passing.
+  Migration applied live against knowledgebase DB. All ghost states cleared.
+
+files_created:
+  - apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql
+  - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
+
+migration_results:
+  pre_flight_ghost_rows: 70
+  ghost_rows_breakdown:
+    uat: 51
+    ready_for_review: 3
+    ready_to_work: 15
+    elaboration: 1
+    done: 0
+    in_review: 0
+    deferred: 0
+    draft: 0
+  rows_updated: 70
+  post_migration_ghost_rows: 0
+  idempotency_verified: true
+
+pgtap_results:
+  total_tests: 7
+  passed: 7
+  failed: 0
+  tests:
+    - id: 1
+      description: 'zero ghost-state rows remain in workflow.stories after migration 1007'
+      result: ok
+    - id: 2
+      description: 'uat and done ghost states have 0 rows (migrated to completed)'
+      result: ok
+    - id: 3
+      description: "all PIPE-0020 history rows use event_type='state_change' (not state_changed)"
+      result: ok
+    - id: 4
+      description: 'all PIPE-0020 history rows have migration_date and original_state metadata fields'
+      result: ok
+    - id: 5
+      description: "inserting event_type='state_changed' raises check_violation (23514)"
+      result: ok
+    - id: 6
+      description: 'idempotency: re-running uat→completed INSERT inserts 0 new PIPE-0020 rows'
+      result: ok
+    - id: 7
+      description: 'idempotency: total PIPE-0020 history row count is unchanged after re-run'
+      result: ok
+
+e2e_gate: EXEMPT
+e2e_exempt_reason: 'DB-only migration story (story_type: infra). pgtap is the verification mechanism.'
+
+acceptance_criteria:
+  - ac: 'Ghost state rows migrated to canonical states'
+    evidence: '70 rows migrated: 51 uat→completed, 3 ready_for_review→needs_code_review, 15 ready_to_work→ready, 1 elaboration→elab'
+    status: PASS
+  - ac: 'DISABLE/ENABLE TRIGGER wraps ghost-state UPDATEs'
+    evidence: 'Migration guards trigger disable/enable via pg_trigger existence check. Safely handles pre-1001 environments.'
+    status: PASS
+  - ac: "History backfill uses event_type='state_change' (not 'state_changed')"
+    evidence: "pgtap test 3 verifies all PIPE-0020 rows use correct event_type. Test 5 verifies CHECK constraint blocks 'state_changed'."
+    status: PASS
+  - ac: 'NOT EXISTS guard prevents duplicate history rows'
+    evidence: 'pgtap tests 6-7 confirm idempotency: re-running INSERT logic inserts 0 new rows.'
+    status: PASS
+  - ac: 'RAISE NOTICE reports ghost_rows_found, rows_updated, history_rows_inserted'
+    evidence: 'Migration emits NOTICE at pre-flight and final summary. Live run output: ghost_rows_found=0, rows_updated=0, history_rows_inserted=0 (on second idempotent run).'
+    status: PASS
+  - ac: 'Zero ghost-state rows remain after migration'
+    evidence: 'pgtap test 1 asserts COUNT=0 across all 8 ghost states. Post-migration DB query confirmed 0 ghost rows.'
+    status: PASS
+  - ac: 'Migration is idempotent (safe to re-run)'
+    evidence: 'Second run of migration: ghost_rows_found=0, all UPDATEs 0 rows, history_rows_inserted=0.'
+    status: PASS
+  - ac: 'Safety preamble blocks non-knowledgebase databases'
+    evidence: "current_database() check raises EXCEPTION if not 'knowledgebase'. Migration ran on correct DB."
+    status: PASS
+
+overall_result: PASS
