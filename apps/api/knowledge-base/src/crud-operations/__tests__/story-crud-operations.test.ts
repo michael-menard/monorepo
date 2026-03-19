@@ -1,5 +1,6 @@
 /**
- * Tests for story CRUD operations: kb_create_story, kb_update_story, kb_get_story.
+ * Tests for story CRUD operations: kb_create_story, kb_update_story, kb_get_story,
+ * and kb_update_story_status (including artifact gate enforcement).
  *
  * These are integration tests that run against a real PostgreSQL database
  * (ADR-005). The tests require the content columns added by KFMB-1020 to
@@ -9,22 +10,37 @@
  * Database: postgres://localhost:5433 (configurable via DB_URL env var)
  *
  * @see KFMB-1020 for story and acceptance criteria
+ * @see PIPE-0030 for artifact gate enforcement tests
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
 import { eq, and } from 'drizzle-orm'
 import { ZodError } from 'zod'
 import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
-import { stories, planStoryLinks } from '../../db/schema.js'
+import { stories, planStoryLinks, storyArtifacts } from '../../db/schema.js'
 import {
   kb_create_story,
   kb_get_story,
   kb_list_stories,
   kb_update_story,
+  kb_update_story_status,
   KbCreateStoryInputSchema,
   KbUpdateStoryInputSchema,
 } from '../story-crud-operations.js'
+import { artifact_write } from '../artifact-operations.js'
+
+// Mock filesystem operations so artifact_write does not write real files
+vi.mock('fs/promises', () => ({
+  mkdir: vi.fn().mockResolvedValue(undefined),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('js-yaml', () => ({
+  dump: (obj: unknown) => `# yaml
+${JSON.stringify(obj, null, 2)}
+`,
+}))
 
 // ============================================================================
 // Test Setup
@@ -556,5 +572,291 @@ describe('kb_list_stories — plan_slug filter', () => {
     const returnedIds = result.stories.map(s => s.storyId)
     expect(returnedIds).toContain(linkedId)
     expect(returnedIds).not.toContain(unlinkedId)
+  })
+})
+
+// ============================================================================
+// kb_update_story_status — Artifact Gate Enforcement (PIPE-0030)
+//
+// These tests verify that the ARTIFACT_GATES map in kb_update_story_status
+// correctly blocks or allows state transitions based on whether the required
+// artifact exists in story_artifacts.
+//
+// Gate map under test:
+//   elab → ready              requires: elaboration
+//   in_progress → needs_code_review  requires: proof
+//   needs_code_review → ready_for_qa requires: review
+//   in_qa → completed         requires: qa_gate
+//
+// Non-gated transitions (e.g., backlog → created, ready → in_progress,
+// created → elab, needs_code_review → failed_code_review) always succeed.
+// ============================================================================
+
+describe('kb_update_story_status — artifact gate enforcement', () => {
+  const gateTestStoryIds: string[] = []
+
+  afterEach(async () => {
+    // Delete storyArtifacts BEFORE stories (no FK cascade on story_id)
+    for (const id of gateTestStoryIds) {
+      await db.delete(storyArtifacts).where(eq(storyArtifacts.storyId, id))
+      await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
+      await db.delete(stories).where(eq(stories.storyId, id))
+    }
+    gateTestStoryIds.length = 0
+  })
+
+  /**
+   * Helper: create a story and immediately advance it to the target state
+   * through ungated transitions using direct DB updates (avoids artifact
+   * requirements for intermediate states).
+   */
+  async function bootstrapStoryAtState(suffix: string, targetState: string): Promise<string> {
+    const storyId = `${TEST_PREFIX}-GATE-${suffix}`
+    gateTestStoryIds.push(storyId)
+
+    await kb_create_story(deps, {
+      story_id: storyId,
+      title: `Gate test story (${suffix})`,
+      state: targetState as any,
+    })
+
+    return storyId
+  }
+
+  /**
+   * Helper: write an artifact to story_artifacts so a gate check passes.
+   * Uses kb_write_artifact with write_to_kb: true and a temp story_dir.
+   */
+  async function writeArtifact(storyId: string, artifactType: string): Promise<string> {
+    const result = await artifact_write(
+      {
+        story_id: storyId,
+        artifact_type: artifactType as any,
+        content: { note: `gate test artifact for ${artifactType}` },
+        phase: 'implementation',
+        iteration: 0,
+        // story_dir is required by artifact_write but fs/promises is mocked at the top of this file
+        story_dir: `/tmp/gate-tests/${storyId}`,
+        write_to_kb: true,
+      },
+      deps,
+    )
+    return result.kb_artifact_id!
+  }
+
+  // --------------------------------------------------------------------------
+  // AC-1, AC-9, AC-10 — in_progress → needs_code_review REJECTED (no proof)
+  // --------------------------------------------------------------------------
+  it('EC-1: in_progress → needs_code_review rejected when no proof artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('EC1', 'in_progress')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'needs_code_review',
+    })
+
+    // AC-10: updated must be false
+    expect(result.updated).toBe(false)
+    // AC-9: message must name the missing artifact type
+    expect(result.message).toContain('proof')
+    expect(result.message).toContain('not found in KB')
+    // State must be unchanged
+    expect(result.story?.state).toBe('in_progress')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-3 — needs_code_review → ready_for_qa REJECTED (no review)
+  // --------------------------------------------------------------------------
+  it('EC-2: needs_code_review → ready_for_qa rejected when no review artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('EC2', 'needs_code_review')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'ready_for_qa',
+    })
+
+    expect(result.updated).toBe(false)
+    expect(result.message).toContain('review')
+    expect(result.message).toContain('not found in KB')
+    expect(result.story?.state).toBe('needs_code_review')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-5 — in_qa → completed REJECTED (no qa_gate)
+  // --------------------------------------------------------------------------
+  it('EC-3: in_qa → completed rejected when no qa_gate artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('EC3', 'in_qa')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'completed',
+    })
+
+    expect(result.updated).toBe(false)
+    expect(result.message).toContain('qa_gate')
+    expect(result.message).toContain('not found in KB')
+    expect(result.story?.state).toBe('in_qa')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-7 — elab → ready REJECTED (no elaboration)
+  // --------------------------------------------------------------------------
+  it('EC-4: elab → ready rejected when no elaboration artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('EC4', 'elab')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'ready',
+    })
+
+    expect(result.updated).toBe(false)
+    expect(result.message).toContain('elaboration')
+    expect(result.message).toContain('not found in KB')
+    expect(result.story?.state).toBe('elab')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-2 — in_progress → needs_code_review SUCCEEDS with proof artifact
+  // --------------------------------------------------------------------------
+  it('HP-1: in_progress → needs_code_review succeeds when proof artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('HP1', 'in_progress')
+    await writeArtifact(storyId, 'proof')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'needs_code_review',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('needs_code_review')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-4 — needs_code_review → ready_for_qa SUCCEEDS with review artifact
+  // --------------------------------------------------------------------------
+  it('HP-2: needs_code_review → ready_for_qa succeeds when review artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('HP2', 'needs_code_review')
+    await writeArtifact(storyId, 'review')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'ready_for_qa',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('ready_for_qa')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-6 — in_qa → completed SUCCEEDS with qa_gate artifact
+  // --------------------------------------------------------------------------
+  it('HP-3: in_qa → completed succeeds when qa_gate artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('HP3', 'in_qa')
+    await writeArtifact(storyId, 'qa_gate')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'completed',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('completed')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-8 — elab → ready SUCCEEDS with elaboration artifact
+  // --------------------------------------------------------------------------
+  it('HP-4: elab → ready succeeds when elaboration artifact exists', async () => {
+    const storyId = await bootstrapStoryAtState('HP4', 'elab')
+    await writeArtifact(storyId, 'elaboration')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'ready',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('ready')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-11 — Ungated transitions proceed without artifact checks (ED-3, HP-5, HP-6, ED-4)
+  // --------------------------------------------------------------------------
+  it('HP-5: backlog → created (ungated) succeeds without any artifact', async () => {
+    const storyId = await bootstrapStoryAtState('HP5', 'backlog')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'created',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('created')
+  })
+
+  it('HP-6: ready → in_progress (ungated) succeeds without any artifact', async () => {
+    const storyId = await bootstrapStoryAtState('HP6', 'ready')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'in_progress',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('in_progress')
+  })
+
+  it('ED-3: created → elab (ungated) succeeds without any artifact', async () => {
+    const storyId = await bootstrapStoryAtState('ED3', 'created')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'elab',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('elab')
+  })
+
+  it('ED-4: needs_code_review → failed_code_review (ungated) succeeds without any artifact', async () => {
+    const storyId = await bootstrapStoryAtState('ED4', 'needs_code_review')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'failed_code_review',
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.story?.state).toBe('failed_code_review')
+  })
+
+  // --------------------------------------------------------------------------
+  // AC-9, AC-10 — Gate rejection: state unchanged, verified via kb_get_story (ED-1, ED-2)
+  // --------------------------------------------------------------------------
+  it('ED-1: gate rejection leaves story state unchanged (verified via kb_get_story)', async () => {
+    const storyId = await bootstrapStoryAtState('ED1', 'in_progress')
+
+    // Attempt gated transition with no proof artifact
+    await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'needs_code_review',
+    })
+
+    // Confirm state is unchanged
+    const getResult = await kb_get_story(deps, { story_id: storyId })
+    expect(getResult.story?.state).toBe('in_progress')
+  })
+
+  it('ED-2: rejection message includes artifact type and "not found in KB"', async () => {
+    const storyId = await bootstrapStoryAtState('ED2', 'elab')
+
+    const result = await kb_update_story_status(deps, {
+      story_id: storyId,
+      state: 'ready',
+    })
+
+    expect(result.updated).toBe(false)
+    expect(result.message).toMatch(/elaboration/)
+    expect(result.message).toMatch(/not found in KB/)
   })
 })

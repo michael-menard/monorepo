@@ -1,0 +1,2 @@
+skipped: true
+reason: 'PIPE-0030 is a pure backend story — no UI components, no HTTP endpoints, no browser surface. The MCP tool kb_update_story_status returns structured JSON to machine callers only.'

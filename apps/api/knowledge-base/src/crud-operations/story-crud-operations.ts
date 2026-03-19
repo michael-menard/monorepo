@@ -592,6 +592,8 @@ export async function kb_update_story_status(
     'elab→ready': 'elaboration',
     'in_progress→needs_code_review': 'proof',
     'needs_code_review→ready_for_qa': 'review',
+    // Note: The artifact type here is 'qa_gate' (not 'qa_verify'). Historical story descriptions
+    // used the name 'qa_verify', but the canonical artifact type in story_artifacts is 'qa_gate'.
     'in_qa→completed': 'qa_gate',
   }
 
