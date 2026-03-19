@@ -35,12 +35,16 @@ The production application database. Contains user-facing data.
 
 The agent infrastructure database. Stores workflow state, semantic embeddings, and all pipeline artifacts.
 
-| pg schema   | File                  | Purpose                                                                              |
-| ----------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `public`    | `schema/kb.ts`        | Knowledge entries, embeddings, ADRs, code standards, cohesion rules, lessons learned |
-| `workflow`  | `schema/workflow.ts`  | Stories, plans, agents, invocations, sessions, context packs, ML model registry      |
-| `artifacts` | `schema/artifacts.ts` | Per-story pipeline artifacts (reviews, evidence, QA gates, checkpoints, etc.)        |
-| `analytics` | `schema/analytics.ts` | Token usage, A/B model experiments, model assignments                                |
+| pg schema   | File                  | Purpose                                                                                                     |
+| ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `public`    | `schema/kb.ts`        | Knowledge entries, embeddings, ADRs, code standards, cohesion rules, lessons learned                        |
+| `workflow`  | `schema/workflow.ts`  | Stories (canonical, with embedding), plans, agents, invocations, sessions, context packs, ML model registry |
+| `artifacts` | `schema/artifacts.ts` | Per-story pipeline artifacts (reviews, evidence, QA gates, checkpoints, etc.)                               |
+| `analytics` | `schema/analytics.ts` | Token usage, A/B model experiments, model assignments                                                       |
+
+> **Note (CDBN-2024):** `public.stories` was the legacy stories table. It has been dropped by migration
+> `1011_cdbn2024_cleanup_public_stories.sql`. `workflow.stories` is now the sole canonical stories table
+> and includes the `embedding vector(1536)` column for semantic similarity search.
 
 Import tables from `@repo/knowledge-base/db`:
 
