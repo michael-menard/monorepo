@@ -71,6 +71,85 @@ describe('PipelineJobDataSchema', () => {
       expect(result.touchedPathPrefixes).toEqual(['packages/backend', 'apps/api'])
     })
 
+    // PIPE-2010: HP-1 — review payload with worktree context
+    it('accepts review payload with worktreePath and featureDir', () => {
+      const result = PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2020',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2020',
+          title: 'Dispatch Router Review Branch',
+          worktreePath: '/tmp/worktrees/PIPE-2020',
+          featureDir: 'plans/future/platform/pipeline-orchestrator-activation',
+        },
+      })
+      expect(result.stage).toBe('review')
+      if (result.stage === 'review') {
+        expect(result.payload.worktreePath).toBe('/tmp/worktrees/PIPE-2020')
+        expect(result.payload.featureDir).toBe(
+          'plans/future/platform/pipeline-orchestrator-activation',
+        )
+      }
+    })
+
+    // PIPE-2010: HP-2 — review payload without optional fields
+    it('accepts review payload without optional worktree fields', () => {
+      const result = PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2020',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2020',
+          title: 'Dispatch Router Review Branch',
+        },
+      })
+      expect(result.stage).toBe('review')
+      if (result.stage === 'review') {
+        expect(result.payload.worktreePath).toBeUndefined()
+        expect(result.payload.featureDir).toBeUndefined()
+      }
+    })
+
+    // PIPE-2010: HP-3 — QA payload with standard snapshot shape
+    it('accepts QA payload with standard story snapshot', () => {
+      const result = PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2030',
+        stage: 'qa',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2030',
+          title: 'Completion Callbacks',
+          description: 'QA verification',
+          feature: 'pipe',
+          state: 'ready_for_qa',
+        },
+      })
+      expect(result.stage).toBe('qa')
+      if (result.stage === 'qa') {
+        expect(result.payload.storyId).toBe('PIPE-2030')
+      }
+    })
+
+    // PIPE-2010: ED-1 — review payload with only worktreePath (featureDir omitted)
+    it('accepts review payload with only worktreePath', () => {
+      const result = PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2020',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2020',
+          title: 'Partial worktree context',
+          worktreePath: '/tmp/worktrees/PIPE-2020',
+        },
+      })
+      expect(result.stage).toBe('review')
+      if (result.stage === 'review') {
+        expect(result.payload.worktreePath).toBe('/tmp/worktrees/PIPE-2020')
+        expect(result.payload.featureDir).toBeUndefined()
+      }
+    })
+
     it('accepts implementation payload with story snapshot', () => {
       const result = PipelineJobDataSchema.parse({
         storyId: 'APIP-0020',
@@ -163,6 +242,52 @@ describe('PipelineJobDataSchema', () => {
           payload: {},
         }),
       ).toThrow()
+    })
+
+    // PIPE-2010: EC-1 — review payload missing required storyId
+    it('rejects review payload missing required payload.storyId', () => {
+      expect(() =>
+        PipelineJobDataSchema.parse({
+          storyId: 'PIPE-2020',
+          stage: 'review',
+          attemptNumber: 1,
+          payload: { title: 'Missing storyId' },
+        }),
+      ).toThrow()
+    })
+
+    // PIPE-2010: EC-2 — review payload with worktreePath as non-string
+    it('rejects review payload with worktreePath as non-string', () => {
+      expect(() =>
+        PipelineJobDataSchema.parse({
+          storyId: 'PIPE-2020',
+          stage: 'review',
+          attemptNumber: 1,
+          payload: { storyId: 'PIPE-2020', title: 'T', worktreePath: 123 },
+        }),
+      ).toThrow()
+    })
+  })
+
+  // PIPE-2010: ED-2 — passthrough behavior preserved
+  describe('passthrough behavior', () => {
+    it('preserves extra fields on review payload via passthrough()', () => {
+      const result = PipelineJobDataSchema.parse({
+        storyId: 'PIPE-2020',
+        stage: 'review',
+        attemptNumber: 1,
+        payload: {
+          storyId: 'PIPE-2020',
+          title: 'Passthrough test',
+          worktreePath: '/tmp/wt',
+          customField: 'should-pass-through',
+        },
+      })
+      expect(result.stage).toBe('review')
+      if (result.stage === 'review') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((result.payload as any).customField).toBe('should-pass-through')
+      }
     })
   })
 

@@ -18,6 +18,8 @@ export type {
   PipelineJobData,
   PipelinePhase,
   StorySnapshotPayload,
+  ReviewPayload,
+  QaPayload,
   ElaborationJobData,
   StoryCreationJobData,
   ImplementationJobData,
@@ -26,6 +28,8 @@ export type {
 } from './__types__/index.js'
 export {
   StorySnapshotPayloadSchema,
+  ReviewPayloadSchema,
+  QaPayloadSchema,
   ElaborationJobDataSchema,
   StoryCreationJobDataSchema,
   ImplementationJobDataSchema,
