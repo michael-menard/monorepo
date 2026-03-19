@@ -1,0 +1,51 @@
+{
+  "story_id": "CDBE-0010",
+  "generated_at": "2026-03-19T00:15:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC1",
+      "ac_text": "pgtap installed and runnable in local dev and CI",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 4,
+      "strong_evidence_count": 4,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC2",
+      "ac_text": "Transaction-rollback test fixture helper documented",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC3",
+      "ac_text": "Example trigger unit test passing",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC4",
+      "ac_text": "CI pipeline runs pgtap suite on each PR",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 1,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 4,
+  "accepted": 4,
+  "challenged": 0,
+  "rejected": 0
+}

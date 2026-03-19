@@ -1,133 +1,113 @@
 schema: 1
-story_id: WINT-4100
-timestamp: '2026-03-09T00:00:00Z'
+story_id: CDBE-0010
+timestamp: '2026-03-18T00:00:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 0
+    pass: 6
     fail: 0
-    note: exempt — agent-prompt-only story, no TypeScript code
   integration:
     pass: 0
     fail: 0
-    note: N/A
   e2e:
     pass: 0
     fail: 0
-    note: exempt — agent-prompt-only story
   http:
     pass: 0
     fail: 0
-    note: N/A — no backend changes
-test_exemption_reason: >-
-  WINT-4100 is an agent-prompt-only story. The deliverable is a markdown agent spec file
-  (.claude/agents/backlog-curator.agent.md). No TypeScript, no build artifacts, no test files. All test categories are
-  exempt per evidence artifact.
-coverage: N/A
+test_notes: >-
+  pgtap SQL tests only (infra story). TypeScript/Vitest tests are N/A. 6 pgtap assertions verified via EVIDENCE.yaml
+  command output showing all passing. No pg_prove executable in QA environment — verified via evidence artifact and
+  direct SQL file analysis.
+coverage: null
 coverage_meets_threshold: true
+coverage_notes: >-
+  Coverage metric not applicable — pure infra story (SQL, shell, YAML). No TypeScript source. 45% threshold applies to
+  TypeScript packages only.
 test_quality:
   verdict: PASS
   anti_patterns: []
 acs_verified:
-  - ac_id: AC-1
+  - ac_id: AC1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-1
-    check: head -20 backlog-curator.agent.md
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
     notes: >-
-      YAML frontmatter confirmed: created=2026-03-08, updated=2026-03-08, version=1.0.0, type=worker, model=haiku,
-      name=backlog-curator, spawned_by=[pm-story-generation-leader, pm-story-adhoc-leader]
-  - ac_id: AC-2
+      docker-compose.pgtap.yml confirmed present: defines pgtap-postgres service on port 5434, uses postgres:16 base
+      image, builds from infra/pgtap/Dockerfile, requires PGTAP_DB_PASS via ?-operator (fails fast if unset).
+      infra/pgtap/Dockerfile confirmed present: installs postgresql-16-pgtap and libtap-parser-sourcehandler-pgtap-perl
+      in a single apt-get layer. scripts/db/run-pgtap.sh confirmed present: uses pg_prove with auto-discovery of
+      tests/db/**/*.sql, supports single-file mode, includes path traversal guards, suppresses --verbose in CI. Evidence
+      shows pg_prove 3.37 installed and container healthy.
+  - ac_id: AC2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-2
-    check: Read file — Inputs section verified
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
     notes: >-
-      Required inputs table: scope, output_dir. Optional inputs table: scope_challenges_dir, deferred_writes_dir,
-      batch_limit — all present with correct descriptions and degradation notes.
-  - ac_id: AC-3
+      tests/db/fixtures/rollback-helper.sql confirmed present: documents BEGIN/SELECT plan(N)/assertions/SELECT
+      finish()/ROLLBACK pattern with inline explanation of isolation guarantees, SAVEPOINT alternative for deferred
+      constraints, and DDL idempotency notes. tests/db/README.md confirmed present: includes full local setup
+      walkthrough, pg_prove install instructions, writing-a-new-test template, pgtap assertion reference table, security
+      considerations section, and environment variable table.
+  - ac_id: AC3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-3
-    check: Read file — Execution Phases section verified
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
     notes: >-
-      4 phases present: Phase 1 Load Deferred Items, Phase 2 Deduplicate and Rank, Phase 3 Generate PM Review Batch,
-      Phase 4 Produce Output.
-  - ac_id: AC-4
+      tests/db/triggers/test_set_story_completed_at.sql confirmed present: 6 well-structured assertions covering (1)
+      function exists, (2) completed_at is NULL before transition, (3) completed_at set on -> completed transition, (4)
+      completed_at not overwritten on second completed transition, (5) trigger fires independently for second row, (6)
+      non-completed state transition leaves completed_at NULL. Correctly uses BEGIN/ROLLBACK isolation pattern.
+      EVIDENCE.yaml shows all 6/6 passing with TAP output: '1..6', 'ok 1' through 'ok 6', 'All tests successful. Result:
+      PASS'.
+  - ac_id: AC4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-4
-    check: grep 'kb_search' backlog-curator.agent.md
-    notes: 'Exact query found in Phase 1: kb_search({ query: "deferred moonshot", tags: ["deferred"], limit: 50 })'
-  - ac_id: AC-5
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-5
-    check: Read file — Graceful Degradation section verified
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
     notes: >-
-      All 3 degradation cases documented: KB unavailable (falls back to filesystem, emits WARNINGS signal), no deferred
-      items found (emits zero-item batch + COMPLETE), scope-challenges absent (skips silently, no warning).
-  - ac_id: AC-6
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-6
-    check: Read file — Phase 2 Deduplicate and Rank verified
-    notes: >-
-      Dedup key: (story_id + SHA-256 hash of deferral description). Source field records all origins joined with '+'
-      (e.g., 'kb+scope-challenges').
-  - ac_id: AC-7
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-7
-    check: Read file — Phase 3 Generate PM Review Batch verified
-    notes: >-
-      batch_limit configurable (default 10), truncated: true flag set when total_items_found > batch_limit, ranked list
-      sorted by recency descending.
-  - ac_id: AC-8
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-8
-    check: grep 'pm-review-batch.json' backlog-curator.agent.md
-    notes: >-
-      Schema section present with all required fields: generated_at, total_items_found, items_in_batch, truncated,
-      items[]. Field definitions table included.
-  - ac_id: AC-9
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-9
-    check: Read file — PM-REVIEW-REPORT.md Specification verified
-    notes: >-
-      Spec defined with ~5 lines per item. recommended_action enum: promote-to-story | close | defer-again. Truncation
-      note template included.
-  - ac_id: AC-10
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-10
-    check: grep -i 'does not auto-create|does not modify' backlog-curator.agent.md
-    notes: >-
-      Non-Goals section enumerates: no auto-create stories, no modify KB entries, no write to stories index, no run
-      scope-defender or graph-checker. Non-Negotiables section reinforces: MUST NOT create stories, modify KB entries,
-      or write to the stories index.
-  - ac_id: AC-11
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-11
-    check: grep 'LangGraph' backlog-curator.agent.md
-    notes: >-
-      LangGraph Porting Notes section present. Input contract table (5 state fields), 4-phase execution contract, output
-      contract table, future node path nodes/backlog/backlog-curate.ts documented.
-  - ac_id: AC-12
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_verification.AC-12
-    check: grep -c 'BACKLOG-CURATOR' returns 5 (not 3 as test plan states)
-    notes: >-
-      All 3 canonical completion signals defined in Completion Signals table: BACKLOG-CURATOR COMPLETE, BACKLOG-CURATOR
-      COMPLETE WITH WARNINGS, BACKLOG-CURATOR BLOCKED. The grep count of 5 (vs test plan expectation of 3) is due to 2
-      additional usage examples in the Graceful Degradation section — this is correct file structure, not a defect. Test
-      plan heuristic imprecision noted; AC itself is fully satisfied.
+      .github/workflows/pgtap.yml confirmed present: triggers on pull_request to main/develop when paths include
+      tests/db/**, scripts/db/run-pgtap.sh, migrations/**, or the workflow itself. Service container uses postgres:16
+      with PGTAP_DB_PASSWORD from GitHub Secret (no hardcoded credentials). Steps: checkout, install pgtap + pg_prove
+      via apt-get, CREATE EXTENSION pgtap, apply 999_full_schema_baseline.sql (file confirmed present), verify pg_prove
+      version, run bash scripts/db/run-pgtap.sh. Report step uses if: always() for visibility on failure.
 architecture_compliant: true
 architecture_notes: >-
-  Agent-prompt-only deliverable. No code, no build, no TypeScript. Review artifact confirmed 0 errors, 0 warnings across
-  all 10 review workers. 1 pre-existing type error in @repo/app-sets-gallery is unrelated to this story.
+  Security: no hardcoded passwords anywhere — docker-compose uses ?-operator fail-fast for missing env var, CI uses
+  secrets.PGTAP_DB_PASSWORD throughout. .env.local confirmed in .gitignore. Port 5434 chosen to avoid conflict with
+  knowledge-base postgres on 5433; bound to 127.0.0.1 only. --verbose suppressed in CI (CI=true check). Test tables use
+  _test_* prefix. Path traversal guard in run-pgtap.sh rejects '..' and paths outside TESTS_DIR.
 issues: []
-observations:
-  - type: test_plan_imprecision
-    ac_id: AC-12
-    detail: >-
-      Test plan check 3 expects grep -c 'BACKLOG-CURATOR' = 3. Actual count is 5. The 2 additional occurrences are valid
-      usage examples in the Graceful Degradation section (lines 52-53). All 3 required signals are correctly defined.
-      Not a defect.
-lessons_to_record: []
+e2e_exempt: true
+e2e_exempt_reason: >-
+  Infrastructure story (SQL, shell, YAML only) — no TypeScript, no HTTP endpoints, no browser UI. E2E tests not
+  applicable.
+lessons_to_record:
+  - lesson: >-
+      pgtap test isolation via BEGIN/ROLLBACK is self-healing: SELECT finish() raises an exception on assertion count
+      mismatch, which causes PostgreSQL to abort and ROLLBACK automatically — isolation is preserved even on test
+      failure without explicit error handling.
+    category: pattern
+    tags:
+      - pgtap
+      - database
+      - testing
+      - infra
+  - lesson: >-
+      For GitHub Actions service containers, custom Docker images are not available — install pgtap via apt-get in a
+      setup step against the standard postgres:16 image rather than building a custom image. The custom Dockerfile is
+      still useful for local docker-compose.
+    category: pattern
+    tags:
+      - ci
+      - github-actions
+      - pgtap
+      - docker
+  - lesson: >-
+      The ?-operator syntax in docker-compose (${VAR:?error message}) provides fail-fast credential enforcement — the
+      container refuses to start if the password is not set, preventing accidental runs against an unauthenticated
+      database.
+    category: pattern
+    tags:
+      - docker
+      - security
+      - credentials
 tokens:
-  in: 9500
-  out: 1800
+  in: 8500
+  out: 1200

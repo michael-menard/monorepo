@@ -1,0 +1,137 @@
+schema: 1
+phase: qa-setup
+status: COMPLETE
+story_id: CDBE-0010
+timestamp: '2026-03-18T23:56:00Z'
+
+precondition_checks:
+  story_exists_in_kb: true
+  story_id: CDBE-0010
+  story_state: in_qa
+  expected_state_for_qa: ready_for_qa
+  state_note: Story has already transitioned to in_qa; precondition satisfied
+
+  evidence_artifact_exists: true
+  evidence_location: _implementation/EVIDENCE.yaml
+  evidence_version: schema 1
+
+  review_artifact_exists: true
+  review_location: KB artifact store (iteration 3)
+  review_verdict: PASS
+  review_iteration: 3
+  review_timestamp: '2026-03-18T23:55:18.595Z'
+
+story_metadata:
+  title: pgtap Test Harness Setup for DB Infrastructure Stories
+  feature: cdbe
+  priority: P1
+  story_type: infra
+  e2e_gate: exempt
+  reason_for_e2e_exempt: Infrastructure story (shell/SQL/Docker/YAML only) — no TypeScript app code
+
+acceptance_criteria_summary:
+  total: 4
+  ac1: pgtap installed and runnable in local dev and CI
+  ac2: Transaction-rollback test fixture helper documented
+  ac3: Example trigger unit test passing
+  ac4: CI pipeline runs pgtap suite on each PR
+
+evidence_artifact_summary:
+  schema: 1
+  e2e_status: EXEMPT
+  e2e_exempt_reason: story_type is infra — E2E tests are exempt per execute-leader rules
+
+  ac_status_overview:
+    ac1_status: PASS
+    ac1_evidence: docker-compose.pgtap.yml, infra/pgtap/Dockerfile, docker exec test, pg_prove version
+
+    ac2_status: PASS
+    ac2_evidence: tests/db/fixtures/rollback-helper.sql, tests/db/README.md (documentation complete)
+
+    ac3_status: PASS
+    ac3_evidence: test_set_story_completed_at.sql (6 pgtap assertions all passing)
+
+    ac4_status: PASS
+    ac4_evidence: .github/workflows/pgtap.yml (GitHub Actions workflow configured)
+
+  build_status: N/A (no TypeScript code)
+  lint_status: N/A (infrastructure files only)
+  type_check_status: N/A (infrastructure files only)
+  unit_test_status: PASS (pgtap tests 6/6 assertions passing)
+
+review_artifact_summary:
+  iteration: 3
+  verdict: PASS
+  total_errors: 0
+  total_warnings: 3
+  critical_issues: 0
+  high_issues: 0
+  medium_issues: 0
+  low_issues: 3
+
+  workers_run:
+    - security
+    - typecheck
+    - build
+
+  workers_skipped:
+    - lint
+    - style
+    - syntax
+    - react
+    - typescript
+    - accessibility
+    - reusability
+
+  security_findings:
+    note: All previous critical/high issues (SEC-001, SEC-002, SEC-004, SEC-006) verified as FIXED
+    low_issue_1: SEC-007 — Directory traversal check blocks ".." but not symlinks; defense-in-depth adequate for local dev
+    low_issue_2: SEC-008 — Error messages echo user input without escaping; local dev script only
+    low_issue_3: SEC-009 — SQL test files executed without content validation; mitigated by code review
+
+  codebase_health:
+    pre_existing_type_errors: 1619 (unrelated to this story)
+    pre_existing_build_failures: 1 (unrelated to this story)
+
+story_status_updated:
+  previous_state: ready_for_qa
+  current_state: in_qa
+  transition_timestamp: '2026-03-18T23:56:00Z'
+  phase: qa_verification
+
+verification_phase_readiness:
+  story_ready_for_qa_verification: true
+  evidence_complete: true
+  review_passed: true
+  no_blocking_issues: true
+
+  files_for_qa_inspection:
+    - docker-compose.pgtap.yml
+    - infra/pgtap/Dockerfile
+    - scripts/db/run-pgtap.sh
+    - tests/db/fixtures/rollback-helper.sql
+    - tests/db/README.md
+    - tests/db/triggers/test_set_story_completed_at.sql
+    - .github/workflows/pgtap.yml
+    - .env.pgtap.example
+
+next_phase: qa-verification
+qa_verification_tasks:
+  - task: Verify pgtap installation in docker-compose.pgtap.yml
+    acceptance_criteria: AC1 from EVIDENCE
+
+  - task: Verify transaction-rollback fixture helper documentation
+    acceptance_criteria: AC2 from EVIDENCE
+
+  - task: Verify example trigger unit test (test_set_story_completed_at.sql)
+    acceptance_criteria: AC3 from EVIDENCE
+
+  - task: Verify CI pipeline workflow configuration
+    acceptance_criteria: AC4 from EVIDENCE
+
+  - task: Manual verification of shell script security fixes
+    acceptance_criteria: Iteration 2 fix verification from VERIFICATION.iter2.md
+    details: Shell injection protection, password error handling, CI credential management, Docker security, verbose mode suppression
+
+signal: SETUP COMPLETE
+message: Story CDBE-0010 preconditions verified. Ready to proceed with QA verification phase.
