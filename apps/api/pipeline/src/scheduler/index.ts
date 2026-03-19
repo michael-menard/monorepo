@@ -247,7 +247,7 @@ export class SchedulerLoop {
     const result = await db.execute<{ storyId: string }>(sql`
       SELECT psl.story_id AS "storyId"
       FROM workflow.plan_story_links psl
-      WHERE psl.story_id = ANY(${sql.raw(`ARRAY[${storyIds.map(id => `'${id}'`).join(',')}]`)})
+      WHERE psl.story_id = ANY(${storyIds})
         AND EXISTS (
           SELECT 1
           FROM workflow.plan_story_links psl2

@@ -148,7 +148,6 @@ describe('SchedulerLoop', () => {
 
       // Directly invoke with a mock that intercepts kb_update_story_status
       // by wrapping the method
-      const originalDispatch = scheduler.dispatchStory.bind(scheduler)
       scheduler.dispatchStory = async (s, attempt) => {
         mockKbUpdate({ story_id: s.storyId, state: 'in_progress' })
         const result = await mockKbUpdate(kbDeps, { story_id: s.storyId, state: 'in_progress' })
@@ -266,7 +265,6 @@ describe('SchedulerLoop', () => {
       const scheduler = new SchedulerLoop(queue, kbDeps, {})
 
       // Wrap dispatchStory to inject a mock KB advance that returns updated:false
-      const origDispatch = SchedulerLoop.prototype.dispatchStory
       scheduler.dispatchStory = async (s, attempt) => {
         // Simulate: KB advance returns updated:false (another process already advanced it)
         const advanceResult = { updated: false, message: 'Conflict: story already in_progress', story: null }
