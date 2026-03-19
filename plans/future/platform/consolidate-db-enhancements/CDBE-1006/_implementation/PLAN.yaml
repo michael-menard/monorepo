@@ -1,0 +1,229 @@
+schema: 2
+story_id: CDBE-1006
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Create 1005_workflow_rls.sql migration file: idempotent role creation (agent_role, lambda_role, reporting_role),
+      RLS enable+force on all four tables (workflow.stories, workflow.plans, workflow.story_state_history,
+      workflow.workflow_audit_log), per-role permissive SELECT policies per table, per-role DML grants per
+      AC-8/AC-9/AC-10, kbuser BYPASSRLS grant, and COMMENT ON TABLE/POLICY entries with 1005: prefix. All operations in
+      DO $$ blocks with idempotency guards (pg_roles, pg_class.relrowsecurity, pg_policies). RLS enable and first policy
+      creation for each table must be atomic within the same DO block to prevent implicit DENY window.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+    dependencies: []
+    slice: backend
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+      - AC-15
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Verify idempotency by running the migration a second time. Execute the migration SQL file again and confirm: exit
+      code 0, no errors, RAISE NOTICE lines confirm 'already exists, skipped', pg_policies count is unchanged from first
+      run, pg_roles count for the three roles is still 3.
+    files: []
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql && psql $KB_DATABASE_URL
+      -c "SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'workflow'"
+    acs_covered:
+      - AC-1
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Write pgtap test file 1005_workflow_rls_test.sql in apps/api/knowledge-base/src/db/migrations/pgtap/. Tests must
+      verify: all three roles exist (has_role), RLS is enabled and forced on all four tables (ok with
+      pg_class.relrowsecurity/relforcerowsecurity queries), at least one policy per table (ok with pg_policies count
+      query), permission enforcement (throws_ok with 42501 for: agent_role DELETE on workflow.stories, reporting_role
+      INSERT on workflow.stories, reporting_role UPDATE on workflow.plans, reporting_role DELETE on
+      workflow.story_state_history, agent_role UPDATE on workflow.workflow_audit_log). Use SET LOCAL ROLE for permission
+      tests inside a subtransaction. Follow BEGIN/ROLLBACK wrapper and SELECT plan(N)/finish() structure from
+      1004_valid_transitions_test.sql.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1004_valid_transitions_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql | pg_prove
+    acs_covered:
+      - AC-12
+      - AC-13
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Verify kbuser regression: confirm existing Lambda operations continue to work after migration. Run the key
+      assertions SQL from the story's Test Plan section to validate: kbuser BYPASSRLS = true (or rolsuper = true),
+      kbuser can SELECT/INSERT/UPDATE/DELETE on workflow.stories, all four tables have relrowsecurity=true and
+      relforcerowsecurity=true. Document kbuser superuser status finding in the migration file comment header if not
+      already done.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: psql $KB_DATABASE_URL -c "SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = 'kbuser'"
+    acs_covered:
+      - AC-11
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    action: create
+    reason: >-
+      New idempotent migration: create three least-privilege roles, enable+force RLS on four workflow tables, create
+      permissive SELECT policies per role, grant per-role DML privileges, grant kbuser BYPASSRLS, add COMMENT ON
+      TABLE/POLICY with 1005: prefix
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql
+    action: create
+    reason: >-
+      pgtap test suite verifying roles exist, RLS is enabled on all four tables, at least one policy per table, and
+      permission enforcement (42501 for forbidden operations)
+commands_to_run:
+  - command: ls apps/api/knowledge-base/src/db/migrations/1005_*.sql
+    when: before writing migration — verify slot 1005 is free
+    required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    when: after ST-1 — first apply
+    required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    when: after ST-1 — second apply (idempotency verification, ST-2)
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -c "SELECT COUNT(*) FROM pg_roles WHERE rolname IN
+      ('agent_role','lambda_role','reporting_role')"
+    when: after migration apply — verify three roles created
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -c "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class JOIN pg_namespace ON
+      pg_class.relnamespace = pg_namespace.oid WHERE nspname = 'workflow' AND relname IN
+      ('stories','plans','story_state_history','workflow_audit_log')"
+    when: after migration apply — verify RLS enabled on all four tables
+    required: true
+  - command: psql $KB_DATABASE_URL -c "SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'workflow'"
+    when: after migration apply — verify at least 12 policies (3 roles x 4 tables)
+    required: true
+  - command: psql $KB_DATABASE_URL -c "SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = 'kbuser'"
+    when: after migration apply — verify kbuser BYPASSRLS (ST-4)
+    required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql | pg_prove
+    when: after ST-3 — run pgtap test suite
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Migration file exists at apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql; second run exits 0 with
+      no errors
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: >-
+      pg_roles query returns 3 for agent_role/lambda_role/reporting_role; DO $$ IF NOT EXISTS pattern used in migration
+      SQL
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: 'pg_class query: workflow.stories relrowsecurity=true, relforcerowsecurity=true'
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: 'pg_class query: workflow.plans relrowsecurity=true, relforcerowsecurity=true'
+    evidence_type: command
+  - ac_id: AC-5
+    planned_evidence: 'pg_class query: workflow.story_state_history relrowsecurity=true, relforcerowsecurity=true'
+    evidence_type: command
+  - ac_id: AC-6
+    planned_evidence: 'pg_class query: workflow.workflow_audit_log relrowsecurity=true, relforcerowsecurity=true'
+    evidence_type: command
+  - ac_id: AC-7
+    planned_evidence: >-
+      pg_policies count >= 12 (at least one SELECT policy per role per table); idempotency guard in migration uses
+      pg_policies check before CREATE POLICY
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: >-
+      GRANT statements in migration: agent_role INSERT+SELECT on stories/story_state_history, SELECT on
+      plans/workflow_audit_log; pgtap throws_ok confirms agent_role cannot DELETE
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      GRANT statements in migration: lambda_role SELECT+INSERT+UPDATE+DELETE on stories/plans, INSERT+SELECT on
+      story_state_history/workflow_audit_log; pgtap confirms lambda_role full DML on stories
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      GRANT statements in migration: reporting_role SELECT-only on all four tables; pgtap throws_ok confirms 42501 on
+      INSERT/UPDATE/DELETE attempts
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: >-
+      ALTER ROLE kbuser BYPASSRLS in migration; psql query confirms rolbypassrls=true (or rolsuper=true); kbuser DML
+      operations succeed after migration
+    evidence_type: command
+  - ac_id: AC-12
+    planned_evidence: >-
+      pgtap file exists at apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql; pg_prove reports
+      all tests pass
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: pgtap test uses SET LOCAL ROLE agent_role and throws_ok with error code 42501 for DELETE on workflow.stories
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      Deployment gate — enforced by PR sequencing: CDBE-1006 PR merged before CDBE-1010 PR is opened. Not a code
+      artifact.
+    evidence_type: manual
+  - ac_id: AC-15
+    planned_evidence: >-
+      COMMENT ON TABLE and COMMENT ON POLICY statements with '1005:' prefix present in migration SQL for all created
+      objects
+    evidence_type: file
+architectural_decisions: []
+complexity: moderate
+notes:
+  - Slot 1005 confirmed free as of 2026-03-18 (ls output shows no 1005_*.sql files).
+  - >-
+    CRITICAL: RLS enable and first policy creation for each table must be atomic in the same DO block. If ENABLE ROW
+    LEVEL SECURITY runs without any policy, all non-superuser connections receive implicit DENY. The DO block must
+    CREATE POLICY before (or within the same transaction as) ALTER TABLE ... ENABLE ROW LEVEL SECURITY.
+  - >-
+    kbuser BYPASSRLS: ALTER ROLE kbuser BYPASSRLS is harmless if kbuser is a superuser (rolsuper=true) and required if
+    not. Include unconditionally. ST-4 verifies the actual pg_roles status and documents the finding.
+  - >-
+    SECURITY DEFINER trigger (1001 migration) bypasses RLS on workflow.stories regardless of session role. This is
+    expected PostgreSQL behaviour and is a documented limitation in the migration header — not a defect.
+  - >-
+    Use current_role (not current_user) in policy USING clauses when SET ROLE is in use — the two diverge after role
+    switching.
+  - 'No Drizzle schema changes: RLS policies are not representable in Drizzle ORM. workflow.ts is not touched.'
+  - >-
+    pgtap permission tests (AC-13) use SET LOCAL ROLE inside a SAVEPOINT/ROLLBACK TO SAVEPOINT pattern so the throws_ok
+    statement can revert the role change and the outer transaction remains intact.
+  - >-
+    Pattern reference: 1004_valid_transitions.sql for idempotent DO block structure; 1001_canonical_story_states.sql for
+    COMMENT ON style with migration number prefix; 1004_valid_transitions_test.sql for pgtap file layout.
+  - >-
+    All four tables confirmed to exist in workflow schema: stories (line 33), plans (line 137), story_state_history
+    (line 94), workflow_audit_log (line 292) in apps/api/knowledge-base/src/db/schema/workflow.ts.
+  - No telemetry schema exists in KB database. The story already corrects this — all RLS targets are in workflow schema.

@@ -1,0 +1,170 @@
+schema: 2
+story_id: CDBE-2005
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Write CREATE TABLE DDL for workflow.allowed_agents with all required columns, PK, and full COMMENT ON TABLE /
+      COMMENT ON COLUMN documentation. Use CREATE TABLE IF NOT EXISTS guard.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    dependencies: []
+    slice: backend
+    verification: psql -c "\d workflow.allowed_agents" — all columns and types present
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-10
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Write idempotent DO $$ seed block inserting all known agent identities into workflow.allowed_agents using INSERT
+      WHERE NOT EXISTS pattern. Agent list confirmed by scanning .claude/agents/*.agent.md. Append this block to the
+      migration file created in ST-1.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+      - apps/api/knowledge-base/src/mcp-server/access-control.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: SELECT COUNT(*) FROM workflow.allowed_agents WHERE active = true — result >= 5
+    acs_covered:
+      - AC-4
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Write workflow.validate_caller(caller_agent_id text) RETURNS void PL/pgSQL function. Raises SQLSTATE P0001 with
+      message 'Unauthorized caller: <agent_id>' when caller not found in allowed_agents WHERE active = true. Returns
+      void on success. Use CREATE OR REPLACE FUNCTION. Append to migration file.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      SELECT workflow.validate_caller('pm-story-seed-agent') — no error; SELECT workflow.validate_caller('rogue') —
+      raises P0001
+    acs_covered:
+      - AC-5
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write pgtap test file tests/db/triggers/test_cdbe2005_allowed_agents.sql. Include BEGIN/ROLLBACK transaction
+      isolation, has_function assertion (assertion 1), SAVEPOINT guard, throws_ok for unknown agent, throws_ok for
+      inactive agent, lives_ok for known active agent, has_table/has_column schema checks, and seed row presence checks.
+      Plan count: 8 assertions matching HP-1, HP-2, HP-3, EC-1, EC-2, ED-1, ED-2, ED-3.
+    files:
+      - tests/db/triggers/test_cdbe2005_allowed_agents.sql
+    files_to_read:
+      - tests/db/triggers/test_cdbe1030_artifact_superseded_at.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: pg_prove tests/db/triggers/test_cdbe2005_allowed_agents.sql — all 8 assertions pass
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    action: create
+    reason: >-
+      New migration creating workflow.allowed_agents table, idempotent seed data, and workflow.validate_caller()
+      function (AC-1 through AC-5, AC-10)
+  - path: tests/db/triggers/test_cdbe2005_allowed_agents.sql
+    action: create
+    reason: pgtap test suite verifying table structure, seed data, and validate_caller behavior (AC-6 through AC-9)
+commands_to_run:
+  - command: psql -f apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    when: after writing migration file
+    required: true
+  - command: psql -f apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    when: second run — idempotency check, must produce no errors and no new rows
+    required: true
+  - command: pg_prove tests/db/triggers/test_cdbe2005_allowed_agents.sql
+    when: after migration deployed
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Migration DDL: CREATE TABLE workflow.allowed_agents with agent_id (text PK), agent_name (text NOT NULL),
+      allowed_procedures (text[] NOT NULL), active (boolean NOT NULL DEFAULT true), created_at (timestamptz NOT NULL
+      DEFAULT NOW())
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Migration uses CREATE TABLE IF NOT EXISTS and INSERT WHERE NOT EXISTS; second psql run produces no errors and
+      SELECT COUNT(*) returns same value
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: COMMENT ON TABLE and COMMENT ON COLUMN for all 5 columns present in migration file
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      Seed DO $$ block inserts rows for all agent identities confirmed from .claude/agents/*.agent.md scan. Minimum:
+      pm-story-seed-agent, dev-implement-backend-coder, dev-implement-frontend-coder, qa-verify-verification-leader,
+      uat-orchestrator, pipeline-supervisor. SELECT COUNT(*) >= 5 after migration.
+    evidence_type: command
+  - ac_id: AC-5
+    planned_evidence: >-
+      CREATE OR REPLACE FUNCTION workflow.validate_caller(caller_agent_id text) RETURNS void with RAISE EXCEPTION
+      SQLSTATE P0001 for unknown/inactive callers; pgtap lives_ok confirms valid caller passes
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: "pgtap throws_ok: validate_caller('rogue-process') raises P0001 — test EC-1 in test file"
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: "pgtap lives_ok: validate_caller('pm-story-seed-agent') returns void with no exception — test HP-1 in test file"
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      pgtap throws_ok: validate_caller for agent with active=false raises P0001 — test EC-2 in test file (insert
+      inactive agent in SAVEPOINT-guarded setup block)
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      Test file uses BEGIN; ... ROLLBACK; wrapper. Assertion 1 is has_function('workflow', 'validate_caller',
+      ARRAY['text'], 'validate_caller function should exist in workflow schema')
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: File created at apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql with numeric prefix 1005
+    evidence_type: file
+architectural_decisions: []
+complexity: simple
+notes:
+  - >-
+    Agent seed list confirmed by scanning .claude/agents/*.agent.md (136 agent files total). The AC-4 minimum list
+    specifies logical identities; the actual seed must include all agent file basenames as agent_id values plus any
+    logical identifiers (orchestrator-agent, pipeline-supervisor) documented in the story.
+  - >-
+    Key agent identities for seed (from .agent.md scan): pm-story-seed-agent, dev-implement-backend-coder,
+    dev-implement-frontend-coder, dev-implement-implementation-leader, dev-plan-leader, dev-execute-leader,
+    dev-setup-leader, dev-verification-leader, qa-verify-completion-leader, qa-verify-setup-leader,
+    qa-verify-verification-leader, qa, pm, uiux, uat-orchestrator, elab-setup-leader, elab-completion-leader,
+    knowledge-context-loader, git-ops, and the logical identifiers orchestrator-agent and pipeline-supervisor.
+  - >-
+    The allowed_procedures column is seeded with an empty array '{}' for all agents at MVP — Phase 2 stored procedures
+    will populate this with fine-grained procedure names in their respective migrations.
+  - >-
+    validate_caller() must use PERFORM workflow.validate_caller(...) call pattern from stored procedures — RETURNS void
+    is the correct signature for this use case.
+  - >-
+    Migration numeric prefix 1005 confirmed — no collision with other in-flight CDBE migrations. Migration 1004 is
+    valid_transitions (deployed). Next available is 1005.
+  - >-
+    pgtap test plan count: 8 assertions (ED-3 has_function + HP-2 has_table/has_column checks + HP-3 seed count + HP-1
+    lives_ok + EC-1 throws_ok unknown + EC-2 throws_ok inactive + ED-1 throws_ok NULL + ED-2 idempotency count check).
+  - No TypeScript changes required. No Vitest tests needed. No application-layer bindings in scope.
+  - >-
+    Deploy ordering: this migration is independent of Phase 1 trigger stories (CDBE-1010–1040). Must deploy before
+    CDBE-2010, CDBE-2020, CDBE-2030.

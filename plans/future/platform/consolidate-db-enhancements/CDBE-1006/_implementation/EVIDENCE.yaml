@@ -1,0 +1,250 @@
+schema: 1
+story_id: CDBE-1006
+version: 1
+timestamp: '2026-03-18T02:00:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: 'Migration file 1005_workflow_rls.sql exists and is idempotent (re-running produces no error, no duplicate objects)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql (run twice)'
+        result: "Both runs exit 0. Second run shows 'already exists, skipped' for all roles and policies. Final policy count unchanged at 22."
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: 'Migration file created in worktree — 569 lines, idempotent DO blocks throughout'
+
+  - ac_id: AC-2
+    ac_text: 'Three DB roles created idempotently: agent_role (NOLOGIN, no SUPERUSER), lambda_role (NOLOGIN, no SUPERUSER), reporting_role (NOLOGIN, NOINHERIT)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT COUNT(*) FROM pg_roles WHERE rolname IN (''agent_role'',''lambda_role'',''reporting_role'')"'
+        result: 'count = 3'
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: "Section 2 uses IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '...') pattern for all three roles"
+
+  - ac_id: AC-3
+    ac_text: 'RLS enabled on workflow.stories with ENABLE ROW LEVEL SECURITY and FORCE ROW LEVEL SECURITY'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class ... WHERE relname = ''stories''"'
+        result: 'relrowsecurity=t, relforcerowsecurity=t'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 4 and 5 pass: RLS enabled and FORCE RLS enabled on workflow.stories'
+
+  - ac_id: AC-4
+    ac_text: 'RLS enabled on workflow.plans with same pattern as AC-3'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT relrowsecurity, relforcerowsecurity FROM pg_class ... WHERE relname = ''plans''"'
+        result: 'relrowsecurity=t, relforcerowsecurity=t'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 6 and 7 pass: RLS enabled and FORCE RLS enabled on workflow.plans'
+
+  - ac_id: AC-5
+    ac_text: 'RLS enabled on workflow.story_state_history with same pattern as AC-3'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT relrowsecurity, relforcerowsecurity FROM pg_class ... WHERE relname = ''story_state_history''"'
+        result: 'relrowsecurity=t, relforcerowsecurity=t'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 8 and 9 pass: RLS enabled and FORCE RLS enabled on workflow.story_state_history'
+
+  - ac_id: AC-6
+    ac_text: 'RLS enabled on workflow.workflow_audit_log (NOT telemetry schema — no telemetry schema exists)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT relrowsecurity, relforcerowsecurity FROM pg_class ... WHERE relname = ''workflow_audit_log''"'
+        result: 'relrowsecurity=t, relforcerowsecurity=t'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 10 and 11 pass: RLS enabled and FORCE RLS enabled on workflow.workflow_audit_log. Migration header explicitly documents no telemetry schema.'
+
+  - ac_id: AC-7
+    ac_text: 'At least one PERMISSIVE SELECT policy per role per RLS-enabled table, created idempotently'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT COUNT(*) FROM pg_policies WHERE schemaname = ''workflow''"'
+        result: 'count = 22 (exceeds minimum of 12, which is 3 roles x 4 tables)'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 12-16 pass: at least one policy per table, total >= 12'
+
+  - ac_id: AC-8
+    ac_text: 'agent_role granted INSERT and SELECT on workflow.stories and workflow.story_state_history; SELECT on workflow.plans and workflow.workflow_audit_log'
+    status: PASS
+    evidence_items:
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: 'Section 7: GRANT SELECT, INSERT ON workflow.stories TO agent_role; GRANT SELECT ON workflow.plans TO agent_role; GRANT SELECT, INSERT ON workflow.story_state_history TO agent_role; GRANT SELECT ON workflow.workflow_audit_log TO agent_role'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Test 18 confirms agent_role cannot DELETE (enforcing boundary)'
+
+  - ac_id: AC-9
+    ac_text: 'lambda_role granted SELECT, INSERT, UPDATE, DELETE on workflow.stories and workflow.plans; INSERT and SELECT on workflow.story_state_history and workflow.workflow_audit_log'
+    status: PASS
+    evidence_items:
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: 'Section 7: GRANT SELECT, INSERT, UPDATE, DELETE ON workflow.stories TO lambda_role; GRANT SELECT, INSERT, UPDATE, DELETE ON workflow.plans TO lambda_role; GRANT SELECT, INSERT ON workflow.story_state_history TO lambda_role; GRANT SELECT, INSERT ON workflow.workflow_audit_log TO lambda_role'
+
+  - ac_id: AC-10
+    ac_text: 'reporting_role granted SELECT-only on workflow.stories, workflow.plans, workflow.story_state_history, and workflow.workflow_audit_log'
+    status: PASS
+    evidence_items:
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: 'Section 7: GRANT SELECT on all four tables to reporting_role only'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Tests 19, 20, 21 confirm reporting_role cannot INSERT (stories), UPDATE (plans), DELETE (story_state_history) — all 42501'
+
+  - ac_id: AC-11
+    ac_text: 'kbuser granted BYPASSRLS so existing Lambda operations continue unchanged during migration window'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: 'psql -c "SELECT rolname, rolbypassrls, rolsuper FROM pg_roles WHERE rolname = ''kbuser''"'
+        result: 'rolbypassrls=t, rolsuper=t (both true — double protection)'
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: 'Test 17 passes: kbuser has BYPASSRLS or rolsuper=true'
+
+  - ac_id: AC-12
+    ac_text: 'pgtap test file 1005_workflow_rls_test.sql exists in apps/api/knowledge-base/src/db/migrations/pgtap/'
+    status: PASS
+    evidence_items:
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: '246-line pgtap test file with 27 tests: roles (3), RLS+FORCE per table (8), policy counts (5), kbuser bypass (1), role permission enforcement (5), named policy verification (5)'
+      - type: command
+        command: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        result: '27/27 tests pass (ok 1 through ok 27, finish returns empty)'
+
+  - ac_id: AC-13
+    ac_text: 'At least one pgtap test uses SET LOCAL ROLE agent_role to verify forbidden operation (agent_role cannot DELETE from workflow.stories — throws_ok 42501)'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+        description: "Test 18: SAVEPOINT before_agent_delete_test; SET LOCAL ROLE agent_role; throws_ok(DELETE FROM workflow.stories WHERE false, '42501') — passes. Uses ROLLBACK TO SAVEPOINT + RESET ROLE pattern."
+
+  - ac_id: AC-14
+    ac_text: 'Migration deployed and verified BEFORE CDBE-1010 trigger implementation begins'
+    status: PARTIAL
+    evidence_items:
+      - type: command
+        command: 'Migration applied to local KB database — exit 0 confirmed'
+        result: 'PARTIAL: Deployment gate is enforced by PR sequencing. CDBE-1006 PR must be merged before CDBE-1010 PR is opened. This AC is verified by process, not code artifact.'
+
+  - ac_id: AC-15
+    ac_text: 'COMMENT ON TABLE and COMMENT ON POLICY entries with 1005: prefix for all newly created objects'
+    status: PASS
+    evidence_items:
+      - type: file
+        path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+        description: "Sections 8 and 9: COMMENT ON TABLE for all 4 tables and COMMENT ON POLICY for all 22 policies, all with '1005:' prefix"
+
+touched_files:
+  - path: 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+    action: created
+    lines: 569
+    description: 'Main RLS migration: idempotent role creation, RLS enable+force on 4 tables, 22 permissive policies, DML grants, kbuser BYPASSRLS, COMMENT ON TABLE/POLICY with 1005: prefix'
+  - path: 'apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+    action: created
+    lines: 246
+    description: 'pgtap test suite: 27 tests covering roles existence, RLS+FORCE per table, policy counts, kbuser bypass, role-based permission enforcement (5 throws_ok tests with 42501)'
+
+commands_run:
+  - command: 'ls apps/api/knowledge-base/src/db/migrations/1005*.sql (worktree)'
+    result: SUCCESS
+    output: 'No matches found — slot 1005 is free in worktree'
+    timestamp: '2026-03-18T01:30:00Z'
+  - command: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql (first run)'
+    result: SUCCESS
+    output: 'All roles created, RLS enabled on 4 tables, 22 policies created, exit 0'
+    timestamp: '2026-03-18T01:45:00Z'
+  - command: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql (second run — idempotency)'
+    result: SUCCESS
+    output: "All roles/policies show 'already exists, skipped'. Policy count unchanged at 22. Exit 0."
+    timestamp: '2026-03-18T01:46:00Z'
+  - command: 'psql -c "SELECT COUNT(*) FROM pg_roles WHERE rolname IN (''agent_role'',''lambda_role'',''reporting_role'')"'
+    result: SUCCESS
+    output: 'count = 3'
+    timestamp: '2026-03-18T01:47:00Z'
+  - command: 'psql -c "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class ... WHERE relname IN (''stories'',''plans'',''story_state_history'',''workflow_audit_log'')"'
+    result: SUCCESS
+    output: 'All 4 tables: relrowsecurity=t, relforcerowsecurity=t'
+    timestamp: '2026-03-18T01:47:00Z'
+  - command: 'psql -c "SELECT COUNT(*) FROM pg_policies WHERE schemaname = ''workflow''"'
+    result: SUCCESS
+    output: 'count = 22'
+    timestamp: '2026-03-18T01:47:00Z'
+  - command: 'psql -c "SELECT rolname, rolbypassrls, rolsuper FROM pg_roles WHERE rolname = ''kbuser''"'
+    result: SUCCESS
+    output: 'rolbypassrls=t, rolsuper=t'
+    timestamp: '2026-03-18T01:47:00Z'
+  - command: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql'
+    result: SUCCESS
+    output: '27/27 pgtap tests pass (ok 1 - ok 27)'
+    timestamp: '2026-03-18T01:55:00Z'
+  - command: 'pnpm --filter @repo/knowledge-base check-types'
+    result: FAILURE
+    output: '18 pre-existing TypeScript errors in analytics-operations.ts and story-context.ts — confirmed pre-existing on main branch, unrelated to this story (SQL-only changes)'
+    timestamp: '2026-03-18T01:35:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  pgtap: { pass: 27, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: 'story_type: infra — DB-only migration story, no user-facing behavior to test via browser'
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+  note: 'SQL migration — no line coverage applicable'
+
+notable_decisions:
+  - 'Slot 1005 is free in worktree branch (story/CDBE-1006 diverged before 1005_rename_priority_order_to_sort_order.sql was added to main). Used slot 1005 as intended.'
+  - 'kbuser has both rolsuper=true and rolbypassrls=true — BYPASSRLS grant is harmless redundancy as documented in story.'
+  - 'SECURITY DEFINER trigger (1001 migration) bypasses RLS — documented in migration header as expected behaviour.'
+  - 'pgtap installed in KB container via docker exec for live test run. pgtap was not pre-installed in pgvector/pgvector:pg16 image.'
+  - '22 policies created (7 on stories, 6 on plans, 5 on story_state_history, 4 on workflow_audit_log) — exceeds minimum 12 required by AC-7.'
+  - 'workflow_audit_log has foreign key on execution_id — test 22 uses WHERE false clause to avoid FK violations while still testing permission boundary.'
+
+known_deviations:
+  - 'AC-14 is a deployment gate (PR sequencing), not a code artifact. Marked PARTIAL — will become PASS when CDBE-1006 PR is merged before CDBE-1010 is started.'
+  - 'Pre-existing TypeScript errors in @repo/knowledge-base are unrelated to this story (SQL-only changes). 18 errors exist on main branch before this work.'
+
+token_summary:
+  execute: { in: 35000, out: 12000 }

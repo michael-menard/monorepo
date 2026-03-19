@@ -32,6 +32,7 @@
     "@repo/design-system": "workspace:*",
     "@repo/hooks": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/workflow-roadmap": "workspace:*",
     "@tanstack/react-router": "^1.130.2",
     "@tanstack/react-router-devtools": "^1.130.2",
     "class-variance-authority": "^0.7.1",

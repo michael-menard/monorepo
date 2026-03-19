@@ -575,6 +575,8 @@ export const PlanStorySchema = z.object({
   wave: z.number(),
   thrashCount: z.number(),
   isExternal: z.boolean(),
+  linkId: z.string().nullable(),
+  sortOrder: z.number().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
 })
@@ -589,6 +591,8 @@ type LinkedStoryRow = {
   priority: string | null
   blockedByStory: string | null
   thrashCount: number
+  linkId: string | null
+  sortOrder: number | null
   createdAt: Date
   updatedAt: Date
 }
@@ -626,6 +630,8 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       blockedByStory: stories.blockedByStory,
       createdAt: stories.createdAt,
       updatedAt: stories.updatedAt,
+      linkId: planStoryLinks.id,
+      sortOrder: planStoryLinks.sortOrder,
       thrashCount: sql<number>`(
         select count(*)::int
         from workflow.story_state_history h
@@ -657,7 +663,11 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
     .from(planStoryLinks)
     .innerJoin(stories, eq(planStoryLinks.storyId, stories.storyId))
     .where(eq(planStoryLinks.planSlug, slug))
-    .orderBy(asc(stories.priority), desc(stories.createdAt))
+    .orderBy(
+      asc(sql`coalesce(${planStoryLinks.sortOrder}, 9999)`),
+      asc(stories.priority),
+      desc(stories.createdAt),
+    )
 
   if (linkedStories.length === 0) return []
 
@@ -786,6 +796,8 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
       wave: waves.get(storyId) ?? 0,
       thrashCount: story.thrashCount ?? 0,
       isExternal: !planStoryIds.has(storyId),
+      linkId: planStoryIds.has(storyId) ? (story.linkId ?? null) : null,
+      sortOrder: planStoryIds.has(storyId) ? (story.sortOrder ?? null) : null,
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
     } satisfies PlanStory)
@@ -1150,4 +1162,15 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
           }
         : null,
   }
+}
+
+export async function reorderPlanStories(slug: string, items: ReorderItem[]): Promise<void> {
+  const updates = items.map(item =>
+    database
+      .update(planStoryLinks)
+      .set({ sortOrder: item.sortOrder })
+      .where(and(eq(planStoryLinks.id, item.id), eq(planStoryLinks.planSlug, slug))!),
+  )
+
+  await Promise.all(updates)
 }

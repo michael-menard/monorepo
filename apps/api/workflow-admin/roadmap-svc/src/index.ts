@@ -6,6 +6,7 @@ import {
   getPlans,
   getPlanBySlug,
   reorderPlans,
+  reorderPlanStories,
   updatePlan,
   getStoriesByPlanSlug,
   getStoryById,
@@ -116,6 +117,27 @@ app.get('/api/v1/roadmap/:slug/stories', async c => {
     logger.error('Failed to fetch plan stories', { error: String(error), slug })
     console.error('Full error:', error)
     return c.json({ error: 'Failed to fetch plan stories', detail: String(error) }, 500)
+  }
+})
+
+app.patch('/api/v1/roadmap/:slug/stories/reorder', async c => {
+  const slug = c.req.param('slug')
+  const body = await c.req.json()
+
+  const { items } = body as {
+    items: Array<{ id: string; sortOrder: number }>
+  }
+
+  if (!items || !Array.isArray(items)) {
+    return c.json({ error: 'Invalid request: items are required' }, 400)
+  }
+
+  try {
+    await reorderPlanStories(slug, items)
+    return c.json({ success: true })
+  } catch (error) {
+    logger.error('Failed to reorder plan stories', { error, slug, items })
+    return c.json({ error: 'Failed to reorder plan stories' }, 500)
   }
 })
 

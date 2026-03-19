@@ -1,0 +1,160 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  test_framework: pgtap
+  test_file: tests/db/triggers/test_cdbe2005_allowed_agents.sql
+
+happy_path_tests:
+  - id: HP-1
+    title: 'validate_caller returns void for a known active agent'
+    setup: |
+      workflow.allowed_agents table seeded with known agents including 'pm-story-seed-agent' (active = true).
+      Migration 1005 (or equivalent CDBE-2005 migration) deployed.
+    action: |
+      SELECT workflow.validate_caller('pm-story-seed-agent');
+    expected: |
+      Function returns void without raising any exception. Query completes successfully.
+    evidence: |
+      pgtap: lives_ok($$ SELECT workflow.validate_caller('pm-story-seed-agent') $$, 'validate_caller should not raise for known active agent')
+
+  - id: HP-2
+    title: 'workflow.allowed_agents table exists with correct schema'
+    setup: |
+      CDBE-2005 migration deployed.
+    action: |
+      SELECT has_table('workflow', 'allowed_agents', '...');
+      SELECT has_column('workflow', 'allowed_agents', 'agent_id', '...');
+      SELECT has_column('workflow', 'allowed_agents', 'agent_name', '...');
+      SELECT has_column('workflow', 'allowed_agents', 'allowed_procedures', '...');
+      SELECT has_column('workflow', 'allowed_agents', 'active', '...');
+      SELECT has_column('workflow', 'allowed_agents', 'created_at', '...');
+    expected: |
+      All has_table and has_column assertions pass.
+    evidence: |
+      pgtap structural assertions on workflow.allowed_agents table.
+
+  - id: HP-3
+    title: 'Seed rows present for all known agent identities'
+    setup: |
+      CDBE-2005 migration deployed and seed executed.
+    action: |
+      SELECT COUNT(*) FROM workflow.allowed_agents WHERE active = true;
+    expected: |
+      Count >= 5 (minimum seed rows: pm-story-seed-agent, dev-implementation-agent, qa-verify-agent, orchestrator-agent, pipeline-supervisor).
+    evidence: |
+      pgtap: ok((SELECT COUNT(*) FROM workflow.allowed_agents WHERE active = true) >= 5, 'at least 5 active agents seeded')
+
+error_cases:
+  - id: EC-1
+    title: 'validate_caller raises exception for unknown agent_id'
+    setup: |
+      workflow.allowed_agents table seeded. 'unknown-agent-xyz' is NOT present in the table.
+    action: |
+      SELECT workflow.validate_caller('unknown-agent-xyz');
+    expected: |
+      Function raises SQLSTATE 'P0001' (raise_exception) with message 'Unauthorized caller: unknown-agent-xyz'.
+    evidence: |
+      pgtap: throws_ok(
+        $$ SELECT workflow.validate_caller('unknown-agent-xyz') $$,
+        'P0001',
+        'Unauthorized caller: unknown-agent-xyz',
+        'validate_caller should raise for unknown agent_id'
+      )
+
+  - id: EC-2
+    title: 'validate_caller raises exception for known agent with active = false'
+    setup: |
+      workflow.allowed_agents seeded. Insert or update a row so that a known agent has active = false.
+      Example: agent_id = 'deactivated-agent' present with active = false.
+    action: |
+      SELECT workflow.validate_caller('deactivated-agent');
+    expected: |
+      Function raises SQLSTATE 'P0001' with message 'Unauthorized caller: deactivated-agent'.
+    evidence: |
+      pgtap: throws_ok(
+        $$ SELECT workflow.validate_caller('deactivated-agent') $$,
+        'P0001',
+        'Unauthorized caller: deactivated-agent',
+        'validate_caller should raise for inactive agent'
+      )
+
+edge_cases:
+  - id: ED-1
+    title: 'validate_caller with NULL agent_id'
+    setup: |
+      workflow.allowed_agents table seeded. No row with NULL agent_id (agent_id is PK, cannot be NULL).
+    action: |
+      SELECT workflow.validate_caller(NULL);
+    expected: |
+      Function raises 'Unauthorized caller: <null>' or equivalent rejection. NULL is not a valid caller.
+    evidence: |
+      pgtap: throws_ok($$ SELECT workflow.validate_caller(NULL) $$, 'validate_caller should reject NULL agent_id')
+
+  - id: ED-2
+    title: 'Migration is idempotent — re-running does not duplicate seed rows'
+    setup: |
+      CDBE-2005 migration deployed once. Count of rows in workflow.allowed_agents recorded.
+    action: |
+      Re-run the CDBE-2005 migration SQL (or the seed DO $$ block) a second time.
+    expected: |
+      Row count in workflow.allowed_agents is unchanged. No duplicate rows inserted.
+      CREATE TABLE IF NOT EXISTS does not error. INSERT ON CONFLICT DO NOTHING skips existing rows.
+    evidence: |
+      Manual: run migration twice; compare row counts before and after second run.
+
+  - id: ED-3
+    title: 'validate_caller function exists (deployment guard)'
+    setup: |
+      CDBE-2005 migration deployed.
+    action: |
+      SELECT has_function('workflow', 'validate_caller', ARRAY['text'], '...');
+    expected: |
+      Assertion passes — function exists in workflow schema with correct signature.
+    evidence: |
+      pgtap: has_function('workflow', 'validate_caller', ARRAY['text'], 'validate_caller should exist in workflow schema')
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'has_table(workflow, allowed_agents) — pgtap structural assertion'
+      - 'has_function(workflow, validate_caller, [text]) — pgtap function existence'
+      - 'throws_ok for unknown agent — SQLSTATE P0001 with expected message'
+      - 'throws_ok for inactive agent — SQLSTATE P0001 with expected message'
+      - 'lives_ok for known active agent — no exception raised'
+      - 'Transaction wrapped in BEGIN/ROLLBACK for test isolation'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify COMMENT ON TABLE and COMMENT ON COLUMN documentation'
+    steps:
+      - 'Connect to the KB database'
+      - "Run: SELECT obj_description('workflow.allowed_agents'::regclass, 'pg_class')"
+      - 'Verify comment is non-empty and describes the table purpose'
+      - "Run: SELECT col_description('workflow.allowed_agents'::regclass, attnum) FROM pg_attribute WHERE attrelid = 'workflow.allowed_agents'::regclass AND attname = 'agent_id'"
+      - 'Verify each column has a non-null comment'
+    expected: |
+      All COMMENT ON TABLE and COMMENT ON COLUMN values are populated and meaningful.
+  - id: MC-2
+    title: 'Verify migration file numeric prefix positions CDBE-2005 before CDBE-2010'
+    steps:
+      - 'List apps/api/knowledge-base/src/db/migrations/ directory'
+      - 'Confirm CDBE-2005 migration file has lower numeric prefix than any CDBE-2010 migration file'
+    expected: |
+      CDBE-2005 migration runs before CDBE-2010 migration in sequential ordering.
+
+fixture_definitions:
+  - name: 'allowed_agents seed rows'
+    type: 'SQL INSERT seed data'
+    description: 'Minimum 5 rows: pm-story-seed-agent, dev-implementation-agent, qa-verify-agent, orchestrator-agent, pipeline-supervisor — all with active = true'
+  - name: 'deactivated-agent test row'
+    type: 'SQL INSERT (test-only)'
+    description: 'A known agent_id with active = false, inserted within test transaction and rolled back. Used for EC-2.'
+
+risks:
+  - 'If CDBE-2005 migration is not deployed before tests run, has_function assertion (ED-3) will fail — use SAVEPOINT isolation pattern from test_cdbe1030_artifact_superseded_at.sql'
+  - 'Agent identity list in AC-4 may not be exhaustive — seed should be easy to extend by appending rows'
+  - 'pgtap extension must be installed in the test database — CI environment must have pgtap available'
+  - 'NULL agent_id behavior (ED-1) depends on PL/pgSQL implementation; if agent_id PK constraint fires before function logic, error message will differ from P0001'

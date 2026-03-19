@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  ORCH-3010 is a backend orchestrator test-only story. No UI components, no frontend
+  surfaces, no HTTP API endpoints. The story adds a Vitest integration test file to
+  packages/backend/orchestrator. UI/UX review is not applicable.

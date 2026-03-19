@@ -30,7 +30,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import {
-  AppBadge,
   Button,
   Input,
   Select,
@@ -49,6 +48,9 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
+  PlanStatusTag,
+  PriorityTag,
+  GenericTag,
 } from '@repo/app-component-library'
 import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../store/roadmapApi'
 import {
@@ -99,43 +101,6 @@ const TYPE_OPTIONS = [
 ]
 
 const fromSelect = (v: string) => (v === ALL ? '' : v)
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: '!bg-slate-700/40 !border-slate-600/40 !text-slate-300/70',
-  active: '!bg-blue-500/20 !border-blue-500/30 !text-blue-300/70',
-  accepted: '!bg-cyan-500/20 !border-cyan-500/30 !text-cyan-300/70',
-  'stories-created': '!bg-teal-500/20 !border-teal-500/30 !text-teal-300/70',
-  'in-progress': '!bg-violet-500/20 !border-violet-500/30 !text-violet-300/70',
-  implemented: '!bg-emerald-500/20 !border-emerald-500/30 !text-emerald-300/70',
-  superseded: '!bg-orange-500/20 !border-orange-500/30 !text-orange-300/70',
-  archived: '!bg-slate-600/20 !border-slate-500/30 !text-slate-400/70',
-  blocked: '!bg-red-500/20 !border-red-500/30 !text-red-300/70',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  P1: '!bg-red-500/40 !border-red-500/30 !text-white/40',
-  P2: '!bg-orange-500/40 !border-orange-500/30 !text-white/40',
-  P3: '!bg-amber-400/40 !border-amber-400/30 !text-white/40',
-  P4: '!bg-teal-500/40 !border-teal-500/30 !text-white/40',
-  P5: '!bg-blue-500/40 !border-blue-500/30 !text-white/40',
-}
-
-const TAG_COLORS = [
-  'bg-cyan-500/20 text-cyan-300/70 border-cyan-500/30',
-  'bg-violet-500/20 text-violet-300/70 border-violet-500/30',
-  'bg-emerald-500/20 text-emerald-300/70 border-emerald-500/30',
-  'bg-amber-500/20 text-amber-300/70 border-amber-500/30',
-  'bg-pink-500/20 text-pink-300/70 border-pink-500/30',
-  'bg-sky-500/20 text-sky-300/70 border-sky-500/30',
-  'bg-orange-500/20 text-orange-300/70 border-orange-500/30',
-  'bg-teal-500/20 text-teal-300/70 border-teal-500/30',
-]
-
-function tagColor(tag: string): string {
-  let hash = 0
-  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0
-  return TAG_COLORS[hash % TAG_COLORS.length]
-}
 
 function relativeTime(dateStr: string | null): string {
   if (!dateStr) return '\u2014'
@@ -281,11 +246,8 @@ const tableColumns = [
       return (
         <ul className="flex flex-wrap gap-1" aria-label="Tags">
           {plan.tags.map(tag => (
-            <li
-              key={tag}
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${tagColor(tag)}`}
-            >
-              {tag}
+            <li key={tag}>
+              <GenericTag label={tag} />
             </li>
           ))}
         </ul>
@@ -298,14 +260,7 @@ const tableColumns = [
     size: 140,
     cell: info => {
       const plan = info.row.original
-      return (
-        <AppBadge
-          variant="outline"
-          className={STATUS_COLORS[plan.status ?? ''] ?? '!border-slate-600/50 !text-slate-400/70'}
-        >
-          {plan.status}
-        </AppBadge>
-      )
+      return <PlanStatusTag status={plan.status ?? ''} />
     },
     enableSorting: true,
   }),
@@ -315,16 +270,7 @@ const tableColumns = [
     cell: info => {
       const plan = info.row.original
       if (!plan.priority) return null
-      return (
-        <AppBadge
-          variant="outline"
-          className={
-            PRIORITY_COLORS[plan.priority] ?? '!bg-blue-500/40 !border-blue-500/30 !text-white/40'
-          }
-        >
-          {plan.priority}
-        </AppBadge>
-      )
+      return <PriorityTag priority={plan.priority} />
     },
     enableSorting: true,
   }),

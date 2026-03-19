@@ -210,6 +210,7 @@ export const planStoryLinks = workflow.table('plan_story_links', {
     .notNull()
     .references(() => stories.storyId, { onDelete: 'cascade' }),
   linkType: text('link_type').notNull().default('mentioned'),
+  sortOrder: integer('sort_order'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

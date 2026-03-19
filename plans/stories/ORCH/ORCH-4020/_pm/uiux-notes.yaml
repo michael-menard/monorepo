@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  ORCH-4020 is a backend test-only story. No frontend components, no API endpoints,
+  and no UI surfaces are touched. This story adds a Vitest integration test file to
+  packages/backend/orchestrator/src/__tests__/integration/. UI/UX review is not applicable.

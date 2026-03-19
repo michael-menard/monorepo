@@ -149,9 +149,16 @@ export const KbWriteArtifactInputSchema = z.object({
 
   /** JSONB summary for quick access (subset of content) */
   summary: z.record(z.unknown()).nullable().optional(),
+
+  /** When true, ignore caller's iteration value and auto-assign MAX(iteration)+1 for this (story_id, artifact_type, artifact_name) triple. Default: false (preserves upsert behavior). */
+  auto_increment: z.boolean().optional(),
+
+  /** Maximum allowed iteration. Rejects writes when resolved iteration >= max_iterations. */
+  max_iterations: z.number().int().min(1).optional(),
 })
 
-export type KbWriteArtifactInput = z.infer<typeof KbWriteArtifactInputSchema>
+/** Input type — allows optional fields that have defaults in the schema. */
+export type KbWriteArtifactInput = z.input<typeof KbWriteArtifactInputSchema>
 
 /**
  * Schema for kb_read_artifact input.
@@ -649,6 +656,43 @@ async function deleteDetailRow(
 }
 
 // ============================================================================
+// Iteration Helpers
+// ============================================================================
+
+/**
+ * Resolve the next iteration number for a (story_id, artifact_type) pair.
+ * When a custom artifact_name is provided, scopes the query to that name.
+ * When artifact_name is null (auto-generated names), queries across all
+ * names for that type since auto-generated names vary by iteration.
+ *
+ * Returns MAX(iteration) + 1, or 0 if no prior artifacts exist.
+ */
+async function resolveNextIteration(
+  db: NodePgDatabase<typeof schema>,
+  storyId: string,
+  artifactType: string,
+  artifactName: string | null,
+): Promise<number> {
+  const conditions = [
+    eq(storyArtifacts.storyId, storyId),
+    eq(storyArtifacts.artifactType, artifactType),
+  ]
+
+  // Only filter by artifact_name when a custom name was explicitly provided.
+  // Auto-generated names include the iteration suffix and vary per row.
+  if (artifactName !== null) {
+    conditions.push(eq(storyArtifacts.artifactName, artifactName))
+  }
+
+  const result = await db
+    .select({ maxIter: sql<number>`COALESCE(MAX(${storyArtifacts.iteration}), -1)` })
+    .from(storyArtifacts)
+    .where(and(...conditions))
+
+  return (result[0]?.maxIter ?? -1) + 1
+}
+
+// ============================================================================
 // Operations
 // ============================================================================
 
@@ -674,7 +718,31 @@ export async function kb_write_artifact(
   const { db } = deps
 
   const now = new Date()
-  const iteration = validatedInput.iteration ?? 0
+
+  // --- Resolve iteration ---
+  // When auto_increment is true, compute the next iteration from MAX(iteration)+1.
+  // Pass the custom artifact_name if provided; null triggers unscoped MAX across all names.
+  let iteration: number
+  if (validatedInput.auto_increment) {
+    iteration = await resolveNextIteration(
+      db,
+      validatedInput.story_id,
+      validatedInput.artifact_type,
+      validatedInput.artifact_name ?? null,
+    )
+  } else {
+    iteration = validatedInput.iteration ?? 0
+  }
+
+  // --- Enforce max_iterations ---
+  if (validatedInput.max_iterations !== undefined && iteration >= validatedInput.max_iterations) {
+    throw new Error(
+      `Max iterations (${validatedInput.max_iterations}) reached for ${validatedInput.artifact_type} on ${validatedInput.story_id}. Resolved iteration: ${iteration}`,
+    )
+  }
+
+  // --- Auto-inject iteration into content to eliminate drift ---
+  const content = { ...validatedInput.content, iteration }
 
   const artifactName =
     validatedInput.artifact_name ?? generateArtifactName(validatedInput.artifact_type, iteration)
@@ -698,7 +766,7 @@ export async function kb_write_artifact(
     const { detailTable, detailId } = await insertDetailRow(
       db,
       validatedInput.artifact_type,
-      validatedInput.content,
+      content,
       validatedInput.story_id,
     )
 
@@ -727,7 +795,7 @@ export async function kb_write_artifact(
       detailId,
     })
 
-    return toArtifactResponse(result[0], validatedInput.content)
+    return toArtifactResponse(result[0], content)
   }
 
   // Update existing: update detail row, then jump table
@@ -743,7 +811,7 @@ export async function kb_write_artifact(
       existingRow.detailTable,
       existingRow.detailId,
       validatedInput.artifact_type,
-      validatedInput.content,
+      content,
       validatedInput.story_id,
     )
   } else {
@@ -751,7 +819,7 @@ export async function kb_write_artifact(
     const { detailTable, detailId } = await insertDetailRow(
       db,
       validatedInput.artifact_type,
-      validatedInput.content,
+      content,
       validatedInput.story_id,
     )
     resolvedDetailTable = detailTable
@@ -778,7 +846,7 @@ export async function kb_write_artifact(
     artifactId: result[0].id,
   })
 
-  return toArtifactResponse(result[0], validatedInput.content)
+  return toArtifactResponse(result[0], content)
 }
 
 /**
@@ -1033,6 +1101,12 @@ export const ArtifactWriteInputSchema = z.object({
 
   /** Explicit summary override. When provided, takes precedence over auto-extracted summary. */
   summary: z.record(z.unknown()).optional(),
+
+  /** When true, auto-assign next iteration number via KB. Requires write_to_kb=true. Default: false. */
+  auto_increment: z.boolean().optional(),
+
+  /** Maximum allowed iteration. Rejects writes when resolved iteration >= max_iterations. */
+  max_iterations: z.number().int().min(1).optional(),
 })
 
 export type ArtifactWriteInput = z.infer<typeof ArtifactWriteInputSchema>
@@ -1082,12 +1156,75 @@ export async function artifact_write(
   kbWriteFn: KbWriteFn = kb_write_artifact,
 ): Promise<ArtifactWriteResult> {
   const validatedInput = ArtifactWriteInputSchema.parse(input)
-  const iteration = validatedInput.iteration ?? 0
+  const useAutoIncrement = validatedInput.auto_increment ?? false
+
+  // Artifact types that gate state transitions — KB write is mandatory for these.
+  const GATED_ARTIFACT_TYPES = new Set(['elaboration', 'proof', 'review', 'qa_gate'])
+  const isGated = GATED_ARTIFACT_TYPES.has(validatedInput.artifact_type)
+
+  // Auto-extract summary; caller-provided summary takes precedence (AC-5, AC-6)
+  const resolvedSummary =
+    validatedInput.summary ??
+    extractArtifactSummary(validatedInput.artifact_type, validatedInput.content)
+
+  let kbWritten: boolean | null = null
+  let kbArtifactId: string | null = null
+  let kbError: string | null = null
+  let resolvedIteration = validatedInput.iteration ?? 0
+
+  // When auto_increment is true, do KB write FIRST to resolve the iteration,
+  // then use the resolved iteration for the filesystem path.
+  if (useAutoIncrement && validatedInput.write_to_kb) {
+    try {
+      const result = await kbWriteFn(
+        {
+          story_id: validatedInput.story_id,
+          artifact_type: validatedInput.artifact_type,
+          content: validatedInput.content,
+          phase: validatedInput.phase ?? null,
+          auto_increment: true,
+          max_iterations: validatedInput.max_iterations,
+          summary: resolvedSummary,
+        },
+        deps,
+      )
+      kbWritten = true
+      kbArtifactId = result.id
+      resolvedIteration = result.iteration ?? 0
+
+      logger.info('artifact_write: KB write succeeded (auto_increment)', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        iteration: resolvedIteration,
+        artifactId: result.id,
+      })
+    } catch (err) {
+      kbWritten = false
+      kbError = err instanceof Error ? err.message : String(err)
+
+      if (isGated) {
+        logger.error('artifact_write: KB write failed for gated artifact type (blocking)', {
+          storyId: validatedInput.story_id,
+          artifactType: validatedInput.artifact_type,
+          error: kbError,
+        })
+        throw new Error(
+          `KB write required for gated artifact type '${validatedInput.artifact_type}': ${kbError}`,
+        )
+      }
+
+      logger.warn('artifact_write: KB write failed (non-blocking, auto_increment)', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        error: kbError,
+      })
+    }
+  }
 
   const filePath = computeArtifactPath(
     validatedInput.story_dir,
     validatedInput.artifact_type,
-    iteration,
+    resolvedIteration,
   )
 
   // ---- Filesystem write (primary, must succeed) ----
@@ -1095,7 +1232,6 @@ export async function artifact_write(
   const fs = await import('fs/promises')
   const path = await import('path')
 
-  // Ensure the _implementation directory exists
   const dir = path.dirname(filePath)
   await fs.mkdir(dir, { recursive: true })
 
@@ -1105,28 +1241,12 @@ export async function artifact_write(
   logger.info('artifact_write: file written', {
     storyId: validatedInput.story_id,
     artifactType: validatedInput.artifact_type,
-    iteration,
+    iteration: resolvedIteration,
     filePath,
   })
 
-  // Artifact types that gate state transitions — KB write is mandatory for these.
-  // A silent failure here would allow a story to appear stuck (artifact missing)
-  // even though work was done. The precondition guard in kb_update_story_status
-  // depends on these being present in the KB before allowing the transition.
-  const GATED_ARTIFACT_TYPES = new Set(['elaboration', 'proof', 'review', 'qa_gate'])
-  const isGated = GATED_ARTIFACT_TYPES.has(validatedInput.artifact_type)
-
-  // ---- KB write (mandatory for gated types, optional+failure-isolated for others) ----
-  let kbWritten: boolean | null = null
-  let kbArtifactId: string | null = null
-  let kbError: string | null = null
-
-  // Auto-extract summary; caller-provided summary takes precedence (AC-5, AC-6)
-  const resolvedSummary =
-    validatedInput.summary ??
-    extractArtifactSummary(validatedInput.artifact_type, validatedInput.content)
-
-  if (validatedInput.write_to_kb) {
+  // ---- KB write for non-auto_increment path (original behavior) ----
+  if (!useAutoIncrement && validatedInput.write_to_kb) {
     try {
       const result = await kbWriteFn(
         {
@@ -1134,7 +1254,8 @@ export async function artifact_write(
           artifact_type: validatedInput.artifact_type,
           content: validatedInput.content,
           phase: validatedInput.phase ?? null,
-          iteration,
+          iteration: resolvedIteration,
+          max_iterations: validatedInput.max_iterations,
           summary: resolvedSummary,
         },
         deps,
@@ -1145,7 +1266,7 @@ export async function artifact_write(
       logger.info('artifact_write: KB write succeeded', {
         storyId: validatedInput.story_id,
         artifactType: validatedInput.artifact_type,
-        iteration,
+        iteration: resolvedIteration,
         artifactId: result.id,
       })
     } catch (err) {
@@ -1153,12 +1274,10 @@ export async function artifact_write(
       kbError = err instanceof Error ? err.message : String(err)
 
       if (isGated) {
-        // Gated artifact types must land in the KB — re-throw so the caller knows
-        // the precondition for the next state transition cannot be satisfied.
         logger.error('artifact_write: KB write failed for gated artifact type (blocking)', {
           storyId: validatedInput.story_id,
           artifactType: validatedInput.artifact_type,
-          iteration,
+          iteration: resolvedIteration,
           error: kbError,
         })
         throw new Error(
@@ -1169,7 +1288,7 @@ export async function artifact_write(
       logger.warn('artifact_write: KB write failed (non-blocking)', {
         storyId: validatedInput.story_id,
         artifactType: validatedInput.artifact_type,
-        iteration,
+        iteration: resolvedIteration,
         error: kbError,
       })
     }

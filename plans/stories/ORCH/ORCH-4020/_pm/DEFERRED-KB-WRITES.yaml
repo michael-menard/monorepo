@@ -1,0 +1,42 @@
+# Deferred KB Writes for ORCH-4020
+# Generated: 2026-03-18
+# Reason: KB database not accessible from PM generation context (MCP not available in this session)
+# Action required: Run these writes when KB PostgreSQL connection is available
+
+writes:
+  - type: story_status_update
+    story_id: ORCH-4020
+    state: backlog
+    metadata:
+      experiment_variant: control
+      generated: '2026-03-18'
+      story_file: plans/stories/ORCH/ORCH-4020/ORCH-4020.md
+    triggered_by: pm-story-generation-leader
+    reason: Story generation complete
+
+  - type: story_upsert
+    story_id: ORCH-4020
+    feature: autonomous-pipeline-test-plan
+    title: 'E2E Pipeline Tests — Bootstrap to Story Creation to Elaboration'
+    story_dir: plans/stories/ORCH/ORCH-4020
+    story_file: plans/stories/ORCH/ORCH-4020/ORCH-4020.md
+    story_type: tech_debt
+    points: 5
+    priority: P2
+    state: backlog
+    touches_backend: true
+    touches_frontend: false
+    touches_database: false
+    touches_infra: false
+
+  - type: pm_artifact
+    story_id: ORCH-4020
+    artifact_type: pm_test_plan
+    source_file: plans/stories/ORCH/ORCH-4020/_pm/test-plan.yaml
+
+  - type: pm_artifact
+    story_id: ORCH-4020
+    artifact_type: pm_dev_feasibility
+    source_file: plans/stories/ORCH/ORCH-4020/_pm/dev-feasibility.yaml
+
+  # uiux-notes.yaml skipped: true — not stored as KB artifact per agent rules

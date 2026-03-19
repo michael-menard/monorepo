@@ -7,6 +7,7 @@ const config: Config = {
     './src/**/*.{ts,tsx}',
     './index.html',
     '../../packages/core/app-component-library/src/**/*.{ts,tsx}',
+    '../workflow-roadmap/src/**/*.{ts,tsx}',
   ],
   safelist: [
     'animate-in',

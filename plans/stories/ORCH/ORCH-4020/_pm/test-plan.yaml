@@ -1,0 +1,141 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Bootstrap handoff returns valid BootstrapResult with mocked story-creation'
+    setup: |
+      vi.mock('../graphs/story-creation.js') returns valid StoryCreationResult shape.
+      runBootstrap called with { storyId: 'ORCH-TEST-001', storyRequest: createPipelineTestStoryRequest(), config: { persistToDb: false, requireHiTL: false } }
+    action: 'Call runBootstrap with module-level story-creation mock active'
+    expected: |
+      BootstrapResult parsed by BootstrapResultSchema:
+      - success: true
+      - storyId === 'ORCH-TEST-001'
+      - storyCreationResult !== null
+      - errors: []
+    evidence: 'Vitest assertion: expect(result.success).toBe(true), expect(result.storyId).toBe(storyId), expect(result.storyCreationResult).not.toBeNull()'
+
+  - id: HP-2
+    title: 'Story-creation → elaboration two-graph chain produces valid ElaborationResult'
+    setup: |
+      createMockLLMProvider() injected into story-creation config.
+      runStoryCreation called with { request: createPipelineTestStoryRequest(), baseline: null, config: { persistToDb: false, requireHiTL: false, autoApprovalThreshold: 0 } }
+    action: |
+      1. Call runStoryCreation — capture synthesizedStory from result.
+      2. Call runElaboration(synthesizedStory, null, { persistToDb: false, recalculateReadiness: false })
+    expected: |
+      Step 1: StoryCreationResult with non-null synthesizedStory (parsed by StoryCreationResultSchema)
+      Step 2: ElaborationResult with success: true (parsed by ElaborationResultSchema)
+    evidence: |
+      expect(storyCreationResult.synthesizedStory).not.toBeNull()
+      expect(elaborationResult.success).toBe(true)
+
+  - id: HP-3
+    title: 'Fixture factories produce valid shapes accepted by graph schemas'
+    setup: 'createPipelineTestStoryRequest() and createPipelineTestSynthesizedStory() called with no args'
+    action: 'Parse each factory output with corresponding Zod schema'
+    expected: 'No Zod parse errors; all required fields present'
+    evidence: 'expect(() => StoryRequestSchema.parse(createPipelineTestStoryRequest())).not.toThrow()'
+
+error_cases:
+  - id: EC-1
+    title: 'Bootstrap with story-creation mock configured to throw returns BootstrapResult with success: false'
+    setup: |
+      vi.mock('../graphs/story-creation.js') configured to throw Error('story-creation failure').
+      runBootstrap called with valid storyId and config.
+    action: 'Call runBootstrap — story-creation mock throws during invoke'
+    expected: |
+      BootstrapResult returned (no uncaught exception):
+      - success: false
+      - errors array non-empty (contains error message)
+    evidence: |
+      await expect(runBootstrap(...)).resolves.not.toThrow()
+      expect(result.success).toBe(false)
+      expect(result.errors.length).toBeGreaterThan(0)
+
+  - id: EC-2
+    title: 'Bootstrap with empty storyId returns BootstrapResult with success: false'
+    setup: 'runBootstrap called with storyId: "" and valid config'
+    action: 'Call runBootstrap with empty string storyId'
+    expected: 'BootstrapResult with success: false and non-empty errors array; no uncaught exception'
+    evidence: 'expect(result.success).toBe(false)'
+
+  - id: EC-3
+    title: 'Story-creation returns null synthesizedStory — elaboration handles graceful null input'
+    setup: |
+      createMockLLMProvider() injected.
+      Story-creation mock (if needed) returns StoryCreationResult with synthesizedStory: null.
+    action: 'Call runElaboration with null currentStory'
+    expected: 'ElaborationResult returned without uncaught exception; success: false or skipped state documented'
+    evidence: 'await expect(runElaboration(null, null, config)).resolves.toBeDefined()'
+
+edge_cases:
+  - id: ED-1
+    title: 'Bootstrap test with persistToDb: false does not invoke DB node functions'
+    setup: 'Spy on load_from_db and save_to_db node calls if accessible; config: { persistToDb: false }'
+    action: 'Call runBootstrap; inspect which nodes executed'
+    expected: 'DB nodes not called; graph exits without DB I/O'
+    evidence: 'Test completes without DB connection error; mocked DB spy not called (if injectable)'
+
+  - id: ED-2
+    title: 'All integration tests complete within 10 seconds'
+    setup: 'Full test suite executed with all mocks active'
+    action: 'Run vitest on pipeline-e2e.integration.test.ts with --reporter=verbose'
+    expected: 'Total test duration < 10 seconds'
+    evidence: 'Vitest timing output; no test timeout errors'
+
+  - id: ED-3
+    title: 'Two-graph chain test uses autoApprovalThreshold: 0 and does not pause at HiTL node'
+    setup: 'runStoryCreation config includes autoApprovalThreshold: 0'
+    action: 'Call runStoryCreation through full graph execution'
+    expected: 'Graph does not pause at HiTL decision node; result returned without manual intervention'
+    evidence: 'Test resolves without hanging; no timeout; result has defined synthesizedStory'
+
+  - id: ED-4
+    title: 'vi.mock at module top level hoisting works for logger mock'
+    setup: 'vi.mock("@repo/logger", ...) declared at module top level before any imports'
+    action: 'Run test file; verify no logger output in console'
+    expected: 'No unhandled console output from @repo/logger; test passes'
+    evidence: 'Test output clean; no logger noise'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'BootstrapResultSchema.parse(result) — validates BootstrapResult shape'
+      - 'StoryCreationResultSchema.parse(result) — validates StoryCreationResult shape'
+      - 'ElaborationResultSchema.parse(result) — validates ElaborationResult shape'
+      - 'result.success === true (HP-1, HP-2)'
+      - 'result.errors.length === 0 (HP-1)'
+      - 'result.storyCreationResult !== null (HP-1)'
+      - 'result.synthesizedStory !== null (HP-2 step 1)'
+      - 'result.success === false (EC-1, EC-2)'
+      - 'result.errors.length > 0 (EC-1)'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: createPipelineTestStoryRequest
+    type: 'StoryRequest'
+    description: |
+      Minimal valid StoryRequest for pipeline E2E tests.
+      Defined inline in test file following createTestStoryRequest pattern from story-creation.test.ts.
+      Fields: storyId, title, description, acceptanceCriteria (2 items minimum).
+
+  - name: createPipelineTestSynthesizedStory
+    type: 'SynthesizedStory'
+    description: |
+      Minimal valid SynthesizedStory for feeding into runElaboration.
+      Defined inline following createTestStory pattern from elaboration.test.ts.
+      Fields: id, title, description, acceptanceCriteria, status, priority.
+
+risks:
+  - 'story-creation graph has 13+ nodes — if injectable LLM config is not accepted by all nodes, the two-graph chain test may fail or call live APIs unexpectedly. Verify injection points before writing AC-3 test.'
+  - 'Module-level vi.mock may interfere with the two-graph chain group if both test groups share the same file. Consider vi.resetModules() between groups or separate files.'
+  - 'BootstrapResult schema shape may wrap synthesizedStory differently than expected — read bootstrap.ts lines 323–376 before asserting on nested field access.'
+  - 'autoApprovalThreshold: 0 may not fully bypass HiTL pause — read story-creation.ts HiTL node implementation to confirm flag behavior.'
+  - '10-second timing constraint is tight for 13+ nodes even with mocked LLM — benchmark early in implementation.'

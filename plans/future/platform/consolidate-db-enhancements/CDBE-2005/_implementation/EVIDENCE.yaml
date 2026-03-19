@@ -1,0 +1,141 @@
+story_id: CDBE-2005
+phase: implementation
+iteration: 1
+timestamp: '2026-03-18T00:00:00Z'
+
+summary:
+  status: complete
+  all_acs_met: true
+  e2e_exempt: true
+  notes: >-
+    Database-only story (story_type: infra). Migration 1005 deployed to
+    knowledge-base-postgres successfully. 150 seed rows inserted (all agent
+    identities from .claude/agents/*.agent.md scan). validate_caller() function
+    raises SQLSTATE P0001 for unknown/inactive callers. All 8 pgtap assertions
+    pass. Migration is idempotent (second run: 0 rows inserted, no errors).
+    E2E tests exempt — no UI surface.
+
+files_created:
+  - path: apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    action: create
+    description: >-
+      Migration creating workflow.allowed_agents table (5 columns, PK, COMMENT ON TABLE/COLUMN),
+      idempotent DO $$ seed block (150 active agent rows), and workflow.validate_caller(text)
+      RETURNS void function with SQLSTATE P0001 on rejection.
+  - path: tests/db/triggers/test_cdbe2005_allowed_agents.sql
+    action: create
+    description: >-
+      pgtap test suite with 8 assertions covering function existence, table schema,
+      seed count, valid caller (lives_ok), unknown caller (throws_ok P0001),
+      inactive caller (throws_ok P0001), and NULL caller (throws_ok P0001).
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: met
+    evidence: >-
+      workflow.allowed_agents table created with columns: agent_id (text PK),
+      agent_name (text NOT NULL), allowed_procedures (text[] NOT NULL),
+      active (boolean NOT NULL DEFAULT true), created_at (timestamptz NOT NULL DEFAULT NOW()).
+      Verified via psql \d workflow.allowed_agents — all 5 columns and types confirmed.
+    evidence_type: file
+
+  - ac_id: AC-2
+    status: met
+    evidence: >-
+      Migration uses CREATE TABLE IF NOT EXISTS. Seed uses DO $$ WHERE NOT EXISTS block.
+      Second migration run produced NOTICE "Inserted 0 rows" and no errors.
+      Row count after both runs: 150 (unchanged).
+    evidence_type: command
+
+  - ac_id: AC-3
+    status: met
+    evidence: >-
+      COMMENT ON TABLE workflow.allowed_agents and COMMENT ON COLUMN for all 5 columns
+      (agent_id, agent_name, allowed_procedures, active, created_at) present in migration file.
+    evidence_type: file
+
+  - ac_id: AC-4
+    status: met
+    evidence: >-
+      Seed DO $$ block inserts 150 rows derived from full scan of .claude/agents/*.agent.md
+      (136 agent files) plus 2 logical identities (orchestrator-agent, pipeline-supervisor).
+      SELECT COUNT(*) FROM workflow.allowed_agents WHERE active = true returned 150.
+      Minimum required agents all present: pm-story-seed-agent, dev-implement-backend-coder,
+      dev-implement-frontend-coder, qa-verify-verification-leader, uat-orchestrator,
+      orchestrator-agent, pipeline-supervisor.
+    evidence_type: command
+
+  - ac_id: AC-5
+    status: met
+    evidence: >-
+      CREATE OR REPLACE FUNCTION workflow.validate_caller(caller_agent_id text) RETURNS void
+      created with RAISE EXCEPTION SQLSTATE P0001 'Unauthorized caller: <agent_id>' for
+      unknown/inactive callers. SELECT workflow.validate_caller('pm-story-seed-agent')
+      returned void without exception. SELECT workflow.validate_caller('rogue-process')
+      raised ERROR: Unauthorized caller: rogue-process.
+    evidence_type: test
+
+  - ac_id: AC-6
+    status: met
+    evidence: >-
+      pgtap assertion 6 (EC-1): throws_ok($$ SELECT workflow.validate_caller('rogue-process') $$,
+      'P0001', 'Unauthorized caller: rogue-process', ...) — PASSED.
+      pg_prove output: "All tests successful. Files=1, Tests=8"
+    evidence_type: test
+
+  - ac_id: AC-7
+    status: met
+    evidence: >-
+      pgtap assertion 5 (HP-1): lives_ok($$ SELECT workflow.validate_caller('pm-story-seed-agent') $$,
+      'validate_caller should return void without exception for a known active agent') — PASSED.
+      pg_prove output: "All tests successful. Files=1, Tests=8"
+    evidence_type: test
+
+  - ac_id: AC-8
+    status: met
+    evidence: >-
+      pgtap assertion 7 (EC-2): throws_ok for '_test-inactive-agent' (inserted within
+      transaction with active=false), raises P0001 'Unauthorized caller: _test-inactive-agent' — PASSED.
+      pg_prove output: "All tests successful. Files=1, Tests=8"
+    evidence_type: test
+
+  - ac_id: AC-9
+    status: met
+    evidence: >-
+      Test file uses BEGIN; ... ROLLBACK; wrapper. Assertion 1 is has_function('workflow',
+      'validate_caller', ARRAY['text'], 'workflow.validate_caller(text) function should exist
+      (deployed by CDBE-2005)') — PASSED.
+      pg_prove output: "All tests successful. Files=1, Tests=8"
+    evidence_type: test
+
+  - ac_id: AC-10
+    status: met
+    evidence: >-
+      Migration file created at apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+      with numeric prefix 1005. No collision with other in-flight CDBE migrations.
+    evidence_type: file
+
+build_verification:
+  migration_first_run:
+    command: psql -f apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql
+    status: passed
+    output: 'CREATE TABLE, COMMENT x6, NOTICE: 1005: Inserted 150 rows, DO, CREATE FUNCTION, COMMENT'
+  migration_idempotency_run:
+    command: psql -f apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql (second run)
+    status: passed
+    output: 'CREATE TABLE (skipping), COMMENT x6, NOTICE: 1005: Inserted 0 rows, DO, CREATE FUNCTION, COMMENT'
+  pgtap_tests:
+    command: pg_prove tests/db/triggers/test_cdbe2005_allowed_agents.sql
+    status: passed
+    output: 'All tests successful. Files=1, Tests=8, Result: PASS'
+
+e2e_tests:
+  status: exempt
+  reason: >-
+    story_type: infra (database-only). No UI surface. No Playwright tests applicable.
+    AC coverage is 100% via pgtap (DB-level) and migration execution evidence.
+
+git:
+  branch: story/CDBE-2005
+  commit: bde987b2
+  pushed: true

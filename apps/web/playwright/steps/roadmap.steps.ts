@@ -330,6 +330,47 @@ Then('I should see {string}', async ({ page }, text: string) => {
 })
 
 // ============================================================================
+// Dependency Graph Tab Steps
+// ============================================================================
+
+Given('I click on the Deps tab', async ({ page }) => {
+  const depsTab = page.getByRole('tab', { name: /deps/i })
+  await depsTab.click()
+  await page.waitForTimeout(300)
+})
+
+Then('I should see wave headers with story cards', async ({ page }) => {
+  // Wave headers render as "Wave N" text inside the dep graph view
+  const waveHeader = page.getByText(/Wave \d+/)
+  // Either we see wave headers (plan has dependencies) or the no-dependencies message
+  const noDeps = page.getByText(/No dependencies/)
+  const noStories = page.getByText(/No stories match/)
+  const hasWaves = await waveHeader
+    .first()
+    .isVisible()
+    .catch(() => false)
+  const hasNoDeps = await noDeps.isVisible().catch(() => false)
+  const hasNoStories = await noStories.isVisible().catch(() => false)
+
+  // At least one of these should be visible
+  expect(hasWaves || hasNoDeps || hasNoStories).toBeTruthy()
+
+  // If waves are present, verify story cards exist within them
+  if (hasWaves) {
+    const storyCards = page.locator('a[href*="/story/"]')
+    await expect(storyCards.first()).toBeVisible()
+  }
+})
+
+Then('I should see {string} or {string}', async ({ page }, text1: string, text2: string) => {
+  const el1 = page.getByText(text1)
+  const el2 = page.getByText(text2)
+  const visible1 = await el1.isVisible().catch(() => false)
+  const visible2 = await el2.isVisible().catch(() => false)
+  expect(visible1 || visible2).toBeTruthy()
+})
+
+// ============================================================================
 // Story Details Page Verification Steps
 // ============================================================================
 
@@ -481,4 +522,80 @@ Then('the page size should show {string}', async ({ page }, size: string) => {
     .locator('[role="combobox"]')
     .filter({ hasText: new RegExp(`^${size}$`) })
   await expect(pageSizeSelector.first()).toBeVisible()
+})
+
+// ============================================================================
+// Dashboard Steps
+// ============================================================================
+
+Given('I am on the dashboard page', async ({ page }) => {
+  await page.goto('/dashboard')
+  await page.waitForLoadState('load')
+})
+
+Then('I should see the dashboard page title', async ({ page }) => {
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+})
+
+Then('I should see the dashboard subtitle', async ({ page }) => {
+  await expect(page.getByText('Cross-plan project health and next actions')).toBeVisible()
+})
+
+Then('I should see the {string} section', async ({ page }, sectionName: string) => {
+  await expect(page.getByText(sectionName, { exact: true })).toBeVisible()
+})
+
+Then('I should see the total story count', async ({ page }) => {
+  await expect(page.getByText(/\d+ stories/)).toBeVisible()
+})
+
+Then('I should see the state distribution bar', async ({ page }) => {
+  await expect(page.locator('svg rect').first()).toBeVisible()
+})
+
+Then('I should see work queue table headers', async ({ page }) => {
+  await expect(page.getByRole('columnheader', { name: 'Story' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Title' })).toBeVisible()
+})
+
+Then('I should see at least one plan card', async ({ page }) => {
+  // Plan cards are <a> elements with plan titles inside .grid container
+  const planCards = page.locator('a').filter({ has: page.locator('h3') })
+  await expect(planCards.first()).toBeVisible()
+})
+
+Then('I should see a {string} link in the header', async ({ page }, linkText: string) => {
+  const link = page.locator('header').getByRole('link', { name: linkText })
+  await expect(link).toBeVisible()
+})
+
+When('I click the {string} link', async ({ page }, linkText: string) => {
+  const link = page.locator('header').getByRole('link', { name: linkText })
+  await link.click()
+  await page.waitForLoadState('load')
+})
+
+Then('I should be on the dashboard page', async ({ page }) => {
+  await expect(page).toHaveURL(/\/dashboard/)
+})
+
+Given('the work queue has stories', async ({ page }) => {
+  // Dashboard is already loaded; verify queue has content
+  await expect(page.locator('a[href*="/story/"]').first()).toBeVisible()
+})
+
+When('I click on a story ID in the work queue', async ({ page }) => {
+  const storyLink = page.locator('a[href*="/story/"]').first()
+  await storyLink.click()
+  await page.waitForLoadState('load')
+})
+
+Given('there are plan progress cards', async ({ page }) => {
+  await expect(page.locator('a[href*="/plan/"]').first()).toBeVisible()
+})
+
+When('I click on a plan card', async ({ page }) => {
+  const planCard = page.locator('a[href*="/plan/"]').first()
+  await planCard.click()
+  await page.waitForLoadState('load')
 })

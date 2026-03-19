@@ -109,13 +109,16 @@ Report: "{STORY_ID} blocked at Phase N: <reason>"
 
 On `QA PASS`:
 
-- Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "completed", phase: "qa_verification" })`
-- Story status: ✅ `uat`
 - Log telemetry (fire-and-forget — never blocks workflow):
   ```
   /telemetry-log {STORY_ID} qa-verify-story qa success
   ```
   If the call returns null or throws, log a warning and continue.
+- **Merge and finalize** — delegate to `/done`:
+  ```
+  /done {STORY_ID}
+  ```
+  This handles: commit any remaining changes, push, rebase on main, squash-merge the PR, delete branches, remove the worktree, update KB to `completed`, and pull main. If `/done` encounters errors (no PR, worktree already gone, etc.), it warns and continues — non-blocking.
 
 On `QA FAIL`:
 
