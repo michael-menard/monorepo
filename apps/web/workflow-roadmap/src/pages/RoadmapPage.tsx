@@ -48,7 +48,6 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
-  PlanStatusTag,
   PriorityTag,
   GenericTag,
 } from '@repo/app-component-library'
@@ -198,91 +197,81 @@ const col = createColumnHelper<Plan>()
 const tableColumns = [
   col.display({
     id: 'drag',
-    size: 48,
     header: () => null,
     cell: () => null, // overridden in SortableRow
+    meta: { width: 'w-10' },
   }),
   col.accessor('title', {
     header: 'Title',
-    // no explicit size — fills remaining space via colgroup
     cell: info => {
       const plan = info.row.original
       return (
-        <Link
-          to="/plan/$slug"
-          params={{ slug: plan.planSlug }}
-          className="flex items-center gap-1.5 no-underline"
-          onClick={e => e.stopPropagation()}
-        >
-          <span className="text-slate-100/70 hover:text-cyan-400 transition-colors">
-            {plan.title}
-          </span>
-          {plan.churnDepth > 0 && (
-            <span
-              className="text-xs text-amber-400 font-mono"
-              aria-label={`Supersedes ${plan.churnDepth} prior plan${plan.churnDepth > 1 ? 's' : ''}${plan.supersedesPlanSlug ? ` (replaces ${plan.supersedesPlanSlug})` : ''}`}
-            >
-              {'\u21BA'}
-              {plan.churnDepth}
+        <div className="min-w-0">
+          <Link
+            to="/plan/$slug"
+            params={{ slug: plan.planSlug }}
+            className="flex items-center gap-1.5 no-underline"
+            onClick={e => e.stopPropagation()}
+          >
+            <span className="text-base font-semibold text-slate-100/70 hover:text-cyan-400 transition-colors truncate">
+              {plan.title}
             </span>
+            {plan.churnDepth > 0 && (
+              <span
+                className="text-xs text-amber-400 font-mono shrink-0"
+                aria-label={`Supersedes ${plan.churnDepth} prior plan${plan.churnDepth > 1 ? 's' : ''}${plan.supersedesPlanSlug ? ` (replaces ${plan.supersedesPlanSlug})` : ''}`}
+              >
+                {'\u21BA'}
+                {plan.churnDepth}
+              </span>
+            )}
+            {plan.hasRegression && (
+              <span
+                className="text-xs text-orange-500 font-mono shrink-0"
+                aria-label="Status has regressed"
+              >
+                {'\u26A0'}
+              </span>
+            )}
+          </Link>
+          {plan.tags && plan.tags.length > 0 && (
+            <ul className="flex flex-wrap gap-1 mt-1 ml-3" aria-label="Tags">
+              {plan.tags.map(tag => (
+                <li key={tag}>
+                  <GenericTag label={tag} />
+                </li>
+              ))}
+            </ul>
           )}
-          {plan.hasRegression && (
-            <span className="text-xs text-orange-500 font-mono" aria-label="Status has regressed">
-              {'\u26A0'}
-            </span>
-          )}
-        </Link>
+        </div>
       )
-    },
-    enableSorting: true,
-  }),
-  col.display({
-    id: 'tags',
-    size: 200,
-    header: 'Tags',
-    cell: info => {
-      const plan = info.row.original
-      if (!plan.tags || plan.tags.length === 0) return null
-      return (
-        <ul className="flex flex-wrap gap-1" aria-label="Tags">
-          {plan.tags.map(tag => (
-            <li key={tag}>
-              <GenericTag label={tag} />
-            </li>
-          ))}
-        </ul>
-      )
-    },
-    meta: { hideAt: 'xl' },
-  }),
-  col.accessor('status', {
-    header: 'Status',
-    size: 140,
-    cell: info => {
-      const plan = info.row.original
-      return <PlanStatusTag status={plan.status ?? ''} />
     },
     enableSorting: true,
   }),
   col.accessor('priority', {
     header: 'Priority',
-    size: 100,
     cell: info => {
       const plan = info.row.original
       if (!plan.priority) return null
       return <PriorityTag priority={plan.priority} />
     },
     enableSorting: true,
+    meta: { hideAt: 'md', width: 'w-20' },
   }),
   col.accessor('totalStories', {
     header: 'Stories',
-    size: 160,
     cell: info => <StoryGauge plan={info.row.original} />,
     enableSorting: true,
+    meta: { hideAt: 'sm', width: 'w-[15%]' },
+  }),
+  col.display({
+    id: 'spacer',
+    header: () => null,
+    cell: () => null,
+    meta: { hideAt: 'lg', width: 'w-8' },
   }),
   col.accessor('lastStoryActivityAt', {
     header: 'Last Activity',
-    size: 120,
     cell: info => {
       const val = info.getValue()
       return (
@@ -292,7 +281,7 @@ const tableColumns = [
       )
     },
     enableSorting: true,
-    meta: { hideAt: 'lg' },
+    meta: { hideAt: 'lg', width: 'w-24' },
   }),
 ]
 
@@ -346,7 +335,7 @@ function SortableRow({
         const meta = cell.column.columnDef.meta as Record<string, unknown> | undefined
         if (cell.column.id === 'drag') {
           return (
-            <TableCell key={cell.id} className="py-3">
+            <TableCell key={cell.id} className="py-6">
               <button
                 type="button"
                 {...attributes}
@@ -657,14 +646,13 @@ export function RoadmapPage() {
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <Table className="table-fixed">
+            <Table>
               <colgroup>
-                {table.getAllColumns().map(column => (
-                  <col
-                    key={column.id}
-                    style={column.id === 'title' ? undefined : { width: column.getSize() }}
-                  />
-                ))}
+                {table.getAllColumns().map(column => {
+                  const meta = column.columnDef.meta as Record<string, unknown> | undefined
+                  const w = (meta?.width as string) || undefined
+                  return <col key={column.id} className={w} />
+                })}
               </colgroup>
               <TableHeader>
                 {table.getHeaderGroups().map(hg => (
@@ -718,18 +706,20 @@ export function RoadmapPage() {
           </div>
           <div className="flex items-center gap-1">
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
+              className="h-8 w-8 text-slate-400 hover:text-slate-100"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              className="h-8 w-8 text-slate-400 hover:text-slate-100"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -747,13 +737,14 @@ export function RoadmapPage() {
                 pageNum = current - 2 + i
               }
 
+              const isActive = pagination.pageIndex === pageNum
               return (
                 <Button
                   key={pageNum}
-                  variant={pagination.pageIndex === pageNum ? 'default' : 'outline'}
-                  size="sm"
+                  variant={isActive ? 'default' : 'ghost'}
+                  size="icon"
                   onClick={() => table.setPageIndex(pageNum)}
-                  className="w-8 h-8 p-0"
+                  className={`h-8 w-8 text-sm ${isActive ? '' : 'text-slate-400 hover:text-slate-100'}`}
                 >
                   {pageNum + 1}
                 </Button>
@@ -761,18 +752,20 @@ export function RoadmapPage() {
             })}
 
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              className="h-8 w-8 text-slate-400 hover:text-slate-100"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => table.setPageIndex(totalPages - 1)}
               disabled={!table.getCanNextPage()}
+              className="h-8 w-8 text-slate-400 hover:text-slate-100"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
