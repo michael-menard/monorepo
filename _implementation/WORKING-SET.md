@@ -1,133 +1,123 @@
-# WINT-9090: Working Set
+# CDBE-3010 Working Set
 
-## Story Context
-
-Port context-warmer and session-manager agent logic to LangGraph nodes in `packages/backend/orchestrator/src/nodes/context/`.
-
-**Status**: in-progress
-**Iteration**: 0
-**Phase**: setup → implementation
+**Story ID**: CDBE-3010  
+**Story Branch**: `tree/story/CDBE-3010`  
+**Implementation Phase**: Development Setup Complete  
+**Worktree**: `/Users/michaelmenard/Development/monorepo/tree/story/CDBE-3010`  
 
 ---
 
-## Key Constraints (from CLAUDE.md & Story)
+## Constraints
 
-1. **Use Zod schemas for all types** — Never use TypeScript interfaces
-2. **No barrel files** — Import directly from source files
-3. **Use @repo/logger, not console** — All logging via logger module
-4. **Minimum 45% test coverage** — Story expects >= 80% for nodes
-5. **Named exports preferred** — Functions and types exported by name
-6. **Dependency gate: WINT-9010** — Must reach uat/completed before implementation starts
-7. **Factory pattern required** — All nodes use `createToolNode` from node-factory.ts
-8. **Graceful degradation** — DB failures return null/false, never throw
-9. **No schema changes** — Read-only access to context_cache tables
+### From CLAUDE.md
+- Use Zod schemas for all TypeScript types (NOT APPLICABLE — pure DDL)
+- No barrel files (NOT APPLICABLE — pure DDL)
+- Use @repo/logger, not console (NOT APPLICABLE — pure DDL)
+- Minimum 45% test coverage (NOT APPLICABLE — test surface is pgtap only, coverage not measured)
+- Named exports preferred (NOT APPLICABLE — pure DDL)
 
----
-
-## Canonical References
-
-| Pattern | File |
-|---------|------|
-| LangGraph node porting | `packages/backend/orchestrator/src/nodes/sync/doc-sync.ts` |
-| Extended graph state | `packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts` |
-| DB injection pattern | `packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts` |
-| Context cache logic | `packages/backend/mcp-tools/src/context-cache/context-cache-get.ts` |
-| Session logic | `packages/backend/mcp-tools/src/session-management/session-create.ts` |
-
----
-
-## Implementation Path
-
-### Subtask 1: Directory Structure (ST-1)
-- Create `packages/backend/orchestrator/src/nodes/context/index.ts`
-- Estimated: 4k tokens
-
-### Subtask 2: Context Warmer Node (ST-2)
-- Implement `context-warmer.ts` with cache read + write logic
-- Port `contextCacheGet` and `contextCachePut` from MCP tools
-- Estimated: 14k tokens
-
-### Subtask 3: Cache Invalidation (ST-3)
-- Add invalidation operation to context-warmer.ts
-- Port `contextCacheInvalidate` logic
-- Estimated: 6k tokens
-
-### Subtask 4: Session Manager Node (ST-4)
-- Implement `session-manager.ts` with create/update/complete/cleanup
-- Port all sessionManager operations from MCP tools
-- Estimated: 14k tokens
-
-### Subtask 5: Unit Tests (ST-5)
-- Write `__tests__/context-warmer.test.ts` (injectable mocks)
-- Write `__tests__/session-manager.test.ts` (injectable mocks)
-- Achieve >= 80% coverage
-- Estimated: 16k tokens
-
----
-
-## Acceptance Criteria (14 total)
-
-- [ ] AC-1: context-warmer.ts with factory and default export
-- [ ] AC-2: session-manager.ts with factory and default export
-- [ ] AC-3: nodes/context/index.ts re-exports both
-- [ ] AC-4: Cache read from contextPacks
-- [ ] AC-5: Cache write to contextPacks
-- [ ] AC-6: Session create in contextSessions
-- [ ] AC-7: Session update/complete operations
-- [ ] AC-8: Both use createToolNode
-- [ ] AC-9: Extended GraphState interfaces
-- [ ] AC-10: DB injectable (factory pattern)
-- [ ] AC-11: Graceful degradation on DB failure
-- [ ] AC-12: >= 80% test coverage
-- [ ] AC-13: Cache invalidation accessible
-- [ ] AC-14: Zod schemas defined (not duplicated)
-
----
-
-## Dependencies
-
-**Blocking**: WINT-9010 must reach uat or completed
-
-**Source code**:
-- `@repo/logger`
-- `@repo/db`
-- `@repo/database-schema`
-- `@repo/workflow-logic` (confirmation needed)
-- MCP tool types from context-cache and session-management
-
----
-
-## Branch & Worktree
-
-- **Worktree**: `/Users/michaelmenard/Development/monorepo/tree/story/WINT-9090`
-- **Main branch**: main
-- **Feature branch**: TBD (create during implementation)
-
----
-
-## Verification Commands
-
-```bash
-# Type check
-pnpm check-types --filter @repo/orchestrator
-
-# Test with coverage
-pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage
-
-# Full test suite
-pnpm test:all
-```
+### Migration-Specific Constraints
+1. **Safety Preamble**: All knowledgebase migrations must include `current_database() = 'knowledgebase'` verification (lesson from CDBN-1050)
+2. **Idempotency**: `CREATE OR REPLACE VIEW` is idempotent; no DROP guard needed
+3. **Column Exposure**: Use explicit column list (not `s.*`) to avoid schema change surprises
+4. **RLS Inheritance**: View runs with SECURITY INVOKER (default); caller privileges inherited from underlying tables
+5. **Index Dependency**: `idx_story_state_history_open_rows` (migration 1010) must exist before view creation
+6. **No API Scope**: Pure DDL — no MCP tools, Lambda handlers, TypeScript services, or UI components
 
 ---
 
 ## Next Steps
 
-1. Read canonical reference files (doc-sync.ts, load-knowledge-context.ts, load-from-db.ts)
-2. Read MCP tool business logic (context-cache-get.ts, session-create.ts, etc.)
-3. Implement ST-1 (directory structure)
-4. Implement ST-2 (context-warmer)
-5. Implement ST-3 (invalidation)
-6. Implement ST-4 (session-manager)
-7. Implement ST-5 (tests)
-8. Run verification commands
-9. Create PR and code review
+### Phase: Implementation
+1. Write `apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql`
+   - Safety preamble DO block
+   - CREATE OR REPLACE VIEW with explicit column list
+   - LATERAL join for latest open row
+   - COMMENT statements with migration number prefix
+
+2. Write `apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql`
+   - View existence assertion
+   - Three data scenarios: with history, without history, with closed + open rows
+   - Idempotency tests
+
+### Phase: Verification
+- Run migration on KB database
+- Run pgtap tests
+- Verify idempotency (re-run migration, expect zero errors)
+- Confirm LATERAL join uses partial index (EXPLAIN plan)
+
+### Phase: Code Review
+- AC compliance verification (AC-1 through AC-12)
+- Non-goal validation (no API/TypeScript changes)
+- Pattern conformance (vs. reference files)
+
+### Phase: QA
+- Production deployment readiness
+- Rollback readiness
+- RLS privilege verification across roles
+
+---
+
+## Reference Patterns
+
+### LATERAL Join (from 1000_create_story_details_view.sql, lines 117–123)
+```sql
+LEFT JOIN LATERAL (
+  SELECT *
+  FROM workflow.story_outcomes o2
+  WHERE o2.story_id = s.story_id
+  ORDER BY o2.created_at DESC
+  LIMIT 1
+) o ON true
+```
+
+### CREATE OR REPLACE VIEW (from 999_add_plan_churn_tracking.sql, line 65)
+```sql
+CREATE OR REPLACE VIEW workflow.v_plan_churn_summary AS
+WITH RECURSIVE ...
+```
+
+### pgtap Structure (from 1010_story_state_history_trigger_test.sql)
+```sql
+BEGIN;
+SELECT plan(N);
+-- Assertions
+SELECT * FROM finish();
+ROLLBACK;
+```
+
+### Safety Preamble (from CDBN-1050 lesson)
+```sql
+DO $$ BEGIN
+  IF current_database() <> 'knowledgebase' THEN
+    RAISE EXCEPTION 'Migration 1030: This migration must run against the ''knowledgebase'' database, not %', current_database();
+  END IF;
+END $$;
+```
+
+---
+
+## Files to Create
+
+| File | Purpose | Lines Est. |
+|------|---------|-----------|
+| `apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql` | Migration DDL | ~60 |
+| `apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql` | pgtap tests | ~80 |
+
+---
+
+## Files NOT in Scope
+
+- No changes to `workflow.stories` table
+- No changes to `workflow.story_details` view
+- No changes to `workflow.story_state_history` table
+- No new TypeScript types or services
+- No new API endpoints
+- No new MCP tools
+- No UI components
+
+---
+
+## Summary
+
+CDBE-3010 is a narrowly-scoped DDL migration story. The implementation requires two SQL files: a migration file creating the view with proper idempotency and safety guards, and a pgtap test file covering all acceptance criteria. No code outside the database layer is in scope.
