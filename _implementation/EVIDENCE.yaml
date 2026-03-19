@@ -1,94 +1,182 @@
-story_id: CDBN-2024
+schema: 1
+story_id: CDBE-4020
+timestamp: '2026-03-19T04:00:00Z'
 phase: implementation
-iteration: 1
-story_type: infra
-e2e_exempt: true
+iteration: 0
 
-summary: >
-  Dropped public.stories table, redirected story-similarity.ts to workflow.stories,
-  added embedding column to workflow.stories Drizzle schema and migration,
-  removed storyDetails from legacy.ts and all import sites.
+summary: >-
+  All three subtasks completed successfully. Migration 1011 applied to knowledgebase DB with
+  zero errors on both first and second (idempotency) run. All 15 pgtap tests pass. kb.ts
+  updated with embedding column on all five tables. Zero new type errors introduced.
 
-files_changed:
-  - path: apps/api/knowledge-base/src/db/migrations/1011_cdbn2024_cleanup_public_stories.sql
-    action: created
-    description: >
-      Migration: DROP TABLE public.stories CASCADE, DROP legacy trigger functions
-      (audit_story_changes, set_story_completed_at, set_story_started_at),
-      ADD COLUMN embedding vector(1536) to workflow.stories, CREATE ivfflat index.
+subtask_results:
+  - subtask_id: ST-1
+    status: complete
+    files_created:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+    verification: >-
+      Applied to knowledgebase DB (port 5435). First run: zero errors, RAISE NOTICE output for
+      all 5 tables (lessons_learned=62, adrs=0, code_standards=0, rules=0, cohesion_rules=0),
+      5x ALTER TABLE, 5x CREATE INDEX. Second run: zero errors, all "already exists, skipping"
+      NOTICEs confirming idempotency.
 
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbn2024_cleanup_public_stories_test.sql
-    action: created
-    description: >
-      pgTAP test: verifies public.stories is absent and workflow.stories.embedding exists.
+  - subtask_id: ST-2
+    status: complete
+    files_modified:
+      - apps/api/knowledge-base/src/db/schema/kb.ts
+    verification: >-
+      pnpm --filter @repo/knowledge-base check-types: 17 pre-existing errors, 0 errors in
+      kb.ts. Zero new type errors introduced by this change. All five tables (adrs,
+      codeStandards, cohesionRules, lessonsLearned, rules) have embedding column added.
+      Inferred select/insert types exported for all five tables.
 
-  - path: apps/api/knowledge-base/src/search/story-similarity.ts
-    action: modified
-    description: >
-      Converted SimilarStoryResult interface to Zod schema (SimilarStoryResultSchema),
-      redirected FROM clause from public.stories to workflow.stories,
-      removed deleted_at IS NULL filter (column absent from workflow.stories),
-      embedding IS NOT NULL is now sole WHERE condition.
+  - subtask_id: ST-3
+    status: complete
+    files_created:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+    verification: >-
+      All 15 pgtap assertions pass: 5x col_type_is (public.vector(1536)), 5x HNSW index
+      existence (USING hnsw in indexdef), 5x nullable check (is_nullable = YES).
 
-  - path: apps/api/knowledge-base/src/crud-operations/story-context.ts
-    action: modified
-    description: >
-      Removed storyDetails import and parallel query, removed isNull(stories.deletedAt)
-      filter (column absent from workflow.stories), detail field returns null,
-      removed unused isNull and and imports.
+ac_evidence:
+  - ac_id: AC-1
+    status: PASS
+    evidence: >-
+      Migration contains DO block checking current_database() = 'knowledgebase'. If database
+      is not 'knowledgebase', raises EXCEPTION '1011: This migration must run against the
+      knowledgebase database. Current database: %'. Safety preamble confirmed at lines 28-35
+      of migration file (verbatim pattern from 1007).
+    evidence_type: manual
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
 
-  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
-    action: modified
-    description: >
-      Added embedding: vector('embedding', { dimensions: 1536 }) to workflow.stories
-      Drizzle table definition. Replaced removed-column comment.
+  - ac_id: AC-2
+    status: PASS
+    evidence: >-
+      Migration contains ALTER TABLE public.<table> ADD COLUMN IF NOT EXISTS embedding
+      public.vector(1536) for all five tables (lessons_learned, adrs, code_standards, rules,
+      cohesion_rules). Confirmed via pg_attribute: pgtap tests 1-5 verify col_type_is
+      public.vector(1536) for all five tables — all pass.
+    evidence_type: command
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
 
-  - path: apps/api/knowledge-base/src/db/schema/legacy.ts
-    action: modified
-    description: >
-      Removed storyDetails table export (lines 80-109) and unused boolean import.
+  - ac_id: AC-3
+    status: PASS
+    evidence: >-
+      Migration contains CREATE INDEX CONCURRENTLY IF NOT EXISTS ... USING hnsw (embedding
+      public.vector_cosine_ops) WITH (m = 16, ef_construction = 64) for all five tables.
+      pgtap tests 6-10 verify HNSW index existence via pg_indexes.indexdef ILIKE '%USING hnsw%'
+      — all pass. Indexes confirmed in pg_indexes query: one per table, no duplicates.
+    evidence_type: command
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
 
-  - path: apps/api/knowledge-base/src/db/index.ts
-    action: modified
-    description: >
-      Removed storyDetails from re-exports list.
+  - ac_id: AC-4
+    status: PASS
+    evidence: >-
+      Second migration run produced zero errors. All ALTER TABLE statements emitted "column
+      already exists, skipping" NOTICEs. All CREATE INDEX CONCURRENTLY statements emitted
+      "relation already exists, skipping" NOTICEs. pg_indexes query confirms exactly one HNSW
+      index per table (5 rows total, one per table).
+    evidence_type: command
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
 
-  - path: docs/architecture/databases.md
-    action: modified
-    description: >
-      Added CDBN-2024 migration note documenting public.stories removal.
-      Updated workflow schema table description to note embedding support.
+  - ac_id: AC-5
+    status: PASS
+    evidence: >-
+      Migration contains COMMENT ON COLUMN public.<table>.embedding with '1011:' prefix for
+      all five tables. Pattern: '1011: Semantic embedding vector (1536 dimensions) for
+      similarity search via HNSW index.' COMMENT ON INDEX also includes '1011:' prefix for
+      all five indexes.
+    evidence_type: manual
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
 
-quality_gates:
+  - ac_id: AC-6
+    status: PASS
+    evidence: >-
+      kb.ts updated: embedding: vector('embedding', { dimensions: 1536 }) added to adrs,
+      codeStandards, cohesionRules, lessonsLearned, and rules table definitions. Re-exported
+      inferred types: Adr/NewAdr, CodeStandard/NewCodeStandard, CohesionRule/NewCohesionRule,
+      LessonLearned/NewLessonLearned, Rule/NewRule. Type check: 0 errors in kb.ts
+      (17 pre-existing errors in other files, none introduced by this change).
+    evidence_type: command
+    files:
+      - apps/api/knowledge-base/src/db/schema/kb.ts
+
+  - ac_id: AC-7
+    status: PASS
+    evidence: >-
+      pgtap test file 1011_cdbe4020_embedding_columns_knowledge_tables_test.sql created with
+      15 assertions. All 15 pass: tests 1-5 (col_type_is public.vector(1536)), tests 6-10
+      (HNSW index in pg_indexes), tests 11-15 (nullable via information_schema.columns).
+      Output: "1..15" plan, all "ok N - ..." lines, finish() with no failures.
+    evidence_type: test
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+
+  - ac_id: AC-8
+    status: PASS
+    evidence: >-
+      Migration contains RAISE NOTICE for pre-flight row counts for all five tables in a
+      single DO block. Output from first run: '1011: Pre-flight row counts —
+      lessons_learned=62, adrs=0, code_standards=0, rules=0, cohesion_rules=0'. Row count
+      visible in psql NOTICE output confirming pre-flight check executed.
+    evidence_type: manual
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+
+  - ac_id: AC-9
+    status: PASS
+    evidence: >-
+      Migration contains pgvector version guard DO block using string_to_array(extversion,
+      '.')::int[] < ARRAY[0, 5, 0] comparison. If pgvector < 0.5.0 or not installed, raises
+      EXCEPTION '1011: pgvector version % is too old. HNSW index support requires >= 0.5.0.'
+      Applied successfully on pgvector 0.8.1 — RAISE NOTICE: '1011: pgvector version check
+      passed — installed version: 0.8.1'.
+    evidence_type: manual
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+
+build_results:
   type_check:
-    status: PASS
-    notes: >
-      No new type errors introduced. Pre-existing errors in analytics-operations.ts
-      (stories.phase, stories.iteration) and @repo/logger module resolution errors
-      confirmed pre-existing via git stash comparison.
+    status: pass
+    command: pnpm --filter @repo/knowledge-base check-types
+    notes: Zero errors in kb.ts. 17 pre-existing errors in analytics-operations.ts, story-context.ts, tool-handlers.ts — not introduced by this story.
 
-  tests:
-    status: PASS
-    notes: >
-      41 failed / 15 passed / 9 test failures — identical before and after our changes
-      (confirmed via git stash comparison). No test regressions introduced.
+migration_results:
+  first_run:
+    status: pass
+    notices:
+      - '1011: Safety check passed — running against database: knowledgebase'
+      - '1011: pgvector version check passed — installed version: 0.8.1'
+      - '1011: Pre-flight row counts — lessons_learned=62, adrs=0, code_standards=0, rules=0, cohesion_rules=0'
+    operations: 5x ALTER TABLE, 5x COMMENT ON COLUMN, 5x CREATE INDEX CONCURRENTLY, 5x COMMENT ON INDEX
+    errors: 0
 
-  grep_public_stories:
-    status: PASS
-    command: grep -rn "public.stories" apps/api/knowledge-base/src/ --include="*.ts"
-    result: zero matches
+  second_run_idempotency:
+    status: pass
+    notices:
+      - 'column "embedding" of relation "lessons_learned" already exists, skipping'
+      - 'column "embedding" of relation "adrs" already exists, skipping'
+      - 'column "embedding" of relation "code_standards" already exists, skipping'
+      - 'column "embedding" of relation "rules" already exists, skipping'
+      - 'column "embedding" of relation "cohesion_rules" already exists, skipping'
+      - 'relation "idx_lessons_learned_embedding_hnsw" already exists, skipping'
+      - 'relation "idx_adrs_embedding_hnsw" already exists, skipping'
+      - 'relation "idx_code_standards_embedding_hnsw" already exists, skipping'
+      - 'relation "idx_rules_embedding_hnsw" already exists, skipping'
+      - 'relation "idx_cohesion_rules_embedding_hnsw" already exists, skipping'
+    errors: 0
 
-  grep_storyDetails:
-    status: PASS
-    command: grep -rn "storyDetails" apps/api/knowledge-base/src/ --include="*.ts"
-    result: zero matches
+pgtap_results:
+  total: 15
+  passed: 15
+  failed: 0
+  output: '1..15 — all ok'
 
-e2e_gate:
-  status: EXEMPT
-  reason: story_type is infra — no frontend surfaces touched
-
-commit:
-  sha: 2c84c4d1
-  message: 'feat(CDBN-2024): drop public.stories, redirect story-similarity to workflow.stories'
-  branch: story/CDBN-2024
-  pushed: true
+e2e_results:
+  status: exempt
+  reason: story_type is infra (database migration + schema update — no UI, no API endpoint)

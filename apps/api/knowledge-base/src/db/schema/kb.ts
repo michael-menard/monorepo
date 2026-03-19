@@ -81,6 +81,7 @@ export const adrs = pgTable('adrs', {
   sourceStoryId: text('source_story_id'),
   tags: text('tags').array(),
   workflowStoryId: text('workflow_story_id'),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -116,6 +117,7 @@ export const codeStandards = pgTable('code_standards', {
   sourceStoryId: text('source_story_id'),
   tags: text('tags').array(),
   workflowStoryId: text('workflow_story_id'),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -129,6 +131,7 @@ export const cohesionRules = pgTable('cohesion_rules', {
   severity: text('severity').notNull().default('warning'),
   isActive: boolean('is_active').default(true),
   sourceId: uuid('source_id'),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -150,6 +153,7 @@ export const lessonsLearned = pgTable('lessons_learned', {
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
   verifiedBy: text('verified_by'),
   workflowStoryId: text('workflow_story_id'),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -165,6 +169,7 @@ export const rules = pgTable('rules', {
   sourceStoryId: text('source_story_id'),
   sourceLessonId: uuid('source_lesson_id'),
   workflowStoryId: text('workflow_story_id'),
+  embedding: vector('embedding', { dimensions: 1536 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -173,3 +178,13 @@ export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert
 export type EmbeddingCacheEntry = typeof embeddingCache.$inferSelect
 export type NewEmbeddingCacheEntry = typeof embeddingCache.$inferInsert
+export type Adr = typeof adrs.$inferSelect
+export type NewAdr = typeof adrs.$inferInsert
+export type CodeStandard = typeof codeStandards.$inferSelect
+export type NewCodeStandard = typeof codeStandards.$inferInsert
+export type CohesionRule = typeof cohesionRules.$inferSelect
+export type NewCohesionRule = typeof cohesionRules.$inferInsert
+export type LessonLearned = typeof lessonsLearned.$inferSelect
+export type NewLessonLearned = typeof lessonsLearned.$inferInsert
+export type Rule = typeof rules.$inferSelect
+export type NewRule = typeof rules.$inferInsert

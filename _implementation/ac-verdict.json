@@ -1,11 +1,21 @@
 {
-  "story_id": "CDBE-4010",
-  "generated_at": "2026-03-19T02:10:00Z",
-  "overall_verdict": "PASS",
+  "story_id": "CDBE-4020",
+  "generated_at": "2026-03-19T04:30:00Z",
+  "overall_verdict": "CHALLENGE",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "A migration file 1009_cdbe4010_pgvector_embedding_tables.sql exists and includes a DB safety preamble DO block verifying current_database() = 'knowledgebase'",
+      "ac_text": "Migration contains safety preamble that checks current_database() == 'knowledgebase'",
+      "verdict": "CHALLENGE",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence relies on manual code inspection only. No test assertion or deterministic verification of the safety check logic.",
+      "proof_required": "Provide a pgtap test that verifies the safety check triggers correctly when database is not 'knowledgebase', or provide command output showing the check passed on the first run."
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "Migration adds embedding column (public.vector(1536)) to all five tables",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -14,48 +24,38 @@
       "proof_required": null
     },
     {
-      "ac_id": "AC-2",
-      "ac_text": "workflow.story_embeddings table exists with correct columns and UNIQUE constraint on story_id",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 3,
-      "strong_evidence_count": 3,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
       "ac_id": "AC-3",
-      "ac_text": "workflow.plan_embeddings table exists with correct columns and UNIQUE constraint on plan_id",
+      "ac_text": "Migration creates HNSW index on embedding column for all five tables",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 3,
-      "strong_evidence_count": 3,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "HNSW indexes on embedding columns with m=16, ef_construction=64 parameters documented and verified",
+      "ac_text": "Migration is idempotent (second run produces zero errors)",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "workflow.embedding_section_lookup reference table exists with schema confirmed during elaboration",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 3,
-      "strong_evidence_count": 3,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
+      "ac_text": "Migration includes COMMENT ON COLUMN and COMMENT ON INDEX with '1011:' prefix",
+      "verdict": "CHALLENGE",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence is manual code inspection only. No automated test or query result verifying the comments exist and have correct content.",
+      "proof_required": "Provide a pgtap test that verifies comment existence and content (e.g., SELECT obj_description(oid, 'pg_class')) or a psql query output showing the comments."
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "Migration is fully idempotent with CREATE TABLE/INDEX IF NOT EXISTS guards",
+      "ac_text": "kb.ts schema is updated with embedding column and types for all five tables",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -65,67 +65,37 @@
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "Tables registered in workflow.ts with vector customType and TypeScript types exported; pnpm check-types passes",
+      "ac_text": "pgtap test file created with 15 assertions, all passing",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 3,
-      "strong_evidence_count": 3,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "COMMENT ON TABLE statements with migration number prefix exist for all three tables",
-      "verdict": "ACCEPT",
+      "ac_text": "Migration emits RAISE NOTICE with pre-flight row counts for all five tables",
+      "verdict": "CHALLENGE",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence is manual inspection + RAISE NOTICE output description. No test assertion or structured verification that the notice contains correct row counts.",
+      "proof_required": "Provide a pgtap test that parses or validates the NOTICE output, or provide a command that re-runs the migration and captures deterministic output showing row counts for each table."
     },
     {
       "ac_id": "AC-9",
-      "ac_text": "pgtap test file with 13 assertions verifying table existence, column types, HNSW indexes, FK constraints, and UNIQUE constraints",
-      "verdict": "ACCEPT",
+      "ac_text": "Migration includes pgvector version guard that checks for version >= 0.5.0",
+      "verdict": "CHALLENGE",
       "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-10",
-      "ac_text": "findSimilarStories() updated to query workflow.story_embeddings JOIN workflow.stories; deleted_at filter removed; Vitest test verifies corrected SQL references",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-11",
-      "ac_text": "SimilarStoryResult replaced with Zod schema and z.infer<> type inference; no TypeScript interface",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 3,
-      "strong_evidence_count": 3,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-12",
-      "ac_text": "pgtap test includes assertion verifying wrong-dimension vector insert is rejected with error code 22000",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence is manual inspection + RAISE NOTICE output description on a single version (0.8.1). No test verifying the guard rejects older versions.",
+      "proof_required": "Provide a pgtap test that mocks or simulates a pgvector version < 0.5.0 and verifies the migration raises an exception, or provide command output from a test environment with an older pgvector version."
     }
   ],
-  "total_acs": 12,
-  "accepted": 12,
-  "challenged": 0,
+  "total_acs": 9,
+  "accepted": 5,
+  "challenged": 4,
   "rejected": 0
 }
