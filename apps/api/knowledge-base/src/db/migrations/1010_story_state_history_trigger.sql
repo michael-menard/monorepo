@@ -162,7 +162,7 @@ UPDATE workflow.story_state_history
 -- Migration 1005 granted SELECT, INSERT to agent_role but omitted UPDATE,
 -- which is required for the trigger to close open rows when agent_role is caller.
 
-GRANT UPDATE ON workflow.story_state_history TO agent_role;
+GRANT UPDATE (exited_at, duration_seconds) ON workflow.story_state_history TO agent_role;
 
 DO $$
 DECLARE
