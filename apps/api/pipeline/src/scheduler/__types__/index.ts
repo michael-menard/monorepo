@@ -28,3 +28,16 @@ export const SchedulerConfigSchema = z.object({
 })
 
 export type SchedulerConfig = z.infer<typeof SchedulerConfigSchema>
+
+export const StoryRowSchema = z.object({
+  storyId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  feature: z.string(),
+  state: z.string().nullable(),
+  priority: z.string().nullable(),
+  blockedByStory: z.string().nullable(),
+  createdAt: z.date(),
+})
+
+export type StoryRow = z.infer<typeof StoryRowSchema>

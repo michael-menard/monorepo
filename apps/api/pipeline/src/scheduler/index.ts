@@ -25,23 +25,8 @@ import {
   ReviewJobDataSchema,
   QaJobDataSchema,
 } from '@repo/pipeline-queue'
-import type { SchedulerConfig } from './__types__/index.js'
+import type { SchedulerConfig, StoryRow } from './__types__/index.js'
 import { SchedulerConfigSchema } from './__types__/index.js'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-type StoryRow = {
-  storyId: string
-  title: string
-  description: string | null
-  feature: string
-  state: string | null
-  priority: string | null
-  blockedByStory: string | null
-  createdAt: Date
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SchedulerLoop
@@ -436,7 +421,7 @@ export class SchedulerLoop {
 
     const jobData = ImplementationJobDataSchema.parse({
       storyId: story.storyId,
-      stage: 'implementation' as const,
+      stage: 'implementation',
       attemptNumber,
       payload: {
         storyId: story.storyId,
@@ -487,7 +472,7 @@ export class SchedulerLoop {
 
     const jobData = ReviewJobDataSchema.parse({
       storyId: story.storyId,
-      stage: 'review' as const,
+      stage: 'review',
       attemptNumber,
       payload: {
         storyId: story.storyId,
@@ -536,7 +521,7 @@ export class SchedulerLoop {
 
     const jobData = QaJobDataSchema.parse({
       storyId: story.storyId,
-      stage: 'qa' as const,
+      stage: 'qa',
       attemptNumber,
       payload: {
         storyId: story.storyId,
