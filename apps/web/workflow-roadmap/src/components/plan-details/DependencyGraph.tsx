@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { getStoryStateColor, getPriorityColor } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
 
 export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
@@ -27,34 +28,13 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
   const isComplete = (state?: string | null) =>
     state === 'completed' || state === 'uat' || state === 'cancelled'
 
-  const stateColor = (state?: string | null) => {
-    if (state === 'completed' || state === 'uat') return 'bg-emerald-500/80'
-    if (state === 'in_progress') return 'bg-blue-500/80'
-    if (state === 'in_qa' || state === 'ready_for_qa') return 'bg-amber-500/80'
-    if (state === 'needs_code_review' || state === 'ready_for_review') return 'bg-violet-500/80'
-    if (state === 'failed_code_review' || state === 'failed_qa') return 'bg-red-500/80'
-    if (state === 'blocked') return 'bg-red-500/80'
-    if (state === 'ready' || state === 'ready_to_work') return 'bg-cyan-500/80'
-    return 'bg-slate-500/80'
+  const stateColor = (s?: string | null) => getStoryStateColor(s, 'dot')
+  const stateBorderColor = (s?: string | null) => {
+    // Map dot color to border: bg-X -> border-X/30
+    const dot = getStoryStateColor(s, 'dot')
+    return dot.replace('bg-', 'border-').replace(/\/\d+$/, '') + '/30'
   }
-
-  const stateBorderColor = (state?: string | null) => {
-    if (state === 'completed' || state === 'uat') return 'border-emerald-500/30'
-    if (state === 'in_progress') return 'border-blue-500/30'
-    if (state === 'in_qa' || state === 'ready_for_qa') return 'border-amber-500/30'
-    if (state === 'needs_code_review' || state === 'ready_for_review') return 'border-violet-500/30'
-    if (state === 'failed_code_review' || state === 'failed_qa') return 'border-red-500/30'
-    if (state === 'blocked') return 'border-red-500/30'
-    if (state === 'ready' || state === 'ready_to_work') return 'border-cyan-500/30'
-    return 'border-slate-700/60'
-  }
-
-  const priorityColor = (p?: string | null) => {
-    if (p === 'P0' || p === 'P1') return 'text-red-400'
-    if (p === 'P2') return 'text-orange-400'
-    if (p === 'P3') return 'text-yellow-400'
-    return 'text-slate-500'
-  }
+  const priorityColor = (p?: string | null) => getPriorityColor(p, 'text')
 
   if (stories.length === 0) {
     return <p className="text-slate-500">No stories match the current filters.</p>

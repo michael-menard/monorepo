@@ -6,7 +6,6 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import {
-  AppBadge,
   Table,
   TableBody,
   TableCell,
@@ -14,6 +13,8 @@ import {
   TableHeader,
   TableRow,
   ThrashIcon,
+  StateTag,
+  PriorityTag,
 } from '@repo/app-component-library'
 import type { PlanStory } from '../store/roadmapApi'
 import { getConfig } from '../config'
@@ -32,19 +33,6 @@ function relativeTime(iso: string | null) {
   else if (days < 30) label = `${Math.floor(days / 7)}w ago`
   else label = `${Math.floor(days / 30)}mo ago`
   return <span className="text-xs text-slate-400 font-mono">{label}</span>
-}
-
-function stateBadgeVariant(row: PlanStory) {
-  if (row.state === 'completed') return 'default' as const
-  if (row.state === 'blocked' || row.hasBlockers) return 'destructive' as const
-  if (row.state === 'in_progress' || row.state === 'in_qa') return 'outline' as const
-  return 'secondary' as const
-}
-
-function priorityBadgeVariant(priority: string | null) {
-  if (priority === 'P0') return 'destructive' as const
-  if (priority === 'P1') return 'outline' as const
-  return 'secondary' as const
 }
 
 function createColumns(fromPlan?: FromPlanInfo) {
@@ -96,7 +84,7 @@ function createColumns(fromPlan?: FromPlanInfo) {
         const row = info.row.original
         return (
           <div className="flex items-center gap-2">
-            <AppBadge variant={stateBadgeVariant(row)}>{row.state ?? '-'}</AppBadge>
+            <StateTag state={row.state ?? '-'} />
             {row.isBlocked || row.hasBlockers ? (
               <span title="Has blockers" className="text-destructive">
                 ⚠️
@@ -135,11 +123,10 @@ function createColumns(fromPlan?: FromPlanInfo) {
     col.accessor('priority', {
       header: 'Priority',
       size: 90,
-      cell: info => (
-        <AppBadge variant={priorityBadgeVariant(info.getValue())}>
-          {info.getValue() ?? '-'}
-        </AppBadge>
-      ),
+      cell: info => {
+        const v = info.getValue()
+        return v ? <PriorityTag priority={v} /> : <span className="text-slate-500">-</span>
+      },
     }),
     col.accessor('updatedAt', {
       header: 'Last Activity',

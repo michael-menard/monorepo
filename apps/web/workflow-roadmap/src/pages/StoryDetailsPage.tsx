@@ -7,6 +7,9 @@ import {
   AppTabsList,
   AppTabsTrigger,
   AppTabsContent,
+  StateTag,
+  PriorityTag,
+  PIPELINE_STAGES,
 } from '@repo/app-component-library'
 import {
   ArrowLeft,
@@ -35,52 +38,6 @@ import {
   useUpdateStoryContentSectionMutation,
 } from '../store/roadmapApi'
 import { useStorySSE } from '../hooks/useStorySSE'
-
-const PIPELINE_STAGES = [
-  {
-    id: 'backlog',
-    label: 'Backlog',
-    states: ['backlog', 'created'],
-    color: 'bg-slate-400',
-    text: 'text-slate-400',
-  },
-  {
-    id: 'ready',
-    label: 'Ready',
-    states: ['ready_to_work'],
-    color: 'bg-cyan-400',
-    text: 'text-cyan-400',
-  },
-  {
-    id: 'progress',
-    label: 'In Progress',
-    states: ['in_progress'],
-    color: 'bg-blue-400',
-    text: 'text-blue-400',
-  },
-  {
-    id: 'review',
-    label: 'Review',
-    states: ['needs_code_review', 'ready_for_review', 'failed_code_review'],
-    color: 'bg-violet-400',
-    text: 'text-violet-400',
-  },
-  {
-    id: 'qa',
-    label: 'QA',
-    states: ['ready_for_qa', 'in_qa'],
-    color: 'bg-amber-400',
-    text: 'text-amber-400',
-  },
-  { id: 'uat', label: 'UAT', states: ['uat'], color: 'bg-emerald-400', text: 'text-emerald-400' },
-  {
-    id: 'done',
-    label: 'Done',
-    states: ['completed'],
-    color: 'bg-emerald-500',
-    text: 'text-emerald-400',
-  },
-]
 
 function PipelineStrip({ state }: { state: string }) {
   const currentIdx = PIPELINE_STAGES.findIndex(s => s.states.includes(state))
@@ -138,35 +95,11 @@ function PipelineStrip({ state }: { state: string }) {
 
 function PriorityBadge({ priority }: { priority: string | null | undefined }) {
   if (!priority) return null
-  const cls =
-    priority === 'P0'
-      ? '!bg-red-600/50 !border-red-500/40 !text-white/80'
-      : priority === 'P1'
-        ? '!bg-red-500/40 !border-red-500/30 !text-white/60'
-        : priority === 'P2'
-          ? '!bg-orange-500/40 !border-orange-500/30 !text-white/60'
-          : priority === 'P3'
-            ? '!bg-amber-400/40 !border-amber-400/30 !text-white/60'
-            : priority === 'P4'
-              ? '!bg-teal-500/40 !border-teal-500/30 !text-white/60'
-              : '!bg-blue-500/40 !border-blue-500/30 !text-white/60'
-  return (
-    <AppBadge variant="outline" className={cls}>
-      {priority}
-    </AppBadge>
-  )
+  return <PriorityTag priority={priority} />
 }
 
 function StateBadge({ state }: { state: string }) {
-  const variant =
-    state === 'completed'
-      ? 'default'
-      : state === 'blocked' || state === 'failed_code_review'
-        ? 'destructive'
-        : state === 'in_progress' || state === 'in_qa'
-          ? 'outline'
-          : 'secondary'
-  return <AppBadge variant={variant}>{state.replace(/_/g, ' ')}</AppBadge>
+  return <StateTag state={state} />
 }
 
 function CopyIdButton({ text }: { text: string }) {

@@ -292,6 +292,34 @@ export type { AppTableProps, TableVariant } from './data/AppTable'
 // Tour
 export { TourProvider, TourStep, TourTrigger, useTour } from './tour/guided-tour'
 
+// Tags (workflow tag components + color maps)
+export { StateTag, PriorityTag, PlanStatusTag, GenericTag, EpicTag, WorkflowTag } from './tags'
+export type {
+  StateTagProps,
+  PriorityTagProps,
+  PlanStatusTagProps,
+  GenericTagProps,
+  EpicTagProps,
+  WorkflowTagProps,
+  TagSize,
+  TagCategory,
+} from './tags/__types__'
+export {
+  STORY_STATE_COLORS,
+  PRIORITY_COLORS,
+  PLAN_STATUS_COLORS,
+  GENERIC_TAG_PALETTE,
+  PIPELINE_STAGES,
+  getStoryStateColor,
+  getPriorityColor,
+  getPlanStatusColor,
+  getGenericTagColor,
+} from './tags/color-maps'
+
+// Icons (custom SVG icons not available in lucide-react)
+export { ThrashIcon } from './icons/ThrashIcon'
+export type { ThrashIconProps } from './icons/ThrashIcon'
+
 // =============================================================================
 // HOOKS
 // =============================================================================
