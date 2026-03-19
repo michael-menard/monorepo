@@ -1,0 +1,183 @@
+schema: 2
+story_id: PIPE-1010
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+complexity: simple
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Validate state mapping table against StoryStateSchema enum. Read apps/api/knowledge-base/src/__types__/index.ts
+      lines 780-799. Confirm every mapped KB state in the inventory table is a member of the 13-state canonical enum.
+      Reject any ghost-state value (uat, ready_to_work, in_review, ready_for_review, deferred) — none should appear as a
+      target mapping.
+    files: []
+    files_to_read:
+      - apps/api/knowledge-base/src/__types__/index.ts
+    dependencies: []
+    slice: backend
+    verification: >-
+      All 8 distinct mapped states (completed, needs_code_review, in_progress, ready_for_qa, ready, backlog, in_qa,
+      created) confirmed present in StoryStateSchema enum. No ghost states in target column.
+    acs_covered:
+      - AC-2
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Import APIP-0010 through APIP-1070 (11 stories). Call kb_create_story once per story with mapped state, feature:
+      'apip', and epic: 'autonomous-pipeline'. Stories: APIP-0010 (completed), APIP-0020 (completed), APIP-0030
+      (completed), APIP-0040 (needs_code_review), APIP-1020 (completed), APIP-1031 (completed), APIP-1032 (completed),
+      APIP-1040 (completed), APIP-1050 (needs_code_review), APIP-1060 (in_progress), APIP-1070 (completed). Use title
+      from story.yaml or .md frontmatter. APIP-0020/1031/1032 have no story.yaml — source title from .md frontmatter.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 1
+    slice: backend
+    verification: "kb_list_stories({ feature: 'apip', limit: 100 }) returns records for all 11 stories with correct states."
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-8
+      - AC-10
+      - AC-11
+      - AC-12
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Import APIP-2010 through APIP-3090 (13 stories). Call kb_create_story once per story. Stories: APIP-2010
+      (backlog), APIP-2020 (completed), APIP-2030 (completed), APIP-3010 (ready_for_qa), APIP-3020 (completed),
+      APIP-3030 (completed), APIP-3040 (completed), APIP-3050 (completed), APIP-3060 (completed), APIP-3070 (completed),
+      APIP-3080 (completed), APIP-3090 (completed). All feature: 'apip', epic: 'autonomous-pipeline'.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 1
+    slice: backend
+    verification: "kb_list_stories({ feature: 'apip', limit: 100 }) includes all 13 stories with correct states."
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-6
+      - AC-10
+      - AC-11
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Import APIP-4010 through APIP-5007 (14 stories). Call kb_create_story once per story. Stories: APIP-4010
+      (completed), APIP-4020 (completed), APIP-4030 (completed), APIP-4040 (completed), APIP-4050 (completed), APIP-4060
+      (completed), APIP-4070 (completed), APIP-5000 (completed), APIP-5001 (completed), APIP-5002 (completed), APIP-5003
+      (completed), APIP-5004 (completed), APIP-5005 (completed), APIP-5006 (completed), APIP-5007 (in_progress).
+      APIP-5001 has no story.yaml — source title from EVIDENCE.yaml or .md in stories/. All feature: 'apip', epic:
+      'autonomous-pipeline'.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 1
+    slice: backend
+    verification: "kb_list_stories({ feature: 'apip', limit: 100 }) includes all 14 stories with correct states."
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-4
+      - AC-10
+      - AC-11
+      - AC-12
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Import APIP-6001 through APIP-6003 (3 stories) and run post-import verification. Stories: APIP-6001 (completed),
+      APIP-6002 (completed), APIP-6003 (ready). After all 41 imports, call kb_list_stories({ feature: 'apip', limit: 100
+      }) and assert total >= 41. Spot-check 5 stories (one per non-completed state): APIP-2010 (backlog), APIP-6003
+      (ready), APIP-1060 (in_progress), APIP-3010 (ready_for_qa), APIP-0040 (needs_code_review).
+    files: []
+    files_to_read: []
+    dependencies:
+      - 4
+    slice: backend
+    verification: >-
+      kb_list_stories({ feature: 'apip', limit: 100 }).total >= 41. All 5 spot-check stories have correct canonical
+      states.
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-7
+      - AC-10
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Idempotency verification. Re-run the complete import loop of all 41 kb_create_story calls a second time. Confirm
+      zero errors are returned (upsert semantics prevent duplicates). Confirm kb_list_stories({ feature: 'apip', limit:
+      100 }).total is still >= 41 and no duplicate story_id records appear.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 5
+    slice: backend
+    verification: >-
+      Second full import run: zero errors from kb_create_story. Count unchanged at >= 41. No duplicate story_id values
+      in results.
+    acs_covered:
+      - AC-9
+files_to_change: []
+commands_to_run: []
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "kb_list_stories({ feature: 'apip', limit: 100 }) returns >= 41 records"
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: State mapping table validated against StoryStateSchema; all 41 imported stories have canonical state values
+    evidence_type: manual
+  - ac_id: AC-3
+    planned_evidence: 'UAT-stage stories (APIP-0010, APIP-0030, APIP-1070) verified with state: completed'
+    evidence_type: manual
+  - ac_id: AC-4
+    planned_evidence: 'APIP-1060, APIP-5007 verified with state: in_progress'
+    evidence_type: manual
+  - ac_id: AC-5
+    planned_evidence: 'APIP-0040, APIP-1050 verified with state: needs_code_review'
+    evidence_type: manual
+  - ac_id: AC-6
+    planned_evidence: 'APIP-3010 verified with state: ready_for_qa'
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: 'APIP-6003 verified with state: ready'
+    evidence_type: manual
+  - ac_id: AC-8
+    planned_evidence: >-
+      APIP-1031 and APIP-1032 verified with state: completed (sourced from .md frontmatter status: uat, mapped to
+      completed)
+    evidence_type: manual
+  - ac_id: AC-9
+    planned_evidence: Second full import run produces zero errors; count unchanged at >= 41
+    evidence_type: manual
+  - ac_id: AC-10
+    planned_evidence: "All 41 stories have feature: 'apip' and epic: 'autonomous-pipeline' set on import"
+    evidence_type: manual
+  - ac_id: AC-11
+    planned_evidence: Story titles match source files verbatim — no truncation or normalization
+    evidence_type: manual
+  - ac_id: AC-12
+    planned_evidence: APIP-0020, APIP-1031, APIP-1032, APIP-5001 successfully imported using .md frontmatter metadata
+    evidence_type: manual
+architectural_decisions: []
+notes:
+  - This is a pure data-migration chore. No application code changes are made.
+  - No files_to_change or commands_to_run apply — the implementation is exclusively kb_create_story MCP tool calls.
+  - >-
+    Steps 2, 3, and 4 have the same dependency (ST-1/step 1) and can execute in parallel once ST-1 validates the mapping
+    table.
+  - Step 5 depends on step 4 (last batch) to ensure all stories are imported before verification runs.
+  - >-
+    State determination hierarchy: stage directory position > story.yaml status > .md frontmatter status > inferred
+    default.
+  - APIP-1010 and APIP-1030 are explicitly excluded (superseded). Do not call kb_create_story for these IDs.
+  - >-
+    StoryStateSchema 13 canonical states validated: backlog, created, elab, ready, in_progress, needs_code_review,
+    ready_for_qa, in_qa, completed, failed_code_review, failed_qa, blocked, cancelled.
+  - >-
+    All 8 distinct mapped target states in the inventory are members of StoryStateSchema: completed, needs_code_review,
+    in_progress, ready_for_qa, ready, backlog, in_qa, created.

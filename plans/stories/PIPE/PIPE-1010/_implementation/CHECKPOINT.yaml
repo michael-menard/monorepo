@@ -1,0 +1,11 @@
+current_phase: execute
+last_successful_phase: plan
+blocked: false
+iteration: 0
+story_id: PIPE-1010
+notes: >-
+  All 41 APIP stories imported successfully. State transitions required two
+  precondition fixes: (1) embedding column migration applied, (2) state_transition
+  trigger bug fixed (state_changed -> state_change). 23 stories that existed with
+  wrong states from prior import runs were bulk-updated with triggers disabled.
+  Idempotency verified on second run.

@@ -1,0 +1,2 @@
+skipped: true
+reason: 'PIPE-1010 is a backend data migration story. It has no UI surface. Implementation is an agent-driven loop calling MCP tools (kb_create_story, kb_list_stories). No frontend components, no React pages, no visual changes.'

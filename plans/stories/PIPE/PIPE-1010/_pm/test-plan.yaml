@@ -1,0 +1,114 @@
+strategy: manual
+scope:
+  endpoints:
+    - kb_create_story (MCP tool, one call per story)
+    - kb_list_stories (MCP tool, post-import verification)
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'All 41 APIP stories imported successfully'
+    setup: 'KB has no APIP stories (fresh state or post-reset). State mapping table applied.'
+    action: 'Execute import loop: call kb_create_story once per story in the 41-story inventory, using mapped states.'
+    expected: 'All 41 calls return success. kb_list_stories({ feature: "apip", limit: 100 }) returns total >= 41.'
+    evidence: 'kb_list_stories response JSON with total count field >= 41.'
+
+  - id: HP-2
+    title: 'UAT-stage stories imported with state: completed'
+    setup: 'Import loop completed for all stories.'
+    action: 'Call kb_list_stories({ feature: "apip", limit: 100 }) and filter stories with stage UAT (e.g., APIP-0010, APIP-0030, APIP-1020).'
+    expected: 'All UAT-stage stories have state field equal to "completed".'
+    evidence: 'kb_list_stories response showing state: completed for APIP-0010, APIP-0030, APIP-1070, APIP-2020, APIP-2030, and all other UAT entries.'
+
+  - id: HP-3
+    title: 'Stories have correct feature and epic fields set'
+    setup: 'Import loop completed.'
+    action: 'Call kb_list_stories({ feature: "apip", limit: 100 }) and inspect feature/epic fields on returned records.'
+    expected: 'Every returned story has feature: "apip" and epic: "autonomous-pipeline".'
+    evidence: 'kb_list_stories response JSON; each item shows feature and epic fields as expected.'
+
+error_cases:
+  - id: EC-1
+    title: 'Ghost state value rejected at import time'
+    setup: 'Attempt to call kb_create_story with state: "uat" (ghost state, not mapped).'
+    action: 'Call kb_create_story({ story_id: "APIP-TEST", state: "uat", ... }) without applying state mapping.'
+    expected: 'Tool returns a Zod validation error. Story not inserted.'
+    evidence: 'Error response from kb_create_story showing StoryStateSchema validation failure.'
+
+  - id: EC-2
+    title: 'ready-to-work mapped to ready before insert'
+    setup: 'APIP-6003 has worktree stage ready-to-work.'
+    action: 'Apply mapping table (ready-to-work -> ready). Call kb_create_story({ story_id: "APIP-6003", state: "ready", ... }).'
+    expected: 'Story inserted with state: "ready". No validation error.'
+    evidence: 'kb_list_stories result shows APIP-6003 with state: ready.'
+
+  - id: EC-3
+    title: 'needs-code-review stage mapped correctly'
+    setup: 'APIP-0040 and APIP-1050 are in the needs-code-review stage.'
+    action: 'Call kb_create_story for both with state: "needs_code_review" (note underscore, not hyphen).'
+    expected: 'Both stories inserted successfully. State is needs_code_review.'
+    evidence: 'kb_list_stories response for APIP-0040 and APIP-1050 showing state: needs_code_review.'
+
+edge_cases:
+  - id: ED-1
+    title: 'Idempotent re-run produces no errors and no duplicates'
+    setup: 'First import run completed. All 41 stories exist in KB.'
+    action: 'Re-run the full import loop (all 41 kb_create_story calls) with identical inputs.'
+    expected: 'All calls succeed (upsert semantics). kb_list_stories still returns exactly 41 APIP stories. No duplicate records. No state overwrites if story was previously in a later state.'
+    evidence: 'kb_list_stories total count unchanged at >= 41. No error responses from second run.'
+
+  - id: ED-2
+    title: 'Stories without story.yaml (APIP-0020, APIP-1031, APIP-1032, APIP-5001) imported from .md frontmatter'
+    setup: 'Worktree files for APIP-0020, APIP-1031, APIP-1032 have no story.yaml; metadata sourced from .md frontmatter and proof artifacts.'
+    action: 'Call kb_create_story for each of these four stories using metadata extracted from .md files. State = completed.'
+    expected: 'All four stories inserted with state: completed and accurate titles from frontmatter.'
+    evidence: 'kb_list_stories result shows all four stories with correct titles and state: completed.'
+
+  - id: ED-3
+    title: 'Story appearing in both stories/ and UAT/ directory — stage directory wins'
+    setup: 'Story X exists in both stories/ (with status: backlog) and UAT/ stage directory.'
+    action: 'Import story X using stage-directory-wins rule: state = completed (from UAT/ position).'
+    expected: 'Story X inserted with state: completed, not backlog. Stage directory takes precedence.'
+    evidence: 'kb_list_stories for story X shows state: completed.'
+
+  - id: ED-4
+    title: 'APIP-2010 (no active stage, backlog) imported with state: backlog'
+    setup: 'APIP-2010 has no stage directory — only exists in stories/ with no proof artifacts.'
+    action: 'Call kb_create_story({ story_id: "APIP-2010", state: "backlog", ... }).'
+    expected: 'Story inserted with state: backlog.'
+    evidence: 'kb_list_stories for APIP-2010 shows state: backlog.'
+
+tooling_evidence:
+  backend:
+    http_requests:
+      - 'kb_create_story MCP call per story with mapped state and metadata'
+      - 'kb_list_stories({ feature: "apip", limit: 100 }) post-import verification call'
+    assertions:
+      - 'Total returned by kb_list_stories >= 41'
+      - 'No story has a ghost state value (uat, ready_to_work, in_review, ready_for_review, deferred)'
+      - 'All stories have feature: "apip" and epic: "autonomous-pipeline"'
+  frontend: ~
+
+manual_cases:
+  - id: MC-1
+    title: 'Spot-check 5 stories covering all non-completed states'
+    steps:
+      - 'After import, call kb_list_stories({ feature: "apip", limit: 100 })'
+      - 'Locate APIP-2010 (backlog), APIP-6003 (ready), APIP-1060 (in_progress), APIP-3010 (ready_for_qa), APIP-0040 (needs_code_review)'
+      - 'Verify each has the expected state value'
+    expected: 'All five spot-check stories have correct canonical state values'
+
+fixture_definitions:
+  - name: apip_story_inventory
+    type: data
+    description: '41-row inventory table from STORY-SEED.md with story_id, title, worktree_stage, and mapped_kb_state'
+  - name: state_mapping_table
+    type: data
+    description: 'Worktree-to-canonical state mapping from STORY-SEED.md used to transform raw worktree status strings before kb_create_story calls'
+
+risks:
+  - 'Title accuracy: stories without story.yaml require reading .md frontmatter; title truncation or encoding errors possible'
+  - 'APIP-1060 CHECKPOINT.yaml may have incomplete metadata — may require defaults for missing fields'
+  - 'Duplicate detection depends on kb_create_story upsert-by-story_id semantics; if that logic changes, re-runs may produce duplicates'
+  - 'kb_list_stories has a limit parameter; if APIP story count exceeds 100, verification query must use pagination'
