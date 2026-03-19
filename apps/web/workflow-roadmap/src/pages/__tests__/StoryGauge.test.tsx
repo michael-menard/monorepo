@@ -23,7 +23,7 @@ const basePlan: Plan = {
   storyPrefix: 'TEST',
   tags: null,
   priority: 'P2',
-  priorityOrder: 1,
+  sortOrder: 1,
   supersedesPlanSlug: null,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',

@@ -5,7 +5,7 @@ import { sseRoutes } from './routes/sse'
 import {
   getPlans,
   getPlanBySlug,
-  reorderPlansPriority,
+  reorderPlans,
   updatePlan,
   getStoriesByPlanSlug,
   getStoryById,
@@ -15,6 +15,7 @@ import {
   type PlanUpdateInput,
   type StoryUpdateInput,
 } from './services/planService'
+import { getDashboard } from './services/dashboardService'
 
 const app = new Hono()
 
@@ -30,6 +31,17 @@ app.get('/', c => {
 
 app.get('/health', c => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.get('/api/v1/dashboard', async c => {
+  try {
+    const result = await getDashboard()
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to fetch dashboard', { error: String(error) })
+    console.error('Full error:', error)
+    return c.json({ error: 'Failed to fetch dashboard', detail: String(error) }, 500)
+  }
 })
 
 app.get('/api/v1/roadmap', async c => {
@@ -110,20 +122,19 @@ app.get('/api/v1/roadmap/:slug/stories', async c => {
 app.patch('/api/v1/roadmap/reorder', async c => {
   const body = await c.req.json()
 
-  const { priority, items } = body as {
-    priority: string
-    items: Array<{ id: string; priorityOrder: number }>
+  const { items } = body as {
+    items: Array<{ id: string; sortOrder: number }>
   }
 
-  if (!priority || !items || !Array.isArray(items)) {
-    return c.json({ error: 'Invalid request: priority and items are required' }, 400)
+  if (!items || !Array.isArray(items)) {
+    return c.json({ error: 'Invalid request: items are required' }, 400)
   }
 
   try {
-    await reorderPlansPriority(priority, items)
+    await reorderPlans(items)
     return c.json({ success: true })
   } catch (error) {
-    logger.error('Failed to reorder plans', { error, priority, items })
+    logger.error('Failed to reorder plans', { error, items })
     return c.json({ error: 'Failed to reorder plans' }, 500)
   }
 })

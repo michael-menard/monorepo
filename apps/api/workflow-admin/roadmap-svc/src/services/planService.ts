@@ -198,7 +198,7 @@ export const PlanUpdateInputSchema = z.object({
   storyPrefix: z.string().nullable().optional(),
   tags: z.array(z.string()).nullable().optional(),
   priority: z.string().nullable().optional(),
-  priorityOrder: z.number().nullable().optional(),
+  sortOrder: z.number().nullable().optional(),
 })
 
 export type PlanUpdateInput = z.infer<typeof PlanUpdateInputSchema>
@@ -241,7 +241,7 @@ export type PlanSummary = {
   tags: string[] | null
   status: string | null
   priority: string | null
-  priorityOrder: number | null
+  sortOrder: number | null
   supersedesPlanSlug: string | null
   createdAt: Date
   updatedAt: Date
@@ -324,7 +324,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
       tags: plans.tags,
       status: plans.status,
       priority: plans.priority,
-      priorityOrder: plans.priorityOrder,
+      sortOrder: plans.sortOrder,
       supersedesPlanSlug: plans.supersedesPlanSlug,
       createdAt: plans.createdAt,
       updatedAt: plans.updatedAt,
@@ -417,8 +417,8 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
     .from(plans)
     .where(whereClause)
     .orderBy(
+      asc(sql`coalesce(${plans.sortOrder}, 9999)`),
       asc(plans.priority),
-      asc(sql`coalesce(${plans.priorityOrder}, 9999)`),
       desc(plans.createdAt),
     )
     .limit(limit)
@@ -445,7 +445,7 @@ export const PlanWithDetailsSchema = z.object({
   storyPrefix: z.string().nullable(),
   tags: z.array(z.string()).nullable(),
   priority: z.string().nullable(),
-  priorityOrder: z.number().nullable(),
+  sortOrder: z.number().nullable(),
   rawContent: z.string().nullable(),
   sections: z.unknown(),
   contentHash: z.string().nullable(),
@@ -474,7 +474,7 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
     storyPrefix: plan.storyPrefix,
     tags: plan.tags,
     priority: plan.priority,
-    priorityOrder: plan.priorityOrder,
+    sortOrder: plan.sortOrder,
     rawContent: plan.rawContent,
     sections: plan.sections,
     contentHash: plan.contentHash,
@@ -485,16 +485,16 @@ export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | nul
 
 export const ReorderItemSchema = z.object({
   id: z.string(),
-  priorityOrder: z.number(),
+  sortOrder: z.number(),
 })
 
 export type ReorderItem = z.infer<typeof ReorderItemSchema>
 
-export async function reorderPlansPriority(priority: string, items: ReorderItem[]): Promise<void> {
+export async function reorderPlans(items: ReorderItem[]): Promise<void> {
   const updates = items.map(item =>
     database
       .update(plans)
-      .set({ priorityOrder: item.priorityOrder, updatedAt: new Date() })
+      .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
       .where(eq(plans.id, item.id))
       .returning({ id: plans.id }),
   )
@@ -539,8 +539,8 @@ export async function updatePlan(
   if (input.priority !== undefined) {
     updateData.priority = input.priority
   }
-  if (input.priorityOrder !== undefined) {
-    updateData.priorityOrder = input.priorityOrder
+  if (input.sortOrder !== undefined) {
+    updateData.sortOrder = input.sortOrder
   }
 
   await database.update(plans).set(updateData).where(eq(plans.id, plan.id))

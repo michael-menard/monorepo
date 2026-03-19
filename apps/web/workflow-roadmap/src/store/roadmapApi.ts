@@ -10,7 +10,7 @@ export interface Plan {
   storyPrefix: string | null
   tags: string[] | null
   priority: string | null
-  priorityOrder: number | null
+  sortOrder: number | null
   supersedesPlanSlug: string | null
   createdAt: string
   updatedAt: string
@@ -266,13 +266,14 @@ export const roadmapApi = createApi({
     }),
     reorderPlans: builder.mutation<
       { success: boolean },
-      { priority: string; items: Array<{ id: string; priorityOrder: number }> }
+      { items: Array<{ id: string; sortOrder: number }> }
     >({
       query: body => ({
         url: '/roadmap/reorder',
         method: 'PATCH',
         body,
       }),
+      invalidatesTags: ['Plans'],
     }),
     updatePlan: builder.mutation<
       PlanDetails,

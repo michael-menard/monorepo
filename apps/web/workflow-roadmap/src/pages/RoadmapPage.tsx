@@ -537,11 +537,10 @@ export function RoadmapPage() {
       const reordered = arrayMove(orderedData, oldIndex, newIndex)
       setOrderedData(reordered)
       reorderPlans({
-        priority: priority || '',
-        items: reordered.map((p, i) => ({ id: p.id, priorityOrder: i })),
+        items: reordered.map((p, i) => ({ id: p.id, sortOrder: i })),
       })
     },
-    [orderedData, reorderPlans, priority],
+    [orderedData, reorderPlans],
   )
 
   const handleRowClick = (plan: Plan) => {
@@ -665,9 +664,7 @@ export function RoadmapPage() {
       </section>
 
       <p className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-sm text-cyan-400 font-mono">
-        {priority
-          ? `Drag rows to reorder within priority ${priority}.`
-          : 'Drag rows to set priority order. Filter by a priority group to reorder within it.'}
+        Drag rows to set display order.
       </p>
 
       {/* Page size + info bar */}

@@ -159,7 +159,7 @@ export const plans = workflow.table('plans', {
   sections: jsonb('sections'),
   status: text('status'),
   priority: text('priority'),
-  priorityOrder: integer('priority_order'),
+  sortOrder: integer('sort_order'),
 })
 
 export const planDetails = workflow.table('plan_details', {
