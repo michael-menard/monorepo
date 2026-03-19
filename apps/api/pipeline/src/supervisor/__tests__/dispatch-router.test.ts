@@ -19,10 +19,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import type { Job } from 'bullmq'
 import { ZodError } from 'zod'
-import { dispatchJob, resetDispatcherState, type GraphRunners } from '../dispatch-router.js'
-import { WallClockTimeoutError } from '../wall-clock-timeout.js'
-import { PipelineSupervisorConfigSchema, type PipelineJobData } from '../__types__/index.js'
 import { logger } from '@repo/logger'
+import { dispatchJob, resetDispatcherState, type GraphRunners } from '../dispatch-router.js'
+import { PipelineSupervisorConfigSchema, type PipelineJobData } from '../__types__/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures
