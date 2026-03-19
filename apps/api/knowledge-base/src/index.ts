@@ -116,3 +116,6 @@ export {
   type KbGetStoryResult,
   type KbListStoriesInput,
 } from './crud-operations/story-crud-operations.js'
+
+// Story state types (for external consumers like pipeline supervisor)
+export { StoryStateSchema, type StoryState } from './__types__/index.js'

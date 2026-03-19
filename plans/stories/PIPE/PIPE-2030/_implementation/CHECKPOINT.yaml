@@ -1,0 +1,11 @@
+schema: 1
+story_id: PIPE-2030
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+timestamp: '2026-03-18T23:00:00Z'
+blocked: false
+notes: >-
+  ST-1 through ST-4 complete. supervisor/index.ts fixed: qa→completed, as any removed,
+  state=blocked added to failed handler. 12 new tests all passing in supervisor-callbacks.test.ts.
+  Pre-existing test failures (4 files, wint dep chain issue) unchanged.

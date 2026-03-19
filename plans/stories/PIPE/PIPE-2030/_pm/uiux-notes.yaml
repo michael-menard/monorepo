@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  PIPE-2030 is a pure backend bug fix in the PipelineSupervisor process
+  (apps/api/pipeline/src/supervisor/index.ts). No frontend components, no HTTP
+  API surface, no UI state changes, and no Playwright evidence required. This
+  is a correctness fix for BullMQ worker event callback state mappings.

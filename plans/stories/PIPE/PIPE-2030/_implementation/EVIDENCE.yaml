@@ -1,0 +1,147 @@
+schema: 1
+story_id: PIPE-2030
+phase: implementation
+iteration: 1
+timestamp: '2026-03-18T23:00:00Z'
+generated_by: dev-execute-leader
+
+summary:
+  total_acs: 8
+  covered: 8
+  missing: 0
+  verdict: PASS
+
+acceptance_criteria:
+  - ac_id: AC-1
+    description: STAGE_TO_NEXT_STATE['qa'] maps to 'completed' not 'UAT'
+    status: PASS
+    evidence_type: code_change
+    evidence:
+      - type: code_change
+        file: apps/api/pipeline/src/supervisor/index.ts
+        line: 219
+        before: "qa: 'UAT'"
+        after: "qa: 'completed'"
+        description: Fixed incorrect state mapping for qa stage completion
+
+  - ac_id: AC-2
+    description: No 'as any' cast on state field in completed handler
+    status: PASS
+    evidence_type: type_check
+    evidence:
+      - type: code_change
+        file: apps/api/pipeline/src/supervisor/index.ts
+        line: 234
+        before: 'state: nextState as any'
+        after: 'state: nextState'
+        description: >-
+          Removed 'as any' cast by changing Record type to Record<string, StoryState>
+          and importing StoryState from @repo/knowledge-base. All four mapped values
+          are now valid StoryStateSchema members.
+      - type: command
+        command: pnpm --filter @repo/pipeline check-types
+        exit_code: 0
+        output: 'No type errors'
+
+  - ac_id: AC-3
+    description: Fire-and-forget .catch() pattern preserved in completed handler
+    status: PASS
+    evidence_type: code_review
+    evidence:
+      - type: code_change
+        file: apps/api/pipeline/src/supervisor/index.ts
+        description: >-
+          kb_update_story_status() call uses .catch() pattern (not await).
+          Verified by test HP-1 through HP-4 which flush microtask queue via
+          await Promise.resolve() before asserting.
+
+  - ac_id: AC-4
+    description: worker.on('failed') final-failure path calls kb_update_story_status with state 'blocked'
+    status: PASS
+    evidence_type: code_change
+    evidence:
+      - type: code_change
+        file: apps/api/pipeline/src/supervisor/index.ts
+        line: 274
+        before: '{ story_id: storyId, blocked_reason: ... }'
+        after: "{ story_id: storyId, state: 'blocked', blocked_reason: ... }"
+        description: Added state='blocked' to the KB update call in the failed handler final-failure path
+
+  - ac_id: AC-5
+    description: Unit tests HP-1..HP-4 verify all 4 stages advance to correct state
+    status: PASS
+    evidence_type: test
+    evidence:
+      - type: test_suite
+        file: apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+        tests:
+          - name: 'HP-1: elaboration stage → state: ready'
+            status: PASS
+          - name: 'HP-2: implementation stage → state: needs_code_review'
+            status: PASS
+          - name: 'HP-3: review stage → state: ready_for_qa'
+            status: PASS
+          - name: 'HP-4: qa stage → state: completed (not UAT)'
+            status: PASS
+
+  - ac_id: AC-6
+    description: Unit tests HP-5, EC-3 for failed callback final vs transient paths
+    status: PASS
+    evidence_type: test
+    evidence:
+      - type: test_suite
+        file: apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+        tests:
+          - name: 'HP-5: final failure → state: blocked with non-empty blocked_reason'
+            status: PASS
+          - name: 'EC-3: transient failure → kb NOT called'
+            status: PASS
+          - name: 'HP-5a: default maxAttempts (undefined opts.attempts) → final if attemptsMade>=1'
+            status: PASS
+          - name: 'HP-5b: no kbDeps → kb NOT called'
+            status: PASS
+          - name: 'HP-5c: job undefined edge case → kb NOT called'
+            status: PASS
+          - name: 'HP-5d: non-Error thrown → blocked_reason is non-empty string'
+            status: PASS
+
+  - ac_id: AC-7
+    description: pnpm test --filter @repo/pipeline exits 0 for new supervisor-callbacks.test.ts suite
+    status: PASS
+    evidence_type: command
+    evidence:
+      - type: command
+        command: pnpm --filter @repo/pipeline test
+        result: >-
+          12 tests in supervisor-callbacks.test.ts: all PASS.
+          Total: 4 pre-existing failures (same as baseline), 141 tests passed (up from 129).
+          No new failures introduced.
+
+  - ac_id: AC-8
+    description: No wint.* references in supervisor-callbacks.test.ts
+    status: PASS
+    evidence_type: command
+    evidence:
+      - type: command
+        command: "grep -r 'wint\\.' apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts"
+        result: >-
+          Only match is in the AC-8 comment itself: '* AC-8: No wint.* references in this file.'
+          No functional wint.* references.
+
+files_changed:
+  - path: apps/api/pipeline/src/supervisor/index.ts
+    action: modified
+    changes:
+      - "Line 20: Added 'type StoryState' to @repo/knowledge-base import"
+      - 'Line 216: Changed Record<string, string> to Record<string, StoryState>'
+      - "Line 219: Changed qa: 'UAT' to qa: 'completed'"
+      - "Line 234: Removed 'as any' cast from state field"
+      - "Line 274: Added state: 'blocked' to kb_update_story_status call in failed handler"
+  - path: apps/api/knowledge-base/src/index.ts
+    action: modified
+    changes:
+      - 'Added export of StoryStateSchema and StoryState from ./__types__/index.js for external consumers'
+  - path: apps/api/pipeline/src/supervisor/__tests__/supervisor-callbacks.test.ts
+    action: created
+    changes:
+      - 'New test file with 12 tests covering completed (HP-1..HP-4) and failed (HP-5, EC-3+) callbacks'

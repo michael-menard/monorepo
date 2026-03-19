@@ -1,0 +1,133 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  files_under_test:
+    - apps/api/pipeline/src/supervisor/index.ts
+  packages:
+    - '@repo/pipeline'
+    - '@repo/knowledge-base'
+
+happy_path_tests:
+  - id: HP-1
+    title: 'qa stage completion maps to completed state in KB'
+    setup: 'Create mock kbDeps with jest.fn() for kb_update_story_status. Instantiate PipelineSupervisor with mock deps. Emit worker completed event with job data { storyId: "PIPE-2030", stage: "qa" }.'
+    action: 'Trigger worker.on("completed") handler with a mock job whose data.stage = "qa" and data.storyId = "PIPE-2030".'
+    expected: 'kb_update_story_status is called once with { story_id: "PIPE-2030", state: "completed" }. No Zod validation error is thrown.'
+    evidence: 'vi.spyOn on kb_update_story_status — assert toHaveBeenCalledWith({ story_id: "PIPE-2030", state: "completed" })'
+
+  - id: HP-2
+    title: 'implementation stage completion maps to needs_code_review state in KB'
+    setup: 'Mock kbDeps. Emit worker completed event with { storyId: "PIPE-9999", stage: "implementation" }.'
+    action: 'Trigger completed handler with stage = "implementation".'
+    expected: 'kb_update_story_status called with { story_id: "PIPE-9999", state: "needs_code_review" }.'
+    evidence: 'Spy assertion on kb_update_story_status call args'
+
+  - id: HP-3
+    title: 'review stage completion maps to ready_for_qa state in KB'
+    setup: 'Mock kbDeps. Emit completed event with { storyId: "PIPE-9999", stage: "review" }.'
+    action: 'Trigger completed handler with stage = "review".'
+    expected: 'kb_update_story_status called with { story_id: "PIPE-9999", state: "ready_for_qa" }.'
+    evidence: 'Spy assertion on kb_update_story_status call args'
+
+  - id: HP-4
+    title: 'elaboration stage completion maps to ready state in KB'
+    setup: 'Mock kbDeps. Emit completed event with { storyId: "PIPE-9999", stage: "elaboration" }.'
+    action: 'Trigger completed handler with stage = "elaboration".'
+    expected: 'kb_update_story_status called with { story_id: "PIPE-9999", state: "ready" }.'
+    evidence: 'Spy assertion on kb_update_story_status call args'
+
+  - id: HP-5
+    title: 'Final failure sets state to blocked in KB'
+    setup: 'Mock kbDeps. Create a mock failed job with attemptsMade = 3, opts.attempts = 3 (final failure condition).'
+    action: 'Trigger worker.on("failed") handler with the mock job and an Error object.'
+    expected: 'kb_update_story_status called with { story_id: ..., state: "blocked", blocked_reason: <error message> }.'
+    evidence: 'Spy assertion on kb_update_story_status — assert state: "blocked" is present in call args'
+
+error_cases:
+  - id: EC-1
+    title: 'kbDeps is null — KB callback is skipped on completion'
+    setup: 'Instantiate PipelineSupervisor without KB_DB_PASSWORD set (kbDeps = null). Mock worker completed event.'
+    action: 'Trigger completed handler with valid storyId and stage.'
+    expected: 'kb_update_story_status is NOT called. No error is thrown.'
+    evidence: 'Assert kb_update_story_status mock was NOT called (toHaveBeenCalledTimes(0))'
+
+  - id: EC-2
+    title: 'kbDeps is null — KB callback is skipped on final failure'
+    setup: 'PipelineSupervisor with null kbDeps. Mock failed job with isFinalFailure = true.'
+    action: 'Trigger failed handler.'
+    expected: 'kb_update_story_status is NOT called.'
+    evidence: 'Assert kb_update_story_status mock NOT called'
+
+  - id: EC-3
+    title: 'Transient failure (not final) — KB callback is skipped'
+    setup: 'Mock kbDeps. Create failed job with attemptsMade = 1, opts.attempts = 3 (not final).'
+    action: 'Trigger failed handler.'
+    expected: 'kb_update_story_status is NOT called (only final failures trigger KB update).'
+    evidence: 'Assert kb_update_story_status mock NOT called'
+
+  - id: EC-4
+    title: 'Unknown stage in STAGE_TO_NEXT_STATE — no KB call'
+    setup: 'Mock kbDeps. Emit completed event with stage = "unknown_stage".'
+    action: 'Trigger completed handler.'
+    expected: 'kb_update_story_status is NOT called (no mapping exists). No error thrown.'
+    evidence: 'Assert kb_update_story_status mock NOT called'
+
+  - id: EC-5
+    title: 'kb_update_story_status rejects — error is caught and logged, not propagated'
+    setup: 'Mock kbDeps where kb_update_story_status rejects with an error. Mock logger.warn.'
+    action: 'Trigger completed handler with valid stage.'
+    expected: 'Error is caught by .catch() handler. logger.warn is called with event: "kb_state_advance_failed". No unhandled rejection.'
+    evidence: 'Assert logger.warn called with correct event key'
+
+edge_cases:
+  - id: ED-1
+    title: 'Missing storyId in job data — KB callback is skipped'
+    setup: 'Mock kbDeps. Create completed job with data = { stage: "qa" } (no storyId).'
+    action: 'Trigger completed handler.'
+    expected: 'kb_update_story_status is NOT called. Guard condition (storyId && stage && this.kbDeps) prevents call.'
+    evidence: 'Assert kb_update_story_status mock NOT called'
+
+  - id: ED-2
+    title: 'job is undefined in failed handler — KB callback is skipped'
+    setup: 'Mock kbDeps. Trigger failed handler with job = undefined.'
+    action: 'Call failed handler with undefined job.'
+    expected: 'No KB call made. No crash. isFinalFailure guard handles undefined job.'
+    evidence: 'No throw, kb_update_story_status NOT called'
+
+  - id: ED-3
+    title: 'All four STAGE_TO_NEXT_STATE values are valid StoryStateSchema states'
+    setup: 'Import StoryStateSchema from @repo/knowledge-base. Read STAGE_TO_NEXT_STATE map values from supervisor.'
+    action: 'Validate each value via StoryStateSchema.parse() or .safeParse().'
+    expected: 'All four values (ready, needs_code_review, ready_for_qa, completed) parse without error.'
+    evidence: 'Assert safeParse().success === true for each value'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'kb_update_story_status called with state matching StoryStateSchema enum (not "UAT")'
+      - 'kb_update_story_status NOT called when kbDeps is null'
+      - 'kb_update_story_status NOT called on transient (non-final) failures'
+      - 'logger.warn called with correct event key on KB call failure'
+      - 'state: "blocked" present when final failure occurs'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: mockKbDeps
+    type: object
+    description: 'StoryCrudDeps mock with kb_update_story_status as vi.fn() returning Promise.resolve()'
+  - name: mockCompletedJob
+    type: object
+    description: 'BullMQ Job mock with data.storyId and data.stage fields set'
+  - name: mockFailedJob
+    type: object
+    description: 'BullMQ Job mock with attemptsMade and opts.attempts set to control isFinalFailure condition'
+
+risks:
+  - 'BullMQ Worker instantiation requires Redis — tests must mock the Worker class or extract the callback logic into testable functions separate from the Worker constructor'
+  - 'PipelineSupervisor.start() sets up worker.on() handlers internally — tests may need to call start() with mocked Redis/BullMQ or refactor the handler registration to be injectable'
+  - 'Fire-and-forget callbacks return void — tests must flush the microtask queue (await Promise.resolve() or use vi.runAllMicrotasks()) to assert the async KB call happened'
+  - 'Pattern reference: apps/api/pipeline/src/supervisor/__tests__/supervisor-blockers.test.ts — check existing test setup for Worker mocking approach'
