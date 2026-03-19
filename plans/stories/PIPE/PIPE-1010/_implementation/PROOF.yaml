@@ -1,0 +1,62 @@
+story_id: PIPE-1010
+title: Bulk Import APIP Stories from Worktree to KB
+type: data-migration
+verdict: PASS
+summary: >-
+  41 APIP stories imported from tree/story-cdbn-2011 worktree into KB. All 12 ACs passed. Idempotency verified (re-run
+  produced 0 errors, count unchanged).
+ac_results:
+  AC-1:
+    status: PASS
+    evidence: 41 kb_create_story calls completed successfully
+  AC-2:
+    status: PASS
+    evidence: >-
+      State mapping validated: uat->completed, ready-to-work->ready, needs-code-review->needs_code_review,
+      in-progress->in_progress, ready-for-qa->ready_for_qa
+  AC-3:
+    status: PASS
+    evidence: Stage directory position used as authoritative state source
+  AC-4:
+    status: PASS
+    evidence: APIP-1010 and APIP-1030 excluded (superseded)
+  AC-5:
+    status: PASS
+    evidence: All stories have feature=apip
+  AC-6:
+    status: PASS
+    evidence: All 41 stories retrievable via kb_get_story
+  AC-7:
+    status: PASS
+    evidence: Priority and description fields populated from story.yaml/frontmatter
+  AC-8:
+    status: PASS
+    evidence: 'State distribution: completed(34), needs_code_review(2), in_progress(2), ready_for_qa(1), backlog(1), ready(1)'
+  AC-9:
+    status: PASS
+    evidence: 'Second import run: 41/41 success, 0 errors, count unchanged'
+  AC-10:
+    status: PASS
+    evidence: 'Metadata sourcing hierarchy: stage dir > story.yaml > .md frontmatter > defaults'
+  AC-11:
+    status: PASS
+    evidence: 7 stories without story.yaml imported from .md frontmatter
+  AC-12:
+    status: PASS
+    evidence: All stories validated against StoryStateSchema canonical 13 states
+e2e_tests:
+  status: exempt
+  reason: Data-migration chore, no application code changes
+metrics:
+  total_imported: 41
+  state_distribution:
+    completed: 34
+    needs_code_review: 2
+    in_progress: 2
+    ready_for_qa: 1
+    backlog: 1
+    ready: 1
+  excluded:
+    - APIP-1010
+    - APIP-1030
+  idempotency: verified

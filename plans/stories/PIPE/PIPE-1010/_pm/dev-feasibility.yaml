@@ -1,0 +1,98 @@
+feasible: true
+confidence: high
+rationale: >
+  This story is an agent-driven operational import using existing MCP tooling. No new code changes
+  to the codebase are required. The kb_create_story MCP tool is deployed and operational (per PIPE-0010,
+  PIPE-0020). The StoryStateSchema is enforced at the Zod layer. The primary risk — ghost state values —
+  is fully addressed by the pre-computed state mapping table in the seed. The 41-story inventory is
+  explicitly enumerated. Effort is low and the implementation path is deterministic.
+complexity: low
+change_surface:
+  areas:
+    - 'KB MCP tool layer (apps/api/knowledge-base) — read-only from implementation perspective; calling existing tools'
+    - 'stories table in Aurora PostgreSQL — new rows inserted via kb_create_story upsert'
+  endpoints:
+    - 'kb_create_story (MCP tool) — one call per story, 41 total'
+    - 'kb_list_stories (MCP tool) — verification call post-import'
+  deploy_touchpoints:
+    - 'No deployment required — uses existing deployed KB MCP server'
+
+risks:
+  - finding: 'Ghost state values in worktree story.yaml files will cause hard Zod validation failures if not mapped before kb_create_story call'
+    mitigation: 'Apply state mapping table (from seed) before every kb_create_story call. Validate all 41 mapped values against StoryStateSchema enum before starting import loop. Reference: apps/api/knowledge-base/src/__types__/index.ts lines 780-799.'
+  - finding: 'Seven stories lack a story.yaml file (APIP-0020, APIP-1031, APIP-1032, APIP-1050, APIP-1060, APIP-2010, APIP-5001). Metadata must be sourced from .md frontmatter or CHECKPOINT/EVIDENCE artifacts.'
+    mitigation: 'Read .md frontmatter for title. For state, use stage directory position as authoritative source. Seed inventory table provides pre-resolved state for all 41 stories — use that as the canonical source.'
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'kb_list_stories({ feature: "apip", limit: 100 }) returns total >= 41 after import'
+  - 'Spot-check of 5 stories (one per non-completed state) confirms correct state mapping'
+  - 'Second import run (idempotency verification) completes with no errors and total count unchanged'
+
+subtasks:
+  - id: ST-1
+    title: 'Validate state mapping table against StoryStateSchema enum'
+    goal: 'Confirm all 8 mapped target states in the mapping table are valid StoryStateSchema values before starting the import loop'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/__types__/index.ts'
+    files_to_modify: []
+    acs: ['AC-2']
+    depends_on: none
+    verification: 'Each value in the mapping table (completed, in_progress, needs_code_review, ready_for_qa, ready, backlog, in_qa, created) exists in the StoryStateSchema enum at lines 780-799'
+    estimated_tokens: 2000
+
+  - id: ST-2
+    title: 'Import APIP-0010 through APIP-1070 (foundation and implementation stories)'
+    goal: 'Call kb_create_story for APIP-0010, APIP-0020, APIP-0030, APIP-0040, APIP-1020, APIP-1031, APIP-1032, APIP-1040, APIP-1050, APIP-1060, APIP-1070 with mapped states and metadata from seed inventory'
+    files_to_read:
+      - 'plans/stories/PIPE/PIPE-1010/_pm/STORY-SEED.md'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-3', 'AC-4', 'AC-5', 'AC-8', 'AC-10', 'AC-11', 'AC-12']
+    depends_on: ST-1
+    verification: 'kb_list_stories({ feature: "apip", limit: 100 }) includes all 11 stories in this batch with correct states'
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: 'Import APIP-2010 through APIP-3090 (platform and learning stories)'
+    goal: 'Call kb_create_story for APIP-2010, APIP-2020, APIP-2030, APIP-3010 through APIP-3090 with mapped states and metadata from seed inventory'
+    files_to_read:
+      - 'plans/stories/PIPE/PIPE-1010/_pm/STORY-SEED.md'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-3', 'AC-6', 'AC-10', 'AC-11']
+    depends_on: ST-1
+    verification: 'kb_list_stories({ feature: "apip", limit: 100 }) includes APIP-2010 (backlog), APIP-2020 (completed), APIP-3010 (ready_for_qa), APIP-3020-3090 (completed)'
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: 'Import APIP-4010 through APIP-5007 (health gate and infra stories)'
+    goal: 'Call kb_create_story for APIP-4010 through APIP-4070 and APIP-5000 through APIP-5007 with mapped states from seed inventory'
+    files_to_read:
+      - 'plans/stories/PIPE/PIPE-1010/_pm/STORY-SEED.md'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-3', 'AC-4', 'AC-10', 'AC-11', 'AC-12']
+    depends_on: ST-1
+    verification: 'kb_list_stories({ feature: "apip", limit: 100 }) includes all APIP-4xxx and APIP-5xxx stories with correct states'
+    estimated_tokens: 6000
+
+  - id: ST-5
+    title: 'Import APIP-6001 through APIP-6003 and run post-import verification'
+    goal: 'Complete the import loop with APIP-6001 (completed), APIP-6002 (completed), APIP-6003 (ready). Then call kb_list_stories to assert total >= 41 and spot-check 5 stories.'
+    files_to_read:
+      - 'plans/stories/PIPE/PIPE-1010/_pm/STORY-SEED.md'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-7', 'AC-10']
+    depends_on: ST-4
+    verification: 'kb_list_stories({ feature: "apip", limit: 100 }) total >= 41; APIP-6003 shows state: ready'
+    estimated_tokens: 3000
+
+  - id: ST-6
+    title: 'Idempotency verification — re-run full import loop'
+    goal: 'Re-run all 41 kb_create_story calls with identical inputs. Confirm no errors and no state corruption.'
+    files_to_read:
+      - 'plans/stories/PIPE/PIPE-1010/_pm/STORY-SEED.md'
+    files_to_modify: []
+    acs: ['AC-9']
+    depends_on: ST-5
+    verification: 'Second run produces zero errors. kb_list_stories total unchanged at >= 41. No ghost state values appear.'
+    estimated_tokens: 4000

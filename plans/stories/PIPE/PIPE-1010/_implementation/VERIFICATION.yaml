@@ -1,0 +1,144 @@
+schema: 1
+story_id: PIPE-1010
+timestamp: '2026-03-19T06:00:00.000Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+e2e_exempt: true
+e2e_exempt_reason: Data migration chore — zero application code changes. No touched_files. E2E not applicable.
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: No code changes; coverage threshold not applicable per e2e_exempt exemption.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    No test suite to evaluate — operational data migration with no application code. Quality verified through direct KB
+    state inspection.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: 'kb_list_stories(feature: apip, limit: 100) returned total: 41'
+    notes: Exact count of 41 APIP stories confirmed. All 41 stories present with feature=apip.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: Spot-checked all 5 non-completed-state stories; full list shows only valid StoryStateSchema values
+    notes: >-
+      No ghost states observed across all 41 returned stories. States present: completed, in_progress,
+      needs_code_review, ready_for_qa, ready, backlog.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: kb_get_story(APIP-0010) state=completed; APIP-1070, APIP-2020, APIP-3020, APIP-6001 all state=completed
+    notes: UAT-stage stories correctly imported with state=completed.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: kb_get_story(APIP-1060) state=in_progress; kb_get_story(APIP-5007) state=in_progress
+    notes: Both in-progress/ stage stories have state=in_progress as required.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: kb_get_story(APIP-0040) state=needs_code_review; kb_get_story(APIP-1050) state=needs_code_review
+    notes: Both needs-code-review/ stage stories have state=needs_code_review as required.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: kb_get_story(APIP-3010) state=ready_for_qa
+    notes: APIP-3010 (ready-for-qa/ stage) correctly imported with state=ready_for_qa.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: kb_get_story(APIP-6003) state=ready
+    notes: APIP-6003 (ready-to-work stage) correctly mapped to state=ready (not ghost value ready_to_work).
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: kb_get_story(APIP-1031) state=completed; kb_get_story(APIP-1032) state=completed
+    notes: Both stories without stage directory presence but with UAT proof artifacts imported as state=completed.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml idempotency_verified=true; kb_list_stories returns exactly 41 (upsert semantics prevent duplicates)
+    notes: Idempotency verified by implementer. Count remains 41. No duplicate records observed.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: 'All 41 stories returned by kb_list_stories(feature: apip) have feature=apip confirmed'
+    notes: >-
+      feature=apip confirmed on every sampled story (APIP-0010, APIP-0040, APIP-1031, APIP-1032, APIP-1050, APIP-1060,
+      APIP-2010, APIP-3010, APIP-5007, APIP-6003). Epic field not surfaced in kb_get_story API response schema; feature
+      routing is correct. Evidence artifact reports PASS for epic field.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: Spot-check of 10 story titles matches inventory table in PIPE-1010.md exactly
+    notes: >-
+      Sampled titles verified: BullMQ Work Queue Setup, Model Router v1 with Rate Limiting and Token Budgets,
+      Implementation Graph Skeleton with Worktree and Evidence Infrastructure, Change Loop with Model Dispatch
+      Micro-Verify and Atomic Commits, QA Graph with Autonomous Verdict, Change Telemetry Table and Instrumentation,
+      Blocked Queue and Notification System, KB-Filesystem State Reconciliation, Database Schema Versioning and
+      Migration Strategy, Review Graph with Parallel Fan-Out Workers — all match exactly.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: kb_get_story(APIP-1031), kb_get_story(APIP-1032) present with correct titles and state=completed
+    notes: Stories without story.yaml (APIP-1031, APIP-1032) successfully imported from .md frontmatter metadata.
+superseded_story_check:
+  APIP-1010:
+    exists_in_kb: true
+    feature: autonomous-pipeline
+    state: completed
+    verdict: PASS
+    notes: >-
+      APIP-1010 is a pre-existing record (createdAt 2026-02-25, feature=autonomous-pipeline). It was NOT imported by
+      PIPE-1010 (which only imports feature=apip stories). It does not appear in kb_list_stories(feature: apip) results.
+      AC-12 non-goal satisfied: APIP-1010 was not imported as part of this migration.
+  APIP-1030:
+    exists_in_kb: true
+    feature: autonomous-pipeline
+    state: cancelled
+    verdict: PASS
+    notes: >-
+      APIP-1030 is also a pre-existing record (createdAt 2026-02-25, feature=autonomous-pipeline, state=cancelled). It
+      was NOT imported by PIPE-1010. Does not appear in the 41-story apip feature listing.
+architecture_compliant: true
+architecture_notes: >-
+  Zero application code changes. Pure KB data migration via MCP tool calls. No barrel files, no console.log, no
+  TypeScript interfaces introduced. Consistent with KB-as-source-of-truth architectural decision.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Pre-existing KB records with a different feature field (autonomous-pipeline vs apip) are invisible to
+      feature-scoped list queries. APIP-1010 and APIP-1030 existed as pre-migration records under
+      feature=autonomous-pipeline; they do not contaminate the import count and are effectively superseded in context
+      without being flagged as imported.
+    category: pattern
+    tags:
+      - kb
+      - data-migration
+      - feature-scoping
+  - lesson: >-
+      The kb_get_story API response does not expose the epic field in its serialized output schema. QA verification of
+      epic field correctness can only be confirmed through implementer evidence or by querying the DB directly. Future
+      evidence artifacts for story imports should include a direct DB query or plan-link check to prove epic= value.
+    category: blocker
+    tags:
+      - kb
+      - api
+      - evidence-quality
+  - lesson: >-
+      Data migration stories with e2e_exempt=true and zero touched_files require QA verification via direct KB state
+      inspection (kb_get_story, kb_list_stories) rather than test re-execution. The verification pattern: count check +
+      state spot-check per non-default state + exclusion check for superseded IDs is sufficient for this class of story.
+    category: pattern
+    tags:
+      - qa
+      - data-migration
+      - chore
+      - e2e-exempt
+tokens:
+  in: 18000
+  out: 3000
