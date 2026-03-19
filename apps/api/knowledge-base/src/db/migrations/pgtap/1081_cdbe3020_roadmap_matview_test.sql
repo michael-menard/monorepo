@@ -70,7 +70,7 @@ REFRESH MATERIALIZED VIEW workflow.roadmap;
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(14);
 
 -- ── HP-1: Materialized view exists ───────────────────────────────────────────
 
@@ -166,6 +166,18 @@ SELECT has_index(
 SELECT has_function(
   'workflow', 'refresh_roadmap_matview',
   '1081 HP-7: workflow.refresh_roadmap_matview() trigger function exists'
+);
+
+-- ── HP-8: Triggers exist on plan_story_links and stories ────────────────────
+
+SELECT has_trigger(
+  'workflow', 'plan_story_links', 'trg_refresh_roadmap_plan_story_links',
+  '1081 HP-8a: trigger trg_refresh_roadmap_plan_story_links exists on workflow.plan_story_links'
+);
+
+SELECT has_trigger(
+  'workflow', 'stories', 'trg_refresh_roadmap_stories',
+  '1081 HP-8b: trigger trg_refresh_roadmap_stories exists on workflow.stories'
 );
 
 -- ── EC-1: Plan with no stories — estimated_completion_pct IS NULL ────────────

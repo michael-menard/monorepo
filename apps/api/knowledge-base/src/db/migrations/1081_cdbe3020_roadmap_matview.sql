@@ -165,7 +165,7 @@ REFRESH MATERIALIZED VIEW workflow.roadmap;
 CREATE OR REPLACE FUNCTION workflow.refresh_roadmap_matview()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 AS $$
 BEGIN
   -- AC-8: Guard against recursive trigger invocation
@@ -186,7 +186,7 @@ COMMENT ON FUNCTION workflow.refresh_roadmap_matview() IS
   'Fires on INSERT/UPDATE/DELETE to workflow.plan_story_links and workflow.stories. '
   'pg_trigger_depth() > 1 guard prevents infinite recursion. Returns NULL (AFTER trigger). '
   'Uses non-CONCURRENTLY REFRESH — triggers always run inside a transaction context; '
-  'CONCURRENTLY is not available there. SECURITY DEFINER to ensure refresh privileges.';
+  'CONCURRENTLY is not available there. SECURITY INVOKER to ensure refresh privileges.';
 
 -- ============================================================================
 -- STATEMENT-LEVEL TRIGGERS
