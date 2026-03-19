@@ -2513,9 +2513,13 @@ Parameters:
 - artifact_type (required): Type of artifact
 - content (required): Full artifact content as JSON object
 - phase (optional): Implementation phase (setup, analysis, planning, implementation, code_review, qa_verification, completion)
-- iteration (optional): Fix cycle iteration number (default: 0)
+- iteration (optional): Fix cycle iteration number (default: 0). Ignored when auto_increment=true.
 - artifact_name (optional): Human-readable name (auto-generated if not provided)
 - summary (optional): JSONB summary for quick access
+- auto_increment (optional): When true, automatically assigns the next iteration number (MAX(iteration)+1 for this story_id + artifact_type + artifact_name triple). Ignores the caller's iteration value. Default: false.
+- max_iterations (optional): Maximum allowed iterations. Rejects writes when resolved iteration >= max_iterations.
+
+Note: content.iteration is always auto-injected with the resolved iteration value to prevent drift between the column and content.
 
 Returns: Created/updated artifact
 {
@@ -2747,8 +2751,10 @@ Parameters:
 - content (required): Artifact content as JSON object (serialized to YAML)
 - story_dir (required): Absolute path to story root directory
 - phase (optional): Implementation phase
-- iteration (optional): Fix cycle iteration number (default: 0)
+- iteration (optional): Fix cycle iteration number (default: 0). Ignored when auto_increment=true.
 - write_to_kb (optional): Also write to KB database (default: true)
+- auto_increment (optional): When true, auto-assigns next iteration via KB (requires write_to_kb=true). KB write happens first to resolve iteration, then filesystem uses the resolved value. Default: false.
+- max_iterations (optional): Maximum allowed iterations. Rejects writes when resolved iteration >= max_iterations.
 
 Returns:
 {
