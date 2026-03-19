@@ -1,0 +1,279 @@
+schema: 2
+story_id: CDBE-1060
+timestamp: '2026-03-19T06:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Implement story_completion_cascade trigger function in the migration file. Pre-flight: verify depends_on_id column
+      (not depends_on_story_id) and document workflow.worktrees table existence. Function handles: early-exit guard for
+      non-cascade transitions (AC-9), resolving story_dependencies (AC-2, depends_on_id guarded with resolved_at IS
+      NULL), marking worktree merged_at (AC-3, graceful on missing row), soft-deleting open story_assignments (AC-4).
+      Wrap in SECURITY INVOKER, add COMMENT ON FUNCTION.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+      - apps/api/knowledge-base/src/db/migrations/1050_cascade_trigger_prerequisites.sql
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
+    dependencies: []
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -c "SELECT proname FROM pg_proc JOIN pg_namespace ON pronamespace=pg_namespace.oid WHERE
+      nspname='workflow' AND proname='story_completion_cascade'"
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-9
+      - AC-10
+      - AC-12
+      - AC-13
+      - AC-15
+      - AC-16
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement story_cancellation_cascade trigger function in the same migration file. Key ordering per AC-17: (1)
+      capture v_blocked_story_ids into a local array/variable from story_blockers WHERE blocked_by_story_id =
+      NEW.story_id AND deleted_at IS NULL BEFORE the soft-delete UPDATE, (2) soft-delete open story_assignments (AC-6),
+      (3) soft-delete open story_blockers rows (AC-7, both story_id and blocked_by_story_id sides), (4) INSERT flag
+      events into workflow.story_state_history with event_type='blocker' for each captured blocked story_id (AC-8,
+      flag-only, no state change). Add COMMENT ON FUNCTION. Include early-exit guard (AC-9). SECURITY INVOKER.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1050_cascade_trigger_prerequisites.sql
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -c "SELECT proname FROM pg_proc JOIN pg_namespace ON pronamespace=pg_namespace.oid WHERE
+      nspname='workflow' AND proname='story_cancellation_cascade'"
+    acs_covered:
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-12
+      - AC-13
+      - AC-17
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Create the story_cascade_trigger AFTER UPDATE trigger on workflow.stories in the same migration file. Use DROP
+      TRIGGER IF EXISTS / CREATE TRIGGER (idempotent). The trigger calls the appropriate cascade function (completion or
+      cancellation) via a single dispatcher function or directly by having each cascade function check NEW.state. Single
+      trigger entry per AC-11. Add COMMENT ON TRIGGER. Add completion RAISE NOTICE block. Verify migration slot 1060 is
+      unoccupied.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -c "SELECT tgname FROM pg_trigger JOIN pg_class ON tgrelid=pg_class.oid JOIN pg_namespace ON
+      relnamespace=pg_namespace.oid WHERE nspname='workflow' AND relname='stories' AND tgname='story_cascade_trigger'"
+    acs_covered:
+      - AC-11
+      - AC-12
+      - AC-13
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write the pgtap integration test file. Follow BEGIN/plan(N)/finish()/ROLLBACK pattern from 1010 test. Insert
+      fixture stories and related rows (story_dependencies, story_assignments, story_blockers, worktrees if available)
+      within the transaction. Tests: HP-1 has_function completion_cascade, HP-2 completion resolves dependencies
+      (depends_on_id, resolved_at set), HP-3 completion soft-deletes assignments, HP-4 completion sets worktree
+      merged_at, HP-5 completion with no worktree no error, HP-6 has_function cancellation_cascade, HP-7 cancellation
+      soft-deletes assignments, HP-8 cancellation soft-deletes blockers, HP-9 cancellation flags downstream via
+      story_state_history blocker event (state unchanged), TR-1 has_trigger story_cascade_trigger, NC-1 non-cascade
+      transition no side effects, AT-1 atomicity check (simulated sub-op failure causes rollback), ID-1 idempotency
+      (second run exits 0). Total: plan(13) or plan(N) matching actual test count.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1050_cascade_trigger_prerequisites_test.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql | pg_prove
+    acs_covered:
+      - AC-14
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    action: create
+    reason: >-
+      Main migration: defines story_completion_cascade(), story_cancellation_cascade(), and story_cascade_trigger per
+      ACs 1-13
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql
+    action: create
+    reason: pgtap integration test file covering all 13 test cases (HP-1 through HP-9, TR-1, NC-1, AT-1, ID-1) per AC-14
+commands_to_run:
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    when: after migration file is written
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -f
+      apps/api/knowledge-base/src/db/migrations/pgtap/1060_completion_cancellation_cascade_test.sql | pg_prove
+    when: after migration applied and pgtap test file is written
+    required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1060_completion_cancellation_cascade.sql
+    when: second run (idempotency check for ID-1)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Migration creates workflow.story_completion_cascade() via CREATE OR REPLACE FUNCTION, confirmed via has_function()
+      pgtap test HP-1
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      pgtap test HP-2: after completed transition, story_dependencies row with depends_on_id = story_id has resolved_at
+      set. Trigger uses 'depends_on_id' (not depends_on_story_id) per AC-15 pre-flight check.
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      pgtap test HP-4: after completed transition, workflow.worktrees row has merged_at set. pgtap test HP-5: completion
+      with no worktree row does not raise error.
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      pgtap test HP-3: after completed transition, open story_assignments rows have deleted_at set. 0-row case covered
+      by HP-5 flow (no error).
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Migration creates workflow.story_cancellation_cascade() via CREATE OR REPLACE FUNCTION, confirmed via
+      has_function() pgtap test HP-6
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: 'pgtap test HP-7: after cancelled transition, open story_assignments rows for cancelled story have deleted_at set'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'pgtap test HP-8: after cancelled transition, open story_blockers rows (both sides) have deleted_at set'
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      pgtap test HP-9: after cancelled transition, a workflow.story_state_history row with event_type='blocker' exists
+      for the downstream story. Downstream story state is unchanged.
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      pgtap test NC-1: non-cascade state transition (e.g., backlog->created) triggers no side effects on assignments,
+      dependencies, or blockers
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      pgtap test AT-1: simulate a sub-operation failure inside cascade; assert full rollback with no partial state
+      committed
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: >-
+      pgtap test TR-1: has_trigger('workflow', 'stories', 'story_cascade_trigger') passes. Migration uses DROP TRIGGER
+      IF EXISTS / CREATE TRIGGER.
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      Code review: COMMENT ON FUNCTION and COMMENT ON TRIGGER statements present in migration file with '1060: ...'
+      prefix for all three objects
+    evidence_type: file
+  - ac_id: AC-13
+    planned_evidence: >-
+      pgtap test ID-1: second psql run of migration exits 0 with no ERROR. Uses CREATE OR REPLACE FUNCTION + DROP
+      TRIGGER IF EXISTS / CREATE TRIGGER.
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      pgtap test file exists at pgtap/1060_completion_cancellation_cascade_test.sql. pg_prove output shows all tests
+      passing.
+    evidence_type: test
+  - ac_id: AC-15
+    planned_evidence: >-
+      Code review: trigger function body uses 'depends_on_id' (not depends_on_story_id). Migration header comment
+      documents column name pre-flight verification.
+    evidence_type: file
+  - ac_id: AC-16
+    planned_evidence: >-
+      Migration header comment documents: SELECT to_regclass('workflow.worktrees') IS NOT NULL result. Trigger body uses
+      workflow.worktrees with merged_at column (confirmed in Drizzle schema workflow.ts line 72).
+    evidence_type: file
+  - ac_id: AC-17
+    planned_evidence: >-
+      Code review: story_cancellation_cascade() function body captures v_blocked_story_ids into a variable BEFORE the
+      AC-7 soft-delete UPDATE on story_blockers. Variable is then used for AC-8 INSERT loop.
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: 'AC-8 flag mechanism: which table/column to use for recording a cancellation flag on downstream stories?'
+    decision: >-
+      INSERT into workflow.story_state_history with event_type='blocker', story_id=<downstream_story_id>,
+      from_state=<current_state>, to_state=<current_state> (same state, flag-only). The 'blocker' event_type is already
+      in the check constraint (999_full_schema_baseline.sql line 1313). Existing indexes
+      idx_workflow_story_state_history_story_id and idx_workflow_story_state_history_event_type support efficient agent
+      queries. No new table required.
+    rationale: >-
+      The story_state_history check constraint already includes 'blocker' as a valid event_type. This reuses the
+      existing audit infrastructure, is queryable by agents via (story_id, event_type='blocker'), and requires no new
+      DDL. The from_state=to_state pattern records a flag-only event without any state mutation. Consistent with the
+      established pattern used by record_state_transition() in migration 1001/1010.
+    decided_by: dev-plan-leader
+  - id: ARCH-002
+    question: >-
+      Trigger dispatcher pattern: single dispatcher function calling completion/cancellation, or each function checks
+      NEW.state internally?
+    decision: >-
+      Each cascade function includes its own early-exit guard (IF NEW.state NOT IN ('completed', 'cancelled') THEN
+      RETURN NEW END IF). The story_cascade_trigger calls both functions in sequence: story_completion_cascade for
+      completed, story_cancellation_cascade for cancelled. However, since PostgreSQL triggers can only call one function
+      per trigger, a single dispatcher function workflow.story_cascade_dispatch() is preferred that checks NEW.state and
+      calls the appropriate function internally, returning the result.
+    rationale: >-
+      A single trigger with a single dispatcher function ensures deterministic ordering per AC-11 ('single AFTER UPDATE
+      trigger'). This prevents the risk of two triggers firing in unspecified order. The dispatcher reads NEW.state once
+      and branches to the appropriate cascade. Each cascade function still includes its own early-exit guard as a
+      defense-in-depth measure.
+    decided_by: dev-plan-leader
+complexity: moderate
+notes:
+  - >-
+    worktrees table is confirmed in Drizzle schema (workflow.ts line 62-75) with merged_at and abandoned_at columns but
+    is NOT present in 999_full_schema_baseline.sql. The table exists in the live DB via Drizzle migration history.
+    Implementation MUST document this in migration header (AC-16).
+  - >-
+    depends_on_id is confirmed as the correct column name in workflow.story_dependencies (999_full_schema_baseline.sql
+    line 1272). AC-2 trigger body must use depends_on_id, not depends_on_story_id (AC-15).
+  - >-
+    story_state_history event_type check constraint allows: state_change, transition, phase_change, assignment, blocker,
+    metadata_version (baseline line 1313). The 'blocker' event_type is available for AC-8 flag events without any DDL
+    changes.
+  - >-
+    story_state_history has a BEFORE INSERT trigger (enforce_story_state_history_transition from migration 1010) that
+    validates transitions against workflow.valid_transitions. AC-8 flag inserts use from_state=current_state,
+    to_state=current_state — this is an idempotent/self-transition that may fail validation. The flag INSERT must bypass
+    this trigger or use a different event_type='blocker' with NULL from_state to avoid the valid_transitions check.
+    Recommend using NULL from_state (initial-insert semantics) in the flag INSERT to avoid the trigger guard.
+  - >-
+    The agent_role UPDATE grant on workflow.story_assignments and workflow.story_blockers is already in migration 1050
+    (GRANT SELECT, INSERT, UPDATE ... TO agent_role). The worktrees table grants must be verified — if agent_role does
+    not have UPDATE on workflow.worktrees, the completion cascade will fail for agent_role callers.
+  - Migration slot 1060 is confirmed unoccupied — no 1060_*.sql file exists in the migrations directory.
+  - >-
+    Opportunity opp-3 noted: AC-2 UPDATE should guard with AND resolved_at IS NULL to be idempotent (avoid overwriting a
+    previously recorded resolution timestamp). This is already in the plan step description for ST-1.
+  - >-
+    pgtap AT-1 atomicity test: use a DO block inside the test transaction that inserts a story, begins cascade, then
+    calls a deliberately invalid operation (e.g., UPDATE workflow.stories SET state=NULL WHERE story_id=...) inside the
+    cascade context and verifies full rollback. Alternatively, use a mock that raises EXCEPTION. The approach must be
+    confirmed at implementation time.
