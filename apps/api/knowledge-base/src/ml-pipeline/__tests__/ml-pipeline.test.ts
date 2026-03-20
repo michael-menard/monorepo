@@ -47,17 +47,6 @@ vi.mock('@repo/db', () => ({
     select: mockDbSelect,
     update: mockDbUpdate,
   },
-  mlModels: { id: 'id', modelName: 'model_name', isActive: 'is_active', modelType: 'model_type' },
-  modelMetrics: { id: 'id', modelId: 'model_id' },
-  modelPredictions: {
-    id: 'id',
-    modelId: 'model_id',
-    entityType: 'entity_type',
-    entityId: 'entity_id',
-    predictionType: 'prediction_type',
-    predictedAt: 'predicted_at',
-  },
-  trainingData: { id: 'id', validated: 'validated', validatedAt: 'validated_at' },
 }))
 
 vi.mock('../db/index.js', () => ({
