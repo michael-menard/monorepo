@@ -292,16 +292,22 @@ export const roadmapApi = createApi({
         method: 'PATCH',
         body: input,
       }),
+      invalidatesTags: (_r, _e, { slug }) => [{ type: 'Plans', id: slug }, 'Plans'],
     }),
     updateStory: builder.mutation<
       { storyId: string },
-      { storyId: string; input: { description?: string | null } }
+      { storyId: string; input: { description?: string | null; state?: string } }
     >({
       query: ({ storyId, input }) => ({
         url: `/stories/${storyId}`,
         method: 'PATCH',
         body: input,
       }),
+      invalidatesTags: (_r, _e, { storyId }) => [
+        { type: 'Story', id: storyId },
+        'Stories',
+        'Dashboard',
+      ],
     }),
     updateStoryContentSection: builder.mutation<
       { storyId: string; sectionName: string },
@@ -312,6 +318,7 @@ export const roadmapApi = createApi({
         method: 'PATCH',
         body: { contentText },
       }),
+      invalidatesTags: (_r, _e, { storyId }) => [{ type: 'Story', id: storyId }],
     }),
   }),
 })

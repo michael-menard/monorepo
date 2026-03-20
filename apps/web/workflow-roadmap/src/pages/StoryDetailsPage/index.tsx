@@ -6,8 +6,9 @@ import {
   AppTabsList,
   AppTabsTrigger,
   AppTabsContent,
+  ConfirmationDialog,
 } from '@repo/app-component-library'
-import { ArrowLeft, AlertTriangle, Pencil, Check, X } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Pencil, Check, X, Ban } from 'lucide-react'
 import { useState } from 'react'
 import {
   useGetStoryByIdQuery,
@@ -39,6 +40,20 @@ export function StoryDetailsPage() {
   const [descriptionValue, setDescriptionValue] = useState('')
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [sectionValue, setSectionValue] = useState('')
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+
+  const handleCancelStory = async () => {
+    setCancelling(true)
+    try {
+      await updateStory({ storyId, input: { state: 'cancelled' } }).unwrap()
+      setShowCancelDialog(false)
+    } catch {
+      // keep dialog open on error
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   const handleDescriptionSave = async () => {
     try {
@@ -149,6 +164,34 @@ export function StoryDetailsPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <StoryHeader data={data} fromPlan={fromPlan} />
+
+      {data.state !== 'cancelled' && data.state !== 'completed' && data.state !== 'UAT' && (
+        <div className="flex justify-end mb-4">
+          <CustomButton
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCancelDialog(true)}
+            className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+          >
+            <Ban className="h-3.5 w-3.5 mr-1.5" />
+            Cancel Story
+          </CustomButton>
+          <ConfirmationDialog
+            open={showCancelDialog}
+            onOpenChange={setShowCancelDialog}
+            title="Cancel Story?"
+            description={
+              data.blocksIds.length > 0
+                ? `This will cancel ${data.storyId}. The following stories depend on it and may be impacted: ${data.blocksIds.join(', ')}.`
+                : `Are you sure you want to cancel ${data.storyId}? This action cannot be easily undone.`
+            }
+            confirmText="Cancel Story"
+            variant="destructive"
+            onConfirm={handleCancelStory}
+            loading={cancelling}
+          />
+        </div>
+      )}
 
       {/* Pipeline strip */}
       <div className="mb-6">

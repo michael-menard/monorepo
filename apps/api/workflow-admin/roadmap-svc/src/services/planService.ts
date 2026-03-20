@@ -138,6 +138,7 @@ export const database = drizzle(pool)
 
 export const StoryUpdateInputSchema = z.object({
   description: z.string().nullable().optional(),
+  state: z.string().optional(),
 })
 
 export type StoryUpdateInput = z.infer<typeof StoryUpdateInputSchema>
@@ -160,6 +161,10 @@ export async function updateStory(
 
   if (input.description !== undefined) {
     updateData.description = input.description
+  }
+
+  if (input.state !== undefined) {
+    updateData.state = input.state
   }
 
   await database.update(stories).set(updateData).where(eq(stories.storyId, storyId))
@@ -332,6 +337,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
       totalStories: sql<number>`(
         select count(*)::int
         from workflow.plan_story_links psl
+        join workflow.stories s on s.story_id = psl.story_id
         where psl.plan_slug = plans.plan_slug
       )`,
       completedStories: sql<number>`(
