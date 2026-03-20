@@ -16,6 +16,7 @@
  */
 
 import { logger } from '@repo/logger'
+import { z } from 'zod'
 import { createTaskContract } from '../models/__types__/task-contract.js'
 import { evaluateQuality } from '../models/quality-evaluator.js'
 import { recordRun } from './leaderboard.js'
@@ -67,11 +68,11 @@ export const QUALITY_EVALUATOR_LIMITATION =
 /**
  * Response shape from Ollama /api/generate endpoint (non-streaming).
  */
-const OllamaResponseSchema = {
-  response: '',
-  done: false,
-}
-type OllamaResponse = typeof OllamaResponseSchema & { response: string; done: boolean }
+const OllamaResponseSchema = z.object({
+  response: z.string(),
+  done: z.boolean(),
+})
+type OllamaResponse = z.infer<typeof OllamaResponseSchema>
 
 /**
  * Call the Ollama generate API for a single (model, prompt) pair.
@@ -116,7 +117,7 @@ export async function callOllama(
     throw new Error(`Ollama returned HTTP ${response.status} for model ${model}`)
   }
 
-  const data = (await response.json()) as OllamaResponse
+  const data = OllamaResponseSchema.parse(await response.json())
 
   logger.info('benchmark_harness', {
     event: 'ollama_call_complete',
@@ -374,31 +375,14 @@ export function printSummaryTable(summary: BenchmarkSummary): void {
 /**
  * Options for the benchmark harness runner.
  */
-export const BenchmarkOptionsSchema = {
-  /**
-   * Path to the leaderboard YAML. Defaults to MODEL_LEADERBOARD_PATH.
-   * Inject a temp path for tests.
-   */
-  leaderboardPath: MODEL_LEADERBOARD_PATH,
+export const BenchmarkOptionsSchema = z.object({
+  leaderboardPath: z.string().default(MODEL_LEADERBOARD_PATH),
+  models: z.array(z.string()).default([...REQUIRED_MODELS]),
+  corpus: z.array(z.any()).default([...BENCHMARK_CORPUS]),
+  ollamaBaseUrl: z.string().default(OLLAMA_BASE_URL),
+})
 
-  /**
-   * Override models to benchmark. Defaults to REQUIRED_MODELS.
-   */
-  models: REQUIRED_MODELS as readonly string[],
-
-  /**
-   * Override task corpus. Defaults to BENCHMARK_CORPUS.
-   */
-  corpus: BENCHMARK_CORPUS as readonly BenchmarkTask[],
-
-  /**
-   * Ollama base URL. Defaults to OLLAMA_BASE_URL.
-   * Inject for tests.
-   */
-  ollamaBaseUrl: OLLAMA_BASE_URL,
-}
-
-export type BenchmarkOptions = Partial<typeof BenchmarkOptionsSchema>
+export type BenchmarkOptions = z.input<typeof BenchmarkOptionsSchema>
 
 /**
  * Run the full benchmark harness.
