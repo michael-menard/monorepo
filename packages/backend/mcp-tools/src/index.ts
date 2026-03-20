@@ -69,3 +69,43 @@ export { contextPackGet } from './context-pack/context-pack-get.js'
 export { logInvocation } from './telemetry/workflow-log-invocation.js'
 export { WorkflowLogInvocationInputSchema } from './telemetry/__types__/index.js'
 export type { WorkflowLogInvocationInput } from './telemetry/__types__/index.js'
+
+// Re-export ML pipeline tools (WINT-0140)
+export {
+  mlModelRegister,
+  mlModelGetActive,
+  mlMetricsRecord,
+  mlPredictionRecord,
+  mlPredictionGetByEntity,
+  trainingDataIngest,
+  trainingDataMarkValidated,
+  MlModelTypeSchema,
+  MlModelRegisterInputSchema,
+  MlModelGetActiveInputSchema,
+  MlMetricsRecordInputSchema,
+  MlPredictionRecordInputSchema,
+  MlPredictionGetByEntityInputSchema,
+  TrainingDataIngestInputSchema,
+  TrainingDataMarkValidatedInputSchema,
+} from '@repo/knowledge-base/ml-pipeline'
+export type {
+  MlModelType,
+  MlModelRegisterInput,
+  MlModelRegisterOutput,
+  MlModelGetActiveInput,
+  MlModelGetActiveOutput,
+  MlModelRecord,
+  MlMetricsRecordInput,
+  MlMetricsRecordOutput,
+  MlMetricRecord,
+  MlPredictionRecordInput,
+  MlPredictionRecordOutput,
+  MlPredictionGetByEntityInput,
+  MlPredictionGetByEntityOutput,
+  MlPredictionRow,
+  TrainingDataIngestInput,
+  TrainingDataIngestOutput,
+  TrainingDataMarkValidatedInput,
+  TrainingDataMarkValidatedOutput,
+  TrainingDataRow,
+} from '@repo/knowledge-base/ml-pipeline'
