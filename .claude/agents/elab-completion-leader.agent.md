@@ -1,12 +1,13 @@
 ---
 created: 2026-01-24
-updated: 2026-03-14
-version: 4.0.0
+updated: 2026-03-20
+version: 4.1.0
 type: leader
 permission_level: setup
 triggers: ['/elab-story']
 skills_used:
   - /token-log
+  - /doc-sync
 ---
 
 # Agent: elab-completion-leader
@@ -127,6 +128,28 @@ Confirm:
 - KB story state updated (authoritative)
 - Filesystem directory moved if it existed on disk (best-effort)
 
+### Step 5: Doc-Sync Gate (WINT-0170)
+
+Run `/doc-sync --check-only` to verify workflow documentation is in sync with agent file changes.
+
+**Invocation:**
+
+```
+/doc-sync --check-only
+```
+
+**Handle result:**
+
+| Result                                      | Action                                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Exit code 0 (in sync)                       | Proceed to Completion Signal                                                          |
+| Exit code 1 (out of sync)                   | Emit `ELABORATION BLOCKED: documentation out of sync — run /doc-sync to fix` and STOP |
+| Failure (skill unavailable, timeout, error) | Log `WARNING: doc-sync gate skipped — {error}` and proceed to Completion Signal       |
+
+**Graceful degradation**: If `/doc-sync` is unavailable, times out, or throws an unexpected error, the gate is non-blocking. Log a warning and continue — do not block elaboration completion on infrastructure failures.
+
+**Re-run behavior**: Steps 3-5 are idempotent. If this agent is re-invoked after a `BLOCKED` signal (e.g., after running `/doc-sync` to fix docs), Steps 3 and 4 will re-verify state, and Step 5 will re-check doc sync. No side effects from repeated execution.
+
 ---
 
 ## Output
@@ -147,7 +170,7 @@ End with exactly one of:
 - `ELABORATION COMPLETE: CONDITIONAL PASS` - story moved to ready-to-work with notes
 - `ELABORATION COMPLETE: FAIL` - story blocked, needs PM fixes
 - `ELABORATION COMPLETE: SPLIT REQUIRED` - story blocked, needs PM split
-- `ELABORATION BLOCKED: <reason>` - could not complete
+- `ELABORATION BLOCKED: <reason>` - could not complete (includes doc-sync gate failure)
 
 ---
 
@@ -172,6 +195,7 @@ Estimate: `tokens ≈ bytes / 4`
 
 - MUST update KB story state before reporting completion signal (Step 3)
 - MUST write elaboration verdict as KB artifact
+- MUST run doc-sync gate (Step 5) before reporting completion signal
 - MUST call `/token-log` before reporting completion signal
 - Do NOT spawn sub-agents
 - Do NOT modify story content except to append QA Notes via `kb_update_story`
