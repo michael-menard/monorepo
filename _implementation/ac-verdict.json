@@ -1,95 +1,124 @@
 {
-  "story_id": "CDBE-5010",
-  "generated_at": "2026-03-19T03:10:00Z",
+  "story_id": "WINT-0140",
+  "generated_at": "2026-03-20T00:00:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "Migration creates workflow.agent_invocations and analytics.story_token_usage as partitioned parent tables with RANGE partitioning on started_at and logged_at respectively",
+      "ac_text": "MlModelTypeSchema z.enum with 4 PG enum values",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 2,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 1,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "PRIMARY KEY includes partition key; FKs drop and recreate with CASCADE (agent_outcomes, agent_decisions) and SET NULL (hitl_decisions) on agent_invocations parent",
+      "ac_text": "ml_model_register tool inserts into workflow.ml_models",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "Unique index on (invocation_id, started_at) created per partition; pgTAP HP-5a verifies index on y2026m03",
+      "ac_text": "ml_model_get_active tool queries WHERE is_active=true with optional modelType filter",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "Data migration uses rename-create-copy-drop strategy within single BEGIN/COMMIT transaction for both tables",
+      "ac_text": "ml_metrics_record tool appends to model_metrics (append-only)",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "DEFAULT partitions created for agent_invocations and story_token_usage; pgTAP HP-2b and HP-3b verify historical rows route to default",
+      "ac_text": "ml_prediction_record tool appends to model_predictions (append-only)",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "Monthly partitions created for current (y2026m03) and next (y2026m04) months; pgTAP HP-2a and HP-3a verify 2026-03-15 routing",
+      "ac_text": "ml_prediction_get_by_entity tool queries by entityType + entityId ordered by predictedAt DESC",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "Row count verification within migration (sections 8, 16) with RAISE EXCEPTION on mismatch; orphan FK check in section 17; all within transaction",
+      "ac_text": "training_data_ingest tool inserts into training_data with optional storyId",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
+      "weak_evidence_count": 2,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "pgTAP test file contains exactly 20 assertions across 8 groups (HP-1 through HP-8); tests run in BEGIN...ROLLBACK for clean state",
+      "ac_text": "training_data_mark_validated tool updates validated=true + validated_at=NOW()",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
+      "evidence_evaluated": 3,
       "strong_evidence_count": 1,
+      "weak_evidence_count": 2,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "All tools use Zod parse input, @repo/logger warn on errors, return null on DB failure",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 2,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "Package registration: knowledge-base ./ml-pipeline export + mcp-tools re-export",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "Unit tests with vi.mock for db, one test per tool minimum, >=45% coverage",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     }
   ],
-  "total_acs": 8,
-  "accepted": 8,
+  "total_acs": 11,
+  "accepted": 11,
   "challenged": 0,
   "rejected": 0,
   "warnings": [
-    "story_file_missing: CDBE-5010.md not found; evaluated with ac_text from EVIDENCE.yaml only",
-    "role_pack_missing: qa.md not found; used embedded QA constraints"
+    "story_file_missing: WINT-0140.md not found; evaluated with ac_text from EVIDENCE.yaml only"
   ]
 }
