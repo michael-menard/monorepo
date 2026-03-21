@@ -142,9 +142,11 @@ import {
   kb_get_token_summary,
   kb_get_bottleneck_analysis,
   kb_get_churn_analysis,
+  kb_get_scoreboard,
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
+  KbGetScoreboardInputSchema,
 } from '../crud-operations/analytics-operations.js'
 import {
   workflow_log_decision,
@@ -4480,6 +4482,52 @@ export async function handleKbGetChurnAnalysis(
   }
 }
 
+/**
+ * Handle kb_get_scoreboard tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with scoreboard
+ */
+export async function handleKbGetScoreboard(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_scoreboard tool invoked', {
+    correlation_id: correlationId,
+    feature: inputObj?.feature,
+    start_date: inputObj?.start_date,
+    end_date: inputObj?.end_date,
+  })
+
+  try {
+    enforceAuthorization('kb_get_scoreboard' as ToolName, context)
+    const validated = KbGetScoreboardInputSchema.parse(input)
+    const result = await kb_get_scoreboard({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_scoreboard succeeded', {
+      correlation_id: correlationId,
+      total_completed: result.throughput.total_completed,
+      agent_count: result.agent_reliability.agents.length,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_scoreboard failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 // ============================================================================
 // Worktree Management Tool Handlers (WINT-1130)
 // ============================================================================
@@ -5334,6 +5382,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_token_summary: handleKbGetTokenSummary,
   kb_get_bottleneck_analysis: handleKbGetBottleneckAnalysis,
   kb_get_churn_analysis: handleKbGetChurnAnalysis,
+  kb_get_scoreboard: handleKbGetScoreboard,
   // Worktree management tools (WINT-1130)
   worktree_register: handleWorktreeRegister,
   worktree_get_by_story: handleWorktreeGetByStory,

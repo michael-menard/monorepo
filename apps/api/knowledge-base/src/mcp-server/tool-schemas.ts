@@ -82,9 +82,11 @@ import {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
+  KbGetScoreboardInputSchema,
   type KbGetTokenSummaryInput,
   type KbGetBottleneckAnalysisInput,
   type KbGetChurnAnalysisInput,
+  type KbGetScoreboardInput,
 } from '../crud-operations/analytics-operations.js'
 // Re-export schemas and types for external use
 export {
@@ -101,6 +103,7 @@ export {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
+  KbGetScoreboardInputSchema,
 }
 export type {
   KbCreateStoryInput,
@@ -116,6 +119,7 @@ export type {
   KbGetTokenSummaryInput,
   KbGetBottleneckAnalysisInput,
   KbGetChurnAnalysisInput,
+  KbGetScoreboardInput,
 }
 // Re-export worktree tool schemas (WINT-1130)
 export {
@@ -3418,6 +3422,35 @@ Response:
   inputSchema: zodToMcpSchema(KbGetChurnAnalysisInputSchema),
 }
 
+/**
+ * kb_get_scoreboard tool definition.
+ *
+ * Returns composite workflow health scoreboard.
+ */
+export const kbGetScoreboardToolDefinition: McpToolDefinition = {
+  name: 'kb_get_scoreboard',
+  description: `Get composite workflow health scoreboard with 5 key metrics.
+
+Answers: "How healthy is the overall pipeline right now?"
+
+Parameters:
+- start_date (optional): Start of time range (ISO 8601)
+- end_date (optional): End of time range (ISO 8601)
+- feature (optional): Filter by feature prefix
+
+Returns: Throughput, cycle time, first-pass success rate, cost efficiency, and agent reliability
+
+Example (all time):
+{}
+
+Example (filter by feature and date range):
+{
+  "feature": "wish",
+  "start_date": "2026-01-01"
+}`,
+  inputSchema: zodToMcpSchema(KbGetScoreboardInputSchema),
+}
+
 // ============================================================================
 // Worktree Management Tool Definitions (WINT-1130)
 // ============================================================================
@@ -4230,6 +4263,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetTokenSummaryToolDefinition,
   kbGetBottleneckAnalysisToolDefinition,
   kbGetChurnAnalysisToolDefinition,
+  kbGetScoreboardToolDefinition,
   // Worktree management tools (WINT-1130)
   worktreeRegisterToolDefinition,
   worktreeGetByStoryToolDefinition,
