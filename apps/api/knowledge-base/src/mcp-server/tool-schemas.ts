@@ -70,7 +70,9 @@ import {
 } from '../crud-operations/plan-operations.js'
 import {
   KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
   type KbGetPlanRevisionsInput,
+  type KbGetPlanRevisionDiffInput,
 } from '../crud-operations/plan-revision-operations.js'
 import {
   KbLogPlanEventInputSchema,
@@ -3835,6 +3837,34 @@ Example:
   inputSchema: zodToMcpSchema(KbGetPlanRevisionsInputSchema),
 }
 
+export const kbGetPlanRevisionDiffToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_revision_diff',
+  description: `Compare two plan revisions and return a structured field-level diff.
+
+Computes the diff on-read between two revision numbers for a given plan.
+Returns a structured diff object with per-field change information suitable
+for programmatic consumption by LangGraph nodes.
+
+Parameters:
+- plan_slug (required): Plan slug to diff revisions for
+- revision_a (required): First revision number (older)
+- revision_b (required): Second revision number (newer)
+
+Returns: Structured diff with fields map, each containing {field, oldValue, newValue, changeType}.
+changeType is one of: added, removed, modified, unchanged.
+
+If revision_a does not exist (e.g., first revision), all fields show as 'added'.
+If neither revision exists, throws an error.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "revision_a": 1,
+  "revision_b": 2
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanRevisionDiffInputSchema),
+}
+
 // ============================================================================
 // Plan Execution Log (PDBM Phase 0)
 // ============================================================================
@@ -3889,9 +3919,19 @@ Example:
 }
 
 // Re-export new schemas for handler imports
-export { KbGetPlanRevisionsInputSchema, KbLogPlanEventInputSchema, KbGetPlanEventsInputSchema }
+export {
+  KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
+}
 
-export type { KbGetPlanRevisionsInput, KbLogPlanEventInput, KbGetPlanEventsInput }
+export type {
+  KbGetPlanRevisionsInput,
+  KbGetPlanRevisionDiffInput,
+  KbLogPlanEventInput,
+  KbGetPlanEventsInput,
+}
 
 /**
  * All MCP tool definitions.
@@ -4279,6 +4319,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbSearchPlansToolDefinition,
   kbGetPlanDashboardToolDefinition,
   kbGetPlanRevisionsToolDefinition,
+  kbGetPlanRevisionDiffToolDefinition,
   kbLogPlanEventToolDefinition,
   kbGetPlanEventsToolDefinition,
   // Artifact search tool (KBAR-0130)

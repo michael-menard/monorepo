@@ -70,6 +70,7 @@ export const ToolNameSchema = z.enum([
   'kb_search_plans',
   'kb_get_plan_dashboard',
   'kb_get_plan_revisions',
+  'kb_get_plan_revision_diff',
   'kb_log_plan_event',
   'kb_get_plan_events',
   // Artifact search tool (KBAR-0130)
@@ -168,6 +169,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_search_plans: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_dashboard: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_revisions: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_plan_revision_diff: new Set(['pm', 'dev', 'qa', 'all']),
   kb_log_plan_event: new Set(['pm', 'dev']),
   kb_get_plan_events: new Set(['pm', 'dev', 'qa', 'all']),
   // Artifact search tool (KBAR-0130) - available to all roles

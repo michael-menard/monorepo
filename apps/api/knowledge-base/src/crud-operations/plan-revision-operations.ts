@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, desc } from 'drizzle-orm'
+import { eq, sql, desc, and } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { planRevisionHistory, plans } from '../db/schema.js'
@@ -165,5 +165,168 @@ export async function kb_get_plan_revisions(
     revisions,
     total,
     message: `Found ${revisions.length} revisions (${total} total) for plan '${validated.plan_slug}'`,
+  }
+}
+
+// ============================================================================
+// Revision Diff (APRS-1050)
+// ============================================================================
+
+export const ChangeTypeSchema = z.enum(['added', 'removed', 'modified', 'unchanged'])
+export type ChangeType = z.infer<typeof ChangeTypeSchema>
+
+export const FieldDiffSchema = z.object({
+  field: z.string(),
+  oldValue: z.unknown().nullable(),
+  newValue: z.unknown().nullable(),
+  changeType: ChangeTypeSchema,
+})
+export type FieldDiff = z.infer<typeof FieldDiffSchema>
+
+export const RevisionDiffResultSchema = z.object({
+  plan_slug: z.string(),
+  revision_a: z.number(),
+  revision_b: z.number(),
+  fields: z.record(z.string(), FieldDiffSchema),
+  has_changes: z.boolean(),
+})
+export type RevisionDiffResult = z.infer<typeof RevisionDiffResultSchema>
+
+export const KbGetPlanRevisionDiffInputSchema = z.object({
+  /** Plan slug to diff revisions for */
+  plan_slug: z.string().min(1),
+
+  /** First revision number (older) */
+  revision_a: z.number().int().min(1),
+
+  /** Second revision number (newer) */
+  revision_b: z.number().int().min(1),
+})
+
+export type KbGetPlanRevisionDiffInput = z.infer<typeof KbGetPlanRevisionDiffInputSchema>
+
+/** Fields to compare between revisions */
+const DIFF_FIELDS = ['rawContent', 'contentHash', 'sections', 'changeReason', 'changedBy'] as const
+
+/**
+ * Compare two values for equality using JSON serialization for deep comparison.
+ */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+/**
+ * Determine the change type between two values.
+ */
+function getChangeType(oldVal: unknown, newVal: unknown): ChangeType {
+  if (valuesEqual(oldVal, newVal)) return 'unchanged'
+  if (oldVal == null && newVal != null) return 'added'
+  if (oldVal != null && newVal == null) return 'removed'
+  return 'modified'
+}
+
+/**
+ * Compute a structured field-level diff between two plan revision records.
+ *
+ * Pure function — no DB access. Compares rawContent, contentHash, sections,
+ * changeReason, and changedBy fields.
+ */
+export function computeRevisionDiff(
+  revisionA: typeof planRevisionHistory.$inferSelect | null,
+  revisionB: typeof planRevisionHistory.$inferSelect | null,
+  planSlug: string,
+  revNumA: number,
+  revNumB: number,
+): RevisionDiffResult {
+  const fields: Record<string, FieldDiff> = {}
+  let hasChanges = false
+
+  for (const field of DIFF_FIELDS) {
+    const oldVal = revisionA ? revisionA[field] : null
+    const newVal = revisionB ? revisionB[field] : null
+    const changeType = getChangeType(oldVal, newVal)
+
+    if (changeType !== 'unchanged') hasChanges = true
+
+    fields[field] = {
+      field,
+      oldValue: oldVal ?? null,
+      newValue: newVal ?? null,
+      changeType,
+    }
+  }
+
+  return {
+    plan_slug: planSlug,
+    revision_a: revNumA,
+    revision_b: revNumB,
+    fields,
+    has_changes: hasChanges,
+  }
+}
+
+/**
+ * Get a structured diff between two plan revisions.
+ *
+ * Fetches both revisions from the database and computes a field-level diff.
+ * If revision_a does not exist (e.g., comparing first revision), treats it as
+ * all-null fields (all fields will show as 'added').
+ */
+export async function kb_get_plan_revision_diff(
+  deps: PlanRevisionCrudDeps,
+  input: KbGetPlanRevisionDiffInput,
+): Promise<{
+  diff: RevisionDiffResult
+  message: string
+}> {
+  const validated = KbGetPlanRevisionDiffInputSchema.parse(input)
+
+  // Resolve plan_slug to plan_id
+  const planResult = await deps.db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.planSlug, validated.plan_slug))
+    .limit(1)
+
+  if (planResult.length === 0) {
+    throw new Error(`Plan '${validated.plan_slug}' not found`)
+  }
+
+  const planId = planResult[0]!.id
+
+  // Fetch both revisions
+  const revisions = await deps.db
+    .select()
+    .from(planRevisionHistory)
+    .where(
+      and(
+        eq(planRevisionHistory.planId, planId),
+        sql`${planRevisionHistory.revisionNumber} IN (${validated.revision_a}, ${validated.revision_b})`,
+      ),
+    )
+
+  const revA = revisions.find(r => r.revisionNumber === validated.revision_a) ?? null
+  const revB = revisions.find(r => r.revisionNumber === validated.revision_b) ?? null
+
+  if (!revA && !revB) {
+    throw new Error(
+      `Neither revision ${validated.revision_a} nor ${validated.revision_b} found for plan '${validated.plan_slug}'`,
+    )
+  }
+
+  const diff = computeRevisionDiff(
+    revA,
+    revB,
+    validated.plan_slug,
+    validated.revision_a,
+    validated.revision_b,
+  )
+
+  return {
+    diff,
+    message: `Diff computed for plan '${validated.plan_slug}' between revisions ${validated.revision_a} and ${validated.revision_b}: ${diff.has_changes ? 'changes detected' : 'no changes'}`,
   }
 }
