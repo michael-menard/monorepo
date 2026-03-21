@@ -5,10 +5,11 @@ import {
   setStatus,
   setPriority,
   setType,
+  setTag,
   setExcludeCompleted,
   setSearch,
   setSort,
-  setPageSize,
+  resetFilters,
   type RoadmapFiltersState,
 } from '../roadmapFiltersSlice'
 
@@ -27,11 +28,11 @@ const defaultState: RoadmapFiltersState = {
   status: '',
   priority: '',
   type: '',
+  tag: '',
   excludeCompleted: true,
   search: '',
   sortKey: 'createdAt',
   sortDirection: 'desc',
-  pageSize: 10,
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -65,7 +66,6 @@ describe('roadmapFiltersSlice', () => {
         search: 'auth',
         sortKey: 'title',
         sortDirection: 'asc',
-        pageSize: 25,
       }
       const store = makeStore(saved)
       expect(store.getState().roadmapFilters).toEqual({ ...defaultState, ...saved })
@@ -137,6 +137,20 @@ describe('roadmapFiltersSlice', () => {
     })
   })
 
+  describe('setTag', () => {
+    it('updates tag', () => {
+      const store = makeStore()
+      store.dispatch(setTag('frontend'))
+      expect(store.getState().roadmapFilters.tag).toBe('frontend')
+    })
+
+    it('clears tag when empty string is dispatched', () => {
+      const store = makeStore({ tag: 'backend' })
+      store.dispatch(setTag(''))
+      expect(store.getState().roadmapFilters.tag).toBe('')
+    })
+  })
+
   describe('setExcludeCompleted', () => {
     it('can be set to false', () => {
       const store = makeStore()
@@ -181,19 +195,21 @@ describe('roadmapFiltersSlice', () => {
     })
   })
 
-  describe('setPageSize', () => {
-    it('updates pageSize', () => {
-      const store = makeStore()
-      store.dispatch(setPageSize(25))
-      expect(store.getState().roadmapFilters.pageSize).toBe(25)
-    })
+  // ── resetFilters ────────────────────────────────────────────────────────
 
-    it('allows all valid page size options', () => {
+  describe('resetFilters', () => {
+    it('resets all filters back to defaults', () => {
       const store = makeStore()
-      for (const size of [5, 10, 20, 50]) {
-        store.dispatch(setPageSize(size))
-        expect(store.getState().roadmapFilters.pageSize).toBe(size)
-      }
+      store.dispatch(setStatus('active'))
+      store.dispatch(setPriority('P1'))
+      store.dispatch(setType('feature'))
+      store.dispatch(setTag('frontend'))
+      store.dispatch(setSearch('auth'))
+      store.dispatch(setExcludeCompleted(false))
+      store.dispatch(setSort({ key: 'title', direction: 'asc' }))
+
+      store.dispatch(resetFilters())
+      expect(store.getState().roadmapFilters).toEqual(defaultState)
     })
   })
 
@@ -206,17 +222,16 @@ describe('roadmapFiltersSlice', () => {
     store.dispatch(setSearch('auth'))
     store.dispatch(setExcludeCompleted(false))
     store.dispatch(setSort({ key: 'priority', direction: 'asc' }))
-    store.dispatch(setPageSize(20))
 
     expect(store.getState().roadmapFilters).toEqual({
       status: 'active',
       priority: 'P1',
       type: '',
+      tag: '',
       excludeCompleted: false,
       search: 'auth',
       sortKey: 'priority',
       sortDirection: 'asc',
-      pageSize: 20,
     })
   })
 })

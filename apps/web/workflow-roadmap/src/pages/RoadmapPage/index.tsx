@@ -1,14 +1,12 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from '@tanstack/react-router'
 import {
   getCoreRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
   useReactTable,
   flexRender,
   type SortingState,
-  type PaginationState,
 } from '@tanstack/react-table'
 import {
   DndContext,
@@ -25,26 +23,16 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@repo/app-component-library'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@repo/app-component-library'
 import { useGetPlansQuery, useReorderPlansMutation, type Plan } from '../../store/roadmapApi'
-import { setSort, setPageSize } from '../../store/roadmapFiltersSlice'
+import { setSort, setTag } from '../../store/roadmapFiltersSlice'
 import type { RootState } from '../../store'
-import { tableColumns } from './columns'
+import { createTableColumns } from './columns'
 import { responsiveClass, sortAriaValue } from './utils'
 import { FilterBar } from './FilterBar'
 import { SortableRow } from './SortableRow'
-import { PaginationControls } from './PaginationControls'
+
+const PAGE_SIZE = 20
 
 export { StoryGauge } from './StoryGauge'
 
@@ -52,27 +40,37 @@ export function RoadmapPage() {
   const navigate = useNavigate({ from: '/' })
   const dispatch = useDispatch()
 
-  const { status, priority, type, excludeCompleted, search, sortKey, sortDirection, pageSize } =
+  const { status, priority, type, tag, excludeCompleted, search, sortKey, sortDirection } =
     useSelector((state: RootState) => state.roadmapFilters)
 
   const [reorderPlans] = useReorderPlansMutation()
 
+  // --- Infinite scroll page tracking ---
+  const [page, setPage] = useState(1)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [status, priority, type, tag, excludeCompleted, search])
+
   const queryParams = useMemo(
     () => ({
-      page: 1,
-      limit: 100,
+      page,
+      limit: PAGE_SIZE,
       status: status ? [status] : undefined,
       priority: priority ? [priority] : undefined,
       planType: type ? [type] : undefined,
+      tags: tag ? [tag] : undefined,
       excludeCompleted,
       search: search.trim() || undefined,
     }),
-    [status, priority, type, excludeCompleted, search],
+    [page, status, priority, type, tag, excludeCompleted, search],
   )
 
-  const { data, error } = useGetPlansQuery(queryParams)
+  const { data, error, isFetching } = useGetPlansQuery(queryParams)
 
   const plans = useMemo(() => data?.data ?? [], [data?.data])
+  const hasMore = data ? data.pagination.page < data.pagination.totalPages : false
 
   // Local ordered copy for DnD reordering
   const [orderedData, setOrderedData] = useState<Plan[]>(plans)
@@ -80,10 +78,41 @@ export function RoadmapPage() {
     setOrderedData(plans)
   }, [plans])
 
+  // --- Infinite scroll via IntersectionObserver ---
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    const root = scrollContainerRef.current
+    if (!sentinel || !root) return
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting && hasMore && !isFetching) {
+          setPage(p => p + 1)
+        }
+      },
+      { root, rootMargin: '200px' },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore, isFetching])
+
   // --- Sorting state synced with Redux ---
   const [sorting, setSorting] = useState<SortingState>(
     sortKey ? [{ id: sortKey, desc: sortDirection === 'desc' }] : [],
   )
+
+  const handleTagClick = useCallback(
+    (clickedTag: string) => {
+      dispatch(setTag(clickedTag))
+    },
+    [dispatch],
+  )
+
+  const columns = useMemo(() => createTableColumns(handleTagClick), [handleTagClick])
 
   const handleSortingChange = useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
@@ -98,35 +127,14 @@ export function RoadmapPage() {
     [dispatch],
   )
 
-  // --- Pagination state synced with Redux ---
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize,
-  })
-
-  const handlePaginationChange = useCallback(
-    (updater: PaginationState | ((old: PaginationState) => PaginationState)) => {
-      setPagination(prev => {
-        const next = typeof updater === 'function' ? updater(prev) : updater
-        if (next.pageSize !== prev.pageSize) {
-          dispatch(setPageSize(next.pageSize))
-        }
-        return next
-      })
-    },
-    [dispatch],
-  )
-
   // --- TanStack table ---
   const table = useReactTable({
     data: orderedData,
-    columns: tableColumns,
-    state: { sorting, pagination },
+    columns,
+    state: { sorting },
     onSortingChange: handleSortingChange,
-    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowId: row => row.id,
   })
 
@@ -174,6 +182,8 @@ export function RoadmapPage() {
     )
   }
 
+  const total = data?.pagination.total ?? 0
+
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8">
@@ -189,43 +199,17 @@ export function RoadmapPage() {
         Drag rows to set display order.
       </p>
 
-      {/* Page size + info bar */}
-      <div className="flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show:</span>
-          <Select
-            value={pagination.pageSize.toString()}
-            onValueChange={value => {
-              const size = Number(value)
-              handlePaginationChange(prev => ({ ...prev, pageSize: size, pageIndex: 0 }))
-            }}
-          >
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[5, 10, 20, 50].map(size => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">entries</span>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Showing {pagination.pageIndex * pagination.pageSize + 1} to{' '}
-          {Math.min((pagination.pageIndex + 1) * pagination.pageSize, orderedData.length)} of{' '}
-          {orderedData.length} entries
-        </div>
+      <div className="px-4 py-2 text-sm text-muted-foreground">
+        Showing {orderedData.length} of {total} {total === 1 ? 'plan' : 'plans'}
       </div>
 
-      {/* Table */}
+      {/* Table — scrollable container */}
       <section
+        ref={scrollContainerRef}
         aria-label="Plans table"
-        className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-hidden"
+        className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-y-auto max-h-[70vh]"
       >
-        {orderedData.length === 0 ? (
+        {orderedData.length === 0 && !isFetching ? (
           <div className="text-center py-8 text-muted-foreground">No plans found</div>
         ) : (
           <DndContext
@@ -241,7 +225,7 @@ export function RoadmapPage() {
                   return <col key={column.id} className={w} />
                 })}
               </colgroup>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-slate-900">
                 {table.getHeaderGroups().map(hg => (
                   <TableRow key={hg.id}>
                     {hg.headers.map(header => {
@@ -283,9 +267,17 @@ export function RoadmapPage() {
             </Table>
           </DndContext>
         )}
-      </section>
 
-      <PaginationControls table={table} />
+        {/* Loading indicator */}
+        {isFetching && (
+          <div className="text-center py-4 text-sm text-muted-foreground">
+            Loading more plans...
+          </div>
+        )}
+
+        {/* Scroll sentinel — triggers next page load when visible */}
+        <div ref={sentinelRef} className="h-1" />
+      </section>
     </div>
   )
 }
