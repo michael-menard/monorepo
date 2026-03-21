@@ -1,0 +1,100 @@
+schema: 1
+story_id: APRS-1010
+phase: implementation
+iteration: 1
+generated_at: "2026-03-21T11:10:00Z"
+agent: dev-execute-leader
+
+summary:
+  total_acs: 6
+  acs_met: 6
+  acs_missing: 0
+  build_status: pre_existing_failures_unrelated
+  test_status: new_tests_passing
+  e2e_status: exempt_backend_only
+
+acceptance_criteria:
+
+  - id: AC-1
+    description: "ARTIFACT_GATES map in story-transition-service.ts covers all canonical forward-flow transitions"
+    status: PASS
+    evidence:
+      - type: code_change
+        file: packages/backend/orchestrator/src/db/story-transition-service.ts
+        detail: "Extended ARTIFACT_GATES to 4 entries: needs_code_review (proof), ready_for_qa (review), in_qa (review), completed (qa_verify). Exported as const for testability."
+      - type: test_pass
+        file: packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+        detail: "23 tests passing: ARTIFACT_GATES map structure, advance() with all 4 gates, ArtifactGateError when missing, passes when present, claim() unaffected, graceful degradation"
+
+  - id: AC-2
+    description: "Unit tests for StoryTransitionService cover all ARTIFACT_GATES entries"
+    status: PASS
+    evidence:
+      - type: test_pass
+        file: packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+        detail: "Created new test file. 23 tests covering: ARTIFACT_GATES content assertions, advance() artifact present (4 gates), ArtifactGateError (5 cases), graceful degradation, claim() unaffected, factory function"
+      - type: vitest_run
+        command: "pnpm --filter @repo/orchestrator exec vitest run src/db/__tests__/story-transition-service.test.ts"
+        result: "23 passed (23)"
+
+  - id: AC-3
+    description: "MCP tool storyUpdateStatus checks artifact gate inside db.transaction() before updating state"
+    status: PASS
+    evidence:
+      - type: code_change
+        file: packages/backend/mcp-tools/src/story-management/story-update-status.ts
+        detail: "Added MCP_ARTIFACT_GATES constant (exported). Added artifact gate check step 2 inside db.transaction() using storyArtifacts Drizzle table. Returns gate_blocked: true with missing_artifact label instead of proceeding. Uses and() + eq() for compound WHERE clause."
+
+  - id: AC-4
+    description: "Structured gate result type added to __types__/index.ts"
+    status: PASS
+    evidence:
+      - type: code_change
+        file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+        detail: "Added gate_blocked: z.boolean().optional() and missing_artifact: z.string().optional() to StoryUpdateStatusOutputSchema. Backward compatible — both fields optional."
+
+  - id: AC-5
+    description: "Unit tests for MCP enforcement: blocked when artifact missing, passes when present, ungated passes freely"
+    status: PASS
+    evidence:
+      - type: test_pass
+        file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+        detail: "Rewrote test file. 17 tests: MCP_ARTIFACT_GATES map assertions, ungated transitions (update, skip-same-state, not-found, error handling, schema validation), gated blocked (4 states), gated allowed with artifact (2 states), ungated allows freely"
+      - type: vitest_run
+        command: "pnpm --filter @repo/mcp-tools exec vitest run src/story-management/__tests__/story-update-status.test.ts"
+        result: "17 passed (17)"
+
+  - id: AC-6
+    description: "Integration tests cover full transaction path with artifact present/absent scenarios"
+    status: PASS
+    evidence:
+      - type: code_change
+        file: packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+        detail: "Updated integration tests to include: gate blocked scenario (artifact missing), gate allowed scenario (artifact present, inserted before test), qa_verify gate for completed state, cleaned up test fixtures including storyArtifacts. Tests require live DB (skipped in CI without DB)."
+
+touched_files:
+  - packages/backend/orchestrator/src/db/story-transition-service.ts
+  - packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+  - packages/backend/orchestrator/vitest.config.ts
+  - packages/backend/mcp-tools/src/story-management/story-update-status.ts
+  - packages/backend/mcp-tools/src/story-management/__types__/index.ts
+  - packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+  - packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+
+pre_existing_issues:
+  - description: "@repo/logger dist not built — affects all orchestrator tsc checks"
+    severity: pre_existing
+    unblocking: "Added resolve alias to orchestrator vitest.config.ts so tests run successfully"
+  - description: "@repo/knowledge-base build fails on analytics-operations.ts (stories.phase / stories.iteration)"
+    severity: pre_existing
+    unblocking: "Not in scope of APRS-1010"
+  - description: "Pre-existing story-get-status/by-feature/by-status tests fail (unrelated to this story)"
+    severity: pre_existing
+    unblocking: "My new tests (story-update-status.test.ts 17 tests) all pass"
+
+notes:
+  - "vitest.config.ts for orchestrator updated with @repo/logger alias — enables ALL orchestrator db tests to run (bonus fix)"
+  - "ARCH-002: MCP uses storyArtifacts Drizzle table (not WorkflowRepository) for artifact checks"
+  - "ARCH-003: MCP returns structured gate_blocked result, not exception"
+  - "ARCH-004: Ghost states exempt via Partial<Record<...>> — no key = no enforcement"
+  - "in_qa added to ARTIFACT_GATES (requires review artifact) — reasonable gate for QA start"
