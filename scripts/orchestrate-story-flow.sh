@@ -255,8 +255,8 @@ parse_story_dependencies() {
 
   local current_story=""
   while IFS= read -r line; do
-    # Match story header: ## STORY-ID: ...
-    if [[ "$line" =~ ^##[[:space:]]+([A-Z]+-[0-9]+): ]]; then
+    # Match story header: ### STORY-ID: ... (triple hash per stories.index.md format)
+    if [[ "$line" =~ ^###[[:space:]]+([A-Z]+-[0-9]+): ]]; then
       current_story="${BASH_REMATCH[1]}"
     fi
     # Match depends-on line within a story section
@@ -282,13 +282,134 @@ parse_story_dependencies() {
   done < "$INDEX_FILE"
 }
 
+# Extract phase number from story ID (e.g., WINT-0123 → 0, WINT-1234 → 1)
+# Returns empty string if pattern doesn't match
+get_story_phase() {
+  local STORY_ID="$1"
+  if [[ "$STORY_ID" =~ ^[A-Z]+-([0-9])[0-9]{3}$ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  fi
+}
+
+# Build phase cache: map each story to its phase number
+# Format: STORY_ID<TAB>PHASE_NUM
+parse_story_phases() {
+  local INDEX_FILE="$1"
+  local PHASE_CACHE="$LOG_DIR/.phase-cache"
+
+  if [[ ! -f "$INDEX_FILE" ]]; then
+    return 0
+  fi
+
+  local current_phase=""
+  local current_story=""
+  while IFS= read -r line; do
+    # Match phase header: ## Phase N: ...
+    if [[ "$line" =~ ^##[[:space:]]+Phase[[:space:]]+([0-9]+): ]]; then
+      current_phase="${BASH_REMATCH[1]}"
+    fi
+    # Match story header: ### STORY-ID: ...
+    if [[ "$line" =~ ^###[[:space:]]+([A-Z]+-[0-9]+): ]]; then
+      current_story="${BASH_REMATCH[1]}"
+      if [[ -n "$current_phase" ]]; then
+        echo "${current_story}	${current_phase}" >> "$PHASE_CACHE"
+      fi
+    fi
+  done < "$INDEX_FILE"
+}
+
+# Get phase for a story from cache
+get_story_phase_from_cache() {
+  local STORY_ID="$1"
+  local PHASE_CACHE="$LOG_DIR/.phase-cache"
+
+  if [[ ! -f "$PHASE_CACHE" ]]; then
+    # Fallback: extract from story ID
+    get_story_phase "$STORY_ID"
+    return
+  fi
+
+  local phase_line
+  phase_line=$(grep "^${STORY_ID}	" "$PHASE_CACHE" 2>/dev/null | head -1) || true
+  if [[ -n "$phase_line" ]]; then
+    echo "$phase_line" | cut -f2
+  else
+    # Fallback: extract from story ID
+    get_story_phase "$STORY_ID"
+  fi
+}
+
+# Check if all stories in a phase are complete (UAT or done)
+# Returns 0 if phase is complete, 1 if not
+is_phase_complete() {
+  local PHASE_NUM="$1"
+  local PHASE_CACHE="$LOG_DIR/.phase-cache"
+
+  if [[ ! -f "$PHASE_CACHE" ]]; then
+    return 0  # No cache = can't check = proceed
+  fi
+
+  # Get all stories in this phase
+  local stories_in_phase
+  stories_in_phase=$(grep "	${PHASE_NUM}$" "$PHASE_CACHE" | cut -f1) || true
+
+  if [[ -z "$stories_in_phase" ]]; then
+    return 0  # No stories in phase = phase is complete
+  fi
+
+  while IFS= read -r story_id; do
+    if [[ -z "$story_id" ]]; then continue; fi
+
+    # Check if story is complete (UAT, done, or completed)
+    local story_state
+    story_state=$(read_state_field "$story_id" "current_state" 2>/dev/null) || true
+
+    case "$story_state" in
+      UAT|DONE|COMPLETED|completed|done|uat)
+        continue  # This story is complete
+        ;;
+      *)
+        # Check result file as fallback
+        local result_file="$LOG_DIR/.results/${story_id}"
+        if [[ -f "$result_file" ]]; then
+          local result
+          result=$(cat "$result_file")
+          if [[ "$result" == *"result=ok"* ]]; then
+            continue  # Completed this run
+          fi
+        fi
+        # Story not complete
+        return 1
+        ;;
+    esac
+  done <<< "$stories_in_phase"
+
+  return 0
+}
+
 # Check if all dependencies for a story are satisfied.
 # Returns 0 if satisfied (or no deps), 1 if blocked.
 # Sets BLOCKING_DEPS to comma-separated list of blocking story IDs.
+# Sets BLOCKING_PHASE if blocked by incomplete prior phase.
 check_deps_satisfied() {
   local STORY_ID="$1"
   local CACHE_FILE="$LOG_DIR/.deps-cache"
   BLOCKING_DEPS=""
+  BLOCKING_PHASE=""
+
+  # Phase-level blocking: story's phase must have all prior phases complete
+  local story_phase
+  story_phase=$(get_story_phase_from_cache "$STORY_ID")
+  if [[ -n "$story_phase" && "$story_phase" -gt 0 ]]; then
+    local prior_phase=$((story_phase - 1))
+    while [[ $prior_phase -ge 0 ]]; do
+      if ! is_phase_complete "$prior_phase"; then
+        BLOCKING_PHASE="Phase $prior_phase incomplete"
+        return 1
+      fi
+      prior_phase=$((prior_phase - 1))
+    done
+  fi
 
   if [[ ! -f "$CACHE_FILE" ]]; then
     return 0  # No cache = no deps info = proceed
@@ -323,12 +444,14 @@ check_deps_satisfied() {
       fi
     fi
 
-    # Check 2: state file says UAT
+    # Check 2: state file says UAT or completed
     local dep_state
     dep_state=$(read_state_field "$dep" "current_state" 2>/dev/null) || true
-    if [[ "$dep_state" == "UAT" ]]; then
-      continue  # This dep is satisfied
-    fi
+    case "$dep_state" in
+      UAT|DONE|COMPLETED|completed|done|uat)
+        continue  # This dep is satisfied
+        ;;
+    esac
 
     # Not satisfied
     blocked+=("$dep")
@@ -412,13 +535,19 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
   esac
   PARSED_INDEX_FILES="${PARSED_INDEX_FILES}|${INDEX_FILE}|"
   parse_story_dependencies "$INDEX_FILE"
+  parse_story_phases "$INDEX_FILE"
 done
 
 DEPS_COUNT=0
 if [[ -f "$LOG_DIR/.deps-cache" ]]; then
   DEPS_COUNT=$(grep -cv '	none$' "$LOG_DIR/.deps-cache" 2>/dev/null) || true
 fi
-echo "  Parsed deps for $(wc -l < "$LOG_DIR/.deps-cache" | tr -d ' ') stories ($DEPS_COUNT with dependencies)"
+PHASE_COUNT=0
+if [[ -f "$LOG_DIR/.phase-cache" ]]; then
+  PHASE_COUNT=$(wc -l < "$LOG_DIR/.phase-cache" | tr -d ' ')
+fi
+echo "  Parsed deps for $(wc -l < "$LOG_DIR/.deps-cache" 2>/dev/null | tr -d ' ') stories ($DEPS_COUNT with dependencies)"
+echo "  Parsed phases for $PHASE_COUNT stories"
 
 # ── Banner ───────────────────────────────────────────────────────────
 echo ""
@@ -473,9 +602,13 @@ pre_qa_check() {
   local STORY_ID="$1"
   local TAG="$2"
 
-  # Check story dependencies are satisfied
+  # Check story dependencies are satisfied (phase and story-level)
   if ! check_deps_satisfied "$STORY_ID"; then
-    echo "$TAG QA   SKIP:    $STORY_ID (blocked by deps: $BLOCKING_DEPS)"
+    if [[ -n "$BLOCKING_PHASE" ]]; then
+      echo "$TAG QA   SKIP:    $STORY_ID (blocked: $BLOCKING_PHASE)"
+    else
+      echo "$TAG QA   SKIP:    $STORY_ID (blocked by deps: $BLOCKING_DEPS)"
+    fi
     return 1
   fi
 
@@ -1144,10 +1277,14 @@ if $DRY_RUN; then
       *)          CMD="(unknown state: $STATE)" ;;
     esac
     # Show dependency status
-    local dep_note=""
+    dep_note=""
     if [[ "$ACTION" != "done" && "$ACTION" != "skip" ]]; then
       if ! check_deps_satisfied "$STORY_ID"; then
-        dep_note="  (blocked by: $BLOCKING_DEPS)"
+        if [[ -n "$BLOCKING_PHASE" ]]; then
+          dep_note="  (blocked: $BLOCKING_PHASE)"
+        elif [[ -n "$BLOCKING_DEPS" ]]; then
+          dep_note="  (blocked by: $BLOCKING_DEPS)"
+        fi
       fi
     fi
     printf "  %-14s %-14s → %s%s\n" "$STORY_ID" "$STATE" "$CMD" "$dep_note"
@@ -1714,12 +1851,18 @@ while true; do
       fi
     fi
 
-    # Check dependencies
+    # Check dependencies (phase-level and story-level)
     if ! check_deps_satisfied "$STORY_ID"; then
+      local block_reason=""
+      if [[ -n "$BLOCKING_PHASE" ]]; then
+        block_reason="$BLOCKING_PHASE"
+      elif [[ -n "$BLOCKING_DEPS" ]]; then
+        block_reason="deps: $BLOCKING_DEPS"
+      fi
       if [[ $PASS_NUM -eq 1 ]]; then
-        echo "  [$IDX/$TOTAL] $STORY_ID: DEFERRED (blocked by: $BLOCKING_DEPS)"
+        echo "  [$IDX/$TOTAL] $STORY_ID: DEFERRED (blocked: $block_reason)"
       else
-        echo "  $STORY_ID: still blocked by $BLOCKING_DEPS"
+        echo "  $STORY_ID: still blocked ($block_reason)"
       fi
       ((DEFERRED_THIS_PASS++))
       continue
