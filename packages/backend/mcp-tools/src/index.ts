@@ -69,3 +69,7 @@ export { contextPackGet } from './context-pack/context-pack-get.js'
 export { logInvocation } from './telemetry/workflow-log-invocation.js'
 export { WorkflowLogInvocationInputSchema } from './telemetry/__types__/index.js'
 export type { WorkflowLogInvocationInput } from './telemetry/__types__/index.js'
+
+// Note: ML pipeline tools (WINT-0140) are registered directly in the knowledge-base MCP server.
+// They are NOT re-exported through mcp-tools to avoid a cyclic dependency:
+// knowledge-base → mcp-tools → knowledge-base.

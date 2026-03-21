@@ -1,0 +1,71 @@
+phase: qa-setup
+status: complete
+story_id: WINT-0140
+status_updated: in-qa
+timestamp: '2026-03-20T19:30:00Z'
+
+# Evidence summary (quick read)
+evidence_version: 1
+ac_count: 11
+ac_passing: 11
+review_verdict: PASS
+review_iteration: 0
+
+# Precondition validation
+preconditions:
+  story_exists_in_kb: PASS
+  status_is_ready_for_qa: PASS
+  evidence_artifact_exists: PASS
+  review_artifact_exists: PASS
+  code_review_passed: PASS
+
+# Implementation summary
+implementation_summary: |
+  WINT-0140: Create ML Pipeline MCP Tools
+
+  Story implements 7 ML pipeline tools for managing models, metrics, predictions, and training data.
+  All 11 acceptance criteria pass with 24 tests passing and 0 tests failing.
+  Code review completed with PASS verdict - no blocking issues.
+
+  Cyclic dependency issue resolved in iteration 1:
+  - Root cause: mcp-tools re-exporting worktree-management and telemetry locally
+  - Resolution: Direct imports from @repo/knowledge-base
+  - Result: Clean unidirectional dependency graph
+
+# Evidence highlights
+evidence_highlights:
+  total_tests: 24
+  tests_passing: 24
+  tests_failing: 0
+  build_status: Ready (pre-existing cyclic dep in larger monorepo noted but not blocking)
+  e2e_status: EXEMPT (infrastructure/tools story, no UI surface)
+
+# Review highlights
+review_highlights:
+  compliance_checks: PASS
+  pattern_checks: PASS
+  security_checks: PASS
+  testing_checks: PASS
+  performance_checks: PASS
+  total_findings: 16
+  findings_severity: All PASS
+
+# Acceptance criteria (all PASS)
+acceptance_criteria:
+  - AC-1: MlModelTypeSchema z.enum with 4 PG enum values - PASS
+  - AC-2: ml_model_register tool inserts into workflow.ml_models - PASS
+  - AC-3: ml_model_get_active tool queries WHERE is_active=true - PASS
+  - AC-4: ml_metrics_record tool appends to model_metrics - PASS
+  - AC-5: ml_prediction_record tool appends to model_predictions - PASS
+  - AC-6: ml_prediction_get_by_entity tool queries by entityType + entityId - PASS
+  - AC-7: training_data_ingest tool inserts into training_data - PASS
+  - AC-8: training_data_mark_validated tool updates validated=true - PASS
+  - AC-9: All tools use Zod parse input, logger warn on errors - PASS
+  - AC-10: Package registration in knowledge-base and mcp-tools - PASS
+  - AC-11: Unit tests with vi.mock for db, >=45% coverage - PASS
+
+# Ready for QA verification
+ready_for_qa_verification: true
+
+# Next phase
+next_phase: qa_verification

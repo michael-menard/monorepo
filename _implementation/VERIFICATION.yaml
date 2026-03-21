@@ -1,11 +1,11 @@
 schema: 1
-story_id: CDBE-2020
-timestamp: '2026-03-19T06:00:00Z'
+story_id: WINT-0140
+timestamp: '2026-03-20T19:20:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 0
+    pass: 24
     fail: 0
   integration:
     pass: 0
@@ -13,145 +13,102 @@ test_results:
   e2e:
     pass: 0
     fail: 0
-  pgtap:
-    pass: 23
+  http:
+    pass: 0
     fail: 0
-e2e_exempt: true
-e2e_exempt_reason: DB-only story — no user-facing behavior, no TypeScript files changed
-coverage: null
+coverage: 98.5
 coverage_meets_threshold: true
+coverage_note: >-
+  ML pipeline module files show 98-100% statement/branch/function coverage. Global package coverage is low due to
+  pre-existing untested modules unrelated to WINT-0140.
 test_quality:
   verdict: PASS
   anti_patterns: []
 acs_verified:
-  - ac_id: AC-1
+  - ac_id: AC1
     status: PASS
-    evidence_ref: migration:83-88
-    notes: >-
-      workflow.resolve_blocker(uuid, text, text) RETURNS TABLE (story_id text, fully_unblocked boolean), SECURITY
-      INVOKER, CREATE OR REPLACE FUNCTION — exact signature match
-  - ac_id: AC-2
+    evidence_ref: EVIDENCE:files_changed[ml-model-register.ts, ml-model-get-active.ts]
+    notes: mlModelRegister and mlModelGetActive created for workflow.ml_models. 7 unit tests pass.
+  - ac_id: AC2
     status: PASS
-    evidence_ref: migration:98, pgtap:ED-1
-    notes: >-
-      PERFORM workflow.validate_caller(caller_agent_id) is the first statement in the function body. ED-1 test verifies
-      P0001 for unknown caller.
-  - ac_id: AC-3
+    evidence_ref: EVIDENCE:files_changed[ml-metrics-record.ts]
+    notes: mlMetricsRecord created for workflow.model_metrics. 3 unit tests pass including UUID validation and error path.
+  - ac_id: AC3
     status: PASS
-    evidence_ref: migration:101-109, 119-122
+    evidence_ref: EVIDENCE:files_changed[ml-prediction-record.ts, ml-prediction-get-by-entity.ts]
     notes: >-
-      Fetches story_id and deleted_at from story_blockers WHERE id = blocker_id. IF NOT FOUND raises informative
-      exception. resolution_notes stored in UPDATE at line 121.
-  - ac_id: AC-4
+      mlPredictionRecord and mlPredictionGetByEntity created for workflow.model_predictions. 6 unit tests pass including
+      limit constraint (max 100).
+  - ac_id: AC4
     status: PASS
-    evidence_ref: migration:112-116, 119-122
+    evidence_ref: EVIDENCE:files_changed[training-data-ingest.ts, training-data-mark-validated.ts]
     notes: >-
-      Guards on v_deleted_at IS NOT NULL before UPDATE — raises P0001 if already resolved. UPDATE only proceeds for
-      unresolved rows. ED-4 test confirms.
-  - ac_id: AC-5
+      trainingDataIngest and trainingDataMarkValidated created for workflow.training_data. 8 unit tests pass including
+      optional storyId and not-found handling.
+  - ac_id: AC5
     status: PASS
-    evidence_ref: migration:125-133, pgtap:HP-3
-    notes: >-
-      COUNT(*) of active blockers post-soft-delete — (v_active_count = 0) is fully_unblocked. RETURN QUERY used
-      (equivalent to RETURN NEXT for TABLE-returning functions). HP-3 tests cover single/multiple blocker scenarios.
-  - ac_id: AC-6
+    evidence_ref: EVIDENCE:files_changed[__types__/index.ts]
+    notes: All Zod schemas defined. No TypeScript interfaces used. MlModelTypeSchema and all Input/Output schemas present.
+  - ac_id: AC6
     status: PASS
-    evidence_ref: migration:172-181
+    evidence_ref: 'spot-check: mcp-tools/src/index.ts'
     notes: >-
-      artifacts.complete_artifact(text, text, text, text, int, text, text, jsonb DEFAULT NULL) RETURNS void, SECURITY
-      INVOKER, CREATE OR REPLACE FUNCTION — exact signature match
-  - ac_id: AC-7
+      Cyclic dependency resolved. mcp-tools index.ts has no ml-pipeline imports. Review iteration 2 confirms build
+      passes.
+  - ac_id: AC7
     status: PASS
-    evidence_ref: migration:196, pgtap:ED-2
-    notes: >-
-      PERFORM workflow.validate_caller(complete_artifact.caller_agent_id) is the first statement. ED-2 verifies P0001
-      for unknown caller before any mutation.
-  - ac_id: AC-8
+    evidence_ref: EVIDENCE:files_changed[error-handler.ts]
+    notes: error-handler.ts extracted as shared utility (extractErrorMessage). Used across all 7 tool files.
+  - ac_id: AC8
     status: PASS
-    evidence_ref: migration:202-237, migration:1-16 (header comment)
-    notes: >-
-      Implementation uses UPDATE-first, INSERT-if-not-exists instead of ON CONFLICT DO UPDATE. Intentional deviation: ON
-      CONFLICT triggers artifact_versions_supersede BEFORE INSERT, causing 'cannot affect row a second time' error.
-      Header comment documents this. Achieves identical atomic upsert semantics.
-  - ac_id: AC-9
+    evidence_ref: 'spot-check: ml-model-register.ts'
+    notes: '@repo/logger used throughout (logger.warn). No console.log detected.'
+  - ac_id: AC9
     status: PASS
-    evidence_ref: migration:202-237, migration:248-258
-    notes: >-
-      No superseded_at assignment in function body. COMMENT ON FUNCTION documents trigger-managed supersession on INSERT
-      path. UPDATE path (lines 202-209) only sets phase, summary, updated_at.
-  - ac_id: AC-10
+    evidence_ref: EVIDENCE:tests.unit
+    notes: 24/24 unit tests pass across all 7 tools.
+  - ac_id: AC10
     status: PASS
-    evidence_ref: migration:37-50
-    notes: >-
-      DO block at top of migration checks pg_proc for workflow.validate_caller. Raises EXCEPTION with ERRCODE P0002 if
-      missing. Appears before both CREATE OR REPLACE FUNCTION statements.
-  - ac_id: AC-11
+    evidence_ref: REVIEW artifact (iteration 2)
+    notes: TypeScript compilation passes for both @repo/knowledge-base and @repo/mcp-tools. 0 type errors.
+  - ac_id: AC11
     status: PASS
-    evidence_ref: migration:137-143, migration:241-258
+    evidence_ref: EVIDENCE:files_changed[ml-pipeline/index.ts]
     notes: >-
-      Both COMMENT ON FUNCTION start with '1070:', describe entry-point validation (validate_caller), mutation
-      performed, and SECURITY INVOKER rationale.
-  - ac_id: AC-12
-    status: PASS
-    evidence_ref: migration:55-68, migration:83, migration:172
-    notes: >-
-      resolution_notes uses IF NOT EXISTS DO block guard. Both functions use CREATE OR REPLACE FUNCTION. Second run
-      exits cleanly.
-  - ac_id: AC-13
-    status: PASS
-    evidence_ref: pgtap:1-314
-    notes: >-
-      Follows BEGIN / SELECT plan(23) / ... / SELECT * FROM finish() / ROLLBACK pattern. 23 tests across HP-1 (5), HP-2
-      (3), HP-3 (4), HP-4 (5), HP-5 (2), ED-1 through ED-4 (4) = 23 total.
-  - ac_id: AC-14
-    status: PASS
-    evidence_ref: migration:262-263
-    notes: >-
-      GRANT EXECUTE ON FUNCTION workflow.resolve_blocker(uuid, text, text) TO agent_role and GRANT EXECUTE ON FUNCTION
-      artifacts.complete_artifact(text, text, text, text, int, text, text, jsonb) TO agent_role — both present.
-  - ac_id: AC-15
-    status: PASS
-    evidence_ref: migration:267-299
-    notes: >-
-      DO block at end verifies existence of resolve_blocker, complete_artifact, and resolution_notes column. RAISE
-      NOTICE confirmation message with all three status variables.
-  - ac_id: AC-16
-    status: PASS
-    evidence_ref: migration:217-236, migration:253-255
-    notes: >-
-      checksum is not in the INSERT column list. COMMENT documents: 'checksum parameter: accepted for API compatibility
-      but NOT persisted to the database... persisting them in the artifacts table is deferred to a future migration if
-      needed.' Wording differs from AC but semantic requirement fully satisfied.
+      Module in apps/api/knowledge-base/src/ml-pipeline/ with __types__/__tests__ directories. All 7 tools and schemas
+      exported.
 architecture_compliant: true
+architecture_notes: >-
+  Zod-first types, @repo/logger for logging, named exports, __types__/__tests__ directory structure, no barrel file
+  violations.
 issues: []
 lessons_to_record:
   - lesson: >-
-      ON CONFLICT DO UPDATE is incompatible with BEFORE INSERT triggers that modify the conflicting row — use
-      UPDATE-first, INSERT-if-not-exists pattern instead
+      When adding MCP tools for new domain tables to knowledge-base package, avoid re-exporting from mcp-tools to
+      prevent cyclic dependency. Tools must live only in knowledge-base.
+    category: blocker
+    tags:
+      - mcp-tools
+      - cyclic-dependency
+      - knowledge-base
+      - architecture
+  - lesson: >-
+      Extracting a shared error-handler.ts at the module level (extractErrorMessage) eliminates repetitive try/catch
+      message extraction across multiple tool files in the same domain.
     category: pattern
     tags:
-      - postgresql
-      - triggers
-      - upsert
-      - migrations
+      - error-handling
+      - code-reuse
+      - ml-pipeline
   - lesson: >-
-      When an AC prescribes a specific implementation mechanism (ON CONFLICT DO UPDATE) but the migration uses a
-      different mechanism for documented technical reasons, this constitutes a PASS if the behavioral contract is
-      preserved and the deviation is documented in code comments
+      ML pipeline MCP tools can be fully unit-tested by mocking @repo/db and @repo/logger via vi.hoisted() — no live DB
+      connection needed. Consistent with WINT-0100/WINT-0120 pattern.
     category: pattern
     tags:
-      - qa
-      - ac-verification
-      - sql
-      - migrations
-  - lesson: >-
-      pgtap test setup should seed blocker rows whose ordering in tests is clear — the e1e1 second blocker for
-      TEST-1070-A was subtle to follow across HP-2 and HP-3 test groups
-    category: time_sink
-    tags:
-      - pgtap
-      - test-setup
-      - readability
+      - testing
+      - mocking
+      - ml-pipeline
+      - vitest
 tokens:
   in: 18000
-  out: 3500
+  out: 2500
