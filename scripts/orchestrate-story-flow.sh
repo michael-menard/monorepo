@@ -470,12 +470,12 @@ pre_qa_check() {
     return 1
   fi
 
-  # Quick type-check in worktree if it exists
+  # Quick type-check in worktree if it exists and has deps installed
   local WT_PATH
   WT_PATH=$(resolve_worktree_root "$STORY_ID")
-  if [[ -n "$WT_PATH" && -d "$WT_PATH" ]]; then
+  if [[ -n "$WT_PATH" && -d "$WT_PATH" && -d "$WT_PATH/node_modules" ]]; then
     if ! (cd "$WT_PATH" && pnpm check-types --quiet 2>/dev/null); then
-      echo "$TAG QA   SKIP:    $STORY_ID (type-check failed in worktree — env not ready)"
+      echo "$TAG QA   SKIP:    $STORY_ID (type-check failed in worktree)"
       return 1
     fi
   fi
