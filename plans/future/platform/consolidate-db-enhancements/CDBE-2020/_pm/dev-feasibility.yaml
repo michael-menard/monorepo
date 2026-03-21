@@ -1,0 +1,140 @@
+feasible: true
+confidence: high
+rationale: >
+  Both stored procedures follow well-established patterns already deployed in Phase 1
+  migrations (1005, 1010, 1020). The required tables (workflow.story_blockers,
+  artifacts.story_artifacts) exist. validate_caller() exists in workflow schema via
+  migration 1005. The ON CONFLICT unique constraint target
+  (story_id, artifact_type, artifact_name, iteration) is confirmed in the baseline
+  migration 999. The RETURNS TABLE pattern for resolve_blocker is standard PL/pgSQL.
+  No new schema dependencies needed beyond the resolution_notes column decision.
+  The story is DB-only: no TypeScript, no Lambda, no API changes.
+
+complexity: medium
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (new migration SQL file)'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ (new pgtap test file)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'CDBE-2005 must be deployed first (workflow.validate_caller must exist)'
+    - 'CDBE-1050 must be deployed first (workflow.story_blockers must exist)'
+    - 'CDBE-1030 must be deployed first (artifacts.story_artifacts.superseded_at + artifact_versions_supersede trigger must exist)'
+    - 'Migration slot must be confirmed at implementation time (after CDBE-1060 slot is assigned)'
+
+risks:
+  - finding: >
+      workflow.story_blockers has no resolution_notes column (migration 1050 confirmed).
+      The function signature in AC-1/AC-3 includes resolution_notes text parameter, but
+      there is nowhere to persist it without adding the column.
+    mitigation: >
+      Add ALTER TABLE workflow.story_blockers ADD COLUMN IF NOT EXISTS resolution_notes text
+      to the CDBE-2020 migration. This is the preferred resolution (option a from seed).
+      Update COMMENT ON COLUMN to cite migration number. No schema dependency conflict —
+      migration 1050 created the table with soft-delete support and this column addition
+      is fully additive.
+
+  - finding: >
+      Migration slot collision risk with CDBE-2010 and CDBE-2030 (all Phase 2 stories
+      need sequential slots after 1050/1060).
+    mitigation: >
+      At implementation time: inspect apps/api/knowledge-base/src/db/migrations/ for
+      last used slot, assign next available number (expected range 1060-1099 after
+      Phase 1 completes). Coordinate with CDBE-2010 implementer. Document chosen slot
+      in migration file header comment.
+
+  - finding: >
+      CDBE-2005 (workflow.allowed_agents + validate_caller) is listed as backlog, not
+      completed. Migration 1005 SQL exists in the codebase, but deployment state is unknown.
+      resolve_blocker and complete_artifact both call PERFORM workflow.validate_caller()
+      at entry point — if not deployed, the procedures will fail at runtime.
+    mitigation: >
+      AC-10 pre-condition DO block guards against this: it checks pg_proc for
+      validate_caller existence before creating either procedure, raising a clear
+      exception if absent. CDBE-2020 KB depends_on should be updated to include
+      CDBE-2005 explicitly.
+
+missing_requirements:
+  - >
+    Confirm whether resolution_notes column should be added to workflow.story_blockers
+    in this migration or dropped from the function signature. Seed recommends adding the
+    column (option a). Dev should add ALTER TABLE to migration and update AC-3 text to
+    reflect that notes are persisted to the new column.
+
+evidence_expectations:
+  - 'pgtap test suite passes with zero failing tests against test DB with all dependencies deployed'
+  - 'psql exit code 0 on second migration run (idempotency verified)'
+  - 'pg_prove output shows all test assertions passing'
+  - 'RAISE NOTICE completion block output visible in migration run log'
+
+subtasks:
+  - id: ST-1
+    title: 'Confirm migration slot and add resolution_notes column decision'
+    goal: >
+      Determine the next available migration slot number after CDBE-1060.
+      Add ALTER TABLE workflow.story_blockers ADD COLUMN IF NOT EXISTS resolution_notes text
+      to the migration plan. Document the slot number in the migration file header.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/'
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: 'ls apps/api/knowledge-base/src/db/migrations/ | sort | tail -5'
+    estimated_tokens: 2000
+
+  - id: ST-2
+    title: 'Write migration SQL: resolution_notes column + workflow.resolve_blocker function'
+    goal: >
+      Create the migration file with:
+      (1) pre-condition DO block for validate_caller existence,
+      (2) ALTER TABLE workflow.story_blockers ADD COLUMN IF NOT EXISTS resolution_notes text,
+      (3) CREATE OR REPLACE FUNCTION workflow.resolve_blocker(...) RETURNS TABLE SECURITY INVOKER
+          with validate_caller entry point, blocker fetch, soft-delete UPDATE, fully_unblocked check,
+          RETURN NEXT, COMMENT ON FUNCTION, GRANT EXECUTE to agent_role.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1005_allowed_agents.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1050_cascade_trigger_prerequisites.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/XXXX_resolve_blocker_complete_artifact.sql'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-10', 'AC-11', 'AC-12', 'AC-14']
+    depends_on: ST-1
+    verification: 'psql $DB_URL -f apps/api/knowledge-base/src/db/migrations/XXXX_resolve_blocker_complete_artifact.sql'
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: 'Write migration SQL: workflow.complete_artifact function and completion block'
+    goal: >
+      Add to the migration file:
+      (1) CREATE OR REPLACE FUNCTION workflow.complete_artifact(...) RETURNS void SECURITY INVOKER
+          with validate_caller entry point, INSERT ... ON CONFLICT DO UPDATE SET,
+          COMMENT ON FUNCTION noting trigger interaction (DO UPDATE path does not re-fire BEFORE INSERT trigger),
+          GRANT EXECUTE to agent_role.
+      (2) RAISE NOTICE completion block confirming both functions installed.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/XXXX_resolve_blocker_complete_artifact.sql'
+    acs: ['AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-11', 'AC-12', 'AC-14', 'AC-15']
+    depends_on: ST-2
+    verification: 'psql $DB_URL -f apps/api/knowledge-base/src/db/migrations/XXXX_resolve_blocker_complete_artifact.sql (second run — must exit 0)'
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: 'Write pgtap test file for resolve_blocker and complete_artifact'
+    goal: >
+      Create pgtap test file covering:
+      - has_function existence guards for both procedures
+      - HP-1 through HP-5: happy paths (soft-delete, fully_unblocked, upsert, trigger interaction)
+      - EC-1 through EC-5: error cases (P0001, not-found, already-deleted, invalid type)
+      - ED-1 through ED-4: edge cases (last blocker, DO UPDATE no re-trigger, idempotency, pre-condition)
+      All wrapped in BEGIN / SELECT plan(N) / ... / SELECT * FROM finish() / ROLLBACK.
+      SAVEPOINT + DO block guards on any DDL.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/XXXX_resolve_blocker_complete_artifact_test.sql'
+    acs: ['AC-13']
+    depends_on: ST-3
+    verification: 'psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/XXXX_resolve_blocker_complete_artifact_test.sql | pg_prove'
+    estimated_tokens: 8000

@@ -1,0 +1,157 @@
+schema: 1
+story_id: CDBE-5020
+timestamp: '2026-03-19T03:45:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 17
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+  http:
+    pass: 0
+    fail: 0
+coverage: 66.1
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage
+    notes: >-
+      Migration DDL creates telemetry.workflow_events as PARTITION BY RANGE (ts). Confirmed in
+      001_partition_workflow_events.sql.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage
+    notes: >-
+      Table is telemetry.workflow_events (confirmed by schema.ts telemetrySchema). Elaboration gap G2 resolution was
+      incorrect — table was never in public schema. Implementation correctly uses telemetry schema.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage
+    notes: >-
+      Partition key is ts (timestamptz). Confirmed in schema.ts (ts: timestamp('ts').notNull()) and migration DDL
+      PARTITION BY RANGE (ts). Elaboration gap G1 resolution was incorrect — actual column was always ts. Implementation
+      is correct.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage
+    notes: >-
+      Initial partitions created: y2025_and_prior, y2026m01–m05. Historical data migration via INSERT INTO
+      telemetry.workflow_events SELECT ... FROM telemetry.workflow_events_old.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      runPartitionManager uses CREATE TABLE IF NOT EXISTS guard. Idempotency test passes: runs twice with no error. SQL
+      contains pattern confirmed by test 'SQL contains CREATE TABLE IF NOT EXISTS for idempotency'.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      DB errors caught in try/catch within runPartitionManager loop.
+      logger.error('cron.partition-manager.partition-failed') called. Test 'catches DB error and logs it without
+      crashing (AC-6)' passes.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      DISABLE_CRON_JOB_PARTITION_MANAGER env var filtering implemented in buildCronRegistry(). 3 tests verify
+      enable/disable behavior. partitionManagerJob added to ALL_CRON_JOBS in registry.ts.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      PartitionManagerConfigSchema uses Zod (z.object). No TypeScript interfaces used. Conforms to CLAUDE.md Zod-first
+      requirement.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      December→January year rollover test generates workflow_events_y2027m01 with correct range. February boundary test
+      confirmed. addMonths() arithmetic handles year rollover correctly.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      Advisory lock (pg_try_advisory_lock, key 42_005) acquired before running. Skip path verified when lock not
+      acquired. Lock key PARTITION_MANAGER = 42_005 added to constants.ts.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:unit_tests
+    notes: >-
+      partitionManagerJob schedule is '0 5 1 * *' (5 min past midnight on 1st of each month). Registered via
+      partitionManagerJob.job.ts following patternMinerJob pattern.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage
+    notes: >-
+      E2E exempt: infrastructure/DB migration story with no user-facing changes. Migration SQL is idempotent with IF NOT
+      EXISTS guards throughout.
+architecture_compliant: true
+issues:
+  - severity: blocking
+    file: packages/backend/orchestrator/src/cron/partition-manager.ts
+    line: 43
+    rule: prettier/prettier
+    description: >-
+      Function signature for addMonths() exceeds 100-char line width limit. Parameters must be placed on separate lines
+      per Prettier config. ESLint error: 'Replace `year:·number,·month:·number,·monthsToAdd:·number` with
+      newline-separated form'.
+    fix: |-
+      Split function parameters onto separate lines:
+        function addMonths(
+          year: number,
+          month: number,
+          monthsToAdd: number,
+        ): { year: number; month: number }
+  - severity: blocking
+    file: packages/backend/orchestrator/src/cron/partition-manager.ts
+    line: 44
+    rule: prettier/prettier
+    description: 'Unnecessary parentheses around `(month - 1)`. ESLint error: ''Replace `(month·-·1)` with `month·-·1`''.'
+    fix: 'Remove the extra parentheses: `const totalMonths = month - 1 + monthsToAdd`'
+note_on_elaboration_gaps: >-
+  Elaboration gap resolutions G1 ('created_at') and G2 ('public schema') were incorrect. The actual schema.ts confirms
+  telemetry.workflow_events partitioned on ts. The implementation correctly used the actual schema — the developer
+  checked schema.ts directly during implementation. The elaboration resolutions were based on stale/incorrect
+  pre-drizzle-migration backup schema analysis. No AC failures result from this discrepancy; the implementation is
+  correct.
+lessons_to_record:
+  - lesson: >-
+      Elaboration gap resolutions can be wrong if based on pre-migration backup schema rather than current Drizzle
+      schema.ts. Always verify against current schema.ts as ground truth, not DB backups.
+    category: blocker
+    tags:
+      - elaboration
+      - db-migration
+      - schema
+  - lesson: >-
+      Prettier line-length violations on function signatures are not caught by code review if reviewer does not run
+      ESLint locally. QA must run ESLint as a mandatory gate even when code review PASS.
+    category: anti_pattern
+    tags:
+      - prettier
+      - eslint
+      - code-review
+      - qa
+  - lesson: >-
+      Advisory lock pattern (pg_try_advisory_lock + fixed integer key in constants.ts) for singleton cron jobs is
+      well-established in this codebase. New cron jobs should always follow this pattern.
+    category: pattern
+    tags:
+      - cron
+      - advisory-lock
+      - orchestrator
+tokens:
+  in: 18000
+  out: 3500

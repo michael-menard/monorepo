@@ -1,0 +1,4 @@
+skipped: true
+reason: >
+  PIPE-1020 is a KB data-linking chore with no UI components, HTTP endpoints, or React code.
+  All operations are performed via KB MCP tools and direct SQL. No user interface is touched.

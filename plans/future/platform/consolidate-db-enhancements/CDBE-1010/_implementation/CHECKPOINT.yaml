@@ -1,0 +1,7 @@
+story_id: CDBE-1010
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+updated_at: "2026-03-18T18:56:00Z"
+blocked: false
+notes: "Both SQL files written. EVIDENCE.yaml produced. E2E exempt (infra story)."

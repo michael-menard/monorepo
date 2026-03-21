@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  CDBE-4030 is a pure backend worker process (embedding generation via NOTIFY/LISTEN + polling fallback).
+  There is no user-facing UI surface area, no HTTP endpoints, and no frontend components touched.
+  Operational visibility is via @repo/logger output only.

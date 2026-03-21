@@ -1,0 +1,129 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'UPDATE to workflow.stories produces audit row for changed column'
+    setup: 'Migration 1040 applied. A test story row exists in workflow.stories. workflow.story_mutation_audit_log table exists.'
+    action: 'UPDATE workflow.stories SET priority = ''high'' WHERE story_id = ''TEST-AUDIT-001''; (prior priority was ''medium'')'
+    expected: 'Exactly one row exists in workflow.story_mutation_audit_log where table_name = ''workflow.stories'', row_id = ''TEST-AUDIT-001'', column_name = ''priority'', old_value = ''medium'', new_value = ''high'''
+    evidence: 'SELECT count(*) FROM workflow.story_mutation_audit_log WHERE story_id = ''TEST-AUDIT-001'' AND column_name = ''priority'';'
+
+  - id: HP-2
+    title: 'UPDATE to workflow.plans produces audit row for changed column'
+    setup: 'A test plan row exists in workflow.plans.'
+    action: 'UPDATE workflow.plans SET status = ''active'' WHERE plan_slug = ''test-plan-audit''; (prior status was ''draft'')'
+    expected: 'One row in workflow.story_mutation_audit_log with table_name = ''workflow.plans'', row_id = ''test-plan-audit'', column_name = ''status'', old_value = ''draft'', new_value = ''active'''
+    evidence: 'SELECT * FROM workflow.story_mutation_audit_log WHERE row_id = ''test-plan-audit'' AND column_name = ''status'';'
+
+  - id: HP-3
+    title: 'Multiple changed columns on single UPDATE produce multiple audit rows'
+    setup: 'Test story exists in workflow.stories.'
+    action: 'UPDATE workflow.stories SET priority = ''critical'', title = ''Updated Title'' WHERE story_id = ''TEST-AUDIT-002'';'
+    expected: 'Two rows in workflow.story_mutation_audit_log for story_id TEST-AUDIT-002 — one for priority, one for title'
+    evidence: 'SELECT column_name FROM workflow.story_mutation_audit_log WHERE row_id = ''TEST-AUDIT-002'' ORDER BY column_name;'
+
+  - id: HP-4
+    title: 'redact_sensitive_value returns original value for non-sensitive column'
+    setup: 'redact_sensitive_value() function deployed.'
+    action: 'SELECT workflow.redact_sensitive_value(''priority'', ''high'');'
+    expected: 'Returns ''high'' unchanged'
+    evidence: 'pgtap: SELECT is(workflow.redact_sensitive_value(''priority'', ''high''), ''high'', ...)'
+
+  - id: HP-5
+    title: 'plan_archival_cascade and audit_plan_mutations co-exist without conflict'
+    setup: 'Both triggers deployed on workflow.plans (plan_archival_cascade from 1020, audit_plan_mutations from 1040).'
+    action: 'UPDATE workflow.plans SET status = ''archived'' WHERE plan_slug = ''test-plan-cascade'';'
+    expected: 'plan_archival_cascade fires (backlog stories moved to deferred) AND audit_plan_mutations fires (audit row written for status change). No error thrown.'
+    evidence: 'SELECT count(*) FROM workflow.story_mutation_audit_log WHERE row_id = ''test-plan-cascade'' AND column_name = ''status''; -- expect 1'
+
+error_cases:
+  - id: EC-1
+    title: 'Sensitive column value is redacted in audit row'
+    setup: 'story row has a column named ''api_key'' (if added). Or test via redact_sensitive_value() function directly.'
+    action: 'SELECT workflow.redact_sensitive_value(''api_key'', ''sk-live-abc123'');'
+    expected: 'Returns ''[REDACTED]'' not the actual value'
+    evidence: 'pgtap: SELECT is(workflow.redact_sensitive_value(''api_key'', ''sk-live-abc123''), ''[REDACTED]'', ...)'
+
+  - id: EC-2
+    title: 'Sensitive column old_value AND new_value are both redacted'
+    setup: 'A row in workflow.stories has a column in the sensitive list.'
+    action: 'Perform UPDATE on that column. Check audit row.'
+    expected: 'Both old_value and new_value in workflow.story_mutation_audit_log show ''[REDACTED]''. Column_name is still logged (only the value is masked).'
+    evidence: 'SELECT column_name, old_value, new_value FROM workflow.story_mutation_audit_log WHERE column_name IN (SELECT column_name FROM sensitive list);'
+
+  - id: EC-3
+    title: 'Second migration run is idempotent — exits 0 with no errors'
+    setup: 'Migration 1040 already applied.'
+    action: 'Run migration 1040 a second time.'
+    expected: 'Exits with code 0, no errors, no duplicate objects created'
+    evidence: 'Manual: run psql $DB_URL -f 1040_audit_trigger.sql; echo $?'
+
+edge_cases:
+  - id: ED-1
+    title: 'Unchanged column does NOT produce audit row'
+    setup: 'Test story exists. priority = ''medium''.'
+    action: 'UPDATE workflow.stories SET priority = ''medium'' WHERE story_id = ''TEST-AUDIT-003''; (same value)'
+    expected: 'Zero rows inserted into workflow.story_mutation_audit_log for story_id TEST-AUDIT-003 priority column'
+    evidence: 'SELECT count(*) FROM workflow.story_mutation_audit_log WHERE row_id = ''TEST-AUDIT-003'' AND column_name = ''priority''; -- expect 0'
+
+  - id: ED-2
+    title: 'INSERT to workflow.stories does NOT trigger audit'
+    setup: 'workflow.story_mutation_audit_log is empty for test ID.'
+    action: 'INSERT INTO workflow.stories (story_id, title, state) VALUES (''TEST-INSERT-AUDIT'', ''test'', ''backlog'');'
+    expected: 'Zero rows in workflow.story_mutation_audit_log for row_id ''TEST-INSERT-AUDIT'''
+    evidence: 'SELECT count(*) FROM workflow.story_mutation_audit_log WHERE row_id = ''TEST-INSERT-AUDIT''; -- expect 0'
+
+  - id: ED-3
+    title: 'NULL old_value handled gracefully (column was NULL before update)'
+    setup: 'Test story with a nullable column set to NULL.'
+    action: 'UPDATE workflow.stories SET some_nullable_col = ''new_value'' WHERE story_id = ''TEST-NULL-AUDIT'';'
+    expected: 'Audit row written with old_value = NULL (or ''NULL'' text), new_value = ''new_value''. No crash.'
+    evidence: 'SELECT old_value FROM workflow.story_mutation_audit_log WHERE row_id = ''TEST-NULL-AUDIT'';'
+
+  - id: ED-4
+    title: 'workflow.plans archival cascade triggers audit on cascaded story updates'
+    setup: 'workflow.plans row exists with linked backlog stories.'
+    action: 'UPDATE workflow.plans SET status = ''archived'';'
+    expected: 'For each story moved to deferred by the cascade, an audit row is written (state column changed from backlog to deferred). No recursive loop detected.'
+    evidence: 'SELECT count(*) FROM workflow.story_mutation_audit_log WHERE column_name = ''state'' AND new_value = ''deferred'';'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'workflow.story_mutation_audit_log row count after UPDATE'
+      - 'old_value and new_value correctness in audit row'
+      - 'redact_sensitive_value() return value for known sensitive column names'
+      - 'trigger existence via has_trigger() in pgtap'
+      - 'idempotency: second migration run exits 0'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify COMMENT ON objects exist in pg_description'
+    steps:
+      - 'Connect to KB database'
+      - "SELECT obj_description(oid) FROM pg_proc WHERE proname = 'audit_story_mutations';"
+      - "SELECT obj_description(oid) FROM pg_proc WHERE proname = 'audit_plan_mutations';"
+      - "SELECT obj_description(oid) FROM pg_proc WHERE proname = 'redact_sensitive_value';"
+    expected: 'Each returns a non-null comment string containing ''1040'''
+
+fixture_definitions:
+  - name: test_story_for_audit
+    type: workflow.stories row
+    description: 'Minimal story row (story_id, feature, state, title) inserted inside pgtap BEGIN/ROLLBACK transaction'
+  - name: test_plan_for_audit
+    type: workflow.plans row
+    description: 'Minimal plan row inserted inside pgtap BEGIN/ROLLBACK transaction'
+  - name: sensitive_column_test_value
+    type: text constant
+    description: "A literal string like 'sk-live-abc123' used to verify [REDACTED] masking"
+
+risks:
+  - 'The execution_id NOT NULL FK on workflow.workflow_audit_log is a hard blocker — test plan assumes new workflow.story_mutation_audit_log table is created; if schema decision changes, test fixtures must be updated'
+  - 'Column enumeration in trigger body is explicit (not dynamic) — if new columns are added to workflow.stories or workflow.plans after migration 1040, they will not be audited until trigger is updated'
+  - 'RLS on workflow.workflow_audit_log means agent_role cannot INSERT there — verify new table does NOT have the same RLS restriction'
+  - 'pgtap tests require kbuser (BYPASSRLS) to run — confirm test runner role before executing'

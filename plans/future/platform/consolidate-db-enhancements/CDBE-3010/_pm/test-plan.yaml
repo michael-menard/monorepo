@@ -1,0 +1,104 @@
+strategy: pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  migration_file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+  pgtap_file: apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+
+happy_path_tests:
+  - id: HP-1
+    title: 'View exists after migration is applied'
+    setup: 'Migration 1030 applied to KB database (port 5433)'
+    action: 'SELECT has_view(''workflow'', ''stories_current'', ''workflow.stories_current view exists'')'
+    expected: 'pgtap assertion passes — view is present in workflow schema'
+    evidence: 'pg_prove exits 0; TAP output shows ok 1'
+
+  - id: HP-2
+    title: 'Story with one open history row returns populated current_state and entered_at'
+    setup: |
+      INSERT INTO workflow.stories (story_id, feature, state, title) VALUES (''TEST-3010-ONE-ROW'', ''cdbe-3010-test'', ''backlog'', ''test'') ON CONFLICT DO NOTHING;
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state) VALUES (''TEST-3010-ONE-ROW'', ''state_change'', NULL, ''backlog'');
+    action: 'SELECT current_state, entered_at FROM workflow.stories_current WHERE story_id = ''TEST-3010-ONE-ROW'''
+    expected: 'current_state = ''backlog'', entered_at IS NOT NULL'
+    evidence: 'ok() assertion on query result in pgtap test'
+
+  - id: HP-3
+    title: 'Story with no history rows returns NULL for current_state and entered_at'
+    setup: |
+      INSERT INTO workflow.stories (story_id, feature, state, title) VALUES (''TEST-3010-NO-HIST'', ''cdbe-3010-test'', ''backlog'', ''test no hist'') ON CONFLICT DO NOTHING;
+    action: 'SELECT current_state, entered_at FROM workflow.stories_current WHERE story_id = ''TEST-3010-NO-HIST'''
+    expected: 'current_state IS NULL, entered_at IS NULL'
+    evidence: 'ok() assertion in pgtap test confirms LEFT JOIN semantics'
+
+  - id: HP-4
+    title: 'Story with multiple history rows (one closed, one open) returns only the open row values'
+    setup: |
+      INSERT INTO workflow.stories (story_id, feature, state, title) VALUES (''TEST-3010-MULTI'', ''cdbe-3010-test'', ''created'', ''test multi hist'') ON CONFLICT DO NOTHING;
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state) VALUES (''TEST-3010-MULTI'', ''state_change'', NULL, ''backlog'');
+      -- First insert closes prior row via trigger; second insert creates open row
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state) VALUES (''TEST-3010-MULTI'', ''state_change'', ''backlog'', ''created'');
+    action: 'SELECT current_state FROM workflow.stories_current WHERE story_id = ''TEST-3010-MULTI'''
+    expected: 'current_state = ''created'' (not ''backlog'' — the closed row is excluded)'
+    evidence: 'ok() assertion in pgtap test; WHERE exited_at IS NULL ensures closed row is skipped'
+
+error_cases:
+  - id: EC-1
+    title: 'Safety preamble blocks execution on wrong database'
+    setup: 'Connect to lego_dev (port 5432) instead of knowledgebase (port 5433)'
+    action: 'Run 1030_cdbe3010_stories_current_view.sql against lego_dev'
+    expected: 'EXCEPTION raised: "Migration must run against knowledgebase database"'
+    evidence: 'psql exits with error; DO block preamble fires before any DDL executes'
+
+  - id: EC-2
+    title: 'Second migration run is idempotent — no error on re-apply'
+    setup: 'Migration 1030 already applied to KB database'
+    action: 'Run 1030_cdbe3010_stories_current_view.sql a second time'
+    expected: 'psql exits 0; CREATE OR REPLACE VIEW succeeds without error'
+    evidence: 'lives_ok() in pgtap test confirms idempotency'
+
+edge_cases:
+  - id: ED-1
+    title: 'View includes all explicit story columns — no wildcard s.*'
+    setup: 'Migration applied'
+    action: 'SELECT column_name FROM information_schema.columns WHERE table_schema = ''workflow'' AND table_name = ''stories_current'' ORDER BY ordinal_position'
+    expected: 'All known stories columns present plus current_state and entered_at; no unexpected extra columns if stories table grows later'
+    evidence: 'Explicit column list in view definition prevents schema-change surprises'
+
+  - id: ED-2
+    title: 'View has COMMENT ON VIEW and COMMENT ON COLUMN for current_state and entered_at'
+    setup: 'Migration applied'
+    action: |
+      SELECT obj_description(''workflow.stories_current''::regclass, ''pg_class'');
+      SELECT col_description(''workflow.stories_current''::regclass, ordinal_position) FROM information_schema.columns WHERE table_schema=''workflow'' AND table_name=''stories_current'' AND column_name IN (''current_state'', ''entered_at'');
+    expected: 'All three comments are non-null and contain migration number ''3010'''
+    evidence: 'pgtap has_column_comment() or ok(col_description(...) IS NOT NULL) assertions'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'has_view(''workflow'', ''stories_current'', ...) passes'
+      - 'ok(current_state = ''backlog'') for story with open row'
+      - 'ok(current_state IS NULL) for story without history'
+      - 'ok(current_state = open_row_value) for story with multiple rows'
+      - 'lives_ok(CREATE OR REPLACE VIEW ...) idempotency check'
+  frontend: ~
+
+manual_cases: []
+
+fixture_definitions:
+  - name: TEST-3010-ONE-ROW
+    type: workflow.stories + workflow.story_state_history
+    description: Story with one open state history row; used for HP-2
+  - name: TEST-3010-NO-HIST
+    type: workflow.stories only
+    description: Story with no history rows; used for HP-3
+  - name: TEST-3010-MULTI
+    type: workflow.stories + workflow.story_state_history (2 rows)
+    description: Story with one closed row and one open row; used for HP-4
+
+risks:
+  - 'Trigger enforce_story_state_history_transition (migration 1010) may reject INSERT of test fixtures if from_state/to_state values are invalid transitions — use NULL → backlog then backlog → created as safe transitions'
+  - 'pgtap test must be wrapped in BEGIN/ROLLBACK to avoid leaving test fixtures in KB database'
+  - 'Migration slot 1030 must be confirmed free at implementation time; if taken, adjust filename and pgtap test file accordingly'

@@ -1,0 +1,38 @@
+story_id: CDBE-1030
+title: Artifact Write and Plan Archival Cascade Triggers
+status: pass
+implementation:
+  files_created:
+    - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    - apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql
+  commits:
+    - '0b443513 feat(CDBE-1030): artifact version supersession and plan archival cascade triggers'
+    - 'a8a1f01a fix(CDBE-1030): wrap pgtap CREATE TRIGGER tests with SAVEPOINT+DO block (AC-13)'
+tests:
+  pgtap:
+    status: pass
+    total: 27
+    passed: 27
+    failed: 0
+    mode: live
+e2e_tests:
+  status: exempt
+  reason: Pure PostgreSQL migration — no API or UI surface
+  mode: live
+acceptance_criteria:
+  AC-1: pass
+  AC-2: pass
+  AC-3: pass
+  AC-4: pass
+  AC-5: pass
+  AC-6: pass
+  AC-7: pass
+  AC-8: pass
+  AC-9: pass
+  AC-10: pass
+  AC-11: pass
+  AC-12: pass
+  AC-13: pass
+  AC-14: pass
+  AC-15: pass
+  AC-16: pass

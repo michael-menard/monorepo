@@ -1,0 +1,20 @@
+id: 'CDBE-1050'
+title: 'Cascade Trigger DDL Prerequisites — story_assignments, story_blockers, and story_dependencies.resolved_at'
+status: backlog
+priority: high
+points: 3
+story_type: tech_debt
+phase: 1
+split_from: 'CDBE-1020'
+split_part: '1 of 2'
+feature: |
+  Create the missing DDL prerequisites for cascade triggers: story_assignments and story_blockers tables (with soft-delete), story_dependencies.resolved_at column, RLS grants for agent_role, and pgtap schema-presence tests.
+goal: |
+  Provide the schema foundation required by CDBE-1060 cascade trigger implementation.
+depends_on: [CDBE-1010]
+endpoints: []
+infrastructure: []
+risk_notes: |
+  Low risk — DDL only. story_dependencies table must be confirmed to exist before adding column. Migration slot 1050 must be verified free at implementation time.
+sizing_warning: false
+created: '2026-03-18'

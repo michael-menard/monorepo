@@ -1,0 +1,171 @@
+{
+  "story_id": "CDBE-1030",
+  "generated_at": "2026-03-18T20:55:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "Migration adds `superseded_at timestamptz` column to `artifacts.story_artifacts` using `ALTER TABLE … ADD COLUMN IF NOT EXISTS superseded_at timestamptz`. `COMMENT ON COLUMN` cites migration number.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "Trigger function `artifacts.supersede_prior_artifact_version()` is created using `CREATE OR REPLACE FUNCTION`, declared `SECURITY INVOKER`, written in `plpgsql`. When a new `artifacts.story_artifacts` row is inserted, it finds the most recent non-superseded row for the same `(story_id, artifact_type)` (where `superseded_at IS NULL`, ordered by `created_at DESC LIMIT 1`) and sets `superseded_at = NOW()` on that row.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 4,
+      "strong_evidence_count": 4,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "The trigger function from AC-2 also executes `UPDATE workflow.stories SET updated_at = NOW() WHERE story_id = NEW.story_id` after setting `superseded_at`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "A BEFORE INSERT trigger named `artifact_versions_supersede` is attached to `artifacts.story_artifacts` FOR EACH ROW executing `artifacts.supersede_prior_artifact_version()`. Created using `DROP TRIGGER IF EXISTS artifact_versions_supersede ON artifacts.story_artifacts; CREATE TRIGGER ...` (idempotent).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "When no prior non-superseded row exists for `(story_id, artifact_type)` on insert, Trigger 1 completes without error — the `UPDATE … SET superseded_at = NOW()` finds zero matching rows and is a silent no-op.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "Trigger function `workflow.archive_plan_stories()` is created using `CREATE OR REPLACE FUNCTION`, declared `SECURITY INVOKER`, written in `plpgsql`. When `NEW.status = 'archived'::plan_status_enum` and `OLD.status IS DISTINCT FROM NEW.status`, it executes: `UPDATE workflow.stories SET state = 'deferred' WHERE story_id IN (SELECT story_id FROM workflow.plan_story_links WHERE plan_slug = NEW.plan_slug) AND state = 'backlog'`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "An AFTER UPDATE trigger named `plan_archival_cascade` is attached to `workflow.plans` FOR EACH ROW executing `workflow.archive_plan_stories()`. Created using `DROP TRIGGER IF EXISTS / CREATE TRIGGER` (idempotent). Function returns `NULL` (AFTER trigger convention).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "When a plan is updated to `'archived'` with zero linked backlog stories (no matching rows in `plan_story_links`, or all linked stories are in non-backlog states), Trigger 2 completes without error.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "When a plan is updated to a status value other than `'archived'` (e.g., `'active'` → `'in-progress'`), Trigger 2 does not modify any `workflow.stories` rows.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "`COMMENT ON` statements are included for: `COMMENT ON FUNCTION artifacts.supersede_prior_artifact_version()` citing migration number, `COMMENT ON TRIGGER artifact_versions_supersede ON artifacts.story_artifacts` citing migration number, `COMMENT ON FUNCTION workflow.archive_plan_stories()` citing migration number, `COMMENT ON TRIGGER plan_archival_cascade ON workflow.plans` citing migration number, `COMMENT ON COLUMN artifacts.story_artifacts.superseded_at` citing migration number.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 6,
+      "strong_evidence_count": 6,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "Migration is safe to run multiple times (idempotent): second run exits 0 with no errors. Uses `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS` throughout.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 7,
+      "strong_evidence_count": 7,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "A partial index is added: `CREATE INDEX IF NOT EXISTS idx_story_artifacts_active_versions ON artifacts.story_artifacts (story_id, artifact_type, created_at DESC) WHERE superseded_at IS NULL`. `COMMENT ON INDEX` cites migration number.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "pgtap test file is written at `apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql` following the `BEGIN / SELECT plan(N) / … / SELECT * FROM finish() / ROLLBACK` pattern. All `CREATE TRIGGER` DDL inside the test file is wrapped in `SAVEPOINT + DO block` checking `pg_proc` for the trigger function's existence before attaching. Tests cover column, trigger, index existence and behavioral assertions.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 4,
+      "strong_evidence_count": 4,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "Migration includes a pre-condition safety guard as a `DO $$ … $$` block that checks `SELECT 1 FROM workflow.valid_transitions WHERE from_state = 'backlog' AND to_state = 'deferred'` and raises `EXCEPTION` if the row is absent. This guard must execute before the trigger functions are defined so that deployment fails fast if the transition prerequisite is missing.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-15",
+      "ac_text": "The backlog→deferred transition is seeded in `workflow.valid_transitions` using idempotent INSERT ... ON CONFLICT DO NOTHING.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-16",
+      "ac_text": "GRANT UPDATE (superseded_at) ON artifacts.story_artifacts TO agent_role to allow SECURITY INVOKER trigger to perform its updates.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 16,
+  "accepted": 16,
+  "challenged": 0,
+  "rejected": 0
+}

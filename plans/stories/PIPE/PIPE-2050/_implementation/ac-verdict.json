@@ -1,0 +1,151 @@
+{
+  "story_id": "PIPE-2050",
+  "generated_at": "2026-03-19T05:45:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "SchedulerLoop gains a getEligibleReviewStories(limit: number) method that queries workflow.stories WHERE state = 'ready_for_qa' with no unresolved depends_on/blocked_by dependencies. Returns StoryRow[].",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "SchedulerLoop gains a dispatchReviewStory(story: StoryRow, attemptNumber: number) method that atomically advances ready_for_qa → in_qa via kb_update_story_status, returns early if updated:false, parses ReviewJobDataSchema, and calls queue.add() with jobId format {storyId}:review:{attemptNumber}.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "SchedulerLoop.runOnce() is extended to: (a) compute review slots using the same shared maxConcurrent ceiling as implementation; (b) call getEligibleReviewStories(), apply ordering/filtering via applyFinishBeforeNewStart and applyStrictFinishFilter, and dispatch up to available slots via dispatchReviewStory().",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "SchedulerLoop gains a getEligibleQaStories(limit: number) method querying stories in state = 'in_qa' with no unresolved dependencies. Returns StoryRow[].",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "SchedulerLoop gains a dispatchQaStory(story: StoryRow, attemptNumber: number) method following the same F006 atomic advance + jobId pattern ({storyId}:qa:{attemptNumber}), building a QaJobDataSchema-compliant payload.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "SchedulerLoop.runOnce() includes QA dispatch: calls getEligibleQaStories(), applies ordering/filtering, and dispatches up to available slots.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "finishBeforeNewStart and strictFinishBeforeNewStart ordering/filtering applies consistently to review and QA eligible story lists. Both applyFinishBeforeNewStart() and applyStrictFinishFilter() are called with the review/QA eligible lists before dispatch.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "A unit test verifies that dispatchReviewStory() is called with a story in ready_for_qa state during a runOnce() cycle when a slot is available.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "A unit test verifies that dispatchQaStory() is called with a story in the correct QA-trigger state during a runOnce() cycle.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "A unit test verifies that dispatchReviewStory() does NOT call queue.add() when kb_update_story_status returns updated:false (F006 preservation — mirrors PIPE-2040 AC-7 pattern).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "A unit test verifies that review and QA dispatch pass the correct jobId format: {storyId}:review:1 and {storyId}:qa:1 to queue.add() options.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "TypeScript compilation (pnpm check-types --filter @repo/pipeline) passes with zero errors after all changes.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "All tests in apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts pass. pnpm test --filter @repo/pipeline exits 0.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "F006 deviation for QA dispatch is documented: no KB state advance because no valid intermediate state exists between in_qa and completed/failed_qa/blocked. BullMQ jobId dedup is the idempotency fence.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 14,
+  "accepted": 14,
+  "challenged": 0,
+  "rejected": 0
+}

@@ -1,0 +1,24 @@
+schema: 1
+story_id: CDBE-5020
+timestamp: '2026-03-19T00:00:00Z'
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - 'packages/backend/db/**'
+  - 'packages/backend/orchestrator/src/cron/**'
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: true
+  performance: true
+summary: 'Convert telemetry.workflow_events to monthly range-partitioned table and implement automated partition management via cron job'
+elaboration: completed
+gen_mode: false

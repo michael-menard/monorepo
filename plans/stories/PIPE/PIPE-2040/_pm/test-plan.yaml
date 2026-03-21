@@ -1,0 +1,174 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: 'dispatchStory() passes correct jobId to queue.add()'
+    setup: |
+      Create scheduler with default config. Mock queue.add() via makeQueue().
+      Mock kb_update_story_status to return { updated: true }.
+      Prepare a story with storyId: 'PIPE-001', stage: 'implementation', attemptNumber: 1.
+    action: |
+      Call scheduler.dispatchStory(story).
+    expected: |
+      queue.add() is called with arguments:
+        ('story-PIPE-001', expect.anything(), expect.objectContaining({ jobId: 'PIPE-001:implementation:1' }))
+    evidence: |
+      expect(queue.add).toHaveBeenCalledWith(
+        'story-PIPE-001',
+        expect.anything(),
+        expect.objectContaining({ jobId: 'PIPE-001:implementation:1' })
+      )
+
+  - id: HP-2
+    title: 'runOnce() with strictFinishBeforeNewStart:false dispatches all eligible stories'
+    setup: |
+      Configure scheduler with strictFinishBeforeNewStart: false (default).
+      Mock getEligibleStories() to return [storyA (plan-X), storyB (plan-Y)].
+      Plan-X has an in_progress sibling; plan-Y has no in_progress siblings.
+      Mock kb_update_story_status to return { updated: true } for both.
+    action: |
+      Call scheduler.runOnce().
+    expected: |
+      Both storyA and storyB are dispatched. queue.add() is called twice.
+    evidence: |
+      expect(queue.add).toHaveBeenCalledTimes(2)
+      expect(dispatchStory).toHaveBeenCalledWith(storyA)
+      expect(dispatchStory).toHaveBeenCalledWith(storyB)
+
+  - id: HP-3
+    title: 'applyFinishBeforeNewStart() priority reordering still works (no regression)'
+    setup: |
+      Configure scheduler with finishBeforeNewStart: true (existing flag).
+      Mock eligible stories: storyA (plan with in_progress sibling), storyB (plan with no in_progress sibling).
+    action: |
+      Call scheduler.runOnce().
+    expected: |
+      storyA is dispatched first (priority ordering preserved). Both stories dispatched.
+    evidence: |
+      const calls = dispatchStory.mock.calls
+      expect(calls[0][0]).toEqual(storyA)
+      expect(calls[1][0]).toEqual(storyB)
+
+error_cases:
+  - id: EC-1
+    title: 'dispatchStory() skips queue.add() when KB advance returns updated: false (F006 preserved)'
+    setup: |
+      Mock kb_update_story_status to return { updated: false } (another process already advanced the story).
+      Mock queue.add() via makeQueue().
+    action: |
+      Call scheduler.dispatchStory(story).
+    expected: |
+      queue.add() is NOT called. The function returns early without enqueueing.
+    evidence: |
+      expect(queue.add).not.toHaveBeenCalled()
+
+  - id: EC-2
+    title: 'runOnce() with strictFinishBeforeNewStart:true defers new-plan stories when in_progress siblings exist'
+    setup: |
+      Configure scheduler with strictFinishBeforeNewStart: true.
+      Mock eligible stories: storyA (plan-X with an in_progress sibling), storyB (plan-Y with no in_progress siblings).
+      Mock plan-level in_progress detection to indicate plan-X has active work.
+    action: |
+      Call scheduler.runOnce().
+    expected: |
+      Only storyA is dispatched. storyB is NOT dispatched (deferred to next poll cycle).
+      queue.add() is called exactly once.
+    evidence: |
+      expect(queue.add).toHaveBeenCalledTimes(1)
+      expect(dispatchStory).toHaveBeenCalledWith(storyA)
+      expect(dispatchStory).not.toHaveBeenCalledWith(storyB)
+
+  - id: EC-3
+    title: 'runOnce() with strictFinishBeforeNewStart:true dispatches all stories when no plan has in_progress work'
+    setup: |
+      Configure scheduler with strictFinishBeforeNewStart: true.
+      Mock eligible stories: storyA (plan-X), storyB (plan-Y).
+      Mock plan-level in_progress detection: no plans have in_progress stories.
+    action: |
+      Call scheduler.runOnce().
+    expected: |
+      Both storyA and storyB are dispatched (no in_progress work to block them).
+    evidence: |
+      expect(queue.add).toHaveBeenCalledTimes(2)
+
+edge_cases:
+  - id: ED-1
+    title: 'dispatchStory() jobId format is correct for attemptNumber > 1 (retry scenario)'
+    setup: |
+      Story with storyId: 'PIPE-099', stage: 'implementation', attemptNumber: 3.
+      Mock kb_update_story_status to return { updated: true }.
+    action: |
+      Call scheduler.dispatchStory(story) with attemptNumber 3.
+    expected: |
+      queue.add() is called with jobId: 'PIPE-099:implementation:3'.
+    evidence: |
+      expect(queue.add).toHaveBeenCalledWith(
+        'story-PIPE-099',
+        expect.anything(),
+        expect.objectContaining({ jobId: 'PIPE-099:implementation:3' })
+      )
+
+  - id: ED-2
+    title: 'runOnce() with strictFinishBeforeNewStart:true and empty eligible list does not throw'
+    setup: |
+      Configure scheduler with strictFinishBeforeNewStart: true.
+      Mock getEligibleStories() to return [].
+    action: |
+      Call scheduler.runOnce().
+    expected: |
+      No error thrown. queue.add() is not called.
+    evidence: |
+      await expect(scheduler.runOnce()).resolves.not.toThrow()
+      expect(queue.add).not.toHaveBeenCalled()
+
+  - id: ED-3
+    title: 'SchedulerConfigSchema defaults do not change for existing fields'
+    setup: |
+      Instantiate SchedulerConfigSchema.parse({}) — no arguments.
+    action: |
+      Inspect the parsed config object.
+    expected: |
+      strictFinishBeforeNewStart defaults to false.
+      pollIntervalMs, maxConcurrent, finishBeforeNewStart, queueName retain their original defaults.
+    evidence: |
+      const config = SchedulerConfigSchema.parse({})
+      expect(config.strictFinishBeforeNewStart).toBe(false)
+      expect(config.finishBeforeNewStart).toBe(true) // existing default unchanged
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'queue.add() called with correct jobId string format {storyId}:{stage}:{attemptNumber}'
+      - 'queue.add() NOT called when kb_update_story_status returns { updated: false }'
+      - 'dispatchStory called only for eligible stories after strictFinishBeforeNewStart filter'
+      - 'TypeScript compilation passes: pnpm check-types --filter @repo/pipeline'
+      - 'All tests pass: pnpm test --filter @repo/pipeline'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: makeQueue
+    type: vitest mock factory
+    description: |
+      Existing factory in scheduler.test.ts. Returns a mock queue with vi.fn() for add(), getWaiting(), etc.
+      Used to assert queue.add() call arguments and counts without real BullMQ/Redis.
+  - name: makeStory
+    type: vitest mock factory
+    description: |
+      Existing factory in scheduler.test.ts. Returns a StoryRow with configurable storyId, planId, state.
+      Extend with planId field to support strictFinishBeforeNewStart plan grouping tests.
+  - name: makeKbDeps
+    type: vitest mock factory
+    description: |
+      Existing factory in scheduler.test.ts. Returns mock KB dependency functions.
+      For new tests: mock the plan-level in_progress query result to control strictFinishBeforeNewStart filtering.
+
+risks:
+  - 'The strictFinishBeforeNewStart filter may require a new DB query for plan-level in_progress detection. If this query is implemented as a raw SQL call, the makeKbDeps() mock must be extended to return plan-level data — ensure the mock shape matches the actual query result type.'
+  - 'If attemptNumber is not currently tracked in the story dispatch path, AC-1 may require a new field on the job data or scheduler state. Verify where attemptNumber comes from before writing the test assertion.'
+  - 'F006 early-return path (updated: false) must be explicitly tested — if the existing scheduler.test.ts already covers this path, ensure the new test is distinct and covers the jobId context specifically.'

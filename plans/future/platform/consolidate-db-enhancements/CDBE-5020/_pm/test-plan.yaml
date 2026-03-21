@@ -1,0 +1,142 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Partitioned parent table exists with correct column set after migration'
+    setup: 'Run partition migration SQL against a clean lego_dev test schema with the original telemetry.workflow_events table'
+    action: 'Execute migration; query information_schema.columns for telemetry.workflow_events'
+    expected: 'Table exists as a partitioned table (relkind=p); all original columns (event_id, event_type, event_version, ts, run_id, item_id, workflow_name, agent_role, status, payload, correlation_id, source, emitted_by) present with correct types'
+    evidence: 'SELECT relkind FROM pg_class JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace WHERE nspname = ''telemetry'' AND relname = ''workflow_events'' returns ''p'''
+
+  - id: HP-2
+    title: 'Existing rows are accessible via parent table after migration'
+    setup: 'Insert 10 test rows into pre-migration telemetry.workflow_events with ts values in current month; run migration'
+    action: 'SELECT COUNT(*) FROM telemetry.workflow_events'
+    expected: 'Count returns 10; rows accessible via parent table with correct data; rows physically located in current month child partition'
+    evidence: 'SELECT COUNT(*) FROM telemetry.workflow_events_y<YYYY>m<MM> returns 10'
+
+  - id: HP-3
+    title: 'New inserts via insertWorkflowEvent() route to correct child partition transparently'
+    setup: 'Post-migration partitioned table; telemetry SDK connected to lego_dev'
+    action: 'Call insertWorkflowEvent() with a new event; check child partition'
+    expected: 'Insert succeeds without error; row appears in current month partition; parent table SELECT shows the new row'
+    evidence: 'SELECT * FROM telemetry.workflow_events_y<YYYY>m<MM> shows new event'
+
+  - id: HP-4
+    title: 'partitionManagerJob CronJobDefinition validates against CronJobDefinitionSchema'
+    setup: 'Import partitionManagerJob from partition-manager.job.ts'
+    action: 'CronJobDefinitionSchema.parse(partitionManagerJob)'
+    expected: 'Validation passes without throwing; jobName = "partition-manager"; schedule = "0 5 1 * *"'
+    evidence: 'Vitest test passes; no ZodError thrown'
+
+  - id: HP-5
+    title: 'runPartitionManager generates correct partition name and date range for current month'
+    setup: 'Mock DB client; set system date to 2026-03-01'
+    action: 'Call runPartitionManager(mockDbClient) for upcoming month (April 2026)'
+    expected: 'Executes SQL: CREATE TABLE IF NOT EXISTS telemetry.workflow_events_y2026m04 PARTITION OF telemetry.workflow_events FOR VALUES FROM (''2026-04-01'') TO (''2026-05-01'')'
+    evidence: 'Mock DB client query captured; SQL matches expected pattern'
+
+  - id: HP-6
+    title: 'partition-manager registered in cron registry and appears in startup log'
+    setup: 'Start orchestrator with cron registry; DISABLE_CRON_JOB_PARTITION_MANAGER unset'
+    action: 'Call buildCronRegistry(); check registered jobs'
+    expected: 'Registry contains job with name "partition-manager"; startup log records job with schedule "0 5 1 * *"'
+    evidence: 'Vitest test on registry output; log assertion on @repo/logger output'
+
+error_cases:
+  - id: EC-1
+    title: 'Advisory lock skip — concurrent instance holds lock'
+    setup: 'Mock pg_try_advisory_lock to return false (lock held)'
+    action: 'Invoke partitionManagerJob.runFn()'
+    expected: 'runPartitionManager is never called; logger.info called with "cron.partition-manager.skipped" and reason'
+    evidence: 'Vitest spy: runPartitionManager spy call count = 0; logger.info spy includes expected message'
+
+  - id: EC-2
+    title: 'Insert with ts outside any partition boundary fails with clear error (not silent data loss)'
+    setup: 'Partitioned table with partitions for 2026-03 through 2026-05 only; attempt insert with ts = ''2025-01-01'''
+    action: 'INSERT INTO telemetry.workflow_events (..., ts) VALUES (..., ''2025-01-01'')'
+    expected: 'PostgreSQL throws error: no partition of relation "workflow_events" found for row; error is surfaced, not silent'
+    evidence: 'pg client throws; no row inserted; confirms no silent data loss'
+
+  - id: EC-3
+    title: 'DISABLE_CRON_JOB_PARTITION_MANAGER=true excludes job from registry'
+    setup: 'Set env var DISABLE_CRON_JOB_PARTITION_MANAGER=true; call buildCronRegistry()'
+    action: 'Check registered job names'
+    expected: '"partition-manager" not present in registry; other jobs unaffected'
+    evidence: 'Vitest test: registry.jobs.find(j => j.jobName === "partition-manager") returns undefined'
+
+  - id: EC-4
+    title: 'DB error during partition pre-creation is logged and does not crash orchestrator'
+    setup: 'Mock DB client.query throws pg Error (e.g., permission denied)'
+    action: 'Call runPartitionManager(mockDbClient)'
+    expected: 'Error is caught; logger.error called with error details; function returns without throwing; orchestrator process does not exit'
+    evidence: 'Vitest: no unhandled rejection; logger.error spy captures error message'
+
+edge_cases:
+  - id: ED-1
+    title: 'December to January year rollover — correct partition name and range'
+    setup: 'Set system date to 2026-12-01; call runPartitionManager for upcoming months'
+    action: 'Call runPartitionManager(mockDbClient)'
+    expected: 'Generates partition workflow_events_y2027m01 with range FROM ''2027-01-01'' TO ''2027-02-01''; year correctly increments'
+    evidence: 'SQL string captured from mock includes y2027m01 and correct dates'
+
+  - id: ED-2
+    title: 'Idempotency — migration safe to run twice'
+    setup: 'Run migration once on lego_dev test schema'
+    action: 'Run migration a second time on same schema'
+    expected: 'Second run completes without error; table structure unchanged; no duplicate rows'
+    evidence: 'No pg error thrown; row count unchanged; partition count unchanged'
+
+  - id: ED-3
+    title: 'Idempotency — runPartitionManager safe to run twice in same month'
+    setup: 'Run runPartitionManager once; partition for next month already exists'
+    action: 'Call runPartitionManager again'
+    expected: 'IF NOT EXISTS guard prevents error; logger logs skip/already-exists; no crash'
+    evidence: 'Mock DB returns no error (IF NOT EXISTS semantics); logger.info spy captures skip message'
+
+  - id: ED-4
+    title: 'February boundary — correct 28/29-day month range'
+    setup: 'Set system date to 2028-01-01 (upcoming month is Feb 2028, leap year); call runPartitionManager'
+    action: 'Generate partition for February 2028'
+    expected: 'Partition range FROM ''2028-02-01'' TO ''2028-03-01''; PostgreSQL handles Feb boundary correctly; no date arithmetic bug'
+    evidence: 'SQL string includes FROM 2028-02-01 TO 2028-03-01; range is valid PostgreSQL date literal'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'pg_class.relkind = ''p'' for telemetry.workflow_events post-migration'
+      - 'Child partition count >= 3 (current + 2 months ahead) post-migration'
+      - 'CronJobDefinitionSchema.parse(partitionManagerJob) returns without throwing'
+      - 'SQL captured by mock DB includes CREATE TABLE IF NOT EXISTS telemetry.workflow_events_y<YYYY>m<MM> PARTITION OF'
+      - 'logger.info spy called with ''cron.partition-manager.skipped'' when lock not acquired'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify pg_cron not required — confirm Node.js cron is sole mechanism'
+    steps:
+      - 'Confirm orchestrator starts and registers partition-manager job without pg_cron extension'
+      - 'Check Aurora instance: SELECT * FROM pg_extension WHERE extname = ''pg_cron'' — document result'
+      - 'Confirm migration deploys correctly against lego_dev (not knowledgebase) using correct connection string'
+    expected: 'Cron job fires at scheduled time; partition created; no pg_cron dependency'
+
+fixture_definitions:
+  - name: workflowEventsPreMigrationRows
+    type: SQL INSERT
+    description: '10 rows in telemetry.workflow_events with ts values spread across current month for migration data integrity tests'
+  - name: mockDbClient
+    type: Vitest mock
+    description: 'Mock pg Pool client with query spy; used for runPartitionManager unit tests and advisory lock tests'
+  - name: InMemoryCronAdapter
+    type: Test adapter
+    description: 'Existing InMemoryCronAdapter from cron infrastructure — reuse for partitionManagerJob schedule tests'
+
+risks:
+  - 'Migration tests require access to a lego_dev database instance (not knowledgebase) — CI must have correct DB connection configured'
+  - 'Table rewrite migration is potentially long-running in production; unit tests cannot validate production timing — manual_case MC-1 covers production verification'
+  - 'Month boundary date arithmetic must be tested against actual pg date literals — wrong format causes pg to reject partition DDL silently if IF NOT EXISTS is used'
+  - 'CDBE-5010 must be merged before migration can run in production (partition management job in CDBE-5020 will cover all three tables if CDBE-5010 is merged first)'

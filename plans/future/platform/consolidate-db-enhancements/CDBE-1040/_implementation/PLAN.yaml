@@ -1,0 +1,248 @@
+schema: 2
+story_id: CDBE-1040
+timestamp: '2026-03-18T10:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Create workflow.story_mutation_audit_log table DDL — CREATE TABLE IF NOT EXISTS with bigserial PK,
+      table_name/row_id/column_name/old_value/new_value/changed_at columns, GRANT INSERT/SELECT to agent_role and
+      lambda_role, sequence grant for bigserial. Verify slot 1040 is available (confirmed: no existing 1040_*.sql).
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+      - apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql
+    dependencies: []
+    slice: backend
+    verification: grep -c 'story_mutation_audit_log' apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    acs_covered:
+      - AC-10
+      - AC-13
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement workflow.redact_sensitive_value(column_name text, value text) RETURNS text — CREATE OR REPLACE FUNCTION,
+      LANGUAGE plpgsql, SECURITY INVOKER. Hardcoded sensitive column pattern array (any column_name containing: api_key,
+      token, secret, credential, password). COMMENT ON FUNCTION citing 1040 and documenting the hardcoded-array choice
+      (AC-2 recommendation). ADD COLUMN IF NOT EXISTS points integer and epic text on workflow.stories to satisfy AC-14
+      column enumeration (migration must add these before trigger body references them).
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: grep -c 'redact_sensitive_value' apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-8
+      - AC-9
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement workflow.audit_story_mutations() trigger function and audit_story_mutations trigger on workflow.stories.
+      AFTER UPDATE FOR EACH ROW. Explicit column enumeration comment block at top of function body listing auditable
+      columns: state, priority, title, description, blocked_reason, blocked_by_story, points, feature, epic. IS DISTINCT
+      FROM diff per column, INSERT per changed column into workflow.story_mutation_audit_log calling
+      redact_sensitive_value for old and new values. DROP TRIGGER IF EXISTS / CREATE TRIGGER (idempotent). COMMENT ON
+      FUNCTION and COMMENT ON TRIGGER citing 1040.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    dependencies:
+      - 2
+    slice: backend
+    verification: grep -c 'audit_story_mutations' apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    acs_covered:
+      - AC-3
+      - AC-5
+      - AC-7
+      - AC-9
+      - AC-12
+      - AC-14
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement workflow.audit_plan_mutations() trigger function and audit_plan_mutations trigger on workflow.plans.
+      AFTER UPDATE FOR EACH ROW. Explicit column enumeration comment block listing auditable columns: status, title,
+      description, priority. IS DISTINCT FROM diff per column, INSERT per changed column into
+      workflow.story_mutation_audit_log with table_name = 'workflow.plans' and row_id = NEW.plan_slug. DROP TRIGGER IF
+      EXISTS / CREATE TRIGGER (idempotent). COMMENT ON FUNCTION and COMMENT ON TRIGGER citing 1040. Add completion
+      notice DO $$ block that checks all 4 objects exist.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    dependencies:
+      - 3
+    slice: backend
+    verification: grep -c 'audit_plan_mutations' apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    acs_covered:
+      - AC-4
+      - AC-6
+      - AC-7
+      - AC-9
+      - AC-12
+      - AC-14
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write pgtap test file 1040_audit_trigger_test.sql. BEGIN/ROLLBACK wrapper. SELECT plan(N) with exact count. Tests:
+      (T-1) has_trigger audit_story_mutations on workflow.stories; (T-2) has_trigger audit_plan_mutations on
+      workflow.plans; (T-3) lives_ok UPDATE workflow.stories produces audit row (row count = 1); (T-4) lives_ok UPDATE
+      workflow.plans produces audit row; (T-5) unchanged column UPDATE produces 0 audit rows; (T-6) sensitive column
+      UPDATE produces [REDACTED] in both old_value and new_value; (T-7) redact_sensitive_value returns [REDACTED] for
+      known sensitive column name; (T-8) redact_sensitive_value returns original value for non-sensitive column; (T-9)
+      INSERT to workflow.stories produces 0 audit rows; plus function SECURITY INVOKER checks and idempotency lives_ok
+      tests.
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    dependencies:
+      - 4
+    slice: backend
+    verification: grep -c 'SELECT plan' apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql
+    acs_covered:
+      - AC-11
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    action: create
+    reason: >-
+      Main migration: audit table DDL, redact_sensitive_value function, audit_story_mutations function+trigger,
+      audit_plan_mutations function+trigger, COMMENT ON all objects, ADD COLUMN IF NOT EXISTS for points and epic on
+      workflow.stories
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql
+    action: create
+    reason: 'pgtap test file covering all AC-11 test cases: trigger existence, behavioral tests, edge cases, idempotency'
+commands_to_run:
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    when: after migration file is written
+    required: true
+  - command: psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql | pg_prove
+    when: after pgtap test file is written and migration is applied
+    required: true
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql
+    when: second run for idempotency verification (AC-10)
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: SQL function workflow.redact_sensitive_value in 1040_audit_trigger.sql; pgtap T-7 and T-8 verify return values
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: Hardcoded constant array within redact_sensitive_value function body; COMMENT ON FUNCTION documents the choice
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      workflow.audit_story_mutations() function in 1040_audit_trigger.sql; pgtap T-3 verifies a story UPDATE produces an
+      audit row
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      workflow.audit_plan_mutations() function in 1040_audit_trigger.sql; pgtap T-4 verifies a plan UPDATE produces an
+      audit row
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      DROP TRIGGER IF EXISTS / CREATE TRIGGER audit_story_mutations ON workflow.stories in 1040_audit_trigger.sql; pgtap
+      T-1 has_trigger
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      DROP TRIGGER IF EXISTS / CREATE TRIGGER audit_plan_mutations ON workflow.plans in 1040_audit_trigger.sql; pgtap
+      T-2 has_trigger
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: IS DISTINCT FROM guard per column in trigger bodies; pgtap T-5 verifies unchanged column produces 0 audit rows
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      redact_sensitive_value called on both old_value and new_value in trigger INSERT; pgtap T-6 verifies [REDACTED]
+      appears for sensitive column
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      COMMENT ON FUNCTION for redact_sensitive_value, audit_story_mutations, audit_plan_mutations; COMMENT ON TRIGGER
+      for audit_story_mutations, audit_plan_mutations; COMMENT ON TABLE for workflow.story_mutation_audit_log — all in
+      1040_audit_trigger.sql
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      CREATE OR REPLACE FUNCTION, DROP TRIGGER IF EXISTS, CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS used
+      throughout; second migration run exits 0
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: >-
+      1040_audit_trigger_test.sql passes pg_prove: trigger existence (T-1, T-2), behavioral (T-3 through T-6), function
+      unit tests (T-7, T-8), INSERT no-op (T-9), idempotency
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      Triggers declared AFTER UPDATE FOR EACH ROW only (no INSERT/DELETE clauses); pgtap T-9 verifies INSERT produces 0
+      audit rows
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: 'Confirmed: no 1040_*.sql exists in apps/api/knowledge-base/src/db/migrations/ (verified via ls grep at plan time)'
+    evidence_type: manual
+  - ac_id: AC-14
+    planned_evidence: >-
+      Comment block at top of both trigger function bodies enumerating auditable columns; stories: state, priority,
+      title, description, blocked_reason, blocked_by_story, points, feature, epic; plans: status, title, description,
+      priority
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      AC-2 offers two options for sensitive columns definition: (a) workflow.sensitive_audit_columns table or (b)
+      hardcoded constant array in function body. Which to use?
+    decision: Hardcoded constant array within redact_sensitive_value function body
+    rationale: >-
+      AC-2 explicitly recommends this for MVP: zero SELECT overhead per trigger invocation, no extra table to maintain,
+      fully self-contained in the function. The story's own recommendation aligns with MVP scope.
+    decided_by: story_recommendation
+  - id: ARCH-002
+    question: >-
+      AC-14 lists points and epic as auditable columns on workflow.stories, but neither column exists in the current
+      schema (confirmed by Drizzle schema and migration audit). How should the migration handle this?
+    decision: >-
+      Add points integer and epic text to workflow.stories using ADD COLUMN IF NOT EXISTS in this migration, before the
+      trigger function body that references them. This keeps the migration self-contained and idempotent.
+    rationale: >-
+      The trigger body must compile against the actual column set at CREATE FUNCTION time. PostgreSQL validates column
+      references in trigger functions at execution time (not compile time for PL/pgSQL), so the columns must exist when
+      the trigger fires. ADD COLUMN IF NOT EXISTS is idempotent and consistent with the pattern used in
+      999_consolidate_story_tables.sql. The story AC-14 is authoritative on auditable column scope.
+    decided_by: autonomous
+complexity: moderate
+notes:
+  - 'Migration slot 1040 verified available: no existing 1040_*.sql file found'
+  - >-
+    workflow.stories auditable columns per AC-14: state, priority, title, description, blocked_reason, blocked_by_story,
+    points, feature, epic. Note: points and epic do not exist in current schema — this migration adds them via ADD
+    COLUMN IF NOT EXISTS
+  - 'workflow.plans auditable columns per AC-14: status, title, description, priority'
+  - 'System columns explicitly excluded (AC-14): id, created_at, updated_at, file_hash, started_at, completed_at'
+  - SECURITY INVOKER pattern confirmed from 1020_artifact_cascade_triggers.sql
+  - >-
+    GRANT INSERT ON workflow.story_mutation_audit_log to agent_role and lambda_role required — triggers run as SECURITY
+    INVOKER so the calling role must have INSERT rights
+  - Also GRANT USAGE ON SEQUENCE workflow.story_mutation_audit_log_id_seq needed for bigserial
+  - >-
+    Edge Case 3 confirmed: audit_story_mutations writes to a separate table so no recursive loop when
+    plan_archival_cascade bulk-updates stories
+  - >-
+    pgtap test needs a test story in valid state for UPDATE to be accepted — the enforce_state_transition trigger
+    (migration 1001) may reject non-existent state transitions, but direct UPDATE to same state or valid state will work
+  - The 1020 pgtap test uses state = 'backlog' for test stories and 'ready' — same pattern safe to reuse in 1040 tests
+warnings:
+  - >-
+    ARCH-002: points and epic columns are in AC-14 auditable list but not in current schema. Plan adds them via ADD
+    COLUMN IF NOT EXISTS. If this is intentional forward-declaration, confirm with owner before implementation — but
+    since AC-14 is explicitly from autonomous elaboration resolving gap-1, proceeding autonomously.

@@ -1,0 +1,170 @@
+schema: 1
+story_id: CDBE-2030
+timestamp: '2026-03-19T00:00:00Z'
+steps:
+  - id: 1
+    description: >-
+      Write migration 1090_cdbe2030_ingest_story_from_yaml.sql: implement
+      workflow.ingest_story_from_yaml(p_caller_agent_id text, p_story_yaml jsonb) stored procedure with validate_caller
+      guard, JSONB schema validation, recursive dependency depth check (CTE, max depth 5, cycle detection), and
+      idempotent upserts for stories/story_details/story_content/story_dependencies with observability return counts
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+    dependencies: []
+    slice: backend
+  - id: 2
+    description: >-
+      Write pgtap test suite 1090_cdbe2030_ingest_story_from_yaml_test.sql covering: schema structure (function exists,
+      SECURITY INVOKER), happy-path full ingest (new story), idempotent re-ingest (update), story_content upsert by
+      section_name, story_dependencies idempotent behaviour (ON CONFLICT), depth-5 boundary (exactly depth 5 allowed),
+      depth-6 rejection, cycle detection rejection, invalid caller rejection (P0001), JSONB schema validation rejection
+      (P0002 or custom error code)
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe2030_ingest_story_from_yaml_test.sql
+    dependencies:
+      - 1
+    slice: backend
+  - id: 3
+    description: >-
+      Add kb_ingest_story_from_yaml TypeScript CRUD operation: Zod input schema (caller_agent_id, story_yaml as z.record
+      or typed object), function that calls workflow.ingest_story_from_yaml via sql`` template, returns typed {
+      inserted, updated, skipped } counts
+    files:
+      - apps/api/knowledge-base/src/crud-operations/story-ingest-operations.ts
+    dependencies:
+      - 1
+    slice: backend
+  - id: 4
+    description: >-
+      Register MCP tool: add KbIngestStoryFromYamlInputSchema and KbIngestStoryFromYamlResultSchema to
+      story-ingest-operations.ts, add handleKbIngestStoryFromYaml handler to tool-handlers.ts (following
+      handleKbCreateStory pattern: enforceAuthorization, parse, call CRUD, log, return JSON), add
+      kb_ingest_story_from_yaml tool definition to tool-schemas.ts, register handler in toolHandlers map
+    files:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    dependencies:
+      - 3
+    slice: backend
+  - id: 5
+    description: >-
+      Write unit tests for story-ingest-operations.ts and the MCP handler: test Zod schema validation, mock db.execute
+      response, verify return shape, test error propagation from DB errors
+    files:
+      - apps/api/knowledge-base/src/crud-operations/__tests__/story-ingest-operations.test.ts
+    dependencies:
+      - 3
+      - 4
+    slice: backend
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+    action: create
+    reason: Migration implementing the ingest_story_from_yaml stored procedure (AC-1 through AC-4)
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe2030_ingest_story_from_yaml_test.sql
+    action: create
+    reason: pgTAP tests covering all ACs and error paths for the stored procedure
+  - path: apps/api/knowledge-base/src/crud-operations/story-ingest-operations.ts
+    action: create
+    reason: TypeScript CRUD wrapper and Zod schemas for calling the stored procedure from MCP layer
+  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    action: modify
+    reason: Add handleKbIngestStoryFromYaml handler and register kb_ingest_story_from_yaml in toolHandlers map
+  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    action: modify
+    reason: Add kbIngestStoryFromYamlToolDefinition and push to toolDefinitions
+  - path: apps/api/knowledge-base/src/crud-operations/__tests__/story-ingest-operations.test.ts
+    action: create
+    reason: Vitest unit tests for the TypeScript ingest wrapper and MCP handler
+commands_to_run:
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      SQL migration documents JSONB payload shape in COMMENT ON FUNCTION and validates all required keys before parsing;
+      pgtap test HP-1 verifies function signature and schema comment exists
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Migration implements INSERT ON CONFLICT DO UPDATE for stories and story_details, INSERT ON CONFLICT DO UPDATE for
+      story_content keyed on (story_id, section_name); pgtap test HP-2 verifies idempotent re-ingest produces same row
+      count and updated values
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      UNIQUE constraint uq_story_dependency(story_id, depends_on_id) already exists; migration uses ON
+      CONFLICT(story_id, depends_on_id) DO NOTHING for story_dependencies; pgtap test HP-3 verifies duplicate dependency
+      call does not error and produces exactly one row
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Migration implements recursive CTE merging payload dependencies with existing DB dependencies, computes max depth,
+      raises exception for depth > 5 or cycle detected; pgtap tests ED-depth-5 (allowed), ED-depth-6 (rejected),
+      ED-cycle (rejected) verify boundary and cycle cases
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      story_dependencies AC-2 originally specified DELETE+INSERT pattern, but the UNIQUE constraint uq_story_dependency
+      already exists. Should we use ON CONFLICT DO NOTHING (idempotent append) or DELETE+INSERT (replace-all semantics)?
+    decision: >-
+      Use ON CONFLICT(story_id, depends_on_id) DO NOTHING — idempotent append semantics. The UNIQUE constraint is
+      already present and DELETE+INSERT would remove dependencies that are in the DB but not in the incoming payload,
+      which is destructive for partial-update calls. AC-3 explicitly acknowledges the UNIQUE constraint exists and
+      allows either pattern; we choose the safer approach.
+    rationale: >-
+      DELETE+INSERT would silently drop existing dependencies not present in the current payload. The idempotent append
+      pattern preserves existing data and is consistent with how story_content uses ON CONFLICT by section_name. A
+      separate explicit removeStoryDependency operation should be used if deletion is needed.
+    decided_by: planner
+  - id: ARCH-002
+    question: >-
+      The story JSONB payload needs to map to workflow.stories, workflow.story_details, workflow.story_content, and
+      workflow.story_dependencies. Should story_details be an upsert (INSERT ... ON CONFLICT DO UPDATE) or a plain
+      UPDATE?
+    decision: >-
+      Use INSERT ... ON CONFLICT (story_id) DO UPDATE for story_details — same idempotent pattern as stories. This
+      ensures a first-time ingest of a story that has no story_details row yet works correctly without a prior INSERT.
+    rationale: >-
+      A plain UPDATE would silently no-op if the story_details row doesn't exist yet. INSERT ON CONFLICT handles both
+      the new-row and update-in-place cases atomically.
+    decided_by: planner
+  - id: ARCH-003
+    question: >-
+      Should the MCP tool accept story_yaml as a raw JSONB object (z.record) or as a fully typed Zod schema matching the
+      JSONB shape?
+    decision: >-
+      Accept story_yaml as z.record(z.unknown()) at the MCP/TypeScript layer, with runtime JSONB schema validation
+      enforced inside the stored procedure. The stored procedure is the authoritative validator.
+    rationale: >-
+      Duplicating the full JSONB shape as a Zod schema in TypeScript creates a second source of truth that can drift
+      from the SQL. The stored procedure already validates the JSONB shape (AC-1), so the TypeScript layer only needs to
+      ensure the field is present and is an object.
+    decided_by: planner
+complexity: moderate
+notes:
+  - Migration number 1090 is confirmed as next available slot (1080 is last used migration)
+  - >-
+    UNIQUE constraints uq_story_content_section and uq_story_dependency already exist — AC-3 is fully satisfied by
+    existing schema
+  - >-
+    Follow exact pattern from 1013_cdbe2010_stored_procedures.sql: BEGIN/COMMIT wrapper, PERFORM validate_caller,
+    COMMENT ON FUNCTION, GRANT EXECUTE TO agent_role, RAISE NOTICE on completion
+  - >-
+    The recursive depth CTE must merge payload edges with existing DB edges to detect depth violations against the full
+    graph, not just the incoming payload
+  - >-
+    Cycle detection: a cycle exists if a recursive CTE with CYCLE detection clause terminates early, or if start_node
+    appears in descendants — use PostgreSQL CYCLE clause (PG 14+) or manual ancestor tracking
+  - story_details has a 1:1 FK to stories.story_id — use INSERT ... ON CONFLICT (story_id) DO UPDATE SET ...
+  - >-
+    Return type: TABLE(inserted_stories int, updated_stories int, upserted_content int, upserted_details int,
+    inserted_dependencies int, skipped_dependencies int)
+  - pgtap tests must use ROLLBACK at end to keep the test DB clean (same as all other pgtap suites in this codebase)

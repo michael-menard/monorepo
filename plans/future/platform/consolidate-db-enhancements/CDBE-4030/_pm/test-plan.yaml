@@ -1,0 +1,163 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'NOTIFY trigger fires on INSERT to lessons_learned'
+    setup: 'CDBE-4020 merged; worker process running with LISTEN on knowledge_embedding_needed'
+    action: 'INSERT a new row into public.lessons_learned'
+    expected: 'Worker receives pg_notify event with payload {table: "lessons_learned", id: "<uuid>"}'
+    evidence: 'Worker log entry: "Received notification for lessons_learned:<id>"; embedding column populated'
+
+  - id: HP-2
+    title: 'Worker batches notifications and calls EmbeddingClient'
+    setup: 'Worker running; 20 INSERT notifications arrive within 50ms batch window'
+    action: 'All 20 notifications arrive within batchWindowMs=50'
+    expected: 'EmbeddingClient.generateEmbeddingsBatch() called once with array of 20 texts; all 20 rows updated with non-null embedding'
+    evidence: 'Single batch call logged; 20 UPDATE statements executed; embedding IS NOT NULL for all rows'
+
+  - id: HP-3
+    title: 'Backfill populates all NULL embeddings at startup'
+    setup: '100 rows with embedding IS NULL exist across the five tables after CDBE-4020 migration'
+    action: 'Worker starts; backfill runs'
+    expected: 'All 100 rows have embedding IS NOT NULL after backfill completes; startup log shows per-table row counts'
+    evidence: 'SELECT count(*) FROM lessons_learned WHERE embedding IS NULL returns 0; backfill-complete log'
+
+  - id: HP-4
+    title: 'Polling fallback catches rows missed during worker downtime'
+    setup: 'Worker is stopped; 5 rows inserted into adrs; worker restarts'
+    action: 'Worker restarts; polling fallback runs within first 5 minutes'
+    expected: 'All 5 rows now have embedding IS NOT NULL'
+    evidence: 'Polling log entry: "Found 5 NULL embeddings in adrs"; 5 UPDATE statements; embedding IS NOT NULL'
+
+  - id: HP-5
+    title: 'Graceful shutdown completes in-flight batch before exit'
+    setup: 'Worker processing a batch of 10 embeddings'
+    action: 'SIGTERM sent to worker process'
+    expected: 'Worker finishes current batch, releases pg.Client LISTEN connection, exits with code 0'
+    evidence: 'Process exit code 0; log: "Graceful shutdown complete"; no partial embedding writes'
+
+  - id: HP-6
+    title: 'NOTIFY triggers exist on all five tables for INSERT and UPDATE'
+    setup: 'CDBE-4030 migration applied to knowledgebase DB'
+    action: 'pgtap tests run against knowledgebase DB'
+    expected: 'All pgtap assertions pass: triggers present on INSERT and UPDATE for all five tables'
+    evidence: 'pgtap output: 20 tests pass (2 triggers x 5 tables x 2 events = 20 trigger checks + payload assertions)'
+
+error_cases:
+  - id: EC-1
+    title: 'OpenAI API returns 429 rate limit error'
+    setup: 'Worker running; EmbeddingClient mock configured to return 429'
+    action: 'Batch of 10 notifications received; EmbeddingClient throws on first call'
+    expected: 'EmbeddingClient built-in retry fires (exponential backoff); worker does not crash; failure logged if retries exhausted'
+    evidence: 'Worker log: "OpenAI rate limit, retrying"; worker continues processing next batch'
+
+  - id: EC-2
+    title: 'pg.Client LISTEN connection drops unexpectedly'
+    setup: 'Worker running with active LISTEN subscription; DB restarts'
+    action: 'pg.Client emits error event due to connection drop'
+    expected: 'Worker catches client error event; reconnects with exponential backoff; re-subscribes to LISTEN'
+    evidence: 'Log: "LISTEN connection error, reconnecting"; LISTEN re-established; worker continues'
+
+  - id: EC-3
+    title: 'Individual row embedding failure does not crash worker loop'
+    setup: 'Worker running; one row has malformed content that causes embedding error'
+    action: 'Notification arrives for malformed row'
+    expected: 'Error logged for that specific row; worker continues processing next notifications; no process crash'
+    evidence: 'Log: "Failed to embed row <id> in <table>: <error>"; subsequent rows processed normally'
+
+  - id: EC-4
+    title: 'Malformed NOTIFY payload is rejected gracefully'
+    setup: 'Worker listening on knowledge_embedding_needed'
+    action: 'A notification arrives with invalid JSON payload (missing id field)'
+    expected: 'Zod schema validation fails; error logged; notification discarded; worker continues'
+    evidence: 'Log: "Invalid notification payload: <zod error>"; worker still processing valid notifications'
+
+  - id: EC-5
+    title: 'DB UPDATE fails for a specific row'
+    setup: 'Worker has embedding result; DB UPDATE throws transient error'
+    action: 'withRetry() wraps UPDATE; transient error on first attempt'
+    expected: 'withRetry() retries; if all retries exhausted, error logged per row; no crash'
+    evidence: 'Log: "Failed to write embedding for <table>:<id> after N retries"; other rows still written'
+
+edge_cases:
+  - id: ED-1
+    title: 'Polling fallback skips if previous run not complete'
+    setup: 'Polling interval fires; previous polling run is still in progress'
+    action: 'Second polling interval fires while first is still running'
+    expected: 'Second run skipped; log: "Polling run skipped: previous run still in progress"'
+    evidence: 'Single concurrent polling run; no double-batching or duplicate embedding writes'
+
+  - id: ED-2
+    title: 'Batch window triggers on size limit, not just time'
+    setup: 'batchWindowMs=50, batchSize=25; 25 notifications arrive within 10ms'
+    action: '25 notifications buffered'
+    expected: 'Batch fires immediately on size=25 trigger, not waiting for 50ms window'
+    evidence: 'Batch processing log shows trigger reason: "size_limit"; elapsed time < 50ms'
+
+  - id: ED-3
+    title: 'Backfill with zero NULL rows is a no-op'
+    setup: 'All rows in all five tables already have non-null embeddings'
+    action: 'Worker starts; backfill runs'
+    expected: 'Backfill completes immediately; log shows 0 rows processed per table; no API calls'
+    evidence: 'Log: "Backfill complete: 0 rows processed"; EmbeddingClient not called'
+
+  - id: ED-4
+    title: 'Worker starts before CDBE-4020 embedding columns exist'
+    setup: 'CDBE-4020 NOT yet applied; worker attempts to start'
+    action: 'Worker startup queries for embedding IS NULL on a target table'
+    expected: 'Query fails with column-not-found error; worker logs error and exits with non-zero code'
+    evidence: 'Log: "Startup check failed: column embedding does not exist on lessons_learned"'
+
+  - id: ED-5
+    title: 'Backfill inter-batch delay fires for large table'
+    setup: '200 rows with NULL embeddings in lessons_learned; backfillBatchSize=50, backfillDelayMs=500'
+    action: 'Backfill runs'
+    expected: '4 batches processed; 500ms delay between each batch; no OpenAI 429 errors'
+    evidence: 'Log: "Backfill batch 1/4 complete, waiting 500ms"; total time >= 1500ms (3 delays)'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'SELECT count(*) FROM lessons_learned WHERE embedding IS NULL = 0 after backfill'
+      - 'SELECT count(*) FROM adrs WHERE embedding IS NULL = 0 after backfill'
+      - 'SELECT count(*) FROM code_standards WHERE embedding IS NULL = 0 after backfill'
+      - 'SELECT count(*) FROM rules WHERE embedding IS NULL = 0 after backfill'
+      - 'SELECT count(*) FROM cohesion_rules WHERE embedding IS NULL = 0 after backfill'
+      - 'pgtap: 10+ assertions for trigger existence on all five tables'
+      - 'Process exit code 0 on SIGTERM'
+  frontend:
+    # omitted: ui_touched = false
+
+manual_cases:
+  - id: MC-1
+    title: 'End-to-end durability gap test'
+    steps:
+      - 'Start worker process'
+      - 'Stop worker process (simulate downtime)'
+      - 'Insert 3 rows into adrs'
+      - 'Restart worker process'
+      - 'Wait for polling interval (5 minutes or lower in test config)'
+      - 'Check embedding IS NOT NULL for all 3 rows'
+    expected: 'All 3 rows have embeddings populated by polling fallback despite missed NOTIFY events'
+
+fixture_definitions:
+  - name: MockEmbeddingClient
+    type: vitest mock
+    description: 'Implements EmbeddingClient interface; generateEmbeddingsBatch returns deterministic vector arrays; configurable to throw errors for error case tests'
+  - name: MockPgClient
+    type: vitest mock
+    description: 'Simulates pg.Client; captures LISTEN subscription; emits configurable notification events; captures UPDATE queries'
+  - name: NullEmbeddingRows
+    type: DB seed
+    description: 'SQL INSERT statements for 10 rows per table with embedding IS NULL; used in integration tests'
+
+risks:
+  - 'Integration tests require real knowledgebase DB on port 5433 with CDBE-4020 migration applied — CI must provision this'
+  - 'SIGTERM test requires process spawn/kill in test environment — may be fragile in some CI runners'
+  - 'OpenAI rate limit retry tests depend on EmbeddingClient retry config matching expected behavior'
+  - 'Polling skip-if-running guard test requires precise timing control — use fake timers or injectable clock'

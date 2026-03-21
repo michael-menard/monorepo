@@ -30,18 +30,17 @@ export type {
   ContextCacheInvalidateResult,
 } from './context-cache/__types__/index.js'
 
-// Re-export all worktree management tools (WINT-1130)
+// Re-export all worktree management tools (WINT-1130) — sourced from knowledge-base
 export {
   worktreeRegister,
   worktreeGetByStory,
   worktreeListActive,
   worktreeMarkComplete,
-  // Zod schemas (needed by knowledge-base MCP server tool-schemas.ts)
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
-} from './worktree-management/index.js'
+} from '@repo/knowledge-base/worktree-management'
 export type {
   WorktreeRegisterInput,
   WorktreeRegisterOutput,
@@ -52,7 +51,7 @@ export type {
   WorktreeMarkCompleteInput,
   WorktreeMarkCompleteOutput,
   WorktreeRecord,
-} from './worktree-management/index.js'
+} from '@repo/knowledge-base/worktree-management'
 
 // Re-export story compatibility shim tools (WINT-1011, CDBN-3010: DB-only)
 export {
@@ -65,11 +64,6 @@ export {
 // Re-export context pack get tool (WINT-2020)
 export { contextPackGet } from './context-pack/context-pack-get.js'
 
-// Re-export telemetry tools (WINT-3020)
-export { logInvocation } from './telemetry/workflow-log-invocation.js'
-export { WorkflowLogInvocationInputSchema } from './telemetry/__types__/index.js'
-export type { WorkflowLogInvocationInput } from './telemetry/__types__/index.js'
-
-// Note: ML pipeline tools (WINT-0140) are registered directly in the knowledge-base MCP server.
-// They are NOT re-exported through mcp-tools to avoid a cyclic dependency:
-// knowledge-base → mcp-tools → knowledge-base.
+// Re-export telemetry tools (WINT-3020) — sourced from knowledge-base
+export { logInvocation, WorkflowLogInvocationInputSchema } from '@repo/knowledge-base/telemetry'
+export type { WorkflowLogInvocationInput } from '@repo/knowledge-base/telemetry'

@@ -1,0 +1,151 @@
+strategy: pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  db_objects:
+    - workflow.story_state_history (columns: exited_at, duration_seconds)
+    - workflow.validate_story_state_history_insert (trigger function)
+    - trigger: enforce_story_state_history_transition on workflow.story_state_history
+  test_file: apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+
+happy_path_tests:
+  - id: HP-1
+    title: Legal transition accepted — backlog to created
+    setup: >
+      Insert a story into workflow.stories with state='backlog'.
+      Insert a row into workflow.story_state_history with from_state=NULL, to_state='backlog', exited_at=NULL (initial open row).
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-1', 'transition', 'backlog', 'created');
+    expected: INSERT succeeds; row is present in story_state_history with to_state='created'.
+    evidence: SELECT count(*) FROM workflow.story_state_history WHERE story_id='test-story-1' AND to_state='created'; returns 1.
+
+  - id: HP-2
+    title: Previous open row closed on legal transition
+    setup: >
+      Insert a row into story_state_history for story 'test-story-2' with from_state=NULL, to_state='backlog', exited_at=NULL, created_at = NOW() - interval '5 minutes'.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-2', 'transition', 'backlog', 'created');
+    expected: >
+      The previous row for story 'test-story-2' (to_state='backlog') now has exited_at IS NOT NULL
+      and duration_seconds approximately 300 (5 minutes in seconds).
+    evidence: >
+      SELECT exited_at, duration_seconds FROM workflow.story_state_history
+      WHERE story_id='test-story-2' AND to_state='backlog';
+      exited_at IS NOT NULL, duration_seconds BETWEEN 295 AND 305.
+
+  - id: HP-3
+    title: Initial insert with NULL from_state accepted
+    setup: >
+      No prior rows for story 'test-story-3' in story_state_history.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-3', 'transition', NULL, 'backlog');
+    expected: INSERT succeeds; row present with from_state NULL and to_state='backlog'.
+    evidence: SELECT count(*) FROM workflow.story_state_history WHERE story_id='test-story-3' AND from_state IS NULL; returns 1.
+
+  - id: HP-4
+    title: Migration idempotency — second run succeeds
+    setup: Migration 1010 already applied (all objects exist).
+    action: Re-run migration SQL file.
+    expected: All CREATE OR REPLACE FUNCTION and DROP TRIGGER IF EXISTS / CREATE TRIGGER statements complete with exit 0 and RAISE NOTICE confirming replacement.
+    evidence: psql exit code 0; no ERROR lines in output.
+
+error_cases:
+  - id: EC-1
+    title: Illegal transition rejected — completed to in_progress
+    setup: >
+      Insert a row into story_state_history for story 'test-story-bad-1' with to_state='completed', exited_at=NULL.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-bad-1', 'transition', 'completed', 'in_progress');
+    expected: >
+      INSERT raises exception with SQLSTATE 23514 (check_violation) and message identifying 'completed → in_progress'.
+    evidence: throws_ok with SQLSTATE 23514 in pgtap test.
+
+  - id: EC-2
+    title: Illegal transition rejected — backlog to in_qa
+    setup: >
+      Story state history has an open row for story 'test-story-bad-2' with to_state='backlog'.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-bad-2', 'transition', 'backlog', 'in_qa');
+    expected: INSERT raises exception with SQLSTATE 23514.
+    evidence: throws_ok with SQLSTATE 23514 in pgtap test.
+
+  - id: EC-3
+    title: event_type 'state_changed' (invalid value) caught by CHECK constraint
+    setup: None required.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-ec3', 'state_changed', NULL, 'backlog');
+    expected: INSERT fails with CHECK constraint violation (event_type must be one of allowed values).
+    evidence: throws_ok in pgtap test; confirms 'state_changed' is rejected.
+
+edge_cases:
+  - id: ED-1
+    title: No previous open row — duration close skipped gracefully
+    setup: >
+      story_state_history has no rows for story 'test-story-ed1'.
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-ed1', 'transition', NULL, 'backlog');
+    expected: INSERT succeeds; no UPDATE error for missing prior row (trigger handles NOT FOUND gracefully).
+    evidence: Row present; exited_at on prior rows not applicable (no prior rows).
+
+  - id: ED-2
+    title: Multiple open rows — only the most recent is closed
+    setup: >
+      Insert two rows for story 'test-story-ed2': row A (created_at = NOW()-10min, exited_at=NULL)
+      and row B (created_at = NOW()-2min, exited_at=NULL). Both open (edge case: should not normally occur).
+    action: >
+      INSERT INTO workflow.story_state_history (story_id, event_type, from_state, to_state)
+      VALUES ('test-story-ed2', 'transition', 'backlog', 'created');
+    expected: Only the most recent open row (row B) has exited_at set. Row A remains open.
+    evidence: SELECT count(*) WHERE story_id='test-story-ed2' AND exited_at IS NULL = 1 (row A still open); row B has exited_at.
+
+  - id: ED-3
+    title: Trigger operates within existing RLS policies
+    setup: >
+      Connect as agent_role (non-superuser). Attempt to insert a legal transition into story_state_history.
+    action: >
+      SET ROLE agent_role;
+      INSERT INTO workflow.story_state_history (...) VALUES (...legal transition...);
+    expected: Insert succeeds (agent_role has INSERT permission per migration 1005 RLS policies).
+    evidence: No permission denied error; row present.
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - pgtap has_column assertions for exited_at and duration_seconds
+      - pgtap has_trigger assertion for enforce_story_state_history_transition
+      - pgtap throws_ok with SQLSTATE 23514 for illegal transitions
+      - pgtap ok() for legal transition acceptance and exited_at population
+      - psql exit code 0 for idempotency run
+
+manual_cases:
+  - id: MC-1
+    title: Verify event_type CHECK constraint coverage
+    steps:
+      - Connect to KB database
+      - Query information_schema.check_constraints for story_state_history.event_type constraint
+      - Confirm allowed values include 'transition' and 'state_change', do NOT include 'state_changed'
+      - Verify the existing record_state_transition trigger (migration 1001) uses 'state_changed' — confirm this IS currently violating the constraint (pre-existing bug)
+      - Confirm migration 1010 either fixes the constraint or documents the inconsistency
+    expected: Clear understanding of whether the CHECK constraint is enforced on existing data.
+
+fixture_definitions:
+  - name: story_state_history_legal_row
+    type: SQL INSERT
+    description: A row in story_state_history with from_state=NULL, to_state='backlog', exited_at=NULL, created_at=NOW()-5min for use in HP-2 and ED-2 tests.
+  - name: story_state_history_open_row
+    type: SQL INSERT
+    description: A row representing the most recent open state for a story, used to verify exited_at closure.
+
+risks:
+  - RLS policies may prevent test fixture inserts if tests run as non-superuser. Run pgtap tests as superuser or a role with bypass RLS capability.
+  - The existing record_state_transition trigger (migration 1001) inserts with event_type='state_changed' which violates the CHECK constraint. If the CHECK constraint is enforced, this trigger would fail on every state change. Verify actual DB state before writing tests that depend on this trigger.
+  - Recursive trigger concern: the BEFORE INSERT trigger on story_state_history issues an UPDATE on the same table. PostgreSQL does not re-fire BEFORE INSERT triggers on UPDATEs, so recursion is not expected — but verify no BEFORE UPDATE trigger exists on story_state_history.

@@ -1,0 +1,138 @@
+story_id: PIPE-2020
+phase: implementation
+iteration: 1
+generated_at: "2026-03-18T19:17:00Z"
+agent: dev-execute-leader
+
+summary:
+  total_acs: 6
+  covered: 6
+  missing: 0
+  test_result: PASS
+  e2e_exempt: true
+  e2e_exempt_reason: "story_type: infra — pure test coverage story, no UI or live HTTP surface"
+
+steps_executed:
+  - id: ST-1
+    description: "Extend createMockRunners() to return all 5 runners with spies"
+    status: complete
+    files_modified:
+      - tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+
+  - id: ST-2
+    description: "Add job data factory functions for implementation, review, qa stages"
+    status: complete
+    files_modified:
+      - tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+
+  - id: ST-3
+    description: "Add HP-4 (implementation), HP-5 (review with worktreePath fallback), HP-6 (qa) happy path tests"
+    status: complete
+    files_modified:
+      - tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+
+  - id: ST-4
+    description: "Add EC wall clock timeout tests for implementation, review, qa stages"
+    status: complete
+    files_modified:
+      - tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+
+  - id: ST-5
+    description: "Add CB circuit breaker tests for implementation, review, qa stages + isolation test"
+    status: complete
+    files_modified:
+      - tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+
+  - id: ST-6
+    description: "Verify type cast is gone (grep verification only)"
+    status: complete
+    verification_output: "No 'as ReviewPayload' or 'as unknown as' casts found in dispatch-router.ts — only comment confirming removal (PIPE-2010)"
+
+test_results:
+  command: "cd tree/story/PIPE-2020 && pnpm test --filter @repo/pipeline -- --run dispatch-router"
+  outcome: PASS
+  test_files: 1
+  tests_passed: 38
+  tests_failed: 0
+  duration_ms: 16
+
+acceptance_criteria:
+  - id: AC-1
+    description: "createMockRunners() returns all 5 runners with individual spies (devImplementSpy, reviewSpy, qaVerifySpy added)"
+    status: COVERED
+    evidence: "createMockRunners() now returns GraphRunners & { elaborationSpy, storyCreationSpy, devImplementSpy, reviewSpy, qaVerifySpy } — all typed as MockInstance"
+    test_refs:
+      - "HP-4: implementation job routes to runDevImplement()"
+      - "HP-5: review job routes to runReview()"
+      - "HP-6: qa job routes to runQAVerify()"
+
+  - id: AC-2
+    description: "Factory functions exist for implementation, review, qa job data"
+    status: COVERED
+    evidence: "createImplementationJobData(), createReviewJobData(), createQaJobData() added with proper PipelineJobData shapes and mock payloads"
+    test_refs:
+      - "HP-4 tests use createImplementationJobData()"
+      - "HP-5 tests use createReviewJobData() with and without worktreePath"
+      - "HP-6 tests use createQaJobData()"
+
+  - id: AC-3
+    description: "HP-4: implementation stage dispatches runDevImplement() with correct params"
+    status: COVERED
+    evidence: "Test verifies runDevImplement() called with { storyId: 'TEST-003', attempt: 1 } and no other runners called"
+    test_refs:
+      - "HP-4: calls runDevImplement() with storyId and attemptNumber"
+      - "HP-4: does NOT call runElaboration() or runStoryCreation() for implementation jobs"
+      - "HP-4: does NOT call runReview() or runQAVerify() for implementation jobs"
+
+  - id: AC-4
+    description: "HP-5: review stage dispatches runReview() with worktreePath from payload, falls back to empty string"
+    status: COVERED
+    evidence: "Two tests: one with worktreePath present (passes '/path/to/worktree'), one without (falls back to '' per dispatch-router.ts default)"
+    test_refs:
+      - "HP-5: calls runReview() with storyId, worktreePath, featureDir, and attemptNumber"
+      - "HP-5: falls back to empty string for worktreePath when not provided in payload"
+
+  - id: AC-5
+    description: "HP-6: qa stage dispatches runQAVerify() with correct params"
+    status: COVERED
+    evidence: "Test verifies runQAVerify() called with { storyId: 'TEST-005', attempt: 1 } and no other runners called"
+    test_refs:
+      - "HP-6: calls runQAVerify() with storyId and attemptNumber"
+      - "HP-6: does NOT call any other runner for qa jobs"
+
+  - id: AC-6
+    description: "EC wall clock timeout for implementation, review, qa stages"
+    status: COVERED
+    evidence: "Three timeout tests added — each uses a hanging runner for its stage and verifies wall_clock_timeout thrown after vi.advanceTimersByTime(200)"
+    test_refs:
+      - "EC-1 implementation: throws wall_clock_timeout when implementation graph hangs"
+      - "EC-1 review: throws wall_clock_timeout when review graph hangs"
+      - "EC-1 qa: throws wall_clock_timeout when qa graph hangs"
+
+  - id: AC-7
+    description: "CB circuit breaker for implementation, review, qa stages + isolation"
+    status: COVERED
+    evidence: "Four circuit breaker tests: one per new stage (trips circuit, verifies moveToDelayed() called, graph not called) + isolation test confirming implementation circuit trip does not affect review circuit"
+    test_refs:
+      - "CB implementation: calls job.moveToDelayed() when implementation circuit is OPEN"
+      - "CB review: calls job.moveToDelayed() when review circuit is OPEN"
+      - "CB qa: calls job.moveToDelayed() when qa circuit is OPEN"
+      - "CB isolation: tripping implementation circuit does NOT affect review circuit"
+
+  - id: AC-8
+    description: "ST-6: No type cast (as ReviewPayload) in dispatch-router.ts"
+    status: COVERED
+    evidence: "grep confirms no 'as ReviewPayload' or 'as unknown as' casts — PIPE-2010 already removed the cast; only a comment remains"
+    test_refs:
+      - "ST-6 grep verification: no cast found in dispatch-router.ts"
+
+files_modified:
+  - path: tree/story/PIPE-2020/apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    change_type: extended
+    description: "Added 3 job data factories, 5 runner spies, HP-4/HP-5/HP-6 happy path suites, 3 EC timeout tests, 4 CB circuit breaker tests (3 stages + isolation)"
+    lines_before: 634
+    lines_after: 790
+
+e2e:
+  exempt: true
+  reason: "Pure unit test story — no UI, no HTTP endpoints, no browser interaction"

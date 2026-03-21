@@ -1,0 +1,22 @@
+schema: 1
+story_id: CDBE-5020
+timestamp: '2026-03-19T03:35:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+gate:
+  decision: null
+  evaluated_at: null
+  override_reason: null
+  readiness_score: null
+blocked: false
+forced: false
+warnings:
+  - CDBE-5010 must be merged before production deployment (not an implementation blocker)
+  - Migration file directory packages/backend/db/src/migrations/ created as part of step 1
+gen_mode: false
+completed_phases:
+  - setup
+  - plan
+  - execute

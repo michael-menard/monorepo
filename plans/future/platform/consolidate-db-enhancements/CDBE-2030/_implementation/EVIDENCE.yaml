@@ -1,0 +1,102 @@
+story_id: CDBE-2030
+phase: implementation
+iteration: 1
+generated_at: '2026-03-19T09:04:00Z'
+agent: dev-execute-leader
+
+acceptance_criteria:
+  - id: AC-1
+    description: >
+      Define complete JSONB payload schema mapping to workflow.stories, story_details,
+      story_content, story_dependencies
+    status: PASS
+    evidence:
+      - type: sql_migration
+        file: apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+        detail: >
+          Procedure accepts p_story_yaml jsonb with all fields mapped: scalar story fields
+          to workflow.stories, story_dir/file/touches_* to story_details, content array
+          to story_content, dependencies array to story_dependencies.
+      - type: zod_schema
+        file: apps/api/knowledge-base/src/crud-operations/story-ingest-operations.ts
+        detail: KbIngestStoryFromYamlInputSchema defines story_yaml as z.record(z.unknown()) with full doc comment listing all optional keys.
+
+  - id: AC-2
+    description: >
+      Implement idempotent upsert: story_content uses upsert by section_name,
+      story_dependencies uses ON CONFLICT DO NOTHING, story_details uses INSERT ON CONFLICT DO UPDATE
+    status: PASS
+    evidence:
+      - type: sql_migration
+        file: apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+        detail: >
+          Step 4: stories INSERT ON CONFLICT(story_id) DO UPDATE.
+          Step 5: story_details INSERT ON CONFLICT(story_id) DO UPDATE.
+          Step 6: story_content INSERT ON CONFLICT ON CONSTRAINT uq_story_content_section DO UPDATE.
+          Step 7: story_dependencies INSERT ON CONFLICT ON CONSTRAINT uq_story_dependency DO NOTHING.
+      - type: unit_test
+        file: apps/api/knowledge-base/src/crud-operations/__tests__/story-ingest-operations.test.ts
+        detail: MOCK-1/MOCK-2 tests verify inserted_stories vs updated_stories counts; HP-3/HP-4/HP-5 pgTAP tests verify idempotent behavior.
+
+  - id: AC-3
+    description: >
+      UNIQUE constraints already exist (uq_story_content_section, uq_story_dependency) —
+      use ON CONFLICT for idempotency
+    status: PASS
+    evidence:
+      - type: sql_migration
+        file: apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+        detail: >
+          Uses "ON CONFLICT ON CONSTRAINT uq_story_content_section" and
+          "ON CONFLICT ON CONSTRAINT uq_story_dependency" — references existing constraints
+          by name without recreating them.
+      - type: pgtap_test
+        file: apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe2030_ingest_story_from_yaml_test.sql
+        detail: HP-4 verifies no duplicate story_content rows; HP-5 verifies skipped_dependencies count on re-ingest.
+
+  - id: AC-4
+    description: >
+      Recursive CTE depth check against merged graph (payload + existing DB),
+      cycle detection, max depth 5
+    status: PASS
+    evidence:
+      - type: sql_migration
+        file: apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+        detail: >
+          Step 3 uses a recursive CTE (merged_edges + traversal) combining payload deps
+          and existing DB deps. Raises P0004 on cycle, P0005 when depth >= max_depth (5).
+      - type: pgtap_test
+        file: apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe2030_ingest_story_from_yaml_test.sql
+        detail: >
+          HP-6: depth-5 chain accepted (D1→D2→D3→D4→D5→D6).
+          ED-1: depth-6 rejected (P0005).
+          ED-2: cycle detection (P0004) via CYC→D1 + attempt D1→CYC.
+
+build:
+  status: PASS
+  command: pnpm --filter @repo/knowledge-base build
+  output: Clean TypeScript compilation, no errors
+
+unit_tests:
+  status: PASS
+  file: apps/api/knowledge-base/src/crud-operations/__tests__/story-ingest-operations.test.ts
+  passed: 11
+  failed: 0
+  details:
+    - ZOD-1 through ZOD-5: Zod schema validation (required fields, optional fields, type safety)
+    - MOCK-1 through MOCK-4: Mocked DB response shape validation
+    - MSG-1 through MSG-2: Message reflects insert vs update
+
+e2e_tests:
+  status: EXEMPT
+  reason: story_type infra — pure stored procedure + MCP wrapper, no UI or HTTP endpoints
+
+files_created:
+  - apps/api/knowledge-base/src/db/migrations/1090_cdbe2030_ingest_story_from_yaml.sql
+  - apps/api/knowledge-base/src/db/migrations/pgtap/1090_cdbe2030_ingest_story_from_yaml_test.sql
+  - apps/api/knowledge-base/src/crud-operations/story-ingest-operations.ts
+  - apps/api/knowledge-base/src/crud-operations/__tests__/story-ingest-operations.test.ts
+
+files_modified:
+  - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+  - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts

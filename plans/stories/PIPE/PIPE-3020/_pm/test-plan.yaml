@@ -1,0 +1,108 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: 'Setup node creates real git worktree with injectable gitRunner'
+    setup: 'Instantiate createWorktreeSetupNode with mock gitRunner that resolves successfully'
+    action: 'Invoke the node with state containing storyId and worktreeBaseDir'
+    expected: 'gitRunner called with args ["worktree", "add", "-b", "elab/PIPE-3020", "<path>"], state.worktreePath set to real path, state.worktreeSetup === true'
+    evidence: 'Mock gitRunner spy: expect(mockGitRunner).toHaveBeenCalledWith(["worktree", "add", "-b", "elab/PIPE-3020", expect.stringContaining("PIPE-3020")])'
+
+  - id: HP-2
+    title: 'Setup node calls worktreeRegister after successful git worktree add'
+    setup: 'Mock gitRunner resolves OK; mock worktreeRegister returns a valid worktree record'
+    action: 'Invoke setup node'
+    expected: 'worktreeRegister called with { storyId: "PIPE-3020", worktreePath: <path>, branchName: "elab/PIPE-3020" }; state.worktreeSetup === true'
+    evidence: 'Mock spy assertion on worktreeRegister import; check returned state shape'
+
+  - id: HP-3
+    title: 'Teardown node removes worktree and marks complete via worktreeMarkComplete'
+    setup: 'Mock gitRunner resolves OK; mock worktreeGetByStory returns { id: "wt-uuid" }; mock worktreeMarkComplete returns success'
+    action: 'Invoke createWorktreeTeardownNode with state containing worktreePath and storyId'
+    expected: 'gitRunner called with ["worktree", "remove", "--force", <path>]; worktreeMarkComplete called with { worktreeId: "wt-uuid", status: "abandoned" }; state.worktreeTornDown === true'
+    evidence: 'Mock spy assertions; state shape check'
+
+  - id: HP-4
+    title: 'Integration: full setup→teardown lifecycle in isolated os.tmpdir() git repo'
+    setup: 'Create tmp dir via os.tmpdir(); git init; git commit --allow-empty -m "init"; configure ElabStoryConfig with worktreeBaseDir pointing to another tmp dir'
+    action: 'Call setup node factory, then teardown node factory with real gitRunner'
+    expected: 'Worktree directory exists after setup; does not exist after teardown; no thrown errors'
+    evidence: 'fs.existsSync(worktreePath) === true after setup; === false after teardown'
+
+error_cases:
+  - id: EC-1
+    title: 'Setup node returns worktreeSetup: false when git worktree add fails (non-zero exit)'
+    setup: 'Mock gitRunner rejects with error containing exit code 128'
+    action: 'Invoke createWorktreeSetupNode'
+    expected: 'state.worktreeSetup === false, state.worktreePath === null, state.errors contains the git error message'
+    evidence: 'State object assertion after node invocation'
+
+  - id: EC-2
+    title: 'Setup node continues (worktreeSetup remains true) when worktreeRegister returns null'
+    setup: 'Mock gitRunner resolves OK; mock worktreeRegister returns null (registration failure)'
+    action: 'Invoke createWorktreeSetupNode'
+    expected: 'state.worktreeSetup === true (setup not failed); logger.warn called with registration failure message'
+    evidence: 'State assertion + logger.warn spy'
+
+  - id: EC-3
+    title: 'Teardown node emits warning-only when git worktree remove fails'
+    setup: 'Mock gitRunner rejects; mock worktreeGetByStory returns a record'
+    action: 'Invoke createWorktreeTeardownNode'
+    expected: 'state.worktreeTornDown === true; state.workflowSuccess NOT changed; logger.warn called'
+    evidence: 'State shape assertion; workflowSuccess value unchanged'
+
+  - id: EC-4
+    title: 'Teardown node skips worktreeMarkComplete when no worktree record found'
+    setup: 'Mock worktreeGetByStory returns null; mock gitRunner resolves OK'
+    action: 'Invoke createWorktreeTeardownNode'
+    expected: 'worktreeMarkComplete NOT called; logger.warn emitted about missing record; state.worktreeTornDown === true'
+    evidence: 'worktreeMarkComplete mock not called assertion'
+
+edge_cases:
+  - id: ED-1
+    title: 'WINT-9060 warning strings are absent from both node factory implementations'
+    setup: 'Read source of elab-story.ts post-implementation'
+    action: 'Grep for "WINT-9060" in elab-story.ts'
+    expected: 'Zero matches'
+    evidence: 'String search assertion'
+
+  - id: ED-2
+    title: 'worktreeBaseDir from ElabStoryConfig used — hardcoded /tmp/worktrees not present'
+    setup: 'Instantiate setup node with custom worktreeBaseDir (/custom/base)'
+    action: 'Invoke setup node'
+    expected: 'gitRunner called with path containing /custom/base'
+    evidence: 'Mock gitRunner spy arg assertion'
+
+  - id: ED-3
+    title: 'Integration test: git worktree add fails if no initial commit exists'
+    setup: 'Create bare repo (git init only, no commit); attempt setup node with real gitRunner'
+    action: 'Invoke setup node'
+    expected: 'Catches error; state.worktreeSetup === false; no unhandled rejection'
+    evidence: 'Error state assertion; process does not crash'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'state.worktreeSetup === true on success'
+      - 'state.worktreePath matches expected filesystem path'
+      - 'state.worktreeTornDown === true after teardown'
+      - 'state.workflowSuccess not mutated by teardown'
+      - 'gitRunner called with correct args'
+      - 'worktreeRegister called with correct args'
+      - 'worktreeMarkComplete called with worktreeId and status: abandoned'
+manual_cases: []
+fixture_definitions:
+  - name: TempGitRepo
+    type: integration-fixture
+    description: 'Creates os.tmpdir() isolated git repo with initial commit before git worktree add; cleaned up after test'
+  - name: MockGitRunner
+    type: unit-fixture
+    description: 'vi.fn() resolving with { stdout: "", stderr: "", exitCode: 0 } for success scenarios; rejects for failure scenarios'
+risks:
+  - '@repo/logger symlink may be broken in worktree test environments — pre-existing environment artifact, not a regression'
+  - 'worktreeRegister and worktreeMarkComplete MCP tool mocking requires correct module path targeting in vitest'
+  - 'Integration test requires real git CLI in CI environment — should be available in all standard CI runners'

@@ -1,0 +1,144 @@
+feasible: true
+confidence: medium
+rationale: >
+  The core work is well-scoped: one SQL migration (DROP TABLE IF EXISTS public.stories CASCADE),
+  one TypeScript file update (story-similarity.ts), a Zod schema conversion, and a legacy.ts
+  cleanup. The blocking risk is the missing embedding column on workflow.stories — the migration
+  cannot redirect findSimilarStories until this column exists. Assuming CDBN-2022/2023 add it
+  (or this story adds it), the path is clear. Medium confidence because the live DB state of
+  public.stories is uncertain (may already be dropped per baseline snapshot).
+complexity: medium
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (new migration SQL file)'
+    - 'apps/api/knowledge-base/src/search/story-similarity.ts'
+    - 'apps/api/knowledge-base/src/db/schema/legacy.ts'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ (optional pgtap test)'
+    - 'docs/architecture/databases.md'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Run DB migrations against Aurora PostgreSQL via migration runner'
+    - 'Confirm embedding column present on workflow.stories before deploying story-similarity.ts update'
+
+risks:
+  - finding: >
+      workflow.stories lacks embedding vector(1536) and deleted_at columns in current Drizzle
+      schema (workflow.ts line 53 explicitly excludes them). Redirecting story-similarity.ts
+      without these columns will cause a runtime SQL error on every findSimilarStories call.
+    mitigation: >
+      Add embedding vector(1536) and deleted_at timestamptz columns to workflow.stories in this
+      migration (or confirm CDBN-2022/2023 adds them). Use ADD COLUMN IF NOT EXISTS for idempotency.
+      The workflow.plans table already has embedding vector(1536) (workflow.ts line 161) — follow
+      that exact pattern. Create an ivfflat index if vector search performance is required.
+
+  - finding: >
+      public.stories CASCADE drop will silently remove dependent objects: story_audit_trigger,
+      audit_story_changes() function, set_story_completed_at(), set_story_started_at() functions,
+      and indexes (idx_stories_blocked, idx_stories_state). These functions may still be referenced
+      by other code or be orphaned.
+    mitigation: >
+      Before writing the migration, run: SELECT * FROM pg_depend WHERE refobjid =
+      'public.stories'::regclass AND deptype = 'n'. Document all dependent objects in inline SQL
+      comments. Explicitly DROP FUNCTION IF EXISTS for audit_story_changes(), set_story_completed_at(),
+      set_story_started_at() to be intentional rather than relying on CASCADE.
+
+  - finding: >
+      storyDetails in legacy.ts may be imported by active code. If any code queries storyDetails,
+      removing the Drizzle definition will cause a runtime error (Drizzle table object undefined).
+    mitigation: >
+      Run grep -rn "storyDetails" apps/api/knowledge-base/src/ --include="*.ts" before removing.
+      If no imports found, safe to remove. If found, trace to confirm the underlying DB table
+      still exists before removing the definition.
+
+missing_requirements:
+  - >
+    AC-3 requires embedding column on workflow.stories but does not specify whether this story
+    adds the column or relies on CDBN-2022/2023 to add it. PM must clarify: is the embedding
+    column migration in scope for CDBN-2024, or is it a prerequisite from an earlier story?
+
+evidence_expectations:
+  - 'pgtap hasnt_table(''public'', ''stories'', ...) passes after migration'
+  - 'pnpm check-types exits 0 after story-similarity.ts and legacy.ts changes'
+  - 'pnpm test --filter apps/api/knowledge-base passes (all existing + new tests green)'
+  - 'grep -rn "public.stories" apps/api/ --include="*.ts" returns zero results'
+
+subtasks:
+  - id: ST-1
+    title: 'Audit dependent objects and determine embedding column strategy'
+    goal: >
+      Before writing any code: confirm public.stories live state, list cascade-drop dependencies,
+      confirm whether embedding column needs to be added in this story or a predecessor.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+      - 'apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql'
+      - 'apps/api/knowledge-base/src/db/schema/legacy.ts'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-2', 'AC-3']
+    depends_on: none
+    verification: 'Manual DB query: SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema=''public'' AND table_name=''stories'')'
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: 'Write cleanup migration: DROP public.stories and add embedding to workflow.stories'
+    goal: >
+      Create the numbered SQL migration file with DROP TABLE IF EXISTS public.stories CASCADE,
+      explicit DROP FUNCTION IF EXISTS for orphaned functions, and ADD COLUMN IF NOT EXISTS
+      embedding vector(1536) on workflow.stories (if not already present).
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/999_cleanup_duplicate_tables.sql'
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/<next-slot>_cdbn2024_cleanup_public_stories.sql (new file)'
+    acs: ['AC-1', 'AC-2', 'AC-3']
+    depends_on: ST-1
+    verification: 'Run migration; psql -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema=''public'' AND table_name=''stories'')" returns false'
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: 'Convert SimilarStoryResult interface to Zod schema and redirect query to workflow.stories'
+    goal: >
+      Update story-similarity.ts: replace SimilarStoryResult interface with
+      SimilarStoryResultSchema = z.object({...}) + z.infer<>, update FROM public.stories
+      to FROM workflow.stories, adjust deleted_at and embedding IS NOT NULL filters to match
+      actual workflow.stories columns.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/search/story-similarity.ts'
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/search/story-similarity.ts'
+    acs: ['AC-4', 'AC-5', 'AC-6']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter apps/api/knowledge-base && pnpm test --filter apps/api/knowledge-base'
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: 'Remove or annotate storyDetails in legacy.ts; update docs/architecture/databases.md'
+    goal: >
+      Audit storyDetails import sites; if no active imports, remove the Drizzle definition.
+      Update legacy.ts with DEPRECATED comments for any remaining orphaned definitions.
+      Update docs/architecture/databases.md to remove public.stories references and confirm
+      workflow.stories as canonical.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/schema/legacy.ts'
+      - 'docs/architecture/databases.md'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/schema/legacy.ts'
+      - 'docs/architecture/databases.md'
+    acs: ['AC-8', 'AC-9']
+    depends_on: ST-3
+    verification: 'pnpm check-types; grep -rn "storyDetails" apps/api/ --include="*.ts" (confirm no active imports)'
+    estimated_tokens: 4000
+
+  - id: ST-5
+    title: 'Write pgtap test and run full quality gates'
+    goal: >
+      Write optional pgtap test confirming hasnt_table(''public'', ''stories'', ...).
+      Run pnpm check-types, pnpm test, /lint-fix to confirm all quality gates pass.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1004_valid_transitions_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/<slot>_cdbn2024_cleanup_public_stories_test.sql (new file)'
+    acs: ['AC-7', 'AC-10', 'AC-11', 'AC-12']
+    depends_on: ST-4
+    verification: 'pnpm test:all; /lint-fix confirms no new errors'
+    estimated_tokens: 3000

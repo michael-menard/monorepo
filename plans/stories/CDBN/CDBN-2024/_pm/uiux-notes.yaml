@@ -1,0 +1,7 @@
+skipped: true
+reason: >
+  CDBN-2024 is a pure backend database migration and TypeScript code cleanup story.
+  It has no user interface surface. The only observable behavior change is that story
+  similarity search will function correctly (it was likely broken while querying the
+  dropped public.stories table). No frontend components, pages, or API endpoints visible
+  to end users are touched by this story.

@@ -1,0 +1,121 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: 'All 8 ORCH stories exist in KB and are linked to autonomous-pipeline-test-plan'
+    setup: 'KB is available; all 8 ORCH stories have been imported'
+    action: 'Call kb_list_stories with plan_slug: autonomous-pipeline-test-plan'
+    expected: 'Returns 8 stories: ORCH-1010, ORCH-2010, ORCH-2020, ORCH-3010, ORCH-3020, ORCH-3030, ORCH-4010, ORCH-4020 — all with feature: autonomous-pipeline-test-plan'
+    evidence: 'kb_list_stories response contains all 8 story IDs'
+  - id: HP-2
+    title: 'ORCH-2020 elaborated and advanced to elab state'
+    setup: 'ORCH-2020 is in backlog state; KB is available'
+    action: 'Run elaboration workflow on ORCH-2020; write ELABORATION artifact; call kb_update_story_status(ORCH-2020, elab)'
+    expected: 'kb_get_story(ORCH-2020) returns state: elab with ELABORATION artifact present'
+    evidence: 'KB query shows state=elab and artifact of type ELABORATION exists for ORCH-2020'
+  - id: HP-3
+    title: 'ORCH-3020 elaborated and advanced to elab state'
+    setup: 'ORCH-3020 is in backlog state; ORCH-3010 completed story available as reference'
+    action: 'Run elaboration workflow on ORCH-3020; write ELABORATION artifact; call kb_update_story_status(ORCH-3020, elab)'
+    expected: 'kb_get_story(ORCH-3020) returns state: elab with ELABORATION artifact present'
+    evidence: 'KB query shows state=elab and artifact of type ELABORATION exists for ORCH-3020'
+  - id: HP-4
+    title: 'ORCH-3030 elaborated and advanced to elab state'
+    setup: 'ORCH-3030 is in backlog state; StoryRepository interface available in orchestrator package'
+    action: 'Run elaboration workflow on ORCH-3030; write ELABORATION artifact; call kb_update_story_status(ORCH-3030, elab)'
+    expected: 'kb_get_story(ORCH-3030) returns state: elab with ELABORATION artifact present'
+    evidence: 'KB query shows state=elab and artifact of type ELABORATION exists for ORCH-3030'
+  - id: HP-5
+    title: 'ORCH-4010 elaborated and advanced to elab state'
+    setup: 'ORCH-4010 is in backlog state; ORCH-4020 (E2E patterns) available as canonical reference'
+    action: 'Run elaboration workflow on ORCH-4010; write ELABORATION artifact; call kb_update_story_status(ORCH-4010, elab)'
+    expected: 'kb_get_story(ORCH-4010) returns state: elab with ELABORATION artifact present'
+    evidence: 'KB query shows state=elab and artifact of type ELABORATION exists for ORCH-4010'
+  - id: HP-6
+    title: 'All 4 elaborated stories advanced to ready state'
+    setup: 'ORCH-2020, ORCH-3020, ORCH-3030, ORCH-4010 all in elab state with ELABORATION artifacts'
+    action: 'Call kb_update_story_status for each story with state: ready'
+    expected: 'All 4 stories show state: ready in KB'
+    evidence: 'kb_get_story for each returns state=ready; autonomous pipeline scheduler can now pick them up'
+error_cases:
+  - id: EC-1
+    title: 'KB unavailable during audit phase'
+    setup: 'KB MCP server is unreachable'
+    action: 'Attempt kb_list_stories with plan_slug: autonomous-pipeline-test-plan'
+    expected: 'MCP tool returns error; story execution is blocked; error logged; story remains in current state'
+    evidence: 'No state transitions occur; error surfaced to operator'
+  - id: EC-2
+    title: 'Elaboration artifact write fails before state advancement'
+    setup: 'ORCH-2020 in backlog; KB write fails mid-operation'
+    action: 'Attempt to write ELABORATION artifact for ORCH-2020'
+    expected: 'State remains backlog — do NOT advance to elab without confirmed artifact presence; retry required'
+    evidence: 'kb_get_story(ORCH-2020) still shows state=backlog; no orphaned state advancement'
+  - id: EC-3
+    title: 'Ghost state used in kb_update_story_status call'
+    setup: 'Implementation agent attempts to use ready_to_work or in_review instead of canonical state'
+    action: 'Call kb_update_story_status with state: ready_to_work'
+    expected: 'Zod validation fails; canonical state enum error returned; story state unchanged'
+    evidence: 'Error message references canonical state enum; state not updated'
+edge_cases:
+  - id: ED-1
+    title: 'One ORCH story already in elab or ready state at audit time'
+    setup: 'ORCH-2020 was previously partially elaborated and advanced to elab by another process'
+    action: 'Audit finds ORCH-2020 is already in elab state'
+    expected: 'Skip elaboration for already-elaborated story; log idempotent skip; do not overwrite existing ELABORATION artifact'
+    evidence: 'ORCH-2020 remains in elab state; no duplicate artifact written'
+  - id: ED-2
+    title: 'Full orchestrator test suite run attempted'
+    setup: 'Developer runs pnpm test --filter @repo/orchestrator without scoping'
+    action: 'Full suite runs including health-gate.integration.test.ts'
+    expected: '13 pre-existing failures appear — this is expected and does NOT indicate a regression from PIPE-1030 work'
+    evidence: 'Scoped test commands per story pass; full suite failures are pre-existing'
+  - id: ED-3
+    title: 'ORCH-4010 elaboration references ORCH-4020 patterns (inverted dependency)'
+    setup: 'ORCH-4010 is being elaborated; ORCH-4020 is already completed'
+    action: 'Elaboration agent reads ORCH-4020 story as canonical reference for full-graph mock patterns'
+    expected: 'ORCH-4010 ELABORATION artifact includes references to ORCH-4020 patterns; no conflict noted'
+    evidence: 'ELABORATION artifact for ORCH-4010 explicitly cites ORCH-4020 as pattern source'
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'kb_list_stories(plan_slug: autonomous-pipeline-test-plan) returns 8 stories'
+      - 'kb_get_story(ORCH-2020).state === elab after elaboration'
+      - 'kb_get_story(ORCH-3020).state === elab after elaboration'
+      - 'kb_get_story(ORCH-3030).state === elab after elaboration'
+      - 'kb_get_story(ORCH-4010).state === elab after elaboration'
+      - 'kb_get_story(ORCH-2020).state === ready after advancement'
+      - 'kb_get_story(ORCH-3020).state === ready after advancement'
+      - 'kb_get_story(ORCH-3030).state === ready after advancement'
+      - 'kb_get_story(ORCH-4010).state === ready after advancement'
+      - 'ELABORATION artifact exists for each of the 4 stories in KB'
+manual_cases:
+  - id: MC-1
+    title: 'Verify no ORCH filesystem directories created'
+    steps:
+      - 'After PIPE-1030 execution, check plans/stories/ORCH/ for any new directories'
+      - 'Verify no new story.yaml files were created'
+      - 'Confirm all state changes happened only in KB'
+    expected: 'No new ORCH filesystem directories exist; KB-only operations confirmed'
+  - id: MC-2
+    title: 'Verify plan_story_links integrity'
+    steps:
+      - 'Query KB for plan_story_links where plan_slug = autonomous-pipeline-test-plan'
+      - 'Confirm all 8 ORCH stories are linked'
+      - 'Confirm no duplicate links exist'
+    expected: 'Exactly 8 story links present for the plan'
+fixture_definitions:
+  - name: orch-story-audit-result
+    type: KB query result
+    description: 'Result of kb_list_stories(plan_slug: autonomous-pipeline-test-plan) — used to validate all 8 stories present'
+  - name: elaboration-artifact
+    type: KB artifact
+    description: 'ELABORATION type artifact written to KB for each backlog ORCH story during elaboration phase'
+risks:
+  - 'KB MCP tool unavailability blocks all phases — no offline fallback possible'
+  - 'Ghost state enum values in agent context may cause Zod validation failures (mitigation: always use canonical states)'
+  - 'Pre-existing 13 failures in orchestrator health-gate tests may confuse pass/fail baseline (mitigation: use scoped test commands per story)'
+  - 'ORCH-4010/ORCH-4020 dependency inversion requires careful AC wording to avoid circular references'

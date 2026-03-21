@@ -1,0 +1,41 @@
+schema: 1
+story_id: CDBE-4020
+timestamp: "2026-03-18T00:00:00Z"
+phase: setup
+iteration: 0
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - apps/api/knowledge-base/**
+  - packages/backend/orchestrator/**
+risk_flags:
+  migrations: true
+  security: true
+  performance: true
+  external_apis: false
+  auth: false
+  payments: false
+summary: Add nullable embedding vector(1536) columns and HNSW indexes to five knowledge tables (lessons_learned, adrs, code_standards, rules, cohesion_rules) for semantic search
+elaboration: completed
+blocking_dependencies:
+  - CDBE-4010
+key_constraints:
+  - Manual SQL authoring required — db:generate fails
+  - Migration slot must be verified at implementation time (expect 1011)
+  - CREATE INDEX CONCURRENTLY cannot run inside transaction
+  - pgvector >= 0.5.0 required for HNSW
+  - DB safety preamble checking current_database() = 'knowledgebase'
+  - All tables in public schema
+  - Embedding columns nullable for post-migration worker backfill
+reuse_patterns:
+  - Safety preamble from 1007_pipe_0020_ghost_state_audit.sql (lines 28-35)
+  - Vector customType from kb.ts (lines 24-39)
+  - Index pattern from 1002_artifact_precondition_index.sql
+  - pgtap structure from 1007_pipe_0020_ghost_state_audit_test.sql

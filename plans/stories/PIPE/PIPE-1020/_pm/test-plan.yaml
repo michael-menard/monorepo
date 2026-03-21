@@ -1,0 +1,122 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: 'Audit finds gap and links all missing APIP stories'
+    setup: |
+      PIPE-1010 is completed. All APIP-prefixed stories exist in the KB stories table.
+      plan_story_links has 0 rows for plan_slug='autonomous-pipeline'.
+    action: |
+      1. Run kb_list_stories(plan_slug: 'autonomous-pipeline', limit: 100) → note linked_count = 0
+      2. Run kb_list_stories(feature: 'platform') filtered to APIP-prefix → note total_count = N
+      3. Execute bulk INSERT INTO plan_story_links (plan_slug, story_id, link_type)
+         SELECT 'autonomous-pipeline', s.story_id, 'spawned_from'
+         FROM stories s
+         WHERE s.story_id LIKE 'APIP-%'
+         ON CONFLICT (plan_slug, story_id) DO NOTHING
+      4. Run kb_list_stories(plan_slug: 'autonomous-pipeline', limit: 100) again
+    expected: |
+      Post-execution count = N (total APIP stories).
+      newly_linked = N, already_linked = 0, gap_resolved = true.
+    evidence: 'kb_list_stories response shows count = N after insert'
+  - id: HP-2
+    title: 'Audit finds no gap — verification-only pass'
+    setup: |
+      PIPE-1010 is completed. All APIP stories exist in KB.
+      plan_story_links already has rows for all APIP stories for plan_slug='autonomous-pipeline'.
+    action: |
+      1. Run kb_list_stories(plan_slug: 'autonomous-pipeline', limit: 100) → note count = N
+      2. Run total APIP count query → total = N
+      3. gap_count = 0 → skip INSERT
+      4. Write count report: apip_stories_in_kb=N, already_linked=N, newly_linked=0, gap_resolved=true
+    expected: |
+      No rows inserted. Count report reflects 0 newly_linked.
+    evidence: 'Count report file written; no plan_story_links INSERT executed'
+error_cases:
+  - id: EC-1
+    title: 'PIPE-1010 not completed — APIP stories missing from KB'
+    setup: |
+      PIPE-1010 is still in backlog state. APIP stories do not exist in KB stories table.
+    action: |
+      Attempt to run bulk INSERT into plan_story_links for APIP story IDs.
+    expected: |
+      Foreign key violation: story_id FK on plan_story_links references stories table.
+      Executor aborts and documents: "PIPE-1010 must complete before PIPE-1020 can execute."
+    evidence: 'DB error or pre-condition check prevents execution'
+  - id: EC-2
+    title: 'Partial gap — some APIP stories linked, others not'
+    setup: |
+      PIPE-1010 completed. 30 of 43 APIP stories have plan_story_links rows.
+      13 stories are missing from plan_story_links.
+    action: |
+      1. Audit: linked_count = 30, total_count = 43, gap_count = 13
+      2. Execute INSERT with ON CONFLICT DO NOTHING
+      3. Post-audit: count = 43
+    expected: |
+      13 rows inserted, 30 skipped by ON CONFLICT. Final count = 43.
+    evidence: 'Count report: newly_linked=13, already_linked=30, gap_resolved=true'
+edge_cases:
+  - id: ED-1
+    title: 'Idempotency — running linking operation twice produces no duplicates'
+    setup: |
+      Full link set already applied. All 43 APIP stories linked to autonomous-pipeline.
+    action: |
+      Re-run the bulk INSERT with ON CONFLICT (plan_slug, story_id) DO NOTHING.
+    expected: |
+      0 rows inserted on second run. plan_story_links count unchanged.
+    evidence: 'DB reports 0 rows affected; post-audit count = 43 unchanged'
+  - id: ED-2
+    title: 'Cancelled story APIP-1030 included in link set'
+    setup: |
+      APIP-1030 exists in KB with state=cancelled. It has no plan_story_links row yet.
+    action: |
+      Bulk INSERT includes APIP-1030 (all APIP-prefix stories, regardless of state).
+    expected: |
+      APIP-1030 gets a plan_story_links row with link_type='spawned_from'.
+      Decision documented: cancelled stories are included in plan links (they were part of the plan's history).
+    evidence: 'plan_story_links contains row for (autonomous-pipeline, APIP-1030, spawned_from)'
+  - id: ED-3
+    title: 'No story state fields modified during linking'
+    setup: |
+      Run the full linking operation across all 43 APIP stories.
+    action: |
+      After linking, query KB for all APIP story states.
+    expected: |
+      No story state has changed. Linking chore only inserts plan_story_links rows.
+    evidence: 'kb_get_story for all APIP stories shows same state as before execution'
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'kb_list_stories(plan_slug: autonomous-pipeline, limit: 100).count equals total APIP story count in KB'
+      - 'plan_story_links INSERT returns rows_inserted count matching gap_count'
+      - 'Second INSERT run returns 0 rows (idempotency)'
+  frontend: null
+manual_cases:
+  - id: MC-1
+    title: 'Verify count report is written and accurate'
+    steps:
+      - 'Execute linking operation'
+      - 'Read count report (written by executor as a logged summary)'
+      - 'Confirm fields: apip_stories_in_kb, already_linked, newly_linked, gap_resolved are all present'
+    expected: 'All four count fields are populated with non-null integers; gap_resolved is boolean true'
+  - id: MC-2
+    title: 'Confirm no filesystem artifacts created'
+    steps:
+      - 'After execution, check plans/stories/PIPE/PIPE-1020/ directory'
+      - 'Check for any newly created .yaml story files, worktree directories, or WORK-ORDER.md'
+    expected: 'No new filesystem artifacts created beyond the _pm/ working files already present'
+fixture_definitions:
+  - name: apip_stories_kb_fixture
+    type: KB state
+    description: 'Set of APIP-prefixed story IDs in the KB stories table (post PIPE-1010 completion)'
+  - name: plan_story_links_baseline
+    type: DB state
+    description: 'Snapshot of plan_story_links rows for plan_slug=autonomous-pipeline before execution'
+risks:
+  - 'PIPE-1010 not yet completed — FK constraint will reject inserts for non-existent story_ids'
+  - 'plan_story_links unique constraint requires exact idempotency pattern; any INSERT without ON CONFLICT DO NOTHING will error on re-run'
+  - 'As of 2026-03-19, 43 APIP stories may already be linked — executor must audit before inserting to avoid false newly_linked count'

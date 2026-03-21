@@ -1,0 +1,140 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'dispatchReviewStory() dispatches a ready_for_qa story as a review stage job'
+    setup: 'makeQueue() mock, makeKbDeps() with updateStatus returning {updated: true}, story in state ready_for_qa'
+    action: 'Call scheduler.dispatchReviewStory(story, 1)'
+    expected: 'queue.add() called with jobId "STORY-001:review:1", stage "review", KB state advanced before enqueue'
+    evidence: 'vi.spyOn(queue, "add") assert called once with correct jobId; vi.spyOn(kbDeps, "updateStatus") assert called before queue.add()'
+
+  - id: HP-2
+    title: 'dispatchQaStory() dispatches an in_qa-eligible story as a qa stage job'
+    setup: 'makeQueue() mock, makeKbDeps() with updateStatus returning {updated: true}, story in correct QA-trigger state'
+    action: 'Call scheduler.dispatchQaStory(story, 1)'
+    expected: 'queue.add() called with jobId "STORY-001:qa:1", stage "qa", KB state advanced before enqueue'
+    evidence: 'vi.spyOn(queue, "add") assert called once; jobId format verified as {storyId}:qa:1'
+
+  - id: HP-3
+    title: 'runOnce() dispatches implementation, review, and QA stories in a single cycle'
+    setup: 'Three eligible stories: one in state "ready", one in "ready_for_qa", one in QA-trigger state; maxConcurrent = 10'
+    action: 'Call scheduler.runOnce()'
+    expected: 'dispatchStory(), dispatchReviewStory(), and dispatchQaStory() each called once'
+    evidence: 'vi.spyOn() on each dispatch method; assert all three called in a single runOnce() invocation'
+
+  - id: HP-4
+    title: 'getEligibleReviewStories() returns stories in ready_for_qa with no unresolved dependencies'
+    setup: 'DB with two stories in ready_for_qa, one with a blocking dependency'
+    action: 'Call scheduler.getEligibleReviewStories(5)'
+    expected: 'Returns only the story with no unresolved dependencies'
+    evidence: 'Assert returned array length = 1; assert story.state = "ready_for_qa"'
+
+  - id: HP-5
+    title: 'getEligibleQaStories() returns stories in QA-trigger state with no unresolved dependencies'
+    setup: 'DB with two stories in QA-trigger state, one with a blocking dependency'
+    action: 'Call scheduler.getEligibleQaStories(5)'
+    expected: 'Returns only the story with no unresolved dependencies'
+    evidence: 'Assert returned array length = 1; assert correct state value'
+
+  - id: HP-6
+    title: 'finishBeforeNewStart ordering applies to review eligible list'
+    setup: 'finishBeforeNewStart: true, one story already in in_review, one story in ready_for_qa'
+    action: 'Call scheduler.runOnce()'
+    expected: 'No new review stories dispatched (finish-before-new-start prevents new dispatch while one is active)'
+    evidence: 'vi.spyOn(scheduler, "dispatchReviewStory") assert not called'
+
+error_cases:
+  - id: EC-1
+    title: 'dispatchReviewStory() does NOT call queue.add() when KB advance returns updated: false'
+    setup: 'makeKbDeps() with updateStatus returning {updated: false}, story in ready_for_qa'
+    action: 'Call scheduler.dispatchReviewStory(story, 1)'
+    expected: 'queue.add() is NOT called; warning logged'
+    evidence: 'vi.spyOn(queue, "add") assert not called; vi.spyOn(logger, "warn") assert called once'
+
+  - id: EC-2
+    title: 'dispatchQaStory() does NOT call queue.add() when KB advance returns updated: false'
+    setup: 'makeKbDeps() with updateStatus returning {updated: false}, story in QA-trigger state'
+    action: 'Call scheduler.dispatchQaStory(story, 1)'
+    expected: 'queue.add() is NOT called; warning logged'
+    evidence: 'vi.spyOn(queue, "add") assert not called'
+
+  - id: EC-3
+    title: 'runOnce() handles zero eligible review stories gracefully'
+    setup: 'No stories in ready_for_qa state; one story in "ready" state'
+    action: 'Call scheduler.runOnce()'
+    expected: 'Only implementation dispatch runs; no errors thrown'
+    evidence: 'vi.spyOn(scheduler, "dispatchReviewStory") assert not called; no thrown exceptions'
+
+  - id: EC-4
+    title: 'runOnce() handles zero eligible QA stories gracefully'
+    setup: 'No stories in QA-trigger state'
+    action: 'Call scheduler.runOnce()'
+    expected: 'Implementation and review dispatch run normally; no errors thrown'
+    evidence: 'vi.spyOn(scheduler, "dispatchQaStory") assert not called; process completes'
+
+edge_cases:
+  - id: ED-1
+    title: 'strictFinishBeforeNewStart applies to QA eligible list (same as implementation)'
+    setup: 'strictFinishBeforeNewStart: true, one story already in_qa processing, one new story in QA-trigger state'
+    action: 'Call scheduler.runOnce()'
+    expected: 'New QA story not dispatched because strictFinishBeforeNewStart prevents it'
+    evidence: 'vi.spyOn(scheduler, "dispatchQaStory") assert not called for new story'
+
+  - id: ED-2
+    title: 'review and QA dispatch use correct jobId thread format'
+    setup: 'Story with id "ABC-123" in ready_for_qa and a story in QA-trigger state; attemptNumber = 3'
+    action: 'Call dispatchReviewStory(reviewStory, 3) and dispatchQaStory(qaStory, 3)'
+    expected: 'jobId is "ABC-123:review:3" and "XYZ-456:qa:3" respectively'
+    evidence: 'Assert queue.add() first argument contains correct jobId in options'
+
+  - id: ED-3
+    title: 'maxConcurrent ceiling shared across implementation + review + QA dispatch'
+    setup: 'maxConcurrent = 2, queue reports 2 active jobs; stories available in ready, ready_for_qa, and QA-trigger states'
+    action: 'Call scheduler.runOnce()'
+    expected: 'No new jobs dispatched (ceiling reached)'
+    evidence: 'vi.spyOn on all three dispatch methods assert not called'
+
+  - id: ED-4
+    title: 'ReviewPayload includes worktreePath and featureDir (even if empty string defaults)'
+    setup: 'Story in ready_for_qa with no worktree allocation persisted in KB'
+    action: 'Call scheduler.dispatchReviewStory(story, 1)'
+    expected: 'queue.add() called with payload containing worktreePath (empty string or actual path) and featureDir'
+    evidence: 'Assert queue.add() options.data.payload.worktreePath is defined (string type); assert payload.featureDir is defined'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'queue.add() called with correct jobId format {storyId}:{stage}:{attemptNumber}'
+      - 'KB updateStatus called BEFORE queue.add() in all dispatch paths'
+      - 'dispatchReviewStory/dispatchQaStory not called when KB returns updated: false'
+      - 'TypeScript compilation passes: pnpm check-types --filter @repo/pipeline exits 0'
+      - 'All scheduler unit tests pass: pnpm test --filter @repo/pipeline exits 0'
+
+manual_cases: []
+
+fixture_definitions:
+  - name: makeQueue
+    type: vitest mock
+    description: 'Creates a mock BullMQ Queue with add() spy; existing helper in scheduler.test.ts'
+  - name: makeStory
+    type: factory function
+    description: 'Creates a StoryRow with overridable fields; existing helper in scheduler.test.ts'
+  - name: makeKbDeps
+    type: vitest mock
+    description: 'Creates mock StoryCrudDeps with configurable updateStatus return value; existing helper'
+  - name: reviewStory
+    type: factory function
+    description: 'makeStory() override with state: "ready_for_qa" for review dispatch tests'
+  - name: qaStory
+    type: factory function
+    description: 'makeStory() override with state: QA-trigger state for QA dispatch tests'
+
+risks:
+  - 'QA trigger state ambiguity: the canonical state for dispatching QA jobs needs to be confirmed against the state machine before tests can be written — seed notes this as unresolved'
+  - 'worktreePath sourcing: tests must match implementation choice (empty string vs KB-stored path); defer test fixture value until implementation confirms approach'
+  - 'Shared maxConcurrent ceiling: test must mock queue.getJobCounts() or equivalent to simulate active job count; verify this method exists on makeQueue() mock'

@@ -1,0 +1,121 @@
+feasible: true
+confidence: high
+rationale: >
+  This story is a well-scoped database migration with clearly defined patterns to follow.
+  The vector customType already exists in kb.ts, the migration safety preamble pattern is
+  established, and the pgtap test structure has a gold-standard reference. The primary
+  technical risk is the CREATE INDEX CONCURRENTLY transaction-block constraint, which is
+  well-documented in the seed and has a known mitigation. CDBE-4010 blocking dependency
+  means implementation cannot start until that story merges, but elaboration is fully
+  unblocked. Complexity is medium (5 Drizzle table updates + SQL migration with 5 HNSW
+  indexes + pgtap test file).
+
+complexity: medium
+
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/schema/kb.ts — Drizzle schema (5 table definitions updated)'
+    - 'apps/api/knowledge-base/src/db/migrations/ — new SQL migration file (slot 1011)'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ — new pgtap test file'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Run migration against knowledgebase DB (port 5435) via pnpm db:migrate or manual psql'
+    - 'Confirm pgvector >= 0.5.0 is installed before applying migration'
+    - 'HNSW index build time: minimal at expected row counts (< 1000 per table), but monitor with RAISE NOTICE row count output'
+
+risks:
+  - finding: 'CREATE INDEX CONCURRENTLY cannot run inside a transaction block in PostgreSQL'
+    mitigation: >
+      Structure migration SQL so each CREATE INDEX CONCURRENTLY statement is a top-level
+      statement, NOT wrapped in BEGIN/COMMIT. The ALTER TABLE ADD COLUMN operations can be
+      in a transaction, but each HNSW index creation must be outside any explicit
+      transaction block. Pattern: safety preamble DO block, then ALTER TABLE statements
+      (optionally in transaction), then each CREATE INDEX CONCURRENTLY as a standalone
+      top-level statement.
+
+  - finding: 'CDBE-4010 blocking dependency — vector customType import path must be verified'
+    mitigation: >
+      Do not begin ST-1 (write migration SQL) until CDBE-4010 is merged and the vector
+      customType in kb.ts is confirmed stable. The customType already exists in kb.ts
+      (lines 24-39) and can be reused directly — no new definition needed. Elaboration
+      is fully unblocked.
+
+  - finding: 'Migration slot 1011 assumed but must be verified at implementation time'
+    mitigation: >
+      Run ls apps/api/knowledge-base/src/db/migrations/ | grep -v 999 | sort | tail -5
+      at implementation start. Update all filenames, COMMENT ON prefixes, and pgtap test
+      references to match the confirmed free slot number. Do not hardcode 1011 in story
+      artifacts.
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'psql output showing zero ERROR lines when migration applied to knowledgebase DB'
+  - 'pg_indexes query returning 5 rows with indexdef containing ''USING hnsw'' for all five tables'
+  - 'pgtap test pg_prove output: all assertions pass'
+  - 'pnpm check-types --filter @repo/knowledge-base exits 0 after kb.ts update'
+  - 'Second migration run produces zero errors (idempotency)'
+
+subtasks:
+  - id: ST-1
+    title: 'Author migration SQL with safety preamble, ADD COLUMN, and HNSW indexes'
+    goal: >
+      Write migration file 1011_cdbe4020_embedding_columns_knowledge_tables.sql (verify
+      slot at implementation time) with: (a) DB safety preamble DO block, (b) pgvector
+      version guard, (c) pre-flight row count RAISE NOTICE for all five tables,
+      (d) ALTER TABLE ADD COLUMN IF NOT EXISTS embedding public.vector(1536) for each
+      table, (e) COMMENT ON COLUMN for each column, (f) CREATE INDEX CONCURRENTLY IF
+      NOT EXISTS USING hnsw for each table (outside transaction, with m=16
+      ef_construction=64 comment).
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql (NEW)'
+    acs:
+      - 'AC-1'
+      - 'AC-2'
+      - 'AC-3'
+      - 'AC-4'
+      - 'AC-5'
+      - 'AC-8'
+      - 'AC-9'
+    depends_on: none
+    verification: 'Apply migration to knowledgebase DB and confirm zero errors; run migration twice for idempotency'
+    estimated_tokens: 12000
+
+  - id: ST-2
+    title: 'Update kb.ts Drizzle schema — add embedding column to five table definitions'
+    goal: >
+      Add `embedding: vector('embedding', { dimensions: 1536 })` to the adrs,
+      codeStandards, cohesionRules, lessonsLearned, and rules table definitions in
+      kb.ts. Re-export inferred types for all five modified tables. Run pnpm check-types
+      to verify zero TypeScript errors.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/schema/kb.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/schema/kb.ts'
+    acs:
+      - 'AC-6'
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 4000
+
+  - id: ST-3
+    title: 'Write pgtap test file for migration 1011'
+    goal: >
+      Write pgtap test file 1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+      (matching migration slot) asserting: (a) embedding column exists on all five
+      tables with type USER-DEFINED (col_type_is), (b) HNSW indexes exist on all five
+      tables with indexdef containing USING hnsw (has_index + pg_indexes query),
+      (c) embedding column is nullable on all five tables (col_is_nullable).
+      Follow structure from gold-standard 1007_pipe_0020_ghost_state_audit_test.sql.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql (NEW)'
+    acs:
+      - 'AC-7'
+    depends_on: ST-1
+    verification: 'pg_prove output shows all assertions pass against a DB with migration 1011 applied'
+    estimated_tokens: 6000

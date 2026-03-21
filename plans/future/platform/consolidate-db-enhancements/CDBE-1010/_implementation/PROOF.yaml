@@ -1,0 +1,58 @@
+story_id: CDBE-1010
+title: Valid Transitions INSERT Trigger on story_state_history
+status: complete
+pr_number: 535
+pr_url: https://github.com/michael-menard/monorepo/pull/535
+branch: story/CDBE-1010
+files_created:
+  - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+  - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+acceptance_criteria:
+  AC-1:
+    status: pass
+    evidence: ADD COLUMN IF NOT EXISTS exited_at timestamptz
+  AC-2:
+    status: pass
+    evidence: ADD COLUMN IF NOT EXISTS duration_seconds numeric(12,3)
+  AC-3:
+    status: pass
+    evidence: SECURITY INVOKER declared + COMMENT ON FUNCTION documents it
+  AC-4:
+    status: pass
+    evidence: NOT EXISTS subquery with COALESCE(__NULL__) pattern
+  AC-5:
+    status: pass
+    evidence: RAISE EXCEPTION with ERRCODE=23514 (check_violation)
+  AC-6:
+    status: pass
+    evidence: UPDATE exited_at=NOW(), duration_seconds=EXTRACT(EPOCH)
+  AC-7:
+    status: pass
+    evidence: NULL from_state branch skips row closure
+  AC-8:
+    status: pass
+    evidence: BEFORE INSERT trigger on story_state_history
+  AC-9:
+    status: pass
+    evidence: DROP TRIGGER IF EXISTS + CREATE TRIGGER
+  AC-10:
+    status: pass
+    evidence: COMMENT ON for columns, index, function, trigger
+  AC-11:
+    status: pass
+    evidence: 19 pgtap tests covering all scenarios
+  AC-12:
+    status: pass
+    evidence: All DDL uses IF NOT EXISTS/CREATE OR REPLACE
+  AC-13:
+    status: pass
+    evidence: record_state_transition fixed + backfill + new trigger uses transition
+  AC-14:
+    status: pass
+    evidence: GRANT UPDATE ON story_state_history TO agent_role
+e2e_tests:
+  status: exempt
+  reason: Pure database migration - no API or UI surface
+pgtap_tests:
+  count: 19
+  file: pgtap/1010_story_state_history_trigger_test.sql

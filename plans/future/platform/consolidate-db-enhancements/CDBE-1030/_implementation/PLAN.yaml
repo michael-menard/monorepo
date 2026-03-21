@@ -1,0 +1,241 @@
+schema: 2
+story_id: CDBE-1030
+timestamp: '2026-03-19T12:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Add superseded_at column and partial index to artifacts.story_artifacts
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+    dependencies: []
+    slice: backend
+    verification: grep -c 'superseded_at' apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    acs_covered:
+      - AC-1
+      - AC-12
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Add AC-14 pre-condition guard DO block verifying backlog→deferred exists in workflow.valid_transitions, plus AC-15
+      INSERT of the transition if absent
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      grep -c 'backlog.*deferred\|deferred.*backlog'
+      apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    acs_covered:
+      - AC-14
+      - AC-15
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement Trigger 1: artifacts.supersede_prior_artifact_version() function, artifact_versions_supersede BEFORE
+      INSERT trigger, COMMENT ON all objects, GRANT UPDATE (superseded_at) to agent_role
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      grep -c 'supersede_prior_artifact_version\|artifact_versions_supersede\|GRANT UPDATE.*superseded_at'
+      apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-10
+      - AC-11
+      - AC-16
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement Trigger 2: workflow.archive_plan_stories() AFTER UPDATE function, plan_archival_cascade trigger, COMMENT
+      ON all objects
+    files:
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      grep -c 'archive_plan_stories\|plan_archival_cascade'
+      apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write pgtap test file 1020_artifact_cascade_triggers_test.sql with SAVEPOINT+DO block guards, all behavioral
+      assertions from AC-13
+    files:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    dependencies:
+      - 3
+      - 4
+    slice: backend
+    verification: >-
+      grep -c 'SAVEPOINT\|has_trigger\|has_column\|lives_ok\|ok('
+      apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql
+    acs_covered:
+      - AC-13
+files_to_change:
+  - path: apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    action: create
+    reason: >-
+      New migration: adds superseded_at column, partial index, backlog→deferred valid_transitions guard+insert, Trigger
+      1 (artifact supersession BEFORE INSERT), Trigger 2 (plan archival cascade AFTER UPDATE), GRANT UPDATE to
+      agent_role
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql
+    action: create
+    reason: pgtap test file for migration 1020 covering all AC-13 test scenarios with SAVEPOINT+DO block guards
+commands_to_run:
+  - command: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql
+    when: after migration file is written
+    required: true
+  - command: >-
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1020_artifact_cascade_triggers_test.sql |
+      pg_prove
+    when: after both files are written and migration is applied
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Migration contains ALTER TABLE artifacts.story_artifacts ADD COLUMN IF NOT EXISTS superseded_at timestamptz with
+      COMMENT ON COLUMN
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Function artifacts.supersede_prior_artifact_version() created with CREATE OR REPLACE, SECURITY INVOKER, performs
+      UPDATE ... SET superseded_at = NOW() on prior non-superseded row
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: Trigger function also executes UPDATE workflow.stories SET updated_at = NOW() WHERE story_id = NEW.story_id
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      BEFORE INSERT trigger artifact_versions_supersede on artifacts.story_artifacts created with DROP TRIGGER IF EXISTS
+      / CREATE TRIGGER pattern
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: 'pgtap test ED-1: lives_ok for first artifact insert (no prior row, trigger is silent no-op)'
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Function workflow.archive_plan_stories() created with CREATE OR REPLACE, SECURITY INVOKER, checks NEW.status =
+      'archived' and OLD.status IS DISTINCT FROM NEW.status, bulk UPDATEs stories
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      AFTER UPDATE trigger plan_archival_cascade on workflow.plans created with DROP TRIGGER IF EXISTS / CREATE TRIGGER;
+      function returns NULL
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: 'pgtap test ED-3: lives_ok for plan archive with zero linked backlog stories'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: 'pgtap test ED-5: non-archived status change does not modify story states'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Migration contains COMMENT ON FUNCTION for both functions, COMMENT ON TRIGGER for both triggers, COMMENT ON COLUMN
+      for superseded_at, all citing migration 1020
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: >-
+      All DDL uses CREATE OR REPLACE FUNCTION, DROP TRIGGER IF EXISTS, ADD COLUMN IF NOT EXISTS, CREATE INDEX IF NOT
+      EXISTS; pgtap idempotency test passes (HP-3)
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      CREATE INDEX IF NOT EXISTS idx_story_artifacts_active_versions ON artifacts.story_artifacts (story_id,
+      artifact_type, created_at DESC) WHERE superseded_at IS NULL with COMMENT ON INDEX
+    evidence_type: file
+  - ac_id: AC-13
+    planned_evidence: >-
+      pgtap test file at pgtap/1020_artifact_cascade_triggers_test.sql with BEGIN/SELECT plan(N)/.../ROLLBACK structure;
+      all SAVEPOINT+DO block guards; has_column, has_trigger, has_index, lives_ok, ok() assertions covering HP-1, HP-2,
+      HP-3, ED-1 through ED-6
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: >-
+      Migration contains DO $$ block before trigger functions that checks valid_transitions for backlog→deferred and
+      raises EXCEPTION if absent
+    evidence_type: file
+  - ac_id: AC-15
+    planned_evidence: >-
+      AC-15 (autonomously added): Migration inserts backlog→deferred row into valid_transitions ON CONFLICT DO NOTHING
+      if not already present, ensuring AC-14 guard passes on deployment
+    evidence_type: file
+  - ac_id: AC-16
+    planned_evidence: >-
+      AC-16 (autonomously added): Migration includes GRANT UPDATE (superseded_at) ON artifacts.story_artifacts TO
+      agent_role
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      workflow.plans.status type: the story document says plan_status_enum (PostgreSQL ENUM), but the actual schema uses
+      text with CHECK constraint. Which comparison form should the trigger use?
+    decision: >-
+      Use text comparison: NEW.status = 'archived' (no cast needed, column is text). The OLD.status IS DISTINCT FROM
+      NEW.status guard works on text columns.
+    rationale: >-
+      Direct schema inspection of 999_full_schema_baseline.sql line 1224 confirms status is text with CONSTRAINT
+      plans_status_check CHECK (status = ANY (ARRAY[...])). The story document's claim of plan_status_enum is incorrect.
+      Text comparison is simpler and correct.
+    decided_by: auto
+  - id: ARCH-002
+    question: >-
+      AC-15 prerequisite handling: should migration 1020 INSERT the backlog→deferred transition, or only raise an error
+      if absent?
+    decision: >-
+      Migration 1020 inserts the backlog→deferred row using INSERT ... ON CONFLICT DO NOTHING before the pre-condition
+      guard check, ensuring idempotent self-healing deployment. The guard still validates afterward.
+    rationale: >-
+      AC-15 (autonomously added during elab) explicitly says implementation must insert this row. The story non-goals
+      say 'prefer flagging absence with an error' but AC-15 overrides this for the specific backlog→deferred row. Using
+      INSERT ... ON CONFLICT DO NOTHING is idempotent.
+    decided_by: auto
+complexity: moderate
+notes:
+  - Migration slot 1020 is confirmed available (ls output shows last slot is 1010).
+  - workflow.plans.status is TEXT (not a PostgreSQL ENUM) — use plain string comparison in Trigger 2.
+  - idx_plan_story_links_plan_slug and idx_plan_story_links_story_id indexes confirmed present in 999 baseline.
+  - artifacts.story_artifacts has NO superseded_at column in baseline — must be added in this migration.
+  - SAVEPOINT + DO block pattern is MANDATORY for all CREATE TRIGGER DDL in pgtap test file (KB lesson 23ea4ba2).
+  - >-
+    deferred is NOT currently in valid_transitions (1004 seed data confirms only cancelled maps from backlog). AC-15
+    adds it.
+  - Both trigger functions use SECURITY INVOKER explicitly per CDBE-1010 pattern.
+  - >-
+    Trigger 2 AFTER UPDATE fires record_state_transition (1001/1010) which inserts story_state_history — requires
+    backlog→deferred in valid_transitions or will fail with 23514.
+  - >-
+    GRANT UPDATE (superseded_at) ON artifacts.story_artifacts TO agent_role required per AC-16 (SECURITY INVOKER means
+    trigger runs as caller role).
+  - 'Trigger 1 migration order: ADD COLUMN → CREATE INDEX → CREATE OR REPLACE FUNCTION → DROP/CREATE TRIGGER.'
+  - >-
+    Migration order overall: INSERT backlog→deferred transition (AC-15) → pre-condition guard (AC-14) → Trigger 1 DDL
+    (ST-1, ST-3) → Trigger 2 DDL (ST-4) → GRANT (AC-16).

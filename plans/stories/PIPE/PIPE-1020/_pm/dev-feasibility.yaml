@@ -1,0 +1,74 @@
+feasible: true
+confidence: high
+rationale: >
+  PIPE-1020 is a straightforward KB data-linking chore. The plan_story_links table, its unique
+  constraint, and the ON CONFLICT DO NOTHING idempotency pattern are all established. The
+  migrate-plans-to-kb.ts script provides a direct template (lines 419-426). The only execution
+  risk is the dependency on PIPE-1010 completing first — which is a sequencing concern, not a
+  feasibility blocker. The story itself is implementable in a single SQL statement or a short script.
+complexity: low
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/scripts/ (pattern reference only — no file modification needed)'
+    - 'KB postgres: workflow.plan_story_links table (INSERT only)'
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: 'PIPE-1010 must complete before PIPE-1020 can execute (FK dependency)'
+    mitigation: >
+      Pre-condition check: verify kb_list_stories(feature: 'platform') returns APIP-prefix stories
+      before attempting any plan_story_links INSERT. Abort and document if APIP stories not found.
+  - finding: 'As of 2026-03-19, 43 APIP stories may already be fully linked'
+    mitigation: >
+      Always audit current state first. If gap_count = 0, skip INSERT and close as verification pass.
+      Do not assume 0 rows exist — read from KB before writing.
+missing_requirements: []
+evidence_expectations:
+  - 'kb_list_stories(plan_slug: autonomous-pipeline, limit: 100) count equals total APIP story count'
+  - 'Written count report: apip_stories_in_kb, already_linked, newly_linked, gap_resolved'
+  - 'Confirmation that no story state fields were modified'
+subtasks:
+  - id: ST-1
+    title: 'Audit current plan_story_links state for autonomous-pipeline'
+    goal: >
+      Query KB for (a) count of APIP stories currently linked to autonomous-pipeline via
+      plan_story_links, and (b) total APIP story count in KB. Compute gap_count.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+    files_to_modify: []
+    acs: ['AC-1']
+    depends_on: none
+    verification: >
+      kb_list_stories(plan_slug: autonomous-pipeline, limit: 100) returns a count.
+      A second query for all APIP-prefixed stories in KB returns total count.
+      gap_count = total - linked.
+    estimated_tokens: 3000
+  - id: ST-2
+    title: 'Insert missing plan_story_links rows (if gap > 0)'
+    goal: >
+      For each APIP story ID not yet linked to autonomous-pipeline, insert a row into
+      plan_story_links with plan_slug='autonomous-pipeline', link_type='spawned_from',
+      using ON CONFLICT (plan_slug, story_id) DO NOTHING. Include cancelled stories (APIP-1030).
+    files_to_read:
+      - 'apps/api/knowledge-base/src/scripts/migrate-plans-to-kb.ts'
+    files_to_modify: []
+    acs: ['AC-2', 'AC-7']
+    depends_on: ST-1
+    verification: >
+      Bulk INSERT executes without error. ON CONFLICT ensures idempotency.
+      Post-insert kb_list_stories count equals total APIP count.
+    estimated_tokens: 4000
+  - id: ST-3
+    title: 'Write count report and verify post-execution state'
+    goal: >
+      After linking (or after confirming no gap), produce a count report with:
+      apip_stories_in_kb, already_linked, newly_linked, gap_resolved.
+      Run post-execution kb_list_stories to confirm full coverage.
+    files_to_read: []
+    files_to_modify: []
+    acs: ['AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-8']
+    depends_on: ST-2
+    verification: >
+      Count report fields all populated. Post-execution count = total APIP stories.
+      No story state fields changed. No filesystem artifacts created.
+    estimated_tokens: 2000

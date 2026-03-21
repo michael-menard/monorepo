@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  CDBE-1010 is a pure PostgreSQL database migration story. No user interface components
+  are created or modified. The only user-observable effect is that invalid state transitions
+  submitted to workflow.story_state_history are rejected at the database level with a clear
+  error, rather than silently persisting invalid data. No design review is required.

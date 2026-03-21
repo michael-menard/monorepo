@@ -1,0 +1,234 @@
+strategy: pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'resolve_blocker soft-deletes the target blocker row and reports fully_unblocked=true when no remaining active blockers'
+    setup: |
+      Insert a workflow.stories row ('TEST-2020-STORY1').
+      Insert one row into workflow.story_blockers with story_id='TEST-2020-STORY1',
+      blocked_by_story_id='TEST-2020-OTHER', deleted_at=NULL.
+      Insert a valid agent into workflow.allowed_agents (agent_id='test-agent-2020', active=true).
+    action: |
+      SELECT * FROM workflow.resolve_blocker(<blocker_id>, 'test-agent-2020', 'resolved in test');
+    expected: |
+      - The target row in workflow.story_blockers now has deleted_at IS NOT NULL.
+      - Function returns row with story_id='TEST-2020-STORY1' and fully_unblocked=true.
+    evidence: |
+      ok(deleted_at IS NOT NULL, 'blocker row soft-deleted');
+      is(fully_unblocked, true, 'fully_unblocked=true when only blocker resolved');
+
+  - id: HP-2
+    title: 'resolve_blocker reports fully_unblocked=false when other active blockers remain'
+    setup: |
+      Insert 'TEST-2020-STORY2' story.
+      Insert two blocker rows: blocker_A and blocker_B for same story_id. Both deleted_at=NULL.
+    action: |
+      SELECT * FROM workflow.resolve_blocker(<blocker_A_id>, 'test-agent-2020', 'first resolved');
+    expected: |
+      - blocker_A row has deleted_at IS NOT NULL.
+      - blocker_B row still has deleted_at IS NULL.
+      - Function returns fully_unblocked=false.
+    evidence: |
+      isnt(deleted_at, NULL, 'blocker_A soft-deleted');
+      is((SELECT deleted_at FROM workflow.story_blockers WHERE id=blocker_B_id), NULL::timestamptz, 'blocker_B still active');
+      is(fully_unblocked, false, 'fully_unblocked=false while another active blocker exists');
+
+  - id: HP-3
+    title: 'complete_artifact inserts a new artifact row on first call — trigger fires, no prior supersession'
+    setup: |
+      Insert 'TEST-2020-ART-STORY' story.
+      Ensure no prior artifacts exist for (story_id, artifact_type, artifact_name, iteration).
+    action: |
+      PERFORM workflow.complete_artifact('TEST-2020-ART-STORY','plan','PLAN.yaml','implementation',0,'checksum-abc','test-agent-2020',NULL);
+    expected: |
+      - One row exists in artifacts.story_artifacts for the given (story_id, type, name, iteration).
+      - superseded_at IS NULL (first insert, no prior version to supersede).
+    evidence: |
+      is((SELECT COUNT(*) FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY'), 1::bigint, 'one artifact row inserted');
+      is((SELECT superseded_at FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY' LIMIT 1), NULL::timestamptz, 'no supersession on first insert');
+
+  - id: HP-4
+    title: 'complete_artifact upserts on second call for same (story_id, type, name, iteration) — no duplicate, DO UPDATE fires'
+    setup: |
+      From HP-3: one artifact row already exists with checksum='checksum-abc'.
+    action: |
+      PERFORM workflow.complete_artifact('TEST-2020-ART-STORY','plan','PLAN.yaml','implementation',0,'checksum-xyz','test-agent-2020','{"note":"updated"}'::jsonb);
+    expected: |
+      - Still only one row in artifacts.story_artifacts for (story_id, type, name, iteration=0).
+      - Row's summary = '{"note":"updated"}' and phase = 'implementation' (updated via DO UPDATE).
+      - No unique constraint violation raised.
+    evidence: |
+      is((SELECT COUNT(*) FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY'), 1::bigint, 'still exactly one artifact row after upsert');
+      is((SELECT (summary->>'note') FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY'), 'updated', 'summary updated via DO UPDATE');
+
+  - id: HP-5
+    title: 'complete_artifact new iteration triggers supersession of prior active version via artifact_versions_supersede trigger'
+    setup: |
+      From HP-3: iteration=0 row exists for artifact_name='PLAN.yaml'. superseded_at IS NULL.
+    action: |
+      PERFORM workflow.complete_artifact('TEST-2020-ART-STORY','plan','PLAN.yaml','implementation',1,'checksum-v2','test-agent-2020',NULL);
+    expected: |
+      - Iteration=0 row now has superseded_at IS NOT NULL (trigger fired on INSERT for iteration=1).
+      - Iteration=1 row has superseded_at IS NULL (newest active version).
+    evidence: |
+      isnt((SELECT superseded_at FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY' AND iteration=0), NULL::timestamptz, 'iteration=0 superseded after iteration=1 inserted');
+      is((SELECT superseded_at FROM artifacts.story_artifacts WHERE story_id='TEST-2020-ART-STORY' AND iteration=1), NULL::timestamptz, 'iteration=1 is current active version');
+
+error_cases:
+  - id: EC-1
+    title: 'resolve_blocker raises P0001 for unknown caller_agent_id'
+    setup: |
+      Insert a valid blocker row. Use caller_agent_id='unknown-agent-that-does-not-exist'.
+    action: |
+      SELECT * FROM workflow.resolve_blocker(<blocker_id>, 'unknown-agent-that-does-not-exist', 'test');
+    expected: |
+      Function raises SQLSTATE P0001 before any mutation.
+      blocker row deleted_at remains NULL (no mutation occurred).
+    evidence: |
+      throws_ok($$SELECT * FROM workflow.resolve_blocker(...)$$, 'P0001', 'unknown caller raises P0001');
+
+  - id: EC-2
+    title: 'resolve_blocker raises exception when blocker_id does not exist'
+    setup: |
+      Use a random UUID that does not correspond to any workflow.story_blockers row.
+    action: |
+      SELECT * FROM workflow.resolve_blocker('00000000-0000-0000-0000-000000000000'::uuid, 'test-agent-2020', 'test');
+    expected: |
+      Function raises an informative exception ('Blocker not found: ...').
+    evidence: |
+      throws_ok($$...$$, NULL, 'non-existent blocker_id raises exception');
+
+  - id: EC-3
+    title: 'resolve_blocker raises exception when blocker is already soft-deleted'
+    setup: |
+      Insert a blocker row with deleted_at already set to NOW().
+    action: |
+      SELECT * FROM workflow.resolve_blocker(<already_deleted_id>, 'test-agent-2020', 'test');
+    expected: |
+      Function raises informative exception (e.g., 'Blocker already resolved: ...').
+      No state change occurs.
+    evidence: |
+      throws_ok($$...$$, NULL, 'already-resolved blocker raises exception');
+
+  - id: EC-4
+    title: 'complete_artifact raises P0001 for unknown caller_agent_id'
+    setup: |
+      Use caller_agent_id='ghost-agent-9999' not in workflow.allowed_agents.
+    action: |
+      PERFORM workflow.complete_artifact('TEST-2020-ART-STORY','plan','PLAN.yaml','implementation',0,'checksum','ghost-agent-9999',NULL);
+    expected: |
+      Function raises SQLSTATE P0001 before any mutation.
+      No artifact row inserted.
+    evidence: |
+      throws_ok($$PERFORM workflow.complete_artifact(...)$$, 'P0001', 'unknown caller raises P0001');
+
+  - id: EC-5
+    title: 'complete_artifact raises check constraint violation (SQLSTATE 23514) for invalid artifact_type'
+    setup: |
+      Use artifact_type='invalid-type-xyz' not in the artifacts.story_artifacts CHECK constraint enum.
+    action: |
+      PERFORM workflow.complete_artifact('TEST-2020-ART-STORY','invalid-type-xyz','file.yaml','implementation',0,'checksum','test-agent-2020',NULL);
+    expected: |
+      INSERT raises SQLSTATE 23514 (check_violation) from the table CHECK constraint.
+    evidence: |
+      throws_ok($$PERFORM workflow.complete_artifact(...)$$, '23514', 'invalid artifact_type raises check_violation');
+
+edge_cases:
+  - id: ED-1
+    title: 'resolve_blocker last-of-many: soft-delete last active blocker returns fully_unblocked=true'
+    setup: |
+      Insert story 'TEST-2020-MULTI'. Insert 3 blocker rows (A, B, C). Soft-delete A and B first.
+    action: |
+      SELECT * FROM workflow.resolve_blocker(<blocker_C_id>, 'test-agent-2020', 'final resolution');
+    expected: |
+      fully_unblocked=true because no remaining active blockers (deleted_at IS NULL) for story.
+    evidence: |
+      is(fully_unblocked, true, 'fully_unblocked=true after last active blocker resolved');
+
+  - id: ED-2
+    title: 'complete_artifact upsert path does NOT re-fire artifact_versions_supersede trigger (DO UPDATE not INSERT)'
+    setup: |
+      Insert iteration=0 and iteration=1 rows for (story_id, type, name). iteration=0 has superseded_at set.
+      iteration=1 is active (superseded_at IS NULL).
+    action: |
+      Call complete_artifact for (story_id, type, name, iteration=1) again — triggers DO UPDATE path.
+    expected: |
+      - iteration=1 superseded_at remains NULL (trigger NOT re-fired on DO UPDATE).
+      - No additional supersession occurs.
+    evidence: |
+      is((SELECT superseded_at FROM artifacts.story_artifacts WHERE ... AND iteration=1), NULL::timestamptz, 'DO UPDATE path does not re-fire BEFORE INSERT trigger');
+
+  - id: ED-3
+    title: 'Migration idempotency — second run of CDBE-2020 migration exits without error'
+    setup: |
+      Apply migration once. Both functions exist.
+    action: |
+      Run migration SQL a second time (or run each CREATE OR REPLACE FUNCTION statement again).
+    expected: |
+      No error raised. Functions are replaced cleanly. RAISE NOTICE completion block fires.
+    evidence: |
+      lives_ok($$CREATE OR REPLACE FUNCTION workflow.resolve_blocker(...)$$, 'CREATE OR REPLACE is idempotent');
+      lives_ok($$CREATE OR REPLACE FUNCTION workflow.complete_artifact(...)$$, 'CREATE OR REPLACE is idempotent');
+
+  - id: ED-4
+    title: 'Pre-condition guard blocks migration when workflow.validate_caller does not exist'
+    setup: |
+      Drop workflow.validate_caller function from schema (or test against clean DB without 1005).
+    action: |
+      Run the migration DO block pre-condition guard in isolation.
+    expected: |
+      RAISE EXCEPTION with message citing '2020: Pre-condition failed — workflow.validate_caller() not found.'
+    evidence: |
+      Verified by manual inspection or targeted pgtap DO block test.
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'workflow.resolve_blocker exists in pg_proc (has_function check)'
+      - 'workflow.complete_artifact exists in pg_proc (has_function check)'
+      - 'Both functions have prosecdef=false (SECURITY INVOKER)'
+      - 'GRANT EXECUTE on both functions to agent_role verified via has_function or information_schema.role_routine_grants'
+      - 'workflow.story_blockers.resolution_notes column existence — dev-feasibility decision determines whether present'
+  frontend:
+    # omitted — ui_touched: false
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify RAISE NOTICE completion block output at migration execution time'
+    steps:
+      - Run migration SQL against test DB and capture psql output.
+      - Confirm RAISE NOTICE confirms both functions installed.
+    expected: 'psql output contains completion notice citing both resolve_blocker and complete_artifact.'
+
+  - id: MC-2
+    title: 'Verify GRANT EXECUTE on both functions to agent_role'
+    steps:
+      - Connect as agent_role to test DB.
+      - Attempt to call workflow.resolve_blocker with a valid agent and a test blocker row.
+      - Attempt to call workflow.complete_artifact with valid args.
+    expected: 'Both functions execute without permission denied errors when called as agent_role.'
+
+fixture_definitions:
+  - name: test-agent-2020
+    type: workflow.allowed_agents row
+    description: 'Active agent row inserted for test isolation. agent_id=test-agent-2020, active=true.'
+  - name: TEST-2020-STORY1
+    type: workflow.stories row
+    description: 'Minimal story row with story_id=TEST-2020-STORY1, feature=cdbe-2020-test, state=backlog.'
+  - name: test-blocker-active
+    type: workflow.story_blockers row
+    description: 'Active blocker row (deleted_at=NULL) pointing to TEST-2020-STORY1.'
+  - name: TEST-2020-ART-STORY
+    type: workflow.stories row
+    description: 'Minimal story row used for complete_artifact tests.'
+
+risks:
+  - 'resolution_notes column: if workflow.story_blockers does not have this column, AC-3 parameter silently discards the value or the function signature must be updated. Dev-feasibility must confirm column existence (migration 1050 analysis shows it does NOT exist — dev must add ALTER TABLE or adjust signature).'
+  - 'Migration slot: test must reference the correct migration number. File should be named XXXX_resolve_blocker_complete_artifact.sql where XXXX is confirmed at implementation time.'
+  - 'artifact_type CHECK constraint: pgtap test EC-5 must use a known-invalid artifact_type. The actual enum values must be inspected from migration 999 baseline to pick a safe invalid value.'
+  - 'pgtap concurrency test cannot be done within a single connection — concurrency simulation relies on verifying ON CONFLICT semantics in same-transaction upsert tests (HP-4) rather than literal parallel connections.'

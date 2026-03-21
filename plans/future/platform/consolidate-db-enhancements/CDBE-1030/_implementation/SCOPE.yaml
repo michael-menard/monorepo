@@ -1,0 +1,25 @@
+---
+schema: 1
+story_id: CDBE-1030
+timestamp: '2026-03-19T00:00:00Z'
+gen_mode: false
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+touched_paths_globs:
+  - 'apps/api/knowledge-base/src/db/migrations/**'
+  - 'apps/api/knowledge-base/src/db/migrations/pgtap/**'
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: true
+summary: 'Add PostgreSQL triggers for artifact version supersession and plan archival cascade'
+elaboration: completed

@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  CDBE-3010 is a pure database DDL migration story. It creates a SQL view
+  (workflow.stories_current) with no user-facing UI surface, no API endpoints,
+  and no frontend components. No UI/UX review is applicable.

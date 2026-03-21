@@ -1,0 +1,154 @@
+feasible: true
+confidence: high
+rationale: >
+  This is a well-scoped pure SQL migration story with clear prerequisites already met:
+  valid_transitions table (migration 1004) is deployed with 54 rows, RLS on story_state_history
+  (migration 1005) is live, and the pgtap harness (CDBE-0010) is operational. The trigger pattern
+  follows the established model from migration 1001. The only complication is the pre-existing
+  event_type CHECK constraint inconsistency, which must be addressed in this migration. No new
+  packages, no API changes, no UI work — purely additive SQL.
+complexity: medium
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/db/migrations/ (new migration file 1010)
+    - apps/api/knowledge-base/src/db/migrations/pgtap/ (new test file 1010_*_test.sql)
+  endpoints: []
+  deploy_touchpoints:
+    - Apply migration 1010 to KB database (psql or Flyway)
+    - Run pgtap test suite to verify trigger behavior
+    - Confirm idempotency by running migration a second time
+
+risks:
+  - finding: >
+      Recursive trigger risk: the BEFORE INSERT trigger on story_state_history issues an UPDATE
+      on the same table to close the previous open row. PostgreSQL does not re-invoke BEFORE INSERT
+      triggers on UPDATEs, so this is safe — but must be confirmed that no BEFORE UPDATE trigger
+      exists on story_state_history that could cause issues.
+    mitigation: >
+      Check pg_trigger for any BEFORE UPDATE triggers on workflow.story_state_history before
+      finalizing the migration. Currently none exist (only the insert trigger is being added).
+
+  - finding: >
+      event_type CHECK constraint inconsistency: the existing record_state_transition trigger
+      (migration 1001) inserts with event_type='state_changed' which is NOT in the CHECK constraint
+      allowed values (['state_change', 'transition', 'phase_change', 'assignment', 'blocker',
+      'metadata_version']). If the CHECK constraint is enforced, existing state transitions would
+      fail. This pre-existing bug must be resolved in migration 1010.
+    mitigation: >
+      Migration 1010 should: (1) use event_type='transition' for any inserts in the new trigger,
+      (2) investigate whether the CHECK constraint is currently NOT VALID or was added after data,
+      and (3) optionally fix the CHECK constraint or the existing trigger's event_type value.
+      Recommended: update record_state_transition (migration 1001 function) to use 'state_change'
+      and update any existing 'state_changed' rows to 'state_change'.
+
+  - finding: >
+      Migration slot verification: current highest confirmed slot is 1006. Slots 1007-1009 may be
+      claimed by in-flight parallel stories. Must verify at implementation time.
+    mitigation: >
+      ls apps/api/knowledge-base/src/db/migrations/ before writing migration to confirm slot 1010
+      is available. The story ID 'CDBE-1010' aligns with slot 1010 by convention.
+
+missing_requirements: []
+
+evidence_expectations:
+  - pgtap test file passes: pg_prove reports 0 failed tests
+  - Migration runs twice without error (idempotency verified)
+  - has_trigger assertion confirms enforce_story_state_history_transition exists on story_state_history
+  - throws_ok with SQLSTATE 23514 confirms illegal transition rejection
+  - Legal transition test confirms exited_at and duration_seconds populated on prior open row
+  - has_column confirms exited_at and duration_seconds on story_state_history
+
+subtasks:
+  - id: ST-1
+    title: Add exited_at and duration_seconds columns to story_state_history
+    goal: >
+      Extend the story_state_history table schema with state-duration tracking columns so the
+      INSERT trigger can record how long each state was active.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql (lines 1305-1314 for current schema)
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql (lines 26-44 for ADD COLUMN IF NOT EXISTS pattern)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql (CREATE)
+    acs: ['AC-1', 'AC-2', 'AC-10', 'AC-12']
+    depends_on: none
+    verification: >
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='workflow' AND table_name='story_state_history'
+      AND column_name IN ('exited_at', 'duration_seconds');
+      — returns 2 rows.
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: Implement validate_story_state_history_insert trigger function
+    goal: >
+      Create the BEFORE INSERT trigger function that validates (from_state, to_state) against
+      valid_transitions, raises SQLSTATE 23514 on illegal transitions, and closes the previous
+      open row with exited_at and duration_seconds.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql (lines 61-101 for trigger function pattern)
+      - apps/api/knowledge-base/src/db/migrations/1004_valid_transitions.sql (for valid_transitions table structure)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql (extends ST-1 file)
+    acs: ['AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-13']
+    depends_on: ST-1
+    verification: >
+      SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname='workflow' AND p.proname='validate_story_state_history_insert';
+      — returns 1 row.
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: Create enforce_story_state_history_transition BEFORE INSERT trigger
+    goal: >
+      Attach the trigger function to workflow.story_state_history using DROP TRIGGER IF EXISTS
+      / CREATE TRIGGER pattern to ensure idempotency.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql (lines 103-107 for DROP/CREATE trigger pattern)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql (extends ST-2 file)
+    acs: ['AC-8', 'AC-9', 'AC-10', 'AC-12']
+    depends_on: ST-2
+    verification: >
+      SELECT tgname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname='workflow' AND c.relname='story_state_history'
+      AND t.tgname='enforce_story_state_history_transition';
+      — returns 1 row.
+    estimated_tokens: 3000
+
+  - id: ST-4
+    title: Fix event_type inconsistency (record_state_transition uses invalid value)
+    goal: >
+      Resolve the pre-existing bug where the record_state_transition function (migration 1001)
+      inserts with event_type='state_changed' which violates the CHECK constraint. Update the
+      function to use 'state_change' and migrate existing bad data.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1001_canonical_story_states.sql (lines 133-148)
+      - apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql (CHECK constraint definition for story_state_history.event_type)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql (extends ST-3 file)
+    acs: ['AC-13']
+    depends_on: ST-3
+    verification: >
+      SELECT count(*) FROM workflow.story_state_history WHERE event_type='state_changed';
+      — returns 0. SELECT count(*) FROM workflow.story_state_history WHERE event_type='state_change';
+      — returns previously 'state_changed' row count.
+    estimated_tokens: 4000
+
+  - id: ST-5
+    title: Write pgtap test file 1010_story_state_history_trigger_test.sql
+    goal: >
+      Write a comprehensive pgtap test file covering column existence, trigger existence, legal
+      transition acceptance, illegal transition rejection, NULL from_state acceptance, exited_at
+      closure, and idempotency verification.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1004_valid_transitions_test.sql (template)
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1005_workflow_rls_test.sql (additional patterns)
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql (CREATE)
+    acs: ['AC-11']
+    depends_on: ST-4
+    verification: >
+      psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql | pg_prove
+      — 0 failures, all tests pass.
+    estimated_tokens: 8000

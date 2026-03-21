@@ -1,0 +1,163 @@
+schema: 2
+story_id: PIPE-1040
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Verify file existence and key exports for all APIP-1031/1032 deliverables. Use ls to confirm all 7 files exist on
+      main, then grep for runImplementation, CommitRecordSchema, changeLoopNode, and ChangeLoopStatus exports. Confirm
+      both commit SHAs are ancestors of HEAD via git merge-base.
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/nodes/evidence-production.ts
+      - packages/backend/orchestrator/src/nodes/load-story.ts
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    dependencies: []
+    slice: packages
+    verification: >-
+      ls all 7 paths succeed; grep finds runImplementation, CommitRecordSchema, changeLoopNode, ChangeLoopStatus; git
+      merge-base --is-ancestor exits 0 for both 2164bd74 and c525a8b5
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Run scoped orchestrator tests covering APIP-1031/1032 files. Execute vitest with pattern filter
+      'change-loop|implementation|evidence-production|load-story|create-worktree' under @repo/orchestrator. Confirm all
+      89 APIP-specific tests pass. Document 37 pre-existing failures (in 10 known unrelated files) as the baseline in KB
+      so future runs do not block on them.
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/implementation-graph.test.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: >-
+      pnpm --filter @repo/orchestrator run test output shows 89 APIP-specific tests passing; failure set matches the
+      known 37-failure pre-existing baseline only
+    acs_covered:
+      - AC-4
+      - AC-5
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Check KB state for APIP-1031 and APIP-1032. Query each story via kb_get_story. If either exists in a non-terminal
+      state (not completed, not UAT), advance via kb_update_story_status. If either does not exist in KB at all, create
+      a KB note recording merge confirmation with commit SHAs (2164bd74 for APIP-1031, c525a8b5 for APIP-1032) and the
+      pre-existing failure baseline of 37 failures in 10 files.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 2
+    slice: packages
+    verification: >-
+      kb_get_story for APIP-1031 and APIP-1032 returns completed or UAT state, OR a KB note exists confirming the merge
+      with commit SHAs
+    acs_covered:
+      - AC-6
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Inspect packages/backend/orchestrator/src/graphs/index.ts to determine whether runImplementation is exported from
+      the package's public API surface. grep for 'runImplementation' in that file. Confirm it is NOT present (consistent
+      with the known gap documented in story). Record this finding in KB as a gap for PIPE-3010 to resolve. No source
+      code modifications.
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/index.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: >-
+      grep -n 'runImplementation' packages/backend/orchestrator/src/graphs/index.ts returns no output; KB note records
+      gap for PIPE-3010
+    acs_covered:
+      - AC-7
+      - AC-8
+files_to_change: []
+commands_to_run:
+  - command: >-
+      ls packages/backend/orchestrator/src/graphs/implementation.ts
+      packages/backend/orchestrator/src/nodes/change-loop.ts packages/backend/orchestrator/src/nodes/create-worktree.ts
+      packages/backend/orchestrator/src/nodes/evidence-production.ts
+      packages/backend/orchestrator/src/nodes/load-story.ts
+      packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    when: 'ST-1: verify all 7 files exist'
+    required: true
+  - command: git merge-base --is-ancestor 2164bd74 HEAD && git merge-base --is-ancestor c525a8b5 HEAD
+    when: 'ST-1: confirm both commit SHAs are ancestors of HEAD'
+    required: true
+  - command: >-
+      pnpm --filter @repo/orchestrator run test -- --reporter=verbose
+      --testPathPattern='change-loop|implementation|evidence-production|load-story|create-worktree'
+    when: 'ST-2: scoped test run for APIP-1031/1032 files'
+    required: true
+  - command: grep -n 'runImplementation' packages/backend/orchestrator/src/graphs/index.ts
+    when: 'ST-4: verify runImplementation is NOT in public API'
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      ls and grep confirm implementation.ts exists and exports runImplementation and CommitRecordSchema; git merge-base
+      confirms 2164bd74 is ancestor of HEAD
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: >-
+      ls and grep confirm change-loop.ts exists and exports changeLoopNode and ChangeLoopStatus; git merge-base confirms
+      c525a8b5 is ancestor of HEAD
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: >-
+      ls exits 0 for all 5 APIP-1031 deliverable files: create-worktree.ts, evidence-production.ts, load-story.ts,
+      i-model-dispatch.ts, implementation.ts
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: >-
+      scoped vitest run output shows 89 tests passing across the 8 APIP-specific test files with 0 failures in those
+      files
+    evidence_type: command
+  - ac_id: AC-5
+    planned_evidence: >-
+      KB note records 37 pre-existing failures in 10 files as baseline; these failures are not in APIP-1031/1032 test
+      files
+    evidence_type: manual
+  - ac_id: AC-6
+    planned_evidence: >-
+      KB shows APIP-1031 and APIP-1032 in completed or UAT state, or KB note records merge confirmation with SHAs
+      2164bd74 and c525a8b5
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: grep -n 'runImplementation' graphs/index.ts returns empty; KB note documents gap for PIPE-3010
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: git diff --stat confirms no source file modifications; this is a read-only verification story
+    evidence_type: command
+architectural_decisions: []
+complexity: simple
+notes:
+  - This is a verification-only chore story — no source code changes are permitted under any circumstances.
+  - >-
+    The 37 pre-existing orchestrator test failures are known, documented in the story, and must NOT be treated as
+    regressions blocking this story.
+  - >-
+    The runImplementation gap in graphs/index.ts is a known, intentional out-of-scope finding — document it for
+    PIPE-3010 only.
+  - >-
+    ST-2 depends on ST-1 (files must be confirmed present before running tests). ST-3 depends on ST-2 (test results feed
+    the KB baseline note). ST-4 depends only on ST-1 and can run in parallel with ST-2/ST-3.
+  - >-
+    If APIP-1031 or APIP-1032 do not exist in KB, create a kb_add note rather than failing — these are legacy stories
+    from before the KB-first architecture.
+  - >-
+    plans/future/platform/autonomous-pipeline/ directory absence is expected (post-merge directory restructuring) — do
+    not block on this.

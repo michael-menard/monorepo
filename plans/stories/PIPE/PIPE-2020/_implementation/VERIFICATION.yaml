@@ -1,0 +1,143 @@
+schema: 1
+story_id: PIPE-2020
+timestamp: '2026-03-18T23:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 38
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+e2e_status: EXEMPT
+e2e_exempt_reason: Test-only story — no application code changed, only dispatch-router.test.ts modified
+coverage: N/A — single test file modification; global threshold 45% met by existing coverage
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Injectable runners pattern used correctly (not vi.mock). vi.useFakeTimers scoped to describe blocks.
+    vi.clearAllMocks() used between circuit breaker trip and test dispatch. Thread ID convention
+    '{storyId}:{stage}:{attemptNumber}' is enforced. All patterns match established patterns from APIP-0020.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 251-277: createMockRunners() returns all 5 runners (runElaboration,
+      runStoryCreation, runDevImplement, runReview, runQAVerify) satisfying GraphRunners interface. All 38 existing+new
+      tests pass.
+    notes: >-
+      Spot-checked: all 5 spy references (elaborationSpy, storyCreationSpy, devImplementSpy, reviewSpy, qaVerifySpy)
+      exported from function. All existing tests remained green.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 203-249: createImplementationJobData(), createReviewJobData(), createQaJobData()
+      factory functions present, following same pattern as createElaborationJobData()/createStoryCreationJobData().
+      createReviewJobData() accepts optional overrides including payload.
+    notes: TypeScript compilation passes zero errors confirming factory return types are valid PipelineJobData.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 456-510: describe('HP-4: implementation job routes to runDevImplement()') block.
+      Verifies runDevImplement called with {storyId:'TEST-003', attempt:1},
+      runElaboration/runStoryCreation/runReview/runQAVerify not called.
+    notes: 4 test cases in the block. Directly observed in source.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 515-580: describe('HP-5: review job routes to runReview()') block. Verifies
+      runReview called with {storyId, worktreePath, featureDir, attempt}. Includes fallback test (worktreePath ''
+      featureDir 'plans/future/platform'). No other runners called.
+    notes: 4 test cases including Edge Case 3 worktreePath fallback variant. Directly observed in source.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 585-630: describe('HP-6: qa job routes to runQAVerify()') block. Verifies
+      runQAVerify called with {storyId:'TEST-005', attempt:1}, no other runners called.
+    notes: 3 test cases. Directly observed in source.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 707-783: Wall clock timeout tests for implementation (line 707), review (line 733),
+      qa (line 759). Each uses vi.useFakeTimers/vi.useRealTimers, hangingRunner = vi.fn().mockImplementation(() => new
+      Promise<never>(() => {})), vi.advanceTimersByTime(200). Tests assert wall_clock_timeout rejection.
+    notes: >-
+      Timeout threadId assertion verified at line 668-702 for elaboration pattern; same pattern replicated for 3 new
+      branches.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 961-1033: CB implementation (line 961), CB review (line 986), CB qa (line 1011).
+      Each uses circuitBreakerFailureThreshold:1, trips circuit on first dispatch, verifies job2.moveToDelayed() called
+      and runner not called on second dispatch. Lines 933-957 verify circuit_open log event.
+    notes: Additional isolation test at line 1035 confirms tripping implementation circuit does not affect review circuit.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: >-
+      grep -n 'as StorySnapshotPayload &' apps/api/pipeline/src/supervisor/dispatch-router.ts returns no results.
+      PIPE-2010 type cast already removed prior to this story.
+    notes: >-
+      Confirmed via live grep in worktree. dispatch-router.ts review branch now uses data.payload.worktreePath directly
+      (typed ReviewPayload).
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: >-
+      dispatch-router.test.ts lines 1111-1145: 'all lifecycle log calls include storyId, stage, threadId, attemptNumber'
+      test at line 1111. 'completed event includes durationMs' test at line 1134. HP-4/5/6 blocks also assert
+      event:'completed', storyId, stage in completedCall.
+    notes: threadId convention {storyId}:{stage}:{attemptNumber} confirmed irreversible ADR; asserted at lines 428, 448, 702.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: >-
+      Live test run: pnpm test --filter @repo/pipeline -- --run dispatch-router → 38 tests passed (38), 0 failed.
+      Duration 1.70s.
+    notes: All 38 tests pass including all pre-existing elaboration/story-creation tests (no regressions).
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: tsc --noEmit in apps/api/pipeline exits 0 with no output. Zero TypeScript errors.
+    notes: Type cast removed (AC-8) + all factory functions correctly typed — TypeScript accepts the full test file.
+architecture_compliant: true
+architecture_notes: >-
+  Injectable runners pattern used correctly (not vi.mock). Thread ID ADR '{storyId}:{stage}:{attemptNumber}' enforced in
+  assertions. Test-only story: no production code changed except pre-existing type cast removal (PIPE-2010 scope). No
+  Redis/BullMQ/integration fixtures introduced. All tests are pure unit tests.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      When evidence only reports 8 ACs but the story has 11, the dev agent numbered AC-9/10/11 as sub-verifications
+      within the same implementation scope. Evidence AC-1 through AC-8 map to story ACs 1-8; AC-9 (completed log shape),
+      AC-10 (all tests pass), and AC-11 (type check) were validated independently during QA verification.
+    category: pattern
+    tags:
+      - qa-verify
+      - evidence
+      - ac-mapping
+  - lesson: >-
+      Test-only stories (no production code changes) are E2E exempt but still require TypeScript compilation check — tsc
+      --noEmit catches type errors introduced by new test helper types.
+    category: pattern
+    tags:
+      - qa-verify
+      - test-only
+      - typecheck
+  - lesson: >-
+      The injectable runners pattern (runners parameter on dispatchJob) is the correct test seam for dispatch-router.ts.
+      vi.mock('./graph-loader') should never be used. This pattern allows complete unit isolation without module
+      mocking.
+    category: reuse
+    tags:
+      - pipeline
+      - dispatch-router
+      - testing-pattern
+tokens:
+  in: 18000
+  out: 3500

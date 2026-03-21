@@ -1,0 +1,3 @@
+story_id: PIPE-2020
+skipped: true
+reason: "No UI or UX surface. This story is purely backend TypeScript — test additions to dispatch-router.test.ts and a type cast removal in dispatch-router.ts."

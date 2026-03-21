@@ -1,0 +1,94 @@
+feasible: true
+confidence: high
+rationale: >
+  All prerequisite building blocks are already implemented and tested. createCreateWorktreeNode
+  and createCleanupWorktreeNode exist with the canonical injectable gitRunner pattern. worktreeRegister,
+  worktreeMarkComplete, and worktreeGetByStory MCP tools are implemented. The only work is replacing
+  two stub factory functions in elab-story.ts with real implementations that wire to existing components.
+  No new infrastructure, no schema changes, no API surface. Integration test fixture pattern is documented
+  via APIP-1032 lesson. Risk is low.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/graphs/elab-story.ts
+    - packages/backend/orchestrator/src/nodes/__tests__/ (new test file)
+    - packages/backend/orchestrator/src/__tests__/integration/ (new or extended integration test)
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: 'worktreeRegister and worktreeMarkComplete are MCP tools imported via @repo/mcp-tools — vitest module mocking path must match exactly to avoid import resolution issues'
+    mitigation: 'Use vi.mock with the exact import path used in elab-story.ts; verify with a passing test run before committing'
+missing_requirements: []
+evidence_expectations:
+  - 'pnpm test --filter @repo/orchestrator passes with zero regressions'
+  - 'pnpm check-types passes with zero errors'
+  - 'New unit tests demonstrate injectable mock gitRunner called with correct args'
+  - 'Integration test passes with real os.tmpdir() isolated git repo'
+  - 'WINT-9060 warning strings absent from elab-story.ts post-implementation'
+subtasks:
+  - id: ST-1
+    title: 'Read and understand canonical implementations before writing any code'
+    goal: 'Establish exact patterns to replicate in elab-story.ts setup/teardown factories'
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/nodes/merge/cleanup-worktree.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-register.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-mark-complete.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-get-by-story.ts
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    files_to_modify: []
+    acs: []
+    depends_on: none
+    verification: 'No verification — read-only orientation step'
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: 'Implement createWorktreeSetupNode real factory in elab-story.ts'
+    goal: 'Replace stub with real git worktree add + worktreeRegister logic using injectable gitRunner'
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    acs: ['AC-1', 'AC-2', 'AC-5', 'AC-6', 'AC-7']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/orchestrator'
+    estimated_tokens: 10000
+
+  - id: ST-3
+    title: 'Implement createWorktreeTeardownNode real factory in elab-story.ts'
+    goal: 'Replace stub with real git worktree remove + worktreeMarkComplete logic; warn-only errors; never mutate workflowSuccess'
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/merge/cleanup-worktree.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-mark-complete.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    acs: ['AC-3', 'AC-4', 'AC-7']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter @repo/orchestrator'
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: 'Write unit tests for setup and teardown node factories'
+    goal: 'Cover HP (success path, correct git args, correct state), EP (git failure, registration null), and warn-only teardown error'
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+    acs: ['AC-8']
+    depends_on: ST-3
+    verification: 'pnpm test --filter @repo/orchestrator --run'
+    estimated_tokens: 10000
+
+  - id: ST-5
+    title: 'Write integration test for full setup→teardown lifecycle'
+    goal: 'Verify real git worktree add and remove in os.tmpdir() isolated repo with initial commit; no regressions'
+    files_to_read:
+      - packages/backend/orchestrator/src/__tests__/integration/create-worktree.integration.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+    acs: ['AC-9', 'AC-10']
+    depends_on: ST-4
+    verification: 'pnpm test --filter @repo/orchestrator --run && pnpm check-types --filter @repo/orchestrator'
+    estimated_tokens: 8000

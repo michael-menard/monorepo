@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  CDBE-2020 is a pure database migration story. It creates two PL/pgSQL stored procedures
+  (workflow.resolve_blocker and workflow.complete_artifact) in a single migration file.
+  No frontend components, UI surfaces, HTTP endpoints, Lambda handlers, or user-facing
+  interactions are involved. UI/UX review is not applicable.
