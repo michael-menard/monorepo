@@ -248,7 +248,7 @@ export const KbUpdateStoryInputSchema = z.object({
   packages: z.array(z.string()).nullable().optional(),
 
   /** APRS-1030: Minimum viable path flag */
-  minimum_path: z.boolean().nullable().optional(),
+  minimum_path: z.boolean().optional(),
 })
 
 export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
@@ -895,7 +895,7 @@ export async function kb_update_story(
   }
 
   if (validated.minimum_path !== undefined) {
-    updates.minimumPath = validated.minimum_path ?? undefined
+    updates.minimumPath = validated.minimum_path
   }
 
   const result = await deps.db
@@ -1006,7 +1006,7 @@ export async function kb_create_story(
     if (validated.blocked_reason !== undefined) updates.blockedReason = validated.blocked_reason
     if (validated.blocked_by_story !== undefined)
       updates.blockedByStory = validated.blocked_by_story
-    if (validated.minimum_path !== undefined) updates.minimumPath = validated.minimum_path
+    if (validated.minimum_path !== undefined) updates.minimumPath = validated.minimum_path ?? false
     // Clear stale blocker metadata when unblocking
     if (validated.blocked === false) {
       updates.blockedReason = null
