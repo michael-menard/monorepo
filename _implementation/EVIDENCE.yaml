@@ -1,152 +1,59 @@
-story_id: WINT-0140
+schema: 2
+story_id: WINT-0230
 phase: implementation
-iteration: 1
-generated_at: '2026-03-19'
+iteration: 0
+timestamp: '2026-03-20T07:19:00Z'
 
-summary:
-  status: COMPLETE
-  tests_passed: 24
-  tests_failed: 0
-  build_status: pre-existing cyclic dep prevents turbo build (not introduced by this story)
-  e2e_status: EXEMPT (infra/tools story - no UI surface)
+changes_made:
+  - file: packages/backend/orchestrator/src/index.ts
+    action: modified
+    description: Added exports for ModelRouter and ModelRouterFactory from ./models/unified-interface.js (AC-7)
+  - file: packages/backend/orchestrator/src/models/__tests__/integration.test.ts
+    action: modified
+    description: >-
+      Fixed version assertions from '1.0.0' to '1.1.0' to match WINT-0220-STRATEGY.yaml.
+      Also fixed stale reviewDate assertion from '2026-03-15' to '2026-06-15' to match actual YAML. (AC-8)
+  - file: packages/backend/orchestrator/src/models/unified-interface.ts.bak
+    action: deleted
+    description: Removed stale 560-line backup file (cleanup)
+
+tests:
+  total: 259
+  passed: 259
+  failed: 0
+  test_files: 12
+  command: pnpm test -- src/models/ --reporter=verbose
+  notes: >-
+    All 12 test files passed (259 tests). Pre-existing @repo/logger resolution errors
+    were resolved by building the logger package (stale tsconfig.tsbuildinfo in
+    packages/core/logger required manual removal).
+
+type_check:
+  status: pass_with_preexisting_errors
+  notes: >-
+    No type errors in files changed by this story (src/index.ts, unified-interface.ts,
+    integration.test.ts). Pre-existing errors exist in unrelated files:
+    @repo/db missing in mcp-tools, @repo/workflow-logic missing in orchestrator nodes.
+    These errors predate WINT-0230.
+
+e2e_tests:
+  status: exempt
+  reason: Infrastructure/backend-only story, no UI changes. TypeScript package exports only.
 
 acceptance_criteria:
-  - id: AC-1
-    description: 'MlModelTypeSchema z.enum with 4 PG enum values'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-        detail: "MlModelTypeSchema = z.enum(['quality_predictor','effort_estimator','risk_classifier','pattern_recommender'])"
-      - test: 'ml-pipeline re-exports (mcp-tools stub) - MlModelTypeSchema with 4 valid values'
+  AC-7:
+    status: pass
+    evidence: >-
+      ModelRouter and ModelRouterFactory are now exported from
+      packages/backend/orchestrator/src/index.ts via
+      'export { ModelRouter, ModelRouterFactory } from ./models/unified-interface.js'.
+      Both classes exist in unified-interface.ts (confirmed at lines 95 and 612).
 
-  - id: AC-2
-    description: 'ml_model_register tool inserts into workflow.ml_models'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
-        detail: 'db.insert(mlModels).values(...).returning() - Zod validated, returns row or null'
-      - test: 'mlModelRegister - registers a new model and returns the row'
-      - test: 'mlModelRegister - returns null and warns on DB error'
-
-  - id: AC-3
-    description: 'ml_model_get_active tool queries WHERE is_active=true with optional modelType filter'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
-        detail: 'eq(mlModels.isActive, true) + optional modelType filter with and()'
-      - test: 'mlModelGetActive - returns all active models when no type filter'
-      - test: 'mlModelGetActive - returns empty array and warns on DB error'
-
-  - id: AC-4
-    description: 'ml_metrics_record tool appends to model_metrics (append-only)'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
-        detail: 'db.insert(modelMetrics).values(...).returning() - append-only, no update path'
-      - test: 'mlMetricsRecord - records a metric and returns the row'
-      - test: 'mlMetricsRecord - returns null and warns on DB error'
-
-  - id: AC-5
-    description: 'ml_prediction_record tool appends to model_predictions (append-only)'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
-        detail: 'db.insert(modelPredictions).values(...).returning() - append-only'
-      - test: 'mlPredictionRecord - records a prediction and returns the row'
-      - test: 'mlPredictionRecord - returns null and warns on DB error'
-
-  - id: AC-6
-    description: 'ml_prediction_get_by_entity tool queries by entityType + entityId ordered by predictedAt DESC'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
-        detail: 'and(eq(entityType), eq(entityId)) + optional predictionType + orderBy(desc(predictedAt)).limit()'
-      - test: 'mlPredictionGetByEntity - returns predictions for entity'
-      - test: 'mlPredictionGetByEntity - respects limit constraint (max 100)'
-
-  - id: AC-7
-    description: 'training_data_ingest tool inserts into training_data with optional storyId'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-        detail: 'db.insert(trainingData).values({dataType, features, labels, storyId: null}).returning()'
-      - test: 'trainingDataIngest - ingests training data and returns the row'
-      - test: 'trainingDataIngest - ingests with optional storyId'
-
-  - id: AC-8
-    description: 'training_data_mark_validated tool updates validated=true + validated_at=NOW()'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
-        detail: 'db.update(trainingData).set({validated:true, validatedAt:new Date()}).where(eq(id)).returning()'
-      - test: 'trainingDataMarkValidated - marks training data as validated and returns updated row'
-      - test: 'trainingDataMarkValidated - returns null and warns when record not found'
-
-  - id: AC-9
-    description: 'All tools use Zod parse input, @repo/logger warn on errors, return null on DB failure'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-        detail: 'All input schemas defined as Zod schemas with z.infer<> types'
-      - detail: 'All tools use Schema.parse(input) at entry, catch block calls logger.warn and returns null'
-      - test: 'All error-path tests verify logger.warn called and null returned'
-
-  - id: AC-10
-    description: 'Package registration: knowledge-base ./ml-pipeline export + mcp-tools re-export'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/package.json
-        detail: '"./ml-pipeline": { import: ./src/ml-pipeline/index.ts, types: ./src/ml-pipeline/index.ts }'
-      - file: packages/backend/mcp-tools/src/index.ts
-        detail: 'Re-exports all 7 tools and schemas from @repo/knowledge-base/ml-pipeline'
-
-  - id: AC-11
-    description: 'Unit tests with vi.mock for db, one test per tool minimum, >=45% coverage'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-        detail: '24 tests across 7 describe blocks - all passing. Uses vi.hoisted + vi.mock(@repo/db)'
-      - result: '24/24 tests pass'
-
-files_created:
-  - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
-  - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-  - apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
-  - apps/api/knowledge-base/src/ml-pipeline/index.ts
-  - apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/__types__/index.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-register.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-get-active.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-metrics-record.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-record.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-get-by-entity.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/training-data-ingest.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/training-data-mark-validated.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/index.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-
-files_modified:
-  - apps/api/knowledge-base/package.json
-  - apps/api/knowledge-base/vitest.config.ts
-  - packages/backend/mcp-tools/src/index.ts
-  - packages/backend/mcp-tools/vitest.config.ts
-
-pre_existing_issues_noted:
-  - cyclic_dependency: '@repo/knowledge-base <-> @repo/mcp-tools prevents turbo build (pre-existing)'
-  - logger_resolution: '@repo/logger dist not built - pre-existing in worktree, fixed via vitest aliases'
-  - db_resolution: '@repo/db dist not built - pre-existing in worktree, fixed via vitest aliases'
-
-test_results:
-  knowledge_base_ml_pipeline:
-    passed: 24
-    failed: 0
-    command: 'pnpm --filter @repo/knowledge-base test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'
-  mcp_tools_ml_pipeline:
-    passed: 4
-    failed: 0
-    command: 'pnpm --filter @repo/mcp-tools test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'
+  AC-8:
+    status: pass
+    evidence: >-
+      Integration test assertions updated to match WINT-0220-STRATEGY.yaml:
+      strategy_version '1.0.0' → '1.1.0' (line 57),
+      version.version '1.0.0' → '1.1.0' (line 241),
+      version.reviewDate '2026-03-15' → '2026-06-15' (line 243, matches YAML line 12).
+      All 21 integration tests pass after fix.

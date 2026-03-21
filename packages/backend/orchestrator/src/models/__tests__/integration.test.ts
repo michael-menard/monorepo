@@ -54,7 +54,7 @@ describe('integration: real strategy validation', () => {
       const strategy = await loadStrategy({ strategyPath: realStrategyPath })
 
       expect(strategy.tiers).toHaveLength(4)
-      expect(strategy.strategy_version).toBe('1.0.0')
+      expect(strategy.strategy_version).toBe('1.1.0')
       expect(strategy.effective_date).toBe('2026-02-15')
     })
 
@@ -238,9 +238,9 @@ describe('integration: real strategy validation', () => {
     it('should return correct strategy version from Configuration API', () => {
       const version = router.getStrategyVersion()
 
-      expect(version.version).toBe('1.0.0')
+      expect(version.version).toBe('1.1.0')
       expect(version.effectiveDate).toBe('2026-02-15')
-      expect(version.reviewDate).toBe('2026-03-15')
+      expect(version.reviewDate).toBe('2026-06-15')
     })
 
     it('should load cost analysis metadata', async () => {
