@@ -562,14 +562,27 @@ export async function kb_get_scoreboard(
   if (validated.end_date) {
     agentConditions.push(lte(agentInvocations.startedAt, validated.end_date))
   }
+  if (validated.feature) {
+    agentConditions.push(eq(stories.feature, validated.feature))
+  }
 
-  const agentResult = await deps.db
+  const needsFeatureJoin = !!validated.feature
+  let agentQuery = deps.db
     .select({
       agentName: agentInvocations.agentName,
       total: sql<number>`count(*)::int`,
       successful: sql<number>`count(*) filter (where ${agentInvocations.status} = 'success')::int`,
     })
     .from(agentInvocations)
+
+  if (needsFeatureJoin) {
+    agentQuery = agentQuery.innerJoin(
+      stories,
+      eq(agentInvocations.storyId, stories.storyId),
+    ) as typeof agentQuery
+  }
+
+  const agentResult = await agentQuery
     .where(agentConditions.length > 0 ? and(...agentConditions) : undefined)
     .groupBy(agentInvocations.agentName)
     .orderBy(desc(sql`count(*)`))
