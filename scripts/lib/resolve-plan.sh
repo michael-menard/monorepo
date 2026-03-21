@@ -51,6 +51,34 @@ resolve_plan() {
           STORY_PREFIX="${kb_prefix:-}"
           return 0
         fi
+
+        # KB plan exists but has no feature_dir — use story_prefix to find dir
+        if [[ -n "$kb_prefix" && "$kb_prefix" != "null" ]]; then
+          # Try common locations based on prefix
+          local prefix_lower
+          prefix_lower=$(echo "$kb_prefix" | tr '[:upper:]' '[:lower:]')
+          for search_root in plans/future/platform plans/future plans; do
+            local dir_match
+            dir_match=$(find "$search_root" -maxdepth 3 -type d -name "$prefix_lower" 2>/dev/null | head -1) || true
+            if [[ -n "$dir_match" ]]; then
+              FEATURE_DIR="$dir_match"
+              PLAN_SLUG=$(basename "$FEATURE_DIR")
+              STORY_PREFIX="$kb_prefix"
+              return 0
+            fi
+          done
+          # Also try the slug itself as directory name
+          for search_root in plans/future/platform plans/future plans; do
+            local dir_match
+            dir_match=$(find "$search_root" -maxdepth 3 -type d -name "$slug" 2>/dev/null | head -1) || true
+            if [[ -n "$dir_match" ]]; then
+              FEATURE_DIR="$dir_match"
+              PLAN_SLUG=$(basename "$FEATURE_DIR")
+              STORY_PREFIX="$kb_prefix"
+              return 0
+            fi
+          done
+        fi
       fi
     fi
   fi
