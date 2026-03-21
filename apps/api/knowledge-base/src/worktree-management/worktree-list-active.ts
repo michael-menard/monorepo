@@ -5,7 +5,7 @@
 
 import { eq, desc } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { getDbClient } from '../db/client.js'
+import { db } from '@repo/db'
 import { worktrees, stories } from '../db/index.js'
 import {
   WorktreeListActiveInputSchema,
@@ -25,7 +25,7 @@ export async function worktreeListActive(
   const parsed = WorktreeListActiveInputSchema.parse(input)
 
   try {
-    const results = await getDbClient()
+    const results = await db
       .select({
         id: worktrees.id,
         storyId: stories.storyId,

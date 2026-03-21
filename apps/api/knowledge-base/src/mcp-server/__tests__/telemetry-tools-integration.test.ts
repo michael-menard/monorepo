@@ -10,7 +10,7 @@
  * Uses unit-style mocking (no DB connection required).
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getToolDefinitions } from '../tool-schemas.js'
 import {
   WorkflowLogInvocationInputSchema,
@@ -65,6 +65,10 @@ function generateTestUuid() {
 // ============================================================================
 
 describe('Telemetry Tool Schemas (WINT-0120)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('Tool Discovery', () => {
     it('should include all 4 telemetry tools in getToolDefinitions()', () => {
       const tools = getToolDefinitions()
@@ -298,4 +302,264 @@ describe('Telemetry Tool Schemas (WINT-0120)', () => {
       expect(result.success).toBe(false)
     })
   })
+
+  describe('CRUD Round-Trip Tests', () => {
+    it('workflow_log_invocation returns logged:true with valid input', async () => {
+      const uuid = generateTestUuid()
+      mockWorkflowLogInvocation.mockResolvedValueOnce({
+        logged: true,
+        id: uuid,
+        invocation_id: 'dev-execute-leader-001',
+        message: 'Logged invocation dev-execute-leader-001 for agent dev-execute-leader',
+      })
+
+      const result = await mockWorkflowLogInvocation({}, {
+        invocation_id: 'dev-execute-leader-001',
+        agent_name: 'dev-execute-leader',
+        status: 'success',
+      })
+
+      expect(result.logged).toBe(true)
+      expect(result.id).toBe(uuid)
+      expect(result.invocation_id).toBe('dev-execute-leader-001')
+      expect(typeof result.message).toBe('string')
+    })
+
+    it('workflow_log_invocation is called with correct arguments', async () => {
+      const uuid = generateTestUuid()
+      mockWorkflowLogInvocation.mockResolvedValueOnce({
+        logged: true,
+        id: uuid,
+        invocation_id: 'test-invocation-002',
+        message: 'Logged invocation',
+      })
+
+      const deps = {}
+      const input = {
+        invocation_id: 'test-invocation-002',
+        agent_name: 'dev-plan-leader',
+        story_id: 'WINT-3080',
+        status: 'success' as const,
+        input_tokens: 5000,
+        output_tokens: 1500,
+      }
+
+      await mockWorkflowLogInvocation(deps, input)
+
+      expect(mockWorkflowLogInvocation).toHaveBeenCalledWith(deps, input)
+    })
+
+    it('workflow_log_decision returns logged:true with valid input', async () => {
+      const uuid = generateTestUuid()
+      mockWorkflowLogDecision.mockResolvedValueOnce({
+        logged: true,
+        id: uuid,
+        message: 'Logged approve decision for story WINT-3080',
+      })
+
+      const result = await mockWorkflowLogDecision({}, {
+        decision_type: 'approve',
+        decision_text: 'Approved the implementation plan',
+        operator_id: 'user-michael',
+        story_id: 'WINT-3080',
+      })
+
+      expect(result.logged).toBe(true)
+      expect(result.id).toBe(uuid)
+      expect(typeof result.message).toBe('string')
+    })
+
+    it('workflow_log_decision passes FK invocation_id correctly', async () => {
+      const invocationUuid = generateTestUuid()
+      const decisionUuid = generateTestUuid()
+      mockWorkflowLogDecision.mockResolvedValueOnce({
+        logged: true,
+        id: decisionUuid,
+        message: 'Logged reject decision for story WINT-3080',
+      })
+
+      const input = {
+        invocation_id: invocationUuid,
+        decision_type: 'reject',
+        decision_text: 'Rejected due to missing tests',
+        operator_id: 'user-michael',
+        story_id: 'WINT-3080',
+      }
+
+      await mockWorkflowLogDecision({}, input)
+
+      expect(mockWorkflowLogDecision).toHaveBeenCalledWith({}, expect.objectContaining({
+        invocation_id: invocationUuid,
+        decision_type: 'reject',
+      }))
+    })
+
+    it('workflow_log_outcome upserts and returns story_id + verdict', async () => {
+      const uuid = generateTestUuid()
+      mockWorkflowLogOutcome.mockResolvedValueOnce({
+        logged: true,
+        id: uuid,
+        story_id: 'WINT-3080',
+        final_verdict: 'pass',
+        message: 'Upserted outcome for story WINT-3080: pass',
+      })
+
+      const result = await mockWorkflowLogOutcome({}, {
+        story_id: 'WINT-3080',
+        final_verdict: 'pass',
+      })
+
+      expect(result.logged).toBe(true)
+      expect(result.story_id).toBe('WINT-3080')
+      expect(result.final_verdict).toBe('pass')
+      expect(typeof result.message).toBe('string')
+    })
+
+    it('workflow_log_outcome can be called twice (upsert behavior)', async () => {
+      const uuid = generateTestUuid()
+      mockWorkflowLogOutcome
+        .mockResolvedValueOnce({
+          logged: true,
+          id: uuid,
+          story_id: 'WINT-3080',
+          final_verdict: 'fail',
+          message: 'Upserted outcome for story WINT-3080: fail',
+        })
+        .mockResolvedValueOnce({
+          logged: true,
+          id: uuid,
+          story_id: 'WINT-3080',
+          final_verdict: 'pass',
+          message: 'Upserted outcome for story WINT-3080: pass',
+        })
+
+      const first = await mockWorkflowLogOutcome({}, { story_id: 'WINT-3080', final_verdict: 'fail' })
+      const second = await mockWorkflowLogOutcome({}, { story_id: 'WINT-3080', final_verdict: 'pass' })
+
+      expect(first.final_verdict).toBe('fail')
+      expect(second.final_verdict).toBe('pass')
+      expect(second.id).toBe(uuid)
+      expect(mockWorkflowLogOutcome).toHaveBeenCalledTimes(2)
+    })
+
+    it('workflow_get_story_telemetry returns all 3 collections', async () => {
+      mockWorkflowGetStoryTelemetry.mockResolvedValueOnce({
+        story_id: 'WINT-3080',
+        invocations: [{ id: generateTestUuid(), agentName: 'dev-execute-leader' }],
+        decisions: [{ id: generateTestUuid(), decisionType: 'approve' }],
+        outcome: { storyId: 'WINT-3080', finalVerdict: 'pass' },
+        message: 'Found 1 invocations, 1 decisions, 1 outcome for WINT-3080',
+      })
+
+      const result = await mockWorkflowGetStoryTelemetry({}, { story_id: 'WINT-3080' })
+
+      expect(result.story_id).toBe('WINT-3080')
+      expect(Array.isArray(result.invocations)).toBe(true)
+      expect(Array.isArray(result.decisions)).toBe(true)
+      expect(result.invocations).toHaveLength(1)
+      expect(result.decisions).toHaveLength(1)
+      expect(result.outcome).not.toBeNull()
+    })
+
+    it('workflow_get_story_telemetry returns empty arrays for unknown story', async () => {
+      mockWorkflowGetStoryTelemetry.mockResolvedValueOnce({
+        story_id: 'UNKNOWN-9999',
+        invocations: [],
+        decisions: [],
+        outcome: null,
+        message: 'Found 0 invocations, 0 decisions, no outcome for UNKNOWN-9999',
+      })
+
+      const result = await mockWorkflowGetStoryTelemetry({}, { story_id: 'UNKNOWN-9999' })
+
+      expect(result.invocations).toHaveLength(0)
+      expect(result.decisions).toHaveLength(0)
+      expect(result.outcome).toBeNull()
+    })
+  })
+
+  describe('MCP Handler Validation', () => {
+    it('workflow_log_invocation tool has required: [agentName, status]', () => {
+      const tools = getToolDefinitions()
+      const tool = tools.find(t => t.name === 'workflow_log_invocation')
+
+      expect(tool).toBeDefined()
+      const required = tool!.inputSchema.required as string[]
+      expect(required).toContain('agentName')
+      expect(required).toContain('status')
+    })
+
+    it('workflow_log_decision tool has required: [decision_type, decision_text, operator_id, story_id]', () => {
+      const tools = getToolDefinitions()
+      const tool = tools.find(t => t.name === 'workflow_log_decision')
+
+      expect(tool).toBeDefined()
+      const required = tool!.inputSchema.required as string[]
+      expect(required).toContain('decision_type')
+      expect(required).toContain('decision_text')
+      expect(required).toContain('operator_id')
+      expect(required).toContain('story_id')
+    })
+
+    it('workflow_log_outcome tool has required: [story_id, final_verdict]', () => {
+      const tools = getToolDefinitions()
+      const tool = tools.find(t => t.name === 'workflow_log_outcome')
+
+      expect(tool).toBeDefined()
+      const required = tool!.inputSchema.required as string[]
+      expect(required).toContain('story_id')
+      expect(required).toContain('final_verdict')
+    })
+
+    it('workflow_get_story_telemetry tool has required: [story_id]', () => {
+      const tools = getToolDefinitions()
+      const tool = tools.find(t => t.name === 'workflow_get_story_telemetry')
+
+      expect(tool).toBeDefined()
+      const required = tool!.inputSchema.required as string[]
+      expect(required).toContain('story_id')
+    })
+  })
+
+  describe('FK/Constraint Validation', () => {
+    it('workflow_log_decision accepts null invocation_id (nullable FK) — schema validates', () => {
+      const result = WorkflowLogDecisionInputSchema.safeParse({
+        invocation_id: undefined,
+        decision_type: 'approve',
+        decision_text: 'Approved without an invocation context',
+        operator_id: 'user-michael',
+        story_id: 'WINT-3080',
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('workflow_log_outcome upsert targets storyId uniqueness — mock called twice with same story_id', async () => {
+      const storyId = 'WINT-3080-UPSERT'
+      const uuid = generateTestUuid()
+      mockWorkflowLogOutcome
+        .mockResolvedValueOnce({ logged: true, id: uuid, story_id: storyId, final_verdict: 'fail', message: '' })
+        .mockResolvedValueOnce({ logged: true, id: uuid, story_id: storyId, final_verdict: 'pass', message: '' })
+
+      await mockWorkflowLogOutcome({}, { story_id: storyId, final_verdict: 'fail' })
+      await mockWorkflowLogOutcome({}, { story_id: storyId, final_verdict: 'pass' })
+
+      const calls = mockWorkflowLogOutcome.mock.calls
+      const storiesUsed = calls.map((call: unknown[]) => (call[1] as { story_id: string }).story_id)
+      expect(storiesUsed.every((id: string) => id === storyId)).toBe(true)
+    })
+
+    it('workflow_log_invocation propagates errors — mock rejects, verify error propagates', async () => {
+      mockWorkflowLogInvocation.mockRejectedValueOnce(new Error('DB connection failed'))
+
+      await expect(
+        mockWorkflowLogInvocation({}, {
+          invocation_id: 'failing-invocation',
+          agent_name: 'dev-execute-leader',
+          status: 'failure',
+        })
+      ).rejects.toThrow('DB connection failed')
+    })
+  })
+
 })

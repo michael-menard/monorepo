@@ -5,7 +5,7 @@
 
 import { eq, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { getDbClient } from '../db/client.js'
+import { db } from '@repo/db'
 import { worktrees } from '../db/index.js'
 import {
   WorktreeMarkCompleteInputSchema,
@@ -43,7 +43,7 @@ export async function worktreeMarkComplete(
       `
     }
 
-    const result = await getDbClient()
+    const result = await db
       .update(worktrees)
       .set(updateValues)
       .where(eq(worktrees.id, parsed.worktreeId))
