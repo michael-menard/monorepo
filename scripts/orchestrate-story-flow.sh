@@ -470,10 +470,15 @@ pre_qa_check() {
     return 1
   fi
 
-  # Quick type-check in worktree if it exists and has deps installed
+  # Quick type-check in worktree if it exists
   local WT_PATH
   WT_PATH=$(resolve_worktree_root "$STORY_ID")
-  if [[ -n "$WT_PATH" && -d "$WT_PATH" && -d "$WT_PATH/node_modules" ]]; then
+  if [[ -n "$WT_PATH" && -d "$WT_PATH" ]]; then
+    # Ensure deps are installed
+    if [[ ! -d "$WT_PATH/node_modules" ]]; then
+      echo "$TAG QA   INSTALL: $STORY_ID (installing deps in worktree)"
+      (cd "$WT_PATH" && pnpm install --frozen-lockfile 2>/dev/null) || true
+    fi
     if ! (cd "$WT_PATH" && pnpm check-types --quiet 2>/dev/null); then
       echo "$TAG QA   SKIP:    $STORY_ID (type-check failed in worktree)"
       return 1
