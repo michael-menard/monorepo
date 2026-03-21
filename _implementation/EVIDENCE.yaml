@@ -1,59 +1,262 @@
-schema: 2
-story_id: WINT-0230
-phase: implementation
-iteration: 0
-timestamp: '2026-03-20T07:19:00Z'
+schema: 1
+story_id: WINT-0270
+version: 1
+timestamp: '2026-03-20T11:50:00Z'
 
-changes_made:
-  - file: packages/backend/orchestrator/src/index.ts
-    action: modified
-    description: Added exports for ModelRouter and ModelRouterFactory from ./models/unified-interface.js (AC-7)
-  - file: packages/backend/orchestrator/src/models/__tests__/integration.test.ts
-    action: modified
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: >-
+      The harness shall include a task corpus with at least 3 prompts per category for 4 categories:
+      code_generation, code_review, elaboration_analysis, lint_syntax.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
+        description: >-
+          Exports BENCHMARK_CORPUS with 12 tasks: 3 per category across all 4 categories.
+          Tasks sourced from real monorepo context (TypeScript snippets, YAML fragments, lint output).
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+        description: >-
+          18 tests pass verifying: >= 12 total tasks, all 4 categories present,
+          >= 3 tasks per category, unique IDs, non-empty prompts, naming convention.
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/benchmark-corpus.test.ts
+        result: SUCCESS (18/18 tests pass)
+
+  - ac_id: AC-2
+    ac_text: >-
+      The harness shall iterate all 5 required Ollama models against each task,
+      recording latency_ms, cost_usd=0, and raw output per run.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+        description: >-
+          runBenchmarkHarness() iterates REQUIRED_MODELS x BENCHMARK_CORPUS tasks.
+          Records latency_ms, cost_usd=0, raw output via callOllama(), evaluateQuality().
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/constants.ts
+        description: >-
+          REQUIRED_MODELS exports all 5 models: deepseek-coder-v2:16b, codellama:13b,
+          qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b.
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          runBenchmarkHarness() test verifies 2 models x 2 tasks = 4 fetch calls.
+          summary.totalRuns = 4 confirmed.
+
+  - ac_id: AC-3
+    ac_text: >-
+      For each (model, task) pair, the harness shall call evaluateQuality() and
+      recordRun() to persist results to the leaderboard YAML.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+        description: >-
+          runSingleBenchmark() calls evaluateQuality(contract, 'tier-3', output) and
+          recordRun(leaderboardPath, {...evaluation, cost_usd: 0, latency_ms, task_id}).
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          Test "should persist a leaderboard entry via recordRun (AC-3)" verifies
+          leaderboard YAML file is created after each run. Test "should persist leaderboard
+          after all runs (AC-3: recordRun called)" verifies file exists after harness run.
+
+  - ac_id: AC-4
+    ac_text: >-
+      The harness shall include a QUALITY_EVALUATOR_LIMITATION constant documenting
+      that scores are heuristic-only (keyword matching, length heuristics, no semantic analysis).
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+        description: >-
+          QUALITY_EVALUATOR_LIMITATION exported constant with JSDoc documentation explaining
+          heuristic-only nature: keyword matching, length heuristics, no semantic analysis,
+          no code execution. Printed in harness_start and summary_header log events.
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          3 tests verify: QUALITY_EVALUATOR_LIMITATION is non-empty, mentions 'heuristic'
+          or 'keyword', mentions 'semantic'.
+
+  - ac_id: AC-5
+    ac_text: >-
+      MODEL_LEADERBOARD_PATH shall be a named constant in constants.ts,
+      not hardcoded in harness files.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/constants.ts
+        description: >-
+          MODEL_LEADERBOARD_PATH exported as named constant:
+          path.join(process.cwd(), 'data', 'model-leaderboard.yaml').
+          REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH also exported.
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+        description: >-
+          Imports MODEL_LEADERBOARD_PATH, REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH
+          from constants.ts. No hardcoded paths in harness file.
+
+  - ac_id: AC-6
+    ac_text: >-
+      The benchmark script shall be developer-local only (scripts/benchmark-models.ts)
+      and NOT referenced in CI configuration.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: scripts/benchmark-models.ts
+        description: >-
+          Developer-local CLI script. Imports runBenchmarkHarness from benchmark-harness.ts.
+          Supports --leaderboard-path, --models, --ollama-url arguments.
+          Not referenced in any CI config files.
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          Unit tests use vi.stubGlobal('fetch', mockFetch) — no live Ollama network calls.
+          Tests are isolated from network.
+
+  - ac_id: AC-7
+    ac_text: >-
+      The harness shall set cost_usd = 0 for all Ollama model runs
+      (zero-cost sentinel per WINT-0260).
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+        description: >-
+          BenchmarkResultSchema uses z.literal(0) for cost_usd field, enforcing zero-cost sentinel.
+          runSingleBenchmark() hardcodes cost_usd: 0 in both success and error paths.
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          Test "should return a BenchmarkResult with cost_usd = 0 (AC-7: Ollama zero-cost sentinel)"
+          explicitly verifies result.cost_usd === 0. Additional tests in buildSummary() and
+          runBenchmarkHarness() sections verify cost_usd sentinel is maintained.
+
+  - ac_id: AC-8
+    ac_text: >-
+      Unit tests shall cover: task iteration loop (all tasks x all models),
+      result aggregation (averages, ranking), mock Ollama responses.
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+        description: >-
+          23 tests covering: callOllama (4 tests), QUALITY_EVALUATOR_LIMITATION (3 tests),
+          runSingleBenchmark (6 tests), buildSummary (5 tests), runBenchmarkHarness (5 tests).
+          All use vi.stubGlobal('fetch', mockFetch) for Ollama mocking.
+      - type: test
+        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+        description: >-
+          18 tests verifying corpus structure: category counts, ID uniqueness, prompt validity,
+          naming convention, expected keyword arrays.
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/
+        result: SUCCESS (112 tests pass across 5 model-selector test files)
+
+touched_files:
+  - path: packages/backend/orchestrator/src/model-selector/constants.ts
+    action: created
+    lines: 65
     description: >-
-      Fixed version assertions from '1.0.0' to '1.1.0' to match WINT-0220-STRATEGY.yaml.
-      Also fixed stale reviewDate assertion from '2026-03-15' to '2026-06-15' to match actual YAML. (AC-8)
-  - file: packages/backend/orchestrator/src/models/unified-interface.ts.bak
-    action: deleted
-    description: Removed stale 560-line backup file (cleanup)
+      MODEL_LEADERBOARD_PATH, REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH,
+      OLLAMA_TIMEOUT_MS constants.
+  - path: packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
+    action: created
+    lines: 130
+    description: >-
+      Zod schemas: BenchmarkCategorySchema, BenchmarkTaskSchema, BenchmarkResultSchema,
+      ModelSummaryRowSchema, BenchmarkSummarySchema with inferred types.
+  - path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
+    action: created
+    lines: 285
+    description: >-
+      BENCHMARK_CORPUS with 12 tasks across 4 categories (3 per category).
+      Tasks sourced from real monorepo context.
+  - path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+    action: created
+    lines: 310
+    description: >-
+      runBenchmarkHarness(), callOllama(), runSingleBenchmark(), buildSummary(),
+      printSummaryTable(). QUALITY_EVALUATOR_LIMITATION constant.
+  - path: scripts/benchmark-models.ts
+    action: created
+    lines: 130
+    description: >-
+      Developer-local CLI entrypoint. Argument parsing, Ollama health check,
+      invokes runBenchmarkHarness().
+  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+    action: created
+    lines: 270
+    description: >-
+      23 unit tests for harness logic. Uses vi.stubGlobal('fetch') to mock Ollama.
+  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+    action: created
+    lines: 115
+    description: 18 unit tests for corpus structure validation.
 
-tests:
-  total: 259
-  passed: 259
-  failed: 0
-  test_files: 12
-  command: pnpm test -- src/models/ --reporter=verbose
-  notes: >-
-    All 12 test files passed (259 tests). Pre-existing @repo/logger resolution errors
-    were resolved by building the logger package (stale tsconfig.tsbuildinfo in
-    packages/core/logger required manual removal).
+commands_run:
+  - command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/benchmark-corpus.test.ts src/model-selector/__tests__/benchmark-harness.test.ts
+    result: SUCCESS
+    output: '41 tests pass (18 corpus + 23 harness)'
+    timestamp: '2026-03-20T11:30:00Z'
+  - command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/
+    result: SUCCESS
+    output: '112 tests pass (5 model-selector test files)'
+    timestamp: '2026-03-20T11:45:00Z'
+  - command: pnpm --filter @repo/orchestrator check-types (from main monorepo)
+    result: SUCCESS
+    output: No type errors in new files
+    timestamp: '2026-03-20T11:00:00Z'
 
-type_check:
-  status: pass_with_preexisting_errors
-  notes: >-
-    No type errors in files changed by this story (src/index.ts, unified-interface.ts,
-    integration.test.ts). Pre-existing errors exist in unrelated files:
-    @repo/db missing in mcp-tools, @repo/workflow-logic missing in orchestrator nodes.
-    These errors predate WINT-0230.
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 41
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
 
 e2e_tests:
   status: exempt
-  reason: Infrastructure/backend-only story, no UI changes. TypeScript package exports only.
+  exempt_reason: >-
+    Developer tooling story (packages slice only). No browser UI, no HTTP endpoints.
+    Benchmark harness is a local CLI script targeting Ollama — not a user-facing feature.
+    All tests are unit tests with mocked Ollama via vi.stubGlobal('fetch').
+  tests_written: false
 
-acceptance_criteria:
-  AC-7:
-    status: pass
-    evidence: >-
-      ModelRouter and ModelRouterFactory are now exported from
-      packages/backend/orchestrator/src/index.ts via
-      'export { ModelRouter, ModelRouterFactory } from ./models/unified-interface.js'.
-      Both classes exist in unified-interface.ts (confirmed at lines 95 and 612).
+coverage:
+  note: Coverage data not collected (worktree node_modules setup). Tests verified passing via vitest run.
 
-  AC-8:
-    status: pass
-    evidence: >-
-      Integration test assertions updated to match WINT-0220-STRATEGY.yaml:
-      strategy_version '1.0.0' → '1.1.0' (line 57),
-      version.version '1.0.0' → '1.1.0' (line 241),
-      version.reviewDate '2026-03-15' → '2026-06-15' (line 243, matches YAML line 12).
-      All 21 integration tests pass after fix.
+notable_decisions:
+  - >-
+    ARCH-001: MODEL_LEADERBOARD_PATH = path.join(process.cwd(), 'data', 'model-leaderboard.yaml').
+    Injectable for tests via BenchmarkOptions argument.
+  - >-
+    ARCH-002: Direct HTTP fetch to Ollama /api/generate. No PipelineModelRouter stack.
+    Makes Ollama call easy to mock in unit tests via vi.stubGlobal('fetch').
+  - >-
+    ARCH-003: REQUIRED_MODELS hardcoded in constants.ts: 5 models from setup-ollama-models.sh.
+  - >-
+    @repo/logger workspace dependency not resolved in worktree node_modules due to pnpm
+    workspace symlink setup. Fixed by copying logger dist and creating @repo/logger symlink.
+    Pre-existing issue not caused by this story.
+
+known_deviations:
+  - >-
+    Worktree node_modules missing @repo/* workspace packages. Worked around by copying
+    logger dist and creating symlink. This is a worktree setup issue, not a code issue.
+  - >-
+    pnpm --filter check-types fails in worktree due to missing @repo/logger resolution
+    in TypeScript compiler (pre-existing issue in leaderboard.ts also affected).
+    Type check passes cleanly from main monorepo.
+
+token_summary:
+  execute:
+    in: 0
+    out: 0
