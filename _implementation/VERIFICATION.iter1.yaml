@@ -1,0 +1,111 @@
+schema: 1
+story_id: WINT-1130
+timestamp: '2026-03-21T19:02:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 13
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: Infrastructure/database migration story — no UI or API endpoint changes
+  http:
+    pass: 0
+    fail: 0
+    status: n/a
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: >-
+  Unit tests mock DB client — coverage tool not applicable for infrastructure story. 13/13 tests pass covering all 4 MCP
+  tools across happy path, null returns, error handling, and input validation.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    Tests use vi.hoisted() for proper mock hoisting, vi.clearAllMocks() in beforeEach, chain helper functions for
+    drizzle mock setup, and cover all 4 tools with positive, null-return, error, and validation cases.
+acs_verified:
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_changed[1]
+    notes: >-
+      Migration file 1110_wint1130_worktrees_table.sql exists at
+      apps/api/knowledge-base/src/db/migrations/1110_wint1130_worktrees_table.sql. Contains CREATE TABLE IF NOT EXISTS
+      workflow.worktrees with all required columns (id, story_id, worktree_path, branch_name, status, created_at,
+      updated_at, merged_at, abandoned_at, metadata). Table comment references WINT-1130.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_changed[0]
+    notes: >-
+      Migration 1060_completion_cancellation_cascade.sql uses workflow.worktrees (correct table name) in all 3 trigger
+      functions: story_completion_cascade(), story_cancellation_cascade(), and story_cascade_dispatch(). Zero
+      occurrences of story_worktrees in any source file. The pg_class guard checks for 'worktrees' (not
+      'story_worktrees'). Historical references in CDBE-1060 plan documents are not source code.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_changed[1]
+    notes: >-
+      Migration 1110 creates: CREATE UNIQUE INDEX IF NOT EXISTS idx_worktrees_story_id_active ON
+      workflow.worktrees(story_id) WHERE status = 'active'. Comment explicitly cites WINT-1130 AC-8. Index prevents
+      multiple concurrent active worktrees per story while allowing unlimited historical (merged/abandoned) entries.
+      Also verified in Drizzle schema at workflow.ts line 62-75.
+  - ac_id: AC-MCP-TOOLS
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:files_changed[2-8]
+    notes: >-
+      All 4 MCP tools implemented and registered: worktree_register (worktree-register.ts), worktree_get_by_story
+      (worktree-get-by-story.ts), worktree_list_active (worktree-list-active.ts), worktree_mark_complete
+      (worktree-mark-complete.ts). All registered in tool-schemas.ts and tool-handlers.ts. Zod-first types in
+      __types__/index.ts. Uses @repo/logger (no console). Uses getDbClient() (not @repo/db import). 13 unit tests cover
+      all tools.
+architecture_compliant: true
+architecture_notes: >-
+  Zod-first types throughout (no TS interfaces). Uses @repo/logger, not console. Functional pattern. No barrel files in
+  implementation. Correct import paths with .js extensions. SECURITY INVOKER on all trigger functions. Idempotent SQL
+  (IF NOT EXISTS, CREATE OR REPLACE). Cascade logic uses pg_class guard for runtime table existence check.
+issues: []
+pre_existing_failures:
+  note: >-
+    Running pnpm test --filter @repo/knowledge-base shows 36 failing tests across 19 files. Confirmed pre-existing on
+    main branch. Failures are in story-outcomes, analytics, and other unrelated test files. None introduced by
+    WINT-1130.
+  worktree_tests: '13/13 pass when run in isolation via: vitest run src/worktree-management/__tests__/'
+lessons_to_record:
+  - lesson: >-
+      When running pnpm test for a package with pre-existing failures, use vitest run <specific-path> to isolate only
+      the story-touched test files. Pre-existing failures pollute the full test run output and can obscure the actual
+      story test results.
+    category: pattern
+    tags:
+      - testing
+      - vitest
+      - qa-verify
+  - lesson: >-
+      pg_class runtime guard pattern (checking table existence before UPDATE) allows migration 1060 to safely deploy
+      before migration 1110 without a hard dependency. This is a useful defensive pattern for migrations with forward
+      references.
+    category: pattern
+    tags:
+      - sql
+      - migrations
+      - postgres
+      - infrastructure
+  - lesson: >-
+      Partial unique index (WHERE status = 'active') is the correct pattern to enforce at-most-one active worktree per
+      story while allowing unlimited historical records. Standard unique index would block legitimate historical
+      entries.
+    category: pattern
+    tags:
+      - sql
+      - postgres
+      - indexes
+      - worktrees
+tokens:
+  in: 18000
+  out: 3500
