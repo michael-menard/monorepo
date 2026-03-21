@@ -957,6 +957,124 @@ describe('kb_add_dependency', () => {
     expect(dep).toBeDefined()
     expect(dep!.dependencyType).toBe('follow_up_from')
   })
+
+  it('rejects orphan — depends_on_id does not exist', async () => {
+    const storyA = makeStoryId('DEP-ORPH-A')
+    testStoryIds.push(storyA)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: 'NONEXISTENT-STORY-999',
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('depends_on_id not found')
+  })
+
+  it('rejects orphan — story_id does not exist', async () => {
+    const storyA = makeStoryId('DEP-ORPH-B')
+    testStoryIds.push(storyA)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: 'NONEXISTENT-STORY-999',
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('story_id not found')
+  })
+
+  it('rejects direct cycle A→B→A', async () => {
+    const storyA = makeStoryId('DEP-CYC2-A')
+    const storyB = makeStoryId('DEP-CYC2-B')
+    testStoryIds.push(storyA, storyB)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+
+    // Create A depends_on B
+    const first = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    expect(first.created).toBe(true)
+
+    // Try B depends_on A — should detect cycle
+    const result = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('Cycle detected')
+  })
+
+  it('rejects transitive cycle A→B→C→A', async () => {
+    const storyA = makeStoryId('DEP-CYC3-A')
+    const storyB = makeStoryId('DEP-CYC3-B')
+    const storyC = makeStoryId('DEP-CYC3-C')
+    testStoryIds.push(storyA, storyB, storyC)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+    await kb_create_story(deps, { story_id: storyC, title: 'Story C' })
+
+    // Create chain: A depends_on B, B depends_on C
+    await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyC,
+      dependency_type: 'depends_on',
+    })
+
+    // Try C depends_on A — should detect transitive cycle
+    const result = await kb_add_dependency(deps, {
+      story_id: storyC,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('Cycle detected')
+  })
+
+  it('allows valid dependency chain without cycle', async () => {
+    const storyA = makeStoryId('DEP-CHAIN-A')
+    const storyB = makeStoryId('DEP-CHAIN-B')
+    const storyC = makeStoryId('DEP-CHAIN-C')
+    testStoryIds.push(storyA, storyB, storyC)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+    await kb_create_story(deps, { story_id: storyC, title: 'Story C' })
+
+    // A depends_on B, B depends_on C — no cycle
+    const r1 = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    expect(r1.created).toBe(true)
+
+    const r2 = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyC,
+      dependency_type: 'depends_on',
+    })
+    expect(r2.created).toBe(true)
+  })
 })
 
 // ============================================================================
