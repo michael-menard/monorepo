@@ -12,7 +12,8 @@ tools: [Read, Grep, Glob, Bash, Task, TaskOutput, AskUserQuestion]
 kb_tools:
   - kb_search
   - kb_add_decision
-  - workflow_log_outcome
+  - session_create
+  - session_complete
 shared:
   - _shared/decision-handling.md
   - _shared/autonomy-tiers.md
@@ -38,7 +39,7 @@ Follow `.claude/agents/_shared/decision-handling.md` for all decisions.
 
 - Tier 4 (Destructive) → ALWAYS escalate, regardless of autonomy level
 - Tier 2 (Preference) with locked project preference → Auto-accept
-- Batch mode → Queue Tier 2/5 decisions via `kb_add_decision({ decision_type: 'deferred', ... })`
+- Batch mode → Queue Tier 2/5 decisions to PENDING-DECISIONS.yaml
 
 ---
 
@@ -64,9 +65,10 @@ Follow `.claude/agents/_shared/decision-handling.md` for all decisions.
 
 ## Inputs
 
+- Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
-- Scope flags: via `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })`
-- Validated plan: via `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'plan' })`
+- `_implementation/SCOPE.md` - scope flags
+- `_implementation/IMPLEMENTATION-PLAN.md` - validated plan
 
 ---
 
@@ -74,11 +76,7 @@ Follow `.claude/agents/_shared/decision-handling.md` for all decisions.
 
 ### Step 1: Read Scope
 
-Extract `backend_impacted`, `frontend_impacted` from KB:
-
-```javascript
-kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })
-```
+Extract `backend_impacted`, `frontend_impacted` from SCOPE.md
 
 ### Step 2: Spawn Workers (PARALLEL)
 
@@ -92,7 +90,7 @@ Use TaskOutput to wait. Track: COMPLETE / BLOCKED / type errors
 
 If worker output contains `BLOCKED: Decision required`:
 
-1. **Read the BLOCKED signal payload** from the worker output for decision details
+1. **Read BLOCKERS.md** for decision details
 
 2. **Classify the decision tier** (see `.claude/agents/_shared/decision-handling.md`):
    - Destructive action (delete, drop, force push)? → Tier 4
@@ -122,18 +120,19 @@ If worker output contains `BLOCKED: Decision required`:
    | 5    | Escalate     | Escalate     | Auto\*       |
 
 5. **If Auto-Accept**:
-   - Log via `kb_add_decision({ story_id: '{STORY_ID}', decision_type: 'auto', ... })`
+   - Log to `_implementation/DECISIONS-AUTO.yaml`
    - Resume worker with decision context
    - Continue execution
 
 6. **If Escalate (normal mode)**:
    - Query KB for prior decisions
    - Use AskUserQuestion to get user input
-   - Record via `kb_add_decision({ story_id: '{STORY_ID}', decision_type: 'architecture', ... })`
+   - Record in ARCHITECTURAL-DECISIONS.yaml
+   - Write decision to KB
    - Resume worker
 
 7. **If Escalate (batch_mode=true)**:
-   - Queue via `kb_add_decision({ story_id: '{STORY_ID}', decision_type: 'deferred', ... })`
+   - Queue to `_implementation/PENDING-DECISIONS.yaml`
    - Continue with other workers if possible
    - Present batch at phase end
 
@@ -149,7 +148,7 @@ If backend completed AND story involves API endpoints.
 
 ### Step 6: Final Check
 
-Verify worker outputs exist, check for BLOCKED signals
+Verify logs exist, check for BLOCKERS.md
 
 ---
 
@@ -157,38 +156,35 @@ Verify worker outputs exist, check for BLOCKED signals
 
 Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
+### Session Create (at workflow start, before spawning workers)
+
+```javascript
+// Before spawning any workers:
+const session = await session_create({
+  agentName: 'dev-implement-implementation-leader',
+  storyId: '{STORY_ID}',
+  phase: 'implementation',
+})
+// if session === null: emit "SESSION UNAVAILABLE — continuing without session tracking" and proceed
+// if session !== null: record session.sessionId for later use
+```
+
+### Session Complete (before IMPLEMENTATION COMPLETE signal)
+
+```javascript
+// After all workers complete, before emitting IMPLEMENTATION COMPLETE:
+if (session) {
+  await session_complete({ sessionId: session.sessionId })
+  // null return: log warning and continue — never blocks completion
+}
+```
+
 ---
 
 ## Token Tracking (REQUIRED)
 
 ```
 /token-log {STORY_ID} dev-implementation <input-tokens> <output-tokens>
-```
-
----
-
-## Step 6.5: Log Outcome on Blocked/Cancelled (WINT-3050)
-
-**When emitting `IMPLEMENTATION BLOCKED`**: Before signaling, log the outcome.
-
-```javascript
-try {
-  const result = await workflow_log_outcome({
-    story_id: "{STORY_ID}",
-    final_verdict: "blocked",  // or "cancelled" if user-cancelled
-    quality_score: 0,
-    review_iterations: 0,  // populate from retry count if available
-    qa_iterations: 0,
-    primary_blocker: "<blocked reason from Step 3/4>",
-    completed_at: new Date().toISOString()
-  })
-  if (result === null) {
-    logger.warn("WINT-3050: outcome log returned null for {STORY_ID}")
-  }
-} catch (e) {
-  logger.warn("WINT-3050: outcome log failed for {STORY_ID}: " + e.message)
-}
-// Continue to emit BLOCKED signal regardless
 ```
 
 ---
@@ -202,26 +198,26 @@ try {
 
 ## Retry Policy
 
-| Scenario          | Action                                |
-| ----------------- | ------------------------------------- |
-| Type errors (1st) | Retry with error context              |
-| Type errors (2nd) | Signal BLOCKED to parent orchestrator |
-| Worker blocked    | No retry, BLOCKED immediately         |
-| Lint errors       | No retry, BLOCKED                     |
+| Scenario          | Action                        |
+| ----------------- | ----------------------------- |
+| Type errors (1st) | Retry with error context      |
+| Type errors (2nd) | Create BLOCKERS.md, BLOCKED   |
+| Worker blocked    | No retry, BLOCKED immediately |
+| Lint errors       | No retry, BLOCKED             |
 
 ---
 
 ## Non-Negotiables
 
-| Rule                       | Description                                              |
-| -------------------------- | -------------------------------------------------------- |
-| Escalate arch decisions    | MUST present to user via AskUserQuestion                 |
-| Record decisions           | Via `kb_add_decision` (architecture/auto/deferred types) |
-| Never approve autonomously | User confirms all arch decisions                         |
-| Parallel spawn             | Single message for all workers                           |
-| Token log                  | Call /token-log before completion                        |
-| Delegate only              | Do NOT implement code yourself                           |
-| Respect scope              | Only spawn workers per scope flags                       |
+| Rule                       | Description                                                |
+| -------------------------- | ---------------------------------------------------------- |
+| Escalate arch decisions    | MUST present to user via AskUserQuestion                   |
+| Record decisions           | In ARCHITECTURAL-DECISIONS.yaml AND KB via kb_add_decision |
+| Never approve autonomously | User confirms all arch decisions                           |
+| Parallel spawn             | Single message for all workers                             |
+| Token log                  | Call /token-log before completion                          |
+| Delegate only              | Do NOT implement code yourself                             |
+| Respect scope              | Only spawn workers per scope flags                         |
 
 ---
 

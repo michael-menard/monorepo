@@ -90,6 +90,13 @@ import {
   type KbGetChurnAnalysisInput,
   type KbGetScoreboardInput,
 } from '../crud-operations/analytics-operations.js'
+import {
+  SessionCreateInputSchema,
+  SessionUpdateInputSchema,
+  SessionCompleteInputSchema,
+  SessionQueryInputSchema,
+  SessionCleanupInputSchema,
+} from '../crud-operations/session-operations.js'
 // Re-export schemas and types for external use
 export {
   KbCreateStoryInputSchema,
@@ -4459,4 +4466,147 @@ toolDefinitions.push(
   workflowLogDecisionToolDefinition,
   workflowLogOutcomeToolDefinition,
   workflowGetStoryTelemetryToolDefinition,
+)
+
+// ============================================================================
+// Session Tool Definitions (WINT-2090)
+// ============================================================================
+
+const sessionCreateToolDefinition = {
+  name: 'session_create',
+  description: `Create a new agent context session in workflow.context_sessions.
+
+Session tracking is telemetry — a null return must NOT block workflow execution.
+Auto-generates a UUID sessionId if not provided.
+
+Parameters:
+- agentName (required): Name of the leader agent opening the session (e.g., 'dev-execute-leader')
+- storyId (optional): Story ID for this workflow (e.g., 'WINT-2090')
+- phase (optional): Current workflow phase (e.g., 'execute', 'plan', 'qa')
+- sessionId (optional): Override the session UUID (auto-generated if omitted)
+- inputTokens (optional): Initial input token count (default: 0)
+- outputTokens (optional): Initial output token count (default: 0)
+- cachedTokens (optional): Initial cached token count (default: 0)
+
+Returns: Created session record or null on DB error. Null must NOT block workflow.
+
+Example:
+{
+  "agentName": "dev-execute-leader",
+  "storyId": "WINT-2090",
+  "phase": "execute"
+}`,
+  inputSchema: zodToMcpSchema(SessionCreateInputSchema),
+}
+
+const sessionUpdateToolDefinition = {
+  name: 'session_update',
+  description: `Update an existing agent session's token metrics.
+
+Supports two modes:
+- incremental (default): Adds values to existing counts (concurrent-safe with SQL arithmetic)
+- absolute: Sets values directly (last-write-wins)
+
+Cannot update completed sessions (endedAt IS NOT NULL).
+
+Parameters:
+- sessionId (required): UUID of the session to update
+- mode (optional): 'incremental' (default) or 'absolute'
+- inputTokens (optional): Token count to add/set
+- outputTokens (optional): Token count to add/set
+- cachedTokens (optional): Token count to add/set
+
+Returns: Updated session record or null on error.
+
+Example (incremental):
+{
+  "sessionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "inputTokens": 1000,
+  "outputTokens": 500
+}`,
+  inputSchema: zodToMcpSchema(SessionUpdateInputSchema),
+}
+
+const sessionCompleteToolDefinition = {
+  name: 'session_complete',
+  description: `Mark an agent session as completed with final metrics.
+
+Sets the endedAt timestamp and optionally updates final token counts.
+Cannot complete an already-completed session (idempotency check).
+
+Parameters:
+- sessionId (required): UUID of the session to complete
+- endedAt (optional): ISO timestamp for completion (defaults to now())
+- inputTokens (optional): Final input token count (absolute)
+- outputTokens (optional): Final output token count (absolute)
+- cachedTokens (optional): Final cached token count (absolute)
+
+Returns: Completed session record or null on error.
+
+Example:
+{
+  "sessionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "inputTokens": 5000,
+  "outputTokens": 2500
+}`,
+  inputSchema: zodToMcpSchema(SessionCompleteInputSchema),
+}
+
+const sessionQueryToolDefinition = {
+  name: 'session_query',
+  description: `Query agent sessions with flexible filtering and pagination.
+
+Results are ordered by startedAt DESC (most recent first).
+Filter by agentName, storyId, or active-only (endedAt IS NULL).
+
+Parameters:
+- agentName (optional): Filter by agent name
+- storyId (optional): Filter by story ID
+- activeOnly (optional): If true, return only sessions without endedAt (default: false)
+- limit (optional): Max results (1-1000, default: 50)
+- offset (optional): Pagination offset (default: 0)
+
+Returns: Array of matching session records.
+
+Example:
+{
+  "storyId": "WINT-2090",
+  "activeOnly": true
+}`,
+  inputSchema: zodToMcpSchema(SessionQueryInputSchema),
+}
+
+const sessionCleanupToolDefinition = {
+  name: 'session_cleanup',
+  description: `Archive old completed agent sessions by deletion.
+
+SAFETY: Defaults to dryRun=true — must explicitly set dryRun=false to delete.
+Only deletes completed sessions (endedAt IS NOT NULL) older than retentionDays.
+
+Parameters:
+- retentionDays (optional): Sessions older than this many days are eligible (default: 90, min: 1)
+- dryRun (optional): If true (default), count sessions without deleting
+
+Returns: { deletedCount, dryRun, cutoffDate }
+
+Example (dry run):
+{
+  "retentionDays": 90
+}
+
+Example (actual cleanup):
+{
+  "retentionDays": 90,
+  "dryRun": false
+}`,
+  inputSchema: zodToMcpSchema(SessionCleanupInputSchema),
+}
+
+// Append session tools to toolDefinitions (WINT-2090)
+toolDefinitions.push(
+  sessionCreateToolDefinition,
+  sessionUpdateToolDefinition,
+  sessionCompleteToolDefinition,
+  sessionQueryToolDefinition,
+  sessionCleanupToolDefinition,
 )

@@ -11,6 +11,8 @@ model: haiku
 tools: [Read, Grep, Glob, Write, Edit, Bash]
 kb_tools:
   - kb_search
+  - session_create
+  - session_complete
 skills_used:
   - /precondition-check
   - /token-log
@@ -138,6 +140,35 @@ review_iteration: { iteration from review artifact }
 
 - `SETUP COMPLETE` - Proceed to verification phase
 - `SETUP BLOCKED: <reason>` - Cannot proceed
+
+---
+
+## Session Lifecycle
+
+Call `session_create` at the start (before precondition checks) and `session_complete` before emitting SETUP COMPLETE or SETUP BLOCKED. Session tracking is telemetry — null returns MUST NOT gate QA setup.
+
+### Session Create (at workflow start)
+
+```javascript
+// Before precondition checks:
+const session = await session_create({
+  agentName: 'qa-verify-setup-leader',
+  storyId: '{STORY_ID}',
+  phase: 'qa-setup',
+})
+// if session === null: emit "SESSION UNAVAILABLE — continuing without session tracking" and proceed
+// if session !== null: record session.sessionId for later use
+```
+
+### Session Complete (before emitting signal)
+
+```javascript
+// Before emitting SETUP COMPLETE or SETUP BLOCKED:
+if (session) {
+  await session_complete({ sessionId: session.sessionId })
+  // null return: log warning and continue — never blocks completion
+}
+```
 
 ---
 

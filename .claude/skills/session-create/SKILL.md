@@ -1,7 +1,7 @@
 ---
 name: session-create
 description: Open a new context session at the start of a leader agent workflow. Records agentName, storyId, and phase in workflow.context_sessions, emitting a structured SESSION CREATED block for downstream workers to inherit.
-mcp_tools_available: [mcp__postgres-knowledgebase__sessionCreate]
+mcp_tools_available: [session_create]
 ---
 
 # /session-create - Open a Context Session
@@ -32,7 +32,7 @@ Session tracking is **telemetry** — it must never gate or block a workflow. If
 
 This skill:
 
-1. Calls `mcp__postgres-knowledgebase__sessionCreate` with `agentName`, `storyId`, and `phase`
+1. Calls `session_create` with `agentName`, `storyId`, and `phase`
 2. Records the returned `session_id` and emits the structured `SESSION CREATED` output block
 3. Handles null returns (DB error) gracefully — emits `SESSION UNAVAILABLE` and continues
 
@@ -43,7 +43,7 @@ This skill:
 Call the MCP tool with required and optional fields:
 
 ```javascript
-const result = await mcp__postgres_knowledgebase__sessionCreate({
+const result = await session_create({
   agentName: 'dev-execute-leader', // required — name of THIS agent
   storyId: 'WINT-2090', // optional
   phase: 'execute', // optional
@@ -150,7 +150,7 @@ The leader's downstream work (plan execution, file writes, code generation) must
 ### Minimal invocation
 
 ```javascript
-const session = await mcp__postgres_knowledgebase__sessionCreate({
+const session = await session_create({
   agentName: 'dev-execute-leader',
 })
 // Emits:
@@ -164,7 +164,7 @@ const session = await mcp__postgres_knowledgebase__sessionCreate({
 ### Full invocation with context
 
 ```javascript
-const session = await mcp__postgres_knowledgebase__sessionCreate({
+const session = await session_create({
   agentName: 'dev-execute-leader',
   storyId: 'WINT-2090',
   phase: 'execute',
@@ -180,7 +180,7 @@ const session = await mcp__postgres_knowledgebase__sessionCreate({
 ### Null-return path
 
 ```javascript
-const session = await mcp__postgres_knowledgebase__sessionCreate({
+const session = await session_create({
   agentName: 'dev-execute-leader',
   storyId: 'WINT-2090',
   phase: 'execute',

@@ -13,6 +13,8 @@ kb_tools:
   - kb_update_story_status
   - kb_read_artifact
   - artifact_write
+  - session_create
+  - session_complete
 ---
 
 # Agent: dev-execute-leader
@@ -53,6 +55,20 @@ const [plan, scope, context, checkpoint] = await Promise.all([
 ### Step 1: Validate Phase
 
 Use checkpoint artifact: `current_phase: plan` or `fix`, `blocked: false`
+
+### Step 1.5: Open Session (FIRE AND FORGET)
+
+Call `session_create` immediately after reading KB artifacts. Session tracking is telemetry — null return MUST NOT block execution.
+
+```javascript
+const session = await session_create({
+  agentName: 'dev-execute-leader',
+  storyId: '{STORY_ID}',
+  phase: 'execute',
+})
+// if session === null: emit "SESSION UNAVAILABLE — continuing without session tracking" and proceed
+// if session !== null: emit structured SESSION CREATED block with session.sessionId
+```
 
 ### Step 2: Determine Execution Mode
 
@@ -161,7 +177,7 @@ Task tool:
   description: "E2E tests {STORY_ID}"
   prompt: |
     Read: .claude/agents/dev-implement-playwright.agent.md
-    CONTEXT: story_id={STORY_ID}, mode=LIVE
+    CONTEXT: feature_dir={FEATURE_DIR}, story_id={STORY_ID}, mode=LIVE
     Signal: E2E COMPLETE or E2E FAILED: reason
 ```
 
@@ -177,7 +193,7 @@ artifact_write({
   artifact_type: 'evidence',
   phase: 'implementation',
   iteration: checkpoint.content.iteration,
-  file_path: '_story/{STORY_ID}/EVIDENCE.yaml',
+  file_path: '{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml',
   content: {
     /* full EVIDENCE structure */
   },
@@ -195,7 +211,7 @@ artifact_write({
   artifact_type: 'checkpoint',
   phase: 'implementation',
   iteration: checkpoint.content.iteration,
-  file_path: '_story/{STORY_ID}/CHECKPOINT.yaml',
+  file_path: '{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml',
   content: {
     ...checkpoint.content,
     current_phase: 'execute',
@@ -211,8 +227,10 @@ artifact_write({
 
 ## Output
 
-- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write` (file shim: `_story/{STORY_ID}/EVIDENCE.yaml`)
-- KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write` (file shim: `_story/{STORY_ID}/CHECKPOINT.yaml`)
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml` (written via `artifact_write`)
+- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
+- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write`
+- KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write`
 - Code files (created/modified by workers)
 
 ---
@@ -220,6 +238,32 @@ artifact_write({
 ## Session Lifecycle
 
 Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
+
+### Session Create (at workflow start)
+
+After reading KB artifacts and validating phase, call:
+
+```javascript
+const session = await session_create({
+  agentName: 'dev-execute-leader',
+  storyId: '{STORY_ID}',
+  phase: 'execute',
+})
+if (!session) {
+  // log warning and continue — session tracking is telemetry, not a gate
+}
+```
+
+### Session Complete (before completion signal)
+
+After writing EVIDENCE.yaml and updating CHECKPOINT, before emitting EXECUTION COMPLETE:
+
+```javascript
+if (session) {
+  await session_complete({ sessionId: session.sessionId })
+  // null return: log warning and continue — never blocks completion
+}
+```
 
 ---
 
@@ -236,6 +280,19 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 - `EXECUTION COMPLETE` - all steps executed, evidence collected
 - `EXECUTION BLOCKED: <reason>` - cannot proceed
 - `EXECUTION PARTIAL: <reason>` - some ACs missing evidence
+
+---
+
+## Session Complete (Before Completion Signal)
+
+After writing EVIDENCE.yaml and updating CHECKPOINT, call `session_complete` before emitting completion signal:
+
+```javascript
+if (session) {
+  await session_complete({ sessionId: session.sessionId })
+  // null return: log warning and continue — session tracking is telemetry, not a gate
+}
+```
 
 ---
 
