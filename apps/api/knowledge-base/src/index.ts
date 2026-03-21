@@ -36,6 +36,8 @@ export {
   type NewKnowledgeEntry,
   type EmbeddingCacheEntry,
   type NewEmbeddingCacheEntry,
+  type SelectContextPack,
+  type SelectContextSession,
 } from './db/schema.js'
 
 // Type exports

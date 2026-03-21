@@ -14,8 +14,43 @@ import { z } from 'zod'
 import { eq, and, gte, lte, sql, desc, asc, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { storyTokenUsage, stories } from '../db/schema.js'
+import { storyTokenUsage, stories, storyOutcomes } from '../db/schema.js'
 import { TokenGroupBySchema } from '../__types__/index.js'
+
+/**
+ * Derive phase from story state.
+ * Phase is no longer stored — it's computed from the state value.
+ */
+function derivePhaseFromState(state: string | null): string {
+  if (!state) return 'unknown'
+  switch (state) {
+    case 'backlog':
+    case 'created':
+      return 'planning'
+    case 'elab':
+    case 'ready':
+      return 'elaboration'
+    case 'in_progress':
+    case 'needs_code_review':
+    case 'ready_for_review':
+    case 'in_review':
+    case 'failed_code_review':
+      return 'development'
+    case 'ready_for_qa':
+    case 'in_qa':
+    case 'failed_qa':
+      return 'qa'
+    case 'UAT':
+    case 'completed':
+      return 'done'
+    case 'cancelled':
+    case 'deferred':
+    case 'blocked':
+      return 'inactive'
+    default:
+      return 'unknown'
+  }
+}
 
 // ============================================================================
 // Input Schemas
@@ -212,15 +247,26 @@ export async function kb_get_bottleneck_analysis(
     ? and(eq(stories.feature, validated.feature), activeCondition)
     : activeCondition
 
+  // Derive phase from state via SQL CASE
+  const phaseExpr = sql<string>`CASE
+    WHEN ${stories.state} IN ('backlog', 'created') THEN 'planning'
+    WHEN ${stories.state} IN ('elab', 'ready') THEN 'elaboration'
+    WHEN ${stories.state} IN ('in_progress', 'needs_code_review', 'ready_for_review', 'in_review', 'failed_code_review') THEN 'development'
+    WHEN ${stories.state} IN ('ready_for_qa', 'in_qa', 'failed_qa') THEN 'qa'
+    WHEN ${stories.state} IN ('UAT', 'completed') THEN 'done'
+    WHEN ${stories.state} IN ('cancelled', 'deferred', 'blocked') THEN 'inactive'
+    ELSE 'unknown'
+  END`
+
   // Get phase distribution for active stories
   const phaseDistribution = await deps.db
     .select({
-      phase: stories.phase,
+      phase: phaseExpr,
       count: sql<number>`count(*)::int`,
     })
     .from(stories)
     .where(phaseDistCondition)
-    .groupBy(stories.phase)
+    .groupBy(phaseExpr)
     .orderBy(desc(sql`count(*)`))
 
   // Build state distribution condition
@@ -251,7 +297,6 @@ export async function kb_get_bottleneck_analysis(
   const stuckStories = await deps.db
     .select({
       storyId: stories.storyId,
-      phase: stories.phase,
       state: stories.state,
       updatedAt: stories.updatedAt,
     })
@@ -264,7 +309,7 @@ export async function kb_get_bottleneck_analysis(
   const now = Date.now()
   const stuckWithDays = stuckStories.map(s => ({
     story_id: s.storyId,
-    phase: s.phase,
+    phase: derivePhaseFromState(s.state),
     state: s.state,
     days_stuck: Math.floor((now - s.updatedAt.getTime()) / (1000 * 60 * 60 * 24)),
   }))
@@ -315,24 +360,27 @@ export async function kb_get_churn_analysis(
 }> {
   const validated = KbGetChurnAnalysisInputSchema.parse(input)
 
+  // Total iterations = reviewIterations + qaIterations from story_outcomes
+  const totalIterationsExpr = sql<number>`(${storyOutcomes.reviewIterations} + ${storyOutcomes.qaIterations})`
+
   // Build high churn condition
-  const iterationCondition = gte(stories.iteration, validated.min_iterations)
+  const iterationCondition = gte(totalIterationsExpr, validated.min_iterations)
   const highChurnCondition = validated.feature
     ? and(eq(stories.feature, validated.feature), iterationCondition)
     : iterationCondition
 
-  // Find high-churn stories (iteration >= threshold)
+  // Find high-churn stories (total iterations >= threshold)
   const highChurnStories = await deps.db
     .select({
       storyId: stories.storyId,
-      iteration: stories.iteration,
+      iteration: totalIterationsExpr,
       feature: stories.feature,
-      phase: stories.phase,
       state: stories.state,
     })
     .from(stories)
+    .innerJoin(storyOutcomes, eq(stories.storyId, storyOutcomes.storyId))
     .where(highChurnCondition)
-    .orderBy(desc(stories.iteration))
+    .orderBy(desc(totalIterationsExpr))
     .limit(validated.limit)
 
   // Build feature averages condition
@@ -342,21 +390,22 @@ export async function kb_get_churn_analysis(
   const featureAverages = await deps.db
     .select({
       feature: stories.feature,
-      avgIterations: sql<number>`avg(${stories.iteration})::float`,
+      avgIterations: sql<number>`avg(${storyOutcomes.reviewIterations} + ${storyOutcomes.qaIterations})::float`,
       storyCount: sql<number>`count(*)::int`,
-      maxIterations: sql<number>`max(${stories.iteration})::int`,
+      maxIterations: sql<number>`max(${storyOutcomes.reviewIterations} + ${storyOutcomes.qaIterations})::int`,
     })
     .from(stories)
+    .innerJoin(storyOutcomes, eq(stories.storyId, storyOutcomes.storyId))
     .where(featureCondition)
     .groupBy(stories.feature)
-    .orderBy(desc(sql`avg(${stories.iteration})`))
+    .orderBy(desc(sql`avg(${storyOutcomes.reviewIterations} + ${storyOutcomes.qaIterations})`))
 
   return {
     high_churn_stories: highChurnStories.map(s => ({
       story_id: s.storyId,
       iteration: s.iteration ?? 0,
       feature: s.feature,
-      phase: s.phase,
+      phase: derivePhaseFromState(s.state),
       state: s.state,
     })),
     feature_averages: featureAverages.map(f => ({

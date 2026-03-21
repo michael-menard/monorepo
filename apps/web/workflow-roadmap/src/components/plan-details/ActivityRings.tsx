@@ -4,24 +4,61 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@repo/app-component-lib
 export interface StoryStats {
   total: number
   completed: number
-  active: number
-  backlog: number
+  reviewed: number
+  ready: number
 }
 
-export function ActivityRings({ stats }: { stats: StoryStats }) {
-  const { total, completed, active, backlog } = stats
-  const completedPct = total > 0 ? completed / total : 0
-  const activePct = total > 0 ? active / total : 0
-  const backlogPct = total > 0 ? backlog / total : 0
+const rings = [
+  {
+    key: 'completed',
+    label: 'Completed',
+    color: '#7eb8c9',
+    dotClass: 'bg-[#7eb8c9]',
+    textClass: 'text-[#7eb8c9]',
+  },
+  {
+    key: 'reviewed',
+    label: 'Reviewed',
+    color: '#5a4a6b',
+    dotClass: 'bg-[#5a4a6b]',
+    textClass: 'text-[#5a4a6b]',
+  },
+  {
+    key: 'ready',
+    label: 'Ready',
+    color: '#3d5a6e',
+    dotClass: 'bg-[#3d5a6e]',
+    textClass: 'text-[#3d5a6e]',
+  },
+  {
+    key: 'created',
+    label: 'Created',
+    color: '#2a3a4a',
+    dotClass: 'bg-[#2a3a4a]',
+    textClass: 'text-[#2a3a4a]',
+  },
+] as const
 
-  const sw = 8
-  const gap = 4
-  const r1 = 44
-  const r2 = r1 - sw - gap
-  const r3 = r2 - sw - gap
-  const c1 = 2 * Math.PI * r1
-  const c2 = 2 * Math.PI * r2
-  const c3 = 2 * Math.PI * r3
+export function ActivityRings({ stats }: { stats: StoryStats }) {
+  const { total, completed, reviewed, ready } = stats
+
+  // Cumulative funnel: each ring includes all stages beyond it
+  const cumulativeCounts = {
+    completed,
+    reviewed: reviewed + completed,
+    ready: ready + reviewed + completed,
+    created: total,
+  }
+
+  const pcts = Object.fromEntries(
+    Object.entries(cumulativeCounts).map(([k, v]) => [k, total > 0 ? v / total : 0]),
+  ) as Record<string, number>
+
+  const sw = 7
+  const gap = 3
+  const rOuter = 46
+  const radii = rings.map((_, i) => rOuter - i * (sw + gap))
+  const circumferences = radii.map(r => 2 * Math.PI * r)
 
   return (
     <Tooltip>
@@ -36,79 +73,50 @@ export function ActivityRings({ stats }: { stats: StoryStats }) {
             aria-hidden="true"
           >
             {/* Track rings */}
-            <circle cx="50" cy="50" r={r1} fill="none" stroke="#060f1e" strokeWidth={sw} />
-            <circle cx="50" cy="50" r={r2} fill="none" stroke="#060f1e" strokeWidth={sw} />
-            <circle cx="50" cy="50" r={r3} fill="none" stroke="#060f1e" strokeWidth={sw} />
-            {/* Completed — emerald outer */}
-            <motion.circle
-              cx="50"
-              cy="50"
-              r={r1}
-              fill="none"
-              stroke="#10b981"
-              strokeWidth={sw}
-              strokeDasharray={c1}
-              strokeLinecap="round"
-              initial={{ strokeDashoffset: c1 }}
-              animate={{ strokeDashoffset: c1 * (1 - completedPct) }}
-              transition={{ duration: 1.2, ease: 'easeOut', delay: 0 }}
-            />
-            {/* Active — blue middle */}
-            <motion.circle
-              cx="50"
-              cy="50"
-              r={r2}
-              fill="none"
-              stroke="#60a5fa"
-              strokeWidth={sw}
-              strokeDasharray={c2}
-              strokeLinecap="round"
-              initial={{ strokeDashoffset: c2 }}
-              animate={{ strokeDashoffset: c2 * (1 - activePct) }}
-              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.15 }}
-            />
-            {/* Created/backlog — cyan inner */}
-            <motion.circle
-              cx="50"
-              cy="50"
-              r={r3}
-              fill="none"
-              stroke="#22d3ee"
-              strokeWidth={sw}
-              strokeDasharray={c3}
-              strokeLinecap="round"
-              initial={{ strokeDashoffset: c3 }}
-              animate={{ strokeDashoffset: c3 * (1 - backlogPct) }}
-              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
-            />
+            {radii.map((r, i) => (
+              <circle
+                key={`track-${i}`}
+                cx="50"
+                cy="50"
+                r={r}
+                fill="none"
+                stroke="#060f1e"
+                strokeWidth={sw}
+              />
+            ))}
+            {/* Progress rings */}
+            {rings.map((ring, i) => (
+              <motion.circle
+                key={ring.key}
+                cx="50"
+                cy="50"
+                r={radii[i]}
+                fill="none"
+                stroke={ring.color}
+                strokeWidth={sw}
+                strokeDasharray={circumferences[i]}
+                strokeLinecap="round"
+                initial={{ strokeDashoffset: circumferences[i] }}
+                animate={{ strokeDashoffset: circumferences[i] * (1 - (pcts[ring.key] ?? 0)) }}
+                transition={{ duration: 1.2, ease: 'easeOut', delay: i * 0.1 }}
+              />
+            ))}
           </svg>
         </div>
       </TooltipTrigger>
       <TooltipContent
         side="left"
-        className="bg-slate-800 border border-slate-600 text-slate-100 p-3 font-mono text-xs space-y-2"
+        className="bg-slate-800 border border-slate-600 text-slate-100 p-3 font-mono text-xs space-y-1.5"
       >
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          <span className="text-slate-400">Completed</span>
-          <span className="text-emerald-400 ml-4">
-            {completed}/{total}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-blue-400 inline-block" />
-          <span className="text-slate-400">Active</span>
-          <span className="text-blue-400 ml-4">
-            {active}/{total}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-cyan-400 inline-block" />
-          <span className="text-slate-400">Created</span>
-          <span className="text-cyan-400 ml-4">
-            {backlog}/{total}
-          </span>
-        </div>
+        {rings.map(ring => (
+          <div key={ring.key} className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${ring.dotClass} inline-block`} />
+            <span className="text-slate-400">{ring.label}</span>
+            <span className={`${ring.textClass} ml-auto tabular-nums`}>
+              {cumulativeCounts[ring.key as keyof typeof cumulativeCounts]}/{total}
+            </span>
+          </div>
+        ))}
       </TooltipContent>
     </Tooltip>
   )

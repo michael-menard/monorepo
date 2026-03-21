@@ -5,6 +5,7 @@
  * all cron job definitions with timeout wrapping and env-aware filtering.
  *
  * APIP-3090: Cron Scheduler Infrastructure
+ * CDBE-5020: Added partitionManagerJob to ALL_CRON_JOBS
  */
 
 import { logger } from '@repo/logger'
@@ -13,6 +14,7 @@ import { NodeTimeoutError } from '../runner/errors.js'
 import type { CronSchedulerAdapter } from './adapter.js'
 import type { CronJobDefinition, CronRunResult, CronScheduleRegistry } from './schemas.js'
 import { CronRunResultSchema } from './schemas.js'
+import { partitionManagerJob } from './jobs/partition-manager.job.js'
 
 // ============================================================================
 // registerCronJobs
@@ -92,6 +94,7 @@ function createWrappedJobFn(job: CronJobDefinition): () => Promise<void> {
  * Environment variable format:
  *   DISABLE_CRON_JOB_PATTERN_MINER=true  → disables job named 'pattern-miner'
  *   DISABLE_CRON_JOB_CODE_AUDIT=true     → disables job named 'code-audit'
+ *   DISABLE_CRON_JOB_PARTITION_MANAGER=true → disables job named 'partition-manager'
  *
  * The job name is normalized: hyphens become underscores, uppercased.
  *
@@ -116,3 +119,17 @@ export function buildCronRegistry(
 
   return { jobs: activeJobs }
 }
+
+// ============================================================================
+// ALL_CRON_JOBS — canonical list of all registered cron jobs (CDBE-5020)
+// ============================================================================
+
+/**
+ * Canonical list of all cron jobs available in the orchestrator.
+ * Pass this to buildCronRegistry() to build the active registry with
+ * env-var filtering applied (DISABLE_CRON_JOB_<NAME>=true).
+ *
+ * Each job in this list respects the DISABLE_CRON_JOB_<JOBNAME> env var.
+ * To disable partition-manager: DISABLE_CRON_JOB_PARTITION_MANAGER=true
+ */
+export const ALL_CRON_JOBS: CronJobDefinition[] = [partitionManagerJob]

@@ -72,20 +72,6 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
     return <p className="text-slate-500">No stories match the current filters.</p>
   }
 
-  // Check if there are any dependencies at all
-  const hasDeps =
-    stories.some(s => (s.dependencies ?? []).length > 0 || s.blockedByStory) || waves.length > 1
-
-  if (!hasDeps) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="text-3xl mb-3 text-slate-700">◈</div>
-        <p className="text-slate-400 font-medium">No dependencies</p>
-        <p className="text-slate-600 text-sm mt-1">None of the visible stories have blockers.</p>
-      </div>
-    )
-  }
-
   // Find first wave with incomplete work
   const firstActionableWave = waves.find(w => waveGroups.get(w)!.some(s => !isComplete(s.state)))
 

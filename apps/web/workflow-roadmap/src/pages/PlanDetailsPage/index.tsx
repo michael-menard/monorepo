@@ -37,10 +37,20 @@ export function PlanDetailsPage() {
   const storyStats = useMemo((): StoryStats | null => {
     if (!storiesData || storiesData.length === 0) return null
     const total = storiesData.length
-    const completed = storiesData.filter(s => s.state === 'completed').length
-    const active = storiesData.filter(s => s.state === 'in_progress' || s.state === 'in_qa').length
-    const backlog = total - completed - active
-    return { total, completed, active, backlog }
+    const countState = (...states: string[]) =>
+      storiesData.filter(s => s.state && states.includes(s.state)).length
+    return {
+      total,
+      completed: countState('uat', 'completed'),
+      reviewed: countState(
+        'needs_code_review',
+        'ready_for_review',
+        'ready_for_qa',
+        'in_qa',
+        'in_review',
+      ),
+      ready: countState('ready', 'in_progress'),
+    }
   }, [storiesData])
 
   const lastWorkedAt = useMemo(() => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { logger } from '@repo/logger'
+import { Send } from '@langchain/langgraph'
 import {
   createBatchProcessGraph,
   runBatchProcess,
@@ -13,10 +14,8 @@ import {
   BatchWorkerResultSchema,
   BatchProcessStateAnnotation,
   type BatchProcessState,
-  type BatchProcessConfig,
   type BatchWorkerResult,
 } from '../batch-process.js'
-import { Send } from '@langchain/langgraph'
 
 // ============================================================================
 // Mocks

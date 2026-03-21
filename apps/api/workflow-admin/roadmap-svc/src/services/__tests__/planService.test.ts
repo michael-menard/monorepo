@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { StoryUpdateInputSchema } from '../planService'
 
 describe('planService - getStoryById data transformation', () => {
   beforeEach(() => {
@@ -170,5 +171,53 @@ describe('planService - getStoryById data transformation', () => {
       expect(getVariant('P3')).toBe('secondary')
       expect(getVariant(null)).toBe('secondary')
     })
+  })
+})
+
+describe('StoryUpdateInputSchema', () => {
+  it('accepts description only', () => {
+    const result = StoryUpdateInputSchema.safeParse({ description: 'updated desc' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.description).toBe('updated desc')
+      expect(result.data.state).toBeUndefined()
+    }
+  })
+
+  it('accepts state only', () => {
+    const result = StoryUpdateInputSchema.safeParse({ state: 'cancelled' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.state).toBe('cancelled')
+      expect(result.data.description).toBeUndefined()
+    }
+  })
+
+  it('accepts both description and state', () => {
+    const result = StoryUpdateInputSchema.safeParse({ description: 'new desc', state: 'cancelled' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.description).toBe('new desc')
+      expect(result.data.state).toBe('cancelled')
+    }
+  })
+
+  it('accepts empty object', () => {
+    const result = StoryUpdateInputSchema.safeParse({})
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts null description with state', () => {
+    const result = StoryUpdateInputSchema.safeParse({ description: null, state: 'blocked' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.description).toBeNull()
+      expect(result.data.state).toBe('blocked')
+    }
+  })
+
+  it('rejects non-string state', () => {
+    const result = StoryUpdateInputSchema.safeParse({ state: 123 })
+    expect(result.success).toBe(false)
   })
 })

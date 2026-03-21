@@ -82,6 +82,12 @@ export const ToolNameSchema = z.enum([
   'workflow_log_decision',
   'workflow_log_outcome',
   'workflow_get_story_telemetry',
+  // Story dependency and context tools
+  'kb_add_dependency',
+  'kb_get_story_plan_links',
+  'kb_ingest_story_from_yaml',
+  'kb_find_similar_stories',
+  'kb_get_story_context',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -173,6 +179,12 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   workflow_log_decision: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_log_outcome: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_get_story_telemetry: new Set(['pm', 'dev', 'qa', 'all']),
+  // Story dependency and context tools - available to all roles
+  kb_add_dependency: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_plan_links: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_ingest_story_from_yaml: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_find_similar_stories: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_context: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

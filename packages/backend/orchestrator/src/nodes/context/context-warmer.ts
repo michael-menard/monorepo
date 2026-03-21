@@ -18,7 +18,7 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import type { SelectContextPack } from '@repo/knowledge-base/db'
+import type { SelectContextPack } from '@repo/knowledge-base'
 import {
   ContextCacheGetInputSchema,
   ContextCachePutInputSchema,

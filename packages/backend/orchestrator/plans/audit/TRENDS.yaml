@@ -1,7 +1,7 @@
 schema: 1
-generated: 2026-03-12T03:05:39.074Z
+generated: 2026-03-20T10:45:13.554Z
 window_days: 30
-audits_analyzed: 20
+audits_analyzed: 25
 overall:
   trend: stable
   total_findings_current: 0
@@ -25,7 +25,11 @@ by_severity:
     current: 0
     previous: 0
     trend: stable
-by_lens: {}
+by_lens:
+  audit-8-emergency-controls:
+    current: 0
+    previous: 0
+    trend: stable
 worst_offenders: []
 timeline:
   - date: 2026-02-14
@@ -143,6 +147,36 @@ timeline:
     medium: 0
     low: 0
   - date: 2026-03-12
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  - date: 2026-03-16
+    total: 7
+    critical: 4
+    high: 1
+    medium: 1
+    low: 1
+  - date: 2026-03-17
+    total: 5
+    critical: 0
+    high: 1
+    medium: 2
+    low: 2
+  - date: 2026-03-18
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  - date: 2026-03-19
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  - date: 2026-03-20
     total: 0
     critical: 0
     high: 0

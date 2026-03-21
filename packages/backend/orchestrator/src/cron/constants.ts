@@ -22,6 +22,8 @@ export const LOCK_KEYS = {
   WEEKLY_REPORT: 42_003,
   /** Dead code reaper cron job lock key (APIP-4050) */
   DEAD_CODE_REAPER: 42_004,
+  /** Partition manager cron job lock key (CDBE-5020) */
+  PARTITION_MANAGER: 42_005,
 } as const
 
 export type LockKey = (typeof LOCK_KEYS)[keyof typeof LOCK_KEYS]

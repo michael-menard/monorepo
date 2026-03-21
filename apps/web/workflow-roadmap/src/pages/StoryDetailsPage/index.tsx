@@ -171,7 +171,7 @@ export function StoryDetailsPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowCancelDialog(true)}
-            className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+            className="p-8 bg-red-500/10 text-red-400 border-0 hover:bg-red-500/20 hover:text-red-300"
           >
             <Ban className="h-3.5 w-3.5 mr-1.5" />
             Cancel Story

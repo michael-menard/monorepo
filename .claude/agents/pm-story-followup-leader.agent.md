@@ -4,7 +4,7 @@ updated: 2026-01-25
 version: 3.1.0
 type: leader
 permission_level: docs-only
-triggers: ["/pm-story followup"]
+triggers: ['/pm-story followup']
 skills_used:
   - /index-update
   - /token-log
@@ -21,12 +21,14 @@ Generate follow-up stories from findings identified during QA Elaboration of a p
 ## Inputs
 
 From orchestrator context:
+
 - Feature directory (e.g., `plans/features/wishlist`)
 - Source story ID (e.g., WISH-007)
 - Finding number (optional, for specific finding)
 - **Pre-allocated story ID** (optional, provided when spawned in parallel)
 
 From filesystem:
+
 - Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
 - Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
 
@@ -49,6 +51,7 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 3. Extract follow-up items from:
 
    a) **Checklist format:**
+
    ```
    ### Follow-up Stories Suggested
    - [ ] Brief description of follow-up story 1
@@ -56,6 +59,7 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
    ```
 
    b) **Table format:**
+
    ```
    | # | Finding | User Decision | Notes |
    | 1 | [finding] | Follow-up | [notes] |
@@ -72,6 +76,7 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 ### Phase 2: Selection
 
 **If finding-number NOT provided:**
+
 1. Display numbered candidate list
 2. Ask: "Which follow-up would you like to generate? (Enter number, or 'all')"
 3. Wait for response
@@ -79,12 +84,14 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 5. If number: proceed with that candidate
 
 **If finding-number WAS provided:**
+
 1. Validate number exists in candidates
 2. Proceed with that candidate
 
 ### Phase 3: Determine Story ID
 
 **If PRE-ALLOCATED ID was provided by orchestrator:**
+
 - Use the pre-allocated ID directly
 - Skip to Phase 3.5 for verification only (collision should not occur)
 - The orchestrator pre-allocates IDs to avoid race conditions when workers run in parallel
@@ -92,8 +99,9 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 **If NO pre-allocated ID (running standalone):**
 
 1. **List existing stories via KB:**
+
    ```javascript
-   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
+   kb_list_stories({ feature: '{feature_slug}', limit: 100 })
    ```
 
 2. **Find highest existing ID:**
@@ -120,9 +128,11 @@ For multiple follow-ups from same parent in one session, each gets +10 from the 
 For the proposed follow-up ID:
 
 1. **List existing stories via KB:**
+
    ```javascript
-   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
+   kb_list_stories({ feature: '{feature_slug}', limit: 100 })
    ```
+
    Extract all existing story IDs from the result.
 
 2. **Check if proposed ID exists in KB:**
@@ -146,6 +156,7 @@ For the proposed follow-up ID:
    `PM FAILED: Could not allocate unique story ID after 10 attempts`
 
 **Example collision resolution:**
+
 ```
 Proposed: WISH-2047
 Collision: WISH-2047 already exists (IP/Geolocation Logging)
@@ -160,6 +171,7 @@ Use: WISH-2060
 For each selected follow-up:
 
 1. Create directory:
+
    ```
    {FEATURE_DIR}/backlog/{NEW_STORY_ID}/
    {FEATURE_DIR}/backlog/{NEW_STORY_ID}/_pm/
@@ -170,7 +182,7 @@ For each selected follow-up:
 ```yaml
 ---
 status: backlog
-follow_up_from: {STORY_ID}
+follow_up_from: { STORY_ID }
 ---
 ```
 
@@ -215,12 +227,59 @@ follow_up_from: {STORY_ID}
 
 ### Phase 5: Register in KB
 
-1. Register the new follow-up story in the KB:
+1. **Read parent story metadata:**
+
    ```javascript
-   kb_update_story_status({ story_id: "{NEW_STORY_ID}", state: "backlog", phase: "pm" })
+   kb_get_story({ story_id: '{STORY_ID}', include_dependencies: true })
    ```
 
-2. The KB is the source of truth — no index file update needed
+   Extract: `feature`, `priority`, and inbound dependencies.
+
+2. **Read parent plan linkage:**
+
+   ```javascript
+   kb_get_story_plan_links({ story_id: '{STORY_ID}' })
+   ```
+
+   Extract: `plan_slug` (first link, if any).
+
+3. **Create follow-on story via `kb_create_story`:**
+
+   ```javascript
+   kb_create_story({
+     story_id: '{NEW_STORY_ID}',
+     title: '...',
+     feature: '{parent.feature}',
+     state: 'backlog',
+     plan_slug: '{parent.plan_slug}', // links to same plan
+     description: 'Follow-up from {STORY_ID}: ...',
+   })
+   ```
+
+   This actually creates the story in the KB (unlike `kb_update_story_status` which only updates existing rows).
+
+4. **Set dependency on parent:**
+
+   ```javascript
+   kb_add_dependency({
+     story_id: '{NEW_STORY_ID}',
+     depends_on_id: '{STORY_ID}',
+     dependency_type: 'follow_up_from',
+   })
+   ```
+
+5. **Inherit parent's blocking dependencies** (copy inbound blockers unless they're clearly irrelevant to the follow-up scope):
+
+   ```javascript
+   // For each blocker from parent's dependencies where type is 'depends_on' or 'blocked_by':
+   kb_add_dependency({
+     story_id: '{NEW_STORY_ID}',
+     depends_on_id: '{blocker_id}',
+     dependency_type: 'depends_on',
+   })
+   ```
+
+6. The KB is the source of truth — no index file update needed
 
 ### Phase 6: Update Source Story
 
@@ -230,13 +289,13 @@ follow_up_from: {STORY_ID}
 
 ## Quality Gates
 
-| Gate | Check |
-|------|-------|
-| Parent exists | Source story has QA Discovery Notes |
-| Finding valid | Selected finding exists in candidates |
-| Independently testable | Follow-up can be verified alone |
-| Dependency set | Depends On points to parent |
-| No scope creep | Stays within finding bounds |
+| Gate                   | Check                                 |
+| ---------------------- | ------------------------------------- |
+| Parent exists          | Source story has QA Discovery Notes   |
+| Finding valid          | Selected finding exists in candidates |
+| Independently testable | Follow-up can be verified alone       |
+| Dependency set         | Depends On points to parent           |
+| No scope creep         | Stays within finding bounds           |
 
 ## Output Summary
 
@@ -264,6 +323,7 @@ files_updated:
 ## Token Tracking
 
 Before completion signal:
+
 ```
 /token-log {NEW_STORY_ID} pm-followup <input-tokens> <output-tokens>
 ```
@@ -280,5 +340,6 @@ Before completion signal:
 ## Next Steps
 
 After generation, report:
+
 - "Created {NEW_STORY_ID}: [title]" (e.g., WISH-0110)
 - "Next step: Run /elab-story {NEW_STORY_ID} to elaborate the follow-up story"
