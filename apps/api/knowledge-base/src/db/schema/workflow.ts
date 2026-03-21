@@ -573,3 +573,53 @@ export type PlanEmbedding = typeof planEmbeddings.$inferSelect
 export type NewPlanEmbedding = typeof planEmbeddings.$inferInsert
 export type EmbeddingSectionLookup = typeof embeddingSectionLookup.$inferSelect
 export type NewEmbeddingSectionLookup = typeof embeddingSectionLookup.$inferInsert
+
+// APRS-1040: Plan flow source/confidence tracking tables
+// Stores workflow.plan_flows and workflow.plan_flow_steps for flow provenance.
+// source values: user | inferred | merged (enforced via CHECK in migration)
+// status values: approved | unconfirmed | rejected | deferred (enforced via CHECK in migration)
+// confidence: numeric(4,3) in range 0.0–1.0 (enforced via CHECK in migration)
+
+export const planFlows = workflow.table(
+  'plan_flows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'cascade' }),
+    source: text('source').notNull(),
+    confidence: numeric('confidence', { precision: 4, scale: 3 }),
+    status: text('status').notNull().default('unconfirmed'),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planIdIdx: index('idx_plan_flows_plan_id').on(table.planId),
+    statusIdx: index('idx_plan_flows_status').on(table.status),
+  }),
+)
+
+export const planFlowSteps = workflow.table(
+  'plan_flow_steps',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    flowId: uuid('flow_id')
+      .notNull()
+      .references(() => planFlows.id, { onDelete: 'cascade' }),
+    stepOrder: integer('step_order').notNull(),
+    stepLabel: text('step_label').notNull(),
+    stepDescription: text('step_description'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    flowIdIdx: index('idx_plan_flow_steps_flow_id').on(table.flowId),
+    flowOrderIdx: index('idx_plan_flow_steps_flow_order').on(table.flowId, table.stepOrder),
+  }),
+)
+
+export type PlanFlow = typeof planFlows.$inferSelect
+export type NewPlanFlow = typeof planFlows.$inferInsert
+export type PlanFlowStep = typeof planFlowSteps.$inferSelect
+export type NewPlanFlowStep = typeof planFlowSteps.$inferInsert
