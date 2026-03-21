@@ -16,6 +16,7 @@ import {
   createRouter,
   RouterProvider,
   Outlet,
+  ScrollRestoration,
 } from '@tanstack/react-router'
 import { store } from './store'
 import { initConfig } from './config'
@@ -31,7 +32,12 @@ const WorkflowRoadmapModulePropsSchema = z.object({
 export type WorkflowRoadmapModuleProps = z.infer<typeof WorkflowRoadmapModulePropsSchema>
 
 function ModuleLayout() {
-  return <Outlet />
+  return (
+    <>
+      <ScrollRestoration />
+      <Outlet />
+    </>
+  )
 }
 
 function createAppRouter() {
