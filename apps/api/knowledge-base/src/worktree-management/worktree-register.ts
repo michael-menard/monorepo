@@ -5,7 +5,7 @@
 
 import { eq } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { db } from '@repo/db'
+import { getDbClient } from '../db/client.js'
 import { worktrees, stories } from '../db/index.js'
 import {
   WorktreeRegisterInputSchema,
@@ -26,7 +26,7 @@ export async function worktreeRegister(
 
   try {
     // Verify story exists before inserting
-    const [story] = await db
+    const [story] = await getDbClient()
       .select({ storyId: stories.storyId })
       .from(stories)
       .where(eq(stories.storyId, parsed.storyId))
@@ -39,7 +39,7 @@ export async function worktreeRegister(
       return null
     }
 
-    const [worktree] = await db
+    const [worktree] = await getDbClient()
       .insert(worktrees)
       .values({
         storyId: story.storyId,
