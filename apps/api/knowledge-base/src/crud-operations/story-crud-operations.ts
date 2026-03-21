@@ -38,6 +38,7 @@ const storyColumns = {
   fileHash: stories.fileHash,
   createdAt: stories.createdAt,
   updatedAt: stories.updatedAt,
+  minimumPath: stories.minimumPath,
 } as const
 
 const storyArtifactColumns = {
@@ -245,6 +246,9 @@ export const KbUpdateStoryInputSchema = z.object({
 
   /** Packages touched by this story (text array). Note: packages is not a column on workflow.stories; not persisted. */
   packages: z.array(z.string()).nullable().optional(),
+
+  /** APRS-1030: Minimum viable path flag */
+  minimum_path: z.boolean().nullable().optional(),
 })
 
 export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
@@ -366,6 +370,9 @@ export const KbCreateStoryInputSchema = z.object({
 
   /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
   plan_slug: z.string().nullable().optional(),
+
+  /** APRS-1030: True when this story is on the minimum viable path for its plan batch */
+  minimum_path: z.boolean().optional(),
 })
 
 export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>
@@ -887,6 +894,10 @@ export async function kb_update_story(
     updates.description = validated.description
   }
 
+  if (validated.minimum_path !== undefined) {
+    updates.minimumPath = validated.minimum_path ?? undefined
+  }
+
   const result = await deps.db
     .update(stories)
     .set(updates)
@@ -953,6 +964,7 @@ export async function kb_create_story(
         description: validated.description ?? null,
         blockedReason: validated.blocked_reason ?? null,
         blockedByStory: validated.blocked_by_story ?? null,
+        minimumPath: validated.minimum_path ?? false,
         createdAt: now,
         updatedAt: now,
       })
@@ -994,6 +1006,7 @@ export async function kb_create_story(
     if (validated.blocked_reason !== undefined) updates.blockedReason = validated.blocked_reason
     if (validated.blocked_by_story !== undefined)
       updates.blockedByStory = validated.blocked_by_story
+    if (validated.minimum_path !== undefined) updates.minimumPath = validated.minimum_path
     // Clear stale blocker metadata when unblocking
     if (validated.blocked === false) {
       updates.blockedReason = null
