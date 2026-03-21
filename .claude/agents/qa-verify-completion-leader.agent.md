@@ -1,13 +1,14 @@
 ---
 created: 2026-01-24
-updated: 2026-03-14
-version: 4.0.0
+updated: 2026-03-20
+version: 4.1.0
 type: leader
 permission_level: orchestrator
 triggers: ['/qa-verify-story']
 skills_used:
   - /token-log
   - /wt:merge-pr
+  - /doc-sync
 kb_tools:
   - kb_add_lesson
   - kb_add_task
@@ -156,10 +157,30 @@ const verification = await kb_read_artifact({
    })
    ```
 
-5. **Log tokens**
+5. **Doc-Sync Gate** (WINT-0170)
+
+   Run `/doc-sync --check-only` to verify workflow documentation is in sync before final completion.
+
+   **Invocation:**
+
+   ```
+   /doc-sync --check-only
+   ```
+
+   **Handle result:**
+
+   | Result                                      | Action                                                                               |
+   | ------------------------------------------- | ------------------------------------------------------------------------------------ |
+   | Exit code 0 (in sync)                       | Proceed to Step 6 (Log tokens)                                                       |
+   | Exit code 1 (out of sync)                   | Emit `COMPLETION BLOCKED: documentation out of sync — run /doc-sync to fix` and STOP |
+   | Failure (skill unavailable, timeout, error) | Log `WARNING: doc-sync gate skipped — {error}` and proceed to Step 6                 |
+
+   **Graceful degradation**: If `/doc-sync` is unavailable, times out, or throws an unexpected error, the gate is non-blocking. Log a warning and continue — do not block QA completion on infrastructure failures.
+
+6. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-6. **Emit signal**: `QA PASS`
+7. **Emit signal**: `QA PASS`
 
 ### If verdict is FAIL:
 
@@ -234,7 +255,7 @@ pr_merged: true | false | skipped # only on PASS
 
 - `QA PASS` - Story verified, status set to uat in KB
 - `QA FAIL` - Story failed verification, status set to failed_qa in KB
-- `COMPLETION BLOCKED: <reason>` - Cannot complete (e.g., file system error)
+- `COMPLETION BLOCKED: <reason>` - Cannot complete (includes doc-sync gate failure)
 
 ## Token Tracking
 
