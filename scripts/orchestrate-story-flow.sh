@@ -474,7 +474,7 @@ pre_qa_check() {
   local WT_PATH
   WT_PATH=$(resolve_worktree_root "$STORY_ID")
   if [[ -n "$WT_PATH" && -d "$WT_PATH" ]]; then
-    if ! pnpm --dir "$WT_PATH" check-types --quiet 2>/dev/null; then
+    if ! (cd "$WT_PATH" && pnpm check-types --quiet 2>/dev/null); then
       echo "$TAG QA   SKIP:    $STORY_ID (type-check failed in worktree — env not ready)"
       return 1
     fi
