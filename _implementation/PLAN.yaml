@@ -1,211 +1,352 @@
 schema: 1
-story_id: WINT-0270
-timestamp: '2026-03-20T14:30:00Z'
+story_id: WINT-5010
+timestamp: '2026-03-21T21:15:00Z'
 steps:
   - id: 1
-    description: Define shared constant MODEL_LEADERBOARD_PATH and create task corpus types/schema
+    description: >-
+      Create package scaffold: package.json, tsconfig.json, vitest.config.ts at
+      packages/backend/sidecars/hitl-interview/
     files:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
+      - packages/backend/sidecars/hitl-interview/package.json
+      - packages/backend/sidecars/hitl-interview/tsconfig.json
+      - packages/backend/sidecars/hitl-interview/vitest.config.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/__types__/index.ts
-      - packages/backend/orchestrator/src/models/__types__/task-contract.ts
+      - packages/backend/sidecars/cohesion/package.json
+      - packages/backend/sidecars/cohesion/tsconfig.json
+      - packages/backend/sidecars/cohesion/vitest.config.ts
     dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
-    acs_covered:
-      - AC-5
-  - id: 2
-    description: >-
-      Build the task corpus — 3+ prompts per category (code_generation, code_review, elaboration_analysis, lint_syntax)
-      sourced from monorepo files
-    files:
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
-      - packages/backend/orchestrator/src/models/__types__/task-contract.ts
-    dependencies:
-      - 1
-    slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
     acs_covered:
       - AC-1
-  - id: 3
+      - AC-9
+  - id: 2
     description: >-
-      Implement the benchmark harness runner — iterates tasks x models, measures latency, calls evaluateQuality() and
-      recordRun(), builds summary table
+      Create src/__types__/index.ts with all Zod schemas: DecisionTypeSchema, TrainingDataTypeSchema,
+      InterviewAnswersSchema, FeatureVectorSchema, HitlInterviewInputSchema, HitlInterviewOutputSchema,
+      HitlDecisionRowSchema
     files:
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-      - packages/backend/orchestrator/src/models/quality-evaluator.ts
-      - packages/backend/orchestrator/src/model-selector/leaderboard.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/index.ts
+      - packages/backend/sidecars/role-pack/src/__types__/index.ts
+      - packages/backend/sidecars/cohesion/src/__types__/index.ts
+      - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
     dependencies:
       - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-2
+      - AC-5
+      - AC-7
+      - AC-8
+  - id: 3
+    description: >-
+      Create src/capture-interview.ts: core logic that reads hitl_decisions for context, builds feature vector, calls
+      trainingDataIngest, returns labeled training row
+    files:
+      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
+    files_to_read:
+      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
+      - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
+      - apps/api/knowledge-base/src/db/index.ts
+      - packages/backend/sidecars/cohesion/src/compute-audit.ts
+    dependencies:
       - 2
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+  - id: 4
+    description: >-
+      Create src/hitl-interview.ts: MCP tool wrapper that validates input via HitlInterviewInputSchema and delegates to
+      captureInterview
+    files:
+      - packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
+    files_to_read:
+      - packages/backend/sidecars/role-pack/src/role-pack-get.ts
+      - packages/backend/sidecars/cohesion/src/mcp-tools/cohesion-audit.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
     acs_covered:
       - AC-2
       - AC-3
-      - AC-4
-      - AC-7
-  - id: 4
-    description: Add developer-local CLI entrypoint script (scripts/benchmark-models.ts) to invoke harness from command line
-    files:
-      - scripts/benchmark-models.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-    dependencies:
-      - 3
-    slice: packages
-    verification: pnpm check-types
-    acs_covered:
-      - AC-6
   - id: 5
-    description: Write unit tests for harness logic (task iteration, result aggregation) using mock Ollama responses via vi.mock
+    description: >-
+      Create src/http-handler.ts: POST /hitl-interview handler using sendJson + readBody from @repo/sidecar-http-utils,
+      validates body via HitlInterviewInputSchema, calls captureInterview
     files:
-      - packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-      - packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+      - packages/backend/sidecars/hitl-interview/src/http-handler.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
+      - packages/backend/sidecars/cohesion/src/routes/cohesion.ts
+      - packages/backend/sidecars/http-utils/src/index.ts
     dependencies:
-      - 2
       - 3
     slice: packages
-    verification: pnpm test --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
     acs_covered:
-      - AC-8
+      - AC-1
+      - AC-9
+  - id: 6
+    description: 'Create src/server.ts: Node.js HTTP server on PORT ?? ''3093'', routing POST /hitl-interview to http-handler'
+    files:
+      - packages/backend/sidecars/hitl-interview/src/server.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/server.ts
+    dependencies:
+      - 5
+    slice: packages
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-1
+  - id: 7
+    description: 'Create src/index.ts: package entry point exporting hitlInterview MCP tool and all public types from __types__'
+    files:
+      - packages/backend/sidecars/hitl-interview/src/index.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/index.ts
+      - packages/backend/sidecars/role-pack/src/index.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 8
+    description: 'Create src/test/setup.ts: mock @repo/db and @repo/logger for unit tests'
+    files:
+      - packages/backend/sidecars/hitl-interview/src/test/setup.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/test/setup.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-10
+  - id: 9
+    description: >-
+      Create src/__tests__/capture-interview.test.ts: unit tests for captureInterview — happy path, hitl_decisions
+      context enrichment, trainingDataIngest call shape, error handling
+    files:
+      - packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/__tests__/compute-audit.test.ts
+      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
+    dependencies:
+      - 3
+      - 8
+    slice: packages
+    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-10
+  - id: 10
+    description: >-
+      Create src/__tests__/mcp-tool.test.ts: unit tests for hitlInterview MCP wrapper — input validation, delegation,
+      null return on error
+    files:
+      - packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/__tests__/mcp-tools.test.ts
+      - packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
+    dependencies:
+      - 4
+      - 8
+    slice: packages
+    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-2
+      - AC-10
+  - id: 11
+    description: >-
+      Create src/__tests__/http-handler.test.ts: unit tests for HTTP handler — 200 on valid body, 400 on bad input, 500
+      on ingest failure, 404/405 routing guards
+    files:
+      - packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/__tests__/routes.test.ts
+      - packages/backend/sidecars/hitl-interview/src/http-handler.ts
+    dependencies:
+      - 5
+      - 8
+    slice: packages
+    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-10
+  - id: 12
+    description: >-
+      Create src/__tests__/integration.test.ts: integration test verifying trainingDataIngest is called with correctly
+      shaped features and labels objects for each decisionType
+    files:
+      - packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts
+    files_to_read:
+      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
+      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
+    dependencies:
+      - 3
+      - 8
+    slice: packages
+    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    acs_covered:
+      - AC-5
+      - AC-10
 files_to_change:
-  - path: packages/backend/orchestrator/src/model-selector/constants.ts
+  - path: packages/backend/sidecars/hitl-interview/package.json
     action: create
-    reason: 'AC-5: Expose MODEL_LEADERBOARD_PATH as named constant shared between harness and router'
-  - path: packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
+    reason: 'Package scaffold: @repo/sidecar-hitl-interview, port 3093 (AC-1)'
+  - path: packages/backend/sidecars/hitl-interview/tsconfig.json
     action: create
-    reason: Zod schemas for BenchmarkTask, BenchmarkResult, BenchmarkSummary following project Zod-first typing requirement
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
+    reason: TypeScript config matching cohesion sidecar pattern
+  - path: packages/backend/sidecars/hitl-interview/vitest.config.ts
     action: create
-    reason: 'AC-1: Task corpus with 3+ prompts per category (4 categories = 12+ tasks) sourced from monorepo files'
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+    reason: Vitest config with 45% coverage thresholds (AC-10), setup file
+  - path: packages/backend/sidecars/hitl-interview/src/__types__/index.ts
     action: create
     reason: >-
-      AC-2, AC-3, AC-4, AC-7: Core harness — iterates 5 models x all tasks, measures latency_ms, invokes
-      evaluateQuality() + recordRun(), outputs summary table; documents heuristic limitation
-  - path: scripts/benchmark-models.ts
+      All Zod schemas: DecisionTypeSchema, TrainingDataTypeSchema, InterviewAnswersSchema (AC-7), FeatureVectorSchema
+      (AC-8), HitlInterviewInputSchema (AC-2)
+  - path: packages/backend/sidecars/hitl-interview/src/capture-interview.ts
     action: create
-    reason: 'AC-6: Developer-local CLI script, NOT in CI; imports harness and runs it'
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+    reason: 'Core logic: read hitl_decisions for context (AC-6), build feature vector (AC-4), call trainingDataIngest (AC-5)'
+  - path: packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
     action: create
-    reason: 'AC-8: Unit tests for harness logic (task iteration, result aggregation) using mock Ollama fetch responses'
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+    reason: hitlInterview MCP tool exported from src/index.ts (AC-2)
+  - path: packages/backend/sidecars/hitl-interview/src/http-handler.ts
     action: create
-    reason: 'AC-1, AC-8: Unit tests verifying corpus has >= 3 tasks per category and all 4 categories present'
+    reason: HTTP handler using @repo/sidecar-http-utils sendJson + readBody (AC-9)
+  - path: packages/backend/sidecars/hitl-interview/src/server.ts
+    action: create
+    reason: HTTP server on PORT ?? '3093' (AC-1)
+  - path: packages/backend/sidecars/hitl-interview/src/index.ts
+    action: create
+    reason: 'Package entry: exports hitlInterview MCP tool and public types (AC-1, AC-2)'
+  - path: packages/backend/sidecars/hitl-interview/src/test/setup.ts
+    action: create
+    reason: Mock @repo/db and @repo/logger for unit tests
+  - path: packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts
+    action: create
+    reason: Unit tests for core capture logic (AC-10)
+  - path: packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts
+    action: create
+    reason: Unit tests for hitlInterview MCP wrapper (AC-2, AC-10)
+  - path: packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts
+    action: create
+    reason: Unit tests for HTTP handler routing and error cases (AC-10)
+  - path: packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts
+    action: create
+    reason: Integration tests verifying trainingDataIngest call shape (AC-10)
 commands_to_run:
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after each step
+  - command: pnpm install
+    when: after package.json created, to register workspace package
     required: true
-  - command: pnpm test --filter @repo/orchestrator
-    when: after step 5
+  - command: pnpm check-types --filter @repo/sidecar-hitl-interview
+    when: after all source files created
     required: true
-  - command: pnpm build --filter @repo/orchestrator
+  - command: pnpm test --filter @repo/sidecar-hitl-interview
+    when: after all test files created
+    required: true
+  - command: pnpm build --filter @repo/sidecar-hitl-interview
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      benchmark-corpus.ts exports corpus array; benchmark-corpus.test.ts verifies >= 3 tasks per category and all 4
-      categories (code_generation, code_review, elaboration_analysis, lint_syntax) present
-    evidence_type: test
+      package.json with @repo/sidecar-hitl-interview, server.ts with PORT ?? '3093', directory structure matches
+      role-pack pattern
+    evidence_type: file
   - ac_id: AC-2
-    planned_evidence: >-
-      benchmark-harness.ts iterates all 5 REQUIRED_MODELS from setup-ollama-models.sh against each task; records
-      latency_ms, input_tokens, output_tokens, raw output per run; benchmark-harness.test.ts verifies via mocked fetch
+    planned_evidence: hitlInterview exported from src/index.ts; mcp-tool.test.ts verifies export and param validation
     evidence_type: test
   - ac_id: AC-3
-    planned_evidence: >-
-      benchmark-harness.ts calls evaluateQuality() (from quality-evaluator.ts) and recordRun() (from leaderboard.ts) for
-      each (model, task) pair; test verifies both are called per iteration
+    planned_evidence: capture-interview.test.ts verifies all InterviewAnswersSchema fields required before trainingDataIngest is called
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      benchmark-harness.ts includes QUALITY_EVALUATOR_LIMITATION constant/comment documenting that scores are
-      heuristic-only (keyword matching, length heuristics, no semantic analysis); also printed in summary table header
-    evidence_type: file
+      FeatureVectorSchema in __types__/index.ts; integration.test.ts verifies features object contains all required
+      vector fields
+    evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      constants.ts exports MODEL_LEADERBOARD_PATH; both benchmark-harness.ts and model-router.ts (or a future consumer)
-      import it from constants.ts rather than hardcoding the path
-    evidence_type: file
+      integration.test.ts verifies trainingDataIngest called with dataType in {'qa_gate_decision',
+      'code_review_decision', 'story_approval_decision'}
+    evidence_type: test
   - ac_id: AC-6
     planned_evidence: >-
-      scripts/benchmark-models.ts exists as developer-local runner; no CI config references it; harness unit tests use
-      vi.mock for Ollama, not live network calls
+      capture-interview.ts reads from hitlDecisions via @repo/db (read-only SELECT); no insert/update on hitl_decisions
+      in any file
     evidence_type: file
   - ac_id: AC-7
     planned_evidence: >-
-      benchmark-harness.ts sets cost_usd = 0 for all Ollama model runs (zero-cost sentinel per WINT-0260); test verifies
-      cost_usd === 0 in RunRecord
-    evidence_type: test
+      InterviewAnswersSchema in src/__types__/index.ts with rationale, confidence, alternativesConsidered,
+      riskAssessment
+    evidence_type: file
   - ac_id: AC-8
     planned_evidence: >-
-      benchmark-harness.test.ts covers: task iteration loop (all tasks x all models), result aggregation (averages,
-      ranking), mock Ollama responses returning controlled output; benchmark-corpus.test.ts covers corpus structure
-      validation
+      FeatureVectorSchema in src/__types__/index.ts with all 6 typed fields including TrainingDataTypeSchema for
+      decisionType
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      http-handler.ts imports sendJson, readBody from @repo/sidecar-http-utils; no local reimplementation; @repo/logger
+      used throughout
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      vitest coverage thresholds set to 45%; pnpm test --filter @repo/sidecar-hitl-interview passes; integration.test.ts
+      includes trainingDataIngest call shape assertions
     evidence_type: test
 architectural_decisions:
   - id: ARCH-001
-    question: Where should MODEL_LEADERBOARD_PATH point — relative to package root or absolute from monorepo root?
-    decision: >-
-      Path relative to the orchestrator package output directory: path.join(process.cwd(), 'data',
-      'model-leaderboard.yaml'). Allows the harness to write next to the package without hardcoding monorepo root. For
-      tests, the path is overridden via argument injection.
+    question: Should the hitlInterview MCP tool call captureInterview directly (in-process) or via HTTP fetch to localhost:3093?
+    decision: Direct in-process call (same pattern as cohesion_audit in WINT-4010)
     rationale: >-
-      Keeps the package self-contained; tests can inject a temp path; does not require knowledge of monorepo layout at
-      runtime.
-    decided_by: planner
+      WINT-4010 established this pattern via ARCH-001 precedent: direct import avoids requiring the sidecar HTTP server
+      to be running when the MCP tool is invoked. HTTP server is for external callers; MCP tool is the programmatic
+      interface.
+    decided_by: auto-accepted (tier-1, matches existing codebase pattern)
   - id: ARCH-002
-    question: How should the harness invoke Ollama — via PipelineModelRouter, direct HTTP fetch, or a thin OllamaClient wrapper?
+    question: AC-9 references readJsonBody but @repo/sidecar-http-utils only exports readBody. Which to use?
     decision: >-
-      Direct HTTP fetch to Ollama generate/chat API (http://127.0.0.1:11434/api/generate). This avoids pulling in the
-      full PipelineModelRouter stack (LangChain, BudgetAccumulator, TokenBucket) for a developer-local benchmark script.
+      Use readBody from @repo/sidecar-http-utils and parse JSON locally in http-handler.ts, following the rules-registry
+      pattern
     rationale: >-
-      The harness is explicitly dev-local only (AC-6). A direct fetch keeps dependencies minimal and makes the Ollama
-      call easy to mock in unit tests via vi.mock('node-fetch') or global fetch mock.
-    decided_by: planner
+      rules-registry/src/http-handler.ts shows the established pattern: readBody() returns raw string, local
+      readJsonBody() helper parses it. This keeps @repo/sidecar-http-utils unchanged (no new exports needed) and follows
+      existing convention.
+    decided_by: auto-accepted (tier-1, matches codebase pattern)
   - id: ARCH-003
-    question: Should the 5 required Ollama models be hardcoded in the harness or imported from a shared constant?
+    question: Where should trainingDataIngest be imported from — direct path or package export?
     decision: >-
-      Hardcode the 5 REQUIRED_MODELS list in constants.ts alongside MODEL_LEADERBOARD_PATH, mirroring the
-      REQUIRED_MODELS array from setup-ollama-models.sh. These are: deepseek-coder-v2:16b, codellama:13b,
-      qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b.
+      Import trainingDataIngest from apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts via
+      @repo/knowledge-base package dependency
     rationale: >-
-      Single source of truth in constants.ts; the script is the authoritative list per WINT-0220 strategy; both harness
-      and any future consumer can import from constants.
-    decided_by: planner
+      cohesion sidecar uses @repo/db for database access. Same dependency pattern: hitl-interview sidecar adds
+      @repo/knowledge-base to its dependencies to access the ML pipeline tool and DB exports. No circular deps — the
+      sidecar is a consumer of knowledge-base.
+    decided_by: auto-accepted (tier-2, matches cohesion dependency pattern)
 complexity: moderate
 notes:
-  - AC-6 explicitly states the harness is dev-local only — no CI integration required; unit tests use mocks
-  - AC-7 confirms Ollama cost_usd = 0 sentinel (soft dependency on WINT-0260 — no blocking)
+  - pnpm-workspace.yaml already includes packages/backend/sidecars/* — no workspace config change needed
   - >-
-    Quality evaluator uses heuristic scoring (keyword matching, length checks) — not semantic; this limitation must be
-    documented per AC-4
+    No DB migrations required — workflow.hitl_decisions and workflow.training_data tables already exist (confirmed in
+    SCOPE artifact)
   - >-
-    The 5 required models are from setup-ollama-models.sh REQUIRED_MODELS: deepseek-coder-v2:16b, codellama:13b,
-    qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b
+    The AC-9 reference to readJsonBody means using readBody from @repo/sidecar-http-utils and wrapping JSON.parse
+    locally (rules-registry pattern)
+  - Coverage threshold is 45% (not 80% like cohesion) per AC-10 — vitest.config.ts thresholds should reflect this
   - >-
-    Task corpus categories must cover exactly: code_generation, code_review, elaboration_analysis, lint_syntax (4
-    categories x 3+ prompts = 12+ tasks minimum per AC-1)
+    hitl_decisions.storyId is NOT NULL FK — read queries must filter by valid storyId; handle empty result gracefully
+    (context enrichment is best-effort)
   - >-
-    Prompts must be sourced from monorepo files (actual TypeScript code snippets, real elaboration YAML fragments, real
-    lint output)
+    trainingDataIngest returns null on failure (not throws) — capture-interview.ts must handle null return and log
+    warning
   - >-
-    RunRecord requires: taskContract, selectedTier, modelUsed, qualityScore, qualityDimensions, contractMismatch,
-    timestamp (from QualityEvaluationSchema) plus cost_usd, latency_ms, task_id
-  - No barrel files — import directly from source paths per CLAUDE.md
+    Port 3093 was noted as conflicting with rules-registry in elaboration ARCH note — the server.ts comment in cohesion
+    shows rules-registry as 3093. Clarify: rules-registry is @repo/sidecar-rules-registry. Dev must confirm port 3093 is
+    available or use 3094.
