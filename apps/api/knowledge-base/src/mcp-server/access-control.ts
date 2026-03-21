@@ -54,6 +54,7 @@ export const ToolNameSchema = z.enum([
   'kb_get_token_summary',
   'kb_get_bottleneck_analysis',
   'kb_get_churn_analysis',
+  'kb_get_scoreboard',
   // Worktree management tools (WINT-1130)
   'worktree_register',
   'worktree_get_by_story',
@@ -145,6 +146,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_get_token_summary: new Set(['pm', 'dev']),
   kb_get_bottleneck_analysis: new Set(['pm', 'dev']),
   kb_get_churn_analysis: new Set(['pm', 'dev']),
+  kb_get_scoreboard: new Set(['pm', 'dev']),
   // Worktree management tools (WINT-1130) - available to all roles
   worktree_register: new Set(['pm', 'dev', 'qa', 'all']),
   worktree_get_by_story: new Set(['pm', 'dev', 'qa', 'all']),

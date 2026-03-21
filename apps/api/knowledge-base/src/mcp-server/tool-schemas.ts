@@ -82,9 +82,11 @@ import {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
+  KbGetScoreboardInputSchema,
   type KbGetTokenSummaryInput,
   type KbGetBottleneckAnalysisInput,
   type KbGetChurnAnalysisInput,
+  type KbGetScoreboardInput,
 } from '../crud-operations/analytics-operations.js'
 // Re-export schemas and types for external use
 export {
@@ -101,6 +103,7 @@ export {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
   KbGetChurnAnalysisInputSchema,
+  KbGetScoreboardInputSchema,
 }
 export type {
   KbCreateStoryInput,
@@ -116,6 +119,7 @@ export type {
   KbGetTokenSummaryInput,
   KbGetBottleneckAnalysisInput,
   KbGetChurnAnalysisInput,
+  KbGetScoreboardInput,
 }
 // Re-export worktree tool schemas (WINT-1130)
 export {
@@ -3419,6 +3423,55 @@ Response:
 }
 
 // ============================================================================
+// Scoreboard Tool Definition (WINT-3090)
+// ============================================================================
+/**
+ * kb_get_scoreboard tool definition.
+ *
+ * Returns composite workflow health scoreboard with 5 key metrics.
+ */
+export const kbGetScoreboardToolDefinition: McpToolDefinition = {
+  name: 'kb_get_scoreboard',
+  description: `Get composite workflow health scoreboard with 5 key metrics.
+
+Answers: "How healthy is our development pipeline overall?"
+
+Parameters:
+- start_date (optional): Filter from this date (ISO string or coercible date)
+- end_date (optional): Filter to this date (ISO string or coercible date)
+- feature (optional): Filter by feature prefix (e.g. "WINT", "PIPE")
+
+Returns 5 metrics:
+1. throughput: stories_completed_per_week, total_completed, weeks_observed
+2. cycle_time: avg/min/max cycle_time_days, sample_size
+3. first_pass_success: total_completed, first_pass_count, first_pass_rate
+4. cost_efficiency: avg_cost_per_story, total_cost, story_count
+5. agent_reliability: per-agent total_invocations, successful_invocations, success_rate
+
+Example (no filters):
+{}
+
+Example (filter by feature and date range):
+{
+  "feature": "WINT",
+  "start_date": "2026-01-01",
+  "end_date": "2026-03-31"
+}
+
+Response:
+{
+  "throughput": { "stories_completed_per_week": 3.5, "total_completed": 42, "weeks_observed": 12 },
+  "cycle_time": { "avg_cycle_time_days": 2.4, "min_cycle_time_days": 0.5, "max_cycle_time_days": 8.1, "sample_size": 42 },
+  "first_pass_success": { "total_completed": 42, "first_pass_count": 28, "first_pass_rate": 0.6667 },
+  "cost_efficiency": { "avg_cost_per_story": 0.42, "total_cost": 17.64, "story_count": 42 },
+  "agent_reliability": { "agents": [{ "agent_name": "dev-implement", "total_invocations": 120, "successful_invocations": 110, "success_rate": 0.9167 }] },
+  "generated_at": "2026-03-20T10:00:00.000Z",
+  "message": "Scoreboard: 42 stories completed, 5 agents tracked"
+}`,
+  inputSchema: zodToMcpSchema(KbGetScoreboardInputSchema),
+}
+
+// ============================================================================
 // Worktree Management Tool Definitions (WINT-1130)
 // ============================================================================
 
@@ -4230,6 +4283,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetTokenSummaryToolDefinition,
   kbGetBottleneckAnalysisToolDefinition,
   kbGetChurnAnalysisToolDefinition,
+  // Scoreboard tool (WINT-3090)
+  kbGetScoreboardToolDefinition,
   // Worktree management tools (WINT-1130)
   worktreeRegisterToolDefinition,
   worktreeGetByStoryToolDefinition,
