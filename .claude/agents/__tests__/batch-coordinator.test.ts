@@ -9,9 +9,9 @@
  * @see .claude/agents/batch-coordinator.agent.md
  */
 
-import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { describe, it, expect } from 'vitest'
 
 const AGENT_PATH = resolve(__dirname, '..', 'batch-coordinator.agent.md')
 const content = readFileSync(AGENT_PATH, 'utf-8')
