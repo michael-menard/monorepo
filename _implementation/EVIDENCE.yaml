@@ -1,208 +1,218 @@
 schema: 1
-story_id: "APIP-3010"
-version: 1
-timestamp: "2026-02-28T19:42:00Z"
+story_id: WINT-2090
+phase: implementation
+iteration: 0
+timestamp: '2026-03-20T19:10:00Z'
+agent: dev-execute-leader
 
 acceptance_criteria:
-  - ac_id: "AC-1"
-    ac_text: "SQL migration creates wint.change_telemetry with 14 columns and rollback companion"
+  - ac_id: AC-1
+    description: >-
+      tool-handlers.ts contains 5 new handler functions (handleSessionCreate, handleSessionUpdate,
+      handleSessionComplete, handleSessionQuery, handleSessionCleanup); tool-schemas.ts contains 5
+      new tool definitions with inputSchema from zodToMcpSchema
     status: PASS
-    evidence_items:
+    evidence:
       - type: file
-        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
-        description: "SQL migration creating wint.change_telemetry table with 14 columns: id, story_id, model_id, affinity_key, change_type, file_type, outcome, tokens_in, tokens_out, escalated_to, retry_count, error_code, error_message, duration_ms, created_at (14 data columns + pk = id is the pk)"
+        path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        description: >-
+          Added handleSessionCreate, handleSessionUpdate, handleSessionComplete,
+          handleSessionQuery, handleSessionCleanup functions appended at end of file.
+          Also imports session_create, session_update, session_complete, session_query,
+          session_cleanup from '../crud-operations/session-operations.js'.
       - type: file
-        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry_rollback.sql"
-        description: "Rollback companion script drops indexes then table"
+        path: apps/api/knowledge-base/src/crud-operations/session-operations.ts
+        description: >-
+          New file implementing all 5 session operations with full Zod schemas,
+          resilient error handling (null returns on DB error), and proper logging.
+      - type: file
+        path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+        description: >-
+          Added sessionCreateToolDefinition, sessionUpdateToolDefinition,
+          sessionCompleteToolDefinition, sessionQueryToolDefinition,
+          sessionCleanupToolDefinition using zodToMcpSchema wrappers.
+          Also imports SessionCreateInputSchema through SessionCleanupInputSchema
+          from '../crud-operations/session-operations.js'.
 
-  - ac_id: "AC-2"
-    ac_text: "CHECK constraints on change_type and file_type with unknown placeholder"
+  - ac_id: AC-2
+    description: >-
+      tool-schemas.ts toolDefinitions array includes session_create, session_update,
+      session_complete, session_query, session_cleanup; getToolDefinitions() returns 81 tools
     status: PASS
-    evidence_items:
-      - type: file
-        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
-        description: "CONSTRAINT chk_change_telemetry_change_type CHECK (change_type IN ('unknown', 'add', 'modify', 'delete', 'rename', 'refactor')); CONSTRAINT chk_change_telemetry_file_type CHECK (file_type IN ('unknown', 'ts', 'tsx', 'sql', 'yaml', 'json', 'md', 'sh', 'other'))"
-
-  - ac_id: "AC-3"
-    ac_text: "CHECK constraint on outcome: pass, fail, abort, budget_exhausted"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
-        description: "CONSTRAINT chk_change_telemetry_outcome CHECK (outcome IN ('pass', 'fail', 'abort', 'budget_exhausted'))"
-
-  - ac_id: "AC-4"
-    ac_text: "3 indexes: idx_change_telemetry_story_id, idx_change_telemetry_affinity, idx_change_telemetry_created_at"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
-        description: "CREATE INDEX IF NOT EXISTS idx_change_telemetry_story_id ON story_id; CREATE INDEX IF NOT EXISTS idx_change_telemetry_affinity ON affinity_key; CREATE INDEX IF NOT EXISTS idx_change_telemetry_created_at ON created_at"
-
-  - ac_id: "AC-5"
-    ac_text: "ChangeTelemetrySchema z.object() with z.infer<> type alias — no TypeScript interfaces"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
-        description: "export const ChangeTelemetrySchema = z.object({...}); export type ChangeTelemetry = z.infer<typeof ChangeTelemetrySchema>. No interfaces used."
-
-  - ac_id: "AC-6"
-    ac_text: "writeTelemetry() exported function with try/catch and logger.warn"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
-        description: "export async function writeTelemetry(record: ChangeTelemetry, db: DbQueryable): Promise<void> with try/catch that calls logger.warn on error and returns void without rethrowing"
-
-  - ac_id: "AC-7"
-    ac_text: "GATED on APIP-1030 — change-loop instrumentation call sites"
-    status: MISSING
-    reason: "GATED on APIP-1030 — change-loop.ts does not exist yet. TODO comment placed in change-telemetry.ts: TODO(APIP-1030): Wire writeTelemetry() calls into change-loop.ts once APIP-1030 is merged"
-    evidence_items:
-      - type: manual
-        description: "TODO(APIP-1030) comment in packages/backend/orchestrator/src/telemetry/change-telemetry.ts line ~109"
-
-  - ac_id: "AC-8"
-    ac_text: "Unit test: DB failure does not throw, logger.warn called once"
-    status: PASS
-    evidence_items:
+    evidence:
       - type: test
-        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
-        description: "EC-1 tests: 'does not throw when DB query rejects', 'calls logger.warn exactly once when DB query rejects', 'logger.warn receives error and context object' — all pass"
-      - type: command
-        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
-        result: "PASS — 20 tests pass"
-
-  - ac_id: "AC-9"
-    ac_text: "Unit tests: 4 outcome types produce valid ChangeTelemetrySchema records; nullable fields accept null"
-    status: PASS
-    evidence_items:
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+        description: >-
+          Updated test now expects 81 tools (was 73, but actual pre-existing count was 76;
+          76 + 5 session tools = 81). Test passes: all 5 session tool names are in the
+          expected list and the count assertion is 81.
       - type: test
-        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
-        description: "ED-3: all 4 outcome values validated; HP-1 pass outcome; HP-2 budget_exhausted+escalatedTo; ED-1 nullable fields (escalatedTo, errorCode, errorMessage, durationMs)"
-      - type: command
-        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
-        result: "PASS — 20 tests pass"
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+        description: >-
+          Tests verify all 5 session tool names are in getToolDefinitions() and have
+          descriptions > 50 chars and valid inputSchema with type: "object".
 
-  - ac_id: "AC-10"
-    ac_text: "Integration tests for migration + round-trip DB operations against APIP-5001 test DB"
-    status: PARTIAL
-    reason: "Integration tests are structurally complete and correct. 8 tests skip (APIP_TEST_DB_URL not set), 1 documentation test passes. Tests cover HP-3, HP-4, HP-5, ED-2, EC-3 — all implemented using describe.skipIf(!HAS_TEST_DB) guard."
-    evidence_items:
-      - type: test
-        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.integration.test.ts"
-        description: "9 integration tests: HP-3 migration apply, HP-3 3 indexes exist, ED-2 idempotency, HP-4 pass row insert+readback, HP-5 budget_exhausted+escalated_to round-trip, EC-3 outcome/change_type/file_type constraint rejection. Skipped due to missing APIP_TEST_DB_URL."
-      - type: command
-        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.integration"
-        result: "PASS — 1 pass, 8 skipped (no APIP-5001 test DB available)"
-
-  - ac_id: "AC-11"
-    ac_text: "Drizzle ORM schema definition in change-telemetry.ts, exported from schema index"
+  - ac_id: AC-3
+    description: >-
+      handleToolCall dispatches to correct handler for each session tool name;
+      integration tests verify dispatch
     status: PASS
-    evidence_items:
+    evidence:
+      - type: test
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+        description: >-
+          'handleToolCall dispatch' test group verifies dispatch for all 5 tools.
+          mockSessionCreate/Update/Complete/Query/Cleanup are injected via vi.mock
+          and handleToolCall routes correctly to each. All 16 tests pass.
       - type: file
-        path: "packages/backend/database-schema/src/schema/change-telemetry.ts"
-        description: "changeTelemetry table defined using wintSchema.table() with all 14 columns, 3 CHECK constraints, 3 indexes, plus insertChangeTelemetrySchema and selectChangeTelemetrySchema via drizzle-zod"
+        path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+        description: >-
+          toolHandlers map includes session_create, session_update, session_complete,
+          session_query, session_cleanup entries pointing to respective handler functions.
+
+  - ac_id: AC-4
+    description: >-
+      access-control.ts ToolNameSchema enum includes 5 session tool names;
+      ACCESS_MATRIX has entries with 'all' role access
+    status: PASS
+    evidence:
       - type: file
-        path: "packages/backend/database-schema/src/schema/index.ts"
-        description: "Exports changeTelemetry, insertChangeTelemetrySchema, selectChangeTelemetrySchema, InsertChangeTelemetry, SelectChangeTelemetry from ./change-telemetry.js"
-      - type: command
-        command: "pnpm --filter @repo/database-schema exec tsc --noEmit (filtered to change-telemetry only)"
-        result: "PASS — no TypeScript errors in change-telemetry.ts"
+        path: apps/api/knowledge-base/src/mcp-server/access-control.ts
+        description: >-
+          ToolNameSchema enum now includes 'session_create', 'session_update',
+          'session_complete', 'session_query', 'session_cleanup'. ACCESS_MATRIX
+          has all 5 session tools mapped to new Set(['pm', 'dev', 'qa', 'all']).
+      - type: test
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/access-control.test.ts
+        description: >-
+          124 access control tests pass, including the ToolNameSchema validation
+          and ACCESS_MATRIX checks (these tests run schema validation).
 
-  - ac_id: "AC-12"
-    ac_text: "GATED on APIP-1030 — orchestrator test suite regression guard"
-    status: PARTIAL
-    reason: "GATED on APIP-1030 for change-loop instrumentation. Non-gated portion: orchestrator test suite runs 3462 passing tests (3482 total minus pre-existing elaboration.test.ts failure which was failing before this story's changes)."
-    evidence_items:
-      - type: command
-        command: "pnpm --filter @repo/orchestrator test"
-        result: "3462 pass, 26 skip, 1 fail (pre-existing elaboration test — confirmed pre-existing by stash check)"
+  - ac_id: AC-5
+    description: >-
+      4 leader agent .md files contain /session-create call at workflow start and
+      /session-complete at workflow end
+    status: PASS
+    evidence:
+      - type: file
+        path: .claude/agents/dev-execute-leader.agent.md
+        description: >-
+          Added Step 1.5 (Open Session, FIRE AND FORGET) with session_create call
+          using agentName 'dev-execute-leader', storyId, phase 'execute'.
+          Added Session Complete section before EXECUTION COMPLETE signal.
+          Added session_create and session_complete to kb_tools list.
+      - type: file
+        path: .claude/agents/dev-setup-leader.agent.md
+        description: >-
+          Added Session Lifecycle section before Completion Signal with session_create
+          (before precondition checks) and session_complete (before SETUP COMPLETE/BLOCKED).
+          Added session_create and session_complete to kb_tools list.
+      - type: file
+        path: .claude/agents/qa-verify-setup-leader.agent.md
+        description: >-
+          Added Session Lifecycle section before Token Tracking with session_create
+          (before precondition checks) and session_complete (before SETUP COMPLETE/BLOCKED).
+          Added session_create and session_complete to kb_tools list.
+      - type: file
+        path: .claude/agents/dev-implement-implementation-leader.agent.md
+        description: >-
+          Extended Session Lifecycle section with session_create (before spawning workers)
+          and session_complete (before IMPLEMENTATION COMPLETE). Added session_create
+          and session_complete to kb_tools list.
 
-touched_files:
-  - path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
-    action: created
-    lines: 81
-    description: "SQL migration: wint.change_telemetry table with 14 columns, 3 CHECK constraints, 3 indexes"
-  - path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry_rollback.sql"
-    action: created
-    lines: 28
-    description: "Rollback: drops indexes and change_telemetry table"
-  - path: "packages/backend/database-schema/src/schema/change-telemetry.ts"
-    action: created
-    lines: 95
-    description: "Drizzle ORM schema: changeTelemetry table + drizzle-zod insert/select schemas"
-  - path: "packages/backend/database-schema/src/schema/index.ts"
-    action: modified
-    lines: 8
-    description: "Added changeTelemetry and related type exports"
-  - path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
-    action: created
-    lines: 165
-    description: "ChangeTelemetrySchema Zod schema, DbQueryable type, writeTelemetry() fire-and-continue function"
-  - path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
-    action: created
-    lines: 185
-    description: "20 unit tests for AC-8 (DB failure safety) and AC-9 (outcome validation, nullable fields)"
-  - path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.integration.test.ts"
-    action: created
-    lines: 165
-    description: "9 integration tests for AC-10 (migration, round-trip, constraints) — skips without APIP_TEST_DB_URL"
+  - ac_id: AC-6
+    description: >-
+      Agent files include null-return guard: 'if session null, log warning and continue'
+      — session tracking never gates workflow
+    status: PASS
+    evidence:
+      - type: file
+        path: .claude/agents/dev-execute-leader.agent.md
+        description: >-
+          Step 1.5 includes: "if session === null: emit 'SESSION UNAVAILABLE —
+          continuing without session tracking' and proceed". Session Complete section
+          includes "null return: log warning and continue — never blocks completion".
+      - type: file
+        path: .claude/agents/dev-setup-leader.agent.md
+        description: >-
+          Session Create section includes null guard: "if session === null: emit
+          SESSION UNAVAILABLE and proceed". Session Complete includes "null return:
+          log warning and continue — never blocks completion".
+      - type: file
+        path: .claude/agents/qa-verify-setup-leader.agent.md
+        description: Null return guard documented for both create and complete calls.
+      - type: file
+        path: .claude/agents/dev-implement-implementation-leader.agent.md
+        description: Null return guard documented for both create and complete calls.
+      - type: file
+        path: apps/api/knowledge-base/src/crud-operations/session-operations.ts
+        description: >-
+          session_create returns null on DB error (never throws). session_complete
+          returns null on DB error. session_query returns [] on DB error. Only
+          business logic errors (session not found, already completed) throw.
+      - type: test
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+        description: >-
+          'null return graceful degradation' test group verifies that null return
+          from session_create and session_complete does NOT set isError=true.
 
-commands_run:
-  - command: "pnpm --filter @repo/database-schema exec tsc --noEmit (change-telemetry.ts)"
-    result: SUCCESS
-    output: "No errors in change-telemetry.ts (pre-existing seed/db error unrelated)"
-    timestamp: "2026-02-28T19:38:00Z"
-  - command: "pnpm --filter @repo/orchestrator exec tsc --noEmit (change-telemetry.ts)"
-    result: SUCCESS
-    output: "No TypeScript errors in new telemetry files"
-    timestamp: "2026-02-28T19:41:00Z"
-  - command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
-    result: SUCCESS
-    output: "20 tests pass"
-    timestamp: "2026-02-28T19:41:41Z"
-  - command: "pnpm --filter @repo/orchestrator test -- change-telemetry.integration"
-    result: SUCCESS
-    output: "1 pass, 8 skipped (no APIP_TEST_DB_URL)"
-    timestamp: "2026-02-28T19:39:46Z"
-  - command: "pnpm --filter @repo/orchestrator test"
-    result: FAIL
-    output: "3462 pass, 26 skip, 1 fail — pre-existing failure in elaboration.test.ts (confirmed pre-existing by stash test)"
-    timestamp: "2026-02-28T19:40:30Z"
+  - ac_id: AC-7
+    description: >-
+      session-tools-integration.test.ts exists with tests for all 5 tools; pnpm test passes
+    status: PASS
+    evidence:
+      - type: test
+        path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+        description: >-
+          New test file with 16 tests covering: tool discovery (5 session tools in
+          getToolDefinitions), schema validation (required fields, optional fields),
+          handleToolCall dispatch for all 5 tools, null return graceful degradation.
+          All 16 tests pass.
+      - type: test_run
+        command: pnpm --filter @repo/knowledge-base test -- session-tools mcp-integration access-control telemetry-tools
+        result: '187 tests passed (4 test files)'
 
-endpoints_exercised: []
+build_evidence:
+  - type: type_check
+    command: pnpm --filter @repo/knowledge-base check-types
+    result: PASS (exit 0, no errors)
+  - type: unit_tests
+    command: pnpm --filter @repo/knowledge-base test -- session-tools mcp-integration access-control
+    result: '187 tests pass'
 
-notable_decisions:
-  - "ARCH-001: Migration sequence 0028 follows 0027_wint_0131_capabilities_feature_fk.sql as the last migration"
-  - "ARCH-002: change_type and file_type use TEXT + CHECK constraints with 'unknown' placeholder (not ENUM) per AC-2 architecture note about APIP-1020 ADR pending"
-  - "ARCH-003: writeTelemetry() uses await + try/catch (fire-and-continue) — telemetry NEVER blocks the change loop"
-  - "DbQueryable uses pg.Pool/Client duck-typing (not Drizzle) since orchestrator depends on pg, not drizzle-orm"
-  - "logger.warn signature is (message: string, metadata?) — not pino-style (object, message). Adjusted to match @repo/logger ILogger interface"
-  - "Integration tests use describe.skipIf(!HAS_TEST_DB) — structurally complete, skip cleanly without APIP_TEST_DB_URL"
+e2e_evidence:
+  status: EXEMPT
+  reason: >-
+    This story is type 'backend' — session management MCP tools are backend-only.
+    No frontend E2E tests required. Session tools are verified via unit integration tests.
 
-known_deviations:
-  - "AC-7 is GATED on APIP-1030 — cannot instrument change-loop.ts (it does not exist). TODO comment added."
-  - "AC-12 regression guard shows 1 pre-existing elaboration test failure (existed before this story's changes, confirmed by git stash test)."
-  - "AC-10 integration tests skip (8/9) due to APIP_TEST_DB_URL not set — tests are structurally complete and will run once APIP-5001 DB is available."
+files_changed:
+  created:
+    - apps/api/knowledge-base/src/crud-operations/session-operations.ts
+    - apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+  modified:
+    - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    - apps/api/knowledge-base/src/mcp-server/access-control.ts
+    - .claude/agents/dev-execute-leader.agent.md
+    - .claude/agents/dev-setup-leader.agent.md
+    - .claude/agents/qa-verify-setup-leader.agent.md
+    - .claude/agents/dev-implement-implementation-leader.agent.md
+    - .claude/skills/session-create/SKILL.md
 
-test_summary:
-  unit: { pass: 20, fail: 0 }
-  integration: { pass: 1, fail: 0 }
-
-e2e_tests:
-  status: skipped
-  skip_reason: "No HTTP endpoints or UI surfaces added in this story. Purely internal backend infrastructure (DB migration + telemetry write function). Backend not running (localhost:3001 refused connection). E2E not applicable."
-  config: "playwright.legacy.config.ts"
-  project: "chromium-live"
-  mode: "live"
-  results:
-    total: 0
-    passed: 0
-    failed: 0
-    skipped: 0
-  failed_tests: []
-  config_issues: []
-  videos: []
-  screenshots: []
+summary:
+  all_acs_passing: true
+  notes:
+    - >-
+      Circular dependency prevented importing @repo/mcp-tools into @repo/knowledge-base
+      (mcp-tools depends on knowledge-base). Session operations were implemented directly
+      in apps/api/knowledge-base/src/crud-operations/session-operations.ts using the
+      same DB schema (contextSessions from ./db/index.js) and same patterns as
+      telemetry-operations.ts.
+    - >-
+      mcp-integration.test.ts tool count updated from 73 to 81 (not 78 as planned) because
+      3 tools (kb_add_dependency, kb_get_story_plan_links, kb_ingest_story_from_yaml) were
+      already in tool-schemas.ts but missing from the test. The correct count is 81.
+    - >-
+      E2E tests not applicable — session management tools are backend MCP tools with no
+      frontend surface. All ACs covered by unit/integration tests.

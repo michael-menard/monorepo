@@ -1,242 +1,231 @@
 schema: 2
-story_id: APRS-2030
-timestamp: '2026-03-24T01:00:00Z'
+story_id: WINT-2090
+timestamp: '2026-03-21T01:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
     description: >-
-      Extend PlanRefinementStateAnnotation and RefinementPhaseSchema with HiTL fields. The state file lives at
-      packages/backend/orchestrator/src/state/plan-refinement-state.ts and does not yet exist in this worktree. Create
-      it from the APRS-5030 reference implementation which includes all APRS-2010 base fields plus the APRS-2030 HiTL
-      additions (hitlDecision, humanReviewResult, readinessScore, storyReadiness, validationResult) and the APRS-2020
-      gap-coverage fields (gapFindings, specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen,
-      previousGapCount, consecutiveLlmFailures). RefinementPhaseSchema must include human_review, final_validation,
-      story_readiness phases.
+      Register 5 session tools in the MCP server: add handler functions in tool-handlers.ts (handleSessionCreate,
+      handleSessionUpdate, handleSessionComplete, handleSessionQuery, handleSessionCleanup) and tool definitions in
+      tool-schemas.ts (with descriptions and zodToMcpSchema wrappers). Import the 5 session functions from
+      @repo/mcp-tools session-management package.
     files:
-      - packages/backend/orchestrator/src/state/plan-refinement-state.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
     files_to_read:
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/state/plan-refinement-state.ts
+      - packages/backend/mcp-tools/src/session-management/session-create.ts
+      - packages/backend/mcp-tools/src/session-management/session-update.ts
+      - packages/backend/mcp-tools/src/session-management/session-complete.ts
+      - packages/backend/mcp-tools/src/session-management/session-query.ts
+      - packages/backend/mcp-tools/src/session-management/session-cleanup.ts
+      - packages/backend/mcp-tools/src/session-management/__types__/index.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
     dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
     acs_covered:
       - AC-1
+      - AC-2
+      - AC-3
   - id: 2
     subtask_id: ST-2
     description: >-
-      Implement human_review_checkpoint node with DecisionCallback injection. Create
-      packages/backend/orchestrator/src/nodes/plan-refinement/ directory and human-review-checkpoint.ts. Also create
-      __tests__/human-review-checkpoint.test.ts with makeState helper that includes ALL fields from PlanRefinementState
-      — critically, the AC-9 fix requires the makeState helper to include the APRS-2020 gap-coverage fields:
-      gapFindings, specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount,
-      consecutiveLlmFailures.
+      Add session tool names to access-control.ts ToolNameSchema enum (session_create, session_update, session_complete,
+      session_query, session_cleanup), add them to the ACCESS_MATRIX with 'all' role access, and register handler
+      functions in the toolHandlers map in tool-handlers.ts. Also push the 5 tool definitions onto the toolDefinitions
+      array in tool-schemas.ts.
     files:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
+      - apps/api/knowledge-base/src/mcp-server/access-control.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
     files_to_read:
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
+      - apps/api/knowledge-base/src/mcp-server/access-control.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
     dependencies:
       - 1
-    slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- human-review-checkpoint
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
     acs_covered:
+      - AC-1
       - AC-2
       - AC-3
-      - AC-7
-      - AC-9
+      - AC-4
   - id: 3
     subtask_id: ST-3
     description: >-
-      Implement final_validation node (validate-only, no LLM). Create final-validation.ts and
-      __tests__/final-validation.test.ts. The makeState helper in final-validation.test.ts must also include all
-      APRS-2020 gap-coverage fields to satisfy AC-9 / pnpm check-types.
+      Update dev-execute-leader.agent.md to call /session-create at the start of the workflow (after reading KB
+      artifacts, before executing plan steps) and /session-complete at the end (before emitting EXECUTION COMPLETE
+      signal). Session tracking must be fire-and-forget: null return must NOT block execution. Add session_id to the
+      context passed to EVIDENCE artifact.
     files:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
+      - .claude/agents/dev-execute-leader.agent.md
     files_to_read:
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
-    dependencies:
-      - 1
+      - .claude/agents/dev-execute-leader.agent.md
+      - .claude/skills/session-create/SKILL.md
+    dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- final-validation
+    verification: echo 'Agent file updated - manual verification'
     acs_covered:
-      - AC-4
-      - AC-7
+      - AC-5
+      - AC-6
   - id: 4
     subtask_id: ST-4
     description: >-
-      Implement story_readiness_check node with injectable scorer. Create story-readiness-check.ts and
-      __tests__/story-readiness-check.test.ts. Default formula: flows_confirmed_ratio*40 + warnings_cleared_ratio*30 +
-      no_errors*30. Pass threshold: 70. The makeState helper in story-readiness-check.test.ts must also include all
-      APRS-2020 gap-coverage fields.
+      Update dev-setup-leader.agent.md to call /session-create at the start of the workflow (before precondition checks)
+      and /session-complete at the end (before emitting SETUP COMPLETE signal). Add session tracking calls to BOTH
+      implement and fix modes. Session tracking must never gate setup flow.
     files:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
+      - .claude/agents/dev-setup-leader.agent.md
     files_to_read:
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
-    dependencies:
-      - 1
+      - .claude/agents/dev-setup-leader.agent.md
+      - .claude/skills/session-create/SKILL.md
+    dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- story-readiness-check
+    verification: echo 'Agent file updated - manual verification'
     acs_covered:
       - AC-5
-      - AC-7
+      - AC-6
   - id: 5
     subtask_id: ST-5
     description: >-
-      Wire all three nodes into the plan-refinement graph with conditional edges. Create plan-refinement.ts in graphs/
-      and update/create graphs/__tests__/plan-refinement.test.ts. The graph must include:
-      coverage_agent→human_review_checkpoint (conditional via afterGapCoverage),
-      human_review_checkpoint→final_validation (approve), human_review_checkpoint→extract_flows (edit, DEC-6 stub),
-      human_review_checkpoint→END (reject/defer), final_validation→story_readiness_check (pass), final_validation→END
-      (error), story_readiness_check→END. PlanRefinementGraphConfigSchema must include decisionCallback and scoreFn
-      fields. APRS-2010 routing tests must continue to pass (backward compat).
+      Update qa-verify-setup-leader.agent.md to call /session-create at the start (before precondition checks) and
+      /session-complete at the end (before emitting SETUP COMPLETE or SETUP BLOCKED). Session tracking must never gate
+      QA setup flow.
     files:
-      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+      - .claude/agents/qa-verify-setup-leader.agent.md
     files_to_read:
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - >-
-        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
-    dependencies:
-      - 2
-      - 3
-      - 4
+      - .claude/agents/qa-verify-setup-leader.agent.md
+      - .claude/skills/session-create/SKILL.md
+    dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- plan-refinement
+    verification: echo 'Agent file updated - manual verification'
     acs_covered:
+      - AC-5
       - AC-6
-      - AC-8
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Update dev-implement-implementation-leader.agent.md to call /session-create at the start (before spawning workers)
+      and /session-complete at the end (before emitting IMPLEMENTATION COMPLETE). Session tracking must never gate
+      implementation flow.
+    files:
+      - .claude/agents/dev-implement-implementation-leader.agent.md
+    files_to_read:
+      - .claude/agents/dev-implement-implementation-leader.agent.md
+      - .claude/skills/session-create/SKILL.md
+    dependencies: []
+    slice: packages
+    verification: echo 'Agent file updated - manual verification'
+    acs_covered:
+      - AC-5
+      - AC-6
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Write MCP integration tests for the 5 session tools in apps/api/knowledge-base/src/mcp-server/__tests__/. Create
+      session-tools-integration.test.ts that mocks the session management functions and tests handleToolCall dispatch
+      for all 5 tool names. Update mcp-integration.test.ts tool count from 73 to 78 and add the 5 new tool names to the
+      expected list.
+    files:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
+      - apps/api/knowledge-base/src/mcp-server/__tests__/test-helpers.ts
+    dependencies:
+      - 1
+      - 2
+    slice: backend
+    verification: pnpm test --filter @repo/knowledge-base -- --testPathPattern=session-tools
+    acs_covered:
+      - AC-7
 files_to_change:
-  - path: packages/backend/orchestrator/src/state/plan-refinement-state.ts
-    action: create
+  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    action: modify
     reason: >-
-      AC-1: Add HiTL state fields (hitlDecision, humanReviewResult, readinessScore, storyReadiness, validationResult)
-      and RefinementPhaseSchema phases (human_review, final_validation, story_readiness). File does not yet exist in
-      this worktree.
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
+      Add 5 session handler functions (handleSessionCreate/Update/Complete/Query/Cleanup) and register in toolHandlers
+      map
+  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    action: modify
+    reason: Add 5 session tool definitions with descriptions and push to toolDefinitions array
+  - path: apps/api/knowledge-base/src/mcp-server/access-control.ts
+    action: modify
+    reason: Add session_create/update/complete/query/cleanup to ToolNameSchema enum and ACCESS_MATRIX with 'all' role access
+  - path: .claude/agents/dev-execute-leader.agent.md
+    action: modify
+    reason: Add /session-create at workflow start and /session-complete at workflow end
+  - path: .claude/agents/dev-setup-leader.agent.md
+    action: modify
+    reason: Add /session-create at workflow start and /session-complete at workflow end for both implement and fix modes
+  - path: .claude/agents/qa-verify-setup-leader.agent.md
+    action: modify
+    reason: Add /session-create at workflow start and /session-complete at workflow end
+  - path: .claude/agents/dev-implement-implementation-leader.agent.md
+    action: modify
+    reason: Add /session-create at workflow start and /session-complete at workflow end
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
     action: create
-    reason: 'AC-2, AC-3: Injectable DecisionCallback factory, AutoDecisionCallback, routeHiTLDecision phase function.'
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
-    action: create
-    reason: >-
-      AC-8, AC-9: Unit tests for all four HiTL flows. makeState helper MUST include APRS-2020 gap-coverage fields to
-      satisfy pnpm check-types.
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
-    action: create
-    reason: 'AC-4: Validate-only node — NormalizedPlanSchema.safeParse, confirmed flows have steps, no critical warnings.'
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
-    action: create
-    reason: >-
-      AC-8: Unit tests for validatePlan and createFinalValidationNode. makeState helper must include gap-coverage
-      fields.
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
-    action: create
-    reason: 'AC-5: Injectable ReadinessScoreFn, default DEC-4 formula, computeReadinessScore phase function.'
-  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
-    action: create
-    reason: >-
-      AC-8: Unit tests for defaultReadinessScoreFn, computeReadinessScore, and createStoryReadinessCheckNode. makeState
-      helper must include gap-coverage fields.
-  - path: packages/backend/orchestrator/src/graphs/plan-refinement.ts
-    action: create
-    reason: >-
-      AC-6: Wire all nodes with conditional edges. PlanRefinementGraphConfigSchema with decisionCallback and scoreFn.
-      File does not yet exist in this worktree.
-  - path: packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
-    action: create
-    reason: >-
-      AC-8: Graph-level routing tests for all four APRS-2030 conditional edge scenarios (approve, reject, defer, edit)
-      plus final_validation failure path. APRS-2010 backward-compat tests preserved.
+    reason: New integration tests for all 5 session MCP tools
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
+    action: modify
+    reason: Update tool count from 73 to 78 and add 5 session tool names to expected list
 commands_to_run:
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after each step
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after ST-1 and ST-2 code changes
     required: true
-  - command: pnpm test --filter @repo/orchestrator
+  - command: pnpm test --filter @repo/knowledge-base
     when: after all code changes
     required: true
-  - command: pnpm build --filter @repo/orchestrator
+  - command: pnpm build --filter @repo/knowledge-base
     when: after all code changes
-    required: false
+    required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      plan-refinement-state.ts exports PlanRefinementStateAnnotation with hitlDecision, humanReviewResult,
-      readinessScore, storyReadiness, validationResult fields and RefinementPhaseSchema includes human_review,
-      final_validation, story_readiness. pnpm check-types passes.
+      tool-handlers.ts contains 5 new handler functions; tool-schemas.ts contains 5 new tool definitions with
+      inputSchema from zodToMcpSchema
     evidence_type: file
   - ac_id: AC-2
     planned_evidence: >-
-      human-review-checkpoint.test.ts tests all four HiTL flows (approve→final_validation, edit→gap_coverage,
-      reject→error, defer→complete). AutoDecisionCallback tests included.
+      tool-schemas.ts toolDefinitions array includes session_create, session_update, session_complete, session_query,
+      session_cleanup; getToolDefinitions() returns 78 tools
     evidence_type: test
   - ac_id: AC-3
-    planned_evidence: >-
-      createHumanReviewCheckpointNode accepts optional decisionCallback config. PlanRefinementGraphConfigSchema includes
-      decisionCallback field. Test verifies default AutoDecisionCallback is used when none provided.
+    planned_evidence: handleToolCall dispatches to correct handler for each session tool name; integration tests verify dispatch
     evidence_type: test
   - ac_id: AC-4
-    planned_evidence: >-
-      final-validation.test.ts covers: null normalizedPlan fails, confirmed flow with no steps fails, critical warnings
-      surfaced, no mutations to state. pnpm check-types passes.
-    evidence_type: test
+    planned_evidence: access-control.ts ToolNameSchema enum includes 5 session tool names; ACCESS_MATRIX has entries with 'all' role
+    evidence_type: file
   - ac_id: AC-5
-    planned_evidence: >-
-      story-readiness-check.test.ts covers: DEC-4 formula, threshold=70, injectable scoreFn, reasons[] populated. pnpm
-      check-types passes.
-    evidence_type: test
+    planned_evidence: 4 leader agent .md files contain /session-create call at workflow start and /session-complete at workflow end
+    evidence_type: file
   - ac_id: AC-6
     planned_evidence: >-
-      plan-refinement.test.ts routing tests: approve→complete path, reject→error, defer→complete+warning, edit loop
-      (edit then approve), final_validation failure→error without story_readiness.
-    evidence_type: test
+      Agent files include null-return guard: 'if session null, log warning and continue' — session tracking never gates
+      workflow
+    evidence_type: file
   - ac_id: AC-7
-    planned_evidence: >-
-      routeHiTLDecision, validatePlan, computeReadinessScore exported as named phase functions from their respective
-      node files. Tests invoke them directly.
-    evidence_type: test
-  - ac_id: AC-8
-    planned_evidence: >-
-      All four test files exist and pass: human-review-checkpoint.test.ts, final-validation.test.ts,
-      story-readiness-check.test.ts, plan-refinement.test.ts. pnpm test --filter @repo/orchestrator passes.
-    evidence_type: test
-  - ac_id: AC-9
-    planned_evidence: >-
-      makeState helper in human-review-checkpoint.test.ts (and all other test makeState helpers) includes gapFindings,
-      specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount,
-      consecutiveLlmFailures. pnpm check-types passes against all test files.
+    planned_evidence: session-tools-integration.test.ts exists with tests for all 5 tools; pnpm test passes
     evidence_type: test
 architectural_decisions: []
 complexity: moderate
 notes:
   - >-
-    CRITICAL: All 5 canonical files do NOT exist yet in the APRS-2030 worktree. The seed analysis claim of 'already
-    implemented' refers to the APRS-5030 worktree. Files must be CREATED, not modified.
+    Session functions already exist in packages/backend/mcp-tools/src/session-management/ — no new functions to write,
+    only wire-up
   - >-
-    APRS-5030 is the authoritative reference implementation — all 5 files can be ported directly with the AC-9 makeState
-    fix applied.
+    The mcp-tools package is NOT a direct dep of @repo/knowledge-base; import paths must be verified. The functions need
+    to be imported from the session-management package — check package.json deps first
   - >-
-    AC-9 fix applies to ALL test makeState helpers, not just human-review-checkpoint.test.ts. The
-    final-validation.test.ts and story-readiness-check.test.ts makeState helpers in APRS-5030 also lack gap-coverage
-    fields and will fail pnpm check-types in this worktree.
-  - 'DEC-6: edit flow routes to extract_flows (not gap_coverage) — this is intentional per the story decisions.'
-  - 'DEC-7: PHASE_TO_CHECKPOINT_MAP is NOT modified in this story — deferred.'
-  - 'E2E exempt: backend-only orchestrator nodes, no UI surface or API endpoints.'
+    CRITICAL: session tracking is telemetry, never a gate. Null returns from session_create/complete must log warning
+    and let workflow continue
+  - 'Access control for session tools: ''all'' role is appropriate — these are observability tools, not admin operations'
+  - 'Tool naming: snake_case (session_create not sessionCreate) per MCP convention and elaboration decision'
+  - mcp-integration.test.ts currently expects exactly 73 tools — must update to 78 after adding 5 session tools
   - >-
-    plan-refinement.ts graph must import normalize-plan.ts and extract-flows.ts nodes that already exist in this
-    worktree. Verify those paths exist before creating graph.
-  - The plan-refinement/ directory under nodes/ must be created — it does not exist in the APRS-2030 worktree.
+    skill files (.claude/skills/session-create/SKILL.md) reference mcp__postgres-knowledgebase__sessionCreate
+    (camelCase) — update to session_create (snake_case) per WINT-2090 elaboration decision

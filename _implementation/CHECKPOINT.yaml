@@ -1,28 +1,11 @@
 schema: 1
-story_id: WINT-4040
-feature_dir: plans/future/platform/wint
-timestamp: 2026-03-08T14:52:00Z
-current_phase: implementation
-last_successful_phase: implementation
-iteration: 2
-max_iterations: 5
+story_id: WINT-2090
+timestamp: '2026-03-20T19:10:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
 blocked: false
 forced: false
 warnings: []
 gen_mode: false
-fix_cycles:
-  - schema_version: 1
-    iteration: 2
-    triggered_by: code_review
-    started_at: "2026-03-08T14:50:00Z"
-    completed_at: "2026-03-08T14:52:00Z"
-    issues_fixed:
-      - file: "packages/backend/mcp-tools/src/scripts/infer-capabilities.ts"
-        line: 103
-        issue: "Removed unnecessary escape characters from regex pattern ([\\] and [\\\\])"
-        severity: medium
-      - file: "packages/backend/mcp-tools/src/scripts/infer-capabilities.ts"
-        line: 533
-        issue: "Broke long line to comply with 100-character line width limit"
-        severity: low
-    verification_result: PASS
