@@ -1,18 +1,10 @@
-schema: 1
-story_id: WINT-0270
-timestamp: '2026-03-20T12:00:00Z'
-current_phase: execute
-last_successful_phase: plan
-iteration: 0
-max_iterations: 3
-blocked: false
-blocked_reason: null
+branch: story/WINT-6010
+commit: 57c8b5e9
+e2e_gate: exempt
 gen_mode: false
-forced: false
-branch: story/WINT-0270
-worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/WINT-0270
-warnings:
-  - >-
-    Worktree @repo/logger not pre-built. Fixed by copying dist and symlinking.
-    Pre-existing workspace setup issue.
-plan_artifact_id: 7049d0cc-144e-440d-a44a-f2a5875aae08
+iteration: 0
+current_phase: qa-verify
+last_successful_phase: qa-verify
+worktree_path: tree/story/WINT-6010
+autonomy_level: aggressive
+verification_verdict: PASS

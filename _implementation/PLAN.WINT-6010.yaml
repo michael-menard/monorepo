@@ -1,0 +1,275 @@
+schema: 2
+story_id: WINT-6010
+timestamp: '2026-03-21T00:00:00Z'
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Write agent frontmatter (YAML header) and Role/Mission section with
+      correct metadata fields matching the shared FRONTMATTER.md standard
+      (created, updated, version, type, name, description, model, triggers,
+      kb_tools, shared refs).
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - .claude/agents/dev-plan-leader.agent.md
+      - .claude/agents/dev-setup-leader.agent.md
+      - .claude/agents/_shared/FRONTMATTER.md
+    dependencies: []
+    slice: packages
+    verification: 'grep -E "^---" .claude/agents/batch-coordinator.agent.md | wc -l'
+    acs_covered:
+      - AC-1
+
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Write the KB query section — actionable story fetch using kb_list_stories
+      with states filter (ready, in_progress, needs_code_review,
+      failed_code_review, backlog, created, elab) across all active plans.
+      Include plan slug iteration and STORY_ID:STATE output format matching
+      batch-elaborate.sh fetch_actionable_stories() pattern.
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - scripts/batch-elaborate.sh
+      - .claude/agents/_shared/kb-integration.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: 'grep -c "kb_list_stories" .claude/agents/batch-coordinator.agent.md'
+    acs_covered:
+      - AC-2
+      - AC-3
+
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Write the dependency ordering and finish-started-first prioritization
+      section. Define sort algorithm: in_progress and needs_code_review stories
+      first (finish-started), then ready ordered by dependency depth + priority
+      (P1 before P5), then elab/created/backlog. Include the state-to-phase
+      routing table (state → worker agent mapping).
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - scripts/batch-elaborate.sh
+    dependencies:
+      - 2
+    slice: packages
+    verification: 'grep -c "finish.started\|in_progress\|routing" .claude/agents/batch-coordinator.agent.md'
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write the sequential processing loop and worker spawning section. One
+      story at a time model (no concurrency). For each story: determine phase
+      from routing table, spawn appropriate worker agent via Task tool, await
+      completion signal, advance KB state via kb_update_story_status. Include
+      retry budget (MAX_RETRIES=2) and token-cap detection/countdown matching
+      batch-elaborate.sh run_with_retry() pattern.
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - scripts/batch-elaborate.sh
+      - .claude/agents/dev-setup-leader.agent.md
+    dependencies:
+      - 3
+    slice: packages
+    verification: 'grep -c "kb_update_story_status\|MAX_RETRIES\|token.cap" .claude/agents/batch-coordinator.agent.md'
+    acs_covered:
+      - AC-7
+      - AC-8
+
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write the self-healing and KB-native state mutation safety section.
+      Define concurrent mutation guard: check current state before advancing
+      (state mismatch = skip, not fail). Define self-heal behaviors: worker
+      error → move back to earlier stage rather than marking failed, except
+      after max retries. Include token-cap countdown and resume pattern from
+      batch-elaborate.sh wait_with_countdown().
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - scripts/batch-elaborate.sh
+    dependencies:
+      - 4
+    slice: packages
+    verification: 'grep -c "self.heal\|concurrent\|state.*guard\|mismatch" .claude/agents/batch-coordinator.agent.md'
+    acs_covered:
+      - AC-8
+
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Write the invocation interface, completion signals, token tracking, and
+      non-negotiables sections. Define trigger (/batch-coordinate or via direct
+      invocation), optional --plans flag, completion signals (BATCH COMPLETE,
+      BATCH BLOCKED), /token-log call pattern, and the non-negotiables list
+      (KB-only state, no flat files, sequential-only, self-heal not fail, etc.).
+    files:
+      - .claude/agents/batch-coordinator.agent.md
+    files_to_read:
+      - .claude/agents/dev-plan-leader.agent.md
+      - .claude/agents/_shared/autonomy-tiers.md
+      - .claude/agents/_shared/decision-handling.md
+    dependencies:
+      - 5
+    slice: packages
+    verification: 'grep -c "BATCH COMPLETE\|BATCH BLOCKED\|token-log\|Non-Negotiable" .claude/agents/batch-coordinator.agent.md'
+    acs_covered:
+      - AC-1
+      - AC-4
+
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Write Vitest tests in .claude/agents/__tests__/batch-coordinator.test.ts
+      that validate the agent file structure and content. Tests must cover:
+      (1) happy-path smoke test: file exists with correct frontmatter fields,
+      (2) routing table completeness: all required states present,
+      (3) failure-path test: retry budget constants present,
+      (4) token-cap simulation: countdown pattern present,
+      (5) KB-only state management: kb_update_story_status referenced,
+      (6) no flat-file tracking: no WORK-ORDER or result-dir references,
+      (7) sequential processing: single-story-at-a-time language present.
+    files:
+      - .claude/agents/__tests__/batch-coordinator.test.ts
+    files_to_read:
+      - .claude/agents/batch-coordinator.agent.md
+      - .claude/agents/__tests__/doc-sync-database.test.ts
+    dependencies:
+      - 6
+    slice: packages
+    verification: pnpm test .claude/agents/__tests__/batch-coordinator.test.ts
+    acs_covered:
+      - AC-9
+      - AC-10
+      - AC-11
+
+files_to_change:
+  - path: .claude/agents/batch-coordinator.agent.md
+    action: create
+    reason: >-
+      AC-1: Primary deliverable — the batch-coordinator orchestration agent
+      that replaces batch-elaborate.sh with KB-native state management,
+      finish-started-first heuristic, and phase-appropriate worker routing.
+  - path: .claude/agents/__tests__/batch-coordinator.test.ts
+    action: create
+    reason: >-
+      AC-9 through AC-11: Vitest tests validating agent file structure and
+      content including happy-path, failure-path, and token-cap simulation
+      scenarios.
+
+commands_to_run:
+  - command: pnpm test .claude/agents/__tests__/batch-coordinator.test.ts
+    when: after step 7
+    required: true
+  - command: >-
+      grep -E "^---" .claude/agents/batch-coordinator.agent.md &&
+      echo "Frontmatter present"
+    when: after step 1
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      .claude/agents/batch-coordinator.agent.md exists with correct YAML
+      frontmatter (created, updated, version, type, name, description, model,
+      triggers, kb_tools) matching FRONTMATTER.md standard.
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Agent contains kb_list_stories call pattern with states filter covering
+      all actionable states; iterates multiple plan slugs.
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      Agent defines dependency ordering — stories with unmet deps are skipped
+      or queued; ordering logic based on dependency depth from KB.
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      Agent invocation interface documented (trigger, --plans flag, context
+      params); invocable as /batch-coordinate or via direct agent call.
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      Finish-started-first section explicitly prioritizes in_progress and
+      needs_code_review stories before ready stories.
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      State-to-agent routing table present: ready/in_progress → implement
+      worker; needs_code_review/failed_code_review → review worker; elab →
+      elab worker; backlog/created → enrich worker.
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      Sequential processing model documented — one story at a time, no
+      parallel spawning; matches batch-elaborate.sh main loop pattern.
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      KB state mutation safety: pre-advance state check, mismatch handling,
+      kb_update_story_status used exclusively (no flat-file result tracking).
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      batch-coordinator.test.ts includes happy-path smoke test: agent file
+      exists, frontmatter valid, routing table complete. Test passes.
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      batch-coordinator.test.ts includes failure-path test: retry budget
+      constants (MAX_RETRIES) present, self-heal vocabulary present, no
+      immediate FAIL on error.
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: >-
+      batch-coordinator.test.ts includes token-cap simulation test: countdown
+      wait pattern (TOKEN_CAP_WAIT or equivalent) present in agent content.
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      7 PLAN steps (ST-1 through ST-7) each map to one subtask unit per AC-12
+      decomposition; each step touches <= 2 files and has clear verification.
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - >-
+    The primary deliverable is a Markdown agent file, NOT TypeScript code.
+    Tests validate the agent file's text content (grep-style assertions).
+  - >-
+    The _implementation/ directory already contains artifacts for WINT-0270
+    (a different story sharing this worktree). The new PLAN for WINT-6010 is
+    at _implementation/PLAN.WINT-6010.yaml to avoid collision.
+  - >-
+    batch-elaborate.sh is the canonical reference — the agent should translate
+    its shell patterns (retry budgets, token-cap detection, state routing,
+    self-healing) into agent-spec language.
+  - >-
+    KB tools in frontmatter: kb_list_stories (query), kb_update_story_status
+    (state management), kb_get_story (story detail), kb_search (context).
+  - >-
+    No flat-file tracking — results go to KB only. This is a hard constraint
+    from MEMORY.md and the story ACs.
+  - >-
+    Tests use fs.readFileSync to load the agent .md file and assert on its
+    string content — same pattern as doc-sync-database.test.ts validates
+    behavior via code, but here we validate agent spec content via file read.
+  - >-
+    autonomy_level is aggressive — AC-12 subtask decomposition already
+    resolved; no architectural decisions need user input.
