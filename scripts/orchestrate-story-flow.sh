@@ -47,9 +47,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ── Source shared libraries ──────────────────────────────────────────
+source "$SCRIPT_DIR/lib/spinner.sh"
 source "$SCRIPT_DIR/lib/work-order-parser.sh"
 source "$SCRIPT_DIR/lib/detect-state.sh"
 source "$SCRIPT_DIR/lib/kb-cache.sh"
+source "$SCRIPT_DIR/lib/story-enrich.sh"
 
 # ── Defaults ─────────────────────────────────────────────────────────
 WORK_ORDER="$REPO_ROOT/plans/future/platform/WORK-ORDER-BY-BATCH.md"
@@ -64,6 +66,8 @@ PLAN_SLUG_ARG=""
 MAX_PASSES=10
 TOKEN_LIMIT_HIT=false          # Global flag: stop launching when rate-limited
 SKIP_SYNC=false                # Skip per-transition KB/index syncs (final reconciliation only)
+SKIP_ENRICH=false              # Skip per-story enrichment before elab
+RELEVANCE_CHECK=false          # Run relevance check before enrichment (opt-in, was too aggressive)
 
 # All tools needed across all phases — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -85,12 +89,12 @@ while [[ $# -gt 0 ]]; do
     --autonomy)       AUTONOMY="$2"; shift 2 ;;
     --max-passes)     MAX_PASSES="$2"; shift 2 ;;
     --skip-sync)      SKIP_SYNC=true; shift ;;
+    --skip-enrich)    SKIP_ENRICH=true; shift ;;
+    --relevance-check) RELEVANCE_CHECK=true; shift ;;
     --help|-h)
       echo "Usage: $0 [options]"
       echo ""
       echo "Options:"
-      echo "  --parallel N          Run N stories in parallel (default 3)"
-      echo "  --sequential          Run one at a time"
       echo "  --dry-run             Show detected states + planned actions"
       echo "  --from STORY-ID       Resume from a specific story in work order"
       echo "  --only ID,ID,...      Process only specific stories"
@@ -98,8 +102,12 @@ while [[ $# -gt 0 ]]; do
       echo "  --work-order FILE     Custom work order file"
       echo "  --plan SLUG           Discover stories from a KB plan (mutually exclusive with --work-order)"
       echo "  --autonomy LEVEL      Set autonomy level (default aggressive)"
-      echo "  --max-passes N        Max dependency loop-back passes (default 10)"
       echo "  --skip-sync           Skip per-transition KB/index syncs (final reconciliation only)"
+      echo "  --skip-enrich         Skip pre-elab story enrichment (default: enrich ON)"
+      echo "  --relevance-check     Run pre-elab relevance check (default: OFF)"
+      echo "  --parallel N          (ignored — execution is always sequential by wave)"
+      echo "  --sequential          (ignored — execution is always sequential by wave)"
+      echo "  --max-passes N        (ignored — wave ordering replaces multi-pass retry)"
       exit 0
       ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
@@ -124,10 +132,10 @@ if [[ -n "$PLAN_SLUG_ARG" ]]; then
 
   echo "Resolving plan: $PLAN_SLUG_ARG"
   resolve_plan "$PLAN_SLUG_ARG"
-  echo "  Feature dir: $FEATURE_DIR"
+  echo "  Plan slug: $PLAN_SLUG"
   echo "  Story prefix: ${STORY_PREFIX:-<none>}"
 
-  # Discover stories (KB-first, stories.index.md fallback)
+  # Discover stories from KB
   discover_stories
 
   if [[ ${#DISCOVERED_STORIES[@]} -eq 0 ]]; then
@@ -232,184 +240,24 @@ fi
 # In plan mode, kb_fetch_stories already ran. In work-order mode, we need
 # to fetch by explicit IDs since stories span multiple plans/prefixes.
 if [[ -z "$PLAN_SLUG_ARG" ]]; then
-  echo "Fetching KB states..."
   kb_fetch_by_ids "$(IFS=,; echo "${FILTERED_STORIES[*]}")"
-  echo "  KB cache: ${#KB_STORY_IDS[@]} stories found"
 fi
 
 # ── Dependency helpers ────────────────────────────────────────────────
 #
-# Parse inter-story dependencies from stories.index.md and check whether
-# a story's deps have been satisfied (reached UAT / result=ok).
+# Dependencies come from the DB via kb_compute_waves(), which writes
+# $LOG_DIR/.deps-cache and $LOG_DIR/.wave-cache. The old filesystem-based
+# parse_story_dependencies/parse_story_phases functions have been removed.
 #
-
-# Build a deps cache file from a stories.index.md
-# Format: STORY_ID<TAB>DEP1,DEP2  (or STORY_ID<TAB>none)
-parse_story_dependencies() {
-  local INDEX_FILE="$1"
-  local CACHE_FILE="$LOG_DIR/.deps-cache"
-
-  if [[ ! -f "$INDEX_FILE" ]]; then
-    return 0
-  fi
-
-  local current_story=""
-  while IFS= read -r line; do
-    # Match story header: ### STORY-ID: ... (triple hash per stories.index.md format)
-    if [[ "$line" =~ ^###[[:space:]]+([A-Z]+-[0-9]+): ]]; then
-      current_story="${BASH_REMATCH[1]}"
-    fi
-    # Match depends-on line within a story section
-    if [[ -n "$current_story" && "$line" =~ \*\*Depends\ On:\*\*[[:space:]]*(.*) ]]; then
-      local deps_raw="${BASH_REMATCH[1]}"
-      # Normalize: strip whitespace, treat "none", "—", empty as no deps
-      deps_raw=$(echo "$deps_raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-      if [[ -z "$deps_raw" || "$deps_raw" == "none" || "$deps_raw" == "—" || "$deps_raw" == "-" ]]; then
-        # Only write if not already cached (avoid overwriting)
-        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
-          echo "${current_story}	none" >> "$CACHE_FILE"
-        fi
-      else
-        # Comma-separated story IDs — normalize spaces
-        local deps_clean
-        deps_clean=$(echo "$deps_raw" | sed 's/[[:space:]]*,[[:space:]]*/,/g')
-        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
-          echo "${current_story}	${deps_clean}" >> "$CACHE_FILE"
-        fi
-      fi
-      current_story=""
-    fi
-  done < "$INDEX_FILE"
-}
-
-# Extract phase number from story ID (e.g., WINT-0123 → 0, WINT-1234 → 1)
-# Returns empty string if pattern doesn't match
-get_story_phase() {
-  local STORY_ID="$1"
-  if [[ "$STORY_ID" =~ ^[A-Z]+-([0-9])[0-9]{3}$ ]]; then
-    echo "${BASH_REMATCH[1]}"
-  fi
-}
-
-# Build phase cache: map each story to its phase number
-# Format: STORY_ID<TAB>PHASE_NUM
-parse_story_phases() {
-  local INDEX_FILE="$1"
-  local PHASE_CACHE="$LOG_DIR/.phase-cache"
-
-  if [[ ! -f "$INDEX_FILE" ]]; then
-    return 0
-  fi
-
-  local current_phase=""
-  local current_story=""
-  while IFS= read -r line; do
-    # Match phase header: ## Phase N: ...
-    if [[ "$line" =~ ^##[[:space:]]+Phase[[:space:]]+([0-9]+): ]]; then
-      current_phase="${BASH_REMATCH[1]}"
-    fi
-    # Match story header: ### STORY-ID: ...
-    if [[ "$line" =~ ^###[[:space:]]+([A-Z]+-[0-9]+): ]]; then
-      current_story="${BASH_REMATCH[1]}"
-      if [[ -n "$current_phase" ]]; then
-        echo "${current_story}	${current_phase}" >> "$PHASE_CACHE"
-      fi
-    fi
-  done < "$INDEX_FILE"
-}
-
-# Get phase for a story from cache
-get_story_phase_from_cache() {
-  local STORY_ID="$1"
-  local PHASE_CACHE="$LOG_DIR/.phase-cache"
-
-  if [[ ! -f "$PHASE_CACHE" ]]; then
-    # Fallback: extract from story ID
-    get_story_phase "$STORY_ID"
-    return
-  fi
-
-  local phase_line
-  phase_line=$(grep "^${STORY_ID}	" "$PHASE_CACHE" 2>/dev/null | head -1) || true
-  if [[ -n "$phase_line" ]]; then
-    echo "$phase_line" | cut -f2
-  else
-    # Fallback: extract from story ID
-    get_story_phase "$STORY_ID"
-  fi
-}
-
-# Check if all stories in a phase are complete (UAT or done)
-# Returns 0 if phase is complete, 1 if not
-is_phase_complete() {
-  local PHASE_NUM="$1"
-  local PHASE_CACHE="$LOG_DIR/.phase-cache"
-
-  if [[ ! -f "$PHASE_CACHE" ]]; then
-    return 0  # No cache = can't check = proceed
-  fi
-
-  # Get all stories in this phase
-  local stories_in_phase
-  stories_in_phase=$(grep "	${PHASE_NUM}$" "$PHASE_CACHE" | cut -f1) || true
-
-  if [[ -z "$stories_in_phase" ]]; then
-    return 0  # No stories in phase = phase is complete
-  fi
-
-  while IFS= read -r story_id; do
-    if [[ -z "$story_id" ]]; then continue; fi
-
-    # Check if story is complete (UAT, done, or completed)
-    local story_state
-    story_state=$(read_state_field "$story_id" "current_state" 2>/dev/null) || true
-
-    case "$story_state" in
-      UAT|DONE|COMPLETED|completed|done|uat)
-        continue  # This story is complete
-        ;;
-      *)
-        # Check result file as fallback
-        local result_file="$LOG_DIR/.results/${story_id}"
-        if [[ -f "$result_file" ]]; then
-          local result
-          result=$(cat "$result_file")
-          if [[ "$result" == *"result=ok"* ]]; then
-            continue  # Completed this run
-          fi
-        fi
-        # Story not complete
-        return 1
-        ;;
-    esac
-  done <<< "$stories_in_phase"
-
-  return 0
-}
 
 # Check if all dependencies for a story are satisfied.
 # Returns 0 if satisfied (or no deps), 1 if blocked.
 # Sets BLOCKING_DEPS to comma-separated list of blocking story IDs.
-# Sets BLOCKING_PHASE if blocked by incomplete prior phase.
+# Deps come from DB via kb_compute_waves → $LOG_DIR/.deps-cache
 check_deps_satisfied() {
   local STORY_ID="$1"
   local CACHE_FILE="$LOG_DIR/.deps-cache"
   BLOCKING_DEPS=""
-  BLOCKING_PHASE=""
-
-  # Phase-level blocking: story's phase must have all prior phases complete
-  local story_phase
-  story_phase=$(get_story_phase_from_cache "$STORY_ID")
-  if [[ -n "$story_phase" && "$story_phase" -gt 0 ]]; then
-    local prior_phase=$((story_phase - 1))
-    while [[ $prior_phase -ge 0 ]]; do
-      if ! is_phase_complete "$prior_phase"; then
-        BLOCKING_PHASE="Phase $prior_phase incomplete"
-        return 1
-      fi
-      prior_phase=$((prior_phase - 1))
-    done
-  fi
 
   if [[ ! -f "$CACHE_FILE" ]]; then
     return 0  # No cache = no deps info = proceed
@@ -431,10 +279,10 @@ check_deps_satisfied() {
   IFS="$IFS_SAVE"
 
   for dep in "${dep_ids[@]}"; do
-    dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    dep=$(echo "$dep" | tr -d ' ')
     if [[ -z "$dep" ]]; then continue; fi
 
-    # Check 1: result file says ok
+    # Check 1: result file says ok (completed this run)
     local dep_result_file="$LOG_DIR/.results/${dep}"
     if [[ -f "$dep_result_file" ]]; then
       local dep_result
@@ -450,6 +298,15 @@ check_deps_satisfied() {
     case "$dep_state" in
       UAT|DONE|COMPLETED|completed|done|uat)
         continue  # This dep is satisfied
+        ;;
+    esac
+
+    # Check 3: KB state is terminal
+    local kb_dep_state
+    kb_dep_state=$(kb_story_state "$dep" 2>/dev/null) || true
+    case "$kb_dep_state" in
+      completed|uat|done)
+        continue
         ;;
     esac
 
@@ -519,35 +376,40 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
   STATE_SUMMARY="${STATE_SUMMARY}${STORY_ID}=${DETECTED_STATE} "
 done
 
-# ── Build dependency cache ─────────────────────────────────────────────
-# Parse dependencies from each unique stories.index.md once
+# ── Compute dependency waves from DB ──────────────────────────────────
 echo ""
-echo "Building dependency cache..."
-: > "$LOG_DIR/.deps-cache"  # initialize empty cache file
-PARSED_INDEX_FILES=""
-for STORY_ID in "${FILTERED_STORIES[@]}"; do
-  FEAT_DIR=$(read_state_field "$STORY_ID" "feature_dir")
-  if [[ -z "$FEAT_DIR" ]]; then continue; fi
-  INDEX_FILE="$FEAT_DIR/stories.index.md"
-  # Skip if we already parsed this index file
-  case "$PARSED_INDEX_FILES" in
-    *"|${INDEX_FILE}|"*) continue ;;
-  esac
-  PARSED_INDEX_FILES="${PARSED_INDEX_FILES}|${INDEX_FILE}|"
-  parse_story_dependencies "$INDEX_FILE"
-  parse_story_phases "$INDEX_FILE"
-done
+echo "Computing dependency waves from DB..."
+kb_compute_waves "${PLAN_SLUG_ARG:-}" "$LOG_DIR"
 
 DEPS_COUNT=0
 if [[ -f "$LOG_DIR/.deps-cache" ]]; then
   DEPS_COUNT=$(grep -cv '	none$' "$LOG_DIR/.deps-cache" 2>/dev/null) || true
 fi
-PHASE_COUNT=0
-if [[ -f "$LOG_DIR/.phase-cache" ]]; then
-  PHASE_COUNT=$(wc -l < "$LOG_DIR/.phase-cache" | tr -d ' ')
+echo "  Dependencies: $DEPS_COUNT stories with deps, $((KB_WAVE_MAX + 1)) wave(s)"
+
+# ── Sort FILTERED_STORIES by wave (ascending), then by ID within wave ──
+if [[ -f "$LOG_DIR/.wave-cache" && -s "$LOG_DIR/.wave-cache" ]]; then
+  SORTED_STORIES=()
+  local_wave=0
+  while [[ $local_wave -le $KB_WAVE_MAX ]]; do
+    while IFS=$'\t' read -r sid wave_num; do
+      [[ "$wave_num" == "$local_wave" ]] || continue
+      # Only include stories that are in FILTERED_STORIES
+      for fs in "${FILTERED_STORIES[@]}"; do
+        if [[ "$fs" == "$sid" ]]; then
+          SORTED_STORIES+=("$sid")
+          break
+        fi
+      done
+    done < "$LOG_DIR/.wave-cache"
+    ((local_wave++))
+  done
+  # Replace FILTERED_STORIES with sorted version
+  if [[ ${#SORTED_STORIES[@]} -gt 0 ]]; then
+    FILTERED_STORIES=("${SORTED_STORIES[@]}")
+    echo "  Stories re-sorted by wave order"
+  fi
 fi
-echo "  Parsed deps for $(wc -l < "$LOG_DIR/.deps-cache" 2>/dev/null | tr -d ' ') stories ($DEPS_COUNT with dependencies)"
-echo "  Parsed phases for $PHASE_COUNT stories"
 
 # ── Banner ───────────────────────────────────────────────────────────
 echo ""
@@ -556,16 +418,16 @@ echo " Unified Story Orchestrator"
 echo "======================================"
 if [[ -n "$PLAN_SLUG_ARG" ]]; then
   echo " Plan:          $PLAN_SLUG_ARG"
-  echo " Feature dir:   $FEATURE_DIR"
+  echo " Story prefix:  $STORY_PREFIX"
 else
   echo " Work order:    $WORK_ORDER"
 fi
 echo " Stories:       $TOTAL"
 echo " Skipped:       $SKIPPED_COUNT"
-echo " Parallel:      $PARALLEL"
+echo " Waves:         $((KB_WAVE_MAX + 1))"
+echo " Execution:     sequential (wave-ordered)"
 echo " Autonomy:      $AUTONOMY"
 echo " Max retries:   $MAX_RETRIES"
-echo " Max passes:    $MAX_PASSES"
 echo " Dry run:       $DRY_RUN"
 [[ -n "$ONLY_LIST" ]] && echo " Only:          $ONLY_LIST"
 echo " Logs:          $LOG_DIR/"
@@ -578,14 +440,14 @@ RUN_LOG="$LOG_DIR/run.log"
   echo "Start: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   if [[ -n "$PLAN_SLUG_ARG" ]]; then
     echo "Plan: $PLAN_SLUG_ARG"
-    echo "Feature dir: $FEATURE_DIR"
+    echo "Story prefix: $STORY_PREFIX"
   else
     echo "Work order: $WORK_ORDER"
   fi
-  echo "Parallel: $PARALLEL"
+  echo "Waves: $((KB_WAVE_MAX + 1))"
+  echo "Execution: sequential (wave-ordered)"
   echo "Autonomy: $AUTONOMY"
   echo "Max retries: $MAX_RETRIES"
-  echo "Max passes: $MAX_PASSES"
   echo "Dry run: $DRY_RUN"
   [[ -n "$ONLY_LIST" ]] && echo "Only: $ONLY_LIST"
   [[ -n "$RESUME_FROM" ]] && echo "Resume from: $RESUME_FROM"
@@ -602,13 +464,9 @@ pre_qa_check() {
   local STORY_ID="$1"
   local TAG="$2"
 
-  # Check story dependencies are satisfied (phase and story-level)
+  # Check story dependencies are satisfied
   if ! check_deps_satisfied "$STORY_ID"; then
-    if [[ -n "$BLOCKING_PHASE" ]]; then
-      echo "$TAG QA   SKIP:    $STORY_ID (blocked: $BLOCKING_PHASE)"
-    else
-      echo "$TAG QA   SKIP:    $STORY_ID (blocked by deps: $BLOCKING_DEPS)"
-    fi
+    echo "$TAG QA   SKIP:    $STORY_ID (blocked by deps: $BLOCKING_DEPS)"
     return 1
   fi
 
@@ -975,13 +833,13 @@ update_kb_status() {
     return 0
   fi
 
+  spin_start "$STORY_ID → KB: $kb_state"
   claude -p "Call kb_update_story_status with story_id '${STORY_ID}', state '${kb_state}', phase '${PHASE}'. Output only 'OK' or 'ERROR: <reason>'. No explanation." \
     --allowedTools "mcp__knowledge-base__kb_update_story_status" \
     --output-format text \
     --permission-mode bypassPermissions \
     > /dev/null 2>&1 || true
-
-  echo "$TAG KB   UPDATE:  $STORY_ID → $kb_state (phase=$PHASE)"
+  spin_stop "$TAG KB   UPDATE:  $STORY_ID → $kb_state (phase=$PHASE)"
 }
 
 # Update stories.index.md status (best-effort, non-blocking)
@@ -997,11 +855,11 @@ update_index_status() {
     return 0
   fi
 
+  spin_start "$STORY_ID → index: $index_status"
   claude -p "/story-update $FEAT_DIR $STORY_ID $index_status" \
     $CLAUDE_FLAGS \
     > /dev/null 2>&1 || true
-
-  echo "$TAG IDX  UPDATE:  $STORY_ID → $index_status"
+  spin_stop "$TAG IDX  UPDATE:  $STORY_ID → $index_status"
 }
 
 # ── Work order locking (mkdir-based, POSIX-safe, macOS-compatible) ────
@@ -1258,9 +1116,18 @@ move_story_to() {
 # ── Dry run ──────────────────────────────────────────────────────────
 if $DRY_RUN; then
   echo ""
-  echo "=== Dry Run — Planned Actions ==="
+  echo "=== Dry Run — Planned Actions (Wave-Ordered) ==="
   echo ""
+  local dry_wave=0
+  local prev_wave=-1
   for STORY_ID in "${FILTERED_STORIES[@]}"; do
+    local sw
+    sw=$(kb_story_wave "$STORY_ID" "$LOG_DIR")
+    if [[ "${sw:-0}" != "$prev_wave" ]]; then
+      [[ $prev_wave -ge 0 ]] && echo ""
+      echo "  ── Wave ${sw:-0} ──"
+      prev_wave="${sw:-0}"
+    fi
     STATE=$(read_state_field "$STORY_ID" "current_state")
     FEAT_DIR=$(read_state_field "$STORY_ID" "feature_dir")
     ACTION=$(state_to_action "$STATE")
@@ -1280,9 +1147,7 @@ if $DRY_RUN; then
     dep_note=""
     if [[ "$ACTION" != "done" && "$ACTION" != "skip" ]]; then
       if ! check_deps_satisfied "$STORY_ID"; then
-        if [[ -n "$BLOCKING_PHASE" ]]; then
-          dep_note="  (blocked: $BLOCKING_PHASE)"
-        elif [[ -n "$BLOCKING_DEPS" ]]; then
+        if [[ -n "$BLOCKING_DEPS" ]]; then
           dep_note="  (blocked by: $BLOCKING_DEPS)"
         fi
       fi
@@ -1290,7 +1155,7 @@ if $DRY_RUN; then
     printf "  %-14s %-14s → %s%s\n" "$STORY_ID" "$STATE" "$CMD" "$dep_note"
   done
   echo ""
-  echo "Dry run complete. $TOTAL stories detected, $PARALLEL would run in parallel, max $MAX_PASSES passes."
+  echo "Dry run complete. $TOTAL stories across $((KB_WAVE_MAX + 1)) wave(s), sequential execution."
   # Cleanup
   wo_cleanup
   exit 0
@@ -1387,12 +1252,13 @@ process_story() {
       # ── Not found → generate story ────────────────────────────
       NOT_FOUND)
         local GEN_LOG="$LOG_DIR/${STORY_ID}-generate.log"
-        echo "$TAG GEN  START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}generate,"
 
+        spin_start "$TAG GEN  $STORY_ID"
         claude -p "/pm-story generate $FEAT_DIR $STORY_ID" \
              $CLAUDE_FLAGS \
              > "$GEN_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$GEN_LOG" "generate")
@@ -1415,15 +1281,56 @@ process_story() {
         continue
         ;;
 
-      # ── Generated → elaborate ─────────────────────────────────
+      # ── Generated → enrich → elaborate ──────────────────────────
       GENERATED)
+        # ── Relevance check (opt-in via --relevance-check) ──────
+        if [[ "$RELEVANCE_CHECK" == "true" ]]; then
+          echo "$TAG RELV CHECK: $STORY_ID"
+          if ! check_relevance "$STORY_ID"; then
+            echo "$TAG RELV SKIP:  $STORY_ID (cancelled or deferred)"
+            FINAL_RESULT="skip"
+            break
+          fi
+        fi
+
+        # ── Enrichment (opt-out via --skip-enrich) ──────────────
+        if [[ "$SKIP_ENRICH" != "true" ]]; then
+          local ENRICH_LOG="$LOG_DIR/${STORY_ID}-enrich.log"
+          local ENRICH_ATTEMPTS=0
+          local ENRICH_OK=false
+
+          while [[ $ENRICH_ATTEMPTS -lt $MAX_PHASE_ATTEMPTS ]]; do
+            spin_start "$TAG ENRCH $STORY_ID"
+            local enrich_rc=0
+            enrich_story "$STORY_ID" "${PLAN_SLUG:-}" || enrich_rc=$?
+            spin_kill
+
+            case "$enrich_rc" in
+              0) ENRICH_OK=true; break ;;
+              1) ((ENRICH_ATTEMPTS++))
+                 echo "$TAG ENRCH RETRY: $STORY_ID — retrying ($ENRICH_ATTEMPTS/$MAX_PHASE_ATTEMPTS)"
+                 sleep 5
+                 ;;
+              *) break ;;
+            esac
+          done
+
+          if [[ "$ENRICH_OK" != "true" ]]; then
+            FINAL_RESULT="stuck"
+            echo "$TAG ENRCH STUCK: $STORY_ID — enrichment failed after $ENRICH_ATTEMPTS attempts"
+            break
+          fi
+          echo "$TAG ENRCH OK:    $STORY_ID"
+        fi
+
         local ELAB_LOG="$LOG_DIR/${STORY_ID}-elaborate.log"
-        echo "$TAG ELAB START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}elaborate,"
 
+        spin_start "$TAG ELAB $STORY_ID"
         claude -p "/elab-story $FEAT_DIR $STORY_ID --autonomous" \
              $CLAUDE_FLAGS \
              > "$ELAB_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$ELAB_LOG" "elaborate")
@@ -1469,12 +1376,13 @@ process_story() {
         fi
 
         local IMPL_LOG="$LOG_DIR/${STORY_ID}-implement.log"
-        echo "$TAG IMPL START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}implement,"
 
+        spin_start "$TAG IMPL $STORY_ID"
         claude -p "/dev-implement-story $FEAT_DIR $STORY_ID --autonomous=$AUTONOMY" \
              $CLAUDE_FLAGS \
              > "$IMPL_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$IMPL_LOG" "implement")
@@ -1522,15 +1430,13 @@ process_story() {
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local REVIEW_LOG="$LOG_DIR/${STORY_ID}-review.log"
-        echo "$TAG REVW START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}review,"
 
-        # Note: review agents discover code via git branch and KB evidence artifact.
-        # The worktree is at tree/story/$STORY_ID — agents may use git worktree list
-        # or the conventional path to find it (see worktree-resolution.md).
+        spin_start "$TAG REVW $STORY_ID"
         claude -p "/dev-code-review $FEAT_DIR $STORY_ID" \
              $CLAUDE_FLAGS \
              > "$REVIEW_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$REVIEW_LOG" "review")
@@ -1580,12 +1486,13 @@ process_story() {
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local FIX_LOG="$LOG_DIR/${STORY_ID}-fix-review.log"
-        echo "$TAG FIX  START:  $STORY_ID (fixing review failures, fix $((MAX_RETRIES - RETRIES_LEFT))/$MAX_RETRIES)"
         PHASES_RUN="${PHASES_RUN}fix-review,"
 
+        spin_start "$TAG FIX  $STORY_ID (review fix $((MAX_RETRIES - RETRIES_LEFT))/$MAX_RETRIES)"
         claude -p "/dev-fix-story $FEAT_DIR $STORY_ID" \
              $CLAUDE_FLAGS \
              > "$FIX_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$FIX_LOG" "fix")
@@ -1639,12 +1546,13 @@ process_story() {
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local QA_LOG="$LOG_DIR/${STORY_ID}-qa.log"
-        echo "$TAG QA   START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}qa,"
 
+        spin_start "$TAG QA   $STORY_ID"
         claude -p "/qa-verify-story $FEAT_DIR $STORY_ID" \
              $CLAUDE_FLAGS \
              > "$QA_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$QA_LOG" "qa")
@@ -1696,12 +1604,13 @@ process_story() {
         sync_worktree_for_agents "$STORY_ID" "$TAG"
 
         local FIX_LOG="$LOG_DIR/${STORY_ID}-fix-qa.log"
-        echo "$TAG FIX  START:  $STORY_ID (fixing QA failures, fix $((MAX_RETRIES - RETRIES_LEFT))/$MAX_RETRIES)"
         PHASES_RUN="${PHASES_RUN}fix-qa,"
 
+        spin_start "$TAG FIX  $STORY_ID (QA fix $((MAX_RETRIES - RETRIES_LEFT))/$MAX_RETRIES)"
         claude -p "/dev-fix-story $FEAT_DIR $STORY_ID" \
              $CLAUDE_FLAGS \
              > "$FIX_LOG" 2>&1 || true
+        spin_kill
 
         local LOG_CHECK
         LOG_CHECK=$(check_log_for_failure "$FIX_LOG" "fix")
@@ -1765,24 +1674,6 @@ process_story() {
   echo "result=$FINAL_RESULT phases=$PHASES_RUN state=${CURRENT_STATE:-unknown} transitions=${TRANSITION_LOG:-none}" > "$RESULT_FILE"
 }
 
-# ── Parallel execution with job pool (multi-pass for dependencies) ────
-RUNNING_PIDS=()
-
-wait_for_slot() {
-  while [[ ${#RUNNING_PIDS[@]} -ge $PARALLEL ]]; do
-    local STILL_RUNNING=()
-    for pid in "${RUNNING_PIDS[@]}"; do
-      if kill -0 "$pid" 2>/dev/null; then
-        STILL_RUNNING+=("$pid")
-      fi
-    done
-    RUNNING_PIDS=("${STILL_RUNNING[@]}")
-    if [[ ${#RUNNING_PIDS[@]} -ge $PARALLEL ]]; then
-      sleep 2
-    fi
-  done
-}
-
 # Helper: check if a story is already finished (result=ok or result=skip) or stuck/failed
 is_story_done_or_stuck() {
   local sid="$1"
@@ -1797,122 +1688,100 @@ is_story_done_or_stuck() {
   return 1
 }
 
+# ── Sequential wave-based execution ─────────────────────────────────
+# Process stories one at a time, wave by wave. All stories in wave N
+# complete before any story in wave N+1 starts. Dependencies are
+# guaranteed satisfied by wave ordering.
+
 echo ""
-echo "Starting $TOTAL stories with parallelism=$PARALLEL, max_passes=$MAX_PASSES..."
+echo "Starting $TOTAL stories sequentially across $((KB_WAVE_MAX + 1)) wave(s)..."
 echo ""
 
-PASS_NUM=0
 TOTAL_DEFERRED=0
+PASS_NUM=1  # kept for summary compat
 
-while true; do
-  ((PASS_NUM++))
-  if [[ $PASS_NUM -gt $MAX_PASSES ]]; then
-    echo "Reached max passes ($MAX_PASSES). Stopping."
-    break
-  fi
+current_wave=0
+while [[ $current_wave -le $KB_WAVE_MAX ]]; do
 
-  DEFERRED_THIS_PASS=0
-  LAUNCHED_THIS_PASS=0
-  RUNNING_PIDS=()
-
-  if [[ $PASS_NUM -gt 1 ]]; then
-    echo ""
-    echo "── Pass $PASS_NUM (retrying dep-blocked stories) ──"
-    echo ""
-  fi
-
+  # Collect stories in this wave
+  WAVE_STORIES=()
   for i in "${!FILTERED_STORIES[@]}"; do
     STORY_ID="${FILTERED_STORIES[$i]}"
-    IDX=$((i + 1))
+    story_wave=$(kb_story_wave "$STORY_ID" "$LOG_DIR")
+    [[ "${story_wave:-0}" == "$current_wave" ]] && WAVE_STORIES+=("$STORY_ID")
+  done
 
-    # Stop launching if token limit was hit by any worker
+  if [[ ${#WAVE_STORIES[@]} -eq 0 ]]; then
+    ((current_wave++))
+    continue
+  fi
+
+  echo "── Wave $current_wave (${#WAVE_STORIES[@]} stories) ──────────────────────────"
+
+  WAVE_OK=0
+  WAVE_SKIP=0
+  WAVE_BLOCKED=0
+
+  for STORY_ID in "${WAVE_STORIES[@]}"; do
+    # Find global index for TAG display
+    IDX=0
+    for gi in "${!FILTERED_STORIES[@]}"; do
+      if [[ "${FILTERED_STORIES[$gi]}" == "$STORY_ID" ]]; then
+        IDX=$((gi + 1))
+        break
+      fi
+    done
+
+    # Stop if token limit was hit
     if is_token_limited; then
       echo ""
       echo "TOKEN LIMIT HIT — not launching any more stories."
-      echo "Waiting for ${#RUNNING_PIDS[@]} running jobs to finish..."
       break
     fi
 
     # Skip stories that already have a final result
     if is_story_done_or_stuck "$STORY_ID"; then
+      ((WAVE_SKIP++))
       continue
     fi
 
-    # On pass > 1, re-detect state — another worker or prior pass may have advanced it
-    if [[ $PASS_NUM -gt 1 ]]; then
-      local_feat_dir=$(read_state_field "$STORY_ID" "feature_dir")
-      if [[ -n "$local_feat_dir" ]]; then
-        kb_st=$(kb_story_state "$STORY_ID")
-        detect_story_state "$STORY_ID" "$local_feat_dir" "" "$kb_st"
-        if [[ "$DETECTED_STATE" == "UAT" ]]; then
-          echo "result=ok phases= state=UAT transitions=" > "$LOG_DIR/.results/${STORY_ID}"
-          continue
-        fi
-      fi
-    fi
-
-    # Check dependencies (phase-level and story-level)
+    # Safety check: verify deps are satisfied (should be true by wave ordering)
     if ! check_deps_satisfied "$STORY_ID"; then
-      local block_reason=""
-      if [[ -n "$BLOCKING_PHASE" ]]; then
-        block_reason="$BLOCKING_PHASE"
-      elif [[ -n "$BLOCKING_DEPS" ]]; then
-        block_reason="deps: $BLOCKING_DEPS"
-      fi
-      if [[ $PASS_NUM -eq 1 ]]; then
-        echo "  [$IDX/$TOTAL] $STORY_ID: DEFERRED (blocked: $block_reason)"
-      else
-        echo "  $STORY_ID: still blocked ($block_reason)"
-      fi
-      ((DEFERRED_THIS_PASS++))
+      local block_reason="deps: ${BLOCKING_DEPS:-unknown}"
+      echo "  [$IDX/$TOTAL] $STORY_ID: BLOCKED ($block_reason) — unexpected in wave $current_wave"
+      ((WAVE_BLOCKED++))
+      ((TOTAL_DEFERRED++))
       continue
     fi
 
-    wait_for_slot
+    # Run story to completion (foreground — no backgrounding)
+    process_story "$STORY_ID" "$IDX"
+    ((WAVE_OK++))
 
-    process_story "$STORY_ID" "$IDX" &
-    RUNNING_PIDS+=($!)
-    ((LAUNCHED_THIS_PASS++))
-
-    # Stagger launches to avoid thundering herd
-    sleep 3
+    # Check if token limit was hit during processing
+    if is_token_limited; then
+      echo ""
+      echo "TOKEN LIMIT: Account token/rate limit detected. Stopping orchestrator."
+      echo "  Check logs in: $LOG_DIR"
+      break
+    fi
   done
 
-  # Wait for all parallel jobs this pass to complete
-  if [[ ${#RUNNING_PIDS[@]} -gt 0 ]]; then
-    echo ""
-    echo "Pass $PASS_NUM: launched $LAUNCHED_THIS_PASS stories, $DEFERRED_THIS_PASS deferred. Waiting..."
-    wait
-    # Wait for background sync jobs too
-    wait 2>/dev/null || true
-  fi
+  echo "── Wave $current_wave complete (processed=$WAVE_OK skipped=$WAVE_SKIP blocked=$WAVE_BLOCKED) ──"
+  echo ""
 
-  # If token limit was hit, stop all further passes
+  # If token limit was hit, stop all further waves
   if is_token_limited; then
-    echo ""
-    echo "TOKEN LIMIT: Account token/rate limit detected. Stopping orchestrator."
-    echo "  Check logs in: $LOG_DIR"
     break
   fi
 
-  # If nothing was deferred, we're done
-  if [[ $DEFERRED_THIS_PASS -eq 0 ]]; then
-    break
-  fi
-
-  # If nothing launched but some were deferred, we're stuck
-  if [[ $LAUNCHED_THIS_PASS -eq 0 && $DEFERRED_THIS_PASS -gt 0 ]]; then
-    echo ""
-    echo "All $DEFERRED_THIS_PASS remaining stories blocked by unresolved dependencies. Stopping."
-    TOTAL_DEFERRED=$DEFERRED_THIS_PASS
-    break
-  fi
+  ((current_wave++))
 done
 
 echo ""
-echo "Completed after $PASS_NUM pass(es)."
+echo "Completed $((current_wave > KB_WAVE_MAX + 1 ? KB_WAVE_MAX + 1 : current_wave)) of $((KB_WAVE_MAX + 1)) wave(s)."
 if [[ $TOTAL_DEFERRED -gt 0 ]]; then
-  echo "$TOTAL_DEFERRED stories remain blocked by unresolved dependencies."
+  echo "$TOTAL_DEFERRED stories blocked by unresolved dependencies."
 fi
 
 # ── Final reconciliation pass ─────────────────────────────────────────
@@ -1974,7 +1843,7 @@ done
   echo ""
   echo "=== Final Summary ==="
   echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  echo "Passes: $PASS_NUM  Dep-blocked: $TOTAL_DEFERRED"
+  echo "Waves: $((KB_WAVE_MAX + 1))  Dep-blocked: $TOTAL_DEFERRED"
   echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  TOKEN_LIMIT: $RESULT_TOKEN_LIMIT  Missing: $MISSING"
   echo "---"
   echo "Per-story results:"
@@ -1994,14 +1863,13 @@ echo "======================================"
 echo " Summary"
 echo "======================================"
 echo " Total stories:     $TOTAL"
-echo " Parallelism:       $PARALLEL"
+echo " Waves:             $((KB_WAVE_MAX + 1))"
 echo " Max retries:       $MAX_RETRIES"
 echo " OK:                $RESULT_OK"
 echo " FAILED:            $RESULT_FAIL"
 echo " STUCK:             $RESULT_STUCK"
 echo " SKIPPED:           $RESULT_SKIP"
 [[ $RESULT_TOKEN_LIMIT -gt 0 ]] && echo " TOKEN LIMITED:     $RESULT_TOKEN_LIMIT"
-echo " Passes:            $PASS_NUM"
 [[ $TOTAL_DEFERRED -gt 0 ]] && echo " Dep-blocked:       $TOTAL_DEFERRED"
 [[ $MISSING -gt 0 ]] && echo " Missing results:   $MISSING"
 echo " Logs:              $LOG_DIR/"
