@@ -13,6 +13,7 @@ import {
   type TrainingDataIngestInput,
   type TrainingDataIngestOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Ingest a training data record
@@ -50,7 +51,7 @@ export async function trainingDataIngest(
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to ingest training data of type '${parsed.dataType}':`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return null
   }

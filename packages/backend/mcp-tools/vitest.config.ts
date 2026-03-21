@@ -8,12 +8,6 @@ export default defineConfig({
       '@repo/db': resolve(__dirname, '../../..', 'packages/backend/db/src/index.ts'),
       // Resolve @repo/logger from source during tests (dist/ may not be built in worktrees)
       '@repo/logger': resolve(__dirname, '../../..', 'packages/core/logger/src/index.ts'),
-      // Resolve @repo/knowledge-base/ml-pipeline from source during tests
-      '@repo/knowledge-base/ml-pipeline': resolve(
-        __dirname,
-        '../../..',
-        'apps/api/knowledge-base/src/ml-pipeline/index.ts',
-      ),
     },
   },
   test: {

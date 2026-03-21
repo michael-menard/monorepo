@@ -150,6 +150,9 @@ importers:
       '@repo/context-pack-sidecar':
         specifier: workspace:*
         version: link:../../../packages/backend/sidecars/context-pack
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../../packages/backend/db
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger

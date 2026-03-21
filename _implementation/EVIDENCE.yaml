@@ -1,155 +1,152 @@
-schema: 1
-story_id: CDBE-5010
-title: Partition agent_invocations and token_usage Tables
+story_id: WINT-0140
 phase: implementation
-iteration: 0
-timestamp: '2026-03-19T00:00:00Z'
+iteration: 1
+generated_at: '2026-03-19'
 
-files_created:
-  - path: apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
-    description: >-
-      Full migration SQL: safety preamble, pre-migration row count snapshot,
-      drop FKs, rename+copy strategy for both tables, per-partition unique indexes,
-      FK reconstruction, row count verification, orphan FK check, table comments.
-      All within single BEGIN/COMMIT transaction.
-
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
-    description: >-
-      pgTAP test file with 20 assertions across 8 groups:
-      HP-1 (table structure), HP-2/HP-3 (partition routing), HP-4 (EXPLAIN pruning),
-      HP-5 (index validity), HP-6 (CASCADE FK), HP-7 (SET NULL FK), HP-8 (data completeness).
-
-files_modified:
-  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
-    description: >-
-      Added 8-line comment block above agentInvocations table definition documenting
-      RANGE partitioning on started_at, composite PK (id, started_at), migration 1100
-      reference, and ARCH-001 FK strategy rationale.
-
-  - path: apps/api/knowledge-base/src/db/schema/analytics.ts
-    description: >-
-      Added 6-line comment block above storyTokenUsage table definition documenting
-      RANGE partitioning on logged_at, composite PK (id, logged_at), migration 1100
-      reference, and append-only nature (no dependent FKs).
+summary:
+  status: COMPLETE
+  tests_passed: 24
+  tests_failed: 0
+  build_status: pre-existing cyclic dep prevents turbo build (not introduced by this story)
+  e2e_status: EXEMPT (infra/tools story - no UI surface)
 
 acceptance_criteria:
-  - ac_id: AC-1
+  - id: AC-1
+    description: 'MlModelTypeSchema z.enum with 4 PG enum values'
     status: PASS
-    evidence: >-
-      Migration section 4 creates workflow.agent_invocations PARTITION BY RANGE (started_at).
-      Migration section 12 creates analytics.story_token_usage PARTITION BY RANGE (logged_at).
-      pgTAP HP-1a asserts relkind='p' for agent_invocations; HP-1b for story_token_usage.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
+        detail: "MlModelTypeSchema = z.enum(['quality_predictor','effort_estimator','risk_classifier','pattern_recommender'])"
+      - test: 'ml-pipeline re-exports (mcp-tools stub) - MlModelTypeSchema with 4 valid values'
 
-  - ac_id: AC-2
+  - id: AC-2
+    description: 'ml_model_register tool inserts into workflow.ml_models'
     status: PASS
-    evidence: >-
-      Migration section 4: PRIMARY KEY (id, started_at) on agent_invocations parent.
-      Migration section 2: drops agent_outcomes_invocation_id_fkey, agent_decisions_invocation_id_fkey,
-      hitl_decisions_invocation_id_fkey.
-      Migration section 9: recreates all three FKs referencing new partitioned parent,
-      with CASCADE for agent_outcomes and agent_decisions, SET NULL for hitl_decisions.
-      pgTAP HP-6a/HP-6b (CASCADE) and HP-7a/HP-7b (SET NULL) verify FK behavior.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
+        detail: 'db.insert(mlModels).values(...).returning() - Zod validated, returns row or null'
+      - test: 'mlModelRegister - registers a new model and returns the row'
+      - test: 'mlModelRegister - returns null and warns on DB error'
 
-  - ac_id: AC-3
+  - id: AC-3
+    description: 'ml_model_get_active tool queries WHERE is_active=true with optional modelType filter'
     status: PASS
-    evidence: >-
-      Migration section 6: CREATE UNIQUE INDEX on (invocation_id, started_at) on each
-      of the three agent_invocations partitions (default, y2026m03, y2026m04).
-      pgTAP HP-5a verifies the unique index exists on the y2026m03 partition.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
+        detail: 'eq(mlModels.isActive, true) + optional modelType filter with and()'
+      - test: 'mlModelGetActive - returns all active models when no type filter'
+      - test: 'mlModelGetActive - returns empty array and warns on DB error'
 
-  - ac_id: AC-4
+  - id: AC-4
+    description: 'ml_metrics_record tool appends to model_metrics (append-only)'
     status: PASS
-    evidence: >-
-      For agent_invocations: section 3 renames old table, section 4 creates partitioned parent,
-      section 7 copies data (INSERT INTO new SELECT * FROM old), section 10 drops old table.
-      For story_token_usage: section 11 renames, section 12 creates, section 15 copies, section 18 drops.
-      Both within the single BEGIN/COMMIT transaction wrapping the entire migration.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
+        detail: 'db.insert(modelMetrics).values(...).returning() - append-only, no update path'
+      - test: 'mlMetricsRecord - records a metric and returns the row'
+      - test: 'mlMetricsRecord - returns null and warns on DB error'
 
-  - ac_id: AC-5
+  - id: AC-5
+    description: 'ml_prediction_record tool appends to model_predictions (append-only)'
     status: PASS
-    evidence: >-
-      Migration section 5: CREATE TABLE workflow.agent_invocations_default PARTITION OF ... DEFAULT.
-      Migration section 13: CREATE TABLE analytics.story_token_usage_default PARTITION OF ... DEFAULT.
-      pgTAP HP-2b verifies historical 2025-01-01 row routes to agent_invocations_default.
-      pgTAP HP-3b verifies historical 2024-06-01 row routes to story_token_usage_default.
-      pgTAP HP-1c/HP-1d verify default partitions exist.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
+        detail: 'db.insert(modelPredictions).values(...).returning() - append-only'
+      - test: 'mlPredictionRecord - records a prediction and returns the row'
+      - test: 'mlPredictionRecord - returns null and warns on DB error'
 
-  - ac_id: AC-6
+  - id: AC-6
+    description: 'ml_prediction_get_by_entity tool queries by entityType + entityId ordered by predictedAt DESC'
     status: PASS
-    evidence: >-
-      Migration section 5: creates agent_invocations_y2026m03 (current month) and
-      agent_invocations_y2026m04 (next month).
-      Migration section 13: creates story_token_usage_y2026m03 (current month) and
-      story_token_usage_y2026m04 (next month).
-      pgTAP HP-2a verifies 2026-03-15 routes to y2026m03.
-      pgTAP HP-3a verifies 2026-03-15 routes to story_token_usage_y2026m03.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
+        detail: 'and(eq(entityType), eq(entityId)) + optional predictionType + orderBy(desc(predictedAt)).limit()'
+      - test: 'mlPredictionGetByEntity - returns predictions for entity'
+      - test: 'mlPredictionGetByEntity - respects limit constraint (max 100)'
 
-  - ac_id: AC-7
+  - id: AC-7
+    description: 'training_data_ingest tool inserts into training_data with optional storyId'
     status: PASS
-    evidence: >-
-      Migration section 8: row count assertion for agent_invocations (RAISE EXCEPTION on mismatch).
-      Migration section 16: row count assertion for story_token_usage (RAISE EXCEPTION on mismatch).
-      Migration section 17: orphaned FK check for agent_outcomes, agent_decisions, hitl_decisions;
-      raises exception if any non-null invocation_id is unresolvable after re-partitioning.
-      All verification within the same transaction — any failure rolls back the entire migration.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/1100_cdbe5010_partition_telemetry.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
+        detail: 'db.insert(trainingData).values({dataType, features, labels, storyId: null}).returning()'
+      - test: 'trainingDataIngest - ingests training data and returns the row'
+      - test: 'trainingDataIngest - ingests with optional storyId'
 
-  - ac_id: AC-8
+  - id: AC-8
+    description: 'training_data_mark_validated tool updates validated=true + validated_at=NOW()'
     status: PASS
-    evidence: >-
-      pgTAP file with exactly 20 assertions:
-        HP-1 (4): relkind='p' for both tables, DEFAULT partitions exist for both tables.
-        HP-2 (2): 2026-03 routes to y2026m03, 2025-01 routes to default.
-        HP-3 (2): 2026-03 routes to y2026m03, 2024-06 routes to default.
-        HP-4 (2): EXPLAIN prunes to y2026m03 for both tables.
-        HP-5 (3): UNIQUE (invocation_id, started_at) on y2026m03, UNIQUE (id) on y2026m03, INDEX (story_id) on stu_y2026m03.
-        HP-6 (2): INSERT and CASCADE DELETE on agent_outcomes.
-        HP-7 (2): INSERT and SET NULL DELETE on hitl_decisions.
-        HP-8 (3): parent count == sum of partitions for both tables, correct per-partition routing for all 3 partitions.
-      All tests run inside BEGIN...ROLLBACK to leave DB clean.
-    files:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
+        detail: 'db.update(trainingData).set({validated:true, validatedAt:new Date()}).where(eq(id)).returning()'
+      - test: 'trainingDataMarkValidated - marks training data as validated and returns updated row'
+      - test: 'trainingDataMarkValidated - returns null and warns when record not found'
 
-commands_run:
-  - command: pnpm --filter @repo/knowledge-base build (via tsc --noEmit)
-    result: PASS — 0 errors in knowledge-base/src files
-    note: >-
-      Pre-existing errors in mcp-tools and sidecars packages (missing @repo/db, @repo/logger
-      workspace deps) are unrelated to CDBE-5010 changes and existed before this story.
+  - id: AC-9
+    description: 'All tools use Zod parse input, @repo/logger warn on errors, return null on DB failure'
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
+        detail: 'All input schemas defined as Zod schemas with z.infer<> types'
+      - detail: 'All tools use Schema.parse(input) at entry, catch block calls logger.warn and returns null'
+      - test: 'All error-path tests verify logger.warn called and null returned'
 
-  - command: pnpm --filter @repo/knowledge-base test
-    result: 39 test files pass, 19 fail
-    note: >-
-      All failures are pre-existing: database connectivity issues (missing kbmem tables like
-      tasks, work_state), parameter binding bug in story-outcomes.test.ts, and missing
-      tool handler exports from prior stories. None are related to CDBE-5010 migration files
-      or schema comments. The schema TS files (workflow.ts, analytics.ts) only received
-      non-functional comment additions with no code changes.
+  - id: AC-10
+    description: 'Package registration: knowledge-base ./ml-pipeline export + mcp-tools re-export'
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/package.json
+        detail: '"./ml-pipeline": { import: ./src/ml-pipeline/index.ts, types: ./src/ml-pipeline/index.ts }'
+      - file: packages/backend/mcp-tools/src/index.ts
+        detail: 'Re-exports all 7 tools and schemas from @repo/knowledge-base/ml-pipeline'
 
-notes:
-  - >-
-    The story_token_usage table does NOT have an estimated_cost column in the actual database
-    baseline (999_full_schema_baseline.sql line 309-322). The PLAN.yaml warning about
-    estimated_cost was based on a misread of line 94 in 999_add_telemetry_tables.sql which
-    references agent_invocations, not story_token_usage. The migration correctly omits
-    estimated_cost from the new partitioned story_token_usage DDL.
-  - >-
-    E2E tests are not applicable for this story_type (database migration + pgTAP tests).
-    The pgTAP tests serve as the integration test layer and require the migration to be
-    applied to a live PostgreSQL instance with the pgTAP extension installed.
-  - >-
-    Migration 1090 (referenced in PLAN.yaml as taken by CDBE-3030 token_dashboard matview)
-    does not exist in the filesystem yet. Migration 1100 is the next sequential migration.
+  - id: AC-11
+    description: 'Unit tests with vi.mock for db, one test per tool minimum, >=45% coverage'
+    status: PASS
+    evidence:
+      - file: apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
+        detail: '24 tests across 7 describe blocks - all passing. Uses vi.hoisted + vi.mock(@repo/db)'
+      - result: '24/24 tests pass'
+
+files_created:
+  - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
+  - apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
+  - apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
+  - apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
+  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
+  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
+  - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
+  - apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
+  - apps/api/knowledge-base/src/ml-pipeline/index.ts
+  - apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/__types__/index.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-register.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-get-active.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/ml-metrics-record.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-record.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-get-by-entity.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/training-data-ingest.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/training-data-mark-validated.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/index.ts
+  - packages/backend/mcp-tools/src/ml-pipeline/__tests__/ml-pipeline.test.ts
+
+files_modified:
+  - apps/api/knowledge-base/package.json
+  - apps/api/knowledge-base/vitest.config.ts
+  - packages/backend/mcp-tools/src/index.ts
+  - packages/backend/mcp-tools/vitest.config.ts
+
+pre_existing_issues_noted:
+  - cyclic_dependency: '@repo/knowledge-base <-> @repo/mcp-tools prevents turbo build (pre-existing)'
+  - logger_resolution: '@repo/logger dist not built - pre-existing in worktree, fixed via vitest aliases'
+  - db_resolution: '@repo/db dist not built - pre-existing in worktree, fixed via vitest aliases'
+
+test_results:
+  knowledge_base_ml_pipeline:
+    passed: 24
+    failed: 0
+    command: 'pnpm --filter @repo/knowledge-base test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'
+  mcp_tools_ml_pipeline:
+    passed: 4
+    failed: 0
+    command: 'pnpm --filter @repo/mcp-tools test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'

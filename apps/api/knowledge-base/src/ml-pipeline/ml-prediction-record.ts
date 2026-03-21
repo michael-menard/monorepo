@@ -13,6 +13,7 @@ import {
   type MlPredictionRecordInput,
   type MlPredictionRecordOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Record a model prediction (append-only)
@@ -56,7 +57,7 @@ export async function mlPredictionRecord(
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to record prediction for model '${parsed.modelId}', entity '${parsed.entityId}':`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return null
   }

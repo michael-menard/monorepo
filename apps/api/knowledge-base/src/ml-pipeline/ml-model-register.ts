@@ -13,6 +13,7 @@ import {
   type MlModelRegisterInput,
   type MlModelRegisterOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Register a new ML model in the database
@@ -55,7 +56,7 @@ export async function mlModelRegister(input: MlModelRegisterInput): Promise<MlMo
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to register ML model '${parsed.modelName}':`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return null
   }

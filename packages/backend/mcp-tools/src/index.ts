@@ -70,42 +70,6 @@ export { logInvocation } from './telemetry/workflow-log-invocation.js'
 export { WorkflowLogInvocationInputSchema } from './telemetry/__types__/index.js'
 export type { WorkflowLogInvocationInput } from './telemetry/__types__/index.js'
 
-// Re-export ML pipeline tools (WINT-0140)
-export {
-  mlModelRegister,
-  mlModelGetActive,
-  mlMetricsRecord,
-  mlPredictionRecord,
-  mlPredictionGetByEntity,
-  trainingDataIngest,
-  trainingDataMarkValidated,
-  MlModelTypeSchema,
-  MlModelRegisterInputSchema,
-  MlModelGetActiveInputSchema,
-  MlMetricsRecordInputSchema,
-  MlPredictionRecordInputSchema,
-  MlPredictionGetByEntityInputSchema,
-  TrainingDataIngestInputSchema,
-  TrainingDataMarkValidatedInputSchema,
-} from '@repo/knowledge-base/ml-pipeline'
-export type {
-  MlModelType,
-  MlModelRegisterInput,
-  MlModelRegisterOutput,
-  MlModelGetActiveInput,
-  MlModelGetActiveOutput,
-  MlModelRecord,
-  MlMetricsRecordInput,
-  MlMetricsRecordOutput,
-  MlMetricRecord,
-  MlPredictionRecordInput,
-  MlPredictionRecordOutput,
-  MlPredictionGetByEntityInput,
-  MlPredictionGetByEntityOutput,
-  MlPredictionRow,
-  TrainingDataIngestInput,
-  TrainingDataIngestOutput,
-  TrainingDataMarkValidatedInput,
-  TrainingDataMarkValidatedOutput,
-  TrainingDataRow,
-} from '@repo/knowledge-base/ml-pipeline'
+// Note: ML pipeline tools (WINT-0140) are registered directly in the knowledge-base MCP server.
+// They are NOT re-exported through mcp-tools to avoid a cyclic dependency:
+// knowledge-base → mcp-tools → knowledge-base.

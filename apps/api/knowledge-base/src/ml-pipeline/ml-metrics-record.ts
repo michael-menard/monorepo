@@ -13,6 +13,7 @@ import {
   type MlMetricsRecordInput,
   type MlMetricsRecordOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Record a model metric (append-only)
@@ -50,7 +51,7 @@ export async function mlMetricsRecord(input: MlMetricsRecordInput): Promise<MlMe
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to record metric '${parsed.metricType}' for model '${parsed.modelId}':`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return null
   }

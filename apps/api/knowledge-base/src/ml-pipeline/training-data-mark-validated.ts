@@ -14,6 +14,7 @@ import {
   type TrainingDataMarkValidatedInput,
   type TrainingDataMarkValidatedOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Mark a training data record as validated
@@ -55,7 +56,7 @@ export async function trainingDataMarkValidated(
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to mark training data '${parsed.id}' as validated:`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return null
   }

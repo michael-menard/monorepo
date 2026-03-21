@@ -14,6 +14,7 @@ import {
   type MlModelGetActiveInput,
   type MlModelGetActiveOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Get all active ML models, with optional type filter
@@ -50,10 +51,7 @@ export async function mlModelGetActive(
       updatedAt: row.updatedAt,
     }))
   } catch (error) {
-    logger.warn(
-      `[mcp-tools] Failed to get active ML models:`,
-      error instanceof Error ? error.message : String(error),
-    )
+    logger.warn(`[mcp-tools] Failed to get active ML models:`, extractErrorMessage(error))
     return []
   }
 }

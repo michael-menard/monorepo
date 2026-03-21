@@ -14,6 +14,7 @@ import {
   type MlPredictionGetByEntityInput,
   type MlPredictionGetByEntityOutput,
 } from './__types__/index.js'
+import { extractErrorMessage } from './error-handler.js'
 
 /**
  * Get predictions for an entity (ordered by predictedAt DESC)
@@ -60,7 +61,7 @@ export async function mlPredictionGetByEntity(
   } catch (error) {
     logger.warn(
       `[mcp-tools] Failed to get predictions for entity '${parsed.entityId}':`,
-      error instanceof Error ? error.message : String(error),
+      extractErrorMessage(error),
     )
     return []
   }
