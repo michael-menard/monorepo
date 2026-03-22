@@ -1,6 +1,6 @@
 ---
 name: status-audit
-description: Audit story statuses across filesystem, KB, and git worktrees. Detects stale statuses, duplicate directories, orphaned worktrees, unprocessed deferred KB writes, and missing KB artifacts. Resolves conflicts by picking the furthest-progressed directory as ground truth.
+description: Audit story statuses across KB, git worktrees, and artifacts. Detects stale statuses, orphaned worktrees, deferred KB writes, and missing KB artifacts. Detects stale statuses, duplicate directories, orphaned worktrees, unprocessed deferred KB writes, and missing KB artifacts. Resolves conflicts by picking the furthest-progressed directory as ground truth.
 created: 2026-02-23
 updated: 2026-02-23
 version: 1.0.0
@@ -18,6 +18,7 @@ type: utility
 ```
 
 **Examples:**
+
 ```bash
 /status-audit                          # Full audit of all platform stories (report only)
 /status-audit --fix                    # Audit + apply all KB corrections
@@ -31,13 +32,13 @@ type: utility
 
 Performs a five-part audit and optionally fixes all detected issues:
 
-| Section | What It Checks |
-|---------|---------------|
+| Section                         | What It Checks                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **A. Legacy Stage Directories** | Stories that still exist in old-style stage dirs (`backlog/`, `in-progress/`, etc.) — flags for migration to flat `stories/` layout |
-| **B. KB State Mismatch** | Stories in flat `stories/` on disk vs KB `state` field — flags stories on disk not in KB, and vice versa |
-| **C. Orphaned Worktrees** | Active `git worktree list` entries vs `worktree_list_active` KB records |
-| **D. Deferred KB Writes** | `DEFERRED-KB-WRITES.yaml` files on disk that were never processed |
-| **E. Artifact Sync** | Key artifacts on disk (`CHECKPOINT.yaml`, `EVIDENCE.yaml`, `QA-VERIFY.yaml`) vs KB artifact records |
+| **B. KB State Mismatch**        | Stories in flat `stories/` on disk vs KB `state` field — flags stories on disk not in KB, and vice versa                            |
+| **C. Orphaned Worktrees**       | Active `git worktree list` entries vs `worktree_list_active` KB records                                                             |
+| **D. Deferred KB Writes**       | `DEFERRED-KB-WRITES.yaml` files on disk that were never processed                                                                   |
+| **E. Artifact Sync**            | Key artifacts on disk (`CHECKPOINT.yaml`, `EVIDENCE.yaml`, `QA-VERIFY.yaml`) vs KB artifact records                                 |
 
 **Source of truth:** The KB is the authoritative source for story state. Filesystem directories are for artifact storage only — status is never inferred from directory location.
 
@@ -62,6 +63,7 @@ git worktree list
 Parse output into a map: `{ path → branch }`. Extract story IDs from branch names matching pattern `story/STORY-ID` or `story/STORY-ID-*`.
 
 Example:
+
 ```
 /repo/tree/story/KBAR-0050  e2d613a4 [story/KBAR-0050]   → KBAR-0050
 /repo/tree/story/WINT-1120  56f9fede [story/WINT-1120]    → WINT-1120
@@ -84,40 +86,65 @@ If tool fails, set `KB_WORKTREES = {}` and note in output.
 
 ---
 
-### Step 3 — Filesystem Scan
+### Step 3 — KB Story Scan
 
-**Scan A: Flat stories/ directories (canonical)**
+**Scan A: Registered stories (canonical)**
 
-Run via Bash tool to find all story directories in the flat layout:
+Query KB for all registered stories:
 
-```bash
-find plans/future/platform -type d \
-  -regextype posix-extended \
-  -regex '.*/stories/[A-Z]+-[0-9]+$'
+```javascript
+// Call directly (not via sub-agent):
+mcp__knowledge -
+  base__kb_list_stories({
+    epic: "--epic flag value or 'platform'",
+    limit: 100,
+  })
+// Paginate: repeat with offset: 100, 200, ... until exhausted
 ```
 
-For each path found, extract:
-- `story_id`: last path segment (e.g., `KBAR-0040`)
-- `story_path`: full path (e.g., `plans/future/platform/wint/stories/KBAR-0040`)
+For each KB story record, extract:
 
-Store as `DISK_STORIES`: `{ storyId → { story_path } }`
+- `story_id`: story identifier (e.g., `KBAR-0040`)
+- `story_dir`: canonical directory path from KB record (e.g., `plans/future/platform/wint/stories/KBAR-0040`)
+- `state`: current KB state
+
+Store as `DISK_STORIES`: `{ storyId → { story_path: story.story_dir } }`
 
 **Scan B: Legacy stage directories (flag for migration)**
 
-Run via Bash tool to find stories still in old-style stage directories:
+KB is the source of truth — legacy stage directories are identified by querying KB for stories whose `story_dir` contains a stage directory pattern. Use `kb_search` to find stories with legacy paths:
 
-```bash
-find plans/future/platform -mindepth 2 -maxdepth 5 -type d \
-  -regextype posix-extended \
-  -regex '.*/(backlog|created|elaboration|ready-to-work|in-progress|needs-code-review|failed-code-review|ready-for-qa|failed-qa|UAT|completed)/[A-Z]+-[0-9]+$'
+```javascript
+mcp__knowledge -
+  base__kb_search({
+    query: 'backlog elaboration ready-to-work in-progress UAT completed',
+    tags: ['story'],
+    limit: 50,
+  })
 ```
 
-For each path found, extract:
-- `story_id`: last path segment
-- `stage_dir`: parent directory name
-- `legacy_path`: full path
+Additionally, check if any KB story's `story_dir` contains known stage directory names:
 
-Store as `LEGACY_STORIES`: `{ storyId → { legacy_path, stage_dir } }`. These are flagged in Section A.
+```javascript
+// Filter KB_STORIES where story_dir contains a legacy stage name
+const LEGACY_STAGES = [
+  'backlog',
+  'elaboration',
+  'ready-to-work',
+  'in-progress',
+  'needs-code-review',
+  'failed-code-review',
+  'ready-for-qa',
+  'failed-qa',
+  'UAT',
+  'completed',
+]
+const legacyStories = Object.entries(KB_STORIES).filter(([id, s]) =>
+  LEGACY_STAGES.some(stage => s.story_dir?.includes('/' + stage + '/')),
+)
+```
+
+Store as `LEGACY_STORIES`: `{ storyId → { legacy_path: story.story_dir, stage_dir } }`. These are flagged in Section A.
 
 If `--story` flag is set, filter both scans to just that story ID.
 
@@ -142,18 +169,27 @@ Store as `KB_STORIES`: `{ storyId → { state, story_dir, priority, blocked } }`
 
 ### Step 5 — Deferred KB Writes Scan
 
-Run via Bash tool:
+Query KB for deferred write records:
 
-```bash
-find plans/future/platform -name "DEFERRED-KB-WRITES.yaml" -type f
+```javascript
+// Call directly (not via sub-agent):
+mcp__knowledge -
+  base__kb_search({
+    query: 'deferred kb writes',
+    tags: ['deferred-kb-writes'],
+    limit: 50,
+  })
 ```
 
-For each file found, read the first few lines to extract:
+For each result, extract:
+
 - `deferred_at` timestamp
 - `reason`
-- `story_id` from the writes array
+- `story_id`
 
-Store as `DEFERRED_WRITES`: `[ { file_path, story_id, deferred_at, reason } ]`
+Also, if `story_dir` is available on KB story records, check for any `DEFERRED-KB-WRITES.yaml` indicator in the story metadata.
+
+Store as `DEFERRED_WRITES`: `[ { story_id, deferred_at, reason } ]`
 
 ---
 
@@ -168,6 +204,7 @@ ls {canonical_path}/_implementation/ 2>/dev/null
 ```
 
 Key artifacts to flag if present on disk:
+
 - `CHECKPOINT.yaml` or `_implementation/CHECKPOINT.yaml`
 - `EVIDENCE.yaml` or `_implementation/EVIDENCE.yaml`
 - `QA-VERIFY.yaml` or `_implementation/QA-VERIFY.yaml`
@@ -182,6 +219,7 @@ mcp__knowledge-base__kb_list_artifacts({ story_id: STORY_ID })
 Only call `kb_list_artifacts` for stories that have at least one key artifact on disk and are in `DISK_STORIES`. Batch these calls — do not call for every story.
 
 Compare disk artifacts vs KB artifact `artifact_type` values:
+
 - `CHECKPOINT.yaml` → type `checkpoint`
 - `EVIDENCE.yaml` → type `evidence`
 - `QA-VERIFY.yaml` → type `qa_gate`
@@ -217,6 +255,7 @@ Also flag if `KB_STORIES[id].story_dir` doesn't match the canonical path on disk
 #### Section C: Orphaned Worktrees
 
 Cross-reference `GIT_WORKTREES` vs `KB_WORKTREES`:
+
 - In git but not in KB → **Untracked worktree** (git has it, KB doesn't know)
 - In KB but not in git → **Orphaned KB record** (KB thinks it's active, git worktree is gone)
 - In both → OK (show as healthy)
@@ -380,11 +419,11 @@ Fix Results:
 
 ## Edge Cases
 
-| Scenario | Behavior |
-|----------|----------|
-| Legacy story in `UAT/` or other stage dir | Flagged in Section A as needing migration to `stories/` layout |
-| Nested story dir (e.g., `stories/KBAR-0020/KBAR-0020`) | Skip inner dir — it's an artifact folder |
-| Story in git worktree but no active work / clearly abandoned | Flag for manual review, don't auto-remove |
-| `kb_list_stories` pagination | Keep calling with increasing offset until total exhausted |
-| Story on disk but `--story` filter doesn't match | Skip |
+| Scenario                                                     | Behavior                                                          |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Legacy story in `UAT/` or other stage dir                    | Flagged in Section A as needing migration to `stories/` layout    |
+| Nested story dir (e.g., `stories/KBAR-0020/KBAR-0020`)       | Skip inner dir — it's an artifact folder                          |
+| Story in git worktree but no active work / clearly abandoned | Flag for manual review, don't auto-remove                         |
+| `kb_list_stories` pagination                                 | Keep calling with increasing offset until total exhausted         |
+| Story on disk but `--story` filter doesn't match             | Skip                                                              |
 | KB `state` is `completed` but story is in a legacy stage dir | KB wins — KB is the authoritative source. Flag dir for migration. |

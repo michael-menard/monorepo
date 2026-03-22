@@ -5,7 +5,14 @@ version: 3.0.0
 type: worker
 permission_level: kb-write
 model: haiku
-spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader, pm-story-seed-agent, dev-setup-leader, dev-plan-leader]
+spawned_by:
+  [
+    pm-story-generation-leader,
+    pm-story-adhoc-leader,
+    pm-story-seed-agent,
+    dev-setup-leader,
+    dev-plan-leader,
+  ]
 schema: packages/backend/orchestrator/src/artifacts/knowledge-context.ts
 kb_tools:
   - kb_search
@@ -28,6 +35,7 @@ Worker agent responsible for loading relevant lessons learned and architecture d
 ## Mission
 
 Retrieve and surface critical knowledge that should inform the current story:
+
 1. **Lessons Learned** - Past failures, blockers, and patterns to avoid
 2. **Architecture Decision Records (ADRs)** - Active constraints and patterns to follow
 3. **Token Optimization Patterns** - Cost-saving patterns for implementation
@@ -40,13 +48,15 @@ This context prevents repeating past mistakes and ensures architectural consiste
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story identifier (e.g., "WISH-001")
 - `story_domain`: Domain/feature area (e.g., "wishlist", "gallery", "auth")
 - `story_scope`: Brief description of what the story involves
-- `feature_dir`: Feature directory path (for locating ADR-LOG.md)
+- `feature_dir`: Feature directory path (used for kb_write_artifact output)
 
 From filesystem:
-- `plans/stories/ADR-LOG.md` - Architecture Decision Records
+
+- Knowledge Base via `kb_search({ tags: ["adr"] })` - Architecture Decision Records
 - Knowledge Base via `kb_search` - Lessons learned
 - Knowledge Base via `artifact_search` - Past implementation artifacts
 
@@ -61,29 +71,32 @@ From filesystem:
 **Actions**:
 
 1. **Query Knowledge Base for lessons**:
+
    ```javascript
    kb_search({
-     query: "{story_domain} {story_scope} implementation",
-     tags: ["lesson-learned"],
-     limit: 10
+     query: '{story_domain} {story_scope} implementation',
+     tags: ['lesson-learned'],
+     limit: 10,
    })
    ```
 
 2. **Query for domain-specific lessons**:
+
    ```javascript
    kb_search({
-     query: "{story_domain} blocker failure pattern",
-     tags: ["lesson-learned"],
-     limit: 5
+     query: '{story_domain} blocker failure pattern',
+     tags: ['lesson-learned'],
+     limit: 5,
    })
    ```
 
 3. **Query for token optimization lessons**:
+
    ```javascript
    kb_search({
-     query: "token optimization high-cost operation",
-     tags: ["lesson-learned"],
-     limit: 5
+     query: 'token optimization high-cost operation',
+     tags: ['lesson-learned'],
+     limit: 5,
    })
    ```
 
@@ -119,7 +132,15 @@ Collect all results into `pattern_discovery`. If either query throws or returns 
 
 **Actions**:
 
-1. **Read ADR-LOG.md** at `plans/stories/ADR-LOG.md`
+1. **Query KB for ADRs** via kb_search:
+
+   ```javascript
+   kb_search({
+     query: 'architecture decision record',
+     tags: ['adr'],
+     limit: 20,
+   })
+   ```
 
 2. **Filter to active ADRs**:
    - Status: Active (skip Deprecated, Superseded)
@@ -164,65 +185,66 @@ Collect all results into `pattern_discovery`. If either query throws or returns 
 **Objective**: Produce structured knowledge context for story creation.
 
 **Output Structure**:
+
 ```yaml
 knowledge_context:
   loaded: true
-  timestamp: "{ISO timestamp}"
+  timestamp: '{ISO timestamp}'
 
   lessons_learned:
-    count: {number}
+    count: { number }
     relevant_to_scope:
-      - story_id: "{STORY-XXX}"
-        lesson: "{lesson description}"
+      - story_id: '{STORY-XXX}'
+        lesson: '{lesson description}'
         category: blocker | pattern | time_sink | reuse
-        applies_because: "{why this is relevant}"
+        applies_because: '{why this is relevant}'
 
     blockers_to_avoid:
-      - "{blocker description}"
+      - '{blocker description}'
 
     patterns_to_follow:
-      - "{pattern description}"
+      - '{pattern description}'
 
     patterns_to_avoid:
-      - "{anti-pattern description}"
+      - '{anti-pattern description}'
 
   architecture_decisions:
-    active_count: {number}
+    active_count: { number }
     relevant_adrs:
-      - id: "ADR-XXX"
-        title: "{title}"
+      - id: 'ADR-XXX'
+        title: '{title}'
         status: active
-        constraint: "{key constraint or decision}"
-        applies_to: ["{domain1}", "{domain2}"]
+        constraint: '{key constraint or decision}'
+        applies_to: ['{domain1}', '{domain2}']
 
     constraints:
-      api_paths: "{schema if ADR-001 applies}"
-      infrastructure: "{pattern if ADR-002 applies}"
-      storage: "{pattern if ADR-003 applies}"
-      auth: "{pattern if ADR-004 applies}"
-      testing: "{requirement if ADR-005 applies}"
+      api_paths: '{schema if ADR-001 applies}'
+      infrastructure: '{pattern if ADR-002 applies}'
+      storage: '{pattern if ADR-003 applies}'
+      auth: '{pattern if ADR-004 applies}'
+      testing: '{requirement if ADR-005 applies}'
 
   token_optimization:
     high_cost_operations:
-      - operation: "{description}"
-        typical_tokens: {number}
-        mitigation: "{how to avoid}"
+      - operation: '{description}'
+        typical_tokens: { number }
+        mitigation: '{how to avoid}'
 
     recommended_patterns:
-      - "{pattern}"
+      - '{pattern}'
 
   # pattern_discovery: artifact-based results from artifact_search (actual implementation
   # content indexed automatically via artifact_write/kb_add from past stories). Distinct
   # from lessons_learned (authored summaries written intentionally by story authors).
   pattern_discovery:
-    - story_id: "{STORY-XXX}"
-      artifact_type: "evidence | plan"
-      content_summary: "{brief summary of relevant content}"
+    - story_id: '{STORY-XXX}'
+      artifact_type: 'evidence | plan'
+      content_summary: '{brief summary of relevant content}'
       relevance_score: 0.0-1.0
-      phase: "{implementation | planning | ...}"
+      phase: '{implementation | planning | ...}'
 
   warnings:
-    - "{any warnings about missing context}"
+    - '{any warnings about missing context}'
 ```
 
 ---
@@ -232,53 +254,53 @@ knowledge_context:
 ```yaml
 knowledge_context:
   loaded: true | false
-  timestamp: "2026-02-01T10:00:00Z"
+  timestamp: '2026-02-01T10:00:00Z'
 
   lessons_learned:
     count: 5
     relevant_to_scope:
-      - story_id: "WISH-2004"
-        lesson: "API path mismatch between frontend RTK Query and backend Hono routes caused 404s"
+      - story_id: 'WISH-2004'
+        lesson: 'API path mismatch between frontend RTK Query and backend Hono routes caused 404s'
         category: blocker
-        applies_because: "Story involves API endpoint work"
+        applies_because: 'Story involves API endpoint work'
     blockers_to_avoid:
-      - "API path schema mismatch between frontend and backend"
+      - 'API path schema mismatch between frontend and backend'
     patterns_to_follow:
-      - "Use discriminated union result types for core functions"
+      - 'Use discriminated union result types for core functions'
     patterns_to_avoid:
-      - "Reading full serverless.yml when only one resource needed"
+      - 'Reading full serverless.yml when only one resource needed'
 
   architecture_decisions:
     active_count: 5
     relevant_adrs:
-      - id: "ADR-001"
-        title: "API Endpoint Path Schema"
+      - id: 'ADR-001'
+        title: 'API Endpoint Path Schema'
         status: active
-        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
-        applies_to: ["api", "backend", "frontend"]
+        constraint: 'Frontend uses /api/v2/{domain}, Backend uses /{domain}'
+        applies_to: ['api', 'backend', 'frontend']
     constraints:
-      api_paths: "/api/v2/{domain} -> /{domain} via proxy"
-      testing: "UAT must use real services, not mocks"
+      api_paths: '/api/v2/{domain} -> /{domain} via proxy'
+      testing: 'UAT must use real services, not mocks'
 
   token_optimization:
     high_cost_operations:
-      - operation: "Read serverless.yml"
+      - operation: 'Read serverless.yml'
         typical_tokens: 17500
-        mitigation: "Extract relevant section only"
+        mitigation: 'Extract relevant section only'
     recommended_patterns:
-      - "Targeted file reads over full files"
-      - "Grep before Read"
+      - 'Targeted file reads over full files'
+      - 'Grep before Read'
 
   # pattern_discovery contains artifact-based results from artifact_search — actual
   # implementation content from past stories indexed via artifact_write/kb_add.
   # This is DISTINCT from lessons_learned, which are authored summaries written
   # intentionally by story authors.
   pattern_discovery:
-    - story_id: "KBAR-0130"
-      artifact_type: "evidence"
-      content_summary: "MCP tool handler implementation for kb_write_artifact"
+    - story_id: 'KBAR-0130'
+      artifact_type: 'evidence'
+      content_summary: 'MCP tool handler implementation for kb_write_artifact'
       relevance_score: 0.87
-      phase: "implementation"
+      phase: 'implementation'
 
   warnings: []
 
@@ -292,6 +314,7 @@ knowledge_context:
 ## Completion Signal
 
 End with exactly one of:
+
 - `KNOWLEDGE-CONTEXT COMPLETE` - Context loaded successfully
 - `KNOWLEDGE-CONTEXT PARTIAL: {reason}` - Some context missing but usable
 - `KNOWLEDGE-CONTEXT FAILED: {reason}` - Critical failure
@@ -301,7 +324,7 @@ End with exactly one of:
 ## Non-Negotiables
 
 - **MUST query Knowledge Base** for lessons learned (not deprecated file)
-- **MUST read ADR-LOG.md** for architecture decisions
+- **MUST query KB for ADRs** via kb_search with tags: ["adr"] for architecture decisions
 - **MUST filter to ACTIVE ADRs only** (skip deprecated/superseded)
 - **MUST map lessons and ADRs to story scope** (don't dump everything)
 - **MUST surface blockers prominently** (these prevent story success)
@@ -320,13 +343,13 @@ When called with `story_id`, write the knowledge context to the Knowledge Base:
 
 ```javascript
 kb_write_artifact({
-  story_id: "{STORY_ID}",
-  artifact_type: "context",
-  phase: "planning",
+  story_id: '{STORY_ID}',
+  artifact_type: 'context',
+  phase: 'planning',
   iteration: 0,
   content: {
     /* full knowledge_context structure as defined above, including pattern_discovery */
-  }
+  },
 })
 ```
 
@@ -339,10 +362,12 @@ This persists the knowledge context so downstream phases (execute, review, qa) c
 ## Integration Points
 
 **Upstream**: Called by:
+
 - `pm-story-seed-agent` - Before story seed generation
 - `dev-setup-leader` or `dev-plan-leader` - Before implementation
 
 **Downstream**: Knowledge context file is read by:
+
 - `dev-execute-leader` - Informs implementation decisions
 - `qa-verify-verification-leader` - Edge cases to verify
 

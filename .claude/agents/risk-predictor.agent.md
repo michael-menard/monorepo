@@ -48,13 +48,13 @@ Output is written as YAML predictions section merged into story file by pm-story
 From orchestrator context:
 
 - `story_id`: Story identifier
-- `story_seed_path`: Path to STORY-SEED.md
+- `story_id`: Story identifier (used for kb_read_artifact)
 - `epic`: Epic/domain (for similar story search)
 
-From filesystem:
+From Knowledge Base:
 
-- STORY-SEED.md at `{story_seed_path}` (contains ACs, scope description)
-- PATTERNS-{month}.yaml from WKFL-006 (optional, degrades gracefully if missing)
+- Story seed via `kb_read_artifact({ story_id, artifact_type: "seed" })` (contains ACs, scope description)
+- PATTERNS data from WKFL-006 via `kb_search({ tags: ["patterns", current_month] })` (optional, degrades gracefully if missing)
 
 From Knowledge Base:
 
@@ -71,7 +71,11 @@ From Knowledge Base:
 
 **Actions**:
 
-1. **Read STORY-SEED.md**
+1. **Read story seed from KB**:
+
+   ```javascript
+   const seed = await kb_read_artifact({ story_id, artifact_type: 'seed' })
+   ```
 
 2. **Extract AC count**:
    - Count number of items in `acceptance_criteria:` section
@@ -79,7 +83,7 @@ From Knowledge Base:
    - **Edge case**: If 0 ACs, set `ac_count = 0`
 
 3. **Extract story title**:
-   - Read `title:` field from STORY-SEED.md frontmatter
+   - Read `title:` field from seed content
    - Store as `story_title` (used for similarity search and title-based heuristics)
 
 4. **Extract scope keywords**:
@@ -93,11 +97,15 @@ From Knowledge Base:
 
 **Actions**:
 
-1. **Attempt to read PATTERNS-{current_month}.yaml**:
+1. **Attempt to query WKFL-006 patterns from KB**:
 
    ```javascript
    const current_month = new Date().toISOString().slice(0, 7) // e.g. "2026-02"
-   const patterns_path = `plans/future/workflow-learning/patterns/PATTERNS-${current_month}.yaml`
+   const patterns_results = await kb_search({
+     query: 'workflow patterns ' + current_month,
+     tags: ['patterns', 'wkfl-006', current_month],
+     limit: 10,
+   })
    ```
 
 2. **If file exists**:
@@ -137,21 +145,23 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
    const similar_stories = results.filter(r => r.similarity_score > 0.7).slice(0, 5)
    ```
 
-3. **Load OUTCOME.yaml for each similar story to extract actual_tokens**:
+3. **Load outcome data for each similar story to extract actual_tokens**:
 
    ```javascript
    const story_data = []
    for (const story of similar_stories) {
      try {
-       const outcome_path = `${story.feature_dir}/in-progress/${story.story_id}/_implementation/OUTCOME.yaml`
-       const outcome = parseYaml(readFile(outcome_path))
+       const outcome = await kb_read_artifact({
+         story_id: story.story_id,
+         artifact_type: 'outcome',
+       })
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
          actual_tokens: outcome?.totals?.tokens_total || null,
        })
      } catch (error) {
-       logger.warn(`Failed to load OUTCOME.yaml for ${story.story_id}`)
+       logger.warn(`Failed to load outcome artifact for ${story.story_id}`)
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
@@ -338,11 +348,11 @@ predictions:
 
 **Logic**:
 
-1. **Load predictions from story YAML**:
+1. **Load predictions from KB**:
 
    ```javascript
-   const story_yaml = parseYaml(readFile(`{feature_dir}/stories/{story_id}/{story_id}.md`))
-   const predictions = story_yaml.predictions
+   const story_data = await kb_get_story({ story_id })
+   const predictions = story_data?.predictions
 
    if (!predictions) {
      logger.info('No predictions found for story, skipping accuracy tracking')
@@ -350,10 +360,10 @@ predictions:
    }
    ```
 
-2. **Load actuals from OUTCOME.yaml**:
+2. **Load actuals from KB outcome artifact**:
 
    ```javascript
-   const outcome = parseYaml(readFile(outcome_path))
+   const outcome = await kb_read_artifact({ story_id, artifact_type: 'outcome' })
    const actuals = {
      split: outcome.split_occurred || false,
      review_cycles: outcome.phases?.dev_implementation?.review_cycles || null,
@@ -500,16 +510,16 @@ try {
 
 **High-Cost Operations**:
 
-1. Loading full story files → mitigate by loading OUTCOME.yaml only
+1. Loading full story files → mitigate by using kb_read_artifact for outcome artifacts only
 2. KB search returning too many results → limit to 5, filter by similarity > 0.70
 3. Loading WKFL-006 patterns repeatedly → cache in memory per session
 
 **Optimization Patterns**:
 
 - Query KB with targeted tags ['outcome'] for similar stories
-- Read STORY-SEED.md only (not full story file)
+- Use kb_read_artifact for seed/outcome (not full story files)
 - task_contract: shallow reasoning — lightweight heuristic analysis
-- Batch similar story OUTCOME.yaml loads if multiple predictions
+- Batch similar story outcome artifact reads if multiple predictions
 
 ---
 
