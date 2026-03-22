@@ -1,6 +1,6 @@
 schema: 1
-story_id: WINT-9010
-timestamp: '2026-03-23T00:00:00Z'
+story_id: APRS-4010
+timestamp: '2026-03-22T23:15:00.000Z'
 gen_mode: false
 touches:
   backend: true
@@ -11,14 +11,18 @@ touches:
   ui: false
   infra: false
 touched_paths_globs:
-  - 'packages/backend/workflow-logic/src/**'
-  - 'packages/backend/orchestrator/src/**'
+  - packages/backend/orchestrator/**
+  - packages/backend/orchestrator/src/state/**
+  - packages/backend/orchestrator/src/nodes/**
+  - packages/backend/orchestrator/src/graphs/**
 risk_flags:
   auth: false
   payments: false
   migrations: false
   external_apis: false
   security: false
-  performance: false
-summary: 'Extend @repo/workflow-logic with decision, artifact, context, and token modules to establish TypeScript source of truth for shared business logic'
+  performance: true
+summary: >-
+  Implement load_refined_plan, slice_flows, and generate_stories nodes for Story Generation LangGraph with Zod state
+  schemas, injectable adapters, and comprehensive unit tests
 elaboration: completed

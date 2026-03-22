@@ -1,73 +1,23 @@
 /**
  * generate_stories node tests
- * APRS-4010: ST-4 / AC-5
+ * APRS-4010: ST-4 / AC-5, AC-7
  */
 
 import { describe, it, expect, vi } from 'vitest'
 import {
-  deriveStoryTitle,
-  deriveStoryTags,
-  buildFlowStepReference,
-  buildStoryPrompt,
-  generateFallbackStory,
-  generateStoryForSlice,
+  generateTitle,
+  generateTags,
+  generateStepReference,
+  generateSingleStory,
   createGenerateStoriesNode,
+  type LlmAdapterFn,
 } from '../generate-stories.js'
+import type { StoryGenerationState, SlicedFlow } from '../../../state/story-generation-state.js'
 import type { NormalizedPlan, Flow } from '../../../state/plan-refinement-state.js'
-import type { SlicedFlow, StoryGenerationState } from '../../../state/story-generation-state.js'
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function makePlan(overrides: Partial<NormalizedPlan> = {}): NormalizedPlan {
-  return {
-    planSlug: 'test-plan',
-    title: 'Test Plan',
-    summary: 'A test plan summary',
-    problemStatement: 'The problem',
-    proposedSolution: 'The solution',
-    goals: ['Goal 1'],
-    nonGoals: ['Non-goal 1'],
-    flows: [],
-    openQuestions: [],
-    warnings: [],
-    constraints: [],
-    dependencies: [],
-    status: 'active',
-    priority: 'high',
-    tags: ['backend', 'api'],
-    ...overrides,
-  }
-}
-
-function makeFlow(overrides: Partial<Flow> = {}): Flow {
-  return {
-    id: 'flow-1',
-    name: 'User Creates Plan',
-    actor: 'Admin',
-    trigger: 'Admin clicks create',
-    steps: [
-      { index: 1, description: 'Open form' },
-      { index: 2, description: 'Fill fields' },
-      { index: 3, description: 'Save to database' },
-    ],
-    successOutcome: 'Plan saved',
-    source: 'user',
-    confidence: 1.0,
-    status: 'confirmed',
-    ...overrides,
-  }
-}
-
-function makeSlice(overrides: Partial<SlicedFlow> = {}): SlicedFlow {
-  return {
-    flow_id: 'flow-1',
-    step_indices: [1, 2],
-    scope_description: 'Open form through Fill fields',
-    ...overrides,
-  }
-}
 
 function makeState(overrides: Partial<StoryGenerationState> = {}): StoryGenerationState {
   return {
@@ -83,190 +33,154 @@ function makeState(overrides: Partial<StoryGenerationState> = {}): StoryGenerati
   }
 }
 
-// ============================================================================
-// deriveStoryTitle tests
-// ============================================================================
+function makeFlow(overrides: Partial<Flow> = {}): Flow {
+  return {
+    id: 'flow-1',
+    name: 'Test Flow',
+    actor: 'User',
+    trigger: 'User clicks button',
+    steps: [
+      { index: 1, description: 'Step one' },
+      { index: 2, description: 'Step two' },
+    ],
+    successOutcome: 'Completed',
+    source: 'user',
+    confidence: 1.0,
+    status: 'confirmed',
+    ...overrides,
+  }
+}
 
-describe('deriveStoryTitle', () => {
-  it('returns "Actor: scopeDescription" when scope differs from flow name', () => {
-    const title = deriveStoryTitle('User Creates Plan', 'Admin', 'Open form through Fill fields')
-    expect(title).toBe('Admin: Open form through Fill fields')
-  })
+function makePlan(overrides: Partial<NormalizedPlan> = {}): NormalizedPlan {
+  return {
+    planSlug: 'test-plan',
+    title: 'Test Plan',
+    summary: 'A test plan',
+    problemStatement: 'Problem',
+    proposedSolution: 'Solution',
+    goals: [],
+    nonGoals: [],
+    flows: [],
+    openQuestions: [],
+    warnings: [],
+    constraints: [],
+    dependencies: [],
+    status: 'refined',
+    priority: 'medium',
+    tags: ['backend'],
+    ...overrides,
+  }
+}
 
-  it('returns "Actor: flowName" when scope includes flow name', () => {
-    const title = deriveStoryTitle('User Creates Plan', 'Admin', 'User Creates Plan')
-    expect(title).toBe('Admin: User Creates Plan')
-  })
+function makeSlice(overrides: Partial<SlicedFlow> = {}): SlicedFlow {
+  return {
+    flow_id: 'flow-1',
+    step_indices: [1, 2],
+    scope_description: 'Do the thing',
+    ...overrides,
+  }
+}
+
+const mockLlmAdapter: LlmAdapterFn = vi.fn().mockResolvedValue({
+  description: 'LLM-generated description',
+  acceptance_criteria: ['AC-1: Works correctly'],
+  subtasks: [{ id: 'st-1', description: 'Implement feature', files: ['src/foo.ts'], verification: 'pnpm test' }],
+  risk: 'low',
 })
 
 // ============================================================================
-// deriveStoryTags tests
+// Template helper tests
 // ============================================================================
 
-describe('deriveStoryTags', () => {
-  it('includes plan tags, actor tag, and flow tag', () => {
-    const tags = deriveStoryTags(['backend', 'api'], 'Admin', 'User Creates Plan')
+describe('generateTitle', () => {
+  it('combines flow name and description', () => {
+    const title = generateTitle('User Login', 'Validate credentials')
+    expect(title).toBe('User Login: Validate credentials')
+  })
+
+  it('truncates long descriptions', () => {
+    const longDesc = 'A'.repeat(80)
+    const title = generateTitle('Flow', longDesc)
+    expect(title.length).toBeLessThanOrEqual(70)
+    expect(title).toContain('...')
+  })
+})
+
+describe('generateTags', () => {
+  it('includes plan tags plus actor and flow tags', () => {
+    const tags = generateTags(['backend', 'api'], 'Admin User', 'Create Plan')
     expect(tags).toContain('backend')
     expect(tags).toContain('api')
-    expect(tags).toContain('admin')
-    expect(tags).toContain('user-creates-plan')
+    expect(tags).toContain('actor:admin-user')
+    expect(tags).toContain('flow:create-plan')
   })
 
   it('deduplicates tags', () => {
-    const tags = deriveStoryTags(['admin'], 'Admin', 'Flow')
-    const unique = new Set(tags)
-    expect(unique.size).toBe(tags.length)
+    const tags = generateTags(['backend', 'backend'], 'User', 'Flow')
+    const backendCount = tags.filter(t => t === 'backend').length
+    expect(backendCount).toBe(1)
+  })
+})
+
+describe('generateStepReference', () => {
+  it('single step reference', () => {
+    expect(generateStepReference('f1', [3])).toBe('f1:step-3')
+  })
+
+  it('multi-step reference', () => {
+    expect(generateStepReference('f1', [1, 2, 3])).toBe('f1:steps-1-3')
+  })
+
+  it('empty steps', () => {
+    expect(generateStepReference('f1', [])).toBe('f1:none')
   })
 })
 
 // ============================================================================
-// buildFlowStepReference tests
+// generateSingleStory tests
 // ============================================================================
 
-describe('buildFlowStepReference', () => {
-  it('returns all reference when no step indices', () => {
-    expect(buildFlowStepReference('flow-1', [])).toBe('flow-1/all')
-  })
-
-  it('returns single step reference for one index', () => {
-    expect(buildFlowStepReference('flow-1', [3])).toBe('flow-1/step-3')
-  })
-
-  it('returns range reference for multiple indices', () => {
-    expect(buildFlowStepReference('flow-1', [1, 2, 3])).toBe('flow-1/steps-1-3')
-  })
-})
-
-// ============================================================================
-// buildStoryPrompt tests
-// ============================================================================
-
-describe('buildStoryPrompt', () => {
-  it('builds a prompt with correct fields', () => {
-    const plan = makePlan()
-    const flow = makeFlow()
-    const slice = makeSlice({ step_indices: [1, 2] })
-
-    const prompt = buildStoryPrompt(plan, flow, slice)
-
-    expect(prompt.planTitle).toBe('Test Plan')
-    expect(prompt.planSummary).toBe('A test plan summary')
-    expect(prompt.planTags).toEqual(['backend', 'api'])
-    expect(prompt.flowName).toBe('User Creates Plan')
-    expect(prompt.flowActor).toBe('Admin')
-    expect(prompt.scopeDescription).toBe('Open form through Fill fields')
-    // stepDescriptions: steps 1 and 2
-    expect(prompt.stepDescriptions).toEqual(['Open form', 'Fill fields'])
-  })
-})
-
-// ============================================================================
-// generateFallbackStory tests
-// ============================================================================
-
-describe('generateFallbackStory', () => {
-  it('generates a valid story without LLM', () => {
-    const plan = makePlan()
-    const flow = makeFlow()
+describe('generateSingleStory', () => {
+  it('generates a complete story from slice + flow + plan', async () => {
     const slice = makeSlice()
+    const flow = makeFlow()
+    const plan = makePlan()
 
-    const story = generateFallbackStory(plan, flow, slice)
+    const story = await generateSingleStory(slice, flow, plan, mockLlmAdapter)
 
-    expect(story.title).toBeTruthy()
-    expect(story.description).toBeTruthy()
-    expect(Array.isArray(story.acceptance_criteria)).toBe(true)
-    expect(story.acceptance_criteria.length).toBeGreaterThan(0)
+    expect(story.title).toContain('Test Flow')
+    expect(story.description).toBe('LLM-generated description')
+    expect(story.acceptance_criteria).toHaveLength(1)
+    expect(story.subtasks).toHaveLength(1)
     expect(story.parent_plan_slug).toBe('test-plan')
     expect(story.parent_flow_id).toBe('flow-1')
-    expect(story.flow_step_reference).toContain('flow-1')
     expect(story.minimum_path).toBe(false)
-    expect(['low', 'medium', 'high']).toContain(story.risk)
+    expect(story.tags).toContain('backend')
   })
-})
 
-// ============================================================================
-// generateStoryForSlice tests
-// ============================================================================
-
-describe('generateStoryForSlice', () => {
-  it('uses LLM adapter when provided', async () => {
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'LLM description',
-      acceptance_criteria: ['AC1', 'AC2'],
-      subtasks: ['Task 1'],
+  it('passes correct prompt to LLM adapter', async () => {
+    const adapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['ac'],
+      subtasks: [],
       risk: 'low',
     })
-    const plan = makePlan()
-    const flow = makeFlow()
-    const slice = makeSlice()
 
-    const story = await generateStoryForSlice(plan, flow, slice, llmAdapter)
+    const slice = makeSlice({ scope_description: 'Test scope' })
+    const flow = makeFlow({ name: 'My Flow', actor: 'Admin' })
+    const plan = makePlan({ title: 'My Plan', summary: 'Plan summary' })
 
-    expect(llmAdapter).toHaveBeenCalledOnce()
-    expect(story.description).toBe('LLM description')
-    expect(story.acceptance_criteria).toEqual(['AC1', 'AC2'])
-    expect(story.subtasks).toEqual(['Task 1'])
-    expect(story.risk).toBe('low')
-    expect(story.tags).toContain('backend')
-    expect(story.tags).toContain('admin')
-  })
+    await generateSingleStory(slice, flow, plan, adapter)
 
-  it('falls back to template when no LLM adapter', async () => {
-    const plan = makePlan()
-    const flow = makeFlow()
-    const slice = makeSlice()
-
-    const story = await generateStoryForSlice(plan, flow, slice, undefined)
-
-    expect(story.title).toBeTruthy()
-    expect(story.parent_plan_slug).toBe('test-plan')
-    expect(story.parent_flow_id).toBe('flow-1')
-  })
-
-  it('falls back to template when LLM adapter throws', async () => {
-    const llmAdapter = vi.fn().mockRejectedValue(new Error('LLM unavailable'))
-    const plan = makePlan()
-    const flow = makeFlow()
-    const slice = makeSlice()
-
-    const story = await generateStoryForSlice(plan, flow, slice, llmAdapter)
-
-    // Should not throw — fallback used
-    expect(story.title).toBeTruthy()
-    expect(story.parent_plan_slug).toBe('test-plan')
-  })
-
-  it('title is template-derived (not from LLM)', async () => {
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'desc',
-      acceptance_criteria: ['ac'],
-      subtasks: [],
-    })
-    const plan = makePlan()
-    const flow = makeFlow({ name: 'Create Record', actor: 'System' })
-    const slice = makeSlice({ scope_description: 'Save record to DB' })
-
-    const story = await generateStoryForSlice(plan, flow, slice, llmAdapter)
-
-    // Title is derived from actor + scope, not from LLM
-    expect(story.title).toContain('System')
-  })
-
-  it('tags are template-derived from plan tags + actor + flow name', async () => {
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'desc',
-      acceptance_criteria: ['ac'],
-      subtasks: [],
-    })
-    const plan = makePlan({ tags: ['payments'] })
-    const flow = makeFlow({ name: 'Process Payment', actor: 'Gateway' })
-    const slice = makeSlice()
-
-    const story = await generateStoryForSlice(plan, flow, slice, llmAdapter)
-
-    expect(story.tags).toContain('payments')
-    expect(story.tags).toContain('gateway')
-    expect(story.tags).toContain('process-payment')
+    expect(adapter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planTitle: 'My Plan',
+        planSummary: 'Plan summary',
+        flowName: 'My Flow',
+        flowActor: 'Admin',
+        sliceDescription: 'Test scope',
+      }),
+    )
   })
 })
 
@@ -275,105 +189,111 @@ describe('generateStoryForSlice', () => {
 // ============================================================================
 
 describe('createGenerateStoriesNode', () => {
-  it('generates stories for all sliced flows', async () => {
-    const plan = makePlan()
-    const flow1 = makeFlow({ id: 'flow-1' })
-    const flow2 = makeFlow({ id: 'flow-2', name: 'Review Plan', actor: 'Reviewer' })
-
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'Generated',
-      acceptance_criteria: ['AC'],
-      subtasks: [],
-      risk: 'low',
-    })
-
-    const node = createGenerateStoriesNode({ llmAdapter })
+  it('generates stories and sets phase to complete', async () => {
+    const node = createGenerateStoriesNode({ llmAdapter: mockLlmAdapter })
+    const flow = makeFlow()
+    const plan = makePlan({ flows: [flow] })
+    const slice = makeSlice()
     const state = makeState({
       refinedPlan: plan,
-      flows: [flow1, flow2],
-      slicedFlows: [
-        makeSlice({ flow_id: 'flow-1' }),
-        makeSlice({ flow_id: 'flow-2' }),
-      ],
+      flows: [flow],
+      slicedFlows: [slice],
     })
 
     const result = await node(state)
 
     expect(result.generationPhase).toBe('complete')
-    expect(result.generatedStories).toHaveLength(2)
-    expect(llmAdapter).toHaveBeenCalledTimes(2)
+    expect(result.generatedStories).toHaveLength(1)
+    expect(result.generatedStories![0].title).toContain('Test Flow')
   })
 
-  it('sets error phase when refinedPlan is null', async () => {
+  it('returns error when no sliced flows', async () => {
     const node = createGenerateStoriesNode()
-    const state = makeState({ refinedPlan: null })
+    const state = makeState({ slicedFlows: [] })
 
     const result = await node(state)
 
     expect(result.generationPhase).toBe('error')
-    expect(result.errors).toEqual(
-      expect.arrayContaining([expect.stringContaining('refinedPlan is null')]),
-    )
+    expect(result.errors![0]).toContain('no sliced flows')
   })
 
-  it('completes with empty stories when no sliced flows', async () => {
+  it('returns error when refinedPlan is null', async () => {
     const node = createGenerateStoriesNode()
     const state = makeState({
-      refinedPlan: makePlan(),
-      slicedFlows: [],
-    })
-
-    const result = await node(state)
-
-    expect(result.generationPhase).toBe('complete')
-    expect(result.generatedStories).toEqual([])
-  })
-
-  it('skips slices with missing flow reference and adds warning', async () => {
-    const node = createGenerateStoriesNode()
-    const state = makeState({
-      refinedPlan: makePlan(),
-      flows: [makeFlow({ id: 'flow-1' })],
-      slicedFlows: [
-        makeSlice({ flow_id: 'flow-1' }),
-        makeSlice({ flow_id: 'flow-missing' }), // not in state.flows
-      ],
-    })
-
-    const result = await node(state)
-
-    expect(result.generatedStories).toHaveLength(1)
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('flow-missing')]),
-    )
-  })
-
-  it('each story has all required fields', async () => {
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'Story desc',
-      acceptance_criteria: ['AC1'],
-      subtasks: ['Sub1'],
-      risk: 'high',
-    })
-    const node = createGenerateStoriesNode({ llmAdapter })
-    const state = makeState({
-      refinedPlan: makePlan(),
-      flows: [makeFlow()],
+      refinedPlan: null,
       slicedFlows: [makeSlice()],
     })
 
     const result = await node(state)
 
-    const story = result.generatedStories?.[0]
-    expect(story?.title).toBeTruthy()
-    expect(story?.description).toBeTruthy()
-    expect(Array.isArray(story?.acceptance_criteria)).toBe(true)
-    expect(Array.isArray(story?.subtasks)).toBe(true)
-    expect(Array.isArray(story?.tags)).toBe(true)
-    expect(['low', 'medium', 'high']).toContain(story?.risk)
-    expect(typeof story?.minimum_path).toBe('boolean')
-    expect(story?.parent_plan_slug).toBe('test-plan')
-    expect(story?.parent_flow_id).toBe('flow-1')
-    expect(story?.flow_step_reference).toBeTruthy()
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors![0]).toContain('refinedPlan is null')
+  })
+
+  it('skips slices with missing flow and adds warning', async () => {
+    const node = createGenerateStoriesNode({ llmAdapter: mockLlmAdapter })
+    const flow = makeFlow({ id: 'existing-flow' })
+    const plan = makePlan({ flows: [flow] })
+    const state = makeState({
+      refinedPlan: plan,
+      flows: [flow],
+      slicedFlows: [
+        makeSlice({ flow_id: 'missing-flow' }),
+        makeSlice({ flow_id: 'existing-flow' }),
+      ],
+    })
+
+    const result = await node(state)
+
+    expect(result.generationPhase).toBe('complete')
+    expect(result.generatedStories).toHaveLength(1)
+    expect(result.warnings!.length).toBeGreaterThan(0)
+    expect(result.warnings![0]).toContain('missing-flow')
+  })
+
+  it('handles LLM adapter failure for individual stories', async () => {
+    const failingAdapter: LlmAdapterFn = vi.fn()
+      .mockRejectedValueOnce(new Error('LLM timeout'))
+      .mockResolvedValueOnce({
+        description: 'Success',
+        acceptance_criteria: ['AC'],
+        subtasks: [],
+        risk: 'low',
+      })
+
+    const node = createGenerateStoriesNode({ llmAdapter: failingAdapter })
+    const flow = makeFlow()
+    const plan = makePlan()
+    const state = makeState({
+      refinedPlan: plan,
+      flows: [flow],
+      slicedFlows: [
+        makeSlice({ step_indices: [1] }),
+        makeSlice({ step_indices: [2] }),
+      ],
+    })
+
+    const result = await node(state)
+
+    expect(result.generationPhase).toBe('complete')
+    expect(result.generatedStories).toHaveLength(1)
+    expect(result.warnings!.some(w => w.includes('LLM timeout'))).toBe(true)
+  })
+
+  it('uses default adapter when none provided', async () => {
+    const node = createGenerateStoriesNode()
+    const flow = makeFlow()
+    const plan = makePlan()
+    const state = makeState({
+      refinedPlan: plan,
+      flows: [flow],
+      slicedFlows: [makeSlice()],
+    })
+
+    const result = await node(state)
+
+    expect(result.generationPhase).toBe('complete')
+    expect(result.generatedStories).toHaveLength(1)
+    expect(result.generatedStories![0].description).toContain('Implement')
   })
 })
