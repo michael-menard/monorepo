@@ -1,110 +1,107 @@
-# Verification Report - KBAR-0230 Fix Iteration 4
+# Verification Report - WINT-7020
 
-**Verification Date:** 2026-03-06  
-**Mode:** Fix Verification  
-**Story ID:** KBAR-0230  
-**Iteration:** 4  
+**Story:** WINT-7020 - Create Agent Migration Plan  
+**Story Type:** Planning/Analysis  
+**Mode:** fix (iteration 1)  
+**Date:** 2026-03-21  
+**Branch:** story/WINT-7020  
 
 ---
 
 ## Executive Summary
 
-**Overall Status:** PASS
+WINT-7020 is a **planning story** with no production code changes. Deliverable is a KB artifact (`AGENT-MIGRATION-PLAN`) and a summary markdown file. The fix iteration (F1) successfully:
 
-All verification checks completed successfully for fix iteration 4. The 3 TypeScript issues in `generateStoriesIndex.ts` have been properly resolved, and the complete test suite passes.
+1. Removed obsolete _implementation artifacts that should never exist in a planning story
+2. Added AGENT-MIGRATION-PLAN.md as a human-readable reference guide for downstream stories
+
+**Verification Status: PASS**
 
 ---
 
 ## Verification Checklist
 
-| Check | Result | Details |
-|-------|--------|---------|
-| Build | PASS | database-schema package builds without errors |
-| Type Check | PASS | No TypeScript errors in generateStoriesIndex.ts |
-| Unit Tests | PASS | 437 tests passed in database-schema package |
-| Database Tests | PASS | All database schema tests pass |
+Since this is a planning story with no production code:
+
+- [x] **_implementation/ cleanup** - Obsolete artifacts removed (CHECKPOINT.setup.json, SCOPE.setup.json)
+- [x] **AGENT-MIGRATION-PLAN.md exists** - Well-formed markdown file with 95 lines
+- [x] **Git status clean** - Working tree clean, all changes committed
+- [x] **Branch tracking** - story/WINT-7020 is up to date with origin/story/WINT-7020
+- [x] **Commit quality** - Fix commit is well-formed with clear message
+- [x] **No type-checking required** - Planning story, no production code
+- [x] **No build required** - Planning story, no compilation needed
+- [x] **No tests required** - Planning story, no code tests to run
 
 ---
 
-## Detailed Results
+## Changes Verified
 
-### 1. Build Verification
+### Deletions (F1)
+- `_implementation/CHECKPOINT.setup.json` (13 lines) - REMOVED
+- `_implementation/SCOPE.setup.json` (83 lines) - REMOVED
 
-**Command:** `pnpm --filter @repo/database-schema build`
+### Additions (F1)
+- `plans/future/platform/agent-migration-plan/AGENT-MIGRATION-PLAN.md` (95 lines) - ADDED
 
-**Result:** PASS
-
-The database-schema package builds successfully with no errors. The TypeScript compilation completes without issues.
-
-### 2. Type Check Verification
-
-**File Analyzed:** `packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts`
-
-**Result:** PASS
-
-All 3 issues identified in iteration 4 code review have been properly resolved:
-
-1. **Issue 1 (Line 25-41):** z.any() replacement
-   - Fixed: Replaced z.any() with specific `StoryMetadataSchema` definition
-   - Change: Lines 25-41 now contain a fully-typed Zod schema with specific constraints
-   - Type Safety: The schema now defines all expected fields explicitly (surfaces, tags, wave, blocked_by, blocks, feature_dir)
-
-2. **Issue 2 (Line 208):** Type assertion removal
-   - Fixed: Removed `as Record<string, unknown>` assertion
-   - Change: Now uses properly typed `meta: StoryMetadata` with `meta.surfaces` accessor
-   - Type Safety: Uses inferred types from StoryMetadata schema
-
-3. **Issue 3 (Line 229-243):** Type assertion removal
-   - Fixed: Removed implicit type assertion for surfaces object
-   - Change: Uses typed `meta.surfaces` from StoryMetadata schema
-   - Type Safety: Surfaces is now properly typed as optional object with boolean properties
-
-### 3. Unit Test Results
-
-**Command:** `pnpm --filter @repo/database-schema test`
-
-**Result:** PASS
-
-```text
-Test Files  19 passed (19)
-     Tests  437 passed (437)
-   Duration: 1.76s
+### Commit
+```
+449c3f81 fix(WINT-7020): remove obsolete _implementation artifacts and add migration plan summary
 ```
 
-All 437 tests in the database-schema package pass, including:
-- `src/seed/generate/__tests__/generateStoriesIndex.test.ts` (12 tests) - PASS
-- `src/schema/__tests__/kbar-schema.test.ts` (128 tests) - PASS
-- All other schema and seed tests - PASS
+---
 
-### 4. Code Quality
+## File Verification
 
-**Zod-First Types:** PASS
-- All types use Zod schemas with `z.infer<typeof Schema>`
-- No TypeScript interfaces or type assertions used
+### AGENT-MIGRATION-PLAN.md
 
-**Type Assertions:** PASS
-- No remaining `as` keyword type assertions in the fixed file
-- All type conversions use Zod parsing
+**Location:** `/Users/michaelmenard/Development/monorepo/tree/story/WINT-7020/plans/future/platform/agent-migration-plan/AGENT-MIGRATION-PLAN.md`
 
-**Schema Constraints:** PASS
-- StoryMetadataSchema is strictly typed with `.strict()` 
-- All object properties have explicit type definitions
+**Structure:**
+- [x] Well-formed markdown
+- [x] Clear title and overview
+- [x] 9 migration batches documented (Batch-0 through Batch-8)
+- [x] 113 files total across all batches
+- [x] Shim strategy clearly explained
+- [x] 5 reference categories defined
+- [x] Migration order constraints specified
+- [x] Verification per batch documented
+- [x] Downstream story map provided (WINT-7030 through WINT-7090)
+- [x] References KB artifact (`kb_read_artifact` for full machine-readable version)
+
+**Content Quality:**
+- Comprehensive summary of the AGENT-MIGRATION-PLAN KB artifact
+- Suitable reference for downstream stories that don't need to query KB directly
+- All 113 files accounted for in batches
+- Clear dependency graph: Batch-0 → Batch-1-8 with defined ordering
+
+### Git Status
+
+```
+On branch story/WINT-7020
+Your branch is up to date with 'origin/story/WINT-7020'.
+
+nothing to commit, working tree clean
+```
 
 ---
 
-## Files Modified
+## Downstream Impact
 
-- `packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts`
+This planning story enables:
+- **WINT-7030:** Batch-0 migration (shared includes/shims)
+- **WINT-7040:** Batch-1 migration (leader agents)
+- **WINT-7050:** Batch-2,3 migration (coder agents)
+- **WINT-7060:** Batch-4 migration (review agents)
+- **WINT-7070:** Batch-5 migration (skills/commands)
+- **WINT-7080:** Batch-6,7 migration (partial + scripts)
+- **WINT-7090:** Batch-8 migration (docs/prompts)
+
+All downstream stories (WINT-7030 through WINT-7090) have explicit batch assignments and can begin migration work.
 
 ---
 
 ## Conclusion
 
-Fix iteration 4 successfully addresses all 3 TypeScript type safety issues flagged in code review. The fixes implement proper Zod schema validation throughout the codebase, eliminating all type assertions and z.any() usage in the affected file.
+WINT-7020 verification **COMPLETE** with all expected artifacts present and git state clean.
 
-All changes pass:
-- TypeScript compilation
-- Full test suite (437 tests)
-- Code quality standards
-
-The implementation now adheres to the project's Zod-first type safety requirement.
+No code quality gates apply to planning stories. Deliverable is ready for downstream consumption.
