@@ -1,16 +1,22 @@
 /**
  * load_refined_plan Node
  *
- * Loads a refined plan from KB via injectable PlanLoaderFn adapter,
- * validates against NormalizedPlanSchema, and extracts confirmed flows.
+ * Reads a refined/normalized plan from KB, validates against NormalizedPlanSchema,
+ * and extracts confirmed flows into state.
  *
- * AC-3: Sets generationPhase='slice_flows' on success, 'error' on failure.
+ * Injectable PlanLoaderFn adapter (default: returns null).
+ * Sets generationPhase='slice_flows' on success, 'error' on failure.
  *
  * APRS-4010: ST-2
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { NormalizedPlanSchema, type NormalizedPlan } from '../../state/plan-refinement-state.js'
+import {
+  NormalizedPlanSchema,
+  type NormalizedPlan,
+  type Flow,
+} from '../../state/plan-refinement-state.js'
 import type { StoryGenerationState } from '../../state/story-generation-state.js'
 
 // ============================================================================
@@ -19,12 +25,82 @@ import type { StoryGenerationState } from '../../state/story-generation-state.js
 
 /**
  * Injectable plan-loader adapter.
- * Loads a refined plan from KB or other source by planSlug.
- * Default: returns null (expects refinedPlan in state).
+ * Loads a refined/normalized plan from KB by planSlug.
+ * Default returns null — callers must inject a real loader.
  */
-export type PlanLoaderFn = (planSlug: string) => Promise<NormalizedPlan | null>
+export type PlanLoaderFn = (planSlug: string) => Promise<Record<string, unknown> | null>
 
-const defaultPlanLoader: PlanLoaderFn = async () => null
+/**
+ * Default no-op plan loader (returns null).
+ */
+const defaultPlanLoader: PlanLoaderFn = async (_planSlug: string) => null
+
+// ============================================================================
+// Config Schema
+// ============================================================================
+
+export const LoadRefinedPlanConfigSchema = z.object({
+  /** Injectable plan-loader adapter */
+  planLoader: z.function().optional(),
+})
+
+export type LoadRefinedPlanConfig = z.infer<typeof LoadRefinedPlanConfigSchema>
+
+// ============================================================================
+// Phase Functions (exported for unit testability)
+// ============================================================================
+
+/**
+ * Load plan from adapter by planSlug.
+ * Returns raw plan object or null on failure.
+ */
+export async function loadPlanFromKb(
+  planSlug: string,
+  planLoader: PlanLoaderFn,
+): Promise<Record<string, unknown> | null> {
+  if (!planSlug) {
+    return null
+  }
+
+  try {
+    return await planLoader(planSlug)
+  } catch (err) {
+    logger.warn('load_refined_plan: plan loader failed', { err, planSlug })
+    return null
+  }
+}
+
+/**
+ * Validate raw plan data against NormalizedPlanSchema.
+ * Returns validated NormalizedPlan or null if validation fails.
+ */
+export function validateAndParseRefinedPlan(
+  raw: Record<string, unknown> | null,
+  planSlug: string,
+): NormalizedPlan | null {
+  if (!raw) {
+    return null
+  }
+
+  const result = NormalizedPlanSchema.safeParse({ planSlug, ...raw })
+  if (!result.success) {
+    logger.warn('load_refined_plan: plan validation failed', {
+      planSlug,
+      errors: result.error.flatten(),
+    })
+    return null
+  }
+
+  return result.data
+}
+
+/**
+ * Extract confirmed flows from a normalized plan.
+ * Only returns flows with status='confirmed'.
+ */
+export function extractConfirmedFlows(plan: NormalizedPlan): Flow[] {
+  return plan.flows.filter(f => f.status === 'confirmed')
+}
 
 // ============================================================================
 // Node Factory
@@ -33,9 +109,10 @@ const defaultPlanLoader: PlanLoaderFn = async () => null
 /**
  * Creates the load_refined_plan LangGraph node.
  *
- * AC-3: Reads plan via injectable PlanLoaderFn, validates against
- * NormalizedPlanSchema, extracts confirmed flows. Sets generationPhase
- * to 'slice_flows' on success, 'error' on failure.
+ * AC-3: Reads plan from KB, validates against NormalizedPlanSchema,
+ *       extracts confirmed flows, sets generationPhase.
+ *
+ * @param config - Optional config with injectable plan-loader adapter
  */
 export function createLoadRefinedPlanNode(config: { planLoader?: PlanLoaderFn } = {}) {
   const planLoader = config.planLoader ?? defaultPlanLoader
@@ -44,61 +121,38 @@ export function createLoadRefinedPlanNode(config: { planLoader?: PlanLoaderFn } 
     try {
       logger.info('load_refined_plan: starting', { planSlug: state.planSlug })
 
-      // Try to load from adapter if not already in state
-      let plan = state.refinedPlan
-      if (!plan) {
-        const loaded = await planLoader(state.planSlug)
-        if (!loaded) {
-          logger.error('load_refined_plan: no plan found', { planSlug: state.planSlug })
-          return {
-            generationPhase: 'error',
-            errors: [`load_refined_plan: no plan found for slug "${state.planSlug}"`],
-          }
+      // Load raw plan from KB
+      const rawPlan = await loadPlanFromKb(state.planSlug, planLoader)
+
+      if (!rawPlan) {
+        logger.warn('load_refined_plan: no plan loaded', { planSlug: state.planSlug })
+        return {
+          generationPhase: 'error',
+          errors: [`load_refined_plan: could not load plan for slug '${state.planSlug}'`],
         }
-        plan = loaded
       }
 
       // Validate against NormalizedPlanSchema
-      const parseResult = NormalizedPlanSchema.safeParse(plan)
-      if (!parseResult.success) {
-        const issues = parseResult.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
-        logger.error('load_refined_plan: validation failed', { planSlug: state.planSlug, issues })
+      const refinedPlan = validateAndParseRefinedPlan(rawPlan, state.planSlug)
+
+      if (!refinedPlan) {
         return {
           generationPhase: 'error',
-          errors: [`load_refined_plan: validation failed — ${issues.join('; ')}`],
+          errors: [`load_refined_plan: plan validation failed for slug '${state.planSlug}'`],
         }
       }
 
-      const validPlan = parseResult.data
-
-      // Extract confirmed flows only
-      const confirmedFlows = validPlan.flows.filter(f => f.status === 'confirmed')
-
-      if (confirmedFlows.length === 0) {
-        logger.warn('load_refined_plan: no confirmed flows found', {
-          planSlug: state.planSlug,
-          totalFlows: validPlan.flows.length,
-        })
-        return {
-          refinedPlan: validPlan,
-          flows: [],
-          generationPhase: 'error',
-          errors: ['load_refined_plan: no confirmed flows found in plan'],
-          warnings: [
-            `Plan has ${validPlan.flows.length} flow(s) but none are confirmed. ` +
-              'Run plan refinement with human review to confirm flows before story generation.',
-          ],
-        }
-      }
+      // Extract confirmed flows
+      const confirmedFlows = extractConfirmedFlows(refinedPlan)
 
       logger.info('load_refined_plan: complete', {
         planSlug: state.planSlug,
-        confirmedFlows: confirmedFlows.length,
-        totalFlows: validPlan.flows.length,
+        confirmedFlowCount: confirmedFlows.length,
+        totalFlowCount: refinedPlan.flows.length,
       })
 
       return {
-        refinedPlan: validPlan,
+        refinedPlan,
         flows: confirmedFlows,
         generationPhase: 'slice_flows',
         errors: [],

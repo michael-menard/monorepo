@@ -1,186 +1,238 @@
 schema: 2
-story_id: APRS-4010
-timestamp: '2026-03-22T23:30:00.000Z'
+story_id: APRS-4020
+timestamp: '2026-03-22T18:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
-    description: >-
-      Create story-generation-state.ts with StoryGenerationStateAnnotation, SlicedFlowSchema, GeneratedStorySchema,
-      GenerationPhaseSchema Zod types using Annotation.Root pattern from plan-refinement-state.ts
+    description: Extend StoryGenerationStateAnnotation with dependency wiring and validation fields; extend GenerationPhaseSchema
     files:
       - packages/backend/orchestrator/src/state/story-generation-state.ts
     files_to_read:
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
       - packages/backend/orchestrator/src/state/plan-refinement-state.ts
     dependencies: []
     slice: packages
     verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-1
-      - AC-2
   - id: 2
     subtask_id: ST-2
-    description: >-
-      Implement load_refined_plan node with injectable PlanLoaderFn adapter (reads confirmed flows from KB via plan
-      loader, validates NormalizedPlanSchema, sets generationPhase) + unit tests
+    description: Implement wire_dependencies node with injectable MinimumPathFn and unit tests
     files:
-      - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/wire-dependencies.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/normalize-plan.test.ts
       - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
     dependencies:
       - 1
     slice: packages
-    verification: pnpm vitest run --reporter=verbose load-refined-plan
+    verification: pnpm vitest run wire-dependencies --reporter=verbose
     acs_covered:
+      - AC-2
       - AC-3
+      - AC-4
   - id: 3
     subtask_id: ST-3
-    description: >-
-      Implement slice_flows node with DEC-2 slicing heuristic (distinct side-effect or actor boundary = separate
-      SlicedFlow, pure data-passing steps merged into predecessor) + unit tests
+    description: Implement validate_graph node with injectable GraphValidatorFn and unit tests
     files:
-      - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
     files_to_read:
       - packages/backend/orchestrator/src/state/story-generation-state.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
     dependencies:
       - 1
     slice: packages
-    verification: pnpm vitest run --reporter=verbose slice-flows
-    acs_covered:
-      - AC-4
-  - id: 4
-    subtask_id: ST-4
-    description: >-
-      Implement generate_stories node with injectable LlmAdapterFn (title/tags template-derived,
-      description/AC/subtasks/risk LLM-generated per DEC-3, each story independently testable) + unit tests
-    files:
-      - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
-    dependencies:
-      - 1
-      - 3
-    slice: packages
-    verification: pnpm vitest run --reporter=verbose generate-stories
+    verification: pnpm vitest run validate-graph --reporter=verbose
     acs_covered:
       - AC-5
-  - id: 5
-    subtask_id: ST-5
-    description: >-
-      Wire story-generation graph: START->load_refined_plan->slice_flows->generate_stories->END with conditional error
-      edges at each step. Export createStoryGenerationGraph factory with injectable adapters. Add graph compilation
-      test.
+      - AC-6
+  - id: 4
+    subtask_id: ST-4
+    description: 'Extend createStoryGenerationGraph factory: wire wire_dependencies → validate_graph nodes with conditional edges'
     files:
       - packages/backend/orchestrator/src/graphs/story-generation.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
     dependencies:
       - 2
       - 3
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-8
+  - id: 5
+    subtask_id: ST-5
+    description: Update graph integration tests for full 5-node pipeline; all existing tests remain green
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+    dependencies:
       - 4
     slice: packages
-    verification: pnpm vitest run --reporter=verbose story-generation
+    verification: pnpm vitest run story-generation --reporter=verbose
     acs_covered:
-      - AC-6
       - AC-7
 files_to_change:
   - path: packages/backend/orchestrator/src/state/story-generation-state.ts
+    action: modify
+    reason: >-
+      AC-1: Add dependencyEdges, parallelGroups, orderedStories, validationResult, generatedStoriesWithDeps fields and
+      wire_dependencies/validate_graph phases
+  - path: packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
     action: create
-    reason: New state annotation for story-generation graph (AC-1, AC-2)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
+    reason: >-
+      AC-2/3/4: wire_dependencies node with injectable MinimumPathFn, BFS topological layer partitioning, deterministic
+      dependency edge inference
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/wire-dependencies.test.ts
     action: create
-    reason: load_refined_plan node with injectable PlanLoaderFn (AC-3)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
+    reason: 'AC-7: Unit tests for minimum-path assignment, parallel group identification, dependency ordering'
+  - path: packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
     action: create
-    reason: Unit tests for load_refined_plan node (AC-7)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
+    reason: 'AC-5/6: validate_graph node with injectable GraphValidatorFn, no-op default, validationResult writes to state'
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
     action: create
-    reason: slice_flows node with DEC-2 heuristic (AC-4)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
-    action: create
-    reason: Unit tests for slice_flows node (AC-7)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
-    action: create
-    reason: generate_stories node with injectable LlmAdapterFn (AC-5)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
-    action: create
-    reason: Unit tests for generate_stories node (AC-7)
+    reason: 'AC-7: Unit tests for cycle detection, orphan detection, duplicate detection, minimum-path coverage check'
   - path: packages/backend/orchestrator/src/graphs/story-generation.ts
-    action: create
-    reason: Story generation graph wiring with conditional edges (AC-6)
+    action: modify
+    reason: >-
+      AC-8: Add graphValidator injectable to config, wire generate_stories → wire_dependencies → validate_graph → END
+      with conditional edges
   - path: packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
-    action: create
-    reason: Graph compilation test (AC-7)
+    action: modify
+    reason: 'AC-7: Full 5-node integration test; preserve all existing 4-node tests'
 commands_to_run:
   - command: pnpm check-types --filter @repo/orchestrator
-    when: after ST-1 and after all code changes
+    when: after ST-1 and ST-4
     required: true
-  - command: pnpm vitest run --reporter=verbose --filter @repo/orchestrator
+  - command: pnpm vitest run wire-dependencies --reporter=verbose
+    when: after ST-2
+    required: true
+  - command: pnpm vitest run validate-graph --reporter=verbose
+    when: after ST-3
+    required: true
+  - command: pnpm vitest run story-generation --reporter=verbose
+    when: after ST-5
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      story-generation-state.ts exports StoryGenerationStateAnnotation with all required fields using Annotation.Root
-      pattern; pnpm check-types passes
-    evidence_type: command
+      TypeScript compilation passes with new state fields; Annotation.Root has dependencyEdges, parallelGroups,
+      orderedStories, validationResult, generatedStoriesWithDeps; GenerationPhaseSchema includes wire_dependencies and
+      validate_graph
+    evidence_type: test
   - ac_id: AC-2
     planned_evidence: >-
-      GeneratedStorySchema defined in story-generation-state.ts with all kb_create_story-compatible fields; pnpm
-      check-types passes
-    evidence_type: command
+      Unit tests in wire-dependencies.test.ts: minimum_path assignment from flow step count heuristic, orderedStories
+      ordering (minimum-path first), dependency edge inference from parent_flow_id + step ordering
+    evidence_type: test
   - ac_id: AC-3
     planned_evidence: >-
-      Unit test: load-refined-plan.test.ts covers success path (sets generationPhase=slice_flows), validation failure
-      (sets phase=error), and injectable adapter
+      Unit tests: success path sets generationPhase=validate_graph; error path sets generationPhase=error; no LLM calls
+      in implementation (pure deterministic logic)
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      Unit test: slice-flows.test.ts verifies distinct side-effect/actor boundary = separate SlicedFlow, pure
-      data-passing steps merged into predecessor, single-step flow produces one slice
+      Unit tests: parallelGroups computed via BFS topological layer partitioning; injectable MinimumPathFn overrides
+      default heuristic
     evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      Unit test: generate-stories.test.ts with mocked LlmAdapterFn verifies GeneratedStory[] output, title/tags
-      template-derived, independent testability per story
+      Unit tests: no-op default GraphValidatorFn passes all checks; mock adapter tests for cycle, orphan, duplicate,
+      minimum-path coverage detection
     evidence_type: test
   - ac_id: AC-6
     planned_evidence: >-
-      story-generation.ts graph compiles and routes correctly:
-      START->load_refined_plan->slice_flows->generate_stories->END with error->END at each step
+      Unit tests: cycle → generationPhase=error + validationResult.passed=false; orphan/duplicate/min-path-coverage →
+      warnings + generationPhase=complete + validationResult.passed=true
     evidence_type: test
   - ac_id: AC-7
     planned_evidence: >-
-      All 4 test files present and passing: load-refined-plan.test.ts, slice-flows.test.ts, generate-stories.test.ts,
-      story-generation.test.ts
+      All unit tests pass: wire-dependencies.test.ts, validate-graph.test.ts; integration test: full 5-node graph
+      invocation with mock adapters produces generationPhase=complete; all 7 existing story-generation.test.ts tests
+      remain green
     evidence_type: test
-architectural_decisions: []
+  - ac_id: AC-8
+    planned_evidence: >-
+      TypeScript compilation; createStoryGenerationGraph accepts graphValidator config; graph wiring: generate_stories →
+      wire_dependencies → validate_graph → END; conditional error edges at each new node
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      How to represent dependency edges between GeneratedStory objects when stories have no persistent IDs at generation
+      time?
+    decision: >-
+      Use story title + parent_flow_id as composite key for edge references within the wire_dependencies node.
+      dependencyEdges use from/to as string identifiers (title|flow_id composite or index-based). orderedStories and
+      parallelGroups reference GeneratedStory by array index for the in-memory pipeline.
+    rationale: >-
+      Stories at generation time are ephemeral in-memory objects with no KB ID yet. Using title+flow_id as a stable
+      composite key within the same graph run is sufficient for MVP. KB persistence is deferred to APRS-4030 per story
+      non-goals.
+    decided_by: agent
+  - id: ARCH-002
+    question: generatedStoriesWithDeps vs orderedStories — are both needed in state?
+    decision: >-
+      Both are kept per AC-1. generatedStoriesWithDeps = GeneratedStory[] with minimum_path field mutated after
+      wire_dependencies runs. orderedStories = the same stories sorted (minimum-path first, then dependency order). This
+      separation allows downstream nodes to access both the flat-with-deps list and the ordered execution list.
+    rationale: >-
+      AC-1 explicitly requires both fields. The distinction matters for APRS-4030 KB write ordering vs minimum_path
+      annotation.
+    decided_by: agent
+  - id: ARCH-003
+    question: How to implement BFS topological layer partitioning for parallelGroups given GeneratedStory objects?
+    decision: >-
+      Build an adjacency list from dependencyEdges (using story array index as node identifier), compute in-degree for
+      each node, run standard BFS Kahn's algorithm collecting nodes per BFS layer. Each layer becomes one entry in
+      parallelGroups (array of story titles or indices). For MVP, use story titles as group member identifiers.
+    rationale: >-
+      Kahn's BFS naturally produces layers where all nodes in a layer have no dependencies on each other — exactly
+      parallel group semantics. Using titles keeps the output human-readable and consistent with the from/to edge
+      format.
+    decided_by: agent
+  - id: ARCH-004
+    question: Should generate_stories → wire_dependencies be a direct edge or conditional?
+    decision: >-
+      Conditional edge. generate_stories already transitions to phase=complete on success. We change generate_stories to
+      transition to phase=wire_dependencies on success instead of complete. afterGenerateStories conditional routes to
+      wire_dependencies when phase=wire_dependencies, and __end__ when phase=error.
+    rationale: >-
+      Consistent with existing pattern (afterLoadRefinedPlan, afterSliceFlows). Allows generate_stories to short-circuit
+      to END on error without flowing through wiring/validation. Requires changing generate_stories success phase from
+      complete to wire_dependencies.
+    decided_by: agent
 complexity: moderate
 notes:
   - >-
-    autonomy_level=aggressive: no architectural decisions to escalate — all decisions pre-resolved in story (DEC-1
-    through DEC-5)
+    ARCH-004 requires a one-line change to generate-stories.ts: success path returns generationPhase=wire_dependencies
+    instead of complete. This is required for the conditional edge routing to work correctly.
   - >-
-    Pattern: follows plan-refinement exactly — Annotation.Root, injectable adapters, createXxxNode factory, exported
-    phase functions for testability
-  - 'GeneratedStorySchema uses minimum_path: z.boolean().default(false) per DEC-4'
+    The generate_stories node's existing test expects generationPhase=complete on success. That test will need updating
+    in ST-5 to expect wire_dependencies, or a separate integration-level assertion.
   - >-
-    slice_flows heuristic (DEC-2): actor boundary or distinct side-effect = new SlicedFlow; pure data-passing within
-    same actor merged into predecessor; single-step flow = exactly one slice
+    wire_dependencies is purely deterministic — no LLM calls, no async I/O beyond state reads. The node returns
+    synchronously-computable results wrapped in async per LangGraph node contract.
   - >-
-    generate_stories (DEC-3): title from flow.name + step scope (template), tags from plan.tags + actor (template),
-    description/AC/subtasks/risk from LLM
-  - No PHASE_TO_CHECKPOINT_MAP changes, no persistent checkpointer, no wire_dependencies/validate_graph per non-goals
+    DEC-1 scope: cross-flow dependency inference is explicitly deferred. Only same-flow step ordering creates edges.
+    Stories from different flows have no edges between them unless parent_flow_id relationships imply otherwise.
   - >-
-    Subtask ST-2 and ST-3 both depend on ST-1 (state schema) but are otherwise independent — can be implemented in
-    parallel
+    The GeneratedStory objects already carry parent_flow_id and flow_step_reference which encode step ordering.
+    wire_dependencies reads these to sort stories within a flow by step index extracted from flow_step_reference.
+  - >-
+    validate_graph no-op default: returns { passed: true, errors: [], warnings: [] }. This ensures the graph compiles
+    and tests pass without APRS-1020 primitives.
+  - 'File count per step: ST-1=1, ST-2=2, ST-3=2, ST-4=1, ST-5=1 — all within the 3-file limit from schema validation.'
