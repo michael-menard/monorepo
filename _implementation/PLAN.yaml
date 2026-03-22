@@ -1,211 +1,186 @@
-schema: 1
-story_id: WINT-0270
-timestamp: '2026-03-20T14:30:00Z'
+schema: 2
+story_id: APRS-4010
+timestamp: '2026-03-22T23:30:00.000Z'
+subtask_source: story
 steps:
   - id: 1
-    description: Define shared constant MODEL_LEADERBOARD_PATH and create task corpus types/schema
+    subtask_id: ST-1
+    description: >-
+      Create story-generation-state.ts with StoryGenerationStateAnnotation, SlicedFlowSchema, GeneratedStorySchema,
+      GenerationPhaseSchema Zod types using Annotation.Root pattern from plan-refinement-state.ts
     files:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/__types__/index.ts
-      - packages/backend/orchestrator/src/models/__types__/task-contract.ts
+      - packages/backend/orchestrator/src/state/plan-refinement-state.ts
     dependencies: []
     slice: packages
     verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
-      - AC-5
-  - id: 2
-    description: >-
-      Build the task corpus — 3+ prompts per category (code_generation, code_review, elaboration_analysis, lint_syntax)
-      sourced from monorepo files
-    files:
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
-      - packages/backend/orchestrator/src/models/__types__/task-contract.ts
-    dependencies:
-      - 1
-    slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
-    acs_covered:
       - AC-1
-  - id: 3
+      - AC-2
+  - id: 2
+    subtask_id: ST-2
     description: >-
-      Implement the benchmark harness runner — iterates tasks x models, measures latency, calls evaluateQuality() and
-      recordRun(), builds summary table
+      Implement load_refined_plan node with injectable PlanLoaderFn adapter (reads confirmed flows from KB via plan
+      loader, validates NormalizedPlanSchema, sets generationPhase) + unit tests
     files:
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/constants.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-      - packages/backend/orchestrator/src/models/quality-evaluator.ts
-      - packages/backend/orchestrator/src/model-selector/leaderboard.ts
-      - packages/backend/orchestrator/src/model-selector/__types__/index.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/normalize-plan.test.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
     dependencies:
       - 1
-      - 2
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm vitest run --reporter=verbose load-refined-plan
     acs_covered:
-      - AC-2
       - AC-3
-      - AC-4
-      - AC-7
-  - id: 4
-    description: Add developer-local CLI entrypoint script (scripts/benchmark-models.ts) to invoke harness from command line
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement slice_flows node with DEC-2 slicing heuristic (distinct side-effect or actor boundary = separate
+      SlicedFlow, pure data-passing steps merged into predecessor) + unit tests
     files:
-      - scripts/benchmark-models.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-      - packages/backend/orchestrator/src/model-selector/constants.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
     dependencies:
+      - 1
+    slice: packages
+    verification: pnpm vitest run --reporter=verbose slice-flows
+    acs_covered:
+      - AC-4
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement generate_stories node with injectable LlmAdapterFn (title/tags template-derived,
+      description/AC/subtasks/risk LLM-generated per DEC-3, each story independently testable) + unit tests
+    files:
+      - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
+    dependencies:
+      - 1
       - 3
     slice: packages
-    verification: pnpm check-types
+    verification: pnpm vitest run --reporter=verbose generate-stories
+    acs_covered:
+      - AC-5
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Wire story-generation graph: START->load_refined_plan->slice_flows->generate_stories->END with conditional error
+      edges at each step. Export createStoryGenerationGraph factory with injectable adapters. Add graph compilation
+      test.
+    files:
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+    dependencies:
+      - 2
+      - 3
+      - 4
+    slice: packages
+    verification: pnpm vitest run --reporter=verbose story-generation
     acs_covered:
       - AC-6
-  - id: 5
-    description: Write unit tests for harness logic (task iteration, result aggregation) using mock Ollama responses via vi.mock
-    files:
-      - packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-      - packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-      - packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-    dependencies:
-      - 2
-      - 3
-    slice: packages
-    verification: pnpm test --filter @repo/orchestrator
-    acs_covered:
-      - AC-8
+      - AC-7
 files_to_change:
-  - path: packages/backend/orchestrator/src/model-selector/constants.ts
+  - path: packages/backend/orchestrator/src/state/story-generation-state.ts
     action: create
-    reason: 'AC-5: Expose MODEL_LEADERBOARD_PATH as named constant shared between harness and router'
-  - path: packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
+    reason: New state annotation for story-generation graph (AC-1, AC-2)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
     action: create
-    reason: Zod schemas for BenchmarkTask, BenchmarkResult, BenchmarkSummary following project Zod-first typing requirement
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
+    reason: load_refined_plan node with injectable PlanLoaderFn (AC-3)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
     action: create
-    reason: 'AC-1: Task corpus with 3+ prompts per category (4 categories = 12+ tasks) sourced from monorepo files'
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
+    reason: Unit tests for load_refined_plan node (AC-7)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
     action: create
-    reason: >-
-      AC-2, AC-3, AC-4, AC-7: Core harness — iterates 5 models x all tasks, measures latency_ms, invokes
-      evaluateQuality() + recordRun(), outputs summary table; documents heuristic limitation
-  - path: scripts/benchmark-models.ts
+    reason: slice_flows node with DEC-2 heuristic (AC-4)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
     action: create
-    reason: 'AC-6: Developer-local CLI script, NOT in CI; imports harness and runs it'
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
+    reason: Unit tests for slice_flows node (AC-7)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
     action: create
-    reason: 'AC-8: Unit tests for harness logic (task iteration, result aggregation) using mock Ollama fetch responses'
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
+    reason: generate_stories node with injectable LlmAdapterFn (AC-5)
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
     action: create
-    reason: 'AC-1, AC-8: Unit tests verifying corpus has >= 3 tasks per category and all 4 categories present'
+    reason: Unit tests for generate_stories node (AC-7)
+  - path: packages/backend/orchestrator/src/graphs/story-generation.ts
+    action: create
+    reason: Story generation graph wiring with conditional edges (AC-6)
+  - path: packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+    action: create
+    reason: Graph compilation test (AC-7)
 commands_to_run:
   - command: pnpm check-types --filter @repo/orchestrator
-    when: after each step
+    when: after ST-1 and after all code changes
     required: true
-  - command: pnpm test --filter @repo/orchestrator
-    when: after step 5
-    required: true
-  - command: pnpm build --filter @repo/orchestrator
+  - command: pnpm vitest run --reporter=verbose --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      benchmark-corpus.ts exports corpus array; benchmark-corpus.test.ts verifies >= 3 tasks per category and all 4
-      categories (code_generation, code_review, elaboration_analysis, lint_syntax) present
-    evidence_type: test
+      story-generation-state.ts exports StoryGenerationStateAnnotation with all required fields using Annotation.Root
+      pattern; pnpm check-types passes
+    evidence_type: command
   - ac_id: AC-2
     planned_evidence: >-
-      benchmark-harness.ts iterates all 5 REQUIRED_MODELS from setup-ollama-models.sh against each task; records
-      latency_ms, input_tokens, output_tokens, raw output per run; benchmark-harness.test.ts verifies via mocked fetch
-    evidence_type: test
+      GeneratedStorySchema defined in story-generation-state.ts with all kb_create_story-compatible fields; pnpm
+      check-types passes
+    evidence_type: command
   - ac_id: AC-3
     planned_evidence: >-
-      benchmark-harness.ts calls evaluateQuality() (from quality-evaluator.ts) and recordRun() (from leaderboard.ts) for
-      each (model, task) pair; test verifies both are called per iteration
+      Unit test: load-refined-plan.test.ts covers success path (sets generationPhase=slice_flows), validation failure
+      (sets phase=error), and injectable adapter
     evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      benchmark-harness.ts includes QUALITY_EVALUATOR_LIMITATION constant/comment documenting that scores are
-      heuristic-only (keyword matching, length heuristics, no semantic analysis); also printed in summary table header
-    evidence_type: file
+      Unit test: slice-flows.test.ts verifies distinct side-effect/actor boundary = separate SlicedFlow, pure
+      data-passing steps merged into predecessor, single-step flow produces one slice
+    evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      constants.ts exports MODEL_LEADERBOARD_PATH; both benchmark-harness.ts and model-router.ts (or a future consumer)
-      import it from constants.ts rather than hardcoding the path
-    evidence_type: file
+      Unit test: generate-stories.test.ts with mocked LlmAdapterFn verifies GeneratedStory[] output, title/tags
+      template-derived, independent testability per story
+    evidence_type: test
   - ac_id: AC-6
     planned_evidence: >-
-      scripts/benchmark-models.ts exists as developer-local runner; no CI config references it; harness unit tests use
-      vi.mock for Ollama, not live network calls
-    evidence_type: file
+      story-generation.ts graph compiles and routes correctly:
+      START->load_refined_plan->slice_flows->generate_stories->END with error->END at each step
+    evidence_type: test
   - ac_id: AC-7
     planned_evidence: >-
-      benchmark-harness.ts sets cost_usd = 0 for all Ollama model runs (zero-cost sentinel per WINT-0260); test verifies
-      cost_usd === 0 in RunRecord
+      All 4 test files present and passing: load-refined-plan.test.ts, slice-flows.test.ts, generate-stories.test.ts,
+      story-generation.test.ts
     evidence_type: test
-  - ac_id: AC-8
-    planned_evidence: >-
-      benchmark-harness.test.ts covers: task iteration loop (all tasks x all models), result aggregation (averages,
-      ranking), mock Ollama responses returning controlled output; benchmark-corpus.test.ts covers corpus structure
-      validation
-    evidence_type: test
-architectural_decisions:
-  - id: ARCH-001
-    question: Where should MODEL_LEADERBOARD_PATH point — relative to package root or absolute from monorepo root?
-    decision: >-
-      Path relative to the orchestrator package output directory: path.join(process.cwd(), 'data',
-      'model-leaderboard.yaml'). Allows the harness to write next to the package without hardcoding monorepo root. For
-      tests, the path is overridden via argument injection.
-    rationale: >-
-      Keeps the package self-contained; tests can inject a temp path; does not require knowledge of monorepo layout at
-      runtime.
-    decided_by: planner
-  - id: ARCH-002
-    question: How should the harness invoke Ollama — via PipelineModelRouter, direct HTTP fetch, or a thin OllamaClient wrapper?
-    decision: >-
-      Direct HTTP fetch to Ollama generate/chat API (http://127.0.0.1:11434/api/generate). This avoids pulling in the
-      full PipelineModelRouter stack (LangChain, BudgetAccumulator, TokenBucket) for a developer-local benchmark script.
-    rationale: >-
-      The harness is explicitly dev-local only (AC-6). A direct fetch keeps dependencies minimal and makes the Ollama
-      call easy to mock in unit tests via vi.mock('node-fetch') or global fetch mock.
-    decided_by: planner
-  - id: ARCH-003
-    question: Should the 5 required Ollama models be hardcoded in the harness or imported from a shared constant?
-    decision: >-
-      Hardcode the 5 REQUIRED_MODELS list in constants.ts alongside MODEL_LEADERBOARD_PATH, mirroring the
-      REQUIRED_MODELS array from setup-ollama-models.sh. These are: deepseek-coder-v2:16b, codellama:13b,
-      qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b.
-    rationale: >-
-      Single source of truth in constants.ts; the script is the authoritative list per WINT-0220 strategy; both harness
-      and any future consumer can import from constants.
-    decided_by: planner
+architectural_decisions: []
 complexity: moderate
 notes:
-  - AC-6 explicitly states the harness is dev-local only — no CI integration required; unit tests use mocks
-  - AC-7 confirms Ollama cost_usd = 0 sentinel (soft dependency on WINT-0260 — no blocking)
   - >-
-    Quality evaluator uses heuristic scoring (keyword matching, length checks) — not semantic; this limitation must be
-    documented per AC-4
+    autonomy_level=aggressive: no architectural decisions to escalate — all decisions pre-resolved in story (DEC-1
+    through DEC-5)
   - >-
-    The 5 required models are from setup-ollama-models.sh REQUIRED_MODELS: deepseek-coder-v2:16b, codellama:13b,
-    qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b
+    Pattern: follows plan-refinement exactly — Annotation.Root, injectable adapters, createXxxNode factory, exported
+    phase functions for testability
+  - 'GeneratedStorySchema uses minimum_path: z.boolean().default(false) per DEC-4'
   - >-
-    Task corpus categories must cover exactly: code_generation, code_review, elaboration_analysis, lint_syntax (4
-    categories x 3+ prompts = 12+ tasks minimum per AC-1)
+    slice_flows heuristic (DEC-2): actor boundary or distinct side-effect = new SlicedFlow; pure data-passing within
+    same actor merged into predecessor; single-step flow = exactly one slice
   - >-
-    Prompts must be sourced from monorepo files (actual TypeScript code snippets, real elaboration YAML fragments, real
-    lint output)
+    generate_stories (DEC-3): title from flow.name + step scope (template), tags from plan.tags + actor (template),
+    description/AC/subtasks/risk from LLM
+  - No PHASE_TO_CHECKPOINT_MAP changes, no persistent checkpointer, no wire_dependencies/validate_graph per non-goals
   - >-
-    RunRecord requires: taskContract, selectedTier, modelUsed, qualityScore, qualityDimensions, contractMismatch,
-    timestamp (from QualityEvaluationSchema) plus cost_usd, latency_ms, task_id
-  - No barrel files — import directly from source paths per CLAUDE.md
+    Subtask ST-2 and ST-3 both depend on ST-1 (state schema) but are otherwise independent — can be implemented in
+    parallel
