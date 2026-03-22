@@ -204,7 +204,7 @@ export async function kb_get_bottleneck_analysis(
   phase_distribution: { phase: string; count: number }[]
   stuck_stories: {
     story_id: string
-    phase: string | null
+    phase: string | null // derived from state (phase column removed)
     state: string | null
     days_stuck: number
   }[]
@@ -221,15 +221,15 @@ export async function kb_get_bottleneck_analysis(
     ? and(eq(stories.feature, validated.feature), activeCondition)
     : activeCondition
 
-  // Get phase distribution for active stories
+  // Get phase distribution for active stories (uses state — phase column was removed)
   const phaseDistribution = await deps.db
     .select({
-      phase: stories.phase,
+      phase: stories.state,
       count: sql<number>`count(*)::int`,
     })
     .from(stories)
     .where(phaseDistCondition)
-    .groupBy(stories.phase)
+    .groupBy(stories.state)
     .orderBy(desc(sql`count(*)`))
 
   // Build state distribution condition
@@ -260,7 +260,7 @@ export async function kb_get_bottleneck_analysis(
   const stuckStories = await deps.db
     .select({
       storyId: stories.storyId,
-      phase: stories.phase,
+      phase: stories.state,
       state: stories.state,
       updatedAt: stories.updatedAt,
     })
@@ -311,7 +311,7 @@ export async function kb_get_churn_analysis(
     story_id: string
     iteration: number
     feature: string | null
-    phase: string | null
+    phase: string | null // derived from state (phase column removed)
     state: string | null
   }[]
   feature_averages: {
@@ -324,41 +324,47 @@ export async function kb_get_churn_analysis(
 }> {
   const validated = KbGetChurnAnalysisInputSchema.parse(input)
 
+  // Derive iteration count from story_artifacts (phase/iteration columns removed from stories)
+  const iterationSql = sql<number>`COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0)`
+
   // Build high churn condition
-  const iterationCondition = gte(stories.iteration, validated.min_iterations)
   const highChurnCondition = validated.feature
-    ? and(eq(stories.feature, validated.feature), iterationCondition)
-    : iterationCondition
+    ? and(eq(stories.feature, validated.feature), gte(iterationSql, validated.min_iterations))
+    : gte(iterationSql, validated.min_iterations)
 
   // Find high-churn stories (iteration >= threshold)
   const highChurnStories = await deps.db
     .select({
       storyId: stories.storyId,
-      iteration: stories.iteration,
+      iteration: iterationSql,
       feature: stories.feature,
-      phase: stories.phase,
+      phase: stories.state,
       state: stories.state,
     })
     .from(stories)
     .where(highChurnCondition)
-    .orderBy(desc(stories.iteration))
+    .orderBy(desc(iterationSql))
     .limit(validated.limit)
 
   // Build feature averages condition
   const featureCondition = validated.feature ? eq(stories.feature, validated.feature) : undefined
 
-  // Get average iterations by feature
+  // Get average iterations by feature (derived from story_artifacts)
   const featureAverages = await deps.db
     .select({
       feature: stories.feature,
-      avgIterations: sql<number>`avg(${stories.iteration})::float`,
+      avgIterations: sql<number>`avg(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))::float`,
       storyCount: sql<number>`count(*)::int`,
-      maxIterations: sql<number>`max(${stories.iteration})::int`,
+      maxIterations: sql<number>`max(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))::int`,
     })
     .from(stories)
     .where(featureCondition)
     .groupBy(stories.feature)
-    .orderBy(desc(sql`avg(${stories.iteration})`))
+    .orderBy(
+      desc(
+        sql`avg(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))`,
+      ),
+    )
 
   return {
     high_churn_stories: highChurnStories.map(s => ({
