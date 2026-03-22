@@ -1,0 +1,91 @@
+schema: 1
+story_id: WINT-7070
+timestamp: 2026-03-22T12:00:00Z
+current_phase: setup
+last_successful_phase: null
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+
+setup_summary:
+  phase: 0
+  status: COMPLETE
+  findings:
+    total_target_files: 10
+    filesystem_refs_identified: 29
+    patterns_identified: 4
+    risk_assessment: HIGH (KB unavailability, sub-agent context)
+    
+  target_files:
+    - path: .claude/skills/review/SKILL.md
+      refs_found: 6
+      patterns: ["directory_scanning", "epic_resolution", "glob_pattern"]
+    - path: .claude/skills/review-draft-story/SKILL.md
+      refs_found: 3
+      patterns: ["bmad-core", "docs_stories", "checklist_file"]
+    - path: .claude/agents/review-aggregate-leader.agent.md
+      refs_found: 1
+      patterns: ["artifact_path"]
+    - path: .claude/agents/architect-story-review.agent.md
+      refs_found: 4
+      patterns: ["artifact_paths", "component_structure"]
+    - path: .claude/agents/ui-ux-review-setup-leader.agent.md
+      refs_found: 9
+      patterns: ["artifact_paths", "feature_dir"]
+    - path: .claude/agents/ui-ux-review-reviewer.agent.md
+      refs_found: 4
+      patterns: ["artifact_paths", "screenshot_directory"]
+    - path: .claude/agents/ui-ux-review-report-leader.agent.md
+      refs_found: 3
+      patterns: ["artifact_paths"]
+    - path: .claude/agents/code-review-security.agent.md
+      refs_found: 2
+      patterns: ["artifact_refs"]
+    - path: .claude/agents/pm-dev-feasibility-review.agent.md
+      refs_found: 1
+      patterns: ["feature_dir"]
+    - path: .claude/skills/qa-gate/SKILL.md
+      refs_found: 1
+      patterns: ["story_file_discovery"]
+
+  migration_patterns:
+    pattern_1_directory_scanning:
+      affected_files: 2
+      files: ["review skill", "qa-gate skill"]
+      replacement: "kb_list_stories() query"
+    pattern_2_artifact_paths:
+      affected_files: 7
+      files: ["review-aggregate", "architect-review", "ui-ux-setup", "ui-ux-reviewer", "ui-ux-report", "code-review-security"]
+      replacement: "kb_read_artifact() / kb_write_artifact()"
+    pattern_3_bmad_core:
+      affected_files: 1
+      files: ["review-draft-story"]
+      status: "dead_code_removal"
+    pattern_4_feature_dir:
+      affected_files: 2
+      files: ["ui-ux-setup", "pm-dev-feasibility"]
+      replacement: "KB story metadata"
+
+next_phase: implementation
+recommended_sequence:
+  - 1. .claude/skills/review/SKILL.md (6 refs, high complexity)
+  - 2. .claude/skills/review-draft-story/SKILL.md (3 refs, dead code removal)
+  - 3. .claude/agents/qa-gate/SKILL.md (1 ref, simple)
+  - 4. .claude/agents/ui-ux-review-setup-leader.agent.md (9 refs, high complexity)
+  - 5. .claude/agents/ui-ux-review-reviewer.agent.md (4 refs)
+  - 6. .claude/agents/ui-ux-review-report-leader.agent.md (3 refs)
+  - 7. .claude/agents/architect-story-review.agent.md (4 refs)
+  - 8. .claude/agents/code-review-security.agent.md (2 refs)
+  - 9. .claude/agents/review-aggregate-leader.agent.md (1 ref, mostly done)
+  - 10. .claude/agents/pm-dev-feasibility-review.agent.md (1 ref)
+
+success_criteria:
+  - [ ] All 10 files identified and analyzed
+  - [ ] Filesystem refs replaced with KB MCP calls
+  - [ ] Mode B directory scanning migrated to kb_list_stories
+  - [ ] .bmad-core references removed/migrated
+  - [ ] Grep verification pass (zero filesystem refs)
+  - [ ] Smoke test of migrated workflow passes
