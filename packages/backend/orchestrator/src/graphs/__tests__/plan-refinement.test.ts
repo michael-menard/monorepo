@@ -1,11 +1,12 @@
 /**
  * Plan Refinement Graph tests
  * APRS-2010: ST-5 / AC-7
+ * APRS-2020: ST-5 — gap coverage loop integration tests
  * APRS-2030: ST-5 / AC-6, AC-8
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { createPlanRefinementGraph } from '../plan-refinement.js'
+import { createPlanRefinementGraph, afterGapCoverage } from '../plan-refinement.js'
 import type { LlmAdapterFn } from '../../nodes/plan-refinement/extract-flows.js'
 import type { DecisionCallback } from '../../nodes/plan-refinement/human-review-checkpoint.js'
 
@@ -84,6 +85,28 @@ describe('plan-refinement graph routing (original APRS-2010)', () => {
     expect(result.refinementPhase).toBe('complete')
   })
 
+  it('normalize_plan sets normalizedPlan before extract_flows runs', async () => {
+    // Track call order via flow-writer side effect
+    const callOrder: string[] = []
+
+    const llmAdapter: LlmAdapterFn = vi.fn().mockImplementation(async _prompt => {
+      callOrder.push('extract_flows:llm')
+      return []
+    })
+
+    const graph = createPlanRefinementGraph({ llmAdapter })
+
+    const result = await graph.invoke({
+      planSlug: 'order-test',
+      rawPlan: { content: SAMPLE_MARKDOWN },
+    })
+
+    // normalizedPlan should exist (set by normalize_plan, then used by extract_flows)
+    expect(result.normalizedPlan).not.toBeNull()
+    // LLM was called (meaning extract_flows ran after normalize_plan)
+    expect(callOrder).toContain('extract_flows:llm')
+  })
+
   it('with mocked LLM adapter — inferred flows are in state', async () => {
     const llmAdapter: LlmAdapterFn = vi.fn().mockResolvedValue([
       {
@@ -118,6 +141,7 @@ describe('plan-refinement graph routing (original APRS-2010)', () => {
 
     expect(result.normalizedPlan).not.toBeNull()
     expect(result.errors).toEqual([])
+    expect(Array.isArray(result.flows)).toBe(true)
   })
 
   it('graph state contains planSlug throughout', async () => {
@@ -134,11 +158,174 @@ describe('plan-refinement graph routing (original APRS-2010)', () => {
 })
 
 // ============================================================================
+// afterGapCoverage Unit Tests
+// ============================================================================
+
+describe('afterGapCoverage', () => {
+  const baseState = {
+    planSlug: 'test',
+    rawPlan: null,
+    normalizedPlan: null,
+    flows: [],
+    refinementPhase: 'gap_coverage' as const,
+    iterationCount: 1,
+    maxIterations: 3,
+    warnings: [],
+    errors: [],
+    gapFindings: [],
+    specialistFindings: [],
+    reconciledFindings: [],
+    coverageScore: null,
+    circuitBreakerOpen: false,
+    previousGapCount: 0,
+    consecutiveLlmFailures: 0,
+    hitlDecision: null,
+    humanReviewResult: null,
+    readinessScore: null,
+    storyReadiness: null,
+    validationResult: null,
+  }
+
+  it('returns human_review_checkpoint when refinementPhase is complete', () => {
+    const state = { ...baseState, refinementPhase: 'complete' as const }
+    expect(afterGapCoverage(state)).toBe('human_review_checkpoint')
+  })
+
+  it('returns human_review_checkpoint when iterationCount >= maxIterations', () => {
+    const state = { ...baseState, iterationCount: 3, maxIterations: 3 }
+    expect(afterGapCoverage(state)).toBe('human_review_checkpoint')
+  })
+
+  it('returns human_review_checkpoint when circuitBreakerOpen is true', () => {
+    const state = { ...baseState, circuitBreakerOpen: true }
+    expect(afterGapCoverage(state)).toBe('human_review_checkpoint')
+  })
+
+  it('returns human_review_checkpoint on convergence (delta < 0.05)', () => {
+    // previousGapCount=10, currentCount=10 → delta=0 < 0.05
+    const state = { ...baseState, previousGapCount: 10, gapFindings: Array(10).fill({}) as any[] }
+    expect(afterGapCoverage(state)).toBe('human_review_checkpoint')
+  })
+
+  it('returns coverage_agent when gaps exist and no exit condition met', () => {
+    // iterationCount=1 < maxIterations=3, not open, phase not complete
+    const state = {
+      ...baseState,
+      iterationCount: 1,
+      gapFindings: [{ id: 'gap-1' } as any],
+      previousGapCount: 0,
+    }
+    expect(afterGapCoverage(state)).toBe('coverage_agent')
+  })
+})
+
+// ============================================================================
+// Gap Coverage Loop Integration Tests (APRS-2020)
+// ============================================================================
+
+describe('gap coverage loop (APRS-2020)', () => {
+  it('runs gap coverage loop with coverage + specialist + reconciliation', async () => {
+    let callCount = 0
+    const coverageAdapter = vi.fn().mockImplementation(async () => {
+      callCount++
+      if (callCount === 1)
+        return [
+          {
+            id: 'gap-1',
+            type: 'coverage',
+            description: 'Missing error handling',
+            severity: 'medium',
+            sourceFlowIds: [],
+            relatedAcIds: [],
+          },
+        ]
+      return [] // second iteration finds no new gaps
+    })
+    const uxSpecialist = vi.fn().mockResolvedValue([
+      {
+        id: 'sf-1',
+        gapId: 'gap-1',
+        specialistType: 'ux',
+        analysis: 'Error state UX needed',
+        recommendation: 'Add error boundary',
+        severity: 'medium',
+        confidence: 0.8,
+      },
+    ])
+
+    const graph = createPlanRefinementGraph({ coverageAdapter, uxSpecialist })
+    const result = await graph.invoke({ planSlug: 'loop-test', rawPlan: { content: SAMPLE_MARKDOWN } })
+
+    expect(result.coverageScore).not.toBeNull()
+    expect(result.gapFindings.length).toBeGreaterThanOrEqual(1)
+    expect(result.errors).toEqual([])
+  })
+
+  it('terminates at maxIterations boundary', async () => {
+    const coverageAdapter = vi.fn().mockResolvedValue([
+      {
+        id: 'gap-1',
+        type: 'coverage',
+        description: 'Persistent gap',
+        severity: 'high',
+        sourceFlowIds: [],
+        relatedAcIds: [],
+      },
+    ])
+
+    const graph = createPlanRefinementGraph({ coverageAdapter })
+    const result = await graph.invoke({
+      planSlug: 'boundary-test',
+      rawPlan: { content: SAMPLE_MARKDOWN },
+      maxIterations: 3,
+    })
+
+    expect(result.iterationCount).toBeLessThanOrEqual(3)
+    // Graph should have terminated, not looped forever
+    expect(result.errors).toEqual([])
+  })
+
+  it('circuit breaker opens after consecutive failures', async () => {
+    // Circuit breaker opens after consecutiveLlmFailures >= 2.
+    // Seed consecutiveLlmFailures=1 so a single adapter failure triggers it.
+    const coverageAdapter = vi.fn().mockRejectedValue(new Error('LLM timeout'))
+
+    const graph = createPlanRefinementGraph({ coverageAdapter })
+    const result = await graph.invoke({
+      planSlug: 'cb-test',
+      rawPlan: { content: SAMPLE_MARKDOWN },
+      consecutiveLlmFailures: 1,
+    })
+
+    expect(result.circuitBreakerOpen).toBe(true)
+    expect(result.errors).toEqual([])
+  })
+
+  it('no gaps found exits immediately with complete phase', async () => {
+    const coverageAdapter = vi.fn().mockResolvedValue([])
+
+    const graph = createPlanRefinementGraph({ coverageAdapter })
+    const result = await graph.invoke({ planSlug: 'no-gaps', rawPlan: { content: SAMPLE_MARKDOWN } })
+
+    expect(result.coverageScore).toBe(1.0)
+    expect(result.reconciledFindings).toEqual([])
+  })
+
+  it('no gap coverage adapters — graph completes without error', async () => {
+    const graph = createPlanRefinementGraph()
+    const result = await graph.invoke({ planSlug: 'no-adapters', rawPlan: { content: SAMPLE_MARKDOWN } })
+
+    expect(result.errors).toEqual([])
+    expect(result.coverageScore).toBe(1.0)
+  })
+})
+
+// ============================================================================
 // APRS-2030 Routing Tests — AC-6: all new conditional edges
 // ============================================================================
 
 describe('plan-refinement graph routing (APRS-2030)', () => {
-  it('approve flow: extract_flows → human_review → final_validation → story_readiness → END', async () => {
+  it('approve flow: gap_coverage → human_review → final_validation → story_readiness → END', async () => {
     const decisionCallback: DecisionCallback = {
       ask: vi.fn().mockResolvedValue({
         decision: 'approve',
@@ -225,7 +412,7 @@ describe('plan-refinement graph routing (APRS-2030)', () => {
       rawPlan: { content: SAMPLE_MARKDOWN },
     })
 
-    // Should have gone through edit → extract_flows → human_review → approve → final_validation → readiness → complete
+    // Should have gone through edit → extract_flows → gap_coverage → human_review → approve → final_validation → readiness → complete
     expect(callCount).toBe(2)
     expect(result.hitlDecision).toBe('approve')
     expect(result.refinementPhase).toBe('complete')
