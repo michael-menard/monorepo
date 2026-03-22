@@ -11,7 +11,12 @@
  */
 
 import { ZodError } from 'zod'
-import { NodeCancellationError, NodeCircuitOpenError, NodeTimeoutError } from './errors.js'
+import {
+  NodeCancellationError,
+  NodeCircuitOpenError,
+  NodeTimeoutError,
+  QualityEscalationExhaustedError,
+} from './errors.js'
 
 /**
  * Error classification result with details.
@@ -38,6 +43,7 @@ export type ErrorCategory =
   | 'circuit_open'
   | 'network'
   | 'rate_limit'
+  | 'quality_below_threshold'
   | 'unknown'
 
 /**
@@ -131,6 +137,16 @@ export function classifyError(error: unknown): ErrorClassification {
       category: 'programming',
       action: 'fail',
       reason: 'SyntaxError indicates a programming error - retrying will not help',
+    }
+  }
+
+  // QualityEscalationExhaustedError - NOT retryable, requires escalation
+  if (error instanceof QualityEscalationExhaustedError) {
+    return {
+      isRetryable: false,
+      category: 'quality_below_threshold',
+      action: 'fail',
+      reason: 'Quality escalation exhausted - all model tiers tried',
     }
   }
 
