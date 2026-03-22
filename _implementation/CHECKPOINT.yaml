@@ -1,10 +1,15 @@
-branch: story/WINT-6010
-commit: 57c8b5e9
-e2e_gate: exempt
-gen_mode: false
+schema: 1
+story_id: WINT-7010
+timestamp: '2026-03-21T00:00:00Z'
+current_phase: setup
+last_successful_phase: null
 iteration: 0
-current_phase: qa-verify
-last_successful_phase: qa-verify
-worktree_path: tree/story/WINT-6010
-autonomy_level: aggressive
-verification_verdict: PASS
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+branch: story/WINT-7010
+worktree_path: tree/story/WINT-7010
+e2e_gate: exempt
+e2e_gate_reason: audit-only story, no code changes or e2e applicable
