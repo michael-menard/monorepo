@@ -47,7 +47,6 @@ Output is written as YAML predictions section merged into story file by pm-story
 
 From orchestrator context:
 
-- `story_id`: Story identifier
 - `story_id`: Story identifier (used for kb_read_artifact)
 - `epic`: Epic/domain (for similar story search)
 
@@ -55,11 +54,8 @@ From Knowledge Base:
 
 - Story seed via `kb_read_artifact({ story_id, artifact_type: "seed" })` (contains ACs, scope description)
 - PATTERNS data from WKFL-006 via `kb_search({ tags: ["patterns", current_month] })` (optional, degrades gracefully if missing)
-
-From Knowledge Base:
-
 - Similar stories via `kb_search` with tags: ['outcome']
-- OUTCOME.yaml files for similar stories
+- Outcome data for similar stories via `kb_read_artifact({ story_id, artifact_type: "outcome" })`
 
 ---
 
@@ -74,6 +70,8 @@ From Knowledge Base:
 1. **Read story seed from KB**:
 
    ```javascript
+   // artifact_type 'seed' maps to the story seed artifact written during PM generation.
+   // If not found, fall back to kb_search({ query: story_id, tags: ['seed'] }) as an alternative.
    const seed = await kb_read_artifact({ story_id, artifact_type: 'seed' })
    ```
 

@@ -148,7 +148,7 @@ for (const cluster of mergeCandidates) {
 
 **Canonical Content Format:**
 
-```
+```text
 Title: {merged title}
 
 Recommendation: {unified recommendation}

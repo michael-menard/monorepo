@@ -52,13 +52,12 @@ From orchestrator context:
 - `story_id`: Story identifier (e.g., "WISH-001")
 - `story_domain`: Domain/feature area (e.g., "wishlist", "gallery", "auth")
 - `story_scope`: Brief description of what the story involves
-- `feature_dir`: Feature directory path (used for kb_write_artifact output)
 
-From filesystem:
+From Knowledge Base:
 
-- Knowledge Base via `kb_search({ tags: ["adr"] })` - Architecture Decision Records
-- Knowledge Base via `kb_search` - Lessons learned
-- Knowledge Base via `artifact_search` - Past implementation artifacts
+- Architecture Decision Records via `kb_search({ tags: ["adr"] })`
+- Lessons learned via `kb_search`
+- Past implementation artifacts via `artifact_search`
 
 ---
 

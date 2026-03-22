@@ -1,6 +1,6 @@
 ---
 name: status-audit
-description: Audit story statuses across KB, git worktrees, and artifacts. Detects stale statuses, orphaned worktrees, deferred KB writes, and missing KB artifacts. Detects stale statuses, duplicate directories, orphaned worktrees, unprocessed deferred KB writes, and missing KB artifacts. Resolves conflicts by picking the furthest-progressed directory as ground truth.
+description: Audit story statuses across KB, git worktrees, and artifacts. Detects stale statuses, duplicate directories, orphaned worktrees, unprocessed deferred KB writes, and missing KB artifacts. Resolves conflicts by picking the furthest-progressed directory as ground truth.
 created: 2026-02-23
 updated: 2026-02-23
 version: 1.0.0
@@ -126,7 +126,7 @@ mcp__knowledge -
 Additionally, check if any KB story's `story_dir` contains known stage directory names:
 
 ```javascript
-// Filter KB_STORIES where story_dir contains a legacy stage name
+// Filter Scan A results where story_dir contains a legacy stage name
 const LEGACY_STAGES = [
   'backlog',
   'elaboration',
@@ -139,8 +139,8 @@ const LEGACY_STAGES = [
   'UAT',
   'completed',
 ]
-const legacyStories = Object.entries(KB_STORIES).filter(([id, s]) =>
-  LEGACY_STAGES.some(stage => s.story_dir?.includes('/' + stage + '/')),
+const legacyStories = Object.entries(DISK_STORIES).filter(([id, s]) =>
+  LEGACY_STAGES.some(stage => s.story_path?.includes('/' + stage + '/')),
 )
 ```
 
@@ -262,7 +262,7 @@ Cross-reference `GIT_WORKTREES` vs `KB_WORKTREES`:
 
 #### Section D: Deferred KB Writes
 
-List all `DEFERRED-KB-WRITES.yaml` files with their age (current date minus `deferred_at`) and story ID.
+List all deferred write KB records with their story ID, `deferred_at` timestamp, age (current date minus `deferred_at`), and reason.
 
 #### Section E: Artifact Sync Gaps
 
@@ -303,11 +303,11 @@ Scanned: {N} stories on disk  |  {M} in KB  |  {date}
   WKFL-007    tree/story/WKFL-007             ✗ missing   UNTRACKED
   ...
 
-── D. DEFERRED KB WRITES ({count} files) ────────────────────────────
+── D. DEFERRED KB WRITES ({count} records) ──────────────────────────
 
-  File                                              Story      Age     Reason
-  ────────────────────────────────────────────────  ─────────  ──────  ──────────────────────────
-  UAT/INFR-0040/DEFERRED-KB-WRITES.yaml            INFR-0040  10 days KB tools unavailable in PM
+  Story      Deferred At           Age     Reason
+  ─────────  ────────────────────  ──────  ──────────────────────────
+  INFR-0040  2026-03-12T10:00:00Z  10 days KB tools unavailable in PM
   ...
 
 ── E. ARTIFACT SYNC GAPS ({count} stories) ──────────────────────────
@@ -384,11 +384,11 @@ For **ORPHANED KB records** (in KB but not in git): call `mcp__knowledge-base__w
 These cannot be auto-applied here because the write payloads vary. Instead, output:
 
 ```
-⚠ DEFERRED-KB-WRITES.yaml files must be processed manually:
-  Run /kb-compress or read each file and apply writes via kb_update_story.
+⚠ Deferred KB write records must be processed manually:
+  Run /kb-compress or review each record and apply writes via kb_update_story.
 ```
 
-List each file path for easy access.
+List each record's story_id, deferred_at, and reason for easy access.
 
 #### Fix E: Artifact Sync
 
