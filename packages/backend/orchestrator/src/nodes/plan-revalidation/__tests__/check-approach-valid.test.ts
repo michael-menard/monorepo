@@ -5,6 +5,14 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import type { PlanRevalidationState, ContextSnapshot } from '../../../state/plan-revalidation-state.js'
+import {
+  buildApproachPrompt,
+  validateApproach,
+  buildApproachFindings,
+  createCheckApproachValidNode,
+  type ApproachValidationResult,
+} from '../check-approach-valid.js'
 
 vi.mock('@repo/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -22,15 +30,6 @@ vi.mock('@langchain/langgraph', () => {
   )
   return { Annotation }
 })
-
-import type { PlanRevalidationState, ContextSnapshot } from '../../../state/plan-revalidation-state.js'
-import {
-  buildApproachPrompt,
-  validateApproach,
-  buildApproachFindings,
-  createCheckApproachValidNode,
-  type ApproachValidationResult,
-} from '../check-approach-valid.js'
 
 // ============================================================================
 // Helpers

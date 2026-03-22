@@ -5,6 +5,15 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import {
+  StoryRefSchema,
+  ContextSnapshotSchema,
+  DriftFindingSchema,
+  RevalidationVerdictSchema,
+  RevalidationPhaseSchema,
+  PlanRevalidationStateAnnotation,
+} from '../../../state/plan-revalidation-state.js'
+import type { PlanRevalidationState } from '../../../state/plan-revalidation-state.js'
 
 vi.mock('@repo/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -26,16 +35,6 @@ vi.mock('@langchain/langgraph', () => {
 
   return { Annotation, overwrite, append }
 })
-
-import {
-  StoryRefSchema,
-  ContextSnapshotSchema,
-  DriftFindingSchema,
-  RevalidationVerdictSchema,
-  RevalidationPhaseSchema,
-  PlanRevalidationStateAnnotation,
-} from '../../../state/plan-revalidation-state.js'
-import type { PlanRevalidationState } from '../../../state/plan-revalidation-state.js'
 
 // ============================================================================
 // Helpers

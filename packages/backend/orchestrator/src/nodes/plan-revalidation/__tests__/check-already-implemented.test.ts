@@ -5,6 +5,13 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import type { PlanRevalidationState } from '../../../state/plan-revalidation-state.js'
+import {
+  lookupArtifacts,
+  evaluateImplementationStatus,
+  createCheckAlreadyImplementedNode,
+  type ArtifactLookupResult,
+} from '../check-already-implemented.js'
 
 vi.mock('@repo/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -22,14 +29,6 @@ vi.mock('@langchain/langgraph', () => {
   )
   return { Annotation }
 })
-
-import type { PlanRevalidationState } from '../../../state/plan-revalidation-state.js'
-import {
-  lookupArtifacts,
-  evaluateImplementationStatus,
-  createCheckAlreadyImplementedNode,
-  type ArtifactLookupResult,
-} from '../check-already-implemented.js'
 
 // ============================================================================
 // Helpers
