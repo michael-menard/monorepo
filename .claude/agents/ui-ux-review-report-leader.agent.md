@@ -4,7 +4,7 @@ updated: 2026-01-25
 version: 3.0.0
 type: leader
 permission_level: docs-only
-triggers: ["/ui-ux-review"]
+triggers: ['/ui-ux-review']
 skills_used:
   - /token-log
 ---
@@ -14,22 +14,26 @@ skills_used:
 **Model**: haiku
 
 ## Mission
+
 Compile review findings into final UI-UX-REVIEW report.
 
 ## Inputs
-- Feature directory (e.g., `plans/features/wishlist`)
+
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
-- `feature_dir`, `story_id`, `base_path`
+Read from KB: `kb_read_artifact({ story_id, artifact_type: "context", artifact_name: "UI-UX-REVIEW-CONTEXT" })`:
 
-Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
+- `story_id`
+
+Read from KB: `kb_read_artifact({ story_id, artifact_type: "uiux_notes" })`:
+
 - All check results and findings
 
 ## Output Format
+
 Follow `.claude/agents/_shared/lean-docs.md`
 
-Write to `{FEATURE_DIR}/stories/{STORY_ID}/UI-UX-REVIEW-{STORY_ID}.md`:
+Write via `kb_write_artifact({ story_id, artifact_type: "review", artifact_name: "REVIEW-UIUX", content: {report} })`:
 
 ```markdown
 # UI/UX Review: {STORY_ID}
@@ -39,53 +43,57 @@ Write to `{FEATURE_DIR}/stories/{STORY_ID}/UI-UX-REVIEW-{STORY_ID}.md`:
 
 ## Design System Compliance
 
-| Check | Status | Evidence |
-|-------|--------|----------|
-| Token colors only | PASS/FAIL | {file:line or "Clean"} |
-| No custom fonts | PASS/FAIL | {evidence} |
-| No inline styles | PASS/FAIL | {evidence} |
-| shadcn via _primitives | PASS/FAIL | {evidence} |
-| Pattern compliance | PASS/FAIL | {evidence} |
-| Logger usage | PASS/FAIL | {evidence} |
+| Check                   | Status    | Evidence               |
+| ----------------------- | --------- | ---------------------- |
+| Token colors only       | PASS/FAIL | {file:line or "Clean"} |
+| No custom fonts         | PASS/FAIL | {evidence}             |
+| No inline styles        | PASS/FAIL | {evidence}             |
+| shadcn via \_primitives | PASS/FAIL | {evidence}             |
+| Pattern compliance      | PASS/FAIL | {evidence}             |
+| Logger usage            | PASS/FAIL | {evidence}             |
 
 ## Accessibility
 
 **Tool**: axe
 **Routes Tested**: {list}
 
-| Severity | Count | Details |
-|----------|-------|---------|
-| Critical | N | {summary or "None"} |
-| Serious | N | {summary} |
-| Moderate | N | {summary} |
-| Minor | N | {summary} |
+| Severity | Count | Details             |
+| -------- | ----- | ------------------- |
+| Critical | N     | {summary or "None"} |
+| Serious  | N     | {summary}           |
+| Moderate | N     | {summary}           |
+| Minor    | N     | {summary}           |
 
 ## Performance & Web Metrics
 
 **Routes Tested**: {list}
 
 ### Lighthouse Scores
-| Metric | Score |
-|--------|-------|
-| Performance | NN |
-| Accessibility | NN |
-| Best Practices | NN |
-| SEO | NN |
+
+| Metric         | Score |
+| -------------- | ----- |
+| Performance    | NN    |
+| Accessibility  | NN    |
+| Best Practices | NN    |
+| SEO            | NN    |
 
 ### Web Vitals
-| Metric | Value | Status |
-|--------|-------|--------|
-| FCP | NNms | OK/WARN |
-| LCP | NNms | OK/WARN |
-| CLS | N.NN | OK/WARN |
-| TTI | NNms | OK/WARN |
+
+| Metric | Value | Status  |
+| ------ | ----- | ------- |
+| FCP    | NNms  | OK/WARN |
+| LCP    | NNms  | OK/WARN |
+| CLS    | N.NN  | OK/WARN |
+| TTI    | NNms  | OK/WARN |
 
 ## Findings
 
 ### Violations (Must Fix)
+
 {list with file:line references, or "None"}
 
 ### Warnings (Should Fix)
+
 {list with file:line references, or "None"}
 
 ## Ship Decision
@@ -104,18 +112,20 @@ Write to `{FEATURE_DIR}/stories/{STORY_ID}/UI-UX-REVIEW-{STORY_ID}.md`:
 
 ## Verdict Logic
 
-| Condition | Verdict |
-|-----------|---------|
-| Any design system violation | FAIL |
-| Any critical/serious a11y issue | FAIL |
-| Explicit performance threshold violated | FAIL |
-| Moderate a11y or metric warnings only | PASS-WITH-WARNINGS |
-| All checks pass | PASS |
+| Condition                               | Verdict            |
+| --------------------------------------- | ------------------ |
+| Any design system violation             | FAIL               |
+| Any critical/serious a11y issue         | FAIL               |
+| Explicit performance threshold violated | FAIL               |
+| Moderate a11y or metric warnings only   | PASS-WITH-WARNINGS |
+| All checks pass                         | PASS               |
 
 ## Signals
+
 - `REPORT COMPLETE` - Final report written
 - `REPORT FAILED: <reason>` - Cannot compile report
 
 ## Token Tracking
+
 See: `.claude/agents/_shared/token-tracking.md`
 Call: `/token-log {STORY_ID} ui-ux-review <in> <out>`

@@ -5,7 +5,7 @@ version: 2.2.0
 type: leader
 permission_level: write-artifacts
 schema: packages/backend/orchestrator/src/artifacts/review.ts
-triggers: ["/dev-code-review"]
+triggers: ['/dev-code-review']
 kb_tools:
   - artifact_write
 ---
@@ -21,8 +21,8 @@ Aggregate code review worker outputs into REVIEW.yaml. Generate ranked patches f
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: STORY-XXX
-- `feature_dir`: Path to feature directory
 - `worker_outputs`: YAML results from 10 workers (lint, style, syntax, security, typecheck, build, reusability, react, typescript, accessibility)
 - `carried_forward`: Map of worker names to previous PASS results (if any skipped)
 - `iteration`: Current review iteration number
@@ -52,33 +52,30 @@ From orchestrator context:
    - `pre_existing_build_failures`: from `build.pre_existing_failures` (0 if absent)
    - `note`: human-readable summary, e.g. "12 type errors exist outside this story's scope"
 
-5. **Write Review Artifact (Dual-Write: File + KB)**
+6. **Write Review Artifact to KB**
 
 ## Output Format
 
-Write via `artifact_write` (dual-write: file system primary, KB secondary best-effort):
+Write via `kb_write_artifact`:
 
 ```javascript
-const result = artifact_write({
-  story_id: "{STORY_ID}",
-  artifact_type: "review",
-  phase: "code_review",
-  iteration: {iteration},
-  file_path: "{feature_dir}/stories/{story_id}/_implementation/REVIEW.yaml",
-  content: { /* REVIEW structure below */ }
+kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'review',
+  phase: 'code_review',
+  iteration: { iteration },
+  content: {
+    /* REVIEW structure below */
+  },
 })
-
-// Graceful failure handling:
-// - If result.file_written === false: hard failure — REVIEW not persisted; emit AGGREGATE BLOCKED
-// - If result.kb_write_warning: soft warning — log but continue; REVIEW preserved on filesystem
 ```
 
 Full content structure:
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-timestamp: "2026-02-01T12:00:00.000Z"
+story_id: '{STORY_ID}'
+timestamp: '2026-02-01T12:00:00.000Z'
 iteration: 1
 
 verdict: PASS | FAIL
@@ -94,13 +91,13 @@ workers_skipped:
 
 ranked_patches:
   - priority: 1
-    file: "src/handlers/list.ts"
+    file: 'src/handlers/list.ts'
     issue: "Type 'string' is not assignable to type 'number'"
     severity: high
     auto_fixable: false
     worker: typecheck
   - priority: 2
-    file: "src/handlers/list.ts"
+    file: 'src/handlers/list.ts'
     issue: "'x' is defined but never used"
     severity: medium
     auto_fixable: true
@@ -173,8 +170,8 @@ total_warnings: 2
 auto_fixable_count: 1
 
 codebase_health:
-  pre_existing_type_errors: 12       # errors in non-touched files from typecheck run
-  pre_existing_build_failures: 0     # build failures in non-touched files
+  pre_existing_type_errors: 12 # errors in non-touched files from typecheck run
+  pre_existing_build_failures: 0 # build failures in non-touched files
   note: "12 type errors exist outside this story's scope"
 
 tokens:

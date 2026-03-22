@@ -17,7 +17,6 @@ Focus ONLY on risks that block the core user journey. Track non-MVP concerns sep
 
 ## Inputs (authoritative)
 
-- Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
 Read from:
@@ -45,7 +44,7 @@ Everything else is a **Future Risk** - important but not MVP-blocking.
 
 ## Output (MUST WRITE)
 
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/dev-feasibility.yaml`:
+Write via `kb_write_artifact({ story_id, artifact_type: "dev_feasibility", content: {feasibility_data} })`:
 
 ```yaml
 feasible: true | false
@@ -82,4 +81,4 @@ subtasks:
 
 Non-MVP risks and future scope are **omitted** — out of scope for this output.
 
-The leader reads this file and stores it as a `pm_dev_feasibility` KB artifact.
+The leader reads this from KB via `kb_read_artifact({ story_id, artifact_type: 'dev_feasibility' })`.
