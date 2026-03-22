@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "story_id": "WINT-7020",
+  "timestamp": "2026-03-21T18:36:00Z",
+  "gen_mode": false,
+  "touches": {
+    "backend": false,
+    "frontend": false,
+    "packages": false,
+    "db": false,
+    "contracts": false,
+    "ui": false,
+    "infra": false
+  },
+  "touched_paths_globs": [],
+  "risk_flags": {
+    "auth": false,
+    "payments": false,
+    "migrations": false,
+    "external_apis": false,
+    "security": false,
+    "performance": false
+  },
+  "summary": "Create structured migration plan for eliminating filesystem directory references from 89 agent/skill/command files based on WINT-7010 analysis",
+  "elaboration": "completed",
+  "artifact_outputs": [
+    {
+      "artifact_type": "analysis",
+      "artifact_name": "AGENT-MIGRATION-PLAN",
+      "description": "Structured migration plan with batch groupings, migration order, compatibility shim strategy, and per-agent remediation steps"
+    }
+  ],
+  "dependencies": [
+    {
+      "story_id": "WINT-7010",
+      "artifact_type": "analysis",
+      "artifact_name": "AGENT-FILESYSTEM-AUDIT",
+      "status": "required_already_complete"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-0",
+      "description": "Pre-condition gate — verify WINT-7010 analysis artifact exists"
+    },
+    {
+      "id": "AC-1",
+      "description": "kb_read_artifact returns non-null artifact with schema_version field"
+    },
+    {
+      "id": "AC-2",
+      "description": "Artifact contains batch_schedule array with required fields per batch"
+    },
+    {
+      "id": "AC-3",
+      "description": "All 89 files from WINT-7010 assigned to exactly one batch"
+    },
+    {
+      "id": "AC-4",
+      "description": "Artifact contains shim_strategy section"
+    },
+    {
+      "id": "AC-5",
+      "description": "Shared includes batch listed first with no dependencies"
+    },
+    {
+      "id": "AC-6",
+      "description": "Each batch has grep-based negative assertions + human review gate for Batch-0"
+    },
+    {
+      "id": "AC-7",
+      "description": "downstream_story_map linking batches to WINT-7030+"
+    },
+    {
+      "id": "AC-8",
+      "description": "All five reference categories enumerated with remediation actions"
+    },
+    {
+      "id": "AC-9",
+      "description": "Partially_migrated files get review-only remediation"
+    }
+  ]
+}
