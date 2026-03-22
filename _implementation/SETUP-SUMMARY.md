@@ -1,169 +1,208 @@
-# WINT-9090: Setup Summary
+# Phase 0 Setup Summary - APRS-1060
 
-**Timestamp**: 2026-02-24T21:45:00Z
-**Agent**: dev-setup-leader
-**Mode**: implement
-**Status**: SETUP COMPLETE
-
----
-
-## Pre-Implementation Verification
-
-### Story Status
-- Moved from `ready-to-work` → `in-progress`
-- File: `/Users/michaelmenard/Development/monorepo/plans/future/platform/wint/in-progress/WINT-9090/`
-- Story frontmatter updated (status: in-progress)
-- Index updated (stories.index.md)
-
-### Artifacts Created
-- `CHECKPOINT.yaml` — Phase: setup, Iteration: 0, Max: 3
-- `SCOPE.yaml` — Scope analysis with risk flags and touched paths
-- `WORKING-SET.md` — Constraints, canonical references, and implementation roadmap
+**Story ID:** APRS-1060  
+**Title:** Agent Escalation Chain  
+**Mode:** Implement (gen_mode: false)  
+**Status:** SETUP COMPLETE  
+**Timestamp:** 2026-03-21T00:00:00Z
 
 ---
 
-## Scope Summary
+## Story Overview
 
-**Story**: Create Context Cache LangGraph Nodes — Port context-warmer and session-manager to nodes/context/
+Implement a three-level quality-based escalation chain (Sonnet → Opus → human) triggered when an LLM node exhausts retries (NodeRetryExhaustedError). This is distinct from the existing provider-availability escalation chain.
 
-**Points**: 5 | **Priority**: medium | **Phase**: 9
-
-### Touches
-
-| Area | Status |
-|------|--------|
-| Backend | ✓ yes (LangGraph nodes) |
-| Frontend | ✗ no |
-| Packages | ✓ yes (@repo/logger, @repo/db, @repo/workflow-logic, MCP types) |
-| Database | ✓ yes (context_cache.contextPacks, contextSessions) |
-| Contracts | ✓ yes (Zod schemas) |
-| UI | ✗ no |
-| Infrastructure | ✗ no |
-
-### Risk Flags
-
-| Flag | Status | Notes |
-|------|--------|-------|
-| Security | ✓ flagged | Cache invalidation must be synchronized |
-| Performance | ✓ flagged | Concurrent read/write optimization |
-| Auth | ✗ clear | |
-| Payments | ✗ clear | |
-| Migrations | ✗ clear | No schema changes |
-| External APIs | ✗ clear | |
+**Key Requirement:** Budget guard before Opus, telemetry at each step, human tier blocks story with KB note context.
 
 ---
 
-## Implementation Dependencies
+## Scope Analysis
 
-**BLOCKING**: WINT-9010 (@repo/workflow-logic) must reach `uat` or `completed` status
+### Domains Touched
+- **Backend:** Orchestrator runner infrastructure ✓
+- **Packages:** Core retry/escalation logic ✓
+- **DB:** KB writes for notes/state updates ✓
+- Frontend: No
+- UI: No
+- Infra: No
 
-**Required packages**:
-- `@repo/logger` — All logging
-- `@repo/db` — Drizzle ORM client
-- `@repo/database-schema` — contextPacks, contextSessions schemas
-- `@repo/workflow-logic` — Conditional on WINT-9010 status
-- `packages/backend/mcp-tools/src/context-cache/__types__` — Zod schemas (import, don't duplicate)
-- `packages/backend/mcp-tools/src/session-management/__types__` — Zod schemas (import, don't duplicate)
+### Key Files to Modify/Create
 
----
+**Modify:**
+1. `packages/backend/orchestrator/src/runner/error-classification.ts` — Add `quality_below_threshold` category
+2. `packages/backend/orchestrator/src/runner/types.ts` — Type support
 
-## Constraints (CLAUDE.md Enforced)
+**Create:**
+1. `packages/backend/orchestrator/src/runner/quality-escalation.ts` — Main escalation wrapper (NEW)
+2. `packages/backend/orchestrator/src/runner/__tests__/quality-escalation.test.ts` — Unit tests (NEW)
+3. `packages/backend/orchestrator/src/runner/__tests__/quality-escalation-integration.test.ts` — Integration test (NEW)
 
-1. **Zod schemas required** — No TypeScript interfaces
-2. **No barrel files** — Import from source files directly
-3. **Logging via @repo/logger** — Never use console
-4. **Named exports** — Functions exported by name
-5. **Factory pattern** — All nodes use `createToolNode` from node-factory.ts
-6. **Graceful degradation** — DB failures return null, never throw
-7. **Test coverage >= 80%** — Story goal (vs. 45% minimum)
-
----
-
-## Canonical References
-
-Setup provides paths to reference implementations:
-
-| Pattern | File |
-|---------|------|
-| LangGraph node porting | `packages/backend/orchestrator/src/nodes/sync/doc-sync.ts` |
-| Extended graph state | `packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts` |
-| DB injection | `packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts` |
+**Reference (do NOT modify):**
+- `packages/backend/orchestrator/src/pipeline/model-router.ts` — Provider escalation chain (separate concern)
+- `packages/backend/orchestrator/src/pipeline/budget-accumulator.ts` — Budget checks
+- `packages/backend/orchestrator/src/nodes/workflow/decision-callback-node.ts` — Human decision node
+- `packages/backend/orchestrator/src/runner/retry.ts` — Existing retry logic
+- `packages/backend/orchestrator/src/runner/node-factory.ts` — Node creation
 
 ---
 
-## Implementation Roadmap
+## Acceptance Criteria (12 Total)
 
-### Phase 1: Directory & Index (ST-1, ~4k tokens)
-- Create `packages/backend/orchestrator/src/nodes/context/index.ts`
-- Stub both node exports
+### Gap Fixes (AC-GAP series)
+- **AC-GAP1:** Escalation triggered by NodeRetryExhaustedError only
+- **AC-GAP2:** Human tier sets blocked + KB note, no interactive prompt
+- **AC-GAP3:** Budget guard before Opus (BudgetAccumulator.checkBudget)
 
-### Phase 2: Context Warmer (ST-2+3, ~20k tokens)
-- `context-warmer.ts` with cache read/write/invalidate
-- Port from MCP tools (`context-cache-get.ts`, `context-cache-put.ts`, `context-cache-invalidate.ts`)
+### Decision-Driven (AC-DEC series)
+- **AC-DEC2:** Chain always starts from Sonnet regardless of original model
+- **AC-DEC4:** Structured telemetry at each escalation step
 
-### Phase 3: Session Manager (ST-4, ~14k tokens)
-- `session-manager.ts` with create/update/complete/cleanup
-- Port from MCP tools (`session-create.ts`, `session-update.ts`, etc.)
-
-### Phase 4: Tests (ST-5, ~16k tokens)
-- `__tests__/context-warmer.test.ts` with injectable mocks
-- `__tests__/session-manager.test.ts` with injectable mocks
-- Target >= 80% coverage
-
-### Phase 5: Verification
-- `pnpm check-types --filter @repo/orchestrator` ✓
-- `pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage` ✓
-- Code review → PR
+### Implementation (AC-1 through AC-7)
+- **AC-1:** New 'quality_below_threshold' error category in error-classification.ts
+- **AC-2:** withQualityEscalation composable wrapper in runner/
+- **AC-3:** Sonnet retry exhaustion → budget check → Opus invocation with telemetry
+- **AC-4:** Opus exhaustion or budget insufficient → human tier with blocked state
+- **AC-5:** Budget guard skips Opus with distinct blocked_reason
+- **AC-6:** Unit tests for all scenarios
+- **AC-7:** Integration test for full Sonnet→Opus→human path
 
 ---
 
-## Acceptance Criteria (14 total)
+## Implementation Subtasks
 
-All acceptance criteria from story are tracked in WORKING-SET.md
-
-- [ ] AC-1: context-warmer.ts factory and default export
-- [ ] AC-2: session-manager.ts factory and default export
-- [ ] AC-3: index.ts re-exports both nodes
-- [ ] AC-4: Cache read implementation
-- [ ] AC-5: Cache write implementation
-- [ ] AC-6: Session create implementation
-- [ ] AC-7: Session update/complete operations
-- [ ] AC-8: Both use createToolNode
-- [ ] AC-9: Extended GraphState interfaces defined
-- [ ] AC-10: DB injectable via factory
-- [ ] AC-11: Graceful DB failure degradation
-- [ ] AC-12: >= 80% test coverage
-- [ ] AC-13: Cache invalidation accessible
-- [ ] AC-14: Zod schemas defined (not duplicated)
+1. **ST-1:** Add `quality_below_threshold` error category to error-classification.ts
+2. **ST-2:** Implement `withQualityEscalation` wrapper in runner/quality-escalation.ts
+3. **ST-3:** Budget guard integration with BudgetAccumulator
+4. **ST-4:** Human tier: KB note context + blocked state
+5. **ST-5:** Escalation telemetry (structured logger events)
+6. **ST-6:** Unit tests (5 scenarios)
+7. **ST-7:** Integration test (full Sonnet→Opus→human path)
 
 ---
 
-## Environment
+## Critical Constraints
 
-- **Monorepo root**: `/Users/michaelmenard/Development/monorepo`
-- **Worktree**: `/Users/michaelmenard/Development/monorepo/tree/story/WINT-9090`
-- **Feature dir**: `plans/future/platform/wint`
-- **Main branch**: main
-- **Git status**: Clean (ready for feature branch)
+### Do NOT Modify
+- `model-router.ts` — Provider escalation is separate concern
+
+### Must Enforce
+1. Budget guard mandatory before Opus
+2. Human tier uses `noop` mode (DecisionCallbackNodeConfig.mode = 'noop')
+3. withQualityEscalation must compose without modifying factory signatures
+4. KB writes must be atomic with state advances
+5. Chain always starts from Sonnet (not from original model)
+
+### Codebase Patterns
+- Use `@repo/logger` (not console.log)
+- No barrel files (import from source directly)
+- Zod schemas for all types (no TypeScript interfaces)
+- Named exports preferred
+- Minimum 45% test coverage
 
 ---
 
-## Next Agent in Chain
+## Key Design Decisions
 
-**dev-implement-leader** will:
-1. Verify preconditions (dependencies, no prior work)
-2. Create feature branch
-3. Execute implementation subtasks (ST-1 through ST-5)
-4. Run tests and verification
-5. Generate evidence artifacts
-6. Prepare for code review
+### Quality Escalation vs. Provider Escalation
+
+The existing `model-router.ts` implements **provider escalation**: when a provider is unavailable, try the next provider in the chain (ollama → openrouter → anthropic).
+
+This story implements **quality escalation**: when an LLM node exhausts retries due to quality issues (NodeRetryExhaustedError), escalate to a higher-tier model regardless of original provider assignment.
+
+**Relationship:** Independent, composable layers. Both can be active simultaneously.
+
+### Budget Guard Before Opus
+
+Before escalating from Sonnet to Opus:
+1. Check remaining budget using `BudgetAccumulator.checkBudget(storyId, opusTokenEstimate, hardCap)`
+2. If budget insufficient: skip Opus, go directly to human tier with distinct `blocked_reason`
+3. If budget sufficient: invoke Opus with telemetry
+
+### Human Tier Behavior
+
+The human tier:
+- Does NOT prompt interactively (uses `mode: 'noop'`)
+- Sets story state to `blocked`
+- Writes KB note with context (original error, escalation path, budget status)
+- Human intervention required to unblock
+
+### Telemetry Strategy
+
+Structured logging at each step:
+```
+{
+  event: 'quality_escalation_attempt',
+  story_id: '...',
+  from_tier: 'sonnet',
+  to_tier: 'opus',
+  reason: '...',
+  tokens_consumed: 1234,
+  budget_remaining: 5678
+}
+```
 
 ---
 
-## Key Decisions
+## Setup Artifacts
 
-1. **Porting pattern**: Use WINT-9020 (doc-sync.ts) as canonical reference
-2. **DB access**: Injectable via factory functions (no module-scope hard-wiring)
-3. **Error handling**: Log + return null/false (never throw)
-4. **Schema source**: Import from MCP tool __types__, never duplicate
-5. **Implementation gate**: WINT-9010 must be at least uat status before starting code
+### Checkpoint (Iteration 0)
+- Phase: setup
+- Status: COMPLETE
+- Next Phase: implementation
+
+### Scope
+- Touches: backend, packages, db
+- Risk flags: external_apis, security, performance, budget_enforcement, kb_atomicity
+- Elaboration: completed
+
+---
+
+## Next Steps (for Implementation Lead)
+
+1. **Read** the story requirements in detail (APRS-1060 story artifact)
+2. **Implement ST-1:** Add error category to error-classification.ts
+3. **Implement ST-2:** Create quality-escalation.ts wrapper
+4. **Implement ST-3-5:** Integrate budget, human tier, telemetry
+5. **Test ST-6-7:** Unit and integration tests
+6. **Verify** all 12 ACs pass
+7. **Code review** per REVIEW.yaml checklist
+8. **QA verification** per verification plan
+
+---
+
+## Constraint Verification
+
+All constraints from story description verified:
+
+| Constraint | Status | Evidence |
+|-----------|--------|----------|
+| Do NOT modify model-router.ts | ✓ | Separate concern, not in touched_paths_globs |
+| Budget guard mandatory | ✓ | ST-3 explicit, AC-GAP3, AC-5 |
+| Human tier noop mode | ✓ | AC-GAP2, referenced in design |
+| Composable wrapper | ✓ | ST-2 withQualityEscalation, no factory changes |
+| KB atomicity | ✓ | Design decision documented |
+| Chain starts from Sonnet | ✓ | AC-DEC2 acceptance criteria |
+
+---
+
+## Reference Materials
+
+**Key Files for Context:**
+- `packages/backend/orchestrator/src/runner/retry.ts` — NodeRetryExhaustedError thrown here
+- `packages/backend/orchestrator/src/runner/error-classification.ts` — ErrorCategory enum
+- `packages/backend/orchestrator/src/runner/types.ts` — NodeRetryConfig, related types
+- `packages/backend/orchestrator/src/pipeline/budget-accumulator.ts` — BudgetAccumulator.checkBudget()
+- `packages/backend/orchestrator/src/nodes/workflow/decision-callback-node.ts` — DecisionCallbackNodeConfig.mode
+
+**Testing Patterns:**
+- Vitest framework
+- Mock retry exhaustion scenarios
+- Verify telemetry events emitted
+- Test budget guard transitions
+- Integration: full chain simulation
+
+---
+
+**Setup Completed:** 2026-03-21T00:00:00Z  
+**Ready for Implementation:** Yes  
+**Blocking Issues:** None
