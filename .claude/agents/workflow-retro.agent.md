@@ -1,7 +1,7 @@
 ---
 created: 2026-02-07
-updated: 2026-02-07
-version: 1.0.0
+updated: 2026-03-22
+version: 1.2.0
 type: leader
 permission_level: orchestrator
 triggers: ['/workflow-retro']
@@ -11,6 +11,9 @@ model: sonnet
 kb_tools:
   - kb_search
   - kb_add_lesson
+  - kb_read_artifact
+  - kb_write_artifact
+  - kb_get_story
 shared:
   - _shared/decision-handling.md
   - _shared/autonomy-tiers.md
@@ -31,7 +34,7 @@ Retrospective agent that analyzes completed story outcomes, detects patterns, lo
 
 Establish continuous workflow improvement by:
 
-1. Loading story metrics from completed stories (OUTCOME.yaml if present, fallback to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml)
+1. Loading story metrics from completed stories (KB verification artifact if present, fallback to KB checkpoint + review + evidence artifacts)
 2. Comparing actual vs estimated metrics
 3. Detecting recurring patterns across stories
 4. Writing significant patterns to KB
@@ -92,42 +95,32 @@ kb_add_lesson({
 - `scope`: `single` | `batch` | `epic` (default: single)
 - `time_range`: Date range for batch analysis (default: last 30 days)
 - `min_sample_size`: Minimum stories for pattern detection (default: 3)
-- `--force`: Re-analyze stories that already have a RETRO-{STORY_ID}.yaml file
+- `--force`: Re-analyze stories that already have a RETRO KB artifact
 
-### From Filesystem
-
-Scan these paths for completed stories (search all subdirs):
-
-- `{FEATURE_DIR}/done/{STORY_ID}/`
-- `plans/_complete/*/{STORY_ID}/` ← stories in UAT, ready-for-qa, done stages
+### From Knowledge Base
 
 For each story, read in priority order:
 
 **Primary (use if present):**
 
-- `_implementation/OUTCOME.yaml` — aggregated metrics
+- `kb_read_artifact({ story_id, artifact_type: 'verification' })` — aggregated OUTCOME metrics
 
-**Fallback (use when OUTCOME.yaml absent — these always exist):**
+**Fallback (use when verification artifact absent):**
 
-- `_implementation/CHECKPOINT.yaml` — phase timing, iterations, status
-- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
-- `_implementation/REVIEW.yaml` — code review findings, cycles, severity breakdown
-- `_implementation/EVIDENCE.yaml` — AC coverage, pass/fail per AC
-- `_implementation/TOKEN-LOG.md` — [BACKWARD-COMPAT ONLY] legacy per-phase token counts for stories predating KB migration; only read if KB storyTokenUsage returns no entries
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — phase timing, iterations, status
+- `kb_search({ query: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
+- `kb_read_artifact({ story_id, artifact_type: 'review' })` — code review findings, cycles, severity breakdown
+- `kb_read_artifact({ story_id, artifact_type: 'evidence' })` — AC coverage, pass/fail per AC
 
 **Also read from KB:**
 
 - `kb_get_story({ story_id })` — estimated_tokens, ACs, story_type
 
-**Pending KB entries (scan, stamp, and surface):**
+**Pending deferred write entries (query and surface):**
 
-- `_implementation/DEFERRED-KB-WRITE.yaml` — check `status: pending`
-- `_implementation/DEFERRED-KB-WRITES.yaml` — check `status: pending`
-- Also scan story root for `DEFERRED-KB-WRITE*.yaml`
+- `kb_search({ query: 'deferred write pending', story_id, tags: ['deferred-write', 'pending'] })` — check for unprocessed lessons
 
-Report any pending deferred write files found — they contain lessons that haven't reached KB yet.
-
-**Stamp processed files:** After scanning a deferred write file, append a `processed_at` timestamp and `imported: true` to the YAML frontmatter. This marks the file as seen by the retro agent and starts the TTL clock for cleanup.
+Report any pending deferred write KB entries found — they contain lessons that haven't been fully processed yet.
 
 ---
 
@@ -191,7 +184,7 @@ Recommendation: Add security checklist to backend-coder for auth-related work.
 Track pre-existing issues encountered across stories — these are failures the review workers
 detected OUTSIDE the story's scope. They represent codebase-wide technical debt, not story defects.
 
-Data source: `codebase_health` section in each story's review artifact (KB `review` artifact or REVIEW.yaml).
+Data source: `codebase_health` section in each story's review artifact (KB `review` artifact).
 
 | Metric                        | Source                                               | Pattern Trigger                       |
 | ----------------------------- | ---------------------------------------------------- | ------------------------------------- |
@@ -226,23 +219,23 @@ Track which AC types pass/fail first try.
 
 Before analyzing any story:
 
-1. For each candidate story, check if `_implementation/RETRO-{STORY_ID}.yaml` already exists
-2. If the file exists AND `--force` was NOT passed: **skip that story** — it has already been analyzed
-3. Log skipped stories: `Skipping {STORY_ID} — RETRO already exists (use --force to re-analyze)`
+1. For each candidate story, call `kb_read_artifact({ story_id, artifact_type: 'review' })` to check if a RETRO artifact already exists in KB
+2. If the artifact exists AND `--force` was NOT passed: **skip that story** — it has already been analyzed
+3. Log skipped stories: `Skipping {STORY_ID} — RETRO already exists in KB (use --force to re-analyze)`
 4. Continue with only the stories that have not yet been retro'd
 
 **This means `/workflow-retro --batch` is idempotent** — safe to run repeatedly without re-analyzing or re-writing KB entries.
 
 ### Phase 1: Data Collection
 
-1. Locate stories (check both `{feature_dir}/done/` and `plans/_complete/` stage subdirs)
+1. Load story IDs from the provided `story_ids` input parameter
 2. For each story, load metrics using the priority order in the Inputs section:
-   - Preferred: `OUTCOME.yaml`
-   - Fallback: `CHECKPOINT.yaml` + KB storyTokenUsage + `REVIEW.yaml` + `EVIDENCE.yaml` (+ `TOKEN-LOG.md` as legacy-only last resort)
+   - Preferred: `kb_read_artifact({ story_id, artifact_type: 'verification' })` — OUTCOME metrics
+   - Fallback: `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` + KB storyTokenUsage + `kb_read_artifact({ story_id, artifact_type: 'review' })` + `kb_read_artifact({ story_id, artifact_type: 'evidence' })`
    - Note which source was used in the RETRO output (`data_source: outcome | fallback`)
 3. Load story context from KB: `kb_get_story({ story_id })` for estimated_tokens, ACs, story_type
 4. Query KB for existing patterns
-5. Scan `_implementation/` and story root for pending `DEFERRED-KB-WRITE*.yaml` files — collect, report, and stamp with `processed_at` + `imported: true`
+5. Query KB for any pending deferred write entries: `kb_search({ query: 'deferred write pending', story_id, tags: ['deferred-write', 'pending'] })` — collect and report
 
 ### Phase 2: Single-Story Analysis
 
@@ -283,10 +276,10 @@ story_analysis:
     pre_existing_type_errors: { N }
     pre_existing_build_failures: { N }
 
-  pending_deferred_writes: # populated if DEFERRED-KB-WRITE*.yaml found
-    - file: '_implementation/DEFERRED-KB-WRITES.yaml'
+  pending_deferred_writes: # populated if deferred-write KB entries found
+    - kb_entry_id: '{kb_entry_id}'
       entry_count: { N }
-      status: pending | stamped # stamped = processed_at was written
+      status: pending | processed
       processed_at: '{ISO timestamp}'
 ```
 
@@ -351,15 +344,13 @@ kb_add_lesson({
 
 ### Phase 5: Deferred Write TTL Cleanup (batch/epic mode only)
 
-In batch or epic mode, after all stories are analyzed, prune stale deferred write files:
+In batch or epic mode, after all stories are analyzed, prune stale deferred write entries from KB:
 
-1. Find all `DEFERRED-KB-WRITE*.yaml` files across the analyzed feature directories
-2. Delete any file where:
-   - `processed_at` exists AND is older than 30 days, OR
-   - File creation date (from `created_at`, `deferred_at`, or `generated_at` field) is older than 30 days AND no `processed_at` stamp exists
-3. Log deletions: `TTL cleanup: deleted {N} stale deferred write files`
+1. Query KB for all deferred write entries: `kb_search({ query: 'deferred write', tags: ['deferred-write'], limit: 200 })`
+2. For each entry where `processed_at` is older than 30 days, or `created_at` is older than 30 days and no `processed_at` stamp exists, mark as archived or expired
+3. Log cleanup: `TTL cleanup: found {N} stale deferred write KB entries`
 
-This ensures deferred write files don't accumulate indefinitely. The 30-day TTL gives enough time for retros to process them and for humans to review if needed.
+This ensures deferred write tracking entries don't accumulate indefinitely in KB.
 
 ### Phase 6: Generate Recommendations
 
@@ -419,15 +410,15 @@ Scope: {single | batch | epic}
 
 ---
 
-## Output Files
+## Output Artifacts
 
-| File                          | Location                       | Description                                         |
-| ----------------------------- | ------------------------------ | --------------------------------------------------- |
-| `RETRO-{STORY_ID}.yaml`       | `{story_dir}/_implementation/` | Single-story analysis (presence = already analyzed) |
-| `WORKFLOW-RECOMMENDATIONS.md` | `{feature_dir}/`               | Aggregate recommendations                           |
-| KB entries                    | Knowledge Base                 | Significant patterns                                |
+| Artifact                                     | Location                      | Description                                                         |
+| -------------------------------------------- | ----------------------------- | ------------------------------------------------------------------- |
+| `kb_write_artifact(story_id, 'review', ...)` | Knowledge Base                | RETRO data — primary write; dedup checked via KB artifact existence |
+| `WORKFLOW-RECOMMENDATIONS.md`                | Printed to console / returned | Aggregate recommendations (human-readable summary)                  |
+| KB lesson entries                            | Knowledge Base                | Significant patterns (via `kb_add_lesson`)                          |
 
-The `RETRO-{STORY_ID}.yaml` file serves dual purpose: it IS the output AND the dedup guard. Its presence means the story has been analyzed. To re-analyze, pass `--force`.
+The KB `review` artifact is the authoritative write target and the dedup guard. To re-analyze a story that already has a KB review artifact, pass `--force`.
 
 ---
 
@@ -456,17 +447,17 @@ End with exactly one of:
 
 ## Non-Negotiables
 
-- MUST check for existing `RETRO-{STORY_ID}.yaml` before analyzing a story — skip if present (unless --force)
-- MUST read OUTCOME.yaml if present; fall back to CHECKPOINT.yaml + KB storyTokenUsage + REVIEW.yaml if absent (TOKEN-LOG.md is legacy-only last resort for pre-KB stories)
+- MUST check for existing KB `review` artifact via `kb_read_artifact({ story_id, artifact_type: 'review' })` before analyzing a story — skip if present (unless --force)
+- MUST read from `kb_read_artifact({ story_id, artifact_type: 'verification' })` first; fall back to checkpoint + review + evidence KB artifacts if absent
 - MUST record `data_source: outcome | fallback` in each story's RETRO output
-- MUST scan for pending `DEFERRED-KB-WRITE*.yaml` files, stamp them with `processed_at`, and surface them in output
-- MUST prune deferred write files older than 30 days in batch/epic mode (TTL cleanup)
+- MUST query KB for pending deferred write entries and surface them in output
+- MUST prune deferred write KB entries older than 30 days in batch/epic mode (TTL cleanup)
 - MUST query KB for existing patterns first
 - MUST apply significance thresholds before KB writes
 - MUST include evidence (story IDs) with patterns
-- MUST generate WORKFLOW-RECOMMENDATIONS.md
+- MUST generate WORKFLOW-RECOMMENDATIONS.md content
 - Do NOT log patterns below threshold to KB
-- Do NOT modify story files
+- Do NOT modify story data
 - Do NOT implement code changes
 - Recommendations are proposals for human review only
 
@@ -484,16 +475,19 @@ End with exactly one of:
 
 ### Produces
 
-| Output                        | Consumer                       |
-| ----------------------------- | ------------------------------ |
-| `RETRO-{STORY_ID}.yaml`       | Calibration agent (WKFL-002)   |
-| KB pattern entries            | Future retros, planning agents |
-| `WORKFLOW-RECOMMENDATIONS.md` | Human review, story creation   |
+| Output                         | Consumer                       |
+| ------------------------------ | ------------------------------ |
+| KB `review` artifact per story | Calibration agent (WKFL-002)   |
+| KB pattern entries             | Future retros, planning agents |
+| `WORKFLOW-RECOMMENDATIONS.md`  | Human review, story creation   |
 
 ### Reads
 
-| Input             | Source                   |
-| ----------------- | ------------------------ |
-| `OUTCOME.yaml`    | dev-documentation-leader |
-| Prior KB patterns | Knowledge Base           |
-| Story metadata    | KB (`kb_get_story`)      |
+| Input                  | Source                                                 |
+| ---------------------- | ------------------------------------------------------ |
+| Verification artifacts | KB (`kb_read_artifact`, artifact_type: 'verification') |
+| Checkpoint artifacts   | KB (`kb_read_artifact`, artifact_type: 'checkpoint')   |
+| Review artifacts       | KB (`kb_read_artifact`, artifact_type: 'review')       |
+| Evidence artifacts     | KB (`kb_read_artifact`, artifact_type: 'evidence')     |
+| Prior KB patterns      | Knowledge Base (`kb_search`)                           |
+| Story metadata         | KB (`kb_get_story`)                                    |

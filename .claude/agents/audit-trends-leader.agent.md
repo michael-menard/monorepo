@@ -1,10 +1,14 @@
 ---
 created: 2026-02-11
-updated: 2026-02-11
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: leader
 permission_level: write-artifacts
-triggers: ["/code-audit trends"]
+triggers: ['/code-audit trends']
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: audit-trends-leader
@@ -12,39 +16,50 @@ triggers: ["/code-audit trends"]
 **Model**: haiku
 
 ## Mission
+
 Analyze trends across multiple audit runs. Compute violations over time, identify worst offenders, and track improvement or regression.
 
 ## Inputs
+
 From orchestrator context:
+
 - `lens_filter`: specific lens to analyze (optional)
 - `file_filter`: specific file to analyze (optional)
 - `days`: time window in days (default: 30)
 
 ## Task
 
-### 1. Load All Findings Files
-Read all `plans/audit/FINDINGS-*.yaml` files.
-Filter to files within the `--days` window.
+### 1. Load All Findings
+
+Read from KB:
+
+- `kb_read_artifact({ story_id: 'WINT-7080', artifact_type: 'analysis' })` — consolidated findings data
+- If not found, call `kb_search({ query: 'audit findings', tags: ['audit'] })` to locate findings artifacts
+- Filter to findings within the `--days` window
 
 ### 2. Compute Trend Metrics
 
 **Overall Trends:**
+
 - Total findings per audit run (line over time)
 - Findings by severity per run
 - Findings by lens per run
 - New vs recurring vs fixed per run
 
 **Worst Offender Files:**
+
 - Files that appear most frequently across audits
 - Files with highest total severity score
 - Files that are getting worse (increasing findings)
 
 **Lens Trends:**
+
 - Which lenses are improving over time?
 - Which lenses are regressing?
 - Which lenses have the most persistent issues?
 
 **Fix Rate:**
+
 - Percentage of findings fixed between audits
 - Average time to fix by severity
 - Which lenses get fixed fastest?
@@ -52,11 +67,13 @@ Filter to files within the `--days` window.
 ### 3. Generate Trend Summary
 
 ## Output Format
-Write to `plans/audit/TRENDS.yaml` (overwrite existing):
+
+Write to KB: `kb_write_artifact({ story_id: 'WINT-7080', artifact_type: 'analysis', artifact_name: 'TRENDS', content: { ... } })`
+Also present the following as formatted output to the user (TRENDS summary):
 
 ```yaml
 schema: 1
-generated: "2026-02-11T18:30:00Z"
+generated: '2026-02-11T18:30:00Z'
 window_days: 30
 audits_analyzed: 4
 
@@ -97,23 +114,23 @@ by_lens:
   # ... etc
 
 worst_offenders:
-  - file: "apps/web/main-app/src/App.tsx"
+  - file: 'apps/web/main-app/src/App.tsx'
     total_findings: 8
     appearances: 4
     trend: stable
-  - file: "apps/api/lego-api/src/handlers/sets.ts"
+  - file: 'apps/api/lego-api/src/handlers/sets.ts'
     total_findings: 6
     appearances: 3
     trend: regressing
 
 timeline:
-  - date: "2026-02-11"
+  - date: '2026-02-11'
     total: 42
     critical: 2
     high: 8
     medium: 20
     low: 12
-  - date: "2026-02-04"
+  - date: '2026-02-04'
     total: 50
     critical: 3
     high: 10
@@ -145,11 +162,13 @@ Top 3 Worst Offenders:
 ```
 
 ## Rules
-- Read all FINDINGS yaml files in the time window
+
+- Load all findings from KB within the time window (use `kb_read_artifact` then `kb_search` as fallback)
 - If only 1 audit exists, report current state without trend comparison
 - If no audits exist, report error
 - Trend classification: improving (>10% reduction), stable (<10% change), regressing (>10% increase)
 - Worst offenders = files appearing in 2+ audits with high cumulative severity
 
 ## Completion Signal
+
 - `TRENDS COMPLETE: {audits_analyzed} audits, trend: {overall_trend}`

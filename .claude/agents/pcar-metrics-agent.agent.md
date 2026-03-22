@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [scrum-master-loop-leader, dev-verification-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: pcar-metrics-agent
@@ -27,9 +31,10 @@ Worker agent responsible for calculating the **NORTH STAR METRIC** for planning 
 From PLAN.md:
 
 > **We do not optimize for fewer cycles.
-> We optimize for fewer surprises *after commitment*.**
+> We optimize for fewer surprises _after commitment_.**
 
 PCAR is the primary indicator of planning quality. It answers:
+
 - Did we reduce ambiguity at commitment time?
 - Did planning capture what mattered?
 - Where do upstream gaps leak through?
@@ -39,16 +44,19 @@ PCAR is the primary indicator of planning quality. It answers:
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being analyzed (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
 - `commitment_timestamp`: When commitment gate was passed (ISO timestamp)
 
-From filesystem:
-- Workflow events at `{output_dir}/_implementation/EVENTS.yaml` (if exists)
-- Checkpoint data at `{output_dir}/_implementation/CHECKPOINT.md`
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — workflow events and checkpoint data
+
+If KB is unavailable, log a warning and return degraded metrics with `data_source: 'unavailable'`.
 
 From graph state (if running in LangGraph):
+
 - `collectedEvents`: Array of workflow events from event collection node
 
 ---
@@ -59,10 +67,10 @@ From graph state (if running in LangGraph):
 
 Only two event types count toward PCAR:
 
-| Type | Detection Criteria | Examples |
-|------|-------------------|----------|
+| Type            | Detection Criteria                              | Examples                                                                  |
+| --------------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
 | `clarification` | Questions from dev to PM/UX/QA after commitment | "What should happen when...?", "Is this in scope?", "Can you clarify...?" |
-| `scope_change` | AC additions/modifications after commitment | New AC added, AC wording changed, constraint added |
+| `scope_change`  | AC additions/modifications after commitment     | New AC added, AC wording changed, constraint added                        |
 
 ### Post-Commitment Definition
 
@@ -83,23 +91,23 @@ An event is **post-commitment** if ANY of these conditions are true:
 ```yaml
 clarification_signals:
   question_patterns:
-    - "\\?"  # Direct questions
-    - "clarify|clarification"
-    - "what do you mean"
-    - "can you explain"
-    - "not sure about"
-    - "unclear"
-    - "ambiguous"
-    - "which approach"
-    - "should I"
-    - "is this correct"
+    - "\\?" # Direct questions
+    - 'clarify|clarification'
+    - 'what do you mean'
+    - 'can you explain'
+    - 'not sure about'
+    - 'unclear'
+    - 'ambiguous'
+    - 'which approach'
+    - 'should I'
+    - 'is this correct'
 
   context_patterns:
-    - "asked PM about"
-    - "checked with UX"
-    - "confirmed with QA"
-    - "needed clarification on"
-    - "ambiguity in AC"
+    - 'asked PM about'
+    - 'checked with UX'
+    - 'confirmed with QA'
+    - 'needed clarification on'
+    - 'ambiguity in AC'
 ```
 
 #### Scope Change Detection
@@ -107,20 +115,20 @@ clarification_signals:
 ```yaml
 scope_change_signals:
   ac_changes:
-    - "AC added"
-    - "AC modified"
-    - "AC removed"
-    - "acceptance criteria updated"
+    - 'AC added'
+    - 'AC modified'
+    - 'AC removed'
+    - 'acceptance criteria updated'
 
   constraint_changes:
-    - "constraint added"
-    - "constraint modified"
-    - "scope expanded"
-    - "scope reduced"
+    - 'constraint added'
+    - 'constraint modified'
+    - 'scope expanded'
+    - 'scope reduced'
 
   file_changes:
-    - "affected files changed"
-    - "new files added to scope"
+    - 'affected files changed'
+    - 'new files added to scope'
 ```
 
 ---
@@ -134,13 +142,12 @@ scope_change_signals:
 **Actions**:
 
 1. **Find commitment timestamp**:
-   - Check CHECKPOINT.md for commitment phase timestamp
-   - Check EVENTS.yaml for commitment event
-   - Check graph state for commitment gate result
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get checkpoint data including commitment phase timestamp
+   - Check graph state for commitment gate result (if running in LangGraph)
 
 2. **Load workflow events**:
-   - Read from EVENTS.yaml if file-based
-   - Read from graph state if orchestrator-based
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get workflow events (same artifact as above)
+   - Read from graph state `collectedEvents` if orchestrator-based
 
 3. **Verify commitment exists**:
    - PCAR is only meaningful if commitment occurred
@@ -191,6 +198,7 @@ scope_change_signals:
 **Objective**: Compute the PCAR metric.
 
 **Formula**:
+
 ```
 PCAR = (clarification_count + scope_change_count) / stories_analyzed
 ```
@@ -203,12 +211,12 @@ For single-story analysis: `stories_analyzed = 1`
 
 **Insight Categories**:
 
-| PCAR Level | Rate | Insight |
-|------------|------|---------|
-| Excellent | 0 | Zero post-commitment ambiguity - planning was thorough |
-| Moderate | 1-2 | Room for improvement in planning |
-| High | 3-4 | Consider improving elaboration phase |
-| Critical | 5+ | Significant planning gaps need investigation |
+| PCAR Level | Rate | Insight                                                |
+| ---------- | ---- | ------------------------------------------------------ |
+| Excellent  | 0    | Zero post-commitment ambiguity - planning was thorough |
+| Moderate   | 1-2  | Room for improvement in planning                       |
+| High       | 3-4  | Consider improving elaboration phase                   |
+| Critical   | 5+   | Significant planning gaps need investigation           |
 
 **Pattern Insights**:
 
@@ -223,39 +231,39 @@ For single-story analysis: `stories_analyzed = 1`
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-calculated_at: "{ISO_TIMESTAMP}"
+story_id: '{STORY_ID}'
+calculated_at: '{ISO_TIMESTAMP}'
 
 # Commitment context
 commitment:
   found: true | false
-  timestamp: "{ISO_TIMESTAMP}"  # Only if found
-  phase_when_committed: "commitment"  # Phase that triggered commitment
+  timestamp: '{ISO_TIMESTAMP}' # Only if found
+  phase_when_committed: 'commitment' # Phase that triggered commitment
 
 # PCAR metrics
 metrics:
   # Event counts
-  clarification_count: {N}
-  scope_change_count: {N}
-  total_ambiguity: {N}
+  clarification_count: { N }
+  scope_change_count: { N }
+  total_ambiguity: { N }
 
   # Rate per story
-  rate: {N.N}
+  rate: { N.N }
   stories_analyzed: 1
 
   # Breakdown by phase
   by_phase:
-    implementation: {N}
-    verification: {N}
-    complete: {N}
+    implementation: { N }
+    verification: { N }
+    complete: { N }
 
 # Ambiguity events (post-commitment only)
 events:
   - type: clarification | scope_change
-    timestamp: "{ISO_TIMESTAMP}"
+    timestamp: '{ISO_TIMESTAMP}'
     phase: implementation | verification | complete
-    description: "brief description"
-    actor: "dev | system"  # Optional
+    description: 'brief description'
+    actor: 'dev | system' # Optional
 
 # Thresholds
 thresholds:
@@ -270,8 +278,8 @@ assessment:
 
 # Insights for system learning
 insights:
-  - "insight 1"
-  - "insight 2"
+  - 'insight 1'
+  - 'insight 2'
 
 # Calculation status
 success: true | false
@@ -284,13 +292,13 @@ error: null | "error message"
 
 ```yaml
 schema: 1
-story_id: "WISH-0500"
-calculated_at: "2026-02-01T14:30:00Z"
+story_id: 'WISH-0500'
+calculated_at: '2026-02-01T14:30:00Z'
 
 commitment:
   found: true
-  timestamp: "2026-02-01T10:00:00Z"
-  phase_when_committed: "commitment"
+  timestamp: '2026-02-01T10:00:00Z'
+  phase_when_committed: 'commitment'
 
 metrics:
   clarification_count: 2
@@ -305,21 +313,21 @@ metrics:
 
 events:
   - type: clarification
-    timestamp: "2026-02-01T11:30:00Z"
+    timestamp: '2026-02-01T11:30:00Z'
     phase: implementation
-    description: "Developer asked about error handling edge case"
+    description: 'Developer asked about error handling edge case'
     actor: dev
 
   - type: clarification
-    timestamp: "2026-02-01T12:15:00Z"
+    timestamp: '2026-02-01T12:15:00Z'
     phase: implementation
-    description: "Needed clarification on loading state behavior"
+    description: 'Needed clarification on loading state behavior'
     actor: dev
 
   - type: scope_change
-    timestamp: "2026-02-01T13:00:00Z"
+    timestamp: '2026-02-01T13:00:00Z'
     phase: verification
-    description: "AC added for timeout handling"
+    description: 'AC added for timeout handling'
     actor: system
 
 thresholds:
@@ -332,9 +340,9 @@ assessment:
   pcar_exceeds_critical: false
 
 insights:
-  - "High PCAR (3.0 events/story) - consider improving elaboration phase"
-  - "Clarification-heavy (2 vs 1 scope changes) - requirements may lack clarity"
-  - "67% of ambiguity in implementation phase - consider more thorough pre-dev review"
+  - 'High PCAR (3.0 events/story) - consider improving elaboration phase'
+  - 'Clarification-heavy (2 vs 1 scope changes) - requirements may lack clarity'
+  - '67% of ambiguity in implementation phase - consider more thorough pre-dev review'
 
 success: true
 ```
@@ -352,6 +360,7 @@ packages/backend/orchestrator/src/nodes/metrics/calc-pcar.ts
 ```
 
 The node provides:
+
 - `filterPostCommitmentEvents()` - Filter events by phase/timestamp
 - `classifyAmbiguityEvent()` - Classify events as clarification/scope_change
 - `calculatePCARMetrics()` - Compute PCAR metrics
@@ -360,22 +369,26 @@ The node provides:
 ### Event Collection Integration
 
 Events are collected by:
+
 ```
 packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
 ```
 
 Uses event types:
+
 - `EventType.clarification`
 - `EventType.scope_change`
 
 ### Commitment Gate Integration
 
 Commitment timestamp comes from:
+
 ```
 .claude/agents/commitment-gate-agent.agent.md
 ```
 
 The commitment gate records:
+
 - `evaluated_at` timestamp
 - `decision: PASS | BLOCKED | OVERRIDE`
 

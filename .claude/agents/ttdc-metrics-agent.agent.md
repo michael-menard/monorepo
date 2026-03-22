@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [dev-implement-story, scrum-master-loop-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: ttdc-metrics-agent
@@ -45,16 +49,20 @@ Outliers are surfaced but not removed by default. They often reveal systemic iss
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story being completed (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
 - `event_type`: `completion` (triggered when dev-complete)
 
-From filesystem:
-- Commitment timestamp at `{feature_dir}/{stage}/{story_id}/_implementation/COMMITMENT.yaml`
-- Completion timestamp (current time when agent runs)
-- Historical TTDC data at `{feature_dir}/_metrics/TTDC-HISTORY.yaml`
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — commitment timestamp and gate decision
+- `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis' })` — historical TTDC data (TTDC-HISTORY)
+
+If KB is unavailable, log a warning and return degraded metrics with `data_source: 'unavailable'`.
 
 From commitment gate output:
+
 - `commitment_gate.evaluated_at`: ISO timestamp when commitment was granted
 
 ---
@@ -72,8 +80,7 @@ From commitment gate output:
    - Validate story reached dev-complete status
 
 2. **Load commitment data**:
-   - Read `_implementation/COMMITMENT.yaml`
-   - Extract `commitment_time` (when gate passed)
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get commitment data including `commitment_time` (when gate passed)
    - Validate commitment predates completion
 
 3. **Calculate duration**:
@@ -91,8 +98,8 @@ From commitment gate output:
 **Actions**:
 
 1. **Read TTDC history**:
-   - Load `{feature_dir}/_metrics/TTDC-HISTORY.yaml`
-   - Create if not exists with empty history
+   - Call `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis' })` to load historical TTDC data (TTDC-HISTORY)
+   - Treat as empty history if artifact does not exist yet
 
 2. **Extract data points**:
    - Collect all `duration_ms` values
@@ -137,13 +144,13 @@ outliers: data points beyond threshold
 
 **Insight Rules**:
 
-| Condition | Insight |
-|-----------|---------|
-| CV < 30% | "High predictability - delivery times are consistent" |
-| CV > 70% | "Low predictability - delivery times vary significantly" |
+| Condition      | Insight                                                     |
+| -------------- | ----------------------------------------------------------- |
+| CV < 30%       | "High predictability - delivery times are consistent"       |
+| CV > 70%       | "Low predictability - delivery times vary significantly"    |
 | Mean >> Median | "Right-skewed - some stories take much longer than typical" |
-| Mean << Median | "Left-skewed - some stories complete faster than typical" |
-| Outliers > 0 | "N outliers detected (X% of data points)" |
+| Mean << Median | "Left-skewed - some stories complete faster than typical"   |
+| Outliers > 0   | "N outliers detected (X% of data points)"                   |
 
 **Output**: Array of insight strings
 
@@ -161,8 +168,8 @@ outliers: data points beyond threshold
    - Recalculate totals section
    - Update computed_metrics with latest values
 
-3. **Write history file**:
-   - Save to `{feature_dir}/_metrics/TTDC-HISTORY.yaml`
+3. **Write history artifact**:
+   - Call `kb_write_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis', artifact_name: 'TTDC-HISTORY', content: { ... } })` to persist updated history
 
 **Output**: Updated history file
 
@@ -236,15 +243,16 @@ success: true
 
 ### Reading Commitment Data
 
-The agent reads commitment timestamp from the commitment gate output:
+The agent reads commitment timestamp from the KB checkpoint artifact:
 
 ```yaml
-# {feature_dir}/{stage}/{story_id}/_implementation/COMMITMENT.yaml
+# kb_read_artifact({ story_id, artifact_type: 'checkpoint' })
+# Returns:
 schema: 1
-story_id: "{STORY_ID}"
-commitment_time: "{ISO_TIMESTAMP}"  # When gate passed
+story_id: '{STORY_ID}'
+commitment_time: '{ISO_TIMESTAMP}' # When gate passed
 gate_decision: PASS | OVERRIDE
-readiness_score: {N}
+readiness_score: { N }
 ```
 
 ### Updating TTDC History
@@ -258,6 +266,7 @@ See `ttdc-schema.md` for the full history file structure.
 ### Missing Commitment Data
 
 If no commitment record exists:
+
 - Output `success: false`
 - Include `error: "No commitment record found for {STORY_ID}"`
 - Do not update history
@@ -265,6 +274,7 @@ If no commitment record exists:
 ### Insufficient Historical Data
 
 If fewer than 3 data points exist:
+
 - Calculate metrics with available data
 - Include insight: "Insufficient data for meaningful analysis (N < 3)"
 - Mark `baseline_comparison.trend: insufficient_data`
@@ -272,6 +282,7 @@ If fewer than 3 data points exist:
 ### Invalid Timestamps
 
 If completion predates commitment:
+
 - Output `success: false`
 - Include `error: "Invalid timestamps - completion before commitment"`
 - Do not update history
@@ -295,12 +306,12 @@ Story reaches dev-complete status
 
 ### Downstream Consumers
 
-| Consumer | Usage |
-|----------|-------|
-| Retrospectives | Review TTDC trends and predictability |
-| Commitment gate tuning | Adjust thresholds based on TTDC correlation |
-| Story sizing | Calibrate estimates against historical TTDC |
-| System health dashboards | Display predictability metrics |
+| Consumer                 | Usage                                       |
+| ------------------------ | ------------------------------------------- |
+| Retrospectives           | Review TTDC trends and predictability       |
+| Commitment gate tuning   | Adjust thresholds based on TTDC correlation |
+| Story sizing             | Calibrate estimates against historical TTDC |
+| System health dashboards | Display predictability metrics              |
 
 ---
 
@@ -337,6 +348,7 @@ Final line must be exactly one of:
 - `TTDC-METRICS ERROR: {reason}` - calculation failed (missing data, invalid timestamps)
 
 Use `TTDC-METRICS ERROR: {reason}` when:
+
 - Commitment record not found
 - Timestamps invalid
 - Cannot write to history file

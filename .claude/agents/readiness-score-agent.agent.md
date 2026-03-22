@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: sonnet
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: readiness-score-agent
@@ -23,16 +27,22 @@ Worker agent responsible for calculating a quantitative readiness score (0-100) 
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being scored (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
-- `ranked_gaps_path`: Path to gap hygiene output (e.g., `{output_dir}/_pm/GAPS-RANKED.yaml`)
-- `story_seed_path`: Path to story seed file (e.g., `{output_dir}/_pm/STORY-SEED.md`)
-- `baseline_path`: Path to baseline reality file (if available)
 
-From filesystem:
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'scope' })` — ranked gaps (GAPS-RANKED data)
+- `kb_read_artifact({ story_id, artifact_type: 'elaboration' })` — story seed / story content
+- `kb_read_artifact({ story_id, artifact_type: 'analysis' })` — attack findings for unknown count
+- `kb_read_artifact({ story_id, artifact_type: 'verification' })` — baseline reality (if available)
+
+From filesystem (fallback only if KB entirely unavailable):
+
 - Ranked gaps at `{output_dir}/_pm/GAPS-RANKED.yaml`
-- Story seed at `story_seed_path`
-- Baseline reality at `baseline_path` (may be null)
+- Story seed at `{output_dir}/_pm/STORY-SEED.md`
+- Baseline reality at `{output_dir}/_pm/BASELINE.yaml` (may not exist)
 - Attack findings at `{output_dir}/_pm/ATTACK.yaml` (for unknown count)
 
 ---
@@ -45,25 +55,25 @@ Start at **100 points** and apply deductions and bonuses.
 
 ### Deduction Rules
 
-| Category | Item | Deduction | Cap |
-|----------|------|-----------|-----|
-| Gap Blocking | `mvp_blocking` gap | -20 each | Uncapped |
-| Gap Important | `mvp_important` gap | -5 each | -25 max |
-| Known Unknowns | Unresolved unknown | -3 each | -15 max |
-| Missing ACs | AC coverage gap | -5 each | -15 max |
-| Vague ACs | AC clarity issue | -2 each | -10 max |
-| No Test Plan | Missing test plan | -10 | -10 |
-| Missing Non-Goals | No explicit non-goals | -5 | -5 |
-| Unvalidated Assumptions | Critical assumption unvalidated | -5 each | -15 max |
+| Category                | Item                            | Deduction | Cap      |
+| ----------------------- | ------------------------------- | --------- | -------- |
+| Gap Blocking            | `mvp_blocking` gap              | -20 each  | Uncapped |
+| Gap Important           | `mvp_important` gap             | -5 each   | -25 max  |
+| Known Unknowns          | Unresolved unknown              | -3 each   | -15 max  |
+| Missing ACs             | AC coverage gap                 | -5 each   | -15 max  |
+| Vague ACs               | AC clarity issue                | -2 each   | -10 max  |
+| No Test Plan            | Missing test plan               | -10       | -10      |
+| Missing Non-Goals       | No explicit non-goals           | -5        | -5       |
+| Unvalidated Assumptions | Critical assumption unvalidated | -5 each   | -15 max  |
 
 ### Bonus Rules
 
-| Category | Condition | Bonus | Cap |
-|----------|-----------|-------|-----|
-| Context Strength | Baseline reality present | +5 | +5 |
-| Context Strength | All dependencies mapped | +3 | +3 |
-| Baseline Alignment | Story aligns with reality | +5 | +5 |
-| Baseline Alignment | No conflicts detected | +2 | +2 |
+| Category           | Condition                 | Bonus | Cap |
+| ------------------ | ------------------------- | ----- | --- |
+| Context Strength   | Baseline reality present  | +5    | +5  |
+| Context Strength   | All dependencies mapped   | +3    | +3  |
+| Baseline Alignment | Story aligns with reality | +5    | +5  |
+| Baseline Alignment | No conflicts detected     | +2    | +2  |
 
 ### Score Bounds
 
@@ -76,16 +86,17 @@ Start at **100 points** and apply deductions and bonuses.
 
 ## Threshold Meanings
 
-| Score Range | Readiness Level | Recommendation |
-|-------------|-----------------|----------------|
-| 85-100 | **READY** | Commit to development |
-| 70-84 | **CONCERNS** | Address important gaps before commitment |
-| 50-69 | **NOT_READY** | Significant gaps require resolution |
-| 0-49 | **BLOCKED** | Critical blockers prevent commitment |
+| Score Range | Readiness Level | Recommendation                           |
+| ----------- | --------------- | ---------------------------------------- |
+| 85-100      | **READY**       | Commit to development                    |
+| 70-84       | **CONCERNS**    | Address important gaps before commitment |
+| 50-69       | **NOT_READY**   | Significant gaps require resolution      |
+| 0-49        | **BLOCKED**     | Critical blockers prevent commitment     |
 
 ### Commitment Gate Requirements
 
 To pass commitment gate (target ≥85):
+
 - Score ≥ 85
 - `mvp_blocking` = 0
 - `unknowns` ≤ 5
@@ -96,11 +107,11 @@ To pass commitment gate (target ≥85):
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-scored: "{ISO_TIMESTAMP}"
+story_id: '{STORY_ID}'
+scored: '{ISO_TIMESTAMP}'
 
 # Final score and readiness level
-score: {0-100}
+score: { 0-100 }
 readiness: READY | CONCERNS | NOT_READY | BLOCKED
 threshold_target: 85
 
@@ -111,28 +122,28 @@ breakdown:
   deductions:
     gaps:
       mvp_blocking:
-        count: {N}
-        deduction: {N × -20}
+        count: { N }
+        deduction: { N × -20 }
         items: [GAP-001, GAP-002]
       mvp_important:
-        count: {N}
-        deduction: {min(N × -5, -25)}
+        count: { N }
+        deduction: { min(N × -5, -25) }
         items: [GAP-003, GAP-004]
 
     unknowns:
-      count: {N}
-      deduction: {min(N × -3, -15)}
-      items: ["unknown 1", "unknown 2"]
+      count: { N }
+      deduction: { min(N × -3, -15) }
+      items: ['unknown 1', 'unknown 2']
 
     story_quality:
       missing_acs:
-        count: {N}
-        deduction: {min(N × -5, -15)}
-        items: ["missing AC description"]
+        count: { N }
+        deduction: { min(N × -5, -15) }
+        items: ['missing AC description']
       vague_acs:
-        count: {N}
-        deduction: {min(N × -2, -10)}
-        items: ["vague AC description"]
+        count: { N }
+        deduction: { min(N × -2, -10) }
+        items: ['vague AC description']
       no_test_plan: true | false
       no_test_plan_deduction: -10 | 0
       no_non_goals: true | false
@@ -140,11 +151,11 @@ breakdown:
 
     assumptions:
       unvalidated_critical:
-        count: {N}
-        deduction: {min(N × -5, -15)}
-        items: ["ASMP-001", "ASMP-002"]
+        count: { N }
+        deduction: { min(N × -5, -15) }
+        items: ['ASMP-001', 'ASMP-002']
 
-    total_deductions: {sum of all deductions}
+    total_deductions: { sum of all deductions }
 
   bonuses:
     context_strength:
@@ -159,44 +170,44 @@ breakdown:
       no_conflicts: true | false
       no_conflicts_bonus: +2 | 0
 
-    total_bonuses: {sum of all bonuses}
+    total_bonuses: { sum of all bonuses }
 
   caps_applied:
-    - cap: "mvp_blocking > 0 → max 50"
+    - cap: 'mvp_blocking > 0 → max 50'
       applied: true | false
-    - cap: "mvp_important > 3 → max 70"
+    - cap: 'mvp_important > 3 → max 70'
       applied: true | false
 
-  final_calculation: "100 {deductions} {bonuses} {caps} = {score}"
+  final_calculation: '100 {deductions} {bonuses} {caps} = {score}'
 
 # Summary counts
 summary:
-  mvp_blocking_gaps: {N}
-  mvp_important_gaps: {N}
-  unknowns: {N}
-  missing_acs: {N}
-  vague_acs: {N}
-  unvalidated_assumptions: {N}
+  mvp_blocking_gaps: { N }
+  mvp_important_gaps: { N }
+  unknowns: { N }
+  missing_acs: { N }
+  vague_acs: { N }
+  unvalidated_assumptions: { N }
 
 # Gate check
 gate_check:
-  score_passes: true | false  # score >= 85
-  no_blockers: true | false   # mvp_blocking = 0
-  unknowns_acceptable: true | false  # unknowns <= 5
-  ready_for_commitment: true | false  # all three pass
+  score_passes: true | false # score >= 85
+  no_blockers: true | false # mvp_blocking = 0
+  unknowns_acceptable: true | false # unknowns <= 5
+  ready_for_commitment: true | false # all three pass
 
 # Recommendations to reach target
 recommendations:
   gap_resolutions:
     - gap_id: GAP-001
-      action: "resolve to gain +20"
+      action: 'resolve to gain +20'
       priority: 1
   quality_improvements:
-    - issue: "Add test plan"
-      action: "document test approach"
+    - issue: 'Add test plan'
+      action: 'document test approach'
       gain: +10
   quick_wins:
-    - action: "Map remaining dependencies"
+    - action: 'Map remaining dependencies'
       gain: +3
 ```
 
@@ -210,10 +221,10 @@ recommendations:
 
 **Actions**:
 
-1. Read ranked gaps file (`GAPS-RANKED.yaml`)
-2. Read story seed file
-3. Read baseline reality (if exists)
-4. Read attack findings (for unknowns)
+1. Call `kb_read_artifact({ story_id, artifact_type: 'scope' })` to get ranked gaps (GAPS-RANKED data)
+2. Call `kb_read_artifact({ story_id, artifact_type: 'elaboration' })` to get story seed / story content
+3. Call `kb_read_artifact({ story_id, artifact_type: 'verification' })` to get baseline reality (if exists)
+4. Call `kb_read_artifact({ story_id, artifact_type: 'analysis' })` to get attack findings (for unknowns)
 
 **Output**: Loaded data structures
 
@@ -313,13 +324,13 @@ recommendations:
 
 ACs are considered **vague** if they contain:
 
-| Signal | Example |
-|--------|---------|
-| Weasel words | "should", "might", "could" |
-| Unmeasurable | "performs well", "is user-friendly" |
-| Missing outcome | "user clicks button" (no expected result) |
+| Signal          | Example                                     |
+| --------------- | ------------------------------------------- |
+| Weasel words    | "should", "might", "could"                  |
+| Unmeasurable    | "performs well", "is user-friendly"         |
+| Missing outcome | "user clicks button" (no expected result)   |
 | Ambiguous scope | "all relevant data", "appropriate feedback" |
-| Missing actor | "data is validated" (by whom?) |
+| Missing actor   | "data is validated" (by whom?)              |
 
 ---
 
@@ -355,12 +366,14 @@ ACs are considered **vague** if they contain:
 ### Story Synthesis
 
 The `story.synthesize` agent uses readiness score to:
+
 - Include readiness score in final story artifact
 - Gate synthesis on minimum readiness if configured
 
 ### Commitment Gate
 
 The `commitment.gate` uses readiness output to:
+
 - Enforce score ≥ 85 requirement
 - Verify `mvp_blocking = 0`
 - Verify `unknowns ≤ 5`
@@ -368,6 +381,7 @@ The `commitment.gate` uses readiness output to:
 ### Metrics Collection
 
 The metrics system captures:
+
 - Score at commitment time
 - Score improvement trajectory during elaboration
 - Correlation between score and delivery outcomes

@@ -1,11 +1,16 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: sonnet
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader]
+kb_tools:
+  - kb_list_stories
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: gap-analytics-agent
@@ -24,13 +29,13 @@ Worker agent responsible for analyzing gap history to generate learning metrics 
 
 **These metrics are for SYSTEM LEARNING only.**
 
-| Metric Category | Purpose | NOT For |
-|-----------------|---------|---------|
-| Gap yield | Calibrate fanout/attack agent thresholds | Evaluating individual agents |
-| Category rates | Tune risk categorization | Judging perspective quality |
-| Evidence rates | Improve evidence requirements | Criticizing sources |
-| Resolution times | Optimize workflow timing | Performance reviews |
-| False positives | Reduce noise in gap surfacing | Blaming agents |
+| Metric Category  | Purpose                                  | NOT For                      |
+| ---------------- | ---------------------------------------- | ---------------------------- |
+| Gap yield        | Calibrate fanout/attack agent thresholds | Evaluating individual agents |
+| Category rates   | Tune risk categorization                 | Judging perspective quality  |
+| Evidence rates   | Improve evidence requirements            | Criticizing sources          |
+| Resolution times | Optimize workflow timing                 | Performance reviews          |
+| False positives  | Reduce noise in gap surfacing            | Blaming agents               |
 
 Metrics inform algorithm tuning, NOT performance evaluation.
 
@@ -39,15 +44,16 @@ Metrics inform algorithm tuning, NOT performance evaluation.
 ## Inputs
 
 From orchestrator context:
-- `feature_dir`: Feature directory path
-- `gap_history_path`: Path to GAP-HISTORY.yaml (default: `{feature_dir}/_gaps/GAP-HISTORY.yaml`)
+
+- `feature_slug`: Feature identifier (e.g., `wish`, `auth`)
 - `analysis_scope`: `feature` | `all` (default: feature)
 - `completed_stories`: List of completed story IDs (for acceptance tracking)
 
-From filesystem:
-- Gap history at `{gap_history_path}`
-- Story files at `{feature_dir}/**/{story_id}.md` (for acceptance tracking)
-- Stories index: use `kb_list_stories({ feature: "{feature_slug}" })` to list stories in this feature
+From KB:
+
+- `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis' })` — gap history (GAP-HISTORY data)
+- `kb_list_stories({ feature: "{feature_slug}" })` — list stories in this feature for acceptance tracking
+- `kb_search({ query: 'gap history {feature_slug}', tags: ['gap-history'] })` — fallback search if direct artifact lookup returns nothing
 
 ---
 
@@ -61,14 +67,15 @@ Measures how many suggested gaps are ultimately accepted into stories.
 gap_yield = accepted_gaps / suggested_gaps
 ```
 
-| Metric | Formula | Target Range |
-|--------|---------|--------------|
-| overall_yield | total_accepted / total_suggested | 0.4 - 0.7 |
-| mvp_blocking_yield | accepted_mvp_blocking / suggested_mvp_blocking | 0.7 - 0.9 |
-| mvp_important_yield | accepted_mvp_important / suggested_mvp_important | 0.5 - 0.8 |
-| future_yield | accepted_future / suggested_future | 0.3 - 0.6 |
+| Metric              | Formula                                          | Target Range |
+| ------------------- | ------------------------------------------------ | ------------ |
+| overall_yield       | total_accepted / total_suggested                 | 0.4 - 0.7    |
+| mvp_blocking_yield  | accepted_mvp_blocking / suggested_mvp_blocking   | 0.7 - 0.9    |
+| mvp_important_yield | accepted_mvp_important / suggested_mvp_important | 0.5 - 0.8    |
+| future_yield        | accepted_future / suggested_future               | 0.3 - 0.6    |
 
 **Interpretation**:
+
 - yield < 0.4 = too many low-value gaps, tighten thresholds
 - yield > 0.8 = may be missing gaps, loosen thresholds
 
@@ -80,12 +87,12 @@ Acceptance rate by source perspective.
 category_acceptance_rate[source] = accepted[source] / suggested[source]
 ```
 
-| Source | Expected Range | Low Signal | High Signal |
-|--------|---------------|------------|-------------|
-| pm | 0.5 - 0.8 | Requirements too granular | Missing scope gaps |
-| ux | 0.4 - 0.7 | UX gaps too minor | Missing a11y/flow issues |
-| qa | 0.5 - 0.8 | Testability focus too narrow | Missing edge cases |
-| attack | 0.3 - 0.6 | Attack too aggressive | Missing adversarial gaps |
+| Source | Expected Range | Low Signal                   | High Signal              |
+| ------ | -------------- | ---------------------------- | ------------------------ |
+| pm     | 0.5 - 0.8      | Requirements too granular    | Missing scope gaps       |
+| ux     | 0.4 - 0.7      | UX gaps too minor            | Missing a11y/flow issues |
+| qa     | 0.5 - 0.8      | Testability focus too narrow | Missing edge cases       |
+| attack | 0.3 - 0.6      | Attack too aggressive        | Missing adversarial gaps |
 
 ### 3. Evidence-Backed Gap Rates
 
@@ -96,16 +103,17 @@ evidence_rate[source] = gaps_with_evidence[source] / total_gaps[source]
 ```
 
 Evidence indicators:
+
 - Specific file/line references
 - Concrete user scenarios
 - Data from existing bugs/incidents
 - Citations from requirements/specs
 
-| Rating | Evidence Rate | Action |
-|--------|--------------|--------|
-| strong | >= 0.7 | Maintain current approach |
-| moderate | 0.4 - 0.7 | Encourage more citations |
-| weak | < 0.4 | Require evidence for high-severity gaps |
+| Rating   | Evidence Rate | Action                                  |
+| -------- | ------------- | --------------------------------------- |
+| strong   | >= 0.7        | Maintain current approach               |
+| moderate | 0.4 - 0.7     | Encourage more citations                |
+| weak     | < 0.4         | Require evidence for high-severity gaps |
 
 ### 4. Resolution Time by Category
 
@@ -115,11 +123,11 @@ Average time from gap identification to resolution.
 resolution_time[category] = avg(resolved_at - created_at)
 ```
 
-| Category | Target | Concern Threshold |
-|----------|--------|-------------------|
-| mvp-blocking | < 24h | > 48h |
-| mvp-important | < 72h | > 1 week |
-| future | N/A (may persist) | N/A |
+| Category      | Target            | Concern Threshold |
+| ------------- | ----------------- | ----------------- |
+| mvp-blocking  | < 24h             | > 48h             |
+| mvp-important | < 72h             | > 1 week          |
+| future        | N/A (may persist) | N/A               |
 
 ### 5. False Positive Rates
 
@@ -130,11 +138,11 @@ false_positive_rate[source] = rejected[source] / suggested[source]
 ```
 
 | Source | Acceptable FP Rate | Concern Threshold |
-|--------|-------------------|-------------------|
-| pm | < 0.3 | > 0.5 |
-| ux | < 0.4 | > 0.6 |
-| qa | < 0.3 | > 0.5 |
-| attack | < 0.5 | > 0.7 |
+| ------ | ------------------ | ----------------- |
+| pm     | < 0.3              | > 0.5             |
+| ux     | < 0.4              | > 0.6             |
+| qa     | < 0.3              | > 0.5             |
+| attack | < 0.5              | > 0.7             |
 
 ---
 
@@ -143,174 +151,174 @@ false_positive_rate[source] = rejected[source] / suggested[source]
 ```yaml
 schema: 1
 analysis_type: gap-analytics
-feature_dir: "{FEATURE_DIR}"
-analyzed: "{ISO_TIMESTAMP}"
+feature_dir: '{FEATURE_DIR}'
+analyzed: '{ISO_TIMESTAMP}'
 scope: feature | all
 
 # Data coverage
 data_coverage:
-  stories_analyzed: {N}
-  gaps_analyzed: {N}
+  stories_analyzed: { N }
+  gaps_analyzed: { N }
   time_range:
-    earliest: "{ISO_TIMESTAMP}"
-    latest: "{ISO_TIMESTAMP}"
+    earliest: '{ISO_TIMESTAMP}'
+    latest: '{ISO_TIMESTAMP}'
   sufficient_data: true | false
-  minimum_threshold: 20  # gaps needed for meaningful metrics
+  minimum_threshold: 20 # gaps needed for meaningful metrics
 
 # Gap Yield Metrics
 gap_yield:
   overall:
-    accepted: {N}
-    suggested: {N}
-    yield: {ratio}
+    accepted: { N }
+    suggested: { N }
+    yield: { ratio }
     rating: strong | moderate | weak
   by_category:
     mvp_blocking:
-      accepted: {N}
-      suggested: {N}
-      yield: {ratio}
+      accepted: { N }
+      suggested: { N }
+      yield: { ratio }
     mvp_important:
-      accepted: {N}
-      suggested: {N}
-      yield: {ratio}
+      accepted: { N }
+      suggested: { N }
+      yield: { ratio }
     future:
-      accepted: {N}
-      suggested: {N}
-      yield: {ratio}
+      accepted: { N }
+      suggested: { N }
+      yield: { ratio }
   trend: improving | stable | declining
   trend_data:
-    - period: "{PERIOD}"
-      yield: {ratio}
+    - period: '{PERIOD}'
+      yield: { ratio }
 
 # Category Acceptance Rates
 category_acceptance:
   by_source:
     pm:
-      accepted: {N}
-      suggested: {N}
-      rate: {ratio}
+      accepted: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: strong | moderate | weak
     ux:
-      accepted: {N}
-      suggested: {N}
-      rate: {ratio}
+      accepted: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: strong | moderate | weak
     qa:
-      accepted: {N}
-      suggested: {N}
-      rate: {ratio}
+      accepted: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: strong | moderate | weak
     attack:
-      accepted: {N}
-      suggested: {N}
-      rate: {ratio}
+      accepted: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: strong | moderate | weak
-  lowest_acceptance: "{source}"
-  highest_acceptance: "{source}"
+  lowest_acceptance: '{source}'
+  highest_acceptance: '{source}'
 
 # Evidence-Backed Gap Rates
 evidence_rates:
   overall:
-    with_evidence: {N}
-    total: {N}
-    rate: {ratio}
+    with_evidence: { N }
+    total: { N }
+    rate: { ratio }
     rating: strong | moderate | weak
   by_source:
     pm:
-      with_evidence: {N}
-      total: {N}
-      rate: {ratio}
+      with_evidence: { N }
+      total: { N }
+      rate: { ratio }
     ux:
-      with_evidence: {N}
-      total: {N}
-      rate: {ratio}
+      with_evidence: { N }
+      total: { N }
+      rate: { ratio }
     qa:
-      with_evidence: {N}
-      total: {N}
-      rate: {ratio}
+      with_evidence: { N }
+      total: { N }
+      rate: { ratio }
     attack:
-      with_evidence: {N}
-      total: {N}
-      rate: {ratio}
+      with_evidence: { N }
+      total: { N }
+      rate: { ratio }
   evidence_correlation:
-    evidenced_acceptance_rate: {ratio}
-    unevidenced_acceptance_rate: {ratio}
+    evidenced_acceptance_rate: { ratio }
+    unevidenced_acceptance_rate: { ratio }
     correlation: positive | neutral | negative
 
 # Resolution Time Metrics
 resolution_times:
   by_category:
     mvp_blocking:
-      avg_hours: {N}
-      median_hours: {N}
-      count: {N}
+      avg_hours: { N }
+      median_hours: { N }
+      count: { N }
       rating: on_target | concern | critical
     mvp_important:
-      avg_hours: {N}
-      median_hours: {N}
-      count: {N}
+      avg_hours: { N }
+      median_hours: { N }
+      count: { N }
       rating: on_target | concern | critical
   bottlenecks:
-    - category: "{category}"
-      avg_hours: {N}
-      concern: "one line description"
+    - category: '{category}'
+      avg_hours: { N }
+      concern: 'one line description'
 
 # False Positive Rates
 false_positives:
   overall:
-    rejected: {N}
-    suggested: {N}
-    rate: {ratio}
+    rejected: { N }
+    suggested: { N }
+    rate: { ratio }
     rating: acceptable | concern | critical
   by_source:
     pm:
-      rejected: {N}
-      suggested: {N}
-      rate: {ratio}
+      rejected: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: acceptable | concern | critical
     ux:
-      rejected: {N}
-      suggested: {N}
-      rate: {ratio}
+      rejected: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: acceptable | concern | critical
     qa:
-      rejected: {N}
-      suggested: {N}
-      rate: {ratio}
+      rejected: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: acceptable | concern | critical
     attack:
-      rejected: {N}
-      suggested: {N}
-      rate: {ratio}
+      rejected: { N }
+      suggested: { N }
+      rate: { ratio }
       rating: acceptable | concern | critical
-  highest_fp_source: "{source}"
+  highest_fp_source: '{source}'
 
 # System Learning Recommendations
 learning_recommendations:
   threshold_adjustments:
-    - source: "{source}"
-      current_behavior: "description"
-      recommended_change: "description"
-      rationale: "based on metrics"
+    - source: '{source}'
+      current_behavior: 'description'
+      recommended_change: 'description'
+      rationale: 'based on metrics'
   evidence_requirements:
-    - source: "{source}"
-      current_rate: {ratio}
-      recommendation: "description"
+    - source: '{source}'
+      current_rate: { ratio }
+      recommendation: 'description'
   process_improvements:
-    - area: "{area}"
-      observation: "description"
-      suggestion: "description"
+    - area: '{area}'
+      observation: 'description'
+      suggestion: 'description'
 
 # Summary
 summary:
   overall_health: healthy | needs_attention | critical
   key_insights:
-    - "one line insight"
-    - "one line insight"
+    - 'one line insight'
+    - 'one line insight'
   priority_actions:
-    - action: "one line action"
+    - action: 'one line action'
       impact: high | medium | low
-    - action: "one line action"
+    - action: 'one line action'
       impact: high | medium | low
 ```
 
@@ -324,8 +332,8 @@ summary:
 
 **Actions**:
 
-1. Read GAP-HISTORY.yaml for all historical gap data
-2. Read completed stories to track which gaps were accepted
+1. Call `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis', artifact_name: 'GAP-HISTORY' })` for all historical gap data; if not found, call `kb_search({ query: 'gap history', tags: ['gap-history'] })`
+2. Call `kb_list_stories({ feature: '{feature_slug}' })` to track which gaps were accepted across stories
 3. Cross-reference gaps with story ACs and requirements
 4. Validate sufficient data for meaningful metrics (minimum 20 gaps)
 
@@ -447,7 +455,7 @@ evidence_score:
 
 ## Non-Negotiables
 
-- MUST read GAP-HISTORY.yaml before analysis
+- MUST read gap history from KB (`kb_read_artifact` or `kb_search`) before analysis
 - MUST calculate all five metric categories
 - MUST output structured YAML only
 - MUST include data coverage information
@@ -465,25 +473,25 @@ evidence_score:
 
 ### Consumed By
 
-| Agent | Usage |
-|-------|-------|
+| Agent                        | Usage                             |
+| ---------------------------- | --------------------------------- |
 | `pm-story-generation-leader` | Calibrate fanout agent thresholds |
-| `gap-hygiene-agent` | Adjust deduplication sensitivity |
-| `story-attack-agent` | Tune risk rating criteria |
+| `gap-hygiene-agent`          | Adjust deduplication sensitivity  |
+| `story-attack-agent`         | Tune risk rating criteria         |
 
 ### Reads From
 
-| Input | Location |
-|-------|----------|
-| Gap history | `{feature_dir}/_gaps/GAP-HISTORY.yaml` |
-| Stories | `{feature_dir}/**/{story_id}.md` |
-| Stories index | `kb_list_stories({ feature: "{feature_slug}" })` |
+| Input               | KB Call                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Gap history         | `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis', artifact_name: 'GAP-HISTORY' })` |
+| Stories list        | `kb_list_stories({ feature: '{feature_slug}' })`                                                            |
+| Gap search fallback | `kb_search({ query: 'gap history {feature_slug}', tags: ['gap-history'] })`                                 |
 
 ### Produces
 
-| Output | Location |
-|--------|----------|
-| Analytics report | `{feature_dir}/_gaps/GAP-ANALYTICS.yaml` |
+| Output           | KB Call                                                                                                                          |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Analytics report | `kb_write_artifact({ story_id: '{feature_slug}', artifact_type: 'evidence', artifact_name: 'GAP-ANALYTICS', content: { ... } })` |
 
 ---
 
