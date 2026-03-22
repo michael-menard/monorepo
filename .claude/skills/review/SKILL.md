@@ -7,8 +7,6 @@ mcp_tools_available:
   - chrome-devtools # For performance and network debugging
   - postgres-mcp # For query analysis and optimization review
   - kb_search # For project-specific patterns and past decisions
-  - mcp__postgres-knowledgebase__sessionCreate # Telemetry: open session for badge visibility
-  - mcp__postgres-knowledgebase__sessionComplete # Telemetry: close session when done
 ---
 
 # /review - Comprehensive Code Review
@@ -32,16 +30,19 @@ Full-spectrum code review using parallel specialist sub-agents. Each specialist 
 # Review a single story by number
 /review 3.1.5
 
-# Review a single story by story ID
-/review WISH-2002
+# Review a single story by file path
+/review docs/stories/epic-6-wishlist/wish-2002-add-item-flow.md
 
 # Review current branch (no story)
 /review --branch
 
-# Review all stories with an epic tag (shorthand)
+# Review all stories in an epic directory (shorthand)
 /review epic-6-wishlist
 
-# Review all stories with a tag, filtered by status
+# Review all stories in a directory (full path)
+/review docs/stories/epic-6-wishlist/
+
+# Review directory, only stories with specific status
 /review epic-6-wishlist --status=Draft
 
 # Quick review (skip deep specialists)
@@ -98,56 +99,48 @@ else:
 
 Triggered by:
 
-- Story number or ID (e.g., `3.1.5`, `2002`, `WISH-2002`)
+- Story number (e.g., `3.1.5`, `2002`)
+- Story file path (e.g., `docs/stories/epic-6-wishlist/wish-2002-add-item-flow.md`)
 - `--branch` flag
 
 ### Mode B: Directory Review (new)
 
 Triggered by:
 
-- Epic tag name (e.g., `epic-6-wishlist`) - used to query KB for stories with that tag
-- Any tag or filter that maps to a set of stories in the KB
+- Epic directory name (e.g., `epic-6-wishlist`) - auto-prepends `docs/stories/`
+- Full directory path (e.g., `docs/stories/epic-6-wishlist/`)
+- Any path that resolves to a directory containing `.md` files
 
 ```
 TodoWrite([
-  { content: "Query KB for stories", status: "in_progress", activeForm: "Querying KB for stories" },
+  { content: "Scan directory for stories", status: "in_progress", activeForm: "Scanning directory" },
   { content: "Filter stories by status", status: "pending", activeForm: "Filtering stories" },
   { content: "Review each story sequentially", status: "pending", activeForm: "Reviewing stories" },
   { content: "Generate summary report", status: "pending", activeForm: "Generating summary" }
 ])
 ```
 
-**KB story query:**
+**Directory scanning:**
 
-1. Resolve epic tag from target argument:
-   - If starts with `epic-`: use as-is as the tag filter
-   - Otherwise: treat as a tag or search term
-2. Query KB for stories: `kb_list_stories({ tags: ["{epic-tag}"], limit: 50 })`
-3. Filter out stories in terminal states (e.g., cancelled, archived)
-4. If `--status` filter provided, only include stories where status matches
-5. Sort stories by story ID (natural sort order)
-6. Create todo list with one item per story
+1. Resolve directory path:
+   - If starts with `epic-`: prepend `docs/stories/` → `docs/stories/epic-6-wishlist/`
+   - If full path provided: use as-is
+   - If relative path: resolve from working directory
+2. Verify directory exists, error if not
+3. Find all `.md` files in directory: `Glob(pattern: "*.md", path: {DIR_PATH})`
+4. Filter out excluded files/directories:
+   - Skip files in `_legacy/` subdirectories
+   - Skip `IMPLEMENTATION_ORDER.md`
+   - Skip `README.md`
+   - Skip any file starting with `EPIC-` (epic definition files)
+5. For each remaining file, read and extract:
+   - Frontmatter (if present)
+   - Status field (from frontmatter or `status:` line in file)
+6. If `--status` filter provided, only include stories where status matches
+7. Sort stories by filename (natural sort order)
+8. Create todo list with one item per story
 
 **Proceed to Phase 0A for single story or Phase 0B for directory.**
-
----
-
-## Phase 0S: Open Session (Telemetry — non-blocking)
-
-Call `mcp__knowledge-base__session_create` to record that an agent is actively working on this story. This is fire-and-forget telemetry — if it fails, log a warning and continue.
-
-```javascript
-// Extract storyId from the resolved target (e.g. "WINT-6070"), or null for branch reviews
-const sessionResult = await mcp__knowledge_base__session_create({
-  agentName: 'review',
-  storyId: resolvedStoryId ?? null, // null for --branch mode
-  phase: 'review',
-})
-// Store sessionId for Phase 8S at the end
-const _reviewSessionId = sessionResult?.sessionId ?? null
-```
-
-If the tool is not available or throws, skip silently and set `_reviewSessionId = null`.
 
 ---
 
@@ -162,17 +155,15 @@ TodoWrite([
   { content: "Spawn specialist sub-agents", status: "pending", activeForm: "Spawning specialists" },
   { content: "Aggregate findings", status: "pending", activeForm: "Aggregating findings" },
   { content: "Run qa-gate", status: "pending", activeForm: "Running qa-gate" },
-  { content: "Write review artifact to KB", status: "pending", activeForm: "Writing review artifact to KB" }
+  { content: "Write review findings", status: "pending", activeForm: "Writing findings" }
 ])
 ```
 
 **Gather context:**
 
-1. If story provided, fetch from KB: `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })` and extract:
-   - Acceptance criteria
-   - Tasks list
-   - File list (if present in story data)
-   - Previous QA results (from artifacts)
+1. If story provided, load story data:
+   - Call `kb_get_story({ story_id })` to retrieve acceptance criteria, tasks, and metadata
+   - Call `kb_read_artifact({ story_id, artifact_type: 'qa_gate' })` to load prior QA gate results (if any)
 2. Get list of changed files: `git diff --name-only origin/main`
 3. Read CLAUDE.md for project guidelines
 4. Determine review scope (files to analyze)
@@ -208,13 +199,13 @@ TodoWrite([
 
 **For each story in stories_to_review:**
 
-1. **Fetch from KB**: `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })` and extract:
+1. **Read story file** and extract:
    - Story ID/number
    - Title
    - Status
    - Acceptance criteria
    - Tasks list
-   - Previous review findings (from review artifacts, if any)
+   - Previous review findings (if any)
 
 2. **Run Phases 0A through 7 for this story** (see below for modified Phase 7)
 
@@ -222,7 +213,7 @@ TodoWrite([
 
 4. **After all stories processed, proceed to Phase 8B (Summary Report)**
 
-**CRITICAL: Process stories sequentially, not in parallel. This allows review artifacts to be written to the KB for each story before moving to the next.**
+**CRITICAL: Process stories sequentially, not in parallel. This allows findings to be written to the KB for each story before moving to the next. For directory scans with a known story_id, use kb_write_artifact for review output; for directory-only scans without story_ids, findings are returned inline.**
 
 **Proceed to Phase 0A for each story, then continue through phases.**
 
@@ -244,90 +235,6 @@ pnpm lint --filter='...[origin/main]'
 - Re-run checks
 
 **If still failing:** Report and continue (will affect gate decision)
-
----
-
-## Phase 1.5: SonarQube Scan (conditional)
-
-**Controlled by `SONAR_ENABLED` in `.env`:**
-
-```
-auto   — run only when change complexity signals warrant it (default)
-always — always run; block review if server is unreachable
-never  — always skip
-```
-
-### Step 1: Decide whether to run
-
-**If `SONAR_ENABLED=never`** → skip, set `sonar_skipped=true`, continue to Phase 2.
-
-**If `SONAR_ENABLED=always`** → proceed to Step 2 (server probe).
-
-**If `SONAR_ENABLED=auto` (or unset)** → evaluate the changed files list from Phase 0A against these thresholds. Run Sonar if **any one** is true:
-
-| Signal                                                                            | Threshold                                  | Rationale                         |
-| --------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------- |
-| Files changed                                                                     | > 15                                       | Wide surface area                 |
-| Lines changed (`git diff --stat`)                                                 | > 300                                      | Significant volume                |
-| Packages/apps touched                                                             | > 1 distinct `apps/*` or `packages/*` root | Cross-cutting change              |
-| Any file under `apps/api/` or `packages/backend/`                                 | present                                    | Backend changes carry higher risk |
-| Any file matching `*auth*`, `*secret*`, `*payment*`, `*security*`, `*permission*` | present                                    | High-risk paths                   |
-| Previous gate for this story was `FAIL` or `CONCERNS`                             | true                                       | Regression risk                   |
-
-If no threshold is met → skip, set `sonar_skipped=true`, log reason ("change is localised — Sonar skipped"), continue to Phase 2.
-
-### Step 2: Probe server
-
-```bash
-curl -sf $SONAR_HOST_URL/api/system/status
-```
-
-(default `SONAR_HOST_URL=http://localhost:9001`)
-
-- Unreachable AND `SONAR_ENABLED=always` → **halt**: "SonarQube required but server is not running. Run `pnpm sonar:up` or set `SONAR_ENABLED=never`."
-- Unreachable AND `SONAR_ENABLED=auto` → skip gracefully, set `sonar_skipped=true`, continue.
-
-### Step 3: Run scan
-
-```bash
-pnpm sonar:test   # generates coverage/lcov.info
-pnpm sonar:scan
-```
-
-Fetch quality gate result:
-
-```bash
-curl -s "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=lego-moc-instructions-platform" \
-  -u "$SONAR_TOKEN:"
-```
-
-Parse JSON — extract `projectStatus.status` (`OK` / `WARN` / `ERROR`) and failed `conditions`. Store as `sonar_result`:
-
-```yaml
-sonar_result:
-  gate: OK|WARN|ERROR
-  skipped: false
-  triggered_by: files_changed|lines_changed|cross_package|backend_files|high_risk_path|previous_gate|always
-  conditions: # only failed/warning conditions
-    - metric: new_coverage
-      status: ERROR
-      actual_value: '62.5'
-      error_threshold: '80'
-    - metric: new_duplicated_lines_density
-      status: WARN
-      actual_value: '4.1'
-      error_threshold: '3'
-```
-
-### Metric → finding category map (used in Phase 4)
-
-| Sonar metric prefix                                          | Finding category       |
-| ------------------------------------------------------------ | ---------------------- |
-| `security_*`, `new_vulnerabilities`, `new_security_hotspots` | security (SEC-)        |
-| `new_bugs`, `reliability_*`                                  | code_quality (QUAL-)   |
-| `new_code_smells`, `sqale_*`, `maintainability_*`            | technical_debt (DEBT-) |
-| `new_coverage`, `new_uncovered_*`                            | test_coverage (TEST-)  |
-| `new_duplicated_*`                                           | code_quality (QUAL-)   |
 
 ---
 
@@ -718,14 +625,13 @@ results = {
 
 ## Phase 4: Aggregate Findings
 
-**Combine all findings into unified structure. If `sonar_result` is available (not skipped), merge its failed conditions as findings into the appropriate categories using the metric→category map from Phase 1.5.**
+**Combine all findings into unified structure:**
 
 ```yaml
 review_summary:
   story: '{STORY_NUM}'
   reviewed_at: '{ISO-8601}'
   files_analyzed: { count }
-  sonar_gate: OK|WARN|ERROR|skipped # from Phase 1.5
 
   t_shirt_sizing:
     recommended_size: M # Synthesized from all specialists
@@ -867,126 +773,175 @@ Invoke /qa-gate skill with:
 
 The /qa-gate skill will:
 - Determine gate decision (PASS/CONCERNS/FAIL)
-- Write qa_gate artifact to KB via kb_write_artifact
+- Write qa_gate KB artifact via kb_write_artifact (story_id-based)
 - Return gate status
 ```
 
 ---
 
-## Phase 7: Write Review Artifact to KB
+## Phase 7: Write Review Findings
 
 **Write review findings as a KB artifact:**
 
-Call `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "review", content: {review_content} })` with the following content structure:
+Call `kb_write_artifact({ story_id, artifact_type: 'review', content: { /* full review_summary structure */ } })`.
 
-```yaml
-review_date: '{ISO-8601}'
-reviewed_by: 'Claude Code'
-gate: '{PASS|CONCERNS|FAIL}'
-gate_artifact_type: 'qa_gate'
+If artifact already exists from a prior review run, overwrite it (idempotent).
 
-t_shirt_size:
-  recommended: '{M}'
-  confidence: '{high|medium|low}'
-  specialist_breakdown:
-    requirements: { size: M, rationale: '5-7 ACs with some test gaps' }
-    code_quality: { size: L, rationale: 'Moderate complexity, architectural considerations' }
-    security: { size: S, rationale: 'Standard auth checks, low risk' }
-    performance: { size: M, rationale: 'Some optimization needed (memoization)' }
-    accessibility: { size: M, rationale: 'Interactive UI requiring a11y attention' }
-    test_coverage: { size: L, rationale: 'Comprehensive testing needed (unit + integration)' }
-    tech_debt: { size: M, rationale: 'Minor shortcuts, well-documented' }
-  size_distribution: { XS: 0, S: 1, M: 4, L: 2, XL: 0, XXL: 0 }
-  synthesis: |
-    Modal size is M (4/7 specialists). Code Quality and Test Coverage flagged as L due to
-    architectural complexity and comprehensive testing requirements. Overall recommendation:
-    M with awareness that testing effort may push toward upper end of estimate.
+The following markdown template shows the structure of the review content to store in the artifact:
 
-summary:
-  files_analyzed: { count }
-  total_findings: { count }
-  by_severity: { high: { N }, medium: { N }, low: { N } }
-  traceability: '{N}/{M} acceptance criteria have test coverage'
+```markdown
+## Review Findings
 
-required_checks:
-  tests: '{PASS|FAIL}'
-  types: '{PASS|FAIL}'
-  lint: '{PASS|FAIL}'
+> **Review Date:** {ISO-8601}
+> **Reviewed By:** Claude Code
+> **Gate:** {PASS|CONCERNS|FAIL} (score: {score}/100)
+> **Gate Artifact:** qa_gate KB artifact (story_id: {story})
 
-findings_by_category:
-  requirements_traceability:
-    # {If traceability gaps found:}
-    - id: REQ-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file or N/A}'
-      action: '{suggested_action}'
-    # {If no gaps: empty array — all acceptance criteria have test coverage}
+### T-Shirt Size Estimate
 
-  code_quality:
-    - id: QUAL-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}:{line}'
-      action: '{suggested_action}'
+**Recommended Size: {M}** (Confidence: {high|medium|low})
 
-  security:
-    - id: SEC-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}:{line}'
-      cwe: '{cwe_reference}'
-      action: '{suggested_action}'
+**Specialist Breakdown:**
+| Specialist | Size | Rationale |
+|------------|------|-----------|
+| Requirements | M | 5-7 ACs with some test gaps |
+| Code Quality | L | Moderate complexity, architectural considerations |
+| Security | S | Standard auth checks, low risk |
+| Performance | M | Some optimization needed (memoization) |
+| Accessibility | M | Interactive UI requiring a11y attention |
+| Test Coverage | L | Comprehensive testing needed (unit + integration) |
+| Tech Debt | M | Minor shortcuts, well-documented |
 
-  performance:
-    - id: PERF-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}:{line}'
-      impact: '{estimated_impact}'
-      action: '{suggested_action}'
+**Size Distribution:** XS: 0, S: 1, **M: 4**, L: 2, XL: 0, XXL: 0
 
-  accessibility:
-    - id: A11Y-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}:{line}'
-      wcag: '{wcag_criterion}'
-      action: '{suggested_action}'
+**Synthesis:**
+Modal size is M (4/7 specialists). Code Quality and Test Coverage flagged as L due to architectural complexity and comprehensive testing requirements. Overall recommendation: **M** with awareness that testing effort may push toward upper end of estimate.
 
-  test_coverage:
-    - id: TEST-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}'
-      action: '{suggested_action}'
+---
 
-  technical_debt:
-    - id: DEBT-001
-      severity: '{severity}'
-      finding: '{finding}'
-      file: '{file}:{line}'
-      effort: '{estimated_effort}'
-      action: '{suggested_action}'
+### Summary
 
-refactoring_applied:
-  # {If --fix was used:}
-  - file: '{file}'
-    change: '{what was changed and why}'
+- **Files Analyzed:** {count}
+- **Total Findings:** {count} (high: {N}, medium: {N}, low: {N})
+- **Traceability:** {N}/{M} acceptance criteria have test coverage
 
-recommendation: |
-  # {If PASS:} Ready for Done — All checks passed, no blocking issues.
-  # {If CONCERNS:} Review Required — Address medium-severity issues and proceed with awareness.
-  # {If FAIL:} Changes Required — Address high-severity issues before proceeding.
+### Required Checks
+
+| Check | Status      |
+| ----- | ----------- |
+| Tests | {PASS/FAIL} |
+| Types | {PASS/FAIL} |
+| Lint  | {PASS/FAIL} |
+
+### Requirements Traceability
+
+{If traceability gaps found:}
+
+- **[REQ-001] {severity}:** {finding}
+  - **File:** {file or N/A}
+  - **Action:** {suggested_action}
+
+{If no gaps:}
+✓ All acceptance criteria have test coverage
+
+### Code Quality
+
+{For each finding:}
+
+- **[QUAL-001] {severity}:** {finding}
+  - **File:** {file}:{line}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+### Security
+
+{For each finding:}
+
+- **[SEC-001] {severity}:** {finding}
+  - **File:** {file}:{line}
+  - **CWE:** {cwe_reference}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+### Performance
+
+{For each finding:}
+
+- **[PERF-001] {severity}:** {finding}
+  - **File:** {file}:{line}
+  - **Impact:** {estimated_impact}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+### Accessibility
+
+{For each finding:}
+
+- **[A11Y-001] {severity}:** {finding}
+  - **File:** {file}:{line}
+  - **WCAG:** {wcag_criterion}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+### Test Coverage
+
+{For each finding:}
+
+- **[TEST-001] {severity}:** {finding}
+  - **File:** {file}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+### Technical Debt
+
+{For each finding:}
+
+- **[DEBT-001] {severity}:** {finding}
+  - **File:** {file}:{line}
+  - **Effort:** {estimated_effort}
+  - **Action:** {suggested_action}
+
+{If no findings:}
+✓ No issues found
+
+{If --fix was used:}
+
+### Refactoring Applied
+
+- **{file}:** {what was changed and why}
+
+### Recommendation
+
+{If PASS:}
+✓ **Ready for Done** - All checks passed, no blocking issues.
+
+{If CONCERNS:}
+⚠ **Review Required** - Address medium-severity issues and proceed with awareness.
+
+{If FAIL:}
+✗ **Changes Required** - Address high-severity issues before proceeding.
+
+---
 ```
 
 **Important:**
 
-- Use `kb_write_artifact` to persist findings — do NOT write to story files
+- KB write is idempotent — overwrite if artifact already exists
 - Organize findings by specialist category
-- Use empty arrays for categories with zero findings
+- Show "✓ No issues found" for categories with zero findings
 - List findings in order of severity (high → medium → low)
 - Include file paths and line numbers for easy navigation
+- **Mode B (directory scan):** KB artifacts are preferred for story_id inputs. For directory-only scans without a story_id, write findings inline to the response; KB write is skipped.
 
 ---
 
@@ -1018,7 +973,6 @@ REQUIRED CHECKS
   Tests:    {PASS|FAIL}
   Types:    {PASS|FAIL}
   Lint:     {PASS|FAIL}
-  Sonar:    {OK|WARN|ERROR|skipped}
 
 SPECIALIST FINDINGS ({total} total)
   Security:       {N} issues ({high}H {medium}M {low}L) → Size: S
@@ -1044,7 +998,7 @@ REFACTORING APPLIED
 
 GATE DECISION
   Status: {PASS|CONCERNS|FAIL}
-  Gate artifact written to KB (artifact_type: qa_gate)
+  Gate Artifact: qa_gate KB artifact for {story}
 
 {If FAIL:}
 RECOMMENDATION: Address high-severity issues before proceeding.
@@ -1056,7 +1010,7 @@ RECOMMENDATION: Review medium-severity issues and proceed with awareness.
 RECOMMENDATION: Ready for merge.
 
 FINDINGS LOCATION
-  Review artifact written to KB: story_id={STORY_ID}, artifact_type=review
+  Review artifact written: kb_write_artifact(story_id: {STORY_ID}, artifact_type: review)
 
 ═══════════════════════════════════════════════════════════════════
 ```
@@ -1098,8 +1052,8 @@ FINDINGS BY STORY
 │ Size:     M (Confidence: high)
 │ Gate:     {PASS|CONCERNS|FAIL}
 │ Findings: {total} ({high}H {medium}M {low}L)
-│ Review artifact written to KB (story_id={story-1-id}, artifact_type=review)
-│ Gate artifact written to KB (story_id={story-1-id}, artifact_type=qa_gate)
+│ File:     {story_file_path}
+│ Gate:     docs/qa/gates/{story-1}-{slug}.yml
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1107,8 +1061,8 @@ FINDINGS BY STORY
 ├─────────────────────────────────────────────────────────────────┤
 │ Gate:     {PASS|CONCERNS|FAIL}
 │ Findings: {total} ({high}H {medium}M {low}L)
-│ Review artifact written to KB (story_id={story-2-id}, artifact_type=review)
-│ Gate artifact written to KB (story_id={story-2-id}, artifact_type=qa_gate)
+│ File:     {story_file_path}
+│ Gate:     docs/qa/gates/{story-2}-{slug}.yml
 └─────────────────────────────────────────────────────────────────┘
 
 {... for each story}
@@ -1140,7 +1094,7 @@ RECOMMENDATION
 
 {If any FAIL:}
 ⚠ {N} stories require changes before proceeding.
-  → Retrieve review artifacts from KB and address blocking issues.
+  → Review findings in each story file and address blocking issues.
 
 {If any CONCERNS but no FAIL:}
 ⚠ {N} stories have concerns.
@@ -1151,9 +1105,9 @@ RECOMMENDATION
 
 NEXT STEPS
 
-Review detailed findings for each story in KB:
+Review detailed findings in each story file:
 {For each story with FAIL or CONCERNS:}
-  - kb_get_story({ story_id: "{story_id}", include_artifacts: true }) → review artifact
+  - {story_file_path}
 
 ═══════════════════════════════════════════════════════════════════
 ```
@@ -1164,22 +1118,6 @@ Review detailed findings for each story in KB:
 2. Sum total findings across all stories
 3. Identify most common issue types across stories
 4. Provide actionable next steps
-
----
-
-## Phase 8S: Close Session (Telemetry — non-blocking)
-
-After the final report is emitted, close the session opened in Phase 0S. This marks the agent as no longer active, removing the badge from the roadmap UI.
-
-```javascript
-if (_reviewSessionId) {
-  await mcp__knowledge_base__session_complete({
-    sessionId: _reviewSessionId,
-  }).catch(() => {}) // fire-and-forget
-}
-```
-
-If `mcp__knowledge_base__session_complete` is not available, skip silently.
 
 ---
 
