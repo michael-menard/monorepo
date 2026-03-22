@@ -7,6 +7,7 @@
  *
  * APRS-4010: ST-1
  * APRS-4020: ST-1 (extended with dependency wiring + validation state)
+ * APRS-4030: ST-1 (extended with writeResult + write_to_kb phase)
  */
 
 import { z } from 'zod'
@@ -76,6 +77,7 @@ export const GenerationPhaseSchema = z.enum([
   'generate_stories',
   'wire_dependencies',
   'validate_graph',
+  'write_to_kb',
   'complete',
   'error',
 ])
@@ -115,6 +117,22 @@ export const ValidationResultSchema = z.object({
 })
 
 export type ValidationResult = z.infer<typeof ValidationResultSchema>
+
+// ============================================================================
+// WriteResult Schema (APRS-4030: AC-1)
+// ============================================================================
+
+/**
+ * Result from writing stories to KB.
+ */
+export const WriteResultSchema = z.object({
+  storiesWritten: z.number().int().min(0),
+  storiesFailed: z.number().int().min(0),
+  planStatusUpdated: z.boolean(),
+  errors: z.array(z.string()),
+})
+
+export type WriteResult = z.infer<typeof WriteResultSchema>
 
 // ============================================================================
 // State Annotation
@@ -185,6 +203,12 @@ export const StoryGenerationStateAnnotation = Annotation.Root({
   generatedStoriesWithDeps: Annotation<GeneratedStory[]>({
     reducer: overwrite,
     default: () => [],
+  }),
+
+  /** Result from writing stories to KB — output of write_to_kb node */
+  writeResult: Annotation<WriteResult | null>({
+    reducer: overwrite,
+    default: () => null,
   }),
 
   /** Current generation phase */

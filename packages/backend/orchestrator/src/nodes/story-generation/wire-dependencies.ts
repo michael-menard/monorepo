@@ -156,6 +156,8 @@ export function computeParallelGroups(storyKeys: string[], edges: DependencyEdge
     // Only include edges where both endpoints are in our key set
     if (!inDegree.has(edge.from) || !inDegree.has(edge.to)) continue
 
+    // Safe: all storyKeys are initialized in adjacency above, and the guard on
+    // line 157 ensures edge.from is a known key before we reach this line.
     adjacency.get(edge.from)!.push(edge.to)
     inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1)
   }

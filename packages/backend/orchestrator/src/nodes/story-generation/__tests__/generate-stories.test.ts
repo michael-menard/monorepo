@@ -299,7 +299,7 @@ describe('createGenerateStoriesNode', () => {
 
     const result = await node(state)
 
-    expect(result.generationPhase).toBe('complete')
+    expect(result.generationPhase).toBe('wire_dependencies')
     expect(result.generatedStories).toHaveLength(2)
     expect(llmAdapter).toHaveBeenCalledTimes(2)
   })

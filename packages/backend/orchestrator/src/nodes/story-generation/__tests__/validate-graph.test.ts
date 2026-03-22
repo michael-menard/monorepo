@@ -68,14 +68,14 @@ describe('defaultGraphValidatorFn', () => {
 // ============================================================================
 
 describe('createValidateGraphNode', () => {
-  it('sets generationPhase=complete when validation passes (default no-op)', async () => {
+  it('sets generationPhase=write_to_kb when validation passes (default no-op)', async () => {
     const node = createValidateGraphNode()
     const result = await node({
       ...BASE_STATE,
       orderedStories: [makeStory('A', 'flow-1')],
     })
 
-    expect(result.generationPhase).toBe('complete')
+    expect(result.generationPhase).toBe('write_to_kb')
     expect(result.validationResult).toEqual({ passed: true, errors: [], warnings: [] })
   })
 
@@ -94,7 +94,7 @@ describe('createValidateGraphNode', () => {
     expect(result.validationResult?.passed).toBe(false)
   })
 
-  it('sets generationPhase=complete with warnings when validation passes with warnings', async () => {
+  it('sets generationPhase=write_to_kb with warnings when validation passes with warnings', async () => {
     const graphValidator = vi.fn().mockReturnValue({
       passed: true,
       errors: [],
@@ -104,7 +104,7 @@ describe('createValidateGraphNode', () => {
     const node = createValidateGraphNode({ graphValidator })
     const result = await node(BASE_STATE)
 
-    expect(result.generationPhase).toBe('complete')
+    expect(result.generationPhase).toBe('write_to_kb')
     expect(result.warnings).toContain('Orphan story detected: X')
   })
 

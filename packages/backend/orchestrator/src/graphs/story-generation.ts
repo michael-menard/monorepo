@@ -2,15 +2,16 @@
  * Story Generation Graph
  *
  * Composes load_refined_plan, slice_flows, generate_stories, wire_dependencies,
- * and validate_graph nodes into a LangGraph StateGraph.
+ * validate_graph, and write_to_kb nodes into a LangGraph StateGraph.
  *
- * Graph structure (AC-8):
+ * Graph structure:
  *   START → load_refined_plan → slice_flows → generate_stories
- *         → wire_dependencies → validate_graph → END
+ *         → wire_dependencies → validate_graph → write_to_kb → END
  *   Conditional edges: error → END at each step
  *
  * APRS-4010: ST-5
  * APRS-4020: ST-4
+ * APRS-4030: ST-4 (AC-6: added write_to_kb node)
  */
 
 import { z } from 'zod'
@@ -36,6 +37,11 @@ import {
   createValidateGraphNode,
   type GraphValidatorFn,
 } from '../nodes/story-generation/validate-graph.js'
+import {
+  createWriteToKbNode,
+  type KbWriterFn,
+  type StoryIdGeneratorFn,
+} from '../nodes/story-generation/write-to-kb.js'
 
 // ============================================================================
 // Config Schema
@@ -48,6 +54,8 @@ export const StoryGenerationGraphConfigSchema = z.object({
   llmAdapter: z.function().optional(),
   /** Injectable graph validator adapter for validate_graph */
   graphValidator: z.function().optional(),
+  /** Injectable KB writer adapter for write_to_kb */
+  kbWriter: z.function().optional(),
 })
 
 export type StoryGenerationGraphConfig = z.infer<typeof StoryGenerationGraphConfigSchema>
@@ -96,6 +104,16 @@ function afterWireDependencies(state: StoryGenerationState): 'validate_graph' | 
   return 'validate_graph'
 }
 
+/**
+ * Routes after validate_graph: proceed to write_to_kb or END on error.
+ */
+function afterValidateGraph(state: StoryGenerationState): 'write_to_kb' | '__end__' {
+  if (state.generationPhase === 'error') {
+    return '__end__'
+  }
+  return 'write_to_kb'
+}
+
 // ============================================================================
 // Graph Factory
 // ============================================================================
@@ -103,9 +121,9 @@ function afterWireDependencies(state: StoryGenerationState): 'validate_graph' | 
 /**
  * Creates and compiles the story-generation graph.
  *
- * AC-8: Graph: START→load_refined_plan→slice_flows→generate_stories
- *              →wire_dependencies→validate_graph→END
- * Injectable adapters: planLoader, llmAdapter, graphValidator.
+ * Graph: START→load_refined_plan→slice_flows→generate_stories
+ *        →wire_dependencies→validate_graph→write_to_kb→END
+ * Injectable adapters: planLoader, llmAdapter, graphValidator, kbWriter.
  *
  * @param config - Optional configuration with injectable adapters
  * @returns Compiled StateGraph
@@ -116,6 +134,8 @@ export function createStoryGenerationGraph(
     llmAdapter?: LlmAdapterFn
     minimumPathFn?: MinimumPathFn
     graphValidator?: GraphValidatorFn
+    kbWriter?: KbWriterFn
+    storyIdGenerator?: StoryIdGeneratorFn
   } = {},
 ) {
   const graph = new StateGraph(StoryGenerationStateAnnotation)
@@ -127,6 +147,13 @@ export function createStoryGenerationGraph(
       createWireDependenciesNode({ minimumPathFn: config.minimumPathFn }),
     )
     .addNode('validate_graph', createValidateGraphNode({ graphValidator: config.graphValidator }))
+    .addNode(
+      'write_to_kb',
+      createWriteToKbNode({
+        kbWriter: config.kbWriter,
+        storyIdGenerator: config.storyIdGenerator,
+      }),
+    )
 
     // START → load_refined_plan
     .addEdge(START, 'load_refined_plan')
@@ -155,8 +182,14 @@ export function createStoryGenerationGraph(
       __end__: END,
     })
 
-    // validate_graph → END
-    .addEdge('validate_graph', END)
+    // validate_graph → write_to_kb | END
+    .addConditionalEdges('validate_graph', afterValidateGraph, {
+      write_to_kb: 'write_to_kb',
+      __end__: END,
+    })
+
+    // write_to_kb → END
+    .addEdge('write_to_kb', END)
 
   return graph.compile()
 }

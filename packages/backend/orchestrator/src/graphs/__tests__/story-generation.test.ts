@@ -2,11 +2,13 @@
  * story-generation graph compilation + integration tests
  * APRS-4010: ST-5 / AC-6, AC-7
  * APRS-4020: ST-5 / AC-7 (5-node pipeline)
+ * APRS-4030: ST-5 / AC-6, AC-7 (6-node pipeline with write_to_kb)
  */
 
 import { describe, it, expect, vi } from 'vitest'
 import { createStoryGenerationGraph } from '../story-generation.js'
 import type { GraphValidatorFn } from '../../nodes/story-generation/validate-graph.js'
+import type { KbWriterFn } from '../../nodes/story-generation/write-to-kb.js'
 
 // ============================================================================
 // Helpers
@@ -59,7 +61,7 @@ describe('createStoryGenerationGraph', () => {
     expect(typeof graph.invoke).toBe('function')
   })
 
-  it('graph structure: START → load_refined_plan → slice_flows → generate_stories → wire_dependencies → validate_graph → END', () => {
+  it('graph structure: START → load_refined_plan → slice_flows → generate_stories → wire_dependencies → validate_graph → write_to_kb → END', () => {
     // Compilation confirms graph structure is valid
     const graph = createStoryGenerationGraph()
     expect(graph).toBeDefined()
@@ -71,7 +73,7 @@ describe('createStoryGenerationGraph', () => {
 // ============================================================================
 
 describe('createStoryGenerationGraph integration', () => {
-  it('runs full 5-node pipeline from start to end with plan loader', async () => {
+  it('runs full 6-node pipeline from start to end with plan loader', async () => {
     const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
     const llmAdapter = vi.fn().mockResolvedValue({
       description: 'Story description',
@@ -89,10 +91,13 @@ describe('createStoryGenerationGraph integration', () => {
     expect(result.flows).toHaveLength(1)
     expect(result.slicedFlows.length).toBeGreaterThan(0)
     expect(result.generatedStories.length).toBeGreaterThan(0)
-    // 5-node pipeline: wire_dependencies and validate_graph ran
+    // 6-node pipeline: wire_dependencies, validate_graph, and write_to_kb ran
     expect(result.orderedStories.length).toBeGreaterThan(0)
     expect(result.validationResult).not.toBeNull()
     expect(result.validationResult?.passed).toBe(true)
+    expect(result.writeResult).not.toBeNull()
+    expect(result.writeResult?.storiesWritten).toBeGreaterThan(0)
+    expect(result.writeResult?.storiesFailed).toBe(0)
     expect(planLoader).toHaveBeenCalledWith('test-plan')
   })
 
@@ -175,7 +180,7 @@ describe('createStoryGenerationGraph integration', () => {
     expect(result.errors.some((e: string) => e.includes('wire_dependencies failed'))).toBe(true)
   })
 
-  it('exits at validate_graph when validation fails (cycle)', async () => {
+  it('exits at validate_graph when validation fails (cycle) — does not reach write_to_kb', async () => {
     const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
     const llmAdapter = vi.fn().mockResolvedValue({
       description: 'desc',
@@ -188,11 +193,89 @@ describe('createStoryGenerationGraph integration', () => {
       errors: ['Cycle detected: A → B → A'],
       warnings: [],
     })
+    const kbWriter: KbWriterFn = vi.fn()
 
-    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, graphValidator })
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, graphValidator, kbWriter })
     const result = await graph.invoke({ planSlug: 'test-plan' })
 
     expect(result.generationPhase).toBe('error')
     expect(result.errors.some((e: string) => e.includes('Cycle detected'))).toBe(true)
+    expect(result.writeResult).toBeNull()
+    expect(kbWriter).not.toHaveBeenCalled()
+  })
+
+  it('accepts injectable kbWriter via factory', () => {
+    const kbWriter: KbWriterFn = vi.fn()
+    expect(() => createStoryGenerationGraph({ kbWriter })).not.toThrow()
+  })
+
+  it('runs full 6-node pipeline with injectable kbWriter', async () => {
+    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: ['Task 1'],
+      risk: 'low',
+    })
+    const kbWriter: KbWriterFn = vi.fn().mockImplementation(async stories => ({
+      results: stories.map((s: { story_id: string }) => ({
+        success: true,
+        story_id: s.story_id,
+      })),
+      planUpdated: true,
+    }))
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, kbWriter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    expect(result.generationPhase).toBe('complete')
+    expect(kbWriter).toHaveBeenCalled()
+    expect(result.writeResult?.storiesFailed).toBe(0)
+    expect(result.writeResult?.planStatusUpdated).toBe(true)
+  })
+
+  it('exits at write_to_kb on partial failure', async () => {
+    const multiFlowPlan = {
+      ...VALID_PLAN,
+      flows: [
+        VALID_PLAN.flows[0],
+        {
+          id: 'flow-2',
+          name: 'Admin Flow',
+          actor: 'Admin',
+          trigger: 'Admin clicks',
+          steps: [
+            { index: 1, description: 'View dashboard' },
+            { index: 2, description: 'Export data' },
+          ],
+          successOutcome: 'Data exported',
+          source: 'user',
+          confidence: 1.0,
+          status: 'confirmed',
+        },
+      ],
+    }
+    const planLoader = vi.fn().mockResolvedValue(multiFlowPlan)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
+    })
+    const kbWriter: KbWriterFn = vi.fn().mockImplementation(async stories => ({
+      results: stories.map((s: { story_id: string }, i: number) => ({
+        success: i === 0,
+        story_id: s.story_id,
+        ...(i > 0 ? { error: 'DB write failed' } : {}),
+      })),
+      planUpdated: false,
+    }))
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, kbWriter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    // write_to_kb sets error on partial failure
+    expect(result.generationPhase).toBe('error')
+    expect(result.writeResult?.storiesFailed).toBeGreaterThan(0)
   })
 })
