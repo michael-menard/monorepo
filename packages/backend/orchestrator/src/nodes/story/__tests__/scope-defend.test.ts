@@ -11,7 +11,18 @@
  * - ED-1: Zero ACs → challenges=[]
  * - ED-2: All ACs MVP-critical → challenges=[]
  *
+ * WINT-8060 Coverage:
+ * - BT-1: Zero defer-to-backlog challenges → no tasks created
+ * - BT-2: One defer-to-backlog challenge → one task created
+ * - BT-3: Five defer-to-backlog challenges → five tasks created
+ * - BT-4: kb_add_task failure → warning logged, no throw
+ * - BT-5: kbAddTaskFn not injected → no-op
+ * - BT-6: Idempotency — existing task with matching tag → skip
+ * - BT-7: Tags include both 'scope-defender' and 'deferred'
+ * - BT-8: Only defer-to-backlog challenges create tasks (not reduce-scope/accept-as-mvp)
+ *
  * WINT-9040: LangGraph Story Node - Scope Defend
+ * WINT-8060: Integrate scope-defender with Backlog
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,9 +31,14 @@ import {
   applyDAChallenges,
   identifyCandidates,
   scopeDefendNode,
+  createScopeDefendNode,
+  writeBacklogTasks,
   type AcceptanceCriterionItem,
   type GapAnalysis,
   type GraphStateWithScopeDefend,
+  type KbAddTaskFn,
+  type KbListTasksFn,
+  type KbAddTaskInput,
 } from '../scope-defend.js'
 
 // ============================================================================
@@ -316,5 +332,214 @@ describe('scopeDefendNode', () => {
     const stateResult = result as GraphStateWithScopeDefend
 
     expect(stateResult.scope_defend_output).toBeNull()
+  })
+})
+
+// ============================================================================
+// writeBacklogTasks unit tests (WINT-8060)
+// ============================================================================
+
+describe('writeBacklogTasks', () => {
+  let mockKbAddTask: KbAddTaskFn
+  let mockKbListTasks: KbListTasksFn
+  let capturedInputs: KbAddTaskInput[]
+
+  beforeEach(() => {
+    capturedInputs = []
+    mockKbAddTask = vi.fn(async (input: KbAddTaskInput) => {
+      capturedInputs.push(input)
+      return { id: `task-${capturedInputs.length}` }
+    })
+    mockKbListTasks = vi.fn(async () => [])
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // BT-1: Zero defer-to-backlog challenges → no tasks created
+  it('BT-1: zero defer-to-backlog challenges → no tasks created', async () => {
+    const challenges = applyDAChallenges(
+      [makeAC('AC-1', 'User auth is required')], // high risk → accept-as-mvp
+      'WINT-TEST',
+      [],
+    )
+    // All challenges should be accept-as-mvp (high risk)
+    const result = await writeBacklogTasks(challenges, 'WINT-TEST', mockKbAddTask, mockKbListTasks)
+
+    expect(result.tasksCreated).toBe(0)
+    expect(result.warnings).toHaveLength(0)
+    expect(mockKbAddTask).not.toHaveBeenCalled()
+  })
+
+  // BT-2: One defer-to-backlog challenge → one task created
+  it('BT-2: one defer-to-backlog challenge → one task created', async () => {
+    const challenges = applyDAChallenges(
+      [makeAC('AC-1', 'Show animated transition between views')], // low risk → defer-to-backlog
+      'WINT-TEST',
+      [],
+    )
+
+    const result = await writeBacklogTasks(challenges, 'WINT-TEST', mockKbAddTask, mockKbListTasks)
+
+    expect(result.tasksCreated).toBe(1)
+    expect(result.tasksSkipped).toBe(0)
+    expect(mockKbAddTask).toHaveBeenCalledTimes(1)
+  })
+
+  // BT-3: Five defer-to-backlog challenges → five tasks created
+  it('BT-3: five defer-to-backlog challenges → five tasks created', async () => {
+    const lowRiskACs = [
+      makeAC('AC-1', 'Show animated transition between views'),
+      makeAC('AC-2', 'Add tooltip on hover'),
+      makeAC('AC-3', 'Optional color picker'),
+      makeAC('AC-4', 'Nice-to-have animation effect'),
+      makeAC('AC-5', 'Style improvements to sidebar'),
+    ]
+    const challenges = applyDAChallenges(lowRiskACs, 'WINT-TEST', [])
+
+    const result = await writeBacklogTasks(challenges, 'WINT-TEST', mockKbAddTask, mockKbListTasks)
+
+    expect(result.tasksCreated).toBe(5)
+    expect(mockKbAddTask).toHaveBeenCalledTimes(5)
+  })
+
+  // BT-4: kb_add_task failure → warning logged, no throw
+  it('BT-4: kb_add_task failure → warning logged, no throw', async () => {
+    const failingKbAddTask: KbAddTaskFn = vi.fn(async () => {
+      throw new Error('DB connection failed')
+    })
+
+    const challenges = applyDAChallenges(
+      [makeAC('AC-1', 'Show animated transition between views')],
+      'WINT-TEST',
+      [],
+    )
+
+    const result = await writeBacklogTasks(
+      challenges,
+      'WINT-TEST',
+      failingKbAddTask,
+      mockKbListTasks,
+    )
+
+    expect(result.tasksCreated).toBe(0)
+    expect(result.warnings.length).toBeGreaterThan(0)
+    expect(result.warnings[0]).toContain('DB connection failed')
+  })
+
+  // BT-6: Idempotency — existing task with matching tag → skip
+  it('BT-6: idempotency — existing task with matching tag → skip', async () => {
+    const existingTasksKbList: KbListTasksFn = vi.fn(async () => [
+      {
+        id: 'existing-1',
+        title: 'Previously created task',
+        tags: ['scope-defender', 'deferred', 'scope-defender:WINT-TEST:DA-001'],
+      },
+    ])
+
+    const challenges = applyDAChallenges(
+      [makeAC('AC-1', 'Show animated transition between views')],
+      'WINT-TEST',
+      [],
+    )
+
+    const result = await writeBacklogTasks(
+      challenges,
+      'WINT-TEST',
+      mockKbAddTask,
+      existingTasksKbList,
+    )
+
+    expect(result.tasksCreated).toBe(0)
+    expect(result.tasksSkipped).toBe(1)
+    expect(mockKbAddTask).not.toHaveBeenCalled()
+  })
+
+  // BT-7: Tags include both 'scope-defender' and 'deferred'
+  it('BT-7: tags include both scope-defender and deferred', async () => {
+    const challenges = applyDAChallenges(
+      [makeAC('AC-1', 'Show animated transition between views')],
+      'WINT-TEST',
+      [],
+    )
+
+    await writeBacklogTasks(challenges, 'WINT-TEST', mockKbAddTask, mockKbListTasks)
+
+    expect(capturedInputs).toHaveLength(1)
+    expect(capturedInputs[0].tags).toContain('scope-defender')
+    expect(capturedInputs[0].tags).toContain('deferred')
+    expect(capturedInputs[0].tags).toContain('elab:scope-challenge')
+    expect(capturedInputs[0].tags).toContain('source:WINT-TEST')
+    expect(capturedInputs[0].source_agent).toBe('scope-defender')
+    expect(capturedInputs[0].source_phase).toBe('elab')
+    expect(capturedInputs[0].source_story_id).toBe('WINT-TEST')
+    expect(capturedInputs[0].task_type).toBe('feature_idea')
+  })
+
+  // BT-8: Only defer-to-backlog challenges create tasks
+  it('BT-8: only defer-to-backlog challenges create tasks', async () => {
+    // Mix of risk levels: high → accept-as-mvp, low → defer-to-backlog
+    const mixedACs = [
+      makeAC('AC-1', 'User must authenticate securely'), // high risk → accept-as-mvp
+      makeAC('AC-2', 'Show animated transition between views'), // low risk → defer-to-backlog
+    ]
+    const challenges = applyDAChallenges(mixedACs, 'WINT-TEST', [])
+
+    const deferCount = challenges.challenges.filter(
+      c => c.recommendation === 'defer-to-backlog',
+    ).length
+
+    const result = await writeBacklogTasks(challenges, 'WINT-TEST', mockKbAddTask, mockKbListTasks)
+
+    expect(result.tasksCreated).toBe(deferCount)
+  })
+})
+
+// ============================================================================
+// createScopeDefendNode factory tests (WINT-8060)
+// ============================================================================
+
+describe('createScopeDefendNode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // BT-5: kbAddTaskFn not injected → no-op (default node)
+  it('BT-5: without config → no backlog writes (backward compatible)', async () => {
+    const node = createScopeDefendNode()
+    const state = makeBaseState()
+    const result = await node(state)
+    const output = (result as GraphStateWithScopeDefend).scope_defend_output
+
+    expect(output).not.toBeNull()
+    expect(output?.challenges.length).toBeGreaterThan(0)
+  })
+
+  it('with kbAddTaskFn → backlog tasks created for defer-to-backlog challenges', async () => {
+    const capturedInputs: KbAddTaskInput[] = []
+    const mockKbAddTask: KbAddTaskFn = vi.fn(async (input: KbAddTaskInput) => {
+      capturedInputs.push(input)
+      return { id: `task-${capturedInputs.length}` }
+    })
+
+    const node = createScopeDefendNode({ kbAddTaskFn: mockKbAddTask })
+    const state = makeBaseState({
+      acceptance_criteria: [
+        makeAC('AC-1', 'Show animated transition between views'), // low risk → defer
+        makeAC('AC-2', 'Optional tooltip on hover'), // low risk → defer
+      ],
+      gap_analysis: null,
+    })
+
+    await node(state)
+
+    // Should have called kbAddTask for defer-to-backlog challenges
+    expect(mockKbAddTask).toHaveBeenCalled()
+    for (const input of capturedInputs) {
+      expect(input.tags).toContain('scope-defender')
+      expect(input.tags).toContain('deferred')
+      expect(input.task_type).toBe('feature_idea')
+    }
   })
 })

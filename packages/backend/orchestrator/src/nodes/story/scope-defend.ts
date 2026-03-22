@@ -6,6 +6,7 @@
  * Ports the scope-defender Claude Code agent to a native LangGraph node.
  *
  * WINT-9040: LangGraph Story Node - Scope Defend
+ * WINT-8060: Integrate scope-defender with Backlog (KB task writes)
  */
 
 import * as fs from 'node:fs/promises'
@@ -15,70 +16,61 @@ import { logger } from '@repo/logger'
 import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
 import { updateState } from '../../runner/state-helpers.js'
+import {
+  RecommendationSchema,
+  RiskIfDeferredSchema,
+  ScopeChallengeSchema,
+  ScopeChallengesSchema,
+  type RiskIfDeferred,
+  type ScopeChallenge,
+  type ScopeChallenges,
+} from '../../artifacts/scope-challenges.js'
+
+// Re-export canonical types for backward compatibility
+export {
+  RecommendationSchema,
+  RiskIfDeferredSchema,
+  ScopeChallengeSchema,
+  ScopeChallengesSchema,
+  type RiskIfDeferred,
+  type ScopeChallenge,
+}
+export type ScopeChallengeRecommendation = z.infer<typeof RecommendationSchema>
+export type ScopeChallengesOutput = ScopeChallenges
 
 // ============================================================================
-// Schemas — scope-challenges.json output
+// KbAddTaskFn type — injectable for backlog writes (WINT-8060)
 // ============================================================================
 
 /**
- * Recommendation options for a scope challenge.
+ * Input shape for kb_add_task, matching task-operations.ts KbAddTaskInputSchema.
  */
-export const ScopeChallengeRecommendationSchema = z.enum([
-  'defer-to-backlog',
-  'reduce-scope',
-  'accept-as-mvp',
-])
-
-export type ScopeChallengeRecommendation = z.infer<typeof ScopeChallengeRecommendationSchema>
-
-/**
- * Risk level if a challenged item is deferred.
- */
-export const RiskIfDeferredSchema = z.enum(['low', 'medium', 'high'])
-
-export type RiskIfDeferred = z.infer<typeof RiskIfDeferredSchema>
-
-/**
- * A single scope challenge produced by the DA analysis.
- */
-export const ScopeChallengeSchema = z.object({
-  /** Sequential ID: DA-001 through DA-005 */
-  id: z.string().min(1),
-  /** Which AC or feature is challenged */
-  target: z.string().min(1),
-  /** One-line explanation of why this might be non-MVP */
-  challenge: z.string().min(1),
-  /** Recommendation action */
-  recommendation: ScopeChallengeRecommendationSchema,
-  /** Backlog entry description when recommendation is defer-to-backlog */
-  deferral_note: z.string().optional(),
-  /** Risk level if this item is deferred */
-  risk_if_deferred: RiskIfDeferredSchema,
+export const KbAddTaskInputSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().nullable().optional(),
+  source_story_id: z.string().nullable().optional(),
+  source_phase: z.string().nullable().optional(),
+  source_agent: z.string().nullable().optional(),
+  task_type: z.enum(['follow_up', 'improvement', 'bug', 'tech_debt', 'feature_idea']),
+  tags: z.array(z.string()).nullable().optional(),
 })
 
-export type ScopeChallenge = z.infer<typeof ScopeChallengeSchema>
+export type KbAddTaskInput = z.infer<typeof KbAddTaskInputSchema>
 
 /**
- * Full scope-challenges.json output schema.
+ * Injectable function type for creating KB tasks.
+ * Matches the signature of kb_add_task MCP tool handler.
  */
-export const ScopeChallengesOutputSchema = z.object({
-  /** Story ID being challenged */
-  story_id: z.string().min(1),
-  /** ISO 8601 timestamp of generation */
-  generated_at: z.string().datetime(),
-  /** Challenge objects (max 5) */
-  challenges: z.array(ScopeChallengeSchema).max(5),
-  /** Count of items reviewed before cap */
-  total_candidates_reviewed: z.number().int().nonnegative(),
-  /** True if more than 5 candidates qualified */
-  truncated: z.boolean(),
-  /** Warning identifiers */
-  warnings: z.array(z.string()),
-  /** Count of warnings */
-  warning_count: z.number().int().nonnegative(),
-})
+export type KbAddTaskFn = (input: KbAddTaskInput) => Promise<{ id: string } | null>
 
-export type ScopeChallengesOutput = z.infer<typeof ScopeChallengesOutputSchema>
+/**
+ * Injectable function type for listing KB tasks (used for idempotency checks).
+ */
+export type KbListTasksFn = (params: {
+  source_story_id?: string
+  tags?: string[]
+  limit?: number
+}) => Promise<Array<{ id: string; title: string; tags: string[] | null }>>
 
 // ============================================================================
 // Node-local state extension schemas
@@ -137,17 +129,19 @@ export type GraphStateWithScopeDefend = GraphState & {
   /** Accumulated warning count */
   warning_count?: number
   /** Scope defend output */
-  scope_defend_output?: z.infer<typeof ScopeChallengesOutputSchema> | null
+  scope_defend_output?: ScopeChallenges | null
 }
 
 // ============================================================================
 // Risk sort order
 // ============================================================================
 
-const RISK_ORDER: Record<RiskIfDeferred, number> = {
+const RISK_ORDER: Record<string, number> = {
+  critical: 4,
   high: 3,
   medium: 2,
   low: 1,
+  none: 0,
 }
 
 // ============================================================================
@@ -228,9 +222,9 @@ function generateChallenge(ac: AcceptanceCriterionItem): string {
 function deriveRecommendation(
   ac: AcceptanceCriterionItem,
   risk: RiskIfDeferred,
-): ScopeChallengeRecommendation {
-  if (risk === 'high') return 'accept-as-mvp'
-  if (risk === 'low') return 'defer-to-backlog'
+): z.infer<typeof RecommendationSchema> {
+  if (risk === 'high' || risk === 'critical') return 'accept-as-mvp'
+  if (risk === 'low' || risk === 'none') return 'defer-to-backlog'
   // medium — reduce-scope or defer
   const desc = ac.description.toLowerCase()
   if (desc.includes('partial') || desc.includes('basic') || desc.includes('simple')) {
@@ -244,7 +238,7 @@ function deriveRecommendation(
  */
 function deriveDeferralNote(
   ac: AcceptanceCriterionItem,
-  recommendation: ScopeChallengeRecommendation,
+  recommendation: z.infer<typeof RecommendationSchema>,
 ): string | undefined {
   if (recommendation !== 'defer-to-backlog') return undefined
   return `Add to backlog: ${ac.description.substring(0, 80)}`
@@ -297,14 +291,14 @@ export function applyDAChallenges(
   candidates: AcceptanceCriterionItem[],
   storyId: string,
   warnings: string[],
-): ScopeChallengesOutput {
+): ScopeChallenges {
   const totalCandidates = candidates.length
   const truncated = totalCandidates > 5
 
   // Sort by risk descending, then by index for stability
   const sorted = [...candidates].sort((a, b) => {
-    const riskA = RISK_ORDER[deriveRiskLevel(a)]
-    const riskB = RISK_ORDER[deriveRiskLevel(b)]
+    const riskA = RISK_ORDER[deriveRiskLevel(a)] ?? 0
+    const riskB = RISK_ORDER[deriveRiskLevel(b)] ?? 0
     return riskB - riskA
   })
 
@@ -339,142 +333,304 @@ export function applyDAChallenges(
 }
 
 // ============================================================================
+// Backlog task writing (WINT-8060)
+// ============================================================================
+
+/**
+ * Writes backlog tasks for challenges with recommendation='defer-to-backlog'.
+ * Fire-and-forget: failures are logged as warnings, never thrown.
+ * Idempotent: checks for existing tasks with matching tag before writing.
+ *
+ * AC-1: Calls kb_add_task for each defer-to-backlog challenge
+ * AC-3: Failures are non-blocking (logged, not thrown)
+ * AC-4: Only defer-to-backlog challenges generate tasks
+ * AC-9: Idempotency via deterministic tag check
+ * AC-10: Tags include both 'scope-defender' and 'deferred'
+ *
+ * @param challenges - Scope challenges output
+ * @param storyId - Story ID for source attribution
+ * @param kbAddTaskFn - Injectable KB task creation function
+ * @param kbListTasksFn - Injectable KB task listing function (for idempotency)
+ * @returns Count of tasks created and warnings
+ */
+export async function writeBacklogTasks(
+  challenges: ScopeChallenges,
+  storyId: string,
+  kbAddTaskFn: KbAddTaskFn,
+  kbListTasksFn?: KbListTasksFn,
+): Promise<{ tasksCreated: number; tasksSkipped: number; warnings: string[] }> {
+  const deferChallenges = challenges.challenges.filter(c => c.recommendation === 'defer-to-backlog')
+  const warnings: string[] = []
+  let tasksCreated = 0
+  let tasksSkipped = 0
+
+  if (deferChallenges.length === 0) {
+    logger.debug('scope_defend: no defer-to-backlog challenges — skipping backlog writes')
+    return { tasksCreated: 0, tasksSkipped: 0, warnings }
+  }
+
+  // Load existing tasks for idempotency check (AC-9)
+  let existingTags: Set<string> = new Set()
+  if (kbListTasksFn) {
+    try {
+      const existing = await kbListTasksFn({
+        source_story_id: storyId,
+        tags: ['scope-defender'],
+        limit: 50,
+      })
+      for (const task of existing) {
+        if (task.tags) {
+          for (const tag of task.tags) {
+            existingTags.add(tag)
+          }
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.warn(`scope_defend: idempotency check failed — proceeding without: ${msg}`)
+    }
+  }
+
+  for (const challenge of deferChallenges) {
+    const challengeTag = `scope-defender:${storyId}:${challenge.id}`
+
+    // AC-9: Skip if task with this tag already exists
+    if (existingTags.has(challengeTag)) {
+      logger.debug(`scope_defend: skipping duplicate backlog task for ${challengeTag}`)
+      tasksSkipped++
+      continue
+    }
+
+    try {
+      const taskTitle =
+        challenge.deferral_note ??
+        challenge.challenge ??
+        challenge.description ??
+        `Deferred scope item ${challenge.id}`
+
+      await kbAddTaskFn({
+        title: taskTitle,
+        description: `Scope challenge ${challenge.id} from story ${storyId}: ${challenge.challenge ?? challenge.description ?? 'No description'}. Target: ${challenge.target ?? 'N/A'}. Risk if deferred: ${challenge.risk_if_deferred}.`,
+        source_story_id: storyId,
+        source_phase: 'elab',
+        source_agent: 'scope-defender',
+        task_type: 'feature_idea',
+        tags: [
+          'scope-defender',
+          'deferred',
+          'elab:scope-challenge',
+          `source:${storyId}`,
+          challengeTag,
+        ],
+      })
+
+      tasksCreated++
+      logger.info(`scope_defend: created backlog task for ${challengeTag}`)
+    } catch (err) {
+      // AC-3: Non-blocking — log warning, continue
+      const msg = err instanceof Error ? err.message : String(err)
+      warnings.push(`scope_defend: failed to create backlog task for ${challenge.id}: ${msg}`)
+      logger.warn(`scope_defend: kb_add_task failed for ${challengeTag}: ${msg}`)
+    }
+  }
+
+  logger.info(`scope_defend: backlog write complete`, {
+    storyId,
+    tasksCreated,
+    tasksSkipped,
+    warnings: warnings.length,
+  })
+
+  return { tasksCreated, tasksSkipped, warnings }
+}
+
+// ============================================================================
+// Scope Defend Node Configuration (WINT-8060)
+// ============================================================================
+
+/**
+ * Configuration for scope-defend node with optional KB task injection.
+ */
+export const ScopeDefendConfigSchema = z.object({
+  /** Injectable KB task creation function (WINT-8060) */
+  kbAddTaskFn: z.function().optional(),
+  /** Injectable KB task listing function for idempotency (WINT-8060) */
+  kbListTasksFn: z.function().optional(),
+})
+
+export type ScopeDefendConfig = {
+  kbAddTaskFn?: KbAddTaskFn
+  kbListTasksFn?: KbListTasksFn
+}
+
+// ============================================================================
 // Node implementation
 // ============================================================================
 
 /**
- * Scope Defend node implementation.
+ * Core scope defend logic extracted for reuse by both scopeDefendNode and factory.
+ */
+async function executeScopeDefend(
+  state: GraphState,
+  config?: ScopeDefendConfig,
+): Promise<Partial<GraphStateWithScopeDefend>> {
+  const stateWithDefend = state as GraphStateWithScopeDefend
+
+  // -------------------------------------------------------------------------
+  // Phase 1: Load Inputs
+  // -------------------------------------------------------------------------
+
+  const warnings: string[] = []
+
+  // BLOCKING: story_brief must exist
+  if (!stateWithDefend.story_brief) {
+    logger.warn('scope_defend: story_brief missing — node blocked')
+    return updateState({
+      scope_defend_output: null,
+      warning_count: (stateWithDefend.warning_count ?? 0) + 1,
+    } as Partial<GraphStateWithScopeDefend>)
+  }
+
+  const storyBrief = stateWithDefend.story_brief
+  const acs = stateWithDefend.acceptance_criteria ?? []
+  const gapAnalysis = stateWithDefend.gap_analysis ?? null
+  const rolePackPath = stateWithDefend.role_pack_path ?? null
+
+  logger.info(`scope_defend: starting for story ${state.storyId}`, {
+    acCount: acs.length,
+    hasGapAnalysis: gapAnalysis !== null,
+    hasRolePack: rolePackPath !== null,
+  })
+
+  // Optional: gap_analysis missing → increment warning
+  if (!gapAnalysis) {
+    warnings.push('gap_analysis_missing')
+    logger.warn('scope_defend: gap_analysis not provided, all ACs treated as challengeable')
+  }
+
+  // Optional: role_pack_path missing → increment warning
+  if (!rolePackPath) {
+    warnings.push('role_pack_missing')
+    logger.warn('scope_defend: role_pack_path not provided, using embedded DA constraints')
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 2: Identify Candidates
+  // -------------------------------------------------------------------------
+
+  const candidates = identifyCandidates(acs, gapAnalysis)
+
+  logger.info(`scope_defend: identified ${candidates.length} challenge candidates`, {
+    totalACs: acs.length,
+    candidateCount: candidates.length,
+  })
+
+  // -------------------------------------------------------------------------
+  // Phase 3: Apply DA Challenges
+  // -------------------------------------------------------------------------
+
+  const output = applyDAChallenges(candidates, state.storyId, warnings)
+
+  logger.info(`scope_defend: produced ${output.challenges.length} challenges`, {
+    truncated: output.truncated,
+    warningCount: output.warning_count,
+  })
+
+  // -------------------------------------------------------------------------
+  // Phase 4: Produce Output
+  // -------------------------------------------------------------------------
+
+  // Determine output path from storyId and epicPrefix
+  const outputDir = path.join(
+    'plans',
+    'future',
+    'platform',
+    state.epicPrefix.toLowerCase(),
+    'in-progress',
+    state.storyId,
+    '_implementation',
+  )
+
+  try {
+    await fs.mkdir(outputDir, { recursive: true })
+    const outputPath = path.join(outputDir, 'scope-challenges.json')
+    await fs.writeFile(outputPath, JSON.stringify(output, null, 2), 'utf-8')
+    logger.info(`scope_defend: wrote scope-challenges.json to ${outputPath}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`scope_defend: failed to write scope-challenges.json: ${msg}`)
+    // Non-blocking: still return output in state
+  }
+
+  // WINT-8060: Write backlog tasks for defer-to-backlog challenges
+  if (config?.kbAddTaskFn) {
+    const backlogResult = await writeBacklogTasks(
+      output,
+      state.storyId,
+      config.kbAddTaskFn,
+      config.kbListTasksFn,
+    )
+    if (backlogResult.warnings.length > 0) {
+      warnings.push(...backlogResult.warnings)
+    }
+    logger.info(
+      `scope_defend: backlog tasks created=${backlogResult.tasksCreated}, skipped=${backlogResult.tasksSkipped}`,
+    )
+  } else {
+    logger.debug('scope_defend: kbAddTaskFn not injected — skipping backlog writes')
+  }
+
+  // Validate output against schema before returning
+  const validatedOutput = ScopeChallengesSchema.parse(output)
+
+  logger.info(`scope_defend: completed for ${state.storyId}`, {
+    storyBriefTitle: storyBrief.title,
+    challengeCount: validatedOutput.challenges.length,
+  })
+
+  return updateState({
+    scope_defend_output: validatedOutput,
+    warning_count: (stateWithDefend.warning_count ?? 0) + warnings.length,
+  } as Partial<GraphStateWithScopeDefend>)
+}
+
+/**
+ * Scope Defend node implementation (default, no KB injection).
  *
  * Implements the 4-phase scope-defender agent contract:
  * 1. Load Inputs — Extract state fields, validate story_brief exists
  * 2. Identify Candidates — Filter ACs, exclude MVP-critical/blocking items
  * 3. Apply DA Challenges — Cap at 5, prioritize by risk
  * 4. Produce Output — Write scope-challenges.json, return updated state
- *
- * Uses the tool preset (lower retries, shorter timeout) since this is
- * primarily computation with file I/O.
- *
- * @param state - Current graph state with story_brief and acceptance_criteria
- * @returns Partial state update with scope_defend_output
  */
 export const scopeDefendNode = createToolNode(
   'scope_defend',
   async (state: GraphState): Promise<Partial<GraphStateWithScopeDefend>> => {
-    const stateWithDefend = state as GraphStateWithScopeDefend
-
-    // -------------------------------------------------------------------------
-    // Phase 1: Load Inputs
-    // -------------------------------------------------------------------------
-
-    const warnings: string[] = []
-
-    // BLOCKING: story_brief must exist
-    if (!stateWithDefend.story_brief) {
-      logger.warn('scope_defend: story_brief missing — node blocked')
-      return updateState({
-        scope_defend_output: null,
-        warning_count: (stateWithDefend.warning_count ?? 0) + 1,
-      } as Partial<GraphStateWithScopeDefend>)
-    }
-
-    const storyBrief = stateWithDefend.story_brief
-    const acs = stateWithDefend.acceptance_criteria ?? []
-    const gapAnalysis = stateWithDefend.gap_analysis ?? null
-    const rolePackPath = stateWithDefend.role_pack_path ?? null
-
-    logger.info(`scope_defend: starting for story ${state.storyId}`, {
-      acCount: acs.length,
-      hasGapAnalysis: gapAnalysis !== null,
-      hasRolePack: rolePackPath !== null,
-    })
-
-    // Optional: gap_analysis missing → increment warning
-    if (!gapAnalysis) {
-      warnings.push('gap_analysis_missing')
-      logger.warn('scope_defend: gap_analysis not provided, all ACs treated as challengeable')
-    }
-
-    // Optional: role_pack_path missing → increment warning
-    if (!rolePackPath) {
-      warnings.push('role_pack_missing')
-      logger.warn('scope_defend: role_pack_path not provided, using embedded DA constraints')
-    }
-
-    // -------------------------------------------------------------------------
-    // Phase 2: Identify Candidates
-    // -------------------------------------------------------------------------
-
-    const candidates = identifyCandidates(acs, gapAnalysis)
-
-    logger.info(`scope_defend: identified ${candidates.length} challenge candidates`, {
-      totalACs: acs.length,
-      candidateCount: candidates.length,
-    })
-
-    // -------------------------------------------------------------------------
-    // Phase 3: Apply DA Challenges
-    // -------------------------------------------------------------------------
-
-    const output = applyDAChallenges(candidates, state.storyId, warnings)
-
-    logger.info(`scope_defend: produced ${output.challenges.length} challenges`, {
-      truncated: output.truncated,
-      warningCount: output.warning_count,
-    })
-
-    // -------------------------------------------------------------------------
-    // Phase 4: Produce Output
-    // -------------------------------------------------------------------------
-
-    // Determine output path from storyId and epicPrefix
-    // Pattern: plans/future/platform/{epicPrefix}/in-progress/{storyId}/_implementation/scope-challenges.json
-    const outputDir = path.join(
-      'plans',
-      'future',
-      'platform',
-      state.epicPrefix.toLowerCase(),
-      'in-progress',
-      state.storyId,
-      '_implementation',
-    )
-
-    try {
-      await fs.mkdir(outputDir, { recursive: true })
-      const outputPath = path.join(outputDir, 'scope-challenges.json')
-      await fs.writeFile(outputPath, JSON.stringify(output, null, 2), 'utf-8')
-      logger.info(`scope_defend: wrote scope-challenges.json to ${outputPath}`)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      logger.warn(`scope_defend: failed to write scope-challenges.json: ${msg}`)
-      // Non-blocking: still return output in state
-    }
-
-    // Validate output against schema before returning
-    const validatedOutput = ScopeChallengesOutputSchema.parse(output)
-
-    logger.info(`scope_defend: completed for ${state.storyId}`, {
-      storyBriefTitle: storyBrief.title,
-      challengeCount: validatedOutput.challenges.length,
-    })
-
-    return updateState({
-      scope_defend_output: validatedOutput,
-      warning_count: (stateWithDefend.warning_count ?? 0) + warnings.length,
-    } as Partial<GraphStateWithScopeDefend>)
+    return executeScopeDefend(state)
   },
 )
 
 /**
- * Creates a scope defend node.
- * Exported for graph assembly — allows future configuration injection.
+ * Creates a scope defend node with optional KB task injection.
+ * Exported for graph assembly — allows configuration of backlog writes (WINT-8060).
  *
+ * @param config - Optional configuration with KB injection functions
  * @returns Configured node function
  */
-export function createScopeDefendNode() {
+export function createScopeDefendNode(config?: ScopeDefendConfig) {
+  if (!config) {
+    return createToolNode(
+      'scope_defend',
+      async (state: GraphState): Promise<Partial<GraphStateWithScopeDefend>> => {
+        return executeScopeDefend(state)
+      },
+    )
+  }
+
   return createToolNode(
     'scope_defend',
     async (state: GraphState): Promise<Partial<GraphStateWithScopeDefend>> => {
-      return scopeDefendNode(state)
+      return executeScopeDefend(state, config)
     },
   )
 }
