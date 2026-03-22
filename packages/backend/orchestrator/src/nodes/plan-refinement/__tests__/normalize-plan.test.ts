@@ -165,6 +165,21 @@ describe('parseRawPlan', () => {
     expect(Array.isArray(result.goals)).toBe(true)
   })
 
+  it('Non Goals fallback — extracts non-goals when section uses space instead of hyphen', () => {
+    const markdown = `
+# Plan
+
+## Non Goals
+
+- Not doing X
+- Not doing Y
+`
+    const rawPlan = { content: markdown }
+    const result = parseRawPlan('fallback-test', rawPlan)
+
+    expect(result.nonGoals).toEqual(['Not doing X', 'Not doing Y'])
+  })
+
   it('object rawPlan without content field — uses direct object fields', () => {
     const rawPlan = {
       title: 'Direct Title',

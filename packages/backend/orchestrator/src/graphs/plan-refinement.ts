@@ -40,9 +40,9 @@ export type PlanRefinementGraphConfig = z.infer<typeof PlanRefinementGraphConfig
 /**
  * Routes after normalize_plan: proceed to extract_flows or END on error.
  */
-function afterNormalize(state: PlanRefinementState): 'extract_flows' | '__end__' {
+function afterNormalize(state: PlanRefinementState): 'extract_flows' | typeof END {
   if (state.refinementPhase === 'error') {
-    return '__end__'
+    return END
   }
   return 'extract_flows'
 }

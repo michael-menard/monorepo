@@ -116,13 +116,14 @@ function parseFlowBlock(id: string, block: string): Flow | null {
   const trigger = triggerMatch ? triggerMatch[1].trim() : 'User initiates'
   const successOutcome = successMatch ? successMatch[1].trim() : 'Flow completes successfully'
 
-  // Extract steps section
+  // Extract steps section — stop at next field marker (e.g. "- Success Outcome:")
   let steps: Flow['steps'] = []
   const stepsStartIdx = lines.findIndex(l => /steps\s*:/i.test(l))
   if (stepsStartIdx >= 0) {
+    const fieldMarker = /^[-*]\s*(?:actor|trigger|steps|success\s*outcome|outcome)\s*:/i
     steps = lines
       .slice(stepsStartIdx + 1)
-      .filter(l => /^[-*\d]/.test(l))
+      .filter(l => /^[-*\d]/.test(l) && !fieldMarker.test(l))
       .map((l, idx) => ({
         index: idx + 1,
         description: l.replace(/^[-*\d.]+\s*/, '').trim(),
@@ -219,7 +220,7 @@ export function extractUserFlows(
     const flowId = `flow-user-${i + 1}`
     const flow = parseFlowBlock(flowId, flowBlocks[i])
     if (flow) {
-      flows.push({ ...flow, id: flowId, source: 'user', confidence: 1.0 })
+      flows.push(flow)
     }
   }
 
@@ -353,6 +354,7 @@ export function createExtractFlowsNode(
         return {
           flows: [],
           refinementPhase: 'gap_coverage',
+          warnings: ['extract_flows: normalizedPlan was null, no flows extracted'],
         }
       }
 
