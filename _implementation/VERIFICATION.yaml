@@ -1,11 +1,11 @@
 schema: 1
-story_id: APRS-5030
-timestamp: '2026-03-23T20:00:00Z'
+story_id: APRS-5010
+timestamp: '2026-03-23T21:20:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 47
+    pass: 35
     fail: 0
   integration:
     pass: 0
@@ -13,111 +13,111 @@ test_results:
   e2e:
     pass: 0
     fail: 0
+    status: exempt
   http:
     pass: 0
     fail: 0
-coverage: 97.4
+    status: n/a
+coverage: 100
+coverage_branch: 84.84
 coverage_meets_threshold: true
 test_quality:
   verdict: PASS
   anti_patterns: []
+  notes: >-
+    Tests use vitest + expect assertions with no async anti-patterns. All ACs explicitly tagged in test names.
+    Injectable mock pattern used for KB persistence (no real side effects).
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-1]
     notes: >-
-      createPlanLoaderAdapter exists in plan-loader-adapter.ts, wraps KbGetPlanFn as PlanLoaderFn. Verified via 6 unit
-      tests covering success, null return, and throw paths.
+      brainstormToNormalizedPlan produces valid NormalizedPlan — 7 tests pass. Spot-checked: produces correct planSlug
+      via slugify, sets status=draft, maps flows to FlowSchema with source/confidence/status fields.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-2]
     notes: >-
-      createKbWriterAdapter exists in kb-writer-adapter.ts, calls kb_ingest_story_from_yaml and
-      kb_update_plan(status='stories-created') on full success. Verified via 10 unit tests covering sequential writes,
-      plan update conditional on all-success, and error paths.
+      existingPlanToNormalizedPlan produces valid NormalizedPlan — 5 tests pass. Handles recommendation field including
+      warning injection for non-refine-now values.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-3]
     notes: >-
-      generate-stories.ts calls createStoryGenerationGraph() with all three production adapters wired at lines 151-158.
-      Verified via codebase inspection.
+      normalizedPlanToKbInput produces KbPlanInput with status=draft enforced. Verified KbPlanInputSchema.parse output
+      includes status='draft' — 6 tests pass.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-4]
     notes: >-
-      generate-stories.ts outputs: stories_written, stories_failed, plan_status_updated, generation_phase on stdout with
-      [generate-stories] prefix. Lines 165-169 confirmed.
+      Both adapters pass dependencies array through to NormalizedPlan.dependencies and then on to
+      KbPlanInput.dependencies — 2 dedicated tests pass.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-5]
     notes: >-
-      Error output at lines 177-185: outputs FAILED with generation_phase and errors. Fatal catch block at lines 218-221
-      writes to stderr. Process exits with code 1.
+      slugify() produces URL-safe planSlug. Verified: 'User Authentication System' -> 'user-authentication-system', no
+      spaces, 1 test passing.
   - ac_id: AC-6
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-6]
     notes: >-
-      Graph integration test verifies: 'exits at validate_graph when validation fails (cycle) — does not reach
-      write_to_kb'. Confirmed in story-generation.test.ts.
+      Dedicated dual-validation test: NormalizedPlanSchema.parse(normalized) and KbPlanInputSchema.parse(kbInput) both
+      pass without throw. 1 test explicitly covers this.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-7]
     notes: >-
-      createStoryIdGeneratorAdapter in story-id-generator.ts queries kb_list_stories for existing IDs, finds max suffix,
-      generates from max+10. Falls back to 1010 start if no existing stories. defaultStoryIdGeneratorFn stub is not used
-      in production path.
+      IntakePlanDraftSchema defined with all required fields (title, sourceSkill enum, all optional arrays defaulting to
+      []). 6 tests cover validation, defaults, and rejection of invalid inputs.
   - ac_id: AC-8
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
+    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-8]
     notes: >-
-      generate-stories.ts is a CLI script with #!/usr/bin/env tsx shebang, --plan-slug argument, located at
-      packages/backend/orchestrator/src/cli/generate-stories.ts. Follows resume-graph.ts pattern.
-  - ac_id: AC-9
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-9
-    notes: >-
-      Unit tests exist: plan-loader-adapter.test.ts (6 tests), kb-writer-adapter.test.ts (10 tests),
-      story-id-generator.test.ts (14 tests). All use mocked MCP tool functions (vi.fn()). All 30 pass.
-  - ac_id: AC-10
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-10
-    notes: >-
-      story-generation graph with production adapters (AC-10) suite in story-generation.test.ts. Test 'runs full
-      pipeline end-to-end with all three production adapters injected' verifies storiesWritten > 0. All 17 integration
-      tests pass.
+      persistDraftPlan accepts injectable KbUpsertPlanFn, uses status=draft. Mock test confirms call delegation and
+      null-return handling. 2 tests passing.
 architecture_compliant: true
+architecture_notes: >-
+  Pure function adapters. No barrel files. Zod schemas with z.infer<> — no TS interfaces. Component directory structure
+  followed (adapters/intake/__tests__/). @repo/logger not needed (pure functions, no logging surface). No shadcn
+  imports. No console.log. ESM imports with .js extensions.
+pre_existing_failures:
+  noted: true
+  affected_files:
+    - src/__tests__/index.test.ts
+    - src/adapters/__tests__/index-adapter.integration.test.ts
+    - src/nodes/story/__tests__/scope-defend.test.ts
+  verdict: Pre-existing — none of these files are in APRS-5010 touched_files. Not caused by this story.
 issues: []
 lessons_to_record:
   - lesson: >-
-      Ports-and-adapters pattern with injectable MCP functions works well for testability: provide stub
-      KbGetPlanFn/KbIngestStoryFn/KbUpdatePlanFn in tests vs production wiring at CLI level. Zero real MCP calls in test
-      suite.
+      Injectable function type pattern (KbUpsertPlanFn) enables testing side-effectful KB persistence without real MCP
+      tool calls. Type the injectable as a simple async function signature rather than full tool interface.
     category: pattern
     tags:
       - backend
-      - adapters
-      - testability
-      - langgraph
-  - lesson: >-
-      Story ID generation collision prevention via KB query (findMaxSuffix + step=10) is cleaner than fixed-sequence
-      fallback. The fallback to 1010 on kb_list_stories failure ensures resilience without blocking.
-    category: pattern
-    tags:
-      - backend
-      - story-id
-      - collision-prevention
-  - lesson: >-
-      CLI entrypoints for LangGraph should use stub injection points clearly marked with INJECTION POINT comments. This
-      documents where MCP client wiring will happen without blocking the current story.
-    category: pattern
-    tags:
-      - backend
-      - cli
-      - langgraph
+      - testing
       - mcp
-context_cache_notes: >-
-  Cache miss for qa_verification/qa role — context_pack_get returned null. Context artifact also not present in KB.
-  Verification proceeded without cache context.
+      - orchestrator
+  - lesson: >-
+      Local schema copy (KbPlanInputSchema in kb-persistence.ts) avoids cross-app imports when the target schema lives
+      in a different service boundary. Accept the tech debt of duplication over introducing a forbidden dependency edge.
+    category: pattern
+    tags:
+      - backend
+      - schema
+      - orchestrator
+      - architecture
+  - lesson: >-
+      Intermediate typed schema (IntakePlanDraftSchema) between raw skill output and NormalizedPlan eliminates the
+      untyped input contract gap. Both brainstorm and existing-plan skills share a single typed intake shape rather than
+      separate ad-hoc types.
+    category: pattern
+    tags:
+      - backend
+      - zod
+      - orchestrator
+      - intake
 tokens:
-  in: 12000
-  out: 3000
+  in: 28000
+  out: 3500
