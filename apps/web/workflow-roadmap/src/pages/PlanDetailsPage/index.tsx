@@ -257,9 +257,9 @@ export function PlanDetailsPage() {
                   setEditingField(null)
                 }}
               />
-              {isTitleDebouncing && (
+              {isTitleDebouncing ? (
                 <span className="text-xs text-slate-400 font-mono">saving...</span>
-              )}
+              ) : null}
               <CustomButton
                 variant="ghost"
                 size="icon"
@@ -308,7 +308,7 @@ export function PlanDetailsPage() {
               <Copy className="h-3 w-3" />
             )}
           </CustomButton>
-          {slugCopied && <span className="text-xs text-emerald-400 font-mono">copied!</span>}
+          {slugCopied ? <span className="text-xs text-emerald-400 font-mono">copied!</span> : null}
         </div>
         {data.status !== 'superseded' && (
           <div className="flex items-center gap-2 mt-3">
@@ -362,11 +362,11 @@ export function PlanDetailsPage() {
               <h2 className="text-base font-semibold text-slate-300 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
                 Stories
-                {storiesData && storiesData.length > 0 && (
+                {storiesData && storiesData.length > 0 ? (
                   <span className="text-xs text-slate-500 font-mono font-normal">
                     ({filteredStories.length}/{storiesData.length})
                   </span>
-                )}
+                ) : null}
               </h2>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-600 font-mono hidden xl:block 2xl:block">
@@ -419,7 +419,7 @@ export function PlanDetailsPage() {
                 </AppTabsList>
               </div>
             </div>
-            {!isLoadingStories && storiesData && storiesData.length > 0 && (
+            {!isLoadingStories && storiesData && storiesData.length > 0 ? (
               <StoryFilters
                 storySearch={storySearch}
                 setStorySearch={setStorySearch}
@@ -430,7 +430,7 @@ export function PlanDetailsPage() {
                 hideCompleted={hideCompleted}
                 setHideCompleted={setHideCompleted}
               />
-            )}
+            ) : null}
             <AppTabsContent value="table">
               {isLoadingStories ? (
                 <div className="animate-pulse space-y-2">

@@ -20,23 +20,23 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
           Details
         </h2>
         <dl className="space-y-3">
-          {data.epic && (
+          {data.epic ? (
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                 Epic
               </dt>
               <dd className="font-mono text-sm text-slate-200">{data.epic}</dd>
             </div>
-          )}
-          {data.storyType && (
+          ) : null}
+          {data.storyType ? (
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                 Type
               </dt>
               <dd className="text-sm text-slate-200">{data.storyType}</dd>
             </div>
-          )}
-          {data.experimentVariant && (
+          ) : null}
+          {data.experimentVariant ? (
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                 Experiment
@@ -50,8 +50,8 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                 </AppBadge>
               </dd>
             </div>
-          )}
-          {(data.storyPoints != null || data.complexity) && (
+          ) : null}
+          {data.storyPoints != null || data.complexity ? (
             <div className="grid grid-cols-2 gap-3">
               {data.storyPoints != null && (
                 <div>
@@ -61,18 +61,18 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   <dd className="font-mono text-sm text-slate-200">{data.storyPoints}</dd>
                 </div>
               )}
-              {data.complexity && (
+              {data.complexity ? (
                 <div>
                   <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                     <Layers className="h-3 w-3" /> Complexity
                   </dt>
                   <dd className="text-sm text-slate-200">{data.complexity}</dd>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
           <div className="border-t border-slate-800 pt-3 space-y-3">
-            {data.startedAt && (
+            {data.startedAt ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Started
@@ -84,8 +84,8 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   </span>
                 </dd>
               </div>
-            )}
-            {data.completedAt && (
+            ) : null}
+            {data.completedAt ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Completed
@@ -97,7 +97,7 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   </span>
                 </dd>
               </div>
-            )}
+            ) : null}
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> Created
@@ -122,14 +122,14 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
       </DetailCard>
 
       {/* Elaboration */}
-      {data.elaboration && (
+      {data.elaboration ? (
         <DetailCard>
           <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-violet-400 inline-block" />
             Elaboration
           </h2>
           <dl className="space-y-3">
-            {data.elaboration.verdict && (
+            {data.elaboration.verdict ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Verdict
@@ -151,7 +151,7 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   </span>
                 </dd>
               </div>
-            )}
+            ) : null}
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                 Complexity
@@ -164,23 +164,23 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                 )}
               </dd>
             </div>
-            {data.elaboration.elabPhase && (
+            {data.elaboration.elabPhase ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Elab Phase
                 </dt>
                 <dd className="text-sm text-slate-200">{data.elaboration.elabPhase}</dd>
               </div>
-            )}
-            {data.elaboration.confidence && (
+            ) : null}
+            {data.elaboration.confidence ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Confidence
                 </dt>
                 <dd className="text-sm text-slate-200 capitalize">{data.elaboration.confidence}</dd>
               </div>
-            )}
-            {data.elaboration.skillLevel && (
+            ) : null}
+            {data.elaboration.skillLevel ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Skill Level
@@ -189,8 +189,8 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   {data.elaboration.skillLevel.replace(/_/g, ' ')}
                 </dd>
               </div>
-            )}
-            {data.elaboration.implementationEstimate && (
+            ) : null}
+            {data.elaboration.implementationEstimate ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                   Estimate
@@ -199,10 +199,10 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                   {data.elaboration.implementationEstimate}
                 </dd>
               </div>
-            )}
+            ) : null}
           </dl>
         </DetailCard>
-      )}
+      ) : null}
 
       {/* Current Work State */}
       <DetailCard>
@@ -211,7 +211,7 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
           Work State
         </h2>
         <dl className="space-y-3">
-          {(data.currentWorkState?.branch ?? data.branch) && (
+          {(data.currentWorkState?.branch ?? data.branch) ? (
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                 <GitBranch className="h-3 w-3" /> Branch
@@ -220,7 +220,7 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
                 {data.currentWorkState?.branch ?? data.branch}
               </dd>
             </div>
-          )}
+          ) : null}
           <div>
             <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
               <GitBranch className="h-3 w-3" /> Source Branch
@@ -240,14 +240,14 @@ export function StorySidebar({ data }: { data: StoryDetails }) {
               {data.worktreePath || '—'}
             </dd>
           </div>
-          {data.currentWorkState?.phase && (
+          {data.currentWorkState?.phase ? (
             <div>
               <dt className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                 Phase
               </dt>
               <dd className="text-sm text-slate-200">{data.currentWorkState?.phase}</dd>
             </div>
-          )}
+          ) : null}
           {Array.isArray(data.currentWorkState?.nextSteps) &&
             (data.currentWorkState?.nextSteps as string[]).length > 0 && (
               <div>

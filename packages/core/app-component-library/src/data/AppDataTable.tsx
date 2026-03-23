@@ -1,14 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { Button } from '../_primitives/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../_primitives/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../_primitives/table'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -26,7 +17,15 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { Button } from '../_primitives/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../_primitives/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../_primitives/table'
 
 interface SortableRowProps<T> {
   item: T

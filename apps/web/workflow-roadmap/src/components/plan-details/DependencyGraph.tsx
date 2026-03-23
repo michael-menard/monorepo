@@ -120,16 +120,16 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
               >
                 Wave {wave}
               </span>
-              {isActionable && (
+              {isActionable ? (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
                   NEXT
                 </span>
-              )}
-              {allDone && (
+              ) : null}
+              {allDone ? (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500/60">
                   DONE
                 </span>
-              )}
+              ) : null}
               <span className="text-[10px] text-slate-600 ml-auto">
                 {group.filter(s => isComplete(s.state)).length}/{group.length} complete
               </span>
@@ -194,13 +194,13 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                           </button>
                         </span>
                       </div>
-                      {story.priority && (
+                      {story.priority ? (
                         <span
                           className={`font-mono text-[10px] font-semibold ${priorityColor(story.priority)}`}
                         >
                           {story.priority}
                         </span>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Title */}

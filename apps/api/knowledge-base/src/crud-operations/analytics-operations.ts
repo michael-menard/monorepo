@@ -485,9 +485,15 @@ export async function kb_get_scoreboard(
 
   const cycleResult = await deps.db
     .select({
-      avgDays: sql<number | null>`round(avg(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
-      minDays: sql<number | null>`round(min(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
-      maxDays: sql<number | null>`round(max(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
+      avgDays: sql<
+        number | null
+      >`round(avg(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
+      minDays: sql<
+        number | null
+      >`round(min(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
+      maxDays: sql<
+        number | null
+      >`round(max(extract(epoch from (${stories.completedAt} - ${stories.startedAt})) / 86400.0)::numeric, 2)::float`,
       sampleSize: sql<number>`count(*)::int`,
     })
     .from(stories)

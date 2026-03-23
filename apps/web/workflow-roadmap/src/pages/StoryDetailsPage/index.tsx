@@ -125,7 +125,7 @@ export function StoryDetailsPage() {
                 : 'Failed to fetch story'
               : 'Story not found'}
           </div>
-          {errStatus && <div className="text-red-400/60 text-xs">HTTP {errStatus}</div>}
+          {errStatus ? <div className="text-red-400/60 text-xs">HTTP {errStatus}</div> : null}
           {errDetail != null && (
             <div className="text-red-400/60 text-xs break-all">{String(errDetail)}</div>
           )}
@@ -199,7 +199,7 @@ export function StoryDetailsPage() {
       </div>
 
       {/* Blocked reason banner */}
-      {data.blockedReason && (
+      {data.blockedReason ? (
         <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
           <div>
@@ -207,17 +207,17 @@ export function StoryDetailsPage() {
             <p className="text-sm text-red-300/80">{data.blockedReason}</p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Body */}
       <AppTabs defaultValue="overview" className="w-full">
         <AppTabsList className="mb-6">
           <AppTabsTrigger value="overview">Overview</AppTabsTrigger>
-          {data.elaboration && <AppTabsTrigger value="elab">Elaboration</AppTabsTrigger>}
-          {data.evidence && <AppTabsTrigger value="dev">Dev Evidence</AppTabsTrigger>}
-          {data.review && <AppTabsTrigger value="review">Review</AppTabsTrigger>}
-          {data.qaGate && <AppTabsTrigger value="qa">QA Gate</AppTabsTrigger>}
-          {data.verification && <AppTabsTrigger value="verify">Verification</AppTabsTrigger>}
+          {data.elaboration ? <AppTabsTrigger value="elab">Elaboration</AppTabsTrigger> : null}
+          {data.evidence ? <AppTabsTrigger value="dev">Dev Evidence</AppTabsTrigger> : null}
+          {data.review ? <AppTabsTrigger value="review">Review</AppTabsTrigger> : null}
+          {data.qaGate ? <AppTabsTrigger value="qa">QA Gate</AppTabsTrigger> : null}
+          {data.verification ? <AppTabsTrigger value="verify">Verification</AppTabsTrigger> : null}
         </AppTabsList>
 
         <AppTabsContent value="overview">
@@ -324,7 +324,7 @@ export function StoryDetailsPage() {
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-slate-300 leading-relaxed">{item.title}</p>
-                            {item.files && item.files.length > 0 && (
+                            {item.files && item.files.length > 0 ? (
                               <div className="mt-1 flex flex-wrap gap-1">
                                 {item.files.map(f => (
                                   <span
@@ -335,7 +335,7 @@ export function StoryDetailsPage() {
                                   </span>
                                 ))}
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         </li>
                       ))}
@@ -345,7 +345,7 @@ export function StoryDetailsPage() {
               })}
 
               {/* Description */}
-              {(data.description || editingDescription) && (
+              {data.description || editingDescription ? (
                 <DetailCard className="group">
                   <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-purple-500 inline-block" />
@@ -401,57 +401,58 @@ export function StoryDetailsPage() {
                     </p>
                   )}
                 </DetailCard>
-              )}
+              ) : null}
 
               {/* Acceptance Criteria */}
-              {acSection?.contentText &&
-                (() => {
-                  let acItems: { id?: string; text: string }[] = []
-                  try {
-                    const parsed = JSON.parse(acSection.contentText)
-                    if (Array.isArray(parsed)) {
-                      acItems = parsed.map(item =>
-                        typeof item === 'string'
-                          ? { text: item }
-                          : { id: item.id, text: item.text ?? String(item) },
-                      )
+              {acSection?.contentText
+                ? (() => {
+                    let acItems: { id?: string; text: string }[] = []
+                    try {
+                      const parsed = JSON.parse(acSection.contentText)
+                      if (Array.isArray(parsed)) {
+                        acItems = parsed.map(item =>
+                          typeof item === 'string'
+                            ? { text: item }
+                            : { id: item.id, text: item.text ?? String(item) },
+                        )
+                      }
+                    } catch {
+                      acItems = [{ text: acSection.contentText }]
                     }
-                  } catch {
-                    acItems = [{ text: acSection.contentText }]
-                  }
-                  return (
-                    <DetailCard>
-                      <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                        Acceptance Criteria
-                        <span className="text-xs text-slate-600 font-normal font-mono ml-1">
-                          {acItems.length}
-                        </span>
-                        {data.evidence?.acMet != null && data.evidence?.acTotal != null && (
-                          <span
-                            className={`text-xs font-mono font-normal px-1.5 py-0.5 rounded ml-auto ${data.evidence.acMet === data.evidence.acTotal ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'}`}
-                          >
-                            {data.evidence.acMet}/{data.evidence.acTotal} met
+                    return (
+                      <DetailCard>
+                        <h2 className="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                          Acceptance Criteria
+                          <span className="text-xs text-slate-600 font-normal font-mono ml-1">
+                            {acItems.length}
                           </span>
-                        )}
-                      </h2>
-                      <ul className="space-y-2.5">
-                        {acItems.map((item, i) => (
-                          <li key={item.id ?? i} className="flex items-start gap-2.5">
-                            <span className="font-mono text-xs text-emerald-500/50 shrink-0 mt-0.5 w-10 text-right">
-                              {item.id ?? `${i + 1}.`}
+                          {data.evidence?.acMet != null && data.evidence?.acTotal != null && (
+                            <span
+                              className={`text-xs font-mono font-normal px-1.5 py-0.5 rounded ml-auto ${data.evidence.acMet === data.evidence.acTotal ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'}`}
+                            >
+                              {data.evidence.acMet}/{data.evidence.acTotal} met
                             </span>
-                            <span className="text-sm text-slate-300 leading-relaxed">
-                              {item.text}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </DetailCard>
-                  )
-                })()}
+                          )}
+                        </h2>
+                        <ul className="space-y-2.5">
+                          {acItems.map((item, i) => (
+                            <li key={item.id ?? i} className="flex items-start gap-2.5">
+                              <span className="font-mono text-xs text-emerald-500/50 shrink-0 mt-0.5 w-10 text-right">
+                                {item.id ?? `${i + 1}.`}
+                              </span>
+                              <span className="text-sm text-slate-300 leading-relaxed">
+                                {item.text}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </DetailCard>
+                    )
+                  })()
+                : null}
 
-              {data.outcome && <OutcomeCard outcome={data.outcome} />}
+              {data.outcome ? <OutcomeCard outcome={data.outcome} /> : null}
 
               <ActivityTimeline stateHistory={data.stateHistory} />
             </div>
@@ -462,7 +463,7 @@ export function StoryDetailsPage() {
         </AppTabsContent>
 
         {/* Elaboration artifact tab */}
-        {data.elaboration && (
+        {data.elaboration ? (
           <AppTabsContent value="elab">
             <ArtifactJsonViewer
               title="Elaboration"
@@ -479,10 +480,10 @@ export function StoryDetailsPage() {
               ]}
             />
           </AppTabsContent>
-        )}
+        ) : null}
 
         {/* Dev Evidence artifact tab */}
-        {data.evidence && (
+        {data.evidence ? (
           <AppTabsContent value="dev">
             <ArtifactJsonViewer
               title="Dev Evidence"
@@ -513,10 +514,10 @@ export function StoryDetailsPage() {
               ]}
             />
           </AppTabsContent>
-        )}
+        ) : null}
 
         {/* QA Gate artifact tab */}
-        {data.qaGate && (
+        {data.qaGate ? (
           <AppTabsContent value="qa">
             <ArtifactJsonViewer
               title="QA Gate"
@@ -535,21 +536,21 @@ export function StoryDetailsPage() {
               ]}
             />
           </AppTabsContent>
-        )}
+        ) : null}
 
         {/* Review tab */}
-        {data.review && (
+        {data.review ? (
           <AppTabsContent value="review">
             <ReviewTab review={data.review} />
           </AppTabsContent>
-        )}
+        ) : null}
 
         {/* Verification tab */}
-        {data.verification && (
+        {data.verification ? (
           <AppTabsContent value="verify">
             <VerificationTab verification={data.verification} />
           </AppTabsContent>
-        )}
+        ) : null}
       </AppTabs>
     </div>
   )

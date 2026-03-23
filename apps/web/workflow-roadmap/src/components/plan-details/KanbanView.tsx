@@ -74,26 +74,26 @@ export function KanbanView({ stories }: { stories: PlanStory[] }) {
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-xs text-cyan-400">{story.storyId}</span>
-                        {story.isExternal && (
+                        {story.isExternal ? (
                           <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-slate-700/60 text-slate-400 border border-slate-600/40">
                             EXT
                           </span>
-                        )}
+                        ) : null}
                       </div>
-                      {(story.isBlocked || story.hasBlockers) && (
+                      {story.isBlocked || story.hasBlockers ? (
                         <span title="Has blockers" className="text-xs">
                           ⚠️
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <p className="text-sm text-slate-200 leading-snug line-clamp-2 mb-2">
                       {story.title ?? '—'}
                     </p>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {story.priority && <PriorityTag priority={story.priority} />}
-                      {story.state && story.state !== col.states[0] && (
+                      {story.priority ? <PriorityTag priority={story.priority} /> : null}
+                      {story.state && story.state !== col.states[0] ? (
                         <AppBadge variant="secondary">{story.state}</AppBadge>
-                      )}
+                      ) : null}
                     </div>
                   </Link>
                 ))

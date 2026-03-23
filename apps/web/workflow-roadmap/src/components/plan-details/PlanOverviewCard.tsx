@@ -1,9 +1,9 @@
 import { AppBadge, CustomButton } from '@repo/app-component-library'
 import { Pencil } from 'lucide-react'
 import { DetailCard } from '../shared/DetailCard'
+import type { PlanDetails } from '../../store/roadmapApi'
 import { EditableField } from './EditableField'
 import { ActivityRings, type StoryStats } from './ActivityRings'
-import type { PlanDetails } from '../../store/roadmapApi'
 
 export function PlanOverviewCard({
   data,
@@ -81,11 +81,11 @@ export function PlanOverviewCard({
           />
           <div className="flex flex-wrap gap-2">
             <AppBadge variant="outline">{data.status}</AppBadge>
-            {data.priority && (
+            {data.priority ? (
               <AppBadge variant={data.priority === 'P1' ? 'destructive' : 'secondary'}>
                 {data.priority}
               </AppBadge>
-            )}
+            ) : null}
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-400 mb-2">Tags</dt>
