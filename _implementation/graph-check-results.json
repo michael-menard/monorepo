@@ -1,11 +1,12 @@
 {
-  "story_id": "WINT-6060",
-  "generated_at": "2026-03-23T00:00:00.000Z",
+  "story_id": "WINT-8060",
+  "generated_at": "2026-03-23T00:00:00Z",
   "franken_features_found": 0,
   "violations": [],
   "warnings": [
     "graph.features empty — WINT-4030 may not have run",
-    "No active cohesion rules found — WINT-4050 may not have run"
+    "No active cohesion rules found — WINT-4050 may not have run",
+    "Graph query infrastructure not yet initialized - @repo/knowledge-base/db schema missing"
   ],
-  "warning_count": 2
+  "warning_count": 3
 }

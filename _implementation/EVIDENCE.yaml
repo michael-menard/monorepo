@@ -1,262 +1,160 @@
 schema: 1
-story_id: WINT-0270
+story_id: 'WINT-8060'
 version: 1
-timestamp: '2026-03-20T11:50:00Z'
+timestamp: '2026-03-23T17:34:00Z'
 
 acceptance_criteria:
-  - ac_id: AC-1
-    ac_text: >-
-      The harness shall include a task corpus with at least 3 prompts per category for 4 categories:
-      code_generation, code_review, elaboration_analysis, lint_syntax.
+  - ac_id: 'AC-1'
+    ac_text: 'scope-defend node calls kb_add_task once per defer-to-backlog challenge'
     status: PASS
     evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-        description: >-
-          Exports BENCHMARK_CORPUS with 12 tasks: 3 per category across all 4 categories.
-          Tasks sourced from real monorepo context (TypeScript snippets, YAML fragments, lint output).
       - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
-        description: >-
-          18 tests pass verifying: >= 12 total tasks, all 4 categories present,
-          >= 3 tasks per category, unique IDs, non-empty prompts, naming convention.
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: 'BT-2: one defer-to-backlog challenge → one task created; BT-3: five challenges → five tasks created'
+
+  - ac_id: 'AC-2'
+    ac_text: "source_agent: 'scope-defender' in every kb_add_task call"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-7: tags + attribution test verifies source_agent='scope-defender'"
+
+  - ac_id: 'AC-3'
+    ac_text: 'source_story_id set to state.storyId in every kb_add_task call'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-7: verifies source_story_id='WINT-TEST'"
+
+  - ac_id: 'AC-4'
+    ac_text: "source_phase: 'elab' in every kb_add_task call"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-7: verifies source_phase='elab'"
+
+  - ac_id: 'AC-5'
+    ac_text: "task_type: 'feature_idea' in every kb_add_task call"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-7: verifies task_type='feature_idea'"
+
+  - ac_id: 'AC-6'
+    ac_text: 'kbAddTaskFn failure is non-blocking — warning logged, no throw'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-4: kb_add_task throws 'DB connection failed' → result.warnings populated, no exception thrown"
+
+  - ac_id: 'AC-7'
+    ac_text: 'kbAddTaskFn not injected (undefined) → no-op, no error'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: 'BT-5: createScopeDefendNode() without config → no backlog writes, node still produces valid output'
+
+  - ac_id: 'AC-8'
+    ac_text: 'scope-challenges.ts canonical schema is extended; scope-defend.ts imports and re-uses canonical types'
+    status: PASS
+    evidence_items:
       - type: command
-        command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/benchmark-corpus.test.ts
-        result: SUCCESS (18/18 tests pass)
-
-  - ac_id: AC-2
-    ac_text: >-
-      The harness shall iterate all 5 required Ollama models against each task,
-      recording latency_ms, cost_usd=0, and raw output per run.
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-        description: >-
-          runBenchmarkHarness() iterates REQUIRED_MODELS x BENCHMARK_CORPUS tasks.
-          Records latency_ms, cost_usd=0, raw output via callOllama(), evaluateQuality().
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/constants.ts
-        description: >-
-          REQUIRED_MODELS exports all 5 models: deepseek-coder-v2:16b, codellama:13b,
-          qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b.
+        command: 'pnpm --filter @repo/orchestrator check-types'
+        result: 'PASS — no scope-defend or scope-challenges type errors'
       - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          runBenchmarkHarness() test verifies 2 models x 2 tasks = 4 fetch calls.
-          summary.totalRuns = 4 confirmed.
+        path: 'packages/backend/orchestrator/src/nodes/story/scope-defend.ts'
+        description: 'scope-defend.ts imports RecommendationSchema, RiskIfDeferredSchema, ScopeChallengeSchema, ScopeChallengesSchema from artifacts/scope-challenges.ts; re-exports for backward compatibility'
 
-  - ac_id: AC-3
-    ac_text: >-
-      For each (model, task) pair, the harness shall call evaluateQuality() and
-      recordRun() to persist results to the leaderboard YAML.
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-        description: >-
-          runSingleBenchmark() calls evaluateQuality(contract, 'tier-3', output) and
-          recordRun(leaderboardPath, {...evaluation, cost_usd: 0, latency_ms, task_id}).
-      - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          Test "should persist a leaderboard entry via recordRun (AC-3)" verifies
-          leaderboard YAML file is created after each run. Test "should persist leaderboard
-          after all runs (AC-3: recordRun called)" verifies file exists after harness run.
-
-  - ac_id: AC-4
-    ac_text: >-
-      The harness shall include a QUALITY_EVALUATOR_LIMITATION constant documenting
-      that scores are heuristic-only (keyword matching, length heuristics, no semantic analysis).
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-        description: >-
-          QUALITY_EVALUATOR_LIMITATION exported constant with JSDoc documentation explaining
-          heuristic-only nature: keyword matching, length heuristics, no semantic analysis,
-          no code execution. Printed in harness_start and summary_header log events.
-      - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          3 tests verify: QUALITY_EVALUATOR_LIMITATION is non-empty, mentions 'heuristic'
-          or 'keyword', mentions 'semantic'.
-
-  - ac_id: AC-5
-    ac_text: >-
-      MODEL_LEADERBOARD_PATH shall be a named constant in constants.ts,
-      not hardcoded in harness files.
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/constants.ts
-        description: >-
-          MODEL_LEADERBOARD_PATH exported as named constant:
-          path.join(process.cwd(), 'data', 'model-leaderboard.yaml').
-          REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH also exported.
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-        description: >-
-          Imports MODEL_LEADERBOARD_PATH, REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH
-          from constants.ts. No hardcoded paths in harness file.
-
-  - ac_id: AC-6
-    ac_text: >-
-      The benchmark script shall be developer-local only (scripts/benchmark-models.ts)
-      and NOT referenced in CI configuration.
-    status: PASS
-    evidence_items:
-      - type: file
-        path: scripts/benchmark-models.ts
-        description: >-
-          Developer-local CLI script. Imports runBenchmarkHarness from benchmark-harness.ts.
-          Supports --leaderboard-path, --models, --ollama-url arguments.
-          Not referenced in any CI config files.
-      - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          Unit tests use vi.stubGlobal('fetch', mockFetch) — no live Ollama network calls.
-          Tests are isolated from network.
-
-  - ac_id: AC-7
-    ac_text: >-
-      The harness shall set cost_usd = 0 for all Ollama model runs
-      (zero-cost sentinel per WINT-0260).
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-        description: >-
-          BenchmarkResultSchema uses z.literal(0) for cost_usd field, enforcing zero-cost sentinel.
-          runSingleBenchmark() hardcodes cost_usd: 0 in both success and error paths.
-      - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          Test "should return a BenchmarkResult with cost_usd = 0 (AC-7: Ollama zero-cost sentinel)"
-          explicitly verifies result.cost_usd === 0. Additional tests in buildSummary() and
-          runBenchmarkHarness() sections verify cost_usd sentinel is maintained.
-
-  - ac_id: AC-8
-    ac_text: >-
-      Unit tests shall cover: task iteration loop (all tasks x all models),
-      result aggregation (averages, ranking), mock Ollama responses.
+  - ac_id: 'AC-9'
+    ac_text: 'Idempotency — skip write if task with matching tag already exists'
     status: PASS
     evidence_items:
       - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-        description: >-
-          23 tests covering: callOllama (4 tests), QUALITY_EVALUATOR_LIMITATION (3 tests),
-          runSingleBenchmark (6 tests), buildSummary (5 tests), runBenchmarkHarness (5 tests).
-          All use vi.stubGlobal('fetch', mockFetch) for Ollama mocking.
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-6: kbListTasksFn returns existing task with tag 'scope-defender:WINT-TEST:DA-001' → kbAddTask NOT called, tasksSkipped=1"
+
+  - ac_id: 'AC-10'
+    ac_text: "Tags include both 'scope-defender' and 'deferred' in every kb_add_task call"
+    status: PASS
+    evidence_items:
       - type: test
-        path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
-        description: >-
-          18 tests verifying corpus structure: category counts, ID uniqueness, prompt validity,
-          naming convention, expected keyword arrays.
-      - type: command
-        command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/
-        result: SUCCESS (112 tests pass across 5 model-selector test files)
+        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+        description: "BT-7: verifies tags contain 'scope-defender', 'deferred', 'elab:scope-challenge', 'source:WINT-TEST', and the deterministic idempotency tag"
 
 touched_files:
-  - path: packages/backend/orchestrator/src/model-selector/constants.ts
-    action: created
-    lines: 65
-    description: >-
-      MODEL_LEADERBOARD_PATH, REQUIRED_MODELS, OLLAMA_BASE_URL, OLLAMA_GENERATE_PATH,
-      OLLAMA_TIMEOUT_MS constants.
-  - path: packages/backend/orchestrator/src/model-selector/__types__/benchmark.ts
-    action: created
-    lines: 130
-    description: >-
-      Zod schemas: BenchmarkCategorySchema, BenchmarkTaskSchema, BenchmarkResultSchema,
-      ModelSummaryRowSchema, BenchmarkSummarySchema with inferred types.
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-corpus.ts
-    action: created
-    lines: 285
-    description: >-
-      BENCHMARK_CORPUS with 12 tasks across 4 categories (3 per category).
-      Tasks sourced from real monorepo context.
-  - path: packages/backend/orchestrator/src/model-selector/benchmark-harness.ts
-    action: created
-    lines: 310
-    description: >-
-      runBenchmarkHarness(), callOllama(), runSingleBenchmark(), buildSummary(),
-      printSummaryTable(). QUALITY_EVALUATOR_LIMITATION constant.
-  - path: scripts/benchmark-models.ts
-    action: created
-    lines: 130
-    description: >-
-      Developer-local CLI entrypoint. Argument parsing, Ollama health check,
-      invokes runBenchmarkHarness().
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-harness.test.ts
-    action: created
-    lines: 270
-    description: >-
-      23 unit tests for harness logic. Uses vi.stubGlobal('fetch') to mock Ollama.
-  - path: packages/backend/orchestrator/src/model-selector/__tests__/benchmark-corpus.test.ts
-    action: created
-    lines: 115
-    description: 18 unit tests for corpus structure validation.
+  - path: 'packages/backend/orchestrator/src/nodes/story/scope-defend.ts'
+    action: modified
+    lines: 637
+    description: 'Added writeBacklogTasks() helper, KbAddTaskFn/KbListTasksFn types, KbAddTaskInputSchema, ScopeDefendConfig, createScopeDefendNode() factory, idempotency guard, Phase 4 backlog write integration'
+  - path: 'packages/backend/orchestrator/src/artifacts/scope-challenges.ts'
+    action: modified
+    lines: 62
+    description: 'Extended ScopeChallengesSchema with total_candidates_reviewed, truncated, warnings, warning_count fields to make canonical schema the single source of truth'
+  - path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
+    action: modified
+    lines: 546
+    description: 'Added BT-1 through BT-8 test scenarios for writeBacklogTasks() and createScopeDefendNode() factory covering all WINT-8060 ACs'
 
 commands_run:
-  - command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/benchmark-corpus.test.ts src/model-selector/__tests__/benchmark-harness.test.ts
+  - command: 'pnpm --filter @repo/orchestrator check-types'
     result: SUCCESS
-    output: '41 tests pass (18 corpus + 23 harness)'
-    timestamp: '2026-03-20T11:30:00Z'
-  - command: pnpm --filter @repo/orchestrator test -- src/model-selector/__tests__/
+    output: 'No type errors in scope-defend.ts or scope-challenges.ts (pre-existing unrelated errors in other packages)'
+    timestamp: '2026-03-23T17:33:00Z'
+  - command: 'pnpm --filter @repo/orchestrator test -- scope-defend'
     result: SUCCESS
-    output: '112 tests pass (5 model-selector test files)'
-    timestamp: '2026-03-20T11:45:00Z'
-  - command: pnpm --filter @repo/orchestrator check-types (from main monorepo)
+    output: '29 tests passed (1 test file)'
+    timestamp: '2026-03-23T17:34:07Z'
+  - command: 'npx eslint packages/backend/orchestrator/src/nodes/story/scope-defend.ts packages/backend/orchestrator/src/artifacts/scope-challenges.ts'
     result: SUCCESS
-    output: No type errors in new files
-    timestamp: '2026-03-20T11:00:00Z'
+    output: 'No errors after fixing prefer-const for existingTags variable'
+    timestamp: '2026-03-23T17:33:30Z'
 
 endpoints_exercised: []
 
 test_summary:
-  unit:
-    pass: 41
-    fail: 0
-  e2e:
-    pass: 0
-    fail: 0
+  unit: { pass: 29, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
 
 e2e_tests:
   status: exempt
-  exempt_reason: >-
-    Developer tooling story (packages slice only). No browser UI, no HTTP endpoints.
-    Benchmark harness is a local CLI script targeting Ollama — not a user-facing feature.
-    All tests are unit tests with mocked Ollama via vi.stubGlobal('fetch').
+  exempt_reason: 'Pure TypeScript package (LangGraph node) — no HTTP endpoints or browser surface exists for scope-defend node'
+  config: null
+  project: null
+  mode: 'n/a'
   tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
 
 coverage:
-  note: Coverage data not collected (worktree node_modules setup). Tests verified passing via vitest run.
+  lines: null
+  branches: null
 
 notable_decisions:
-  - >-
-    ARCH-001: MODEL_LEADERBOARD_PATH = path.join(process.cwd(), 'data', 'model-leaderboard.yaml').
-    Injectable for tests via BenchmarkOptions argument.
-  - >-
-    ARCH-002: Direct HTTP fetch to Ollama /api/generate. No PipelineModelRouter stack.
-    Makes Ollama call easy to mock in unit tests via vi.stubGlobal('fetch').
-  - >-
-    ARCH-003: REQUIRED_MODELS hardcoded in constants.ts: 5 models from setup-ollama-models.sh.
-  - >-
-    @repo/logger workspace dependency not resolved in worktree node_modules due to pnpm
-    workspace symlink setup. Fixed by copying logger dist and creating @repo/logger symlink.
-    Pre-existing issue not caused by this story.
+  - 'ST-1 (AC-8) completed first as prerequisite gate — scope-challenges.ts canonical schema extended with 4 new optional fields before scope-defend.ts code changes'
+  - 'ST-2/ST-3 fully implemented in scope-defend.ts: writeBacklogTasks() helper exported for testability, kbAddTaskFn/kbListTasksFn injected via ScopeDefendConfig, called at end of Phase 4'
+  - "Idempotency uses deterministic tag format 'scope-defender:{storyId}:{challengeId}' (DA-001..DA-005 stable IDs)"
+  - 'Fire-and-forget error handling: kbAddTaskFn failures caught, logged via logger.warn, never rethrown'
+  - "RISK_ORDER map updated to include 'critical' (4) and 'none' (0) values to match canonical RiskIfDeferredSchema enum"
+  - 'Fixed prefer-const lint error: existingTags initialized as const Set (binding never reassigned, only mutated)'
 
 known_deviations:
-  - >-
-    Worktree node_modules missing @repo/* workspace packages. Worked around by copying
-    logger dist and creating symlink. This is a worktree setup issue, not a code issue.
-  - >-
-    pnpm --filter check-types fails in worktree due to missing @repo/logger resolution
-    in TypeScript compiler (pre-existing issue in leaderboard.ts also affected).
-    Type check passes cleanly from main monorepo.
+  - 'pre-existing type errors in knowledge-base and mcp-tools packages (@repo/db not found) — unrelated to WINT-8060 changes'
+  - 'SCOPE.yaml in worktree appears to be from CDBE-3020 (different story) — worktree content for WINT-8060 is correct per PLAN.yaml'
 
 token_summary:
-  execute:
-    in: 0
-    out: 0
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 8000, out: 3000 }

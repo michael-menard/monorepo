@@ -1,22 +1,25 @@
 schema: 1
-story_id: WINT-5010
-timestamp: '2026-03-23T12:30:00Z'
+story_id: WINT-8060
+timestamp: '2026-03-23T20:00:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 40
+    pass: 29
     fail: 0
   integration:
-    pass: 7
+    pass: 0
     fail: 0
   e2e:
     pass: 0
     fail: 0
+    status: exempt
+    exempt_reason: Pure TypeScript package (LangGraph node) — no HTTP endpoints or browser surface
   http:
     pass: 0
     fail: 0
-coverage: 88.81
+    status: n/a
+coverage: 94.64
 coverage_meets_threshold: true
 test_quality:
   verdict: PASS
@@ -24,96 +27,73 @@ test_quality:
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: package.json:name=@repo/sidecar-hitl-interview; server.ts:PORT=3094
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
     notes: >-
-      Package is named @repo/sidecar-hitl-interview (package.json line 3). Server starts on port 3094 via
-      process.env.PORT ?? '3094' (server.ts line 19). Located at packages/backend/sidecars/hitl-interview/.
+      BT-2 and BT-3 in scope-defend.test.ts confirm one-per-challenge invocation. Source code at scope-defend.ts:411
+      calls kbAddTaskFn per deferred challenge.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: 'src/index.ts:export { hitlInterview }; src/hitl-interview.ts:function hitlInterview(input: HitlInterviewInput)'
-    notes: >-
-      hitlInterview is exported from src/index.ts (line 9). Function signature accepts storyId, phase, decisionType via
-      HitlInterviewInput type (hitl-interview.ts lines 14-24). Validated by HitlInterviewParamsSchema (lines 45-56).
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: BT-7 asserts source_agent === 'scope-defender'. Confirmed in scope-defend.ts:416.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: >-
-      src/__types__/index.ts:INTERVIEW_QUESTIONS record (lines 78-97); capture-interview.ts:captureInterview uses
-      decisionType routing
-    notes: >-
-      INTERVIEW_QUESTIONS provides 4 structured questions per decisionType (qa_gate, code_review, story_approval).
-      Operator is prompted via the question set before interview answers are processed and the training row written.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: BT-7 asserts source_story_id === storyId. Confirmed in scope-defend.ts:414 passing storyId.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: >-
-      src/capture-interview.ts:buildFeatureVector (lines 139-154); src/__types__/index.ts:FeatureVectorSchema (lines
-      63-71)
-    notes: >-
-      Feature vector includes all required fields: storyId, phase, decisionType, storyComplexityScore, agentPhase,
-      decisionContext. buildFeatureVector assembles these from params + readHitlContext + computeStoryComplexityScore.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: BT-7 asserts source_phase === 'elab'. Confirmed in scope-defend.ts:415.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: >-
-      src/capture-interview.ts:defaultIngestFn inserts into trainingData table (lines 49-73); dataType='hitl_interview'
-      mapping via DECISION_TYPE_TO_TRAINING_DATA_TYPE
-    notes: >-
-      defaultIngestFn inserts to workflow.training_data via @repo/db. dataType values are 'qa_gate_decision',
-      'code_review_decision', 'story_approval_decision' mapped via DECISION_TYPE_TO_TRAINING_DATA_TYPE. The AC states
-      dataType='hitl_interview' but the implementation uses specific decision-type values — this is a refinement, not a
-      violation. Integration tests confirm correct shape.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: BT-7 asserts task_type === 'feature_idea'. Confirmed in scope-defend.ts:417 and KbAddTaskInputSchema.
   - ac_id: AC-6
     status: PASS
-    evidence_ref: src/capture-interview.ts:readHitlContext uses SELECT only (lines 79-111); no INSERT/UPDATE on hitl_decisions
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
     notes: >-
-      readHitlContext uses Drizzle .select() from hitlDecisions table. No write operations are present against
-      hitl_decisions anywhere in the implementation.
+      BT-4 verifies thrown error from kbAddTaskFn results in warning recorded, no throw propagated. Non-blocking path
+      confirmed.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: src/__types__/index.ts:InterviewAnswersSchema (lines 50-55)
-    notes: >-
-      InterviewAnswersSchema defines rationale (string min 1), confidence (number 0-1), alternativesConsidered (string
-      min 1), riskAssessment (string min 1) — all four required fields present with runtime validation.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: BT-5 verifies createScopeDefendNode() with no config skips backlog writes entirely with no error.
   - ac_id: AC-8
     status: PASS
-    evidence_ref: src/__types__/index.ts:FeatureVectorSchema (lines 63-71)
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
     notes: >-
-      FeatureVectorSchema defines typed fields: storyId (string), phase (string), decisionType (TrainingDataTypeSchema),
-      storyComplexityScore (number), agentPhase (string), decisionContext (string). All 6 AC-required fields present.
+      scope-challenges.ts extended with total_candidates_reviewed, truncated, warnings, warning_count fields.
+      scope-defend.ts imports and re-exports canonical types from scope-challenges.ts.
   - ac_id: AC-9
     status: PASS
-    evidence_ref: >-
-      src/http-handler.ts:import { sendJson, readBody } from '@repo/sidecar-http-utils' (line 12);
-      src/capture-interview.ts:import { logger } from '@repo/logger' (line 12)
-    notes: >-
-      Both sendJson and readBody are imported and used in http-handler.ts. @repo/logger used throughout with
-      logger.info/warn calls. Both packages declared as dependencies in package.json.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: BT-6 verifies that existing task with matching idempotency tag results in tasksSkipped=1, kbAddTaskFn not called.
   - ac_id: AC-10
     status: PASS
-    evidence_ref: >-
-      coverage: 88.81% (threshold 45%); src/__tests__/integration.test.ts (7 tests verifying trainingDataIngest call
-      shape)
-    notes: >-
-      Coverage confirmed at 88.81% from live test run. integration.test.ts has 7 tests (AC-10.1 through AC-10.7)
-      explicitly verifying trainingDataIngest is called with correct dataType, features object with all FeatureVector
-      fields, labels object with all InterviewAnswers fields, and correct storyId.
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: BT-7 asserts both 'scope-defender' and 'deferred' tags present. Confirmed in scope-defend.ts:418-420.
 architecture_compliant: true
 issues: []
 lessons_to_record:
   - lesson: >-
-      Injectable dependency pattern (CaptureInterviewDeps) allows full unit test isolation for DB operations without
-      integration DB setup, enabling high coverage on DB-coupled code.
+      Injectable function types (KbAddTaskFn, KbListTasksFn) with optional injection and factory pattern
+      (createScopeDefendNode) provide clean testability for nodes that write to external systems without coupling the
+      node to a live KB connection.
     category: pattern
     tags:
-      - backend
+      - orchestrator
+      - langgraph
       - testing
       - dependency-injection
   - lesson: >-
-      Sidecar port registry should be documented in server.ts comments to prevent port collisions across sidecars. This
-      pattern (3090-3094 range) is worth canonicalizing.
+      Idempotency via tag-based lookup (kbListTasksFn scoped by source_story_id + tag prefix) avoids duplicate KB
+      entries on retries. The idempotency check failure is also treated as non-blocking — execution continues without
+      the guard rather than aborting.
     category: pattern
     tags:
-      - sidecar
-      - ports
-      - architecture
+      - idempotency
+      - orchestrator
+      - kb
+      - resilience
 tokens:
-  in: 12000
-  out: 3000
+  in: 9200
+  out: 1800
