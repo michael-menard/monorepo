@@ -148,7 +148,7 @@ Invoke the `cache-warm` skill with configured cache types, collect results from 
      all_succeeded: '{true if failed == 0, false otherwise}'
    ```
 
-2. Write warm-result to stdout or to `{feature_dir}/_implementation/WARM-RESULT.yaml` if feature_dir provided
+2. Write warm-result via `kb_write_artifact({ artifact_type: "warm_result", content: warm_result_object })` if feature_dir provided, otherwise to stdout
 3. Emit exactly one of the completion signals (see Completion Signals section below)
 
 ---

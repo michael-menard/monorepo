@@ -34,11 +34,11 @@ From orchestrator context:
 
 From MCP tools:
 
-- `mcp__postgres_knowledgebase__sessionCreate`
-- `mcp__postgres_knowledgebase__sessionUpdate`
-- `mcp__postgres_knowledgebase__sessionComplete`
-- `mcp__postgres_knowledgebase__sessionQuery`
-- `mcp__postgres_knowledgebase__sessionCleanup`
+- `mcp__knowledge-base__sessionCreate`
+- `mcp__knowledge-base__sessionUpdate`
+- `mcp__knowledge-base__sessionComplete`
+- `mcp__knowledge-base__sessionQuery`
+- `mcp__knowledge-base__sessionCleanup`
 
 From skills:
 
@@ -57,12 +57,14 @@ From skills:
 Before creating a new session, query for existing active sessions that may be leaked:
 
 ```javascript
-const activeSessions = await mcp__postgres_knowledgebase__sessionQuery({
-  agentName: '{agentName}',
-  storyId: '{storyId}',
-  activeOnly: true,
-  limit: 50,
-})
+const activeSessions =
+  (await mcp__knowledge) -
+  base__sessionQuery({
+    agentName: '{agentName}',
+    storyId: '{storyId}',
+    activeOnly: true,
+    limit: 50,
+  })
 ```
 
 **If active sessions found** and the calling context does not match:
@@ -91,11 +93,13 @@ Options:
 Delegate to the `/session-create` skill:
 
 ```javascript
-const result = await mcp__postgres_knowledgebase__sessionCreate({
-  agentName: '{agentName}',
-  storyId: '{storyId}',
-  phase: '{phase}',
-})
+const result =
+  (await mcp__knowledge) -
+  base__sessionCreate({
+    agentName: '{agentName}',
+    storyId: '{storyId}',
+    phase: '{phase}',
+  })
 ```
 
 ### Null-Return Handling
@@ -128,13 +132,14 @@ message: 'sessionCreate returned null — continuing without session tracking'
 Update token metrics using **incremental mode** (always):
 
 ```javascript
-await mcp__postgres_knowledgebase__sessionUpdate({
-  sessionId: '{sessionId}',
-  mode: 'incremental',
-  inputTokens: { inputTokens },
-  outputTokens: { outputTokens },
-  cachedTokens: { cachedTokens },
-})
+;(await mcp__knowledge) -
+  base__sessionUpdate({
+    sessionId: '{sessionId}',
+    mode: 'incremental',
+    inputTokens: { inputTokens },
+    outputTokens: { outputTokens },
+    cachedTokens: { cachedTokens },
+  })
 ```
 
 ### Mode
@@ -152,7 +157,7 @@ Always use `mode: 'incremental'`. This is the correct and required default for c
 
 ```javascript
 try {
-  await mcp__postgres_knowledgebase__sessionUpdate({ ... })
+  await mcp__knowledge-base__sessionUpdate({ ... })
 } catch (error) {
   // Emit warning, skip update, continue workflow
 }
@@ -181,12 +186,13 @@ message: 'sessionUpdate threw: {error.message} — update skipped'
 Complete the session with optional final token counts:
 
 ```javascript
-await mcp__postgres_knowledgebase__sessionComplete({
-  sessionId: '{sessionId}',
-  inputTokens: { finalInputTokens }, // optional
-  outputTokens: { finalOutputTokens }, // optional
-  cachedTokens: { finalCachedTokens }, // optional
-})
+;(await mcp__knowledge) -
+  base__sessionComplete({
+    sessionId: '{sessionId}',
+    inputTokens: { finalInputTokens }, // optional
+    outputTokens: { finalOutputTokens }, // optional
+    cachedTokens: { finalCachedTokens }, // optional
+  })
 ```
 
 ### Idempotent Guard
@@ -197,7 +203,7 @@ await mcp__postgres_knowledgebase__sessionComplete({
 
 ```javascript
 try {
-  await mcp__postgres_knowledgebase__sessionComplete({ ... })
+  await mcp__knowledge-base__sessionComplete({ ... })
 } catch (error) {
   if (error.message.includes('already completed')) {
     // Idempotent — session was already closed
@@ -230,10 +236,12 @@ Returns `null` on database errors. Emit warning, continue.
 **Always** execute cleanup with `dryRun: true` first:
 
 ```javascript
-const preview = await mcp__postgres_knowledgebase__sessionCleanup({
-  retentionDays: 90,
-  dryRun: true,
-})
+const preview =
+  (await mcp__knowledge) -
+  base__sessionCleanup({
+    retentionDays: 90,
+    dryRun: true,
+  })
 ```
 
 Report the preview:
@@ -254,10 +262,12 @@ After reporting the dry-run preview, require explicit confirmation before actual
 ### Step 3: Actual Cleanup (Only After Confirmation)
 
 ```javascript
-const result = await mcp__postgres_knowledgebase__sessionCleanup({
-  retentionDays: 90,
-  dryRun: false, // MUST be explicitly set
-})
+const result =
+  (await mcp__knowledge) -
+  base__sessionCleanup({
+    retentionDays: 90,
+    dryRun: false, // MUST be explicitly set
+  })
 ```
 
 ### Active Session Protection

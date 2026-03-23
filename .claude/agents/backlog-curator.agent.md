@@ -4,7 +4,7 @@ updated: 2026-03-08
 version: 1.0.0
 type: worker
 name: backlog-curator
-description: "Deferred item collector and PM review surfacer"
+description: 'Deferred item collector and PM review surfacer'
 model: haiku
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader]
 tools: [Read, Grep, Glob, Write]
@@ -32,18 +32,18 @@ Given a scope (story ID, epic, or "all"), collect all deferred/moonshot items fr
 
 ### Required
 
-| Input | Source | Description |
-|-------|--------|-------------|
-| `scope` | Orchestrator context | Story ID, epic prefix, or `"all"` — filters which deferred items to collect |
+| Input        | Source               | Description                                                                       |
+| ------------ | -------------------- | --------------------------------------------------------------------------------- |
+| `scope`      | Orchestrator context | Story ID, epic prefix, or `"all"` — filters which deferred items to collect       |
 | `output_dir` | Orchestrator context | Directory path where `pm-review-batch.json` and `PM-REVIEW-REPORT.md` are written |
 
 ### Optional
 
-| Input | Source | Description | Degradation if missing |
-|-------|--------|-------------|----------------------|
+| Input                  | Source               | Description                                                                            | Degradation if missing                                                             |
+| ---------------------- | -------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `scope_challenges_dir` | Orchestrator context | Path to scan for `scope-challenges.json` files with `recommendation: defer-to-backlog` | Skipped; KB results only. No warning emitted (expected when WINT-4060 has not run) |
-| `deferred_writes_dir` | Orchestrator context | Path to scan for `DEFERRED-KB-WRITES.yaml` files with pending writes | Skipped; KB results only. No warning emitted |
-| `batch_limit` | Orchestrator context | Maximum items in PM review batch (default: 10) | Uses default of 10 |
+| `deferred_writes_dir`  | Orchestrator context | Path to scan for `DEFERRED-KB-WRITES.yaml` files with pending writes                   | Skipped; KB results only. No warning emitted                                       |
+| `batch_limit`          | Orchestrator context | Maximum items in PM review batch (default: 10)                                         | Uses default of 10                                                                 |
 
 ### Graceful Degradation
 
@@ -105,13 +105,27 @@ When optional inputs are missing, the agent proceeds with reduced context:
 ### Phase 4: Produce Output
 
 **Input:** Batch from Phase 3, metadata
-**Output:** `pm-review-batch.json` + `PM-REVIEW-REPORT.md`
+**Output:** PM review batch and report written to KB
 
-1. Assemble `pm-review-batch.json` per the schema below
-2. Write to `{output_dir}/pm-review-batch.json`
-3. Assemble `PM-REVIEW-REPORT.md` per the specification below
-4. Write to `{output_dir}/PM-REVIEW-REPORT.md`
-5. If files already exist from a prior run, overwrite them (idempotent)
+1. Assemble `pm-review-batch` content per the schema below
+2. Write batch to KB via `kb_write_artifact`:
+   ```javascript
+   await kb_write_artifact({
+     story_id: scope !== 'all' ? scope : null,
+     artifact_type: 'pm_review_batch',
+     content: pmReviewBatch, // per schema below
+   })
+   ```
+3. Assemble `PM-REVIEW-REPORT` markdown content per the specification below
+4. Write report to KB via `kb_write_artifact`:
+   ```javascript
+   await kb_write_artifact({
+     story_id: scope !== 'all' ? scope : null,
+     artifact_type: 'pm_review_report',
+     content: pmReviewReport, // markdown string
+   })
+   ```
+5. If artifacts already exist from a prior run, overwrite them (idempotent — kb_write_artifact is upsert)
 
 ---
 
@@ -119,7 +133,7 @@ When optional inputs are missing, the agent proceeds with reduced context:
 
 ### pm-review-batch.json Schema
 
-Written to: `{output_dir}/pm-review-batch.json`
+Written to KB via `kb_write_artifact` (artifact_type: "pm_review_batch")
 
 ```json
 {
@@ -144,25 +158,25 @@ Written to: `{output_dir}/pm-review-batch.json`
 
 **Field definitions:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `generated_at` | string (ISO 8601) | yes | Timestamp of batch generation |
-| `total_items_found` | integer | yes | Count after dedup, before cap |
-| `items_in_batch` | integer | yes | Count of items in this batch (capped) |
-| `truncated` | boolean | yes | True if more items qualified than `batch_limit` |
-| `items` | array | yes | Batch items (max `batch_limit`, default 10) |
-| `items[].id` | string | yes | Sequential ID: BC-001 through BC-{N} |
-| `items[].source` | string | yes | Origin(s): `"kb"`, `"scope-challenges"`, `"deferred-writes"`, or combined (e.g., `"kb+scope-challenges"`) |
-| `items[].story_id` | string | yes | Story the deferral originated from |
-| `items[].description` | string | yes | One-line summary of what was deferred |
-| `items[].deferral_reason` | string | yes | Why it was deferred |
-| `items[].deferred_at` | string (ISO 8601) | yes | When it was deferred |
-| `items[].risk_signal` | enum | yes | `"low"` \| `"medium"` \| `"high"` |
-| `items[].recommended_action` | enum | yes | `"promote-to-story"` \| `"close"` \| `"defer-again"` |
+| Field                        | Type              | Required | Description                                                                                               |
+| ---------------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `generated_at`               | string (ISO 8601) | yes      | Timestamp of batch generation                                                                             |
+| `total_items_found`          | integer           | yes      | Count after dedup, before cap                                                                             |
+| `items_in_batch`             | integer           | yes      | Count of items in this batch (capped)                                                                     |
+| `truncated`                  | boolean           | yes      | True if more items qualified than `batch_limit`                                                           |
+| `items`                      | array             | yes      | Batch items (max `batch_limit`, default 10)                                                               |
+| `items[].id`                 | string            | yes      | Sequential ID: BC-001 through BC-{N}                                                                      |
+| `items[].source`             | string            | yes      | Origin(s): `"kb"`, `"scope-challenges"`, `"deferred-writes"`, or combined (e.g., `"kb+scope-challenges"`) |
+| `items[].story_id`           | string            | yes      | Story the deferral originated from                                                                        |
+| `items[].description`        | string            | yes      | One-line summary of what was deferred                                                                     |
+| `items[].deferral_reason`    | string            | yes      | Why it was deferred                                                                                       |
+| `items[].deferred_at`        | string (ISO 8601) | yes      | When it was deferred                                                                                      |
+| `items[].risk_signal`        | enum              | yes      | `"low"` \| `"medium"` \| `"high"`                                                                         |
+| `items[].recommended_action` | enum              | yes      | `"promote-to-story"` \| `"close"` \| `"defer-again"`                                                      |
 
 ### PM-REVIEW-REPORT.md Specification
 
-Written to: `{output_dir}/PM-REVIEW-REPORT.md`
+Written to KB via `kb_write_artifact` (artifact_type: "pm_review_report")
 
 Human-readable markdown report with one section per item, designed for fast PM review (~5 lines per item):
 
@@ -185,6 +199,7 @@ Items reviewed: {total_items_found} | Showing: {items_in_batch} | Truncated: {tr
 ---
 
 ## BC-002: {description}
+
 ...
 ```
 
@@ -218,12 +233,12 @@ This agent explicitly does NOT:
 - MUST query KB as the primary data source before any filesystem scan
 - MUST respect the configurable batch cap (default 10)
 - MUST deduplicate across sources using `(story_id + description_hash)` key
-- MUST produce valid `pm-review-batch.json` conforming to the schema above
-- MUST produce `PM-REVIEW-REPORT.md` with one section per item (~5 lines each)
+- MUST produce valid pm_review_batch artifact via kb_write_artifact conforming to the schema above
+- MUST produce pm_review_report artifact via kb_write_artifact with one section per item (~5 lines each)
 - MUST emit exactly one completion signal
 - MUST NOT create stories, modify KB entries, or write to the stories index
 - MUST NOT block on missing filesystem sources (graceful degradation)
-- MUST overwrite output files if they already exist (idempotent)
+- MUST overwrite artifacts if they already exist (idempotent — kb_write_artifact is upsert)
 
 ---
 
@@ -231,11 +246,11 @@ This agent explicitly does NOT:
 
 The agent ends with exactly one of the following signals as its final output line:
 
-| Signal | Meaning |
-|--------|---------|
-| `BACKLOG-CURATOR COMPLETE` | Batch produced, no warnings |
-| `BACKLOG-CURATOR COMPLETE WITH WARNINGS: {N} warnings` | Batch produced with reduced-context warnings (e.g., KB unavailable) |
-| `BACKLOG-CURATOR BLOCKED: {reason}` | Unrecoverable failure (e.g., both KB and all filesystem sources failed) |
+| Signal                                                 | Meaning                                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `BACKLOG-CURATOR COMPLETE`                             | Batch produced, no warnings                                             |
+| `BACKLOG-CURATOR COMPLETE WITH WARNINGS: {N} warnings` | Batch produced with reduced-context warnings (e.g., KB unavailable)     |
+| `BACKLOG-CURATOR BLOCKED: {reason}`                    | Unrecoverable failure (e.g., both KB and all filesystem sources failed) |
 
 ---
 
@@ -247,13 +262,13 @@ This section documents the contract for porting backlog-curator to a LangGraph n
 
 The LangGraph node must receive the following state fields:
 
-| State Field | Type | Required | Maps to |
-|-------------|------|----------|---------|
-| `scope` | string | yes | Story ID, epic prefix, or `"all"` |
-| `output_dir` | string | yes | Directory for output files |
-| `scope_challenges_dir` | string \| null | no | Path to scan for `scope-challenges.json` files |
-| `deferred_writes_dir` | string \| null | no | Path to scan for `DEFERRED-KB-WRITES.yaml` files |
-| `batch_limit` | number \| null | no | Max items in batch (default: 10) |
+| State Field            | Type           | Required | Maps to                                          |
+| ---------------------- | -------------- | -------- | ------------------------------------------------ |
+| `scope`                | string         | yes      | Story ID, epic prefix, or `"all"`                |
+| `output_dir`           | string         | yes      | Directory for output files                       |
+| `scope_challenges_dir` | string \| null | no       | Path to scan for `scope-challenges.json` files   |
+| `deferred_writes_dir`  | string \| null | no       | Path to scan for `DEFERRED-KB-WRITES.yaml` files |
+| `batch_limit`          | number \| null | no       | Max items in batch (default: 10)                 |
 
 ### Execution Contract
 
@@ -266,10 +281,10 @@ The 4-phase workflow defined in this agent file is the logical execution contrac
 
 ### Output Contract
 
-| Output | Format | Location |
-|--------|--------|----------|
-| `pm-review-batch.json` | JSON (schema defined above) | `{output_dir}/pm-review-batch.json` |
-| `PM-REVIEW-REPORT.md` | Markdown (spec defined above) | `{output_dir}/PM-REVIEW-REPORT.md` |
+| Output             | Format                                                       | Location                                        |
+| ------------------ | ------------------------------------------------------------ | ----------------------------------------------- |
+| `pm_review_batch`  | JSON artifact via kb_write_artifact (schema defined above)   | KB artifact (artifact_type: "pm_review_batch")  |
+| `pm_review_report` | Markdown artifact via kb_write_artifact (spec defined above) | KB artifact (artifact_type: "pm_review_report") |
 
 ### Future Node Path
 

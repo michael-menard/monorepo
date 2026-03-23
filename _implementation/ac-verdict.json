@@ -1,84 +1,84 @@
 {
-  "story_id": "WINT-0270",
-  "generated_at": "2026-03-21T17:39:00Z",
+  "story_id": "WINT-7090",
+  "generated_at": "2026-03-23T17:51:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "The harness shall include a task corpus with at least 3 prompts per category for 4 categories: code_generation, code_review, elaboration_analysis, lint_syntax.",
+      "ac_text": "All session-manager MCP tool references updated to mcp__knowledge-base__* namespace",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "The harness shall iterate all 5 required Ollama models against each task, recording latency_ms, cost_usd=0, and raw output per run.",
+      "ac_text": "kb-compressor uses kb_write_artifact instead of COMPRESSION-REPORT.yaml filesystem write",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "For each (model, task) pair, the harness shall call evaluateQuality() and recordRun() to persist results to the leaderboard YAML.",
+      "ac_text": "context-warmer uses kb_write_artifact instead of WARM-RESULT.yaml filesystem write",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "The harness shall include a QUALITY_EVALUATOR_LIMITATION constant documenting that scores are heuristic-only (keyword matching, length heuristics, no semantic analysis).",
+      "ac_text": "backlog-curator uses kb_write_artifact instead of pm-review-batch.json and PM-REVIEW-REPORT.md filesystem writes",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "MODEL_LEADERBOARD_PATH shall be a named constant in constants.ts, not hardcoded in harness files.",
+      "ac_text": "knowledge-context-loader reads ADR content via KB instead of ADR-LOG.md filesystem",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "The benchmark script shall be developer-local only (scripts/benchmark-models.ts) and NOT referenced in CI configuration.",
+      "ac_text": "All doc-sync MCP tool references updated to mcp__knowledge-base__* namespace",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "The harness shall set cost_usd = 0 for all Ollama model runs (zero-cost sentinel per WINT-0260).",
+      "ac_text": "improvement-proposer uses kb_add instead of kb_add_entry",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "Unit tests shall cover: task iteration loop (all tasks x all models), result aggregation (averages, ranking), mock Ollama responses.",
+      "ac_text": "Final verification shows 0 deprecated tool names or filesystem artifact paths remain",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
@@ -87,6 +87,5 @@
   "total_acs": 8,
   "accepted": 8,
   "challenged": 0,
-  "rejected": 0,
-  "warnings": []
+  "rejected": 0
 }
