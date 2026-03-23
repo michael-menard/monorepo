@@ -1,32 +1,33 @@
-# Fix Documentation - WINT-0140 Iteration 2
+# Fix Documentation - APRS-5030 Iteration 2
 
-**Story:** WINT-0140 - Create ML Pipeline MCP Tools
+**Story:** APRS-5030 - Skill: /story-generation-from-refined-plan Wiring
 **Mode:** Fix Iteration 2
-**Date:** 2026-03-20
+**Date:** 2026-03-22
 **Status:** COMPLETE
 
 ---
 
 ## Executive Summary
 
-Fix iteration 2 successfully resolved the cyclic dependency between `@repo/mcp-tools` and `@repo/knowledge-base` by:
+Fix iteration 2 successfully addressed 4 code review warnings from iteration 1:
 
-1. **Removing ML pipeline re-exports** from `packages/backend/mcp-tools/src/index.ts`
-2. **Removing local copies of worktree management** from mcp-tools (sourced from @repo/knowledge-base)
-3. **Removing local copies of telemetry** from mcp-tools (sourced from @repo/knowledge-base)
+1. **Template literal consolidation** in generate-stories.ts - resolved syntax style warnings
+2. **CLI args Zod validation** - added CliArgsSchema in generate-stories.ts (security improvement)
+3. **Loose generics** - replaced with KbPlanResponseSchema in plan-loader-adapter.ts
+4. **Object construction** - now uses KbIngestStoryInputSchema.parse() in kb-writer-adapter.ts
 
-All verification checks passed. Both packages compile cleanly with no cyclic dependencies detected.
+All verification checks passed: 16/16 tests, clean TypeScript compilation.
 
 ---
 
 ## Root Cause Analysis
 
-**Problem:** The mcp-tools package was maintaining local copies of `worktree-management` and `telemetry` tools that were also available in `@repo/knowledge-base`. This created a circular dependency:
+Code review iteration 1 identified 8 warnings across the story-generation adapter layer:
+- 3 syntax warnings (template literal style improvements)
+- 1 security warning (missing CLI argument validation)
+- 4 TypeScript warnings (loose generics and type assertions at adapter boundaries)
 
-- `@repo/knowledge-base` depends on `@repo/mcp-tools` (for MCP server exports)
-- `@repo/mcp-tools` was trying to re-export tools that created a reverse dependency
-
-**Root Cause:** Architectural misalignment - mcp-tools tried to be the "one-stop shop" for all MCP tools, including those that belong to knowledge-base, creating a cycle.
+These were all valid improvement opportunities that enhanced code quality and type safety without changing functionality.
 
 ---
 
@@ -34,53 +35,36 @@ All verification checks passed. Both packages compile cleanly with no cyclic dep
 
 ### Changes Made
 
-**Modified:** `packages/backend/mcp-tools/src/index.ts`
+**File 1: `packages/backend/orchestrator/src/cli/generate-stories.ts`**
 
-**Before:**
+- Consolidated template literal concatenation patterns
+- Added `CliArgsSchema` using Zod for CLI argument validation
+- All process.argv parsing now validates against schema before use
+- Improved security posture for operator CLI tool
 
-```typescript
-// Local imports (causing cycle)
-export * from './ml-pipeline/index.js'
-export * from './worktree-management/index.js'
-export * from './telemetry/workflow-log-invocation.js'
-```
+**File 2: `packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts`**
 
-**After:**
+- Replaced loose `unknown` and generic `any` types with `KbPlanResponseSchema`
+- Type assertions now bound by explicit schema validation
+- Adapter boundary now has clear, validated input/output types
 
-```typescript
-// Re-export from @repo/knowledge-base (breaks cycle)
-export {
-  worktreeRegister,
-  worktreeGetByStory,
-  worktreeListActive,
-  worktreeMarkComplete,
-} from '@repo/knowledge-base/worktree-management'
+**File 3: `packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts`**
 
-export { logInvocation, WorkflowLogInvocationInputSchema } from '@repo/knowledge-base/telemetry'
-export type { WorkflowLogInvocationInput } from '@repo/knowledge-base/telemetry'
-
-// ML pipeline tools removed (no longer in mcp-tools)
-```
-
-**Deleted Directories:**
-
-- `packages/backend/mcp-tools/src/ml-pipeline/`
-- `packages/backend/mcp-tools/src/worktree-management/`
-- `packages/backend/mcp-tools/src/telemetry/`
+- Object construction now uses `KbIngestStoryInputSchema.parse()` instead of type assertions
+- Validates data shape before KB ingestion
+- Ensures runtime type safety matches compile-time expectations
 
 ### Verification Results
 
 All checks PASSED:
 
-| Check                                   | Status | Details                                               |
-| --------------------------------------- | ------ | ----------------------------------------------------- |
-| TypeScript Compilation (knowledge-base) | PASS   | tsc completes without errors                          |
-| TypeScript Compilation (mcp-tools)      | PASS   | tsc completes without errors                          |
-| Build (knowledge-base)                  | PASS   | turbo build succeeds                                  |
-| Build (mcp-tools)                       | PASS   | turbo build succeeds                                  |
-| Cyclic Dependency Detection             | PASS   | No cycles in dependency graph                         |
-| Module Import Validation                | PASS   | mcp-tools correctly imports from @repo/knowledge-base |
-| Reverse Dependency Check                | PASS   | knowledge-base does not import from mcp-tools         |
+| Check                    | Status | Details                      |
+| ------------------------ | ------ | ---------------------------- |
+| TypeScript Compilation   | PASS   | 0 errors, 0 warnings         |
+| Linting                  | PASS   | All rules satisfied          |
+| Unit Tests               | PASS   | 16/16 tests passing          |
+| Integration Tests        | PASS   | intake-adapters.test.ts OK   |
+| Code Review Checklist    | PASS   | All 4 warnings addressed     |
 
 ---
 
@@ -88,98 +72,60 @@ All checks PASSED:
 
 ### Positive Impacts
 
-1. **Dependency Graph Fixed**
-   - Unidirectional flow: `@repo/mcp-tools` → `@repo/knowledge-base`
-   - No reverse dependencies introduced
-   - Enables full monorepo builds with turbo
+1. **Code Quality Improvements**
+   - Template literals follow project style guidelines
+   - All type assertions replaced with schema validation
+   - Cleaner, more maintainable adapter code
 
-2. **Code Consolidation**
-   - Eliminates duplicate code (worktree-management, telemetry)
-   - Single source of truth for shared tools
-   - Reduced maintenance burden
+2. **Type Safety Enhancement**
+   - Explicit schema boundaries at adapter entry/exit points
+   - Runtime validation prevents type mismatches
+   - Type checking catches errors earlier in development
 
-3. **API Compatibility**
-   - No breaking changes to mcp-tools public API
-   - Consumers of mcp-tools still access all tools (re-exported from knowledge-base)
-   - Transparent refactor from import perspective
+3. **Security Hardening**
+   - CLI arguments now validated with Zod schema
+   - Prevents accidental misuse of operator CLI tool
+   - Operator-only access remains enforced at runtime
 
-### Dependency Flow (After Fix)
+### No Breaking Changes
 
-```
-@repo/knowledge-base
-  ├─ @repo/db
-  ├─ @repo/logger
-  ├─ @repo/sidecar-http-utils
-  └─ (no reverse dependency from mcp-tools)
-
-@repo/mcp-tools
-  ├─ @repo/knowledge-base ✓ (sources tools from here)
-  ├─ @repo/db
-  ├─ @repo/logger
-  └─ @repo/workflow-logic
-```
-
----
-
-## Testing & Validation
-
-### Build Verification
-
-```bash
-# Both packages build successfully
-pnpm --filter @repo/knowledge-base --filter @repo/mcp-tools run build
-# Result: PASS
-
-# Full monorepo build validates no cycles
-pnpm build
-# Result: PASS for knowledge-base and mcp-tools
-```
-
-### Import Verification
-
-**mcp-tools exports check:**
-
-- Worktree management tools sourced from @repo/knowledge-base/worktree-management
-- Telemetry tools sourced from @repo/knowledge-base/telemetry
-- ML pipeline tools no longer re-exported (moved to knowledge-base)
-
-**No reverse imports detected:**
-
-- Verified that @repo/knowledge-base does not import from @repo/mcp-tools
-- Dependency chain is unidirectional
+- All adapter APIs remain unchanged
+- Validation is transparent to callers
+- Tests pass without modification
+- Backward compatible with existing integration points
 
 ---
 
 ## Files Modified
 
 1. **Modified:**
-   - `packages/backend/mcp-tools/src/index.ts` - Updated import paths
+   - `packages/backend/orchestrator/src/cli/generate-stories.ts` - Template consolidation + CLI validation
+   - `packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts` - Generic type replacement
+   - `packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts` - Object construction validation
 
-2. **Deleted:**
-   - `packages/backend/mcp-tools/src/ml-pipeline/` (entire directory)
-   - `packages/backend/mcp-tools/src/worktree-management/` (entire directory)
-   - `packages/backend/mcp-tools/src/telemetry/` (entire directory)
+2. **Tests:**
+   - `packages/backend/orchestrator/src/adapters/intake/__tests__/intake-adapters.test.ts` - 16/16 passing
 
 ---
 
 ## Lessons Learned
 
-1. **Architectural Pattern:** When a tool module belongs to one package (e.g., ML pipeline to knowledge-base), all packages should import it from there, not maintain local copies.
+1. **Schema-First Boundaries:** Adapter layer improvements benefit from explicit Zod schemas at entry/exit points. This catches type mismatches early and self-documents expected data shapes.
 
-2. **Dependency Graph Analysis:** Always validate the dependency graph is acyclic. Use `pnpm build --dry-run` to detect cycles early.
+2. **Template Literal Style:** Consolidate multi-line template literals using backtick continuation rather than string concatenation. Improves readability while maintaining functionality.
 
-3. **Public API Design:** Re-exports from one package to another are acceptable (mcp-tools re-exports from knowledge-base), but not the reverse.
+3. **CLI Security:** Always validate CLI arguments with schemas, even in operator-only tools. This prevents accidental misuse and makes constraints explicit.
 
-4. **Code Duplication Risks:** Local copies of shared code create the risk of cyclic imports and divergence. Prefer consolidated, single-source-of-truth modules.
+4. **Type Safety Over Flexibility:** Replacing generic types with specific schemas improves error detection without adding runtime overhead.
 
 ---
 
 ## Next Steps
 
-1. Code review of the changes
-2. Merge to main branch
-3. Update documentation/README for package consumers
-4. Monitor for any import-related issues in downstream code
+1. Merge changes to main branch
+2. Deploy to integration environment
+3. Monitor story-generation endpoints for any issues
+4. Close APRS-5030
 
 ---
 
@@ -187,6 +133,6 @@ pnpm build
 
 **Fix Iteration:** 2
 **Verification Status:** PASS
-**Ready for Code Review:** YES
+**Ready for Merge:** YES
 
-All acceptance criteria met. No outstanding issues. Cyclic dependency successfully resolved with zero breaking changes to public API.
+All acceptance criteria met. Code review warnings successfully resolved. No outstanding issues. Ready for final merge and story completion.

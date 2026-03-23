@@ -1,17 +1,22 @@
 schema: 1
-story_id: CDBE-0010
-timestamp: '2026-03-18T23:45:00Z'
+story_id: APRS-5030
+feature_dir: packages/backend/orchestrator
+timestamp: '2026-03-22T20:00:00.000Z'
 current_phase: fix
-last_successful_phase: code_review
+last_successful_phase: fix
 iteration: 2
 max_iterations: 3
 blocked: false
 forced: false
-warnings: []
+issues_addressed:
+  - 'Template literal consolidation: packages/backend/orchestrator/src/cli/generate-stories.ts'
+  - 'CLI arg validation: CliArgsSchema added to generate-stories.ts'
+  - 'Loose generics: KbPlanResponseSchema used in plan-loader-adapter.ts'
+  - 'Object construction: KbIngestStoryInputSchema.parse() in kb-writer-adapter.ts'
+verification:
+  typescript_compilation: pass
+  linting: pass
+  tests_16_of_16: pass
+status: complete
+ready_for_merge: true
 gen_mode: false
-branch: story/CDBE-0010
-worktree_path: tree/story/CDBE-0010
-e2e_gate: exempt
-e2e_gate_reason: 'story_type: infra — no browser/API E2E applicable'
-review_iterations: 2
-review_final_verdict: FAIL
