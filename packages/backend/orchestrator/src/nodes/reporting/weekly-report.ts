@@ -71,7 +71,7 @@ export async function aggregateThroughput(
   try {
     const result = await pool.query<{ status: string; count: string }>(
       `SELECT status, COUNT(*)::text AS count
-       FROM wint.change_telemetry
+       FROM analytics.change_telemetry
        WHERE created_at >= $1 AND created_at < $2
          AND status IN ('completed', 'blocked')
        GROUP BY status`,
@@ -94,7 +94,7 @@ export async function aggregateThroughput(
   } catch (err) {
     if (isUndefinedTableError(err)) {
       logger.warn('weekly_report.throughput.table_missing', {
-        error: 'wint.change_telemetry does not exist',
+        error: 'analytics.change_telemetry does not exist',
       })
       return DATA_UNAVAILABLE
     }
@@ -119,7 +119,7 @@ export async function aggregateCosts(
   try {
     const result = await pool.query<{ model_provider: string; total_cost: string }>(
       `SELECT model_provider, SUM(estimated_cost_usd)::text AS total_cost
-       FROM wint.change_telemetry
+       FROM analytics.change_telemetry
        WHERE created_at >= $1 AND created_at < $2
          AND estimated_cost_usd IS NOT NULL
        GROUP BY model_provider`,
@@ -144,7 +144,7 @@ export async function aggregateCosts(
   } catch (err) {
     if (isUndefinedTableError(err)) {
       logger.warn('weekly_report.costs.table_missing', {
-        error: 'wint.change_telemetry does not exist',
+        error: 'analytics.change_telemetry does not exist',
       })
       return DATA_UNAVAILABLE
     }
@@ -166,44 +166,9 @@ export async function aggregateModelPerformance(
   pool: Pool,
   window: TimeWindow,
 ): Promise<ModelPerformanceResult | DataUnavailableResult> {
-  try {
-    const result = await pool.query<{
-      model_id: string
-      first_try_success_rate: string
-      escalation_rate: string
-      trend_direction: string
-    }>(
-      `SELECT
-         model_id,
-         COALESCE(first_try_success_rate, 0)::text AS first_try_success_rate,
-         COALESCE(escalation_rate, 0)::text AS escalation_rate,
-         COALESCE(trend_direction, 'stable') AS trend_direction
-       FROM wint.model_affinity_profiles
-       WHERE updated_at >= $1 AND updated_at < $2`,
-      [window.start, window.end],
-    )
-
-    const by_model: ModelPerformanceResult['by_model'] = {}
-
-    for (const row of result.rows) {
-      const trend = row.trend_direction as 'improving' | 'stable' | 'declining'
-      by_model[row.model_id] = {
-        first_try_success_rate: parseFloat(row.first_try_success_rate),
-        escalation_rate: parseFloat(row.escalation_rate),
-        trend_direction: ['improving', 'stable', 'declining'].includes(trend) ? trend : 'stable',
-      }
-    }
-
-    return { by_model }
-  } catch (err) {
-    if (isUndefinedTableError(err)) {
-      logger.warn('weekly_report.model_performance.table_missing', {
-        error: 'wint.model_affinity_profiles does not exist',
-      })
-      return DATA_UNAVAILABLE
-    }
-    throw err
-  }
+  // TODO(WINT-0250): wint.model_affinity_profiles has no canonical schema target — table does not exist in any migration.
+  // Implement analytics.model_affinity_profiles migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+  return DATA_UNAVAILABLE
 }
 
 /**
@@ -222,66 +187,9 @@ export async function aggregateCodebaseHealth(
   pool: Pool,
   window: TimeWindow,
 ): Promise<CodebaseHealthResult | DataUnavailableResult> {
-  try {
-    const result = await pool.query<{
-      snapshot_at: string
-      metrics: Record<string, number>
-      thresholds: Record<string, number>
-    }>(
-      `SELECT snapshot_at, metrics, thresholds
-       FROM wint.codebase_health
-       WHERE snapshot_at >= $1 AND snapshot_at < $2
-       ORDER BY snapshot_at ASC`,
-      [window.start, window.end],
-    )
-
-    if (result.rows.length < 2) {
-      logger.warn('weekly_report.codebase_health.insufficient_snapshots', {
-        count: result.rows.length,
-        required: 2,
-      })
-      return DATA_UNAVAILABLE
-    }
-
-    const baseline = result.rows[0]
-    const recent = result.rows[result.rows.length - 1]
-
-    const baselineMetrics: Record<string, number> = baseline.metrics ?? {}
-    const recentMetrics: Record<string, number> = recent.metrics ?? {}
-    const thresholds: Record<string, number> = recent.thresholds ?? {}
-
-    const delta_from_baseline: Record<string, number> = {}
-    let metrics_within_threshold = 0
-    let metrics_drifted = 0
-
-    const allKeys = new Set([...Object.keys(baselineMetrics), ...Object.keys(recentMetrics)])
-
-    for (const key of allKeys) {
-      const baselineVal = baselineMetrics[key] ?? 0
-      const recentVal = recentMetrics[key] ?? 0
-      const delta = recentVal - baselineVal
-      delta_from_baseline[key] = Math.round(delta * 10000) / 10000
-
-      const threshold = thresholds[key]
-      if (threshold !== undefined) {
-        if (Math.abs(delta) <= Math.abs(threshold)) {
-          metrics_within_threshold++
-        } else {
-          metrics_drifted++
-        }
-      }
-    }
-
-    return { metrics_within_threshold, metrics_drifted, delta_from_baseline }
-  } catch (err) {
-    if (isUndefinedTableError(err)) {
-      logger.warn('weekly_report.codebase_health.table_missing', {
-        error: 'wint.codebase_health does not exist',
-      })
-      return DATA_UNAVAILABLE
-    }
-    throw err
-  }
+  // TODO(WINT-0250): wint.codebase_health has no canonical schema target — table does not exist in any migration.
+  // Implement analytics.codebase_health migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+  return DATA_UNAVAILABLE
 }
 
 // ============================================================================

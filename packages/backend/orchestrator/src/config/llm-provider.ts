@@ -201,12 +201,12 @@ export function clearOllamaLLMCache(): void {
  */
 export type LLMResult =
   | {
-      provider: 'ollama'
+      provider: string
       llm: BaseChatModel
       model: ParsedOllamaModel
     }
   | {
-      provider: 'claude'
+      provider: string
       llm: null
       model: ClaudeModel
     }
@@ -289,7 +289,7 @@ export async function getLLMForAgent(
  */
 export function getModelInfoForAgent(agentName: string): {
   model: Model
-  provider: 'claude' | 'ollama'
+  provider: string
   parsedOllama: ParsedOllamaModel | null
 } {
   const model = getModelForAgent(agentName)
