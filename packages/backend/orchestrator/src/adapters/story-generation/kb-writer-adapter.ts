@@ -122,7 +122,8 @@ export function createKbWriterAdapter(
     // Sequentially write each story
     for (const story of stories) {
       try {
-        const input: KbIngestStoryInput = {
+        // Validate the story payload against the ingest schema before calling KB
+        const input = KbIngestStoryInputSchema.parse({
           story_id: story.story_id,
           title: story.title,
           description: story.description,
@@ -136,7 +137,7 @@ export function createKbWriterAdapter(
           parent_flow_id: story.parent_flow_id,
           flow_step_reference: story.flow_step_reference,
           dependencies: story.dependencies,
-        }
+        })
 
         const result = await kbIngestStory(input)
 

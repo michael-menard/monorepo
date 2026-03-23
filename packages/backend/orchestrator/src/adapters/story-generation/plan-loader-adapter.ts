@@ -25,13 +25,31 @@ export const KbGetPlanInputSchema = z.object({
 export type KbGetPlanInput = z.infer<typeof KbGetPlanInputSchema>
 
 /**
+ * Schema for the KB plan response shape.
+ * The KB returns a plan record with known top-level fields.
+ * Unknown extra fields are allowed via passthrough() for forward compatibility.
+ * NormalizedPlanSchema.safeParse handles missing/invalid fields downstream.
+ */
+export const KbPlanResponseSchema = z
+  .object({
+    plan_slug: z.string().optional(),
+    title: z.string().optional(),
+    summary: z.string().optional(),
+    status: z.string().optional(),
+    flows: z.array(z.record(z.unknown())).optional(),
+  })
+  .passthrough()
+
+export type KbPlanResponse = z.infer<typeof KbPlanResponseSchema>
+
+/**
  * Injectable function type for kb_get_plan.
  * In production, this delegates to the kb_get_plan MCP tool.
  * In tests, this can be mocked.
  *
  * Returns the plan record (camelCase fields) or null if not found.
  */
-export type KbGetPlanFn = (input: KbGetPlanInput) => Promise<Record<string, unknown> | null>
+export type KbGetPlanFn = (input: KbGetPlanInput) => Promise<KbPlanResponse | null>
 
 // ============================================================================
 // Adapter Factory
@@ -53,16 +71,29 @@ export function createPlanLoaderAdapter(kbGetPlan: KbGetPlanFn): PlanLoaderFn {
     logger.info('plan-loader-adapter: loading plan', { planSlug })
 
     try {
-      const result = await kbGetPlan({ plan_slug: planSlug })
+      const raw = await kbGetPlan({ plan_slug: planSlug })
 
-      if (!result) {
+      if (!raw) {
         logger.warn('plan-loader-adapter: plan not found', { planSlug })
         return null
       }
 
+      // Validate the KB response shape — passthrough() preserves extra fields
+      const parseResult = KbPlanResponseSchema.safeParse(raw)
+      if (!parseResult.success) {
+        logger.warn('plan-loader-adapter: unexpected KB response shape', {
+          planSlug,
+          errors: parseResult.error.flatten(),
+        })
+        // Return raw anyway — NormalizedPlanSchema.safeParse handles missing fields downstream
+        return raw
+      }
+
+      const result = parseResult.data
+      const flows = result.flows ?? []
       logger.info('plan-loader-adapter: plan loaded', {
         planSlug,
-        hasFlows: Array.isArray(result['flows']) && (result['flows'] as unknown[]).length > 0,
+        hasFlows: flows.length > 0,
       })
 
       return result

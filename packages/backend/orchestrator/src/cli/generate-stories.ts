@@ -26,12 +26,11 @@
  * @see APRS-5030 AC-3, AC-4, AC-5, AC-8
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { createStoryGenerationGraph } from '../graphs/story-generation.js'
 import { createPlanLoaderAdapter } from '../adapters/story-generation/plan-loader-adapter.js'
-import {
-  createStoryIdGeneratorAdapter,
-} from '../adapters/story-generation/story-id-generator.js'
+import { createStoryIdGeneratorAdapter } from '../adapters/story-generation/story-id-generator.js'
 import { createKbWriterAdapter } from '../adapters/story-generation/kb-writer-adapter.js'
 import type { KbGetPlanFn } from '../adapters/story-generation/plan-loader-adapter.js'
 import type { KbListStoriesFn } from '../adapters/story-generation/story-id-generator.js'
@@ -41,23 +40,41 @@ import type {
 } from '../adapters/story-generation/kb-writer-adapter.js'
 
 // ============================================================================
+// CLI Argument Schema
+// ============================================================================
+
+/**
+ * Zod schema for validated CLI arguments.
+ * plan_slug must be a non-empty string (slugs contain alphanumeric and hyphens).
+ */
+const CliArgsSchema = z.object({
+  planSlug: z
+    .string()
+    .min(1, 'plan-slug must not be empty')
+    .regex(/^[a-z0-9-]+$/, 'plan-slug must be lowercase alphanumeric with hyphens only')
+    .optional(),
+  help: z.boolean(),
+})
+
+// ============================================================================
 // Argument Parsing
 // ============================================================================
 
-function parseArgs(args: string[]): { planSlug?: string; help: boolean } {
-  const result: { planSlug?: string; help: boolean } = { help: false }
+function parseArgs(args: string[]): z.infer<typeof CliArgsSchema> {
+  const raw: { planSlug?: string; help: boolean } = { help: false }
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--help' || arg === '-h') {
-      result.help = true
+      raw.help = true
     } else if (arg === '--plan-slug' && args[i + 1]) {
-      result.planSlug = args[i + 1]
+      raw.planSlug = args[i + 1]
       i++ // skip value
     }
   }
 
-  return result
+  // Validate with Zod — throws ZodError on invalid input
+  return CliArgsSchema.parse(raw)
 }
 
 function printHelp(): void {
@@ -165,16 +182,11 @@ async function generateStories(planSlug: string): Promise<void> {
   const result = await graph.invoke({ planSlug })
 
   process.stdout.write(
-    `[generate-stories] generation_phase: ${result.generationPhase}\n` +
-      `[generate-stories] stories_written: ${result.writeResult?.storiesWritten ?? 0}\n` +
-      `[generate-stories] stories_failed: ${result.writeResult?.storiesFailed ?? 0}\n` +
-      `[generate-stories] plan_status_updated: ${result.writeResult?.planStatusUpdated ?? false}\n`,
+    `[generate-stories] generation_phase: ${result.generationPhase}\n[generate-stories] stories_written: ${result.writeResult?.storiesWritten ?? 0}\n[generate-stories] stories_failed: ${result.writeResult?.storiesFailed ?? 0}\n[generate-stories] plan_status_updated: ${result.writeResult?.planStatusUpdated ?? false}\n`,
   )
 
   if (result.errors.length > 0) {
-    process.stdout.write(
-      `[generate-stories] errors: ${result.errors.join('; ')}\n`,
-    )
+    process.stdout.write(`[generate-stories] errors: ${result.errors.join('; ')}\n`)
   }
 
   if (result.generationPhase === 'error') {
@@ -203,7 +215,21 @@ async function generateStories(planSlug: string): Promise<void> {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
-  const parsed = parseArgs(args)
+
+  let parsed: z.infer<typeof CliArgsSchema>
+  try {
+    parsed = parseArgs(args)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issues = error.issues.map(i => i.message).join(', ')
+      process.stderr.write(`Error: invalid arguments — ${issues}\n`)
+    } else {
+      process.stderr.write(`Error: ${String(error)}\n`)
+    }
+    printHelp()
+    process.exitCode = 1
+    return
+  }
 
   if (parsed.help) {
     printHelp()
