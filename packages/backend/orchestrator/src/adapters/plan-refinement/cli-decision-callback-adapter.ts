@@ -151,8 +151,18 @@ export function createCLIDecisionCallbackAdapter(): DecisionCallback {
       // Decision-specific follow-up prompts
       // -----------------------------------------------------------------------
 
-      if (decision === 'approve' && context.flows.length > 0) {
-        return await handleApprovePrompt(context)
+      if (decision === 'approve') {
+        if (context.flows.length > 0) {
+          return await handleApprovePrompt(context)
+        }
+        logger.info('plan-refinement CLI: approve with no flows', {
+          planSlug: context.planSlug,
+        })
+        return {
+          decision: 'approve',
+          confirmedFlowIds: [],
+          rejectedFlowIds: [],
+        }
       }
 
       if (decision === 'reject') {
@@ -163,13 +173,12 @@ export function createCLIDecisionCallbackAdapter(): DecisionCallback {
         return await handleRejectPrompt(context, 'defer')
       }
 
-      // edit — no follow-up needed
-      logger.info('plan-refinement CLI: decision selected', {
+      // edit — no follow-up needed, all flows marked as rejected for re-analysis
+      logger.info('plan-refinement CLI: edit decision selected', {
         planSlug: context.planSlug,
-        decision,
       })
       return {
-        decision,
+        decision: 'edit',
         confirmedFlowIds: [],
         rejectedFlowIds: context.flows.map(f => f.id),
       }
