@@ -1,11 +1,11 @@
 {
-  "story_id": "WINT-5010",
-  "generated_at": "2026-03-23T12:30:00Z",
+  "story_id": "WINT-8060",
+  "generated_at": "2026-03-23T22:57:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "Package named @repo/sidecar-hitl-interview, server starts on port 3094",
+      "ac_text": "scope-defend node calls kb_add_task once per defer-to-backlog challenge",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -15,7 +15,7 @@
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "hitlInterview exported, accepts storyId, phase, decisionType via HitlInterviewInput",
+      "ac_text": "source_agent: 'scope-defender' in every kb_add_task call",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -25,7 +25,7 @@
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "INTERVIEW_QUESTIONS provides structured questions per decisionType, operator prompted before processing",
+      "ac_text": "source_story_id set to state.storyId in every kb_add_task call",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -35,7 +35,7 @@
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "Feature vector includes all required fields: storyId, phase, decisionType, storyComplexityScore, agentPhase, decisionContext",
+      "ac_text": "source_phase: 'elab' in every kb_add_task call",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -45,7 +45,7 @@
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "defaultIngestFn inserts into trainingData table with dataType based on DECISION_TYPE_TO_TRAINING_DATA_TYPE mapping",
+      "ac_text": "task_type: 'feature_idea' in every kb_add_task call",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -55,7 +55,7 @@
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "readHitlContext uses SELECT only, no INSERT/UPDATE on hitl_decisions table",
+      "ac_text": "kbAddTaskFn failure is non-blocking — warning logged, no throw",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -65,7 +65,7 @@
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "InterviewAnswersSchema defines rationale, confidence, alternativesConsidered, riskAssessment with runtime validation",
+      "ac_text": "kbAddTaskFn not injected (undefined) → no-op, no error",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -75,17 +75,17 @@
     },
     {
       "ac_id": "AC-8",
-      "ac_text": "FeatureVectorSchema defines storyId, phase, decisionType, storyComplexityScore, agentPhase, decisionContext fields",
+      "ac_text": "scope-challenges.ts canonical schema is extended; scope-defend.ts imports and re-uses canonical types",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-9",
-      "ac_text": "sendJson and readBody from @repo/sidecar-http-utils imported and used; @repo/logger imported and used throughout",
+      "ac_text": "Idempotency — skip write if task with matching tag already exists",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -95,7 +95,7 @@
     },
     {
       "ac_id": "AC-10",
-      "ac_text": "Coverage 88.81% meets threshold (45%); integration tests verify trainingDataIngest call shape and parameters",
+      "ac_text": "Tags include both 'scope-defender' and 'deferred' in every kb_add_task call",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
