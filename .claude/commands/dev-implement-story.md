@@ -482,7 +482,7 @@ Task tool:
     Read instructions: .claude/agents/graph-checker.agent.md
     Story ID: {STORY_ID}
 
-    Output graph-check-results.json to: tree/story/{STORY_ID}/_implementation/
+    Output graph-check-results.json to: tree/story/{STORY_ID}/
 
     Signal when done: GRAPH-CHECKER COMPLETE, GRAPH-CHECKER COMPLETE WITH WARNINGS, or GRAPH-CHECKER BLOCKED
 ```
@@ -490,7 +490,7 @@ Task tool:
 Wait for signal:
 
 - `GRAPH-CHECKER BLOCKED` → Log warning: `"Cohesion Advisory: graph-checker BLOCKED — skipping Phase 2.5"`. Proceed to Step 8.
-- `graph-check-results.json` absent after completion → Log warning: `"Cohesion Advisory: graph-check-results.json not found — skipping Phase 2.5"`. Proceed to Step 8.
+- `graph-check-results.json` absent after completion → Log warning: `"Cohesion Advisory: graph-check-results.json not found at tree/story/{STORY_ID}/ — skipping Phase 2.5"`. Proceed to Step 8.
 - `GRAPH-CHECKER COMPLETE` or `GRAPH-CHECKER COMPLETE WITH WARNINGS` → Proceed to Step 2.5b.
 
 **Step 2.5b: cohesion-prosecutor**
@@ -518,7 +518,7 @@ Task tool:
   prompt: |
     Read instructions: .claude/agents/cohesion-prosecutor.agent.md
     Story ID: {STORY_ID}
-    graph-check-results.json: tree/story/{STORY_ID}/_implementation/graph-check-results.json
+    graph-check-results.json: tree/story/{STORY_ID}/graph-check-results.json
 
     Signal when done: PROSECUTION COMPLETE or PROSECUTION BLOCKED
 ```
@@ -526,7 +526,7 @@ Task tool:
 Wait for signal:
 
 - `PROSECUTION BLOCKED` → Log warning: `"Cohesion Advisory: prosecution BLOCKED — continuing to review"`. Proceed to Step 8.
-- `PROSECUTION COMPLETE` → Read `prosecution-verdict.json` from `{story_path}/_implementation/prosecution-verdict.json`.
+- `PROSECUTION COMPLETE` → Read `prosecution-verdict.json` from `tree/story/{STORY_ID}/prosecution-verdict.json`.
   - If `overall_verdict == "INCOMPLETE-BLOCKED"`: Surface advisory note in the evidence artifact:
     ```
     Cohesion Advisory [WINT-4120 Phase 2.5]: {details from prosecution-verdict.json}
@@ -635,7 +635,7 @@ If gate fails → BLOCKED, do not proceed.
 ## Reference
 
 - `.claude/agents/_reference/patterns/dev-workflow-spawn.md` - Spawn patterns
-- `.claude/agents/_reference/schemas/evidence-yaml.md` - EVIDENCE.yaml schema
+- `.claude/agents/_reference/schemas/evidence-yaml.md` - Evidence artifact schema (stored in KB via `kb_read_artifact({ story_id, artifact_type: 'evidence' })`)
 - `.claude/agents/_reference/patterns/session-lifecycle.md` - Session lifecycle
 - `.claude/agents/_shared/decision-handling.md` - Decision protocol
 - `.claude/agents/_shared/autonomy-tiers.md` - Tier definitions
