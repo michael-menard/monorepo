@@ -40,6 +40,12 @@ import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type { BaseMessage, AIMessage } from '@langchain/core/messages'
 import { ModelRouterFactory } from '../models/unified-interface.js'
+import {
+  PROVIDER_CHAIN,
+  ESCALATION_CHAIN,
+  DEFAULT_MODELS,
+  DEFAULT_RATE_LIMIT,
+} from '../config/pipeline-providers.js'
 import { TokenBucket } from './token-bucket.js'
 import { BudgetAccumulator } from './budget-accumulator.js'
 import {
@@ -50,13 +56,6 @@ import {
   type PipelineDispatchOptions,
   type PipelineDispatchResult,
 } from './__types__/index.js'
-import {
-  PROVIDER_CHAIN,
-  ESCALATION_CHAIN,
-  DEFAULT_MODELS,
-  DEFAULT_RATE_LIMIT,
-  CONFIDENCE_THRESHOLDS as _CONFIDENCE_THRESHOLDS,
-} from '../config/pipeline-providers.js'
 
 // ============================================================================
 // Re-export CONFIDENCE_THRESHOLDS for backward compat
