@@ -81,13 +81,19 @@ export type StoryUpdateStatusInput = z.infer<typeof StoryUpdateStatusInputSchema
 
 /**
  * Story Update Status Output Schema
- * Returns updated story record or null if update failed
+ * Returns updated story record or null if update failed.
+ *
+ * gate_blocked: true when transition was blocked by a missing artifact gate (APRS-1010).
+ * missing_artifact: human-readable label of the artifact required to proceed.
+ * Both fields are optional for backward compatibility with ungated transitions.
  */
 export const StoryUpdateStatusOutputSchema = z
   .object({
     storyId: z.string(),
     state: z.string().nullable(),
     updatedAt: z.date(),
+    gate_blocked: z.boolean().optional(),
+    missing_artifact: z.string().optional(),
   })
   .nullable()
 
