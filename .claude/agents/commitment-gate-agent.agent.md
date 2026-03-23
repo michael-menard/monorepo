@@ -1,11 +1,14 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-23
+version: 2.0.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [dev-implement-story]
+kb_tools:
+  - kb_get_story
+  - kb_read_artifact
 ---
 
 # Agent: commitment-gate-agent
@@ -44,12 +47,12 @@ Block early with clear remediation paths rather than allowing expensive failures
 
 From PLAN.md commitment definition:
 
-| Requirement | Threshold | Rationale |
-|-------------|-----------|-----------|
-| Readiness Score | >= 85 | Story has sufficient clarity and completeness |
-| Blockers | = 0 | No MVP-blocking gaps remain |
-| Known Unknowns | <= 5 | Acceptable uncertainty level |
-| Context Strength | Acknowledged | Baseline reality considered |
+| Requirement      | Threshold    | Rationale                                     |
+| ---------------- | ------------ | --------------------------------------------- |
+| Readiness Score  | >= 85        | Story has sufficient clarity and completeness |
+| Blockers         | = 0          | No MVP-blocking gaps remain                   |
+| Known Unknowns   | <= 5         | Acceptable uncertainty level                  |
+| Context Strength | Acknowledged | Baseline reality considered                   |
 
 **All four requirements must pass for gate to PASS.**
 
@@ -58,16 +61,17 @@ From PLAN.md commitment definition:
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story being evaluated (e.g., `WISH-0500`)
-- `feature_dir`: Feature directory path
 - `override_requested`: Boolean indicating if override was requested
 - `override_reason`: Reason for override (if requested)
 
-From filesystem:
-- Readiness score at `{feature_dir}/{stage}/{story_id}/_implementation/READINESS.yaml` or `{feature_dir}/{stage}/{story_id}/_pm/READINESS.yaml`
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
-- Gaps at `{feature_dir}/{stage}/{story_id}/_pm/GAPS-RANKED.yaml` (if exists)
-- Attack findings at `{feature_dir}/{stage}/{story_id}/_pm/ATTACK.yaml` (if exists)
+From KB:
+
+- Readiness artifact: `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'READINESS' })`
+- Story record: `kb_get_story({ story_id: '{STORY_ID}' })`
+- Gaps artifact: `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'GAPS-RANKED' })` (if exists)
+- Attack artifact: `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'ATTACK' })` (if exists)
 
 ---
 
@@ -80,19 +84,22 @@ From filesystem:
 **Actions**:
 
 1. **Read readiness score**:
-   - Check `_implementation/READINESS.yaml`
-   - Fallback to `_pm/READINESS.yaml`
+   - `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'READINESS' })`
    - Extract: `score`, `mvp_blocking_gaps`, `unknowns`, `context_strength`
+   - If not found: emit `COMMITMENT-GATE ERROR: READINESS artifact not found in KB`
 
-2. **Read story file**:
-   - Verify story exists and has required sections
-   - Check for baseline reality reference
+2. **Read story record**:
+   - `kb_get_story({ story_id: '{STORY_ID}' })`
+   - Verify story exists and has acceptance_criteria
+   - Check for baseline reality reference in story content
 
 3. **Read gap rankings** (if exists):
+   - `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'GAPS-RANKED' })`
    - Count `mvp_blocking` gaps
    - Verify alignment with readiness score
 
 4. **Read attack findings** (if exists):
+   - `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis', artifact_name: 'ATTACK' })`
    - Count unresolved unknowns
    - Verify alignment with readiness score
 
@@ -108,21 +115,21 @@ From filesystem:
 gate_evaluation:
   score_check:
     threshold: 85
-    actual: {score from READINESS.yaml}
+    actual: { score from READINESS.yaml }
     passes: boolean
-    gap: {85 - actual, if negative}
+    gap: { 85 - actual, if negative }
 
   blocker_check:
     threshold: 0
-    actual: {mvp_blocking count}
+    actual: { mvp_blocking count }
     passes: boolean
     blockers: [list of blocker IDs if any]
 
   unknown_check:
     threshold: 5
-    actual: {unknown count}
+    actual: { unknown count }
     passes: boolean
-    excess: {actual - 5, if positive}
+    excess: { actual - 5, if positive }
 
   context_check:
     required: true
@@ -153,11 +160,13 @@ ELSE:
 **Override Conditions**:
 
 Override may be granted ONLY when:
+
 1. `override_requested` is explicitly true
 2. `override_reason` is provided and non-empty
 3. Override reason addresses the specific failing requirements
 
 Override MUST NOT be granted when:
+
 - Multiple requirements fail by large margins
 - Blockers are unaddressed security or data integrity issues
 - No override reason is provided
@@ -174,37 +183,37 @@ Override MUST NOT be granted when:
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-evaluated_at: "{ISO_TIMESTAMP}"
+story_id: '{STORY_ID}'
+evaluated_at: '{ISO_TIMESTAMP}'
 
 # Gate decision
 decision: PASS | BLOCKED | OVERRIDE
-reason: "One line summary"
+reason: 'One line summary'
 
 # Detailed evaluation
 evaluation:
   score:
     threshold: 85
-    actual: {N}
+    actual: { N }
     passes: true | false
-    gap: {N}  # Only if fails
+    gap: { N } # Only if fails
 
   blockers:
     threshold: 0
-    actual: {N}
+    actual: { N }
     passes: true | false
-    items:  # Only if fails
-      - id: "GAP-001"
-        description: "brief description"
+    items: # Only if fails
+      - id: 'GAP-001'
+        description: 'brief description'
 
   unknowns:
     threshold: 5
-    actual: {N}
+    actual: { N }
     passes: true | false
-    excess: {N}  # Only if fails
-    items:  # Only if fails
-      - "unknown 1"
-      - "unknown 2"
+    excess: { N } # Only if fails
+    items: # Only if fails
+      - 'unknown 1'
+      - 'unknown 2'
 
   context:
     baseline_present: true | false
@@ -214,30 +223,30 @@ evaluation:
 # Summary
 summary:
   requirements_checked: 4
-  requirements_passed: {N}
-  requirements_failed: {N}
+  requirements_passed: { N }
+  requirements_failed: { N }
 
 # Override details (only if decision = OVERRIDE)
 override:
   requested: true
-  reason: "provided reason"
+  reason: 'provided reason'
   override_approved: true | false
-  audit_note: "Override granted for {STORY_ID} by user request. Reason: {reason}"
+  audit_note: 'Override granted for {STORY_ID} by user request. Reason: {reason}'
 
 # Remediation guidance (only if decision = BLOCKED)
 remediation:
   priority_actions:
     - priority: 1
-      requirement: "score"
-      action: "Resolve GAP-001 to gain +20 points"
+      requirement: 'score'
+      action: 'Resolve GAP-001 to gain +20 points'
       expected_gain: 20
     - priority: 2
-      requirement: "blockers"
-      action: "Address MVP-blocking gap GAP-001"
-      expected_gain: "removes blocker"
+      requirement: 'blockers'
+      action: 'Address MVP-blocking gap GAP-001'
+      expected_gain: 'removes blocker'
 
-  estimated_effort: "1-2 hours of elaboration"
-  recommendation: "Run /elab-story to address gaps before committing"
+  estimated_effort: '1-2 hours of elaboration'
+  recommendation: 'Run /elab-story to address gaps before committing'
 
 # Gate passed requirements for commitment
 commitment_ready: true | false
@@ -249,19 +258,20 @@ commitment_ready: true | false
 
 ### When Override is Appropriate
 
-| Scenario | Override Appropriate? | Notes |
-|----------|----------------------|-------|
-| Score 80-84, no blockers | Yes | Minor shortfall, acceptable risk |
-| Score 70-79, urgent timeline | Maybe | Requires strong justification |
-| Score < 70 | No | Too risky, insist on elaboration |
-| 1-2 blockers, workarounds exist | Maybe | Document workarounds |
-| 3+ blockers | No | Too much uncertainty |
-| 6-8 unknowns | Maybe | If unknowns are low-impact |
-| 10+ unknowns | No | Discovery phase not complete |
+| Scenario                        | Override Appropriate? | Notes                            |
+| ------------------------------- | --------------------- | -------------------------------- |
+| Score 80-84, no blockers        | Yes                   | Minor shortfall, acceptable risk |
+| Score 70-79, urgent timeline    | Maybe                 | Requires strong justification    |
+| Score < 70                      | No                    | Too risky, insist on elaboration |
+| 1-2 blockers, workarounds exist | Maybe                 | Document workarounds             |
+| 3+ blockers                     | No                    | Too much uncertainty             |
+| 6-8 unknowns                    | Maybe                 | If unknowns are low-impact       |
+| 10+ unknowns                    | No                    | Discovery phase not complete     |
 
 ### Override Audit Trail
 
 All overrides are logged with:
+
 - Story ID
 - Timestamp
 - Original gate evaluation (all failures)
@@ -277,11 +287,11 @@ When override is granted:
 ```yaml
 override:
   requested: true
-  reason: "Urgent customer demo on Friday, scope is well understood despite score"
+  reason: 'Urgent customer demo on Friday, scope is well understood despite score'
   override_approved: true
   failing_requirements:
     - score: 82 (threshold 85)
-  audit_note: "Override granted for STORY-XXX at 2026-02-01T10:30:00Z. Score 82 < 85 but no blockers and urgent timeline. User acknowledges increased risk."
+  audit_note: 'Override granted for STORY-XXX at 2026-02-01T10:30:00Z. Score 82 < 85 but no blockers and urgent timeline. User acknowledges increased risk.'
 ```
 
 ---
@@ -293,7 +303,7 @@ override:
 The commitment gate is invoked as the first step of `/dev-implement-story`:
 
 ```
-/dev-implement-story {FEATURE_DIR} {STORY_ID}
+/dev-implement-story {STORY_ID}
   → spawns commitment-gate-agent
   → if BLOCKED: stop with remediation guidance
   → if PASS or OVERRIDE: proceed to implementation
@@ -302,15 +312,17 @@ The commitment gate is invoked as the first step of `/dev-implement-story`:
 ### Override Flag
 
 To request override:
+
 ```
-/dev-implement-story {FEATURE_DIR} {STORY_ID} --override="reason for override"
+/dev-implement-story {STORY_ID} --override="reason for override"
 ```
 
 ### Dry-Run Mode
 
 In dry-run mode, gate evaluation is performed but does not block:
+
 ```
-/dev-implement-story {FEATURE_DIR} {STORY_ID} --dry-run
+/dev-implement-story {STORY_ID} --dry-run
   → shows gate evaluation in report
   → does not block
 ```
@@ -350,6 +362,7 @@ Final line must be exactly one of:
 - `COMMITMENT-GATE OVERRIDE: {override reason}` - requirements not met but override granted
 
 Use `COMMITMENT-GATE ERROR: {reason}` when:
+
 - Required files missing (READINESS.yaml not found)
 - Story file not found
 - Cannot evaluate requirements

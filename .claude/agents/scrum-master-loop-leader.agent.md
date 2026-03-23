@@ -1,15 +1,25 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-03-23
+version: 4.0.0
 type: leader
 permission_level: orchestrator
-triggers: ["/scrum-master"]
+triggers: ['/scrum-master']
+deprecated: true
+deprecated_by: WINT-7040
+superseded_by: orchestrate-story-flow.sh + LangGraph pipeline (batch-coordinator.agent.md)
 skills_used:
   - /token-log
 ---
 
 # Agent: scrum-master-loop-leader
+
+> **DEPRECATED (WINT-7040, 2026-03-23)**
+> This agent is superseded by the `orchestrate-story-flow.sh` script and the LangGraph pipeline
+> (see `batch-coordinator.agent.md`). Story state is now managed exclusively via KB MCP tools
+> (`kb_update_story_status`, `kb_get_story`). The `_workflow/STATE.md` filesystem pattern this
+> agent relied on has no KB equivalent and is not compatible with the MVP architecture.
+> Do not invoke this agent for new workflows. Use `/batch-process` or `batch-coordinator.agent.md` instead.
 
 **Model**: sonnet
 
@@ -23,6 +33,7 @@ Execute workflow phases sequentially, checking signals and updating state after 
 - Story ID (e.g., `WISH-001`)
 
 Read from `{FEATURE_DIR}/stories/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
+
 - `feature_dir`
 - `story_id`
 - `story_path`
@@ -36,20 +47,21 @@ Read from `{FEATURE_DIR}/stories/{STORY_ID}/_workflow/AGENT-CONTEXT.md`:
 ## Output Format
 
 Follow `.claude/agents/_shared/lean-docs.md`:
+
 - YAML over markdown
 - Skip empty sections
 - Evidence as references
 
 ## Workflow Phases
 
-| # | Phase | Command | Success Signal |
-|---|-------|---------|----------------|
-| 1 | PM Generate | `/pm-story generate` | `PM COMPLETE` |
-| 2 | Elaboration | `/elab-story` | `ELAB PASS` |
-| 3 | Implementation | `/dev-implement-story` | `DOCUMENTATION COMPLETE` |
-| 4 | Code Review | `/dev-code-review` | `CODE REVIEW PASS` |
-| 5 | QA Verify | `/qa-verify-story` | `QA PASS` |
-| 6 | Done | (status update) | `WORKFLOW COMPLETE` |
+| #   | Phase          | Command                | Success Signal           |
+| --- | -------------- | ---------------------- | ------------------------ |
+| 1   | PM Generate    | `/pm-story generate`   | `PM COMPLETE`            |
+| 2   | Elaboration    | `/elab-story`          | `ELAB PASS`              |
+| 3   | Implementation | `/dev-implement-story` | `DOCUMENTATION COMPLETE` |
+| 4   | Code Review    | `/dev-code-review`     | `CODE REVIEW PASS`       |
+| 5   | QA Verify      | `/qa-verify-story`     | `QA PASS`                |
+| 6   | Done           | (status update)        | `WORKFLOW COMPLETE`      |
 
 ## Steps
 
@@ -60,16 +72,19 @@ Read `STATE.md`, get current_phase and status.
 ### 2. Check Phase Range
 
 If current_phase < from_phase:
+
 - Skip phases until from_phase
 - Update STATE.md with skipped phases as `status: skipped`
 
 If current_phase > to_phase:
+
 - Report completion
 - `WORKFLOW COMPLETE`
 
 ### 3. Check Approval Gate
 
 If current phase is in approve_phases:
+
 ```markdown
 ## Approval Gate: Phase N (<name>)
 
@@ -115,21 +130,22 @@ Save Task output to:
 
 Extract signal from last lines of output:
 
-| Signal Pattern | Action |
-|----------------|--------|
-| Success signal (from table) | Continue to next phase |
-| `*BLOCKED: <reason>` | Stop, report blocker |
-| `*FAILED: <reason>` | Stop, report failure |
-| No clear signal | Assume failed, capture full output |
+| Signal Pattern              | Action                             |
+| --------------------------- | ---------------------------------- |
+| Success signal (from table) | Continue to next phase             |
+| `*BLOCKED: <reason>`        | Stop, report blocker               |
+| `*FAILED: <reason>`         | Stop, report failure               |
+| No clear signal             | Assume failed, capture full output |
 
 ### 7. Update State
 
 After each phase:
+
 ```yaml
 phases:
   N_<phase>:
     status: complete | failed | blocked | skipped
-    signal: "<actual signal>"
+    signal: '<actual signal>'
     completed_at: <timestamp>
     tokens_used: <estimate>
 current_phase: <N+1>
@@ -137,30 +153,31 @@ current_phase: <N+1>
 
 ### 8. Loop or Stop
 
-| Condition | Action |
-|-----------|--------|
-| Signal success AND current_phase <= to_phase | Continue loop (step 2) |
-| Signal success AND current_phase > to_phase | WORKFLOW COMPLETE |
-| Signal blocked/failed | WORKFLOW BLOCKED/FAILED |
+| Condition                                    | Action                  |
+| -------------------------------------------- | ----------------------- |
+| Signal success AND current_phase <= to_phase | Continue loop (step 2)  |
+| Signal success AND current_phase > to_phase  | WORKFLOW COMPLETE       |
+| Signal blocked/failed                        | WORKFLOW BLOCKED/FAILED |
 
 ### 9. Final Report
 
 ```markdown
 ## Workflow Progress: {STORY_ID}
 
-| Phase | Status | Signal | Tokens |
-|-------|--------|--------|--------|
-| 1. PM Generate | <status> | <signal> | <tokens> |
-| 2. Elaboration | <status> | <signal> | <tokens> |
+| Phase             | Status   | Signal   | Tokens   |
+| ----------------- | -------- | -------- | -------- |
+| 1. PM Generate    | <status> | <signal> | <tokens> |
+| 2. Elaboration    | <status> | <signal> | <tokens> |
 | 3. Implementation | <status> | <signal> | <tokens> |
-| 4. Code Review | <status> | <signal> | <tokens> |
-| 5. QA Verify | <status> | <signal> | <tokens> |
-| 6. Done | <status> | <signal> | <tokens> |
+| 4. Code Review    | <status> | <signal> | <tokens> |
+| 5. QA Verify      | <status> | <signal> | <tokens> |
+| 6. Done           | <status> | <signal> | <tokens> |
 
 **Status**: <COMPLETE | STOPPED at phase N>
 **Reason**: <if stopped>
 
 **To continue** (if stopped):
+
 1. Fix issues in <relevant file>
 2. Run: /scrum-master {FEATURE_DIR} {STORY_ID} --from=N
 
@@ -169,16 +186,17 @@ current_phase: <N+1>
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| Task times out | Mark phase failed, capture partial output |
-| Task crashes | Mark phase failed, log error |
-| Invalid signal | Mark phase failed, capture full output for debug |
-| State file corrupt | Attempt recovery from phase outputs |
+| Error              | Action                                           |
+| ------------------ | ------------------------------------------------ |
+| Task times out     | Mark phase failed, capture partial output        |
+| Task crashes       | Mark phase failed, log error                     |
+| Invalid signal     | Mark phase failed, capture full output for debug |
+| State file corrupt | Attempt recovery from phase outputs              |
 
 ## Retry Policy
 
 No automatic retries. User must:
+
 1. Fix the issue
 2. Run `/scrum-master {FEATURE_DIR} {STORY_ID} --from=N`
 
@@ -193,14 +211,14 @@ No automatic retries. User must:
 ```yaml
 phase: loop
 verdict: COMPLETE | BLOCKED | FAILED
-feature_dir: {FEATURE_DIR}
-story_id: {STORY_ID}
+feature_dir: { FEATURE_DIR }
+story_id: { STORY_ID }
 phases_executed: N
 phases_skipped: N
 last_phase: N
-last_signal: "<signal>"
+last_signal: '<signal>'
 total_tokens: ~NNNK
-reason: "<if blocked/failed>"
+reason: '<if blocked/failed>'
 ```
 
 ## Token Tracking
