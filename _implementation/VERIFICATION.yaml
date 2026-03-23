@@ -1,157 +1,203 @@
 schema: 1
-story_id: WINT-7020
+story_id: WINT-7070
 timestamp: '2026-03-23T18:00:00Z'
-verdict: PASS
-story_type: planning_documentation
-tests_executed: false
-tests_exempt: true
-tests_exempt_reason: Planning/documentation story — no production code changes. Build, unit tests, and E2E all exempt per project policy.
+verdict: FAIL
+tests_executed: true
 test_results:
   unit:
     pass: 0
     fail: 0
-    exempt: true
+    note: All files are markdown — no unit tests applicable. Exempt per EVIDENCE.
   integration:
     pass: 0
     fail: 0
-    exempt: true
   e2e:
     pass: 0
     fail: 0
-    exempt: true
-  http:
+    note: Exempt — agent markdown migration, no executable code changed.
+  grep_verification:
     pass: 0
-    fail: 0
-    exempt: true
+    fail: 10
+    note: AC-6 grep verification contradicted by direct filesystem checks
 coverage: null
-coverage_meets_threshold: true
-coverage_note: No code changes — coverage threshold not applicable
+coverage_meets_threshold: null
+coverage_note: Not applicable — no executable code changed. Markdown agent/skill files only.
 test_quality:
   verdict: PASS
   anti_patterns: []
-  note: >-
-    No test code written; planning story. Context cache returned null (cache miss for test_patterns/main,
-    lessons_learned/blockers-known, architecture/project-conventions) — proceeded without cache context.
+  note: No code tests to evaluate. Evidence relied on grep verification, which failed QA spot-check.
 acs_verified:
-  - ac_id: AC-0
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-0]
-    notes: >-
-      WINT-7010 analysis artifact confirmed present. KB artifact AGENT-DIRECTORY-AUDIT (source_audit field in
-      AGENT-MIGRATION-PLAN) references WINT-7010:AGENT-DIRECTORY-AUDIT:iteration-1.
   - ac_id: AC-1
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-1]
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-1
     notes: >-
-      kb_read_artifact({ story_id: 'WINT-7020', artifact_type: 'analysis' }) returns non-null artifact with
-      schema_version: '1.0' and artifact_name: 'AGENT-MIGRATION-PLAN'. Verified directly.
+      Evidence claims review/SKILL.md Mode B was migrated from directory scan to kb_list_stories + kb_get_story +
+      kb_write_artifact. Direct file inspection shows NO kb_list_stories, kb_get_story, or artifact_write calls exist in
+      the file. Mode B still references docs/stories/ directory scanning. Migration was not completed.
   - ac_id: AC-2
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-2]
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-2
     notes: >-
-      batch_schedule contains exactly 9 batches (BATCH-0 through BATCH-8). Each batch has batch_id, batch_name,
-      files_in_scope, reference_categories_covered, estimated_file_count, depends_on, rollback_criteria, and
-      validation_checks. Spot-checked BATCH-0 and BATCH-4 — all required fields present.
+      Evidence claims review-draft-story/SKILL.md had .bmad-core ref removed and story location changed to kb_get_story.
+      Direct grep shows .bmad-core/ references still present at lines 82, 250, 261. The migration was not completed for
+      this file.
   - ac_id: AC-3
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-3]
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-3
     notes: >-
-      file_count_reconciliation note confirms: BATCH-0(7) + BATCH-1(9) + BATCH-2(15) + BATCH-3(17) + BATCH-4(19) +
-      BATCH-5(8) + BATCH-6(19) + BATCH-7(14) + BATCH-8(5) = 113. files_not_assigned: []. total_files_in_scope: 113.
+      Evidence claims review/SKILL.md Mode B uses kb_list_stories({ tags: ['{epic-tag}'], limit: 50 }) instead of
+      docs/stories/ directory scan. Direct inspection shows kb_list_stories is not present in the file. docs/stories/
+      scan logic remains intact. AC not met.
   - ac_id: AC-4
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-4]
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-4
     notes: >-
-      shim_strategy section present with transition_approach, rationale, partially_migrated_handling, and
-      output_section_cleanup fields all populated.
+      Evidence claims .bmad-core/core-config.yaml was removed from review-draft-story/SKILL.md. Direct grep confirms
+      .bmad-core/core-config.yaml is still referenced at line 82, and the checklist file reference at line 261
+      (.bmad-core/checklists/story-draft-checklist.md) also remains. Dead code was not removed.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-5]
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-5
     notes: >-
-      BATCH-0 (Shared Includes) is first entry in batch_schedule array with depends_on: []. All other batches depend on
-      BATCH-0 or BATCH-1.
+      Story description scope (10 files) matches elaboration. The SCOPE artifact confirms 10 files targeted. This AC is
+      informational/scope verification and is not contradicted by the code findings.
   - ac_id: AC-6
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-6]
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-6
     notes: >-
-      All 9 batches have grep-based negative assertions in validation_checks. BATCH-0 first validation_check is 'HUMAN
-      REVIEW GATE: Human must verify story-context.md and permissions.md changes before any downstream batch begins'.
-      Verified.
+      Evidence claims 'grep verification: zero matches for FEATURE_DIR, feature_dir, _implementation/, docs/stories/,
+      docs/qa/gates/, .bmad-core/ across all 10 files'. QA independent grep found violations in ALL 10 files: (1)
+      review/SKILL.md — docs/stories/ at lines 33, 42, 100, 105, 106, 120; docs/qa/gates/ at lines 768, 788, 981, 1036,
+      1045. (2) review-draft-story/SKILL.md — .bmad-core/ at lines 82, 250, 261; docs/stories/ at lines 27, 84. (3)
+      qa-gate/SKILL.md — docs/stories/ at line 64; docs/qa/gates/ at lines 66, 193, 245, 280, 370, 377, 390. (4)
+      architect-story-review.agent.md — feature_dir at lines 325, 330, 331; _implementation/ at lines 306, 331, 380. (5)
+      ui-ux-review-setup-leader.agent.md — FEATURE_DIR at lines 22, 28, 32, 59, 63-69; _implementation/ at lines 32,
+      66-69. (6) ui-ux-review-reviewer.agent.md — FEATURE_DIR at lines 21, 94, 97; _implementation/ at lines 21, 89, 94.
+      (7) ui-ux-review-report-leader.agent.md — FEATURE_DIR at lines 23, 24, 26, 32; _implementation/ at lines 23-32.
+      (8) code-review-security.agent.md — _implementation/ at lines 289-290. (9) pm-dev-feasibility-review.agent.md —
+      FEATURE_DIR at line 48; _implementation/ at line 48. (10) review-aggregate-leader.agent.md — feature_dir at lines
+      25, 67; _implementation/ at line 67. The EVIDENCE.yaml grep claim is false — the migration was not completed.
   - ac_id: AC-7
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-7]
+    status: EXEMPT
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-7
     notes: >-
-      downstream_story_map maps BATCH-0 → WINT-7030, BATCH-1 → WINT-7031 (note: markdown shows WINT-7040 but KB artifact
-      uses WINT-7031 through WINT-7037 sequentially). BATCH-8 mapped to null (retain-only, no downstream story). All 8
-      active batches have assigned story IDs.
-  - ac_id: AC-8
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-8]
-    notes: >-
-      reference_categories contains all 5 categories: hardcoded_plans_stories, feature_dir_templates,
-      implementation_dir, hardcoded_docs_stories, elaboration_dir. Each has pattern, file_count, and remediation_action.
-  - ac_id: AC-9
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria_verification[AC-9]
-    notes: >-
-      kb-integration.md has file_remediation: 'documentation_only_retain' in BATCH-0. BATCH-8 archive files all have
-      'documentation_only_retain'. kb-integration.md validation_checks explicitly state it must NOT be stripped of
-      instructional examples.
-git_state:
-  branch: story/WINT-7020
-  commits_ahead_of_main: 3
-  working_tree_clean: true
-  files_changed_from_main:
-    - status: A
-      path: plans/future/platform/agent-migration-plan/AGENT-MIGRATION-PLAN.md
-    - status: M
-      path: _implementation/VERIFICATION.md
-  legacy_files_removed:
-    - _implementation/CHECKPOINT.setup.json
-    - _implementation/SCOPE.setup.json
-  note: Legacy files removed in commit 449c3f81. Confirmed absent from _implementation/ directory.
-deliverable_spot_check:
-  markdown_file: plans/future/platform/agent-migration-plan/AGENT-MIGRATION-PLAN.md
-  line_count: 95
-  expected_line_count: 95
-  sections_present:
-    - Overview
-    - Batch Summary (9 batches)
-    - Shim Strategy
-    - Reference Categories (5)
-    - Migration Order Constraint
-    - Verification Per Batch
-    - Downstream Story Map
-    - Reading the Full Artifact
-  kb_artifact_readable: true
-  kb_artifact_id: 4885967d-ac36-4f1a-8244-3832f3fb0b04
-architecture_compliant: true
+      Smoke test exemption accepted. Runtime invocation of agents is beyond QA scope. However, given that AC-1 through
+      AC-6 (except AC-5) have failed, the exemption is moot — the story requires re-implementation.
+architecture_compliant: false
 architecture_notes: >-
-  Planning story. No TypeScript, React, or API changes. KB-first architecture followed — deliverable stored as KB
-  artifact (type: analysis). Obsolete _implementation/ filesystem artifacts removed per KB-first policy. Markdown
-  summary added for downstream developer reference. No barrel files, no console.log, no Zod violations.
-review_findings_resolved:
-  - F1
-  - F2
-issues: []
+  The core architectural requirement of this story — eliminating all filesystem directory references from
+  review/UX-review agents in favour of KB MCP tool calls — was NOT achieved. All 10 files still contain the legacy
+  patterns (FEATURE_DIR, feature_dir, _implementation/, docs/stories/, docs/qa/gates/, .bmad-core/). This is a direct
+  violation of the WINT migration architecture objective.
+issues:
+  - issue_id: VRF-001
+    severity: critical
+    description: >-
+      review/SKILL.md still contains docs/stories/ directory scan logic in Mode B and docs/qa/gates/ output paths. No KB
+      tool calls (kb_list_stories, kb_get_story, artifact_write) are present. Migration was not performed.
+    file: .claude/skills/review/SKILL.md
+    action_required: >-
+      Replace Mode B directory scan with kb_list_stories({ tags: ['{epic-tag}'], limit: 50 }). Replace story reads with
+      kb_get_story. Replace gate file writes with artifact_write.
+  - issue_id: VRF-002
+    severity: critical
+    description: >-
+      review-draft-story/SKILL.md still references .bmad-core/core-config.yaml (line 82),
+      .bmad-core/checklists/story-draft-checklist.md (line 261), docs/stories/ (lines 27, 84). No migration to
+      kb_get_story performed.
+    file: .claude/skills/review-draft-story/SKILL.md
+    action_required: Remove .bmad-core/ references. Replace docs/stories/ path resolution with kb_get_story. Inline checklist criteria.
+  - issue_id: VRF-003
+    severity: critical
+    description: >-
+      qa-gate/SKILL.md still references docs/stories/ (line 64) and writes gate files to docs/qa/gates/ filesystem paths
+      (lines 66, 193, 245, 280, 370, 377, 390). Migration to KB artifact_write not performed.
+    file: .claude/skills/qa-gate/SKILL.md
+    action_required: Replace docs/qa/gates/ file writes with artifact_write. Replace docs/stories/ story lookup with kb_get_story.
+  - issue_id: VRF-004
+    severity: critical
+    description: >-
+      architect-story-review.agent.md still references feature_dir variable (lines 325, 330, 331) and _implementation/
+      paths (lines 306, 331, 380). Migration to KB reads/writes not performed.
+    file: .claude/agents/architect-story-review.agent.md
+    action_required: >-
+      Replace feature_dir/_implementation/ patterns with kb_get_story + kb_read_artifact for reads, artifact_write for
+      writes.
+  - issue_id: VRF-005
+    severity: critical
+    description: >-
+      ui-ux-review-setup-leader.agent.md still references FEATURE_DIR (lines 22, 28, 32, 59, 63-69) and _implementation/
+      paths. Migration not performed.
+    file: .claude/agents/ui-ux-review-setup-leader.agent.md
+    action_required: Replace all FEATURE_DIR/_implementation/ references with KB tool calls.
+  - issue_id: VRF-006
+    severity: critical
+    description: >-
+      ui-ux-review-reviewer.agent.md still references FEATURE_DIR (lines 21, 94, 97) and _implementation/ paths.
+      Migration not performed.
+    file: .claude/agents/ui-ux-review-reviewer.agent.md
+    action_required: Replace all FEATURE_DIR/_implementation/ references with KB tool calls.
+  - issue_id: VRF-007
+    severity: critical
+    description: >-
+      ui-ux-review-report-leader.agent.md still references FEATURE_DIR (lines 23, 24, 26, 32) and _implementation/
+      paths. Migration not performed.
+    file: .claude/agents/ui-ux-review-report-leader.agent.md
+    action_required: Replace all FEATURE_DIR/_implementation/ references with KB tool calls.
+  - issue_id: VRF-008
+    severity: high
+    description: code-review-security.agent.md still references _implementation/ at lines 289-290.
+    file: .claude/agents/code-review-security.agent.md
+    action_required: Replace _implementation/ references with kb_read_artifact calls.
+  - issue_id: VRF-009
+    severity: high
+    description: pm-dev-feasibility-review.agent.md still references FEATURE_DIR and _implementation/ at line 48.
+    file: .claude/agents/pm-dev-feasibility-review.agent.md
+    action_required: Replace FEATURE_DIR/backlog/_pm/dev-feasibility.yaml write with artifact_write.
+  - issue_id: VRF-010
+    severity: high
+    description: review-aggregate-leader.agent.md still references feature_dir (lines 25, 67) and _implementation/ (line 67).
+    file: .claude/agents/review-aggregate-leader.agent.md
+    action_required: Replace feature_dir/_implementation/REVIEW.yaml write with artifact_write.
+  - issue_id: VRF-011
+    severity: critical
+    description: >-
+      EVIDENCE.yaml AC-6 claim is false. The grep verification statement ('zero matches for FEATURE_DIR, feature_dir,
+      _implementation/, docs/stories/, docs/qa/gates/, .bmad-core/ across all 10 files') is directly contradicted by
+      independent QA grep across all 10 files. The implementation was either never performed or the wrong files were
+      modified.
+    action_required: Developer must re-execute migration on all 10 files and re-run grep verification before resubmitting.
 lessons_to_record:
   - lesson: >-
-      For planning stories, the downstream_story_map in the KB artifact and the human-readable markdown table may
-      diverge on story ID assignments (KB uses sequential IDs WINT-7031..7037 while markdown uses thematic IDs
-      WINT-7040+). Future planning stories should keep both sources synchronized at authoring time.
+      Evidence grep claims must be independently re-verified by QA. A false-positive grep claim (claiming zero matches
+      when matches exist) propagated through evidence and review phases undetected. QA spot-check of actual files is
+      mandatory even when evidence claims clean grep output.
     category: anti_pattern
     tags:
-      - planning
-      - documentation
-      - kb-first
+      - qa
+      - evidence
+      - grep-verification
+      - wint-migration
   - lesson: >-
-      file_count_reconciliation note pattern (explicit batch-by-batch sum verification) is effective for planning
-      artifacts covering large file sets — adopt as standard in migration plan artifacts.
+      For agent/skill markdown migrations (WINT batch stories), the code review phase passed with zero errors/warnings
+      despite the migration not being performed. This indicates the code review workers did not check the actual file
+      content for the required KB pattern adoption — only structural/syntax checks were run. Review phase needs to
+      include a content-level grep check for forbidden filesystem patterns in WINT migration stories.
+    category: blocker
+    tags:
+      - code-review
+      - wint-migration
+      - markdown-agents
+      - qa
+  - lesson: >-
+      For WINT batch migration stories where all changes are markdown files, the test-exempt path must still include an
+      independent QA grep as a test substitute. The absence of executable tests does not mean absence of verifiable
+      correctness criteria.
     category: pattern
     tags:
-      - planning
-      - migration
-      - kb-first
+      - wint-migration
+      - qa-verify
+      - markdown-only-stories
 tokens:
-  in: 9200
-  out: 1800
+  in: 18000
+  out: 3500

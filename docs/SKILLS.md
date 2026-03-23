@@ -8,24 +8,24 @@ This document defines all skills available in the Claude Code CLI, their respons
 
 ### Worktree Management Skills
 
-| Skill ID | File | Description |
-|----------|------|-------------|
-| `wt-new` | `wt-new/SKILL.md` | Create a new git worktree and branch for feature development |
-| `wt-switch` | `wt-switch/SKILL.md` | Switch development context to a different worktree |
-| `wt-status` | `wt-status/SKILL.md` | Show comprehensive status of current and all worktrees |
-| `wt-list` | `wt-list/SKILL.md` | List all active git worktrees with their status |
-| `wt-sync` | `wt-sync/SKILL.md` | Sync current worktree with upstream remote changes |
-| `wt-finish` | `wt-finish/SKILL.md` | Finish a feature by merging and cleaning up worktree |
-| `wt-cleanup` | `wt-cleanup/SKILL.md` | Identify and remove merged or stale worktrees |
-| `wt-prune` | `wt-prune/SKILL.md` | Clean up stale worktree references and metadata |
+| Skill ID     | File                  | Description                                                  |
+| ------------ | --------------------- | ------------------------------------------------------------ |
+| `wt-new`     | `wt-new/SKILL.md`     | Create a new git worktree and branch for feature development |
+| `wt-switch`  | `wt-switch/SKILL.md`  | Switch development context to a different worktree           |
+| `wt-status`  | `wt-status/SKILL.md`  | Show comprehensive status of current and all worktrees       |
+| `wt-list`    | `wt-list/SKILL.md`    | List all active git worktrees with their status              |
+| `wt-sync`    | `wt-sync/SKILL.md`    | Sync current worktree with upstream remote changes           |
+| `wt-finish`  | `wt-finish/SKILL.md`  | Finish a feature by merging and cleaning up worktree         |
+| `wt-cleanup` | `wt-cleanup/SKILL.md` | Identify and remove merged or stale worktrees                |
+| `wt-prune`   | `wt-prune/SKILL.md`   | Clean up stale worktree references and metadata              |
 
 ### Code Review & Quality Skills
 
-| Skill ID | File | Description |
-|----------|------|-------------|
-| `review` | `review/SKILL.md` | Comprehensive code review with parallel specialist sub-agents |
-| `review-draft-story` | `review-draft-story/SKILL.md` | Draft story review with PM, UX, and SM specialists |
-| `qa-gate` | `qa-gate/SKILL.md` | Quality gate decision with persistent YAML output |
+| Skill ID             | File                          | Description                                                   |
+| -------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `review`             | `review/SKILL.md`             | Comprehensive code review with parallel specialist sub-agents |
+| `review-draft-story` | `review-draft-story/SKILL.md` | Draft story review with PM, UX, and SM specialists            |
+| `qa-gate`            | `qa-gate/SKILL.md`            | Quality gate decision with persistent YAML output             |
 
 ---
 
@@ -38,11 +38,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Create a new git worktree and branch for feature development.
 
 **Usage:**
+
 ```bash
 /wt-new
 ```
 
 **Workflow:**
+
 1. Verify git repository
 2. Ask for base branch (e.g., `main`, `develop`)
 3. Ask for feature branch name (e.g., `feature/gallery-123`)
@@ -51,6 +53,7 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 6. Create new worktree at `tree/{branch-name}`
 
 **Benefits:**
+
 - Quick start with guided prompts
 - Safe (verifies git state before changes)
 - Organized (keeps all worktrees in `tree/` directory)
@@ -62,11 +65,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Switch development context to a different git worktree.
 
 **Usage:**
+
 ```bash
 /wt-switch
 ```
 
 **Workflow:**
+
 1. List all available worktrees with numbers
 2. Ask which to switch to (interactive selection)
 3. Provide `cd` command to execute
@@ -81,11 +86,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Show comprehensive status of current and all worktrees.
 
 **Usage:**
+
 ```bash
 /wt-status
 ```
 
 **Information Displayed:**
+
 - Current worktree location
 - All worktrees and their states
 - Uncommitted changes (modified, staged, untracked)
@@ -98,11 +105,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Quick overview of all active git worktrees.
 
 **Usage:**
+
 ```bash
 /wt-list
 ```
 
 **Output:**
+
 - Worktree path (full path)
 - Branch name (checked out branch)
 - Commit (current commit hash)
@@ -115,11 +124,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Sync current worktree with upstream remote changes.
 
 **Usage:**
+
 ```bash
 /wt-sync
 ```
 
 **Workflow:**
+
 1. Check working directory (clean or offer to stash)
 2. Fetch from origin
 3. Ask merge preference (rebase or merge)
@@ -135,11 +146,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Complete a feature by merging to base branch and cleaning up.
 
 **Usage:**
+
 ```bash
 /wt-finish
 ```
 
 **Workflow:**
+
 1. Verify all changes are committed
 2. Ask for base branch to merge into
 3. Optional: run tests before merging
@@ -156,11 +169,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Identify and remove merged or stale worktrees.
 
 **Usage:**
+
 ```bash
 /wt-cleanup
 ```
 
 **Workflow:**
+
 1. List all worktrees
 2. Identify branches already merged to main/develop
 3. Ask which to remove (interactive selection)
@@ -176,11 +191,13 @@ These skills provide a complete workflow for managing git worktrees, enabling is
 **Purpose:** Clean up stale worktree administrative files and references.
 
 **Usage:**
+
 ```bash
 /wt-prune
 ```
 
 **When to Use:**
+
 - After manually deleting a worktree directory
 - When git shows worktrees that don't exist
 - After moving or renaming worktree directories
@@ -198,6 +215,7 @@ These skills provide comprehensive code review and quality gate capabilities usi
 **Purpose:** Full-spectrum code review with parallel specialist sub-agents.
 
 **Usage:**
+
 ```bash
 # Review a story by number
 /review 3.1.5
@@ -239,6 +257,7 @@ These skills provide comprehensive code review and quality gate capabilities usi
 | `--no-gate` | Skip `/qa-gate`, return findings only |
 
 **Specialist Sub-Agents (parallel, haiku model):**
+
 1. **Requirements Traceability** - AC-to-test mapping, coverage gaps
 2. **Code Quality** - Architecture, patterns, best practices
 3. **Security** - OWASP Top 10, auth/authz, injection vulnerabilities
@@ -262,6 +281,7 @@ These skills provide comprehensive code review and quality gate capabilities usi
 Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesized into an overall recommendation.
 
 **Gate Decision:**
+
 - **PASS** - Ready for merge
 - **CONCERNS** - Proceed with awareness of issues
 - **FAIL** - Address high-severity issues first
@@ -273,6 +293,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 **Purpose:** Review stories BEFORE implementation with PM, UX, and SM specialists.
 
 **Usage:**
+
 ```bash
 # Review a specific story
 /review-draft-story 2002
@@ -303,6 +324,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 **Specialist Sub-Agents:**
 
 **PM (John) - Product Perspective:**
+
 - Requirements clarity
 - Scope appropriateness
 - User value identification
@@ -311,6 +333,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 - Risk identification
 
 **UX (Sally) - Design Perspective:**
+
 - User flow clarity
 - Interaction design
 - Visual specifications
@@ -320,6 +343,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 - Component reusability
 
 **SM (Bob) - Implementation Readiness:**
+
 - Executes Story Draft Checklist
 - Goal clarity assessment
 - Technical guidance sufficiency
@@ -335,6 +359,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 | `note` | Minor observation, nice-to-have |
 
 **Decision Outcomes:**
+
 - **PASS** - Story approved, ready for `/implement`
 - **CONCERNS** - Concerns appended, status becomes "Conditional"
 - **FAIL** - Concerns appended, status becomes "Needs Revision"
@@ -346,6 +371,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 **Purpose:** Generate a quality gate decision with persistent YAML output.
 
 **Usage:**
+
 ```bash
 # Quick gate (tests, types, lint only)
 /qa-gate 3.1.5
@@ -379,6 +405,7 @@ Each specialist provides a size estimate (XS, S, M, L, XL, XXL) that is synthesi
 | `--dry-run` | Run checks without persisting file |
 
 **Required Checks (always run):**
+
 ```bash
 pnpm test --filter='...[origin/main]'
 pnpm check-types --filter='...[origin/main]'
@@ -414,6 +441,7 @@ pnpm lint --filter='...[origin/main]'
 | `REQ-` | Requirements |
 
 **Output:**
+
 - Gate file: `docs/qa/gates/{STORY_NUM}-{slug}.yml`
 - Story file updated with gate reference
 
@@ -481,6 +509,7 @@ Located in `plans/` directory, these files govern cross-cutting migration strate
 **Purpose:** High-level planning principles and documentation structure for the migration project.
 
 **Key Contents:**
+
 - Documentation structure guidelines
 - Naming conventions (timestamps in filenames: `YYYYMMDD-HHMM`)
 - **Reuse-First Principle** (non-negotiable): Prefer existing workspace packages over creating per-story utilities
@@ -497,6 +526,7 @@ Located in `plans/` directory, these files govern cross-cutting migration strate
 **Purpose:** Execution-level rules for story development and artifact production.
 
 **Key Contents:**
+
 - **Artifact Rules:** Story folders (`plans/stories/story-XXX/`) are the source of truth
 - **Token Budget Rule:** Every story must track token usage per phase
 - **Naming Rule:** All docs must include timestamps in filenames
@@ -515,11 +545,13 @@ Located in `plans/` directory, these files govern cross-cutting migration strate
 **Purpose:** Template for tracking token (cost) usage per story phase.
 
 **Usage:**
+
 1. Add to each story's `## Token Budget` section
 2. Before starting a phase, note session cost via `/cost`
 3. After completing a phase, record the delta
 
 **Sections:**
+
 - **Phase Summary Table:** Estimates vs actuals for each phase (Story Gen, Test Plan, Feasibility, Implementation, etc.)
 - **Estimation Formula:** `Input tokens ≈ (context_files_bytes / 4) + conversation_history`
 - **Context Loading per Phase:** Expected file reads and token counts
@@ -528,6 +560,7 @@ Located in `plans/` directory, these files govern cross-cutting migration strate
 - **High-Cost Patterns:** Operations that consume >10k tokens to avoid
 
 **Template Values (Opus pricing):**
+
 ```
 Cost ≈ (input × $0.003 + output × $0.015) / 1000
 ```
@@ -541,12 +574,14 @@ Cost ≈ (input × $0.003 + output × $0.015) / 1000
 **Key Sections:**
 
 **Token Usage Summary:**
+
 - Story token costs table (cumulative)
 - High-cost operations registry (operations consistently >10k tokens)
 - Token optimization patterns (what works, what wastes tokens)
 
 **Per-Story Sections (e.g., STORY-007, STORY-008, etc.):**
 Each completed story documents:
+
 - **Date:** When completed
 - **Reuse Discoveries:** Patterns that can be reused in future stories
 - **Blockers Hit:** What blocked progress and how it was resolved
@@ -556,23 +591,29 @@ Each completed story documents:
 - **Recommendations for Future Stories:** Actionable learnings
 
 **Example Entry:**
+
 ```markdown
 ## STORY-007: Gallery - Images Read
+
 Date: 2026-01-19
 
 ### Reuse Discoveries
+
 - DI pattern for core functions was highly reusable
 - Discriminated union result types worked seamlessly
 - Seed upsert pattern allowed idempotent seeding
 
 ### Blockers Hit
+
 - None (smooth implementation)
 
 ### Plan vs Reality
+
 - Files planned: 17
 - Files actually touched: 18
 
 ### Recommendations
+
 1. Extend existing packages first
 2. Specify exact seed UUIDs in story
 3. Route order matters in vercel.json
@@ -616,6 +657,7 @@ plans/stories/STORY-XXX/
 **Purpose:** The main story specification document - source of truth for requirements.
 
 **Standard Sections:**
+
 ```markdown
 ---
 status: draft|approved|in-progress|uat|done
@@ -624,49 +666,67 @@ status: draft|approved|in-progress|uat|done
 # STORY-XXX: Title
 
 ## Title
+
 Short descriptive title
 
 ## Context
+
 Background and motivation
 
 ## Goal
+
 What this story achieves
 
 ## Non-Goals
+
 What is explicitly out of scope
 
 ## Scope
+
 ### Endpoints (for API stories)
+
 ### Packages/Apps Affected
 
 ## Acceptance Criteria
+
 - [ ] **AC-1:** Criterion description
 - [ ] **AC-2:** Criterion description
-...
+      ...
 
 ## Reuse Plan
+
 ### Existing Packages to Use
+
 ### What Will Be Extended
+
 ### New Shared Packages (if any)
 
 ## Architecture Notes
+
 Design decisions, patterns to follow
 
 ## HTTP Contract Plan
+
 Sample API requests/responses
 
 ## Seed Requirements
+
 Test data needed
 
 ## Test Plan
+
 ### Happy Path Tests
+
 ### Error Cases
+
 ### Edge Cases
 
 ## Token Budget
+
 (From TOKEN-BUDGET-TEMPLATE.md)
 
 ## Agent Log
+
 Append-only log of agent actions
 ```
 
@@ -677,44 +737,60 @@ Append-only log of agent actions
 **Purpose:** Detailed step-by-step implementation guide for the dev agent.
 
 **Standard Sections:**
+
 ```markdown
 ## Scope Surface
+
 - backend/API: yes/no
 - frontend/UI: yes/no
 - infra/config: yes/no
 
 ## Acceptance Criteria Checklist
+
 Checkbox list of all ACs
 
 ## Files To Touch (Expected)
+
 List of files to create/modify
 
 ## Reuse Targets
+
 ### Existing Packages to Import
+
 ### Existing Code to Reference
+
 ### Existing Handlers as Templates
 
 ## Architecture Notes
+
 What goes where (core vs adapters)
 
 ## Step-by-Step Plan (Small Steps)
+
 ### Phase 1: ... (Steps 1-N)
+
 #### Step 1: Objective, Files, Verification
+
 ...
 
 ## Test Plan
+
 Unit tests, type check, lint commands
 
 ## Stop Conditions / Blockers
+
 Known blockers or risks
 
 ## Token Log
+
 Files read/written with byte/token estimates
 
 ## Dependencies / Sequencing Notes
+
 What must complete before what
 
 ## Implementation Notes
+
 Key differences from reference implementations
 ```
 
@@ -725,42 +801,60 @@ Key differences from reference implementations
 **Purpose:** Evidence that implementation meets all acceptance criteria.
 
 **Standard Sections:**
+
 ```markdown
 ## Story
+
 Story reference
 
 ## Summary
+
 Brief description of what was implemented
 
 ## Acceptance Criteria Evidence
+
 Table mapping each AC to evidence (file, line, test)
 
 ## Reuse & Architecture Compliance
+
 ### Reuse-First Summary
+
 ### Ports & Adapters Compliance
 
 ## Verification
+
 ### Build Verification
+
 ### Type Check
+
 ### Lint Verification
+
 ### Unit Tests
+
 ### HTTP Contracts
+
 ### Playwright (if applicable)
 
 ## Files Changed
+
 ### New Files
+
 ### Modified Files
 
 ## Deviations / Notes
+
 Any differences from plan
 
 ## Blockers
+
 Any unresolved blockers
 
 ## Token Log
+
 Input/output token estimates
 
 ## Agent Log
+
 Actions taken by each agent
 ```
 
@@ -768,22 +862,22 @@ Actions taken by each agent
 
 ### Agent Phases & Responsibilities
 
-| Phase | Agent | Artifacts Produced |
-|-------|-------|-------------------|
-| **PM: Story Gen** | PM | `STORY-XXX.md` |
-| **PM: Test Plan** | pm-draft-test-plan | `_pm/TEST-PLAN.md` |
-| **PM: Feasibility** | pm-dev-feasibility | `_pm/DEV-FEASIBILITY.md` |
-| **PM: UI/UX** | pm-uiux-recommendations | `_pm/UIUX-NOTES.md` |
-| **PM: Elaboration** | elab-story | `ELAB-STORY-XXX.md` |
-| **Dev: Planning** | dev-implement-planner | `_implementation/IMPLEMENTATION-PLAN.md` |
-| **Dev: Validation** | dev-implement-plan-validator | `_implementation/PLAN-VALIDATION.md` |
-| **Dev: Backend** | dev-implement-backend-coder | `_implementation/BACKEND-LOG.md` |
-| **Dev: Frontend** | dev-implement-frontend-coder | `_implementation/FRONTEND-LOG.md` |
-| **Dev: Contracts** | dev-implement-contracts | `_implementation/CONTRACTS.md` |
-| **Dev: Verification** | dev-implement-verifier | `_implementation/VERIFICATION.md` |
-| **Dev: Proof** | dev-implement-proof-writer | `PROOF-STORY-XXX.md` |
-| **QA: Review** | code-review | `CODE-REVIEW-STORY-XXX.md` |
-| **QA: Verify** | qa-verify | `QA-VERIFY-STORY-XXX.md` |
+| Phase                 | Agent                        | Artifacts Produced                       |
+| --------------------- | ---------------------------- | ---------------------------------------- |
+| **PM: Story Gen**     | PM                           | `STORY-XXX.md`                           |
+| **PM: Test Plan**     | pm-draft-test-plan           | KB artifact (test-plan)                  |
+| **PM: Feasibility**   | pm-dev-feasibility           | KB artifact (pm_dev_feasibility)         |
+| **PM: UI/UX**         | pm-uiux-recommendations      | KB artifact (uiux-notes)                 |
+| **PM: Elaboration**   | elab-story                   | `ELAB-STORY-XXX.md`                      |
+| **Dev: Planning**     | dev-implement-planner        | `_implementation/IMPLEMENTATION-PLAN.md` |
+| **Dev: Validation**   | dev-implement-plan-validator | `_implementation/PLAN-VALIDATION.md`     |
+| **Dev: Backend**      | dev-implement-backend-coder  | `_implementation/BACKEND-LOG.md`         |
+| **Dev: Frontend**     | dev-implement-frontend-coder | `_implementation/FRONTEND-LOG.md`        |
+| **Dev: Contracts**    | dev-implement-contracts      | `_implementation/CONTRACTS.md`           |
+| **Dev: Verification** | dev-implement-verifier       | `_implementation/VERIFICATION.md`        |
+| **Dev: Proof**        | dev-implement-proof-writer   | `PROOF-STORY-XXX.md`                     |
+| **QA: Review**        | code-review                  | `CODE-REVIEW-STORY-XXX.md`               |
+| **QA: Verify**        | qa-verify                    | `QA-VERIFY-STORY-XXX.md`                 |
 
 ---
 
