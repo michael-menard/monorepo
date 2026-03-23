@@ -1,114 +1,89 @@
-# Setup Log - CDBE-3020
+# WINT-7010 Setup Phase Log
 
-**Story:** Roadmap Materialized View and Refresh Trigger  
-**Mode:** implement  
-**Phase:** setup  
-**Iteration:** 0  
-**Timestamp:** 2026-03-19T18:30:00Z
+## Execution Context
+- Story ID: WINT-7010
+- Mode: implement (re-implementation)
+- Gen Mode: false
+- Date: 2026-03-21
+- Worktree: /Users/michaelmenard/Development/monorepo/tree/story/WINT-7010
+- Branch: story/WINT-7010
+
+## Story Summary
+**Title:** Audit Agent Directory References
+**Description:** Scan all Claude agent files, opencode agents, shared includes, and skill files to produce a comprehensive inventory of filesystem directory references for KB-only migration. Output is a structured KB analysis artifact.
+
+**Type:** Audit-only (no code changes)
+
+## Setup Actions Completed
+
+### 1. Checkpoint Artifact (RESET)
+- **Phase:** setup
+- **Iteration:** 0 (reset from previous attempt)
+- **Last Successful Phase:** null
+- **Current Phase:** setup
+- **E2E Gate:** exempt (audit story, no code)
+- **Gen Mode:** false
+- **Status:** CREATED
+
+File: `/Users/michaelmenard/Development/monorepo/tree/story/WINT-7010/_implementation/CHECKPOINT.yaml`
+
+### 2. Scope Artifact (UPDATED)
+- **Phase:** setup
+- **Iteration:** 0
+- **Elaboration Status:** completed
+- **Acceptance Criteria:** 10 ACs covering:
+  - Agent file scanning (.claude/agents/, .opencode/agents/)
+  - Skill file scanning (.claude/skills/)
+  - Pattern identification (absolute paths, relative paths, globs, regex)
+  - JSON inventory output
+  - Pattern categorization
+  - Risk identification for KB migration
+  - Shared include reference documentation
+  - Migration risk reporting
+  - KB analysis artifact generation
+
+File: `/Users/michaelmenard/Development/monorepo/tree/story/WINT-7010/_implementation/SCOPE.yaml`
+
+### 3. Scope Determination
+- **Touches Backend:** false
+- **Touches Frontend:** false
+- **Touches Packages:** false
+- **Touches DB:** false
+- **Touches Infrastructure:** false
+- **No Code Changes:** true
+- **Audit Only:** true
+- **Output:** KB analysis artifact
+
+### 4. Risk Assessment
+All risk flags false (audit-only, no code changes):
+- Auth: false
+- Payments: false
+- Migrations: false
+- External APIs: false
+- Security: false
+- Performance: false
+
+### 5. Artifact Paths (Touched)
+- `.claude/agents/**` - Claude agent files
+- `.opencode/agents/**` - Opencode agent files
+- `.claude/skills/**` - Skill definitions
+- `scripts/**` - Pipeline scripts
+
+## Next Steps (for Implementation Phase)
+1. Execute audit scan of all agent files
+2. Extract directory references and patterns
+3. Categorize patterns by type
+4. Generate migration risk assessment
+5. Produce KB analysis artifact with findings and recommendations
+
+## Constraints & Notes
+- Story is audit-only with no code modifications
+- E2E testing exempt (not applicable)
+- Focus on comprehensive directory reference inventory
+- Output should identify KB migration blockers and risk levels
+- All acceptance criteria are analysis/reporting only
 
 ## Status
-
 SETUP COMPLETE
 
-## Preconditions
-
-- [x] Story exists in KB: CDBE-3020
-- [x] Story status: in_progress (ready for implementation)
-- [x] No prior implementation blocking: checkpoint found but iteration 0 starting fresh
-- [x] Elaboration verdict: CONDITIONAL_PASS (ready_to_implement: true)
-- [x] Dependencies resolved: CDBE-3010 completed
-
-## Scope Analysis
-
-### Story Title
-
-Roadmap Materialized View and Refresh Trigger
-
-### Story Description
-
-Create workflow.roadmap as a materialized view joining plans with story counts, next unblocked stories, and estimated completion; implement trigger or function to REFRESH MATERIALIZED VIEW CONCURRENTLY on plan and story changes.
-
-### Scope Touches
-
-- **DB:** true - Materialized view DDL, index creation, trigger function, GRANT statements
-- **Backend:** false - No TypeScript or API changes per ACs
-- **Frontend:** false - No React changes
-- **Packages:** false
-- **Contracts:** false - No Zod schema changes
-- **UI:** false
-- **Infra:** false
-
-### Risk Flags
-
-- **Migrations:** true - DDL changes, index creation, trigger function deployment
-- **Performance:** true - Materialized view refresh impact, CONCURRENT refresh overhead
-- **External APIs:** false
-- **Auth:** false
-- **Payments:** false
-- **Security:** false
-
-### Touched Path Globs
-
-- `packages/backend/db/migrations/` (new migration)
-- `packages/backend/db/` (schema, tests)
-
-### Reusable Assets Identified
-
-Per elaboration summary:
-
-1. story_counts CTE from migration 999_add_plan_churn_tracking.sql
-2. Safety preamble from CDBE-1030 migration
-3. Trigger pattern from CDBE-1010 migration
-4. pgTAP test structure from CDBE-1030_test
-5. GRANT pattern from CDBE-1005 migration
-6. nextStory logic from planService.ts (reference for unblocked story selection)
-
-## Constraints Applied
-
-All from CLAUDE.md project standards:
-
-1. **Migration Approach:** Use atomic migration pattern with safety preamble and idempotency guards
-2. **Testing:** pgTAP only (pure DDL + PL/pgSQL, no TypeScript changes)
-3. **Code Style:** Standard SQL conventions, clear comments, no hardcoded values
-4. **Naming:** Follow existing schema naming conventions (lowercase, underscores)
-5. **Permissions:** Apply GRANT statements matching existing database role structure
-6. **Documentation:** Add COMMENT ON statements for view and trigger function
-7. **Index:** Create unique index as per AC requirements
-8. **Trigger:** STATEMENT-level, use pg_trigger_depth guard to prevent infinite loops
-
-## Implementation Steps (Next Phase)
-
-1. Read story requirements and ACs from KB
-2. Review dependency story (CDBE-3010) completion
-3. Design materialized view structure (columns, CTEs, joins)
-4. Implement migration DDL:
-   - workflow.roadmap materialized view
-   - Unique index on (plan_id, story_order)
-   - Refresh function with pg_trigger_depth guard
-   - Trigger on plans and stories tables
-   - GRANT statements
-   - COMMENT ON documentation
-5. Write pgTAP tests covering:
-   - View DDL correctness
-   - Column existence and types
-   - Count accuracy
-   - Next story selection
-   - Estimated completion calculation
-   - Index uniqueness
-   - Trigger idempotency (multiple refreshes)
-6. Verify: pnpm test, migration dry-run, coverage
-7. Code review checklist
-8. QA verification
-
-## Branch Information
-
-- **Worktree:** /Users/michaelmenard/Development/monorepo/tree/story/CDBE-3020
-- **Feature Branch:** TBD (set by implementation agent)
-
-## Notes
-
-- Migration slot: ~1080 (verify at implementation time)
-- AC count: 14 (comprehensive coverage)
-- Test strategy: pgTAP only (no TypeScript test changes)
-- Elaboration status: CONDITIONAL_PASS indicates all clarifications resolved and ready to implement
-- Depends on CDBE-3010 (dependency work complete per context)
+All preconditions satisfied. Ready for implementation phase.
