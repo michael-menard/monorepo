@@ -5,7 +5,7 @@
  * Uses Annotation.Root (not extending GraphState) because plan-refinement
  * is plan-centric (planSlug), not story-centric (storyId).
  *
- * APRS-2010, APRS-2030
+ * APRS-2010, APRS-2020, APRS-2030
  */
 
 import { z } from 'zod'
@@ -99,6 +99,69 @@ export const NormalizedPlanSchema = z.object({
 })
 
 export type NormalizedPlan = z.infer<typeof NormalizedPlanSchema>
+
+// ============================================================================
+// Gap Coverage Schemas
+// ============================================================================
+
+/**
+ * A gap identified by the coverage agent.
+ */
+export const GapFindingSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(['ux', 'qa', 'security', 'coverage']),
+  description: z.string().min(1),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  sourceFlowIds: z.array(z.string()).default([]),
+  relatedAcIds: z.array(z.string()).default([]),
+})
+
+export type GapFinding = z.infer<typeof GapFindingSchema>
+
+/**
+ * A specialist's analysis of a gap.
+ */
+export const SpecialistFindingSchema = z.object({
+  id: z.string().min(1),
+  gapId: z.string().min(1),
+  specialistType: z.enum(['ux', 'qa', 'security']),
+  analysis: z.string().min(1),
+  recommendation: z.string().min(1),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  confidence: z.number().min(0).max(1),
+})
+
+export type SpecialistFinding = z.infer<typeof SpecialistFindingSchema>
+
+/**
+ * Merged finding from reconciliation.
+ */
+export const ReconciledFindingSchema = z.object({
+  id: z.string().min(1),
+  gapId: z.string().min(1),
+  type: z.enum(['ux', 'qa', 'security', 'coverage']),
+  description: z.string().min(1),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  specialistAnalyses: z.array(SpecialistFindingSchema).default([]),
+  recommendation: z.string().min(1),
+  status: z.enum(['open', 'addressed', 'deferred']).default('open'),
+})
+
+export type ReconciledFinding = z.infer<typeof ReconciledFindingSchema>
+
+/**
+ * Final output of the gap coverage loop.
+ */
+export const CoverageResultSchema = z.object({
+  coverageScore: z.number().min(0).max(1),
+  totalGaps: z.number().int().min(0),
+  addressedGaps: z.number().int().min(0),
+  reconciledFindings: z.array(ReconciledFindingSchema),
+  iterationsUsed: z.number().int().min(0),
+  circuitBreakerTriggered: z.boolean(),
+})
+
+export type CoverageResult = z.infer<typeof CoverageResultSchema>
 
 // ============================================================================
 // Refinement Phase Enum
@@ -207,6 +270,48 @@ export const PlanRefinementStateAnnotation = Annotation.Root({
   errors: Annotation<string[]>({
     reducer: (current, update) => [...current, ...update],
     default: () => [],
+  }),
+
+  /** Gap findings from coverage agent (append reducer for iteration accumulation) */
+  gapFindings: Annotation<GapFinding[]>({
+    reducer: (current, update) => [...current, ...update],
+    default: () => [],
+  }),
+
+  /** Specialist findings from fan-out (append reducer for fan-in) */
+  specialistFindings: Annotation<SpecialistFinding[]>({
+    reducer: (current, update) => [...current, ...update],
+    default: () => [],
+  }),
+
+  /** Reconciled findings (overwrite per iteration) */
+  reconciledFindings: Annotation<ReconciledFinding[]>({
+    reducer: overwrite,
+    default: () => [],
+  }),
+
+  /** Coverage score from reconciliation (0.0-1.0) */
+  coverageScore: Annotation<number | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** Circuit breaker state */
+  circuitBreakerOpen: Annotation<boolean>({
+    reducer: overwrite,
+    default: () => false,
+  }),
+
+  /** Previous iteration gap count for convergence detection */
+  previousGapCount: Annotation<number>({
+    reducer: overwrite,
+    default: () => 0,
+  }),
+
+  /** Consecutive LLM failure count for circuit breaker */
+  consecutiveLlmFailures: Annotation<number>({
+    reducer: overwrite,
+    default: () => 0,
   }),
 
   /** HiTL decision from human_review_checkpoint (APRS-2030 AC-1) */
