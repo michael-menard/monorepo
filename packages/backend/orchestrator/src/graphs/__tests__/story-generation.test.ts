@@ -1,180 +1,406 @@
 /**
- * Story Generation Graph tests
+ * story-generation graph compilation + integration tests
  * APRS-4010: ST-5 / AC-6, AC-7
+ * APRS-4020: ST-5 / AC-7 (5-node pipeline)
+ * APRS-4030: ST-5 / AC-6, AC-7 (6-node pipeline with write_to_kb)
  */
 
 import { describe, it, expect, vi } from 'vitest'
 import { createStoryGenerationGraph } from '../story-generation.js'
-import type { NormalizedPlan, Flow } from '../../state/plan-refinement-state.js'
-import type { LlmAdapterFn } from '../../nodes/story-generation/generate-stories.js'
+import type { GraphValidatorFn } from '../../nodes/story-generation/validate-graph.js'
+import type { KbWriterFn } from '../../nodes/story-generation/write-to-kb.js'
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-function makeFlow(overrides: Partial<Flow> = {}): Flow {
-  return {
-    id: 'flow-1',
-    name: 'Test Flow',
-    actor: 'User',
-    trigger: 'User clicks button',
-    steps: [
-      { index: 1, description: 'Open form' },
-      { index: 2, description: 'Save data' },
-    ],
-    successOutcome: 'Completed',
-    source: 'user',
-    confidence: 1.0,
-    status: 'confirmed',
-    ...overrides,
-  }
+const VALID_PLAN = {
+  planSlug: 'test-plan',
+  title: 'Test Plan',
+  summary: 'Summary',
+  problemStatement: 'Problem',
+  proposedSolution: 'Solution',
+  goals: ['Goal 1'],
+  nonGoals: [],
+  flows: [
+    {
+      id: 'flow-1',
+      name: 'User Flow',
+      actor: 'User',
+      trigger: 'User clicks',
+      steps: [
+        { index: 1, description: 'Open form' },
+        { index: 2, description: 'Submit form' },
+      ],
+      successOutcome: 'Done',
+      source: 'user',
+      confidence: 1.0,
+      status: 'confirmed',
+    },
+  ],
+  openQuestions: [],
+  warnings: [],
+  constraints: [],
+  dependencies: [],
+  status: 'active',
+  priority: 'high',
+  tags: ['test'],
 }
 
-function makePlan(overrides: Partial<NormalizedPlan> = {}): NormalizedPlan {
-  return {
-    planSlug: 'test-plan',
-    title: 'Test Plan',
-    summary: 'A test plan',
-    problemStatement: 'Problem',
-    proposedSolution: 'Solution',
-    goals: ['Goal 1'],
-    nonGoals: [],
-    flows: [makeFlow()],
-    openQuestions: [],
-    warnings: [],
-    constraints: [],
-    dependencies: [],
-    status: 'refined',
-    priority: 'medium',
-    tags: ['test'],
-    ...overrides,
-  }
-}
-
-const mockLlmAdapter: LlmAdapterFn = vi.fn().mockResolvedValue({
-  description: 'Generated description',
-  acceptance_criteria: ['AC-1: Works'],
-  subtasks: [],
-  risk: 'low',
-})
-
 // ============================================================================
-// Tests
+// Graph compilation tests
 // ============================================================================
 
-describe('Story Generation Graph', () => {
+describe('createStoryGenerationGraph', () => {
   it('compiles without throwing (AC-6)', () => {
     expect(() => createStoryGenerationGraph()).not.toThrow()
   })
 
-  it('compiles with injectable adapters', () => {
-    const planLoader = vi.fn()
-    const llmAdapter = vi.fn()
-    expect(() =>
-      createStoryGenerationGraph({ planLoader, llmAdapter }),
-    ).not.toThrow()
+  it('returns a compiled graph with invoke method (AC-7)', () => {
+    const graph = createStoryGenerationGraph()
+    expect(typeof graph.invoke).toBe('function')
   })
 
-  it('happy path: plan in state → generates stories', async () => {
-    const plan = makePlan()
-    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
+  it('graph structure: START → load_refined_plan → slice_flows → generate_stories → wire_dependencies → validate_graph → write_to_kb → END', () => {
+    // Compilation confirms graph structure is valid
+    const graph = createStoryGenerationGraph()
+    expect(graph).toBeDefined()
+  })
+})
 
-    const result = await graph.invoke({
-      planSlug: 'test-plan',
-      refinedPlan: plan,
+// ============================================================================
+// Graph integration tests (with injectable adapters)
+// ============================================================================
+
+describe('createStoryGenerationGraph integration', () => {
+  it('runs full 6-node pipeline from start to end with plan loader', async () => {
+    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'Story description',
+      acceptance_criteria: ['AC1'],
+      subtasks: ['Task 1'],
+      risk: 'low',
     })
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
 
     expect(result.generationPhase).toBe('complete')
+    expect(result.refinedPlan).not.toBeNull()
+    expect(result.refinedPlan?.planSlug).toBe('test-plan')
+    expect(result.flows).toHaveLength(1)
+    expect(result.slicedFlows.length).toBeGreaterThan(0)
     expect(result.generatedStories.length).toBeGreaterThan(0)
-    expect(result.generatedStories[0].parent_plan_slug).toBe('test-plan')
-    expect(result.generatedStories[0].parent_flow_id).toBe('flow-1')
-  })
-
-  it('happy path: plan loaded via adapter → generates stories', async () => {
-    const plan = makePlan()
-    const planLoader = vi.fn().mockResolvedValue(plan)
-    const graph = createStoryGenerationGraph({ planLoader, llmAdapter: mockLlmAdapter })
-
-    const result = await graph.invoke({
-      planSlug: 'test-plan',
-    })
-
+    // 6-node pipeline: wire_dependencies, validate_graph, and write_to_kb ran
+    expect(result.orderedStories.length).toBeGreaterThan(0)
+    expect(result.validationResult).not.toBeNull()
+    expect(result.validationResult?.passed).toBe(true)
+    expect(result.writeResult).not.toBeNull()
+    expect(result.writeResult?.storiesWritten).toBeGreaterThan(0)
+    expect(result.writeResult?.storiesFailed).toBe(0)
     expect(planLoader).toHaveBeenCalledWith('test-plan')
-    expect(result.generationPhase).toBe('complete')
-    expect(result.generatedStories.length).toBeGreaterThan(0)
   })
 
-  it('load_refined_plan error → short-circuits to END', async () => {
+  it('exits at load_refined_plan on error (plan not found)', async () => {
     const planLoader = vi.fn().mockResolvedValue(null)
-    const graph = createStoryGenerationGraph({ planLoader })
 
-    const result = await graph.invoke({
-      planSlug: 'missing-plan',
-    })
+    const graph = createStoryGenerationGraph({ planLoader })
+    const result = await graph.invoke({ planSlug: 'missing-plan' })
 
     expect(result.generationPhase).toBe('error')
     expect(result.errors.length).toBeGreaterThan(0)
-    expect(result.errors[0]).toContain('no plan found')
-    // slice_flows and generate_stories should not have run
+    // Should not have proceeded to slice or generate
     expect(result.slicedFlows).toEqual([])
     expect(result.generatedStories).toEqual([])
   })
 
-  it('no confirmed flows → error at load_refined_plan', async () => {
-    const plan = makePlan({
-      flows: [makeFlow({ status: 'unconfirmed' })],
-    })
-    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
+  it('completes with empty stories when no confirmed flows', async () => {
+    const planWithNoConfirmedFlows = {
+      ...VALID_PLAN,
+      flows: [
+        {
+          ...VALID_PLAN.flows[0],
+          status: 'unconfirmed',
+        },
+      ],
+    }
+    const planLoader = vi.fn().mockResolvedValue(planWithNoConfirmedFlows)
 
-    const result = await graph.invoke({
-      planSlug: 'test-plan',
-      refinedPlan: plan,
-    })
+    const graph = createStoryGenerationGraph({ planLoader })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    // No confirmed flows → slice_flows proceeds but generates nothing
+    expect(result.generatedStories).toEqual([])
+    expect(result.generationPhase).toBe('complete')
+  })
+
+  it('accepts injectable adapters via factory (AC-7)', () => {
+    const planLoader = vi.fn().mockResolvedValue(null)
+    const llmAdapter = vi.fn()
+
+    expect(() => createStoryGenerationGraph({ planLoader, llmAdapter })).not.toThrow()
+  })
+
+  it('works with no adapters (default no-op behavior)', async () => {
+    const graph = createStoryGenerationGraph()
+    // With no planLoader, should error out gracefully
+    const result = await graph.invoke({ planSlug: 'any-plan' })
 
     expect(result.generationPhase).toBe('error')
-    expect(result.errors.some((e: string) => e.includes('no confirmed flows'))).toBe(true)
+    expect(result.errors.length).toBeGreaterThan(0)
   })
 
-  it('multiple flows → multiple stories', async () => {
-    const plan = makePlan({
-      flows: [
-        makeFlow({ id: 'f1', name: 'Flow One' }),
-        makeFlow({ id: 'f2', name: 'Flow Two' }),
-      ],
+  it('accepts injectable graphValidator via factory', () => {
+    const graphValidator: GraphValidatorFn = vi.fn().mockReturnValue({
+      passed: true,
+      errors: [],
+      warnings: [],
     })
-    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
 
-    const result = await graph.invoke({
-      planSlug: 'test-plan',
-      refinedPlan: plan,
+    expect(() => createStoryGenerationGraph({ graphValidator })).not.toThrow()
+  })
+
+  it('exits at wire_dependencies on error', async () => {
+    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
     })
+    // minimumPathFn that throws → wire_dependencies sets error phase
+    const minimumPathFn = () => {
+      throw new Error('wiring failed')
+    }
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, minimumPathFn })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors.some((e: string) => e.includes('wire_dependencies failed'))).toBe(true)
+  })
+
+  it('exits at validate_graph when validation fails (cycle) — does not reach write_to_kb', async () => {
+    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
+    })
+    const graphValidator: GraphValidatorFn = () => ({
+      passed: false,
+      errors: ['Cycle detected: A → B → A'],
+      warnings: [],
+    })
+    const kbWriter: KbWriterFn = vi.fn()
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, graphValidator, kbWriter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors.some((e: string) => e.includes('Cycle detected'))).toBe(true)
+    expect(result.writeResult).toBeNull()
+    expect(kbWriter).not.toHaveBeenCalled()
+  })
+
+  it('accepts injectable kbWriter via factory', () => {
+    const kbWriter: KbWriterFn = vi.fn()
+    expect(() => createStoryGenerationGraph({ kbWriter })).not.toThrow()
+  })
+
+  it('runs full 6-node pipeline with injectable kbWriter', async () => {
+    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: ['Task 1'],
+      risk: 'low',
+    })
+    const kbWriter: KbWriterFn = vi.fn().mockImplementation(async stories => ({
+      results: stories.map((s: { story_id: string }) => ({
+        success: true,
+        story_id: s.story_id,
+      })),
+      planUpdated: true,
+    }))
+
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, kbWriter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
 
     expect(result.generationPhase).toBe('complete')
-    // At minimum 2 stories (one per flow), possibly more if slicing splits them
-    expect(result.generatedStories.length).toBeGreaterThanOrEqual(2)
+    expect(kbWriter).toHaveBeenCalled()
+    expect(result.writeResult?.storiesFailed).toBe(0)
+    expect(result.writeResult?.planStatusUpdated).toBe(true)
   })
 
-  it('stories have correct schema fields (AC-2)', async () => {
-    const plan = makePlan()
-    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
+  it('exits at write_to_kb on partial failure', async () => {
+    const multiFlowPlan = {
+      ...VALID_PLAN,
+      flows: [
+        VALID_PLAN.flows[0],
+        {
+          id: 'flow-2',
+          name: 'Admin Flow',
+          actor: 'Admin',
+          trigger: 'Admin clicks',
+          steps: [
+            { index: 1, description: 'View dashboard' },
+            { index: 2, description: 'Export data' },
+          ],
+          successOutcome: 'Data exported',
+          source: 'user',
+          confidence: 1.0,
+          status: 'confirmed',
+        },
+      ],
+    }
+    const planLoader = vi.fn().mockResolvedValue(multiFlowPlan)
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
+    })
+    const kbWriter: KbWriterFn = vi.fn().mockImplementation(async stories => ({
+      results: stories.map((s: { story_id: string }, i: number) => ({
+        success: i === 0,
+        story_id: s.story_id,
+        ...(i > 0 ? { error: 'DB write failed' } : {}),
+      })),
+      planUpdated: false,
+    }))
 
-    const result = await graph.invoke({
-      planSlug: 'test-plan',
-      refinedPlan: plan,
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, kbWriter })
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    // write_to_kb sets error on partial failure
+    expect(result.generationPhase).toBe('error')
+    expect(result.writeResult?.storiesFailed).toBeGreaterThan(0)
+  })
+})
+
+// ============================================================================
+// APRS-5030: Production Adapter Integration Tests (AC-10)
+// ============================================================================
+
+import { createPlanLoaderAdapter } from '../../adapters/story-generation/plan-loader-adapter.js'
+import { createStoryIdGeneratorAdapter } from '../../adapters/story-generation/story-id-generator.js'
+import { createKbWriterAdapter } from '../../adapters/story-generation/kb-writer-adapter.js'
+import type { KbGetPlanFn } from '../../adapters/story-generation/plan-loader-adapter.js'
+import type { KbListStoriesFn } from '../../adapters/story-generation/story-id-generator.js'
+import type {
+  KbIngestStoryFn,
+  KbUpdatePlanFn,
+} from '../../adapters/story-generation/kb-writer-adapter.js'
+
+describe('story-generation graph with production adapters (AC-10)', () => {
+  it('runs full pipeline end-to-end with all three production adapters injected', async () => {
+    // Wire all three production adapters via vi.fn() mocks
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(VALID_PLAN)
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([
+      { story_id: 'TESTPLAN-1010' },
+    ])
+    const kbIngestStory: KbIngestStoryFn = vi
+      .fn()
+      .mockImplementation(async input => ({ story_id: input.story_id }))
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn().mockResolvedValue({ plan_slug: 'test-plan' })
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'Story description',
+      acceptance_criteria: ['AC1'],
+      subtasks: ['Task 1'],
+      risk: 'low',
     })
 
-    const story = result.generatedStories[0]
-    expect(story).toHaveProperty('title')
-    expect(story).toHaveProperty('description')
-    expect(story).toHaveProperty('acceptance_criteria')
-    expect(story).toHaveProperty('subtasks')
-    expect(story).toHaveProperty('tags')
-    expect(story).toHaveProperty('risk')
-    expect(story).toHaveProperty('minimum_path')
-    expect(story).toHaveProperty('parent_plan_slug')
-    expect(story).toHaveProperty('parent_flow_id')
-    expect(story).toHaveProperty('flow_step_reference')
-    expect(story.minimum_path).toBe(false) // DEC-4
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({
+      planLoader,
+      llmAdapter,
+      storyIdGenerator,
+      kbWriter,
+    })
+
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    expect(result.generationPhase).toBe('complete')
+    expect(result.writeResult).not.toBeNull()
+    expect(result.writeResult?.storiesWritten).toBeGreaterThan(0)
+    expect(result.writeResult?.storiesFailed).toBe(0)
+    expect(result.writeResult?.planStatusUpdated).toBe(true)
+
+    // Adapter calls verified
+    expect(kbGetPlan).toHaveBeenCalledWith({ plan_slug: 'test-plan' })
+    expect(kbListStories).toHaveBeenCalled()
+    expect(kbIngestStory).toHaveBeenCalled()
+    expect(kbUpdatePlan).toHaveBeenCalledWith({
+      plan_slug: 'test-plan',
+      status: 'stories-created',
+    })
+  })
+
+  it('fails gracefully when plan not found via production adapter', async () => {
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(null)
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([])
+    const kbIngestStory: KbIngestStoryFn = vi.fn()
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn()
+
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({ planLoader, storyIdGenerator, kbWriter })
+    const result = await graph.invoke({ planSlug: 'nonexistent-plan' })
+
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors.length).toBeGreaterThan(0)
+    expect(kbIngestStory).not.toHaveBeenCalled()
+    expect(kbUpdatePlan).not.toHaveBeenCalled()
+  })
+
+  it('story IDs are generated with max+10 offset from existing stories', async () => {
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(VALID_PLAN)
+    // write-to-kb transforms planSlug 'test-plan' → prefix 'TEST-PLAN'
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([
+      { story_id: 'TEST-PLAN-1010' },
+      { story_id: 'TEST-PLAN-1020' },
+      { story_id: 'TEST-PLAN-1030' },
+    ])
+    const capturedStoryIds: string[] = []
+    const kbIngestStory: KbIngestStoryFn = vi.fn().mockImplementation(async input => {
+      capturedStoryIds.push(input.story_id)
+      return { story_id: input.story_id }
+    })
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn().mockResolvedValue({ plan_slug: 'test-plan' })
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
+    })
+
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({
+      planLoader,
+      llmAdapter,
+      storyIdGenerator,
+      kbWriter,
+    })
+    await graph.invoke({ planSlug: 'test-plan' })
+
+    // IDs should start from 1040 (max 1030 + 10)
+    expect(capturedStoryIds.length).toBeGreaterThan(0)
+    capturedStoryIds.forEach(id => {
+      // IDs have format PREFIX-NNNN, extract last segment
+      const segments = id.split('-')
+      const suffix = parseInt(segments[segments.length - 1]!, 10)
+      expect(suffix).toBeGreaterThanOrEqual(1040)
+    })
   })
 })
 

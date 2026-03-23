@@ -1,133 +1,141 @@
 /**
  * slice_flows Node
  *
- * Applies the slicing heuristic (DEC-2) to split flows into story-sized
- * SlicedFlow entries. Each flow step with a distinct side-effect or actor
- * boundary becomes a separate slice. Pure data-passing steps within the
- * same actor are merged into the predecessor.
+ * Applies a slicing heuristic to flows and produces SlicedFlow[] output.
  *
- * AC-4: Output slicedFlows[] with flow_id, step_indices, scope_description.
+ * Slicing heuristic (DEC-2):
+ * - Distinct side-effect or actor boundary = separate slice
+ * - Pure data-passing in the same actor merged into its predecessor
+ * - Single-step flows → exactly one slice
  *
  * APRS-4010: ST-3
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type { Flow, FlowStep } from '../../state/plan-refinement-state.js'
-import type { SlicedFlow, StoryGenerationState } from '../../state/story-generation-state.js'
+import {
+  SlicedFlowSchema,
+  type SlicedFlow,
+  type StoryGenerationState,
+} from '../../state/story-generation-state.js'
 
 // ============================================================================
-// Side-Effect Detection
+// Config Schema
+// ============================================================================
+
+export const SliceFlowsConfigSchema = z.object({
+  /** Maximum number of steps per slice (default: 5) */
+  maxStepsPerSlice: z.number().int().positive().optional(),
+})
+
+export type SliceFlowsConfig = z.infer<typeof SliceFlowsConfigSchema>
+
+// ============================================================================
+// Slicing Heuristic Implementation (exported for unit testability)
 // ============================================================================
 
 /**
- * Keywords that indicate a step has a distinct side-effect.
- * Steps containing these are slice boundaries.
+ * Determine if a step represents an actor or side-effect boundary.
+ * A boundary exists when:
+ * - The step has a different actor than the previous step
+ * - The step description contains side-effect keywords (save, write, send, create, delete, update, emit, publish, notify)
  */
-const SIDE_EFFECT_KEYWORDS = [
-  'save',
-  'write',
-  'send',
-  'create',
-  'delete',
-  'update',
-  'emit',
-  'publish',
-  'notify',
-  'insert',
-  'remove',
-  'store',
-  'persist',
-  'upload',
-  'download',
-  'deploy',
-  'execute',
-  'trigger',
-  'submit',
-  'commit',
-  'push',
-  'merge',
-  'approve',
-  'reject',
-  'validate',
-]
+export function isBoundaryStep(step: FlowStep, previousStep: FlowStep | null): boolean {
+  if (!previousStep) return false
 
-/**
- * Determines if a flow step has a distinct side-effect.
- */
-export function hasSideEffect(step: FlowStep): boolean {
-  const desc = step.description.toLowerCase()
-  return SIDE_EFFECT_KEYWORDS.some(keyword => desc.includes(keyword))
+  // Actor boundary
+  const currentActor = step.actor ?? ''
+  const previousActor = previousStep.actor ?? ''
+  if (currentActor && previousActor && currentActor !== previousActor) {
+    return true
+  }
+
+  // Side-effect boundary — keywords in step description
+  const sideEffectPattern =
+    /\b(save|write|send|create|delete|update|emit|publish|notify|store|persist|dispatch|trigger)\b/i
+  if (sideEffectPattern.test(step.description)) {
+    return true
+  }
+
+  return false
 }
 
 /**
- * Determines if a step has a different actor from the previous step.
+ * Build a scope description for a set of steps.
  */
-export function hasActorBoundary(step: FlowStep, flowActor: string, prevStep?: FlowStep): boolean {
-  const currentActor = step.actor ?? flowActor
-  const previousActor = prevStep?.actor ?? flowActor
-  return currentActor !== previousActor
+export function buildScopeDescription(flow: Flow, stepIndices: number[]): string {
+  const steps = flow.steps.filter(s => stepIndices.includes(s.index))
+  if (steps.length === 0) return `${flow.name} (no steps)`
+  if (steps.length === 1) return steps[0].description
+  return `${steps[0].description} through ${steps[steps.length - 1].description}`
 }
 
-// ============================================================================
-// Slicing Logic
-// ============================================================================
-
 /**
- * Slices a single flow into SlicedFlow entries.
+ * Slice a single flow into SlicedFlow[] using the DEC-2 heuristic.
  *
- * DEC-2 heuristic:
- * - Each step with a distinct side-effect or actor boundary = separate slice
- * - Pure data-passing steps within same actor merged into predecessor
- * - Single-step flows produce exactly one slice
+ * Rules:
+ * - Single-step flows → exactly one slice
+ * - Distinct side-effect or actor boundary = separate slice
+ * - Pure data-passing in same actor → merged into predecessor
  */
 export function sliceFlow(flow: Flow): SlicedFlow[] {
-  const { steps } = flow
+  const steps = flow.steps
 
   // Single-step flows → exactly one slice
   if (steps.length <= 1) {
+    const stepIndices = steps.map(s => s.index)
     return [
-      {
+      SlicedFlowSchema.parse({
         flow_id: flow.id,
-        step_indices: steps.map(s => s.index),
-        scope_description: steps.length === 1 ? steps[0].description : `Empty flow: ${flow.name}`,
-      },
+        step_indices: stepIndices.length > 0 ? stepIndices : [1],
+        scope_description: steps.length > 0 ? steps[0].description : flow.name,
+      }),
     ]
   }
 
+  // Multi-step: apply boundary heuristic
   const slices: SlicedFlow[] = []
   let currentIndices: number[] = []
-  let currentDescriptions: string[] = []
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]
-    const prevStep = i > 0 ? steps[i - 1] : undefined
-    const isBoundary = hasSideEffect(step) || hasActorBoundary(step, flow.actor, prevStep)
+    const previousStep = i > 0 ? steps[i - 1] : null
 
-    if (isBoundary && currentIndices.length > 0) {
-      // Flush current accumulator as a slice
-      slices.push({
-        flow_id: flow.id,
-        step_indices: [...currentIndices],
-        scope_description: currentDescriptions.join('; '),
-      })
+    if (currentIndices.length > 0 && isBoundaryStep(step, previousStep)) {
+      // Commit current slice
+      slices.push(
+        SlicedFlowSchema.parse({
+          flow_id: flow.id,
+          step_indices: currentIndices,
+          scope_description: buildScopeDescription(flow, currentIndices),
+        }),
+      )
       currentIndices = []
-      currentDescriptions = []
     }
 
     currentIndices.push(step.index)
-    currentDescriptions.push(step.description)
   }
 
-  // Flush remaining steps
+  // Commit final slice
   if (currentIndices.length > 0) {
-    slices.push({
-      flow_id: flow.id,
-      step_indices: currentIndices,
-      scope_description: currentDescriptions.join('; '),
-    })
+    slices.push(
+      SlicedFlowSchema.parse({
+        flow_id: flow.id,
+        step_indices: currentIndices,
+        scope_description: buildScopeDescription(flow, currentIndices),
+      }),
+    )
   }
 
   return slices
+}
+
+/**
+ * Slice all flows in the state into SlicedFlow[].
+ */
+export function sliceAllFlows(flows: Flow[]): SlicedFlow[] {
+  return flows.flatMap(flow => sliceFlow(flow))
 }
 
 // ============================================================================
@@ -137,9 +145,12 @@ export function sliceFlow(flow: Flow): SlicedFlow[] {
 /**
  * Creates the slice_flows LangGraph node.
  *
- * AC-4: Applies slicing heuristic to flows, outputs slicedFlows[].
+ * AC-4: Output: slicedFlows[] with flow_id, step_indices, scope_description.
+ * Applies DEC-2 heuristic: distinct side-effect or actor boundary = separate slice.
+ *
+ * @param config - Optional config
  */
-export function createSliceFlowsNode() {
+export function createSliceFlowsNode(_config: SliceFlowsConfig = {}) {
   return async (state: StoryGenerationState): Promise<Partial<StoryGenerationState>> => {
     try {
       logger.info('slice_flows: starting', {
@@ -148,27 +159,24 @@ export function createSliceFlowsNode() {
       })
 
       if (state.flows.length === 0) {
-        logger.warn('slice_flows: no flows to slice')
+        logger.warn('slice_flows: no flows to slice', { planSlug: state.planSlug })
         return {
-          generationPhase: 'error',
-          errors: ['slice_flows: no flows provided'],
+          slicedFlows: [],
+          generationPhase: 'generate_stories',
+          warnings: ['slice_flows: no confirmed flows found to slice'],
         }
       }
 
-      const allSlices: SlicedFlow[] = []
-      for (const flow of state.flows) {
-        const slices = sliceFlow(flow)
-        allSlices.push(...slices)
-      }
+      const slicedFlows = sliceAllFlows(state.flows)
 
       logger.info('slice_flows: complete', {
         planSlug: state.planSlug,
-        flowCount: state.flows.length,
-        sliceCount: allSlices.length,
+        inputFlows: state.flows.length,
+        outputSlices: slicedFlows.length,
       })
 
       return {
-        slicedFlows: allSlices,
+        slicedFlows,
         generationPhase: 'generate_stories',
         errors: [],
       }

@@ -1,0 +1,142 @@
+strategy: unit+integration
+scope:
+  endpoints:
+    - POST /hitl-interview
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'POST /hitl-interview returns 200 with valid qa_gate payload'
+    setup: 'Mock trainingDataIngest to resolve successfully. Mock hitlDecisions SELECT to return a matching row.'
+    action: 'POST /hitl-interview with { storyId: "WINT-5010", phase: "qa", decisionType: "qa_gate", interviewAnswers: { rationale: "Tests pass", confidence: 0.9, alternativesConsidered: "None", riskAssessment: "Low" }, featureVector: { storyId: "WINT-5010", phase: "qa", decisionType: "qa_gate", storyComplexityScore: 3, agentPhase: "qa_gate", decisionContext: "All ACs green" } }'
+    expected: 'HTTP 200 with JSON body { success: true, trainingRowId: "<uuid>" }; trainingDataIngest called once with dataType="hitl_interview", features matching FeatureVectorSchema, labels matching InterviewAnswersSchema'
+    evidence: 'vi.mock trainingDataIngest; assert called with correct shape; assert response status 200'
+
+  - id: HP-2
+    title: 'POST /hitl-interview succeeds for code_review decisionType'
+    setup: 'Mock trainingDataIngest. Mock hitlDecisions SELECT to return empty array (no prior context).'
+    action: 'POST /hitl-interview with { storyId: "WINT-5099", phase: "review", decisionType: "code_review", interviewAnswers: { rationale: "LGTM", confidence: 0.85, alternativesConsidered: "Request changes", riskAssessment: "Minimal" }, featureVector: { storyId: "WINT-5099", phase: "review", decisionType: "code_review", storyComplexityScore: 5, agentPhase: "code_review", decisionContext: "No open comments" } }'
+    expected: 'HTTP 200; trainingDataIngest called with correct shape; no write to hitl_decisions'
+    evidence: 'Assert trainingDataIngest mock called; assert hitlDecisions insert never called'
+
+  - id: HP-3
+    title: 'hitlInterview MCP tool calls compute function directly (ARCH-001)'
+    setup: 'Import hitlInterview from src/index.ts in test; mock compute function and trainingDataIngest'
+    action: 'Call hitlInterview({ storyId: "WINT-5010", phase: "qa", decisionType: "qa_gate" }) with valid interviewAnswers'
+    expected: 'Compute function called directly (no HTTP self-call); trainingDataIngest called; returns success'
+    evidence: 'vi.mock compute module; assert mock called; assert no fetch/http calls'
+
+error_cases:
+  - id: EC-1
+    title: 'Missing required interviewAnswers fields → 422'
+    setup: 'No mocks needed for body validation path'
+    action: 'POST /hitl-interview with body missing confidence field in interviewAnswers'
+    expected: 'HTTP 422 with JSON body { error: "Validation error", details: [...] }'
+    evidence: 'Assert response status 422; no trainingDataIngest call'
+
+  - id: EC-2
+    title: 'Invalid decisionType value → 422'
+    setup: 'No mocks needed'
+    action: 'POST /hitl-interview with decisionType: "unknown_type"'
+    expected: 'HTTP 422 Zod validation error response'
+    evidence: 'Assert response status 422'
+
+  - id: EC-3
+    title: 'trainingDataIngest returns null (DB failure) → 500'
+    setup: 'Mock trainingDataIngest to return null'
+    action: 'POST /hitl-interview with valid payload'
+    expected: 'HTTP 500 with { error: "Failed to write training row" }'
+    evidence: 'Assert response status 500; assert logger.warn called'
+
+  - id: EC-4
+    title: 'Wrong HTTP method → 405'
+    setup: 'None'
+    action: 'GET /hitl-interview'
+    expected: 'HTTP 405 { error: "Method not allowed" }'
+    evidence: 'Assert response status 405'
+
+  - id: EC-5
+    title: 'Unknown path → 404'
+    setup: 'None'
+    action: 'POST /unknown-path'
+    expected: 'HTTP 404 { error: "Not found" }'
+    evidence: 'Assert response status 404'
+
+edge_cases:
+  - id: ED-1
+    title: 'confidence = 0 (lower boundary) is accepted'
+    setup: 'Mock trainingDataIngest'
+    action: 'POST /hitl-interview with confidence: 0'
+    expected: 'HTTP 200; FeatureVectorSchema allows 0; trainingDataIngest called'
+    evidence: 'Assert no validation error; assert 200 response'
+
+  - id: ED-2
+    title: 'confidence = 1 (upper boundary) is accepted'
+    setup: 'Mock trainingDataIngest'
+    action: 'POST /hitl-interview with confidence: 1'
+    expected: 'HTTP 200'
+    evidence: 'Assert 200'
+
+  - id: ED-3
+    title: 'storyId with no hitl_decisions context still succeeds'
+    setup: 'Mock hitlDecisions SELECT to return empty array; mock trainingDataIngest'
+    action: 'POST /hitl-interview with storyId that has no prior hitl_decisions rows'
+    expected: 'HTTP 200; feature vector decisionContext defaults gracefully (empty string or "none")'
+    evidence: 'Assert trainingDataIngest called; assert decisionContext is string (not null/undefined)'
+
+  - id: ED-4
+    title: 'story_approval decisionType is accepted'
+    setup: 'Mock trainingDataIngest'
+    action: 'POST /hitl-interview with decisionType: "story_approval"'
+    expected: 'HTTP 200; enum covers all three valid values'
+    evidence: 'Assert 200'
+
+  - id: ED-5
+    title: 'storyComplexityScore of 0 is valid'
+    setup: 'Mock trainingDataIngest'
+    action: 'POST /hitl-interview with storyComplexityScore: 0'
+    expected: 'HTTP 200; numeric 0 is a valid score'
+    evidence: 'Assert 200; no validation error'
+
+tooling_evidence:
+  backend:
+    http_requests:
+      - 'POST http://localhost:3094/hitl-interview Content-Type: application/json { storyId, phase, decisionType, interviewAnswers, featureVector }'
+    assertions:
+      - 'Response status 200 on valid payload'
+      - 'Response body contains success: true and trainingRowId'
+      - 'trainingDataIngest called with { dataType: "hitl_interview", features: <FeatureVector>, labels: <InterviewAnswers>, storyId }'
+      - 'hitl_decisions table never written to (no INSERT on hitl_decisions)'
+      - 'Response status 422 on Zod validation failure'
+      - 'Response status 500 when trainingDataIngest returns null'
+  frontend: ~
+
+manual_cases:
+  - id: MC-1
+    title: 'MCP tool hitlInterview visible in MCP tool listing'
+    steps:
+      - 'Start sidecar: node dist/server.js (PORT=3094)'
+      - 'Verify sidecar logs "[sidecar-hitl-interview] Server started { port: 3094 }"'
+      - 'Import hitlInterview from dist/index.js and call with valid params'
+    expected: 'Returns training row ID or null on DB failure; no console.log output'
+
+fixture_definitions:
+  - name: validHitlInterviewBody
+    type: object
+    description: 'Full valid POST body with all required fields for qa_gate decision type'
+  - name: validInterviewAnswers
+    type: object
+    description: 'InterviewAnswers with rationale, confidence 0-1, alternativesConsidered, riskAssessment'
+  - name: validFeatureVector
+    type: object
+    description: 'FeatureVector with storyId, phase, decisionType, storyComplexityScore, agentPhase, decisionContext'
+  - name: mockTrainingDataIngestResult
+    type: object
+    description: 'Resolved value from trainingDataIngest: { id, dataType, features, labels, storyId, collectedAt, validated, createdAt }'
+
+risks:
+  - 'trainingDataIngest cross-package import — if @repo/knowledge-base is not a workspace dependency, the import path must be verified before implementation'
+  - 'hitl_decisions Drizzle table may need @repo/db to expose it — verify hitlDecisions is exported from @repo/db schema'
+  - 'Port 3094 must not conflict with future sidecars — infra/ports.cjs must be updated as part of implementation'
+  - 'confidence field: AC-7 says "number 0-1" but seed description initially said "0-100" — story file must clarify 0-1 range per Zod .min(0).max(1)'

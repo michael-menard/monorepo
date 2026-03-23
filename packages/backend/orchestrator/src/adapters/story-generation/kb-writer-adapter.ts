@@ -28,21 +28,23 @@ export const KbIngestStoryInputSchema = z.object({
   story_id: z.string().min(1),
   title: z.string().min(1),
   description: z.string(),
-  feature: z.string(),
-  tags: z.array(z.string()),
-  acceptance_criteria: z.array(z.string()),
-  subtasks: z.array(z.string()),
-  risk: z.enum(['low', 'medium', 'high']),
-  minimum_path: z.boolean(),
-  parent_plan_slug: z.string(),
-  parent_flow_id: z.string(),
-  flow_step_reference: z.string(),
-  dependencies: z.array(
-    z.object({
-      depends_on: z.string(),
-      type: z.string(),
-    }),
-  ),
+  feature: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  acceptance_criteria: z.array(z.string()).optional(),
+  subtasks: z.array(z.string()).optional(),
+  risk: z.enum(['low', 'medium', 'high']).optional(),
+  minimum_path: z.boolean().optional(),
+  parent_plan_slug: z.string().optional(),
+  parent_flow_id: z.string().optional(),
+  flow_step_reference: z.string().optional(),
+  dependencies: z
+    .array(
+      z.object({
+        depends_on: z.string(),
+        type: z.string(),
+      }),
+    )
+    .optional(),
 })
 
 export type KbIngestStoryInput = z.infer<typeof KbIngestStoryInputSchema>
@@ -122,8 +124,7 @@ export function createKbWriterAdapter(
     // Sequentially write each story
     for (const story of stories) {
       try {
-        // Validate the story payload against the ingest schema before calling KB
-        const input = KbIngestStoryInputSchema.parse({
+        const input: KbIngestStoryInput = {
           story_id: story.story_id,
           title: story.title,
           description: story.description,
@@ -137,7 +138,7 @@ export function createKbWriterAdapter(
           parent_flow_id: story.parent_flow_id,
           flow_step_reference: story.flow_step_reference,
           dependencies: story.dependencies,
-        })
+        }
 
         const result = await kbIngestStory(input)
 

@@ -42,9 +42,7 @@ export type KbStoryRecord = z.infer<typeof KbStoryRecordSchema>
  *
  * Returns an array of story records with at least { story_id }.
  */
-export type KbListStoriesFn = (
-  input: KbListStoriesInput,
-) => Promise<KbStoryRecord[]>
+export type KbListStoriesFn = (input: KbListStoriesInput) => Promise<KbStoryRecord[]>
 
 // ============================================================================
 // Helpers
@@ -72,9 +70,7 @@ export function extractNumericSuffix(storyId: string): number | null {
 export function findMaxSuffix(existingIds: string[]): number {
   if (existingIds.length === 0) return DEFAULT_START - STEP
 
-  const suffixes = existingIds
-    .map(extractNumericSuffix)
-    .filter((n): n is number => n !== null)
+  const suffixes = existingIds.map(extractNumericSuffix).filter((n): n is number => n !== null)
 
   if (suffixes.length === 0) return DEFAULT_START - STEP
 

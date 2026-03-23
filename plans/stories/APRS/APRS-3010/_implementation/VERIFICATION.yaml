@@ -1,0 +1,112 @@
+schema: 1
+story_id: APRS-3010
+timestamp: '2026-03-23T21:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 100
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: Backend LangGraph nodes — no UI, no API endpoints
+  http:
+    pass: 0
+    fail: 0
+    status: n/a
+    reason: No HTTP endpoints introduced
+coverage: 92.59
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    notes: >-
+      PlanRevalidationStateAnnotation with 8 fields (planSlug, rawPlan, contextSnapshot, driftFindings, verdict,
+      revalidationPhase, warnings, errors), 5 Zod schemas, append reducers for driftFindings/warnings/errors confirmed
+      in plan-revalidation-state.ts
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    notes: >-
+      load-context.ts implements 3 injectable adapters (KBPlanAdapterFn, KBStoryAdapterFn, CodebaseStateAdapterFn) with
+      4 exported phase functions; @repo/logger used throughout
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    notes: >-
+      check-already-implemented.ts uses ArtifactLookupFn (no LLM), heuristic checks completion artifact OR 90%+ story
+      completion ratio, confirmed in source
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    notes: >-
+      check-approach-valid.ts defines LlmApproachValidatorFn as optional; node gracefully skips when adapter is absent;
+      severity is confidence-based
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    notes: >-
+      check-dependencies.ts uses DependencyGraphQueryFn; missing deps emit blocking finding, blocked deps emit warning
+      finding
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    notes: >-
+      check-scope-drift.ts defines LlmScopeDriftDetectorFn as optional; graceful skip when absent; severity escalation
+      confirmed
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    notes: >-
+      100 unit tests across 6 test files executed and confirmed passing: plan-revalidation-state (18),
+      check-already-implemented (13), check-approach-valid (17), check-dependencies (13), check-scope-drift (21),
+      load-context (18)
+architecture_compliant: true
+architecture_notes:
+  - Zod-first types throughout — no TypeScript interfaces
+  - '@repo/logger used exclusively, no console.log'
+  - No barrel files introduced
+  - Injectable adapter pattern consistent with plan-refinement precedent
+  - Exported phase functions enable full unit testability
+  - Node factory pattern followed
+pre_existing_failures:
+  confirmed: true
+  affected_files:
+    - src/nodes/sync/__tests__/doc-sync.test.ts
+    - src/nodes/health/__tests__/health-gate.integration.test.ts
+    - src/adapters/__tests__/index-adapter.integration.test.ts
+    - src/adapters/__tests__/story-file-adapter.test.ts
+    - src/nodes/qa/__tests__/evidence-judge.test.ts
+  notes: >-
+    Failures are in files outside APRS-3010 scope, attributable to missing @repo/db, missing @repo/workflow-logic,
+    missing wint.codebase_health DB table. None touch plan-revalidation.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Optional LLM adapter pattern (undefined = skip) is a clean way to make LLM-dependent nodes testable without
+      mocking heavy SDK dependencies
+    category: pattern
+    tags:
+      - langgraph
+      - adapter-injection
+      - testing
+  - lesson: >-
+      Scoping test runs to the changed directory (vitest run src/nodes/plan-revalidation) is essential when the package
+      has pre-existing integration test failures unrelated to the story
+    category: pattern
+    tags:
+      - vitest
+      - qa
+      - test-isolation
+tokens:
+  in: 18000
+  out: 3500

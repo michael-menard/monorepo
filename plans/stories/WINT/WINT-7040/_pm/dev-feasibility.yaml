@@ -1,0 +1,117 @@
+feasible: true
+confidence: high
+rationale: 'Migration pattern is well-established (WINT-7070, WINT-7060, WINT-7050 precedents). All target agents have clear KB equivalents for their filesystem operations. The most complex decision (scrum-master STATE.md) has a clear resolution path: deprecation is faster and lower risk than rewriting. uat-orchestrator and uat-precondition-check are trivial quick wins. review-aggregate-leader and context-warmer require verification only.'
+complexity: medium
+change_surface:
+  areas:
+    - '.claude/agents/uat-orchestrator.agent.md'
+    - '.claude/agents/uat-precondition-check.agent.md'
+    - '.claude/agents/review-aggregate-leader.agent.md'
+    - '.claude/agents/context-warmer.agent.md'
+    - '.claude/agents/commitment-gate-agent.agent.md'
+    - '.claude/agents/scrum-master-loop-leader.agent.md'
+    - '.claude/agents/scrum-master-setup-leader.agent.md'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Verify compatibility shim still functional after changes (no deploy, but shim validation required)'
+risks:
+  - finding: 'scrum-master-setup-leader has 16 filesystem refs concentrated in STATE.md management — no direct KB equivalent exists'
+    mitigation: 'Deprecation path (KB OPP-002): add deprecation header citing orchestrate-story-flow.sh + LangGraph supersession. Verify no active invocations via grep before deprecating. This is lower risk than attempting a full KB state-machine rewrite in this story.'
+  - finding: 'review-aggregate-leader is partially migrated — regression risk if existing KB calls are accidentally removed'
+    mitigation: 'Read current state before modifying. Only add missing KB calls and clean Output section prose. Use git diff to confirm no existing KB calls removed.'
+  - finding: 'dev-execute-leader (5 refs) excluded from scope — WINT-7050 conflict not yet resolved at story generation time'
+    mitigation: 'AC-1 gates this explicitly. Do not touch dev-execute-leader in this story. WINT-7050 owns it.'
+  - finding: 'workflow-retro (35 refs) excluded from scope — WINT-7080 conflict not yet resolved'
+    mitigation: 'AC-1 gates this explicitly. Do not touch workflow-retro in this story. WINT-7080 owns it.'
+missing_requirements: []
+evidence_expectations:
+  - 'grep scan output showing zero {FEATURE_DIR} refs in all 7 migrated files'
+  - 'grep output showing zero _implementation/ refs in all 7 migrated files'
+  - 'grep output showing ADR-005 constraint language intact in uat agent files'
+  - 'Documented architectural decision for scrum-master agents (deprecation or migration) in KB'
+subtasks:
+  - id: ST-1
+    title: 'Verify context-warmer is clean (0 refs)'
+    goal: 'Confirm context-warmer.agent.md has no filesystem refs and mark as verified-clean'
+    files_to_read:
+      - '.claude/agents/context-warmer.agent.md'
+    files_to_modify: []
+    acs: ['AC-5']
+    depends_on: none
+    verification: 'grep -n "FEATURE_DIR|_implementation/|story.yaml|STATE.md" .claude/agents/context-warmer.agent.md returns no matches'
+    estimated_tokens: 1000
+  - id: ST-2
+    title: 'Migrate uat-orchestrator and uat-precondition-check (trivial — ADR-LOG.md ref removal)'
+    goal: 'Replace any hardcoded ADR-LOG.md path references with kb_search query or remove; preserve ADR-005 constraint language'
+    files_to_read:
+      - '.claude/agents/uat-orchestrator.agent.md'
+      - '.claude/agents/uat-precondition-check.agent.md'
+    files_to_modify:
+      - '.claude/agents/uat-orchestrator.agent.md'
+      - '.claude/agents/uat-precondition-check.agent.md'
+    acs: ['AC-3']
+    depends_on: none
+    verification: 'grep -n "ADR-LOG.md|FEATURE_DIR|_implementation/" on both files returns zero matches; ADR-005 language present'
+    estimated_tokens: 3000
+  - id: ST-3
+    title: 'Verify review-aggregate-leader (partially migrated — regression check + Output prose cleanup)'
+    goal: 'Confirm existing KB tool call bodies are intact, check Output section prose for stale path references, clean if needed'
+    files_to_read:
+      - '.claude/agents/review-aggregate-leader.agent.md'
+    files_to_modify:
+      - '.claude/agents/review-aggregate-leader.agent.md'
+    acs: ['AC-4']
+    depends_on: none
+    verification: 'grep for kb_read_artifact and kb_write_artifact returns results; grep for FEATURE_DIR or _implementation/ returns zero'
+    estimated_tokens: 2500
+  - id: ST-4
+    title: 'Migrate commitment-gate-agent (7 refs — READINESS.yaml, GAPS-RANKED.yaml, ATTACK.yaml)'
+    goal: 'Replace READINESS.yaml, GAPS-RANKED.yaml, ATTACK.yaml filesystem reads/writes with kb_read_artifact and kb_write_artifact calls; clean Output section prose'
+    files_to_read:
+      - '.claude/agents/commitment-gate-agent.agent.md'
+    files_to_modify:
+      - '.claude/agents/commitment-gate-agent.agent.md'
+    acs: ['AC-6', 'AC-10', 'AC-12', 'AC-13']
+    depends_on: none
+    verification: 'grep -n "READINESS.yaml|GAPS-RANKED.yaml|ATTACK.yaml|FEATURE_DIR|_implementation/" returns zero matches; kb_read_artifact/kb_write_artifact calls present'
+    estimated_tokens: 6000
+  - id: ST-5
+    title: 'Make scrum-master architectural decision — deprecation check'
+    goal: 'Grep .claude/ for active /scrum-master invocations; if none found proceed with deprecation; if found escalate'
+    files_to_read:
+      - '.claude/agents/scrum-master-setup-leader.agent.md'
+      - '.claude/agents/scrum-master-loop-leader.agent.md'
+    files_to_modify: []
+    acs: ['AC-7']
+    depends_on: none
+    verification: 'grep -r "/scrum-master" .claude/ (excluding agent files themselves) returns zero matches OR escalation documented'
+    estimated_tokens: 2000
+  - id: ST-6
+    title: 'Apply scrum-master migration per AC-7 decision (deprecation or KB-native)'
+    goal: 'Add deprecation header comments to scrum-master-setup-leader and scrum-master-loop-leader (if deprecation path chosen), OR replace STATE.md and AGENT-CONTEXT.md with KB equivalents; clean Output section prose'
+    files_to_read:
+      - '.claude/agents/scrum-master-setup-leader.agent.md'
+      - '.claude/agents/scrum-master-loop-leader.agent.md'
+    files_to_modify:
+      - '.claude/agents/scrum-master-setup-leader.agent.md'
+      - '.claude/agents/scrum-master-loop-leader.agent.md'
+    acs: ['AC-7', 'AC-8', 'AC-9', 'AC-10', 'AC-12', 'AC-13']
+    depends_on: ST-5
+    verification: 'Either DEPRECATED header present OR zero STATE.md/_workflow/ refs remain; AGENT-CONTEXT.md write replaced with kb_write_artifact if migrated'
+    estimated_tokens: 8000
+  - id: ST-7
+    title: 'Final grep verification scan across all migrated files'
+    goal: 'Run comprehensive grep scan on all 7 agent files to confirm zero remaining {FEATURE_DIR} and _implementation/ refs; confirm shim unmodified'
+    files_to_read:
+      - '.claude/agents/uat-orchestrator.agent.md'
+      - '.claude/agents/uat-precondition-check.agent.md'
+      - '.claude/agents/review-aggregate-leader.agent.md'
+      - '.claude/agents/context-warmer.agent.md'
+      - '.claude/agents/commitment-gate-agent.agent.md'
+      - '.claude/agents/scrum-master-loop-leader.agent.md'
+      - '.claude/agents/scrum-master-setup-leader.agent.md'
+    files_to_modify: []
+    acs: ['AC-11', 'AC-13']
+    depends_on: ST-6
+    verification: 'grep -rn "FEATURE_DIR|_implementation/" on all 7 files returns zero matches; git diff on shim file shows no changes'
+    estimated_tokens: 2000

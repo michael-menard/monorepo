@@ -1,186 +1,134 @@
-schema: 2
-story_id: APRS-4010
-timestamp: '2026-03-22T23:30:00.000Z'
-subtask_source: story
+schema: 1
+story_id: APRS-1040
+timestamp: '2026-03-21T23:00:00Z'
 steps:
   - id: 1
-    subtask_id: ST-1
-    description: >-
-      Create story-generation-state.ts with StoryGenerationStateAnnotation, SlicedFlowSchema, GeneratedStorySchema,
-      GenerationPhaseSchema Zod types using Annotation.Root pattern from plan-refinement-state.ts
+    description: Add planFlows and planFlowSteps Drizzle table definitions to apps/api/knowledge-base/src/db/schema/workflow.ts
     files:
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
     files_to_read:
-      - packages/backend/orchestrator/src/state/plan-refinement-state.ts
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
     dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
     acs_covered:
       - AC-1
       - AC-2
-  - id: 2
-    subtask_id: ST-2
-    description: >-
-      Implement load_refined_plan node with injectable PlanLoaderFn adapter (reads confirmed flows from KB via plan
-      loader, validates NormalizedPlanSchema, sets generationPhase) + unit tests
-    files:
-      - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/normalize-plan.test.ts
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
-    dependencies:
-      - 1
-    slice: packages
-    verification: pnpm vitest run --reporter=verbose load-refined-plan
-    acs_covered:
       - AC-3
-  - id: 3
-    subtask_id: ST-3
+  - id: 2
     description: >-
-      Implement slice_flows node with DEC-2 slicing heuristic (distinct side-effect or actor boundary = separate
-      SlicedFlow, pure data-passing steps merged into predecessor) + unit tests
+      Create SQL migration 1120_aprs1040_plan_flows.sql with safety preamble, CREATE TABLE IF NOT EXISTS for plan_flows
+      and plan_flow_steps, CHECK constraints, indexes, and completion DO block
     files:
-      - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
+      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     files_to_read:
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
+      - apps/api/knowledge-base/src/db/migrations/1110_wint1130_worktrees_table.sql
     dependencies:
       - 1
-    slice: packages
-    verification: pnpm vitest run --reporter=verbose slice-flows
+    slice: backend
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     acs_covered:
       - AC-4
-  - id: 4
-    subtask_id: ST-4
+  - id: 3
     description: >-
-      Implement generate_stories node with injectable LlmAdapterFn (title/tags template-derived,
-      description/AC/subtasks/risk LLM-generated per DEC-3, each story independently testable) + unit tests
+      Create pgTAP verification test file pgtap/1120_aprs1040_plan_flows_test.sql covering table existence, column
+      types, FK integrity, CHECK constraints, cascade delete, and index existence
     files:
-      - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
-      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
     files_to_read:
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
-      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
-    dependencies:
-      - 1
-      - 3
-    slice: packages
-    verification: pnpm vitest run --reporter=verbose generate-stories
-    acs_covered:
-      - AC-5
-  - id: 5
-    subtask_id: ST-5
-    description: >-
-      Wire story-generation graph: START->load_refined_plan->slice_flows->generate_stories->END with conditional error
-      edges at each step. Export createStoryGenerationGraph factory with injectable adapters. Add graph compilation
-      test.
-    files:
-      - packages/backend/orchestrator/src/graphs/story-generation.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
-      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     dependencies:
       - 2
-      - 3
-      - 4
-    slice: packages
-    verification: pnpm vitest run --reporter=verbose story-generation
+    slice: backend
+    verification: psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
     acs_covered:
-      - AC-6
-      - AC-7
+      - AC-5
 files_to_change:
-  - path: packages/backend/orchestrator/src/state/story-generation-state.ts
+  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
+    action: modify
+    reason: Add planFlows and planFlowSteps table definitions with Drizzle ORM, plus exported inferred types
+  - path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     action: create
-    reason: New state annotation for story-generation graph (AC-1, AC-2)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
+    reason: >-
+      SQL migration creating workflow.plan_flows and workflow.plan_flow_steps tables with all constraints, indexes, and
+      comments
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
     action: create
-    reason: load_refined_plan node with injectable PlanLoaderFn (AC-3)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
-    action: create
-    reason: Unit tests for load_refined_plan node (AC-7)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
-    action: create
-    reason: slice_flows node with DEC-2 heuristic (AC-4)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
-    action: create
-    reason: Unit tests for slice_flows node (AC-7)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
-    action: create
-    reason: generate_stories node with injectable LlmAdapterFn (AC-5)
-  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
-    action: create
-    reason: Unit tests for generate_stories node (AC-7)
-  - path: packages/backend/orchestrator/src/graphs/story-generation.ts
-    action: create
-    reason: Story generation graph wiring with conditional edges (AC-6)
-  - path: packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
-    action: create
-    reason: Graph compilation test (AC-7)
+    reason: >-
+      pgTAP verification tests for AC-5: table existence, column types, CHECK constraints, FK cascade, and index
+      presence
 commands_to_run:
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after ST-1 and after all code changes
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after Drizzle schema changes in step 1
     required: true
-  - command: pnpm vitest run --reporter=verbose --filter @repo/orchestrator
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
+    required: true
+  - command: pnpm test --filter @repo/knowledge-base
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      story-generation-state.ts exports StoryGenerationStateAnnotation with all required fields using Annotation.Root
-      pattern; pnpm check-types passes
-    evidence_type: command
+      Drizzle planFlows table in workflow.ts with source (text, CHECK IN ('user','inferred','merged')), confidence
+      (numeric 0-1), status (text, CHECK IN ('approved','unconfirmed','rejected','deferred')) columns; migration creates
+      workflow.plan_flows with matching DDL
+    evidence_type: file
   - ac_id: AC-2
     planned_evidence: >-
-      GeneratedStorySchema defined in story-generation-state.ts with all kb_create_story-compatible fields; pnpm
-      check-types passes
-    evidence_type: command
+      Drizzle planFlowSteps table in workflow.ts with FK to plan_flows ON DELETE CASCADE; migration creates
+      workflow.plan_flow_steps
+    evidence_type: file
   - ac_id: AC-3
     planned_evidence: >-
-      Unit test: load-refined-plan.test.ts covers success path (sets generationPhase=slice_flows), validation failure
-      (sets phase=error), and injectable adapter
-    evidence_type: test
+      planFlows and planFlowSteps exported from workflow.ts with $inferSelect/$inferInsert type aliases; pnpm
+      check-types passes
+    evidence_type: command
   - ac_id: AC-4
     planned_evidence: >-
-      Unit test: slice-flows.test.ts verifies distinct side-effect/actor boundary = separate SlicedFlow, pure
-      data-passing steps merged into predecessor, single-step flow produces one slice
-    evidence_type: test
+      Migration file 1120_aprs1040_plan_flows.sql with safety preamble (CREATE TABLE IF NOT EXISTS), CHECK constraints
+      on source and status, FK to workflow.plans with ON DELETE CASCADE, supporting indexes, and DO $$ completion notice
+      block
+    evidence_type: file
   - ac_id: AC-5
     planned_evidence: >-
-      Unit test: generate-stories.test.ts with mocked LlmAdapterFn verifies GeneratedStory[] output, title/tags
-      template-derived, independent testability per story
-    evidence_type: test
-  - ac_id: AC-6
-    planned_evidence: >-
-      story-generation.ts graph compiles and routes correctly:
-      START->load_refined_plan->slice_flows->generate_stories->END with error->END at each step
-    evidence_type: test
-  - ac_id: AC-7
-    planned_evidence: >-
-      All 4 test files present and passing: load-refined-plan.test.ts, slice-flows.test.ts, generate-stories.test.ts,
-      story-generation.test.ts
-    evidence_type: test
-architectural_decisions: []
-complexity: moderate
+      pgTAP test file 1120_aprs1040_plan_flows_test.sql with assertions covering: table existence, column
+      presence/types, FK integrity, CHECK constraint violations rejected, cascade delete behavior, index existence
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: Use pgEnum() or text() + CHECK constraint for source/status columns?
+    decision: Use text() columns with SQL CHECK constraints in migration
+    rationale: >-
+      All existing workflow schema tables (stories.state, plans.status, etc.) use plain text() columns. pgEnum() is not
+      used anywhere in workflow.ts. text() + CHECK is consistent with established pattern and easier to extend.
+    decided_by: auto
+    kb_decision_id: 48eb87a5-e96b-4f8c-90f5-35ab9e07abb5
+  - id: ARCH-002
+    question: Migration slot number for 1120?
+    decision: Use migration slot 1120 (next after 1110_wint1130_worktrees_table.sql)
+    rationale: 'Sequential numbering: last numbered migration is 1110. 1120 is the next logical slot.'
+    decided_by: auto
+  - id: ARCH-003
+    question: 'FK target for plan_flows: plans.id (UUID) or plans.plan_slug (text)?'
+    decision: FK to workflow.plans(id) UUID primary key
+    rationale: >-
+      workflow.plans has id UUID as primary key. Other child tables (plan_details, planRevisionHistory, planEmbeddings)
+      all reference plans.id. plan_slug FK is only used in peer-level tables (plan_dependencies, plan_story_links).
+      plan_flows is a child of a plan record, so plans.id is the correct anchor.
+    decided_by: auto
+complexity: simple
 notes:
+  - Story has no subtasks — steps derived from ACs per schema:1 mode
+  - 'ARCH-001: text()+CHECK chosen over pgEnum to match all existing workflow.ts column patterns'
+  - 'ARCH-002: Migration slot 1120 is next sequential slot after 1110'
+  - 'ARCH-003: FK to plans.id UUID (not plan_slug) consistent with plan_details, plan_revision_history, plan_embeddings'
   - >-
-    autonomy_level=aggressive: no architectural decisions to escalate — all decisions pre-resolved in story (DEC-1
-    through DEC-5)
-  - >-
-    Pattern: follows plan-refinement exactly — Annotation.Root, injectable adapters, createXxxNode factory, exported
-    phase functions for testability
-  - 'GeneratedStorySchema uses minimum_path: z.boolean().default(false) per DEC-4'
-  - >-
-    slice_flows heuristic (DEC-2): actor boundary or distinct side-effect = new SlicedFlow; pure data-passing within
-    same actor merged into predecessor; single-step flow = exactly one slice
-  - >-
-    generate_stories (DEC-3): title from flow.name + step scope (template), tags from plan.tags + actor (template),
-    description/AC/subtasks/risk from LLM
-  - No PHASE_TO_CHECKPOINT_MAP changes, no persistent checkpointer, no wire_dependencies/validate_graph per non-goals
-  - >-
-    Subtask ST-2 and ST-3 both depend on ST-1 (state schema) but are otherwise independent — can be implemented in
-    parallel
+    confidence column: numeric(4,3) gives range 0.000–9.999; use CHECK (confidence >= 0 AND confidence <= 1) to enforce
+    0.0-1.0
+  - plan_flow_steps FK to plan_flows ON DELETE CASCADE; plan_flows FK to plans ON DELETE CASCADE — full cascade chain
+  - pgTAP test uses BEGIN/ROLLBACK wrapper and TEST-1040-* fixture story_id prefix
+  - 'Non-goal: No MCP tools, no rawContent migration, no embedding column'
+  - 'Risk: FK migration ordering — migration 1120 must run after 999_full_schema_baseline.sql (plans table) and 1110'
+  - 'Risk: Source enum values must align with APRS-2010 extract_flows output (user|inferred|merged)'

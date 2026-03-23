@@ -78,6 +78,10 @@
       "cache": false,
       "persistent": true
     },
+    "scrape": {
+      "cache": false,
+      "env": ["REBRICKABLE_*", "MINIO_*", "DATABASE_URL"]
+    },
     "clean": {
       "cache": false
     },

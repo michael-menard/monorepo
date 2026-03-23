@@ -1,0 +1,63 @@
+feasible: true
+confidence: high
+rationale: >
+  The primary deliverable is a .claude/agents/classification.agent.md agent-prompt file, following the established weekly-analyst.agent.md and workflow-retro.agent.md patterns. The ML pipeline MCP tools (mlModelGetActive, mlPredictionRecord) are already deployed and functional (WINT-0140). No new sidecar, no new HTTP server, and no new DB schema are required. The only TypeScript surface is an optional compute helper if classification logic exceeds what the agent prompt can orchestrate directly. Injectable DB pattern (ARCH-001) and fallback-first design (heuristic when no active model) keep the story self-contained and deliverable regardless of WINT-5010's production state.
+complexity: low
+change_surface:
+  areas:
+    - '.claude/agents/ (new agent file)'
+    - '.claude/agents/__tests__/ (content-inspection test)'
+    - 'Optional: packages/backend/ compute helper if classification logic required'
+  endpoints: []
+  deploy_touchpoints:
+    - 'No deploy steps required for agent-file-only deliverable'
+    - 'If compute helper added: pnpm build --filter @repo/classification-compute (or inline in existing package)'
+risks:
+  - finding: 'mlModelGetActive may return empty array if no active model registered (WINT-5010 not yet deployed)'
+    mitigation: 'Agent must define explicit heuristic fallback path. When mlModelGetActive returns [], log warning via @repo/logger and return deferred/null prediction. Do NOT call mlPredictionRecord with undefined modelId (FK constraint violation).'
+  - finding: 'Scope ambiguity: agent-only vs. agent + TypeScript compute helper'
+    mitigation: 'Default to agent-prompt-only (AC-1 through AC-7). Add TypeScript compute helper only if the agent instructions require inline computation not achievable via KB tool calls. This scopes the story to a 1-2 point effort.'
+missing_requirements:
+  - 'Concrete feature schema for classification input must be specified in agent Inputs section (e.g., storyComplexityScore, acCount, agentPhase, decisionType, confidence from hitl_interview rows)'
+  - 'Specify which classificationTarget maps to which modelType enum value (quality→quality_predictor, risk→risk_classifier, effort→effort_estimator)'
+evidence_expectations:
+  - 'classification.agent.md file present at .claude/agents/classification.agent.md'
+  - 'Content-inspection test passes: pnpm test --filter @repo/agents (or equivalent test runner targeting .claude/agents/__tests__/)'
+  - 'No TypeScript errors: pnpm check-types'
+  - 'No console.* usage in any TypeScript files (if compute helper added)'
+subtasks:
+  - id: ST-1
+    title: 'Author classification.agent.md with frontmatter and all required sections'
+    goal: 'Create the agent-prompt file with valid YAML frontmatter (type, permission_level, model, kb_tools, shared, story_id) and all required sections: Role, Mission, Inputs, Execution, Output, Completion Signal'
+    files_to_read:
+      - '.claude/agents/weekly-analyst.agent.md'
+      - '.claude/agents/workflow-retro.agent.md'
+    files_to_modify:
+      - '.claude/agents/classification.agent.md (CREATE)'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-5', 'AC-6']
+    depends_on: none
+    verification: 'File exists at .claude/agents/classification.agent.md; YAML frontmatter parseable'
+    estimated_tokens: 4000
+  - id: ST-2
+    title: 'Define heuristic fallback path in agent Execution section'
+    goal: 'Add explicit Execution phase logic: (1) call mlModelGetActive, (2) if empty → log warning + return heuristic/null, (3) if active model → compute features → call mlPredictionRecord'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts'
+      - 'apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts'
+    files_to_modify:
+      - '.claude/agents/classification.agent.md (UPDATE Execution section)'
+    acs: ['AC-4']
+    depends_on: ST-1
+    verification: 'Agent Execution section contains explicit empty-array check and fallback instructions'
+    estimated_tokens: 2000
+  - id: ST-3
+    title: 'Write content-inspection test for classification.agent.md'
+    goal: 'Create .claude/agents/__tests__/classification.test.ts that reads the agent file and asserts all required frontmatter fields and section headings are present'
+    files_to_read:
+      - '.claude/agents/__tests__/ (existing test files for pattern reference)'
+    files_to_modify:
+      - '.claude/agents/__tests__/classification.test.ts (CREATE)'
+    acs: ['AC-7']
+    depends_on: ST-1
+    verification: 'pnpm test -- classification.test.ts passes'
+    estimated_tokens: 3000

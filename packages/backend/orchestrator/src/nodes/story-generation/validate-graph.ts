@@ -109,10 +109,10 @@ export function createValidateGraphNode(config: { graphValidator?: GraphValidato
         }
       }
 
-      // Passed (with optional warnings) → complete
+      // Passed (with optional warnings) → write_to_kb
       return {
         validationResult,
-        generationPhase: 'complete',
+        generationPhase: 'write_to_kb',
         warnings: validationResult.warnings,
       }
     } catch (err) {

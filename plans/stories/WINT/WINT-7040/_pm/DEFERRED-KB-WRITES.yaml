@@ -1,0 +1,63 @@
+# Deferred KB Writes for WINT-7040
+# Generated: 2026-03-23
+# Reason: KB MCP tools not directly invokable from bash in this session context.
+# These writes should be executed when KB MCP is available.
+
+writes:
+  - operation: kb_update_story_status
+    payload:
+      story_id: WINT-7040
+      state: in_progress
+    phase: '0.6 — claim story'
+    priority: critical
+
+  - operation: kb_create_story_or_upsert
+    payload:
+      story_id: WINT-7040
+      feature: wint
+      title: 'Migrate BATCH-6 Agents (Workflow Orchestration) — UAT, Review, Scrum, Commitment Gate'
+      story_dir: 'plans/stories/WINT/WINT-7040'
+      story_file: 'plans/stories/WINT/WINT-7040/WINT-7040.md'
+      story_type: tech_debt
+      points: 5
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    phase: '4.5 — KB persistence'
+    priority: high
+
+  - operation: kb_write_artifact
+    payload:
+      story_id: WINT-7040
+      artifact_type: pm_test_plan
+      artifact_name: test-plan
+      content_file: plans/stories/WINT/WINT-7040/_pm/test-plan.yaml
+    phase: '4 — PM artifact'
+    priority: medium
+
+  - operation: kb_write_artifact
+    payload:
+      story_id: WINT-7040
+      artifact_type: pm_dev_feasibility
+      artifact_name: dev-feasibility
+      content_file: plans/stories/WINT/WINT-7040/_pm/dev-feasibility.yaml
+    phase: '4 — PM artifact'
+    priority: medium
+
+  - operation: kb_update_story_status
+    payload:
+      story_id: WINT-7040
+      metadata:
+        experiment_variant: control
+    phase: '4 — experiment variant (WKFL-008)'
+    priority: medium
+
+  - operation: kb_update_story_status
+    payload:
+      story_id: WINT-7040
+      state: backlog
+    phase: '5 — finalize state'
+    priority: high

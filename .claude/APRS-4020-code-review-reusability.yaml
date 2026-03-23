@@ -1,0 +1,38 @@
+reusability:
+  verdict: PASS
+  files_checked: 8
+  errors: 0
+  warnings: 0
+  findings: []
+  summary: |
+    All 8 touched files are backend orchestrator code implementing new story generation
+    graph logic. No duplication of shared package exports detected.
+
+    Analysis:
+    - story-generation-state.ts: Pure state schema definitions (SlicedFlow, GeneratedStory,
+      DependencyEdge, ValidationResult, GenerationPhase) — domain-specific to story
+      generation, not found in any shared packages.
+    - wire-dependencies.ts: Graph wiring logic (topological sorting via Kahn's algorithm,
+      parallel group computation, minimum-path assignment) — new algorithm specific to
+      this domain, not duplicated elsewhere.
+    - validate-graph.ts: Injectable graph validator pattern, consistent with other nodes
+      in orchestrator (diff-planner, metrics, freshness nodes all use injectable adapters).
+    - generate-stories.ts: Story generation with injectable LLM adapter, template functions
+      (deriveStoryTitle, deriveStoryTags, buildFlowStepReference) — all new, domain-specific.
+    - story-generation.ts: Graph composition using LangGraph StateGraph, composes the above
+      nodes with conditional routing. No duplication of conditional edge patterns.
+    - Test files: Unit + integration tests following existing test patterns in orchestrator.
+
+    No shared packages (app-component-library, accessibility, hooks, auth-hooks, auth-utils,
+    auth-services, cache, upload, upload-types, gallery, design-system, charts, file-list)
+    contain related exports or utilities that could replace the code in these files.
+
+    Code adheres to orchestrator conventions:
+    - Zod-first type definitions (no TypeScript interfaces)
+    - Injectable adapter functions for LLM, validation, plan loading
+    - Logger usage from @repo/logger
+    - LangGraph node factory pattern (createXxxNode functions)
+    - Async node implementations returning Partial<State>
+  tokens:
+    in: 8500
+    out: 800

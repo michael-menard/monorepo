@@ -1,0 +1,54 @@
+---
+generated_at: "2026-03-23T00:00:00Z"
+story_id: WINT-6060
+status: pending
+---
+
+# Deferred KB Writes for WINT-6060
+
+## Write 1: Story Status Claim (Phase 0.6)
+operation: kb_update_story_status
+payload:
+  story_id: WINT-6060
+  state: backlog
+  reason: >
+    Story generation complete. Reverting from in_progress to backlog state
+    since this is the final synthesized state (ready for elaboration/dev pickup).
+
+## Write 2: Experiment Variant (Phase 4 WKFL-008)
+operation: kb_update_story_status
+payload:
+  story_id: WINT-6060
+  metadata:
+    experiment_variant: control
+
+## Write 3: Story Metadata Update (Phase 4.5)
+operation: UPDATE stories
+payload:
+  story_id: WINT-6060
+  title: "Create weekly-analyst Agent (with kb_get_scoreboard MCP registration sub-task)"
+  feature: wint
+  story_dir: plans/stories/WINT/WINT-6060
+  story_file: plans/stories/WINT/WINT-6060/WINT-6060.md
+  story_type: feature
+  points: 3
+  priority: medium
+  state: backlog
+  touches_backend: true
+  touches_frontend: false
+  touches_database: false
+  touches_infra: false
+
+## Write 4: PM Artifacts
+artifacts_to_write:
+  - type: pm_test_plan
+    source_file: plans/stories/WINT/WINT-6060/_pm/test-plan.yaml
+    story_id: WINT-6060
+    phase: elaboration
+
+  - type: pm_dev_feasibility
+    source_file: plans/stories/WINT/WINT-6060/_pm/dev-feasibility.yaml
+    story_id: WINT-6060
+    phase: elaboration
+
+  # pm_uiux_notes omitted (skipped: true)

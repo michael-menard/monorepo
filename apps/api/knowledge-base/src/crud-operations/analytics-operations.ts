@@ -221,15 +221,15 @@ export async function kb_get_bottleneck_analysis(
     ? and(eq(stories.feature, validated.feature), activeCondition)
     : activeCondition
 
-  // Get state distribution for active stories (state replaced phase column)
+  // Get phase distribution for active stories
   const phaseDistribution = await deps.db
     .select({
-      phase: stories.state,
+      phase: stories.phase,
       count: sql<number>`count(*)::int`,
     })
     .from(stories)
     .where(phaseDistCondition)
-    .groupBy(stories.state)
+    .groupBy(stories.phase)
     .orderBy(desc(sql`count(*)`))
 
   // Build state distribution condition
@@ -260,7 +260,7 @@ export async function kb_get_bottleneck_analysis(
   const stuckStories = await deps.db
     .select({
       storyId: stories.storyId,
-      phase: stories.state,
+      phase: stories.phase,
       state: stories.state,
       updatedAt: stories.updatedAt,
     })
@@ -324,47 +324,41 @@ export async function kb_get_churn_analysis(
 }> {
   const validated = KbGetChurnAnalysisInputSchema.parse(input)
 
-  // Derive iteration count from storyOutcomes (reviewIterations + qaIterations)
-  // phase/iteration columns were removed from stories table
-  const iterationExpr = sql<number>`coalesce(${storyOutcomes.reviewIterations}, 0) + coalesce(${storyOutcomes.qaIterations}, 0)`
-
   // Build high churn condition
-  const highChurnConditions: SQL<unknown>[] = [gte(iterationExpr, validated.min_iterations)]
-  if (validated.feature) {
-    highChurnConditions.push(eq(stories.feature, validated.feature))
-  }
+  const iterationCondition = gte(stories.iteration, validated.min_iterations)
+  const highChurnCondition = validated.feature
+    ? and(eq(stories.feature, validated.feature), iterationCondition)
+    : iterationCondition
 
-  // Find high-churn stories (total iterations >= threshold)
+  // Find high-churn stories (iteration >= threshold)
   const highChurnStories = await deps.db
     .select({
       storyId: stories.storyId,
-      iteration: iterationExpr,
+      iteration: stories.iteration,
       feature: stories.feature,
-      phase: stories.state,
+      phase: stories.phase,
       state: stories.state,
     })
     .from(stories)
-    .innerJoin(storyOutcomes, eq(stories.storyId, storyOutcomes.storyId))
-    .where(and(...highChurnConditions))
-    .orderBy(desc(iterationExpr))
+    .where(highChurnCondition)
+    .orderBy(desc(stories.iteration))
     .limit(validated.limit)
 
   // Build feature averages condition
   const featureCondition = validated.feature ? eq(stories.feature, validated.feature) : undefined
 
-  // Get average iterations by feature (from stories with outcomes)
+  // Get average iterations by feature
   const featureAverages = await deps.db
     .select({
       feature: stories.feature,
-      avgIterations: sql<number>`avg(${iterationExpr})::float`,
+      avgIterations: sql<number>`avg(${stories.iteration})::float`,
       storyCount: sql<number>`count(*)::int`,
-      maxIterations: sql<number>`max(${iterationExpr})::int`,
+      maxIterations: sql<number>`max(${stories.iteration})::int`,
     })
     .from(stories)
-    .innerJoin(storyOutcomes, eq(stories.storyId, storyOutcomes.storyId))
     .where(featureCondition)
     .groupBy(stories.feature)
-    .orderBy(desc(sql`avg(${iterationExpr})`))
+    .orderBy(desc(sql`avg(${stories.iteration})`))
 
   return {
     high_churn_stories: highChurnStories.map(s => ({

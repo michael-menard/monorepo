@@ -1,0 +1,148 @@
+schema: 1
+story_id: WINT-5040
+timestamp: '2026-03-23T13:30:30Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 16
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt - backend MCP tools
+  http:
+    pass: 0
+    fail: 0
+    note: no .http files present
+coverage: 95
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: training-data-collect.ts:37-58
+    notes: >-
+      trainingDataCollect exported from training-data-collect.ts and index.ts. Accepts { datasetType, minRows, since }.
+      The since parameter maps to gte(agentInvocations.startedAt, new Date(since)) predicate at line 66.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: training-data-collect.ts:60-116
+    notes: >-
+      routing_dataset joins agent_invocations with story_outcomes via DISTINCT ON subquery. Features: { agentName,
+      phase, inputTokens, outputTokens, durationMs, status }. Labels: { finalVerdict, qualityScore }. Confirmed in
+      RoutingDatasetRowSchema in __types__/index.ts.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: training-data-collect.ts:118-181
+    notes: >-
+      quality_dataset: agentOutcomes → innerJoin(agentInvocations, eq(invocationId, id)) → innerJoin story_outcomes
+      DISTINCT ON subquery. Features: { testsWritten, testsPassed, testsFailed, lintErrors, typeErrors, codeQuality,
+      testCoverage }. Labels: { finalVerdict, qualityScore, reviewIterations, qaIterations }.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: training-data-collect.ts:183-228
+    notes: >-
+      preference_dataset joins hitlDecisions with trainingData on storyId. Features: { decisionType, storyId, operatorId
+      }. Labels: { rationale, confidence, alternativesConsidered, riskAssessment } extracted from tdLabels. NOTE: AC-4
+      description says feature 'phase' but AC-11 authoritative schema specifies 'operatorId' - implementation correctly
+      follows AC-11.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: training-dataset-export.ts:24-74 and index.ts:21
+    notes: >-
+      trainingDatasetExport exported from training-dataset-export.ts and index.ts. Accepts { datasetType, format:
+      'jsonl'|'csv', minCompleteness, minRows, since }. Returns { rows: string[], stats: DatasetStats } or
+      ColdStartResponse or validation failure.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: training-data-collect.ts:271-296
+    notes: >-
+      validateDataset() rejects: (a) rows.length < minRows with reason string, (b) featureCompleteness < 0.8 (80%
+      threshold), (c) distinctLabels < 2. Export also applies secondary minCompleteness threshold. All return { valid:
+      false, reason: string }.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: training-data-collect.ts:88-95, 150-157, 199-207
+    notes: >-
+      Cold-start detection in all three dataset collectors. Returns { coldStart: true, available: rows.length, required:
+      minRows, recommendation: string } when rows < minRows. ColdStartResponseSchema verified in
+      __types__/index.ts:291-298.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: __types__/index.ts:219-348
+    notes: >-
+      All required schemas present: DatasetTypeSchema, TrainingDataCollectInputSchema, RoutingDatasetRowSchema,
+      QualityDatasetRowSchema, PreferenceDatasetRowSchema, DatasetStatsSchema, ColdStartResponseSchema,
+      TrainingDataCollectOutputSchema, TrainingDatasetExportInputSchema, TrainingDatasetExportOutputSchema.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: __tests__/training-data-collect.test.ts
+    notes: >-
+      16 tests in training-data-collect.test.ts. All 16 pass. Tests cover: routing/quality/preference cold-start,
+      feature/label shape correctness, DB error handling, invalid input rejection, degenerate label distribution, JSONL
+      export, CSV export, cold-start propagation from export, completeness rejection, export logging. Coverage well
+      above 45%.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: grep search on new files
+    notes: >-
+      Grep for 'wint.' and 'kbar.' in all new .ts files under ml-pipeline/ returned zero matches. All table references
+      use workflow.* schema exclusively (via Drizzle ORM table references to agentInvocations, agentOutcomes,
+      storyOutcomes, hitlDecisions, trainingData).
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: __types__/index.ts:231-282
+    notes: >-
+      RoutingDatasetRowSchema: features { agentName: string, phase: string|null, inputTokens: number|null, outputTokens:
+      number|null, durationMs: number|null, status: string }, labels { finalVerdict: string, qualityScore: number }.
+      QualityDatasetRowSchema: features { testsWritten, testsPassed, testsFailed, lintErrors, typeErrors,
+      codeQuality|null, testCoverage|null }, labels { finalVerdict, qualityScore, reviewIterations, qaIterations }.
+      PreferenceDatasetRowSchema: features { decisionType, storyId, operatorId }, labels { rationale, confidence,
+      alternativesConsidered, riskAssessment }. Embedding vector excluded.
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: training-data-collect.ts:82-85, 144-147
+    notes: >-
+      Routing dataset uses: sql`(SELECT DISTINCT ON (story_id) story_id, final_verdict, quality_score FROM
+      workflow.story_outcomes ORDER BY story_id, created_at DESC) AS so`. Quality dataset uses same pattern extended
+      with review_iterations and qa_iterations. Both prevent row fan-out from non-unique story_id.
+architecture_compliant: true
+issues: []
+lessons_to_record:
+  - lesson: >-
+      AC-4 informal feature list ('phase') conflicted with AC-11 authoritative schema ('operatorId'). When story has
+      both an informal AC and a schema-level AC, the schema-level AC (with typed Zod definitions) is the authoritative
+      spec. Implementation correctly followed AC-11.
+    category: pattern
+    tags:
+      - spec
+      - zod
+      - acceptance-criteria
+  - lesson: >-
+      DISTINCT ON subquery pattern injected via Drizzle sql`` template literal is effective for deduplicating
+      story_outcomes joins without requiring a unique constraint on story_id. Pattern reusable for any
+      partitioned/non-unique join in the workflow schema.
+    category: reuse
+    tags:
+      - drizzle
+      - postgres
+      - deduplication
+      - workflow-schema
+  - lesson: >-
+      Chainable Drizzle mock pattern (createSelectChain) with vi.fn().mockReturnValue(chain) provides clean, reusable
+      test scaffolding for multi-join queries without real DB access.
+    category: pattern
+    tags:
+      - testing
+      - vitest
+      - drizzle
+      - mocking
+tokens:
+  in: 12000
+  out: 3000

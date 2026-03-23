@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  WINT-6060 delivers only two artifacts: MCP registration boilerplate in TypeScript
+  (tool-schemas.ts and tool-handlers.ts) and an agent markdown file
+  (.claude/agents/weekly-analyst.agent.md). Neither artifact has a UI surface.
+  No components, no Playwright evidence, no design system rules apply.

@@ -1,0 +1,96 @@
+story_id: APRS-4010
+phase: implementation
+iteration: 1
+generated_at: "2026-03-22"
+
+summary:
+  total_acs: 7
+  acs_met: 7
+  acs_missing: 0
+  e2e_status: exempt
+  e2e_reason: "Pure backend package implementation — no HTTP endpoints, no UI, no browser interaction"
+
+acceptance_criteria:
+  - id: AC-1
+    description: "StoryGenerationStateAnnotation defined with Annotation.Root pattern"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/state/story-generation-state.ts
+        detail: "StoryGenerationStateAnnotation exported using Annotation.Root with all required fields: planSlug, refinedPlan, flows, slicedFlows, generatedStories, generationPhase, errors, warnings"
+
+  - id: AC-2
+    description: "SlicedFlowSchema and GeneratedStorySchema with all required fields"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/state/story-generation-state.ts
+        detail: "SlicedFlowSchema: { flow_id, step_indices, scope_description }. GeneratedStorySchema: { title, description, acceptance_criteria[], subtasks[], tags[], risk, minimum_path (default false), parent_plan_slug, parent_flow_id, flow_step_reference }. GenerationPhaseSchema enum: load_plan|slice_flows|generate_stories|complete|error"
+
+  - id: AC-3
+    description: "load_refined_plan node: reads plan from KB, validates against NormalizedPlanSchema, extracts confirmed flows"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
+        detail: "Injectable PlanLoaderFn adapter (default no-op returns null). Validates with NormalizedPlanSchema.safeParse. Extracts confirmed flows via extractConfirmedFlows(). Sets generationPhase='slice_flows' on success, 'error' on failure."
+      - file: packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
+        detail: "14 tests covering: loader success/failure, validation, confirmed flow extraction, error phases. All pass."
+
+  - id: AC-4
+    description: "slice_flows node: slicing heuristic with DEC-2 — distinct side-effect/actor boundary = separate slice"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
+        detail: "isBoundaryStep() detects actor boundary changes and side-effect keywords (save/write/send/create/delete/update/emit/publish/notify/store/persist/dispatch/trigger). Single-step flows → exactly one slice. Pure data-passing merged into predecessor. Output: slicedFlows[] with flow_id, step_indices, scope_description."
+      - file: packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
+        detail: "24 tests covering all heuristic cases. All pass."
+
+  - id: AC-5
+    description: "generate_stories node: injectable LlmAdapterFn, template-derived title/tags, LLM-generated description/AC/subtasks/risk"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
+        detail: "LlmAdapterFn injectable. deriveStoryTitle() and deriveStoryTags() are template-derived (actor + flow name + plan tags). LLM generates description, acceptance_criteria, subtasks, risk. Falls back to template if LLM absent or fails. Each story independently testable."
+      - file: packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
+        detail: "19 tests. All pass."
+
+  - id: AC-6
+    description: "Graph: START→load_refined_plan→slice_flows→generate_stories→END with conditional edges"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/graphs/story-generation.ts
+        detail: "StateGraph with START→load_refined_plan (conditional: error→END) →slice_flows (conditional: error→END) →generate_stories→END. Conditional edges at each node."
+
+  - id: AC-7
+    description: "createStoryGenerationGraph factory exported with injectable adapters (planLoader, llmAdapter)"
+    status: met
+    evidence:
+      - file: packages/backend/orchestrator/src/graphs/story-generation.ts
+        detail: "createStoryGenerationGraph(config: { planLoader?, llmAdapter? }) factory exported."
+      - file: packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+        detail: "8 integration tests: graph compiles, invoke works, full run with mocked adapters, error exit paths, empty flow handling. All pass."
+
+verification:
+  type_check:
+    command: "cd packages/backend/orchestrator && pnpm check-types"
+    status: passed
+
+  unit_tests:
+    command: "pnpm vitest run src/nodes/story-generation/__tests__/ src/graphs/__tests__/story-generation.test.ts"
+    status: passed
+    total: 61
+    passed: 61
+    failed: 0
+
+  e2e_tests:
+    status: exempt
+    reason: "Pure backend package implementation — LangGraph nodes/graph with no HTTP endpoints or UI surface"
+
+files_created:
+  - packages/backend/orchestrator/src/state/story-generation-state.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
+  - packages/backend/orchestrator/src/graphs/story-generation.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/load-refined-plan.test.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/slice-flows.test.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
+  - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts

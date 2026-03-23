@@ -89,6 +89,7 @@ export type StoryUpdateStatusInput = z.infer<typeof StoryUpdateStatusInputSchema
  */
 export const StoryUpdateStatusOutputSchema = z
   .object({
+    id: z.string().uuid().optional(),
     storyId: z.string(),
     state: z.string().nullable(),
     updatedAt: z.date(),

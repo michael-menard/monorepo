@@ -1,0 +1,37 @@
+{
+  "story_id": "WINT-0230",
+  "generated_at": "2026-03-21T17:05:00Z",
+  "overall_verdict": "FAIL",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-7",
+      "ac_text": "ModelRouter and ModelRouterFactory exported from packages/backend/orchestrator/src/index.ts",
+      "verdict": "REJECT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence contains only a status claim ('ModelRouter and ModelRouterFactory exported from orchestrator index.ts') without concrete proof. No file path, no command output, no export listing provided. QA verification directly inspected src/index.ts and found ZERO occurrences of ModelRouter. The export was not added.",
+      "proof_required": "Provide exact file path (packages/backend/orchestrator/src/index.ts), line number range of export statements, and/or output of `grep -n ModelRouter src/index.ts` confirming the exports exist."
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "All integration tests pass with correct strategy version assertions",
+      "verdict": "REJECT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "Evidence claims 'All integration tests pass with correct version 1.1.0 assertions' but provides no file paths or test counts. QA verification executed the test suite and found 2 failures in src/models/__tests__/integration.test.ts: (1) line 57 asserts strategy_version === '1.0.0' but actual YAML has '1.1.0'; (2) line 241 asserts version.version === '1.0.0' but runtime returns '1.1.0'. The tests were NOT updated.",
+      "proof_required": "Provide test file path (src/models/__tests__/integration.test.ts), exact line numbers of updated assertions, test execution command, and passing test count. For example: 'Ran `pnpm test src/models/__tests__/integration.test.ts` in packages/backend/orchestrator: 123 passed, 0 failed'."
+    }
+  ],
+  "total_acs": 2,
+  "accepted": 0,
+  "challenged": 0,
+  "rejected": 2,
+  "metadata": {
+    "evidence_source": "KB artifact (story_artifacts.id=35617dca-f352-458d-8650-a713c2d6c55c)",
+    "verification_source": "VERIFICATION.yaml (iteration 1)",
+    "warnings": 0,
+    "notes": "Both ACs failed QA verification. Evidence claims do not match actual implementation state. AC-7: exports missing. AC-8: tests still contain hardcoded version strings that fail at runtime."
+  }
+}

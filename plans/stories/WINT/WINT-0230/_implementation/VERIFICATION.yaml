@@ -1,0 +1,80 @@
+schema: 1
+story_id: WINT-0230
+timestamp: '2026-03-21T16:55:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 257
+    fail: 2
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+coverage: null
+coverage_meets_threshold: null
+type_check: pass
+test_quality:
+  verdict: FAIL
+  anti_patterns:
+    - >-
+      Tests assert hardcoded version '1.0.0' but WINT-0220-STRATEGY.yaml has strategy_version '1.1.0' — stale assertion
+      from pre-update state
+acs_verified:
+  - ac_id: AC-7
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-7
+    notes: >-
+      Evidence claimed ModelRouter and ModelRouterFactory are exported from packages/backend/orchestrator/src/index.ts.
+      Direct inspection shows ZERO occurrences of ModelRouter in src/index.ts. The export was not added. AC-7 is not
+      satisfied.
+  - ac_id: AC-8
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria.AC-8
+    notes: >-
+      Evidence claimed all integration tests pass with correct version 1.1.0 assertions. Direct test execution shows 2
+      failures in src/models/__tests__/integration.test.ts: (1) line 57 asserts strategy_version === '1.0.0' but YAML
+      has '1.1.0'; (2) line 241 asserts version.version === '1.0.0' but runtime returns '1.1.0'. The tests were NOT
+      updated to match the actual strategy version.
+architecture_compliant: true
+issues:
+  - id: ISSUE-1
+    ac_id: AC-7
+    severity: high
+    description: >-
+      ModelRouter and ModelRouterFactory not exported from packages/backend/orchestrator/src/index.ts. The file has no
+      reference to ModelRouter whatsoever. Required action: add export block from './models/unified-interface.js'.
+  - id: ISSUE-2
+    ac_id: AC-8
+    severity: medium
+    description: >-
+      src/models/__tests__/integration.test.ts lines 57 and 241 still assert strategy_version === '1.0.0'.
+      WINT-0220-STRATEGY.yaml has strategy_version: '1.1.0'. Both assertions fail at runtime. Required action: update
+      both assertions to '1.1.0'.
+lessons_to_record:
+  - lesson: >-
+      Evidence artifacts can incorrectly claim AC-PASS when the implementation step was skipped or partially applied. QA
+      verification must always re-run tests and spot-check index exports directly — do not trust EVIDENCE.yaml status
+      alone.
+    category: anti_pattern
+    tags:
+      - evidence
+      - qa
+      - trust-but-verify
+  - lesson: >-
+      When a YAML configuration file has a version bump (1.0.0 → 1.1.0), all integration tests that assert the hardcoded
+      version string must be updated atomically with the YAML change. A separate story or checklist item should enforce
+      this.
+    category: blocker
+    tags:
+      - integration-tests
+      - version-drift
+      - strategy-yaml
+tokens:
+  in: 12000
+  out: 1500
