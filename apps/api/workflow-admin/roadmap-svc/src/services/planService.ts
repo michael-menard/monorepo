@@ -2,8 +2,14 @@ import { z } from 'zod'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { pgSchema, text, timestamp, integer, jsonb } from 'drizzle-orm/pg-core'
-import { plans, planStoryLinks, type Plan } from '@repo/knowledge-base/db'
-import { eq, ne, desc, sql, inArray, type SQL, and, or, like, asc } from 'drizzle-orm'
+import {
+  plans,
+  planStoryLinks,
+  planDependencies,
+  worktrees,
+  type Plan,
+} from '@repo/knowledge-base/db'
+import { eq, ne, desc, sql, inArray, type SQL, and, or, like, asc, isNull } from 'drizzle-orm'
 
 // Local schema definitions — explicit schema prefix ensures queries resolve correctly
 // regardless of DB search_path. Kept in sync with actual DB columns only.
@@ -272,7 +278,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
   const { page, limit, status, planType, priority, tags, excludeCompleted = true, search } = params
   const offset = (page - 1) * limit
 
-  const conditions: SQL[] = []
+  const conditions: SQL[] = [isNull(plans.deletedAt)]
 
   if (status && status.length > 0) {
     conditions.push(inArray(plans.status, status))
@@ -462,7 +468,11 @@ export const PlanWithDetailsSchema = z.object({
 export type PlanWithDetails = z.infer<typeof PlanWithDetailsSchema>
 
 export async function getPlanBySlug(slug: string): Promise<PlanWithDetails | null> {
-  const result = await database.select().from(plans).where(eq(plans.planSlug, slug)).limit(1)
+  const result = await database
+    .select()
+    .from(plans)
+    .where(and(eq(plans.planSlug, slug), isNull(plans.deletedAt)))
+    .limit(1)
 
   if (result.length === 0) {
     return null
@@ -1168,6 +1178,220 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
           }
         : null,
   }
+}
+
+// --- Impact Analysis & Retire ---
+
+const TERMINAL_STATES = ['cancelled', 'completed', 'UAT']
+
+export const PlanImpactSchema = z.object({
+  exclusiveStories: z.array(
+    z.object({
+      storyId: z.string(),
+      title: z.string(),
+      state: z.string().nullable(),
+      hasActiveWorktree: z.boolean(),
+    }),
+  ),
+  sharedStories: z.array(
+    z.object({
+      storyId: z.string(),
+      title: z.string(),
+      state: z.string().nullable(),
+      otherPlanSlugs: z.array(z.string()),
+    }),
+  ),
+  downstreamPlans: z.array(
+    z.object({
+      planSlug: z.string(),
+      title: z.string(),
+    }),
+  ),
+})
+
+export type PlanImpact = z.infer<typeof PlanImpactSchema>
+
+export async function getPlanImpactAnalysis(slug: string): Promise<PlanImpact | null> {
+  // Verify plan exists
+  const plan = await database
+    .select({ id: plans.id })
+    .from(plans)
+    .where(and(eq(plans.planSlug, slug), isNull(plans.deletedAt)))
+    .limit(1)
+
+  if (plan.length === 0) return null
+
+  // Get all stories linked to this plan (excluding terminal states)
+  const linkedStoryRows = await database
+    .select({
+      storyId: stories.storyId,
+      title: stories.title,
+      state: stories.state,
+    })
+    .from(planStoryLinks)
+    .innerJoin(stories, eq(planStoryLinks.storyId, stories.storyId))
+    .where(eq(planStoryLinks.planSlug, slug))
+
+  // For each story, count how many OTHER plans it's linked to
+  const storyIds = linkedStoryRows.map(s => s.storyId)
+
+  let otherLinksMap = new Map<string, string[]>()
+  if (storyIds.length > 0) {
+    const otherLinks = await database
+      .select({
+        storyId: planStoryLinks.storyId,
+        planSlug: planStoryLinks.planSlug,
+      })
+      .from(planStoryLinks)
+      .where(and(inArray(planStoryLinks.storyId, storyIds), ne(planStoryLinks.planSlug, slug)))
+
+    for (const link of otherLinks) {
+      if (!otherLinksMap.has(link.storyId)) otherLinksMap.set(link.storyId, [])
+      otherLinksMap.get(link.storyId)!.push(link.planSlug)
+    }
+  }
+
+  // Check active worktrees for exclusive stories
+  const exclusiveStoryIds = storyIds.filter(id => !otherLinksMap.has(id))
+  let activeWorktreeSet = new Set<string>()
+  if (exclusiveStoryIds.length > 0) {
+    const activeWorktrees = await database
+      .select({ storyId: worktrees.storyId })
+      .from(worktrees)
+      .where(and(inArray(worktrees.storyId, exclusiveStoryIds), eq(worktrees.status, 'active')))
+    activeWorktreeSet = new Set(activeWorktrees.map(w => w.storyId))
+  }
+
+  // Get downstream plans (plans that depend on this plan)
+  const downstreamRows = await database
+    .select({
+      planSlug: planDependencies.planSlug,
+      title: plans.title,
+    })
+    .from(planDependencies)
+    .innerJoin(plans, eq(planDependencies.planSlug, plans.planSlug))
+    .where(eq(planDependencies.dependsOnSlug, slug))
+
+  // Build result
+  const exclusiveStories = linkedStoryRows
+    .filter(s => !otherLinksMap.has(s.storyId))
+    .filter(s => !TERMINAL_STATES.includes(s.state ?? ''))
+    .map(s => ({
+      storyId: s.storyId,
+      title: s.title,
+      state: s.state,
+      hasActiveWorktree: activeWorktreeSet.has(s.storyId),
+    }))
+
+  const sharedStories = linkedStoryRows
+    .filter(s => otherLinksMap.has(s.storyId))
+    .map(s => ({
+      storyId: s.storyId,
+      title: s.title,
+      state: s.state,
+      otherPlanSlugs: otherLinksMap.get(s.storyId) ?? [],
+    }))
+
+  const downstreamPlans = downstreamRows.map(d => ({
+    planSlug: d.planSlug,
+    title: d.title,
+  }))
+
+  return { exclusiveStories, sharedStories, downstreamPlans }
+}
+
+export const RetireActionSchema = z.enum(['delete', 'supersede'])
+export type RetireAction = z.infer<typeof RetireActionSchema>
+
+export async function executePlanRetire(
+  slug: string,
+  action: RetireAction,
+): Promise<{ success: boolean; error?: string }> {
+  // Verify plan exists
+  const planRows = await database
+    .select({ id: plans.id })
+    .from(plans)
+    .where(and(eq(plans.planSlug, slug), isNull(plans.deletedAt)))
+    .limit(1)
+
+  if (planRows.length === 0) {
+    return { success: false, error: 'Plan not found' }
+  }
+
+  // Run everything in a transaction
+  // drizzle-orm/node-postgres transaction support
+  await database.transaction(async tx => {
+    const now = new Date()
+
+    // 1. Update the plan itself
+    if (action === 'delete') {
+      await tx.update(plans).set({ deletedAt: now, updatedAt: now }).where(eq(plans.planSlug, slug))
+    } else {
+      await tx
+        .update(plans)
+        .set({ status: 'superseded', updatedAt: now })
+        .where(eq(plans.planSlug, slug))
+    }
+
+    // 2. Find exclusive stories (only linked to this plan, not in terminal state)
+    const linkedStoryIds = await tx
+      .select({ storyId: planStoryLinks.storyId })
+      .from(planStoryLinks)
+      .where(eq(planStoryLinks.planSlug, slug))
+
+    const storyIds = linkedStoryIds.map(s => s.storyId)
+
+    if (storyIds.length > 0) {
+      // Find stories linked to other plans
+      const sharedStoryIds = new Set(
+        (
+          await tx
+            .select({ storyId: planStoryLinks.storyId })
+            .from(planStoryLinks)
+            .where(
+              and(inArray(planStoryLinks.storyId, storyIds), ne(planStoryLinks.planSlug, slug)),
+            )
+        ).map(s => s.storyId),
+      )
+
+      // Exclusive stories = linked only to this plan
+      const exclusiveIds = storyIds.filter(id => !sharedStoryIds.has(id))
+
+      if (exclusiveIds.length > 0) {
+        // 3. Get exclusive stories not already in terminal state
+        const exclusiveNonTerminal = await tx
+          .select({ storyId: stories.storyId })
+          .from(stories)
+          .where(
+            and(
+              inArray(stories.storyId, exclusiveIds),
+              sql`coalesce(${stories.state}, 'backlog') NOT IN ('cancelled', 'completed', 'UAT')`,
+            ),
+          )
+
+        const toCancel = exclusiveNonTerminal.map(s => s.storyId)
+
+        if (toCancel.length > 0) {
+          // 4. Cancel exclusive stories
+          await tx
+            .update(stories)
+            .set({ state: 'cancelled', updatedAt: now })
+            .where(inArray(stories.storyId, toCancel))
+
+          // 5. Abandon active worktrees on those stories
+          await tx
+            .update(worktrees)
+            .set({ status: 'abandoned', abandonedAt: now, updatedAt: now })
+            .where(and(inArray(worktrees.storyId, toCancel), eq(worktrees.status, 'active')))
+        }
+      }
+    }
+
+    // 6. Remove upstream dependency rows (where this plan depends on others)
+    await tx.delete(planDependencies).where(eq(planDependencies.planSlug, slug))
+  })
+
+  return { success: true }
 }
 
 export async function reorderPlanStories(slug: string, items: ReorderItem[]): Promise<void> {

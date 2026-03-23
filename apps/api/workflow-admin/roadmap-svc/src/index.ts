@@ -12,6 +12,9 @@ import {
   getStoryById,
   updateStory,
   updateStoryContentSection,
+  getPlanImpactAnalysis,
+  executePlanRetire,
+  RetireActionSchema,
   type PlanListParams,
   type PlanUpdateInput,
   type StoryUpdateInput,
@@ -88,6 +91,42 @@ app.get('/api/v1/roadmap/:slug', async c => {
   } catch (error) {
     logger.error('Failed to fetch plan', { error, slug })
     return c.json({ error: 'Failed to fetch plan' }, 500)
+  }
+})
+
+app.get('/api/v1/roadmap/:slug/impact', async c => {
+  const slug = c.req.param('slug')
+
+  try {
+    const result = await getPlanImpactAnalysis(slug)
+    if (!result) {
+      return c.json({ error: 'Plan not found' }, 404)
+    }
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to fetch plan impact', { error: String(error), slug })
+    return c.json({ error: 'Failed to fetch plan impact', detail: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/roadmap/:slug/retire', async c => {
+  const slug = c.req.param('slug')
+
+  try {
+    const body = await c.req.json()
+    const parsed = RetireActionSchema.safeParse(body.action)
+    if (!parsed.success) {
+      return c.json({ error: 'Invalid action. Must be "delete" or "supersede".' }, 400)
+    }
+
+    const result = await executePlanRetire(slug, parsed.data)
+    if (!result.success) {
+      return c.json({ error: result.error }, 404)
+    }
+    return c.json({ success: true })
+  } catch (error) {
+    logger.error('Failed to retire plan', { error: String(error), slug })
+    return c.json({ error: 'Failed to retire plan', detail: String(error) }, 500)
   }
 })
 
