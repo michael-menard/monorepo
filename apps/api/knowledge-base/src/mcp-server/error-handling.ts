@@ -153,25 +153,48 @@ export function isDatabaseError(error: unknown): boolean {
     'sorry, too many clients',
   ]
 
-  return (
-    dbPatterns.some(pattern => message.includes(pattern) || name.includes(pattern)) ||
-    // Drizzle ORM errors
-    name === 'drizzleerror' ||
-    // pg library errors
-    'code' in error
-  )
+  // Check string patterns first
+  if (dbPatterns.some(pattern => message.includes(pattern) || name.includes(pattern))) {
+    return true
+  }
+
+  // Drizzle ORM errors
+  if (name === 'drizzleerror') {
+    return true
+  }
+
+  // pg library errors use 5-character SQLSTATE codes (e.g. '23505', '42P01')
+  // Only match if .code looks like a PostgreSQL error code, not any .code property
+  if ('code' in error) {
+    const code = String((error as Record<string, unknown>).code)
+    if (/^[0-9A-Z]{5}$/.test(code)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
  * Check if an error is an OpenAI API error.
+ *
+ * Does NOT match on 'embedding' — that word appears in DB column names
+ * and was causing DB errors to be misclassified as OpenAI failures.
  */
 export function isOpenAIError(error: unknown): boolean {
   if (!(error instanceof Error)) return false
 
+  // Check for OpenAI SDK error class names
+  const ctorName = error.constructor.name
+  if (ctorName === 'APIError' || ctorName === 'OpenAIError') {
+    return true
+  }
+
   const message = error.message.toLowerCase()
   const name = error.name.toLowerCase()
 
-  const openaiPatterns = ['openai', 'embedding', 'api_key', 'rate_limit', 'insufficient_quota']
+  // Only match patterns that are unambiguously OpenAI API failures
+  const openaiPatterns = ['openai', 'api_key', 'rate_limit', 'insufficient_quota']
 
   return openaiPatterns.some(pattern => message.includes(pattern) || name.includes(pattern))
 }
@@ -209,8 +232,13 @@ export function sanitizeDatabaseError(error: Error): McpError {
  * Removes API keys and includes retry context.
  */
 export function sanitizeOpenAIError(error: Error): McpError {
-  // Log full error server-side
-  logger.error('OpenAI API error occurred', { error })
+  // Log full error server-side with structured context for debugging
+  logger.error('OpenAI API error occurred', {
+    error,
+    error_class: error.constructor.name,
+    error_code: 'code' in error ? (error as Record<string, unknown>).code : undefined,
+    error_status: 'status' in error ? (error as Record<string, unknown>).status : undefined,
+  })
 
   const message = error.message.toLowerCase()
 
@@ -284,14 +312,15 @@ export function sanitizeError(error: unknown): McpError {
     return sanitizeNotFoundError(error)
   }
 
+  // OpenAI API errors - check before DB errors since isDatabaseError() broadly
+  // matches any error with a .code property, which includes OpenAI SDK errors
+  if (error instanceof Error && isOpenAIError(error)) {
+    return sanitizeOpenAIError(error)
+  }
+
   // Database errors - sanitize connection details
   if (error instanceof Error && isDatabaseError(error)) {
     return sanitizeDatabaseError(error)
-  }
-
-  // OpenAI API errors - sanitize API keys
-  if (error instanceof Error && isOpenAIError(error)) {
-    return sanitizeOpenAIError(error)
   }
 
   // Unknown errors - generic message

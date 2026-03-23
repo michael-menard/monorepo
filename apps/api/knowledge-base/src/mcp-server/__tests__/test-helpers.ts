@@ -218,7 +218,8 @@ export class MockDatabaseError extends Error {
   constructor(message: string, code?: string) {
     super(message)
     this.name = 'DatabaseError'
-    this.code = code ?? 'ECONNREFUSED'
+    // Default to a real PostgreSQL SQLSTATE code (08001 = connection exception)
+    this.code = code ?? '08001'
   }
 }
 
@@ -238,9 +239,9 @@ export class MockOpenAIError extends Error {
 export const sampleErrors = {
   databaseConnection: new MockDatabaseError(
     'Connection refused: postgresql://user:secretpassword@localhost:5432/db',
-    'ECONNREFUSED',
+    '08001',
   ),
-  databaseQuery: new MockDatabaseError('column "nonexistent" does not exist', 'PGQUERY'),
+  databaseQuery: new MockDatabaseError('column "nonexistent" does not exist', '42703'),
   openAIRateLimit: new MockOpenAIError(
     'OpenAI rate_limit exceeded. Retry after 60 seconds.',
   ),
