@@ -12,6 +12,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { z } from 'zod'
 import { sql, eq, and, gt, or, isNull } from 'drizzle-orm'
 import {
   worktreeRegister,
@@ -287,15 +288,11 @@ function getTimeoutConfig(): {
  * Dependencies for tool handlers.
  * Combines all CRUD operation and search dependencies.
  */
-export interface ToolHandlerDeps
-  extends
-    KbAddDeps,
-    KbGetDeps,
-    KbUpdateDeps,
-    KbDeleteDeps,
-    KbListDeps,
-    KbSearchDeps,
-    KbGetRelatedDeps {}
+export const ToolHandlerDepsSchema = z.custom<
+  KbAddDeps & KbGetDeps & KbUpdateDeps & KbDeleteDeps & KbListDeps & KbSearchDeps & KbGetRelatedDeps
+>()
+
+export type ToolHandlerDeps = z.infer<typeof ToolHandlerDepsSchema>
 
 /**
  * Timeout error for tool execution.
@@ -1606,32 +1603,38 @@ export async function handleKbStats(
 /**
  * Health check status values.
  */
-export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy'
+export const HealthStatusSchema = z.enum(['healthy', 'degraded', 'unhealthy'])
+
+export type HealthStatus = z.infer<typeof HealthStatusSchema>
 
 /**
  * Individual health check result.
  */
-export interface HealthCheckResult {
-  status: 'pass' | 'fail'
-  latency_ms?: number
-  uptime_ms?: number
-  error?: string
-}
+export const HealthCheckResultSchema = z.object({
+  status: z.enum(['pass', 'fail']),
+  latency_ms: z.number().optional(),
+  uptime_ms: z.number().optional(),
+  error: z.string().optional(),
+})
+
+export type HealthCheckResult = z.infer<typeof HealthCheckResultSchema>
 
 /**
  * Health check response.
  */
-export interface HealthResponse {
-  status: HealthStatus
-  checks: {
-    db: HealthCheckResult
-    openai_api: HealthCheckResult
-    mcp_server: HealthCheckResult
-  }
-  uptime_ms: number
-  version: string
-  correlation_id: string
-}
+export const HealthResponseSchema = z.object({
+  status: HealthStatusSchema,
+  checks: z.object({
+    db: HealthCheckResultSchema,
+    openai_api: HealthCheckResultSchema,
+    mcp_server: HealthCheckResultSchema,
+  }),
+  uptime_ms: z.number(),
+  version: z.string(),
+  correlation_id: z.string(),
+})
+
+export type HealthResponse = z.infer<typeof HealthResponseSchema>
 
 /**
  * Health check latency thresholds (in ms).

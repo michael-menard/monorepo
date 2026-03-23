@@ -273,11 +273,13 @@ export const ArtifactSearchInputSchema = z.object({
 })
 export type ArtifactSearchInput = z.infer<typeof ArtifactSearchInputSchema>
 
-export interface McpToolDefinition {
-  name: string
-  description: string
-  inputSchema: Record<string, unknown>
-}
+export const McpToolDefinitionSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  inputSchema: z.record(z.string(), z.unknown()),
+})
+
+export type McpToolDefinition = z.infer<typeof McpToolDefinitionSchema>
 
 /**
  * Tool schema versioning policy:

@@ -91,9 +91,11 @@ export type KbGetScoreboardInput = z.infer<typeof KbGetScoreboardInputSchema>
 // Dependencies
 // ============================================================================
 
-export interface AnalyticsDeps {
-  db: NodePgDatabase<typeof schema>
-}
+export const AnalyticsDepsSchema = z.object({
+  db: z.custom<NodePgDatabase<typeof schema>>(),
+})
+
+export type AnalyticsDeps = z.infer<typeof AnalyticsDepsSchema>
 
 // ============================================================================
 // Token Summary
@@ -204,7 +206,6 @@ export async function kb_get_bottleneck_analysis(
   phase_distribution: { phase: string; count: number }[]
   stuck_stories: {
     story_id: string
-    phase: string | null
     state: string | null
     days_stuck: number
   }[]
@@ -216,20 +217,21 @@ export async function kb_get_bottleneck_analysis(
   // Active stories condition
   const activeCondition = sql`${stories.state} NOT IN ('completed', 'cancelled', 'deferred')`
 
-  // Build phase distribution condition
+  // Build phase distribution condition (state is the source of truth; phase was removed from schema)
   const phaseDistCondition = validated.feature
     ? and(eq(stories.feature, validated.feature), activeCondition)
     : activeCondition
 
-  // Get phase distribution for active stories
+  // Get phase (state) distribution for active stories
+  // Note: stories.phase was removed from schema — state serves as the workflow phase proxy
   const phaseDistribution = await deps.db
     .select({
-      phase: stories.phase,
+      phase: stories.state,
       count: sql<number>`count(*)::int`,
     })
     .from(stories)
     .where(phaseDistCondition)
-    .groupBy(stories.phase)
+    .groupBy(stories.state)
     .orderBy(desc(sql`count(*)`))
 
   // Build state distribution condition
@@ -260,7 +262,6 @@ export async function kb_get_bottleneck_analysis(
   const stuckStories = await deps.db
     .select({
       storyId: stories.storyId,
-      phase: stories.phase,
       state: stories.state,
       updatedAt: stories.updatedAt,
     })
@@ -273,7 +274,6 @@ export async function kb_get_bottleneck_analysis(
   const now = Date.now()
   const stuckWithDays = stuckStories.map(s => ({
     story_id: s.storyId,
-    phase: s.phase,
     state: s.state,
     days_stuck: Math.floor((now - s.updatedAt.getTime()) / (1000 * 60 * 60 * 24)),
   }))
@@ -311,7 +311,6 @@ export async function kb_get_churn_analysis(
     story_id: string
     iteration: number
     feature: string | null
-    phase: string | null
     state: string | null
   }[]
   feature_averages: {
@@ -324,48 +323,68 @@ export async function kb_get_churn_analysis(
 }> {
   const validated = KbGetChurnAnalysisInputSchema.parse(input)
 
-  // Build high churn condition
-  const iterationCondition = gte(stories.iteration, validated.min_iterations)
-  const highChurnCondition = validated.feature
-    ? and(eq(stories.feature, validated.feature), iterationCondition)
-    : iterationCondition
+  // stories.iteration was removed from schema — derive iteration count from storyArtifacts
+  // max(iteration) per story in storyArtifacts represents the artifact cycle count (churn proxy)
 
-  // Find high-churn stories (iteration >= threshold)
+  // Find high-churn stories: join stories with max artifact iteration per story
+  const highChurnBaseConditions: SQL<unknown>[] = [
+    sql`max_iter.max_iteration >= ${validated.min_iterations}`,
+  ]
+  if (validated.feature) {
+    highChurnBaseConditions.push(eq(stories.feature, validated.feature))
+  }
+
   const highChurnStories = await deps.db
     .select({
       storyId: stories.storyId,
-      iteration: stories.iteration,
+      iteration: sql<number>`max_iter.max_iteration`,
       feature: stories.feature,
-      phase: stories.phase,
       state: stories.state,
     })
     .from(stories)
-    .where(highChurnCondition)
-    .orderBy(desc(stories.iteration))
+    .innerJoin(
+      sql`(
+        SELECT story_id, max(iteration) AS max_iteration
+        FROM artifacts.story_artifacts
+        GROUP BY story_id
+      ) AS max_iter`,
+      sql`max_iter.story_id = ${stories.storyId}`,
+    )
+    .where(and(...highChurnBaseConditions))
+    .orderBy(desc(sql`max_iter.max_iteration`))
     .limit(validated.limit)
 
-  // Build feature averages condition
-  const featureCondition = validated.feature ? eq(stories.feature, validated.feature) : undefined
+  // Get average artifact iterations by feature
+  const featureBaseConditions: SQL<unknown>[] = []
+  if (validated.feature) {
+    featureBaseConditions.push(eq(stories.feature, validated.feature))
+  }
 
-  // Get average iterations by feature
   const featureAverages = await deps.db
     .select({
       feature: stories.feature,
-      avgIterations: sql<number>`avg(${stories.iteration})::float`,
+      avgIterations: sql<number>`avg(max_iter.max_iteration)::float`,
       storyCount: sql<number>`count(*)::int`,
-      maxIterations: sql<number>`max(${stories.iteration})::int`,
+      maxIterations: sql<number>`max(max_iter.max_iteration)::int`,
     })
     .from(stories)
-    .where(featureCondition)
+    .innerJoin(
+      sql`(
+        SELECT story_id, max(iteration) AS max_iteration
+        FROM artifacts.story_artifacts
+        GROUP BY story_id
+      ) AS max_iter`,
+      sql`max_iter.story_id = ${stories.storyId}`,
+    )
+    .where(featureBaseConditions.length > 0 ? and(...featureBaseConditions) : undefined)
     .groupBy(stories.feature)
-    .orderBy(desc(sql`avg(${stories.iteration})`))
+    .orderBy(desc(sql`avg(max_iter.max_iteration)`))
 
   return {
     high_churn_stories: highChurnStories.map(s => ({
       story_id: s.storyId,
-      iteration: s.iteration ?? 0,
+      iteration: (s.iteration as number) ?? 0,
       feature: s.feature,
-      phase: s.phase,
       state: s.state,
     })),
     feature_averages: featureAverages.map(f => ({
@@ -579,7 +598,7 @@ export async function kb_get_scoreboard(
     agentQuery = agentQuery.innerJoin(
       stories,
       eq(agentInvocations.storyId, stories.storyId),
-    ) as typeof agentQuery
+    ) as unknown as typeof agentQuery
   }
 
   const agentResult = await agentQuery

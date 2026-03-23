@@ -193,8 +193,7 @@ export const ADMIN_TOOLS: readonly ToolName[] = [
  * @returns Normalized lowercase role or null if invalid
  */
 export function normalizeRole(role: string): AgentRole | null {
-  const normalized = role.toLowerCase() as AgentRole
-  const result = AgentRoleSchema.safeParse(normalized)
+  const result = AgentRoleSchema.safeParse(role.toLowerCase())
   return result.success ? result.data : null
 }
 
