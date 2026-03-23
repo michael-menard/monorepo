@@ -1,0 +1,161 @@
+---
+schema: 1
+story_id: WINT-7040
+reviewed_at: '2026-03-23T00:00:00Z'
+reviewed_by: code-review-reusability-agent
+pattern_analysis: Agent design patterns and metadata consistency
+
+reusability:
+  verdict: PASS
+  files_checked: 5
+  errors: 0
+  warnings: 2
+  findings:
+    - severity: warning
+      category: metadata-inconsistency
+      rule: version-progression
+      files:
+        - commitment-gate-agent.agent.md
+        - uat-orchestrator.agent.md
+        - uat-precondition-check.agent.md
+      message: 'Version pinned at 1.0.0 while similar agents in codebase (scrum-master-*) use 3.0.0'
+      context: 'Agents created 2026-02-01. Version should reflect iteration count with other leader/worker pairs.'
+      recommendation: 'Align version progression: 1.0.0 appropriate for initial release, but monitor scrum-master pattern (3.0.0) for breaking changes that may need backporting'
+
+    - severity: warning
+      category: metadata-field-omission
+      rule: permission-level-coverage
+      file: code-review-reusability.agent.md
+      message: "Missing 'spawned_by' field unlike worker agents (commitment-gate-agent, uat-precondition-check)"
+      context: 'Worker agents explicitly declare spawned_by: [parent-agent]. Review agent has no parent declared.'
+      recommendation: "Add spawned_by field if this agent is invoked by a parent, or document why it's standalone"
+
+cross_pattern_analysis:
+  pattern_reuse_assessment: EXCELLENT
+  findings:
+    - pattern: 'Leader-Worker Pairs'
+      examples:
+        - leader: scrum-master-loop-leader (leader, orchestrator)
+          worker: (implied async workers spawned via Task)
+        - leader: scrum-master-setup-leader (leader, setup)
+          worker: (implied workers via skills)
+        - leader: uat-orchestrator (leader, orchestrator)
+          worker: uat-precondition-check (worker, readonly)
+      consistency: STRONG
+      note: 'UAT pair explicitly declares workers field. Scrum-master pair relies on inline Task spawning. Both patterns are valid and complementary.'
+
+    - pattern: 'Completion Signals'
+      examples:
+        - 'COMMITMENT-GATE PASS / BLOCKED / OVERRIDE'
+        - 'UAT PRECONDITION: PASS / FAIL'
+        - 'UAT BLOCKED: {reason}'
+        - 'WORKFLOW COMPLETE / BLOCKED / FAILED'
+        - 'REUSABILITY PASS / FAIL'
+      consistency: STRONG
+      convention: 'Format: {PHASE_NAME} {STATUS}: {optional reason}. All agents follow exactly.'
+
+    - pattern: 'YAML-First Output'
+      examples:
+        - 'code-review-reusability: Returns YAML only (no prose)'
+        - 'commitment-gate-agent: YAML schema with detailed evaluation'
+        - 'uat-precondition-check: YAML with detailed check results'
+      consistency: STRONG
+      note: 'All agents follow lean-docs.md convention: YAML structures over markdown narratives'
+
+    - pattern: 'Model Assignment'
+      examples:
+        - 'haiku: Gate evaluation, precondition checks, reusability analysis (lightweight)'
+        - 'sonnet: Loop orchestration, phase execution, UAT coordination (heavy)'
+      consistency: STRONG
+      rationale: 'Haiku for read-only analysis, Sonnet for orchestration/decision-making logic'
+
+    - pattern: 'Permission Level Hierarchy'
+      levels:
+        - 'read-only: code-review-reusability (scans only, no modifications)'
+        - 'readonly: uat-precondition-check (environment checks only)'
+        - 'docs-only: commitment-gate-agent (evaluates documents, no code changes)'
+        - 'setup: scrum-master-setup-leader (initializes state)'
+        - 'orchestrator: scrum-master-loop-leader, uat-orchestrator (coordinates phases)'
+      consistency: STRONG
+
+    - pattern: 'Documentation Structure'
+      common_sections:
+        - 'Agent name / Model / Mission'
+        - 'Inputs / Outputs'
+        - 'Step-by-step execution flow'
+        - 'Schema/template definitions'
+        - 'Completion signals'
+        - 'Non-negotiables / Rules'
+      consistency: STRONG
+      note: 'All agents follow same section ordering for predictability'
+
+  no_duplication_detected: true
+  reusable_components:
+    - name: 'Completion Signal Pattern'
+      shared_by: ['all agents']
+      implementation: 'Format: {PHASE} {VERDICT}: {reason}'
+
+    - name: 'YAML Output Schema'
+      shared_by: ['commitment-gate-agent', 'code-review-reusability', 'uat-precondition-check']
+      structure: 'schema version, verdict, detailed results, signal'
+
+    - name: 'Precondition Checking Pattern'
+      instances:
+        - 'uat-precondition-check: Environmental checks'
+        - 'commitment-gate-agent: Readiness checks'
+      pattern: 'Load inputs → Validate → Report → Signal'
+
+    - name: 'Phase State Tracking'
+      used_by: ['scrum-master-setup-leader', 'scrum-master-loop-leader']
+      structure: 'Phases object with status/signal/timestamp/tokens per phase'
+
+consistency_metrics:
+  agent_header_format: 'CONSISTENT'
+  completion_signal_format: 'CONSISTENT'
+  yaml_structure_format: 'CONSISTENT'
+  section_ordering: 'CONSISTENT'
+  model_assignment_strategy: 'CONSISTENT'
+  permission_level_semantics: 'CONSISTENT'
+
+architectural_notes:
+  leader_worker_pattern: 'Fully realized. UAT pair is exemplary (explicit workers field).'
+  async_spawning: 'Scrum-master uses Task tool for phase spawning. Parallel with UAT worker pattern.'
+  signal_propagation: 'Clear parent-to-child signal flow. Children emit completion signals consumed by parents.'
+  state_management: 'Filesystem-based (STATE.md, AGENT-CONTEXT.md). Scrum-master pair handles complex phase tracking.'
+  orchestration_scope: 'Scrum-master (multi-phase workflow), UAT (precondition → tests), commitment-gate (single evaluation)'
+
+migration_readiness: 'WINT-7020, WINT-7070 comparison'
+note: 'Cannot directly compare as WINT-7020/7070 story directories not found in standard locations. Recommend checking git history or KB for agent pattern evolution.'
+
+recommendations:
+  priority_1:
+    action: "Document 'spawned_by' semantics"
+    rationale: 'Commitment-gate-agent lacks spawned_by field while being invoked by dev-implement-story. Clarify whether this is intentional (standalone) or oversight.'
+    affected_agents:
+      - code-review-reusability.agent.md
+      - potentially: commitment-gate-agent.agent.md (verify original intent)
+
+  priority_2:
+    action: 'Create agent-pattern-guidelines.md'
+    rationale: 'Patterns are consistent but undocumented. New agents should reference:'
+    guidelines:
+      - 'Completion signal format: {PHASE} {STATUS}: {reason}'
+      - 'YAML-first output, no prose after signal'
+      - 'Permission levels hierarchy'
+      - 'Model assignment: haiku for analysis, sonnet for orchestration'
+      - 'Version progression strategy'
+
+  priority_3:
+    action: 'Expand workers field in orchestrator agents'
+    rationale: 'UAT pair explicitly declares workers. Scrum-master inlines Task spawning. Recommend explicit declaration for discoverability.'
+    example: |
+      # Current (scrum-master-loop-leader)
+      # Spawns phases via inline Task tool
+
+      # Recommended addition
+      workers:
+        - (dynamically invoked via /pm-story, /elab-story, etc.)
+
+tokens:
+  in: 2850
+  out: 1200

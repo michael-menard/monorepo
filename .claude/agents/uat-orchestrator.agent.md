@@ -4,7 +4,7 @@ updated: 2026-02-01
 version: 1.0.0
 type: leader
 permission_level: orchestrator
-triggers: ["/qa-verify-story (UAT mode)", "/uat-run"]
+triggers: ['/qa-verify-story (UAT mode)', '/uat-run']
 related_adr: ADR-005
 workers:
   - uat-precondition-check.agent.md
@@ -54,6 +54,7 @@ UAT Test Orchestrator - Coordinates User Acceptance Testing with mandatory preco
 ## Inputs
 
 From caller:
+
 - `feature_dir`: Feature directory (e.g., `plans/future/wishlist`)
 - `story_id`: Story ID (e.g., `WISH-001`)
 - `test_pattern`: Optional Playwright test pattern (e.g., `**/uat/*.spec.ts`)
@@ -114,6 +115,7 @@ pnpm playwright test \
 ```
 
 **Environment for UAT tests**:
+
 ```bash
 VITE_ENABLE_MSW=false
 PLAYWRIGHT_TEST_ENV=uat
@@ -123,11 +125,11 @@ PLAYWRIGHT_TEST_ENV=uat
 
 ## Output Files
 
-| File | When | Content |
-|------|------|---------|
-| `UAT-PRECONDITION-CHECK.yaml` | Always | Precondition check results |
-| `UAT-RESULTS.yaml` | If tests run | Playwright test results |
-| `UAT-BLOCKED.md` | If precondition fails | Block reason and fix instructions |
+| File                          | When                  | Content                           |
+| ----------------------------- | --------------------- | --------------------------------- |
+| `UAT-PRECONDITION-CHECK.yaml` | Always                | Precondition check results        |
+| `UAT-RESULTS.yaml`            | If tests run          | Playwright test results           |
+| `UAT-BLOCKED.md`              | If precondition fails | Block reason and fix instructions |
 
 ### UAT-BLOCKED.md Template
 
@@ -154,20 +156,21 @@ mocks match your expectations, not that the real system works.
 
 ## Reference
 
-See `plans/stories/ADR-LOG.md` → ADR-005: Testing Strategy - UAT Must Use Real Services
+See ADR-005: Testing Strategy - UAT Must Use Real Services
+(Query KB: `kb_search({ query: 'ADR-005 testing strategy real services' })`)
 ```
 
 ---
 
 ## Signals
 
-| Signal | Meaning |
-|--------|---------|
+| Signal                   | Meaning                                |
+| ------------------------ | -------------------------------------- |
 | `UAT PRECONDITION: PASS` | Preconditions met, proceeding to tests |
-| `UAT PRECONDITION: FAIL` | Preconditions not met, UAT blocked |
-| `UAT TESTS: PASS` | All UAT tests passed |
-| `UAT TESTS: FAIL` | Some UAT tests failed |
-| `UAT BLOCKED: {reason}` | UAT did not run |
+| `UAT PRECONDITION: FAIL` | Preconditions not met, UAT blocked     |
+| `UAT TESTS: PASS`        | All UAT tests passed                   |
+| `UAT TESTS: FAIL`        | Some UAT tests failed                  |
+| `UAT BLOCKED: {reason}`  | UAT did not run                        |
 
 ---
 
@@ -224,10 +227,10 @@ pnpm --filter playwright test:uat
 
 ## Flags
 
-| Flag | Default | Purpose |
-|------|---------|---------|
-| `--skip-precondition` | N/A | **NOT SUPPORTED** - Preconditions cannot be skipped |
-| `--verbose` | false | Show detailed check output |
-| `--dry-run` | false | Run precondition check only, don't run tests |
+| Flag                  | Default | Purpose                                             |
+| --------------------- | ------- | --------------------------------------------------- |
+| `--skip-precondition` | N/A     | **NOT SUPPORTED** - Preconditions cannot be skipped |
+| `--verbose`           | false   | Show detailed check output                          |
+| `--dry-run`           | false   | Run precondition check only, don't run tests        |
 
 **Note**: There is intentionally NO flag to skip precondition checks. This is a hard requirement per ADR-005.
