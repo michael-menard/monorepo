@@ -240,6 +240,15 @@ export interface DashboardResponse {
     fanOut: number
     plans: Array<{ planSlug: string; title: string }>
   }>
+  backlogSummary: {
+    totalOpen: number
+    byPriority: Array<{ priority: string; count: number }>
+    byType: Array<{ taskType: string; count: number }>
+  }
+  backlogAging: Array<{
+    bucket: string
+    count: number
+  }>
 }
 
 export const roadmapApi = createApi({

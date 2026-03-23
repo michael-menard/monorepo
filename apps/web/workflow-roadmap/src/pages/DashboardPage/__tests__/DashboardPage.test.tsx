@@ -86,6 +86,23 @@ const MOCK_DASHBOARD: DashboardResponse = {
       plans: [{ planSlug: 'plan-a', title: 'Plan A' }],
     },
   ],
+  backlogSummary: {
+    totalOpen: 15,
+    byPriority: [
+      { priority: 'P1', count: 8 },
+      { priority: 'P2', count: 7 },
+    ],
+    byType: [
+      { taskType: 'bug', count: 10 },
+      { taskType: 'feature', count: 5 },
+    ],
+  },
+  backlogAging: [
+    { bucket: '<7d', count: 5 },
+    { bucket: '7-14d', count: 4 },
+    { bucket: '14-30d', count: 3 },
+    { bucket: '30+d', count: 3 },
+  ],
 }
 
 describe('DashboardPage', () => {
