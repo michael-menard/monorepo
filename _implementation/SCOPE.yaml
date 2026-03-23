@@ -1,86 +1,24 @@
 schema: 1
-story_id: WINT-5010
-timestamp: '2026-03-21T20:30:00Z'
-phase: setup
-iteration: 0
+story_id: WINT-9010
+timestamp: '2026-03-23T00:00:00Z'
 gen_mode: false
-
-title: Create HiTL Interview Sidecar
-
 touches:
   backend: true
   frontend: false
   packages: true
-  db: true
+  db: false
   contracts: true
   ui: false
   infra: false
-
 touched_paths_globs:
-  - 'packages/backend/sidecars/hitl-interview/**'
-  - 'packages/core/sidecar-hitl-interview/**'
-  - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
-  - 'apps/api/knowledge-base/src/ml-pipeline/'
-
+  - 'packages/backend/workflow-logic/src/**'
+  - 'packages/backend/orchestrator/src/**'
 risk_flags:
   auth: false
   payments: false
   migrations: false
   external_apis: false
-  security: true
+  security: false
   performance: false
-
-summary: Create sidecar service to capture and transform HiTL interview data into labeled training examples, exposing MCP tool and integrating with ML pipeline.
-
+summary: 'Extend @repo/workflow-logic with decision, artifact, context, and token modules to establish TypeScript source of truth for shared business logic'
 elaboration: completed
-
-acceptance_criteria_count: 10
-
-key_acs:
-  - AC1: Sidecar directory structure at packages/backend/sidecars/hitl-interview/
-  - AC2: Export @repo/sidecar-hitl-interview package with hitlInterview MCP tool on port 3093
-  - AC3: Structured question sets per decisionType (qa_gate_decision, code_review_decision, story_approval_decision)
-  - AC4: Feature vectors with storyId, phase, decisionType, storyComplexityScore, agentPhase, decisionContext
-  - AC5: Write training data to workflow.training_data via trainingDataIngest (WINT-0140)
-  - AC6: Read-only access to workflow.hitl_decisions for context enrichment
-  - AC7: InterviewAnswersSchema Zod schema with rationale, confidence, alternativesConsidered, riskAssessment
-  - AC8: FeatureVectorSchema Zod schema
-  - AC9: Use @repo/sidecar-http-utils and @repo/logger with proper error handling
-  - AC10: Minimum 45% test coverage (unit + integration tests)
-
-dependencies:
-  - story_id: WINT-0140
-    status: completed
-    reason: trainingDataIngest must exist before writing to training_data table
-  - story_id: WINT-2010
-    status: completed
-    reason: Role-pack sidecar pattern reference and http-utils dependency
-
-reusable_assets:
-  - source: packages/backend/sidecars/role-pack/src/
-    asset: Sidecar HTTP server pattern and structure
-    usage: Server initialization, port binding, HTTP handler
-  - source: packages/backend/sidecars/http-utils/
-    asset: Sidecar HTTP utilities and error handling
-    usage: Request/response handling, error formatting
-  - source: apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-    asset: trainingDataIngest MCP tool implementation
-    usage: Integration point for writing training data
-  - source: apps/api/knowledge-base/src/db/schema/workflow.ts
-    asset: hitlDecisions and trainingData table schemas
-    usage: Type definitions and database structure reference
-
-test_strategy: Unit tests for MCP tool logic, interview schema validation, feature vector generation; Integration tests for trainingDataIngest calls
-
-migration_info:
-  estimated_slot: null
-  type: No schema changes required
-  requires_downtime: false
-  rollback_strategy: Remove sidecar package and imports
-
-notes: |
-  - No database migrations required; uses existing workflow.hitl_decisions and workflow.training_data tables
-  - Follow role-pack sidecar pattern for directory structure and server setup
-  - MCP tool should expose structured interviews per decision type
-  - Security consideration: Handle training data with care for labeled examples
-  - Coordinate with WINT-0140 (trainingDataIngest) on data format expectations

@@ -1,160 +1,178 @@
 schema: 1
-story_id: 'WINT-8060'
-version: 1
-timestamp: '2026-03-23T17:34:00Z'
+story_id: WINT-9010
+phase: implementation
+iteration: 0
+timestamp: '2026-03-23T13:06:00Z'
+
+summary:
+  verdict: PASS
+  total_acs: 10
+  acs_with_evidence: 10
+  acs_missing: 0
 
 acceptance_criteria:
-  - ac_id: 'AC-1'
-    ac_text: 'scope-defend node calls kb_add_task once per defer-to-backlog challenge'
-    status: PASS
-    evidence_items:
+  - ac_id: AC-1
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/decision/index.ts
+        description: >-
+          Implements DecisionTierSchema (5-tier enum: tier-1 through tier-5),
+          AutonomyLevelSchema (conservative/moderate/aggressive), classifyDecisionTier(description)
+          returning DecisionTier via keyword-based classification, shouldEscalate(tier, autonomyLevel)
+          returning boolean. Tier-4 always escalates regardless of autonomy level.
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: 'BT-2: one defer-to-backlog challenge → one task created; BT-3: five challenges → five tasks created'
+        path: packages/backend/workflow-logic/src/__tests__/decision.test.ts
+        description: >-
+          38 tests passing — classifyDecisionTier covers all 5 tiers, default safe value,
+          case-insensitive matching, and priority ordering. shouldEscalate covers all 15 cells
+          of the 3x5 decision matrix including tier-4 always-escalate invariant.
+        result: PASS
 
-  - ac_id: 'AC-2'
-    ac_text: "source_agent: 'scope-defender' in every kb_add_task call"
-    status: PASS
-    evidence_items:
+  - ac_id: AC-2
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/artifact/index.ts
+        description: >-
+          Implements ArtifactTypeSchema (13-value enum), ArtifactPhaseSchema (7-value enum),
+          getArtifactPhase(artifactType) returning canonical ArtifactPhase,
+          isValidArtifactForPhase(artifactType, phase) returning boolean.
+          Type-to-phase mapping encoded from kb-integration.md Artifact Type Reference section.
+          Pure metadata — no MCP SDK calls.
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-7: tags + attribution test verifies source_agent='scope-defender'"
+        path: packages/backend/workflow-logic/src/__tests__/artifact.test.ts
+        description: >-
+          29 tests passing — getArtifactPhase tested for all 13 artifact types,
+          isValidArtifactForPhase tested for valid and invalid combos, exhaustive schema coverage.
+        result: PASS
 
-  - ac_id: 'AC-3'
-    ac_text: 'source_story_id set to state.storyId in every kb_add_task call'
-    status: PASS
-    evidence_items:
+  - ac_id: AC-3
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/context/index.ts
+        description: >-
+          Implements buildContextQuery(domain, taskType, role?) returning canonical KB search query
+          string (e.g. 'backend api endpoint patterns'), buildBlockerQuery(domain) returning KB
+          blocker query string (e.g. 'backend blockers lessons'). Pure string builders —
+          no KB calls, no network I/O.
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-7: verifies source_story_id='WINT-TEST'"
+        path: packages/backend/workflow-logic/src/__tests__/context.test.ts
+        description: >-
+          19 tests passing — buildContextQuery tested with domain+taskType, with optional role,
+          without role, with empty inputs, with whitespace, with undefined role.
+          buildBlockerQuery tested with domain, empty domain, whitespace domain.
+        result: PASS
 
-  - ac_id: 'AC-4'
-    ac_text: "source_phase: 'elab' in every kb_add_task call"
-    status: PASS
-    evidence_items:
+  - ac_id: AC-4
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/token/index.ts
+        description: >-
+          Implements TokenUsageSchema (z.object with inputTokens: z.number().int().min(0),
+          outputTokens: z.number().int().min(0), phase: z.string().optional()),
+          estimateTokenCount(bytes) returning number (bytes / 4, rounded),
+          formatTokenSummary(usage) returning 'In: ~X Out: ~Y' format per token-tracking.md.
+          Pure functions, no I/O.
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-7: verifies source_phase='elab'"
+        path: packages/backend/workflow-logic/src/__tests__/token.test.ts
+        description: >-
+          32 tests passing — estimateTokenCount tested for 0, positive multiples, non-multiples
+          with rounding. formatTokenSummary tested for standard format, with phase, without phase.
+          TokenUsageSchema tested for valid inputs, rejection of negatives (EC-3), floats, missing fields.
+        result: PASS
 
-  - ac_id: 'AC-5'
-    ac_text: "task_type: 'feature_idea' in every kb_add_task call"
-    status: PASS
-    evidence_items:
+  - ac_id: AC-5
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/index.ts
+        description: >-
+          Updated to export all four new modules: decision/ (DecisionTierSchema, AutonomyLevelSchema,
+          classifyDecisionTier, shouldEscalate, DecisionTier, AutonomyLevel), artifact/ 
+          (ArtifactTypeSchema, ArtifactPhaseSchema, getArtifactPhase, isValidArtifactForPhase,
+          ArtifactType, ArtifactPhase), context/ (buildContextQuery, buildBlockerQuery),
+          token/ (TokenUsageSchema, estimateTokenCount, formatTokenSummary, TokenUsage).
+          Follows exact re-export pattern established for evidence-judge module.
+
+  - ac_id: AC-6
+    verdict: ACCEPT
+    evidence:
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-7: verifies task_type='feature_idea'"
-
-  - ac_id: 'AC-6'
-    ac_text: 'kbAddTaskFn failure is non-blocking — warning logged, no throw'
-    status: PASS
-    evidence_items:
+        path: packages/backend/workflow-logic/src/__tests__/decision.test.ts
+        description: 38 tests for decision/ module in __tests__/ directory
+        result: PASS
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-4: kb_add_task throws 'DB connection failed' → result.warnings populated, no exception thrown"
-
-  - ac_id: 'AC-7'
-    ac_text: 'kbAddTaskFn not injected (undefined) → no-op, no error'
-    status: PASS
-    evidence_items:
+        path: packages/backend/workflow-logic/src/__tests__/artifact.test.ts
+        description: 29 tests for artifact/ module in __tests__/ directory
+        result: PASS
       - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: 'BT-5: createScopeDefendNode() without config → no backlog writes, node still produces valid output'
+        path: packages/backend/workflow-logic/src/__tests__/context.test.ts
+        description: 19 tests for context/ module in __tests__/ directory
+        result: PASS
+      - type: test
+        path: packages/backend/workflow-logic/src/__tests__/token.test.ts
+        description: 32 tests for token/ module in __tests__/ directory
+        result: PASS
 
-  - ac_id: 'AC-8'
-    ac_text: 'scope-challenges.ts canonical schema is extended; scope-defend.ts imports and re-uses canonical types'
-    status: PASS
-    evidence_items:
+  - ac_id: AC-7
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/src/decision/index.ts
+        description: >-
+          All exported types use Zod schemas with z.infer<>: DecisionTierSchema + DecisionTier,
+          AutonomyLevelSchema + AutonomyLevel. No TypeScript interfaces.
+      - type: file
+        path: packages/backend/workflow-logic/src/artifact/index.ts
+        description: >-
+          All exported types use Zod schemas with z.infer<>: ArtifactTypeSchema + ArtifactType,
+          ArtifactPhaseSchema + ArtifactPhase. No TypeScript interfaces.
+      - type: file
+        path: packages/backend/workflow-logic/src/token/index.ts
+        description: >-
+          All exported types use Zod schemas with z.infer<>: TokenUsageSchema + TokenUsage.
+          No TypeScript interfaces.
+
+  - ac_id: AC-8
+    verdict: ACCEPT
+    evidence:
       - type: command
-        command: 'pnpm --filter @repo/orchestrator check-types'
-        result: 'PASS — no scope-defend or scope-challenges type errors'
-      - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/scope-defend.ts'
-        description: 'scope-defend.ts imports RecommendationSchema, RiskIfDeferredSchema, ScopeChallengeSchema, ScopeChallengesSchema from artifacts/scope-challenges.ts; re-exports for backward compatibility'
+        command: >-
+          node $VITEST_DIR/dist/cli.js run --config .../vitest.config.ts
+          --root packages/backend/workflow-logic
+        result: PASS
+        description: >-
+          200 tests passing (8 test files). New modules: decision (38), artifact (29),
+          context (19), token (32) = 118 new tests. All pass.
 
-  - ac_id: 'AC-9'
-    ac_text: 'Idempotency — skip write if task with matching tag already exists'
-    status: PASS
-    evidence_items:
-      - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-6: kbListTasksFn returns existing task with tag 'scope-defender:WINT-TEST:DA-001' → kbAddTask NOT called, tasksSkipped=1"
+  - ac_id: AC-9
+    verdict: ACCEPT
+    evidence:
+      - type: command
+        command: >-
+          tsc --noEmit --project packages/backend/workflow-logic/tsconfig.json
+        result: PASS
+        description: Type-check passes with zero errors for workflow-logic in worktree.
+      - type: command
+        command: >-
+          tsc --project packages/backend/workflow-logic/tsconfig.json
+        result: PASS
+        description: Build passes with zero errors for workflow-logic in worktree.
 
-  - ac_id: 'AC-10'
-    ac_text: "Tags include both 'scope-defender' and 'deferred' in every kb_add_task call"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-        description: "BT-7: verifies tags contain 'scope-defender', 'deferred', 'elab:scope-challenge', 'source:WINT-TEST', and the deterministic idempotency tag"
+  - ac_id: AC-10
+    verdict: ACCEPT
+    evidence:
+      - type: file
+        path: packages/backend/workflow-logic/package.json
+        description: >-
+          package.json dependencies unchanged — only 'zod' and '@repo/logger' as dependencies.
+          No new runtime dependencies added. All four new modules are pure Zod + TypeScript.
 
-touched_files:
-  - path: 'packages/backend/orchestrator/src/nodes/story/scope-defend.ts'
-    action: modified
-    lines: 637
-    description: 'Added writeBacklogTasks() helper, KbAddTaskFn/KbListTasksFn types, KbAddTaskInputSchema, ScopeDefendConfig, createScopeDefendNode() factory, idempotency guard, Phase 4 backlog write integration'
-  - path: 'packages/backend/orchestrator/src/artifacts/scope-challenges.ts'
-    action: modified
-    lines: 62
-    description: 'Extended ScopeChallengesSchema with total_candidates_reviewed, truncated, warnings, warning_count fields to make canonical schema the single source of truth'
-  - path: 'packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts'
-    action: modified
-    lines: 546
-    description: 'Added BT-1 through BT-8 test scenarios for writeBacklogTasks() and createScopeDefendNode() factory covering all WINT-8060 ACs'
-
-commands_run:
-  - command: 'pnpm --filter @repo/orchestrator check-types'
-    result: SUCCESS
-    output: 'No type errors in scope-defend.ts or scope-challenges.ts (pre-existing unrelated errors in other packages)'
-    timestamp: '2026-03-23T17:33:00Z'
-  - command: 'pnpm --filter @repo/orchestrator test -- scope-defend'
-    result: SUCCESS
-    output: '29 tests passed (1 test file)'
-    timestamp: '2026-03-23T17:34:07Z'
-  - command: 'npx eslint packages/backend/orchestrator/src/nodes/story/scope-defend.ts packages/backend/orchestrator/src/artifacts/scope-challenges.ts'
-    result: SUCCESS
-    output: 'No errors after fixing prefer-const for existingTags variable'
-    timestamp: '2026-03-23T17:33:30Z'
-
-endpoints_exercised: []
-
-test_summary:
-  unit: { pass: 29, fail: 0 }
-  e2e: { pass: 0, fail: 0 }
-
-e2e_tests:
-  status: exempt
-  exempt_reason: 'Pure TypeScript package (LangGraph node) — no HTTP endpoints or browser surface exists for scope-defend node'
-  config: null
-  project: null
-  mode: 'n/a'
-  tests_written: false
-  results:
-    total: 0
-    passed: 0
-    failed: 0
-    skipped: 0
-  failed_tests: []
-  config_issues: []
-  videos: []
-  screenshots: []
-
-coverage:
-  lines: null
-  branches: null
-
-notable_decisions:
-  - 'ST-1 (AC-8) completed first as prerequisite gate — scope-challenges.ts canonical schema extended with 4 new optional fields before scope-defend.ts code changes'
-  - 'ST-2/ST-3 fully implemented in scope-defend.ts: writeBacklogTasks() helper exported for testability, kbAddTaskFn/kbListTasksFn injected via ScopeDefendConfig, called at end of Phase 4'
-  - "Idempotency uses deterministic tag format 'scope-defender:{storyId}:{challengeId}' (DA-001..DA-005 stable IDs)"
-  - 'Fire-and-forget error handling: kbAddTaskFn failures caught, logged via logger.warn, never rethrown'
-  - "RISK_ORDER map updated to include 'critical' (4) and 'none' (0) values to match canonical RiskIfDeferredSchema enum"
-  - 'Fixed prefer-const lint error: existingTags initialized as const Set (binding never reassigned, only mutated)'
-
-known_deviations:
-  - 'pre-existing type errors in knowledge-base and mcp-tools packages (@repo/db not found) — unrelated to WINT-8060 changes'
-  - 'SCOPE.yaml in worktree appears to be from CDBE-3020 (different story) — worktree content for WINT-8060 is correct per PLAN.yaml'
-
-token_summary:
-  setup: { in: 0, out: 0 }
-  plan: { in: 0, out: 0 }
-  execute: { in: 8000, out: 3000 }
+e2e:
+  exempt: true
+  reason: >-
+    Pure TypeScript library extension with no UI or API endpoints.
+    E2E exemption confirmed in story context (infrastructure/library story).
