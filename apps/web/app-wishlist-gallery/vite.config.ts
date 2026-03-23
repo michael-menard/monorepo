@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 
 const require = createRequire(import.meta.url)
-const { readPort } = require('../../infra/ports.cjs')
+const { readPort } = require('../../../infra/ports.cjs')
 
 // https://vitejs.dev/config/
 export default defineConfig({
