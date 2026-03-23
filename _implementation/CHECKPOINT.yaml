@@ -1,16 +1,16 @@
 schema: 1
-story_id: WINT-5010
+story_id: WINT-8060
+timestamp: '2026-03-23T17:34:00Z'
+branch: story/WINT-8060
+worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/WINT-8060
+pr_number: 593
+pr_url: https://github.com/michael-menard/monorepo/pull/593
+gen_mode: false
 forced: false
 blocked: false
-blocked_reason: null
-e2e_gate: null
 warnings:
-  - >-
-    PORT CONFLICT: AC-1 specifies port 3093 but rules-registry (WINT-4020) already uses 3093. Plan uses 3094 as default.
-    Dev should confirm with PM or adjust AC-1.
+  - 'pre-existing type errors in knowledge-base and mcp-tools packages (unrelated to WINT-8060)'
 iteration: 0
-feature_dir: workflow-intelligence-wint
-completed_at: null
-current_phase: plan
-last_successful_phase: setup
 max_iterations: 3
+current_phase: execute
+last_successful_phase: plan

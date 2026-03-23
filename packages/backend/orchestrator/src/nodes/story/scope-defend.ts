@@ -370,7 +370,7 @@ export async function writeBacklogTasks(
   }
 
   // Load existing tasks for idempotency check (AC-9)
-  let existingTags: Set<string> = new Set()
+  const existingTags: Set<string> = new Set()
   if (kbListTasksFn) {
     try {
       const existing = await kbListTasksFn({

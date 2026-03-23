@@ -1,352 +1,196 @@
-schema: 1
-story_id: WINT-5010
-timestamp: '2026-03-21T21:15:00Z'
+schema: 2
+story_id: WINT-8060
+timestamp: '2026-03-23T19:00:00Z'
+subtask_source: story
 steps:
   - id: 1
+    subtask_id: ST-1
     description: >-
-      Create package scaffold: package.json, tsconfig.json, vitest.config.ts at
-      packages/backend/sidecars/hitl-interview/
+      Reconcile schema drift between scope-defend.ts local ScopeChallengesOutputSchema and artifacts/scope-challenges.ts
+      canonical schema. Align 'target'→'description' field rename in ScopeChallengeSchema, update RiskIfDeferredSchema
+      to include 'critical' and 'none' values, and ensure the local schema extends or re-exports the canonical.
     files:
-      - packages/backend/sidecars/hitl-interview/package.json
-      - packages/backend/sidecars/hitl-interview/tsconfig.json
-      - packages/backend/sidecars/hitl-interview/vitest.config.ts
+      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
     files_to_read:
-      - packages/backend/sidecars/cohesion/package.json
-      - packages/backend/sidecars/cohesion/tsconfig.json
-      - packages/backend/sidecars/cohesion/vitest.config.ts
+      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
     dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- scope-defend
     acs_covered:
-      - AC-1
-      - AC-9
+      - AC-8
   - id: 2
+    subtask_id: ST-2
     description: >-
-      Create src/__types__/index.ts with all Zod schemas: DecisionTypeSchema, TrainingDataTypeSchema,
-      InterviewAnswersSchema, FeatureVectorSchema, HitlInterviewInputSchema, HitlInterviewOutputSchema,
-      HitlDecisionRowSchema
+      Extend createScopeDefendNode() factory to accept an optional KbAddTaskFn config parameter. Add a
+      writeBacklogTasks() helper function (exported for testability) that iterates defer-to-backlog challenges from the
+      validated output and calls kbAddTaskFn for each, with source attribution fields (source_agent: 'scope-defender',
+      source_story_id, source_phase: 'elab', task_type: 'feature_idea', tags includes 'scope-defender', 'deferred').
+      Call writeBacklogTasks() at the end of Phase 4 in scopeDefendNode. Error from any kbAddTaskFn call must be caught
+      and logged as a warning — never thrown.
     files:
-      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
+      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
     files_to_read:
-      - packages/backend/sidecars/role-pack/src/__types__/index.ts
-      - packages/backend/sidecars/cohesion/src/__types__/index.ts
-      - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
+      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
+      - packages/backend/orchestrator/src/nodes/backlog/backlog-curate.ts
+      - apps/api/knowledge-base/src/crud-operations/task-operations.ts
     dependencies:
       - 1
     slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
+      - AC-1
       - AC-2
-      - AC-5
-      - AC-7
-      - AC-8
-  - id: 3
-    description: >-
-      Create src/capture-interview.ts: core logic that reads hitl_decisions for context, builds feature vector, calls
-      trainingDataIngest, returns labeled training row
-    files:
-      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
-    files_to_read:
-      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
-      - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-      - apps/api/knowledge-base/src/db/index.ts
-      - packages/backend/sidecars/cohesion/src/compute-audit.ts
-    dependencies:
-      - 2
-    slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
-    acs_covered:
       - AC-3
       - AC-4
       - AC-5
       - AC-6
-  - id: 4
+      - AC-7
+  - id: 3
+    subtask_id: ST-3
     description: >-
-      Create src/hitl-interview.ts: MCP tool wrapper that validates input via HitlInterviewInputSchema and delegates to
-      captureInterview
+      Add idempotency guard inside writeBacklogTasks(): before calling kbAddTaskFn for each challenge, call
+      kbListTasksFn with tags filter 'scope-defender:{storyId}:{challengeId}'. Skip write with debug log if task already
+      exists. Add KbListTasksFn as a second optional config parameter in createScopeDefendNode(). The deterministic
+      idempotency tag uses DA-001..DA-005 challenge IDs (stable within a single run).
     files:
-      - packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
+      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
     files_to_read:
-      - packages/backend/sidecars/role-pack/src/role-pack-get.ts
-      - packages/backend/sidecars/cohesion/src/mcp-tools/cohesion-audit.ts
+      - apps/api/knowledge-base/src/crud-operations/task-operations.ts
     dependencies:
-      - 3
+      - 2
     slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
-      - AC-2
-      - AC-3
-  - id: 5
-    description: >-
-      Create src/http-handler.ts: POST /hitl-interview handler using sendJson + readBody from @repo/sidecar-http-utils,
-      validates body via HitlInterviewInputSchema, calls captureInterview
-    files:
-      - packages/backend/sidecars/hitl-interview/src/http-handler.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/routes/cohesion.ts
-      - packages/backend/sidecars/http-utils/src/index.ts
-    dependencies:
-      - 3
-    slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-1
       - AC-9
-  - id: 6
-    description: 'Create src/server.ts: Node.js HTTP server on PORT ?? ''3093'', routing POST /hitl-interview to http-handler'
-    files:
-      - packages/backend/sidecars/hitl-interview/src/server.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/server.ts
-    dependencies:
-      - 5
-    slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-1
-  - id: 7
-    description: 'Create src/index.ts: package entry point exporting hitlInterview MCP tool and all public types from __types__'
-    files:
-      - packages/backend/sidecars/hitl-interview/src/index.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/index.ts
-      - packages/backend/sidecars/role-pack/src/index.ts
-    dependencies:
-      - 4
-    slice: packages
-    verification: pnpm check-types --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-1
-      - AC-2
-  - id: 8
-    description: 'Create src/test/setup.ts: mock @repo/db and @repo/logger for unit tests'
-    files:
-      - packages/backend/sidecars/hitl-interview/src/test/setup.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/test/setup.ts
-    dependencies:
-      - 1
-    slice: packages
-    verification: pnpm test --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-10
-  - id: 9
+  - id: 4
+    subtask_id: ST-4
     description: >-
-      Create src/__tests__/capture-interview.test.ts: unit tests for captureInterview — happy path, hitl_decisions
-      context enrichment, trainingDataIngest call shape, error handling
+      Write unit tests for writeBacklogTasks() and the updated scopeDefendNode / createScopeDefendNode() covering: (a)
+      zero defer-to-backlog challenges → no kbAddTaskFn calls; (b) one challenge → one task with correct source
+      attribution fields; (c) five challenges → five tasks; (d) kbAddTaskFn failure → warning logged, no throw; (e)
+      kbAddTaskFn not injected → no-op (default behaviour); (f) idempotency: kbListTasksFn finds existing task → skip
+      with debug log; (g) tag contract: every task includes both 'scope-defender' and 'deferred' tags.
     files:
-      - packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts
+      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
     files_to_read:
-      - packages/backend/sidecars/cohesion/src/__tests__/compute-audit.test.ts
-      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
+      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
+      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
     dependencies:
       - 3
-      - 8
     slice: packages
-    verification: pnpm test --filter @repo/sidecar-hitl-interview
+    verification: pnpm test --filter @repo/orchestrator -- scope-defend
     acs_covered:
-      - AC-10
-  - id: 10
-    description: >-
-      Create src/__tests__/mcp-tool.test.ts: unit tests for hitlInterview MCP wrapper — input validation, delegation,
-      null return on error
-    files:
-      - packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/__tests__/mcp-tools.test.ts
-      - packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
-    dependencies:
-      - 4
-      - 8
-    slice: packages
-    verification: pnpm test --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-2
-      - AC-10
-  - id: 11
-    description: >-
-      Create src/__tests__/http-handler.test.ts: unit tests for HTTP handler — 200 on valid body, 400 on bad input, 500
-      on ingest failure, 404/405 routing guards
-    files:
-      - packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts
-    files_to_read:
-      - packages/backend/sidecars/cohesion/src/__tests__/routes.test.ts
-      - packages/backend/sidecars/hitl-interview/src/http-handler.ts
-    dependencies:
-      - 5
-      - 8
-    slice: packages
-    verification: pnpm test --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-10
-  - id: 12
-    description: >-
-      Create src/__tests__/integration.test.ts: integration test verifying trainingDataIngest is called with correctly
-      shaped features and labels objects for each decisionType
-    files:
-      - packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts
-    files_to_read:
-      - packages/backend/sidecars/hitl-interview/src/capture-interview.ts
-      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts
-    dependencies:
-      - 3
-      - 8
-    slice: packages
-    verification: pnpm test --filter @repo/sidecar-hitl-interview
-    acs_covered:
-      - AC-5
       - AC-10
 files_to_change:
-  - path: packages/backend/sidecars/hitl-interview/package.json
-    action: create
-    reason: 'Package scaffold: @repo/sidecar-hitl-interview, port 3093 (AC-1)'
-  - path: packages/backend/sidecars/hitl-interview/tsconfig.json
-    action: create
-    reason: TypeScript config matching cohesion sidecar pattern
-  - path: packages/backend/sidecars/hitl-interview/vitest.config.ts
-    action: create
-    reason: Vitest config with 45% coverage thresholds (AC-10), setup file
-  - path: packages/backend/sidecars/hitl-interview/src/__types__/index.ts
-    action: create
+  - path: packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+    action: modify
     reason: >-
-      All Zod schemas: DecisionTypeSchema, TrainingDataTypeSchema, InterviewAnswersSchema (AC-7), FeatureVectorSchema
-      (AC-8), HitlInterviewInputSchema (AC-2)
-  - path: packages/backend/sidecars/hitl-interview/src/capture-interview.ts
-    action: create
-    reason: 'Core logic: read hitl_decisions for context (AC-6), build feature vector (AC-4), call trainingDataIngest (AC-5)'
-  - path: packages/backend/sidecars/hitl-interview/src/hitl-interview.ts
-    action: create
-    reason: hitlInterview MCP tool exported from src/index.ts (AC-2)
-  - path: packages/backend/sidecars/hitl-interview/src/http-handler.ts
-    action: create
-    reason: HTTP handler using @repo/sidecar-http-utils sendJson + readBody (AC-9)
-  - path: packages/backend/sidecars/hitl-interview/src/server.ts
-    action: create
-    reason: HTTP server on PORT ?? '3093' (AC-1)
-  - path: packages/backend/sidecars/hitl-interview/src/index.ts
-    action: create
-    reason: 'Package entry: exports hitlInterview MCP tool and public types (AC-1, AC-2)'
-  - path: packages/backend/sidecars/hitl-interview/src/test/setup.ts
-    action: create
-    reason: Mock @repo/db and @repo/logger for unit tests
-  - path: packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts
-    action: create
-    reason: Unit tests for core capture logic (AC-10)
-  - path: packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts
-    action: create
-    reason: Unit tests for hitlInterview MCP wrapper (AC-2, AC-10)
-  - path: packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts
-    action: create
-    reason: Unit tests for HTTP handler routing and error cases (AC-10)
-  - path: packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts
-    action: create
-    reason: Integration tests verifying trainingDataIngest call shape (AC-10)
+      ST-1: reconcile local schema with canonical (target→description, RiskIfDeferred enum expansion); ST-2: add
+      writeBacklogTasks() helper and KbAddTaskFn config injection; ST-3: add KbListTasksFn config injection and
+      idempotency guard inside writeBacklogTasks()
+  - path: packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+    action: modify
+    reason: >-
+      ST-1: add total_candidates_reviewed, truncated, warnings, warning_count fields to ScopeChallengesSchema so the
+      canonical schema is the single source of truth
+  - path: packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
+    action: modify
+    reason: >-
+      ST-4: add writeBacklogTasks test scenarios (a–g) covering tag contract, idempotency, error handling, and
+      zero-challenge no-op
 commands_to_run:
-  - command: pnpm install
-    when: after package.json created, to register workspace package
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after all code changes
     required: true
-  - command: pnpm check-types --filter @repo/sidecar-hitl-interview
-    when: after all source files created
+  - command: pnpm test --filter @repo/orchestrator -- scope-defend
+    when: after all code changes
     required: true
-  - command: pnpm test --filter @repo/sidecar-hitl-interview
-    when: after all test files created
-    required: true
-  - command: pnpm build --filter @repo/sidecar-hitl-interview
+  - command: pnpm lint --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
-  - ac_id: AC-1
-    planned_evidence: >-
-      package.json with @repo/sidecar-hitl-interview, server.ts with PORT ?? '3093', directory structure matches
-      role-pack pattern
-    evidence_type: file
-  - ac_id: AC-2
-    planned_evidence: hitlInterview exported from src/index.ts; mcp-tool.test.ts verifies export and param validation
-    evidence_type: test
-  - ac_id: AC-3
-    planned_evidence: capture-interview.test.ts verifies all InterviewAnswersSchema fields required before trainingDataIngest is called
-    evidence_type: test
-  - ac_id: AC-4
-    planned_evidence: >-
-      FeatureVectorSchema in __types__/index.ts; integration.test.ts verifies features object contains all required
-      vector fields
-    evidence_type: test
-  - ac_id: AC-5
-    planned_evidence: >-
-      integration.test.ts verifies trainingDataIngest called with dataType in {'qa_gate_decision',
-      'code_review_decision', 'story_approval_decision'}
-    evidence_type: test
-  - ac_id: AC-6
-    planned_evidence: >-
-      capture-interview.ts reads from hitlDecisions via @repo/db (read-only SELECT); no insert/update on hitl_decisions
-      in any file
-    evidence_type: file
-  - ac_id: AC-7
-    planned_evidence: >-
-      InterviewAnswersSchema in src/__types__/index.ts with rationale, confidence, alternativesConsidered,
-      riskAssessment
-    evidence_type: file
   - ac_id: AC-8
     planned_evidence: >-
-      FeatureVectorSchema in src/__types__/index.ts with all 6 typed fields including TrainingDataTypeSchema for
-      decisionType
-    evidence_type: file
+      scope-challenges.ts canonical schema extended; scope-defend.ts local schema imports and re-uses canonical types;
+      type-check passes
+    evidence_type: command
   - ac_id: AC-9
-    planned_evidence: >-
-      http-handler.ts imports sendJson, readBody from @repo/sidecar-http-utils; no local reimplementation; @repo/logger
-      used throughout
-    evidence_type: file
+    planned_evidence: 'Unit test (f): kbListTasksFn finds existing task → kbAddTaskFn NOT called; debug log emitted'
+    evidence_type: test
   - ac_id: AC-10
     planned_evidence: >-
-      vitest coverage thresholds set to 45%; pnpm test --filter @repo/sidecar-hitl-interview passes; integration.test.ts
-      includes trainingDataIngest call shape assertions
+      Unit test (g): every kb_add_task call includes tags: ['scope-defender', 'deferred',
+      'scope-defender:{storyId}:{challengeId}']
+    evidence_type: test
+  - ac_id: AC-1
+    planned_evidence: writeBacklogTasks() called in Phase 4 of scopeDefendNode; one kb_add_task per defer-to-backlog challenge
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: "source_agent: 'scope-defender' in every kb_add_task call — verified by unit test (b)"
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: source_story_id set to state.storyId in every kb_add_task call — verified by unit test (b)
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: "source_phase: 'elab' in every kb_add_task call — verified by unit test (b)"
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: "task_type: 'feature_idea' in every kb_add_task call — verified by unit test (b)"
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: 'Unit test (d): kbAddTaskFn throws → warning logged, no throw from scopeDefendNode'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'Unit test (e): kbAddTaskFn not injected (undefined) → no-op, no error'
     evidence_type: test
 architectural_decisions:
   - id: ARCH-001
-    question: Should the hitlInterview MCP tool call captureInterview directly (in-process) or via HTTP fetch to localhost:3093?
-    decision: Direct in-process call (same pattern as cohesion_audit in WINT-4010)
+    question: Should backlog writes be in Phase 4 of scope-defend.ts or a new downstream node?
+    decision: Extend Phase 4 of scope-defend.ts with injectable KbAddTaskFn — not a new downstream node.
     rationale: >-
-      WINT-4010 established this pattern via ARCH-001 precedent: direct import avoids requiring the sidecar HTTP server
-      to be running when the MCP tool is invoked. HTTP server is for external callers; MCP tool is the programmatic
-      interface.
-    decided_by: auto-accepted (tier-1, matches existing codebase pattern)
+      Elaboration ARCH decision (decided_at: 2026-03-23). Avoids new graph node, uses established injectable pattern
+      from persist-learnings.ts and backlog-curate.ts. Keeps backlog write co-located with challenge generation.
+    decided_by: elaboration
   - id: ARCH-002
-    question: AC-9 references readJsonBody but @repo/sidecar-http-utils only exports readBody. Which to use?
-    decision: >-
-      Use readBody from @repo/sidecar-http-utils and parse JSON locally in http-handler.ts, following the rules-registry
-      pattern
+    question: Does backlog-curator require code changes to surface auto-created tasks?
+    decision: No code changes to backlog-curator needed. The tag contract ('deferred' + 'scope-defender') is sufficient.
     rationale: >-
-      rules-registry/src/http-handler.ts shows the established pattern: readBody() returns raw string, local
-      readJsonBody() helper parses it. This keeps @repo/sidecar-http-utils unchanged (no new exports needed) and follows
-      existing convention.
-    decided_by: auto-accepted (tier-1, matches codebase pattern)
+      backlog-curate.ts already queries with tags=['deferred'] at line 222. Auto-created tasks will appear automatically
+      if they include the 'deferred' tag. The elaboration verified this at codebase_verification.backlog_curate_ts.
+    decided_by: elaboration
   - id: ARCH-003
-    question: Where should trainingDataIngest be imported from — direct path or package export?
+    question: Should scope-defend.ts import types from artifacts/scope-challenges.ts (canonical) or define its own?
     decision: >-
-      Import trainingDataIngest from apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts via
-      @repo/knowledge-base package dependency
+      scope-defend.ts should import ScopeChallengeSchema, RiskIfDeferredSchema, and RecommendationSchema from
+      artifacts/scope-challenges.ts. The canonical schema must be extended to include total_candidates_reviewed,
+      truncated, warnings, warning_count fields.
     rationale: >-
-      cohesion sidecar uses @repo/db for database access. Same dependency pattern: hitl-interview sidecar adds
-      @repo/knowledge-base to its dependencies to access the ML pipeline tool and DB exports. No circular deps — the
-      sidecar is a consumer of knowledge-base.
-    decided_by: auto-accepted (tier-2, matches cohesion dependency pattern)
+      AC-8 prerequisite: cementing a third consumer on the diverged local schema permanently splits the type contract.
+      The canonical schema is extended (not replaced) to preserve backward compatibility for existing consumers.
+    decided_by: elaboration
 complexity: moderate
 notes:
-  - pnpm-workspace.yaml already includes packages/backend/sidecars/* — no workspace config change needed
   - >-
-    No DB migrations required — workflow.hitl_decisions and workflow.training_data tables already exist (confirmed in
-    SCOPE artifact)
+    AC-8 (schema reconciliation) is the prerequisite gate for AC-1–AC-7 and AC-9–AC-10. ST-1 must be completed and
+    type-checked before ST-2 begins.
   - >-
-    The AC-9 reference to readJsonBody means using readBody from @repo/sidecar-http-utils and wrapping JSON.parse
-    locally (rules-registry pattern)
-  - Coverage threshold is 45% (not 80% like cohesion) per AC-10 — vitest.config.ts thresholds should reflect this
+    backlog-curate.ts does NOT require changes — the 'deferred' tag contract is sufficient for backlog-curator's Phase 1
+    KB query (confirmed at line 222).
   - >-
-    hitl_decisions.storyId is NOT NULL FK — read queries must filter by valid storyId; handle empty result gracefully
-    (context enrichment is best-effort)
+    The RISK_ORDER map in scope-defend.ts uses ['low','medium','high'] — after schema reconciliation, it must be updated
+    to handle the canonical enum ['critical','high','medium','low','none']. Critical maps above high; none maps below
+    low.
   - >-
-    trainingDataIngest returns null on failure (not throws) — capture-interview.ts must handle null return and log
-    warning
+    writeBacklogTasks() must be exported for unit testability, matching the pattern of applyDAChallenges() and
+    identifyCandidates().
   - >-
-    Port 3093 was noted as conflicting with rules-registry in elaboration ARCH note — the server.ts comment in cohesion
-    shows rules-registry as 3093. Clarify: rules-registry is @repo/sidecar-rules-registry. Dev must confirm port 3093 is
-    available or use 3094.
+    Fire-and-forget error handling: any kbAddTaskFn call that throws must be caught, logged as logger.warn, and
+    execution continues — never rethrows. Same pattern as persist-learnings.ts.
+  - >-
+    Idempotency tag format: 'scope-defender:{storyId}:{challengeId}' where challengeId is the DA-001..DA-005 stable ID
+    from a single applyDAChallenges() run.
+  - >-
+    deferral_note field from the challenge becomes the task description (if present); otherwise derive from
+    challenge.target + challenge.challenge text.
