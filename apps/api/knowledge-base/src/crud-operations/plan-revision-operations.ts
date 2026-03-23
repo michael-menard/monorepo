@@ -28,7 +28,17 @@ export const KbCreatePlanRevisionInputSchema = z.object({
   content_hash: z.string().optional(),
 
   /** Parsed heading breakdown [{heading, level, startLine}] */
-  sections: z.array(z.record(z.unknown())).optional(),
+  sections: z
+    .array(
+      z
+        .object({
+          heading: z.string(),
+          level: z.number().int(),
+          startLine: z.number().int(),
+        })
+        .passthrough(),
+    )
+    .optional(),
 
   /** Why this revision was created */
   change_reason: z.string().optional(),
@@ -56,9 +66,11 @@ export type KbGetPlanRevisionsInput = z.infer<typeof KbGetPlanRevisionsInputSche
 // Dependencies
 // ============================================================================
 
-export interface PlanRevisionCrudDeps {
-  db: NodePgDatabase<typeof schema>
-}
+export const PlanRevisionCrudDepsSchema = z.object({
+  db: z.custom<NodePgDatabase<typeof schema>>(),
+})
+
+export type PlanRevisionCrudDeps = z.infer<typeof PlanRevisionCrudDepsSchema>
 
 // ============================================================================
 // Operations
