@@ -1,123 +1,79 @@
 schema: 1
-story_id: APRS-5010
-timestamp: '2026-03-23T21:20:00Z'
+story_id: APRS-5040
+timestamp: '2026-03-23T21:17:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 35
+    pass: 19
     fail: 0
   integration:
-    pass: 0
+    pass: 5
     fail: 0
   e2e:
     pass: 0
     fail: 0
-    status: exempt
   http:
     pass: 0
     fail: 0
-    status: n/a
-coverage: 100
-coverage_branch: 84.84
+coverage: null
 coverage_meets_threshold: true
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes: >-
-    Tests use vitest + expect assertions with no async anti-patterns. All ACs explicitly tagged in test names.
-    Injectable mock pattern used for KB persistence (no real side effects).
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-1]
+    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
     notes: >-
-      brainstormToNormalizedPlan produces valid NormalizedPlan — 7 tests pass. Spot-checked: produces correct planSlug
-      via slugify, sets status=draft, maps flows to FlowSchema with source/confidence/status fields.
+      createCLIDecisionCallbackAdapter() returns an object satisfying DecisionCallback interface (ask(DecisionContext)).
+      All 4 HiTL outcomes handled: approve (with flow selection follow-up), edit (all flows marked rejected, returns to
+      extract_flows), reject (follow-up reason prompt, terminates with error), defer (follow-up reason prompt,
+      terminates with deferred flag). Ctrl+C interruption paths handled for all prompts with sensible defaults. Wired
+      into createPlanRefinementGraph() in run-plan-refinement.ts.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-2]
+    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts:69-136
     notes: >-
-      existingPlanToNormalizedPlan produces valid NormalizedPlan — 5 tests pass. Handles recommendation field including
-      warning injection for non-refine-now values.
+      Prompt displays plan slug in header (=== Plan Refinement Review: {planSlug} ===), flows with IDs and names
+      ([{flow.id}] {flow.name} — Actor: {flow.actor}), warnings section with count, errors section with count. Exactly 4
+      inquirer choices: approve, edit, reject, defer. confirmedFlowIds/rejectedFlowIds correctly populated from checkbox
+      selection in handleApprovePrompt(). Verified by unit test 'calls inquirer.prompt with 4 choices for the decision
+      list'.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-3]
+    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/
     notes: >-
-      normalizedPlanToKbInput produces KbPlanInput with status=draft enforced. Verified KbPlanInputSchema.parse output
-      includes status='draft' — 6 tests pass.
-  - ac_id: AC-4
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-4]
-    notes: >-
-      Both adapters pass dependencies array through to NormalizedPlan.dependencies and then on to
-      KbPlanInput.dependencies — 2 dedicated tests pass.
-  - ac_id: AC-5
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-5]
-    notes: >-
-      slugify() produces URL-safe planSlug. Verified: 'User Authentication System' -> 'user-authentication-system', no
-      spaces, 1 test passing.
-  - ac_id: AC-6
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-6]
-    notes: >-
-      Dedicated dual-validation test: NormalizedPlanSchema.parse(normalized) and KbPlanInputSchema.parse(kbInput) both
-      pass without throw. 1 test explicitly covers this.
-  - ac_id: AC-7
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-7]
-    notes: >-
-      IntakePlanDraftSchema defined with all required fields (title, sourceSkill enum, all optional arrays defaulting to
-      []). 6 tests cover validation, defaults, and rejection of invalid inputs.
-  - ac_id: AC-8
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_evidence[AC-8]
-    notes: >-
-      persistDraftPlan accepts injectable KbUpsertPlanFn, uses status=draft. Mock test confirms call delegation and
-      null-return handling. 2 tests passing.
+      19 unit tests in cli-decision-callback-adapter.test.ts covering: factory function, approve path (4 tests), edit
+      path (2 tests), reject path (3 tests), defer path (2 tests), prompt format (5 tests), Ctrl+C interruption (2
+      tests). 5 integration tests in cli-decision-callback-adapter.integration.test.ts covering: approve full graph
+      round-trip, reject full graph round-trip, defer full graph round-trip, edit-then-approve two-cycle round-trip,
+      stub planLoader smoke test. All 24 tests pass with 0 failures.
 architecture_compliant: true
-architecture_notes: >-
-  Pure function adapters. No barrel files. Zod schemas with z.infer<> — no TS interfaces. Component directory structure
-  followed (adapters/intake/__tests__/). @repo/logger not needed (pure functions, no logging surface). No shadcn
-  imports. No console.log. ESM imports with .js extensions.
-pre_existing_failures:
-  noted: true
-  affected_files:
-    - src/__tests__/index.test.ts
-    - src/adapters/__tests__/index-adapter.integration.test.ts
-    - src/nodes/story/__tests__/scope-defend.test.ts
-  verdict: Pre-existing — none of these files are in APRS-5010 touched_files. Not caused by this story.
 issues: []
 lessons_to_record:
   - lesson: >-
-      Injectable function type pattern (KbUpsertPlanFn) enables testing side-effectful KB persistence without real MCP
-      tool calls. Type the injectable as a simple async function signature rather than full tool interface.
+      Adapter factory pattern (createXxxAdapter returning interface) cleanly bridges an interactive CLI tool (inquirer)
+      to a typed graph callback interface without coupling the graph to the I/O mechanism. The graph only sees
+      DecisionCallback; the adapter handles all terminal interaction.
     category: pattern
     tags:
-      - backend
-      - testing
-      - mcp
-      - orchestrator
+      - langgraph
+      - adapter
+      - cli
+      - hitl
+      - inquirer
   - lesson: >-
-      Local schema copy (KbPlanInputSchema in kb-persistence.ts) avoids cross-app imports when the target schema lives
-      in a different service boundary. Accept the tech debt of duplication over introducing a forbidden dependency edge.
+      Ctrl+C / interruption handling via try/catch around each inquirer.prompt call provides graceful fallback (defer on
+      primary interrupt, approve-all on checkbox interrupt) without crashing the graph. This is a reusable pattern for
+      any interactive HiTL adapter.
     category: pattern
     tags:
-      - backend
-      - schema
-      - orchestrator
-      - architecture
-  - lesson: >-
-      Intermediate typed schema (IntakePlanDraftSchema) between raw skill output and NormalizedPlan eliminates the
-      untyped input contract gap. Both brainstorm and existing-plan skills share a single typed intake shape rather than
-      separate ad-hoc types.
-    category: pattern
-    tags:
-      - backend
-      - zod
-      - orchestrator
-      - intake
+      - cli
+      - error-handling
+      - hitl
+      - inquirer
+      - interruption
 tokens:
-  in: 28000
-  out: 3500
+  in: 18000
+  out: 2500
