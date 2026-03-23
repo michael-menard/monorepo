@@ -1033,6 +1033,69 @@ export async function kb_create_story(
 }
 
 // ============================================================================
+// Dependency graph validation helpers
+// ============================================================================
+
+const MAX_CYCLE_DEPTH = 10
+
+/**
+ * Detect if adding an edge (storyId → dependsOnId) would create a cycle.
+ *
+ * BFS from dependsOnId following existing edges. If any traversal reaches
+ * storyId, the proposed edge would create a cycle.
+ *
+ * Ported from migration 1090 recursive CTE (P0004 cycle detection).
+ *
+ * @returns Cycle message string if cycle detected, null if safe
+ */
+async function detectCycle(
+  db: NodePgDatabase<typeof schema>,
+  storyId: string,
+  dependsOnId: string,
+): Promise<string | null> {
+  const visited = new Set<string>()
+  const queue: Array<{ nodeId: string; path: string[] }> = [
+    { nodeId: dependsOnId, path: [storyId, dependsOnId] },
+  ]
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+
+    if (current.path.length >= MAX_CYCLE_DEPTH + 1) {
+      continue // Bounded traversal — do not expand nodes at max depth
+    }
+
+    if (visited.has(current.nodeId)) {
+      continue
+    }
+    visited.add(current.nodeId)
+
+    // Find all outgoing edges from this node (nodeId depends_on X → follow to X)
+    const edges = await db
+      .select({ dependsOnId: storyDependencies.dependsOnId })
+      .from(storyDependencies)
+      .where(eq(storyDependencies.storyId, current.nodeId))
+
+    for (const edge of edges) {
+      if (edge.dependsOnId === storyId) {
+        // Cycle detected — the target of the proposed edge eventually leads back to source
+        const cyclePath = [...current.path, edge.dependsOnId].join(' → ')
+        return `Cycle detected: ${cyclePath}`
+      }
+
+      if (!visited.has(edge.dependsOnId)) {
+        queue.push({
+          nodeId: edge.dependsOnId,
+          path: [...current.path, edge.dependsOnId],
+        })
+      }
+    }
+  }
+
+  return null
+}
+
+// ============================================================================
 // kb_add_dependency
 // ============================================================================
 
@@ -1079,8 +1142,47 @@ export async function kb_add_dependency(
     }
   }
 
-  // Idempotent: check if the exact triple already exists before inserting
-  // (story_dependencies has no unique constraint on the triple, only a UUID PK)
+  // Orphan guard — depends_on_id must reference an existing story
+  const targetExists = await deps.db
+    .select({ storyId: stories.storyId })
+    .from(stories)
+    .where(eq(stories.storyId, validated.depends_on_id))
+    .limit(1)
+
+  if (targetExists.length === 0) {
+    return {
+      created: false,
+      message: `depends_on_id not found: ${validated.depends_on_id}`,
+    }
+  }
+
+  // Also verify story_id exists (prevents dangling edges from either side)
+  const sourceExists = await deps.db
+    .select({ storyId: stories.storyId })
+    .from(stories)
+    .where(eq(stories.storyId, validated.story_id))
+    .limit(1)
+
+  if (sourceExists.length === 0) {
+    return {
+      created: false,
+      message: `story_id not found: ${validated.story_id}`,
+    }
+  }
+
+  // Cycle detection — BFS traversal from depends_on_id to see if it reaches story_id
+  // Ported from migration 1090 recursive CTE (P0004 cycle detection)
+  const cycleMessage = await detectCycle(deps.db, validated.story_id, validated.depends_on_id)
+  if (cycleMessage) {
+    return {
+      created: false,
+      message: cycleMessage,
+    }
+  }
+
+  // Idempotent: check if the exact triple already exists before inserting.
+  // DB has uq_story_dependency on (story_id, depends_on_id) which is MORE restrictive
+  // than triple uniqueness — prevents multiple edge types between the same story pair.
   const existing = await deps.db
     .select({ id: storyDependencies.id })
     .from(storyDependencies)
