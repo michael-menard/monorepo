@@ -28,23 +28,21 @@ export const KbIngestStoryInputSchema = z.object({
   story_id: z.string().min(1),
   title: z.string().min(1),
   description: z.string(),
-  feature: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  acceptance_criteria: z.array(z.string()).optional(),
-  subtasks: z.array(z.string()).optional(),
-  risk: z.enum(['low', 'medium', 'high']).optional(),
-  minimum_path: z.boolean().optional(),
-  parent_plan_slug: z.string().optional(),
-  parent_flow_id: z.string().optional(),
-  flow_step_reference: z.string().optional(),
-  dependencies: z
-    .array(
-      z.object({
-        depends_on: z.string(),
-        type: z.string(),
-      }),
-    )
-    .optional(),
+  feature: z.string(),
+  tags: z.array(z.string()),
+  acceptance_criteria: z.array(z.string()),
+  subtasks: z.array(z.string()),
+  risk: z.enum(['low', 'medium', 'high']),
+  minimum_path: z.boolean(),
+  parent_plan_slug: z.string(),
+  parent_flow_id: z.string(),
+  flow_step_reference: z.string(),
+  dependencies: z.array(
+    z.object({
+      depends_on: z.string(),
+      type: z.string(),
+    }),
+  ),
 })
 
 export type KbIngestStoryInput = z.infer<typeof KbIngestStoryInputSchema>
@@ -56,9 +54,7 @@ export type KbIngestStoryInput = z.infer<typeof KbIngestStoryInputSchema>
  *
  * Returns { story_id } on success, null on failure.
  */
-export type KbIngestStoryFn = (
-  input: KbIngestStoryInput,
-) => Promise<{ story_id: string } | null>
+export type KbIngestStoryFn = (input: KbIngestStoryInput) => Promise<{ story_id: string } | null>
 
 /**
  * Input schema for kb_update_plan MCP tool.
@@ -86,9 +82,7 @@ export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
  *
  * Returns { plan_slug } on success, null on failure.
  */
-export type KbUpdatePlanFn = (
-  input: KbUpdatePlanInput,
-) => Promise<{ plan_slug: string } | null>
+export type KbUpdatePlanFn = (input: KbUpdatePlanInput) => Promise<{ plan_slug: string } | null>
 
 // ============================================================================
 // Adapter Factory
