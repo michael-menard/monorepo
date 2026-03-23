@@ -155,6 +155,7 @@ describe('MCP Server Integration', () => {
         'kb_search_plans',
         'kb_get_plan_dashboard',
         'kb_get_plan_revisions',
+        'kb_get_plan_revision_diff',
         'kb_log_plan_event',
         'kb_get_plan_events',
         // Artifact search tool (KBAR-0130)

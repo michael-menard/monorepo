@@ -47,7 +47,10 @@ import {
 } from '../search/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
 import { findSimilarPlans } from '../search/plan-similarity.js'
-import { kb_get_plan_revisions } from '../crud-operations/plan-revision-operations.js'
+import {
+  kb_get_plan_revisions,
+  kb_get_plan_revision_diff,
+} from '../crud-operations/plan-revision-operations.js'
 import {
   kb_log_plan_event,
   kb_get_plan_events,
@@ -208,6 +211,7 @@ import {
   KbSearchPlansInputSchema,
   KbGetPlanDashboardInputSchema,
   KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
   KbLogPlanEventInputSchema,
   KbGetPlanEventsInputSchema,
 } from './tool-schemas.js'
@@ -5108,6 +5112,38 @@ async function handleKbGetPlanRevisions(
 }
 
 /**
+ * Handle kb_get_plan_revision_diff tool invocation.
+ */
+async function handleKbGetPlanRevisionDiff(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_revision_diff' as ToolName, context)
+    const validated = KbGetPlanRevisionDiffInputSchema.parse(input)
+    const result = await kb_get_plan_revision_diff({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_revision_diff succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      revision_a: validated.revision_a,
+      revision_b: validated.revision_b,
+      has_changes: result.diff.has_changes,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_revision_diff failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Handle kb_log_plan_event tool invocation.
  */
 async function handleKbLogPlanEvent(
@@ -5398,6 +5434,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_search_plans: handleKbSearchPlans,
   kb_get_plan_dashboard: handleKbGetPlanDashboard,
   kb_get_plan_revisions: handleKbGetPlanRevisions,
+  kb_get_plan_revision_diff: handleKbGetPlanRevisionDiff,
   kb_log_plan_event: handleKbLogPlanEvent,
   kb_get_plan_events: handleKbGetPlanEvents,
   // Artifact search tool (KBAR-0130)

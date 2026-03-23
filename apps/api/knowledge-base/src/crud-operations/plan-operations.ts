@@ -12,7 +12,10 @@ import { eq, sql, and, ne, isNotNull, isNull, notInArray, inArray, type SQL } fr
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans, planDependencies, planExecutionLog } from '../db/schema.js'
-import { kb_create_plan_revision } from './plan-revision-operations.js'
+import {
+  kb_create_plan_revision,
+  type KbCreatePlanRevisionInput,
+} from './plan-revision-operations.js'
 
 // ============================================================================
 // Explicit column selectors — guard against schema-vs-DB drift
@@ -534,7 +537,7 @@ export async function kb_upsert_plan(
     await kb_create_plan_revision(deps, {
       plan_slug: validated.plan_slug,
       raw_content: validated.raw_content,
-      sections: validated.sections,
+      sections: validated.sections as KbCreatePlanRevisionInput['sections'],
       change_reason: created ? 'Initial import' : 'Content update via upsert',
       changed_by: 'kb_upsert_plan',
     })
