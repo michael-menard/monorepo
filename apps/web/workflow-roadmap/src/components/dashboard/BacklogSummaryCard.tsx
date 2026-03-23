@@ -1,16 +1,7 @@
+import { getPriorityColor } from '@repo/app-component-library'
 import type { DashboardResponse } from '../../store/roadmapApi'
 
 type BacklogSummary = DashboardResponse['backlogSummary']
-
-const PRIORITY_COLOR: Record<string, string> = {
-  p0: 'text-red-400',
-  p1: 'text-amber-400',
-  p2: 'text-slate-300',
-}
-
-function priorityColor(priority: string): string {
-  return PRIORITY_COLOR[priority.toLowerCase()] ?? 'text-slate-500'
-}
 
 export function BacklogSummaryCard({ backlogSummary }: { backlogSummary: BacklogSummary }) {
   if (backlogSummary.totalOpen === 0) return null
@@ -35,7 +26,11 @@ export function BacklogSummaryCard({ backlogSummary }: { backlogSummary: Backlog
             <div className="space-y-1">
               {backlogSummary.byPriority.map(({ priority, count }) => (
                 <div key={priority} className="flex items-center justify-between">
-                  <span className={`text-xs font-mono ${priorityColor(priority)}`}>{priority}</span>
+                  <span
+                    className={`text-xs font-mono ${getPriorityColor(priority.toUpperCase(), 'text')}`}
+                  >
+                    {priority}
+                  </span>
                   <span className="text-xs font-mono text-slate-400">{count}</span>
                 </div>
               ))}
