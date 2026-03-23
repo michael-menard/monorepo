@@ -67,16 +67,24 @@ CREATE TABLE IF NOT EXISTS workflow.plan_flow_steps (
   step_label       TEXT        NOT NULL,
   step_description TEXT,
   metadata         JSONB,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT chk_plan_flow_steps_step_order
+    CHECK (step_order > 0),
+
+  CONSTRAINT unq_plan_flow_steps_flow_order
+    UNIQUE (flow_id, step_order)
 );
 
 COMMENT ON TABLE workflow.plan_flow_steps IS
   'APRS-1040: Ordered steps within a plan flow. Each row is one step in the execution '
   'sequence of a workflow.plan_flows record. step_order determines sequencing within a flow. '
-  'FK to plan_flows with CASCADE delete — removing a flow removes all its steps.';
+  'FK to plan_flows with CASCADE delete — removing a flow removes all its steps. '
+  'Constraints: step_order > 0, UNIQUE(flow_id, step_order) prevents duplicates and invalid ordering.';
 
 COMMENT ON COLUMN workflow.plan_flow_steps.step_order IS
-  'Ordinal position of this step within its parent flow (1-based, no gap enforcement). '
+  'Ordinal position of this step within its parent flow (1-based, positive integers only). '
+  'Must be unique within a flow (UNIQUE constraint on flow_id, step_order). '
   'Determines execution sequence when the flow is run.';
 
 -- ── 3. Supporting indexes ────────────────────────────────────────────────────

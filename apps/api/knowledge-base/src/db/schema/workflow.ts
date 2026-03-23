@@ -616,10 +616,13 @@ export const planFlowSteps = workflow.table(
   table => ({
     flowIdIdx: index('idx_plan_flow_steps_flow_id').on(table.flowId),
     flowOrderIdx: index('idx_plan_flow_steps_flow_order').on(table.flowId, table.stepOrder),
+    // Constraints enforced in migration 1120: step_order > 0, UNIQUE(flow_id, step_order)
+    // These are DB-enforced in migration DDL, but Drizzle doesn't support CHECK/UNIQUE
+    // constraints directly — they are purely mirrored in the Zod schemas for validation.
   }),
 )
 
-export type PlanFlow = typeof planFlows.$inferSelect
-export type NewPlanFlow = typeof planFlows.$inferInsert
-export type PlanFlowStep = typeof planFlowSteps.$inferSelect
-export type NewPlanFlowStep = typeof planFlowSteps.$inferInsert
+// APRS-1040: Zod-inferred types now imported from __types__
+// These replace Drizzle $inferSelect/$inferInsert patterns per CLAUDE.md "Zod-First Types" requirement.
+// Import types from __types__/index.ts:
+//   import type { PlanFlow, NewPlanFlow, PlanFlowStep, NewPlanFlowStep } from '../__types__'

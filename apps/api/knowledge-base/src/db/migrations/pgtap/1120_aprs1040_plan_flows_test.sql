@@ -4,22 +4,23 @@
 -- Requires:    pgTAP extension, migration 1120 applied
 -- Usage:       psql $KB_DATABASE_URL -f pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
 --
--- Test groups (18 assertions total):
+-- Test groups (26 assertions total):
 --   TEST-1040-1:  Table existence (2 assertions)
 --   TEST-1040-2:  Column presence — plan_flows (5 assertions)
 --   TEST-1040-3:  Column presence — plan_flow_steps (5 assertions)
---   TEST-1040-4:  CHECK constraint rejection (3 assertions)
+--   TEST-1040-4:  CHECK constraint rejection (3 assertions: invalid source, invalid status, confidence > 1)
 --   TEST-1040-5:  FK cascade delete — plan_flows → plan_flow_steps (2 assertions)
 --   TEST-1040-6:  Index existence (4 assertions: plan_id, status, flow_id, flow_order)
+--   TEST-1040-7:  plan_flow_steps step_order constraints (5 assertions: type, nullability, step_order > 0, UNIQUE(flow_id, step_order), duplicate rejection)
 --
--- Wait: total = 2 + 5 + 5 + 3 + 2 + 4 = 21 assertions
+-- Total = 2 + 5 + 5 + 3 + 2 + 4 + 5 = 26 assertions
 --
 -- All writes are inside BEGIN…ROLLBACK to leave the DB clean after the run.
 -- Fixtures use story_id prefix 'TEST-1040-*' and plan fixture to avoid collisions.
 
 BEGIN;
 
-SELECT plan(21);
+SELECT plan(26);
 
 -- ────────────────────────────────────────────────────────────────────────────
 -- Fixture setup: seed a test plan (plan_flows has FK to workflow.plans)
@@ -234,6 +235,86 @@ SELECT ok(
       AND indexname  = 'idx_plan_flow_steps_flow_order'
   ),
   'TEST-1040-6d: index idx_plan_flow_steps_flow_order exists on workflow.plan_flow_steps'
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- TEST-1040-7: plan_flow_steps step_order constraints (type, nullability, value constraints)
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- TEST-1040-7a: step_order column is INTEGER type
+SELECT col_type_is(
+  'workflow', 'plan_flow_steps', 'step_order', 'integer',
+  'TEST-1040-7a: plan_flow_steps.step_order is INTEGER type'
+);
+
+-- TEST-1040-7b: step_order column is NOT NULL
+SELECT col_is_not_null(
+  'workflow', 'plan_flow_steps', 'step_order',
+  'TEST-1040-7b: plan_flow_steps.step_order is NOT NULL'
+);
+
+-- TEST-1040-7c: step_order must be > 0 (chk_plan_flow_steps_step_order CHECK constraint)
+SELECT throws_ok(
+  $$INSERT INTO workflow.plan_flow_steps (id, flow_id, step_order, step_label)
+    VALUES (
+      'd0000000-1040-0002-0000-000000000001'::uuid,
+      'b0000000-1040-0001-0000-000000000001'::uuid,
+      0,
+      'invalid step'
+    )$$,
+  '23514',
+  NULL,
+  'TEST-1040-7c: step_order <= 0 is rejected by CHECK constraint (chk_plan_flow_steps_step_order)'
+);
+
+-- TEST-1040-7d: Duplicate (flow_id, step_order) is rejected by UNIQUE constraint
+-- First insert: step_order = 2 (valid, > 0)
+INSERT INTO workflow.plan_flow_steps (id, flow_id, step_order, step_label)
+VALUES (
+  'd0000000-1040-0002-0000-000000000001'::uuid,
+  'b0000000-1040-0001-0000-000000000001'::uuid,
+  2,
+  'second step'
+);
+
+-- Second insert: same flow_id and step_order should fail
+SELECT throws_ok(
+  $$INSERT INTO workflow.plan_flow_steps (id, flow_id, step_order, step_label)
+    VALUES (
+      'd0000000-1040-0003-0000-000000000001'::uuid,
+      'b0000000-1040-0001-0000-000000000001'::uuid,
+      2,
+      'duplicate step order'
+    )$$,
+  '23505',
+  NULL,
+  'TEST-1040-7d: duplicate (flow_id, step_order) is rejected by UNIQUE constraint'
+);
+
+-- TEST-1040-7e: Different flows can use the same step_order (UNIQUE is per-flow)
+INSERT INTO workflow.plan_flows (id, plan_id, source, status)
+VALUES (
+  'b0000000-1040-0002-0000-000000000001'::uuid,
+  'a0000000-1040-0000-0000-000000000001'::uuid,
+  'user',
+  'approved'
+);
+
+INSERT INTO workflow.plan_flow_steps (id, flow_id, step_order, step_label)
+VALUES (
+  'd0000000-1040-0004-0000-000000000001'::uuid,
+  'b0000000-1040-0002-0000-000000000001'::uuid,
+  2,
+  'step two in different flow'
+);
+
+SELECT is(
+  (SELECT COUNT(*)::bigint
+   FROM workflow.plan_flow_steps
+   WHERE flow_id = 'b0000000-1040-0002-0000-000000000001'::uuid
+     AND step_order = 2),
+  1::bigint,
+  'TEST-1040-7e: different flows can both have step_order = 2 (UNIQUE is per-flow)'
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
