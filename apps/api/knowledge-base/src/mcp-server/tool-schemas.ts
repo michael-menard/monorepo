@@ -70,7 +70,9 @@ import {
 } from '../crud-operations/plan-operations.js'
 import {
   KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
   type KbGetPlanRevisionsInput,
+  type KbGetPlanRevisionDiffInput,
 } from '../crud-operations/plan-revision-operations.js'
 import {
   KbLogPlanEventInputSchema,
@@ -274,9 +276,9 @@ export const ArtifactSearchInputSchema = z.object({
 export type ArtifactSearchInput = z.infer<typeof ArtifactSearchInputSchema>
 
 export const McpToolDefinitionSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  inputSchema: z.record(z.string(), z.unknown()),
+  name: z.string().describe('Tool name'),
+  description: z.string().describe('Tool description'),
+  inputSchema: z.record(z.unknown()).describe('Tool input schema'),
 })
 
 export type McpToolDefinition = z.infer<typeof McpToolDefinitionSchema>
@@ -3424,51 +3426,31 @@ Response:
   inputSchema: zodToMcpSchema(KbGetChurnAnalysisInputSchema),
 }
 
-// ============================================================================
-// Scoreboard Tool Definition (WINT-3090)
-// ============================================================================
 /**
  * kb_get_scoreboard tool definition.
  *
- * Returns composite workflow health scoreboard with 5 key metrics.
+ * Returns composite workflow health scoreboard.
  */
 export const kbGetScoreboardToolDefinition: McpToolDefinition = {
   name: 'kb_get_scoreboard',
   description: `Get composite workflow health scoreboard with 5 key metrics.
 
-Answers: "How healthy is our development pipeline overall?"
+Answers: "How healthy is the overall pipeline right now?"
 
 Parameters:
-- start_date (optional): Filter from this date (ISO string or coercible date)
-- end_date (optional): Filter to this date (ISO string or coercible date)
-- feature (optional): Filter by feature prefix (e.g. "WINT", "PIPE")
+- start_date (optional): Start of time range (ISO 8601)
+- end_date (optional): End of time range (ISO 8601)
+- feature (optional): Filter by feature prefix
 
-Returns 5 metrics:
-1. throughput: stories_completed_per_week, total_completed, weeks_observed
-2. cycle_time: avg/min/max cycle_time_days, sample_size
-3. first_pass_success: total_completed, first_pass_count, first_pass_rate
-4. cost_efficiency: avg_cost_per_story, total_cost, story_count
-5. agent_reliability: per-agent total_invocations, successful_invocations, success_rate
+Returns: Throughput, cycle time, first-pass success rate, cost efficiency, and agent reliability
 
-Example (no filters):
+Example (all time):
 {}
 
 Example (filter by feature and date range):
 {
-  "feature": "WINT",
-  "start_date": "2026-01-01",
-  "end_date": "2026-03-31"
-}
-
-Response:
-{
-  "throughput": { "stories_completed_per_week": 3.5, "total_completed": 42, "weeks_observed": 12 },
-  "cycle_time": { "avg_cycle_time_days": 2.4, "min_cycle_time_days": 0.5, "max_cycle_time_days": 8.1, "sample_size": 42 },
-  "first_pass_success": { "total_completed": 42, "first_pass_count": 28, "first_pass_rate": 0.6667 },
-  "cost_efficiency": { "avg_cost_per_story": 0.42, "total_cost": 17.64, "story_count": 42 },
-  "agent_reliability": { "agents": [{ "agent_name": "dev-implement", "total_invocations": 120, "successful_invocations": 110, "success_rate": 0.9167 }] },
-  "generated_at": "2026-03-20T10:00:00.000Z",
-  "message": "Scoreboard: 42 stories completed, 5 agents tracked"
+  "feature": "wish",
+  "start_date": "2026-01-01"
 }`,
   inputSchema: zodToMcpSchema(KbGetScoreboardInputSchema),
 }
@@ -3857,6 +3839,34 @@ Example:
   inputSchema: zodToMcpSchema(KbGetPlanRevisionsInputSchema),
 }
 
+export const kbGetPlanRevisionDiffToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan_revision_diff',
+  description: `Compare two plan revisions and return a structured field-level diff.
+
+Computes the diff on-read between two revision numbers for a given plan.
+Returns a structured diff object with per-field change information suitable
+for programmatic consumption by LangGraph nodes.
+
+Parameters:
+- plan_slug (required): Plan slug to diff revisions for
+- revision_a (required): First revision number (older)
+- revision_b (required): Second revision number (newer)
+
+Returns: Structured diff with fields map, each containing {field, oldValue, newValue, changeType}.
+changeType is one of: added, removed, modified, unchanged.
+
+If revision_a does not exist (e.g., first revision), all fields show as 'added'.
+If neither revision exists, throws an error.
+
+Example:
+{
+  "plan_slug": "autonomous-pipeline",
+  "revision_a": 1,
+  "revision_b": 2
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanRevisionDiffInputSchema),
+}
+
 // ============================================================================
 // Plan Execution Log (PDBM Phase 0)
 // ============================================================================
@@ -3911,9 +3921,19 @@ Example:
 }
 
 // Re-export new schemas for handler imports
-export { KbGetPlanRevisionsInputSchema, KbLogPlanEventInputSchema, KbGetPlanEventsInputSchema }
+export {
+  KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
+  KbLogPlanEventInputSchema,
+  KbGetPlanEventsInputSchema,
+}
 
-export type { KbGetPlanRevisionsInput, KbLogPlanEventInput, KbGetPlanEventsInput }
+export type {
+  KbGetPlanRevisionsInput,
+  KbGetPlanRevisionDiffInput,
+  KbLogPlanEventInput,
+  KbGetPlanEventsInput,
+}
 
 /**
  * All MCP tool definitions.
@@ -4285,7 +4305,6 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetTokenSummaryToolDefinition,
   kbGetBottleneckAnalysisToolDefinition,
   kbGetChurnAnalysisToolDefinition,
-  // Scoreboard tool (WINT-3090)
   kbGetScoreboardToolDefinition,
   // Worktree management tools (WINT-1130)
   worktreeRegisterToolDefinition,
@@ -4302,6 +4321,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbSearchPlansToolDefinition,
   kbGetPlanDashboardToolDefinition,
   kbGetPlanRevisionsToolDefinition,
+  kbGetPlanRevisionDiffToolDefinition,
   kbLogPlanEventToolDefinition,
   kbGetPlanEventsToolDefinition,
   // Artifact search tool (KBAR-0130)

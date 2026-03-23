@@ -48,7 +48,10 @@ import {
 } from '../search/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
 import { findSimilarPlans } from '../search/plan-similarity.js'
-import { kb_get_plan_revisions } from '../crud-operations/plan-revision-operations.js'
+import {
+  kb_get_plan_revisions,
+  kb_get_plan_revision_diff,
+} from '../crud-operations/plan-revision-operations.js'
 import {
   kb_log_plan_event,
   kb_get_plan_events,
@@ -209,6 +212,7 @@ import {
   KbSearchPlansInputSchema,
   KbGetPlanDashboardInputSchema,
   KbGetPlanRevisionsInputSchema,
+  KbGetPlanRevisionDiffInputSchema,
   KbLogPlanEventInputSchema,
   KbGetPlanEventsInputSchema,
 } from './tool-schemas.js'
@@ -285,14 +289,28 @@ function getTimeoutConfig(): {
 }
 
 /**
+ * Zod schema for tool handler dependencies.
+ * Validates that database connection is present.
+ */
+export const ToolHandlerDepsSchema = z.object({
+  db: z.custom<any>(_val => true, { message: 'Invalid database connection' }),
+})
+
+/**
  * Dependencies for tool handlers.
  * Combines all CRUD operation and search dependencies.
  */
-export const ToolHandlerDepsSchema = z.custom<
-  KbAddDeps & KbGetDeps & KbUpdateDeps & KbDeleteDeps & KbListDeps & KbSearchDeps & KbGetRelatedDeps
->()
+export interface ToolHandlerDeps
+  extends
+    KbAddDeps,
+    KbGetDeps,
+    KbUpdateDeps,
+    KbDeleteDeps,
+    KbListDeps,
+    KbSearchDeps,
+    KbGetRelatedDeps {}
 
-export type ToolHandlerDeps = z.infer<typeof ToolHandlerDepsSchema>
+export type ToolHandlerDepsType = z.infer<typeof ToolHandlerDepsSchema>
 
 /**
  * Timeout error for tool execution.
@@ -1603,38 +1621,32 @@ export async function handleKbStats(
 /**
  * Health check status values.
  */
-export const HealthStatusSchema = z.enum(['healthy', 'degraded', 'unhealthy'])
-
-export type HealthStatus = z.infer<typeof HealthStatusSchema>
+export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy'
 
 /**
  * Individual health check result.
  */
-export const HealthCheckResultSchema = z.object({
-  status: z.enum(['pass', 'fail']),
-  latency_ms: z.number().optional(),
-  uptime_ms: z.number().optional(),
-  error: z.string().optional(),
-})
-
-export type HealthCheckResult = z.infer<typeof HealthCheckResultSchema>
+export interface HealthCheckResult {
+  status: 'pass' | 'fail'
+  latency_ms?: number
+  uptime_ms?: number
+  error?: string
+}
 
 /**
  * Health check response.
  */
-export const HealthResponseSchema = z.object({
-  status: HealthStatusSchema,
-  checks: z.object({
-    db: HealthCheckResultSchema,
-    openai_api: HealthCheckResultSchema,
-    mcp_server: HealthCheckResultSchema,
-  }),
-  uptime_ms: z.number(),
-  version: z.string(),
-  correlation_id: z.string(),
-})
-
-export type HealthResponse = z.infer<typeof HealthResponseSchema>
+export interface HealthResponse {
+  status: HealthStatus
+  checks: {
+    db: HealthCheckResult
+    openai_api: HealthCheckResult
+    mcp_server: HealthCheckResult
+  }
+  uptime_ms: number
+  version: string
+  correlation_id: string
+}
 
 /**
  * Health check latency thresholds (in ms).
@@ -4485,17 +4497,13 @@ export async function handleKbGetChurnAnalysis(
   }
 }
 
-// ============================================================================
-// Scoreboard Tool Handler (WINT-3090)
-// ============================================================================
-
 /**
  * Handle kb_get_scoreboard tool invocation.
  *
  * @param input - Raw input from MCP request
  * @param deps - Database dependency
  * @param context - Tool call context with correlation ID
- * @returns MCP tool result with scoreboard metrics
+ * @returns MCP tool result with scoreboard
  */
 export async function handleKbGetScoreboard(
   input: unknown,
@@ -4522,7 +4530,7 @@ export async function handleKbGetScoreboard(
     logger.info('kb_get_scoreboard succeeded', {
       correlation_id: correlationId,
       total_completed: result.throughput.total_completed,
-      agents_tracked: result.agent_reliability.agents.length,
+      agent_count: result.agent_reliability.agents.length,
       query_time_ms: queryTimeMs,
     })
 
@@ -4534,6 +4542,7 @@ export async function handleKbGetScoreboard(
     return errorToToolResult(error)
   }
 }
+
 // ============================================================================
 // Worktree Management Tool Handlers (WINT-1130)
 // ============================================================================
@@ -5114,6 +5123,38 @@ async function handleKbGetPlanRevisions(
 }
 
 /**
+ * Handle kb_get_plan_revision_diff tool invocation.
+ */
+async function handleKbGetPlanRevisionDiff(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_plan_revision_diff' as ToolName, context)
+    const validated = KbGetPlanRevisionDiffInputSchema.parse(input)
+    const result = await kb_get_plan_revision_diff({ db: deps.db }, validated)
+
+    logger.info('kb_get_plan_revision_diff succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      revision_a: validated.revision_a,
+      revision_b: validated.revision_b,
+      has_changes: result.diff.has_changes,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan_revision_diff failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Handle kb_log_plan_event tool invocation.
  */
 async function handleKbLogPlanEvent(
@@ -5404,6 +5445,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_search_plans: handleKbSearchPlans,
   kb_get_plan_dashboard: handleKbGetPlanDashboard,
   kb_get_plan_revisions: handleKbGetPlanRevisions,
+  kb_get_plan_revision_diff: handleKbGetPlanRevisionDiff,
   kb_log_plan_event: handleKbLogPlanEvent,
   kb_get_plan_events: handleKbGetPlanEvents,
   // Artifact search tool (KBAR-0130)
