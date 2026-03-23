@@ -1,12 +1,12 @@
 {
-  "story_id": "WINT-8060",
-  "generated_at": "2026-03-23T00:00:00Z",
+  "story_id": "WINT-9010",
+  "generated_at": "2026-03-23T13:15:00Z",
   "franken_features_found": 0,
   "violations": [],
   "warnings": [
-    "graph.features empty — WINT-4030 may not have run",
-    "No active cohesion rules found — WINT-4050 may not have run",
-    "Graph query infrastructure not yet initialized - @repo/knowledge-base/db schema missing"
+    "graph.features table does not exist — WINT-4030 (feature cohesion graph builder) has not run",
+    "No active cohesion rules found — WINT-4050 (rules registry builder) has not run or no active rules configured",
+    "Feature cohesion system not yet deployed — Phase 4 subsystem (WINT-4030, WINT-4050, WINT-4060) prerequisites not met"
   ],
   "warning_count": 3
 }

@@ -1,196 +1,239 @@
 schema: 2
-story_id: WINT-8060
-timestamp: '2026-03-23T19:00:00Z'
+story_id: WINT-9010
+timestamp: '2026-03-23T00:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
     description: >-
-      Reconcile schema drift between scope-defend.ts local ScopeChallengesOutputSchema and artifacts/scope-challenges.ts
-      canonical schema. Align 'target'→'description' field rename in ScopeChallengeSchema, update RiskIfDeferredSchema
-      to include 'critical' and 'none' values, and ensure the local schema extends or re-exports the canonical.
+      Implement decision/ module: DecisionTierSchema (5-tier enum), AutonomyLevelSchema
+      (conservative/moderate/aggressive), classifyDecisionTier(description) → DecisionTier, shouldEscalate(tier,
+      autonomyLevel) → boolean. Encode decision matrix from decision-handling.md as const table. Use keyword-based
+      classification matching prose semantics from _shared/decision-handling.md. Tier 4 always escalates regardless of
+      autonomy level.
     files:
-      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
-      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
+      - packages/backend/workflow-logic/src/decision/index.ts
     files_to_read:
-      - packages/backend/orchestrator/src/artifacts/scope-challenges.ts
-      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
+      - .claude/agents/_shared/decision-handling.md
+      - packages/backend/workflow-logic/src/evidence-judge/index.ts
+      - packages/backend/workflow-logic/src/transitions/index.ts
     dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- scope-defend
+    verification: pnpm check-types --filter @repo/workflow-logic
     acs_covered:
-      - AC-8
+      - AC-1
+      - AC-7
+      - AC-10
   - id: 2
     subtask_id: ST-2
     description: >-
-      Extend createScopeDefendNode() factory to accept an optional KbAddTaskFn config parameter. Add a
-      writeBacklogTasks() helper function (exported for testability) that iterates defer-to-backlog challenges from the
-      validated output and calls kbAddTaskFn for each, with source attribution fields (source_agent: 'scope-defender',
-      source_story_id, source_phase: 'elab', task_type: 'feature_idea', tags includes 'scope-defender', 'deferred').
-      Call writeBacklogTasks() at the end of Phase 4 in scopeDefendNode. Error from any kbAddTaskFn call must be caught
-      and logged as a warning — never thrown.
+      Implement artifact/ module: ArtifactTypeSchema (enum of all valid artifact types), ArtifactPhaseSchema (enum of
+      all phases), getArtifactPhase(artifactType) → ArtifactPhase (returns canonical write phase for each artifact
+      type), isValidArtifactForPhase(artifactType, phase) → boolean. Encode type-to-phase mapping table from
+      kb-integration.md Artifact Type Reference section. Pure metadata — no MCP SDK calls.
     files:
-      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+      - packages/backend/workflow-logic/src/artifact/index.ts
     files_to_read:
-      - packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts
-      - packages/backend/orchestrator/src/nodes/backlog/backlog-curate.ts
-      - apps/api/knowledge-base/src/crud-operations/task-operations.ts
-    dependencies:
-      - 1
+      - .claude/agents/_shared/kb-integration.md
+      - packages/backend/workflow-logic/src/evidence-judge/index.ts
+    dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/workflow-logic
     acs_covered:
-      - AC-1
       - AC-2
-      - AC-3
-      - AC-4
-      - AC-5
-      - AC-6
       - AC-7
+      - AC-10
   - id: 3
     subtask_id: ST-3
     description: >-
-      Add idempotency guard inside writeBacklogTasks(): before calling kbAddTaskFn for each challenge, call
-      kbListTasksFn with tags filter 'scope-defender:{storyId}:{challengeId}'. Skip write with debug log if task already
-      exists. Add KbListTasksFn as a second optional config parameter in createScopeDefendNode(). The deterministic
-      idempotency tag uses DA-001..DA-005 challenge IDs (stable within a single run).
+      Implement context/ module: buildContextQuery(domain, taskType, role?) → string (builds a canonical KB search query
+      from parts — e.g. 'backend api endpoint patterns'), buildBlockerQuery(domain) → string (builds a KB search query
+      for blockers/lessons). Both are pure string builders — no KB calls, no network I/O.
     files:
-      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+      - packages/backend/workflow-logic/src/context/index.ts
     files_to_read:
-      - apps/api/knowledge-base/src/crud-operations/task-operations.ts
-    dependencies:
-      - 2
+      - .claude/agents/_shared/kb-integration.md
+      - packages/backend/workflow-logic/src/evidence-judge/index.ts
+    dependencies: []
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/workflow-logic
     acs_covered:
-      - AC-9
+      - AC-3
+      - AC-7
+      - AC-10
   - id: 4
     subtask_id: ST-4
     description: >-
-      Write unit tests for writeBacklogTasks() and the updated scopeDefendNode / createScopeDefendNode() covering: (a)
-      zero defer-to-backlog challenges → no kbAddTaskFn calls; (b) one challenge → one task with correct source
-      attribution fields; (c) five challenges → five tasks; (d) kbAddTaskFn failure → warning logged, no throw; (e)
-      kbAddTaskFn not injected → no-op (default behaviour); (f) idempotency: kbListTasksFn finds existing task → skip
-      with debug log; (g) tag contract: every task includes both 'scope-defender' and 'deferred' tags.
+      Implement token/ module: TokenUsageSchema (z.object with inputTokens: z.number().int().min(0), outputTokens:
+      z.number().int().min(0), phase: z.string().optional()), estimateTokenCount(bytes) → number (bytes / 4, rounded),
+      formatTokenSummary(usage: TokenUsage) → string (human-readable 'In: ~X Out: ~Y' format per token-tracking.md).
+      Pure functions, no I/O.
     files:
-      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
+      - packages/backend/workflow-logic/src/token/index.ts
     files_to_read:
-      - packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
-      - packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+      - .claude/agents/_shared/token-tracking.md
+      - packages/backend/workflow-logic/src/evidence-judge/index.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/workflow-logic
+    acs_covered:
+      - AC-4
+      - AC-7
+      - AC-10
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Update packages/backend/workflow-logic/src/index.ts to export all four new modules: decision/, artifact/,
+      context/, token/. Follow the exact re-export pattern already established for evidence-judge (named exports per
+      function/schema, export type for inferred types).
+    files:
+      - packages/backend/workflow-logic/src/index.ts
+    files_to_read:
+      - packages/backend/workflow-logic/src/index.ts
+    dependencies:
+      - 1
+      - 2
+      - 3
+      - 4
+    slice: packages
+    verification: pnpm check-types --filter @repo/workflow-logic
+    acs_covered:
+      - AC-5
+      - AC-9
+  - id: 6
+    subtask_id: ST-6a
+    description: >-
+      Write unit tests for decision/ and artifact/ modules in packages/backend/workflow-logic/src/__tests__/.
+      decision.test.ts: test classifyDecisionTier for each tier keyword match and unknown input safe default, test
+      shouldEscalate for every cell of the 3x4 decision matrix (3 autonomy levels x 4 non-Tier-4 tiers + Tier-4 always
+      escalates = 13 cases). artifact.test.ts: test getArtifactPhase for all artifact types, test
+      isValidArtifactForPhase for valid/invalid combos.
+    files:
+      - packages/backend/workflow-logic/src/__tests__/decision.test.ts
+      - packages/backend/workflow-logic/src/__tests__/artifact.test.ts
+    files_to_read:
+      - packages/backend/workflow-logic/src/decision/index.ts
+      - packages/backend/workflow-logic/src/artifact/index.ts
+      - packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts
+    dependencies:
+      - 1
+      - 2
+    slice: packages
+    verification: pnpm test --filter @repo/workflow-logic
+    acs_covered:
+      - AC-6
+      - AC-8
+  - id: 7
+    subtask_id: ST-6b
+    description: >-
+      Write unit tests for context/ and token/ modules in packages/backend/workflow-logic/src/__tests__/.
+      context.test.ts: test buildContextQuery with domain+taskType, with optional role, with empty inputs (edge cases).
+      token.test.ts: test estimateTokenCount for 0, positive, and non-multiple-of-4 byte values, test formatTokenSummary
+      output format matches token-tracking.md pattern, test TokenUsageSchema rejects negative values.
+    files:
+      - packages/backend/workflow-logic/src/__tests__/context.test.ts
+      - packages/backend/workflow-logic/src/__tests__/token.test.ts
+    files_to_read:
+      - packages/backend/workflow-logic/src/context/index.ts
+      - packages/backend/workflow-logic/src/token/index.ts
+      - packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts
     dependencies:
       - 3
+      - 4
     slice: packages
-    verification: pnpm test --filter @repo/orchestrator -- scope-defend
+    verification: pnpm test --filter @repo/workflow-logic
     acs_covered:
-      - AC-10
+      - AC-6
+      - AC-8
 files_to_change:
-  - path: packages/backend/orchestrator/src/nodes/story/scope-defend.ts
+  - path: packages/backend/workflow-logic/src/decision/index.ts
+    action: create
+    reason: New decision/ module per AC-1
+  - path: packages/backend/workflow-logic/src/artifact/index.ts
+    action: create
+    reason: New artifact/ module per AC-2
+  - path: packages/backend/workflow-logic/src/context/index.ts
+    action: create
+    reason: New context/ module per AC-3
+  - path: packages/backend/workflow-logic/src/token/index.ts
+    action: create
+    reason: New token/ module per AC-4
+  - path: packages/backend/workflow-logic/src/index.ts
     action: modify
-    reason: >-
-      ST-1: reconcile local schema with canonical (target→description, RiskIfDeferred enum expansion); ST-2: add
-      writeBacklogTasks() helper and KbAddTaskFn config injection; ST-3: add KbListTasksFn config injection and
-      idempotency guard inside writeBacklogTasks()
-  - path: packages/backend/orchestrator/src/artifacts/scope-challenges.ts
-    action: modify
-    reason: >-
-      ST-1: add total_candidates_reviewed, truncated, warnings, warning_count fields to ScopeChallengesSchema so the
-      canonical schema is the single source of truth
-  - path: packages/backend/orchestrator/src/nodes/story/__tests__/scope-defend.test.ts
-    action: modify
-    reason: >-
-      ST-4: add writeBacklogTasks test scenarios (a–g) covering tag contract, idempotency, error handling, and
-      zero-challenge no-op
+    reason: Add exports for all four new modules per AC-5
+  - path: packages/backend/workflow-logic/src/__tests__/decision.test.ts
+    action: create
+    reason: Unit tests for decision/ module per AC-6, AC-8
+  - path: packages/backend/workflow-logic/src/__tests__/artifact.test.ts
+    action: create
+    reason: Unit tests for artifact/ module per AC-6, AC-8
+  - path: packages/backend/workflow-logic/src/__tests__/context.test.ts
+    action: create
+    reason: Unit tests for context/ module per AC-6, AC-8
+  - path: packages/backend/workflow-logic/src/__tests__/token.test.ts
+    action: create
+    reason: Unit tests for token/ module per AC-6, AC-8
 commands_to_run:
+  - command: pnpm check-types --filter @repo/workflow-logic
+    when: after each module is written
+    required: true
+  - command: pnpm test --filter @repo/workflow-logic
+    when: after all code and test changes
+    required: true
   - command: pnpm check-types --filter @repo/orchestrator
-    when: after all code changes
+    when: after all code changes, to verify no downstream breakage
     required: true
-  - command: pnpm test --filter @repo/orchestrator -- scope-defend
-    when: after all code changes
-    required: true
-  - command: pnpm lint --filter @repo/orchestrator
+  - command: pnpm build --filter @repo/workflow-logic
     when: after all code changes
     required: true
 acceptance_criteria_map:
-  - ac_id: AC-8
-    planned_evidence: >-
-      scope-challenges.ts canonical schema extended; scope-defend.ts local schema imports and re-uses canonical types;
-      type-check passes
-    evidence_type: command
-  - ac_id: AC-9
-    planned_evidence: 'Unit test (f): kbListTasksFn finds existing task → kbAddTaskFn NOT called; debug log emitted'
-    evidence_type: test
-  - ac_id: AC-10
-    planned_evidence: >-
-      Unit test (g): every kb_add_task call includes tags: ['scope-defender', 'deferred',
-      'scope-defender:{storyId}:{challengeId}']
-    evidence_type: test
   - ac_id: AC-1
-    planned_evidence: writeBacklogTasks() called in Phase 4 of scopeDefendNode; one kb_add_task per defer-to-backlog challenge
+    planned_evidence: 'Unit test: decision.test.ts — classifyDecisionTier + shouldEscalate all cases'
     evidence_type: test
   - ac_id: AC-2
-    planned_evidence: "source_agent: 'scope-defender' in every kb_add_task call — verified by unit test (b)"
+    planned_evidence: 'Unit test: artifact.test.ts — getArtifactPhase + isValidArtifactForPhase'
     evidence_type: test
   - ac_id: AC-3
-    planned_evidence: source_story_id set to state.storyId in every kb_add_task call — verified by unit test (b)
+    planned_evidence: 'Unit test: context.test.ts — buildContextQuery + buildBlockerQuery'
     evidence_type: test
   - ac_id: AC-4
-    planned_evidence: "source_phase: 'elab' in every kb_add_task call — verified by unit test (b)"
+    planned_evidence: 'Unit test: token.test.ts — TokenUsageSchema + estimateTokenCount + formatTokenSummary'
     evidence_type: test
   - ac_id: AC-5
-    planned_evidence: "task_type: 'feature_idea' in every kb_add_task call — verified by unit test (b)"
-    evidence_type: test
+    planned_evidence: 'File: packages/backend/workflow-logic/src/index.ts exports all new symbols'
+    evidence_type: file
   - ac_id: AC-6
-    planned_evidence: 'Unit test (d): kbAddTaskFn throws → warning logged, no throw from scopeDefendNode'
+    planned_evidence: 'Unit tests: decision.test.ts, artifact.test.ts, context.test.ts, token.test.ts in __tests__/'
     evidence_type: test
   - ac_id: AC-7
-    planned_evidence: 'Unit test (e): kbAddTaskFn not injected (undefined) → no-op, no error'
-    evidence_type: test
-architectural_decisions:
-  - id: ARCH-001
-    question: Should backlog writes be in Phase 4 of scope-defend.ts or a new downstream node?
-    decision: Extend Phase 4 of scope-defend.ts with injectable KbAddTaskFn — not a new downstream node.
-    rationale: >-
-      Elaboration ARCH decision (decided_at: 2026-03-23). Avoids new graph node, uses established injectable pattern
-      from persist-learnings.ts and backlog-curate.ts. Keeps backlog write co-located with challenge generation.
-    decided_by: elaboration
-  - id: ARCH-002
-    question: Does backlog-curator require code changes to surface auto-created tasks?
-    decision: No code changes to backlog-curator needed. The tag contract ('deferred' + 'scope-defender') is sufficient.
-    rationale: >-
-      backlog-curate.ts already queries with tags=['deferred'] at line 222. Auto-created tasks will appear automatically
-      if they include the 'deferred' tag. The elaboration verified this at codebase_verification.backlog_curate_ts.
-    decided_by: elaboration
-  - id: ARCH-003
-    question: Should scope-defend.ts import types from artifacts/scope-challenges.ts (canonical) or define its own?
-    decision: >-
-      scope-defend.ts should import ScopeChallengeSchema, RiskIfDeferredSchema, and RecommendationSchema from
-      artifacts/scope-challenges.ts. The canonical schema must be extended to include total_candidates_reviewed,
-      truncated, warnings, warning_count fields.
-    rationale: >-
-      AC-8 prerequisite: cementing a third consumer on the diverged local schema permanently splits the type contract.
-      The canonical schema is extended (not replaced) to preserve backward compatibility for existing consumers.
-    decided_by: elaboration
+    planned_evidence: 'Code review: all exported types use Zod schemas with z.infer<> — no TypeScript interfaces'
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: 'Command: pnpm test --filter @repo/workflow-logic passes with coverage ≥60% for new modules'
+    evidence_type: command
+  - ac_id: AC-9
+    planned_evidence: 'Command: pnpm check-types --filter @repo/workflow-logic && pnpm check-types --filter @repo/orchestrator both pass'
+    evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: 'File: packages/backend/workflow-logic/package.json dependencies unchanged (zod + @repo/logger only)'
+    evidence_type: file
+architectural_decisions: []
 complexity: moderate
 notes:
   - >-
-    AC-8 (schema reconciliation) is the prerequisite gate for AC-1–AC-7 and AC-9–AC-10. ST-1 must be completed and
-    type-checked before ST-2 begins.
+    Subtasks ST-6 split into ST-6a (decision+artifact tests) and ST-6b (context+token tests) per elab gap-1 guidance to
+    stay under 3-file-per-step limit.
   - >-
-    backlog-curate.ts does NOT require changes — the 'deferred' tag contract is sufficient for backlog-curator's Phase 1
-    KB query (confirmed at line 222).
+    decision/ module: use decision-handling.md as sole canonical source per elab gap-2 resolution
+    (decision-classification.yaml path unconfirmed, treat prose as ground truth).
   - >-
-    The RISK_ORDER map in scope-defend.ts uses ['low','medium','high'] — after schema reconciliation, it must be updated
-    to handle the canonical enum ['critical','high','medium','low','none']. Critical maps above high; none maps below
-    low.
+    Elaboration opp-2: TokenUsageSchema uses z.number().int().min(0) for non-negative constraint — this makes AC-8 edge
+    case EC-3 (-1 input) testable.
   - >-
-    writeBacklogTasks() must be exported for unit testability, matching the pattern of applyDAChallenges() and
-    identifyCandidates().
+    Elaboration opp-4: shouldEscalate for Tier 5 at aggressive autonomy — treat as auto-escalate=false (auto-accept) for
+    low-risk; implementer may need to pass a risk flag or default to false. Document in code comments.
   - >-
-    Fire-and-forget error handling: any kbAddTaskFn call that throws must be caught, logged as logger.warn, and
-    execution continues — never rethrows. Same pattern as persist-learnings.ts.
-  - >-
-    Idempotency tag format: 'scope-defender:{storyId}:{challengeId}' where challengeId is the DA-001..DA-005 stable ID
-    from a single applyDAChallenges() run.
-  - >-
-    deferral_note field from the challenge becomes the task description (if present); otherwise derive from
-    challenge.target + challenge.challenge text.
+    All four modules follow the evidence-judge pattern: Zod schemas at top, pure exported functions below, no external
+    deps.
+  - Steps 1-4 are independent and can run in parallel. Steps 5, 6, 7 depend on earlier steps as indicated.
+  - 'Package is ESM (type: module) — all imports must use .js extensions.'

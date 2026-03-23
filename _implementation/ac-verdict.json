@@ -1,51 +1,51 @@
 {
-  "story_id": "WINT-8060",
-  "generated_at": "2026-03-23T22:57:00Z",
+  "story_id": "WINT-9010",
+  "generated_at": "2026-03-23T13:20:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "scope-defend node calls kb_add_task once per defer-to-backlog challenge",
+      "ac_text": "Decision tier classification and escalation decision modules implemented",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "source_agent: 'scope-defender' in every kb_add_task call",
+      "ac_text": "Artifact type and phase mapping modules implemented",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "source_story_id set to state.storyId in every kb_add_task call",
+      "ac_text": "Context query builder modules implemented",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-4",
-      "ac_text": "source_phase: 'elab' in every kb_add_task call",
+      "ac_text": "Token usage and estimation modules implemented",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-5",
-      "ac_text": "task_type: 'feature_idea' in every kb_add_task call",
+      "ac_text": "Index exports all four new modules with correct API",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -55,17 +55,27 @@
     },
     {
       "ac_id": "AC-6",
-      "ac_text": "kbAddTaskFn failure is non-blocking — warning logged, no throw",
+      "ac_text": "All test files present in __tests__/ directory",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
+      "evidence_evaluated": 4,
+      "strong_evidence_count": 4,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-7",
-      "ac_text": "kbAddTaskFn not injected (undefined) → no-op, no error",
+      "ac_text": "All exported types use Zod schemas with z.infer<>, no TypeScript interfaces",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "All 200 tests pass (8 test files with 118 new tests)",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,
@@ -74,8 +84,8 @@
       "proof_required": null
     },
     {
-      "ac_id": "AC-8",
-      "ac_text": "scope-challenges.ts canonical schema is extended; scope-defend.ts imports and re-uses canonical types",
+      "ac_id": "AC-9",
+      "ac_text": "TypeScript type-check and build pass with zero errors",
       "verdict": "ACCEPT",
       "evidence_evaluated": 2,
       "strong_evidence_count": 2,
@@ -84,18 +94,8 @@
       "proof_required": null
     },
     {
-      "ac_id": "AC-9",
-      "ac_text": "Idempotency — skip write if task with matching tag already exists",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
       "ac_id": "AC-10",
-      "ac_text": "Tags include both 'scope-defender' and 'deferred' in every kb_add_task call",
+      "ac_text": "No new runtime dependencies added",
       "verdict": "ACCEPT",
       "evidence_evaluated": 1,
       "strong_evidence_count": 1,

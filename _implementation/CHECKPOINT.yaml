@@ -1,16 +1,7 @@
 schema: 1
-story_id: WINT-8060
-timestamp: '2026-03-23T17:34:00Z'
-branch: story/WINT-8060
-worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/WINT-8060
-pr_number: 593
-pr_url: https://github.com/michael-menard/monorepo/pull/593
-gen_mode: false
-forced: false
+story_id: WINT-9010
+current_phase: qa-verify
+last_successful_phase: qa-setup
 blocked: false
-warnings:
-  - 'pre-existing type errors in knowledge-base and mcp-tools packages (unrelated to WINT-8060)'
 iteration: 0
-max_iterations: 3
-current_phase: execute
-last_successful_phase: plan
+timestamp: '2026-03-23T19:27:30Z'
