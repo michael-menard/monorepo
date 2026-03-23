@@ -1,0 +1,166 @@
+schema: 1
+story_id: APRS-1010
+timestamp: '2026-03-21T18:30:00Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 309
+    fail: 60
+    note: >-
+      mcp-tools suite: 2 APRS-1010-scoped failures in story-update-status.test.ts. 58 additional failures are unrelated
+      pre-existing regressions in other story-management tests.
+  orchestrator:
+    pass: 4971
+    fail: 43
+    note: >-
+      43 pre-existing failures in orchestrator (story-file-adapter, index-adapter, dev-implement, structurer-affinity).
+      None caused by APRS-1010.
+  integration:
+    pass: 0
+    fail: 0
+    note: Integration tests require live DB — not executed in CI dry run
+  e2e:
+    pass: 0
+    fail: 0
+    note: 'Exempt per evidence: backend-only changes'
+coverage: null
+coverage_meets_threshold: null
+test_quality:
+  verdict: FAIL
+  anti_patterns:
+    - >-
+      story-transition-service.test.ts claimed in EVIDENCE (23 tests) but the file does not exist in
+      packages/backend/orchestrator/src/db/__tests__/ — evidence is fabricated
+    - >-
+      story-update-status.test.ts expects returned object to include an 'id' field but implementation
+      StoryUpdateStatusOutputSchema does not include 'id' — test mismatches implementation contract
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    notes: >-
+      ARTIFACT_GATES in story-transition-service.ts confirmed present with 3 entries: needs_code_review→proof,
+      ready_for_qa→review, completed→qa_verify. ArtifactGateError class exists. advance() method enforces gate before
+      state update.
+  - ac_id: AC-2
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    notes: >-
+      Evidence claims 'MCP_ARTIFACT_GATES + storyArtifacts query in story-update-status.ts transaction' but the actual
+      file at packages/backend/mcp-tools/src/story-management/story-update-status.ts contains NO artifact gate
+      enforcement. No MCP_ARTIFACT_GATES constant, no storyArtifacts query, no gate check of any kind in the transaction
+      body.
+  - ac_id: AC-3
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    notes: >-
+      Evidence claims 'Artifact check inside db.transaction() before state UPDATE in MCP tool' but confirmed absent. The
+      db.transaction() in story-update-status.ts goes directly to SELECT story → UPDATE state → INSERT history with no
+      artifact pre-condition check.
+  - ac_id: AC-4
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    notes: >-
+      Evidence claims 4 gates: needs_code_review→evidence, ready_for_qa→review, in_qa→review, completed→qa_verify.
+      Actual ARTIFACT_GATES has only 3 entries — in_qa gate is missing. File:
+      packages/backend/orchestrator/src/db/story-transition-service.ts lines 26-30.
+  - ac_id: AC-5
+    status: FAIL
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    notes: >-
+      Evidence claims 'story-transition-service.test.ts (23)' as a test suite, but this file does NOT exist in
+      packages/backend/orchestrator/src/db/__tests__/. Only story-repository.test.ts and workflow-repository.test.ts
+      exist there. The 23 tests claimed for this suite were never written or were deleted.
+  - ac_id: AC-6
+    status: PARTIAL
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    notes: >-
+      integration.test.ts exists at packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts but
+      tests only WINT-0090 lifecycle scenarios (state transitions without artifact gate blocking/allowing). No tests
+      verify that artifact-gated transitions are blocked when artifact is absent or allowed when present — the core
+      APRS-1010 integration scenario.
+architecture_compliant: true
+issues:
+  - id: ISSUE-1
+    severity: CRITICAL
+    description: >-
+      AC-2 not implemented: story-update-status.ts MCP tool has no artifact gate enforcement. Stories can advance to
+      gated states via MCP tool without any artifact check.
+    file: packages/backend/mcp-tools/src/story-management/story-update-status.ts
+  - id: ISSUE-2
+    severity: CRITICAL
+    description: >-
+      AC-3 not implemented: no atomicity guarantee in MCP tool (no artifact check before state UPDATE in
+      db.transaction()).
+    file: packages/backend/mcp-tools/src/story-management/story-update-status.ts
+  - id: ISSUE-3
+    severity: HIGH
+    description: 'AC-4 partial: ARTIFACT_GATES missing in_qa→review entry. Gate map has 3 entries instead of required 4.'
+    file: packages/backend/orchestrator/src/db/story-transition-service.ts
+    line: 26-30
+  - id: ISSUE-4
+    severity: HIGH
+    description: >-
+      AC-5 not implemented: story-transition-service.test.ts (23 tests) claimed in evidence does not exist. No unit
+      tests for StoryTransitionService, ArtifactGateError, or advance() in orchestrator package.
+    file: packages/backend/orchestrator/src/db/__tests__/ (missing story-transition-service.test.ts)
+  - id: ISSUE-5
+    severity: MEDIUM
+    description: >-
+      story-update-status.test.ts has 2 failing tests: test expects returned object to include 'id' field but
+      StoryUpdateStatusOutputSchema and implementation do not return 'id'. Type mismatch between test expectations and
+      implementation contract.
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    lines: 104-109, 143-148
+  - id: ISSUE-6
+    severity: MEDIUM
+    description: >-
+      AC-6 integration tests test WINT-0090 scenarios only — no gate-blocking or gate-allowing scenarios for APRS-1010.
+      Core integration scenario (transition blocked without artifact, allowed with artifact) is untested.
+    file: packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+  - id: ISSUE-7
+    severity: INFO
+    description: >-
+      Evidence artifact may contain fabricated test results: claims 40 tests across 2 suites
+      (story-transition-service.test.ts 23 + story-update-status.test.ts 17), but story-transition-service.test.ts does
+      not exist. Actual story-update-status.test.ts has 5 tests (2 failing), not 17.
+    file: N/A (evidence accuracy)
+pre_existing_failures:
+  orchestrator: >-
+    43 test failures in story-file-adapter, index-adapter, dev-implement, structurer-affinity — confirmed pre-existing,
+    not caused by APRS-1010
+  mcp_tools_other: >-
+    58 of 60 mcp-tools failures are in story-get-status, story-get-by-status, story-get-by-feature, shim tests —
+    pre-existing, not caused by APRS-1010
+lessons_to_record:
+  - lesson: >-
+      Evidence artifacts must be verified against actual filesystem state — claimed test suite files
+      (story-transition-service.test.ts) can be absent even when evidence claims pass status. QA verification must
+      always cross-reference evidence claims against repo contents.
+    category: anti_pattern
+    tags:
+      - evidence
+      - testing
+      - qa-verify
+  - lesson: >-
+      When a story requires enforcement at two layers (orchestrator service + MCP tool), both layers must be
+      independently verified. Implementing only one layer constitutes partial delivery even if the other layer is
+      architecturally sound.
+    category: pattern
+    tags:
+      - artifact-enforcement
+      - mcp-tools
+      - orchestrator
+  - lesson: >-
+      Test output schemas should match implementation return shapes exactly. StoryUpdateStatusOutputSchema excludes 'id'
+      but tests expected it — indicates test was written against a different version of the schema.
+    category: anti_pattern
+    tags:
+      - zod
+      - schema
+      - testing
+      - mcp-tools
+tokens:
+  in: 18000
+  out: 3500
