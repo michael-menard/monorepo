@@ -1,7 +1,12 @@
 import 'dotenv/config'
 import { Hono } from 'hono'
+import { streamSSE, type SSEStreamingApi } from 'hono/streaming'
 import { logger } from '@repo/logger'
 import { sseRoutes } from './routes/sse'
+import { portLogRoutes } from './routes/portLogs'
+import { getPortHealth, getPortHistory, getPortTopology } from './services/portHealthService'
+import { stopService, startService, restartService } from './services/processManagerService'
+import { startAll, stopAll } from './services/orchestrationService'
 import {
   getPlans,
   getPlanBySlug,
@@ -24,6 +29,90 @@ import { getDashboard } from './services/dashboardService'
 const app = new Hono()
 
 app.route('/', sseRoutes)
+app.route('/', portLogRoutes)
+
+// --- Port Monitor Routes ---
+
+app.get('/api/v1/ports/health', async c => {
+  try {
+    const result = await getPortHealth()
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to get port health', { error: String(error) })
+    return c.json({ error: 'Failed to get port health', detail: String(error) }, 500)
+  }
+})
+
+app.get('/api/v1/ports/history', async c => {
+  try {
+    const result = getPortHistory()
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to get port history', { error: String(error) })
+    return c.json({ error: 'Failed to get port history', detail: String(error) }, 500)
+  }
+})
+
+app.get('/api/v1/ports/topology', async c => {
+  try {
+    const result = getPortTopology()
+    return c.json(result)
+  } catch (error) {
+    logger.error('Failed to get port topology', { error: String(error) })
+    return c.json({ error: 'Failed to get port topology', detail: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/ports/:key/stop', async c => {
+  const key = c.req.param('key')
+  try {
+    const result = await stopService(key)
+    return c.json(result, result.success ? 200 : 400)
+  } catch (error) {
+    logger.error('Failed to stop service', { error: String(error), key })
+    return c.json({ success: false, message: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/ports/:key/start', async c => {
+  const key = c.req.param('key')
+  try {
+    const result = await startService(key)
+    return c.json(result, result.success ? 200 : 400)
+  } catch (error) {
+    logger.error('Failed to start service', { error: String(error), key })
+    return c.json({ success: false, message: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/ports/:key/restart', async c => {
+  const key = c.req.param('key')
+  try {
+    const result = await restartService(key)
+    return c.json(result, result.success ? 200 : 400)
+  } catch (error) {
+    logger.error('Failed to restart service', { error: String(error), key })
+    return c.json({ success: false, message: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/ports/start-all', async c => {
+  const filter = c.req.query('filter') as 'frontend' | 'backend' | undefined
+  return streamSSE(c, async (stream: SSEStreamingApi) => {
+    for await (const event of startAll(filter)) {
+      await stream.writeSSE({ event: event.type, data: JSON.stringify(event) })
+    }
+  })
+})
+
+app.post('/api/v1/ports/stop-all', async c => {
+  const filter = c.req.query('filter') as 'frontend' | 'backend' | undefined
+  return streamSSE(c, async (stream: SSEStreamingApi) => {
+    for await (const event of stopAll(filter)) {
+      await stream.writeSSE({ event: event.type, data: JSON.stringify(event) })
+    }
+  })
+})
 
 app.get('/', c => {
   return c.json({
@@ -257,7 +346,7 @@ app.get('/api/v1/stories/:storyId', async c => {
   }
 })
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3004
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 9103
 
 logger.info(`Starting Roadmap API on port ${PORT}`)
 
