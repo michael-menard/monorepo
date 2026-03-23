@@ -1,11 +1,11 @@
 schema: 1
-story_id: WINT-6010
-timestamp: '2026-03-21T21:31:45Z'
+story_id: APRS-5030
+timestamp: '2026-03-23T20:00:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 48
+    pass: 47
     fail: 0
   integration:
     pass: 0
@@ -16,134 +16,108 @@ test_results:
   http:
     pass: 0
     fail: 0
-coverage: null
+coverage: 97.4
 coverage_meets_threshold: true
-coverage_notes: >-
-  Deliverable is a markdown agent spec + validation test file. No executable TypeScript code — coverage metric is
-  inapplicable. 48 content-validation tests achieve comprehensive specification coverage across all 12 ACs. Build and
-  e2e exemptions confirmed valid.
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes: >-
-    Tests use content-validation pattern appropriate for agent .md deliverables. No setTimeout, no brittle selectors, no
-    implementation-detail coupling. Tests target observable contract: frontmatter fields, routing table completeness,
-    sequential model enforcement, KB tool usage, retry constants, token cap patterns.
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-1]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
     notes: >-
-      Agent file has valid YAML frontmatter with name, type, model, permission_level, version, tools, kb_tools, and
-      shared_refs. Verified by 6 passing tests in 'AC-1: Agent file structure' describe block.
+      createPlanLoaderAdapter exists in plan-loader-adapter.ts, wraps KbGetPlanFn as PlanLoaderFn. Verified via 6 unit
+      tests covering success, null return, and throw paths.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-2]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
     notes: >-
-      ACTIONABLE_STATES constant defined with 7 states: backlog, created, elab, ready, in_progress, needs_code_review,
-      failed_code_review. kb_list_stories query pattern documented. Verified by 4 passing tests.
+      createKbWriterAdapter exists in kb-writer-adapter.ts, calls kb_ingest_story_from_yaml and
+      kb_update_plan(status='stories-created') on full success. Verified via 10 unit tests covering sequential writes,
+      plan update conditional on all-success, and error paths.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-3]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
     notes: >-
-      Excluded states (cancelled, deferred, blocked, UAT, etc.) enumerated. Deduplication by story_id and max_stories
-      cap both documented. shared_refs reference kb-integration.md and decision-handling.md confirmed.
+      generate-stories.ts calls createStoryGenerationGraph() with all three production adapters wired at lines 151-158.
+      Verified via codebase inspection.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-4]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
     notes: >-
-      Inputs table defines plan_slugs (required), max_stories (default 20), dry_run (default false). Invocation
-      interface via Task tool documented. Invoker responsibilities (WINT-6020) defined.
+      generate-stories.ts outputs: stories_written, stories_failed, plan_status_updated, generation_phase on stdout with
+      [generate-stories] prefix. Lines 165-169 confirmed.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-5]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
     notes: >-
-      PRIORITY_ORDER constant: in_progress=0, needs_code_review=1, failed_code_review=2, ready=3, elab=4, created=5,
-      backlog=6. parsePriority() secondary sort by P1-P5. Finish-started-first explicit. Verified by 2 passing tests.
+      Error output at lines 177-185: outputs FAILED with generation_phase and errors. Fatal catch block at lines 218-221
+      writes to stderr. Process exits with code 1.
   - ac_id: AC-6
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-6]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
     notes: >-
-      Complete routing table covering all 7 actionable states. backlog/created/elab → /elab-story, ready →
-      /dev-implement-story, in_progress → /dev-implement-story --force-continue, needs_code_review → /dev-code-review,
-      failed_code_review → /dev-fix-story. Verified by 5 passing tests.
+      Graph integration test verifies: 'exits at validate_graph when validation fails (cycle) — does not reach
+      write_to_kb'. Confirmed in story-generation.test.ts.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-7]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
     notes: >-
-      Sequential model explicitly enforced: 'ONE story at a time', 'foreground mode only — never background mode'.
-      run_in_background: true explicitly prohibited. State guard before every spawn, parseWorkerResult function defined.
-      Verified by 5 passing tests.
+      createStoryIdGeneratorAdapter in story-id-generator.ts queries kb_list_stories for existing IDs, finds max suffix,
+      generates from max+10. Falls back to 1010 start if no existing stories. defaultStoryIdGeneratorFn stub is not used
+      in production path.
   - ac_id: AC-8
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-8]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
     notes: >-
-      KB-only state management via kb_update_story_status. Flat-file patterns (WORK-ORDER, RESULT_DIR) explicitly
-      prohibited. get_recovery_state() maps phases to earlier states. implement failure reverts to ready. MAX_RETRIES=2.
-      Verified by 6 passing tests.
+      generate-stories.ts is a CLI script with #!/usr/bin/env tsx shebang, --plan-slug argument, located at
+      packages/backend/orchestrator/src/cli/generate-stories.ts. Follows resume-graph.ts pattern.
   - ac_id: AC-9
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-9]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-9
     notes: >-
-      Completion signals: BATCH COMPLETE (with N processed / M succeeded / K failed / J skipped), BATCH BLOCKED. BLOCKED
-      is terminal — no retry. Verified by 3 passing tests.
+      Unit tests exist: plan-loader-adapter.test.ts (6 tests), kb-writer-adapter.test.ts (10 tests),
+      story-id-generator.test.ts (14 tests). All use mocked MCP tool functions (vi.fn()). All 30 pass.
   - ac_id: AC-10
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-10]
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-10
     notes: >-
-      MAX_RETRIES=2 constant. run_with_retry() function with attempt counter (attempts++). Exhaustion message:
-      'exhausted {MAX_RETRIES} retries'. Verified by 4 passing tests.
-  - ac_id: AC-11
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-11]
-    notes: >-
-      TOKEN_CAP_WAIT=300 constant. is_token_cap regex covers rate.limit, token.limit, too many requests, quota exceeded,
-      429, overloaded. wait_with_countdown countdown emit pattern. Verified by 5 passing tests.
-  - ac_id: AC-12
-    status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage[AC-12]
-    notes: >-
-      Non-Negotiables section in agent file: KB-only state, sequential processing, self-heal, finish-started-first,
-      state guard, token tracking, dry-run safety, blocked-is-terminal. Covered by Non-negotiables describe block (4
-      tests). All 8 non-negotiables present in agent file.
+      story-generation graph with production adapters (AC-10) suite in story-generation.test.ts. Test 'runs full
+      pipeline end-to-end with all three production adapters injected' verifies storiesWritten > 0. All 17 integration
+      tests pass.
 architecture_compliant: true
-architecture_notes: >-
-  Agent follows established agent file conventions: YAML frontmatter, KB-native state management, shared_refs to
-  _shared/ docs, Task tool dispatch pattern, completion signal protocol. No TypeScript compiled code — build exemption
-  is valid. No React, no API routes, no infra — correctly scoped to agent orchestration deliverable. Code review
-  confirmed 10/10 workers PASS with zero errors.
 issues: []
 lessons_to_record:
   - lesson: >-
-      Content-validation test pattern for agent .md files: read the file as a string and assert on presence/absence of
-      specific constants, patterns, and structural elements. This achieves comprehensive AC coverage for
-      specification-as-code deliverables without requiring executable runtime code.
+      Ports-and-adapters pattern with injectable MCP functions works well for testability: provide stub
+      KbGetPlanFn/KbIngestStoryFn/KbUpdatePlanFn in tests vs production wiring at CLI level. Zero real MCP calls in test
+      suite.
     category: pattern
     tags:
-      - agents
-      - testing
-      - markdown
-      - vitest
+      - backend
+      - adapters
+      - testability
+      - langgraph
   - lesson: >-
-      Agent files with no TypeScript compilation surface are legitimately exempt from build gates and coverage
-      thresholds. The 45% coverage threshold in CLAUDE.md applies to packages with executable code — markdown agent
-      specs with content-validation tests are a distinct artifact class.
+      Story ID generation collision prevention via KB query (findMaxSuffix + step=10) is cleaner than fixed-sequence
+      fallback. The fallback to 1010 on kb_list_stories failure ensures resilience without blocking.
     category: pattern
     tags:
-      - agents
-      - coverage
-      - qa-gate
-      - build-exempt
+      - backend
+      - story-id
+      - collision-prevention
   - lesson: >-
-      Sequential processing enforcement in batch coordinator agents should be documented with both positive constraint
-      (one story at a time, foreground Task calls) and negative constraint (explicitly prohibit run_in_background:
-      true). Tests should verify the negative constraint is absent.
+      CLI entrypoints for LangGraph should use stub injection points clearly marked with INJECTION POINT comments. This
+      documents where MCP client wiring will happen without blocking the current story.
     category: pattern
     tags:
-      - agents
-      - orchestration
-      - sequential
-      - batch-coordinator
+      - backend
+      - cli
+      - langgraph
+      - mcp
+context_cache_notes: >-
+  Cache miss for qa_verification/qa role — context_pack_get returned null. Context artifact also not present in KB.
+  Verification proceeded without cache context.
 tokens:
-  in: 18000
-  out: 3500
+  in: 12000
+  out: 3000
