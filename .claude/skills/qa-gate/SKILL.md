@@ -10,11 +10,12 @@ description: Create or update a quality gate decision for a story or code change
 Generate a quality gate decision with persistent YAML output. Runs automated checks and optional specialist reviews, then produces a gate file that can be tracked and referenced.
 
 **Key Features:**
-- Persistent YAML gate files for traceability
+
+- Persistent KB gate artifacts for traceability
 - Standardized severity scale (low, medium, high)
 - Issue ID prefixes for categorization (SEC-, PERF-, TEST-, etc.)
 - WAIVED status with approval tracking
-- Updates story file with gate reference
+- Writes qa_gate artifact to KB for the story
 - NFR validation (security, performance, reliability, accessibility)
 
 ## Usage
@@ -50,21 +51,22 @@ Generate a quality gate decision with persistent YAML output. Runs automated che
 - **--waive** - Mark gate as WAIVED (requires --reason and --approved-by)
 - **--reason** - Reason for waiver
 - **--approved-by** - Who approved the waiver
-- **--dry-run** - Run checks but don't persist gate file
+- **--dry-run** - Run checks but don't persist gate artifact to KB
 
 ---
 
 ## EXECUTION INSTRUCTIONS
 
-### Phase 1: Parse Arguments & Locate Files
+### Phase 1: Parse Arguments & Locate Story
 
 ```
 1. Parse story number or --branch flag
 2. If story provided:
-   - Find story file: docs/stories/{STORY_NUM}.*.md
-   - Extract story title and slug
-3. Determine gate file path: docs/qa/gates/{STORY_NUM}-{slug}.yml
-4. Check if gate file already exists (for history tracking)
+   - Fetch from KB: kb_get_story({ story_id: "{STORY_ID}" })
+   - Extract story title and slug from KB record
+3. Gate output will be written as a KB artifact: kb_write_artifact({ story_id, artifact_type: "qa_gate", content: {...} })
+4. Check if a qa_gate artifact already exists for this story (for history tracking):
+   kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true }) and inspect artifacts
 ```
 
 ### Phase 2: Run Required Checks
@@ -79,11 +81,12 @@ pnpm lint --filter='...[origin/main]'
 ```
 
 **Collect results:**
+
 ```yaml
 checks:
-  tests: { status: PASS|FAIL, details: "X tests passed" }
-  types: { status: PASS|FAIL, details: "No type errors" }
-  lint: { status: PASS|FAIL, details: "No lint errors" }
+  tests: { status: PASS|FAIL, details: 'X tests passed' }
+  types: { status: PASS|FAIL, details: 'No type errors' }
+  lint: { status: PASS|FAIL, details: 'No lint errors' }
 ```
 
 ### Phase 3: Specialist Reviews (if --deep or specific flags)
@@ -183,29 +186,30 @@ ELSE:
 ```
 
 **Status reason (1-2 sentences):**
+
 - PASS: "All checks passed with no significant issues."
 - CONCERNS: "Non-blocking issues found that should be addressed."
 - FAIL: "{reason for failure - e.g., 'Tests failing' or 'High severity security issue'}"
 - WAIVED: "{user-provided reason}"
 
-### Phase 5: Generate Gate File
+### Phase 5: Write Gate Artifact to KB
 
-**Write YAML to `docs/qa/gates/{STORY_NUM}-{slug}.yml`:**
+**Call `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "qa_gate", content: {gate_content} })` with the following content structure:**
 
 ```yaml
 schema: 1
-story: "{STORY_NUM}"
-story_title: "{STORY_TITLE}"
+story: '{STORY_NUM}'
+story_title: '{STORY_TITLE}'
 gate: PASS|CONCERNS|FAIL|WAIVED
-status_reason: "{1-2 sentence explanation}"
-reviewer: "Claude Code"
-updated: "{ISO-8601 timestamp}"
+status_reason: '{1-2 sentence explanation}'
+reviewer: 'Claude Code'
+updated: '{ISO-8601 timestamp}'
 
 # Waiver (only active if WAIVED)
 waiver:
-  active: false  # or true if WAIVED
-  reason: ""     # populated if WAIVED
-  approved_by: "" # populated if WAIVED
+  active: false # or true if WAIVED
+  reason: '' # populated if WAIVED
+  approved_by: '' # populated if WAIVED
 
 # All issues found
 top_issues: []
@@ -221,34 +225,27 @@ nfr_validation:
   security: { status: PASS|CONCERNS|FAIL|SKIPPED, issue_count: 0 }
   performance: { status: PASS|CONCERNS|FAIL|SKIPPED, issue_count: 0 }
   accessibility: { status: PASS|CONCERNS|FAIL|SKIPPED, issue_count: 0 }
-  tests: { status: PASS|FAIL, details: "" }
-  types: { status: PASS|FAIL, details: "" }
-  lint: { status: PASS|FAIL, details: "" }
+  tests: { status: PASS|FAIL, details: '' }
+  types: { status: PASS|FAIL, details: '' }
+  lint: { status: PASS|FAIL, details: '' }
 
 # Risk summary
 risk_summary:
   totals: { high: 0, medium: 0, low: 0 }
   recommendations:
-    must_fix: []   # high severity items
+    must_fix: [] # high severity items
     should_fix: [] # medium severity items
 ```
 
-### Phase 6: Update Story File (if story provided)
+### Phase 6: KB Artifact as Persistent Record (if story provided)
 
-**Append to story's QA Results section:**
+The `qa_gate` artifact written to KB in Phase 5 serves as the persistent record for this gate decision. No story file update is needed.
 
-```markdown
-## QA Results
+To retrieve the gate result later:
 
-### Gate Status
-
-Gate: {STATUS} → docs/qa/gates/{STORY_NUM}-{slug}.yml
-Updated: {ISO-8601 timestamp}
-Reviewer: Claude Code
-
-{If issues found:}
-Top Issues:
-- [{ID}] {severity}: {finding}
+```
+kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })
+# Inspect the artifact with artifact_type: "qa_gate"
 ```
 
 ### Phase 7: Report Summary
@@ -277,7 +274,7 @@ Top Issues ({N} total):
   [{ID}] {severity}: {finding}
   ...
 
-Gate File: docs/qa/gates/{STORY_NUM}-{slug}.yml
+Gate artifact written to KB (artifact_type: qa_gate, story_id: {STORY_ID})
 
 {If FAIL:}
 Recommendation: Address high-severity issues before proceeding.
@@ -295,36 +292,36 @@ Approved By: {approved_by}
 
 ## Issue ID Prefixes
 
-| Prefix | Category |
-|--------|----------|
-| SEC- | Security issues |
-| PERF- | Performance issues |
-| A11Y- | Accessibility issues |
-| TEST- | Testing gaps |
-| REL- | Reliability issues |
-| MNT- | Maintainability concerns |
-| ARCH- | Architecture issues |
-| DOC- | Documentation gaps |
-| REQ- | Requirements issues |
+| Prefix | Category                 |
+| ------ | ------------------------ |
+| SEC-   | Security issues          |
+| PERF-  | Performance issues       |
+| A11Y-  | Accessibility issues     |
+| TEST-  | Testing gaps             |
+| REL-   | Reliability issues       |
+| MNT-   | Maintainability concerns |
+| ARCH-  | Architecture issues      |
+| DOC-   | Documentation gaps       |
+| REQ-   | Requirements issues      |
 
 ## Severity Scale
 
 **Fixed values - no variations:**
 
-| Severity | Description | Action |
-|----------|-------------|--------|
-| `high` | Critical issues, should block | Must fix before release |
-| `medium` | Should fix soon, not blocking | Schedule for soon |
-| `low` | Minor issues, cosmetic | Fix when convenient |
+| Severity | Description                   | Action                  |
+| -------- | ----------------------------- | ----------------------- |
+| `high`   | Critical issues, should block | Must fix before release |
+| `medium` | Should fix soon, not blocking | Schedule for soon       |
+| `low`    | Minor issues, cosmetic        | Fix when convenient     |
 
 ## Gate Statuses
 
-| Status | Meaning | When to Use |
-|--------|---------|-------------|
-| `PASS` | All good | No issues or only low severity |
-| `CONCERNS` | Proceed with awareness | Medium severity issues present |
-| `FAIL` | Should not proceed | High severity issues or check failures |
-| `WAIVED` | Accepted despite issues | Explicitly approved to proceed |
+| Status     | Meaning                 | When to Use                            |
+| ---------- | ----------------------- | -------------------------------------- |
+| `PASS`     | All good                | No issues or only low severity         |
+| `CONCERNS` | Proceed with awareness  | Medium severity issues present         |
+| `FAIL`     | Should not proceed      | High severity issues or check failures |
+| `WAIVED`   | Accepted despite issues | Explicitly approved to proceed         |
 
 ---
 
@@ -364,28 +361,32 @@ The `/implement` skill calls `/qa-gate` for its QA phase:
 ## Examples
 
 ### Quick Gate (tests only)
+
 ```bash
 /qa-gate 3.1.5
 # Runs: tests, types, lint
-# Output: docs/qa/gates/3.1.5-my-story.yml
+# Output: KB artifact (artifact_type: qa_gate, story_id: 3.1.5)
 ```
 
 ### Deep Gate (all specialists)
+
 ```bash
 /qa-gate 3.1.5 --deep
 # Runs: tests, types, lint + security, performance, accessibility
-# Output: docs/qa/gates/3.1.5-my-story.yml
+# Output: KB artifact (artifact_type: qa_gate, story_id: 3.1.5)
 ```
 
 ### Waive Known Issues
+
 ```bash
 /qa-gate 3.1.5 --waive --reason "MVP release, will fix in v2" --approved-by "Tech Lead"
 # Sets gate to WAIVED with approval tracking
 ```
 
 ### Branch Review (no story)
+
 ```bash
 /qa-gate --branch --deep
 # Reviews current branch without story reference
-# Output: docs/qa/gates/branch-{branch-name}.yml
+# Output: Findings reported to user only (no KB artifact without a story ID)
 ```

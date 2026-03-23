@@ -2,11 +2,11 @@
 name: review
 description: Comprehensive code review with parallel specialist sub-agents. Analyzes requirements traceability, code quality, security, performance, accessibility, test coverage, and technical debt. Produces detailed findings and calls /qa-gate for final gate decision.
 mcp_tools_available:
-  - context7  # For checking current best practices
-  - perplexity  # For researching security patterns and best practices
-  - chrome-devtools  # For performance and network debugging
-  - postgres-mcp  # For query analysis and optimization review
-  - kb_search  # For project-specific patterns and past decisions
+  - context7 # For checking current best practices
+  - perplexity # For researching security patterns and best practices
+  - chrome-devtools # For performance and network debugging
+  - postgres-mcp # For query analysis and optimization review
+  - kb_search # For project-specific patterns and past decisions
 ---
 
 # /review - Comprehensive Code Review
@@ -16,6 +16,7 @@ mcp_tools_available:
 Full-spectrum code review using parallel specialist sub-agents. Each specialist analyzes a specific dimension, findings are aggregated, and `/qa-gate` produces the final gate decision.
 
 **Key Features:**
+
 - Parallel specialist sub-agents for thorough analysis
 - Requirements traceability (AC → tests mapping)
 - Active refactoring when safe
@@ -29,19 +30,16 @@ Full-spectrum code review using parallel specialist sub-agents. Each specialist 
 # Review a single story by number
 /review 3.1.5
 
-# Review a single story by file path
-/review docs/stories/epic-6-wishlist/wish-2002-add-item-flow.md
+# Review a single story by story ID
+/review WISH-2002
 
 # Review current branch (no story)
 /review --branch
 
-# Review all stories in an epic directory (shorthand)
+# Review all stories with an epic tag (shorthand)
 /review epic-6-wishlist
 
-# Review all stories in a directory (full path)
-/review docs/stories/epic-6-wishlist/
-
-# Review directory, only stories with specific status
+# Review all stories with a tag, filtered by status
 /review epic-6-wishlist --status=Draft
 
 # Quick review (skip deep specialists)
@@ -95,44 +93,38 @@ else:
 ```
 
 ### Mode A: Single Story Review (default)
+
 Triggered by:
-- Story number (e.g., `3.1.5`, `2002`)
-- Story file path (e.g., `docs/stories/epic-6-wishlist/wish-2002-add-item-flow.md`)
+
+- Story number or ID (e.g., `3.1.5`, `2002`, `WISH-2002`)
 - `--branch` flag
 
 ### Mode B: Directory Review (new)
+
 Triggered by:
-- Epic directory name (e.g., `epic-6-wishlist`) - auto-prepends `docs/stories/`
-- Full directory path (e.g., `docs/stories/epic-6-wishlist/`)
-- Any path that resolves to a directory containing `.md` files
+
+- Epic tag name (e.g., `epic-6-wishlist`) - used to query KB for stories with that tag
+- Any tag or filter that maps to a set of stories in the KB
 
 ```
 TodoWrite([
-  { content: "Scan directory for stories", status: "in_progress", activeForm: "Scanning directory" },
+  { content: "Query KB for stories", status: "in_progress", activeForm: "Querying KB for stories" },
   { content: "Filter stories by status", status: "pending", activeForm: "Filtering stories" },
   { content: "Review each story sequentially", status: "pending", activeForm: "Reviewing stories" },
   { content: "Generate summary report", status: "pending", activeForm: "Generating summary" }
 ])
 ```
 
-**Directory scanning:**
-1. Resolve directory path:
-   - If starts with `epic-`: prepend `docs/stories/` → `docs/stories/epic-6-wishlist/`
-   - If full path provided: use as-is
-   - If relative path: resolve from working directory
-2. Verify directory exists, error if not
-3. Find all `.md` files in directory: `Glob(pattern: "*.md", path: {DIR_PATH})`
-4. Filter out excluded files/directories:
-   - Skip files in `_legacy/` subdirectories
-   - Skip `IMPLEMENTATION_ORDER.md`
-   - Skip `README.md`
-   - Skip any file starting with `EPIC-` (epic definition files)
-5. For each remaining file, read and extract:
-   - Frontmatter (if present)
-   - Status field (from frontmatter or `status:` line in file)
-6. If `--status` filter provided, only include stories where status matches
-7. Sort stories by filename (natural sort order)
-8. Create todo list with one item per story
+**KB story query:**
+
+1. Resolve epic tag from target argument:
+   - If starts with `epic-`: use as-is as the tag filter
+   - Otherwise: treat as a tag or search term
+2. Query KB for stories: `kb_list_stories({ tags: ["{epic-tag}"], limit: 50 })`
+3. Filter out stories in terminal states (e.g., cancelled, archived)
+4. If `--status` filter provided, only include stories where status matches
+5. Sort stories by story ID (natural sort order)
+6. Create todo list with one item per story
 
 **Proceed to Phase 0A for single story or Phase 0B for directory.**
 
@@ -149,22 +141,24 @@ TodoWrite([
   { content: "Spawn specialist sub-agents", status: "pending", activeForm: "Spawning specialists" },
   { content: "Aggregate findings", status: "pending", activeForm: "Aggregating findings" },
   { content: "Run qa-gate", status: "pending", activeForm: "Running qa-gate" },
-  { content: "Update story file", status: "pending", activeForm: "Updating story" }
+  { content: "Write review artifact to KB", status: "pending", activeForm: "Writing review artifact to KB" }
 ])
 ```
 
 **Gather context:**
-1. If story provided, read story file and extract:
+
+1. If story provided, fetch from KB: `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })` and extract:
    - Acceptance criteria
    - Tasks list
-   - File list (if present)
-   - Previous QA results
+   - File list (if present in story data)
+   - Previous QA results (from artifacts)
 2. Get list of changed files: `git diff --name-only origin/main`
 3. Read CLAUDE.md for project guidelines
 4. Determine review scope (files to analyze)
 
 **Risk assessment (determines review depth):**
 Auto-escalate to deep review if:
+
 - Auth/payment/security files touched
 - No tests added
 - Diff > 500 lines
@@ -193,13 +187,13 @@ TodoWrite([
 
 **For each story in stories_to_review:**
 
-1. **Read story file** and extract:
+1. **Fetch from KB**: `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })` and extract:
    - Story ID/number
    - Title
    - Status
    - Acceptance criteria
    - Tasks list
-   - Previous review findings (if any)
+   - Previous review findings (from review artifacts, if any)
 
 2. **Run Phases 0A through 7 for this story** (see below for modified Phase 7)
 
@@ -207,7 +201,7 @@ TodoWrite([
 
 4. **After all stories processed, proceed to Phase 8B (Summary Report)**
 
-**CRITICAL: Process stories sequentially, not in parallel. This allows findings to be appended to each story file before moving to the next.**
+**CRITICAL: Process stories sequentially, not in parallel. This allows review artifacts to be written to the KB for each story before moving to the next.**
 
 **Proceed to Phase 0A for each story, then continue through phases.**
 
@@ -224,6 +218,7 @@ pnpm lint --filter='...[origin/main]'
 ```
 
 **If any fail and --fix is set:**
+
 - Try to auto-fix lint issues: `pnpm lint --fix`
 - Re-run checks
 
@@ -237,7 +232,7 @@ pnpm lint --filter='...[origin/main]'
 
 ### 2.1 Requirements Traceability Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -279,11 +274,11 @@ Task(
                  suggested_test: 'Add test for session expiry behavior'
            ```"
 )
-```
+````
 
 ### 2.2 Code Quality Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -332,11 +327,11 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ### 2.3 Security Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -385,11 +380,11 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ### 2.4 Performance Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -438,11 +433,11 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ### 2.5 Accessibility Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -491,11 +486,11 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ### 2.6 Test Coverage Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -542,11 +537,11 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ### 2.7 Technical Debt Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -594,7 +589,7 @@ Task(
                  # ... rest of fields
            ```"
 )
-```
+````
 
 ---
 
@@ -622,21 +617,21 @@ results = {
 
 ```yaml
 review_summary:
-  story: "{STORY_NUM}"
-  reviewed_at: "{ISO-8601}"
-  files_analyzed: {count}
+  story: '{STORY_NUM}'
+  reviewed_at: '{ISO-8601}'
+  files_analyzed: { count }
 
   t_shirt_sizing:
-    recommended_size: M  # Synthesized from all specialists
+    recommended_size: M # Synthesized from all specialists
     confidence: high|medium|low
     specialist_estimates:
-      requirements: { size: M, rationale: "..." }
-      code_quality: { size: L, rationale: "..." }
-      security: { size: S, rationale: "..." }
-      performance: { size: M, rationale: "..." }
-      accessibility: { size: M, rationale: "..." }
-      test_coverage: { size: L, rationale: "..." }
-      technical_debt: { size: M, rationale: "..." }
+      requirements: { size: M, rationale: '...' }
+      code_quality: { size: L, rationale: '...' }
+      security: { size: S, rationale: '...' }
+      performance: { size: M, rationale: '...' }
+      accessibility: { size: M, rationale: '...' }
+      test_coverage: { size: L, rationale: '...' }
+      technical_debt: { size: M, rationale: '...' }
     size_breakdown:
       XS: 0 specialists
       S: 1 specialist
@@ -657,32 +652,32 @@ review_summary:
     lint: { status: PASS|FAIL }
 
   findings:
-    total: {count}
+    total: { count }
     by_severity:
-      high: {count}
-      medium: {count}
-      low: {count}
+      high: { count }
+      medium: { count }
+      low: { count }
     by_category:
-      security: {count}
-      performance: {count}
-      accessibility: {count}
-      code_quality: {count}
-      test_coverage: {count}
-      technical_debt: {count}
-      requirements: {count}
+      security: { count }
+      performance: { count }
+      accessibility: { count }
+      code_quality: { count }
+      test_coverage: { count }
+      technical_debt: { count }
+      requirements: { count }
 
   traceability:
-    ac_total: {count}
-    ac_covered: {count}
-    ac_gaps: {count}
+    ac_total: { count }
+    ac_covered: { count }
+    ac_gaps: { count }
 
   all_findings:
     - id: SEC-001
       category: security
       severity: high
-      finding: "..."
-      file: "..."
-      suggested_action: "..."
+      finding: '...'
+      file: '...'
+      suggested_action: '...'
     # ... all findings sorted by severity
 ```
 
@@ -721,6 +716,7 @@ review_summary:
    - Note any caveats or warnings
 
 **Deduplicate findings:**
+
 - Merge similar findings from different specialists
 - Keep highest severity when duplicated
 
@@ -765,161 +761,124 @@ Invoke /qa-gate skill with:
 
 The /qa-gate skill will:
 - Determine gate decision (PASS/CONCERNS/FAIL)
-- Create gate file at docs/qa/gates/{story}-{slug}.yml
+- Write qa_gate artifact to KB via kb_write_artifact
 - Return gate status
 ```
 
 ---
 
-## Phase 7: Update Story File
+## Phase 7: Write Review Artifact to KB
 
-**Append Review Findings section to story file:**
+**Write review findings as a KB artifact:**
 
-**Check if story file already has a `## Review Findings` section:**
-- If yes: Replace it with updated findings
-- If no: Append to end of file
+Call `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "review", content: {review_content} })` with the following content structure:
 
-```markdown
-## Review Findings
+```yaml
+review_date: '{ISO-8601}'
+reviewed_by: 'Claude Code'
+gate: '{PASS|CONCERNS|FAIL}'
+gate_artifact_type: 'qa_gate'
 
-> **Review Date:** {ISO-8601}
-> **Reviewed By:** Claude Code
-> **Gate:** {PASS|CONCERNS|FAIL} (score: {score}/100)
-> **Gate File:** docs/qa/gates/{story}-{slug}.yml
+t_shirt_size:
+  recommended: '{M}'
+  confidence: '{high|medium|low}'
+  specialist_breakdown:
+    requirements: { size: M, rationale: '5-7 ACs with some test gaps' }
+    code_quality: { size: L, rationale: 'Moderate complexity, architectural considerations' }
+    security: { size: S, rationale: 'Standard auth checks, low risk' }
+    performance: { size: M, rationale: 'Some optimization needed (memoization)' }
+    accessibility: { size: M, rationale: 'Interactive UI requiring a11y attention' }
+    test_coverage: { size: L, rationale: 'Comprehensive testing needed (unit + integration)' }
+    tech_debt: { size: M, rationale: 'Minor shortcuts, well-documented' }
+  size_distribution: { XS: 0, S: 1, M: 4, L: 2, XL: 0, XXL: 0 }
+  synthesis: |
+    Modal size is M (4/7 specialists). Code Quality and Test Coverage flagged as L due to
+    architectural complexity and comprehensive testing requirements. Overall recommendation:
+    M with awareness that testing effort may push toward upper end of estimate.
 
-### T-Shirt Size Estimate
+summary:
+  files_analyzed: { count }
+  total_findings: { count }
+  by_severity: { high: { N }, medium: { N }, low: { N } }
+  traceability: '{N}/{M} acceptance criteria have test coverage'
 
-**Recommended Size: {M}** (Confidence: {high|medium|low})
+required_checks:
+  tests: '{PASS|FAIL}'
+  types: '{PASS|FAIL}'
+  lint: '{PASS|FAIL}'
 
-**Specialist Breakdown:**
-| Specialist | Size | Rationale |
-|------------|------|-----------|
-| Requirements | M | 5-7 ACs with some test gaps |
-| Code Quality | L | Moderate complexity, architectural considerations |
-| Security | S | Standard auth checks, low risk |
-| Performance | M | Some optimization needed (memoization) |
-| Accessibility | M | Interactive UI requiring a11y attention |
-| Test Coverage | L | Comprehensive testing needed (unit + integration) |
-| Tech Debt | M | Minor shortcuts, well-documented |
+findings_by_category:
+  requirements_traceability:
+    # {If traceability gaps found:}
+    - id: REQ-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file or N/A}'
+      action: '{suggested_action}'
+    # {If no gaps: empty array — all acceptance criteria have test coverage}
 
-**Size Distribution:** XS: 0, S: 1, **M: 4**, L: 2, XL: 0, XXL: 0
+  code_quality:
+    - id: QUAL-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}:{line}'
+      action: '{suggested_action}'
 
-**Synthesis:**
-Modal size is M (4/7 specialists). Code Quality and Test Coverage flagged as L due to architectural complexity and comprehensive testing requirements. Overall recommendation: **M** with awareness that testing effort may push toward upper end of estimate.
+  security:
+    - id: SEC-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}:{line}'
+      cwe: '{cwe_reference}'
+      action: '{suggested_action}'
 
----
+  performance:
+    - id: PERF-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}:{line}'
+      impact: '{estimated_impact}'
+      action: '{suggested_action}'
 
-### Summary
+  accessibility:
+    - id: A11Y-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}:{line}'
+      wcag: '{wcag_criterion}'
+      action: '{suggested_action}'
 
-- **Files Analyzed:** {count}
-- **Total Findings:** {count} (high: {N}, medium: {N}, low: {N})
-- **Traceability:** {N}/{M} acceptance criteria have test coverage
+  test_coverage:
+    - id: TEST-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}'
+      action: '{suggested_action}'
 
-### Required Checks
+  technical_debt:
+    - id: DEBT-001
+      severity: '{severity}'
+      finding: '{finding}'
+      file: '{file}:{line}'
+      effort: '{estimated_effort}'
+      action: '{suggested_action}'
 
-| Check | Status |
-|-------|--------|
-| Tests | {PASS/FAIL} |
-| Types | {PASS/FAIL} |
-| Lint  | {PASS/FAIL} |
+refactoring_applied:
+  # {If --fix was used:}
+  - file: '{file}'
+    change: '{what was changed and why}'
 
-### Requirements Traceability
-
-{If traceability gaps found:}
-- **[REQ-001] {severity}:** {finding}
-  - **File:** {file or N/A}
-  - **Action:** {suggested_action}
-
-{If no gaps:}
-✓ All acceptance criteria have test coverage
-
-### Code Quality
-
-{For each finding:}
-- **[QUAL-001] {severity}:** {finding}
-  - **File:** {file}:{line}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-### Security
-
-{For each finding:}
-- **[SEC-001] {severity}:** {finding}
-  - **File:** {file}:{line}
-  - **CWE:** {cwe_reference}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-### Performance
-
-{For each finding:}
-- **[PERF-001] {severity}:** {finding}
-  - **File:** {file}:{line}
-  - **Impact:** {estimated_impact}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-### Accessibility
-
-{For each finding:}
-- **[A11Y-001] {severity}:** {finding}
-  - **File:** {file}:{line}
-  - **WCAG:** {wcag_criterion}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-### Test Coverage
-
-{For each finding:}
-- **[TEST-001] {severity}:** {finding}
-  - **File:** {file}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-### Technical Debt
-
-{For each finding:}
-- **[DEBT-001] {severity}:** {finding}
-  - **File:** {file}:{line}
-  - **Effort:** {estimated_effort}
-  - **Action:** {suggested_action}
-
-{If no findings:}
-✓ No issues found
-
-{If --fix was used:}
-### Refactoring Applied
-
-- **{file}:** {what was changed and why}
-
-### Recommendation
-
-{If PASS:}
-✓ **Ready for Done** - All checks passed, no blocking issues.
-
-{If CONCERNS:}
-⚠ **Review Required** - Address medium-severity issues and proceed with awareness.
-
-{If FAIL:}
-✗ **Changes Required** - Address high-severity issues before proceeding.
-
----
+recommendation: |
+  # {If PASS:} Ready for Done — All checks passed, no blocking issues.
+  # {If CONCERNS:} Review Required — Address medium-severity issues and proceed with awareness.
+  # {If FAIL:} Changes Required — Address high-severity issues before proceeding.
 ```
 
 **Important:**
-- Use Edit tool to replace existing `## Review Findings` section if present
+
+- Use `kb_write_artifact` to persist findings — do NOT write to story files
 - Organize findings by specialist category
-- Show "✓ No issues found" for categories with zero findings
+- Use empty arrays for categories with zero findings
 - List findings in order of severity (high → medium → low)
 - Include file paths and line numbers for easy navigation
 
@@ -978,7 +937,7 @@ REFACTORING APPLIED
 
 GATE DECISION
   Status: {PASS|CONCERNS|FAIL}
-  Gate File: docs/qa/gates/{story}-{slug}.yml
+  Gate artifact written to KB (artifact_type: qa_gate)
 
 {If FAIL:}
 RECOMMENDATION: Address high-severity issues before proceeding.
@@ -990,7 +949,7 @@ RECOMMENDATION: Review medium-severity issues and proceed with awareness.
 RECOMMENDATION: Ready for merge.
 
 FINDINGS LOCATION
-  Story file updated: {STORY_FILE_PATH}
+  Review artifact written to KB: story_id={STORY_ID}, artifact_type=review
 
 ═══════════════════════════════════════════════════════════════════
 ```
@@ -1032,8 +991,8 @@ FINDINGS BY STORY
 │ Size:     M (Confidence: high)
 │ Gate:     {PASS|CONCERNS|FAIL}
 │ Findings: {total} ({high}H {medium}M {low}L)
-│ File:     {story_file_path}
-│ Gate:     docs/qa/gates/{story-1}-{slug}.yml
+│ Review artifact written to KB (story_id={story-1-id}, artifact_type=review)
+│ Gate artifact written to KB (story_id={story-1-id}, artifact_type=qa_gate)
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1041,8 +1000,8 @@ FINDINGS BY STORY
 ├─────────────────────────────────────────────────────────────────┤
 │ Gate:     {PASS|CONCERNS|FAIL}
 │ Findings: {total} ({high}H {medium}M {low}L)
-│ File:     {story_file_path}
-│ Gate:     docs/qa/gates/{story-2}-{slug}.yml
+│ Review artifact written to KB (story_id={story-2-id}, artifact_type=review)
+│ Gate artifact written to KB (story_id={story-2-id}, artifact_type=qa_gate)
 └─────────────────────────────────────────────────────────────────┘
 
 {... for each story}
@@ -1074,7 +1033,7 @@ RECOMMENDATION
 
 {If any FAIL:}
 ⚠ {N} stories require changes before proceeding.
-  → Review findings in each story file and address blocking issues.
+  → Retrieve review artifacts from KB and address blocking issues.
 
 {If any CONCERNS but no FAIL:}
 ⚠ {N} stories have concerns.
@@ -1085,14 +1044,15 @@ RECOMMENDATION
 
 NEXT STEPS
 
-Review detailed findings in each story file:
+Review detailed findings for each story in KB:
 {For each story with FAIL or CONCERNS:}
-  - {story_file_path}
+  - kb_get_story({ story_id: "{story_id}", include_artifacts: true }) → review artifact
 
 ═══════════════════════════════════════════════════════════════════
 ```
 
 **Aggregate Analysis:**
+
 1. Count stories by gate status (PASS/CONCERNS/FAIL)
 2. Sum total findings across all stories
 3. Identify most common issue types across stories
@@ -1132,32 +1092,35 @@ Main Orchestrator (/review)
 
 ## Issue ID Prefixes
 
-| Prefix | Specialist |
-|--------|------------|
-| SEC- | Security |
-| PERF- | Performance |
-| A11Y- | Accessibility |
-| QUAL- | Code Quality |
-| TEST- | Test Coverage |
-| DEBT- | Technical Debt |
-| REQ- | Requirements Traceability |
+| Prefix | Specialist                |
+| ------ | ------------------------- |
+| SEC-   | Security                  |
+| PERF-  | Performance               |
+| A11Y-  | Accessibility             |
+| QUAL-  | Code Quality              |
+| TEST-  | Test Coverage             |
+| DEBT-  | Technical Debt            |
+| REQ-   | Requirements Traceability |
 
 ---
 
 ## When to Use
 
 ### /review (comprehensive)
+
 - Pre-merge reviews
 - Story completion reviews
 - Major feature reviews
 - Security-sensitive changes
 
 ### /review --quick
+
 - Small changes
 - Documentation updates
 - Minor fixes
 
 ### /qa-gate (standalone)
+
 - Quick pass/fail decision
 - CI/CD integration
 - Automated checks only

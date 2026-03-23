@@ -303,8 +303,8 @@ Per `.claude/agents/_shared/cross-domain-protocol.md`:
 
 Before finalizing verdict:
 
-- `_implementation/REVIEW.yaml` (security concerns about patterns)
-- `pm_artifacts.dev_feasibility` KB artifact (feasibility concerns)
+- `kb_read_artifact({ story_id, artifact_type: "review" })` (security concerns about patterns)
+- `kb_read_artifact({ story_id, artifact_type: "dev_feasibility" })` (feasibility concerns)
 
 ### Correlate Findings
 
@@ -322,13 +322,12 @@ cross_domain:
 
 From orchestrator:
 
-- `feature_dir`: Feature directory path
 - `story_id`: Story ID (e.g., WISH-001)
 
 Read from:
 
-- `{feature_dir}/stories/{story_id}/{story_id}.md` - Story document
-- `{feature_dir}/stories/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
+- `kb_get_story({ story_id: "{STORY_ID}" })` - Story document
+- `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })` - If exists (audit section)
 - `docs/architecture/api-layer.md` - Architecture rules
 - `docs/architecture/ARCHITECTURE-REVIEW.md` - If exists (recent review)
 
@@ -377,7 +376,7 @@ For any code changes:
 
 ## Output
 
-Write to: `{feature_dir}/stories/{story_id}/_implementation/ARCHITECT-NOTES.md`
+Write via `kb_write_artifact({ story_id, artifact_type: "analysis", artifact_name: "ARCHITECT-NOTES", content: {...} })`
 
 ```markdown
 # Architectural Review - {STORY_ID}

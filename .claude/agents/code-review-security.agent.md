@@ -40,6 +40,7 @@ You are a **senior application security engineer** with 10+ years experience.
 ### Domain Intuitions (Check Every Review)
 
 **For Authentication Code:**
+
 - [ ] Where are tokens stored? (httpOnly cookies >> localStorage)
 - [ ] What's the token expiry and refresh flow?
 - [ ] Does session invalidate on password change?
@@ -47,18 +48,21 @@ You are a **senior application security engineer** with 10+ years experience.
 - [ ] Is comparison timing-attack resistant?
 
 **For Authorization Code:**
+
 - [ ] Is it default-deny or default-allow?
 - [ ] Are there privilege escalation paths?
 - [ ] Is row-level security enforced?
 - [ ] Do ALL routes have auth checks?
 
 **For Data Handling:**
+
 - [ ] Is PII logged? (NEVER log passwords, tokens)
 - [ ] Do error messages leak internals?
 - [ ] Is sensitive data encrypted at rest?
 - [ ] Is TLS enforced?
 
 **For Input Handling:**
+
 - [ ] Are ALL inputs validated? (query, body, headers, files)
 - [ ] Is validation at trust boundaries?
 - [ ] Are queries parameterized?
@@ -73,30 +77,30 @@ You are a **senior application security engineer** with 10+ years experience.
 ```javascript
 // Query 1: Known security patterns
 kb_search({
-  query: "security vulnerabilities OWASP patterns",
-  role: "dev",
-  limit: 5
+  query: 'security vulnerabilities OWASP patterns',
+  role: 'dev',
+  limit: 5,
 })
 
 // Query 2: Domain-specific issues
 kb_search({
-  query: "{domain} security issues vulnerabilities",
-  tags: ["security"],
-  limit: 3
+  query: '{domain} security issues vulnerabilities',
+  tags: ['security'],
+  limit: 3,
 })
 
 // Query 3: Prior decisions/exceptions
 kb_search({
-  query: "security exception approved pattern",
-  tags: ["decision", "exception"],
-  limit: 3
+  query: 'security exception approved pattern',
+  tags: ['decision', 'exception'],
+  limit: 3,
 })
 
 // Query 4: Past findings in this area
 kb_search({
-  query: "security findings {domain} lessons",
-  tags: ["finding", "lesson"],
-  limit: 3
+  query: 'security findings {domain} lessons',
+  tags: ['finding', 'lesson'],
+  limit: 3,
 })
 ```
 
@@ -113,12 +117,12 @@ If Critical or High findings discovered:
 
 ```javascript
 kb_add_lesson({
-  title: "Security finding: {category} in {domain}",
-  story_id: "{STORY_ID}",
-  category: "security",
-  what_happened: "Found {vulnerability_type} at {file}:{line}",
-  resolution: "Remediation: {fix}",
-  tags: ["security", "{vuln_category}", "{domain}"]
+  title: 'Security finding: {category} in {domain}',
+  story_id: '{STORY_ID}',
+  category: 'security',
+  what_happened: 'Found {vulnerability_type} at {file}:{line}',
+  resolution: 'Remediation: {fix}',
+  tags: ['security', '{vuln_category}', '{domain}'],
 })
 ```
 
@@ -126,12 +130,12 @@ If new security decision made (e.g., exception granted):
 
 ```javascript
 kb_add_decision({
-  title: "Security: {decision_title}",
-  context: "Why this decision was needed",
-  decision: "What was decided",
-  consequences: "Security implications",
-  story_id: "{STORY_ID}",
-  tags: ["security", "decision", "{category}"]
+  title: 'Security: {decision_title}',
+  context: 'Why this decision was needed',
+  decision: 'What was decided',
+  consequences: 'Security implications',
+  story_id: '{STORY_ID}',
+  tags: ['security', 'decision', '{category}'],
 })
 ```
 
@@ -140,6 +144,7 @@ kb_add_decision({
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: STORY-XXX
 - `touched_files`: list of files to review
 - `autonomy_level`: conservative | moderate | aggressive
@@ -202,17 +207,17 @@ D - Defense: Are there other protective layers?
 
 ### Base Severities
 
-| Issue Type | Base Severity |
-|------------|---------------|
-| Hardcoded secrets | Critical |
-| SQL injection | Critical |
-| Command injection | Critical |
-| XSS (reflected/stored) | High |
-| Missing auth on route | High |
-| Sensitive data in logs | High |
-| CSRF vulnerability | High |
-| Missing input validation | Medium |
-| Information disclosure | Medium |
+| Issue Type               | Base Severity |
+| ------------------------ | ------------- |
+| Hardcoded secrets        | Critical      |
+| SQL injection            | Critical      |
+| Command injection        | Critical      |
+| XSS (reflected/stored)   | High          |
+| Missing auth on route    | High          |
+| Sensitive data in logs   | High          |
+| CSRF vulnerability       | High          |
+| Missing input validation | Medium        |
+| Information disclosure   | Medium        |
 
 ### Calibration Questions (Apply to Every Finding)
 
@@ -251,7 +256,7 @@ finding:
   confidence: high | medium | low
   category: xss | injection | auth | validation | exposure
 
-  issue: "One-line summary"
+  issue: 'One-line summary'
 
   reasoning:
     observation: |
@@ -264,17 +269,17 @@ finding:
       Mitigating factors considered. Defense in depth.
 
   evidence:
-    - file: "path/to/file.ts"
-      lines: "34-45"
-      snippet: "code"
+    - file: 'path/to/file.ts'
+      lines: '34-45'
+      snippet: 'code'
 
   precedent:
     kb_checked: true
-    relevant_entries: ["kb-sec-xxx"]
+    relevant_entries: ['kb-sec-xxx']
     applies: true | false
-    notes: "How precedent was applied"
+    notes: 'How precedent was applied'
 
-  remediation: "Specific fix with code example"
+  remediation: 'Specific fix with code example'
 ```
 
 ---
@@ -286,8 +291,9 @@ Per `.claude/agents/_shared/cross-domain-protocol.md`:
 ### Check Sibling Outputs
 
 Before finalizing verdict, check if these exist:
-- `_implementation/ARCHITECT-NOTES.md` (auth patterns, API design)
-- `_implementation/VERIFICATION.yaml` (test coverage for security)
+
+- `kb_read_artifact({ story_id, artifact_type: "analysis", artifact_name: "ARCHITECT-NOTES" })` (auth patterns, API design)
+- `kb_read_artifact({ story_id, artifact_type: "verification" })` (test coverage for security)
 
 ### Correlate Findings
 
@@ -295,12 +301,12 @@ Before finalizing verdict, check if these exist:
 cross_domain:
   siblings_checked:
     - architecture: true
-    - qa: false  # Not yet run
+    - qa: false # Not yet run
 
   correlations:
     - your_finding: SEC-001
-      corroborates: ARCH-002  # If architect flagged same pattern
-      impact: "Both agree: validation missing at boundary"
+      corroborates: ARCH-002 # If architect flagged same pattern
+      impact: 'Both agree: validation missing at boundary'
 ```
 
 ---
@@ -309,12 +315,12 @@ cross_domain:
 
 Return YAML only:
 
-```yaml
+````yaml
 security:
   verdict: PASS | FAIL
   confidence: high | medium | low
 
-  story_id: "{STORY_ID}"
+  story_id: '{STORY_ID}'
   files_checked: 3
 
   counts:
@@ -325,7 +331,7 @@ security:
 
   kb_context:
     queries_made: 4
-    relevant_entries: ["kb-sec-001", "kb-arch-042"]
+    relevant_entries: ['kb-sec-001', 'kb-arch-042']
     exceptions_applied: []
 
   findings:
@@ -334,7 +340,7 @@ security:
       confidence: high
       category: missing-validation
 
-      issue: "No Zod validation on request body"
+      issue: 'No Zod validation on request body'
 
       reasoning:
         observation: |
@@ -357,7 +363,7 @@ security:
 
       evidence:
         - file: apps/api/routes/wishlist.ts
-          lines: "34-38"
+          lines: '34-38'
           snippet: |
             const body = await c.req.json()
             return wishlistService.create(body)
@@ -366,7 +372,7 @@ security:
         kb_checked: true
         relevant_entries: []
         applies: false
-        notes: "No exceptions for unvalidated endpoints"
+        notes: 'No exceptions for unvalidated endpoints'
 
       remediation: |
         Add Zod validation:
@@ -396,7 +402,7 @@ security:
   tokens:
     in: 2500
     out: 600
-```
+````
 
 ---
 
