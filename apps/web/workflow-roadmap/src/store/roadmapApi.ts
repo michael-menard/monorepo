@@ -179,6 +179,25 @@ export interface StoryDetails {
   } | null
 }
 
+export interface PlanImpact {
+  exclusiveStories: Array<{
+    storyId: string
+    title: string
+    state: string | null
+    hasActiveWorktree: boolean
+  }>
+  sharedStories: Array<{
+    storyId: string
+    title: string
+    state: string | null
+    otherPlanSlugs: string[]
+  }>
+  downstreamPlans: Array<{
+    planSlug: string
+    title: string
+  }>
+}
+
 export interface DashboardResponse {
   flowHealth: {
     totalStories: number
@@ -309,6 +328,20 @@ export const roadmapApi = createApi({
         'Dashboard',
       ],
     }),
+    getPlanImpact: builder.query<PlanImpact, string>({
+      query: slug => `/roadmap/${slug}/impact`,
+    }),
+    retirePlan: builder.mutation<
+      { success: boolean },
+      { slug: string; action: 'delete' | 'supersede' }
+    >({
+      query: ({ slug, action }) => ({
+        url: `/roadmap/${slug}/retire`,
+        method: 'POST',
+        body: { action },
+      }),
+      invalidatesTags: ['Plans', 'Stories', 'Dashboard'],
+    }),
     updateStoryContentSection: builder.mutation<
       { storyId: string; sectionName: string },
       { storyId: string; sectionName: string; contentText: string }
@@ -329,7 +362,9 @@ export const {
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
   useGetStoryByIdQuery,
+  useLazyGetPlanImpactQuery,
   useReorderPlansMutation,
+  useRetirePlanMutation,
   useUpdatePlanMutation,
   useUpdateStoryMutation,
   useUpdateStoryContentSectionMutation,

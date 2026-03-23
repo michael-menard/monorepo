@@ -7,12 +7,24 @@ import {
   AppTabsContent,
   CustomButton,
 } from '@repo/app-component-library'
-import { ArrowLeft, Pencil, Check, LayoutGrid, List, Copy, GanttChart } from 'lucide-react'
+import {
+  ArrowLeft,
+  Pencil,
+  Check,
+  LayoutGrid,
+  List,
+  Copy,
+  GanttChart,
+  ArrowRightLeft,
+  Trash2,
+} from 'lucide-react'
 import { useState, useEffect, useRef, startTransition, useMemo } from 'react'
 import {
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
   useUpdatePlanMutation,
+  useLazyGetPlanImpactQuery,
+  useRetirePlanMutation,
 } from '../../store/roadmapApi'
 import { useStorySSE } from '../../hooks/useStorySSE'
 import { relativeTime } from '../../utils/formatters'
@@ -24,6 +36,7 @@ import { PlanMetadataSection } from '../../components/plan-details/PlanMetadataS
 import { TimelineView } from '../../components/plan-details/TimelineView'
 import { DependencyGraph } from '../../components/plan-details/DependencyGraph'
 import { KanbanView } from '../../components/plan-details/KanbanView'
+import { PlanRetireDialog } from '../../components/plan-details/PlanRetireDialog'
 
 export function PlanDetailsPage() {
   const { slug } = useParams({ from: '/plan/$slug' })
@@ -92,6 +105,30 @@ export function PlanDetailsPage() {
       replace: true,
     })
   const [slugCopied, setSlugCopied] = useState(false)
+  const [retireAction, setRetireAction] = useState<'delete' | 'supersede' | null>(null)
+  const [isRetiring, setIsRetiring] = useState(false)
+  const [triggerImpact, { data: impactData, isFetching: isLoadingImpact }] =
+    useLazyGetPlanImpactQuery()
+  const [retirePlan] = useRetirePlanMutation()
+
+  const openRetireDialog = (action: 'delete' | 'supersede') => {
+    setRetireAction(action)
+    triggerImpact(slug)
+  }
+
+  const handleRetireConfirm = async () => {
+    if (!retireAction) return
+    setIsRetiring(true)
+    try {
+      await retirePlan({ slug, action: retireAction }).unwrap()
+      setRetireAction(null)
+      navigate({ to: '/' })
+    } catch (_err) {
+      // keep dialog open on error
+    } finally {
+      setIsRetiring(false)
+    }
+  }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -273,6 +310,40 @@ export function PlanDetailsPage() {
           </CustomButton>
           {slugCopied && <span className="text-xs text-emerald-400 font-mono">copied!</span>}
         </div>
+        {data.status !== 'superseded' && (
+          <div className="flex items-center gap-2 mt-3">
+            <CustomButton
+              variant="outline"
+              size="sm"
+              onClick={() => openRetireDialog('supersede')}
+              className="bg-amber-500/10 text-amber-400 border-0 hover:bg-amber-500/20 hover:text-amber-300"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+              Supersede
+            </CustomButton>
+            <CustomButton
+              variant="outline"
+              size="sm"
+              onClick={() => openRetireDialog('delete')}
+              className="bg-red-500/10 text-red-400 border-0 hover:bg-red-500/20 hover:text-red-300"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </CustomButton>
+          </div>
+        )}
+        <PlanRetireDialog
+          open={retireAction !== null}
+          onOpenChange={open => {
+            if (!open) setRetireAction(null)
+          }}
+          action={retireAction ?? 'delete'}
+          planTitle={data.title}
+          impact={impactData}
+          isLoadingImpact={isLoadingImpact}
+          isRetiring={isRetiring}
+          onConfirm={handleRetireConfirm}
+        />
       </div>
 
       <div className="grid gap-6">
