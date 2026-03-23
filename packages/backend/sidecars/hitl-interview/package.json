@@ -1,0 +1,47 @@
+{
+  "name": "@repo/sidecar-hitl-interview",
+  "version": "1.0.0",
+  "description": "HiTL Interview Sidecar — captures structured interview data at workflow decision points and transforms them into ML training examples",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "@repo/sidecar-http-utils": "workspace:*",
+    "drizzle-orm": "^0.44.3",
+    "zod": "^3.22.4",
+    "@repo/knowledge-base": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.1",
+    "@vitest/coverage-v8": "2.1.9",
+    "dotenv": "17.3.1",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "hitl",
+    "interview",
+    "sidecar",
+    "mcp",
+    "training-data"
+  ]
+}

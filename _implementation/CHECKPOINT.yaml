@@ -1,15 +1,16 @@
 schema: 1
-story_id: WINT-7010
-timestamp: '2026-03-21T00:00:00Z'
-current_phase: setup
-last_successful_phase: null
-iteration: 0
-max_iterations: 3
-blocked: false
+story_id: WINT-5010
 forced: false
-warnings: []
-gen_mode: false
-branch: story/WINT-7010
-worktree_path: tree/story/WINT-7010
-e2e_gate: exempt
-e2e_gate_reason: audit-only story, no code changes or e2e applicable
+blocked: false
+blocked_reason: null
+e2e_gate: null
+warnings:
+  - >-
+    PORT CONFLICT: AC-1 specifies port 3093 but rules-registry (WINT-4020) already uses 3093. Plan uses 3094 as default.
+    Dev should confirm with PM or adjust AC-1.
+iteration: 0
+feature_dir: workflow-intelligence-wint
+completed_at: null
+current_phase: plan
+last_successful_phase: setup
+max_iterations: 3
