@@ -1,6 +1,10 @@
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+
+const require = createRequire(import.meta.url)
+const { readPort } = require('../../../infra/ports.cjs')
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,7 +15,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    port: readPort('RESET_PASSWORD_PORT'),
     host: true,
   },
   build: {

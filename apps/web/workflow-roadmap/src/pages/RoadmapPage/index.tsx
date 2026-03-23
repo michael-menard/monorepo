@@ -47,10 +47,13 @@ export function RoadmapPage() {
 
   // --- Infinite scroll page tracking ---
   const [page, setPage] = useState(1)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 and scroll to top when filters change
   useEffect(() => {
     setPage(1)
+    scrollContainerRef.current?.scrollTo(0, 0)
   }, [status, priority, type, tag, excludeCompleted, search])
 
   const queryParams = useMemo(
@@ -79,17 +82,14 @@ export function RoadmapPage() {
   }, [plans])
 
   // --- Infinite scroll via IntersectionObserver ---
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
-
   useEffect(() => {
     const sentinel = sentinelRef.current
     const root = scrollContainerRef.current
-    if (!sentinel || !root) return
+    if (!sentinel || !root || !hasMore || isFetching) return
 
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0]?.isIntersecting && hasMore && !isFetching) {
+        if (entries[0]?.isIntersecting) {
           setPage(p => p + 1)
         }
       },
@@ -269,11 +269,11 @@ export function RoadmapPage() {
         )}
 
         {/* Loading indicator */}
-        {isFetching && (
+        {isFetching ? (
           <div className="text-center py-4 text-sm text-muted-foreground">
             Loading more plans...
           </div>
-        )}
+        ) : null}
 
         {/* Scroll sentinel — triggers next page load when visible */}
         <div ref={sentinelRef} className="h-1" />

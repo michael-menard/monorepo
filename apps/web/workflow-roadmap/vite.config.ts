@@ -1,6 +1,10 @@
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+
+const require = createRequire(import.meta.url)
+const { readPort } = require('../../../infra/ports.cjs')
 
 export default defineConfig({
   plugins: [react()],
@@ -17,11 +21,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3006,
+    port: readPort('WORKFLOW_ROADMAP_PORT'),
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3004',
+        target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,
         changeOrigin: true,
       },
     },

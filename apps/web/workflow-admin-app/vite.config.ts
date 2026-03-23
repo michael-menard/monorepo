@@ -1,6 +1,10 @@
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+
+const require = createRequire(import.meta.url)
+const { readPort } = require('../../../infra/ports.cjs')
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,17 +22,17 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    port: readPort('WORKFLOW_ADMIN_PORT'),
     host: true,
     proxy: {
       // Roadmap service (plans, stories, dashboard)
       '/api/v1': {
-        target: 'http://localhost:3004',
+        target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,
         changeOrigin: true,
       },
       // Default API gateway
       '/api': {
-        target: 'http://localhost:9000',
+        target: `http://localhost:${readPort('LEGO_API_PORT')}`,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },
@@ -54,6 +58,7 @@ export default defineConfig({
       '@repo/cache',
       '@repo/logger',
       '@repo/accessibility',
+      '@repo/plan-chat',
       '@repo/workflow-roadmap',
     ],
   },

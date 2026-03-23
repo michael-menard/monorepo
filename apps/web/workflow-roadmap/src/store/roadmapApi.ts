@@ -268,6 +268,24 @@ export const roadmapApi = createApi({
         url: '/roadmap',
         params,
       }),
+      // Infinite scroll: cache key ignores `page` so pages accumulate
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { page: _page, ...rest } = queryArgs
+        return rest
+      },
+      // Merge new page data into existing cached data
+      merge: (currentCache, newItems) => {
+        if (newItems.pagination.page === 1) {
+          // Filter reset — replace entirely
+          return newItems
+        }
+        return {
+          data: [...currentCache.data, ...newItems.data],
+          pagination: newItems.pagination,
+        }
+      },
+      // Re-fetch when page changes (even though cache key is the same)
+      forceRefetch: ({ currentArg, previousArg }) => currentArg !== previousArg,
       providesTags: ['Plans'],
     }),
     getPlanBySlug: builder.query<PlanDetails, string>({
