@@ -147,7 +147,7 @@ describe('DashboardPage', () => {
     })
   })
 
-  it('renders all 5 dashboard sections', async () => {
+  it('renders all 7 dashboard sections', async () => {
     mockUseGetDashboardQuery.mockReturnValue({
       data: MOCK_DASHBOARD,
       isLoading: false,
@@ -160,6 +160,8 @@ describe('DashboardPage', () => {
       expect(screen.getByText('Plan Progress')).toBeInTheDocument()
       expect(screen.getByText('Aging Stories')).toBeInTheDocument()
       expect(screen.getByText('Impact Ranking')).toBeInTheDocument()
+      expect(screen.getByText('Backlog Health')).toBeInTheDocument()
+      expect(screen.getByText('Backlog Aging')).toBeInTheDocument()
     })
   })
 
