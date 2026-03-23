@@ -1,239 +1,134 @@
-schema: 2
-story_id: WINT-9010
-timestamp: '2026-03-23T00:00:00Z'
-subtask_source: story
+schema: 1
+story_id: APRS-1040
+timestamp: '2026-03-21T23:00:00Z'
 steps:
   - id: 1
-    subtask_id: ST-1
-    description: >-
-      Implement decision/ module: DecisionTierSchema (5-tier enum), AutonomyLevelSchema
-      (conservative/moderate/aggressive), classifyDecisionTier(description) → DecisionTier, shouldEscalate(tier,
-      autonomyLevel) → boolean. Encode decision matrix from decision-handling.md as const table. Use keyword-based
-      classification matching prose semantics from _shared/decision-handling.md. Tier 4 always escalates regardless of
-      autonomy level.
+    description: Add planFlows and planFlowSteps Drizzle table definitions to apps/api/knowledge-base/src/db/schema/workflow.ts
     files:
-      - packages/backend/workflow-logic/src/decision/index.ts
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
     files_to_read:
-      - .claude/agents/_shared/decision-handling.md
-      - packages/backend/workflow-logic/src/evidence-judge/index.ts
-      - packages/backend/workflow-logic/src/transitions/index.ts
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
     dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/workflow-logic
+    slice: backend
+    verification: pnpm check-types --filter @repo/knowledge-base
     acs_covered:
       - AC-1
-      - AC-7
-      - AC-10
-  - id: 2
-    subtask_id: ST-2
-    description: >-
-      Implement artifact/ module: ArtifactTypeSchema (enum of all valid artifact types), ArtifactPhaseSchema (enum of
-      all phases), getArtifactPhase(artifactType) → ArtifactPhase (returns canonical write phase for each artifact
-      type), isValidArtifactForPhase(artifactType, phase) → boolean. Encode type-to-phase mapping table from
-      kb-integration.md Artifact Type Reference section. Pure metadata — no MCP SDK calls.
-    files:
-      - packages/backend/workflow-logic/src/artifact/index.ts
-    files_to_read:
-      - .claude/agents/_shared/kb-integration.md
-      - packages/backend/workflow-logic/src/evidence-judge/index.ts
-    dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/workflow-logic
-    acs_covered:
       - AC-2
-      - AC-7
-      - AC-10
-  - id: 3
-    subtask_id: ST-3
-    description: >-
-      Implement context/ module: buildContextQuery(domain, taskType, role?) → string (builds a canonical KB search query
-      from parts — e.g. 'backend api endpoint patterns'), buildBlockerQuery(domain) → string (builds a KB search query
-      for blockers/lessons). Both are pure string builders — no KB calls, no network I/O.
-    files:
-      - packages/backend/workflow-logic/src/context/index.ts
-    files_to_read:
-      - .claude/agents/_shared/kb-integration.md
-      - packages/backend/workflow-logic/src/evidence-judge/index.ts
-    dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/workflow-logic
-    acs_covered:
       - AC-3
-      - AC-7
-      - AC-10
-  - id: 4
-    subtask_id: ST-4
+  - id: 2
     description: >-
-      Implement token/ module: TokenUsageSchema (z.object with inputTokens: z.number().int().min(0), outputTokens:
-      z.number().int().min(0), phase: z.string().optional()), estimateTokenCount(bytes) → number (bytes / 4, rounded),
-      formatTokenSummary(usage: TokenUsage) → string (human-readable 'In: ~X Out: ~Y' format per token-tracking.md).
-      Pure functions, no I/O.
+      Create SQL migration 1120_aprs1040_plan_flows.sql with safety preamble, CREATE TABLE IF NOT EXISTS for plan_flows
+      and plan_flow_steps, CHECK constraints, indexes, and completion DO block
     files:
-      - packages/backend/workflow-logic/src/token/index.ts
+      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     files_to_read:
-      - .claude/agents/_shared/token-tracking.md
-      - packages/backend/workflow-logic/src/evidence-judge/index.ts
-    dependencies: []
-    slice: packages
-    verification: pnpm check-types --filter @repo/workflow-logic
+      - apps/api/knowledge-base/src/db/migrations/1110_wint1130_worktrees_table.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     acs_covered:
       - AC-4
-      - AC-7
-      - AC-10
-  - id: 5
-    subtask_id: ST-5
+  - id: 3
     description: >-
-      Update packages/backend/workflow-logic/src/index.ts to export all four new modules: decision/, artifact/,
-      context/, token/. Follow the exact re-export pattern already established for evidence-judge (named exports per
-      function/schema, export type for inferred types).
+      Create pgTAP verification test file pgtap/1120_aprs1040_plan_flows_test.sql covering table existence, column
+      types, FK integrity, CHECK constraints, cascade delete, and index existence
     files:
-      - packages/backend/workflow-logic/src/index.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
     files_to_read:
-      - packages/backend/workflow-logic/src/index.ts
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
+      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     dependencies:
-      - 1
       - 2
-      - 3
-      - 4
-    slice: packages
-    verification: pnpm check-types --filter @repo/workflow-logic
+    slice: backend
+    verification: psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
     acs_covered:
       - AC-5
-      - AC-9
-  - id: 6
-    subtask_id: ST-6a
-    description: >-
-      Write unit tests for decision/ and artifact/ modules in packages/backend/workflow-logic/src/__tests__/.
-      decision.test.ts: test classifyDecisionTier for each tier keyword match and unknown input safe default, test
-      shouldEscalate for every cell of the 3x4 decision matrix (3 autonomy levels x 4 non-Tier-4 tiers + Tier-4 always
-      escalates = 13 cases). artifact.test.ts: test getArtifactPhase for all artifact types, test
-      isValidArtifactForPhase for valid/invalid combos.
-    files:
-      - packages/backend/workflow-logic/src/__tests__/decision.test.ts
-      - packages/backend/workflow-logic/src/__tests__/artifact.test.ts
-    files_to_read:
-      - packages/backend/workflow-logic/src/decision/index.ts
-      - packages/backend/workflow-logic/src/artifact/index.ts
-      - packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts
-    dependencies:
-      - 1
-      - 2
-    slice: packages
-    verification: pnpm test --filter @repo/workflow-logic
-    acs_covered:
-      - AC-6
-      - AC-8
-  - id: 7
-    subtask_id: ST-6b
-    description: >-
-      Write unit tests for context/ and token/ modules in packages/backend/workflow-logic/src/__tests__/.
-      context.test.ts: test buildContextQuery with domain+taskType, with optional role, with empty inputs (edge cases).
-      token.test.ts: test estimateTokenCount for 0, positive, and non-multiple-of-4 byte values, test formatTokenSummary
-      output format matches token-tracking.md pattern, test TokenUsageSchema rejects negative values.
-    files:
-      - packages/backend/workflow-logic/src/__tests__/context.test.ts
-      - packages/backend/workflow-logic/src/__tests__/token.test.ts
-    files_to_read:
-      - packages/backend/workflow-logic/src/context/index.ts
-      - packages/backend/workflow-logic/src/token/index.ts
-      - packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts
-    dependencies:
-      - 3
-      - 4
-    slice: packages
-    verification: pnpm test --filter @repo/workflow-logic
-    acs_covered:
-      - AC-6
-      - AC-8
 files_to_change:
-  - path: packages/backend/workflow-logic/src/decision/index.ts
-    action: create
-    reason: New decision/ module per AC-1
-  - path: packages/backend/workflow-logic/src/artifact/index.ts
-    action: create
-    reason: New artifact/ module per AC-2
-  - path: packages/backend/workflow-logic/src/context/index.ts
-    action: create
-    reason: New context/ module per AC-3
-  - path: packages/backend/workflow-logic/src/token/index.ts
-    action: create
-    reason: New token/ module per AC-4
-  - path: packages/backend/workflow-logic/src/index.ts
+  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
     action: modify
-    reason: Add exports for all four new modules per AC-5
-  - path: packages/backend/workflow-logic/src/__tests__/decision.test.ts
+    reason: Add planFlows and planFlowSteps table definitions with Drizzle ORM, plus exported inferred types
+  - path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
     action: create
-    reason: Unit tests for decision/ module per AC-6, AC-8
-  - path: packages/backend/workflow-logic/src/__tests__/artifact.test.ts
+    reason: >-
+      SQL migration creating workflow.plan_flows and workflow.plan_flow_steps tables with all constraints, indexes, and
+      comments
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
     action: create
-    reason: Unit tests for artifact/ module per AC-6, AC-8
-  - path: packages/backend/workflow-logic/src/__tests__/context.test.ts
-    action: create
-    reason: Unit tests for context/ module per AC-6, AC-8
-  - path: packages/backend/workflow-logic/src/__tests__/token.test.ts
-    action: create
-    reason: Unit tests for token/ module per AC-6, AC-8
+    reason: >-
+      pgTAP verification tests for AC-5: table existence, column types, CHECK constraints, FK cascade, and index
+      presence
 commands_to_run:
-  - command: pnpm check-types --filter @repo/workflow-logic
-    when: after each module is written
+  - command: pnpm check-types --filter @repo/knowledge-base
+    when: after Drizzle schema changes in step 1
     required: true
-  - command: pnpm test --filter @repo/workflow-logic
-    when: after all code and test changes
+  - command: pnpm build --filter @repo/knowledge-base
+    when: after all code changes
     required: true
-  - command: pnpm check-types --filter @repo/orchestrator
-    when: after all code changes, to verify no downstream breakage
-    required: true
-  - command: pnpm build --filter @repo/workflow-logic
+  - command: pnpm test --filter @repo/knowledge-base
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
-    planned_evidence: 'Unit test: decision.test.ts — classifyDecisionTier + shouldEscalate all cases'
-    evidence_type: test
+    planned_evidence: >-
+      Drizzle planFlows table in workflow.ts with source (text, CHECK IN ('user','inferred','merged')), confidence
+      (numeric 0-1), status (text, CHECK IN ('approved','unconfirmed','rejected','deferred')) columns; migration creates
+      workflow.plan_flows with matching DDL
+    evidence_type: file
   - ac_id: AC-2
-    planned_evidence: 'Unit test: artifact.test.ts — getArtifactPhase + isValidArtifactForPhase'
-    evidence_type: test
+    planned_evidence: >-
+      Drizzle planFlowSteps table in workflow.ts with FK to plan_flows ON DELETE CASCADE; migration creates
+      workflow.plan_flow_steps
+    evidence_type: file
   - ac_id: AC-3
-    planned_evidence: 'Unit test: context.test.ts — buildContextQuery + buildBlockerQuery'
-    evidence_type: test
+    planned_evidence: >-
+      planFlows and planFlowSteps exported from workflow.ts with $inferSelect/$inferInsert type aliases; pnpm
+      check-types passes
+    evidence_type: command
   - ac_id: AC-4
-    planned_evidence: 'Unit test: token.test.ts — TokenUsageSchema + estimateTokenCount + formatTokenSummary'
-    evidence_type: test
+    planned_evidence: >-
+      Migration file 1120_aprs1040_plan_flows.sql with safety preamble (CREATE TABLE IF NOT EXISTS), CHECK constraints
+      on source and status, FK to workflow.plans with ON DELETE CASCADE, supporting indexes, and DO $$ completion notice
+      block
+    evidence_type: file
   - ac_id: AC-5
-    planned_evidence: 'File: packages/backend/workflow-logic/src/index.ts exports all new symbols'
+    planned_evidence: >-
+      pgTAP test file 1120_aprs1040_plan_flows_test.sql with assertions covering: table existence, column
+      presence/types, FK integrity, CHECK constraint violations rejected, cascade delete behavior, index existence
     evidence_type: file
-  - ac_id: AC-6
-    planned_evidence: 'Unit tests: decision.test.ts, artifact.test.ts, context.test.ts, token.test.ts in __tests__/'
-    evidence_type: test
-  - ac_id: AC-7
-    planned_evidence: 'Code review: all exported types use Zod schemas with z.infer<> — no TypeScript interfaces'
-    evidence_type: file
-  - ac_id: AC-8
-    planned_evidence: 'Command: pnpm test --filter @repo/workflow-logic passes with coverage ≥60% for new modules'
-    evidence_type: command
-  - ac_id: AC-9
-    planned_evidence: 'Command: pnpm check-types --filter @repo/workflow-logic && pnpm check-types --filter @repo/orchestrator both pass'
-    evidence_type: command
-  - ac_id: AC-10
-    planned_evidence: 'File: packages/backend/workflow-logic/package.json dependencies unchanged (zod + @repo/logger only)'
-    evidence_type: file
-architectural_decisions: []
-complexity: moderate
+architectural_decisions:
+  - id: ARCH-001
+    question: Use pgEnum() or text() + CHECK constraint for source/status columns?
+    decision: Use text() columns with SQL CHECK constraints in migration
+    rationale: >-
+      All existing workflow schema tables (stories.state, plans.status, etc.) use plain text() columns. pgEnum() is not
+      used anywhere in workflow.ts. text() + CHECK is consistent with established pattern and easier to extend.
+    decided_by: auto
+    kb_decision_id: 48eb87a5-e96b-4f8c-90f5-35ab9e07abb5
+  - id: ARCH-002
+    question: Migration slot number for 1120?
+    decision: Use migration slot 1120 (next after 1110_wint1130_worktrees_table.sql)
+    rationale: 'Sequential numbering: last numbered migration is 1110. 1120 is the next logical slot.'
+    decided_by: auto
+  - id: ARCH-003
+    question: 'FK target for plan_flows: plans.id (UUID) or plans.plan_slug (text)?'
+    decision: FK to workflow.plans(id) UUID primary key
+    rationale: >-
+      workflow.plans has id UUID as primary key. Other child tables (plan_details, planRevisionHistory, planEmbeddings)
+      all reference plans.id. plan_slug FK is only used in peer-level tables (plan_dependencies, plan_story_links).
+      plan_flows is a child of a plan record, so plans.id is the correct anchor.
+    decided_by: auto
+complexity: simple
 notes:
+  - Story has no subtasks — steps derived from ACs per schema:1 mode
+  - 'ARCH-001: text()+CHECK chosen over pgEnum to match all existing workflow.ts column patterns'
+  - 'ARCH-002: Migration slot 1120 is next sequential slot after 1110'
+  - 'ARCH-003: FK to plans.id UUID (not plan_slug) consistent with plan_details, plan_revision_history, plan_embeddings'
   - >-
-    Subtasks ST-6 split into ST-6a (decision+artifact tests) and ST-6b (context+token tests) per elab gap-1 guidance to
-    stay under 3-file-per-step limit.
-  - >-
-    decision/ module: use decision-handling.md as sole canonical source per elab gap-2 resolution
-    (decision-classification.yaml path unconfirmed, treat prose as ground truth).
-  - >-
-    Elaboration opp-2: TokenUsageSchema uses z.number().int().min(0) for non-negative constraint — this makes AC-8 edge
-    case EC-3 (-1 input) testable.
-  - >-
-    Elaboration opp-4: shouldEscalate for Tier 5 at aggressive autonomy — treat as auto-escalate=false (auto-accept) for
-    low-risk; implementer may need to pass a risk flag or default to false. Document in code comments.
-  - >-
-    All four modules follow the evidence-judge pattern: Zod schemas at top, pure exported functions below, no external
-    deps.
-  - Steps 1-4 are independent and can run in parallel. Steps 5, 6, 7 depend on earlier steps as indicated.
-  - 'Package is ESM (type: module) — all imports must use .js extensions.'
+    confidence column: numeric(4,3) gives range 0.000–9.999; use CHECK (confidence >= 0 AND confidence <= 1) to enforce
+    0.0-1.0
+  - plan_flow_steps FK to plan_flows ON DELETE CASCADE; plan_flows FK to plans ON DELETE CASCADE — full cascade chain
+  - pgTAP test uses BEGIN/ROLLBACK wrapper and TEST-1040-* fixture story_id prefix
+  - 'Non-goal: No MCP tools, no rawContent migration, no embedding column'
+  - 'Risk: FK migration ordering — migration 1120 must run after 999_full_schema_baseline.sql (plans table) and 1110'
+  - 'Risk: Source enum values must align with APRS-2010 extract_flows output (user|inferred|merged)'

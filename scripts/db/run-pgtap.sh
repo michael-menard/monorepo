@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # scripts/db/run-pgtap.sh — pgtap test runner
 #
-# Discovers and runs all SQL test files under tests/db/ via pg_prove.
+# Discovers and runs all SQL test files via pg_prove from two locations:
+#   1. tests/db/                                               (legacy test home)
+#   2. apps/api/knowledge-base/src/db/migrations/pgtap/       (story-collocated tests)
 # Exits non-zero if any test fails.
 #
 # Usage:
@@ -37,10 +39,13 @@ PGTAP_DB_USER="${PGTAP_DB_USER:-pgtap}"
 PGTAP_DB_PASS="${PGTAP_DB_PASS:?PGTAP_DB_PASS must be set — copy .env.pgtap.example to .env.local and load it}"
 PGTAP_DB_NAME="${PGTAP_DB_NAME:-pgtap_test}"
 
-TESTS_DIR="$(cd "$(dirname "$0")/../../tests/db" && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+TESTS_DIR="$REPO_ROOT/tests/db"
+MIGRATIONS_PGTAP_DIR="$REPO_ROOT/apps/api/knowledge-base/src/db/migrations/pgtap"
 
 # ── Argument handling ─────────────────────────────────────────────────────────
 # Allow passing specific test files as arguments; otherwise discover all *.sql
+# from both TESTS_DIR and MIGRATIONS_PGTAP_DIR.
 TEST_ARRAY=()
 if [ $# -gt 0 ]; then
   for f in "$@"; do
@@ -51,26 +56,32 @@ if [ $# -gt 0 ]; then
     fi
     # Resolve to absolute path for prefix check
     abs_f="$(cd "$(dirname "$f")" 2>/dev/null && pwd)/$(basename "$f")"
-    # Reject absolute paths that don't start with TESTS_DIR
-    if [[ "$f" == /* ]] && [[ "$f" != "$TESTS_DIR"* ]]; then
-      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
-      exit 1
-    fi
-    if [[ "$abs_f" != "$TESTS_DIR"* ]]; then
-      echo "ERROR: Rejected path outside TESTS_DIR ($TESTS_DIR): $f"
+    # Accept paths that fall under either allowed directory
+    if [[ "$abs_f" != "$TESTS_DIR"* ]] && [[ "$abs_f" != "$MIGRATIONS_PGTAP_DIR"* ]]; then
+      echo "ERROR: Rejected path outside allowed test directories: $f"
+      echo "  Allowed: $TESTS_DIR"
+      echo "  Allowed: $MIGRATIONS_PGTAP_DIR"
       exit 1
     fi
     TEST_ARRAY+=("$f")
   done
 else
-  # Discover all SQL test files recursively under tests/db/
+  # Discover all SQL test files from both locations, sorted together.
+  # We write NUL-delimited paths to a temp file so the array population
+  # happens in the current shell (not a subshell) and persists correctly.
+  _tmp_list="$(mktemp)"
+  [ -d "$TESTS_DIR" ]            && find "$TESTS_DIR"            -name '*.sql' -print0 >> "$_tmp_list"
+  [ -d "$MIGRATIONS_PGTAP_DIR" ] && find "$MIGRATIONS_PGTAP_DIR" -name '*.sql' -print0 >> "$_tmp_list"
   while IFS= read -r -d '' f; do
     TEST_ARRAY+=("$f")
-  done < <(find "$TESTS_DIR" -name '*.sql' -print0 | sort -z)
+  done < <(sort -z < "$_tmp_list")
+  rm -f "$_tmp_list"
 fi
 
 if [ ${#TEST_ARRAY[@]} -eq 0 ]; then
-  echo "No test files found under $TESTS_DIR — nothing to run."
+  echo "No test files found — nothing to run."
+  echo "  Searched: $TESTS_DIR"
+  echo "  Searched: $MIGRATIONS_PGTAP_DIR"
   exit 0
 fi
 
@@ -78,6 +89,7 @@ echo "=== pgtap test runner ==="
 echo "Host:     $PGTAP_DB_HOST:$PGTAP_DB_PORT"
 echo "Database: $PGTAP_DB_NAME"
 echo "User:     $PGTAP_DB_USER"
+echo "Tests:    ${#TEST_ARRAY[@]} file(s) found"
 echo ""
 
 # ── Check pg_prove is available ───────────────────────────────────────────────
