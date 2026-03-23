@@ -1,4 +1,4 @@
-import { sql, eq, inArray, not, isNull } from 'drizzle-orm'
+import { sql, eq, inArray, not } from 'drizzle-orm'
 import { text, timestamp } from 'drizzle-orm/pg-core'
 import { plans, planStoryLinks, tasks } from '@repo/knowledge-base/db'
 import {
@@ -18,8 +18,6 @@ const storyStateHistory = workflowSchema.table('story_state_history', {
 
 const COMPLETED_STATES = ['completed', 'cancelled']
 const BACKLOG_EXCLUDED_STATUSES = ['done', 'wont_do', 'promoted']
-
-type PlanLink = { storyId: string; planSlug: string; planTitle: string }
 
 export type DashboardResponse = {
   flowHealth: {
@@ -255,7 +253,6 @@ export async function getDashboard(): Promise<DashboardResponse> {
   ])
 
   // Build lookup maps
-  const storyMap = new Map(allStoryRows.map(s => [s.storyId, s]))
   const completedSet = new Set<string>()
   // We need all story states for completeness check
   const allStatesResult = await database
