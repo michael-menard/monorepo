@@ -29,7 +29,7 @@
  * - Per-provider TokenBucket rate limiting
  * - Per-story BudgetAccumulator with hard cap enforcement
  * - DB-backed model_assignments override (cached, invalidatable)
- * - Affinity-based routing: reads wint.model_affinity profiles per (change_type, file_type)
+ * - Affinity-based routing: reads model affinity profiles per (change_type, file_type)
  * - Reads API keys from environment only
  * - Structured logging via @repo/logger with domain 'pipeline_model_router'
  *
@@ -50,66 +50,19 @@ import {
   type PipelineDispatchOptions,
   type PipelineDispatchResult,
 } from './__types__/index.js'
+import {
+  PROVIDER_CHAIN,
+  ESCALATION_CHAIN,
+  DEFAULT_MODELS,
+  DEFAULT_RATE_LIMIT,
+  CONFIDENCE_THRESHOLDS as _CONFIDENCE_THRESHOLDS,
+} from '../config/pipeline-providers.js'
 
 // ============================================================================
-// Constants
+// Re-export CONFIDENCE_THRESHOLDS for backward compat
 // ============================================================================
 
-/**
- * Escalation chain: providers tried in order.
- * ollama (local/free) → openrouter (external) → anthropic (direct)
- */
-const ESCALATION_CHAIN = ['ollama', 'openrouter', 'anthropic'] as const
-type EscalationProvider = (typeof ESCALATION_CHAIN)[number]
-
-/**
- * Default model strings per provider.
- * These are used as fallback when DB model_assignments don't have an entry.
- */
-const DEFAULT_MODELS: Record<EscalationProvider, string> = {
-  ollama: 'ollama/qwen2.5-coder:7b',
-  openrouter: 'openrouter/anthropic/claude-3.5-haiku',
-  anthropic: 'anthropic/claude-haiku-3.5',
-}
-
-/**
- * Default rate limit config per provider.
- */
-const DEFAULT_RATE_LIMIT: Record<
-  EscalationProvider,
-  { capacity: number; refillRate: number; maxWaitMs: number }
-> = {
-  ollama: { capacity: 10, refillRate: 2, maxWaitMs: 30000 },
-  openrouter: { capacity: 5, refillRate: 1, maxWaitMs: 30000 },
-  anthropic: { capacity: 3, refillRate: 0.5, maxWaitMs: 30000 },
-}
-
-/**
- * Default hard budget cap per story (tokens).
- * Can be overridden at dispatch time.
- */
-const DEFAULT_HARD_BUDGET_CAP = 500_000
-
-/**
- * Default minimum success rate threshold for affinity routing.
- */
-const DEFAULT_AFFINITY_SUCCESS_RATE_THRESHOLD = 0.85
-
-/**
- * Default minimum sample size for affinity routing.
- */
-const DEFAULT_AFFINITY_MIN_SAMPLE_SIZE = 20
-
-/**
- * Confidence level thresholds for deriving confidence from sample_size.
- * Used by affinity-seeder.ts and cold-start detection.
- */
-export const CONFIDENCE_THRESHOLDS = {
-  none: 0,
-  low: 5,
-  medium: 10,
-  high: 20,
-} as const
+export { CONFIDENCE_THRESHOLDS } from '../config/pipeline-providers.js'
 
 // ============================================================================
 // DB Model Assignment Schema
@@ -157,6 +110,14 @@ export type PipelineModelRouterConfig = {
 }
 
 // ============================================================================
+// Default constants (kept local but derived from PROVIDER_CHAIN config)
+// ============================================================================
+
+const DEFAULT_HARD_BUDGET_CAP = 500_000
+const DEFAULT_AFFINITY_SUCCESS_RATE_THRESHOLD = 0.85
+const DEFAULT_AFFINITY_MIN_SAMPLE_SIZE = 20
+
+// ============================================================================
 // PipelineModelRouter
 // ============================================================================
 
@@ -167,7 +128,7 @@ export type PipelineModelRouterConfig = {
 export class PipelineModelRouter {
   private readonly hardBudgetCap: number
   private readonly budgetAccumulator: BudgetAccumulator
-  private readonly tokenBuckets: Map<EscalationProvider, TokenBucket> = new Map()
+  private readonly tokenBuckets: Map<string, TokenBucket> = new Map()
   private assignmentsCache: ModelAssignment[] | null = null
   private readonly affinityReader: AffinityReader | undefined
   private readonly affinitySuccessRateThreshold: number
@@ -209,7 +170,7 @@ export class PipelineModelRouter {
     }
 
     this.budgetAccumulator = new BudgetAccumulator()
-    // Initialize per-provider rate limiters
+    // Initialize per-provider rate limiters from PROVIDER_CHAIN config
     for (const provider of ESCALATION_CHAIN) {
       this.tokenBuckets.set(provider, new TokenBucket(DEFAULT_RATE_LIMIT[provider]))
     }
@@ -231,7 +192,7 @@ export class PipelineModelRouter {
     // -------------------------------------------------------------------------
     const dbModel = this._resolveDbAssignment(agentId)
     if (dbModel) {
-      const provider = dbModel.split('/')[0] as EscalationProvider
+      const provider = dbModel.split('/')[0]
       const result = await this._invokeModel(provider, dbModel, storyId, messages)
 
       logger.info('pipeline_model_router', {
@@ -312,7 +273,7 @@ export class PipelineModelRouter {
         profile.sample_size >= this.affinityMinSampleSize
       ) {
         const modelString = profile.model
-        const provider = modelString.split('/')[0] as EscalationProvider
+        const provider = modelString.split('/')[0]
         const result = await this._invokeModel(provider, modelString, storyId, messages)
 
         logger.info('pipeline_model_router', {
@@ -385,7 +346,7 @@ export class PipelineModelRouter {
         profile.sample_size >= this.affinityMinSampleSize
       ) {
         const modelString = profile.model
-        const provider = modelString.split('/')[0] as EscalationProvider
+        const provider = modelString.split('/')[0]
         const result = await this._invokeModel(provider, modelString, storyId, messages)
 
         logger.info('pipeline_model_router', {
@@ -458,17 +419,25 @@ export class PipelineModelRouter {
       return null
     }
 
-    // AC-4(b): Ollama availability check (try to invoke; if it fails, skip)
-    const ollamaModel = DEFAULT_MODELS['ollama']
+    // AC-4(b): Use exploration-capable provider from PROVIDER_CHAIN config
+    const explorationProvider =
+      PROVIDER_CHAIN.find(p => p.isExplorationCapable) ?? PROVIDER_CHAIN[0]
+    const ollamaModel = explorationProvider.defaultModel
+
     try {
-      const result = await this._invokeModel('ollama', ollamaModel, storyId, messages)
+      const result = await this._invokeModel(
+        explorationProvider.name,
+        ollamaModel,
+        storyId,
+        messages,
+      )
 
       // AC-7: Exploration slot structured log
       logger.info('pipeline_model_router', {
         event: 'routing_decision',
         source: 'exploration',
         model: ollamaModel,
-        provider: 'ollama',
+        provider: explorationProvider.name,
         change_type: changeType,
         file_type: fileType,
         exploration_fraction: this.explorationBudgetFraction,
@@ -476,7 +445,7 @@ export class PipelineModelRouter {
 
       return result
     } catch (_err) {
-      // Ollama unavailable — fall through to tier 4
+      // Exploration provider unavailable — fall through to tier 4
       return null
     }
   }
@@ -493,7 +462,7 @@ export class PipelineModelRouter {
     fileType: string,
   ): Promise<PipelineDispatchResult> {
     const model = this.conservativeOpenRouterModel
-    const provider = model.split('/')[0] as EscalationProvider
+    const provider = model.split('/')[0]
 
     const result = await this._invokeModel(provider, model, storyId, messages)
 
@@ -521,7 +490,7 @@ export class PipelineModelRouter {
     fileType: string,
   ): Promise<PipelineDispatchResult> {
     const model = this.conservativeOpenRouterModel
-    const provider = model.split('/')[0] as EscalationProvider
+    const provider = model.split('/')[0]
 
     try {
       const result = await this._invokeModel(provider, model, storyId, messages)
@@ -697,7 +666,7 @@ export class PipelineModelRouter {
    * Handles budget check, rate limiting, token recording, and response extraction.
    */
   private async _invokeModel(
-    provider: EscalationProvider,
+    provider: string,
     modelString: string,
     storyId: string,
     messages: BaseMessage[],
@@ -758,7 +727,7 @@ export class PipelineModelRouter {
    * Resolve model string for a provider, checking DB cache first.
    * Falls back to DEFAULT_MODELS if no DB assignment found.
    */
-  private _resolveModel(provider: EscalationProvider, agentId: string): string {
+  private _resolveModel(provider: string, agentId: string): string {
     if (this.assignmentsCache) {
       const assignment = this.assignmentsCache.find(
         a => a.provider === provider && this._matchesPattern(a.agentPattern, agentId),
@@ -767,7 +736,7 @@ export class PipelineModelRouter {
         return `${assignment.provider}/${assignment.model}`
       }
     }
-    return DEFAULT_MODELS[provider]
+    return DEFAULT_MODELS[provider] ?? `${provider}/unknown`
   }
 
   /**
@@ -786,7 +755,7 @@ export class PipelineModelRouter {
   /**
    * Get a LangChain BaseChatModel instance for the given provider and model string.
    */
-  private async _getModelInstance(_provider: EscalationProvider, modelString: string) {
+  private async _getModelInstance(_provider: string, modelString: string) {
     const router = await ModelRouterFactory.getInstance()
     const llmProvider = await router.getProvider(modelString)
     return llmProvider.getModel(modelString)

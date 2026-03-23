@@ -8,8 +8,9 @@
  * Story APIP-3060: Bake-Off Engine for Model Experiments
  *
  * Dependency note: model_affinity (APIP-3020) and change_telemetry (APIP-3010) tables
- * may not be defined in this worktree. All reads/writes against those tables use raw SQL
- * strings passed to db.query(), following the pattern established in pattern-miner.ts.
+ * use analytics.* schema. model_affinity target pending migration (see WINT-0250 GAP-1/GAP-2).
+ * All reads/writes against those tables use raw SQL strings passed to db.query(),
+ * following the pattern established in pattern-miner.ts.
  * DB is injected through config.configurable.db.
  */
 
@@ -277,7 +278,7 @@ export function createLoadExperimentsNode() {
            started_at        AS "startedAt",
            max_window_days   AS "maxWindowDays",
            max_window_rows   AS "maxWindowRows"
-         FROM wint.model_experiments
+         FROM analytics.model_experiments
          WHERE status = 'active'
          ORDER BY started_at ASC`,
       )
@@ -330,7 +331,7 @@ export function createEvaluateSignificanceNode() {
              COUNT(*) FILTER (
                WHERE ct.outcome = 'accepted'
              )::text                               AS "acceptedSamples"
-           FROM wint.change_telemetry ct
+           FROM analytics.change_telemetry ct
            WHERE ct.experiment_id = $1
              AND ct.model_used IN ($2, $3)
            GROUP BY ct.model_used`,
@@ -439,20 +440,11 @@ export function createPromoteOrExpireNode() {
         // Promote winner: upsert model_affinity, conclude experiment
         try {
           if (!dryRun) {
-            await db.query(
-              `INSERT INTO wint.model_affinity
-                 (change_type, file_type, preferred_model, confidence, updated_at)
-               VALUES ($1, $2, $3, 'high', NOW())
-               ON CONFLICT (change_type, file_type)
-               DO UPDATE SET
-                 preferred_model = EXCLUDED.preferred_model,
-                 confidence      = EXCLUDED.confidence,
-                 updated_at      = NOW()`,
-              [experiment.changeType, experiment.fileType, result.winnerModel],
-            )
+            // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+            // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
 
             await db.query(
-              `UPDATE wint.model_experiments
+              `UPDATE analytics.model_experiments
                SET
                  status       = 'concluded',
                  winner       = $1,
@@ -503,7 +495,7 @@ export function createPromoteOrExpireNode() {
         try {
           if (!dryRun) {
             await db.query(
-              `UPDATE wint.model_experiments
+              `UPDATE analytics.model_experiments
                SET
                  status       = 'expired',
                  concluded_at = NOW(),

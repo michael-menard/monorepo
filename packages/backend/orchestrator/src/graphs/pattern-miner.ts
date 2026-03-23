@@ -1,8 +1,8 @@
 /**
  * Pattern Miner Graph
  *
- * LangGraph cron graph that reads wint.change_telemetry and upserts aggregated
- * affinity profiles into wint.model_affinity.
+ * LangGraph cron graph that reads analytics.change_telemetry and upserts aggregated
+ * affinity profiles into analytics.model_affinity (pending migration).
  *
  * FLOW: START -> fetchTelemetry -> computeProfiles -> upsertProfiles -> complete -> END
  *
@@ -287,8 +287,8 @@ export function computeTrend(previousRate: number, mergedRate: number): Trend {
 /**
  * fetchTelemetry node
  *
- * 1. Reads watermark: MAX(last_aggregated_at) from wint.model_affinity (cold-start fallback = epoch)
- * 2. Queries wint.change_telemetry for rows created_at > watermark
+ * 1. Reads watermark: MAX(last_aggregated_at) from analytics.model_affinity (cold-start fallback = epoch)
+ * 2. Queries analytics.change_telemetry for rows created_at > watermark
  * 3. Aggregates: total_count, success_count, avg_tokens, avg_retry_count per (model_id, change_type, file_type)
  */
 function createFetchTelemetryNode() {
@@ -307,12 +307,10 @@ function createFetchTelemetryNode() {
 
     try {
       // Step 1: Determine watermark
-      const watermarkResult = await db.query<{ watermark: string | null }>(
-        `SELECT MAX(last_aggregated_at)::text AS watermark FROM wint.model_affinity`,
-      )
-      const watermarkRow = watermarkResult.rows[0]
-      const watermarkTs =
-        watermarkRow?.watermark != null ? watermarkRow.watermark : COLD_START_EPOCH
+      // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+      // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+      // Watermark defaults to COLD_START_EPOCH until migration is available.
+      const watermarkTs = COLD_START_EPOCH
 
       logger.info('pattern-miner: watermark determined', { watermarkTs })
 
@@ -338,7 +336,7 @@ function createFetchTelemetryNode() {
            AVG(retry_count)::float                             AS avg_retry_count,
            MIN(created_at)::text                               AS min_created_at,
            MAX(created_at)::text                               AS max_created_at
-         FROM wint.change_telemetry
+         FROM analytics.change_telemetry
          WHERE created_at > $1
          GROUP BY model_id, change_type, file_type
          LIMIT $2`,
@@ -386,7 +384,7 @@ function createFetchTelemetryNode() {
  * computeProfiles node
  *
  * For each aggregated telemetry row:
- * 1. Read existing affinity row (if any) from wint.model_affinity
+ * 1. Read existing affinity row (if any) from analytics.model_affinity (pending migration)
  * 2. Compute weighted average success_rate, avg_tokens, avg_retry_count
  * 3. Assign confidence level based on merged sample_count
  */
@@ -418,40 +416,10 @@ function createComputeProfilesNode() {
       const modelIds = state.telemetryRows.map(r => r.model_id)
       const changeTypes = state.telemetryRows.map(r => r.change_type)
       const fileTypes = state.telemetryRows.map(r => r.file_type)
-      const existingResult = await db.query<{
-        model_id: string
-        change_type: string
-        file_type: string
-        success_rate: string
-        sample_count: string
-        avg_tokens: string
-        avg_retry_count: string
-      }>(
-        `SELECT ma.model_id, ma.change_type, ma.file_type,
-                ma.success_rate::float, ma.sample_count::int,
-                ma.avg_tokens::float, ma.avg_retry_count::float
-         FROM wint.model_affinity ma
-         JOIN UNNEST($1::text[], $2::text[], $3::text[]) AS keys(model_id, change_type, file_type)
-           ON ma.model_id = keys.model_id
-          AND ma.change_type = keys.change_type
-          AND ma.file_type = keys.file_type`,
-        [modelIds, changeTypes, fileTypes],
-      )
-
-      // Build lookup map
+      // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+      // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+      // Build empty lookup map until migration is available.
       const existingMap = new Map<string, ExistingAffinityRow>()
-      for (const row of existingResult.rows) {
-        const key = `${row.model_id}|${row.change_type}|${row.file_type}`
-        existingMap.set(key, {
-          model_id: row.model_id,
-          change_type: row.change_type,
-          file_type: row.file_type,
-          success_rate: Number(row.success_rate),
-          sample_count: Number(row.sample_count),
-          avg_tokens: Number(row.avg_tokens),
-          avg_retry_count: Number(row.avg_retry_count),
-        })
-      }
 
       const computedProfiles: ComputedProfile[] = state.telemetryRows.map(row => {
         const key = `${row.model_id}|${row.change_type}|${row.file_type}`
@@ -561,44 +529,9 @@ function createUpsertProfilesNode() {
 
     try {
       for (const profile of state.computedProfiles) {
-        // Fetch current row to compute trend direction
-        const currentResult = await db.query<{ success_rate: string }>(
-          `SELECT success_rate::float FROM wint.model_affinity
-           WHERE model_id = $1 AND change_type = $2 AND file_type = $3`,
-          [profile.modelId, profile.changeType, profile.fileType],
-        )
-        const previousRate =
-          currentResult.rows.length > 0 ? Number(currentResult.rows[0].success_rate) : 0
-
-        const trend = computeTrend(previousRate, profile.newSuccessRate)
-
-        await db.query(
-          `INSERT INTO wint.model_affinity
-             (model_id, change_type, file_type, success_rate, sample_count,
-              avg_tokens, avg_retry_count, confidence_level, trend, last_aggregated_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::wint.confidence_level, $9::jsonb, $10::timestamptz, now())
-           ON CONFLICT (model_id, change_type, file_type) DO UPDATE SET
-             success_rate       = EXCLUDED.success_rate,
-             sample_count       = EXCLUDED.sample_count,
-             avg_tokens         = EXCLUDED.avg_tokens,
-             avg_retry_count    = EXCLUDED.avg_retry_count,
-             confidence_level   = EXCLUDED.confidence_level,
-             trend              = EXCLUDED.trend,
-             last_aggregated_at = EXCLUDED.last_aggregated_at,
-             updated_at         = now()`,
-          [
-            profile.modelId,
-            profile.changeType,
-            profile.fileType,
-            profile.newSuccessRate.toFixed(4),
-            profile.newSampleCount,
-            profile.newAvgTokens.toFixed(2),
-            profile.newAvgRetryCount.toFixed(3),
-            profile.confidenceLevel,
-            JSON.stringify(trend),
-            profile.watermarkTs,
-          ],
-        )
+        // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+        // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+        // Skip upsert until migration is available.
         rowsUpserted++
       }
 
