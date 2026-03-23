@@ -1,67 +1,48 @@
-story_id: WINT-6030
-phase: implementation
-iteration: 0
-timestamp: '2026-03-24T00:00:00Z'
+story_id: APRS-4030
 e2e_tests:
+  reason: >-
+    Backend-only LangGraph node implementation with injectable adapters — no UI, no API endpoints, no E2E testable
+    surface
   status: exempt
-  reason: skill-prompt-only story, no runtime code
-acceptance_criteria:
-  - ac_id: AC-1
-    status: PASS
-    evidence: >-
-      File exists at .claude/skills/batch-status/SKILL.md with YAML frontmatter containing created, updated, version,
-      name, description, kb_tools fields
-  - ac_id: AC-2
-    status: PASS
-    evidence: >-
-      Usage section documents /batch-status [--plan=SLUG] [--limit=N] with argument table showing --plan
-      default=workflow-intelligence-wint and --limit default=20
-  - ac_id: AC-3
-    status: PASS
-    evidence: >-
-      CRITICAL EXECUTION RULE block present explicitly prohibiting Task sub-agent spawning: 'Do NOT spawn sub-agents
-      (Task tool) for this skill'
-  - ac_id: AC-4
-    status: PASS
-    evidence: >-
-      Step 2 documents kb_list_stories call, authoritative state bucket grouping block, and Pipeline Health section
-      rendering with summary table
-  - ac_id: AC-5
-    status: PASS
-    evidence: >-
-      Step 3 documents kb_search call with tags=[batch-progress], and explicit 'No batch progress entries found' message
-      for empty results
-  - ac_id: AC-6
-    status: PASS
-    evidence: >-
-      Graceful Degradation Summary table present with 6 condition rows; per-call-site null/error handling documented for
-      both kb_list_stories (HEALTH_ERROR) and kb_search (ACTIVITY_ERROR)
-  - ac_id: AC-7
-    status: PASS
-    evidence: >-
-      Summary Block at end of report shows total stories, counts by bucket (In-flight, Blocked, Completed, Backlog,
-      Other), and Activity entries count
-  - ac_id: AC-8
-    status: PASS
-    evidence: >-
-      kb_tools frontmatter contains exactly [kb_list_stories, kb_search] — no mutation tools listed or called in the
-      skill body
-  - ac_id: AC-9
-    status: PASS
-    evidence: >-
-      Frontmatter matches story-state/SKILL.md pattern (created/updated/version/name/description/kb_tools); output
-      format uses sectioned layout with box-drawing characters, no emoji, consistent column widths
-  - ac_id: AC-10
-    status: PASS
-    evidence: >-
-      Step 2 authoritative bucket assignment block places in_review and in_qa in the completed bucket. Conflicting
-      rendered table from earlier version removed — only the canonical mapping block remains. blocked bucket contains
-      only: blocked, failed_code_review, failed_qa
-files_changed:
-  - path: .claude/skills/batch-status/SKILL.md
-    action: created
-    notes: >-
-      AC-10 fix: removed conflicting rendered table that placed in_review and in_qa in the blocked bucket. Single
-      authoritative bucket assignment block now used throughout. All 10 ACs satisfied.
-commit: 6b84ab813
-branch: story/WINT-6030
+iteration: 0
+type_check:
+  status: pass
+  command: npx tsc --noEmit
+unit_tests:
+  status: pass
+  command: cd packages/backend/orchestrator && npx vitest run src/graphs/__tests__/story-generation.test.ts
+  results:
+    files: 1
+    failed: 0
+    passed: 17
+ac_coverage:
+  AC-1: >-
+    PASS — WriteResultSchema added to state, write_to_kb added to GenerationPhaseSchema, writeResult field added to
+    StoryGenerationStateAnnotation
+  AC-2: >-
+    PASS — write_to_kb node generates story IDs using storyPrefix+sequence(step=10), maps GeneratedStory fields to
+    KbStoryPayload
+  AC-3: PASS — dependency edges mapped from composite keys to generated story IDs in KbStoryPayload.dependencies
+  AC-4: PASS — plan status updated only on full success, generationPhase=error on any failure
+  AC-5: PASS — Injectable KbWriterFn with defaultKbWriterFn no-op, Injectable StoryIdGeneratorFn for testability
+  AC-6: 'PASS — Graph wiring updated: validate_graph→write_to_kb→END with conditional error→END edge after validate_graph'
+  AC-7: PASS — 13 unit tests for write_to_kb, 8 validate-graph tests updated, 14 integration tests (4 new for write_to_kb)
+touched_files:
+  - packages/backend/orchestrator/src/state/story-generation-state.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/write-to-kb.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/write-to-kb.test.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
+  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
+  - packages/backend/orchestrator/src/graphs/story-generation.ts
+  - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+commands_run:
+  - command: cd packages/backend/orchestrator && npx vitest run src/graphs/__tests__/story-generation.test.ts
+    result: PASS — 17/17 tests passed
+    timestamp: '2026-03-23T22:33:00.000Z'
+    note: Fix verification after removing duplicate describe block and import block from story-generation.test.ts
+fix_iteration: 1
+fix_summary: >-
+  Removed duplicate describe block ('story-generation graph with production adapters (AC-10)') and duplicate import
+  block at lines 411-529 of story-generation.test.ts. Copy-paste artifact from APRS-5030 wiring. All 17 tests pass
+  post-fix.
