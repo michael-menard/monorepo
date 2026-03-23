@@ -1,114 +1,221 @@
-# Setup Log - CDBE-3020
+# WINT-3090 Setup Log — Phase 0
 
-**Story:** Roadmap Materialized View and Refresh Trigger  
-**Mode:** implement  
-**Phase:** setup  
-**Iteration:** 0  
-**Timestamp:** 2026-03-19T18:30:00Z
+**Story:** Add Scoreboard Metrics to Telemetry
+**Phase:** Setup (Phase 0)
+**Status:** IN PROGRESS
+**Date:** 2026-03-20
 
-## Status
+## Story Overview
 
-SETUP COMPLETE
+Implement `kb_get_scoreboard` MCP tool to compute composite workflow health metrics from telemetry infrastructure:
 
-## Preconditions
+- Stories completed per week (throughput)
+- Average cycle time (started_at → completed_at)
+- First-pass success rate (no code review or QA iterations)
+- Cost efficiency (tokens per completed story)
+- Agent reliability (success rate by agent)
 
-- [x] Story exists in KB: CDBE-3020
-- [x] Story status: in_progress (ready for implementation)
-- [x] No prior implementation blocking: checkpoint found but iteration 0 starting fresh
-- [x] Elaboration verdict: CONDITIONAL_PASS (ready_to_implement: true)
-- [x] Dependencies resolved: CDBE-3010 completed
+Also create `/scoreboard` CLI skill for human-readable output.
 
-## Scope Analysis
+## Key Context
 
-### Story Title
+### Elaboration Subtask DAG
 
-Roadmap Materialized View and Refresh Trigger
+1. ✅ T1: TBDs resolved
+2. ⬜ T2: Implement kb_get_scoreboard with Zod schemas
+3. ⬜ T3: Register tool (tool-schemas.ts, tool-handlers.ts)
+4. ⬜ T4: Add ToolName to access-control.ts
+5. ⬜ T5: Create /scoreboard SKILL.md
+6. ⬜ T6: Unit tests (>=80% coverage)
 
-### Story Description
+### Implementation Notes (from elaboration)
 
-Create workflow.roadmap as a materialized view joining plans with story counts, next unblocked stories, and estimated completion; implement trigger or function to REFRESH MATERIALIZED VIEW CONCURRENTLY on plan and story changes.
+- **G1 (Cost source):** Use workflow.story_outcomes.estimated_total_cost (not analytics.token_dashboard)
+- **G2 (Cycle time):** stories.completed_at - stories.started_at
+- **G3 (Agent reliability):** agent_invocations.status = 'success' vs total invocations per agent_name
 
-### Scope Touches
+### Acceptance Criteria
 
-- **DB:** true - Materialized view DDL, index creation, trigger function, GRANT statements
-- **Backend:** false - No TypeScript or API changes per ACs
-- **Frontend:** false - No React changes
-- **Packages:** false
-- **Contracts:** false - No Zod schema changes
-- **UI:** false
-- **Infra:** false
+- **AC1:** 5 metric sections returned (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability_rates)
+- **AC2:** Graceful null/zero handling when no data exists
+- **AC3:** Optional date_range filter (start_date, end_date) on all metrics
+- **AC4:** Optional feature filter on all metrics
+- **AC5:** Tool registered in all 3 locations with pm+dev roles
+- **AC6:** /scoreboard skill with markdown table formatting
+- **AC7:** Unit tests >= 80% coverage
 
-### Risk Flags
+## Architecture Analysis
 
-- **Migrations:** true - DDL changes, index creation, trigger function deployment
-- **Performance:** true - Materialized view refresh impact, CONCURRENT refresh overhead
-- **External APIs:** false
-- **Auth:** false
-- **Payments:** false
-- **Security:** false
+### Source Schema Tables
 
-### Touched Path Globs
+#### workflow.stories
 
-- `packages/backend/db/migrations/` (new migration)
-- `packages/backend/db/` (schema, tests)
+- storyId (PK), feature, title, description
+- createdAt, updatedAt, startedAt, completedAt
+- state, priority, tags, packages
+- Key: startedAt/completedAt for cycle_time calculation
 
-### Reusable Assets Identified
+#### workflow.story_outcomes
 
-Per elaboration summary:
+- storyId (FK), finalVerdict, qualityScore
+- totalInputTokens, totalOutputTokens, totalCachedTokens
+- **estimatedTotalCost** (numeric) ← Use for cost_efficiency
+- reviewIterations, qaIterations ← Use for first_pass_success_rate
+- durationMs, primaryBlocker
+- completedAt ← Sync point with stories.completedAt
 
-1. story_counts CTE from migration 999_add_plan_churn_tracking.sql
-2. Safety preamble from CDBE-1030 migration
-3. Trigger pattern from CDBE-1010 migration
-4. pgTAP test structure from CDBE-1030_test
-5. GRANT pattern from CDBE-1005 migration
-6. nextStory logic from planService.ts (reference for unblocked story selection)
+#### workflow.agent_invocations
 
-## Constraints Applied
+- agentName (text), storyId (FK), phase
+- status (text) ← 'success' vs others
+- inputTokens, outputTokens, cachedTokens, totalTokens
+- estimatedCost, modelName
+- startedAt, completedAt
+- Key: status = 'success' for reliability calculation
 
-All from CLAUDE.md project standards:
+#### analytics.story_token_usage
 
-1. **Migration Approach:** Use atomic migration pattern with safety preamble and idempotency guards
-2. **Testing:** pgTAP only (pure DDL + PL/pgSQL, no TypeScript changes)
-3. **Code Style:** Standard SQL conventions, clear comments, no hardcoded values
-4. **Naming:** Follow existing schema naming conventions (lowercase, underscores)
-5. **Permissions:** Apply GRANT statements matching existing database role structure
-6. **Documentation:** Add COMMENT ON statements for view and trigger function
-7. **Index:** Create unique index as per AC requirements
-8. **Trigger:** STATEMENT-level, use pg_trigger_depth guard to prevent infinite loops
+- storyId, feature, phase, agent
+- inputTokens, outputTokens, totalTokens
+- loggedAt, createdAt
+- Note: This is partitioned by logged_at (monthly)
+- Use for detailed token breakdowns if needed
 
-## Implementation Steps (Next Phase)
+### Implementation Working Set
 
-1. Read story requirements and ACs from KB
-2. Review dependency story (CDBE-3010) completion
-3. Design materialized view structure (columns, CTEs, joins)
-4. Implement migration DDL:
-   - workflow.roadmap materialized view
-   - Unique index on (plan_id, story_order)
-   - Refresh function with pg_trigger_depth guard
-   - Trigger on plans and stories tables
-   - GRANT statements
-   - COMMENT ON documentation
-5. Write pgTAP tests covering:
-   - View DDL correctness
-   - Column existence and types
-   - Count accuracy
-   - Next story selection
-   - Estimated completion calculation
-   - Index uniqueness
-   - Trigger idempotency (multiple refreshes)
-6. Verify: pnpm test, migration dry-run, coverage
-7. Code review checklist
-8. QA verification
+**Files to Create:**
 
-## Branch Information
+1. `apps/api/knowledge-base/src/crud-operations/analytics-operations.ts` — Add kb_get_scoreboard function + schemas
 
-- **Worktree:** /Users/michaelmenard/Development/monorepo/tree/story/CDBE-3020
-- **Feature Branch:** TBD (set by implementation agent)
+**Files to Modify:**
 
-## Notes
+1. `apps/api/knowledge-base/src/mcp-server/tool-schemas.ts` — Add KbGetScoreboardInputSchema + export + tool definition
+2. `apps/api/knowledge-base/src/mcp-server/tool-handlers.ts` — Add handle_kb_get_scoreboard handler + register in dispatch
+3. `apps/api/knowledge-base/src/mcp-server/access-control.ts` — Add 'kb_get_scoreboard' to ToolNameSchema enum + ACCESS_MATRIX
+4. `.claude/skills/scoreboard/SKILL.md` — New skill definition
 
-- Migration slot: ~1080 (verify at implementation time)
-- AC count: 14 (comprehensive coverage)
-- Test strategy: pgTAP only (no TypeScript test changes)
-- Elaboration status: CONDITIONAL_PASS indicates all clarifications resolved and ready to implement
-- Depends on CDBE-3010 (dependency work complete per context)
+**Files to Create (Tests):**
+
+1. `apps/api/knowledge-base/src/crud-operations/__tests__/scoreboard-operations.test.ts` — Unit tests for kb_get_scoreboard
+
+## Implementation Pattern Reference
+
+### Existing Analytics Tools Pattern (from analytics-operations.ts)
+
+```typescript
+// 1. Input Schema
+export const KbGetTokenSummaryInputSchema = z.object({
+  group_by: TokenGroupBySchema,
+  feature: z.string().optional(),
+  story_id: z.string().optional(),
+  start_date: z.coerce.date().optional(),
+  end_date: z.coerce.date().optional(),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+})
+
+// 2. Function Signature
+export async function kb_get_token_summary(
+  deps: AnalyticsDeps,
+  input: KbGetTokenSummaryInput,
+): Promise<{ results: [...], total: number, message: string }>
+
+// 3. Drizzle Query Pattern
+const result = await deps.db
+  .select({ ... })
+  .from(storyTokenUsage)
+  .where(whereCondition)
+  .groupBy(groupColumn)
+  .orderBy(desc(...))
+  .limit(validated.limit)
+```
+
+### Tool Registration Pattern (from tool-schemas.ts)
+
+```typescript
+// Export schema
+export const KbGetTokenSummaryInputSchema = z.object({ ... })
+export type KbGetTokenSummaryInput = z.infer<typeof KbGetTokenSummaryInputSchema>
+
+// Tool definition with zodToMcpSchema conversion
+export const kbGetTokenSummaryToolDefinition: McpToolDefinition = {
+  name: 'kb_get_token_summary',
+  description: '...',
+  inputSchema: zodToMcpSchema(KbGetTokenSummaryInputSchema),
+}
+```
+
+### Handler Registration Pattern (from tool-handlers.ts)
+
+```typescript
+// Import
+import { kb_get_token_summary } from '../crud-operations/analytics-operations.js'
+
+// Handler function
+async function handle_kb_get_token_summary(
+  context: AgentContext,
+  deps: ToolDependencies,
+  input: unknown,
+): Promise<string> {
+  // validation, authorization, call, return JSON string
+}
+
+// Registration in toolHandlers map
+export const toolHandlers: Record<ToolName, ToolHandler> = {
+  kb_get_token_summary: handle_kb_get_token_summary,
+  // ...
+}
+```
+
+### Access Control Pattern (from access-control.ts)
+
+```typescript
+export const ToolNameSchema = z.enum([
+  'kb_get_token_summary',
+  'kb_get_bottleneck_analysis',
+  'kb_get_churn_analysis',
+  // ...
+])
+
+const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
+  kb_get_token_summary: new Set(['pm', 'dev']),
+  kb_get_bottleneck_analysis: new Set(['pm', 'dev']),
+  kb_get_churn_analysis: new Set(['pm', 'dev']),
+  // ...
+}
+```
+
+## Key Constraints & Notes
+
+1. **No Barrel Files** - Import directly from source files, never use index.ts re-exports
+2. **Zod-First** - All types must use z.infer<> from Zod schemas, never TypeScript interfaces
+3. **Logger** - Use @repo/logger, never console.log
+4. **Test Coverage** - Minimum 80% for scoreboard tool
+5. **Graceful Handling** - Return zero/null values when no data, never fail
+6. **Query Patterns** - Use Drizzle ORM with proper WHERE conditions and null handling
+
+## Next Steps (T2 Implementation)
+
+1. Define KbGetScoreboardInputSchema in analytics-operations.ts
+   - start_date (optional, coerce to date)
+   - end_date (optional, coerce to date)
+   - feature (optional string filter)
+
+2. Define output schemas for 5 metrics:
+   - throughput: { week: string, stories_completed: number, avg_per_day: number }
+   - cycle_time: { mean_days: number, median_days: number, p95_days: number }
+   - first_pass_success_rate: { rate: number, stories_passed: number, stories_total: number }
+   - cost_efficiency: { avg_cost_per_story: number, total_tokens_per_story: number }
+   - agent_reliability_rates: { agent_name: string, success_rate: number, invocation_count: number }[]
+
+3. Implement kb_get_scoreboard function with aggregation queries
+
+4. Register tool in 3 files
+
+5. Create /scoreboard skill
+
+6. Write comprehensive unit tests
+
+---
+
+**Setup Log Created:** 2026-03-20 20:35 UTC
+**Ready for T2 Implementation:** ✅

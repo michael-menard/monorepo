@@ -1,89 +1,85 @@
+# WINT-3090 Scope Artifact — Phase 0 Setup
+
 schema: 1
-story_id: CDBE-3020
-timestamp: '2026-03-19T18:30:00Z'
+story_id: WINT-3090
+timestamp: 2026-03-20T20:35:00Z
 phase: setup
 iteration: 0
 gen_mode: false
+elaboration: completed
 
-title: Roadmap Materialized View and Refresh Trigger
+# ============================================================================
+# Story Classification
+# ============================================================================
 
 touches:
-  backend: false
-  frontend: false
-  packages: false
-  db: true
-  contracts: false
+  backend: true # MCP tools in knowledge-base, database queries
+  frontend: false # No UI components
+  packages: false # Uses existing packages (@repo/logger), doesn't create new
+  db: true # Queries workflow and analytics schemas
+  contracts: true # Zod schemas for input/output
   ui: false
   infra: false
 
 touched_paths_globs:
-  - 'packages/backend/db/migrations/'
-  - 'packages/backend/db/sql/'
-  - 'packages/backend/db/__tests__/'
+  - 'apps/api/knowledge-base/src/crud-operations/**'
+  - 'apps/api/knowledge-base/src/mcp-server/**'
+  - '.claude/skills/scoreboard/**'
+
+# ============================================================================
+# Risk Flags
+# ============================================================================
 
 risk_flags:
-  auth: false
-  payments: false
-  migrations: true
+  auth: false # Standard pm+dev role access
+  payments: false # No payment operations
+  migrations: false # No DB migrations needed (uses existing tables)
   external_apis: false
-  security: false
-  performance: true
+  security: false # Standard access control enforcement
+  performance: true # Aggregation queries on story_outcomes + agent_invocations
 
-summary: Create workflow.roadmap materialized view with story counts, next unblocked stories, and estimated completion; implement refresh trigger.
+# ============================================================================
+# Implementation Details
+# ============================================================================
 
-elaboration: completed
+summary: Implement kb_get_scoreboard MCP tool with 5 workflow health metrics (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability_rates) and /scoreboard CLI skill for dashboard reporting.
 
-acceptance_criteria_count: 14
+# Files to Create:
+# 1. apps/api/knowledge-base/src/crud-operations/analytics-operations.ts — Add kb_get_scoreboard + schemas (append)
+# 2. apps/api/knowledge-base/src/crud-operations/__tests__/scoreboard-operations.test.ts — Unit tests
+# 3. .claude/skills/scoreboard/SKILL.md — CLI skill definition
 
-key_acs:
-  - AC1: Materialized view DDL with column set (plan_id, plan_title, story_count, completed_count, next_unblocked_story_id, estimated_completion_pct)
-  - AC2: story_counts CTE joining story_state_transitions with state counts
-  - AC3: next_unblocked subquery selecting MIN(story_order) where state NOT IN (completed states)
-  - AC4: estimated_completion_pct calculation
-  - AC5: Unique index on (plan_id, story_order)
-  - AC6: GRANT SELECT on all roles matching existing patterns
-  - AC7: Trigger function with pg_trigger_depth guard
-  - AC8: STATEMENT-level triggers on plans and stories tables
-  - AC9: COMMENT ON for view and trigger function
-  - AC10: Safety preamble and idempotency guards
-  - AC11-14: pgTAP tests and documentation
+# Files to Modify:
+# 1. apps/api/knowledge-base/src/mcp-server/tool-schemas.ts — Add schema + tool definition + exports
+# 2. apps/api/knowledge-base/src/mcp-server/tool-handlers.ts — Add handler + dispatch registration
+# 3. apps/api/knowledge-base/src/mcp-server/access-control.ts — Add enum + ACCESS_MATRIX entry
 
-dependencies:
-  - story_id: CDBE-3010
-    status: complete
-    reason: Dependency work must complete before materialized view logic
+source_tables:
+  - workflow.stories (storyId, feature, startedAt, completedAt)
+  - workflow.story_outcomes (storyId, estimatedTotalCost, reviewIterations, qaIterations)
+  - workflow.agent_invocations (agentName, status, inputTokens, outputTokens, storyId)
 
-test_strategy: pgTAP only (pure DDL + PL/pgSQL, no TypeScript changes)
+query_complexity: medium
+  - Aggregation over multiple tables
+  - Optional date_range filtering
+  - Optional feature filtering
+  - Graceful null handling for no-data cases
 
-reusable_assets:
-  - source: migrations/999_add_plan_churn_tracking.sql
-    asset: story_counts CTE pattern
-    usage: Base structure for story count aggregation
-  - source: migrations/CDBE-1030 migration
-    asset: Safety preamble with idempotency guards
-    usage: Transaction safety and CREATE IF NOT EXISTS patterns
-  - source: migrations/CDBE-1010 migration
-    asset: Trigger function pattern with pg_trigger_depth
-    usage: Prevent infinite trigger recursion
-  - source: migrations/CDBE-1030_test
-    asset: pgTAP test structure and patterns
-    usage: Test framework and assertion patterns
-  - source: migrations/CDBE-1005 migration
-    asset: GRANT pattern for database roles
-    usage: Apply consistent permission model
-  - source: packages/backend/orchestrator/src/services/planService.ts
-    asset: nextStory selection logic
-    usage: Reference for unblocked story ordering logic
+test_coverage_target: 80%
 
-migration_info:
-  estimated_slot: 1081
-  type: DDL + PL/pgSQL
-  requires_downtime: false
-  rollback_strategy: DROP MATERIALIZED VIEW IF EXISTS workflow.roadmap CASCADE
+constraints:
+  - Use Zod schemas for all input/output types (no TypeScript interfaces)
+  - Use @repo/logger, never console.log
+  - No barrel file imports (direct from source)
+  - Gracefully return zero/null when no data exists
+  - Register tool in tool-schemas.ts, tool-handlers.ts, and access-control.ts
+  - Assign pm+dev roles for access
 
-notes: |
-  - All 14 ACs address specific requirements; no TypeScript changes per spec
-  - Elaboration verdict is CONDITIONAL_PASS, indicating ready to implement
-  - CDBE-3010 dependency completed; unblock immediate implementation
-  - Focus on correctness of next_unblocked_story selection logic
-  - Performance review needed during code review phase
+acceptance_criteria_mapped:
+  AC1: 5 metric sections in response (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability_rates)
+  AC2: Null/zero graceful handling
+  AC3: Optional date_range filter (start_date, end_date) on all metrics
+  AC4: Optional feature filter on all metrics
+  AC5: Tool registered in 3 locations with pm+dev roles
+  AC6: /scoreboard skill with markdown table formatting
+  AC7: Unit tests >= 80% coverage
