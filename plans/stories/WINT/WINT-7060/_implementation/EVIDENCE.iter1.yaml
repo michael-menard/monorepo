@@ -1,0 +1,62 @@
+build:
+  reason: No TypeScript changes
+  status: exempt
+title: Migrate Batch 4 Agents (QA) — Fix iteration 1
+changes:
+  .claude/agents/evidence-judge.agent.md:
+    changes:
+      - "Non-Goal #2: Updated to permit kb_write_artifact (was: 'file-based only, no MCP tool calls')"
+      - "Non-Negotiable: Replaced 'MUST NOT write to database or MCP stores' with 'MUST write via kb_write_artifact'"
+      - >-
+        Phase 1 step 1: Replaced filesystem EVIDENCE.yaml read with kb_read_artifact({ story_id, artifact_type:
+        'evidence' })
+      - 'Phase 1 step 2: Replaced {story_dir}/{STORY_ID}.md read with kb_get_story({ story_id })'
+      - >-
+        Phase 4 step 3: Replaced {story_dir}/_implementation/ac-verdict.json write with kb_write_artifact({ story_id,
+        artifact_type: 'analysis', artifact_name: 'ac-verdict', content })
+      - "Output schema header: Updated 'Written to' from filesystem path to KB artifact reference"
+      - >-
+        LangGraph Porting Notes: Updated Input Contract (removed evidence_yaml_path, story_file_path), Output Contract
+        (KB artifact), Tool Requirements (v1.0 KB I/O)
+      - 'Role/Mission sections: Removed EVIDENCE.yaml and ac-verdict.json filesystem language'
+      - 'Non-Negotiables: Cleaned all EVIDENCE.yaml and ac-verdict.json references to KB equivalents'
+      - "Completion Signals: Updated EVIDENCE.yaml references to 'evidence artifact'"
+      - 'BOUNDS table: Updated to reference evidence artifact not EVIDENCE.yaml'
+    refs_migrated: 17
+  .claude/commands/qa-verify-story.md:
+    changes:
+      - >-
+        Phase 1.5 consumer: Replaced filesystem ac-verdict.json read with kb_read_artifact({ story_id, artifact_type:
+        'analysis', artifact_name: 'ac-verdict' })
+      - "Signal routing table: Replaced 'ac-verdict.json absent' with 'ac-verdict artifact absent in KB'"
+      - >-
+        Phase 4 Reference table: Updated Output column from 'ac-verdict.json' to 'KB artifact (type=analysis,
+        name=ac-verdict)'
+      - "Advisory log messages: Updated 'See ac-verdict.json' to 'See ac-verdict KB artifact'"
+      - 'Graceful degradation note: Replaced EVIDENCE.yaml filesystem language with KB artifact language'
+    refs_migrated: 6
+story_id: WINT-7060
+e2e_tests:
+  mode: n/a
+  reason: Markdown-only changes to agent/command docs — no runtime code
+  status: exempt
+iteration: 1
+unit_tests:
+  reason: No testable code changes
+  status: exempt
+touched_files:
+  - .claude/agents/evidence-judge.agent.md
+  - .claude/commands/qa-verify-story.md
+total_refs_migrated: 23
+files_verified_clean:
+  - .claude/agents/story-fanout-qa.agent.md
+  - .claude/agents/qa-verify-setup-leader.agent.md
+  - .claude/agents/qa-verify-verification-leader.agent.md
+  - .claude/agents/qa-verify-completion-leader.agent.md
+  - .claude/agents/qa.agent.md
+  - .claude/skills/qa-gate/SKILL.md
+  - .claude/skills/review/SKILL.md
+fix_iteration_summary: >-
+  QA found that the original EVIDENCE/REVIEW artifacts claimed migration had occurred in evidence-judge.agent.md and
+  qa-verify-story.md but the files were never actually edited. This fix iteration applied all planned changes to both
+  files, eliminating all 5+1 filesystem references. Zero filesystem references remain in either file.

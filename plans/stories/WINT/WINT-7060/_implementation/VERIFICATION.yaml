@@ -1,0 +1,123 @@
+schema: 1
+story_id: WINT-7060
+timestamp: '2026-03-23T19:50:00Z'
+verdict: FAIL
+tests_executed: false
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+test_exemption: docs story — all changes are markdown agent/skill/command files, no TypeScript code changes
+coverage: null
+coverage_meets_threshold: null
+coverage_exemption: docs story — no runtime code, coverage not applicable
+test_quality:
+  verdict: EXEMPT
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: FAIL
+    evidence_ref: Direct file read of .claude/agents/evidence-judge.agent.md
+    notes: >-
+      Non-Goal #2 at line 289 still reads: 'Output is file-based (ac-verdict.json) only. No DB writes, no MCP tool calls
+      for storage.' Non-Negotiable at line 305 still reads: 'MUST NOT write to database or MCP stores'. Phase 4 at line
+      112 still writes to '{story_dir}/_implementation/ac-verdict.json'. LangGraph Porting Notes at line 341 still
+      references filesystem path. ZERO of the 5 planned changes (steps 1, 4, 6) are present in the file. The evidence
+      artifact claimed 6 refs migrated in this file, but the actual file is completely unmigrated.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: Direct file read of .claude/skills/qa-gate/SKILL.md
+    notes: >-
+      qa-gate/SKILL.md Phase 1 uses kb_get_story (line 65). Phase 4 check uses kb_get_story with include_artifacts (line
+      69). Phase 5 uses kb_write_artifact (line 197). Phase 6 is a KB artifact reference (line 247). Phase 7 report
+      references KB artifact (line 277). Examples all reference KB artifact type. All 6 filesystem refs migrated. PASS.
+  - ac_id: AC-3
+    status: FAIL
+    evidence_ref: Direct file read of .claude/agents/evidence-judge.agent.md and .claude/commands/qa-verify-story.md
+    notes: >-
+      Producer half (evidence-judge) NOT migrated: Phase 4 at line 112 still writes to
+      '{story_dir}/_implementation/ac-verdict.json'. Consumer half (qa-verify-story.md) also NOT migrated: line 85 still
+      reads from 'tree/story/{STORY_ID}/_implementation/ac-verdict.json'. The coupled pair migration (steps 4+5) was not
+      applied. The evidence artifact claimed 1 ref migrated in qa-verify-story.md but the file still contains the
+      original filesystem path.
+architecture_compliant: false
+architecture_notes: >-
+  The story's core architectural requirement — eliminating filesystem directory references from QA agent/skill/command
+  files in favor of KB MCP tool calls — is not achieved. evidence-judge.agent.md, the highest-risk file identified by
+  the plan, remains completely unmigrated with 5 active filesystem refs and an explicit Non-Goal prohibiting KB writes.
+issues:
+  - id: ISSUE-001
+    severity: critical
+    description: >-
+      evidence-judge.agent.md not migrated at all. All 5 filesystem references remain:
+      {story_dir}/_implementation/EVIDENCE.yaml read (Phase 1 step 1), {story_dir}/{STORY_ID}.md read (Phase 1 step 2),
+      {story_dir}/_implementation/ac-verdict.json write (Phase 4 step 3), output schema documentation, and LangGraph
+      porting notes. Non-Goal #2 and Non-Negotiable still explicitly prohibit KB writes.
+    file: .claude/agents/evidence-judge.agent.md
+    acs_affected:
+      - AC-1
+      - AC-3
+  - id: ISSUE-002
+    severity: critical
+    description: >-
+      qa-verify-story.md Phase 1.5 consumer not migrated. Line 85 still reads ac-verdict.json from
+      'tree/story/{STORY_ID}/_implementation/ac-verdict.json' instead of kb_read_artifact. Line 84 still checks
+      'ac-verdict.json absent' (filesystem framing). Phase 4 Reference table (line 141) still shows filesystem output
+      file 'ac-verdict.json'.
+    file: .claude/commands/qa-verify-story.md
+    acs_affected:
+      - AC-3
+  - id: ISSUE-003
+    severity: high
+    description: >-
+      EVIDENCE artifact (and PROOF artifact) falsely claim 6 refs migrated in evidence-judge.agent.md and 1 ref migrated
+      in qa-verify-story.md. These claims are not supported by the actual file content. The code review artifact also
+      PASS'd based on these false claims ('Manual verification confirmed all 4 files correctly migrated'). All three
+      prior artifacts are unreliable for these two files.
+    file: 'KB artifacts: EVIDENCE iteration 0, PROOF iteration 0, REVIEW iteration 0'
+    acs_affected:
+      - AC-1
+      - AC-3
+context_cache_notes: >-
+  Cache miss for qa_verify/main — proceeding without test_patterns cache. Cache miss for lessons_learned/blockers-known
+  — proceeding without blockers cache. Cache miss for architecture/project-conventions — proceeding without project
+  conventions cache.
+lessons_to_record:
+  - lesson: >-
+      Evidence artifacts can be written against pre-patch file reads. The WINT-7060 EVIDENCE artifact claimed
+      evidence-judge.agent.md was migrated (6 refs), but the file was never actually changed. QA verification must
+      always spot-check at least one claimed change per file directly from the filesystem.
+    category: blocker
+    tags:
+      - qa-process
+      - evidence-integrity
+      - batch-migration
+  - lesson: >-
+      When a code review marks a story PASS based on 'manual verification confirmed all 4 files correctly migrated' but
+      the reviewer has not actually read the files, the review artifact becomes a false signal. QA verification cannot
+      trust code review verdicts for docs/markdown-only stories — direct file reads are required.
+    category: anti_pattern
+    tags:
+      - code-review
+      - docs-stories
+      - verification
+  - lesson: >-
+      For coupled producer-consumer migrations (evidence-judge writes ac-verdict, qa-verify-story reads it), the
+      coupling makes partial implementation especially dangerous — both ends must be verified independently in QA.
+    category: pattern
+    tags:
+      - coupled-migration
+      - producer-consumer
+      - batch-migration
+tokens:
+  in: 42000
+  out: 3500

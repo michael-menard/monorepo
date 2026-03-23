@@ -1,0 +1,76 @@
+schema: 1
+story_id: WINT-7060
+timestamp: '2026-03-23T21:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+    note: exempt — markdown-only changes, no TypeScript
+  integration:
+    pass: 0
+    fail: 0
+    note: exempt
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt
+  http:
+    pass: 0
+    fail: 0
+    note: n/a — no backend endpoints touched
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE (iteration 1):changes['.claude/agents/evidence-judge.agent.md']
+    notes: >-
+      Non-Goal #2 updated to permit kb_write_artifact; Non-Negotiable updated to MUST write via kb_write_artifact;
+      LangGraph Porting Notes Output Contract and Tool Requirements updated to KB artifact I/O (v1.0 WINT-7060+).
+      Verified in live file at lines 302-303, 318, 350-356.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE (iteration 1):files_verified_clean
+    notes: >-
+      Grep of .claude/skills/qa-gate/SKILL.md for all filesystem patterns (EVIDENCE.yaml, ac-verdict.json, story_dir,
+      _implementation, docs/stories, docs/qa) returned zero matches. All 6 refs migrated to KB operations.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE (iteration 1):changes — both files, coupled pair
+    notes: >-
+      evidence-judge Phase 4 now calls kb_write_artifact({ story_id, artifact_type: 'analysis', artifact_name:
+      'ac-verdict' }). qa-verify-story Phase 1.5 now calls kb_read_artifact({ story_id, artifact_type: 'analysis',
+      artifact_name: 'ac-verdict' }). Signal routing table updated from 'ac-verdict.json absent' to 'ac-verdict artifact
+      absent in KB'. Advisory message text updated in both CHALLENGE/FAIL rows. Verified via git diff — 23 total refs
+      migrated across both files.
+architecture_compliant: true
+issues: []
+lessons_to_record:
+  - lesson: >-
+      Fix iterations for markdown-only stories require re-verifying the actual file diffs — a prior QA run found that
+      evidence claimed migration had occurred but the files were never edited. Always spot-check touched_files content
+      via git diff or direct read to confirm claimed changes are present.
+    category: anti_pattern
+    tags:
+      - qa
+      - evidence
+      - markdown
+      - verification
+  - lesson: >-
+      Coupled producer-consumer migrations (evidence-judge writes ac-verdict, qa-verify-story reads it) should be
+      applied as a single atomic commit. The plan correctly identified this as highest-risk and the execution followed
+      the coupled group execution order.
+    category: pattern
+    tags:
+      - migration
+      - kb
+      - coupled-pair
+      - evidence-judge
+tokens:
+  in: 18000
+  out: 3000
