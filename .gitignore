@@ -67,6 +67,11 @@ storybook-static
 # Vite
 .vite
 
+# Scraper downloads (large binary/data files)
+apps/scrapers/rebrickable/data/downloads/
+apps/scrapers/rebrickable/data/screenshots/
+apps/scrapers/rebrickable/data/browser-profile/
+
 # Dependency directories
 node_modules/
 # Environment variables
