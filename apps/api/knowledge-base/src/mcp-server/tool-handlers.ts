@@ -300,17 +300,13 @@ export const ToolHandlerDepsSchema = z.object({
  * Dependencies for tool handlers.
  * Combines all CRUD operation and search dependencies.
  */
-export interface ToolHandlerDeps
-  extends
-    KbAddDeps,
-    KbGetDeps,
-    KbUpdateDeps,
-    KbDeleteDeps,
-    KbListDeps,
-    KbSearchDeps,
-    KbGetRelatedDeps {}
-
-export type ToolHandlerDepsType = z.infer<typeof ToolHandlerDepsSchema>
+export type ToolHandlerDeps = KbAddDeps &
+  KbGetDeps &
+  KbUpdateDeps &
+  KbDeleteDeps &
+  KbListDeps &
+  KbSearchDeps &
+  KbGetRelatedDeps
 
 /**
  * Timeout error for tool execution.
