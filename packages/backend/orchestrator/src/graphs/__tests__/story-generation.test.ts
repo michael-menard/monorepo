@@ -279,3 +279,127 @@ describe('createStoryGenerationGraph integration', () => {
     expect(result.writeResult?.storiesFailed).toBeGreaterThan(0)
   })
 })
+
+// ============================================================================
+// APRS-5030: Production Adapter Integration Tests (AC-10)
+// ============================================================================
+
+import { createPlanLoaderAdapter } from '../../adapters/story-generation/plan-loader-adapter.js'
+import { createStoryIdGeneratorAdapter } from '../../adapters/story-generation/story-id-generator.js'
+import { createKbWriterAdapter } from '../../adapters/story-generation/kb-writer-adapter.js'
+import type { KbGetPlanFn } from '../../adapters/story-generation/plan-loader-adapter.js'
+import type { KbListStoriesFn } from '../../adapters/story-generation/story-id-generator.js'
+import type {
+  KbIngestStoryFn,
+  KbUpdatePlanFn,
+} from '../../adapters/story-generation/kb-writer-adapter.js'
+
+describe('story-generation graph with production adapters (AC-10)', () => {
+  it('runs full pipeline end-to-end with all three production adapters injected', async () => {
+    // Wire all three production adapters via vi.fn() mocks
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(VALID_PLAN)
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([
+      { story_id: 'TESTPLAN-1010' },
+    ])
+    const kbIngestStory: KbIngestStoryFn = vi
+      .fn()
+      .mockImplementation(async input => ({ story_id: input.story_id }))
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn().mockResolvedValue({ plan_slug: 'test-plan' })
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'Story description',
+      acceptance_criteria: ['AC1'],
+      subtasks: ['Task 1'],
+      risk: 'low',
+    })
+
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({
+      planLoader,
+      llmAdapter,
+      storyIdGenerator,
+      kbWriter,
+    })
+
+    const result = await graph.invoke({ planSlug: 'test-plan' })
+
+    expect(result.generationPhase).toBe('complete')
+    expect(result.writeResult).not.toBeNull()
+    expect(result.writeResult?.storiesWritten).toBeGreaterThan(0)
+    expect(result.writeResult?.storiesFailed).toBe(0)
+    expect(result.writeResult?.planStatusUpdated).toBe(true)
+
+    // Adapter calls verified
+    expect(kbGetPlan).toHaveBeenCalledWith({ plan_slug: 'test-plan' })
+    expect(kbListStories).toHaveBeenCalled()
+    expect(kbIngestStory).toHaveBeenCalled()
+    expect(kbUpdatePlan).toHaveBeenCalledWith({
+      plan_slug: 'test-plan',
+      status: 'stories-created',
+    })
+  })
+
+  it('fails gracefully when plan not found via production adapter', async () => {
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(null)
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([])
+    const kbIngestStory: KbIngestStoryFn = vi.fn()
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn()
+
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({ planLoader, storyIdGenerator, kbWriter })
+    const result = await graph.invoke({ planSlug: 'nonexistent-plan' })
+
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors.length).toBeGreaterThan(0)
+    expect(kbIngestStory).not.toHaveBeenCalled()
+    expect(kbUpdatePlan).not.toHaveBeenCalled()
+  })
+
+  it('story IDs are generated with max+10 offset from existing stories', async () => {
+    const kbGetPlan: KbGetPlanFn = vi.fn().mockResolvedValue(VALID_PLAN)
+    // write-to-kb transforms planSlug 'test-plan' → prefix 'TEST-PLAN'
+    const kbListStories: KbListStoriesFn = vi.fn().mockResolvedValue([
+      { story_id: 'TEST-PLAN-1010' },
+      { story_id: 'TEST-PLAN-1020' },
+      { story_id: 'TEST-PLAN-1030' },
+    ])
+    const capturedStoryIds: string[] = []
+    const kbIngestStory: KbIngestStoryFn = vi.fn().mockImplementation(async input => {
+      capturedStoryIds.push(input.story_id)
+      return { story_id: input.story_id }
+    })
+    const kbUpdatePlan: KbUpdatePlanFn = vi.fn().mockResolvedValue({ plan_slug: 'test-plan' })
+    const llmAdapter = vi.fn().mockResolvedValue({
+      description: 'desc',
+      acceptance_criteria: ['AC1'],
+      subtasks: [],
+      risk: 'low',
+    })
+
+    const planLoader = createPlanLoaderAdapter(kbGetPlan)
+    const storyIdGenerator = createStoryIdGeneratorAdapter(kbListStories)
+    const kbWriter = createKbWriterAdapter(kbIngestStory, kbUpdatePlan)
+
+    const graph = createStoryGenerationGraph({
+      planLoader,
+      llmAdapter,
+      storyIdGenerator,
+      kbWriter,
+    })
+    await graph.invoke({ planSlug: 'test-plan' })
+
+    // IDs should start from 1040 (max 1030 + 10)
+    expect(capturedStoryIds.length).toBeGreaterThan(0)
+    capturedStoryIds.forEach(id => {
+      // IDs have format PREFIX-NNNN, extract last segment
+      const segments = id.split('-')
+      const suffix = parseInt(segments[segments.length - 1]!, 10)
+      expect(suffix).toBeGreaterThanOrEqual(1040)
+    })
+  })
+})
