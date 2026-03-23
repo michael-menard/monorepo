@@ -1,134 +1,238 @@
-schema: 1
-story_id: APRS-1040
-timestamp: '2026-03-21T23:00:00Z'
+schema: 2
+story_id: APRS-4020
+timestamp: '2026-03-22T18:00:00Z'
+subtask_source: story
 steps:
   - id: 1
-    description: Add planFlows and planFlowSteps Drizzle table definitions to apps/api/knowledge-base/src/db/schema/workflow.ts
+    subtask_id: ST-1
+    description: Extend StoryGenerationStateAnnotation with dependency wiring and validation fields; extend GenerationPhaseSchema
     files:
-      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/state/plan-refinement-state.ts
     dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/knowledge-base
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-1
-      - AC-2
-      - AC-3
   - id: 2
-    description: >-
-      Create SQL migration 1120_aprs1040_plan_flows.sql with safety preamble, CREATE TABLE IF NOT EXISTS for plan_flows
-      and plan_flow_steps, CHECK constraints, indexes, and completion DO block
+    subtask_id: ST-2
+    description: Implement wire_dependencies node with injectable MinimumPathFn and unit tests
     files:
-      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/wire-dependencies.test.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/1110_wint1130_worktrees_table.sql
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/generate-stories.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/slice-flows.ts
     dependencies:
       - 1
-    slice: backend
-    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+    slice: packages
+    verification: pnpm vitest run wire-dependencies --reporter=verbose
     acs_covered:
+      - AC-2
+      - AC-3
       - AC-4
   - id: 3
-    description: >-
-      Create pgTAP verification test file pgtap/1120_aprs1040_plan_flows_test.sql covering table existence, column
-      types, FK integrity, CHECK constraints, cascade delete, and index existence
+    subtask_id: ST-3
+    description: Implement validate_graph node with injectable GraphValidatorFn and unit tests
     files:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
-      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+      - packages/backend/orchestrator/src/state/story-generation-state.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/load-refined-plan.ts
     dependencies:
-      - 2
-    slice: backend
-    verification: psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
+      - 1
+    slice: packages
+    verification: pnpm vitest run validate-graph --reporter=verbose
     acs_covered:
       - AC-5
+      - AC-6
+  - id: 4
+    subtask_id: ST-4
+    description: 'Extend createStoryGenerationGraph factory: wire wire_dependencies → validate_graph nodes with conditional edges'
+    files:
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+    dependencies:
+      - 2
+      - 3
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-8
+  - id: 5
+    subtask_id: ST-5
+    description: Update graph integration tests for full 5-node pipeline; all existing tests remain green
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+      - packages/backend/orchestrator/src/graphs/story-generation.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
+      - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: pnpm vitest run story-generation --reporter=verbose
+    acs_covered:
+      - AC-7
 files_to_change:
-  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
+  - path: packages/backend/orchestrator/src/state/story-generation-state.ts
     action: modify
-    reason: Add planFlows and planFlowSteps table definitions with Drizzle ORM, plus exported inferred types
-  - path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+    reason: >-
+      AC-1: Add dependencyEdges, parallelGroups, orderedStories, validationResult, generatedStoriesWithDeps fields and
+      wire_dependencies/validate_graph phases
+  - path: packages/backend/orchestrator/src/nodes/story-generation/wire-dependencies.ts
     action: create
     reason: >-
-      SQL migration creating workflow.plan_flows and workflow.plan_flow_steps tables with all constraints, indexes, and
-      comments
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
+      AC-2/3/4: wire_dependencies node with injectable MinimumPathFn, BFS topological layer partitioning, deterministic
+      dependency edge inference
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/wire-dependencies.test.ts
     action: create
+    reason: 'AC-7: Unit tests for minimum-path assignment, parallel group identification, dependency ordering'
+  - path: packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
+    action: create
+    reason: 'AC-5/6: validate_graph node with injectable GraphValidatorFn, no-op default, validationResult writes to state'
+  - path: packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
+    action: create
+    reason: 'AC-7: Unit tests for cycle detection, orphan detection, duplicate detection, minimum-path coverage check'
+  - path: packages/backend/orchestrator/src/graphs/story-generation.ts
+    action: modify
     reason: >-
-      pgTAP verification tests for AC-5: table existence, column types, CHECK constraints, FK cascade, and index
-      presence
+      AC-8: Add graphValidator injectable to config, wire generate_stories → wire_dependencies → validate_graph → END
+      with conditional edges
+  - path: packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+    action: modify
+    reason: 'AC-7: Full 5-node integration test; preserve all existing 4-node tests'
 commands_to_run:
-  - command: pnpm check-types --filter @repo/knowledge-base
-    when: after Drizzle schema changes in step 1
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-1 and ST-4
     required: true
-  - command: pnpm build --filter @repo/knowledge-base
-    when: after all code changes
+  - command: pnpm vitest run wire-dependencies --reporter=verbose
+    when: after ST-2
     required: true
-  - command: pnpm test --filter @repo/knowledge-base
+  - command: pnpm vitest run validate-graph --reporter=verbose
+    when: after ST-3
+    required: true
+  - command: pnpm vitest run story-generation --reporter=verbose
+    when: after ST-5
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      Drizzle planFlows table in workflow.ts with source (text, CHECK IN ('user','inferred','merged')), confidence
-      (numeric 0-1), status (text, CHECK IN ('approved','unconfirmed','rejected','deferred')) columns; migration creates
-      workflow.plan_flows with matching DDL
-    evidence_type: file
+      TypeScript compilation passes with new state fields; Annotation.Root has dependencyEdges, parallelGroups,
+      orderedStories, validationResult, generatedStoriesWithDeps; GenerationPhaseSchema includes wire_dependencies and
+      validate_graph
+    evidence_type: test
   - ac_id: AC-2
     planned_evidence: >-
-      Drizzle planFlowSteps table in workflow.ts with FK to plan_flows ON DELETE CASCADE; migration creates
-      workflow.plan_flow_steps
-    evidence_type: file
+      Unit tests in wire-dependencies.test.ts: minimum_path assignment from flow step count heuristic, orderedStories
+      ordering (minimum-path first), dependency edge inference from parent_flow_id + step ordering
+    evidence_type: test
   - ac_id: AC-3
     planned_evidence: >-
-      planFlows and planFlowSteps exported from workflow.ts with $inferSelect/$inferInsert type aliases; pnpm
-      check-types passes
-    evidence_type: command
+      Unit tests: success path sets generationPhase=validate_graph; error path sets generationPhase=error; no LLM calls
+      in implementation (pure deterministic logic)
+    evidence_type: test
   - ac_id: AC-4
     planned_evidence: >-
-      Migration file 1120_aprs1040_plan_flows.sql with safety preamble (CREATE TABLE IF NOT EXISTS), CHECK constraints
-      on source and status, FK to workflow.plans with ON DELETE CASCADE, supporting indexes, and DO $$ completion notice
-      block
-    evidence_type: file
+      Unit tests: parallelGroups computed via BFS topological layer partitioning; injectable MinimumPathFn overrides
+      default heuristic
+    evidence_type: test
   - ac_id: AC-5
     planned_evidence: >-
-      pgTAP test file 1120_aprs1040_plan_flows_test.sql with assertions covering: table existence, column
-      presence/types, FK integrity, CHECK constraint violations rejected, cascade delete behavior, index existence
-    evidence_type: file
+      Unit tests: no-op default GraphValidatorFn passes all checks; mock adapter tests for cycle, orphan, duplicate,
+      minimum-path coverage detection
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit tests: cycle → generationPhase=error + validationResult.passed=false; orphan/duplicate/min-path-coverage →
+      warnings + generationPhase=complete + validationResult.passed=true
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      All unit tests pass: wire-dependencies.test.ts, validate-graph.test.ts; integration test: full 5-node graph
+      invocation with mock adapters produces generationPhase=complete; all 7 existing story-generation.test.ts tests
+      remain green
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      TypeScript compilation; createStoryGenerationGraph accepts graphValidator config; graph wiring: generate_stories →
+      wire_dependencies → validate_graph → END; conditional error edges at each new node
+    evidence_type: test
 architectural_decisions:
   - id: ARCH-001
-    question: Use pgEnum() or text() + CHECK constraint for source/status columns?
-    decision: Use text() columns with SQL CHECK constraints in migration
+    question: >-
+      How to represent dependency edges between GeneratedStory objects when stories have no persistent IDs at generation
+      time?
+    decision: >-
+      Use story title + parent_flow_id as composite key for edge references within the wire_dependencies node.
+      dependencyEdges use from/to as string identifiers (title|flow_id composite or index-based). orderedStories and
+      parallelGroups reference GeneratedStory by array index for the in-memory pipeline.
     rationale: >-
-      All existing workflow schema tables (stories.state, plans.status, etc.) use plain text() columns. pgEnum() is not
-      used anywhere in workflow.ts. text() + CHECK is consistent with established pattern and easier to extend.
-    decided_by: auto
-    kb_decision_id: 48eb87a5-e96b-4f8c-90f5-35ab9e07abb5
+      Stories at generation time are ephemeral in-memory objects with no KB ID yet. Using title+flow_id as a stable
+      composite key within the same graph run is sufficient for MVP. KB persistence is deferred to APRS-4030 per story
+      non-goals.
+    decided_by: agent
   - id: ARCH-002
-    question: Migration slot number for 1120?
-    decision: Use migration slot 1120 (next after 1110_wint1130_worktrees_table.sql)
-    rationale: 'Sequential numbering: last numbered migration is 1110. 1120 is the next logical slot.'
-    decided_by: auto
-  - id: ARCH-003
-    question: 'FK target for plan_flows: plans.id (UUID) or plans.plan_slug (text)?'
-    decision: FK to workflow.plans(id) UUID primary key
+    question: generatedStoriesWithDeps vs orderedStories — are both needed in state?
+    decision: >-
+      Both are kept per AC-1. generatedStoriesWithDeps = GeneratedStory[] with minimum_path field mutated after
+      wire_dependencies runs. orderedStories = the same stories sorted (minimum-path first, then dependency order). This
+      separation allows downstream nodes to access both the flat-with-deps list and the ordered execution list.
     rationale: >-
-      workflow.plans has id UUID as primary key. Other child tables (plan_details, planRevisionHistory, planEmbeddings)
-      all reference plans.id. plan_slug FK is only used in peer-level tables (plan_dependencies, plan_story_links).
-      plan_flows is a child of a plan record, so plans.id is the correct anchor.
-    decided_by: auto
-complexity: simple
+      AC-1 explicitly requires both fields. The distinction matters for APRS-4030 KB write ordering vs minimum_path
+      annotation.
+    decided_by: agent
+  - id: ARCH-003
+    question: How to implement BFS topological layer partitioning for parallelGroups given GeneratedStory objects?
+    decision: >-
+      Build an adjacency list from dependencyEdges (using story array index as node identifier), compute in-degree for
+      each node, run standard BFS Kahn's algorithm collecting nodes per BFS layer. Each layer becomes one entry in
+      parallelGroups (array of story titles or indices). For MVP, use story titles as group member identifiers.
+    rationale: >-
+      Kahn's BFS naturally produces layers where all nodes in a layer have no dependencies on each other — exactly
+      parallel group semantics. Using titles keeps the output human-readable and consistent with the from/to edge
+      format.
+    decided_by: agent
+  - id: ARCH-004
+    question: Should generate_stories → wire_dependencies be a direct edge or conditional?
+    decision: >-
+      Conditional edge. generate_stories already transitions to phase=complete on success. We change generate_stories to
+      transition to phase=wire_dependencies on success instead of complete. afterGenerateStories conditional routes to
+      wire_dependencies when phase=wire_dependencies, and __end__ when phase=error.
+    rationale: >-
+      Consistent with existing pattern (afterLoadRefinedPlan, afterSliceFlows). Allows generate_stories to short-circuit
+      to END on error without flowing through wiring/validation. Requires changing generate_stories success phase from
+      complete to wire_dependencies.
+    decided_by: agent
+complexity: moderate
 notes:
-  - Story has no subtasks — steps derived from ACs per schema:1 mode
-  - 'ARCH-001: text()+CHECK chosen over pgEnum to match all existing workflow.ts column patterns'
-  - 'ARCH-002: Migration slot 1120 is next sequential slot after 1110'
-  - 'ARCH-003: FK to plans.id UUID (not plan_slug) consistent with plan_details, plan_revision_history, plan_embeddings'
   - >-
-    confidence column: numeric(4,3) gives range 0.000–9.999; use CHECK (confidence >= 0 AND confidence <= 1) to enforce
-    0.0-1.0
-  - plan_flow_steps FK to plan_flows ON DELETE CASCADE; plan_flows FK to plans ON DELETE CASCADE — full cascade chain
-  - pgTAP test uses BEGIN/ROLLBACK wrapper and TEST-1040-* fixture story_id prefix
-  - 'Non-goal: No MCP tools, no rawContent migration, no embedding column'
-  - 'Risk: FK migration ordering — migration 1120 must run after 999_full_schema_baseline.sql (plans table) and 1110'
-  - 'Risk: Source enum values must align with APRS-2010 extract_flows output (user|inferred|merged)'
+    ARCH-004 requires a one-line change to generate-stories.ts: success path returns generationPhase=wire_dependencies
+    instead of complete. This is required for the conditional edge routing to work correctly.
+  - >-
+    The generate_stories node's existing test expects generationPhase=complete on success. That test will need updating
+    in ST-5 to expect wire_dependencies, or a separate integration-level assertion.
+  - >-
+    wire_dependencies is purely deterministic — no LLM calls, no async I/O beyond state reads. The node returns
+    synchronously-computable results wrapped in async per LangGraph node contract.
+  - >-
+    DEC-1 scope: cross-flow dependency inference is explicitly deferred. Only same-flow step ordering creates edges.
+    Stories from different flows have no edges between them unless parent_flow_id relationships imply otherwise.
+  - >-
+    The GeneratedStory objects already carry parent_flow_id and flow_step_reference which encode step ordering.
+    wire_dependencies reads these to sort stories within a flow by step index extracted from flow_step_reference.
+  - >-
+    validate_graph no-op default: returns { passed: true, errors: [], warnings: [] }. This ensures the graph compiles
+    and tests pass without APRS-1020 primitives.
+  - 'File count per step: ST-1=1, ST-2=2, ST-3=2, ST-4=1, ST-5=1 — all within the 3-file limit from schema validation.'
