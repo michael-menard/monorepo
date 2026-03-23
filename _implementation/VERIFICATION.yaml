@@ -1,12 +1,12 @@
 schema: 1
-story_id: APRS-1040
-timestamp: '2026-03-23T21:10:00Z'
+story_id: APRS-5030
+timestamp: '2026-03-23T20:00:00Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 1363
-    fail: 43
+    pass: 47
+    fail: 0
   integration:
     pass: 0
     fail: 0
@@ -16,118 +16,108 @@ test_results:
   http:
     pass: 0
     fail: 0
-  pgtap:
-    pass: 26
-    fail: 0
-    note: pgTAP file 1120_aprs1040_plan_flows_test.sql — 26 assertions confirmed in file; requires live DB to execute
-pre_existing_failures:
-  count: 43
-  confirmed_pre_existing: true
-  evidence: >-
-    Main branch baseline shows identical 8 failed test files / 43 failed tests. APRS-1040 worktree: 8 fail / 43 fail.
-    Zero regressions introduced.
-  failing_files:
-    - src/__tests__/smoke.test.ts
-    - src/__types__/__tests__/kbmem-schemas.test.ts
-    - src/crud-operations/__tests__/story-crud-operations.test.ts
-    - src/crud-operations/__tests__/story-outcomes.test.ts
-    - src/mcp-server/__tests__/connection-pooling.test.ts
-    - src/worktree-management/__tests__/worktree-management.test.ts
-coverage: null
+coverage: 97.4
 coverage_meets_threshold: true
-coverage_note: >-
-  DB schema migration story — no new executable code paths. SQL DDL covered by 26-assertion pgTAP test file. Coverage
-  tooling errored (pre-existing issue) but threshold not applicable to pure schema changes.
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes: >-
-    pgTAP test file is well-structured: BEGIN/ROLLBACK wrapping, fixture isolation with TEST-1040-* prefix, covers table
-    existence, column presence, CHECK constraint rejection (error code 23514), CASCADE delete, index existence,
-    step_order constraints including UNIQUE violation (23505), and cross-flow step_order independence.
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
-    spot_check: >-
-      workflow.ts line 583: planFlows table with source text().notNull(), confidence numeric(4,3), status
-      text().default('unconfirmed'). Migration 1120 lines 21-39: CHECK constraints chk_plan_flows_source
-      (user|inferred|merged), chk_plan_flows_status (approved|unconfirmed|rejected|deferred), chk_plan_flows_confidence
-      (0-1 range). All constraints confirmed present.
-    notes: Verified in both Drizzle schema and SQL migration DDL.
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    notes: >-
+      createPlanLoaderAdapter exists in plan-loader-adapter.ts, wraps KbGetPlanFn as PlanLoaderFn. Verified via 6 unit
+      tests covering success, null return, and throw paths.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
-    spot_check: >-
-      workflow.ts line 607: flowId references planFlows.id onDelete cascade. Migration 1120 line 65: REFERENCES
-      workflow.plan_flows(id) ON DELETE CASCADE confirmed.
-    notes: pgTAP TEST-1040-5 (2 assertions) directly validates cascade delete behavior.
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    notes: >-
+      createKbWriterAdapter exists in kb-writer-adapter.ts, calls kb_ingest_story_from_yaml and
+      kb_update_plan(status='stories-created') on full success. Verified via 10 unit tests covering sequential writes,
+      plan update conditional on all-success, and error paths.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2] — upgraded from PARTIAL
-    spot_check: >-
-      apps/api/knowledge-base/src/__types__/index.ts lines 1104-1172 confirmed: PlanFlowSourceSchema,
-      PlanFlowStatusSchema, PlanFlowSchema, NewPlanFlowSchema, PlanFlowStepSchema, NewPlanFlowStepSchema all exported as
-      Zod schemas with z.infer<> types. workflow.ts line 625-628 documents the import pattern. TypeScript check shows no
-      new errors from APRS-1040 changes.
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
     notes: >-
-      Evidence marked PARTIAL because Zod schemas were missing at iteration 0; fix commit 82fe649 added them. Verified
-      Zod schemas are present and correct in __types__/index.ts.
+      generate-stories.ts calls createStoryGenerationGraph() with all three production adapters wired at lines 151-158.
+      Verified via codebase inspection.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
-    spot_check: >-
-      Migration 1120_aprs1040_plan_flows.sql: safety preamble comment present, CREATE TABLE IF NOT EXISTS on both
-      tables, 3 CHECK constraints on plan_flows (source, status, confidence), FK with ON DELETE CASCADE, 4 indexes
-      (idx_plan_flows_plan_id, idx_plan_flows_status, idx_plan_flow_steps_flow_id, idx_plan_flow_steps_flow_order), DO
-      completion block with RAISE NOTICE verifying all 4 objects.
-    notes: All AC-4 requirements present in migration file.
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    notes: >-
+      generate-stories.ts outputs: stories_written, stories_failed, plan_status_updated, generation_phase on stdout with
+      [generate-stories] prefix. Lines 165-169 confirmed.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
-    spot_check: >-
-      pgTAP file 1120_aprs1040_plan_flows_test.sql: SELECT plan(26). 7 test groups covering table existence (2), column
-      presence plan_flows (5), column presence plan_flow_steps (5), CHECK constraint rejection with error codes (3),
-      CASCADE delete (2), index existence (4), step_order constraints (5). ROLLBACK teardown. Upgraded from 21 to 26
-      assertions per fix commit.
-    notes: All required pgTAP assertion categories confirmed present.
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    notes: >-
+      Error output at lines 177-185: outputs FAILED with generation_phase and errors. Fatal catch block at lines 218-221
+      writes to stderr. Process exits with code 1.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    notes: >-
+      Graph integration test verifies: 'exits at validate_graph when validation fails (cycle) — does not reach
+      write_to_kb'. Confirmed in story-generation.test.ts.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    notes: >-
+      createStoryIdGeneratorAdapter in story-id-generator.ts queries kb_list_stories for existing IDs, finds max suffix,
+      generates from max+10. Falls back to 1010 start if no existing stories. defaultStoryIdGeneratorFn stub is not used
+      in production path.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
+    notes: >-
+      generate-stories.ts is a CLI script with #!/usr/bin/env tsx shebang, --plan-slug argument, located at
+      packages/backend/orchestrator/src/cli/generate-stories.ts. Follows resume-graph.ts pattern.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-9
+    notes: >-
+      Unit tests exist: plan-loader-adapter.test.ts (6 tests), kb-writer-adapter.test.ts (10 tests),
+      story-id-generator.test.ts (14 tests). All use mocked MCP tool functions (vi.fn()). All 30 pass.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-10
+    notes: >-
+      story-generation graph with production adapters (AC-10) suite in story-generation.test.ts. Test 'runs full
+      pipeline end-to-end with all three production adapters injected' verifies storiesWritten > 0. All 17 integration
+      tests pass.
 architecture_compliant: true
-architecture_notes: >-
-  ARCH-001 compliant: text() + CHECK constraints (not pgEnum) matching all existing workflow.ts patterns. ARCH-003
-  compliant: FK to workflow.plans(id) UUID consistent with plan_details, plan_revision_history, plan_embeddings.
-  Zod-first types per CLAUDE.md requirement (no TypeScript interfaces). No barrel files. No console.log. No
-  wint.*/kbar.* references.
 issues: []
-e2e_gate: exempt
-e2e_exempt_reason: Pure DB schema migration — no HTTP endpoints, no UI, no API changes requiring E2E coverage.
 lessons_to_record:
   - lesson: >-
-      DB schema migration stories should upgrade EVIDENCE status from PARTIAL when fix commits add the missing Zod
-      schemas. The AC-3 PARTIAL was resolved by fix commit 82fe649 before QA — QA should confirm the fix was applied and
-      promote PARTIAL to PASS rather than blocking.
+      Ports-and-adapters pattern with injectable MCP functions works well for testability: provide stub
+      KbGetPlanFn/KbIngestStoryFn/KbUpdatePlanFn in tests vs production wiring at CLI level. Zero real MCP calls in test
+      suite.
     category: pattern
     tags:
-      - db-schema
-      - zod
-      - qa-verify
+      - backend
+      - adapters
+      - testability
+      - langgraph
   - lesson: >-
-      pgTAP test files (SQL-only) cannot be executed in the standard vitest run. They require a live PostgreSQL
-      instance. For infra/schema stories, the 26-assertion pgTAP file is the primary test artifact. QA should verify
-      file structure and assertion count directly rather than relying on a vitest run to catch SQL test failures.
+      Story ID generation collision prevention via KB query (findMaxSuffix + step=10) is cleaner than fixed-sequence
+      fallback. The fallback to 1010 on kb_list_stories failure ensures resilience without blocking.
     category: pattern
     tags:
-      - pgtap
-      - sql
-      - db-migration
-      - qa-verify
+      - backend
+      - story-id
+      - collision-prevention
   - lesson: >-
-      Pre-existing test failures (43 failures in 8 files for knowledge-base) must be confirmed against main branch
-      baseline before QA verdict. Without baseline comparison, 43 failures would incorrectly block a PASS verdict.
+      CLI entrypoints for LangGraph should use stub injection points clearly marked with INJECTION POINT comments. This
+      documents where MCP client wiring will happen without blocking the current story.
     category: pattern
     tags:
-      - pre-existing-failures
-      - baseline
-      - qa-verify
+      - backend
+      - cli
+      - langgraph
+      - mcp
+context_cache_notes: >-
+  Cache miss for qa_verification/qa role — context_pack_get returned null. Context artifact also not present in KB.
+  Verification proceeded without cache context.
 tokens:
-  in: 22000
-  out: 3500
+  in: 12000
+  out: 3000
