@@ -1,134 +1,138 @@
-schema: 1
-story_id: APRS-1040
-timestamp: '2026-03-21T23:00:00Z'
+schema: 2
+story_id: APRS-5040
+timestamp: '2026-03-23T22:15:00Z'
+subtask_source: story
 steps:
   - id: 1
-    description: Add planFlows and planFlowSteps Drizzle table definitions to apps/api/knowledge-base/src/db/schema/workflow.ts
+    subtask_id: ST-1
+    description: >-
+      Implement createCLIDecisionCallbackAdapter in adapters/plan-refinement/ — bridges graph DecisionContext to
+      inquirer prompt, returning {decision, confirmedFlowIds, rejectedFlowIds, reason}
     files:
-      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
+      - packages/backend/orchestrator/src/adapters/decision-callbacks/cli-callback.ts
+      - packages/backend/orchestrator/src/state/plan-refinement-state.ts
     dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/knowledge-base
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-1
       - AC-2
-      - AC-3
   - id: 2
+    subtask_id: ST-2
     description: >-
-      Create SQL migration 1120_aprs1040_plan_flows.sql with safety preamble, CREATE TABLE IF NOT EXISTS for plan_flows
-      and plan_flow_steps, CHECK constraints, indexes, and completion DO block
+      Implement CLI entrypoint run-plan-refinement.ts following generate-stories.ts pattern — parseArgs (--plan-slug,
+      --help), stub planLoader, wires createPlanRefinementGraph with bridged callback, structured stdout output, exit
+      codes
     files:
-      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+      - packages/backend/orchestrator/src/cli/run-plan-refinement.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/1110_wint1130_worktrees_table.sql
+      - packages/backend/orchestrator/src/cli/generate-stories.ts
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
     dependencies:
       - 1
-    slice: backend
-    verification: psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
-      - AC-4
+      - AC-1
+      - AC-2
   - id: 3
+    subtask_id: ST-3
     description: >-
-      Create pgTAP verification test file pgtap/1120_aprs1040_plan_flows_test.sql covering table existence, column
-      types, FK integrity, CHECK constraints, cascade delete, and index existence
+      Unit tests for bridge adapter — all 4 decision paths (approve, edit, reject, defer), prompt format (displays plan
+      slug, flow summaries, warnings, errors), confirmedFlowIds/rejectedFlowIds population
     files:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
     files_to_read:
-      - apps/api/knowledge-base/src/db/migrations/pgtap/1100_cdbe5010_partition_telemetry_test.sql
-      - apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/cli-callback.test.ts
     dependencies:
-      - 2
-    slice: backend
-    verification: psql $PGTAP_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- adapters/plan-refinement
     acs_covered:
-      - AC-5
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Integration test: graph.invoke() with bridged callback using stub planLoader — verifies the full wire from CLI
+      adapter through createPlanRefinementGraph with all 4 HiTL outcomes
+    files:
+      - >-
+        packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+    dependencies:
+      - 1
+      - 2
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- integration
+    acs_covered:
+      - AC-3
 files_to_change:
-  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
-    action: modify
-    reason: Add planFlows and planFlowSteps table definitions with Drizzle ORM, plus exported inferred types
-  - path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
     action: create
     reason: >-
-      SQL migration creating workflow.plan_flows and workflow.plan_flow_steps tables with all constraints, indexes, and
-      comments
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
+      Bridge adapter satisfying AC-1 (DecisionCallback interface) and AC-2 (prompt format with 4 choices, flow
+      summaries, warnings, errors, confirmed/rejected flow IDs)
+  - path: packages/backend/orchestrator/src/cli/run-plan-refinement.ts
     action: create
     reason: >-
-      pgTAP verification tests for AC-5: table existence, column types, CHECK constraints, FK cascade, and index
-      presence
+      CLI entrypoint following generate-stories.ts pattern per story description — parseArgs, printHelp, stub planLoader
+      injection, structured stdout, exit codes
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+    action: create
+    reason: Unit tests for bridge adapter covering all 4 decision paths per AC-3
+  - path: >-
+      packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+    action: create
+    reason: Integration test wiring graph.invoke() with bridged callback + stub planLoader per AC-3 / ST-4
 commands_to_run:
-  - command: pnpm check-types --filter @repo/knowledge-base
-    when: after Drizzle schema changes in step 1
-    required: true
-  - command: pnpm build --filter @repo/knowledge-base
+  - command: pnpm check-types --filter @repo/orchestrator
     when: after all code changes
     required: true
-  - command: pnpm test --filter @repo/knowledge-base
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm lint --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      Drizzle planFlows table in workflow.ts with source (text, CHECK IN ('user','inferred','merged')), confidence
-      (numeric 0-1), status (text, CHECK IN ('approved','unconfirmed','rejected','deferred')) columns; migration creates
-      workflow.plan_flows with matching DDL
-    evidence_type: file
+      cli-decision-callback-adapter.ts: createCLIDecisionCallbackAdapter returns an object satisfying graph's
+      DecisionCallback type (ask(DecisionContext)->{decision, confirmedFlowIds, rejectedFlowIds, reason}), handling
+      approve/edit/reject/defer
+    evidence_type: test
   - ac_id: AC-2
     planned_evidence: >-
-      Drizzle planFlowSteps table in workflow.ts with FK to plan_flows ON DELETE CASCADE; migration creates
-      workflow.plan_flow_steps
-    evidence_type: file
+      cli-decision-callback-adapter.ts: inquirer prompt lists 4 choices, displays plan slug header, flow name summaries,
+      warnings, errors; answer maps to confirmedFlowIds/rejectedFlowIds
+    evidence_type: test
   - ac_id: AC-3
     planned_evidence: >-
-      planFlows and planFlowSteps exported from workflow.ts with $inferSelect/$inferInsert type aliases; pnpm
-      check-types passes
-    evidence_type: command
-  - ac_id: AC-4
-    planned_evidence: >-
-      Migration file 1120_aprs1040_plan_flows.sql with safety preamble (CREATE TABLE IF NOT EXISTS), CHECK constraints
-      on source and status, FK to workflow.plans with ON DELETE CASCADE, supporting indexes, and DO $$ completion notice
-      block
-    evidence_type: file
-  - ac_id: AC-5
-    planned_evidence: >-
-      pgTAP test file 1120_aprs1040_plan_flows_test.sql with assertions covering: table existence, column
-      presence/types, FK integrity, CHECK constraint violations rejected, cascade delete behavior, index existence
-    evidence_type: file
-architectural_decisions:
-  - id: ARCH-001
-    question: Use pgEnum() or text() + CHECK constraint for source/status columns?
-    decision: Use text() columns with SQL CHECK constraints in migration
-    rationale: >-
-      All existing workflow schema tables (stories.state, plans.status, etc.) use plain text() columns. pgEnum() is not
-      used anywhere in workflow.ts. text() + CHECK is consistent with established pattern and easier to extend.
-    decided_by: auto
-    kb_decision_id: 48eb87a5-e96b-4f8c-90f5-35ab9e07abb5
-  - id: ARCH-002
-    question: Migration slot number for 1120?
-    decision: Use migration slot 1120 (next after 1110_wint1130_worktrees_table.sql)
-    rationale: 'Sequential numbering: last numbered migration is 1110. 1120 is the next logical slot.'
-    decided_by: auto
-  - id: ARCH-003
-    question: 'FK target for plan_flows: plans.id (UUID) or plans.plan_slug (text)?'
-    decision: FK to workflow.plans(id) UUID primary key
-    rationale: >-
-      workflow.plans has id UUID as primary key. Other child tables (plan_details, planRevisionHistory, planEmbeddings)
-      all reference plans.id. plan_slug FK is only used in peer-level tables (plan_dependencies, plan_story_links).
-      plan_flows is a child of a plan record, so plans.id is the correct anchor.
-    decided_by: auto
+      Unit test file (4 decision paths) + integration test (graph.invoke() with bridged callback + stub planLoader), all
+      passing
+    evidence_type: test
+architectural_decisions: []
 complexity: simple
 notes:
-  - Story has no subtasks — steps derived from ACs per schema:1 mode
-  - 'ARCH-001: text()+CHECK chosen over pgEnum to match all existing workflow.ts column patterns'
-  - 'ARCH-002: Migration slot 1120 is next sequential slot after 1110'
-  - 'ARCH-003: FK to plans.id UUID (not plan_slug) consistent with plan_details, plan_revision_history, plan_embeddings'
   - >-
-    confidence column: numeric(4,3) gives range 0.000–9.999; use CHECK (confidence >= 0 AND confidence <= 1) to enforce
-    0.0-1.0
-  - plan_flow_steps FK to plan_flows ON DELETE CASCADE; plan_flows FK to plans ON DELETE CASCADE — full cascade chain
-  - pgTAP test uses BEGIN/ROLLBACK wrapper and TEST-1040-* fixture story_id prefix
-  - 'Non-goal: No MCP tools, no rawContent migration, no embedding column'
-  - 'Risk: FK migration ordering — migration 1120 must run after 999_full_schema_baseline.sql (plans table) and 1110'
-  - 'Risk: Source enum values must align with APRS-2010 extract_flows output (user|inferred|merged)'
+    The graph's DecisionCallback (human-review-checkpoint.ts) is DIFFERENT from the adapters/decision-callbacks/types.ts
+    DecisionCallback. The former is plan-refinement-specific with ask(DecisionContext); the latter is a generic
+    ask(DecisionRequest). The bridge adapter creates a NEW graph-compatible DecisionCallback — it does not extend
+    CLIDecisionCallback.
+  - >-
+    The bridge adapter uses inquirer directly (same approach as cli-callback.ts) since it needs to render flow-specific
+    UI beyond generic options.
+  - The adapters/plan-refinement/ directory is new — needs to be created.
+  - ST-3 and ST-4 both live in adapters/plan-refinement/__tests__/ to follow existing test co-location pattern.
+  - >-
+    The CLI entrypoint uses a stub planLoader (same pattern as generate-stories.ts stubKbGetPlan) with an INJECTION
+    POINT comment.
+  - inquirer is already a dependency in the orchestrator package.json.

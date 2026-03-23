@@ -1,21 +1,21 @@
 {
-  "story_id": "WINT-9010",
-  "generated_at": "2026-03-23T13:20:00Z",
+  "story_id": "APRS-5040",
+  "generated_at": "2026-03-23T23:15:00Z",
   "overall_verdict": "PASS",
   "ac_verdicts": [
     {
       "ac_id": "AC-1",
-      "ac_text": "Decision tier classification and escalation decision modules implemented",
+      "ac_text": "Bridge adapter implements DecisionCallback interface with all 4 HiTL outcomes",
       "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
     },
     {
       "ac_id": "AC-2",
-      "ac_text": "Artifact type and phase mapping modules implemented",
+      "ac_text": "CLI prompt format with plan slug, flows, warnings, errors, 4 choices",
       "verdict": "ACCEPT",
       "evidence_evaluated": 2,
       "strong_evidence_count": 2,
@@ -25,87 +25,17 @@
     },
     {
       "ac_id": "AC-3",
-      "ac_text": "Context query builder modules implemented",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-4",
-      "ac_text": "Token usage and estimation modules implemented",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-5",
-      "ac_text": "Index exports all four new modules with correct API",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-6",
-      "ac_text": "All test files present in __tests__/ directory",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 4,
-      "strong_evidence_count": 4,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-7",
-      "ac_text": "All exported types use Zod schemas with z.infer<>, no TypeScript interfaces",
+      "ac_text": "24 tests (19 unit + 5 integration) all passing",
       "verdict": "ACCEPT",
       "evidence_evaluated": 3,
       "strong_evidence_count": 3,
       "weak_evidence_count": 0,
       "challenge_reason": null,
       "proof_required": null
-    },
-    {
-      "ac_id": "AC-8",
-      "ac_text": "All 200 tests pass (8 test files with 118 new tests)",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-9",
-      "ac_text": "TypeScript type-check and build pass with zero errors",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 2,
-      "strong_evidence_count": 2,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
-    },
-    {
-      "ac_id": "AC-10",
-      "ac_text": "No new runtime dependencies added",
-      "verdict": "ACCEPT",
-      "evidence_evaluated": 1,
-      "strong_evidence_count": 1,
-      "weak_evidence_count": 0,
-      "challenge_reason": null,
-      "proof_required": null
     }
   ],
-  "total_acs": 10,
-  "accepted": 10,
+  "total_acs": 3,
+  "accepted": 3,
   "challenged": 0,
   "rejected": 0
 }

@@ -1,176 +1,80 @@
 schema: 1
-story_id: APRS-1040
-version: 1
-timestamp: '2026-03-21T16:45:00Z'
+story_id: APRS-5040
+phase: implementation
+iteration: 0
+timestamp: '2026-03-23T23:00:00Z'
 
 acceptance_criteria:
   - ac_id: AC-1
-    ac_text: >-
-      workflow.plan_flows table created with source (text CHECK IN user|inferred|merged),
-      confidence (numeric 0-1), status (text CHECK IN approved|unconfirmed|rejected|deferred) columns
     status: PASS
-    evidence_items:
-      - type: file
-        path: apps/api/knowledge-base/src/db/schema/workflow.ts
-        description: >-
-          planFlows Drizzle table defined with source text(), confidence numeric(4,3),
-          status text().default('unconfirmed') columns — CHECK constraints enforced in migration
-      - type: file
-        path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
-        description: >-
-          CREATE TABLE IF NOT EXISTS workflow.plan_flows with CONSTRAINT chk_plan_flows_source
-          CHECK (source IN ('user','inferred','merged')), chk_plan_flows_status
-          CHECK (status IN ('approved','unconfirmed','rejected','deferred')),
-          chk_plan_flows_confidence CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1))
+    evidence_type: test
+    description: >-
+      createCLIDecisionCallbackAdapter in adapters/plan-refinement/cli-decision-callback-adapter.ts
+      satisfies the graph's DecisionCallback interface (ask(DecisionContext) returning
+      {decision, confirmedFlowIds, rejectedFlowIds, reason}). Handles all 4 HiTL decisions:
+      approve, edit, reject, defer. Type checked with zero errors.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - packages/backend/orchestrator/src/cli/run-plan-refinement.ts
 
   - ac_id: AC-2
-    ac_text: >-
-      workflow.plan_flow_steps table created with FK to plan_flows ON DELETE CASCADE
     status: PASS
-    evidence_items:
-      - type: file
-        path: apps/api/knowledge-base/src/db/schema/workflow.ts
-        description: >-
-          planFlowSteps Drizzle table defined with flowId uuid().references(() => planFlows.id,
-          { onDelete: 'cascade' }), stepOrder integer(), stepLabel text(), stepDescription text()
-      - type: file
-        path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
-        description: >-
-          CREATE TABLE IF NOT EXISTS workflow.plan_flow_steps with
-          flow_id UUID NOT NULL REFERENCES workflow.plan_flows(id) ON DELETE CASCADE
+    evidence_type: test
+    description: >-
+      CLI prompt displays plan slug header, all flows with IDs and names, warnings,
+      and errors. 4 inquirer choices (approve/edit/reject/defer). Approve flow populates
+      confirmedFlowIds/rejectedFlowIds via checkbox prompt. Verified by 19 unit tests.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
 
   - ac_id: AC-3
-    ac_text: >-
-      planFlows and planFlowSteps exported from workflow.ts with Zod schemas (z.infer);
-      pnpm check-types shows no new errors introduced by APRS-1040 changes
-    status: PARTIAL
-    evidence_items:
-      - type: file
-        path: apps/api/knowledge-base/src/db/schema/workflow.ts
-        description: >-
-          Current: Exports use Drizzle $inferSelect/$inferInsert.
-          Will be updated to use Zod schemas: PlanFlowSchema, NewPlanFlowSchema,
-          PlanFlowStepSchema, NewPlanFlowStepSchema with z.infer<typeof Schema> pattern.
-      - type: command
-        command: pnpm --filter @repo/knowledge-base exec tsc --noEmit
-        result: PARTIAL
-        details: >-
-          No new type errors from APRS-1040 changes (target met).
-          Pre-existing TS2339 errors in analytics-operations.ts (phase, iteration properties)
-          are unrelated to this story and present in worktree before implementation.
-          These are being fixed in separate work (AC-3 coverage: Zod schema exports will fix).
-
-  - ac_id: AC-4
-    ac_text: >-
-      Migration file with safety preamble, CREATE TABLE IF NOT EXISTS, CHECK constraints on source
-      and status, FK to workflow.plans ON DELETE CASCADE, supporting indexes, and DO completion block
     status: PASS
-    evidence_items:
-      - type: file
-        path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
-        description: >-
-          Full migration with: CREATE TABLE IF NOT EXISTS for both tables,
-          CONSTRAINT chk_plan_flows_source CHECK (source IN ('user','inferred','merged')),
-          CONSTRAINT chk_plan_flows_status CHECK (status IN ('approved','unconfirmed','rejected','deferred')),
-          CONSTRAINT chk_plan_flows_confidence CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
-          FK REFERENCES workflow.plans(id) ON DELETE CASCADE (plan_flows),
-          FK REFERENCES workflow.plan_flows(id) ON DELETE CASCADE (plan_flow_steps),
-          Indexes: idx_plan_flows_plan_id, idx_plan_flows_status, idx_plan_flow_steps_flow_id,
-          idx_plan_flow_steps_flow_order, DO $$ completion notice block with RAISE NOTICE
-
-  - ac_id: AC-5
-    ac_text: >-
-      pgTAP test file with assertions for table existence, column presence/types,
-      CHECK constraint rejection, cascade delete behavior, and index presence
-    status: PASS
-    evidence_items:
-      - type: file
-        path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
-        description: >-
-          21-assertion pgTAP test in BEGIN/ROLLBACK wrapper using TEST-1040-* fixture prefix.
-          Groups: TEST-1040-1 table existence (2), TEST-1040-2 plan_flows columns (5),
-          TEST-1040-3 plan_flow_steps columns (5), TEST-1040-4 CHECK rejection (3: invalid source,
-          invalid status, confidence > 1), TEST-1040-5 FK cascade delete (2: row exists before
-          delete, row gone after), TEST-1040-6 index existence (4: plan_id, status, flow_id, flow_order)
-
-touched_files:
-  - path: apps/api/knowledge-base/src/db/schema/workflow.ts
-    action: modified
-    lines: 50
+    evidence_type: test
     description: >-
-      Added planFlows and planFlowSteps Drizzle table definitions with index definitions
-      and PlanFlow/NewPlanFlow/PlanFlowStep/NewPlanFlowStep type exports
-  - path: apps/api/knowledge-base/src/db/migrations/1120_aprs1040_plan_flows.sql
+      24 total tests passing: 19 unit tests (all 4 decision paths, prompt format, Ctrl+C handling)
+      + 5 integration tests (graph.invoke() with bridged callback for all 4 HiTL outcomes
+      + smoke test with stub planLoader). All tests pass in main monorepo.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+
+test_results:
+  - command: pnpm test --filter @repo/orchestrator -- adapters/plan-refinement
+    outcome: PASS
+    details: '2 test files, 24 tests passed (19 unit + 5 integration)'
+
+  - command: npx tsc --noEmit (grep plan-refinement|run-plan-refinement)
+    outcome: PASS
+    details: 'Zero type errors in all 4 new files'
+
+  - command: pnpm eslint (source files only)
+    outcome: PASS
+    details: 'Zero lint errors on adapter and CLI entrypoint'
+
+files_created:
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
     action: created
-    lines: 102
     description: >-
-      SQL migration slot 1120: CREATE TABLE IF NOT EXISTS for plan_flows and plan_flow_steps
-      with CHECK constraints, FK references, indexes, and DO completion block
-  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1120_aprs1040_plan_flows_test.sql
+      Bridge adapter creating graph-compatible DecisionCallback using inquirer directly.
+      Handles approve (with flow checkbox), edit (no follow-up), reject (reason prompt),
+      defer (reason prompt). Ctrl+C interruption handling for all prompts.
+
+  - path: packages/backend/orchestrator/src/cli/run-plan-refinement.ts
     action: created
-    lines: 175
     description: >-
-      21-assertion pgTAP test file covering all AC-5 verification requirements in BEGIN/ROLLBACK wrapper
+      CLI entrypoint following generate-stories.ts pattern. parseArgs (--plan-slug, --help),
+      stub planLoader with INJECTION POINT comment, wires createPlanRefinementGraph with
+      bridged callback, structured stdout output, exit codes 0/1.
 
-commands_run:
-  - command: pnpm --filter @repo/knowledge-base exec tsc --noEmit
-    result: SUCCESS (no new errors from APRS-1040 changes; pre-existing analytics-operations.ts errors unrelated)
-    timestamp: '2026-03-21T16:42:00Z'
-  - command: pnpm build --filter @repo/knowledge-base
-    result: FAILURE (pre-existing analytics-operations.ts type errors — not introduced by APRS-1040)
-    output: Pre-existing TS2339 errors on phase/iteration properties in analytics-operations.ts (in git diff before this story)
-    timestamp: '2026-03-21T16:43:00Z'
-  - command: pnpm test --filter @repo/knowledge-base
-    result: PARTIAL (8 pre-existing test failures, 53 passing — no new failures from APRS-1040 changes)
-    output: 8 failed | 53 passed — failures in smoke, story-crud, kbmem-schemas, story-outcomes (all pre-existing)
-    timestamp: '2026-03-21T16:44:00Z'
-  - command: psql $KB_DATABASE_URL -f pgtap/1120_aprs1040_plan_flows_test.sql | pg_prove
-    result: PARTIAL (26 assertions planned; migration 1120 adds CHECK/UNIQUE constraints not yet in DB)
-    output: pgTAP tests will pass after migration 1120 is applied to KB DB. Tests cover table/column existence, CHECK constraint rejection, CASCADE delete, index presence, step_order validation (type, NOT NULL, > 0, UNIQUE per-flow)
-    timestamp: '2026-03-21T16:45:00Z'
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+    action: created
+    description: >-
+      19 unit tests covering all 4 decision paths, prompt format verification
+      (plan slug, flow IDs, warnings, errors, 4 choices), and Ctrl+C interruption handling.
 
-endpoints_exercised: []
-
-test_summary:
-  unit: { pass: 1363, fail: 43 }
-  e2e: { pass: 0, fail: 0 }
-
-e2e_tests:
-  status: exempt
-  exempt_reason: story_type infra — pure DB schema migration, no API endpoints or UI surfaces
-  config: null
-  project: null
-  mode: null
-  tests_written: false
-  results:
-    total: 0
-    passed: 0
-    failed: 0
-    skipped: 0
-  failed_tests: []
-  config_issues: []
-  videos: []
-  screenshots: []
-
-coverage: {}
-
-notable_decisions:
-  - 'ARCH-001: text() + CHECK constraints used for source/status — matches all existing workflow.ts patterns, not pgEnum'
-  - 'ARCH-002: Migration slot 1120 — next sequential after 1110_wint1130_worktrees_table.sql'
-  - 'ARCH-003: FK to workflow.plans(id) UUID — consistent with plan_details, plan_revision_history, plan_embeddings'
-  - 'confidence uses NUMERIC(4,3) with CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1))'
-  - 'Full CASCADE chain: plan_flows → plan_flow_steps — removing a plan removes flows and their steps'
-  - 'pgTAP test uses BEGIN/ROLLBACK wrapper with TEST-1040-* fixture prefix per project convention'
-
-known_deviations:
-  - description: >-
-      Pre-existing type errors in analytics-operations.ts (TS2339 on phase and iteration properties)
-      cause build and type-check to fail. These errors exist in the worktree before APRS-1040 changes.
-    impact: none-on-this-story
-  - description: >-
-      E2E tests exempt — this story is pure DB schema (infra type). No HTTP endpoints or UI surfaces
-      were added.
-    impact: none
-
-token_summary:
-  execute: { in: 45000, out: 8000 }
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+    action: created
+    description: >-
+      5 integration tests wiring graph.invoke() with bridged CLI adapter + stub planLoader.
+      Covers all 4 HiTL outcomes (approve, reject, defer, edit→approve) plus smoke test.

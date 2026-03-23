@@ -1,31 +1,7 @@
 schema: 1
-story_id: APRS-5030
-feature_dir: packages/backend/orchestrator
-timestamp: '2026-03-22T19:30:00.000Z'
-current_phase: fix
-last_successful_phase: review
-iteration: 2
-max_iterations: 3
+story_id: APRS-5040
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
 blocked: false
-forced: false
-warnings:
-  - 'Code review iteration 1: 8 warnings (3 syntax, 1 security, 4 typescript)'
-  - 'Addressing: template literals, CLI arg validation, loose generics'
 gen_mode: false
-fix_cycles:
-  - schema_version: 1
-    iteration: 2
-    triggered_by: code_review
-    started_at: '2026-03-22T19:30:00.000Z'
-    completed_at: '2026-03-22T20:32:00.000Z'
-    issues_fixed:
-      - file: packages/backend/orchestrator/src/cli/generate-stories.ts
-        issue: 'Template literal style improvement + CLI argument parsing'
-        severity: low
-      - file: packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts
-        issue: 'Added KbGetPlanInputSchema with proper Zod validation and type inference'
-        severity: medium
-      - file: packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts
-        issue: 'Added KbIngestStoryInputSchema and KbUpdatePlanInputSchema with explicit field definitions'
-        severity: medium
-    verification_result: PASS
