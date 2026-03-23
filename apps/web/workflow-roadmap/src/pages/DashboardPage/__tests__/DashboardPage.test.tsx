@@ -86,6 +86,23 @@ const MOCK_DASHBOARD: DashboardResponse = {
       plans: [{ planSlug: 'plan-a', title: 'Plan A' }],
     },
   ],
+  backlogSummary: {
+    totalOpen: 15,
+    byPriority: [
+      { priority: 'P1', count: 8 },
+      { priority: 'P2', count: 7 },
+    ],
+    byType: [
+      { taskType: 'bug', count: 10 },
+      { taskType: 'feature', count: 5 },
+    ],
+  },
+  backlogAging: [
+    { bucket: '<7d', count: 5 },
+    { bucket: '7-14d', count: 4 },
+    { bucket: '14-30d', count: 3 },
+    { bucket: '30+d', count: 3 },
+  ],
 }
 
 describe('DashboardPage', () => {
@@ -130,7 +147,7 @@ describe('DashboardPage', () => {
     })
   })
 
-  it('renders all 5 dashboard sections', async () => {
+  it('renders all 7 dashboard sections', async () => {
     mockUseGetDashboardQuery.mockReturnValue({
       data: MOCK_DASHBOARD,
       isLoading: false,
@@ -143,6 +160,8 @@ describe('DashboardPage', () => {
       expect(screen.getByText('Plan Progress')).toBeInTheDocument()
       expect(screen.getByText('Aging Stories')).toBeInTheDocument()
       expect(screen.getByText('Impact Ranking')).toBeInTheDocument()
+      expect(screen.getByText('Backlog Health')).toBeInTheDocument()
+      expect(screen.getByText('Backlog Aging')).toBeInTheDocument()
     })
   })
 

@@ -31,7 +31,7 @@ export function ArtifactJsonViewer({
         </div>
       </div>
       {/* Raw JSON */}
-      {hasData && (
+      {hasData ? (
         <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl overflow-hidden">
           <button
             onClick={() => setExpanded(e => !e)}
@@ -40,13 +40,13 @@ export function ArtifactJsonViewer({
             <span>Raw JSON</span>
             <span>{expanded ? '▲' : '▼'}</span>
           </button>
-          {expanded && (
+          {expanded ? (
             <pre className="px-6 pb-6 text-xs text-slate-400 overflow-auto max-h-[600px] leading-relaxed">
               {JSON.stringify(data, null, 2)}
             </pre>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { sql, eq, inArray, not } from 'drizzle-orm'
 import { text, timestamp } from 'drizzle-orm/pg-core'
-import { plans, planStoryLinks } from '@repo/knowledge-base/db'
+import { plans, planStoryLinks, tasks } from '@repo/knowledge-base/db'
 import {
   database,
   stories,
@@ -17,8 +17,7 @@ const storyStateHistory = workflowSchema.table('story_state_history', {
 })
 
 const COMPLETED_STATES = ['completed', 'cancelled']
-
-type PlanLink = { storyId: string; planSlug: string; planTitle: string }
+const BACKLOG_EXCLUDED_STATUSES = ['done', 'wont_do', 'promoted']
 
 export type DashboardResponse = {
   flowHealth: {
@@ -62,6 +61,15 @@ export type DashboardResponse = {
     fanOut: number
     plans: Array<{ planSlug: string; title: string }>
   }>
+  backlogSummary: {
+    totalOpen: number
+    byPriority: Array<{ priority: string; count: number }>
+    byType: Array<{ taskType: string; count: number }>
+  }
+  backlogAging: Array<{
+    bucket: string
+    count: number
+  }>
 }
 
 function daysBetween(from: Date, to: Date): number {
@@ -89,67 +97,162 @@ function computeFanOut(
   return visited.size
 }
 
+type BacklogSummaryRow = {
+  priority: string | null
+  taskType: string
+  count: number
+}
+
+type BacklogAgingRow = {
+  bucket: string
+  count: number
+}
+
+export function buildBacklogSummary(
+  rows: BacklogSummaryRow[],
+): DashboardResponse['backlogSummary'] {
+  const totalOpen = rows.reduce((sum, r) => sum + r.count, 0)
+
+  const priorityMap = new Map<string, number>()
+  const typeMap = new Map<string, number>()
+
+  for (const row of rows) {
+    const pKey = row.priority ?? 'none'
+    priorityMap.set(pKey, (priorityMap.get(pKey) ?? 0) + row.count)
+    typeMap.set(row.taskType, (typeMap.get(row.taskType) ?? 0) + row.count)
+  }
+
+  const byPriority = Array.from(priorityMap.entries())
+    .map(([priority, count]) => ({ priority, count }))
+    .sort((a, b) => b.count - a.count)
+
+  const byType = Array.from(typeMap.entries())
+    .map(([taskType, count]) => ({ taskType, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return { totalOpen, byPriority, byType }
+}
+
+export function buildBacklogAging(rows: BacklogAgingRow[]): DashboardResponse['backlogAging'] {
+  const BUCKETS = ['<7d', '7-14d', '14-30d', '30+d']
+  const bucketMap = new Map(rows.map(r => [r.bucket, r.count]))
+  return BUCKETS.map(bucket => ({ bucket, count: bucketMap.get(bucket) ?? 0 }))
+}
+
 export async function getDashboard(): Promise<DashboardResponse> {
   const now = new Date()
 
-  // Run 5 parallel queries
-  const [stateDistRows, allStoryRows, allDepsRows, planLinkRows, stateHistoryRows] =
-    await Promise.all([
-      // 1. State distribution
-      database
-        .select({
-          state: sql<string>`coalesce(${stories.state}, 'backlog')`,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(stories)
-        .groupBy(sql`coalesce(${stories.state}, 'backlog')`),
+  // Run 7 parallel queries
+  const [
+    stateDistRows,
+    allStoryRows,
+    allDepsRows,
+    planLinkRows,
+    stateHistoryRows,
+    backlogSummaryRows,
+    backlogAgingRows,
+  ] = await Promise.all([
+    // 1. State distribution
+    database
+      .select({
+        state: sql<string>`coalesce(${stories.state}, 'backlog')`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(stories)
+      .groupBy(sql`coalesce(${stories.state}, 'backlog')`),
 
-      // 2. All non-completed stories
-      database
-        .select({
-          storyId: stories.storyId,
-          title: stories.title,
-          state: stories.state,
-          priority: stories.priority,
-        })
-        .from(stories)
-        .where(not(inArray(sql`coalesce(${stories.state}, 'backlog')`, COMPLETED_STATES))),
+    // 2. All non-completed stories
+    database
+      .select({
+        storyId: stories.storyId,
+        title: stories.title,
+        state: stories.state,
+        priority: stories.priority,
+      })
+      .from(stories)
+      .where(not(inArray(sql`coalesce(${stories.state}, 'backlog')`, COMPLETED_STATES))),
 
-      // 3. All dependencies
-      database
-        .select({
-          storyId: storyDependenciesTable.storyId,
-          dependsOnId: storyDependenciesTable.dependsOnId,
-        })
-        .from(storyDependenciesTable),
+    // 3. All dependencies
+    database
+      .select({
+        storyId: storyDependenciesTable.storyId,
+        dependsOnId: storyDependenciesTable.dependsOnId,
+      })
+      .from(storyDependenciesTable),
 
-      // 4. Plan links with titles
-      database
-        .select({
-          storyId: planStoryLinks.storyId,
-          planSlug: planStoryLinks.planSlug,
-          planTitle: plans.title,
-        })
-        .from(planStoryLinks)
-        .innerJoin(plans, eq(planStoryLinks.planSlug, plans.planSlug)),
+    // 4. Plan links with titles
+    database
+      .select({
+        storyId: planStoryLinks.storyId,
+        planSlug: planStoryLinks.planSlug,
+        planTitle: plans.title,
+      })
+      .from(planStoryLinks)
+      .innerJoin(plans, eq(planStoryLinks.planSlug, plans.planSlug)),
 
-      // 5. Latest state entry per story (for days-in-state)
-      database
-        .select({
-          storyId: storyStateHistory.storyId,
-          createdAt: storyStateHistory.createdAt,
-        })
-        .from(
-          sql`(
-            select distinct on (story_id) story_id, created_at
-            from workflow.story_state_history
-            order by story_id, created_at desc
-          ) as ${storyStateHistory}`,
-        ),
-    ])
+    // 5. Latest state entry per story (for days-in-state)
+    database
+      .select({
+        storyId: storyStateHistory.storyId,
+        createdAt: storyStateHistory.createdAt,
+      })
+      .from(
+        sql`(
+          select distinct on (story_id) story_id, created_at
+          from workflow.story_state_history
+          order by story_id, created_at desc
+        ) as ${storyStateHistory}`,
+      ),
+
+    // 6. Backlog summary: group by priority and taskType
+    database
+      .select({
+        priority: tasks.priority,
+        taskType: tasks.taskType,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tasks)
+      .where(
+        sql`${tasks.deletedAt} is null and ${tasks.status} not in (${sql.join(
+          BACKLOG_EXCLUDED_STATUSES.map(s => sql`${s}`),
+          sql`, `,
+        )})`,
+      )
+      .groupBy(tasks.priority, tasks.taskType),
+
+    // 7. Backlog aging: CASE buckets on age from created_at
+    database
+      .select({
+        bucket: sql<string>`
+          case
+            when now() - ${tasks.createdAt} < interval '7 days' then '<7d'
+            when now() - ${tasks.createdAt} < interval '14 days' then '7-14d'
+            when now() - ${tasks.createdAt} < interval '30 days' then '14-30d'
+            else '30+d'
+          end
+        `,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tasks)
+      .where(
+        sql`${tasks.deletedAt} is null and ${tasks.status} not in (${sql.join(
+          BACKLOG_EXCLUDED_STATUSES.map(s => sql`${s}`),
+          sql`, `,
+        )})`,
+      )
+      .groupBy(
+        sql`
+          case
+            when now() - ${tasks.createdAt} < interval '7 days' then '<7d'
+            when now() - ${tasks.createdAt} < interval '14 days' then '7-14d'
+            when now() - ${tasks.createdAt} < interval '30 days' then '14-30d'
+            else '30+d'
+          end
+        `,
+      ),
+  ])
 
   // Build lookup maps
-  const storyMap = new Map(allStoryRows.map(s => [s.storyId, s]))
   const completedSet = new Set<string>()
   // We need all story states for completeness check
   const allStatesResult = await database
@@ -290,11 +393,17 @@ export async function getDashboard(): Promise<DashboardResponse> {
     .sort((a, b) => b.fanOut - a.fanOut)
     .slice(0, 15)
 
+  // --- Backlog Summary & Aging ---
+  const backlogSummary = buildBacklogSummary(backlogSummaryRows)
+  const backlogAging = buildBacklogAging(backlogAgingRows)
+
   return {
     flowHealth: { totalStories, distribution, blockedCount },
     unblockedQueue,
     planProgress,
     agingStories,
     impactRanking,
+    backlogSummary,
+    backlogAging,
   }
 }

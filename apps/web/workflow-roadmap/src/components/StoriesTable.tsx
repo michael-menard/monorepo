@@ -36,7 +36,6 @@ function relativeTime(iso: string | null) {
 }
 
 function createColumns(fromPlan?: FromPlanInfo) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stateUpdater = fromPlan ? (((prev: any) => ({ ...prev, fromPlan })) as any) : undefined
   return [
     col.accessor('storyId', {

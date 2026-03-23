@@ -1,5 +1,5 @@
-import { ArtifactJsonViewer } from './ArtifactJsonViewer'
 import type { StoryDetails } from '../../store/roadmapApi'
+import { ArtifactJsonViewer } from './ArtifactJsonViewer'
 
 export function VerificationTab({
   verification,
@@ -32,20 +32,20 @@ export function VerificationTab({
       <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-base font-semibold text-slate-300">QA Verification</h2>
-          {verification.verdict && (
+          {verification.verdict ? (
             <span
               className={`text-sm font-mono font-semibold ${verdictColor(verification.verdict)}`}
             >
               {verification.verdict}
             </span>
-          )}
+          ) : null}
         </div>
-        {summary && (
+        {summary ? (
           <p className="text-sm text-slate-400 mb-4 leading-relaxed border-l-2 border-slate-700 pl-3">
             {summary}
           </p>
-        )}
-        {gates && Object.keys(gates).length > 0 && (
+        ) : null}
+        {gates && Object.keys(gates).length > 0 ? (
           <div className="space-y-1 mb-4">
             {Object.entries(gates).map(([gate, verdict]) => (
               <div
@@ -60,8 +60,8 @@ export function VerificationTab({
               </div>
             ))}
           </div>
-        )}
-        {advisoryNotes && advisoryNotes.length > 0 && (
+        ) : null}
+        {advisoryNotes && advisoryNotes.length > 0 ? (
           <div className="border-t border-slate-800 pt-3 space-y-1.5">
             <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
               Advisory Notes
@@ -72,7 +72,7 @@ export function VerificationTab({
               </p>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
       <ArtifactJsonViewer title="" data={verification.data} meta={[]} />
     </div>

@@ -4,6 +4,8 @@ import { UnblockedWorkQueue } from '../../components/dashboard/UnblockedWorkQueu
 import { PlanProgressGrid } from '../../components/dashboard/PlanProgressGrid'
 import { StoryAgingList } from '../../components/dashboard/StoryAgingList'
 import { ImpactRanking } from '../../components/dashboard/ImpactRanking'
+import { BacklogSummaryCard } from '../../components/dashboard/BacklogSummaryCard'
+import { BacklogAgingList } from '../../components/dashboard/BacklogAgingList'
 
 export function DashboardPage() {
   const { data, isLoading, error } = useGetDashboardQuery()
@@ -42,6 +44,8 @@ export function DashboardPage() {
 
         <aside className="space-y-8">
           <ImpactRanking stories={data.impactRanking} />
+          <BacklogSummaryCard backlogSummary={data.backlogSummary} />
+          <BacklogAgingList backlogAging={data.backlogAging} />
         </aside>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { DetailCard } from '../shared/DetailCard'
-import { VerdictIcon } from './VerdictIcon'
 import { fmtMs, fmtTokens } from '../../utils/formatters'
 import type { StoryDetails } from '../../store/roadmapApi'
+import { VerdictIcon } from './VerdictIcon'
 
 export function OutcomeCard({ outcome }: { outcome: NonNullable<StoryDetails['outcome']> }) {
   return (
@@ -63,12 +63,12 @@ export function OutcomeCard({ outcome }: { outcome: NonNullable<StoryDetails['ou
           <span className="text-slate-500">Cached tokens</span>
           <span className="font-mono text-slate-400">{fmtTokens(outcome.totalCachedTokens)}</span>
         </div>
-        {outcome.primaryBlocker && (
+        {outcome.primaryBlocker ? (
           <div className="pt-2 border-t border-slate-800">
             <span className="text-xs text-slate-500">Primary blocker: </span>
             <span className="text-xs text-red-400">{outcome.primaryBlocker}</span>
           </div>
-        )}
+        ) : null}
       </div>
     </DetailCard>
   )
