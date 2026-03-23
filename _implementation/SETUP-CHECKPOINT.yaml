@@ -1,0 +1,39 @@
+# Phase 0 Setup Checkpoint for APRS-1060
+# Generated: 2026-03-21T00:00:00Z
+
+story_id: APRS-1060
+phase: setup
+iteration: 0
+timestamp: '2026-03-21T00:00:00Z'
+
+# Checkpoint state
+current_phase: setup
+last_successful_phase: null
+max_iterations: 3
+blocked: false
+forced: false
+gen_mode: false
+next_phase: implementation
+
+# Setup artifacts
+artifacts:
+  checkpoint:
+    status: written
+    schema: 1
+    path: KB (not filesystem)
+  scope:
+    status: written
+    schema: 1
+    path: KB (not filesystem)
+
+# Working set sync
+working_set:
+  branch: story/APRS-1060
+  worktree: /Users/michaelmenard/Development/monorepo/tree/story/APRS-1060
+
+# Setup validation
+validation:
+  - mode: implement ✓
+  - no_prior_checkpoints: true ✓
+  - story_ready: true ✓
+  - gen_mode_false: true ✓

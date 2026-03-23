@@ -173,6 +173,37 @@ export class NodeRetryExhaustedError extends NodeExecutionError {
 }
 
 /**
+ * Error thrown when quality-based escalation chain is fully exhausted.
+ * APRS-1060: All model tiers (Sonnet → Opus → human) have been tried.
+ */
+export class QualityEscalationExhaustedError extends NodeExecutionError {
+  public readonly modelsTried: string[]
+  public readonly lastError: Error
+
+  constructor(nodeName: string, modelsTried: string[], lastError: Error) {
+    const models = modelsTried.join(', ')
+    const message = `Node "${nodeName}" quality escalation exhausted: ${models}`
+    super(message, NodeErrorCodes.RETRY_EXHAUSTED, nodeName)
+    this.name = 'QualityEscalationExhaustedError'
+    this.modelsTried = modelsTried
+    this.lastError = lastError
+
+    Object.setPrototypeOf(this, new.target.prototype)
+  }
+
+  override toJSON() {
+    return {
+      ...super.toJSON(),
+      modelsTried: this.modelsTried,
+      lastError: {
+        name: this.lastError.name,
+        message: this.lastError.message,
+      },
+    }
+  }
+}
+
+/**
  * Configuration for stack trace sanitization.
  * AC-20: Stack trace sanitization.
  */
