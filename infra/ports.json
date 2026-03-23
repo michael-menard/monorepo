@@ -1,0 +1,29 @@
+{
+  "_comment": "Canonical port registry. All app ports live here. See infra/ports.cjs for the reader.",
+  "_ranges": {
+    "8000-8xxx": "Frontend Vite dev servers (increment by 3)",
+    "9100-9xxx": "Backend HTTP services (increment by 3)"
+  },
+  "MAIN_APP_PORT": 8000,
+  "APP_DASHBOARD_PORT": 8003,
+  "RESET_PASSWORD_PORT": 8006,
+  "USER_SETTINGS_PORT": 8009,
+  "INSPIRATION_GALLERY_PORT": 8012,
+  "INSTRUCTIONS_GALLERY_PORT": 8015,
+  "SETS_GALLERY_PORT": 8018,
+  "WISHLIST_GALLERY_PORT": 8021,
+  "WORKFLOW_ADMIN_PORT": 8024,
+  "WORKFLOW_ROADMAP_PORT": 8027,
+  "PLAN_CHAT_PORT": 8030,
+  "LEGO_API_PORT": 9100,
+  "ROADMAP_SVC_PORT": 9103,
+  "PORT_MONITOR_PORT": 8033,
+  "_deps": {
+    "WORKFLOW_ADMIN_PORT": ["ROADMAP_SVC_PORT", "LEGO_API_PORT"],
+    "MAIN_APP_PORT": ["LEGO_API_PORT"],
+    "WORKFLOW_ROADMAP_PORT": ["ROADMAP_SVC_PORT"],
+    "PORT_MONITOR_PORT": ["ROADMAP_SVC_PORT"]
+  },
+  "KNOWLEDGE_BASE_PORT": 9106,
+  "PIPELINE_PORT": 9109
+}
