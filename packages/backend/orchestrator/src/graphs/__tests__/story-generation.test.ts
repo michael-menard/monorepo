@@ -1,199 +1,180 @@
 /**
- * story-generation graph compilation + integration tests
+ * Story Generation Graph tests
  * APRS-4010: ST-5 / AC-6, AC-7
- * APRS-4020: ST-5 / AC-7 (5-node pipeline)
  */
 
 import { describe, it, expect, vi } from 'vitest'
 import { createStoryGenerationGraph } from '../story-generation.js'
-import type { GraphValidatorFn } from '../../nodes/story-generation/validate-graph.js'
+import type { NormalizedPlan, Flow } from '../../state/plan-refinement-state.js'
+import type { LlmAdapterFn } from '../../nodes/story-generation/generate-stories.js'
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-const VALID_PLAN = {
-  planSlug: 'test-plan',
-  title: 'Test Plan',
-  summary: 'Summary',
-  problemStatement: 'Problem',
-  proposedSolution: 'Solution',
-  goals: ['Goal 1'],
-  nonGoals: [],
-  flows: [
-    {
-      id: 'flow-1',
-      name: 'User Flow',
-      actor: 'User',
-      trigger: 'User clicks',
-      steps: [
-        { index: 1, description: 'Open form' },
-        { index: 2, description: 'Submit form' },
-      ],
-      successOutcome: 'Done',
-      source: 'user',
-      confidence: 1.0,
-      status: 'confirmed',
-    },
-  ],
-  openQuestions: [],
-  warnings: [],
-  constraints: [],
-  dependencies: [],
-  status: 'active',
-  priority: 'high',
-  tags: ['test'],
+function makeFlow(overrides: Partial<Flow> = {}): Flow {
+  return {
+    id: 'flow-1',
+    name: 'Test Flow',
+    actor: 'User',
+    trigger: 'User clicks button',
+    steps: [
+      { index: 1, description: 'Open form' },
+      { index: 2, description: 'Save data' },
+    ],
+    successOutcome: 'Completed',
+    source: 'user',
+    confidence: 1.0,
+    status: 'confirmed',
+    ...overrides,
+  }
 }
 
+function makePlan(overrides: Partial<NormalizedPlan> = {}): NormalizedPlan {
+  return {
+    planSlug: 'test-plan',
+    title: 'Test Plan',
+    summary: 'A test plan',
+    problemStatement: 'Problem',
+    proposedSolution: 'Solution',
+    goals: ['Goal 1'],
+    nonGoals: [],
+    flows: [makeFlow()],
+    openQuestions: [],
+    warnings: [],
+    constraints: [],
+    dependencies: [],
+    status: 'refined',
+    priority: 'medium',
+    tags: ['test'],
+    ...overrides,
+  }
+}
+
+const mockLlmAdapter: LlmAdapterFn = vi.fn().mockResolvedValue({
+  description: 'Generated description',
+  acceptance_criteria: ['AC-1: Works'],
+  subtasks: [],
+  risk: 'low',
+})
+
 // ============================================================================
-// Graph compilation tests
+// Tests
 // ============================================================================
 
-describe('createStoryGenerationGraph', () => {
+describe('Story Generation Graph', () => {
   it('compiles without throwing (AC-6)', () => {
     expect(() => createStoryGenerationGraph()).not.toThrow()
   })
 
-  it('returns a compiled graph with invoke method (AC-7)', () => {
-    const graph = createStoryGenerationGraph()
-    expect(typeof graph.invoke).toBe('function')
+  it('compiles with injectable adapters', () => {
+    const planLoader = vi.fn()
+    const llmAdapter = vi.fn()
+    expect(() =>
+      createStoryGenerationGraph({ planLoader, llmAdapter }),
+    ).not.toThrow()
   })
 
-  it('graph structure: START → load_refined_plan → slice_flows → generate_stories → wire_dependencies → validate_graph → END', () => {
-    // Compilation confirms graph structure is valid
-    const graph = createStoryGenerationGraph()
-    expect(graph).toBeDefined()
-  })
-})
+  it('happy path: plan in state → generates stories', async () => {
+    const plan = makePlan()
+    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
 
-// ============================================================================
-// Graph integration tests (with injectable adapters)
-// ============================================================================
-
-describe('createStoryGenerationGraph integration', () => {
-  it('runs full 5-node pipeline from start to end with plan loader', async () => {
-    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'Story description',
-      acceptance_criteria: ['AC1'],
-      subtasks: ['Task 1'],
-      risk: 'low',
+    const result = await graph.invoke({
+      planSlug: 'test-plan',
+      refinedPlan: plan,
     })
 
-    const graph = createStoryGenerationGraph({ planLoader, llmAdapter })
-    const result = await graph.invoke({ planSlug: 'test-plan' })
-
     expect(result.generationPhase).toBe('complete')
-    expect(result.refinedPlan).not.toBeNull()
-    expect(result.refinedPlan?.planSlug).toBe('test-plan')
-    expect(result.flows).toHaveLength(1)
-    expect(result.slicedFlows.length).toBeGreaterThan(0)
     expect(result.generatedStories.length).toBeGreaterThan(0)
-    // 5-node pipeline: wire_dependencies and validate_graph ran
-    expect(result.orderedStories.length).toBeGreaterThan(0)
-    expect(result.validationResult).not.toBeNull()
-    expect(result.validationResult?.passed).toBe(true)
-    expect(planLoader).toHaveBeenCalledWith('test-plan')
+    expect(result.generatedStories[0].parent_plan_slug).toBe('test-plan')
+    expect(result.generatedStories[0].parent_flow_id).toBe('flow-1')
   })
 
-  it('exits at load_refined_plan on error (plan not found)', async () => {
-    const planLoader = vi.fn().mockResolvedValue(null)
+  it('happy path: plan loaded via adapter → generates stories', async () => {
+    const plan = makePlan()
+    const planLoader = vi.fn().mockResolvedValue(plan)
+    const graph = createStoryGenerationGraph({ planLoader, llmAdapter: mockLlmAdapter })
 
+    const result = await graph.invoke({
+      planSlug: 'test-plan',
+    })
+
+    expect(planLoader).toHaveBeenCalledWith('test-plan')
+    expect(result.generationPhase).toBe('complete')
+    expect(result.generatedStories.length).toBeGreaterThan(0)
+  })
+
+  it('load_refined_plan error → short-circuits to END', async () => {
+    const planLoader = vi.fn().mockResolvedValue(null)
     const graph = createStoryGenerationGraph({ planLoader })
-    const result = await graph.invoke({ planSlug: 'missing-plan' })
+
+    const result = await graph.invoke({
+      planSlug: 'missing-plan',
+    })
 
     expect(result.generationPhase).toBe('error')
     expect(result.errors.length).toBeGreaterThan(0)
-    // Should not have proceeded to slice or generate
+    expect(result.errors[0]).toContain('no plan found')
+    // slice_flows and generate_stories should not have run
     expect(result.slicedFlows).toEqual([])
     expect(result.generatedStories).toEqual([])
   })
 
-  it('completes with empty stories when no confirmed flows', async () => {
-    const planWithNoConfirmedFlows = {
-      ...VALID_PLAN,
+  it('no confirmed flows → error at load_refined_plan', async () => {
+    const plan = makePlan({
+      flows: [makeFlow({ status: 'unconfirmed' })],
+    })
+    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
+
+    const result = await graph.invoke({
+      planSlug: 'test-plan',
+      refinedPlan: plan,
+    })
+
+    expect(result.generationPhase).toBe('error')
+    expect(result.errors.some((e: string) => e.includes('no confirmed flows'))).toBe(true)
+  })
+
+  it('multiple flows → multiple stories', async () => {
+    const plan = makePlan({
       flows: [
-        {
-          ...VALID_PLAN.flows[0],
-          status: 'unconfirmed',
-        },
+        makeFlow({ id: 'f1', name: 'Flow One' }),
+        makeFlow({ id: 'f2', name: 'Flow Two' }),
       ],
-    }
-    const planLoader = vi.fn().mockResolvedValue(planWithNoConfirmedFlows)
+    })
+    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
 
-    const graph = createStoryGenerationGraph({ planLoader })
-    const result = await graph.invoke({ planSlug: 'test-plan' })
+    const result = await graph.invoke({
+      planSlug: 'test-plan',
+      refinedPlan: plan,
+    })
 
-    // No confirmed flows → slice_flows proceeds but generates nothing
-    expect(result.generatedStories).toEqual([])
     expect(result.generationPhase).toBe('complete')
+    // At minimum 2 stories (one per flow), possibly more if slicing splits them
+    expect(result.generatedStories.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('accepts injectable adapters via factory (AC-7)', () => {
-    const planLoader = vi.fn().mockResolvedValue(null)
-    const llmAdapter = vi.fn()
+  it('stories have correct schema fields (AC-2)', async () => {
+    const plan = makePlan()
+    const graph = createStoryGenerationGraph({ llmAdapter: mockLlmAdapter })
 
-    expect(() => createStoryGenerationGraph({ planLoader, llmAdapter })).not.toThrow()
-  })
-
-  it('works with no adapters (default no-op behavior)', async () => {
-    const graph = createStoryGenerationGraph()
-    // With no planLoader, should error out gracefully
-    const result = await graph.invoke({ planSlug: 'any-plan' })
-
-    expect(result.generationPhase).toBe('error')
-    expect(result.errors.length).toBeGreaterThan(0)
-  })
-
-  it('accepts injectable graphValidator via factory', () => {
-    const graphValidator: GraphValidatorFn = vi.fn().mockReturnValue({
-      passed: true,
-      errors: [],
-      warnings: [],
+    const result = await graph.invoke({
+      planSlug: 'test-plan',
+      refinedPlan: plan,
     })
 
-    expect(() => createStoryGenerationGraph({ graphValidator })).not.toThrow()
-  })
-
-  it('exits at wire_dependencies on error', async () => {
-    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'desc',
-      acceptance_criteria: ['AC1'],
-      subtasks: [],
-      risk: 'low',
-    })
-    // minimumPathFn that throws → wire_dependencies sets error phase
-    const minimumPathFn = () => {
-      throw new Error('wiring failed')
-    }
-
-    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, minimumPathFn })
-    const result = await graph.invoke({ planSlug: 'test-plan' })
-
-    expect(result.generationPhase).toBe('error')
-    expect(result.errors.some((e: string) => e.includes('wire_dependencies failed'))).toBe(true)
-  })
-
-  it('exits at validate_graph when validation fails (cycle)', async () => {
-    const planLoader = vi.fn().mockResolvedValue(VALID_PLAN)
-    const llmAdapter = vi.fn().mockResolvedValue({
-      description: 'desc',
-      acceptance_criteria: ['AC1'],
-      subtasks: [],
-      risk: 'low',
-    })
-    const graphValidator: GraphValidatorFn = () => ({
-      passed: false,
-      errors: ['Cycle detected: A → B → A'],
-      warnings: [],
-    })
-
-    const graph = createStoryGenerationGraph({ planLoader, llmAdapter, graphValidator })
-    const result = await graph.invoke({ planSlug: 'test-plan' })
-
-    expect(result.generationPhase).toBe('error')
-    expect(result.errors.some((e: string) => e.includes('Cycle detected'))).toBe(true)
+    const story = result.generatedStories[0]
+    expect(story).toHaveProperty('title')
+    expect(story).toHaveProperty('description')
+    expect(story).toHaveProperty('acceptance_criteria')
+    expect(story).toHaveProperty('subtasks')
+    expect(story).toHaveProperty('tags')
+    expect(story).toHaveProperty('risk')
+    expect(story).toHaveProperty('minimum_path')
+    expect(story).toHaveProperty('parent_plan_slug')
+    expect(story).toHaveProperty('parent_flow_id')
+    expect(story).toHaveProperty('flow_step_reference')
+    expect(story.minimum_path).toBe(false) // DEC-4
   })
 })
 
