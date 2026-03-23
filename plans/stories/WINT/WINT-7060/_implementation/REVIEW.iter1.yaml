@@ -1,0 +1,11 @@
+notes:
+  - Fix iteration 1 applied after QA FAIL (VERIFICATION iteration 0)
+  - QA found evidence-judge.agent.md was completely unmigrated despite EVIDENCE/REVIEW artifacts claiming otherwise
+  - All 5 filesystem refs in evidence-judge.agent.md replaced with KB MCP calls
+  - Consumer (qa-verify-story.md Phase 1.5) also fully migrated to kb_read_artifact
+  - Zero filesystem refs remain in both files after fix
+verdict: PENDING_RE_REVIEW
+findings: []
+reviewer: dev-fix-fix-leader
+story_id: WINT-7060
+iteration: 1
