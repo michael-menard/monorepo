@@ -1,25 +1,11 @@
 {
-  "story_id": "PIPE-2040",
-  "generated_at": "2026-03-18T00:00:00Z",
+  "story_id": "WINT-6060",
+  "generated_at": "2026-03-23T00:00:00.000Z",
   "franken_features_found": 0,
   "violations": [],
   "warnings": [
-    "Graph checker invoked on scheduler implementation files (not feature cohesion related). Changed files: apps/api/pipeline/src/scheduler/__types__/index.ts, apps/api/pipeline/src/scheduler/index.ts, apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts. These files contain BullMQ scheduler dispatch logic, not feature definitions or CRUD completeness checks. Graph-checker is a Phase 4 cohesion detection tool — scope mismatch with PIPE-2040 implementation files."
+    "graph.features empty — WINT-4030 may not have run",
+    "No active cohesion rules found — WINT-4050 may not have run"
   ],
-  "warning_count": 1,
-  "analysis": {
-    "reason": "SCOPE_MISMATCH",
-    "details": "The graph-checker agent is designed to detect franken-features (features missing CRUD stages) and cohesion rule violations by querying graph.features, graph.epics, graph.capabilities, and the rules registry. The changed files in PIPE-2040 are the BullMQ scheduler implementation for dispatching ready stories to the pipeline. These concerns are orthogonal. The scheduler changes contain zero references to feature definitions, CRUD completeness, or cohesion rules.",
-    "changed_files_scope": [
-      "apps/api/pipeline/src/scheduler/__types__/index.ts (SchedulerConfigSchema, dispatch configuration)",
-      "apps/api/pipeline/src/scheduler/index.ts (SchedulerLoop class, poll cycle logic, finish-before-new-start ordering)",
-      "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts (unit tests for dispatch, ordering, and atomicity)"
-    ],
-    "expected_scope_for_graph_checker": [
-      "Queries to feature cohesion graph (graph.features, graph.epics, graph.capabilities)",
-      "Queries to rules registry (wint.rules with status='active')",
-      "CRUD stage analysis (create, read, update, delete capability completeness)",
-      "Feature completeness violations and actionable hints"
-    ]
-  }
+  "warning_count": 2
 }
