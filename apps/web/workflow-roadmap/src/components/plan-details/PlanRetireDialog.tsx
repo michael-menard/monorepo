@@ -6,7 +6,6 @@ import {
   AppAlertDialogFooter,
   AppAlertDialogTitle,
   AppAlertDialogDescription,
-  AppAlertDialogAction,
   AppAlertDialogCancel,
   CustomButton,
 } from '@repo/app-component-library'
@@ -70,10 +69,9 @@ export function PlanRetireDialog({
                       <span className="font-mono text-slate-500">{s.storyId}</span>
                       <span className="truncate">{s.title}</span>
                       {s.hasActiveWorktree && (
-                        <GitBranch
-                          className="h-3 w-3 text-amber-400 shrink-0"
-                          title="Has active worktree"
-                        />
+                        <span title="Has active worktree">
+                          <GitBranch className="h-3 w-3 text-amber-400 shrink-0" />
+                        </span>
                       )}
                     </li>
                   ))}
@@ -127,22 +125,20 @@ export function PlanRetireDialog({
 
         <AppAlertDialogFooter>
           <AppAlertDialogCancel disabled={isRetiring}>Cancel</AppAlertDialogCancel>
-          <AppAlertDialogAction asChild>
-            <CustomButton
-              variant="destructive"
-              onClick={onConfirm}
-              disabled={isLoadingImpact || isRetiring}
-            >
-              {isRetiring ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  {actionLabel === 'Delete' ? 'Deleting...' : 'Superseding...'}
-                </>
-              ) : (
-                `Confirm ${actionLabel}`
-              )}
-            </CustomButton>
-          </AppAlertDialogAction>
+          <CustomButton
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isLoadingImpact || isRetiring}
+          >
+            {isRetiring ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                {actionLabel === 'Delete' ? 'Deleting...' : 'Superseding...'}
+              </>
+            ) : (
+              `Confirm ${actionLabel}`
+            )}
+          </CustomButton>
         </AppAlertDialogFooter>
       </AppAlertDialogContent>
     </AppAlertDialog>
