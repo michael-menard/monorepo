@@ -1,0 +1,69 @@
+feasible: true
+confidence: high
+rationale: >
+  This story creates a single Markdown file (.claude/skills/weekly-report/SKILL.md).
+  No TypeScript source files, no DB migrations, no Lambda handlers, no npm packages.
+  The invocation pattern (Task tool foreground delegation to an existing agent) is
+  already established by /batch-process (WINT-6020) and /batch-status (WINT-6030).
+  The only risk is the WINT-6060 dependency for end-to-end testing, which is
+  non-blocking for authoring.
+complexity: low
+change_surface:
+  areas:
+    - '.claude/skills/weekly-report/ (new directory and SKILL.md file)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'No deployment steps required. Skill is a Markdown prompt file consumed by Claude Code.'
+risks:
+  - finding: >
+      WINT-6060 dependency: weekly-analyst.agent.md exists on disk but kb_get_scoreboard
+      MCP registration may not be complete. Skill can be authored and reviewed independently
+      but cannot be fully exercised end-to-end until WINT-6060 is done.
+    mitigation: >
+      Author SKILL.md referencing the invocation contract of weekly-analyst.agent.md as-is.
+      Add AC-4 prerequisite note in SKILL.md. Manual test MC-2 deferred until WINT-6060
+      completes. All other ACs can be verified by static inspection.
+missing_requirements: []
+evidence_expectations:
+  - 'File exists at .claude/skills/weekly-report/SKILL.md on branch story/WINT-6070'
+  - 'YAML frontmatter parses without error (yamllint or manual inspection)'
+  - 'All 14 ACs verified by direct inspection of SKILL.md content'
+  - 'No /token-log call present in SKILL.md'
+  - 'Date derivation algorithm handles Monday edge case correctly'
+subtasks:
+  - id: ST-1
+    title: 'Create .claude/skills/weekly-report/SKILL.md'
+    goal: >
+      Author the complete weekly-report skill file with all required sections:
+      YAML frontmatter, Usage (with argument table and 3 examples), Prerequisites,
+      date derivation rule, delegation steps (read agent → CONTEXT block → Task tool →
+      await signal → kb_read_artifact → render report), graceful degradation,
+      non-negotiables (no /token-log), and output format spec.
+    files_to_read:
+      - '.claude/agents/weekly-analyst.agent.md'
+      - '.claude/skills/batch-process/SKILL.md'
+      - '.claude/skills/scoreboard/SKILL.md'
+      - '.claude/skills/next-actions/SKILL.md'
+      - '.claude/skills/story-state/SKILL.md'
+    files_to_modify:
+      - '.claude/skills/weekly-report/SKILL.md (CREATE)'
+    acs:
+      - 'AC-1'
+      - 'AC-2'
+      - 'AC-3'
+      - 'AC-4'
+      - 'AC-5'
+      - 'AC-6'
+      - 'AC-7'
+      - 'AC-8'
+      - 'AC-9'
+      - 'AC-10'
+      - 'AC-11'
+      - 'AC-12'
+      - 'AC-13'
+      - 'AC-14'
+    depends_on: none
+    verification: >
+      Read .claude/skills/weekly-report/SKILL.md and verify all 14 ACs are satisfied
+      by direct inspection. No pnpm command needed — this is a Markdown file.
+    estimated_tokens: 6000

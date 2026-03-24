@@ -1,0 +1,207 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  tests_not_applicable: true
+  tests_not_applicable_reason: >
+    This is a skill-prompt-only story. The deliverable is a single Markdown file
+    (.claude/skills/weekly-report/SKILL.md). No TypeScript source files, no DB
+    migrations, no React components. Vitest coverage threshold does not apply.
+    Verification is via direct file inspection and AC cross-referencing, following
+    the same exemption established for WINT-6020 and WINT-6030.
+happy_path_tests:
+  - id: HP-1
+    title: 'SKILL.md exists at correct path with valid frontmatter'
+    setup: 'Story WINT-6070 has been implemented on branch story/WINT-6070'
+    action: |
+      git show story/WINT-6070:./.claude/skills/weekly-report/SKILL.md
+      Verify YAML frontmatter block is present and parses correctly.
+    expected: |
+      File exists. Frontmatter contains: created, updated, version,
+      name: weekly-report, description, kb_tools: [kb_read_artifact].
+      kb_write_artifact must NOT appear in kb_tools.
+    evidence: 'File contents visible via git show. YAML parsed without error.'
+
+  - id: HP-2
+    title: 'Usage section present with correct command signature and argument table'
+    setup: 'SKILL.md file exists on branch'
+    action: |
+      Read SKILL.md. Verify ## Usage section exists.
+      Confirm command signature: /weekly-report [--week=YYYY-MM-DD] [--feature=FEATURE] [--force]
+      Confirm three-column argument table (Flag | Description | Example) covers all three flags.
+    expected: |
+      Usage section present. Command signature matches spec.
+      Argument table rows: --week, --feature, --force all present with descriptions and examples.
+    evidence: 'Direct inspection of SKILL.md.'
+
+  - id: HP-3
+    title: 'Three concrete examples present in Usage section'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Count example commands in Usage section.
+    expected: |
+      At least 3 examples: (1) current week with no args, (2) specific --week=YYYY-MM-DD,
+      (3) feature-scoped with --feature flag.
+    evidence: 'Direct inspection of SKILL.md Usage section.'
+
+  - id: HP-4
+    title: 'Skill reads weekly-analyst.agent.md before invoking Task tool'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Verify step 1 of execution instructions reads
+      .claude/agents/weekly-analyst.agent.md before invoking Task tool.
+    expected: |
+      Explicit instruction to read .claude/agents/weekly-analyst.agent.md
+      appears before the Task tool invocation step.
+    evidence: 'Direct inspection of implementation steps in SKILL.md.'
+
+  - id: HP-5
+    title: 'Skill delegates to weekly-analyst via foreground Task tool'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Verify Task tool invocation is foreground (not background).
+      Verify CONTEXT block includes week_of (string), feature (optional string),
+      force (optional boolean).
+    expected: |
+      Task tool call does NOT use run_in_background: true.
+      CONTEXT block passes week_of, feature, force as per weekly-analyst input contract.
+    evidence: 'Direct inspection of Task tool invocation in SKILL.md.'
+
+  - id: HP-6
+    title: 'Post-completion: kb_read_artifact called in main conversation'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Verify after receiving WEEKLY ANALYSIS COMPLETE signal,
+      skill calls kb_read_artifact directly (not inside another Task tool).
+      Verify artifact_name = WEEKLY-ANALYSIS-{week_of}, story_id = SYSTEM,
+      artifact_type = analysis.
+    expected: |
+      kb_read_artifact call with correct parameters appears in main conversation
+      step after Task tool completion signal is received.
+    evidence: 'Direct inspection of SKILL.md post-completion steps.'
+
+  - id: HP-7
+    title: 'Rendered report structure matches spec'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Verify output rendering section includes:
+      scoreboard summary table, anomalies section, recommendations section,
+      week-over-week delta section.
+    expected: |
+      All four report sections described and formatted per spec.
+    evidence: 'Direct inspection of output format in SKILL.md.'
+
+error_cases:
+  - id: EC-1
+    title: 'WEEKLY ANALYSIS FAILED: skill surfaces failure verbatim without crash'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Find section describing WEEKLY ANALYSIS FAILED handling.
+      Verify failure reason is surfaced verbatim to the operator.
+    expected: |
+      Explicit instruction to surface WEEKLY ANALYSIS FAILED: {reason} verbatim.
+      No re-throw or crash behavior described.
+    evidence: 'Direct inspection of SKILL.md error handling section.'
+
+  - id: EC-2
+    title: 'kb_read_artifact returns null: graceful degradation'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Find section describing what happens when kb_read_artifact
+      returns null after WEEKLY ANALYSIS COMPLETE.
+    expected: |
+      Skill shows raw completion signal from the agent plus note:
+      "WeeklyAnalysis artifact could not be loaded for display — check KB directly".
+      Does not crash.
+    evidence: 'Direct inspection of SKILL.md graceful degradation section.'
+
+  - id: EC-3
+    title: 'Skill does NOT call /token-log'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Search for any reference to /token-log.
+      Verify either: (a) no mention, or (b) explicit "do NOT call /token-log" non-negotiable.
+    expected: |
+      /token-log is not called by the skill. Token logging handled by weekly-analyst agent.
+      If present, must be a prohibition note, not an invocation.
+    evidence: 'Direct inspection of SKILL.md. Absence of /token-log call or presence of prohibition note.'
+
+edge_cases:
+  - id: ED-1
+    title: '--week flag omitted: derives most recent Monday correctly'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Find date derivation rule for when --week is not provided.
+      Verify: (a) derivation uses current date minus days since Monday,
+      (b) handles edge case where today IS Monday (returns today, not 7 days ago),
+      (c) derivation rule is explicitly documented in SKILL.md.
+    expected: |
+      Algorithm stated clearly. Monday edge case handled (dayOfWeek = 0 → subtract 0 days).
+      Note: JS Date.getDay() is 0-indexed Sunday-start; Monday = 1. Derivation:
+      date - ((day + 6) % 7) days correctly maps Sunday (0) → subtract 6, Monday (1) → 0, etc.
+    evidence: 'Direct inspection of SKILL.md date derivation section.'
+
+  - id: ED-2
+    title: 'Empty anomalies array: shows "No anomalies detected"'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Find anomalies rendering instruction.
+      Verify empty array case displays "No anomalies detected" rather than empty section.
+    expected: |
+      Explicit null/empty check for anomalies. Fallback text "No anomalies detected" present.
+    evidence: 'Direct inspection of SKILL.md anomalies section handling.'
+
+  - id: ED-3
+    title: 'Prerequisite note about WINT-6060 present'
+    setup: 'SKILL.md file exists'
+    action: |
+      Read SKILL.md. Find prerequisite or dependency note.
+      Verify: (a) weekly-analyst.agent.md must exist, (b) WINT-6060 must be complete,
+      (c) kb_get_scoreboard MCP registration mentioned.
+    expected: |
+      Prerequisites section notes dependency on WINT-6060 and kb_get_scoreboard MCP registration.
+    evidence: 'Direct inspection of SKILL.md prerequisites section.'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions: []
+manual_cases:
+  - id: MC-1
+    title: 'AC cross-reference table'
+    steps:
+      - 'Read .claude/skills/weekly-report/SKILL.md'
+      - 'For each AC (AC-1 through AC-14), locate the corresponding section in SKILL.md'
+      - 'Mark AC as satisfied or unsatisfied'
+    expected: 'All 14 ACs verified satisfied'
+
+  - id: MC-2
+    title: 'Live invocation trace (requires WINT-6060 to be complete)'
+    steps:
+      - 'Run: /weekly-report --week=2026-03-17 (a prior week with story data)'
+      - 'Verify agent is spawned in foreground'
+      - 'Verify completion signal is received'
+      - 'Verify kb_read_artifact is called in main conversation'
+      - 'Verify formatted report is rendered'
+    expected: 'Report rendered with scoreboard, anomalies, recommendations, WoW sections'
+    note: 'Can only run after WINT-6060 delivers kb_get_scoreboard MCP registration'
+
+fixture_definitions: []
+
+risks:
+  - id: R-1
+    finding: 'WINT-6060 dependency incomplete — kb_get_scoreboard not yet MCP-registered'
+    severity: warning
+    mitigation: >
+      Manual test MC-2 (live invocation) cannot be run until WINT-6060 is complete.
+      All other tests (file inspection, AC cross-reference) can be run immediately.
+      Mark MC-2 as deferred pending WINT-6060 completion.
+
+  - id: R-2
+    finding: 'Date derivation for most-recent-Monday is subtle in JS (Sunday=0 in getDay())'
+    severity: warning
+    mitigation: >
+      ED-1 verifies the derivation algorithm. QA agent should confirm the formula
+      handles both the Monday edge case (return today) and Sunday edge case
+      (subtract 6 days). Formula: date - ((day + 6) % 7) days.
