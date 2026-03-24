@@ -1,231 +1,270 @@
-schema: 2
-story_id: WINT-2090
-timestamp: '2026-03-21T01:00:00Z'
-subtask_source: story
+schema: 1
+story_id: APRS-3020
+timestamp: '2026-03-24T03:30:00.000Z'
 steps:
   - id: 1
-    subtask_id: ST-1
     description: >-
-      Register 5 session tools in the MCP server: add handler functions in tool-handlers.ts (handleSessionCreate,
-      handleSessionUpdate, handleSessionComplete, handleSessionQuery, handleSessionCleanup) and tool definitions in
-      tool-schemas.ts (with descriptions and zodToMcpSchema wrappers). Import the 5 session functions from
-      @repo/mcp-tools session-management package.
+      Create classify-drift.ts node following APRS-3010 createToolNode factory pattern with pure heuristic scoring: any
+      blocking finding (category=already_implemented) → already_done; any other blocking finding → needs_revision; any
+      warning (no blocking) → needs_revision; all info/no findings → proceed; writes verdict to state.verdict
     files:
-      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/classify-drift.ts
     files_to_read:
-      - packages/backend/mcp-tools/src/session-management/session-create.ts
-      - packages/backend/mcp-tools/src/session-management/session-update.ts
-      - packages/backend/mcp-tools/src/session-management/session-complete.ts
-      - packages/backend/mcp-tools/src/session-management/session-query.ts
-      - packages/backend/mcp-tools/src/session-management/session-cleanup.ts
-      - packages/backend/mcp-tools/src/session-management/__types__/index.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/check-already-implemented.ts
+      - packages/backend/orchestrator/src/state/plan-revalidation-state.ts
     dependencies: []
-    slice: backend
-    verification: pnpm check-types --filter @repo/knowledge-base
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-1
       - AC-2
       - AC-3
   - id: 2
-    subtask_id: ST-2
     description: >-
-      Add session tool names to access-control.ts ToolNameSchema enum (session_create, session_update, session_complete,
-      session_query, session_cleanup), add them to the ACCESS_MATRIX with 'all' role access, and register handler
-      functions in the toolHandlers map in tool-handlers.ts. Also push the 5 tool definitions onto the toolDefinitions
-      array in tool-schemas.ts.
+      Create auto-update-plan.ts node with injectable PlanUpdaterFn adapter and dry_run flag support. On needs_revision
+      verdict: calls kb_update_plan adapter for summary and tags only. In dry_run mode: populates proposed updates in
+      warnings without writing to DB.
     files:
-      - apps/api/knowledge-base/src/mcp-server/access-control.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/auto-update-plan.ts
     files_to_read:
-      - apps/api/knowledge-base/src/mcp-server/access-control.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/check-scope-drift.ts
+      - packages/backend/orchestrator/src/state/plan-revalidation-state.ts
     dependencies:
       - 1
-    slice: backend
-    verification: pnpm check-types --filter @repo/knowledge-base
-    acs_covered:
-      - AC-1
-      - AC-2
-      - AC-3
-      - AC-4
-  - id: 3
-    subtask_id: ST-3
-    description: >-
-      Update dev-execute-leader.agent.md to call /session-create at the start of the workflow (after reading KB
-      artifacts, before executing plan steps) and /session-complete at the end (before emitting EXECUTION COMPLETE
-      signal). Session tracking must be fire-and-forget: null return must NOT block execution. Add session_id to the
-      context passed to EVIDENCE artifact.
-    files:
-      - .claude/agents/dev-execute-leader.agent.md
-    files_to_read:
-      - .claude/agents/dev-execute-leader.agent.md
-      - .claude/skills/session-create/SKILL.md
-    dependencies: []
     slice: packages
-    verification: echo 'Agent file updated - manual verification'
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
+      - AC-4
       - AC-5
+  - id: 3
+    description: >-
+      Create log-revision.ts node with injectable RevisionLoggerFn adapter. Writes to workflow.plan_revision_history
+      with change_reason='minor_drift_auto_update'. Uses MAX(revision_number)+1 query pattern via adapter. Only runs
+      after auto-update-plan succeeds.
+    files:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/log-revision.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/check-already-implemented.ts
+      - packages/backend/orchestrator/src/state/plan-revalidation-state.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
       - AC-6
   - id: 4
-    subtask_id: ST-4
     description: >-
-      Update dev-setup-leader.agent.md to call /session-create at the start of the workflow (before precondition checks)
-      and /session-complete at the end (before emitting SETUP COMPLETE signal). Add session tracking calls to BOTH
-      implement and fix modes. Session tracking must never gate setup flow.
+      Create src/graphs/plan-revalidation.ts with createPlanRevalidationGraph() factory. Compose all 8 nodes
+      (load_context, check_already_implemented, check_approach_valid, check_dependencies, check_scope_drift from
+      APRS-3010 + classify_drift, auto_update_plan, log_revision from APRS-3020). Wire conditional edges from
+      classify_drift: proceed → END; needs_revision → auto_update_plan → log_revision → END; already_done/blocked/error
+      → END.
     files:
-      - .claude/agents/dev-setup-leader.agent.md
+      - packages/backend/orchestrator/src/graphs/plan-revalidation.ts
     files_to_read:
-      - .claude/agents/dev-setup-leader.agent.md
-      - .claude/skills/session-create/SKILL.md
-    dependencies: []
-    slice: packages
-    verification: echo 'Agent file updated - manual verification'
-    acs_covered:
-      - AC-5
-      - AC-6
-  - id: 5
-    subtask_id: ST-5
-    description: >-
-      Update qa-verify-setup-leader.agent.md to call /session-create at the start (before precondition checks) and
-      /session-complete at the end (before emitting SETUP COMPLETE or SETUP BLOCKED). Session tracking must never gate
-      QA setup flow.
-    files:
-      - .claude/agents/qa-verify-setup-leader.agent.md
-    files_to_read:
-      - .claude/agents/qa-verify-setup-leader.agent.md
-      - .claude/skills/session-create/SKILL.md
-    dependencies: []
-    slice: packages
-    verification: echo 'Agent file updated - manual verification'
-    acs_covered:
-      - AC-5
-      - AC-6
-  - id: 6
-    subtask_id: ST-6
-    description: >-
-      Update dev-implement-implementation-leader.agent.md to call /session-create at the start (before spawning workers)
-      and /session-complete at the end (before emitting IMPLEMENTATION COMPLETE). Session tracking must never gate
-      implementation flow.
-    files:
-      - .claude/agents/dev-implement-implementation-leader.agent.md
-    files_to_read:
-      - .claude/agents/dev-implement-implementation-leader.agent.md
-      - .claude/skills/session-create/SKILL.md
-    dependencies: []
-    slice: packages
-    verification: echo 'Agent file updated - manual verification'
-    acs_covered:
-      - AC-5
-      - AC-6
-  - id: 7
-    subtask_id: ST-7
-    description: >-
-      Write MCP integration tests for the 5 session tools in apps/api/knowledge-base/src/mcp-server/__tests__/. Create
-      session-tools-integration.test.ts that mocks the session management functions and tests handleToolCall dispatch
-      for all 5 tool names. Update mcp-integration.test.ts tool count from 73 to 78 and add the 5 new tool names to the
-      expected list.
-    files:
-      - apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
-      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
-    files_to_read:
-      - apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
-      - apps/api/knowledge-base/src/mcp-server/__tests__/telemetry-tools-integration.test.ts
-      - apps/api/knowledge-base/src/mcp-server/__tests__/test-helpers.ts
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - packages/backend/orchestrator/src/state/plan-revalidation-state.ts
     dependencies:
       - 1
       - 2
-    slice: backend
-    verification: pnpm test --filter @repo/knowledge-base -- --testPathPattern=session-tools
+      - 3
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-7
+      - AC-8
+  - id: 5
+    description: >-
+      Write unit tests for classify-drift.ts: 20+ tests covering heuristic scoring rules, edge cases (empty findings,
+      mixed severities, already_implemented category routing), phase transitions, and error handling.
+    files:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/classify-drift.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/check-already-implemented.test.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- classify-drift
+    acs_covered:
+      - AC-9
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 6
+    description: >-
+      Write unit tests for auto-update-plan.ts: 20+ tests covering dry_run behavior, adapter calls, summary/tags
+      write-only contract, no-op when verdict is not needs_revision, error fallback.
+    files:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/auto-update-plan.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/check-scope-drift.test.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- auto-update-plan
+    acs_covered:
+      - AC-9
+      - AC-4
+      - AC-5
+  - id: 7
+    description: >-
+      Write unit tests for log-revision.ts: 20+ tests covering change_reason value, revision_number assignment, adapter
+      call verification, graceful skip when no plan update occurred, error handling.
+    files:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/log-revision.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/check-already-implemented.test.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- log-revision
+    acs_covered:
+      - AC-9
+      - AC-6
+  - id: 8
+    description: >-
+      Write integration tests for createPlanRevalidationGraph() factory: verify graph compiles, test proceed path
+      (no-op), test minor drift path (auto_update_plan + log_revision called), test already_done path (terminates
+      without update), test error propagation. Run full type check.
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/plan-revalidation.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+    dependencies:
+      - 4
+      - 5
+      - 6
+      - 7
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator && pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-7
+      - AC-8
+      - AC-9
+      - AC-10
 files_to_change:
-  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-    action: modify
-    reason: >-
-      Add 5 session handler functions (handleSessionCreate/Update/Complete/Query/Cleanup) and register in toolHandlers
-      map
-  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
-    action: modify
-    reason: Add 5 session tool definitions with descriptions and push to toolDefinitions array
-  - path: apps/api/knowledge-base/src/mcp-server/access-control.ts
-    action: modify
-    reason: Add session_create/update/complete/query/cleanup to ToolNameSchema enum and ACCESS_MATRIX with 'all' role access
-  - path: .claude/agents/dev-execute-leader.agent.md
-    action: modify
-    reason: Add /session-create at workflow start and /session-complete at workflow end
-  - path: .claude/agents/dev-setup-leader.agent.md
-    action: modify
-    reason: Add /session-create at workflow start and /session-complete at workflow end for both implement and fix modes
-  - path: .claude/agents/qa-verify-setup-leader.agent.md
-    action: modify
-    reason: Add /session-create at workflow start and /session-complete at workflow end
-  - path: .claude/agents/dev-implement-implementation-leader.agent.md
-    action: modify
-    reason: Add /session-create at workflow start and /session-complete at workflow end
-  - path: apps/api/knowledge-base/src/mcp-server/__tests__/session-tools-integration.test.ts
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/classify-drift.ts
     action: create
-    reason: New integration tests for all 5 session MCP tools
-  - path: apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts
-    action: modify
-    reason: Update tool count from 73 to 78 and add 5 session tool names to expected list
+    reason: 'AC-1/2/3: classify_drift node with heuristic scoring, writes verdict to state'
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/auto-update-plan.ts
+    action: create
+    reason: 'AC-4/5: auto_update_plan node with kb_update_plan adapter (summary+tags only) and dry_run flag'
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/log-revision.ts
+    action: create
+    reason: 'AC-6: log_revision node writing to plan_revision_history with change_reason=minor_drift_auto_update'
+  - path: packages/backend/orchestrator/src/graphs/plan-revalidation.ts
+    action: create
+    reason: 'AC-7/8: createPlanRevalidationGraph() factory composing all 8 nodes with conditional edge routing'
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/classify-drift.test.ts
+    action: create
+    reason: 'AC-9: 20+ unit tests for classify-drift node'
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/auto-update-plan.test.ts
+    action: create
+    reason: 'AC-9: 20+ unit tests for auto-update-plan node'
+  - path: packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/log-revision.test.ts
+    action: create
+    reason: 'AC-9: 20+ unit tests for log-revision node'
+  - path: packages/backend/orchestrator/src/graphs/__tests__/plan-revalidation.test.ts
+    action: create
+    reason: 'AC-9/10: integration tests for createPlanRevalidationGraph() factory'
 commands_to_run:
-  - command: pnpm check-types --filter @repo/knowledge-base
-    when: after ST-1 and ST-2 code changes
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after each implementation step
     required: true
-  - command: pnpm test --filter @repo/knowledge-base
-    when: after all code changes
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all tests written
     required: true
-  - command: pnpm build --filter @repo/knowledge-base
+  - command: pnpm build --filter @repo/orchestrator
     when: after all code changes
     required: true
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      tool-handlers.ts contains 5 new handler functions; tool-schemas.ts contains 5 new tool definitions with
-      inputSchema from zodToMcpSchema
+      classify-drift.ts node file following createCheckAlreadyImplementedNode factory pattern (NodeConfigSchema,
+      exported phase functions, createClassifyDriftNode factory)
     evidence_type: file
   - ac_id: AC-2
     planned_evidence: >-
-      tool-schemas.ts toolDefinitions array includes session_create, session_update, session_complete, session_query,
-      session_cleanup; getToolDefinitions() returns 78 tools
+      Unit tests in classify-drift.test.ts: blocking→needs_revision/already_done, warning→needs_revision, info→proceed
+      scoring verified
     evidence_type: test
   - ac_id: AC-3
-    planned_evidence: handleToolCall dispatches to correct handler for each session tool name; integration tests verify dispatch
+    planned_evidence: classify-drift.ts writes only to state.verdict (RevalidationVerdict type) — no DB calls, no new state fields
     evidence_type: test
   - ac_id: AC-4
-    planned_evidence: access-control.ts ToolNameSchema enum includes 5 session tool names; ACCESS_MATRIX has entries with 'all' role
-    evidence_type: file
-  - ac_id: AC-5
-    planned_evidence: 4 leader agent .md files contain /session-create call at workflow start and /session-complete at workflow end
-    evidence_type: file
-  - ac_id: AC-6
-    planned_evidence: >-
-      Agent files include null-return guard: 'if session null, log warning and continue' — session tracking never gates
-      workflow
-    evidence_type: file
-  - ac_id: AC-7
-    planned_evidence: session-tools-integration.test.ts exists with tests for all 5 tools; pnpm test passes
+    planned_evidence: auto-update-plan.ts calls PlanUpdaterFn adapter with only summary and tags fields (no other plan fields)
     evidence_type: test
-architectural_decisions: []
+  - ac_id: AC-5
+    planned_evidence: Unit tests verify dry_run=true produces warnings with proposed updates and does NOT call PlanUpdaterFn adapter
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: log-revision.ts calls RevisionLoggerFn with change_reason='minor_drift_auto_update' verified in unit tests
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      plan-revalidation.ts exports createPlanRevalidationGraph() that compiles a StateGraph using
+      PlanRevalidationStateAnnotation
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      Integration tests verify: classify_drift→proceed routes to END; classify_drift→needs_revision routes to
+      auto_update_plan→log_revision→END; classify_drift→already_done/blocked routes to END without update calls
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      20+ tests per node: classify-drift.test.ts, auto-update-plan.test.ts, log-revision.test.ts,
+      plan-revalidation.test.ts all passing
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: pnpm check-types --filter @repo/orchestrator exits 0
+    evidence_type: command
+architectural_decisions:
+  - id: ARCH-001
+    question: Should auto_update_plan conditionally skip writing when verdict is not needs_revision?
+    decision: >-
+      Yes — auto_update_plan is only added to the conditional edge for needs_revision verdict. The node still validates
+      its precondition via state.verdict check and returns early with a warning if called with a different verdict
+      (defensive guard).
+    rationale: >-
+      Graph conditional edge routing is the primary guard; defensive check in node body prevents state corruption if
+      graph is misconfigured in tests.
+    decided_by: planner
+  - id: ARCH-002
+    question: >-
+      How does log-revision obtain the plan UUID (plan_id) to write to plan_revision_history? planSlug is available in
+      state but revision history requires UUID.
+    decision: >-
+      Inject a PlanIdResolverFn adapter into log-revision node that maps planSlug → plan UUID. Default implementation is
+      a no-op that returns null, causing the node to emit a warning and skip the write gracefully.
+    rationale: >-
+      Keeps the node testable without DB. The pipeline supervisor wires the real resolver. Consistent with
+      ports/adapters pattern from APRS-3010.
+    decided_by: planner
+  - id: ARCH-003
+    question: What value should changedBy be in plan_revision_history when written by the automated graph?
+    decision: >-
+      Use the fixed string 'plan-revalidation-graph' as changedBy to identify automated revisions. This is injectable
+      via adapter config for flexibility.
+    rationale: Consistent audit trail distinguishing automated vs human changes. No new state field needed.
+    decided_by: planner
 complexity: moderate
 notes:
   - >-
-    Session functions already exist in packages/backend/mcp-tools/src/session-management/ — no new functions to write,
-    only wire-up
+    classify_drift is a pure heuristic node — no LLM. Per opp-1 from elaboration, this is deterministic and fully
+    unit-testable.
   - >-
-    The mcp-tools package is NOT a direct dep of @repo/knowledge-base; import paths must be verified. The functions need
-    to be imported from the session-management package — check package.json deps first
+    auto_update_plan writes ONLY summary and tags to workflow.plans via kb_update_plan adapter — no other plan fields.
+    Per AC-4.
   - >-
-    CRITICAL: session tracking is telemetry, never a gate. Null returns from session_create/complete must log warning
-    and let workflow continue
-  - 'Access control for session tools: ''all'' role is appropriate — these are observability tools, not admin operations'
-  - 'Tool naming: snake_case (session_create not sessionCreate) per MCP convention and elaboration decision'
-  - mcp-integration.test.ts currently expects exactly 73 tools — must update to 78 after adding 5 session tools
+    No DB migration required — verdict is written to state only (not a new workflow.plans column). Per elab gap-2
+    resolution and ACs.
   - >-
-    skill files (.claude/skills/session-create/SKILL.md) reference mcp__postgres-knowledgebase__sessionCreate
-    (camelCase) — update to session_create (snake_case) per WINT-2090 elaboration decision
+    plan_revision_history revision_number uses MAX(revision_number)+1 pattern via adapter — no sequence. The adapter
+    handles atomicity.
+  - >-
+    The graph does NOT add auto_update_plan or log_revision for already_done/blocked/error verdicts — graph terminates
+    via END directly from classify_drift conditional edges.
+  - Tests use the established vi.mock('@langchain/langgraph') pattern from APRS-3010 test files.
+  - >-
+    Scoring rule for already_implemented category is special: blocking severity with category=already_implemented →
+    already_done verdict (not needs_revision). All other blocking categories → needs_revision.

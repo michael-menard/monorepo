@@ -1,97 +1,41 @@
-story_id: PIPE-2020
-generated_at: '2026-03-18T00:00:00Z'
-domain: backend
-scope_summary: Pure unit test extension for dispatch-router.ts — no new production code except type-cast removal in review branch
-codebase_state:
-  dispatch_router_ts:
-    path: apps/api/pipeline/src/supervisor/dispatch-router.ts
-    lines: 356
-    status: PIPE-2010 already merged — type cast already removed
-    key_finding: >-
-      The unsafe cast 'as StorySnapshotPayload & { worktreePath?: string; featureDir?: string }' is ALREADY GONE. Lines
-      227-233 now use 'data.payload.worktreePath' and 'data.payload.featureDir' directly, which works because
-      ReviewJobDataSchema.payload is typed as ReviewPayloadSchema (includes worktreePath/featureDir).
-    implementation_branches:
-      elaboration: line 213
-      story_creation: line 217
-      implementation: lines 221-225
-      review: lines 226-233
-      qa: lines 234-239
-  dispatch_router_test_ts:
-    path: apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
-    lines: 634
-    current_coverage: elaboration and story-creation only (HP-1, HP-2, HP-3, EC-1 through EC-4, AC-15, ED-3)
-    missing_coverage: >-
-      HP-4 (implementation), HP-5 (review), HP-6 (qa), timeout tests for 3 new stages, circuit breaker tests for 3 new
-      stages
-  createMockRunners:
-    location: dispatch-router.test.ts lines 131-145
-    current_stubs:
-      - runElaboration
-      - runStoryCreation
-    missing_stubs:
-      - runDevImplement
-      - runReview
-      - runQAVerify
-    issue: >-
-      GraphRunners interface requires all 5 runners — current mock is incomplete and TypeScript will flag it when new
-      stage tests try to create partial GraphRunners objects
-  pipeline_queue_types:
-    path: packages/backend/pipeline-queue/src/__types__/index.ts
-    status: PIPE-2010 merged — ReviewPayloadSchema and QaPayloadSchema exist
-    schemas_available:
-      - ElaborationJobDataSchema
-      - StoryCreationJobDataSchema
-      - ImplementationJobDataSchema
-      - ReviewJobDataSchema
-      - QaJobDataSchema
-      - ReviewPayloadSchema
-      - QaPayloadSchema
-      - StorySnapshotPayloadSchema
-    discriminated_union: PipelineJobDataSchema covers all 5 stages
-  graph_types_ts:
-    path: apps/api/pipeline/src/supervisor/graph-types.ts
-    mock_fixture_shapes:
-      DevImplementResult: >-
-        { storyId, success, planLoaded, executeComplete, reviewResult, evidenceCollected, durationMs, completedAt,
-        errors, warnings, ...rest }
-      ReviewGraphResult: '{ storyId, success, verdict?, reviewYamlPath?, durationMs, completedAt, errors, warnings, ...rest }'
-      QAVerifyResult: >-
-        { storyId, success, verdict: 'PASS'|'FAIL'|'BLOCKED', qaArtifact, preconditionsPassed, durationMs, completedAt,
-        errors, warnings, ...rest }
-key_findings:
-  - >-
-    AC-8 (type cast removal) is already done — PIPE-2010 merged the fix. ST-6 becomes a verification task, not
-    implementation.
-  - >-
-    createMockRunners() returns only 2 stubs — TypeScript will error if passed where GraphRunners is expected without
-    all 5 runners.
-  - >-
-    EC-1 timeout tests pass GraphRunners as { runElaboration: hangingRunner, runStoryCreation: vi.fn() } — this works
-    because GraphRunners is an interface; the partial object satisfies structural typing at call site. New timeout tests
-    need to include the missing 3 stubs too.
-  - >-
-    The thread ID convention {storyId}:{stage}:{attemptNumber} is IRREVERSIBLE — all threadId assertions must use this
-    exact format.
-  - >-
-    The review branch fallback: worktreePath ?? '' and featureDir ?? 'plans/future/platform' — HP-5 needs both
-    with-payload and without-payload test variants.
-  - >-
-    Circuit breaker map in dispatch-router.ts line 155-161 includes implementation, review, qa circuits — these are
-    separate from elaboration circuit.
-patterns_to_reuse:
-  timeout_tests: >-
-    EC-1 block lines 321-388: vi.useFakeTimers() in beforeEach, vi.useRealTimers() in afterEach, hangingRunner =
-    vi.fn().mockImplementation(() => new Promise<never>(() => {})), vi.advanceTimersByTime(200)
-  circuit_breaker_tests: >-
-    EC-4 block lines 493-548: circuitBreakerFailureThreshold:1, first dispatch fails to trip, vi.clearAllMocks(), second
-    dispatch hits open circuit
-  happy_path_log_assertion: vi.mocked(logger).info.mock.calls.find(c => c[0] === 'completed')
-  factory_function_pattern: createElaborationJobData(overrides) returns PipelineJobData with spread overrides
-  completed_log_shape: "{ event: 'completed', storyId, stage, threadId, attemptNumber, durationMs }"
+story_id: APRS-3020
+timestamp: '2026-03-24T03:30:00.000Z'
+domain: packages/backend/orchestrator
+canonical_patterns:
+  state_file: packages/backend/orchestrator/src/state/plan-revalidation-state.ts
+  node_pattern: packages/backend/orchestrator/src/nodes/plan-revalidation/check-already-implemented.ts
+  graph_pattern: packages/backend/orchestrator/src/graphs/plan-refinement.ts
+  test_pattern: packages/backend/orchestrator/src/nodes/plan-revalidation/__tests__/check-already-implemented.test.ts
+key_types:
+  RevalidationVerdict: z.enum(['proceed','needs_revision','already_done','blocked','error'])
+  DriftFinding: "{ nodeId, category, severity: 'info'|'warning'|'blocking', summary, detail, confidence }"
+  PlanRevalidationState: '{ planSlug, rawPlan, contextSnapshot, driftFindings[], verdict, revalidationPhase, warnings[], errors[] }'
+  plan_revision_history: >-
+    { id, plan_id(uuid), revision_number, raw_content(text), content_hash, sections(jsonb), change_reason(text),
+    changed_by(text), created_at }
+heuristic_scoring_rules:
+  any_blocking_category_already_implemented: verdict = already_done
+  any_blocking_other_categories: verdict = needs_revision
+  any_warning_no_blocking: verdict = needs_revision
+  all_info_or_no_findings: verdict = proceed
+  error_state: verdict = error
+adapter_contracts:
+  PlanUpdaterFn: >-
+    (planSlug: string, updates: { summary?: string; tags?: string[] }, options?: { dryRun?: boolean }) => Promise<{
+    updated: boolean; proposedUpdates?: Record<string, unknown> }>
+  RevisionLoggerFn: >-
+    (planId: string, revisionData: { rawContent: string; contentHash: string; sections: Record<string, unknown>;
+    changeReason: string; changedBy: string; revisionNumber: number }) => Promise<void>
+  PlanIdResolverFn: '(planSlug: string) => Promise<string | null>'
+aprs_3010_complete: true
+no_db_migration_needed: true
 lessons:
-  - Injectable runners pattern (runners parameter) is the correct test seam — do NOT use vi.mock('./graph-loader')
-  - GraphRunners is a TypeScript interface — all 5 runners must be present in the mock object passed to dispatchJob()
   - >-
-    EC-1 timeout tests: the hanging runner must be set as the specific stage runner (e.g., runDevImplement for
-    implementation stage), all other runners can be vi.fn()
+    Phase function exports (not just node factories) are required for unit testability — each pure logic step must be an
+    exported function
+  - >-
+    LangGraph mock pattern: vi.mock('@langchain/langgraph', () => ({ Annotation: Object.assign((config) =>
+    ({...config}), { Root: ... }) }))
+  - All Zod schema parsing with .parse() for validated output construction
+  - Graceful fallback to defaults on adapter errors — never throw from node function body
+  - Node function returns Partial<PlanRevalidationState>, never full state
