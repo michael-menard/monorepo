@@ -234,6 +234,7 @@ describe('createWireDependenciesNode', () => {
     orderedStories: [],
     validationResult: null,
     generatedStoriesWithDeps: [],
+    writeResult: null,
     generationPhase: 'generate_stories' as const,
     errors: [],
     warnings: [],
