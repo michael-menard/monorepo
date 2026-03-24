@@ -1,0 +1,11 @@
+skipped: true
+reason: >
+  WINT-6070 delivers a single Markdown file (.claude/skills/weekly-report/SKILL.md).
+  No UI surface, no React components, no HTML, no CSS, no Tailwind classes.
+  This is a CLI skill for Claude Code operators only. No shadcn primitives are
+  touched. The story does not interact with the browser or any frontend application.
+output_formatting_notes:
+  - 'No emoji in output tables or section headers (consistent with WINT-6020/WINT-6030 conventions)'
+  - 'Section headers must use dashes separator style matching /scoreboard and /batch-status skill output'
+  - 'Scoreboard table column labels must match /scoreboard skill column names for operator consistency'
+  - 'Formatted markdown tables only — no HTML, no special characters outside standard markdown'

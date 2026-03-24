@@ -1,0 +1,132 @@
+schema: 1
+story_id: WINT-6070
+timestamp: '2026-03-23T21:00:00.000Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 42
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    skipped: 1
+  http:
+    pass: 0
+    fail: 0
+coverage: N/A — delivery is a markdown skill definition file, not TypeScript code. Coverage threshold does not apply.
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-01
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+    notes: File exists at .claude/skills/weekly-report/SKILL.md — confirmed by direct read
+  - ac_id: AC-02
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: 'SKILL.md line 37 and line 94: --week=YYYY-MM-DD parsing documented with type validation'
+  - ac_id: AC-03
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+    notes: 'SKILL.md line 38 and line 95: --feature=FEATURE parsing documented'
+  - ac_id: AC-04
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+    notes: 'SKILL.md line 39 and line 96: --force flag documented as boolean'
+  - ac_id: AC-05
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+    notes: 'SKILL.md lines 75-82: exact formula (day + 6) % 7 present with Monday edge case explanation'
+  - ac_id: AC-06
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: SKILL.md Step 2 (line 97-98) reads agent file before Step 3 spawns it
+  - ac_id: AC-07
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+    notes: 'SKILL.md line 102 and Non-negotiables line 290: foreground-only, no run_in_background'
+  - ac_id: AC-08
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: 'SKILL.md Step 4 (lines 125-133): signal surfaced to operator immediately upon receipt'
+  - ac_id: AC-09
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: 'SKILL.md Step 5 (lines 136-150): WEEKLY ANALYSIS FAILED → surface verbatim, no kb_read_artifact, stop'
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: >-
+      SKILL.md critical execution rule at line 15 and Step 6 header at line 152: kb_read_artifact MUST be in main
+      conversation
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+    notes: 'SKILL.md lines 163-173: null artifact handling documented with exact expected output'
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[11]
+    notes: >-
+      SKILL.md Output Format section (lines 183-252): all 6 required sections present — Scoreboard Snapshot, Agent
+      Reliability, Anomalies, Recommendations, Week-over-Week Delta, Retro Lessons Referenced
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[12]
+    notes: "SKILL.md Non-negotiables line 289: 'No /token-log call' explicitly documented"
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[13]
+    notes: >-
+      SKILL.md line 161 and Non-negotiables line 293: canonical name WEEKLY-ANALYSIS-{week_of} with story_id: SYSTEM
+      confirmed
+architecture_compliant: true
+issues: []
+e2e_exemption:
+  status: approved
+  reason: >-
+    E2E tests require WINT-6060 prerequisite (kb_get_scoreboard MCP registration) to be complete before end-to-end
+    invocation is possible
+  blocking_story: WINT-6060
+pre_existing_failures:
+  count: 3
+  location: packages/backend/orchestrator/src/nodes/reporting/__tests__/weekly-report.test.ts
+  tests:
+    - 'aggregateModelPerformance > HP-4: returns by_model breakdown with mocked affinity row'
+    - aggregateModelPerformance > defaults unknown trend_direction to stable
+    - 'aggregateCodebaseHealth > HP-5: returns delta_from_baseline from 2 snapshots'
+  introduced_by: APIP-4070 / WINT-0250
+  scope_note: >-
+    These failures are in reporting/weekly-report.ts, not touched by WINT-6070. WINT-6070 only touched
+    .claude/skills/weekly-report/SKILL.md.
+lessons_to_record:
+  - lesson: >-
+      Skills that are pure markdown orchestration definitions (SKILL.md) have no TypeScript coverage requirement — the
+      45% coverage threshold applies to TypeScript packages only. QA should explicitly document this exemption rather
+      than treating it as a gap.
+    category: pattern
+    tags:
+      - skills
+      - qa
+      - coverage
+  - lesson: >-
+      When running vitest with a glob that matches worktree copies (tree/story/*), pre-existing failures in worktree
+      files pollute the test run output. Always run with --root scoped to the canonical package path to get clean
+      results.
+    category: anti_pattern
+    tags:
+      - testing
+      - vitest
+      - worktrees
+gate:
+  decision: PASS
+  reason: All acceptance criteria verified, 42 unit tests pass, architecture compliant
+  blocking_issues: []
+tokens:
+  in: 18500
+  out: 3200
