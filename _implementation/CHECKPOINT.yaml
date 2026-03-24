@@ -1,7 +1,43 @@
+# WINT-3090 Checkpoint Artifact — Phase 0 Setup
+
 schema: 1
-story_id: APRS-5040
-current_phase: execute
-last_successful_phase: plan
+story_id: WINT-3090
+timestamp: 2026-03-20T20:35:00Z
+current_phase: setup
+last_successful_phase: null
 iteration: 0
+max_iterations: 3
 blocked: false
+forced: false
 gen_mode: false
+
+# Phase Status
+status:
+  setup:
+    started_at: 2026-03-20T20:35:00Z
+    completed_at: null
+    status: in_progress
+    actions_completed:
+      - Read story frontmatter from KB
+      - Analyzed schema: workflow.stories, workflow.story_outcomes, workflow.agent_invocations
+      - Identified working set files (6 files to create/modify)
+      - Created SETUP-LOG.md with architecture analysis
+      - Created SCOPE.yaml with implementation scope
+    next_action: Proceed to T2 Implementation (kb_get_scoreboard)
+
+# Implementation Context
+context:
+  story_title: Add Scoreboard Metrics to Telemetry
+  autonomy_level: conservative
+  subtask_dag: T1-TBDs-resolved -> T2-implement -> T3-register -> T4-access-control -> T5-skill -> T6-tests
+  current_task: T1 COMPLETE, Ready for T2
+
+# Warnings (if any)
+warnings: []
+
+# Notes
+notes:
+  - Performance flag set: aggregation queries on story_outcomes + agent_invocations may need query optimization
+  - No DB migrations needed (uses existing tables from WINT-3080)
+  - Elaboration complete: all 5 metric definitions clear
+  - Test coverage target 80% for scoreboard tool

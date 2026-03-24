@@ -1,24 +1,85 @@
+# WINT-3090 Scope Artifact — Phase 0 Setup
+
 schema: 1
-story_id: WINT-9010
-timestamp: '2026-03-23T00:00:00Z'
+story_id: WINT-3090
+timestamp: 2026-03-20T20:35:00Z
+phase: setup
+iteration: 0
 gen_mode: false
+elaboration: completed
+
+# ============================================================================
+# Story Classification
+# ============================================================================
+
 touches:
-  backend: true
-  frontend: false
-  packages: true
-  db: false
-  contracts: true
+  backend: true # MCP tools in knowledge-base, database queries
+  frontend: false # No UI components
+  packages: false # Uses existing packages (@repo/logger), doesn't create new
+  db: true # Queries workflow and analytics schemas
+  contracts: true # Zod schemas for input/output
   ui: false
   infra: false
+
 touched_paths_globs:
-  - 'packages/backend/workflow-logic/src/**'
-  - 'packages/backend/orchestrator/src/**'
+  - 'apps/api/knowledge-base/src/crud-operations/**'
+  - 'apps/api/knowledge-base/src/mcp-server/**'
+  - '.claude/skills/scoreboard/**'
+
+# ============================================================================
+# Risk Flags
+# ============================================================================
+
 risk_flags:
-  auth: false
-  payments: false
-  migrations: false
+  auth: false # Standard pm+dev role access
+  payments: false # No payment operations
+  migrations: false # No DB migrations needed (uses existing tables)
   external_apis: false
-  security: false
-  performance: false
-summary: 'Extend @repo/workflow-logic with decision, artifact, context, and token modules to establish TypeScript source of truth for shared business logic'
-elaboration: completed
+  security: false # Standard access control enforcement
+  performance: true # Aggregation queries on story_outcomes + agent_invocations
+
+# ============================================================================
+# Implementation Details
+# ============================================================================
+
+summary: Implement kb_get_scoreboard MCP tool with 5 workflow health metrics (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability_rates) and /scoreboard CLI skill for dashboard reporting.
+
+# Files to Create:
+# 1. apps/api/knowledge-base/src/crud-operations/analytics-operations.ts — Add kb_get_scoreboard + schemas (append)
+# 2. apps/api/knowledge-base/src/crud-operations/__tests__/scoreboard-operations.test.ts — Unit tests
+# 3. .claude/skills/scoreboard/SKILL.md — CLI skill definition
+
+# Files to Modify:
+# 1. apps/api/knowledge-base/src/mcp-server/tool-schemas.ts — Add schema + tool definition + exports
+# 2. apps/api/knowledge-base/src/mcp-server/tool-handlers.ts — Add handler + dispatch registration
+# 3. apps/api/knowledge-base/src/mcp-server/access-control.ts — Add enum + ACCESS_MATRIX entry
+
+source_tables:
+  - workflow.stories (storyId, feature, startedAt, completedAt)
+  - workflow.story_outcomes (storyId, estimatedTotalCost, reviewIterations, qaIterations)
+  - workflow.agent_invocations (agentName, status, inputTokens, outputTokens, storyId)
+
+query_complexity: medium
+  - Aggregation over multiple tables
+  - Optional date_range filtering
+  - Optional feature filtering
+  - Graceful null handling for no-data cases
+
+test_coverage_target: 80%
+
+constraints:
+  - Use Zod schemas for all input/output types (no TypeScript interfaces)
+  - Use @repo/logger, never console.log
+  - No barrel file imports (direct from source)
+  - Gracefully return zero/null when no data exists
+  - Register tool in tool-schemas.ts, tool-handlers.ts, and access-control.ts
+  - Assign pm+dev roles for access
+
+acceptance_criteria_mapped:
+  AC1: 5 metric sections in response (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability_rates)
+  AC2: Null/zero graceful handling
+  AC3: Optional date_range filter (start_date, end_date) on all metrics
+  AC4: Optional feature filter on all metrics
+  AC5: Tool registered in 3 locations with pm+dev roles
+  AC6: /scoreboard skill with markdown table formatting
+  AC7: Unit tests >= 80% coverage

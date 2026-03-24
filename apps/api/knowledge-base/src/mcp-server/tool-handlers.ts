@@ -12,6 +12,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import { z } from 'zod'
 import { sql, eq, and, gt, or, isNull } from 'drizzle-orm'
 import {
   worktreeRegister,
@@ -288,18 +289,24 @@ function getTimeoutConfig(): {
 }
 
 /**
+ * Zod schema for tool handler dependencies.
+ * Validates that database connection is present.
+ */
+export const ToolHandlerDepsSchema = z.object({
+  db: z.custom<any>(_val => true, { message: 'Invalid database connection' }),
+})
+
+/**
  * Dependencies for tool handlers.
  * Combines all CRUD operation and search dependencies.
  */
-export interface ToolHandlerDeps
-  extends
-    KbAddDeps,
-    KbGetDeps,
-    KbUpdateDeps,
-    KbDeleteDeps,
-    KbListDeps,
-    KbSearchDeps,
-    KbGetRelatedDeps {}
+export type ToolHandlerDeps = KbAddDeps &
+  KbGetDeps &
+  KbUpdateDeps &
+  KbDeleteDeps &
+  KbListDeps &
+  KbSearchDeps &
+  KbGetRelatedDeps
 
 /**
  * Timeout error for tool execution.

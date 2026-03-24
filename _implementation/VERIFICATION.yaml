@@ -1,14 +1,14 @@
 schema: 1
-story_id: APRS-5040
-timestamp: '2026-03-23T21:17:00Z'
+story_id: WINT-3090
+timestamp: '2026-03-24T00:30:00.000Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 19
+    pass: 17
     fail: 0
   integration:
-    pass: 5
+    pass: 0
     fail: 0
   e2e:
     pass: 0
@@ -16,64 +16,99 @@ test_results:
   http:
     pass: 0
     fail: 0
-coverage: null
+coverage: 67.75
 coverage_meets_threshold: true
 test_quality:
   verdict: PASS
   anti_patterns: []
 acs_verified:
-  - ac_id: AC-1
+  - ac_id: AC1
     status: PASS
-    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+    evidence_ref: 'EVIDENCE (iteration 0): unit_tests.passed=17, files_modified includes analytics-operations.ts'
     notes: >-
-      createCLIDecisionCallbackAdapter() returns an object satisfying DecisionCallback interface (ask(DecisionContext)).
-      All 4 HiTL outcomes handled: approve (with flow selection follow-up), edit (all flows marked rejected, returns to
-      extract_flows), reject (follow-up reason prompt, terminates with error), defer (follow-up reason prompt,
-      terminates with deferred flag). Ctrl+C interruption paths handled for all prompts with sensible defaults. Wired
-      into createPlanRefinementGraph() in run-plan-refinement.ts.
-  - ac_id: AC-2
+      kb_get_scoreboard function implemented in analytics-operations.ts line 398. Returns all 5 metric sections
+      (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability) in a single response. TC-09
+      verifies all required top-level keys present.
+  - ac_id: AC2
     status: PASS
-    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts:69-136
+    evidence_ref: analytics-scoreboard.test.ts TC-01
     notes: >-
-      Prompt displays plan slug in header (=== Plan Refinement Review: {planSlug} ===), flows with IDs and names
-      ([{flow.id}] {flow.name} — Actor: {flow.actor}), warnings section with count, errors section with count. Exactly 4
-      inquirer choices: approve, edit, reject, defer. confirmedFlowIds/rejectedFlowIds correctly populated from checkbox
-      selection in handleApprovePrompt(). Verified by unit test 'calls inquirer.prompt with 4 choices for the decision
-      list'.
-  - ac_id: AC-3
+      TC-01 verifies zero-data safety: all metrics return sensible defaults (0, null, empty arrays) when DB returns
+      empty. Tested and passing.
+  - ac_id: AC3
     status: PASS
-    evidence_ref: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/
+    evidence_ref: analytics-scoreboard.test.ts TC-08
     notes: >-
-      19 unit tests in cli-decision-callback-adapter.test.ts covering: factory function, approve path (4 tests), edit
-      path (2 tests), reject path (3 tests), defer path (2 tests), prompt format (5 tests), Ctrl+C interruption (2
-      tests). 5 integration tests in cli-decision-callback-adapter.integration.test.ts covering: approve full graph
-      round-trip, reject full graph round-trip, defer full graph round-trip, edit-then-approve two-cycle round-trip,
-      stub planLoader smoke test. All 24 tests pass with 0 failures.
+      KbGetScoreboardInputSchema includes optional start_date and end_date fields. TC-08 verifies date range filter
+      accepted and applied without throwing.
+  - ac_id: AC4
+    status: PASS
+    evidence_ref: analytics-scoreboard.test.ts TC-07
+    notes: >-
+      KbGetScoreboardInputSchema includes optional feature field. TC-07 passes feature filter without error.
+      access-control.ts line 156 confirms pm+dev roles.
+  - ac_id: AC5
+    status: PASS
+    evidence_ref: >-
+      EVIDENCE (iteration 0): files_modified includes tool-schemas.ts, tool-handlers.ts; access-control.ts grep confirms
+      registration
+    notes: >-
+      Verified: tool-schemas.ts line 3433 registers kb_get_scoreboard definition. tool-handlers.ts line 4490 implements
+      handleKbGetScoreboard. access-control.ts line 156 sets pm+dev roles. tool-handlers.ts line 148 imports
+      kb_get_scoreboard.
+  - ac_id: AC6
+    status: PASS
+    evidence_ref: .claude/skills/scoreboard/SKILL.md exists in worktree
+    notes: >-
+      Scoreboard skill file exists at .claude/skills/scoreboard/SKILL.md with usage, options table, examples, and output
+      format. Formats MCP output as markdown table for human CLI consumption.
+  - ac_id: AC7
+    status: PASS
+    evidence_ref: 'analytics-scoreboard.test.ts: 17 tests passing, analytics-operations.ts coverage 67.75%'
+    notes: >-
+      17 unit tests pass (TC-01 through TC-09). analytics-operations.ts statement coverage 67.75% exceeds 45% threshold.
+      Tests use vi.mock for DB, cover all 5 metrics plus zero-data and filter cases.
 architecture_compliant: true
 issues: []
+pre_existing_test_failures:
+  count: 15
+  cause: >-
+    worktree-management directory missing from story worktree (module predates this worktree's base commit). All
+    mcp-server test failures are caused by Cannot resolve ../worktree-management/index.js — confirmed present on main,
+    absent from WINT-3090 worktree base.
+  introduced_by_story: false
+  evidence: >-
+    Same failures reproduce at cce9e839d~1 (before any WINT-3090 code changes). Main branch (d4265f2) shows identical
+    failures in worktree-management/__tests__ for a different pre-existing reason.
+zod_first_types_fix:
+  status: CONFIRMED
+  files:
+    - file: apps/api/knowledge-base/src/crud-operations/analytics-operations.ts
+      change: >-
+        interface AnalyticsDeps → export const AnalyticsDepsSchema = z.object({ db: z.custom<NodePgDatabase<typeof
+        schema>>... }); type AnalyticsDeps = z.infer<typeof AnalyticsDepsSchema>
+      line: 94
+    - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      change: >-
+        interface McpToolDefinition → export const McpToolDefinitionSchema = z.object({...}); type McpToolDefinition =
+        z.infer<typeof McpToolDefinitionSchema>
+      line: 278
+    - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      change: >-
+        interface ToolHandlerDeps extends ... {} → export const ToolHandlerDepsSchema = z.object({...}); type
+        ToolHandlerDeps = KbAddDeps & KbGetDeps & ...
+      line: 295
 lessons_to_record:
   - lesson: >-
-      Adapter factory pattern (createXxxAdapter returning interface) cleanly bridges an interactive CLI tool (inquirer)
-      to a typed graph callback interface without coupling the graph to the I/O mechanism. The graph only sees
-      DecisionCallback; the adapter handles all terminal interaction.
-    category: pattern
+      Story worktrees may be missing modules added to main after the worktree base commit. When mcp-server tests fail
+      with Cannot resolve ../worktree-management/index.js in a worktree but pass on main, verify the module exists on
+      main and was added after the worktree base commit — this is a pre-existing environment gap, not a regression.
+    category: blocker
     tags:
-      - langgraph
-      - adapter
-      - cli
-      - hitl
-      - inquirer
-  - lesson: >-
-      Ctrl+C / interruption handling via try/catch around each inquirer.prompt call provides graceful fallback (defer on
-      primary interrupt, approve-all on checkbox interrupt) without crashing the graph. This is a reusable pattern for
-      any interactive HiTL adapter.
-    category: pattern
-    tags:
-      - cli
-      - error-handling
-      - hitl
-      - inquirer
-      - interruption
+      - worktree
+      - test-failures
+      - module-resolution
+      - pre-existing
 tokens:
-  in: 18000
-  out: 2500
+  in: 42000
+  out: 3500

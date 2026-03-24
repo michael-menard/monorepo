@@ -91,9 +91,13 @@ export type KbGetScoreboardInput = z.infer<typeof KbGetScoreboardInputSchema>
 // Dependencies
 // ============================================================================
 
-export interface AnalyticsDeps {
-  db: NodePgDatabase<typeof schema>
-}
+export const AnalyticsDepsSchema = z.object({
+  db: z.custom<NodePgDatabase<typeof schema>>(_val => true, {
+    message: 'Invalid database connection',
+  }),
+})
+
+export type AnalyticsDeps = z.infer<typeof AnalyticsDepsSchema>
 
 // ============================================================================
 // Token Summary
@@ -204,7 +208,6 @@ export async function kb_get_bottleneck_analysis(
   phase_distribution: { phase: string; count: number }[]
   stuck_stories: {
     story_id: string
-    phase: string | null // derived from state (phase column removed)
     state: string | null
     days_stuck: number
   }[]
@@ -216,23 +219,7 @@ export async function kb_get_bottleneck_analysis(
   // Active stories condition
   const activeCondition = sql`${stories.state} NOT IN ('completed', 'cancelled', 'deferred')`
 
-  // Build phase distribution condition
-  const phaseDistCondition = validated.feature
-    ? and(eq(stories.feature, validated.feature), activeCondition)
-    : activeCondition
-
-  // Get phase distribution for active stories (uses state — phase column was removed)
-  const phaseDistribution = await deps.db
-    .select({
-      phase: stories.state,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(stories)
-    .where(phaseDistCondition)
-    .groupBy(stories.state)
-    .orderBy(desc(sql`count(*)`))
-
-  // Build state distribution condition
+  // Get state distribution (phase column removed from schema - APRS-5040)
   const stateDistCondition = validated.feature ? eq(stories.feature, validated.feature) : undefined
 
   // Get state distribution
@@ -260,7 +247,6 @@ export async function kb_get_bottleneck_analysis(
   const stuckStories = await deps.db
     .select({
       storyId: stories.storyId,
-      phase: stories.state,
       state: stories.state,
       updatedAt: stories.updatedAt,
     })
@@ -273,16 +259,12 @@ export async function kb_get_bottleneck_analysis(
   const now = Date.now()
   const stuckWithDays = stuckStories.map(s => ({
     story_id: s.storyId,
-    phase: s.phase,
     state: s.state,
     days_stuck: Math.floor((now - s.updatedAt.getTime()) / (1000 * 60 * 60 * 24)),
   }))
 
   return {
-    phase_distribution: phaseDistribution.map(p => ({
-      phase: p.phase ?? 'unknown',
-      count: p.count ?? 0,
-    })),
+    phase_distribution: [], // Phase column removed from schema - APRS-5040
     stuck_stories: stuckWithDays,
     state_distribution: stateDistribution.map(s => ({
       state: s.state ?? 'unknown',
@@ -299,19 +281,22 @@ export async function kb_get_bottleneck_analysis(
 /**
  * Analyze story churn: iteration counts and feature patterns.
  *
+ * NOTE: This function is disabled - iteration column was removed from schema (APRS-5040)
+ * The iteration count functionality needs to be reimplemented using storyOutcomes table
+ * which tracks review_iterations and qa_iterations instead.
+ *
  * @param deps - Database dependencies
  * @param input - Analysis options
  * @returns Churn analysis results
  */
 export async function kb_get_churn_analysis(
-  deps: AnalyticsDeps,
-  input: KbGetChurnAnalysisInput,
+  _deps: AnalyticsDeps,
+  _input: KbGetChurnAnalysisInput,
 ): Promise<{
   high_churn_stories: {
     story_id: string
     iteration: number
     feature: string | null
-    phase: string | null // derived from state (phase column removed)
     state: string | null
   }[]
   feature_averages: {
@@ -322,65 +307,13 @@ export async function kb_get_churn_analysis(
   }[]
   message: string
 }> {
-  const validated = KbGetChurnAnalysisInputSchema.parse(input)
-
-  // Derive iteration count from story_artifacts (phase/iteration columns removed from stories)
-  const iterationSql = sql<number>`COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0)`
-
-  // Build high churn condition
-  const highChurnCondition = validated.feature
-    ? and(eq(stories.feature, validated.feature), gte(iterationSql, validated.min_iterations))
-    : gte(iterationSql, validated.min_iterations)
-
-  // Find high-churn stories (iteration >= threshold)
-  const highChurnStories = await deps.db
-    .select({
-      storyId: stories.storyId,
-      iteration: iterationSql,
-      feature: stories.feature,
-      phase: stories.state,
-      state: stories.state,
-    })
-    .from(stories)
-    .where(highChurnCondition)
-    .orderBy(desc(iterationSql))
-    .limit(validated.limit)
-
-  // Build feature averages condition
-  const featureCondition = validated.feature ? eq(stories.feature, validated.feature) : undefined
-
-  // Get average iterations by feature (derived from story_artifacts)
-  const featureAverages = await deps.db
-    .select({
-      feature: stories.feature,
-      avgIterations: sql<number>`avg(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))::float`,
-      storyCount: sql<number>`count(*)::int`,
-      maxIterations: sql<number>`max(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))::int`,
-    })
-    .from(stories)
-    .where(featureCondition)
-    .groupBy(stories.feature)
-    .orderBy(
-      desc(
-        sql`avg(COALESCE((SELECT max(sa.iteration) FROM artifacts.story_artifacts sa WHERE sa.story_id = ${stories.storyId}), 0))`,
-      ),
-    )
-
+  // DISABLED: iteration column removed from stories table (APRS-5040)
+  // Use storyOutcomes.review_iterations and storyOutcomes.qa_iterations instead
   return {
-    high_churn_stories: highChurnStories.map(s => ({
-      story_id: s.storyId,
-      iteration: s.iteration ?? 0,
-      feature: s.feature,
-      phase: s.phase,
-      state: s.state,
-    })),
-    feature_averages: featureAverages.map(f => ({
-      feature: f.feature ?? 'unknown',
-      avg_iterations: Math.round((f.avgIterations ?? 0) * 100) / 100,
-      story_count: f.storyCount ?? 0,
-      max_iterations: f.maxIterations ?? 0,
-    })),
-    message: `Found ${highChurnStories.length} high-churn stories (>=${validated.min_iterations} iterations)`,
+    high_churn_stories: [],
+    feature_averages: [],
+    message:
+      'Churn analysis disabled - iteration column removed from schema. Use story outcomes table instead.',
   }
 }
 
