@@ -1,6 +1,6 @@
 /**
  * final_validation node tests
- * APRS-2030: ST-3 / AC-4, AC-7, AC-8
+ * APRS-2030: ST-3 / AC-4, AC-7, AC-9
  */
 
 import { describe, it, expect } from 'vitest'
@@ -38,6 +38,13 @@ function makeState(overrides: Partial<PlanRefinementState> = {}): PlanRefinement
     maxIterations: 3,
     warnings: [],
     errors: [],
+    gapFindings: [],
+    specialistFindings: [],
+    reconciledFindings: [],
+    coverageScore: null,
+    circuitBreakerOpen: false,
+    previousGapCount: 0,
+    consecutiveLlmFailures: 0,
     hitlDecision: 'approve',
     humanReviewResult: { confirmedFlowIds: ['f1'], rejectedFlowIds: [] },
     readinessScore: null,

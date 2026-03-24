@@ -1,6 +1,6 @@
 /**
  * story_readiness_check node tests
- * APRS-2030: ST-4 / AC-5, AC-7, AC-8
+ * APRS-2030: ST-4 / AC-5, AC-7, AC-9
  */
 
 import { describe, it, expect } from 'vitest'
@@ -43,6 +43,13 @@ function makeState(overrides: Partial<PlanRefinementState> = {}): PlanRefinement
     maxIterations: 3,
     warnings: [],
     errors: [],
+    gapFindings: [],
+    specialistFindings: [],
+    reconciledFindings: [],
+    coverageScore: null,
+    circuitBreakerOpen: false,
+    previousGapCount: 0,
+    consecutiveLlmFailures: 0,
     hitlDecision: 'approve',
     humanReviewResult: { confirmedFlowIds: ['f1'], rejectedFlowIds: [] },
     readinessScore: null,
@@ -80,7 +87,7 @@ describe('defaultReadinessScoreFn', () => {
     expect(score).toBe(100)
   })
 
-  it('half flows confirmed, no warnings, no errors → 50', () => {
+  it('half flows confirmed, no warnings, no errors → 80', () => {
     const score = defaultReadinessScoreFn({
       totalFlows: 4,
       confirmedFlows: 2,

@@ -1,6 +1,6 @@
 /**
  * human_review_checkpoint node tests
- * APRS-2030: ST-2 / AC-2, AC-3, AC-7, AC-8
+ * APRS-2030: ST-2 / AC-2, AC-3, AC-7, AC-9
  */
 
 import { describe, it, expect, vi } from 'vitest'
@@ -27,6 +27,13 @@ function makeState(overrides: Partial<PlanRefinementState> = {}): PlanRefinement
     maxIterations: 3,
     warnings: [],
     errors: [],
+    gapFindings: [],
+    specialistFindings: [],
+    reconciledFindings: [],
+    coverageScore: null,
+    circuitBreakerOpen: false,
+    previousGapCount: 0,
+    consecutiveLlmFailures: 0,
     hitlDecision: null,
     humanReviewResult: null,
     readinessScore: null,
