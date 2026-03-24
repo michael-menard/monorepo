@@ -1,11 +1,13 @@
 schema: 1
-story_id: APRS-2030
-timestamp: '2026-03-24T00:55:00.000Z'
+story_id: WINT-6030
+timestamp: '2026-03-23T00:00:00Z'
 verdict: PASS
-tests_executed: true
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: skill-prompt-only story — no TypeScript code, no packages, no runtime. E2E tests explicitly exempt.
 test_results:
   unit:
-    pass: 56
+    pass: 0
     fail: 0
   integration:
     pass: 0
@@ -13,140 +15,103 @@ test_results:
   e2e:
     pass: 0
     fail: 0
-    note: exempt — backend-only orchestrator nodes, no UI surface or API endpoints
+    exempt: true
   http:
     pass: 0
     fail: 0
-    note: no .http files for this story
 coverage: null
 coverage_meets_threshold: true
-coverage_note: >-
-  Backend orchestrator node package — coverage report not individually extracted, but 56 unit tests cover all node code
-  paths. Global threshold (45%) applies at package level.
+coverage_note: Coverage N/A — docs-only deliverable, no source files to measure.
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes: >-
-    Tests use vi.fn() for mocks, async/await correctly, semantic assertions. No setTimeout used in place of waitFor. No
-    pattern violations observed. makeState helpers include all APRS-2020 gap-coverage fields (AC-9 compliant).
 acs_verified:
   - ac_id: AC-1
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
     notes: >-
-      PlanRefinementStateAnnotation verified in plan-refinement-state.ts lines 317-345: hitlDecision
-      (HiTLDecision|null), humanReviewResult (HumanReviewResult|null), readinessScore (number|null), storyReadiness
-      (StoryReadiness|null), validationResult (ValidationResult|null) — all with overwrite reducer.
-      RefinementPhaseSchema includes human_review, final_validation, story_readiness phases (lines 170-180).
+      File confirmed at .claude/skills/batch-status/SKILL.md. Frontmatter contains all six required fields: created,
+      updated, version, name, description, kb_tools.
   - ac_id: AC-2
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
     notes: >-
-      human-review-checkpoint.ts routeHiTLDecision() covers all 4 flows: approve→final_validation, edit→gap_coverage,
-      reject→error with reason, defer→complete with warning. Node checks state.hitlDecision for soft HiTL resume. Falls
-      back to injected callback. 12 tests confirm all paths.
+      Usage section and Arguments table verified. --plan defaults to workflow-intelligence-wint, --limit defaults to 20.
+      Multiple examples provided.
   - ac_id: AC-3
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
     notes: >-
-      createHumanReviewCheckpointNode({ decisionCallback? }) factory verified. PlanRefinementGraphConfigSchema includes
-      decisionCallback field (plan-refinement.ts line 72). AutoDecisionCallback is default. No transport dependency in
-      routing logic.
+      CRITICAL EXECUTION RULE block present at line 14: explicitly prohibits Task sub-agent spawning and directs direct
+      MCP tool calls with mcp__knowledge-base__ prefix.
   - ac_id: AC-4
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
     notes: >-
-      final-validation.ts validatePlan() runs: (1) NormalizedPlanSchema.safeParse, (2) confirmed flows have non-empty
-      steps check, (3) critical warnings check. No mutations, no LLM calls. Sets refinementPhase=story_readiness on
-      pass, error on fail. 8 tests verify.
+      Step 2 (lines 70-94) documents kb_list_stories call with plan_slug + limit:200, authoritative state-bucket mapping
+      block, per-slug error handling (HEALTH_ERROR flag), and full Pipeline Health section rendering with sample table.
   - ac_id: AC-5
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
     notes: >-
-      story-readiness-check.ts computeReadinessScore() uses injectable ReadinessScoreFn (default:
-      flows_confirmed_ratio*40 + warnings_cleared_ratio*30 + no_errors*30). Pass threshold=70. Writes
-      storyReadiness.score, .passed, .reasons[]. Sets refinementPhase=complete. 13 tests verify including injectable
-      scorer.
+      Step 3 (lines 97-119) documents kb_search call with tags:[batch-progress]. Lines 188-196 show explicit 'No batch
+      progress entries found' message with two-line explanation and bootstrap hint.
   - ac_id: AC-6
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
     notes: >-
-      plan-refinement.ts graph routing verified: afterHumanReview routes approve→final_validation, edit→extract_flows
-      (DEC-6), reject/defer→END. afterFinalValidation routes story_readiness→story_readiness_check, error→END.
-      story_readiness_check→END edge present. 23 graph routing tests confirm all edges.
+      Graceful Degradation Summary table (lines 237-244) has exactly 6 condition rows. Per-call-site handling
+      documented: HEALTH_ERROR for kb_list_stories, ACTIVITY_ERROR for kb_search, with partial-data summary block
+      warning appended when either flag is set.
   - ac_id: AC-7
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-7
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
     notes: >-
-      routeHiTLDecision() exported from human-review-checkpoint.ts, validatePlan() exported from final-validation.ts,
-      computeReadinessScore() exported from story-readiness-check.ts. Matches normalize-plan.ts and extract-flows.ts
-      pattern.
+      Summary Block (lines 213-225) shows Total stories, In-flight, Blocked, Completed, Backlog, Other, and Activity
+      entries count with last LIMIT requested.
   - ac_id: AC-8
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-8
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
     notes: >-
-      56 total tests: 12 human-review-checkpoint (all 4 HiTL flows + AutoDecisionCallback + error handling), 8
-      final-validation (pass/fail/schema/steps/critical-warnings), 13 story-readiness-check (score formula, threshold,
-      injectable scorer), 23 graph-level routing tests (all conditional edges).
+      Frontmatter kb_tools lists exactly [kb_list_stories, kb_search]. Entire skill body is read-only: no
+      kb_update_story_status, kb_add, artifact_write, or any mutation calls present.
   - ac_id: AC-9
     status: PASS
-    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-9
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
     notes: >-
-      makeState helpers in human-review-checkpoint.test.ts (line 19-44) include all APRS-2020 fields: gapFindings,
-      specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount,
-      consecutiveLlmFailures. All typed against PlanRefinementState — type-safe.
+      Frontmatter structure matches peer skill pattern. Report uses box-drawing characters (===, --) for section
+      borders. Activity table specifies explicit column widths (story_id:12, phase:15, outcome:10, timestamp:22). No
+      emoji present anywhere in the file.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: >-
+      Authoritative bucket mapping (lines 87-93) places in_review and in_qa in completed bucket. blocked bucket contains
+      only: blocked, failed_code_review, failed_qa. No conflicting rendered table exists — single canonical mapping
+      block used throughout.
 architecture_compliant: true
 architecture_notes: >-
-  Zod-first types used throughout (HiTLDecisionSchema, HumanReviewResultSchema, StoryReadinessSchema,
-  ValidationResultSchema, PlanRefinementGraphConfigSchema). @repo/logger used for all logging. No console.log. No barrel
-  files created. Injectable adapter pattern consistent with existing nodes (normalize-plan.ts, extract-flows.ts).
-  LangGraph StateGraph.compile() pattern followed.
-build_warnings:
-  - >-
-    Pre-existing type errors in scope-defend.ts block full package type-check/build — unrelated to APRS-2030 files.
-    Confirmed by code review iteration 1.
+  Docs-only deliverable. Follows peer skill conventions (frontmatter schema, sectioned output format, box-drawing
+  characters). Direct MCP call pattern (no sub-agents). Read-only — no state mutation. Related skills cross-referenced
+  correctly.
 issues: []
 lessons_to_record:
   - lesson: >-
-      Injectable callback/adapter pattern (DecisionCallback, ReadinessScoreFn) enables full unit testability of
-      LangGraph nodes without any LLM or transport dependency. This pattern should be used consistently for all future
-      HiTL nodes.
+      For skill-prompt-only stories, QA verification is purely document review: confirm every AC maps to a specific
+      section/line in the SKILL.md and that no conflicting specifications exist (e.g., two bucket assignment tables).
     category: pattern
     tags:
-      - langgraph
-      - hitl
-      - testing
-      - orchestrator
+      - qa
+      - skill-docs
+      - batch-coordinator
   - lesson: >-
-      Soft HiTL state injection (checking state.hitlDecision before invoking callback) provides resume capability
-      without requiring LangGraph interrupt(). The node checks refinementPhase==='human_review' to distinguish resume
-      from re-entry after edit loop.
+      The CRITICAL EXECUTION RULE block preventing Task sub-agent spawning should be a required section in any skill
+      that calls MCP tools directly, not just batch-coordinator skills.
     category: pattern
     tags:
-      - hitl
-      - langgraph
-      - resume
-      - orchestrator
-  - lesson: >-
-      makeState helper in test files must include all state fields (including fields from sibling stories like APRS-2020
-      gap-coverage fields) to prevent TypeScript errors. AC-9 enforces this explicitly.
-    category: pattern
-    tags:
-      - testing
-      - typescript
-      - langgraph
-      - state
-  - lesson: >-
-      DEC-6 routes 'edit' back to extract_flows (not normalize_plan or gap_coverage directly). When adding new
-      conditional routing decisions, document the decision as a DECision record in the story description for future
-      reference.
-    category: pattern
-    tags:
-      - langgraph
-      - routing
-      - orchestrator
-      - design-decisions
-context_cache_note: 'Cache miss for qa_verify/APRS-2030 (role: qa) — proceeded without context cache. No blockers.'
+      - skill-docs
+      - mcp
+      - sub-agents
 tokens:
-  in: 18000
-  out: 3000
+  in: 8500
+  out: 1800

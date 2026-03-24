@@ -1,80 +1,67 @@
-schema: 1
-story_id: APRS-5040
+story_id: WINT-6030
 phase: implementation
 iteration: 0
-timestamp: '2026-03-23T23:00:00Z'
-
+timestamp: '2026-03-24T00:00:00Z'
+e2e_tests:
+  status: exempt
+  reason: skill-prompt-only story, no runtime code
 acceptance_criteria:
   - ac_id: AC-1
     status: PASS
-    evidence_type: test
-    description: >-
-      createCLIDecisionCallbackAdapter in adapters/plan-refinement/cli-decision-callback-adapter.ts
-      satisfies the graph's DecisionCallback interface (ask(DecisionContext) returning
-      {decision, confirmedFlowIds, rejectedFlowIds, reason}). Handles all 4 HiTL decisions:
-      approve, edit, reject, defer. Type checked with zero errors.
-    files:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
-      - packages/backend/orchestrator/src/cli/run-plan-refinement.ts
-
+    evidence: >-
+      File exists at .claude/skills/batch-status/SKILL.md with YAML frontmatter containing created, updated, version,
+      name, description, kb_tools fields
   - ac_id: AC-2
     status: PASS
-    evidence_type: test
-    description: >-
-      CLI prompt displays plan slug header, all flows with IDs and names, warnings,
-      and errors. 4 inquirer choices (approve/edit/reject/defer). Approve flow populates
-      confirmedFlowIds/rejectedFlowIds via checkbox prompt. Verified by 19 unit tests.
-    files:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
-      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
-
+    evidence: >-
+      Usage section documents /batch-status [--plan=SLUG] [--limit=N] with argument table showing --plan
+      default=workflow-intelligence-wint and --limit default=20
   - ac_id: AC-3
     status: PASS
-    evidence_type: test
-    description: >-
-      24 total tests passing: 19 unit tests (all 4 decision paths, prompt format, Ctrl+C handling)
-      + 5 integration tests (graph.invoke() with bridged callback for all 4 HiTL outcomes
-      + smoke test with stub planLoader). All tests pass in main monorepo.
-    files:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
-      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
-
-test_results:
-  - command: pnpm test --filter @repo/orchestrator -- adapters/plan-refinement
-    outcome: PASS
-    details: '2 test files, 24 tests passed (19 unit + 5 integration)'
-
-  - command: npx tsc --noEmit (grep plan-refinement|run-plan-refinement)
-    outcome: PASS
-    details: 'Zero type errors in all 4 new files'
-
-  - command: pnpm eslint (source files only)
-    outcome: PASS
-    details: 'Zero lint errors on adapter and CLI entrypoint'
-
-files_created:
-  - path: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+    evidence: >-
+      CRITICAL EXECUTION RULE block present explicitly prohibiting Task sub-agent spawning: 'Do NOT spawn sub-agents
+      (Task tool) for this skill'
+  - ac_id: AC-4
+    status: PASS
+    evidence: >-
+      Step 2 documents kb_list_stories call, authoritative state bucket grouping block, and Pipeline Health section
+      rendering with summary table
+  - ac_id: AC-5
+    status: PASS
+    evidence: >-
+      Step 3 documents kb_search call with tags=[batch-progress], and explicit 'No batch progress entries found' message
+      for empty results
+  - ac_id: AC-6
+    status: PASS
+    evidence: >-
+      Graceful Degradation Summary table present with 6 condition rows; per-call-site null/error handling documented for
+      both kb_list_stories (HEALTH_ERROR) and kb_search (ACTIVITY_ERROR)
+  - ac_id: AC-7
+    status: PASS
+    evidence: >-
+      Summary Block at end of report shows total stories, counts by bucket (In-flight, Blocked, Completed, Backlog,
+      Other), and Activity entries count
+  - ac_id: AC-8
+    status: PASS
+    evidence: >-
+      kb_tools frontmatter contains exactly [kb_list_stories, kb_search] — no mutation tools listed or called in the
+      skill body
+  - ac_id: AC-9
+    status: PASS
+    evidence: >-
+      Frontmatter matches story-state/SKILL.md pattern (created/updated/version/name/description/kb_tools); output
+      format uses sectioned layout with box-drawing characters, no emoji, consistent column widths
+  - ac_id: AC-10
+    status: PASS
+    evidence: >-
+      Step 2 authoritative bucket assignment block places in_review and in_qa in the completed bucket. Conflicting
+      rendered table from earlier version removed — only the canonical mapping block remains. blocked bucket contains
+      only: blocked, failed_code_review, failed_qa
+files_changed:
+  - path: .claude/skills/batch-status/SKILL.md
     action: created
-    description: >-
-      Bridge adapter creating graph-compatible DecisionCallback using inquirer directly.
-      Handles approve (with flow checkbox), edit (no follow-up), reject (reason prompt),
-      defer (reason prompt). Ctrl+C interruption handling for all prompts.
-
-  - path: packages/backend/orchestrator/src/cli/run-plan-refinement.ts
-    action: created
-    description: >-
-      CLI entrypoint following generate-stories.ts pattern. parseArgs (--plan-slug, --help),
-      stub planLoader with INJECTION POINT comment, wires createPlanRefinementGraph with
-      bridged callback, structured stdout output, exit codes 0/1.
-
-  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
-    action: created
-    description: >-
-      19 unit tests covering all 4 decision paths, prompt format verification
-      (plan slug, flow IDs, warnings, errors, 4 choices), and Ctrl+C interruption handling.
-
-  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
-    action: created
-    description: >-
-      5 integration tests wiring graph.invoke() with bridged CLI adapter + stub planLoader.
-      Covers all 4 HiTL outcomes (approve, reject, defer, edit→approve) plus smoke test.
+    notes: >-
+      AC-10 fix: removed conflicting rendered table that placed in_review and in_qa in the blocked bucket. Single
+      authoritative bucket assignment block now used throughout. All 10 ACs satisfied.
+commit: 6b84ab813
+branch: story/WINT-6030
