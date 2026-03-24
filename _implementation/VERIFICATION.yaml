@@ -1,11 +1,11 @@
 schema: 1
-story_id: WINT-0140
-timestamp: '2026-03-20T19:20:00Z'
+story_id: WINT-3090
+timestamp: '2026-03-24T00:30:00.000Z'
 verdict: PASS
 tests_executed: true
 test_results:
   unit:
-    pass: 24
+    pass: 17
     fail: 0
   integration:
     pass: 0
@@ -16,99 +16,99 @@ test_results:
   http:
     pass: 0
     fail: 0
-coverage: 98.5
+coverage: 67.75
 coverage_meets_threshold: true
-coverage_note: >-
-  ML pipeline module files show 98-100% statement/branch/function coverage. Global package coverage is low due to
-  pre-existing untested modules unrelated to WINT-0140.
 test_quality:
   verdict: PASS
   anti_patterns: []
 acs_verified:
   - ac_id: AC1
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[ml-model-register.ts, ml-model-get-active.ts]
-    notes: mlModelRegister and mlModelGetActive created for workflow.ml_models. 7 unit tests pass.
+    evidence_ref: 'EVIDENCE (iteration 0): unit_tests.passed=17, files_modified includes analytics-operations.ts'
+    notes: >-
+      kb_get_scoreboard function implemented in analytics-operations.ts line 398. Returns all 5 metric sections
+      (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability) in a single response. TC-09
+      verifies all required top-level keys present.
   - ac_id: AC2
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[ml-metrics-record.ts]
-    notes: mlMetricsRecord created for workflow.model_metrics. 3 unit tests pass including UUID validation and error path.
+    evidence_ref: analytics-scoreboard.test.ts TC-01
+    notes: >-
+      TC-01 verifies zero-data safety: all metrics return sensible defaults (0, null, empty arrays) when DB returns
+      empty. Tested and passing.
   - ac_id: AC3
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[ml-prediction-record.ts, ml-prediction-get-by-entity.ts]
+    evidence_ref: analytics-scoreboard.test.ts TC-08
     notes: >-
-      mlPredictionRecord and mlPredictionGetByEntity created for workflow.model_predictions. 6 unit tests pass including
-      limit constraint (max 100).
+      KbGetScoreboardInputSchema includes optional start_date and end_date fields. TC-08 verifies date range filter
+      accepted and applied without throwing.
   - ac_id: AC4
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[training-data-ingest.ts, training-data-mark-validated.ts]
+    evidence_ref: analytics-scoreboard.test.ts TC-07
     notes: >-
-      trainingDataIngest and trainingDataMarkValidated created for workflow.training_data. 8 unit tests pass including
-      optional storyId and not-found handling.
+      KbGetScoreboardInputSchema includes optional feature field. TC-07 passes feature filter without error.
+      access-control.ts line 156 confirms pm+dev roles.
   - ac_id: AC5
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[__types__/index.ts]
-    notes: All Zod schemas defined. No TypeScript interfaces used. MlModelTypeSchema and all Input/Output schemas present.
+    evidence_ref: >-
+      EVIDENCE (iteration 0): files_modified includes tool-schemas.ts, tool-handlers.ts; access-control.ts grep confirms
+      registration
+    notes: >-
+      Verified: tool-schemas.ts line 3433 registers kb_get_scoreboard definition. tool-handlers.ts line 4490 implements
+      handleKbGetScoreboard. access-control.ts line 156 sets pm+dev roles. tool-handlers.ts line 148 imports
+      kb_get_scoreboard.
   - ac_id: AC6
     status: PASS
-    evidence_ref: 'spot-check: mcp-tools/src/index.ts'
+    evidence_ref: .claude/skills/scoreboard/SKILL.md exists in worktree
     notes: >-
-      Cyclic dependency resolved. mcp-tools index.ts has no ml-pipeline imports. Review iteration 2 confirms build
-      passes.
+      Scoreboard skill file exists at .claude/skills/scoreboard/SKILL.md with usage, options table, examples, and output
+      format. Formats MCP output as markdown table for human CLI consumption.
   - ac_id: AC7
     status: PASS
-    evidence_ref: EVIDENCE:files_changed[error-handler.ts]
-    notes: error-handler.ts extracted as shared utility (extractErrorMessage). Used across all 7 tool files.
-  - ac_id: AC8
-    status: PASS
-    evidence_ref: 'spot-check: ml-model-register.ts'
-    notes: '@repo/logger used throughout (logger.warn). No console.log detected.'
-  - ac_id: AC9
-    status: PASS
-    evidence_ref: EVIDENCE:tests.unit
-    notes: 24/24 unit tests pass across all 7 tools.
-  - ac_id: AC10
-    status: PASS
-    evidence_ref: REVIEW artifact (iteration 2)
-    notes: TypeScript compilation passes for both @repo/knowledge-base and @repo/mcp-tools. 0 type errors.
-  - ac_id: AC11
-    status: PASS
-    evidence_ref: EVIDENCE:files_changed[ml-pipeline/index.ts]
+    evidence_ref: 'analytics-scoreboard.test.ts: 17 tests passing, analytics-operations.ts coverage 67.75%'
     notes: >-
-      Module in apps/api/knowledge-base/src/ml-pipeline/ with __types__/__tests__ directories. All 7 tools and schemas
-      exported.
+      17 unit tests pass (TC-01 through TC-09). analytics-operations.ts statement coverage 67.75% exceeds 45% threshold.
+      Tests use vi.mock for DB, cover all 5 metrics plus zero-data and filter cases.
 architecture_compliant: true
-architecture_notes: >-
-  Zod-first types, @repo/logger for logging, named exports, __types__/__tests__ directory structure, no barrel file
-  violations.
 issues: []
+pre_existing_test_failures:
+  count: 15
+  cause: >-
+    worktree-management directory missing from story worktree (module predates this worktree's base commit). All
+    mcp-server test failures are caused by Cannot resolve ../worktree-management/index.js — confirmed present on main,
+    absent from WINT-3090 worktree base.
+  introduced_by_story: false
+  evidence: >-
+    Same failures reproduce at cce9e839d~1 (before any WINT-3090 code changes). Main branch (d4265f2) shows identical
+    failures in worktree-management/__tests__ for a different pre-existing reason.
+zod_first_types_fix:
+  status: CONFIRMED
+  files:
+    - file: apps/api/knowledge-base/src/crud-operations/analytics-operations.ts
+      change: >-
+        interface AnalyticsDeps → export const AnalyticsDepsSchema = z.object({ db: z.custom<NodePgDatabase<typeof
+        schema>>... }); type AnalyticsDeps = z.infer<typeof AnalyticsDepsSchema>
+      line: 94
+    - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      change: >-
+        interface McpToolDefinition → export const McpToolDefinitionSchema = z.object({...}); type McpToolDefinition =
+        z.infer<typeof McpToolDefinitionSchema>
+      line: 278
+    - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      change: >-
+        interface ToolHandlerDeps extends ... {} → export const ToolHandlerDepsSchema = z.object({...}); type
+        ToolHandlerDeps = KbAddDeps & KbGetDeps & ...
+      line: 295
 lessons_to_record:
   - lesson: >-
-      When adding MCP tools for new domain tables to knowledge-base package, avoid re-exporting from mcp-tools to
-      prevent cyclic dependency. Tools must live only in knowledge-base.
+      Story worktrees may be missing modules added to main after the worktree base commit. When mcp-server tests fail
+      with Cannot resolve ../worktree-management/index.js in a worktree but pass on main, verify the module exists on
+      main and was added after the worktree base commit — this is a pre-existing environment gap, not a regression.
     category: blocker
     tags:
-      - mcp-tools
-      - cyclic-dependency
-      - knowledge-base
-      - architecture
-  - lesson: >-
-      Extracting a shared error-handler.ts at the module level (extractErrorMessage) eliminates repetitive try/catch
-      message extraction across multiple tool files in the same domain.
-    category: pattern
-    tags:
-      - error-handling
-      - code-reuse
-      - ml-pipeline
-  - lesson: >-
-      ML pipeline MCP tools can be fully unit-tested by mocking @repo/db and @repo/logger via vi.hoisted() — no live DB
-      connection needed. Consistent with WINT-0100/WINT-0120 pattern.
-    category: pattern
-    tags:
-      - testing
-      - mocking
-      - ml-pipeline
-      - vitest
+      - worktree
+      - test-failures
+      - module-resolution
+      - pre-existing
 tokens:
-  in: 18000
-  out: 2500
+  in: 42000
+  out: 3500
