@@ -11,7 +11,6 @@
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import {
-  GapFindingSchema,
   type GapFinding,
   type NormalizedPlan,
   type Flow,
