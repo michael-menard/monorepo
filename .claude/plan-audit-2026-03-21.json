@@ -1,0 +1,554 @@
+{
+  "auditDate": "2026-03-21",
+  "totalPlans": 65,
+  "audited": 5,
+  "summary": {
+    "ARCHIVE": 1,
+    "PARTIALLY_IMPLEMENTED": 2,
+    "NEEDS_REWRITE": 1,
+    "PROCEED_WITH_CHANGES": 1
+  },
+  "entries": [
+    {
+      "slug": "update-turbo-dev-command",
+      "title": "Update Turbo Dev Command",
+      "status": "draft",
+      "priority": "P3",
+      "planType": "monorepo:tooling",
+      "verdict": "ARCHIVE",
+      "verdictRationale": "100% of the plan's technical deliverables are implemented verbatim in the codebase.",
+      "validity": {
+        "stillNeeded": false,
+        "problemStillReal": false,
+        "duplicates": [],
+        "architectureAlignment": "aligned",
+        "notes": "The problem (messy concurrently-based dev script) no longer exists."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 100,
+        "implemented": [
+          "//#infra:up task in turbo.json with cache:false — turbo.json:9-11",
+          "dev task depends on //#infra:up — turbo.json:25-29",
+          "dev script uses turbo dev --filter — package.json:27",
+          "dev:api convenience script — package.json:28",
+          "dev:web convenience script — package.json:29",
+          "infra:up with Docker check — package.json:30",
+          "infra:down script — package.json:31",
+          "infra:reset script — package.json:32",
+          "infra/compose.lego-app.yaml exists"
+        ],
+        "notImplemented": []
+      },
+      "modifications": {
+        "staleReferences": [],
+        "architectureChanges": [],
+        "newPatterns": []
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "Plan is 100% implemented",
+            "challenge": "README.md line 89 references stale pnpm dev:infra",
+            "resolution": "Sustained as doc gap, not plan gap",
+            "evidencePaths": [
+              "README.md:89"
+            ]
+          }
+        ],
+        "challengesOverruled": [
+          {
+            "claim": "concurrently removal is complete",
+            "challenge": "concurrently still in devDependencies",
+            "resolution": "Overruled — plan said remove from dev script, not uninstall",
+            "evidencePaths": [
+              "package.json:80"
+            ]
+          }
+        ],
+        "confidenceAdjustment": "Verdict stands as ARCHIVE."
+      },
+      "decisions": [],
+      "recommendedActions": [
+        "Archive this plan"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "archived"
+      },
+      "applied": false,
+      "appliedAt": null
+    },
+    {
+      "slug": "story-claim-release-multi-agent",
+      "title": "Story Claim/Release for Multi-Agent Concurrency",
+      "status": "draft",
+      "priority": "P2",
+      "planType": "workflow:langgraph",
+      "verdict": "PARTIALLY_IMPLEMENTED",
+      "verdictRationale": "4 of 5 deliverables have been structurally implemented, but Deliverable 2 (dev-code-review.md claim) uses the ghost state in_review which is rejected by StoryStateSchema — making the code review concurrency guard completely non-functional.",
+      "validity": {
+        "stillNeeded": "partially",
+        "problemStillReal": true,
+        "duplicates": [],
+        "architectureAlignment": "drifted",
+        "notes": "The concurrency problem is real but the plan's state model has diverged from canonical schema."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 60,
+        "implemented": [
+          "Claim step in dev-implement-story.md (Step 0.6) with in_progress guard — lines 170-177",
+          "Claim step in qa-verify-story.md (Step 0.6) with in_qa guard — lines 40-43",
+          "Claim step in dev-fix-story.md (Step 0.6) with in_progress state — lines 34-43",
+          "next-actions excludes in-flight stories via worktree_list_active exclusion — SKILL.md lines 83-91"
+        ],
+        "notImplemented": [
+          "dev-code-review.md claim uses in_review (ghost state) — ZodError on every call — line 48",
+          "Abort recovery in 3 files references ready_for_review (ghost state)",
+          "Follow-up items: stale claim detection, auto-release, claimed_by/claimed_at fields"
+        ]
+      },
+      "modifications": {
+        "staleReferences": [
+          "Plan uses in_review, ready_for_review, ready_to_work — all ghost states"
+        ],
+        "architectureChanges": [
+          "Replace ghost states with canonical equivalents"
+        ],
+        "newPatterns": [
+          "worktree_list_active for in-flight detection"
+        ]
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "Plan completion is 80%",
+            "challenge": "Functional completion is 60% due to broken ghost states",
+            "resolution": "Sustained",
+            "evidencePaths": []
+          }
+        ],
+        "challengesOverruled": [],
+        "confidenceAdjustment": "Verdict stands as PARTIALLY_IMPLEMENTED at 60%."
+      },
+      "decisions": [
+        {
+          "question": "Should ghost state bugs be fixed immediately?",
+          "options": [
+            "Fix now",
+            "Create fix story",
+            "Defer"
+          ],
+          "recommendation": "Fix now",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        }
+      ],
+      "recommendedActions": [
+        "Fix ghost state references in command files",
+        "Mark plan as implemented after fixes"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "implemented"
+      },
+      "applied": false,
+      "appliedAt": null
+    },
+    {
+      "slug": "agent-monitor-dashboard",
+      "title": "Agent Monitor Dashboard — Implementation Plan",
+      "status": "draft",
+      "priority": "P2",
+      "planType": "workflow:feature",
+      "verdict": "NEEDS_REWRITE",
+      "verdictRationale": "The plan's core architecture (dedicated Socket.io server, new packages/ui package, LangGraph event callbacks via DashboardCallbackHandler) has fundamentally diverged from the codebase.",
+      "validity": {
+        "stillNeeded": "partially",
+        "problemStillReal": true,
+        "duplicates": [],
+        "architectureAlignment": "drifted",
+        "notes": "The GOAL is valid but the APPROACH has been superseded by polling-based monitor (APIP-2020). Plan is correctly tagged triage:post-MVP."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 35,
+        "implemented": [
+          "MonitorPage with 4 panels",
+          "PipelineViewPanel",
+          "CostPanel",
+          "BlockedQueuePanel",
+          "NeedsAttentionPanel",
+          "usePipelineMonitor polling hook",
+          "GET /monitor/pipeline endpoint",
+          "MonitorRepository",
+          "story_state_history table",
+          "LangGraph graphs (46 files)",
+          "BullMQ pipeline queue",
+          "Budget accumulator"
+        ],
+        "notImplemented": [
+          "Socket.io server, DashEventSchema, LangGraph event bridge, RingBuffer, useDashSocket, DashboardCallbackHandler, Story Board kanban, Story Detail Modal, Analytics KPI, KB Health panel, Bottleneck detector, Budget enforcement system, Interactive story board, Roadmap panel, Dockerfiles, Cloudflare Tunnel"
+        ]
+      },
+      "modifications": {
+        "staleReferences": [
+          "packages/ui, dashboard-server, story.yaml reads, feature_dir pattern, story_state_transitions table name"
+        ],
+        "architectureChanges": [
+          "Use @repo/app-component-library, extend lego-api monitor domain, use HTTP polling or SSE, use KB MCP tools"
+        ],
+        "newPatterns": [
+          "KB-only story management, MCP tools, worktree development, polling-based monitoring"
+        ]
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "Monitor domain implements only 25%",
+            "challenge": "Actual is 35-40%",
+            "resolution": "Sustained — revised estimate",
+            "evidencePaths": []
+          }
+        ],
+        "challengesOverruled": [
+          {
+            "claim": "Plan is premature (LangGraph never run)",
+            "challenge": "46 graphs exist",
+            "resolution": "Overruled — infrastructure != readiness",
+            "evidencePaths": []
+          }
+        ],
+        "confidenceAdjustment": "Verdict remains NEEDS_REWRITE."
+      },
+      "decisions": [
+        {
+          "question": "Rewrite, archive, or defer?",
+          "options": [
+            "Rewrite to ~15 stories",
+            "Archive + new plan",
+            "Defer post-MVP"
+          ],
+          "recommendation": "Defer",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        }
+      ],
+      "recommendedActions": [
+        "Defer — post-MVP",
+        "Keep APIP-2020 monitor for MVP",
+        "Rewrite after LangGraph proof-of-life"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "draft"
+      },
+      "applied": false,
+      "appliedAt": null
+    },
+    {
+      "slug": "stack-components-album-visual-overhaul",
+      "title": "Stack Components + Album Visual Overhaul",
+      "status": "draft",
+      "priority": "P3",
+      "planType": "lego:feature",
+      "verdict": "PARTIALLY_IMPLEMENTED",
+      "verdictRationale": "Part 1 (stack components in app-component-library) is 100% complete — all 4 components, types, tests, and utilities exist and are production-ready. Part 2 (AlbumCard integration) was NOT completed — AlbumCard still uses CSS-based stacking with GalleryCard (REPA-009 refactor). Part 3 (INSP roadmap/stories) was NOT completed — no INSP stories exist in KB. Stack components have zero consumers, making them unused code awaiting integration. Remaining work depends on a design decision about CSS stacking vs. Framer Motion stacks.",
+      "validity": {
+        "stillNeeded": "partially",
+        "problemStillReal": true,
+        "duplicates": [],
+        "architectureAlignment": "partially-aligned",
+        "notes": "AlbumCard still uses CSS-only faux-stacked effect (two translated divs at lines 84-96). The original problem (flat cards without rich stacking) is partially addressed — CSS stacking provides visual depth but lacks animation and hover-preview. Stack components exist and could deliver a richer experience. Plan is correctly tagged triage:post-MVP."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 55,
+        "implemented": [
+          "OrganicPile.tsx — 86 LOC, Framer Motion spring animations, seeded randomness — packages/core/app-component-library/src/stacks/OrganicPile.tsx",
+          "PerspectiveStack.tsx — 68 LOC, 3D perspective offsets — packages/core/app-component-library/src/stacks/PerspectiveStack.tsx",
+          "CardFan.tsx — 81 LOC, 20-degree arc fan layout — packages/core/app-component-library/src/stacks/CardFan.tsx",
+          "ExpandableStack.tsx — 102 LOC, hover-to-preview grid wrapper — packages/core/app-component-library/src/stacks/ExpandableStack.tsx",
+          "__types__/index.ts — 40 LOC, StackItemSchema, BaseStackPropsSchema, ExpandableStackPropsSchema — stacks/__types__/index.ts",
+          "seeded-random.ts — 10 LOC, deterministic PRNG — stacks/utils/seeded-random.ts",
+          "OrganicPile.test.tsx — 117 LOC — stacks/__tests__/OrganicPile.test.tsx",
+          "PerspectiveStack.test.tsx — 95 LOC — stacks/__tests__/PerspectiveStack.test.tsx",
+          "CardFan.test.tsx — 94 LOC — stacks/__tests__/CardFan.test.tsx",
+          "ExpandableStack.test.tsx — 183 LOC — stacks/__tests__/ExpandableStack.test.tsx",
+          "MiniInspirationCard.tsx — 37 LOC — apps/web/app-inspiration-gallery/src/components/AlbumCard/MiniInspirationCard.tsx"
+        ],
+        "notImplemented": [
+          "Stacks not exported from app-component-library/src/index.ts (NO BARREL FILES rule may make this correct)",
+          "AlbumCard does NOT use OrganicPile or ExpandableStack — uses CSS stacking with GalleryCard — AlbumCard/index.tsx:84-96",
+          "No INSP stories exist in KB — kb_list_stories(feature: INSP) returned 0 results",
+          "stories.index.md updates not applied — file not found in main branch"
+        ]
+      },
+      "modifications": {
+        "staleReferences": [
+          "v0 prototype path — exists but components already ported to production",
+          "Plan says add exports to index.ts — may violate CLAUDE.md NO BARREL FILES rule",
+          "Plan references INSP-001, INSP-002 — no INSP stories in KB; worktree branches use insp-2000 format"
+        ],
+        "architectureChanges": [
+          "AlbumCard now uses GalleryCard from @repo/gallery — plan predates REPA-009 refactor",
+          "Import strategy: direct imports from stacks/ subpath rather than barrel file re-export",
+          "MiniInspirationCard exists but is unused — needs integration if AlbumCard adopts stacks"
+        ],
+        "newPatterns": [
+          "GalleryCard composition pattern — @repo/gallery provides base card with selection/drag — AlbumCard/index.tsx:12",
+          "KB-only story management — stories should be created in KB, not filesystem",
+          "REPA-009 established CSS stacking as current AlbumCard visual pattern"
+        ]
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "REPA-009 deliberately superseded the stack component approach",
+            "challenge": "REPA-009's goal was 'Enhance GalleryCard with Selection & Drag Handle Support' — code dedup, not stack rejection. CSS stacking marked 'PRESERVED' from pre-stack era.",
+            "resolution": "Sustained — REPA-009 refactored for code dedup, not to reject stacks. Stack integration may have never been attempted after REPA-009.",
+            "evidencePaths": [
+              "apps/web/app-inspiration-gallery/src/components/AlbumCard/index.tsx:7-8,61,84"
+            ]
+          },
+          {
+            "claim": "Stack components are dead code",
+            "challenge": "Components are production-ready with 489 LOC of tests, Zod schemas, accessibility, Framer Motion. No documented decision to abandon them.",
+            "resolution": "Sustained — 'unused code awaiting integration' is more accurate than 'dead code'.",
+            "evidencePaths": [
+              "packages/core/app-component-library/src/stacks/OrganicPile.tsx",
+              "packages/core/app-component-library/src/stacks/__tests__/OrganicPile.test.tsx"
+            ]
+          }
+        ],
+        "challengesOverruled": [
+          {
+            "claim": "Stack components have zero consumers",
+            "challenge": "Could other gallery apps benefit from stacks?",
+            "resolution": "Overruled — searched all apps. Zero imports anywhere. MiniInspirationCard also unused.",
+            "evidencePaths": [
+              "apps/web/ (all subdirectories)",
+              "packages/ (all subdirectories)"
+            ]
+          },
+          {
+            "claim": "Plan should be ARCHIVED because it is obsolete",
+            "challenge": "Part 1 done, Part 2 is pending design decision. Partial implementation, not obsolescence.",
+            "resolution": "Overruled — PARTIALLY_IMPLEMENTED is correct. ARCHIVE premature without design decision on CSS vs. Framer Motion.",
+            "evidencePaths": []
+          }
+        ],
+        "confidenceAdjustment": "Verdict remains PARTIALLY_IMPLEMENTED. DA confirmed REPA-009 did not reject stacks and components are deferred integration, not dead code. Key blocker: missing design decision on AlbumCard visual approach."
+      },
+      "decisions": [
+        {
+          "question": "Should AlbumCard use OrganicPile + ExpandableStack (as planned) or keep CSS stacking?",
+          "options": [
+            "Integrate OrganicPile — richer animations, hover preview, components already built",
+            "Keep CSS stacking — simpler, lighter, no Framer Motion overhead",
+            "Defer — post-MVP decision, CSS stacking is good enough for now"
+          ],
+          "recommendation": "Defer — plan is tagged post-MVP. CSS stacking works. Revisit when inspiration gallery is actively developed.",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        },
+        {
+          "question": "Should the unused stack components be kept or removed?",
+          "options": [
+            "Keep — production-ready with tests, valuable for future use",
+            "Remove — zero consumers, adds maintenance burden",
+            "Keep but document — note they await AlbumCard integration"
+          ],
+          "recommendation": "Keep — tested, working, integration decision not yet made. Removing would lose completed work.",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        }
+      ],
+      "recommendedActions": [
+        "Keep plan as draft — post-MVP, remaining work blocked on design decision",
+        "Keep stack components in codebase — production-ready, may integrate when inspiration gallery resumes",
+        "Create INSP stories in KB when inspiration gallery work resumes (0 exist currently)",
+        "When integration is attempted, update plan for GalleryCard composition pattern (REPA-009)"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "draft"
+      },
+      "applied": false,
+      "appliedAt": null
+    },
+    {
+      "slug": "monorepo-health-audit-fix-plan",
+      "title": "Monorepo Health: Audit, Dedup & Bug Fix",
+      "status": "draft",
+      "priority": "P3",
+      "planType": "monorepo:refactor",
+      "verdict": "PROCEED_WITH_CHANGES",
+      "verdictRationale": "The plan addresses a genuine, ongoing need — the monorepo has scattered health audit outputs (28 AUDIT-REPORT.md files in story directories), no consolidated remediation roadmap, unvalidated dedup/bug claims, and no enforcement gates. However, the plan needs significant updates: workspace count is wrong (~169 packages, not ~78), app count is wrong (10+ web apps, not 8), /code-audit skill does not exist, output format should use KB artifacts not markdown files, and the 233 bugs figure has no evidence. The plan true value is governance and consolidation of existing audit data, not discovery.",
+      "validity": {
+        "stillNeeded": "partially",
+        "problemStillReal": true,
+        "duplicates": [],
+        "architectureAlignment": "drifted",
+        "notes": "The GOAL (clean monorepo baseline) is valid. Health audits ARE being generated as side-effects of story execution (28 AUDIT-REPORT.md files in tree/story/KFMB-*/), but results are scattered, not aggregated into KB, and have no remediation enforcement. Phase 2 (dedup) and Phase 3 (bug fix) have zero implementation. Absorbed plans (code-reuse-package-consolidation, bug-hunt-missing-functionality) were never created, not absorbed."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 25,
+        "implemented": [
+          "turbo.json defines build, check-types, lint, test tasks with caching — turbo.json:12-44",
+          "package.json has pnpm build, check-types, test, lint scripts — package.json:27-55",
+          "28 AUDIT-REPORT.md files exist in story directories with detailed findings — tree/story/KFMB-2010/AUDIT-REPORT.md",
+          "28 FIX-PLAN.md files exist in story directories with prioritized fixes — tree/story/KFMB-2010/FIX-PLAN.md",
+          "/lint-fix skill handles ESLint audit with KB persistence — .claude/skills/lint-fix/SKILL.md",
+          "/plan-audit skill handles plan lifecycle auditing — .claude/skills/plan-audit/SKILL.md",
+          "/status-audit skill handles story/workflow state auditing — .claude/skills/status-audit/SKILL.md",
+          "@repo/gallery package exists with 35+ components — packages/core/gallery/src/components/",
+          "Upload packages exist: upload, upload-client, upload-types, upload-config, upload-config-core",
+          "Shared hooks package exists — packages/core/hooks/",
+          "Auth hooks package exists — packages/core/auth-hooks/"
+        ],
+        "notImplemented": [
+          "No monorepo-wide consolidated AUDIT-REPORT.md — audit outputs scattered across 28 story dirs",
+          "No KB artifacts aggregating health audit data — results are raw markdown not searchable",
+          "No priority-ordered remediation roadmap linking audit findings to fix stories",
+          "No dedup audit documenting ~10,800 lines claim — number is unvalidated",
+          "No bug catalog of 233 issues — figure appears aspirational with no source",
+          "/code-audit skill referenced in plan does not exist",
+          "No CI health check gates to prevent regression after fixes",
+          "Gallery component consolidation not documented",
+          "Upload infrastructure consolidation not documented — 5 upload packages exist, unclear if optimally split"
+        ]
+      },
+      "modifications": {
+        "staleReferences": [
+          "Plan says ~78 workspace members — actual count is ~169 package.json files across 13 workspace patterns",
+          "Plan says 8 apps — actual is 10 web apps + 6 backend services",
+          "Plan says Use /code-audit tools — skill does not exist; should reference /lint-fix, /plan-audit, /status-audit",
+          "Plan says output AUDIT-REPORT.md + FIX-PLAN.md — should use KB artifacts (kb_write_artifact with artifact_type: analysis)",
+          "Plan says 233 cataloged issues — no evidence for this number; needs real audit",
+          "Plan says Absorbed plans: code-reuse-package-consolidation, bug-hunt-missing-functionality — these plans were never created"
+        ],
+        "architectureChanges": [
+          "Use KB artifacts (kb_write_artifact/kb_read_artifact) instead of filesystem markdown outputs",
+          "Use KB task tools (kb_add_task, kb_triage_tasks) for bug catalog",
+          "Reference KB-only story management",
+          "Phase 1 should be reframed as consolidate scattered audit results + establish CI gates"
+        ],
+        "newPatterns": [
+          "/lint-fix skill provides comprehensive ESLint audit with auto-fix and KB persistence — CLAUDE.md:41-42",
+          "KB artifact storage for structured data — agents use kb_write_artifact() extensively",
+          "Story-driven audit generating AUDIT-REPORT.md as side-effect — tree/story/KFMB-2010/",
+          "Worktree isolation for development — .claude/worktrees/ with 40+ worktree skills"
+        ]
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "KFMB/CDBN/CDTS story families have absorbed the plans audit work",
+            "challenge": "Story-driven audits are SIDE-EFFECTS of individual stories, not coordinated plan-level health work. PLAN.yaml in KFMB-2010 shows actual scope is Add unit tests for kb_get_next_story MCP tool.",
+            "resolution": "Sustained — no plan-level coordination, root-cause mapping, or consolidated remediation roadmap exists.",
+            "evidencePaths": [
+              "tree/story/KFMB-2010/PLAN.yaml",
+              "tree/story/KFMB-2010/SCOPE.yaml",
+              "tree/story/KFMB-2010/AUDIT-REPORT.md"
+            ]
+          },
+          {
+            "claim": "Phase 1 audit has not been run",
+            "challenge": "28 AUDIT-REPORT.md files exist with detailed findings (build failures, type errors across 12 packages, lint failures in 9 packages, test failures in 14 packages).",
+            "resolution": "Partially sustained — audit HAS been run but results are scattered, not indexed in KB, not governed by the plan. Phase 1 value is consolidation + enforcement, not discovery.",
+            "evidencePaths": [
+              "tree/story/KFMB-2010/AUDIT-REPORT.md",
+              "tree/story/KFMB-2010/FIX-PLAN.md"
+            ]
+          },
+          {
+            "claim": "Workspace count is ~53 or ~78",
+            "challenge": "Actual count is ~169 package.json files. Both claims understate scope.",
+            "resolution": "Sustained — plan scope is understated.",
+            "evidencePaths": [
+              "pnpm-workspace.yaml"
+            ]
+          },
+          {
+            "claim": "233 bugs claim is aspirational with no source",
+            "challenge": "Grep for 233 near bug found only Playwright HTML report, no catalog anywhere.",
+            "resolution": "Sustained — figure needs validation.",
+            "evidencePaths": []
+          }
+        ],
+        "challengesOverruled": [
+          {
+            "claim": "Plan is functionally superseded by story-driven audit work",
+            "challenge": "Stories generate audit outputs but do not coordinate remediation across all packages.",
+            "resolution": "Overruled — plans value is governance (aggregate, prioritize, enforce, prevent regression), not discovery.",
+            "evidencePaths": [
+              "tree/story/KFMB-2010/AUDIT-REPORT.md"
+            ]
+          },
+          {
+            "claim": "Phase 2 dedup has zero evidence",
+            "challenge": "ROADMAP.md in story directories references the plan slug with 10,800 lines description.",
+            "resolution": "Overruled — reference is just plan metadata echo, not evidence of dedup work done.",
+            "evidencePaths": [
+              "tree/story/CDBN-2025/ROADMAP.md"
+            ]
+          }
+        ],
+        "confidenceAdjustment": "Verdict confirmed as PROCEED_WITH_CHANGES. Devils advocate strengthened the case: plan is needed for governance/consolidation, not discovery. Key rewrite areas: Phase 1 becomes consolidation + CI gates, validate 10800 LOC and 233 bugs claims, update all stale references."
+      },
+      "decisions": [
+        {
+          "question": "Should Phase 1 be reframed from run audit to consolidate existing audit results + establish CI health gates?",
+          "options": [
+            "Yes — consolidate into KB artifacts and add CI enforcement",
+            "No — run a fresh monorepo-wide audit from scratch",
+            "Hybrid — consolidate existing + run fresh audit for uncovered packages"
+          ],
+          "recommendation": "Hybrid — consolidate 28 existing AUDIT-REPORT.md files into KB, then run fresh audit for uncovered packages",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        },
+        {
+          "question": "Should the plan be rewritten now or deferred as post-MVP?",
+          "options": [
+            "Rewrite now — monorepo health is a prerequisite for reliable MVP pipeline",
+            "Defer — P3 priority, focus on P1/P2 plans first",
+            "Partial — rewrite Phase 1 only (consolidation is quick win), defer Phases 2-3"
+          ],
+          "recommendation": "Partial — Phase 1 consolidation is a quick win that improves all other work. Phases 2-3 can wait.",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        }
+      ],
+      "recommendedActions": [
+        "Rewrite plan with corrected workspace count (~169 packages), app count (10+ web apps), and tooling references (/lint-fix not /code-audit)",
+        "Reframe Phase 1 as consolidate 28 existing AUDIT-REPORT.md files into KB artifacts + establish CI health gates",
+        "Validate Phase 2 10,800 lines dedup claim with actual code metric audit before committing scope",
+        "Replace Phase 3 233 bugs with real bug inventory using kb_add_task() and kb_triage_tasks()",
+        "Remove Absorbed plans reference — code-reuse-package-consolidation and bug-hunt-missing-functionality were never created",
+        "Update output format to KB artifacts (kb_write_artifact) instead of filesystem markdown"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "draft"
+      },
+      "applied": false,
+      "appliedAt": null
+    }
+  ]
+}

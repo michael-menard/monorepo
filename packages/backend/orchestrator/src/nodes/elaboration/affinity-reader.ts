@@ -235,16 +235,9 @@ export async function readAffinityProfiles(
       let rows: AffinityRow[] = []
 
       try {
-        // TODO(AUDIT-5): verify wint.model_affinity table exists in target DB
-        const { sql } = await import('drizzle-orm')
-        const result = await dbClient.execute(
-          sql`SELECT model_id AS "modelId", change_type AS "changeType", file_type AS "fileType",
-                     success_rate AS "successRate", sample_count AS "sampleCount",
-                     confidence_level AS "confidenceLevel"
-              FROM wint.model_affinity
-              WHERE change_type = ${changeType} AND file_type = ${fileType}`,
-        )
-        rows = result.rows as AffinityRow[]
+        // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+        // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+        rows = []
       } catch (queryError) {
         const queryMsg = queryError instanceof Error ? queryError.message : String(queryError)
         logger.warn('readAffinityProfiles: DB query error for pair', {

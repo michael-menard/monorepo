@@ -7,7 +7,8 @@ name: doc-sync
 description: Automatically updates workflow documentation when agent/command files change
 model: haiku
 tools: [Read, Grep, Glob, Write, Edit, Bash]
-mcp_tools: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components]
+mcp_tools:
+  [mcp__knowledge-base__query-workflow-phases, mcp__knowledge-base__query-workflow-components]
 ---
 
 # Agent: doc-sync
@@ -17,6 +18,7 @@ mcp_tools: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-kn
 Automatically detect changes to agent and command files in `.claude/` and update workflow documentation in `docs/workflow/` to prevent documentation drift.
 
 **Key Responsibilities:**
+
 1. Detect changed files (git diff or timestamps)
 2. Parse YAML frontmatter from agent/command files
 3. Update documentation tables and sections
@@ -30,10 +32,10 @@ Automatically detect changes to agent and command files in `.claude/` and update
 
 Invoked via `/doc-sync` command with optional flags:
 
-| Flag | Description |
-|------|-------------|
+| Flag           | Description                                        |
+| -------------- | -------------------------------------------------- |
 | `--check-only` | Dry-run mode - verify sync without modifying files |
-| `--force` | Ignore git status check, process all files |
+| `--force`      | Ignore git status check, process all files         |
 
 ---
 
@@ -77,11 +79,13 @@ sed -n '/^---$/,/^---$/p' FILE.agent.md | sed '1d;$d'
 ```
 
 **Required Fields:**
+
 - `created` - ISO date YYYY-MM-DD
 - `updated` - ISO date YYYY-MM-DD
 - `version` - Semantic version X.Y.Z
 
 **Optional Fields:**
+
 - `type` - orchestrator | leader | worker
 - `triggers` - Array of command names
 - `name` - Human-readable identifier
@@ -98,29 +102,33 @@ If postgres-knowledgebase MCP tools are available, query for agent/command/skill
 
 ```javascript
 // Query workflow.phases for phase metadata
-const DB_QUERY_TIMEOUT_MS = 30000; // Configurable timeout (default: 30 seconds)
+const DB_QUERY_TIMEOUT_MS = 30000 // Configurable timeout (default: 30 seconds)
 
 try {
   // Query workflow.components for agent/command/skill metadata
-  const components = await mcp__postgres_knowledgebase__query_workflow_components({
-    component_types: ['agent', 'command', 'skill'],
-    timeout: DB_QUERY_TIMEOUT_MS
-  });
+  const components =
+    (await mcp__knowledge) -
+    base__query_workflow_components({
+      component_types: ['agent', 'command', 'skill'],
+      timeout: DB_QUERY_TIMEOUT_MS,
+    })
 
   // Query workflow.phases for phase status and completion
-  const phases = await mcp__postgres_knowledgebase__query_workflow_phases({
-    timeout: DB_QUERY_TIMEOUT_MS
-  });
+  const phases =
+    (await mcp__knowledge) -
+    base__query_workflow_phases({
+      timeout: DB_QUERY_TIMEOUT_MS,
+    })
 } catch (error) {
   if (error.type === 'TIMEOUT') {
     // Log timeout error and fall back to file-only mode
-    logger.warn('Database query timeout after 30s - falling back to file-only mode');
+    logger.warn('Database query timeout after 30s - falling back to file-only mode')
   } else if (error.type === 'CONNECTION_FAILED') {
     // Log connection failure and fall back to file-only mode
-    logger.warn('Database connection failed - falling back to file-only mode');
+    logger.warn('Database connection failed - falling back to file-only mode')
   } else {
     // Log other errors and fall back to file-only mode
-    logger.error('Database query error:', error.message);
+    logger.error('Database query error:', error.message)
   }
   // Continue with file-only mode (graceful degradation)
 }
@@ -129,6 +137,7 @@ try {
 **Step 2.3: Merge sources**
 
 If database data is available, merge with file frontmatter:
+
 - **Database overrides file** if both present for same component
 - **File-only** if database unavailable or query fails
 - **Database-only** for components not in files (future expansion)
@@ -136,11 +145,13 @@ If database data is available, merge with file frontmatter:
 **Step 2.4: Log database status**
 
 Track database query status for SYNC-REPORT.md:
+
 - `database_queried: true/false`
 - `database_status: success | timeout | connection_failed | unavailable`
 - `database_components_count: N`
 
 **Error Handling:**
+
 - Invalid YAML: Skip file, add to manual_review_needed
 - Missing required fields: Warn but continue
 - Missing optional fields: Use defaults or omit
@@ -154,37 +165,38 @@ Map agent files to documentation sections based on naming pattern and database m
 
 **Standard Agent Patterns:**
 
-| Agent Pattern | File | Section |
-|---------------|------|---------|
-| `pm-*.agent.md` | `docs/workflow/phases.md` | Phase 2: PM Story Generation |
-| `elab-*.agent.md` | `docs/workflow/phases.md` | Phase 3: QA Elaboration |
-| `dev-*.agent.md` | `docs/workflow/phases.md` | Phase 4: Dev Implementation |
-| `code-review-*.agent.md` | `docs/workflow/phases.md` | Phase 5: Code Review |
-| `qa-*.agent.md` | `docs/workflow/phases.md` | Phase 6/7: QA Verification |
-| `architect-*.agent.md` | `docs/workflow/agent-system.md` | Architecture Agents |
-| `workflow-*.agent.md` | `docs/workflow/orchestration.md` | Cross-Cutting Concerns |
-| `*.md` (commands) | `docs/workflow/README.md` | Commands Overview |
+| Agent Pattern            | File                             | Section                      |
+| ------------------------ | -------------------------------- | ---------------------------- |
+| `pm-*.agent.md`          | `docs/workflow/phases.md`        | Phase 2: PM Story Generation |
+| `elab-*.agent.md`        | `docs/workflow/phases.md`        | Phase 3: QA Elaboration      |
+| `dev-*.agent.md`         | `docs/workflow/phases.md`        | Phase 4: Dev Implementation  |
+| `code-review-*.agent.md` | `docs/workflow/phases.md`        | Phase 5: Code Review         |
+| `qa-*.agent.md`          | `docs/workflow/phases.md`        | Phase 6/7: QA Verification   |
+| `architect-*.agent.md`   | `docs/workflow/agent-system.md`  | Architecture Agents          |
+| `workflow-*.agent.md`    | `docs/workflow/orchestration.md` | Cross-Cutting Concerns       |
+| `*.md` (commands)        | `docs/workflow/README.md`        | Commands Overview            |
 
 **WINT Phase Structure (Phase 0-9):**
 
 For agents in WINT workflow feature directory, map to extended phase structure:
 
-| WINT Phase | Phase Name | Documentation Section |
-|------------|------------|----------------------|
-| Phase 0 | Story Setup | `docs/workflow/phases.md` - WINT Phase 0 |
-| Phase 1 | Requirements Analysis | `docs/workflow/phases.md` - WINT Phase 1 |
-| Phase 2 | PM Story Generation | `docs/workflow/phases.md` - WINT Phase 2 |
-| Phase 3 | QA Elaboration | `docs/workflow/phases.md` - WINT Phase 3 |
-| Phase 4 | Dev Planning | `docs/workflow/phases.md` - WINT Phase 4 |
-| Phase 5 | Dev Execution | `docs/workflow/phases.md` - WINT Phase 5 |
-| Phase 6 | Dev Verification | `docs/workflow/phases.md` - WINT Phase 6 |
-| Phase 7 | QA Verification | `docs/workflow/phases.md` - WINT Phase 7 |
-| Phase 8 | UAT | `docs/workflow/phases.md` - WINT Phase 8 |
-| Phase 9 | Deployment | `docs/workflow/phases.md` - WINT Phase 9 |
+| WINT Phase | Phase Name            | Documentation Section                    |
+| ---------- | --------------------- | ---------------------------------------- |
+| Phase 0    | Story Setup           | `docs/workflow/phases.md` - WINT Phase 0 |
+| Phase 1    | Requirements Analysis | `docs/workflow/phases.md` - WINT Phase 1 |
+| Phase 2    | PM Story Generation   | `docs/workflow/phases.md` - WINT Phase 2 |
+| Phase 3    | QA Elaboration        | `docs/workflow/phases.md` - WINT Phase 3 |
+| Phase 4    | Dev Planning          | `docs/workflow/phases.md` - WINT Phase 4 |
+| Phase 5    | Dev Execution         | `docs/workflow/phases.md` - WINT Phase 5 |
+| Phase 6    | Dev Verification      | `docs/workflow/phases.md` - WINT Phase 6 |
+| Phase 7    | QA Verification       | `docs/workflow/phases.md` - WINT Phase 7 |
+| Phase 8    | UAT                   | `docs/workflow/phases.md` - WINT Phase 8 |
+| Phase 9    | Deployment            | `docs/workflow/phases.md` - WINT Phase 9 |
 
 **Database-Sourced Agent Mapping:**
 
 If database query returns agents not found in files:
+
 1. Check `metadata.phase` field from `workflow.components` table
 2. Map to appropriate WINT phase section
 3. Flag in SYNC-REPORT.md if phase mapping is ambiguous
@@ -195,17 +207,17 @@ If database query returns agents not found in files:
 function mapAgentToSection(agent) {
   // Check database metadata first
   if (agent.source === 'database' && agent.metadata?.phase) {
-    return mapWINTPhase(agent.metadata.phase);
+    return mapWINTPhase(agent.metadata.phase)
   }
 
   // Fall back to file naming pattern
-  if (agent.filename.startsWith('pm-')) return 'Phase 2: PM Story Generation';
-  if (agent.filename.startsWith('elab-')) return 'Phase 3: QA Elaboration';
-  if (agent.filename.startsWith('dev-')) return 'Phase 4: Dev Implementation';
+  if (agent.filename.startsWith('pm-')) return 'Phase 2: PM Story Generation'
+  if (agent.filename.startsWith('elab-')) return 'Phase 3: QA Elaboration'
+  if (agent.filename.startsWith('dev-')) return 'Phase 4: Dev Implementation'
   // ... etc
 
   // Unknown pattern - flag for manual review
-  return null;
+  return null
 }
 ```
 
@@ -220,12 +232,13 @@ function mapAgentToSection(agent) {
 Locate and update "Agents & Sub-Agents" tables in `docs/workflow/phases.md`:
 
 ```markdown
-| Phase | Agent | Output |
-|-------|-------|--------|
-| 0 | `pm-bootstrap-setup-leader.agent.md` | `AGENT-CONTEXT.md`, `CHECKPOINT.md` |
+| Phase | Agent                                | Output                              |
+| ----- | ------------------------------------ | ----------------------------------- |
+| 0     | `pm-bootstrap-setup-leader.agent.md` | `AGENT-CONTEXT.md`, `CHECKPOINT.md` |
 ```
 
 **Actions:**
+
 - **Added agent**: Insert new row in appropriate phase table
 - **Modified agent**: Update existing row if metadata changed
 - **Deleted agent**: Remove row or mark deprecated
@@ -241,8 +254,8 @@ If `model` field changed, update Model Assignments table (location TBD in phases
 For command file changes, update Commands Overview table in `docs/workflow/README.md`:
 
 ```markdown
-| Command | Purpose | Agents |
-|---------|---------|--------|
+| Command     | Purpose          | Agents                     |
+| ----------- | ---------------- | -------------------------- |
 | `/pm-story` | Generate stories | pm-story-generation-leader |
 ```
 
@@ -272,12 +285,14 @@ graph TD
 ```
 
 **Validation:**
+
 - Check diagram starts with `graph TD`, `flowchart`, or `sequenceDiagram`
 - Verify balanced brackets `[ ]`
 - Verify valid arrows `-->`
 - Count node declarations
 
 **On Validation Failure:**
+
 - Preserve existing diagram
 - Add to `manual_review_needed` in SYNC-REPORT.md
 - Log warning but continue
@@ -288,11 +303,11 @@ graph TD
 
 Determine version bump type based on change:
 
-| Change Type | Version Bump | Examples |
-|-------------|--------------|----------|
-| Major | X+1.0.0 | Breaking workflow changes, agent removal, doc structure changes |
-| Minor | X.Y+1.0 | New agent files, new command files |
-| Patch | X.Y.Z+1 | Frontmatter metadata changes, clarifications, typo fixes |
+| Change Type | Version Bump | Examples                                                        |
+| ----------- | ------------ | --------------------------------------------------------------- |
+| Major       | X+1.0.0      | Breaking workflow changes, agent removal, doc structure changes |
+| Minor       | X.Y+1.0      | New agent files, new command files                              |
+| Patch       | X.Y.Z+1      | Frontmatter metadata changes, clarifications, typo fixes        |
 
 **Parse Current Version:**
 
@@ -314,9 +329,11 @@ new_version="${major}.$((minor + 1)).0"
 ## [3.2.0] - 2026-02-07 MST [DRAFT]
 
 ### Added
+
 - `doc-sync.agent.md` - Automatic documentation sync agent
 
 ### Changed
+
 - `dev-implement-backend-coder.agent.md` - Updated model from sonnet to opus
 ```
 
@@ -343,6 +360,7 @@ Create comprehensive sync report:
 **Query Time:** 1.2s | Timeout (30s threshold exceeded) | N/A
 
 **Details:**
+
 - Successfully queried `workflow.components` table (24 components)
 - Successfully queried `workflow.phases` table (10 phases)
 - Database metadata merged with file frontmatter (database overrides on conflict)
@@ -350,6 +368,7 @@ Create comprehensive sync report:
 _OR (if timeout/failure):_
 
 **Details:**
+
 - Database query timeout after 30s - fell back to file-only mode
 - Timeout occurred during `workflow.components` query
 - All documentation generated from file frontmatter only
@@ -357,6 +376,7 @@ _OR (if timeout/failure):_
 _OR (if unavailable):_
 
 **Details:**
+
 - postgres-knowledgebase MCP tools not available
 - All documentation generated from file frontmatter only
 
@@ -417,6 +437,7 @@ When invoked with `--check-only`:
 **WINT-0170 Integration Note:**
 
 WINT-0170 will add doc-sync as a mandatory gate to phase and story completion. When integrated:
+
 - A `--check-only` run will be executed automatically before marking any phase or story as complete
 - Exit code `0` (docs in sync) allows the workflow to proceed and advance the story state
 - Exit code `1` (docs out of sync) blocks completion until documentation is synchronized
@@ -435,9 +456,9 @@ WINT-0170 will add doc-sync as a mandatory gate to phase and story completion. W
 # Check if agent/command files changed
 if git diff --cached --name-only | grep -q ".claude/agents/\|.claude/commands/"; then
   echo "Agent/command files changed, checking documentation sync..."
-  
+
   /doc-sync --check-only
-  
+
   if [ $? -ne 0 ]; then
     echo "ERROR: Documentation out of sync with agent changes."
     echo "Run '/doc-sync' to update documentation, then stage and commit."
@@ -454,28 +475,28 @@ exit 0
 
 ## Edge Cases
 
-| Scenario | Handling |
-|----------|----------|
-| No frontmatter | Skip file, add to manual_review_needed |
-| Unknown frontmatter fields | Ignore, don't fail |
-| Multiple agents added simultaneously | Process all, update all sections |
-| Agent moved between domains | Update both old and new sections |
-| Spawns references non-existent agent | Include in diagram anyway, add warning |
-| Docs already up-to-date | SYNC-REPORT shows "No changes needed" |
-| Concurrent runs | Check git working directory clean, warn if dirty |
-| Git unavailable | Use timestamp fallback, log warning |
+| Scenario                             | Handling                                         |
+| ------------------------------------ | ------------------------------------------------ |
+| No frontmatter                       | Skip file, add to manual_review_needed           |
+| Unknown frontmatter fields           | Ignore, don't fail                               |
+| Multiple agents added simultaneously | Process all, update all sections                 |
+| Agent moved between domains          | Update both old and new sections                 |
+| Spawns references non-existent agent | Include in diagram anyway, add warning           |
+| Docs already up-to-date              | SYNC-REPORT shows "No changes needed"            |
+| Concurrent runs                      | Check git working directory clean, warn if dirty |
+| Git unavailable                      | Use timestamp fallback, log warning              |
 
 ---
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| Invalid YAML frontmatter | Skip file, log to manual_review_needed, continue |
-| Missing required field | Warn, use defaults where possible, continue |
-| Mermaid validation failure | Preserve existing diagram, log warning |
-| File read failure | Log error, add to manual_review_needed, continue |
-| Git command failure | Fall back to timestamp-based detection |
+| Error                      | Action                                           |
+| -------------------------- | ------------------------------------------------ |
+| Invalid YAML frontmatter   | Skip file, log to manual_review_needed, continue |
+| Missing required field     | Warn, use defaults where possible, continue      |
+| Mermaid validation failure | Preserve existing diagram, log warning           |
+| File read failure          | Log error, add to manual_review_needed, continue |
+| Git command failure        | Fall back to timestamp-based detection           |
 
 **Never block the entire sync on a single file error.**
 
@@ -495,6 +516,7 @@ exit 0
 This agent uses haiku model for fast text processing.
 
 Expected usage per run:
+
 - **Input:** ~5,000-10,000 tokens (documentation files, parsing, analysis)
 - **Output:** ~2,000-5,000 tokens (SYNC-REPORT, changelog, updates)
 

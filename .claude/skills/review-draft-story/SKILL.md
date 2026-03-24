@@ -10,6 +10,7 @@ description: Comprehensive draft story review with parallel specialist sub-agent
 Full-spectrum story review using parallel specialist sub-agents BEFORE implementation begins. Each specialist reviews from their domain perspective, findings are aggregated, and a final readiness decision is produced.
 
 **Key Features:**
+
 - Parallel specialist sub-agents (PM, UX, SM/Checklist)
 - Product requirements completeness validation
 - UX/UI specification review
@@ -23,8 +24,8 @@ Full-spectrum story review using parallel specialist sub-agents BEFORE implement
 # Review a specific story
 /review-draft-story 2002
 
-# Review a story by file path
-/review-draft-story docs/stories/epic-6-wishlist/wish-2002-add-item-flow.md
+# Review a story by ID
+/review-draft-story WISH-2002
 
 # Quick review (skip deep analysis)
 /review-draft-story 2002 --quick
@@ -79,24 +80,23 @@ TodoWrite([
 ```
 
 **Gather context:**
-1. Load `.bmad-core/core-config.yaml` for story locations and patterns
-2. Locate the story file path:
-   - If number provided: Search in `docs/stories/` for matching file
-   - If path provided: Use directly
-3. Read story file and extract:
+
+1. Fetch story from KB: `kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })`
+2. Extract from the KB story record:
    - Title and description
    - Acceptance criteria
    - Tasks/subtasks
-   - Dev Notes section
+   - Dev Notes (from story fields or attached artifacts)
    - Testing section
    - Referenced files/architecture paths (just paths, not content)
-4. Get parent epic FILE PATH if referenced (don't read content)
-5. Get architecture doc FILE PATHS if referenced (don't read content)
-6. Determine if story has UI components (affects UX review)
+3. Get parent epic from KB if referenced: `kb_search({ query: "epic {epic_name}", tags: ["plan"] })`
+4. Get architecture doc references if present (don't read content — pass references to sub-agents)
+5. Determine if story has UI components (affects UX review)
 
 **OPTIMIZATION: Don't load epic/architecture content into parent context - pass file paths to sub-agents**
 
 **Skip Logic:**
+
 - Skip UX review if story has no UI components (API-only, backend, migrations)
 - Skip PM review if `--skip-pm` or no epic/PRD context available
 
@@ -108,7 +108,7 @@ TodoWrite([
 
 ### 1.1 Product Manager (PM) Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -116,10 +116,10 @@ Task(
   run_in_background: true,
   prompt: "You are John, an experienced Product Manager reviewing a story draft.
 
-           Story file path: {STORY_FILE_PATH}
-           Epic file path: {EPIC_FILE_PATH or 'Not provided'}
+           Story ID: {STORY_ID}
+           Epic KB reference: {EPIC_KB_ID or 'Not provided'}
 
-           IMPORTANT: Read the story file. If epic path provided, read it for context.
+           IMPORTANT: Fetch the story from KB: kb_get_story({ story_id: '{STORY_ID}', include_artifacts: true }). If epic reference provided, fetch it from KB for context.
 
            Review the story from a PRODUCT perspective:
 
@@ -170,11 +170,11 @@ Task(
 
            NOTE: Only list actual issues. Omit categories with no concerns."
 )
-```
+````
 
 ### 1.2 UX Expert Specialist
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -182,10 +182,10 @@ Task(
   run_in_background: true,
   prompt: "You are Sally, an experienced UX Expert reviewing a story draft.
 
-           Story file path: {STORY_FILE_PATH}
+           Story ID: {STORY_ID}
            Architecture file paths: {ARCHITECTURE_FILE_PATHS or 'Not provided'}
 
-           IMPORTANT: Read the story file. If architecture paths provided, read them for context.
+           IMPORTANT: Fetch the story from KB: kb_get_story({ story_id: '{STORY_ID}', include_artifacts: true }). If architecture paths provided, read them for context.
 
            Review the story from a UX/UI perspective:
 
@@ -243,13 +243,13 @@ Task(
 
            NOTE: Only list actual issues. Omit categories with no concerns."
 )
-```
+````
 
 ### 1.3 Scrum Master / Implementation Readiness Specialist
 
-**This sub-agent executes the formal Story Draft Checklist (.bmad-core/checklists/story-draft-checklist.md)**
+**This sub-agent executes the standard story draft checklist criteria.**
 
-```
+````
 Task(
   subagent_type: "general-purpose",
   model: "haiku",
@@ -257,12 +257,16 @@ Task(
   run_in_background: true,
   prompt: "You are Bob, a Scrum Master executing the Story Draft Checklist.
 
-           Story file path: {STORY_FILE_PATH}
-           Checklist file path: .bmad-core/checklists/story-draft-checklist.md
+           Story ID: {STORY_ID}
 
            IMPORTANT:
-           1. Read the story file
-           2. Read the checklist file
+           1. Fetch the story from KB: kb_get_story({ story_id: '{STORY_ID}', include_artifacts: true })
+           2. Use the standard story draft checklist criteria:
+              - Requirements clarity: Are requirements clearly defined and unambiguous?
+              - Technical guidance: Are technical decisions and architecture guidance provided?
+              - Testing: Are test scenarios defined including error/edge cases?
+              - Self-containment: Can a developer implement this without seeking additional context?
+              - Tasks: Are tasks broken down to a manageable level?
            3. Execute each checklist item systematically
            4. For each item, mark: [x] PASS, [~] PARTIAL, [ ] FAIL
            5. Identify blocking vs should_fix vs note issues
@@ -288,7 +292,7 @@ Task(
 
            NOTE: Only list actual issues. If everything passes, issues array should be empty."
 )
-```
+````
 
 ---
 
@@ -316,16 +320,18 @@ concerns:
     source: pm|ux|sm
     severity: blocking|should_fix|note
     category: requirements|scope|ux|technical|testing|etc
-    concern: "Clear description of the issue"
-    suggestion: "How to address it"
+    concern: 'Clear description of the issue'
+    suggestion: 'How to address it'
 ```
 
 **Severity Levels:**
+
 - **blocking**: Must fix before story can proceed
 - **should_fix**: Important issue that should be addressed
 - **note**: Minor observation, nice-to-have improvement
 
 **Synthesis Rules (MUCH SIMPLER NOW):**
+
 1. Parse YAML output from each sub-agent
 2. Concatenate all `issues` arrays from PM, UX, and SM
 3. Add sequential IDs and source labels
@@ -333,6 +339,7 @@ concerns:
 5. Deduplicate if needed (keep highest severity)
 
 **Example:**
+
 ```python
 all_issues = pm_review.issues + ux_review.issues + sm_review.issues
 concerns = [
@@ -364,68 +371,74 @@ else:
 
 ---
 
-### Path A: FAIL or CONCERNS → Append to Story
+### Path A: FAIL or CONCERNS → Write Review Artifact to KB
 
-**Append concerns section to story file:**
+**Write concerns as a KB review artifact:**
 
-```markdown
-## Review Concerns
+Call `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "review", artifact_name: "REVIEW-DRAFT", content: {concerns_content} })` with the following content structure:
 
-> **Review Date:** {ISO-8601}
-> **Reviewed By:** PM (John), UX (Sally), SM (Bob)
-> **Decision:** {FAIL|CONCERNS}
-
-### Blocking Issues
-
-- **[1] PM - requirements:** User value not clearly articulated
-  - *Suggestion:* Add explicit user benefit statement to story description
-
-- **[2] SM - testing:** No test scenarios defined for error cases
-  - *Suggestion:* Add error handling test cases to Testing section
-
-### Should-Fix Issues
-
-- **[3] UX - states:** Loading state not specified
-  - *Suggestion:* Define skeleton/spinner behavior during data fetch
-
-### Notes
-
-- **[4] PM - scope:** Consider splitting into two stories if complexity grows
-
----
-```
-
-**Update story status:**
 ```yaml
-# In story frontmatter or status field:
-status: Draft → Needs Revision  # if FAIL
-status: Draft → Conditional     # if CONCERNS (can proceed with awareness)
+review_date: '{ISO-8601}'
+reviewed_by: 'PM (John), UX (Sally), SM (Bob)'
+decision: '{FAIL|CONCERNS}'
+
+blocking_issues:
+  - id: 1
+    source: pm
+    category: requirements
+    concern: 'User value not clearly articulated'
+    suggestion: 'Add explicit user benefit statement to story description'
+
+  - id: 2
+    source: sm
+    category: testing
+    concern: 'No test scenarios defined for error cases'
+    suggestion: 'Add error handling test cases to Testing section'
+
+should_fix_issues:
+  - id: 3
+    source: ux
+    category: states
+    concern: 'Loading state not specified'
+    suggestion: 'Define skeleton/spinner behavior during data fetch'
+
+notes:
+  - id: 4
+    source: pm
+    category: scope
+    concern: 'Consider splitting into two stories if complexity grows'
+```
+
+**Update story status in KB:**
+
+```
+kb_update_story_status({ story_id: "{STORY_ID}", status: "needs_revision" })  # if FAIL
+kb_update_story_status({ story_id: "{STORY_ID}", status: "created" })         # if CONCERNS (can proceed with awareness)
 ```
 
 ---
 
-### Path B: PASS (No Concerns) → Auto-Approve/Merge
+### Path B: PASS (No Concerns) → Auto-Approve
 
 **When all sub-agents return zero blocking or should_fix concerns:**
 
 #### For Draft Story Review (pre-implementation):
 
-1. **Update story status to Approved:**
-   ```yaml
-   status: Draft → Approved
+1. **Update story status to Approved in KB:**
+
+   ```
+   kb_update_story_status({ story_id: "{STORY_ID}", status: "ready" })
    ```
 
-2. **Add approval stamp to story:**
-   ```markdown
-   ## Review Approval
+2. **Write approval artifact to KB:**
 
-   > **Review Date:** {ISO-8601}
-   > **Reviewed By:** PM (John), UX (Sally), SM (Bob)
-   > **Decision:** APPROVED
-
-   All review criteria passed. Story is ready for implementation.
-
-   ---
+   ```
+   kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "review", artifact_name: "REVIEW-DRAFT", content: {
+     review_date: "{ISO-8601}",
+     reviewed_by: "PM (John), UX (Sally), SM (Bob)",
+     decision: "APPROVED",
+     summary: "All review criteria passed. Story is ready for implementation."
+   }})
    ```
 
 3. **Report success and next step:**
@@ -436,21 +449,18 @@ status: Draft → Conditional     # if CONCERNS (can proceed with awareness)
 #### For PR Review (post-implementation):
 
 1. **Merge the PR:**
+
    ```bash
    gh pr merge {PR_NUMBER} --squash --delete-branch
    ```
 
-2. **Update story status to Done:**
-   ```yaml
-   status: In Review → Done
+2. **Update story status to Done in KB:**
+
+   ```
+   kb_update_story_status({ story_id: "{STORY_ID}", status: "UAT" })
    ```
 
-3. **Archive the story:**
-   ```bash
-   mv docs/stories/{epic}/{story}.md docs/_archive/completed-stories/
-   ```
-
-4. **Close associated GitHub issue (if any):**
+3. **Close associated GitHub issue (if any):**
    ```bash
    gh issue close {ISSUE_NUMBER} --comment "Completed and merged in PR #{PR_NUMBER}"
    ```
@@ -501,8 +511,8 @@ NEXT STEPS
 Main Orchestrator (/review-draft-story)
     │
     ├─▶ Phase 0: Context Gathering (inline)
-    │   ├── Load story file
-    │   ├── Load epic context (if available)
+    │   ├── Fetch story from KB (kb_get_story)
+    │   ├── Load epic context from KB (if available)
     │   ├── Detect if PR exists (post-impl review)
     │   └── Determine applicable reviews (skip UX for API-only, etc.)
     │
@@ -530,40 +540,47 @@ Main Orchestrator (/review-draft-story)
 
 ## Concern Categories
 
-| Source | Categories |
-|--------|------------|
-| PM | requirements, scope, user_value, acceptance_criteria, dependencies, risks |
-| UX | user_flow, interaction, visual, states, accessibility, responsive, components |
-| SM | goal_clarity, technical_guidance, references, self_containment, testing, tasks |
+| Source | Categories                                                                     |
+| ------ | ------------------------------------------------------------------------------ |
+| PM     | requirements, scope, user_value, acceptance_criteria, dependencies, risks      |
+| UX     | user_flow, interaction, visual, states, accessibility, responsive, components  |
+| SM     | goal_clarity, technical_guidance, references, self_containment, testing, tasks |
 
 ---
 
 ## Usage Modes
 
 ### Draft Story Review (pre-implementation)
+
 ```bash
 /review-draft-story 2002
 ```
+
 - Reviews story before coding begins
 - PASS → status becomes "Approved", ready for `/implement`
 - CONCERNS/FAIL → concerns appended, status becomes "Needs Revision"
 
 ### PR Review (post-implementation)
+
 ```bash
 /review-draft-story 2002 --pr
 ```
+
 - Reviews story after implementation, with associated PR
 - PASS → PR merged, story archived, status becomes "Done"
 - CONCERNS/FAIL → concerns appended, PR remains open
 
 ### Quick Review
+
 ```bash
 /review-draft-story 2002 --quick
 ```
+
 - Lightweight review, skips deep analysis
 - Good for simple stories or re-reviews after fixes
 
 ### Skip Specific Reviewers
+
 ```bash
 /review-draft-story 2002 --skip-ux    # API-only story
 /review-draft-story 2002 --skip-pm    # No PRD context available

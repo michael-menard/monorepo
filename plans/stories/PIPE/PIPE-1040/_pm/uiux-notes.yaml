@@ -1,0 +1,4 @@
+skipped: true
+reason: >
+  PIPE-1040 is a backend verification and audit story only. It involves no frontend
+  components, UI interactions, or user-facing changes. No UI/UX guidance applicable.

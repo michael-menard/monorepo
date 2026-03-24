@@ -4,22 +4,22 @@ export interface RoadmapFiltersState {
   status: string
   priority: string
   type: string
+  tag: string
   excludeCompleted: boolean
   search: string
   sortKey: string
   sortDirection: 'asc' | 'desc'
-  pageSize: number
 }
 
 const defaultState: RoadmapFiltersState = {
   status: '',
   priority: '',
   type: '',
+  tag: '',
   excludeCompleted: true,
   search: '',
   sortKey: 'createdAt',
   sortDirection: 'desc',
-  pageSize: 10,
 }
 
 function loadFromStorage(): RoadmapFiltersState {
@@ -45,6 +45,9 @@ export const roadmapFiltersSlice = createSlice({
     setType(state, action: PayloadAction<string>) {
       state.type = action.payload
     },
+    setTag(state, action: PayloadAction<string>) {
+      state.tag = action.payload
+    },
     setExcludeCompleted(state, action: PayloadAction<boolean>) {
       state.excludeCompleted = action.payload
     },
@@ -55,8 +58,8 @@ export const roadmapFiltersSlice = createSlice({
       state.sortKey = action.payload.key
       state.sortDirection = action.payload.direction
     },
-    setPageSize(state, action: PayloadAction<number>) {
-      state.pageSize = action.payload
+    resetFilters() {
+      return defaultState
     },
   },
 })
@@ -65,8 +68,9 @@ export const {
   setStatus,
   setPriority,
   setType,
+  setTag,
   setExcludeCompleted,
   setSearch,
   setSort,
-  setPageSize,
+  resetFilters,
 } = roadmapFiltersSlice.actions

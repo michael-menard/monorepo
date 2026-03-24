@@ -1,0 +1,112 @@
+feasible: true
+confidence: high
+rationale: >
+  All required infrastructure exists: EmbeddingClient with caching/retry/batch processing,
+  pg_notify pattern already in KB DB, pg library available in knowledge-base package,
+  migration safety preamble pattern established. The work decomposes cleanly into three
+  independent subtasks. The primary blocker is CDBE-4020 (in_progress) — implementation
+  of ST-1 and beyond must wait for the embedding columns to exist, but story generation
+  and test planning proceed freely.
+complexity: high
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/embedding-worker/ (new module)
+    - apps/api/knowledge-base/src/db/migrations/ (new NOTIFY trigger migration)
+    - apps/api/knowledge-base/src/db/migrations/pgtap/ (new pgtap test)
+  endpoints: []
+  deploy_touchpoints:
+    - Apply migration to knowledgebase DB (port 5433) — requires CDBE-4020 to be merged first
+    - Deploy embedding worker as a persistent process (not Lambda)
+
+risks:
+  - finding: 'CDBE-4020 must be merged before any ST that writes to embedding columns can begin'
+    mitigation: 'ST-1 (NOTIFY triggers) depends on the column existing; do not start ST-1 until CDBE-4020 PR is merged and migration is applied'
+  - finding: 'NOTIFY/LISTEN is not durable — worker downtime causes notification loss'
+    mitigation: 'Polling fallback (AC-5) is mandatory, not optional; implement in ST-3 before worker is considered done'
+  - finding: 'Long-lived pg.Client for LISTEN must NOT use the shared pool'
+    mitigation: 'Instantiate raw pg.Client separately at worker startup; register on-error handler with reconnect logic'
+  - finding: 'OpenAI tier rate limits during backfill of large tables'
+    mitigation: 'Backfill must use lower maxConcurrentRequests (3-5) and inter-batch delay; see AC-6 config defaults'
+  - finding: 'CREATE INDEX CONCURRENTLY cannot run inside a transaction'
+    mitigation: 'NOTIFY trigger migration does not add indexes — N/A for CDBE-4030. If any index is added, author outside transaction block.'
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pgtap test output: all trigger existence assertions pass'
+  - 'Unit test suite: vitest runs pass for batching logic, polling guard, backfill loop, graceful shutdown'
+  - 'Integration test: INSERT to a knowledge table triggers embedding population (embedding IS NOT NULL)'
+  - 'Integration test: worker downtime + restart + polling catches missed rows'
+  - 'pnpm check-types --filter @repo/knowledge-base exits 0'
+  - 'Process exits with code 0 on SIGTERM with no partial writes'
+
+subtasks:
+  - id: ST-1
+    title: 'NOTIFY trigger migration for five knowledge tables + pgtap tests'
+    goal: >
+      Author and apply a SQL migration that adds pg_notify trigger functions to all five knowledge tables
+      (lessons_learned, adrs, code_standards, rules, cohesion_rules), firing on INSERT and relevant
+      UPDATE events. Include pgtap test file verifying trigger existence and payload shape.
+    files_to_read:
+      - apps/api/knowledge-base/src/db/migrations/1003_story_notify.sql
+      - apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql
+      - apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql
+    files_to_modify:
+      - apps/api/knowledge-base/src/db/migrations/<next_seq>_cdbe_4030_knowledge_embedding_notify.sql (new)
+      - apps/api/knowledge-base/src/db/migrations/pgtap/<next_seq>_cdbe_4030_notify_triggers_test.sql (new)
+    acs:
+      - AC-1
+      - AC-2
+    depends_on: none
+    blocked_by: CDBE-4020 (embedding columns must exist before triggers are applied)
+    verification: 'Apply migration to knowledgebase DB; run pgtap test file'
+    estimated_tokens: 10000
+
+  - id: ST-2
+    title: 'Worker core — Zod schemas, LISTEN loop, batch window, embedding call, DB write-back'
+    goal: >
+      Implement the embedding-worker.ts module: Zod config/payload schemas, pg.Client LISTEN subscription,
+      notification batching (window + size triggers), EmbeddingClient.generateEmbeddingsBatch() call,
+      UPDATE write-back via withRetry(), error handling per row, unit tests with mocked pg.Client and
+      EmbeddingClient.
+    files_to_read:
+      - apps/api/knowledge-base/src/embedding-client/index.ts
+      - apps/api/knowledge-base/src/embedding-client/batch-processor.ts
+      - apps/api/knowledge-base/src/db/client.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/embedding-worker/__types__/index.ts (new)
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts (new)
+      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts (new)
+    acs:
+      - AC-3
+      - AC-4
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+    depends_on: ST-1
+    verification: 'pnpm test --filter @repo/knowledge-base; pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 20000
+
+  - id: ST-3
+    title: 'Polling fallback, backfill script, graceful shutdown, startup logging'
+    goal: >
+      Implement the polling fallback (skip-if-running guard, per-table NULL sweep, configurable interval),
+      the backfill function (startup + on-demand, batch-with-delay, configurable params), SIGTERM/SIGINT
+      graceful shutdown sequence, and startup log entries (DB connected, LISTEN active, backfill counts).
+      Add unit tests for polling guard, backfill loop, shutdown sequence.
+    files_to_read:
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts (from ST-2)
+      - apps/api/pipeline/src/scheduler/index.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/embedding-worker/embedding-worker.ts (extend from ST-2)
+      - apps/api/knowledge-base/src/embedding-worker/__tests__/embedding-worker.test.ts (extend from ST-2)
+      - apps/api/knowledge-base/src/embedding-worker/run.ts (new — entrypoint script)
+    acs:
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-11
+    depends_on: ST-2
+    verification: 'pnpm test --filter @repo/knowledge-base; process exits 0 on SIGTERM in integration test'
+    estimated_tokens: 14000

@@ -21,11 +21,20 @@ import type { StoryState } from '../state/enums/story-state.js'
 
 /**
  * States that require a persisted artifact before the transition is allowed.
- * All other transitions have no gate (e.g., in_progress, blocked, failed_*).
+ *
+ * Canonical forward-flow gates:
+ * - needs_code_review: dev must have submitted proof (evidence/EVIDENCE.yaml)
+ * - ready_for_qa:      code review artifact required before opening QA
+ * - in_qa:             code review must exist before QA agent actively runs
+ * - completed:         QA verification artifact required to close the story
+ *
+ * Ghost states and recovery states (failed_*, blocked, cancelled) are exempt
+ * via Partial<Record<StoryState, ...>> — no gate key means no enforcement.
  */
-const ARTIFACT_GATES: Partial<Record<StoryState, { type: string; label: string }>> = {
+export const ARTIFACT_GATES: Partial<Record<StoryState, { type: string; label: string }>> = {
   needs_code_review: { type: 'proof', label: 'Dev proof (evidence)' },
   ready_for_qa: { type: 'review', label: 'Code review' },
+  in_qa: { type: 'review', label: 'Code review' },
   completed: { type: 'qa_verify', label: 'QA verification' },
 }
 

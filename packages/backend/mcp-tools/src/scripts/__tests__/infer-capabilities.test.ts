@@ -6,10 +6,10 @@
  * File I/O tests use tmp directories with real story.yaml fixtures.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   mapKeywordsToStages,
   scanStories,
@@ -36,7 +36,7 @@ const mockFeatureRows: FeatureRow[] = [
 
 const emptyFeaturesFixture: FeatureRow[] = []
 
-const mockInsertFn: InsertFn = vi.fn().mockResolvedValue(undefined)
+const _mockInsertFn: InsertFn = vi.fn().mockResolvedValue(undefined)
 
 const STORY_YAML_CONTENT = `id: WINT-001
 title: "Add MOC to wishlist"

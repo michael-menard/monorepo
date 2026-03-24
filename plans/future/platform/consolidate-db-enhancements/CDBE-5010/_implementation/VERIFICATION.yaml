@@ -1,0 +1,135 @@
+schema: 1
+story_id: CDBE-5010
+timestamp: '2026-03-19T09:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 1317
+    fail: 37
+    notes: >-
+      37 pre-existing failures unrelated to CDBE-5010. All failures are in mcp-server/__tests__/ (tool count assertion
+      73 vs 76, DB_POOL_SIZE config value mismatch). CDBE-5010 only touches 2 SQL migration files and 2 TS schema files
+      with comment-only additions. No mcp-server code was changed.
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    notes: Exempt — pure DDL/SQL migration story
+  pgtap:
+    pass: 20
+    fail: 0
+    notes: >-
+      20-assertion pgTAP test file covering HP-1 through HP-8 (table structure, partition routing, EXPLAIN pruning,
+      index validity, FK CASCADE/SET NULL, data completeness). Requires live DB with migration applied.
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: >-
+  Pure DDL migration — no application code paths. Coverage threshold not applicable. Verification is via pgTAP
+  assertions against live DB.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    pgTAP test uses BEGIN/ROLLBACK to leave DB clean after run. Fixtures use TEST-5010-* prefix to avoid collisions.
+    Tests cover partition routing, pruning, FK cascade behaviors, and cross-partition data completeness.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-1
+    notes: >-
+      Verified in migration SECTION 4 (agent_invocations PARTITION BY RANGE (started_at)) and SECTION 12
+      (story_token_usage PARTITION BY RANGE (logged_at)). Both CREATE TABLE statements confirmed in git show 13c7e133.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-2
+    notes: >-
+      Verified: PK (id, started_at) in SECTION 4, PK (id, logged_at) in SECTION 12. FKs from agent_outcomes,
+      agent_decisions, hitl_decisions dropped in SECTION 2 and recreated in SECTION 9 with original ON DELETE behaviors
+      (CASCADE/CASCADE/SET NULL).
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-3
+    notes: >-
+      Verified in SECTION 6: per-partition UNIQUE INDEX (invocation_id, started_at) on _default, _y2026m03, _y2026m04.
+      Also per-partition UNIQUE INDEX (id) for FK support. pgTAP HP-5a and HP-5b test these directly.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-4
+    notes: >-
+      Verified: rename+copy strategy present — SECTION 3 (RENAME TO agent_invocations_old), SECTION 7 (INSERT SELECT
+      from _old), SECTION 10 (DROP _old). All within single BEGIN/COMMIT transaction.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-5
+    notes: >-
+      Verified: SECTION 5 creates agent_invocations_default (DEFAULT partition). SECTION 13 creates
+      story_token_usage_default (DEFAULT partition). pgTAP HP-1c and HP-1d test existence. HP-2b and HP-3b test
+      historical data routing to DEFAULT.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-6
+    notes: >-
+      Verified: SECTION 5 creates agent_invocations_y2026m03 (2026-03-01 to 2026-04-01) and agent_invocations_y2026m04
+      (2026-04-01 to 2026-05-01). SECTION 13 creates story_token_usage_y2026m03 and story_token_usage_y2026m04 with same
+      range bounds.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-7
+    notes: >-
+      Verified: SECTION 8 performs row count verification with RAISE EXCEPTION on mismatch for agent_invocations.
+      SECTION 16 does same for story_token_usage. SECTION 17 performs orphan FK checks across all 3 child tables
+      (agent_outcomes, agent_decisions, hitl_decisions) with RAISE EXCEPTION on any orphan.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_evidence.AC-8
+    notes: >-
+      Verified: pgtap/1100_cdbe5010_partition_telemetry_test.sql contains exactly 20 assertions (SELECT plan(20))
+      covering HP-1 through HP-8. Test groups confirmed: table structure (4), partition routing AI (2), partition
+      routing STU (2), partition pruning EXPLAIN (2), index validity (3), FK CASCADE (2), FK SET NULL (2), data
+      completeness (3). Uses BEGIN/ROLLBACK for clean teardown.
+architecture_compliant: true
+architecture_notes: >-
+  Migration follows established patterns from 1001-1070. Single BEGIN/COMMIT transaction. Rename+copy strategy
+  appropriate for PostgreSQL partitioning constraints. FK strategy (per-partition UNIQUE INDEX on id for child table
+  references without started_at) is correct PostgreSQL pattern. TypeScript schema changes are comment-only — Drizzle ORM
+  does not express PARTITION BY, which is documented inline.
+pre_existing_failures_note: >-
+  37 unit test failures exist in mcp-server/__tests__/ and are pre-existing relative to CDBE-5010. Confirmed: no
+  mcp-server files were modified in commit 13c7e133. These failures trace to tool count (73 vs 76) and DB_POOL_SIZE
+  config value mismatches from later story work already merged to main.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For pure DDL/SQL migration stories, pgTAP test files with BEGIN/ROLLBACK provide correct QA verification. E2E gate
+      exemption is valid when no application code paths are added.
+    category: pattern
+    tags:
+      - database
+      - migration
+      - pgtap
+      - partitioning
+  - lesson: >-
+      PostgreSQL FK from non-partitioned child to partitioned parent requires a per-partition UNIQUE INDEX on the FK
+      column alone (not including the partition key) when the child table does not carry the partition key. This is the
+      correct pattern when child tables hold only invocation_id (uuid) without started_at.
+    category: pattern
+    tags:
+      - database
+      - partitioning
+      - foreign-keys
+      - postgresql
+  - lesson: >-
+      Pre-existing unit test failures in unrelated packages (mcp-server tool count assertions) must be explicitly
+      documented in QA verification to distinguish them from story regressions. The CDBE-5010 commit touches only 4
+      files — all unrelated to the failing test files.
+    category: pattern
+    tags:
+      - qa
+      - test-failures
+      - pre-existing
+tokens:
+  in: 18000
+  out: 3000

@@ -1,0 +1,9 @@
+story_id: APRS-3010
+current_phase: done
+last_successful_phase: qa-verify
+iteration: 0
+pr_number: 586
+pr_url: https://github.com/michael-menard/monorepo/pull/586
+review_verdict: PASS
+qa_verdict: PASS
+e2e_gate: exempt

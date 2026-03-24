@@ -1,0 +1,33 @@
+# Deferred KB Writes — CDBE-4010
+# Generated: 2026-03-18
+# Reason: pm-story-generation-leader executed without live DB access in this session.
+# These writes should be applied by the next agent session that has DB access.
+
+story_upsert:
+  story_id: CDBE-4010
+  feature: cdbe
+  title: "pgvector Foundation: story_embeddings and plan_embeddings Tables with HNSW Indexes"
+  story_dir: plans/future/platform/consolidate-db-enhancements/CDBE-4010
+  story_file: plans/future/platform/consolidate-db-enhancements/CDBE-4010/CDBE-4010.md
+  story_type: feature
+  points: 3
+  priority: P1
+  state: backlog
+  touches_backend: true
+  touches_frontend: false
+  touches_database: true
+  touches_infra: false
+  metadata:
+    experiment_variant: control
+
+artifacts_to_register:
+  - type: pm_test_plan
+    source_file: plans/future/platform/consolidate-db-enhancements/CDBE-4010/_pm/test-plan.yaml
+    story_id: CDBE-4010
+
+  - type: pm_dev_feasibility
+    source_file: plans/future/platform/consolidate-db-enhancements/CDBE-4010/_pm/dev-feasibility.yaml
+    story_id: CDBE-4010
+    includes_subtasks: true
+
+  # uiux-notes.yaml is skipped: true — omitted per agent instructions

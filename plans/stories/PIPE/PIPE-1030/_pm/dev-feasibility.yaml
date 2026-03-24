@@ -1,0 +1,121 @@
+feasible: true
+confidence: high
+rationale: >
+  PIPE-1030 is a data management story with no new code to write. All operations are
+  KB tool calls (kb_list_stories, kb_get_story, kb_update_story_status). The orchestrator
+  package is fully built and available for inspection. The 4 backlog ORCH stories need
+  elaboration artifacts written and state transitions applied — both are well-understood
+  operations. The inverted ORCH-4010/ORCH-4020 dependency is an acknowledged anomaly that
+  can be resolved by using ORCH-4020 patterns as references during ORCH-4010 elaboration.
+complexity: medium
+change_surface:
+  areas:
+    - 'KB (knowledge base) — story state transitions and artifact writes only'
+    - 'packages/backend/orchestrator — inspection only (no writes) for elaboration context'
+  endpoints: []
+  deploy_touchpoints:
+    - 'KB MCP server must be available during execution'
+risks:
+  - finding: 'ORCH-4010/ORCH-4020 dependency inversion — ORCH-4010 is prerequisite of ORCH-4020 but ORCH-4020 is already completed'
+    mitigation: 'Elaborate ORCH-4010 using ORCH-4020 patterns as canonical references. The completed ORCH-4020 story (plans/stories/ORCH/ORCH-4020/ORCH-4020.md) provides mock patterns that actually make ORCH-4010 elaboration easier, not harder. Document the inversion in ORCH-4010 ELABORATION artifact.'
+  - finding: 'Artifact gates not enforced — state can advance without artifact if KB enforcement is not present'
+    mitigation: 'Elaboration agent must write ELABORATION artifact first, verify it exists via kb_get_story, then call kb_update_story_status. Atomic pattern: write → verify → advance. Do not advance state without confirmed artifact.'
+  - finding: 'Ghost states in agent context may cause Zod validation errors after PIPE-0010 state enum fix'
+    mitigation: 'Use only canonical states: backlog, created, elab, ready, in_progress, needs_code_review, ready_for_qa, in_qa, completed. PIPE-0010 is completed — canonical states are enforced.'
+missing_requirements: []
+evidence_expectations:
+  - 'kb_list_stories(plan_slug: autonomous-pipeline-test-plan) returns exactly 8 stories'
+  - 'kb_get_story(ORCH-2020) shows state=elab and has ELABORATION artifact after Phase 2'
+  - 'kb_get_story(ORCH-3020) shows state=elab and has ELABORATION artifact after Phase 3'
+  - 'kb_get_story(ORCH-3030) shows state=elab and has ELABORATION artifact after Phase 4'
+  - 'kb_get_story(ORCH-4010) shows state=elab and has ELABORATION artifact after Phase 5'
+  - 'All 4 stories show state=ready after Phase 6'
+  - 'No new directories under plans/stories/ORCH/ beyond existing ORCH-3010/ and ORCH-4020/'
+subtasks:
+  - id: ST-1
+    title: 'Audit ORCH story KB state and plan linkage'
+    goal: 'Verify all 8 ORCH stories exist in KB, are linked to autonomous-pipeline-test-plan, and have correct states'
+    files_to_read:
+      - 'KB: kb_list_stories(plan_slug: autonomous-pipeline-test-plan)'
+      - 'KB: kb_get_story for each of the 8 ORCH story IDs'
+    files_to_modify: []
+    acs: ['AC-1']
+    depends_on: none
+    verification: 'kb_list_stories returns 8 stories; each has correct feature and plan linkage'
+    estimated_tokens: 2000
+  - id: ST-2
+    title: 'Elaborate ORCH-2020 (Unit Tests — State Validation and Schema Utilities)'
+    goal: >
+      Write ELABORATION artifact covering validateGraphState, safeValidateGraphState,
+      createInitialState, and schema versioning utilities in packages/backend/orchestrator/src/state/.
+      Advance story to elab state.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/state/validators.ts'
+      - 'packages/backend/orchestrator/src/state/utilities.ts'
+      - 'packages/backend/orchestrator/src/state/graph-state.ts'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockGraphState.ts'
+    files_to_modify: []
+    acs: ['AC-2']
+    depends_on: ST-1
+    verification: 'kb_get_story(ORCH-2020) returns state=elab with ELABORATION artifact present'
+    estimated_tokens: 5000
+  - id: ST-3
+    title: 'Elaborate ORCH-3020 (Integration Tests — Story Creation Fanout and Attack Cluster)'
+    goal: >
+      Write ELABORATION artifact covering story_seed → fanout (pm/ux/qa) → merge_fanout → attack
+      multi-node cluster integration test with mocked LLM. Reference ORCH-3010 as structural pattern.
+      Advance story to elab state.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/nodes/story-creation.ts (inspect fanout nodes)'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockLLMProvider.ts'
+      - 'packages/backend/orchestrator/src/__tests__/integration/elaboration-delta-cluster.integration.test.ts'
+      - 'plans/stories/ORCH/ORCH-3010/ORCH-3010.md'
+    files_to_modify: []
+    acs: ['AC-3', 'AC-8']
+    depends_on: ST-1
+    verification: 'kb_get_story(ORCH-3020) returns state=elab with ELABORATION artifact present'
+    estimated_tokens: 6000
+  - id: ST-4
+    title: 'Elaborate ORCH-3030 (Integration Tests — Persistence Round-Trip)'
+    goal: >
+      Write ELABORATION artifact covering load_from_db → processing → save_to_db nodes
+      with mocked StoryRepository. Advance story to elab state.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/persistence/ (StoryRepository interface)'
+      - 'packages/backend/orchestrator/src/db/'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockLLMProvider.ts'
+    files_to_modify: []
+    acs: ['AC-4', 'AC-8']
+    depends_on: ST-1
+    verification: 'kb_get_story(ORCH-3030) returns state=elab with ELABORATION artifact present'
+    estimated_tokens: 5500
+  - id: ST-5
+    title: 'Elaborate ORCH-4010 (Full Graph Tests — Elaboration and Story Creation Graphs)'
+    goal: >
+      Write ELABORATION artifact covering full graph.invoke() tests for elaboration.ts and
+      story-creation.ts covering all major routing paths. Use ORCH-4020 (completed) as
+      canonical reference for full-graph mock patterns — note the inverted dependency.
+      Advance story to elab state.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/elaboration.ts'
+      - 'packages/backend/orchestrator/src/graphs/story-creation.ts'
+      - 'plans/stories/ORCH/ORCH-4020/ORCH-4020.md'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockLLMProvider.ts'
+      - 'packages/backend/orchestrator/src/__tests__/helpers/createMockGraphState.ts'
+    files_to_modify: []
+    acs: ['AC-5', 'AC-8']
+    depends_on: ST-1
+    verification: 'kb_get_story(ORCH-4010) returns state=elab with ELABORATION artifact present'
+    estimated_tokens: 7000
+  - id: ST-6
+    title: 'Advance all 4 elaborated stories to ready state'
+    goal: >
+      After confirming ELABORATION artifacts exist for ORCH-2020, ORCH-3020, ORCH-3030, ORCH-4010,
+      call kb_update_story_status for each to advance from elab to ready.
+    files_to_read:
+      - 'KB: kb_get_story for each of the 4 stories (verify elab state + artifact)'
+    files_to_modify: []
+    acs: ['AC-6', 'AC-7']
+    depends_on: ST-5
+    verification: 'kb_get_story for each returns state=ready; no filesystem directories created'
+    estimated_tokens: 2000

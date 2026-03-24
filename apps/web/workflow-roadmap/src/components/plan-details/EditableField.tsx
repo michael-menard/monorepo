@@ -152,7 +152,9 @@ export function EditableField({
             />
           )}
           <div className="flex items-center gap-2">
-            {isDebouncing && <span className="text-xs text-slate-400 font-mono">saving...</span>}
+            {isDebouncing ? (
+              <span className="text-xs text-slate-400 font-mono">saving...</span>
+            ) : null}
             <CustomButton
               variant="ghost"
               size="icon"

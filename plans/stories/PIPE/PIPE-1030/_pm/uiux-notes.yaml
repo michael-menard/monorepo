@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  PIPE-1030 is a backend-only KB data management story. It has no frontend components,
+  no user-facing UI, no API endpoints, and no visual surfaces. The story is entirely
+  about verifying KB state and elaborating ORCH backlog stories via KB tool calls
+  (kb_list_stories, kb_get_story, kb_update_story_status). No UI/UX review applicable.

@@ -1,0 +1,177 @@
+schema: 1
+story_id: 'WINT-7090'
+version: 1
+timestamp: '2026-03-22T00:00:00Z'
+
+acceptance_criteria:
+  - ac_id: 'AC1'
+    ac_text: 'session-manager.agent.md uses mcp__knowledge-base__ tool prefix'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'mcp__knowledge-base__' .claude/agents/session-manager.agent.md"
+        result: '14 occurrences of mcp__knowledge-base__ found, zero mcp__postgres_knowledgebase__'
+
+  - ac_id: 'AC2'
+    ac_text: 'doc-sync.agent.md uses mcp__knowledge-base__ tool prefix'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'mcp__knowledge-base__' .claude/agents/doc-sync.agent.md"
+        result: '3 occurrences of mcp__knowledge-base__ found, zero mcp__postgres-knowledgebase__'
+
+  - ac_id: 'AC3'
+    ac_text: 'improvement-proposer.agent.md uses kb_add (not kb_add_entry)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_add' .claude/agents/improvement-proposer.agent.md"
+        result: 'kb_add used in frontmatter and Phase 9 code blocks; no kb_add_entry remains'
+
+  - ac_id: 'AC4'
+    ac_text: 'kb-compressor.agent.md Phase 6 writes via kb_write_artifact'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/agents/kb-compressor.agent.md"
+        result: 'kb_write_artifact call added to Phase 6; No filesystem COMPRESSION-REPORT.yaml write remains'
+
+  - ac_id: 'AC5'
+    ac_text: 'context-warmer.agent.md Phase 4 writes via kb_write_artifact'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/agents/context-warmer.agent.md"
+        result: 'kb_write_artifact call replaces filesystem write in Phase 4 Step 2'
+
+  - ac_id: 'AC6'
+    ac_text: 'backlog-curator.agent.md Phase 4 writes via kb_write_artifact'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/agents/backlog-curator.agent.md"
+        result: 'kb_write_artifact calls added to Phase 4; Write to {output_dir}/... references replaced'
+
+  - ac_id: 'AC7'
+    ac_text: 'knowledge-context-loader.agent.md reads ADRs via kb_search'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'plans/stories/ADR-LOG.md' .claude/agents/knowledge-context-loader.agent.md"
+        result: 'NONE FOUND - filesystem ADR-LOG.md read replaced with kb_search'
+
+  - ac_id: 'AC8'
+    ac_text: 'risk-predictor.agent.md reads seed/patterns/outcomes via KB API'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'story_seed_path\\|plans/future/workflow-learning\\|in-progress.*OUTCOME' .claude/agents/risk-predictor.agent.md"
+        result: 'NONE FOUND - all filesystem reads replaced with kb_read_artifact/kb_search'
+
+  - ac_id: 'AC9'
+    ac_text: 'token-report/SKILL.md uses kb_get_story instead of filesystem directory search'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'plans/stories/backlog\\|plans/stories/in-progress' .claude/skills/token-report/SKILL.md"
+        result: 'NONE FOUND - filesystem directory listing replaced with kb_get_story'
+
+  - ac_id: 'AC10'
+    ac_text: 'status-audit/SKILL.md Steps 3 and 5 use KB API instead of find commands'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'find plans/future/platform' .claude/skills/status-audit/SKILL.md"
+        result: 'NONE FOUND - find commands replaced with kb_list_stories and kb_search'
+
+  - ac_id: 'AC11'
+    ac_text: 'Verification sweep: zero deprecated references remain in migrated files'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -rn 'mcp__postgres\\|mcp__knowledge -' .claude/agents/session-manager.agent.md .claude/agents/doc-sync.agent.md .claude/agents/improvement-proposer.agent.md .claude/agents/kb-compressor.agent.md .claude/agents/context-warmer.agent.md .claude/agents/backlog-curator.agent.md .claude/agents/knowledge-context-loader.agent.md .claude/agents/risk-predictor.agent.md .claude/skills/token-report/SKILL.md .claude/skills/status-audit/SKILL.md"
+        result: 'NONE FOUND - all 10 files clean of deprecated mcp__postgres and broken mcp__knowledge - tool references'
+
+touched_files:
+  - path: '.claude/agents/session-manager.agent.md'
+    action: modified
+    description: 'Replaced 5 mcp__postgres_knowledgebase__ tool call sites (Phases 1-4) with mcp__knowledge-base__'
+
+  - path: '.claude/agents/doc-sync.agent.md'
+    action: modified
+    description: 'Replaced mcp__postgres-knowledgebase__ in frontmatter mcp_tools field and 2 inline code blocks with mcp__knowledge-base__'
+
+  - path: '.claude/agents/improvement-proposer.agent.md'
+    action: modified
+    description: 'Replaced kb_add_entry with kb_add in frontmatter kb_tools list and 2 Phase 9 code blocks'
+
+  - path: '.claude/agents/kb-compressor.agent.md'
+    action: modified
+    description: 'Replaced Phase 6 filesystem COMPRESSION-REPORT.yaml write with kb_write_artifact call; updated Non-Negotiables'
+
+  - path: '.claude/agents/context-warmer.agent.md'
+    action: modified
+    description: 'Replaced Phase 4 Step 2 WARM-RESULT.yaml filesystem write with kb_write_artifact call'
+
+  - path: '.claude/agents/backlog-curator.agent.md'
+    action: modified
+    description: 'Replaced Phase 4 filesystem writes for pm-review-batch.json and PM-REVIEW-REPORT.md with kb_write_artifact calls; updated Output schema headers, Non-Negotiables, and LangGraph output contract'
+
+  - path: '.claude/agents/knowledge-context-loader.agent.md'
+    action: modified
+    description: "Replaced Phase 2 Step 1 filesystem read of plans/stories/ADR-LOG.md with kb_search({ tags: ['adr'] }); updated Inputs section and Non-Negotiables"
+
+  - path: '.claude/agents/risk-predictor.agent.md'
+    action: modified
+    description: 'Replaced story_seed_path filesystem read (STORY-SEED.md) with kb_read_artifact; replaced PATTERNS-{month}.yaml filesystem read with kb_search; replaced OUTCOME.yaml filesystem read with kb_read_artifact; updated accuracy tracking to use kb_get_story and kb_read_artifact'
+
+  - path: '.claude/skills/token-report/SKILL.md'
+    action: modified
+    description: "Replaced 'Locate Story Directory' section listing 6 filesystem directories with kb_get_story; updated output target to kb_write_artifact"
+
+  - path: '.claude/skills/status-audit/SKILL.md'
+    action: modified
+    description: 'Replaced Step 3 find commands for flat stories/ and legacy stage dirs with kb_list_stories + kb_search; replaced Step 5 find for DEFERRED-KB-WRITES.yaml with kb_search; updated description'
+
+commands_run:
+  - command: "grep -rn 'mcp__postgres' <all migrated files>"
+    result: SUCCESS
+    output: 'NONE FOUND - all deprecated mcp__postgres references removed'
+    timestamp: '2026-03-22T00:00:00Z'
+
+  - command: "grep -n 'kb_add_entry' .claude/agents/improvement-proposer.agent.md"
+    result: SUCCESS
+    output: 'NONE FOUND - kb_add_entry replaced with kb_add'
+    timestamp: '2026-03-22T00:00:00Z'
+
+  - command: "grep -n 'find plans/future/platform' .claude/skills/status-audit/SKILL.md"
+    result: SUCCESS
+    output: 'NONE FOUND - find commands replaced with KB API calls'
+    timestamp: '2026-03-22T00:00:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0, skipped: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: 'documentation/agent-config only changes — no TypeScript code modified'
+  mode: 'live'
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage: {}
+
+notable_decisions:
+  - 'doc-sync.agent.md had both hyphenated (mcp__postgres-knowledgebase__) in frontmatter and underscored (mcp__postgres_knowledgebase__) in inline code blocks — both variants replaced'
+  - 'backlog-curator.agent.md output contract updated in LangGraph porting notes to reflect KB artifact types instead of filesystem file paths'
+  - 'status-audit/SKILL.md Step 3 replaced with two-part KB scan (canonical via kb_list_stories, legacy via kb_search + filter) preserving the same logical structure'
+  - 'risk-predictor accuracy tracking section updated to use kb_get_story for predictions and kb_read_artifact for outcomes'
+
+known_deviations: []

@@ -1,0 +1,119 @@
+story_id: CDBE-3010
+phase: implementation
+iteration: 1
+timestamp: '2026-03-19T04:30:00Z'
+overall_status: PASS
+
+build:
+  status: exempt
+  reason: Pure DDL story — no TypeScript, no pnpm build required
+
+unit_tests:
+  status: exempt
+  reason: Pure DDL story — pgtap is the test harness; no Vitest tests
+
+e2e_tests:
+  status: exempt
+  reason: story_type infra — no API routes, MCP tools, or UI components per AC-12
+
+pgtap_tests:
+  status: PASS
+  command: "psql $KB_DATABASE_URL -f pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove"
+  result: "7/7 assertions pass"
+  output: |
+    ok 1 - 1030: workflow.stories_current view exists
+    ok 2 - 1030 HP-2a: story with one open row returns current_state = 'backlog'
+    ok 3 - 1030 HP-2b: story with one open row returns non-null entered_at
+    ok 4 - 1030 HP-3a: story with no history rows returns current_state IS NULL
+    ok 5 - 1030 HP-3b: story with no history rows returns entered_at IS NULL
+    ok 6 - 1030 HP-4: story with multiple rows returns current_state from the open row ('created'), not the closed row
+    ok 7 - 1030 EC-2: CREATE OR REPLACE VIEW workflow.stories_current is idempotent (runs without error)
+
+migration_verification:
+  status: PASS
+  first_run: "psql exits 0, CREATE VIEW, safety preamble NOTICE emitted"
+  second_run: "psql exits 0, idempotency confirmed (CREATE OR REPLACE VIEW)"
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence: "Migration uses CREATE OR REPLACE VIEW workflow.stories_current AS — idempotent; second psql run exits 0"
+    evidence_type: file+command
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-2
+    status: PASS
+    evidence: "Explicit column list: story_id, feature, state, title, priority, description, tags, experiment_variant, blocked_reason, blocked_by_story, started_at, completed_at, file_hash, created_at, updated_at — no s.*"
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-3
+    status: PASS
+    evidence: "LEFT JOIN LATERAL (SELECT to_state, created_at FROM workflow.story_state_history WHERE story_id = s.story_id AND exited_at IS NULL ORDER BY created_at DESC LIMIT 1) h ON true; h.to_state AS current_state in SELECT list"
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-4
+    status: PASS
+    evidence: "h.created_at AS entered_at in SELECT list of the same LATERAL subquery"
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-5
+    status: PASS
+    evidence: "pgtap tests HP-3a and HP-3b pass: story with no history rows returns current_state IS NULL and entered_at IS NULL"
+    evidence_type: test
+
+  - ac_id: AC-6
+    status: PASS
+    evidence: "COMMENT ON VIEW workflow.stories_current IS '3010: Narrow scalar sibling...' present in migration SQL"
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-7
+    status: PASS
+    evidence: "COMMENT ON COLUMN workflow.stories_current.current_state and COMMENT ON COLUMN workflow.stories_current.entered_at both present with '3010:' prefix"
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-8
+    status: PASS
+    evidence: "DO $$ BEGIN IF current_database() <> 'knowledgebase' THEN RAISE EXCEPTION ... END IF; RAISE NOTICE ...; END $$; block at top of migration; NOTICE emitted on run: '1030: Safety check passed — running against database: knowledgebase'"
+    evidence_type: file+command
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-9
+    status: PASS
+    evidence: "pgtap test file at pgtap/1030_cdbe3010_stories_current_view_test.sql — 7/7 assertions pass: has_view (test 1), HP-2 (tests 2-3), HP-3 (tests 4-5), HP-4 (test 6), EC-2 idempotency lives_ok (test 7)"
+    evidence_type: test
+    file: apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+
+  - ac_id: AC-10
+    status: PASS
+    evidence: "psql exits 0 on second run; CREATE OR REPLACE VIEW is inherently idempotent; pgtap EC-2 lives_ok passes"
+    evidence_type: command+test
+
+  - ac_id: AC-11
+    status: PASS
+    evidence: "LATERAL join predicate includes exited_at IS NULL — leverages idx_story_state_history_open_rows partial index from migration 1010. No new index DDL in migration."
+    evidence_type: file
+    file: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+
+  - ac_id: AC-12
+    status: PASS
+    evidence: "Only 2 SQL files created; no TypeScript, no MCP tool handlers, no API routes, no UI components touched"
+    evidence_type: file
+
+files_created:
+  - path: apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql
+    status: created
+    commit: "074ac8aa"
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql
+    status: created
+    commit: "074ac8aa"
+
+git:
+  branch: story/CDBE-3010
+  commit: "074ac8aa"
+  pushed: true
+  remote: origin/story/CDBE-3010

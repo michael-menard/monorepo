@@ -1,0 +1,43 @@
+{
+  "_comment": "Service manifest mapping port keys to start commands. cwd is relative to monorepo root.",
+  "MAIN_APP_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/main-app"
+  },
+  "APP_DASHBOARD_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/app-dashboard"
+  },
+  "WORKFLOW_ADMIN_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/workflow-admin-app"
+  },
+  "WORKFLOW_ROADMAP_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/workflow-roadmap"
+  },
+  "PLAN_CHAT_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/plan-chat"
+  },
+  "PORT_MONITOR_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/web/port-monitor"
+  },
+  "LEGO_API_PORT": {
+    "command": "bun run --hot server.ts",
+    "cwd": "apps/api/lego-api"
+  },
+  "ROADMAP_SVC_PORT": {
+    "command": "bun run --hot src/index.ts",
+    "cwd": "apps/api/workflow-admin/roadmap-svc"
+  },
+  "KNOWLEDGE_BASE_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/api/knowledge-base"
+  },
+  "PIPELINE_PORT": {
+    "command": "pnpm dev",
+    "cwd": "apps/api/pipeline"
+  }
+}

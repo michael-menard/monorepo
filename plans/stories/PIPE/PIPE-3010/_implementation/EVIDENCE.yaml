@@ -1,0 +1,162 @@
+schema: 2
+story_id: PIPE-3010
+version: 1
+timestamp: '2026-03-18T23:04:00Z'
+phase: implementation
+iteration: 0
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          EC-1: createExecuteNode with no modelDispatch → executeComplete=true, completedChanges=[];
+          HP-1: mockDispatch called once per ChangeSpec via createChangeLoopNode delegation
+        result: PASS
+    reason: Tests EC-1 and HP-1 pass in dev-implement.test.ts
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          ED-3: worktreePath derived as path.join(config.worktreePath, storyId) confirmed via test;
+          HP-1 passes confirming createChangeLoopNode receives correct worktreePath
+        result: PASS
+    reason: Test ED-3 passes confirming path.join(worktreePath, storyId) derivation
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          EC-2: shouldEscalate returns abort_to_blocked at iterationCount >= maxIterations;
+          EC-3: afterExecute returns complete on abort_to_blocked
+        result: PASS
+    reason: Tests EC-2 and EC-3 pass confirming escalation routing
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          HP-4: saveProof called with real file paths from CommitRecord.touchedFiles (no 'stub' path);
+          EC-4: no throw when workflowRepo absent — returns evidenceCollected=true with warning
+        result: PASS
+    reason: Tests HP-4 and EC-4 pass confirming real evidence construction
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          ED-4: no WINT-9070 warning in execute node result;
+          grep confirms WINT-9070 string absent from dev-implement.ts source
+        result: PASS
+      - type: command
+        command: grep -r WINT-9070 packages/backend/orchestrator/src/graphs/dev-implement.ts
+        result: no matches — string removed
+        description: WINT-9070 stub warning removed from execute node
+    reason: Test ED-4 passes; grep confirms WINT-9070 absent from source
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm check-types --filter @repo/orchestrator
+        result: Only pre-existing TS2307/@repo/logger errors; no new errors
+        description: >-
+          All new state fields present: worktreePath, changeSpecs, currentChangeIndex,
+          completedChanges, changeLoopStatus — type check passes for changed files
+    reason: pnpm check-types exits with only pre-existing module resolution errors, no new errors in dev-implement.ts
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_items:
+      - type: test
+        description: DevImplementConfigSchema.accepts modelDispatch injection (AC-7) test passes
+        result: PASS
+    reason: modelDispatch z.custom<IModelDispatch>().optional() added to DevImplementConfigSchema
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          HP-2: afterExecute returns review_subgraph on success+runReview=true;
+          HP-3: afterExecute returns collect_evidence when runReview=false;
+          EC-3: afterExecute returns complete on abort_to_blocked
+        result: PASS
+    reason: Tests HP-2, HP-3, EC-3 all pass
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          Vitest test suite: HP-1..HP-5 happy path + EC-1..EC-4 error cases + ED-2..ED-4 edge cases all pass
+          34 tests total pass in dev-implement.test.ts
+        result: PASS
+    reason: 34 tests pass; 0 failures
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/dev-implement.test.ts
+        result: 34 passed, 0 failed
+        description: All tests in dev-implement.test.ts pass
+    reason: pnpm test runs 34 tests with 0 failures
+
+  - ac_id: AC-11
+    status: PASS
+    evidence_items:
+      - type: test
+        description: >-
+          afterExecute typed as returning review_subgraph | collect_evidence | complete;
+          addConditionalEdges map includes complete: complete entry;
+          compilation test confirms graph compiles without TS error
+        result: PASS
+    reason: TypeScript type for afterExecute includes complete; graph compiles with complete edge
+
+touched_files:
+  - path: packages/backend/orchestrator/src/graphs/dev-implement.ts
+    action: modified
+    description: >-
+      Extended DevImplementConfigSchema with modelDispatch; added state annotation fields
+      (worktreePath, changeSpecs, currentChangeIndex, completedChanges, changeLoopStatus);
+      replaced createExecuteNode stub with real IModelDispatch wiring via createChangeLoopNode;
+      wired shouldEscalate into afterExecute with abort_to_blocked → complete routing;
+      replaced createCollectEvidenceNode stub with real evidence from completedChanges;
+      removed WINT-9070 and WINT-9080 stub references
+  - path: packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts
+    action: modified
+    description: >-
+      Extended createTestState with new state field defaults; added tests for shouldEscalate,
+      execute node (EC-1, HP-1, ED-3, ED-4), escalation routing (HP-2, HP-3, EC-3, EC-2),
+      evidence collection (HP-4, EC-4), graph compilation (AC-11), and integration (HP-5)
+
+commands_run:
+  - command: pnpm --filter @repo/orchestrator check-types
+    result: SUCCESS
+    output: Only pre-existing @repo/logger TS7016 error; no new errors in changed files
+    timestamp: '2026-03-18T23:03:00Z'
+  - command: pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/dev-implement.test.ts
+    result: SUCCESS
+    output: 34 passed, 0 failed in 1.95s
+    timestamp: '2026-03-18T23:03:05Z'
+
+notable_decisions:
+  - >-
+    execute node invokes createChangeLoopNode sequentially for each ChangeSpec in a for-loop
+    (not a subgraph loop), constructing an ImplementationGraphState-compatible projection
+    per iteration and accumulating CommitRecord results into completedChanges
+  - >-
+    afterExecute now returns review_subgraph | collect_evidence | complete (3 branches);
+    abort_to_blocked escalation routes directly to complete with workflowSuccess=false
+  - >-
+    collect_evidence uses completedChanges[].touchedFiles for real file paths;
+    commit SHAs stored as commands_run entries for traceability
+
+known_deviations: []

@@ -1,152 +1,80 @@
-story_id: WINT-0140
+schema: 1
+story_id: APRS-5040
 phase: implementation
-iteration: 1
-generated_at: '2026-03-19'
-
-summary:
-  status: COMPLETE
-  tests_passed: 24
-  tests_failed: 0
-  build_status: pre-existing cyclic dep prevents turbo build (not introduced by this story)
-  e2e_status: EXEMPT (infra/tools story - no UI surface)
+iteration: 0
+timestamp: '2026-03-23T23:00:00Z'
 
 acceptance_criteria:
-  - id: AC-1
-    description: 'MlModelTypeSchema z.enum with 4 PG enum values'
+  - ac_id: AC-1
     status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-        detail: "MlModelTypeSchema = z.enum(['quality_predictor','effort_estimator','risk_classifier','pattern_recommender'])"
-      - test: 'ml-pipeline re-exports (mcp-tools stub) - MlModelTypeSchema with 4 valid values'
+    evidence_type: test
+    description: >-
+      createCLIDecisionCallbackAdapter in adapters/plan-refinement/cli-decision-callback-adapter.ts
+      satisfies the graph's DecisionCallback interface (ask(DecisionContext) returning
+      {decision, confirmedFlowIds, rejectedFlowIds, reason}). Handles all 4 HiTL decisions:
+      approve, edit, reject, defer. Type checked with zero errors.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - packages/backend/orchestrator/src/cli/run-plan-refinement.ts
 
-  - id: AC-2
-    description: 'ml_model_register tool inserts into workflow.ml_models'
+  - ac_id: AC-2
     status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
-        detail: 'db.insert(mlModels).values(...).returning() - Zod validated, returns row or null'
-      - test: 'mlModelRegister - registers a new model and returns the row'
-      - test: 'mlModelRegister - returns null and warns on DB error'
+    evidence_type: test
+    description: >-
+      CLI prompt displays plan slug header, all flows with IDs and names, warnings,
+      and errors. 4 inquirer choices (approve/edit/reject/defer). Approve flow populates
+      confirmedFlowIds/rejectedFlowIds via checkbox prompt. Verified by 19 unit tests.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
 
-  - id: AC-3
-    description: 'ml_model_get_active tool queries WHERE is_active=true with optional modelType filter'
+  - ac_id: AC-3
     status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
-        detail: 'eq(mlModels.isActive, true) + optional modelType filter with and()'
-      - test: 'mlModelGetActive - returns all active models when no type filter'
-      - test: 'mlModelGetActive - returns empty array and warns on DB error'
-
-  - id: AC-4
-    description: 'ml_metrics_record tool appends to model_metrics (append-only)'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
-        detail: 'db.insert(modelMetrics).values(...).returning() - append-only, no update path'
-      - test: 'mlMetricsRecord - records a metric and returns the row'
-      - test: 'mlMetricsRecord - returns null and warns on DB error'
-
-  - id: AC-5
-    description: 'ml_prediction_record tool appends to model_predictions (append-only)'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
-        detail: 'db.insert(modelPredictions).values(...).returning() - append-only'
-      - test: 'mlPredictionRecord - records a prediction and returns the row'
-      - test: 'mlPredictionRecord - returns null and warns on DB error'
-
-  - id: AC-6
-    description: 'ml_prediction_get_by_entity tool queries by entityType + entityId ordered by predictedAt DESC'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
-        detail: 'and(eq(entityType), eq(entityId)) + optional predictionType + orderBy(desc(predictedAt)).limit()'
-      - test: 'mlPredictionGetByEntity - returns predictions for entity'
-      - test: 'mlPredictionGetByEntity - respects limit constraint (max 100)'
-
-  - id: AC-7
-    description: 'training_data_ingest tool inserts into training_data with optional storyId'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-        detail: 'db.insert(trainingData).values({dataType, features, labels, storyId: null}).returning()'
-      - test: 'trainingDataIngest - ingests training data and returns the row'
-      - test: 'trainingDataIngest - ingests with optional storyId'
-
-  - id: AC-8
-    description: 'training_data_mark_validated tool updates validated=true + validated_at=NOW()'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
-        detail: 'db.update(trainingData).set({validated:true, validatedAt:new Date()}).where(eq(id)).returning()'
-      - test: 'trainingDataMarkValidated - marks training data as validated and returns updated row'
-      - test: 'trainingDataMarkValidated - returns null and warns when record not found'
-
-  - id: AC-9
-    description: 'All tools use Zod parse input, @repo/logger warn on errors, return null on DB failure'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-        detail: 'All input schemas defined as Zod schemas with z.infer<> types'
-      - detail: 'All tools use Schema.parse(input) at entry, catch block calls logger.warn and returns null'
-      - test: 'All error-path tests verify logger.warn called and null returned'
-
-  - id: AC-10
-    description: 'Package registration: knowledge-base ./ml-pipeline export + mcp-tools re-export'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/package.json
-        detail: '"./ml-pipeline": { import: ./src/ml-pipeline/index.ts, types: ./src/ml-pipeline/index.ts }'
-      - file: packages/backend/mcp-tools/src/index.ts
-        detail: 'Re-exports all 7 tools and schemas from @repo/knowledge-base/ml-pipeline'
-
-  - id: AC-11
-    description: 'Unit tests with vi.mock for db, one test per tool minimum, >=45% coverage'
-    status: PASS
-    evidence:
-      - file: apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-        detail: '24 tests across 7 describe blocks - all passing. Uses vi.hoisted + vi.mock(@repo/db)'
-      - result: '24/24 tests pass'
-
-files_created:
-  - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-model-register.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-model-get-active.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-metrics-record.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-record.ts
-  - apps/api/knowledge-base/src/ml-pipeline/ml-prediction-get-by-entity.ts
-  - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
-  - apps/api/knowledge-base/src/ml-pipeline/training-data-mark-validated.ts
-  - apps/api/knowledge-base/src/ml-pipeline/index.ts
-  - apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/__types__/index.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-register.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-model-get-active.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-metrics-record.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-record.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/ml-prediction-get-by-entity.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/training-data-ingest.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/training-data-mark-validated.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/index.ts
-  - packages/backend/mcp-tools/src/ml-pipeline/__tests__/ml-pipeline.test.ts
-
-files_modified:
-  - apps/api/knowledge-base/package.json
-  - apps/api/knowledge-base/vitest.config.ts
-  - packages/backend/mcp-tools/src/index.ts
-  - packages/backend/mcp-tools/vitest.config.ts
-
-pre_existing_issues_noted:
-  - cyclic_dependency: '@repo/knowledge-base <-> @repo/mcp-tools prevents turbo build (pre-existing)'
-  - logger_resolution: '@repo/logger dist not built - pre-existing in worktree, fixed via vitest aliases'
-  - db_resolution: '@repo/db dist not built - pre-existing in worktree, fixed via vitest aliases'
+    evidence_type: test
+    description: >-
+      24 total tests passing: 19 unit tests (all 4 decision paths, prompt format, Ctrl+C handling)
+      + 5 integration tests (graph.invoke() with bridged callback for all 4 HiTL outcomes
+      + smoke test with stub planLoader). All tests pass in main monorepo.
+    files:
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
 
 test_results:
-  knowledge_base_ml_pipeline:
-    passed: 24
-    failed: 0
-    command: 'pnpm --filter @repo/knowledge-base test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'
-  mcp_tools_ml_pipeline:
-    passed: 4
-    failed: 0
-    command: 'pnpm --filter @repo/mcp-tools test -- src/ml-pipeline/__tests__/ml-pipeline.test.ts'
+  - command: pnpm test --filter @repo/orchestrator -- adapters/plan-refinement
+    outcome: PASS
+    details: '2 test files, 24 tests passed (19 unit + 5 integration)'
+
+  - command: npx tsc --noEmit (grep plan-refinement|run-plan-refinement)
+    outcome: PASS
+    details: 'Zero type errors in all 4 new files'
+
+  - command: pnpm eslint (source files only)
+    outcome: PASS
+    details: 'Zero lint errors on adapter and CLI entrypoint'
+
+files_created:
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+    action: created
+    description: >-
+      Bridge adapter creating graph-compatible DecisionCallback using inquirer directly.
+      Handles approve (with flow checkbox), edit (no follow-up), reject (reason prompt),
+      defer (reason prompt). Ctrl+C interruption handling for all prompts.
+
+  - path: packages/backend/orchestrator/src/cli/run-plan-refinement.ts
+    action: created
+    description: >-
+      CLI entrypoint following generate-stories.ts pattern. parseArgs (--plan-slug, --help),
+      stub planLoader with INJECTION POINT comment, wires createPlanRefinementGraph with
+      bridged callback, structured stdout output, exit codes 0/1.
+
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+    action: created
+    description: >-
+      19 unit tests covering all 4 decision paths, prompt format verification
+      (plan slug, flow IDs, warnings, errors, 4 choices), and Ctrl+C interruption handling.
+
+  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+    action: created
+    description: >-
+      5 integration tests wiring graph.invoke() with bridged CLI adapter + stub planLoader.
+      Covers all 4 HiTL outcomes (approve, reject, defer, edit→approve) plus smoke test.

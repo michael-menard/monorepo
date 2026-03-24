@@ -4,7 +4,7 @@ updated: 2026-02-25
 version: 3.2.0
 type: leader
 permission_level: orchestrator
-triggers: ["/dev-implement-story"]
+triggers: ['/dev-implement-story']
 name: dev-execute-leader
 description: Phase 2 Leader - Execute plan, spawn coders, produce EVIDENCE.yaml
 model: sonnet
@@ -29,6 +29,7 @@ kb_tools:
 ## Inputs
 
 From Knowledge Base (read via `kb_read_artifact`):
+
 - `plan` artifact — Implementation plan
 - `scope` artifact — What surfaces to touch
 - `context` artifact — Lessons/ADRs
@@ -36,10 +37,10 @@ From Knowledge Base (read via `kb_read_artifact`):
 
 ```javascript
 const [plan, scope, context, checkpoint] = await Promise.all([
-  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "plan" }),
-  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "scope" }),
-  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context" }),
-  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" }),
+  kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'plan' }),
+  kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' }),
+  kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'context' }),
+  kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'checkpoint' }),
 ])
 ```
 
@@ -50,18 +51,20 @@ const [plan, scope, context, checkpoint] = await Promise.all([
 ## Execution Flow
 
 ### Step 1: Validate Phase
+
 Use checkpoint artifact: `current_phase: plan` or `fix`, `blocked: false`
 
 ### Step 2: Determine Execution Mode
 
 Use plan artifact and check `content.schema` field:
 
-| PLAN schema | Execution mode | Description |
-|-------------|---------------|-------------|
-| `schema: 2` (subtask_source: story) | **Subtask iteration** | Each step is a separate agent invocation with minimal context |
-| `schema: 1` (no subtask_source) | **Slice coders** (legacy) | Workers determined by SCOPE.yaml surfaces |
+| PLAN schema                         | Execution mode            | Description                                                   |
+| ----------------------------------- | ------------------------- | ------------------------------------------------------------- |
+| `schema: 2` (subtask_source: story) | **Subtask iteration**     | Each step is a separate agent invocation with minimal context |
+| `schema: 1` (no subtask_source)     | **Slice coders** (legacy) | Workers determined by SCOPE.yaml surfaces                     |
 
 **Subtask iteration mode (schema: 2):**
+
 - Iterate through PLAN.yaml steps sequentially (respecting `dependencies`)
 - Each step spawns a **single coder agent** with only:
   - The step's `description` (subtask goal)
@@ -74,14 +77,15 @@ Use plan artifact and check `content.schema` field:
 
 **Slice coder mode (schema: 1 — legacy fallback):**
 
-| touches.backend | touches.frontend | Workers |
-|-----------------|------------------|---------|
-| true | false | backend-coder only |
-| false | true | frontend-coder only |
-| true | true | backend-coder, then frontend-coder |
-| false | false | packages-coder only |
+| touches.backend | touches.frontend | Workers                            |
+| --------------- | ---------------- | ---------------------------------- |
+| true            | false            | backend-coder only                 |
+| false           | true             | frontend-coder only                |
+| true            | true             | backend-coder, then frontend-coder |
+| false           | false            | packages-coder only                |
 
 ### Step 3: Initialize EVIDENCE.yaml
+
 For schema, read: `.claude/agents/_reference/schemas/evidence-yaml.md`
 
 ### Step 4: Execute Plan Steps
@@ -121,6 +125,7 @@ Task tool:
 ```
 
 After each step completes:
+
 1. Run `step.verification` command
 2. If verification fails, retry once with error context
 3. Record files created/modified for next step's context
@@ -130,6 +135,7 @@ After each step completes:
 For spawn patterns, read: `.claude/agents/_reference/patterns/spawn-patterns.md`
 
 ### Step 5-6: Collect Results & Run Verification
+
 ```bash
 pnpm build
 pnpm test --filter <affected-packages>
@@ -143,17 +149,19 @@ pnpm lint <touched-files>
 **Exempt story types**: `story_type: infra` or `story_type: docs`
 
 **Pre-Flight Checks (BLOCKING)**:
+
 1. MSW disabled: `VITE_ENABLE_MSW` must NOT be `true`
 2. Backend running: `curl -sf http://localhost:3001/health`
 3. Config: `playwright.legacy.config.ts`, project: `chromium-live`/`api-live`
 
 **Spawn Playwright agent**:
+
 ```
 Task tool:
   description: "E2E tests {STORY_ID}"
   prompt: |
     Read: .claude/agents/dev-implement-playwright.agent.md
-    CONTEXT: feature_dir={FEATURE_DIR}, story_id={STORY_ID}, mode=LIVE
+    CONTEXT: story_id={STORY_ID}, mode=LIVE
     Signal: E2E COMPLETE or E2E FAILED: reason
 ```
 
@@ -165,12 +173,14 @@ After collecting all evidence, write artifacts using dual-write (file + KB):
 
 ```javascript
 artifact_write({
-  story_id: "{STORY_ID}",
-  artifact_type: "evidence",
-  phase: "implementation",
+  story_id: '{STORY_ID}',
+  artifact_type: 'evidence',
+  phase: 'implementation',
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml",
-  content: { /* full EVIDENCE structure */ }
+  file_path: '_story/{STORY_ID}/EVIDENCE.yaml',
+  content: {
+    /* full EVIDENCE structure */
+  },
 })
 // On response: if kb_write_warning present, log warning — do NOT block execute phase
 ```
@@ -181,16 +191,16 @@ artifact_write({
 
 ```javascript
 artifact_write({
-  story_id: "{STORY_ID}",
-  artifact_type: "checkpoint",
-  phase: "implementation",
+  story_id: '{STORY_ID}',
+  artifact_type: 'checkpoint',
+  phase: 'implementation',
   iteration: checkpoint.content.iteration,
-  file_path: "{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml",
+  file_path: '_story/{STORY_ID}/CHECKPOINT.yaml',
   content: {
     ...checkpoint.content,
-    current_phase: "execute",
-    last_successful_phase: "plan"
-  }
+    current_phase: 'execute',
+    last_successful_phase: 'plan',
+  },
 })
 // On response: if kb_write_warning present, log warning — do NOT block execute phase
 ```
@@ -201,10 +211,8 @@ artifact_write({
 
 ## Output
 
-- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/EVIDENCE.yaml` (written via `artifact_write`)
-- File: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
-- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write`
-- KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write`
+- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write` (file shim: `_story/{STORY_ID}/EVIDENCE.yaml`)
+- KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write` (file shim: `_story/{STORY_ID}/CHECKPOINT.yaml`)
 - Code files (created/modified by workers)
 
 ---
@@ -237,9 +245,9 @@ After EVIDENCE.yaml is written and before emitting completion signal:
 
 ```javascript
 kb_update_story_status({
-  story_id: "{STORY_ID}",
-  state: "ready_for_review",
-  phase: "implementation"
+  story_id: '{STORY_ID}',
+  state: 'ready_for_review',
+  phase: 'implementation',
 })
 ```
 
@@ -249,14 +257,14 @@ kb_update_story_status({
 
 ## Non-Negotiables
 
-| Rule | Description |
-|------|-------------|
-| Use plan artifact from KB | DO NOT read full story file |
-| Produce evidence artifact via artifact_write | Dual-write: file on filesystem + KB indexing |
-| Map every AC | Even if MISSING |
-| Run E2E tests | With LIVE resources, no MSW |
-| Passing E2E required | Stories CANNOT complete without |
-| Write E2E tests | If none exist, create them |
-| Record config issues | Log URL/env/shape mismatches |
-| Token log | Call /token-log before completion |
-| MUST write artifacts via artifact_write | Not direct file writes or legacy write tools — dual-write ensures filesystem + KB |
+| Rule                                         | Description                                                                       |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| Use plan artifact from KB                    | DO NOT read full story file                                                       |
+| Produce evidence artifact via artifact_write | Dual-write: file on filesystem + KB indexing                                      |
+| Map every AC                                 | Even if MISSING                                                                   |
+| Run E2E tests                                | With LIVE resources, no MSW                                                       |
+| Passing E2E required                         | Stories CANNOT complete without                                                   |
+| Write E2E tests                              | If none exist, create them                                                        |
+| Record config issues                         | Log URL/env/shape mismatches                                                      |
+| Token log                                    | Call /token-log before completion                                                 |
+| MUST write artifacts via artifact_write      | Not direct file writes or legacy write tools — dual-write ensures filesystem + KB |

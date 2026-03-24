@@ -1,0 +1,102 @@
+feasible: true
+confidence: high
+rationale: >
+  The implementation code for APIP-1031 and APIP-1032 is already confirmed on main
+  (commits 2164bd74 and c525a8b5). All 89 APIP-specific tests pass. This story is
+  purely a verification-and-documentation audit — no source code modifications are
+  required. The only risk is a potential gap in the public API export surface
+  (runImplementation not re-exported from graphs/index.ts), which is a documented
+  finding for PIPE-3010 rather than a blocker.
+complexity: low
+change_surface:
+  areas:
+    - 'packages/backend/orchestrator/src/graphs/ (read-only inspection)'
+    - 'packages/backend/orchestrator/src/nodes/ (read-only inspection)'
+    - 'KB story state for APIP-1031 and APIP-1032 (write: state update if needed)'
+    - 'KB artifact (write: pre-existing failure baseline note)'
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: 'runImplementation() may not be exported from graphs/index.ts public surface'
+    mitigation: >
+      Check packages/backend/orchestrator/src/graphs/index.ts for the export.
+      If absent, document as a gap for PIPE-3010 to resolve — do NOT fix in this story.
+      PIPE-2020 and PIPE-3010 need this export to wire LLM invocation.
+missing_requirements: []
+evidence_expectations:
+  - 'Terminal output of ls for all 7 deliverable file paths (all should succeed)'
+  - 'grep output confirming key exports: runImplementation, CommitRecordSchema, changeLoopNode, ChangeLoopStatus'
+  - 'Scoped vitest output showing 89 APIP-specific tests passing'
+  - 'git merge-base confirmation for commits 2164bd74 and c525a8b5'
+  - 'KB tool response for APIP-1031 and APIP-1032 state check'
+  - 'KB artifact or note documenting pre-existing failure baseline'
+subtasks:
+  - id: ST-1
+    title: 'Verify file existence and key exports for all APIP-1031/1032 deliverables'
+    goal: >
+      Confirm all 7 implementation files are present on main and contain the expected
+      export symbols. Record git commit SHAs as authoritative merge points.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/implementation.ts'
+      - 'packages/backend/orchestrator/src/nodes/change-loop.ts'
+      - 'packages/backend/orchestrator/src/nodes/create-worktree.ts'
+      - 'packages/backend/orchestrator/src/nodes/evidence-production.ts'
+      - 'packages/backend/orchestrator/src/nodes/load-story.ts'
+      - 'packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts'
+      - 'packages/backend/orchestrator/src/graphs/change-spec-schema.ts'
+    files_to_modify: []
+    acs: ['AC-1', 'AC-2', 'AC-3']
+    depends_on: none
+    verification: >
+      ls all 7 paths succeed; grep finds runImplementation, CommitRecordSchema,
+      changeLoopNode, ChangeLoopStatus exports
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Run scoped orchestrator tests and verify 89 APIP-specific tests pass'
+    goal: >
+      Execute vitest with a pattern scoped to APIP-1031/1032 test files.
+      Confirm all 89 tests pass. Document that 37 pre-existing failures in
+      unrelated files are NOT regressions.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts'
+      - 'packages/backend/orchestrator/src/graphs/__tests__/implementation-graph.test.ts'
+    files_to_modify: []
+    acs: ['AC-4', 'AC-5']
+    depends_on: ST-1
+    verification: >
+      pnpm --filter @repo/orchestrator run test output shows 89 APIP-specific tests
+      passing; failure set matches known pre-existing baseline only
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: 'Check KB state for APIP-1031/APIP-1032 and advance if needed'
+    goal: >
+      Query KB for APIP-1031 and APIP-1032. If they exist and are not in completed
+      state, advance state via kb_update_story_status. If they do not exist,
+      create a KB note recording the merge confirmation with commit SHAs and
+      pre-existing failure baseline.
+    files_to_read: []
+    files_to_modify: []
+    acs: ['AC-6']
+    depends_on: ST-2
+    verification: >
+      kb_get_story for both APIP stories returns completed or UAT state,
+      OR KB note exists with merge confirmation
+    estimated_tokens: 2000
+
+  - id: ST-4
+    title: 'Verify runImplementation public API export from graphs/index.ts'
+    goal: >
+      Inspect packages/backend/orchestrator/src/graphs/index.ts to determine whether
+      runImplementation is exported from the package public surface. Document the
+      finding — if absent, record as a gap for PIPE-3010 to address.
+    files_to_read:
+      - 'packages/backend/orchestrator/src/graphs/index.ts'
+    files_to_modify: []
+    acs: ['AC-7', 'AC-8']
+    depends_on: ST-1
+    verification: >
+      grep for runImplementation in graphs/index.ts; finding documented in KB
+      regardless of whether export is present or absent
+    estimated_tokens: 1500

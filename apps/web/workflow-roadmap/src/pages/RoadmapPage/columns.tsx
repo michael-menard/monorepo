@@ -7,7 +7,7 @@ import { relativeTime } from './utils'
 
 const col = createColumnHelper<Plan>()
 
-export const tableColumns = [
+export const createTableColumns = (onTagClick?: (tag: string) => void) => [
   col.display({
     id: 'drag',
     header: () => null,
@@ -38,24 +38,34 @@ export const tableColumns = [
                 {plan.churnDepth}
               </span>
             )}
-            {plan.hasRegression && (
+            {plan.hasRegression ? (
               <span
                 className="text-xs text-orange-500 font-mono shrink-0"
                 aria-label="Status has regressed"
               >
                 {'\u26A0'}
               </span>
-            )}
+            ) : null}
           </Link>
-          {plan.tags && plan.tags.length > 0 && (
+          {plan.tags && plan.tags.length > 0 ? (
             <ul className="flex flex-wrap gap-1 mt-1 ml-3" aria-label="Tags">
               {plan.tags.map(tag => (
                 <li key={tag}>
-                  <GenericTag label={tag} />
+                  <button
+                    type="button"
+                    className="cursor-pointer"
+                    onClick={e => {
+                      e.stopPropagation()
+                      onTagClick?.(tag)
+                    }}
+                    aria-label={`Filter by tag: ${tag}`}
+                  >
+                    <GenericTag label={tag} />
+                  </button>
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
         </div>
       )
     },

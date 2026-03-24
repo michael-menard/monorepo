@@ -108,11 +108,11 @@ flowchart LR
     Phase0 --> Phase1 --> Phase2
 ```
 
-| Phase | Agent | AI Model | Purpose |
-|-------|-------|----------|---------|
-| 0 | Setup Leader | Haiku (fast, low-cost) | Validate inputs, derive story prefix, check for collisions |
-| 1 | Analysis Leader | Sonnet (capable reasoning) | Extract stories, build dependency graph, assess risks and sizing |
-| 2 | Generation Leader | Haiku (fast, low-cost) | Write story YAML files, create master index, insert into database |
+| Phase | Agent             | AI Model                   | Purpose                                                           |
+| ----- | ----------------- | -------------------------- | ----------------------------------------------------------------- |
+| 0     | Setup Leader      | Haiku (fast, low-cost)     | Validate inputs, derive story prefix, check for collisions        |
+| 1     | Analysis Leader   | Sonnet (capable reasoning) | Extract stories, build dependency graph, assess risks and sizing  |
+| 2     | Generation Leader | Haiku (fast, low-cost)     | Write story YAML files, create master index, insert into database |
 
 **Context passing in KB mode:** Phases communicate through the orchestrator via inline YAML blocks. Phase 0 returns a `SETUP-CONTEXT` block, which the orchestrator captures and passes to Phase 1 along with the original plan content. Phase 1 returns an `ANALYSIS` block, which is passed to Phase 2. No intermediate files are written to disk, reducing I/O and enabling cleaner resumption.
 
@@ -187,19 +187,25 @@ stateDiagram-v2
     completed --> [*]
 ```
 
-### 3.2 Directory Structure
+### 3.2 Artifact Storage
 
-Stories use a flat directory structure with status tracked in YAML frontmatter rather than directory location:
+Story artifacts are stored in the Knowledge Base using KB artifact types rather than on the filesystem. Story status is tracked directly in the KB `stories` table.
 
-```
-plans/future/{epic}/
-  {STORY-ID}/
-    {STORY-ID}.md              Main story file (frontmatter includes status)
-    _pm/                       PM artifacts (test plan, feasibility, blockers)
-    _implementation/           Dev artifacts (plan, logs, proof, verification)
-```
+**KB Artifact Types:**
 
-This flat structure eliminates the need for filesystem moves during status transitions, simplifying database queries and making commands more robust.
+| Phase       | Artifact Type        | Content                           |
+| ----------- | -------------------- | --------------------------------- |
+| PM          | `test-plan`          | Test plan draft                   |
+| PM          | `pm_dev_feasibility` | Dev feasibility review            |
+| PM          | `uiux-notes`         | UI/UX compliance guidance         |
+| Dev         | `elaboration`        | QA elaboration analysis           |
+| Dev         | `plan`               | Implementation plan               |
+| Dev         | `evidence`           | Implementation evidence and proof |
+| Code Review | `review`             | Code review findings              |
+| QA          | `verification`       | QA verification results           |
+| Gate        | `qa-gate`            | Quality gate decision             |
+
+This KB-based artifact model eliminates the need for filesystem directory structure or status-based moves, simplifying queries and making commands more robust. Story status is single-source-of-truth in the KB `stories` table.
 
 ---
 
@@ -221,12 +227,13 @@ flowchart TB
     KC --> |"lessons + ADRs"| SEED
     SEED --> |"seeded story"| L
 
-    TP --> |"test-plan.md"| L
-    DF --> |"dev-feasibility.md"| L
-    UX --> |"uiux-notes.yaml"| L
+    TP --> |"KB artifact (test-plan)"| L
+    DF --> |"KB artifact (pm_dev_feasibility)"| L
+    UX --> |"KB artifact (uiux-notes)"| L
 ```
 
 The system also supports specialized story types:
+
 - **Ad-hoc stories** for emergent, one-off work
 - **Bug stories** for defect tracking
 - **Follow-up stories** generated from QA findings
@@ -255,22 +262,23 @@ Elaboration is a **hard gate** — no story may proceed to implementation withou
 
 ### 5.1 Eight-Point Audit Checklist
 
-| Check | Purpose |
-|-------|---------|
-| Scope Alignment | Does the story match the plan's intent? |
-| Internal Consistency | Do acceptance criteria, scope, and goals agree? |
-| Reuse-First Enforcement | Does the story leverage existing code appropriately? |
-| Ports & Adapters Compliance | Does it respect architectural layering? |
-| Local Testability | Can the story be verified without external dependencies? |
-| Decision Completeness | Are all technical decisions resolved? |
-| Risk Disclosure | Are risks identified and mitigated? |
-| Story Sizing | Is the story small enough for a single implementation cycle? |
+| Check                       | Purpose                                                      |
+| --------------------------- | ------------------------------------------------------------ |
+| Scope Alignment             | Does the story match the plan's intent?                      |
+| Internal Consistency        | Do acceptance criteria, scope, and goals agree?              |
+| Reuse-First Enforcement     | Does the story leverage existing code appropriately?         |
+| Ports & Adapters Compliance | Does it respect architectural layering?                      |
+| Local Testability           | Can the story be verified without external dependencies?     |
+| Decision Completeness       | Are all technical decisions resolved?                        |
+| Risk Disclosure             | Are risks identified and mitigated?                          |
+| Story Sizing                | Is the story small enough for a single implementation cycle? |
 
 ### 5.2 Elaboration Modes
 
 **Interactive mode:** The analyst agent presents findings and the human reviews each one, making accept/reject/modify decisions.
 
 **Autonomous mode:** An autonomous decider agent applies rules:
+
 - MVP-critical gaps are automatically added as new acceptance criteria
 - Non-blocking items are logged to the Knowledge Base for future reference
 - Security vulnerabilities are always added as acceptance criteria
@@ -278,13 +286,13 @@ Elaboration is a **hard gate** — no story may proceed to implementation withou
 
 ### 5.3 Verdicts
 
-| Verdict | Meaning | Next Step |
-|---------|---------|-----------|
-| PASS | Ready for implementation | Proceed to development |
-| CONDITIONAL PASS | Minor fixes needed | Proceed after fixes |
-| NEEDS REFINEMENT | Gaps identified | Return to PM for elicitation |
-| FAIL | Significant issues | Return to PM for rewrite |
-| SPLIT REQUIRED | Story too large | Split into smaller stories |
+| Verdict          | Meaning                  | Next Step                    |
+| ---------------- | ------------------------ | ---------------------------- |
+| PASS             | Ready for implementation | Proceed to development       |
+| CONDITIONAL PASS | Minor fixes needed       | Proceed after fixes          |
+| NEEDS REFINEMENT | Gaps identified          | Return to PM for elicitation |
+| FAIL             | Significant issues       | Return to PM for rewrite     |
+| SPLIT REQUIRED   | Story too large          | Split into smaller stories   |
 
 ---
 
@@ -325,30 +333,30 @@ flowchart TB
 
 ### 6.2 Implementation Phases
 
-| Phase | Agent | Model | Purpose |
-|-------|-------|-------|---------|
-| 0 | Setup Leader | Haiku | Analyze scope (backend/frontend/infra), create checkpoint |
-| 1A | Planner | Sonnet | Create step-by-step implementation plan |
-| 1B | Plan Validator | Sonnet | Validate plan against story requirements |
-| 2A | Backend Coder | Sonnet | Implement backend changes (parallel) |
-| 2A | Frontend Coder | Sonnet | Implement frontend changes (parallel) |
-| 2B | Contract Verifier | Sonnet | Verify API contracts between layers |
-| 3 | Verifier | Sonnet | Run build, lint, tests, E2E |
-| 4A | Proof Writer | Haiku | Document what was built and how to verify |
-| 4B | Learnings Agent | Haiku | Extract lessons for Knowledge Base |
+| Phase | Agent             | Model  | Purpose                                                   |
+| ----- | ----------------- | ------ | --------------------------------------------------------- |
+| 0     | Setup Leader      | Haiku  | Analyze scope (backend/frontend/infra), create checkpoint |
+| 1A    | Planner           | Sonnet | Create step-by-step implementation plan                   |
+| 1B    | Plan Validator    | Sonnet | Validate plan against story requirements                  |
+| 2A    | Backend Coder     | Sonnet | Implement backend changes (parallel)                      |
+| 2A    | Frontend Coder    | Sonnet | Implement frontend changes (parallel)                     |
+| 2B    | Contract Verifier | Sonnet | Verify API contracts between layers                       |
+| 3     | Verifier          | Sonnet | Run build, lint, tests, E2E                               |
+| 4A    | Proof Writer      | Haiku  | Document what was built and how to verify                 |
+| 4B    | Learnings Agent   | Haiku  | Extract lessons for Knowledge Base                        |
 
 ### 6.3 Integrated Code Review
 
 Six specialist review agents run in parallel, each focusing on a different quality dimension:
 
-| Reviewer | Focus |
-|----------|-------|
-| Lint | ESLint and Prettier compliance |
-| Syntax | TypeScript compilation and type safety |
+| Reviewer         | Focus                                                                     |
+| ---------------- | ------------------------------------------------------------------------- |
+| Lint             | ESLint and Prettier compliance                                            |
+| Syntax           | TypeScript compilation and type safety                                    |
 | Style Compliance | Project coding standards (Zod-first types, import rules, no barrel files) |
-| Security | OWASP top 10, injection risks, authentication issues |
-| Type Check | Full TypeScript type checking |
-| Build | Production build verification |
+| Security         | OWASP top 10, injection risks, authentication issues                      |
+| Type Check       | Full TypeScript type checking                                             |
+| Build            | Production build verification                                             |
 
 All six must pass for the review to succeed. On failure, a fix agent addresses the findings, and the review reruns — up to a configurable maximum (default: 3 iterations).
 
@@ -372,25 +380,25 @@ No manual `--resume` flag is needed.
 
 QA verification validates that the implementation meets all acceptance criteria through six hard gates:
 
-| Gate | Requirement |
-|------|-------------|
-| AC Verification | Every acceptance criterion maps to evidence |
-| Test Quality | No anti-patterns (testing mocks instead of behavior) |
-| Test Coverage | 80% of new code, 90% of critical paths |
-| Test Execution | All tests pass (unit, integration, E2E) |
-| Proof Quality | Documentation is complete and verifiable |
-| Architecture Compliance | No architectural violations |
+| Gate                    | Requirement                                          |
+| ----------------------- | ---------------------------------------------------- |
+| AC Verification         | Every acceptance criterion maps to evidence          |
+| Test Quality            | No anti-patterns (testing mocks instead of behavior) |
+| Test Coverage           | 80% of new code, 90% of critical paths               |
+| Test Execution          | All tests pass (unit, integration, E2E)              |
+| Proof Quality           | Documentation is complete and verifiable             |
+| Architecture Compliance | No architectural violations                          |
 
 ### 7.2 QA Gate (Phase 7)
 
 The final ship decision aggregates all evidence from every prior phase — elaboration report, implementation proof, code review results, and QA verification — into a single verdict:
 
-| Decision | Meaning |
-|----------|---------|
-| PASS | Safe to merge |
-| CONCERNS | Advisory issues noted, can still merge |
-| WAIVED | Known issues accepted with documented justification |
-| FAIL | Blocking issues, must return to development |
+| Decision | Meaning                                             |
+| -------- | --------------------------------------------------- |
+| PASS     | Safe to merge                                       |
+| CONCERNS | Advisory issues noted, can still merge              |
+| WAIVED   | Known issues accepted with documented justification |
+| FAIL     | Blocking issues, must return to development         |
 
 ### 7.3 Merge and Cleanup (Phase 8)
 
@@ -424,11 +432,11 @@ flowchart TB
 
 The system uses three AI models with different capability/cost tradeoffs:
 
-| Model | Strengths | Used For |
-|-------|-----------|----------|
-| Haiku | Fast, low cost | Setup/completion leaders, simple validation, file generation |
-| Sonnet | Strong reasoning | Code generation, analysis, complex decision-making |
-| Opus | Highest capability | Reserved for critical judgment calls (rarely used) |
+| Model  | Strengths          | Used For                                                     |
+| ------ | ------------------ | ------------------------------------------------------------ |
+| Haiku  | Fast, low cost     | Setup/completion leaders, simple validation, file generation |
+| Sonnet | Strong reasoning   | Code generation, analysis, complex decision-making           |
+| Opus   | Highest capability | Reserved for critical judgment calls (rarely used)           |
 
 ### 8.3 Context Boundaries
 
@@ -442,18 +450,18 @@ The Expert Intelligence Framework transforms specialist agents from checklist va
 
 ### 9.1 Ten Capabilities
 
-| Capability | Description |
-|------------|-------------|
-| Expert Personas | Domain-specific intuitions and mental models (e.g., "Think like an attacker") |
-| Decision Heuristics | Structured reasoning for gray areas using the RAPID framework |
-| Reasoning Traces | Every finding explains WHY the conclusion was reached |
-| Confidence Signals | Four-level certainty scale (high, medium, low, cannot-determine) |
-| Severity Calibration | Consistent impact assessment using calibration questions |
-| Precedent Awareness | Query KB for prior decisions before making new ones |
-| Cross-Domain Awareness | Check sibling agent findings for corroboration or conflict |
-| Context-Aware Escalation | Smart escalation based on story risk level |
-| Dynamic Standards | Load story-specific rules from project configuration |
-| Disagreement Protocol | Resolve conflicting findings across specialist agents |
+| Capability               | Description                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| Expert Personas          | Domain-specific intuitions and mental models (e.g., "Think like an attacker") |
+| Decision Heuristics      | Structured reasoning for gray areas using the RAPID framework                 |
+| Reasoning Traces         | Every finding explains WHY the conclusion was reached                         |
+| Confidence Signals       | Four-level certainty scale (high, medium, low, cannot-determine)              |
+| Severity Calibration     | Consistent impact assessment using calibration questions                      |
+| Precedent Awareness      | Query KB for prior decisions before making new ones                           |
+| Cross-Domain Awareness   | Check sibling agent findings for corroboration or conflict                    |
+| Context-Aware Escalation | Smart escalation based on story risk level                                    |
+| Dynamic Standards        | Load story-specific rules from project configuration                          |
+| Disagreement Protocol    | Resolve conflicting findings across specialist agents                         |
 
 ### 9.2 Expert Personas
 
@@ -468,13 +476,13 @@ Each specialist agent embodies a senior expert with 10+ years of domain experien
 
 For ambiguous situations where rules do not clearly apply, agents use a structured reasoning framework:
 
-| Step | Question |
-|------|----------|
-| **R**isk | What is the worst-case outcome? |
+| Step               | Question                                         |
+| ------------------ | ------------------------------------------------ |
+| **R**isk           | What is the worst-case outcome?                  |
 | **A**ttack surface | Who has access? Public, admin, or internal only? |
-| **P**recedent | Does the KB show approved or rejected patterns? |
-| **I**ntent | What was the developer trying to achieve? |
-| **D**efense | Are there other protective layers? |
+| **P**recedent      | Does the KB show approved or rejected patterns?  |
+| **I**ntent         | What was the developer trying to achieve?        |
+| **D**efense        | Are there other protective layers?               |
 
 ### 9.4 Confidence and Severity Rules
 
@@ -512,11 +520,11 @@ flowchart TB
 
 The system supports three autonomy levels, configurable per command, per story, or globally:
 
-| Level | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-|-------|--------|--------|--------|--------|--------|
-| Conservative | Escalate | Escalate | Escalate | Escalate | Escalate |
-| Moderate | Auto | Escalate | Auto | **Escalate** | Escalate |
-| Aggressive | Auto | Auto | Auto | **Escalate** | Auto (low-risk) |
+| Level        | Tier 1   | Tier 2   | Tier 3   | Tier 4       | Tier 5          |
+| ------------ | -------- | -------- | -------- | ------------ | --------------- |
+| Conservative | Escalate | Escalate | Escalate | Escalate     | Escalate        |
+| Moderate     | Auto     | Escalate | Auto     | **Escalate** | Escalate        |
+| Aggressive   | Auto     | Auto     | Auto     | **Escalate** | Auto (low-risk) |
 
 **Tier 4 (destructive) decisions always escalate regardless of autonomy level.** This includes database drops, force pushes, production deployments, authentication changes, and breaking changes.
 
@@ -589,12 +597,12 @@ The KB Writer agent checks for duplicates before writing, using a 0.85 cosine si
 
 ### 11.4 Knowledge Types
 
-| Type | Examples | Written By |
-|------|----------|------------|
-| Lessons Learned | Blockers, patterns, time sinks | Implementation Learnings Agent |
-| Architecture Decisions | API patterns, storage strategies | Planning Agent |
-| Test Strategies | Edge cases, verification approaches | QA Verification Agent |
-| Deferred Items | Moonshots, future opportunities | Autonomous Decider Agent |
+| Type                   | Examples                            | Written By                     |
+| ---------------------- | ----------------------------------- | ------------------------------ |
+| Lessons Learned        | Blockers, patterns, time sinks      | Implementation Learnings Agent |
+| Architecture Decisions | API patterns, storage strategies    | Planning Agent                 |
+| Test Strategies        | Edge cases, verification approaches | QA Verification Agent          |
+| Deferred Items         | Moonshots, future opportunities     | Autonomous Decider Agent       |
 
 ---
 
@@ -633,11 +641,11 @@ flowchart TB
     GEN --> EXEC
 ```
 
-| Tier | TTL | Contents | Benefit |
-|------|-----|----------|---------|
-| Static | 24 hours | Project configuration, agent definitions, coding guidelines | Eliminates repeated reads of stable project config |
-| Domain | 4 hours | Story index, ADRs, shared patterns | Keeps cross-story context fresh without constant queries |
-| Session | 30 minutes | Current story context, partial results | Enables efficient worker-to-worker context sharing |
+| Tier    | TTL        | Contents                                                    | Benefit                                                  |
+| ------- | ---------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| Static  | 24 hours   | Project configuration, agent definitions, coding guidelines | Eliminates repeated reads of stable project config       |
+| Domain  | 4 hours    | Story index, ADRs, shared patterns                          | Keeps cross-story context fresh without constant queries |
+| Session | 30 minutes | Current story context, partial results                      | Enables efficient worker-to-worker context sharing       |
 
 ### 12.2 Session Context Inheritance
 
@@ -649,12 +657,12 @@ When leader agents spawn workers, context is inherited efficiently. Workers rece
 
 ### 13.1 Error Types and Recovery
 
-| Error Type | Recovery Strategy |
-|------------|-------------------|
-| Agent Spawn Failed | Retry once (2s delay), then fail the phase |
-| Agent Timeout | Kill agent, mark phase as TIMEOUT |
-| Malformed Output | Log error, retry with clarification (up to 2 retries) |
-| Precondition Failed | Fail immediately with specific missing item |
+| Error Type            | Recovery Strategy                                     |
+| --------------------- | ----------------------------------------------------- |
+| Agent Spawn Failed    | Retry once (2s delay), then fail the phase            |
+| Agent Timeout         | Kill agent, mark phase as TIMEOUT                     |
+| Malformed Output      | Log error, retry with clarification (up to 2 retries) |
+| Precondition Failed   | Fail immediately with specific missing item           |
 | External Service Down | Use fallback behavior, retry with exponential backoff |
 
 ### 13.2 Circuit Breaker
@@ -665,14 +673,14 @@ After 3 consecutive failures of the same type within a phase, the system stops r
 
 Every command is designed for safe re-execution:
 
-| Command | On Re-run |
-|---------|-----------|
-| Story Generation | Error (story exists) unless `--force` |
-| Elaboration | Skip (already elaborated) unless `--force` |
-| Implementation | Auto-resume from detected stage |
-| Code Review | Always re-runs (code may have changed) |
-| QA Verification | Skip if already verified |
-| QA Gate | Always re-runs (may have new evidence) |
+| Command          | On Re-run                                  |
+| ---------------- | ------------------------------------------ |
+| Story Generation | Error (story exists) unless `--force`      |
+| Elaboration      | Skip (already elaborated) unless `--force` |
+| Implementation   | Auto-resume from detected stage            |
+| Code Review      | Always re-runs (code may have changed)     |
+| QA Verification  | Skip if already verified                   |
+| QA Gate          | Always re-runs (may have new evidence)     |
 
 ---
 
@@ -681,6 +689,7 @@ Every command is designed for safe re-execution:
 ### 14.1 Trace Points
 
 Each phase emits structured traces to a JSONL file, recording:
+
 - Phase start/complete events with timestamps
 - Agent spawn events with model selection
 - Tool call events with paths and parameters
@@ -689,6 +698,7 @@ Each phase emits structured traces to a JSONL file, recording:
 ### 14.2 Metrics
 
 Aggregated metrics per story include:
+
 - Total tokens consumed across all phases
 - Duration per phase
 - Number of agent spawns and tool calls
@@ -699,13 +709,13 @@ Aggregated metrics per story include:
 
 Each phase has configurable warning thresholds and hard limits:
 
-| Phase | Warning | Hard Limit |
-|-------|---------|------------|
-| Story Generation | 50K tokens | 100K tokens |
-| Elaboration | 30K tokens | 60K tokens |
-| Implementation | 200K tokens | 500K tokens |
-| Code Review | 50K tokens | 100K tokens |
-| QA Verification | 50K tokens | 100K tokens |
+| Phase            | Warning     | Hard Limit  |
+| ---------------- | ----------- | ----------- |
+| Story Generation | 50K tokens  | 100K tokens |
+| Elaboration      | 30K tokens  | 60K tokens  |
+| Implementation   | 200K tokens | 500K tokens |
+| Code Review      | 50K tokens  | 100K tokens |
+| QA Verification  | 50K tokens  | 100K tokens |
 
 Enforcement ranges from advisory (log only) through warning, soft gate (requires confirmation), to hard gate (fails the phase).
 
@@ -715,13 +725,13 @@ Enforcement ranges from advisory (log only) through warning, soft gate (requires
 
 The system is designed for extensibility following consistent patterns:
 
-| Extension Type | Approach |
-|----------------|----------|
-| Add a check to existing phase | Edit the relevant leader agent to add a step |
-| Add parallel analysis | Create a new worker agent, update the orchestrator to spawn it |
-| Add sequential step | Create a new agent, insert into the phase sequence |
-| Add a new quality gate | Create a new command with setup/work/completion leaders |
-| Add optional behavior | Add conditional logic based on story metadata |
+| Extension Type                | Approach                                                       |
+| ----------------------------- | -------------------------------------------------------------- |
+| Add a check to existing phase | Edit the relevant leader agent to add a step                   |
+| Add parallel analysis         | Create a new worker agent, update the orchestrator to spawn it |
+| Add sequential step           | Create a new agent, insert into the phase sequence             |
+| Add a new quality gate        | Create a new command with setup/work/completion leaders        |
+| Add optional behavior         | Add conditional logic based on story metadata                  |
 
 All extensions follow the phase leader pattern: setup leader (Haiku) validates, work leader (Sonnet) executes, completion leader (Haiku) finalizes.
 
@@ -729,20 +739,20 @@ All extensions follow the phase leader pattern: setup leader (Haiku) validates, 
 
 ## 16. System Statistics
 
-| Metric | Value |
-|--------|-------|
-| Total agents | 45+ |
-| Leader agents | 18 |
-| Worker agents | 27+ |
-| Workflow phases | 8 |
-| Story statuses | 17 |
-| Parallel review workers | 6 |
-| Elaboration audit checks | 8 |
-| QA verification hard gates | 6 |
-| Decision classification tiers | 5 |
-| Expert intelligence capabilities | 10 |
-| Cache tiers | 3 |
-| Supported story types | 5 (standard, ad-hoc, bug, follow-up, split) |
+| Metric                           | Value                                       |
+| -------------------------------- | ------------------------------------------- |
+| Total agents                     | 45+                                         |
+| Leader agents                    | 18                                          |
+| Worker agents                    | 27+                                         |
+| Workflow phases                  | 8                                           |
+| Story statuses                   | 17                                          |
+| Parallel review workers          | 6                                           |
+| Elaboration audit checks         | 8                                           |
+| QA verification hard gates       | 6                                           |
+| Decision classification tiers    | 5                                           |
+| Expert intelligence capabilities | 10                                          |
+| Cache tiers                      | 3                                           |
+| Supported story types            | 5 (standard, ad-hoc, bug, follow-up, split) |
 
 ---
 
@@ -760,6 +770,7 @@ A typical story follows this happy-path sequence:
 8. **Merge** lands the code on main and cleans up the feature branch
 
 Common refinement cycles include:
+
 - **Elaboration loops** (1-2 cycles): Requirement clarification or minor story fixes
 - **Review/fix loops** (1-3 cycles): Automated within implementation, no human intervention
 - **QA-to-dev loops** (1-2 cycles): Bug fixes from QA findings
@@ -769,21 +780,21 @@ Common refinement cycles include:
 
 ## Glossary
 
-| Term | Definition |
-|------|------------|
-| **AC** | Acceptance Criterion — a testable condition that must be met |
-| **ADR** | Architecture Decision Record — a documented technical decision |
-| **DAG** | Directed Acyclic Graph — the dependency structure between stories |
-| **Elaboration** | QA audit of a story specification before implementation |
-| **Hard Gate** | A quality check that must pass; failure blocks progression |
-| **HiTL** | Human-in-the-Loop — a decision requiring human input |
-| **KB** | Knowledge Base — PostgreSQL database with semantic search |
-| **Moonshot** | An out-of-scope enhancement deferred for future consideration |
-| **Phase Leader** | An agent that orchestrates a workflow phase |
-| **Plan Slug** | A kebab-case identifier for a plan in the KB (e.g., `agent-monitor-dashboard`) |
-| **Prefix** | A 2-6 character uppercase identifier for story IDs (e.g., `AGMD`) |
-| **pgvector** | PostgreSQL extension for vector similarity search |
-| **Proof** | Developer-authored document demonstrating what was built and how to verify it |
-| **Story** | A unit of work with acceptance criteria, scope, and dependencies |
-| **UAT** | User Acceptance Testing — the final verification stage |
-| **Worktree** | A git worktree providing isolated development environment per story |
+| Term             | Definition                                                                     |
+| ---------------- | ------------------------------------------------------------------------------ |
+| **AC**           | Acceptance Criterion — a testable condition that must be met                   |
+| **ADR**          | Architecture Decision Record — a documented technical decision                 |
+| **DAG**          | Directed Acyclic Graph — the dependency structure between stories              |
+| **Elaboration**  | QA audit of a story specification before implementation                        |
+| **Hard Gate**    | A quality check that must pass; failure blocks progression                     |
+| **HiTL**         | Human-in-the-Loop — a decision requiring human input                           |
+| **KB**           | Knowledge Base — PostgreSQL database with semantic search                      |
+| **Moonshot**     | An out-of-scope enhancement deferred for future consideration                  |
+| **Phase Leader** | An agent that orchestrates a workflow phase                                    |
+| **Plan Slug**    | A kebab-case identifier for a plan in the KB (e.g., `agent-monitor-dashboard`) |
+| **Prefix**       | A 2-6 character uppercase identifier for story IDs (e.g., `AGMD`)              |
+| **pgvector**     | PostgreSQL extension for vector similarity search                              |
+| **Proof**        | Developer-authored document demonstrating what was built and how to verify it  |
+| **Story**        | A unit of work with acceptance criteria, scope, and dependencies               |
+| **UAT**          | User Acceptance Testing — the final verification stage                         |
+| **Worktree**     | A git worktree providing isolated development environment per story            |

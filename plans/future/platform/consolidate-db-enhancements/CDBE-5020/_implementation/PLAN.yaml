@@ -1,0 +1,290 @@
+schema: 2
+story_id: CDBE-5020
+timestamp: '2026-03-19T10:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Author raw SQL migration to convert public.workflow_events to monthly range-partitioned table on created_at.
+      Include lego_dev safety preamble, rename-old/create-partitioned-parent/migrate-data/create-initial-partitions
+      (current + 2 months)/drop-old/recreate-indexes steps, and rollback comment block. Migration must be idempotent.
+    files:
+      - packages/backend/db/src/migrations/001_partition_workflow_events.sql
+    files_to_read:
+      - packages/backend/db/src/schema.ts
+      - apps/api/knowledge-base/src/db/migrations/1080_plan_story_links_sort_order.sql
+    dependencies: []
+    slice: backend
+    verification: >-
+      Review migration SQL for correctness; confirm idempotency guards (IF NOT EXISTS, IF EXISTS); confirm lego_dev
+      preamble; confirm partition names use workflow_events_y<YYYY>m<MM> convention on created_at
+    acs_covered:
+      - AC-1
+      - AC-12
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Add LOCK_KEYS.PARTITION_MANAGER = 42_005 to packages/backend/orchestrator/src/cron/constants.ts. Must not conflict
+      with existing keys 42_001–42_004.
+    files:
+      - packages/backend/orchestrator/src/cron/constants.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/constants.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-4
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Create packages/backend/orchestrator/src/cron/partition-manager.ts implementing runPartitionManager(dbClient,
+      config?) with PartitionManagerConfigSchema (z.object, monthsAhead default 2). Performs correct date arithmetic
+      including year rollover and February boundaries. Executes CREATE TABLE IF NOT EXISTS public.<partition_name>
+      PARTITION OF public.workflow_events FOR VALUES FROM ('<month_start>') TO ('<month_end>') for each upcoming month.
+      Logs via @repo/logger. Handles DB errors gracefully.
+    files:
+      - packages/backend/orchestrator/src/cron/partition-manager.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/advisory-lock.ts
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-5
+      - AC-6
+      - AC-8
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Create packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts following patternMinerJob pattern
+      exactly: advisory lock acquire via tryAcquireAdvisoryLock(LOCK_KEYS.PARTITION_MANAGER), lazy import of
+      runPartitionManager, structured logging, pool.end() in finally block. Schedule: 0 5 1 * * (5 minutes past midnight
+      on the 1st of each month). Register partitionManagerJob in registry.ts alongside existing jobs with
+      DISABLE_CRON_JOB_PARTITION_MANAGER env var support.
+    files:
+      - packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts
+      - packages/backend/orchestrator/src/cron/registry.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+      - packages/backend/orchestrator/src/cron/registry.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+    dependencies:
+      - 2
+      - 3
+    slice: packages
+    verification: >-
+      pnpm check-types --filter @repo/orchestrator; verify CronJobDefinitionSchema.parse(partitionManagerJob) does not
+      throw
+    acs_covered:
+      - AC-3
+      - AC-7
+      - AC-11
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write Vitest unit tests in packages/backend/orchestrator/src/cron/__tests__/partition-manager.test.ts covering:
+      (a) partitionManagerJob validates against CronJobDefinitionSchema, (b) advisory lock skip path (mock db returns
+      false → runPartitionManager never called), (c) December→January year rollover generates workflow_events_y2027m01
+      with range 2027-01-01 to 2027-02-01, (d) February boundary correct date range, (e) idempotency (IF NOT EXISTS
+      guard logs skip, no error on second run), (f) DB error caught and logged, does not crash. Use InMemoryCronAdapter
+      and mock pg Pool.
+    files:
+      - packages/backend/orchestrator/src/cron/__tests__/partition-manager.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+      - packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts
+      - packages/backend/orchestrator/src/cron/partition-manager.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- partition-manager; pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-9
+      - AC-10
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Validate telemetry SDK compatibility post-migration. Confirm insertWorkflowEvent() and batch-insert.ts continue to
+      work against post-migration public.workflow_events schema without application code changes. Run existing telemetry
+      SDK tests. Document compatibility evidence in comments.
+    files: []
+    files_to_read:
+      - packages/backend/db/src/telemetry-sdk/init.ts
+      - packages/backend/db/src/telemetry-sdk/batch-insert.ts
+      - packages/backend/db/src/__tests__/workflow-events.test.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/db; confirm existing workflow-events tests pass; no application code changes required
+    acs_covered:
+      - AC-2
+files_to_change:
+  - path: packages/backend/db/src/migrations/001_partition_workflow_events.sql
+    action: create
+    reason: >-
+      Raw SQL migration to convert public.workflow_events to monthly range-partitioned table on created_at. Drizzle ORM
+      cannot express partitioning; pnpm db:generate is broken (WINT-0040).
+  - path: packages/backend/orchestrator/src/cron/constants.ts
+    action: modify
+    reason: Add LOCK_KEYS.PARTITION_MANAGER = 42_005 (next available after 42_004) per AC-4
+  - path: packages/backend/orchestrator/src/cron/partition-manager.ts
+    action: create
+    reason: >-
+      Implementation of runPartitionManager() with PartitionManagerConfigSchema and date arithmetic for monthly
+      partition pre-creation per AC-5, AC-6, AC-8
+  - path: packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts
+    action: create
+    reason: CronJobDefinition for partitionManagerJob following patternMinerJob pattern per AC-3
+  - path: packages/backend/orchestrator/src/cron/registry.ts
+    action: modify
+    reason: Register partitionManagerJob with DISABLE_CRON_JOB_PARTITION_MANAGER env var support per AC-7, AC-11
+  - path: packages/backend/orchestrator/src/cron/__tests__/partition-manager.test.ts
+    action: create
+    reason: Unit tests covering advisory lock skip, month boundary cases, idempotency, DB error handling per AC-9, AC-10
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after orchestrator code changes (steps 2-5)
+    required: true
+  - command: pnpm test --filter @repo/orchestrator -- partition-manager
+    when: after writing tests (step 5)
+    required: true
+  - command: pnpm test --filter @repo/db
+    when: after step 6 (SDK compatibility validation)
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/db
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      SQL migration file packages/backend/db/src/migrations/001_partition_workflow_events.sql with lego_dev preamble,
+      table rewrite steps, initial partitions, index recreation, idempotency guards
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      pnpm test --filter @repo/db passes without modification to telemetry SDK source; existing workflow-events tests
+      confirm transparent partition routing
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      partition-manager.job.ts exports partitionManagerJob with schedule 0 5 1 * *, advisory lock, lazy import, finally
+      pool.end(); CronJobDefinitionSchema.parse(partitionManagerJob) does not throw
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: 'constants.ts contains PARTITION_MANAGER: 42_005; pnpm check-types exits 0'
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      partition-manager.ts runPartitionManager() generates correct SQL and partition names; unit test HP-5 covers
+      upcoming month generation
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test EC-4 verifies DB error is caught and logged without crashing; IF NOT EXISTS guard prevents duplicate
+      partition error
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      registry.ts imports and includes partitionManagerJob; buildCronRegistry test with
+      DISABLE_CRON_JOB_PARTITION_MANAGER=true excludes it
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      PartitionManagerConfigSchema defined as z.object({monthsAhead: z.number().default(2)}); no TypeScript interfaces
+      in partition-manager.ts; pnpm check-types exits 0
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      partition-manager.test.ts covers: schema validation, advisory lock skip, December→January rollover, February
+      boundary, idempotency, DB error; all tests pass
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: pnpm check-types --filter @repo/orchestrator exits 0; no interface keyword in new files
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: >-
+      pnpm build --filter @repo/orchestrator + startup log check shows 'partition-manager' registered with schedule '0 5
+      1 * *' in cron.job.registered log
+    evidence_type: manual
+  - ac_id: AC-12
+    planned_evidence: >-
+      Migration SQL file contains rollback comment block with inverse steps (restore unpartitioned table from renamed
+      backup)
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: 'Partition key column name: story description said ''ts'' but elaboration confirmed the actual column is ''created_at'''
+    decision: Use created_at as partition key (confirmed by elaboration gap G1)
+    rationale: >-
+      The actual public.workflow_events table uses created_at as its timestamp column; 'ts' does not exist. Elaboration
+      resolved this as a blocking gap.
+    decided_by: elaboration
+  - id: ARCH-002
+    question: >-
+      Schema prefix: story description said 'telemetry.workflow_events' but elaboration confirmed table is in public
+      schema
+    decision: Use public.workflow_events (not telemetry.workflow_events)
+    rationale: No telemetry schema exists in the lego_dev DB. Table lives in public schema per elaboration gap G2.
+    decided_by: elaboration
+  - id: ARCH-003
+    question: 'Partition management scheduler mechanism: pg_cron vs Lambda vs orchestrator cron job'
+    decision: >-
+      Use orchestrator cron job (patternMinerJob pattern) — Node.js cron infrastructure already built and tested
+      (APIP-3090)
+    rationale: >-
+      Elaboration resolved gap G3 to Lambda/Node.js. Story .md and WORKING-SET.md both confirm patternMinerJob pattern
+      in packages/backend/orchestrator/src/cron/. No new infrastructure needed. pg_cron requires Aurora cluster
+      configuration. Lambda requires SAM/serverless.yml changes. Orchestrator cron is zero-config and already tested.
+    decided_by: elaboration
+  - id: ARCH-004
+    question: 'Migration file location: packages/backend/db/src/migrations/ vs standalone deployment script'
+    decision: Create packages/backend/db/src/migrations/ directory and place SQL migration as 001_partition_workflow_events.sql
+    rationale: >-
+      No existing migrations directory exists in @repo/db (Drizzle manages schema via schema.ts). Since pnpm db:generate
+      is broken (WINT-0040) and Drizzle cannot express partitioned tables, a raw SQL migration directory is the correct
+      home. Naming convention starts at 001 since no existing numbered migrations are present.
+    decided_by: auto
+  - id: ARCH-005
+    question: 'Archival/detachment of old partitions: include or descope?'
+    decision: Descoped as explicit non-goal. Pre-creation only.
+    rationale: No data retention policy defined. Elaboration gap G4 resolved this. Story .md non-goals confirm same.
+    decided_by: elaboration
+complexity: complex
+notes:
+  - >-
+    CRITICAL: elaboration corrected two schema errors from the original story description — partition key is
+    'created_at' (not 'ts'), table is 'public.workflow_events' (not 'telemetry.workflow_events'). All migration SQL and
+    runPartitionManager() must use these corrected values.
+  - >-
+    CDBE-5010 is a PRODUCTION DEPLOYMENT blocker only, not an implementation blocker. Steps 1-5 can be implemented in
+    parallel with CDBE-5010. Both must be merged before production deployment in the same maintenance window.
+  - Migration file directory packages/backend/db/src/migrations/ does not exist yet — must be created as part of step 1.
+  - >-
+    Partition naming convention: workflow_events_y<YYYY>m<MM> (zero-padded month, e.g., workflow_events_y2026m03). This
+    is lowercase only, consistent with PostgreSQL naming conventions.
+  - The advisory lock pattern auto-releases when pool.end() is called in the finally block — no manual unlock needed.
+  - >-
+    Do NOT modify packages/backend/db/src/schema.ts — Drizzle ORM does not support partitioned table definitions. The
+    workflowEvents table definition remains as-is; pg driver handles transparent routing.
+  - >-
+    Partition management job env var filtering: DISABLE_CRON_JOB_PARTITION_MANAGER=true (hyphens in job name
+    'partition-manager' become underscores in env key per buildCronRegistry() normalization).
+  - >-
+    Step 6 (ST-6) is verification-only — no source files to modify. If existing telemetry SDK tests do not exercise the
+    partitioned table (they run against a mock/test DB), this step documents the transparent compatibility guarantee.
+  - >-
+    Opportunity O1 (consolidated partition manager for CDBE-5010 + CDBE-5020 tables) is out of scope for this story.
+    Implement for workflow_events only; CDBE-5010 covers agent_invocations and token_usage separately.
+  - >-
+    Partition table rewrite strategy (for migration SQL): (1) RENAME workflow_events TO workflow_events_old, (2) CREATE
+    TABLE workflow_events PARTITION BY RANGE (created_at) with identical columns, (3) CREATE child partitions for
+    current+2 months, (4) INSERT INTO workflow_events SELECT * FROM workflow_events_old, (5) DROP TABLE
+    workflow_events_old, (6) CREATE indexes on parent. Include IF NOT EXISTS / IF EXISTS guards for idempotency.

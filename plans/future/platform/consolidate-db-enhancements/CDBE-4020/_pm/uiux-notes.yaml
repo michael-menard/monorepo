@@ -1,0 +1,2 @@
+skipped: true
+reason: 'Pure database migration story. No UI components or user-facing changes. No React components, no API endpoints, no frontend surfaces touched.'

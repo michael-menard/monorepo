@@ -41,8 +41,10 @@ export const COL_UPDATED_AT = 'updated_at'
  * Minimal DB query interface required by affinity query.
  * Allows injection of mock clients in tests.
  */
-export const DB_SCHEMA = 'wint'
-export const DB_TABLE = 'model_affinity'
+// TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+// Implement analytics.model_affinity migration before restoring this constant. See GAP-1/GAP-2 in ELABORATION artifact.
+export const DB_SCHEMA = 'analytics' // pending migration
+export const DB_TABLE = 'model_affinity' // table not yet migrated to analytics schema
 export const DB_FULL_TABLE = `${DB_SCHEMA}.${DB_TABLE}`
 
 export interface DbQueryResult {
@@ -91,40 +93,11 @@ export async function queryAffinityProfile(
     LIMIT 1
   `
 
-  let result: DbQueryResult
-
-  try {
-    result = await db.query(sql, [modelId, changeType])
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    logger.warn('diff-planner:affinity-query', {
-      event: 'db_error',
-      model_id: modelId,
-      change_type: changeType,
-      error: message,
-    })
-    return null
-  }
-
-  if (result.rows.length === 0) {
-    // Cold-start: no affinity data for this (model_id, change_type) pair
-    return null
-  }
-
-  const row = result.rows[0]
-  const parsed = AffinityProfileSchema.safeParse(row)
-
-  if (!parsed.success) {
-    logger.warn('diff-planner:affinity-query', {
-      event: 'parse_error',
-      model_id: modelId,
-      change_type: changeType,
-      error: parsed.error.message,
-    })
-    return null
-  }
-
-  return parsed.data
+  // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+  // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+  void db
+  void sql
+  return null
 }
 
 /**
@@ -155,39 +128,9 @@ export async function queryAffinityProfilesByModel(
     ORDER BY ${COL_CHANGE_TYPE}
   `
 
-  let result: DbQueryResult
-
-  try {
-    result = await db.query(sql, [modelId])
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    logger.warn('diff-planner:affinity-query', {
-      event: 'db_error_bulk',
-      model_id: modelId,
-      error: message,
-    })
-    return []
-  }
-
-  if (result.rows.length === 0) {
-    return []
-  }
-
-  const profiles: AffinityProfile[] = []
-
-  for (const row of result.rows) {
-    const parsed = AffinityProfileSchema.safeParse(row)
-    if (parsed.success) {
-      profiles.push(parsed.data)
-    } else {
-      logger.warn('diff-planner:affinity-query', {
-        event: 'row_parse_error',
-        model_id: modelId,
-        change_type: row[COL_CHANGE_TYPE],
-        error: parsed.error.message,
-      })
-    }
-  }
-
-  return profiles
+  // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
+  // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
+  void db
+  void sql
+  return []
 }

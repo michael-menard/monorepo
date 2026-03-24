@@ -16,12 +16,6 @@ import type { Plan } from '../artifacts/plan.js'
 import type { Evidence } from '../artifacts/evidence.js'
 import type { QaVerify } from '../artifacts/qa-verify.js'
 import {
-  ElaborationRecordSchema,
-  PlanRecordSchema,
-  VerificationRecordSchema,
-  ProofRecordSchema,
-  TokenUsageRecordSchema,
-  TokenUsageInputSchema,
   type ElaborationRecord,
   type PlanRecord,
   type VerificationRecord,

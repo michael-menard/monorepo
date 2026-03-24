@@ -1,0 +1,2 @@
+skipped: true
+reason: 'Agent-prompt-only migration story. No UI components, no frontend surfaces, no user-facing visual changes. WINT-7040 modifies .claude/agents/*.agent.md files only.'

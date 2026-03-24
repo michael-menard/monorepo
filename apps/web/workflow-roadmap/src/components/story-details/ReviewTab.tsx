@@ -1,5 +1,5 @@
-import { ArtifactJsonViewer } from './ArtifactJsonViewer'
 import type { StoryDetails } from '../../store/roadmapApi'
+import { ArtifactJsonViewer } from './ArtifactJsonViewer'
 
 export function ReviewTab({ review }: { review: NonNullable<StoryDetails['review']> }) {
   const d = review.data as Record<string, unknown> | null
@@ -17,23 +17,23 @@ export function ReviewTab({ review }: { review: NonNullable<StoryDetails['review
       <div className="bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-base font-semibold text-slate-300">Code Review</h2>
-          {review.verdict && (
+          {review.verdict ? (
             <span className={`text-sm font-mono font-semibold ${verdictColor(review.verdict)}`}>
               {review.verdict}
             </span>
-          )}
+          ) : null}
           {totalErrors != null && (
             <span className="text-xs font-mono text-slate-500 ml-auto">
               {totalErrors} errors · {totalWarnings ?? 0} warnings
             </span>
           )}
         </div>
-        {summary && (
+        {summary ? (
           <p className="text-sm text-slate-400 mb-4 leading-relaxed border-l-2 border-slate-700 pl-3">
             {summary}
           </p>
-        )}
-        {findings && Object.keys(findings).length > 0 && (
+        ) : null}
+        {findings && Object.keys(findings).length > 0 ? (
           <div className="space-y-1">
             {Object.entries(findings).map(([worker, f]) => (
               <div
@@ -53,7 +53,7 @@ export function ReviewTab({ review }: { review: NonNullable<StoryDetails['review
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
       <ArtifactJsonViewer title="" data={review.data} meta={[]} />
     </div>

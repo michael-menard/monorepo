@@ -8,11 +8,7 @@ import { z } from 'zod'
  * Written by story-attack-agent, read by elab-completion-leader.
  */
 
-export const RecommendationSchema = z.enum([
-  'defer-to-backlog',
-  'reduce-scope',
-  'accept-as-mvp',
-])
+export const RecommendationSchema = z.enum(['defer-to-backlog', 'reduce-scope', 'accept-as-mvp'])
 
 export type Recommendation = z.infer<typeof RecommendationSchema>
 
@@ -33,9 +29,7 @@ export type ScopeChallenge = z.infer<typeof ScopeChallengeSchema>
 export const ScopeChallengesSchema = z.object({
   story_id: z.string().min(1),
   generated_at: z.string().datetime(),
-  challenges: z
-    .array(ScopeChallengeSchema)
-    .max(5, 'Maximum 5 scope challenges allowed'),
+  challenges: z.array(ScopeChallengeSchema).max(5, 'Maximum 5 scope challenges allowed'),
 })
 
 export type ScopeChallenges = z.infer<typeof ScopeChallengesSchema>

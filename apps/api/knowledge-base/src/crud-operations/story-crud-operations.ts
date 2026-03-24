@@ -17,6 +17,7 @@ import {
   StoryPhaseSchema,
   StoryPrioritySchema,
   StoryTypeSchema,
+  DependencyTypeSchema,
 } from '../__types__/index.js'
 
 // ============================================================================
@@ -1028,5 +1029,241 @@ export async function kb_create_story(
     message: wasCreated
       ? `Story ${validated.story_id} created successfully`
       : `Story ${validated.story_id} updated successfully`,
+  }
+}
+
+// ============================================================================
+// Dependency graph validation helpers
+// ============================================================================
+
+const MAX_CYCLE_DEPTH = 10
+
+/**
+ * Detect if adding an edge (storyId → dependsOnId) would create a cycle.
+ *
+ * BFS from dependsOnId following existing edges. If any traversal reaches
+ * storyId, the proposed edge would create a cycle.
+ *
+ * Ported from migration 1090 recursive CTE (P0004 cycle detection).
+ *
+ * @returns Cycle message string if cycle detected, null if safe
+ */
+async function detectCycle(
+  db: NodePgDatabase<typeof schema>,
+  storyId: string,
+  dependsOnId: string,
+): Promise<string | null> {
+  const visited = new Set<string>()
+  const queue: Array<{ nodeId: string; path: string[] }> = [
+    { nodeId: dependsOnId, path: [storyId, dependsOnId] },
+  ]
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+
+    if (current.path.length >= MAX_CYCLE_DEPTH + 1) {
+      continue // Bounded traversal — do not expand nodes at max depth
+    }
+
+    if (visited.has(current.nodeId)) {
+      continue
+    }
+    visited.add(current.nodeId)
+
+    // Find all outgoing edges from this node (nodeId depends_on X → follow to X)
+    const edges = await db
+      .select({ dependsOnId: storyDependencies.dependsOnId })
+      .from(storyDependencies)
+      .where(eq(storyDependencies.storyId, current.nodeId))
+
+    for (const edge of edges) {
+      if (edge.dependsOnId === storyId) {
+        // Cycle detected — the target of the proposed edge eventually leads back to source
+        const cyclePath = [...current.path, edge.dependsOnId].join(' → ')
+        return `Cycle detected: ${cyclePath}`
+      }
+
+      if (!visited.has(edge.dependsOnId)) {
+        queue.push({
+          nodeId: edge.dependsOnId,
+          path: [...current.path, edge.dependsOnId],
+        })
+      }
+    }
+  }
+
+  return null
+}
+
+// ============================================================================
+// kb_add_dependency
+// ============================================================================
+
+/**
+ * Input schema for kb_add_dependency tool.
+ */
+export const KbAddDependencyInputSchema = z.object({
+  /** Story that has the dependency */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** Story that is depended upon */
+  depends_on_id: z.string().min(1, 'Depends-on ID cannot be empty'),
+
+  /** Type of dependency relationship */
+  dependency_type: DependencyTypeSchema,
+})
+
+export type KbAddDependencyInput = z.infer<typeof KbAddDependencyInputSchema>
+
+/**
+ * Add a dependency relationship between two stories.
+ *
+ * Idempotent: uses ON CONFLICT DO NOTHING on the (story_id, depends_on_id, dependency_type) triple.
+ * Rejects self-referential dependencies (story_id === depends_on_id).
+ *
+ * @param deps - Database dependencies
+ * @param input - Dependency to create
+ * @returns Created dependency info
+ */
+export async function kb_add_dependency(
+  deps: StoryCrudDeps,
+  input: KbAddDependencyInput,
+): Promise<{
+  created: boolean
+  message: string
+}> {
+  const validated = KbAddDependencyInputSchema.parse(input)
+
+  // Self-referential guard
+  if (validated.story_id === validated.depends_on_id) {
+    return {
+      created: false,
+      message: `Cannot create self-referential dependency: ${validated.story_id} → ${validated.depends_on_id}`,
+    }
+  }
+
+  // Orphan guard — depends_on_id must reference an existing story
+  const targetExists = await deps.db
+    .select({ storyId: stories.storyId })
+    .from(stories)
+    .where(eq(stories.storyId, validated.depends_on_id))
+    .limit(1)
+
+  if (targetExists.length === 0) {
+    return {
+      created: false,
+      message: `depends_on_id not found: ${validated.depends_on_id}`,
+    }
+  }
+
+  // Also verify story_id exists (prevents dangling edges from either side)
+  const sourceExists = await deps.db
+    .select({ storyId: stories.storyId })
+    .from(stories)
+    .where(eq(stories.storyId, validated.story_id))
+    .limit(1)
+
+  if (sourceExists.length === 0) {
+    return {
+      created: false,
+      message: `story_id not found: ${validated.story_id}`,
+    }
+  }
+
+  // Cycle detection — BFS traversal from depends_on_id to see if it reaches story_id
+  // Ported from migration 1090 recursive CTE (P0004 cycle detection)
+  const cycleMessage = await detectCycle(deps.db, validated.story_id, validated.depends_on_id)
+  if (cycleMessage) {
+    return {
+      created: false,
+      message: cycleMessage,
+    }
+  }
+
+  // Idempotent: check if the exact triple already exists before inserting.
+  // DB has uq_story_dependency on (story_id, depends_on_id) which is MORE restrictive
+  // than triple uniqueness — prevents multiple edge types between the same story pair.
+  const existing = await deps.db
+    .select({ id: storyDependencies.id })
+    .from(storyDependencies)
+    .where(
+      and(
+        eq(storyDependencies.storyId, validated.story_id),
+        eq(storyDependencies.dependsOnId, validated.depends_on_id),
+        eq(storyDependencies.dependencyType, validated.dependency_type),
+      ),
+    )
+    .limit(1)
+
+  if (existing.length > 0) {
+    return {
+      created: false,
+      message: `Dependency already exists: ${validated.story_id} ${validated.dependency_type} ${validated.depends_on_id}`,
+    }
+  }
+
+  await deps.db.insert(storyDependencies).values({
+    storyId: validated.story_id,
+    dependsOnId: validated.depends_on_id,
+    dependencyType: validated.dependency_type,
+  })
+
+  return {
+    created: true,
+    message: `Dependency created: ${validated.story_id} ${validated.dependency_type} ${validated.depends_on_id}`,
+  }
+}
+
+// ============================================================================
+// kb_get_story_plan_links
+// ============================================================================
+
+/**
+ * Input schema for kb_get_story_plan_links tool.
+ */
+export const KbGetStoryPlanLinksInputSchema = z.object({
+  /** Story ID to look up plan links for */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+})
+
+export type KbGetStoryPlanLinksInput = z.infer<typeof KbGetStoryPlanLinksInputSchema>
+
+/**
+ * Get all plan linkages for a story.
+ *
+ * Returns the plans that reference this story via plan_story_links.
+ *
+ * @param deps - Database dependencies
+ * @param input - Story ID to look up
+ * @returns Array of plan links
+ */
+export async function kb_get_story_plan_links(
+  deps: StoryCrudDeps,
+  input: KbGetStoryPlanLinksInput,
+): Promise<{
+  links: { plan_slug: string; link_type: string }[]
+  message: string
+}> {
+  const validated = KbGetStoryPlanLinksInputSchema.parse(input)
+
+  const result = await deps.db
+    .select({
+      planSlug: planStoryLinks.planSlug,
+      linkType: planStoryLinks.linkType,
+    })
+    .from(planStoryLinks)
+    .where(eq(planStoryLinks.storyId, validated.story_id))
+
+  const links = result.map(r => ({
+    plan_slug: r.planSlug,
+    link_type: r.linkType,
+  }))
+
+  return {
+    links,
+    message:
+      links.length > 0
+        ? `Found ${links.length} plan link(s) for story ${validated.story_id}`
+        : `No plan links found for story ${validated.story_id}`,
   }
 }

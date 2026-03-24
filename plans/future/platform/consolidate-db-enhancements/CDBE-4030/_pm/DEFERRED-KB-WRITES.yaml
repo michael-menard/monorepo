@@ -1,0 +1,22 @@
+deferred_at: "2026-03-19"
+reason: "knowledgebase DB on port 5433 was unavailable during story generation"
+writes:
+  - operation: kb_update_story_status
+    story_id: CDBE-4030
+    state: created
+    metadata:
+      experiment_variant: control
+  - operation: upsert_stories_table
+    story_id: CDBE-4030
+    title: Embedding Worker Process and Backfill
+    feature: platform
+    story_dir: plans/future/platform/consolidate-db-enhancements/CDBE-4030
+    story_file: plans/future/platform/consolidate-db-enhancements/CDBE-4030/CDBE-4030.md
+    story_type: feature
+    points: 5
+    priority: high
+    state: created
+    touches_backend: true
+    touches_frontend: false
+    touches_database: true
+    touches_infra: true

@@ -1,0 +1,277 @@
+schema: 1
+story_id: "WINT-5010"
+version: 1
+timestamp: "2026-03-21T15:20:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Sidecar at packages/backend/sidecars/hitl-interview/, @repo/sidecar-hitl-interview, port 3094"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/package.json"
+        description: "Package named @repo/sidecar-hitl-interview at packages/backend/sidecars/hitl-interview/"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/server.ts"
+        description: "Server starts on PORT ?? '3094'"
+      - type: e2e
+        path: "apps/web/playwright/features/api/sidecar-hitl-interview/WINT-5010.spec.ts"
+        description: "AC-1 E2E test: sidecar responds on port 3094 — PASS"
+
+  - ac_id: "AC-2"
+    ac_text: "MCP tool hitlInterview exported from src/index.ts, params: { storyId, phase, decisionType }"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/index.ts"
+        description: "Exports hitlInterview from src/hitl-interview.ts"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/hitl-interview.ts"
+        description: "hitlInterview function with params storyId, phase, decisionType"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts"
+        description: "9 unit tests verify param validation and MCP tool behavior"
+
+  - ac_id: "AC-3"
+    ac_text: "Structured question set per decisionType, all InterviewAnswersSchema fields required"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "INTERVIEW_QUESTIONS constant with per-decisionType question sets"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "InterviewAnswersSchema with all fields required (rationale min(1), confidence 0-1, alternativesConsidered min(1), riskAssessment min(1))"
+
+  - ac_id: "AC-4"
+    ac_text: "Feature vectors: storyId, phase, decisionType, storyComplexityScore (numeric), agentPhase (string), decisionContext (string)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "FeatureVectorSchema with all 6 required fields"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/capture-interview.ts"
+        description: "buildFeatureVector() constructs all feature fields"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts"
+        description: "AC-10.4: features object contains all required FeatureVector fields — PASS"
+
+  - ac_id: "AC-5"
+    ac_text: "Write to workflow.training_data via trainingDataIngest, dataType: qa_gate_decision | code_review_decision | story_approval_decision"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/capture-interview.ts"
+        description: "defaultIngestFn inserts to workflow.training_data via @repo/knowledge-base/db"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "DECISION_TYPE_TO_TRAINING_DATA_TYPE mapping + TrainingDataTypeSchema enum"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts"
+        description: "AC-10.1/2/3: all three dataType mappings verified — PASS"
+
+  - ac_id: "AC-6"
+    ac_text: "Read from workflow.hitl_decisions for context enrichment (read-only, no writes to hitl_decisions)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/capture-interview.ts"
+        description: "readHitlContext() reads hitlDecisions table, SELECT-only query"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts"
+        description: "readHitlContext tests: returns context, handles empty rows, handles DB error — PASS"
+
+  - ac_id: "AC-7"
+    ac_text: "InterviewAnswersSchema Zod: rationale (string min 1), confidence (number 0-1), alternativesConsidered (string), riskAssessment (string)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "InterviewAnswersSchema with all required field constraints"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts"
+        description: "EC-3: confidence > 1 returns null, EC-5: empty rationale returns null — PASS"
+      - type: e2e
+        path: "apps/web/playwright/features/api/sidecar-hitl-interview/WINT-5010.spec.ts"
+        description: "E2E: 400 for empty rationale and confidence > 1 — PASS"
+
+  - ac_id: "AC-8"
+    ac_text: "FeatureVectorSchema Zod: storyId, phase, decisionType (TrainingDataTypeSchema), storyComplexityScore (number), agentPhase (string), decisionContext (string)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+        description: "FeatureVectorSchema with all 6 fields using TrainingDataTypeSchema for decisionType"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts"
+        description: "AC-10.4: storyComplexityScore is typeof number — PASS"
+
+  - ac_id: "AC-9"
+    ac_text: "Use @repo/sidecar-http-utils (sendJson, readBody) and @repo/logger"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/http-handler.ts"
+        description: "Imports sendJson and readBody from @repo/sidecar-http-utils; uses logger from @repo/logger"
+      - type: file
+        path: "packages/backend/sidecars/hitl-interview/src/capture-interview.ts"
+        description: "Uses logger from @repo/logger"
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts"
+        description: "8 HTTP handler tests verify sendJson and readBody usage — PASS"
+
+  - ac_id: "AC-10"
+    ac_text: "45% test coverage minimum, integration tests verify trainingDataIngest call shape"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts"
+        description: "7 integration tests verify trainingDataIngest call shape (dataType, features, labels, storyId)"
+      - type: command
+        command: "pnpm --filter @repo/sidecar-hitl-interview test:coverage"
+        result: "PASS — 88.81% statements, 84.31% branches, 75% functions (all above 45% threshold)"
+
+touched_files:
+  - path: "packages/backend/sidecars/hitl-interview/package.json"
+    action: created
+    lines: 46
+    description: "@repo/sidecar-hitl-interview package manifest with workspace deps"
+  - path: "packages/backend/sidecars/hitl-interview/tsconfig.json"
+    action: created
+    lines: 22
+    description: "TypeScript config with NodeNext module resolution"
+  - path: "packages/backend/sidecars/hitl-interview/vitest.config.ts"
+    action: created
+    lines: 35
+    description: "Vitest config with workspace package aliases (dist-free resolution)"
+  - path: "packages/backend/sidecars/hitl-interview/src/__types__/index.ts"
+    action: created
+    lines: 100
+    description: "All Zod schemas: TrainingDataTypeSchema, DecisionTypeSchema, HitlInterviewParamsSchema, InterviewAnswersSchema, FeatureVectorSchema, INTERVIEW_QUESTIONS, DECISION_TYPE_TO_TRAINING_DATA_TYPE"
+  - path: "packages/backend/sidecars/hitl-interview/src/capture-interview.ts"
+    action: created
+    lines: 150
+    description: "Core logic: readHitlContext, computeStoryComplexityScore, buildFeatureVector, captureInterview"
+  - path: "packages/backend/sidecars/hitl-interview/src/hitl-interview.ts"
+    action: created
+    lines: 80
+    description: "MCP tool wrapper: hitlInterview — calls captureInterview in-process (ARCH-001)"
+  - path: "packages/backend/sidecars/hitl-interview/src/http-handler.ts"
+    action: created
+    lines: 115
+    description: "HTTP handler for POST /hitl-interview using sendJson/readBody (AC-9)"
+  - path: "packages/backend/sidecars/hitl-interview/src/server.ts"
+    action: created
+    lines: 45
+    description: "HTTP server on PORT ?? '3094'"
+  - path: "packages/backend/sidecars/hitl-interview/src/index.ts"
+    action: created
+    lines: 35
+    description: "Package entry point exporting hitlInterview and all types"
+  - path: "packages/backend/sidecars/hitl-interview/src/test/setup.ts"
+    action: created
+    lines: 40
+    description: "Test setup mocking @repo/db, @repo/knowledge-base/db, @repo/logger"
+  - path: "packages/backend/sidecars/hitl-interview/src/__tests__/capture-interview.test.ts"
+    action: created
+    lines: 185
+    description: "16 unit tests for readHitlContext, computeStoryComplexityScore, buildFeatureVector, captureInterview"
+  - path: "packages/backend/sidecars/hitl-interview/src/__tests__/mcp-tool.test.ts"
+    action: created
+    lines: 80
+    description: "9 unit tests for hitlInterview MCP tool"
+  - path: "packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts"
+    action: created
+    lines: 130
+    description: "8 unit tests for HTTP handler"
+  - path: "packages/backend/sidecars/hitl-interview/src/__tests__/integration.test.ts"
+    action: created
+    lines: 130
+    description: "7 integration tests verifying trainingDataIngest call shape (AC-10)"
+  - path: "apps/web/playwright/features/api/sidecar-hitl-interview/WINT-5010.spec.ts"
+    action: created
+    lines: 110
+    description: "7 E2E Playwright tests for POST /hitl-interview HTTP API"
+
+commands_run:
+  - command: "pnpm --filter @repo/sidecar-hitl-interview build"
+    result: SUCCESS
+    output: "TypeScript compilation — no errors"
+    timestamp: "2026-03-21T15:18:00Z"
+  - command: "pnpm --filter @repo/sidecar-hitl-interview test"
+    result: SUCCESS
+    output: "40 tests passed across 4 test files"
+    timestamp: "2026-03-21T15:18:30Z"
+  - command: "pnpm --filter @repo/sidecar-hitl-interview test:coverage"
+    result: SUCCESS
+    output: "88.81% statements, 84.31% branches, 75% functions — all above 45% threshold"
+    timestamp: "2026-03-21T15:19:00Z"
+  - command: "HITL_INTERVIEW_URL=http://localhost:3094 RUN_SIDECAR_E2E=1 npx playwright test WINT-5010.spec.ts"
+    result: SUCCESS
+    output: "7 E2E tests passed (sidecar running via tsx)"
+    timestamp: "2026-03-21T15:19:30Z"
+
+endpoints_exercised:
+  - method: POST
+    path: "/hitl-interview"
+    status: 200
+    description: "Valid qa_gate interview request"
+  - method: POST
+    path: "/hitl-interview"
+    status: 400
+    description: "Invalid decisionType rejected"
+  - method: POST
+    path: "/hitl-interview"
+    status: 400
+    description: "Invalid answers (empty rationale) rejected"
+  - method: POST
+    path: "/hitl-interview"
+    status: 400
+    description: "Invalid answers (confidence > 1) rejected"
+
+test_summary:
+  unit: { pass: 40, fail: 0 }
+  e2e: { pass: 7, fail: 0 }
+
+e2e_tests:
+  status: pass
+  exempt_reason: null
+  config: "custom playwright config (sidecar-specific)"
+  project: "api-live"
+  mode: "live"
+  tests_written: true
+  results:
+    total: 7
+    passed: 7
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues:
+    - type: url_mismatch
+      description: "No playwright.legacy.config.ts exists in this codebase — used custom config for sidecar API tests"
+      expected: "playwright.legacy.config.ts with chromium-live/api-live projects"
+      actual: "BDD Cucumber configs only; no legacy config"
+      files:
+        - "apps/web/playwright/playwright.config.ts"
+        - "apps/web/playwright/playwright.api.config.ts"
+      resolution: "Created custom playwright config for sidecar E2E tests; tests run with RUN_SIDECAR_E2E=1 guard"
+
+coverage:
+  lines: 88.81
+  branches: 84.31
+  functions: 75.0
+  statements: 88.81
+
+notable_decisions:
+  - "ARCH-001: hitlInterview MCP tool calls captureInterview in-process (not via HTTP) — matches cohesion_audit pattern"
+  - "ARCH-002: readBody + JSON.parse used since readJsonBody is not exported from @repo/sidecar-http-utils"
+  - "ARCH-003: trainingDataIngest implemented directly via @repo/db Drizzle insert (not via knowledge-base ML pipeline import) — knowledge-base has no /ml-pipeline export path, and direct Drizzle insert is equivalent"
+  - "Port 3094 used (AC-1 note: 3093 already used by rules-registry)"
+  - "vitest.config.ts uses resolve aliases for @repo/db, @repo/logger, @repo/sidecar-http-utils, @repo/knowledge-base/db to avoid dist build dependency in test environment"
+  - "tsconfig.json uses NodeNext module resolution (not bundler) to correctly resolve workspace package types"
+
+known_deviations:
+  - "trainingDataIngest is implemented inline (Drizzle insert to workflow.training_data) rather than importing from apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts — the knowledge-base package has no exported /ml-pipeline path. Behavior is identical."
+  - "E2E tests require sidecar to be explicitly started (RUN_SIDECAR_E2E=1 + HITL_INTERVIEW_URL env vars) — no playwright.legacy.config.ts exists in this codebase"
+  - "Build fails when dependency chain (@repo/logger, @repo/db dist) not pre-built — this is a pre-existing monorepo issue affecting all sidecar packages, not introduced by this story"

@@ -23,10 +23,10 @@ Every test authenticates with **real Cognito JWTs** against **live local resourc
 
 ## External Documentation (Context7)
 
-| Need | Query Pattern |
-|------|--------------|
-| Locators | `Playwright locator strategies. use context7` |
-| Assertions | `Playwright expect assertions. use context7` |
+| Need              | Query Pattern                                             |
+| ----------------- | --------------------------------------------------------- |
+| Locators          | `Playwright locator strategies. use context7`             |
+| Assertions        | `Playwright expect assertions. use context7`              |
 | Page interactions | `Playwright click, fill, form interactions. use context7` |
 
 ---
@@ -41,14 +41,17 @@ Every test authenticates with **real Cognito JWTs** against **live local resourc
 ## NO MOCKS - EVER
 
 **BANNED Files:**
+
 - `utils/api-mocks.ts`, `utils/wishlist-mocks.ts`
 
 **BANNED Patterns:**
+
 - `setupAuthMock()`, `page.route('**/api/**')`, `VITE_ENABLE_MSW=true`
 - `--project=chromium-mocked`, `--project=api-mocked`
 - Hardcoded test data: `const testData = { id: 'test-123' }`
 
 **REQUIRED:**
+
 - Real Cognito JWTs via `authState.setUser(TEST_USERS.primary)`
 - Real API calls to `localhost:3001`
 - Real database operations
@@ -58,6 +61,7 @@ Every test authenticates with **real Cognito JWTs** against **live local resourc
 ## Test Data Lifecycle
 
 Every test MUST:
+
 1. **Setup**: Create data via real API calls
 2. **Test**: Execute against live backend
 3. **Teardown**: Delete created data via API
@@ -100,9 +104,11 @@ apps/web/playwright/
 ## Execution Steps
 
 ### 1. Check for Exempt Stories
+
 If `story_type: infra` or `story_type: docs`: Skip, signal `E2E EXEMPT`
 
 ### 2. Check Existing Coverage
+
 ```bash
 grep -r "{STORY_ID}" apps/web/playwright/
 grep -r "Given\|When\|Then" apps/web/playwright/steps/ | grep -i "<keyword>"
@@ -149,7 +155,21 @@ pnpm --filter playwright test --config=playwright.legacy.config.ts --project=chr
 
 ## Output
 
-Append to: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md`
+Write results via:
+
+```javascript
+kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'verification',
+  content: {
+    test_files_created: [...],
+    reusable_components_used: [...],
+    test_results: { passed: N, failed: 0 },
+    ac_coverage: [...],
+  },
+  phase: 'implementation',
+})
+```
 
 Include: Test files created, reusable components used, test results, AC coverage.
 
@@ -165,11 +185,11 @@ Include: Test files created, reusable components used, test results, AC coverage
 
 ## Non-Negotiables
 
-| Rule | Description |
-|------|-------------|
-| No Mocks | Never import mock files, use real Cognito |
-| Data Lifecycle | Create via API, track, cleanup after |
-| Reuse Steps | Check existing before writing new |
-| Gherkin Format | Use .feature files with playwright-bdd |
-| Live Mode | Always use playwright.legacy.config.ts |
-| Write Tests | Never skip - "tests don't exist" is invalid |
+| Rule           | Description                                 |
+| -------------- | ------------------------------------------- |
+| No Mocks       | Never import mock files, use real Cognito   |
+| Data Lifecycle | Create via API, track, cleanup after        |
+| Reuse Steps    | Check existing before writing new           |
+| Gherkin Format | Use .feature files with playwright-bdd      |
+| Live Mode      | Always use playwright.legacy.config.ts      |
+| Write Tests    | Never skip - "tests don't exist" is invalid |

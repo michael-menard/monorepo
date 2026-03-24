@@ -1,0 +1,52 @@
+schema: 1
+story_id: CDBE-4020
+timestamp: "2026-03-18T00:00:00Z"
+phase: setup
+branch: story/CDBE-4020
+worktree: /Users/michaelmenard/Development/monorepo/tree/story/CDBE-4020
+
+constraints:
+  - "Verify CDBE-4010 is merged before beginning implementation — currently in elab state (blocking)"
+  - "Manual SQL authoring required — db:generate fails with sets.js error"
+  - "Migration slot must be verified at implementation time (expect 1011, last confirmed: 1010)"
+  - "CREATE INDEX CONCURRENTLY cannot run inside transaction blocks — structure migration accordingly"
+  - "pgvector >= 0.5.0 required for HNSW support — include version guard in migration"
+  - "DB safety preamble: current_database() = 'knowledgebase' check required before DDL"
+  - "All five tables are in public schema — not workflow schema"
+  - "Embedding columns must be nullable (NULL indicates not yet computed by CDBE-4030 worker)"
+  - "Use vector(1536) dimension to match OpenAI text-embedding-3-small embeddings"
+  - "No separate embedding tables — inline columns on existing five tables only"
+  - "HNSW chosen for consistency with CDBE-4010 pattern (vs. grandfathered ivfflat)"
+  - "Do not use wint.* or kbar.* schemas — these are dead"
+  - "Do not modify workflow.ts — only kb.ts Drizzle schema needs updates"
+
+next_steps:
+  - "Verify CDBE-4010 merge status and confirm vector customType import path"
+  - "Confirm next available migration slot with: ls apps/api/knowledge-base/src/db/migrations/ | grep -v 999 | sort | tail -5"
+  - "Author migration SQL following 1007_pipe_0020_ghost_state_audit.sql pattern (safety preamble + idempotent DDL)"
+  - "Update kb.ts Drizzle schema with embedding column for all five tables using existing vector customType"
+  - "Create pgtap test file verifying column types, HNSW indexes, and nullability"
+  - "Verify TypeScript compilation: pnpm check-types --filter @repo/knowledge-base"
+  - "Test migration idempotency: run twice against test database, verify no errors or duplicates"
+  - "Verify all five tables affected: lessons_learned, adrs, code_standards, rules, cohesion_rules"
+
+tables_to_modify:
+  - public.lessons_learned
+  - public.adrs
+  - public.code_standards
+  - public.rules
+  - public.cohesion_rules
+
+files_to_create:
+  - apps/api/knowledge-base/src/db/migrations/1011_cdbe4020_embedding_columns_knowledge_tables.sql
+  - apps/api/knowledge-base/src/db/migrations/pgtap/1011_cdbe4020_embedding_columns_knowledge_tables_test.sql
+
+files_to_modify:
+  - apps/api/knowledge-base/src/db/schema/kb.ts
+
+canonical_references:
+  safety_preamble: "apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql (lines 28-35)"
+  vector_type: "apps/api/knowledge-base/src/db/schema/kb.ts (lines 24-39)"
+  index_pattern: "apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql"
+  pgtap_structure: "apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql"
+  example_embedding_table: "apps/api/knowledge-base/src/db/schema/kb.ts lines 41-60 (knowledgeEntries)"

@@ -1,0 +1,176 @@
+strategy: integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Migration applies cleanly on a fresh knowledgebase DB'
+    setup: 'Run all migrations up to 1008; confirm 1009 slot is free'
+    action: 'Apply migration 1009_cdbe4010_pgvector_embedding_tables.sql'
+    expected: 'Migration completes without errors; RAISE NOTICE lines confirm each section ran'
+    evidence: 'Migration exit code 0; psql output shows NOTICE messages for each table/index created'
+
+  - id: HP-2
+    title: 'workflow.story_embeddings table exists with correct schema'
+    setup: 'Apply migration 1009'
+    action: 'Query information_schema.columns WHERE table_schema=''workflow'' AND table_name=''story_embeddings'''
+    expected: 'Columns: id (uuid), story_id (text), embedding (USER-DEFINED/vector), model (text), created_at (timestamptz), updated_at (timestamptz)'
+    evidence: 'pgtap has_table + has_column + col_type_is assertions'
+
+  - id: HP-3
+    title: 'workflow.plan_embeddings table exists with correct schema'
+    setup: 'Apply migration 1009'
+    action: 'Query information_schema.columns WHERE table_schema=''workflow'' AND table_name=''plan_embeddings'''
+    expected: 'Columns: id (uuid), plan_id (uuid), embedding (USER-DEFINED/vector), model (text), created_at (timestamptz), updated_at (timestamptz)'
+    evidence: 'pgtap has_table + has_column + col_type_is assertions'
+
+  - id: HP-4
+    title: 'HNSW indexes exist on both embedding tables'
+    setup: 'Apply migration 1009'
+    action: 'SELECT indexname, indexdef FROM pg_indexes WHERE schemaname=''workflow'' AND indexname LIKE ''idx_%_embedding%'''
+    expected: 'Two rows returned; indexdef for each contains ''USING hnsw'' and ''vector_cosine_ops'''
+    evidence: 'pgtap index_is + manual SELECT confirming USING hnsw in indexdef'
+
+  - id: HP-5
+    title: 'Foreign key constraints reference parent tables correctly'
+    setup: 'Apply migration 1009'
+    action: 'Query information_schema.referential_constraints for story_embeddings and plan_embeddings'
+    expected: 'story_embeddings.story_id → workflow.stories(story_id) ON DELETE CASCADE; plan_embeddings.plan_id → workflow.plans(id) ON DELETE CASCADE'
+    evidence: 'pgtap fk_ok assertions or pg_constraint queries'
+
+  - id: HP-6
+    title: 'UNIQUE constraints prevent duplicate embedding rows'
+    setup: 'Apply migration 1009; insert one row into workflow.story_embeddings'
+    action: 'Attempt to insert a second row with the same story_id'
+    expected: 'INSERT fails with unique_violation (23505)'
+    evidence: 'DO block in pgtap catching the expected exception'
+
+  - id: HP-7
+    title: 'Drizzle schema TypeScript types compile for new tables'
+    setup: 'Apply migration 1009; workflow.ts updated with storyEmbeddings, planEmbeddings, embeddingSectionLookup'
+    action: 'Run pnpm check-types --filter @repo/knowledge-base'
+    expected: 'Zero type errors; inferred types for all three new tables are accessible'
+    evidence: 'pnpm check-types exit code 0'
+
+  - id: HP-8
+    title: 'findSimilarStories() queries workflow.story_embeddings (AC-10)'
+    setup: 'Apply migration 1009; insert test story + embedding row'
+    action: 'Call findSimilarStories() with a test embedding vector'
+    expected: 'Returns stories ranked by cosine similarity from workflow.story_embeddings JOIN workflow.stories'
+    evidence: 'Vitest unit test with mocked pg client verifying the SQL contains workflow.story_embeddings'
+
+error_cases:
+  - id: EC-1
+    title: 'Migration safety preamble rejects wrong database'
+    setup: 'Connect to lego_dev (port 5432) database'
+    action: 'Attempt to apply migration 1009'
+    expected: 'Migration aborts with RAISE EXCEPTION ''wrong database''; no DDL changes applied'
+    evidence: 'Migration exit code non-zero; pg_tables shows no new workflow.story_embeddings row'
+
+  - id: EC-2
+    title: 'ON DELETE CASCADE removes embedding rows when parent story is deleted'
+    setup: 'Apply migration 1009; insert row in workflow.stories and matching row in workflow.story_embeddings'
+    action: 'DELETE FROM workflow.stories WHERE story_id = ''<test-id>'''
+    expected: 'Corresponding workflow.story_embeddings row is automatically deleted'
+    evidence: 'SELECT COUNT(*) FROM workflow.story_embeddings WHERE story_id = ''<test-id>'' returns 0'
+
+  - id: EC-3
+    title: 'ON DELETE CASCADE removes plan embedding rows when parent plan is deleted'
+    setup: 'Apply migration 1009; insert row in workflow.plans and matching row in workflow.plan_embeddings'
+    action: 'DELETE FROM workflow.plans WHERE id = ''<test-uuid>'''
+    expected: 'Corresponding workflow.plan_embeddings row is automatically deleted'
+    evidence: 'SELECT COUNT(*) FROM workflow.plan_embeddings WHERE plan_id = ''<test-uuid>'' returns 0'
+
+  - id: EC-4
+    title: 'Insert rejects embedding with wrong dimension'
+    setup: 'Apply migration 1009'
+    action: 'INSERT INTO workflow.story_embeddings (story_id, embedding) VALUES (''s1'', ''[1,2,3]''::vector)'
+    expected: 'INSERT fails with error — vector dimensions do not match column definition (1536)'
+    evidence: 'psql or Vitest test capturing the ERROR: expected 1536 dimensions'
+
+edge_cases:
+  - id: ED-1
+    title: 'Migration is fully idempotent — second run produces no errors'
+    setup: 'Apply migration 1009 successfully'
+    action: 'Apply migration 1009 again'
+    expected: 'Zero errors; NOTICE messages indicate all IF NOT EXISTS guards triggered; no duplicate tables or indexes'
+    evidence: 'Migration exit code 0 on second run; table count unchanged'
+
+  - id: ED-2
+    title: 'NULL embedding column value is allowed (embedding not yet computed)'
+    setup: 'Apply migration 1009'
+    action: 'INSERT INTO workflow.story_embeddings (story_id, model) VALUES (''story-1'', ''text-embedding-3-small'')'
+    expected: 'Row inserted with embedding = NULL; no NOT NULL violation'
+    evidence: 'SELECT * FROM workflow.story_embeddings confirms embedding IS NULL'
+
+  - id: ED-3
+    title: 'HNSW index handles empty table without error'
+    setup: 'Apply migration 1009; tables are empty'
+    action: 'Run a similarity search: SELECT * FROM workflow.story_embeddings ORDER BY embedding <=> ''[...]''::vector LIMIT 5'
+    expected: 'Returns 0 rows without error'
+    evidence: 'psql query returns empty result set'
+
+  - id: ED-4
+    title: 'Migration slot conflict detection'
+    setup: 'A file named 1009_*.sql already exists from another story'
+    action: 'Attempt to run migrations including both 1009 files'
+    expected: 'Migration runner detects duplicate slot and fails with clear error message'
+    evidence: 'Migration script exit code non-zero; error message references duplicate slot'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'pgtap: has_table(''workflow'', ''story_embeddings'')'
+      - 'pgtap: has_table(''workflow'', ''plan_embeddings'')'
+      - 'pgtap: has_table(''workflow'', ''embedding_section_lookup'')'
+      - 'pgtap: col_type_is(''workflow'', ''story_embeddings'', ''embedding'', ''USER-DEFINED'')'
+      - 'pgtap: col_type_is(''workflow'', ''plan_embeddings'', ''embedding'', ''USER-DEFINED'')'
+      - 'pgtap: index_is for HNSW indexes on both embedding tables'
+      - 'pgtap: fk_ok for story_id → workflow.stories and plan_id → workflow.plans'
+      - 'pgtap: col_is_unique(''workflow'', ''story_embeddings'', ARRAY[''story_id''])'
+      - 'pgtap: col_is_unique(''workflow'', ''plan_embeddings'', ARRAY[''plan_id''])'
+      - 'Vitest: findSimilarStories() SQL references workflow.story_embeddings'
+      - 'TypeScript: pnpm check-types --filter @repo/knowledge-base exits 0'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify COMMENT ON TABLE statements exist for all new tables'
+    steps:
+      - 'Connect to knowledgebase DB'
+      - 'SELECT obj_description(oid, ''pg_class'') FROM pg_class WHERE relname IN (''story_embeddings'', ''plan_embeddings'', ''embedding_section_lookup'') AND relnamespace = ''workflow''::regnamespace'
+    expected: 'Three non-null comment strings returned, each containing the migration number prefix (e.g., ''1009: ...'')'
+
+  - id: MC-2
+    title: 'Verify HNSW parameters are documented in migration SQL comments'
+    steps:
+      - 'Open migration 1009 SQL file'
+      - 'Find CREATE INDEX USING hnsw statements'
+      - 'Confirm a SQL comment precedes or follows the statement explaining m and ef_construction values'
+    expected: 'Comment present; values documented (e.g., m=16, ef_construction=64) with rationale'
+
+  - id: MC-3
+    title: 'Confirm embedding_section_lookup schema matches elaboration decision'
+    steps:
+      - 'After elaboration of AC-5, confirm the final schema aligns with the product owner decision'
+      - 'Verify id SERIAL PK, section_name TEXT NOT NULL UNIQUE, display_order INT columns exist'
+    expected: 'Schema matches elaborated definition; any deviation is documented'
+
+fixture_definitions:
+  - name: test_story_embedding_row
+    type: SQL INSERT
+    description: 'A workflow.stories row + matching workflow.story_embeddings row with a 1536-dimension zero vector for unit test use'
+  - name: test_plan_embedding_row
+    type: SQL INSERT
+    description: 'A workflow.plans row + matching workflow.plan_embeddings row with a 1536-dimension zero vector'
+  - name: pgtap_migration_1009
+    type: pgtap test file
+    description: 'pgtap SQL test file at apps/api/knowledge-base/src/db/migrations/pgtap/1009_cdbe4010_pgvector_embedding_tables_test.sql'
+
+risks:
+  - 'AC-5 (embedding_section_lookup) schema is undefined — tests for this table cannot be finalized until elaboration completes'
+  - 'HNSW index type requires pgvector >= 0.5.0; Aurora PostgreSQL environments must confirm this version is available'
+  - 'Migration slot 1009 may be consumed by another story before implementation — test file references to filename must be updated if slot shifts'
+  - 'findSimilarStories() Vitest test requires understanding the final JOIN pattern — cannot be written until AC-10 implementation is confirmed'

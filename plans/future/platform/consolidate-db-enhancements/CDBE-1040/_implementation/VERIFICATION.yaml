@@ -1,0 +1,175 @@
+schema: 1
+story_id: CDBE-1040
+timestamp: '2026-03-19T06:00:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  pgtap:
+    pass: 27
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+    reason: DB-only migration story — no API or frontend surfaces. pgtap tests provide equivalent coverage.
+coverage: N/A
+coverage_meets_threshold: true
+coverage_notes: DB-only migration. Coverage threshold (45%) not applicable. 27/27 pgtap tests pass with full behavioral coverage.
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:135-167
+    notes: >-
+      workflow.redact_sensitive_value(p_column_name text, p_value text) RETURNS text created with CREATE OR REPLACE
+      FUNCTION, LANGUAGE plpgsql, SECURITY INVOKER. Returns [REDACTED] for column names matching api_key, token, secret,
+      credential, password patterns via ILIKE. Returns original value for non-sensitive columns.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:144-156, COMMENT ON FUNCTION workflow.redact_sensitive_value line 169-177
+    notes: >-
+      Sensitive patterns stored as hardcoded constant array v_sensitive_patterns within function body. COMMENT ON
+      FUNCTION documents the architectural decision: zero SELECT overhead per trigger invocation, no extra table, fully
+      self-contained for MVP scope (ARCH-001).
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:186-316
+    notes: >-
+      workflow.audit_story_mutations() RETURNS TRIGGER created with CREATE OR REPLACE FUNCTION, LANGUAGE plpgsql,
+      SECURITY INVOKER. Fires AFTER UPDATE on workflow.stories. Compares OLD.* to NEW.* using IS DISTINCT FROM for each
+      auditable column. Inserts one row per changed column into workflow.story_mutation_audit_log with
+      table_name='workflow.stories', row_id=NEW.story_id. Calls redact_sensitive_value on both old and new values.
+      Returns NEW.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:348-413
+    notes: >-
+      workflow.audit_plan_mutations() RETURNS TRIGGER created with CREATE OR REPLACE FUNCTION, LANGUAGE plpgsql,
+      SECURITY INVOKER. Fires AFTER UPDATE on workflow.plans. Uses same column-diff and redaction logic as AC-3.
+      table_name='workflow.plans', row_id=NEW.plan_slug. Note: AC-14 lists 'description' as auditable column; actual
+      schema column is 'summary' — migration audits 'summary' and documents this deviation. Returns NULL (correct for
+      AFTER trigger).
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:328-334
+    notes: >-
+      DROP TRIGGER IF EXISTS audit_story_mutations ON workflow.stories; CREATE TRIGGER audit_story_mutations AFTER
+      UPDATE ON workflow.stories FOR EACH ROW EXECUTE FUNCTION workflow.audit_story_mutations(). Idempotent pattern
+      confirmed by T-22 pgtap test (PASS).
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:428-434
+    notes: >-
+      DROP TRIGGER IF EXISTS audit_plan_mutations ON workflow.plans; CREATE TRIGGER audit_plan_mutations AFTER UPDATE ON
+      workflow.plans FOR EACH ROW EXECUTE FUNCTION workflow.audit_plan_mutations(). Idempotent pattern confirmed by T-23
+      pgtap test (PASS).
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: '1040_audit_trigger.sql: all IF OLD.col IS DISTINCT FROM NEW.col guards'
+    notes: >-
+      Every auditable column in both trigger functions is guarded by IS DISTINCT FROM. T-5a and T-5b pgtap tests confirm
+      no audit row generated for unchanged column value (both PASS). IS DISTINCT FROM correctly handles NULL
+      comparisons.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:159-166, pgtap T-6/T-7
+    notes: >-
+      workflow.redact_sensitive_value() called on both old_value and new_value in every INSERT. T-7 (api_key ->
+      [REDACTED]) and T-6 (auth_token -> [REDACTED]) pgtap tests both PASS. Column name itself remains unredacted — only
+      values are masked.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: '1040_audit_trigger.sql: COMMENT ON statements'
+    notes: >-
+      COMMENT ON FUNCTION workflow.redact_sensitive_value (line 169), COMMENT ON FUNCTION workflow.audit_story_mutations
+      (line 318), COMMENT ON TRIGGER audit_story_mutations (line 336), COMMENT ON FUNCTION workflow.audit_plan_mutations
+      (line 415), COMMENT ON TRIGGER audit_plan_mutations (line 436), COMMENT ON TABLE workflow.story_mutation_audit_log
+      (line 76). All cite migration '1040:'. 22 total COMMENT ON statements with '1040:' prefix found in migration file.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: >-
+      1040_audit_trigger.sql: CREATE OR REPLACE FUNCTION, DROP TRIGGER IF EXISTS, CREATE TABLE IF NOT EXISTS, ALTER
+      TABLE ADD COLUMN IF NOT EXISTS
+    notes: >-
+      Migration uses CREATE OR REPLACE FUNCTION throughout, DROP TRIGGER IF EXISTS before each CREATE TRIGGER, CREATE
+      TABLE IF NOT EXISTS for audit log table, ALTER TABLE ADD COLUMN IF NOT EXISTS for
+      points/epic/blocked_reason/blocked_by_story. T-19 through T-23 pgtap tests confirm idempotency (all PASS).
+      Conditional GRANT blocks use IF EXISTS checks on pg_roles.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: '1040_audit_trigger_test.sql: 27 tests, all PASS (live run confirmed)'
+    notes: >-
+      pgtap test file at correct path. SELECT plan(27) matches 27 test assertions. Live run confirms all 27 pass:
+      T-1/T-2 (has_trigger on both tables), T-3 (story UPDATE audit row), T-4 (plan UPDATE audit row), T-5a/T-5b
+      (unchanged column no audit row), T-6/T-7 (sensitive column redaction), T-8 (non-sensitive passthrough), T-9
+      (INSERT = 0 audit rows), T-10/T-11/T-12 (SECURITY INVOKER), T-13-T-18 (table structure), T-19-T-23 (idempotency),
+      T-24 (multi-column = 2 rows), T-25/T-26 (column existence).
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:331-334 (stories), 431-434 (plans)
+    notes: >-
+      Both triggers created as AFTER UPDATE ... FOR EACH ROW — no INSERT or DELETE clause. T-9 pgtap test confirms
+      INSERT to workflow.stories produces 0 audit rows (PASS). Triggers will not fire on DELETE operations.
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: worktree migration directory listing
+    notes: >-
+      Migration slot 1040 was available — no pre-existing 1040_*.sql file in apps/api/knowledge-base/src/db/migrations/
+      before this story. The 1040_audit_trigger.sql is the only file claiming this slot. Git log confirms first commit
+      for any 1040_* file is this story's commit (0de6f94e).
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: 1040_audit_trigger.sql:191-195 (stories comment block), 353-357 (plans comment block)
+    notes: >-
+      Both trigger function bodies contain comment block enumerating auditable columns. workflow.stories: state,
+      priority, title, description, blocked_reason, blocked_by_story, points, feature, epic (9 columns, system columns
+      excluded). workflow.plans: status, title, summary/description, priority (4 columns, system columns excluded). Note
+      on 'description' vs 'summary' for plans is documented in comment and COMMENT ON FUNCTION. ADD COLUMN IF NOT EXISTS
+      DDL for points and epic ensures columns exist for auditing.
+architecture_compliant: true
+architecture_notes: >-
+  SECURITY INVOKER pattern matches reference migration 1020. CREATE OR REPLACE + DROP TRIGGER IF EXISTS idempotency
+  pattern matches. COMMENT ON all objects citing migration number matches. pgtap test structure (BEGIN/ROLLBACK, SELECT
+  plan(N)) matches reference test files. No RLS on audit table is intentional and documented in story architecture
+  notes.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      When AC-14 specifies an auditable column name that differs from the actual schema column name (e.g., 'description'
+      vs 'summary' for workflow.plans), the migration should audit the actual column name and document the discrepancy
+      in both inline comments and COMMENT ON FUNCTION statements. This avoids silent missed auditing.
+    category: pattern
+    tags:
+      - database
+      - audit-trigger
+      - schema-drift
+  - lesson: >-
+      AFTER UPDATE triggers have their return value ignored by PostgreSQL for row-level operations, so both RETURN NEW
+      (audit_story_mutations) and RETURN NULL (audit_plan_mutations) are technically correct. However, RETURN NULL is
+      the idiomatic choice for AFTER triggers since the row has already been written.
+    category: pattern
+    tags:
+      - database
+      - plpgsql
+      - trigger-design
+  - lesson: >-
+      Hardcoded constant arrays in PL/pgSQL trigger functions (vs. a lookup table) eliminate per-invocation SELECT
+      overhead. For high-frequency triggers like row-level audit triggers, this is the correct MVP tradeoff — document
+      the decision in COMMENT ON FUNCTION for future maintainers.
+    category: pattern
+    tags:
+      - database
+      - plpgsql
+      - performance
+      - audit-trigger
+tokens:
+  in: 18000
+  out: 3500

@@ -4,7 +4,7 @@ updated: 2026-02-01
 version: 1.0.0
 type: worker
 permission_level: readonly
-triggers: ["/qa-verify-story (UAT phase)"]
+triggers: ['/qa-verify-story (UAT phase)']
 related_adr: ADR-005
 ---
 
@@ -16,7 +16,8 @@ related_adr: ADR-005
 
 UAT Precondition Checker - Verify that the environment is configured for real end-to-end testing with NO MOCKING before UAT tests run.
 
-**Reference**: See `plans/stories/ADR-LOG.md` → ADR-005 for policy details.
+**Reference**: See ADR-005 for policy details.
+(Query KB: `kb_search({ query: 'ADR-005 testing strategy real services' })`)
 
 ---
 
@@ -30,17 +31,18 @@ UAT Precondition Checker - Verify that the environment is configured for real en
 
 ## Precondition Checks (ALL MUST PASS)
 
-| Check | What | How | Failure Message |
-|-------|------|-----|-----------------|
-| **MSW Disabled** | `VITE_ENABLE_MSW` is NOT `true` | Read env files, check process.env | "MSW is enabled. UAT requires real services. Set VITE_ENABLE_MSW=false" |
-| **API Reachable** | Health endpoint responds | `curl $VITE_SERVERLESS_API_BASE_URL/health` | "API not reachable at {url}. Start backend or check VITE_SERVERLESS_API_BASE_URL" |
-| **Cognito Reachable** | Cognito pool responds | Check `.well-known/jwks.json` endpoint | "Cognito pool not reachable. Check VITE_AWS_USER_POOL_ID and network" |
+| Check                 | What                            | How                                         | Failure Message                                                                   |
+| --------------------- | ------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| **MSW Disabled**      | `VITE_ENABLE_MSW` is NOT `true` | Read env files, check process.env           | "MSW is enabled. UAT requires real services. Set VITE_ENABLE_MSW=false"           |
+| **API Reachable**     | Health endpoint responds        | `curl $VITE_SERVERLESS_API_BASE_URL/health` | "API not reachable at {url}. Start backend or check VITE_SERVERLESS_API_BASE_URL" |
+| **Cognito Reachable** | Cognito pool responds           | Check `.well-known/jwks.json` endpoint      | "Cognito pool not reachable. Check VITE_AWS_USER_POOL_ID and network"             |
 
 ---
 
 ## Inputs
 
 From orchestrator:
+
 - `env_file_path`: Path to .env file to check (e.g., `apps/web/main-app/.env.development`)
 - `api_base_url`: Override for API URL (optional, reads from env if not provided)
 - `cognito_region`: AWS region for Cognito (default: `us-east-1`)
@@ -57,11 +59,13 @@ grep -r "VITE_ENABLE_MSW" apps/web/main-app/.env* 2>/dev/null || echo "NOT_SET"
 ```
 
 **Pass conditions**:
+
 - `VITE_ENABLE_MSW` is not set (defaults to false)
 - `VITE_ENABLE_MSW=false`
 - `VITE_ENABLE_MSW="false"`
 
 **Fail conditions**:
+
 - `VITE_ENABLE_MSW=true`
 - `VITE_ENABLE_MSW="true"`
 - `VITE_ENABLE_MSW=1`
@@ -82,10 +86,12 @@ fi
 ```
 
 **Pass conditions**:
+
 - Health endpoint returns 200
 - Response contains expected health check format
 
 **Fail conditions**:
+
 - Connection refused (backend not running)
 - Timeout (network issue)
 - Non-200 response
@@ -104,10 +110,12 @@ curl -sf "$JWKS_URL" --max-time 5 | jq -e '.keys | length > 0'
 ```
 
 **Pass conditions**:
+
 - JWKS endpoint returns 200
 - Response contains valid keys array
 
 **Fail conditions**:
+
 - Invalid pool ID (404)
 - Network unreachable
 - Malformed response
@@ -121,21 +129,21 @@ curl -sf "$JWKS_URL" --max-time 5 | jq -e '.keys | length > 0'
 ```yaml
 # UAT-PRECONDITION-CHECK.yaml
 schema: 1
-timestamp: "2026-02-01T12:00:00Z"
+timestamp: '2026-02-01T12:00:00Z'
 verdict: PASS
 checks:
   msw_disabled:
     status: PASS
-    detail: "VITE_ENABLE_MSW not set (defaults to false)"
+    detail: 'VITE_ENABLE_MSW not set (defaults to false)'
   api_reachable:
     status: PASS
-    detail: "Health check passed at http://localhost:3001/health"
+    detail: 'Health check passed at http://localhost:3001/health'
     response_time_ms: 45
   cognito_reachable:
     status: PASS
-    detail: "JWKS endpoint responded with 2 keys"
-    pool_id: "us-east-1_jJPnVUCxF"
-message: "All preconditions passed. UAT may proceed."
+    detail: 'JWKS endpoint responded with 2 keys'
+    pool_id: 'us-east-1_jJPnVUCxF'
+message: 'All preconditions passed. UAT may proceed.'
 ```
 
 ### Any Check Fails
@@ -143,20 +151,20 @@ message: "All preconditions passed. UAT may proceed."
 ```yaml
 # UAT-PRECONDITION-CHECK.yaml
 schema: 1
-timestamp: "2026-02-01T12:00:00Z"
+timestamp: '2026-02-01T12:00:00Z'
 verdict: FAIL
 checks:
   msw_disabled:
     status: FAIL
-    detail: "VITE_ENABLE_MSW=true found in .env.development"
-    file: "apps/web/main-app/.env.development"
+    detail: 'VITE_ENABLE_MSW=true found in .env.development'
+    file: 'apps/web/main-app/.env.development'
     line: 15
   api_reachable:
     status: PASS
-    detail: "Health check passed"
+    detail: 'Health check passed'
   cognito_reachable:
     status: SKIP
-    detail: "Skipped due to earlier failure"
+    detail: 'Skipped due to earlier failure'
 message: |
   UAT BLOCKED: MSW is enabled.
 
@@ -167,7 +175,7 @@ message: |
     2. Ensure backend is running: pnpm --filter lego-api dev
     3. Re-run UAT precondition check
 
-  Reference: plans/stories/ADR-LOG.md → ADR-005
+  Reference: ADR-005 (query KB: kb_search({ query: 'ADR-005 testing strategy real services' }))
 ```
 
 ---
@@ -184,6 +192,7 @@ On completion, output one of:
 ## Integration Points
 
 This agent is called by:
+
 - `uat-orchestrator.agent.md` - Before running any UAT tests
 - `/qa-verify-story` - During UAT phase
 - `scripts/uat-preflight.sh` - CI/CD pipeline
@@ -192,10 +201,10 @@ This agent is called by:
 
 ## Error Recovery Guidance
 
-| Failure | Likely Cause | Fix |
-|---------|--------------|-----|
-| MSW enabled | Dev forgot to disable | `VITE_ENABLE_MSW=false` in .env |
-| API unreachable | Backend not running | `pnpm --filter lego-api dev` |
-| API unreachable | Wrong port | Check `VITE_SERVERLESS_API_BASE_URL` |
-| Cognito unreachable | Invalid pool ID | Verify `VITE_AWS_USER_POOL_ID` |
-| Cognito unreachable | Network/VPN issue | Check internet connection |
+| Failure             | Likely Cause          | Fix                                  |
+| ------------------- | --------------------- | ------------------------------------ |
+| MSW enabled         | Dev forgot to disable | `VITE_ENABLE_MSW=false` in .env      |
+| API unreachable     | Backend not running   | `pnpm --filter lego-api dev`         |
+| API unreachable     | Wrong port            | Check `VITE_SERVERLESS_API_BASE_URL` |
+| Cognito unreachable | Invalid pool ID       | Verify `VITE_AWS_USER_POOL_ID`       |
+| Cognito unreachable | Network/VPN issue     | Check internet connection            |

@@ -72,20 +72,6 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
     return <p className="text-slate-500">No stories match the current filters.</p>
   }
 
-  // Check if there are any dependencies at all
-  const hasDeps =
-    stories.some(s => (s.dependencies ?? []).length > 0 || s.blockedByStory) || waves.length > 1
-
-  if (!hasDeps) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="text-3xl mb-3 text-slate-700">◈</div>
-        <p className="text-slate-400 font-medium">No dependencies</p>
-        <p className="text-slate-600 text-sm mt-1">None of the visible stories have blockers.</p>
-      </div>
-    )
-  }
-
   // Find first wave with incomplete work
   const firstActionableWave = waves.find(w => waveGroups.get(w)!.some(s => !isComplete(s.state)))
 
@@ -134,16 +120,16 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
               >
                 Wave {wave}
               </span>
-              {isActionable && (
+              {isActionable ? (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
                   NEXT
                 </span>
-              )}
-              {allDone && (
+              ) : null}
+              {allDone ? (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500/60">
                   DONE
                 </span>
-              )}
+              ) : null}
               <span className="text-[10px] text-slate-600 ml-auto">
                 {group.filter(s => isComplete(s.state)).length}/{group.length} complete
               </span>
@@ -208,13 +194,13 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                           </button>
                         </span>
                       </div>
-                      {story.priority && (
+                      {story.priority ? (
                         <span
                           className={`font-mono text-[10px] font-semibold ${priorityColor(story.priority)}`}
                         >
                           {story.priority}
                         </span>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Title */}

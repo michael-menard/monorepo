@@ -18,13 +18,15 @@ import { eq, and } from 'drizzle-orm'
 import { ZodError } from 'zod'
 import { logger } from '@repo/logger'
 import { getDbClient } from '../../db/client.js'
-import { stories, planStoryLinks, storyArtifacts } from '../../db/schema.js'
+import { stories, planStoryLinks, storyArtifacts, storyDependencies } from '../../db/schema.js'
 import {
   kb_create_story,
   kb_get_story,
   kb_list_stories,
   kb_update_story,
   kb_update_story_status,
+  kb_add_dependency,
+  kb_get_story_plan_links,
   KbCreateStoryInputSchema,
   KbUpdateStoryInputSchema,
 } from '../story-crud-operations.js'
@@ -85,6 +87,8 @@ beforeAll(async () => {
 afterEach(async () => {
   // Clean up all test stories created during test (plan links first due to FK)
   for (const id of testStoryIds) {
+    await db.delete(storyDependencies).where(eq(storyDependencies.storyId, id))
+    await db.delete(storyDependencies).where(eq(storyDependencies.dependsOnId, id))
     await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
@@ -94,6 +98,8 @@ afterEach(async () => {
 afterAll(async () => {
   // Final safety cleanup
   for (const id of testStoryIds) {
+    await db.delete(storyDependencies).where(eq(storyDependencies.storyId, id))
+    await db.delete(storyDependencies).where(eq(storyDependencies.dependsOnId, id))
     await db.delete(planStoryLinks).where(eq(planStoryLinks.storyId, id))
     await db.delete(stories).where(eq(stories.storyId, id))
   }
@@ -858,5 +864,272 @@ describe('kb_update_story_status — artifact gate enforcement', () => {
     expect(result.updated).toBe(false)
     expect(result.message).toMatch(/elaboration/)
     expect(result.message).toMatch(/not found in KB/)
+  })
+})
+
+// ============================================================================
+// kb_add_dependency Tests
+// ============================================================================
+
+describe('kb_add_dependency', () => {
+  it('creates a dependency between two stories', async () => {
+    const storyA = makeStoryId('DEP-A')
+    const storyB = makeStoryId('DEP-B')
+    testStoryIds.push(storyA, storyB)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(true)
+    expect(result.message).toContain('Dependency created')
+  })
+
+  it('is idempotent — duplicate insert returns created=false', async () => {
+    const storyA = makeStoryId('DEP-IDEM-A')
+    const storyB = makeStoryId('DEP-IDEM-B')
+    testStoryIds.push(storyA, storyB)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+
+    await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('already exists')
+  })
+
+  it('rejects self-referential dependency', async () => {
+    const storyA = makeStoryId('DEP-SELF')
+    testStoryIds.push(storyA)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('self-referential')
+  })
+
+  it('dependency appears in kb_get_story with include_dependencies', async () => {
+    const storyA = makeStoryId('DEP-VIS-A')
+    const storyB = makeStoryId('DEP-VIS-B')
+    testStoryIds.push(storyA, storyB)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+
+    await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'follow_up_from',
+    })
+
+    const result = await kb_get_story(deps, {
+      story_id: storyB,
+      include_dependencies: true,
+    })
+
+    expect(result.dependencies).toBeDefined()
+    expect(result.dependencies!.length).toBeGreaterThanOrEqual(1)
+    const dep = result.dependencies!.find(
+      d => d.storyId === storyB && d.dependsOnId === storyA,
+    )
+    expect(dep).toBeDefined()
+    expect(dep!.dependencyType).toBe('follow_up_from')
+  })
+
+  it('rejects orphan — depends_on_id does not exist', async () => {
+    const storyA = makeStoryId('DEP-ORPH-A')
+    testStoryIds.push(storyA)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: 'NONEXISTENT-STORY-999',
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('depends_on_id not found')
+  })
+
+  it('rejects orphan — story_id does not exist', async () => {
+    const storyA = makeStoryId('DEP-ORPH-B')
+    testStoryIds.push(storyA)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+
+    const result = await kb_add_dependency(deps, {
+      story_id: 'NONEXISTENT-STORY-999',
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('story_id not found')
+  })
+
+  it('rejects direct cycle A→B→A', async () => {
+    const storyA = makeStoryId('DEP-CYC2-A')
+    const storyB = makeStoryId('DEP-CYC2-B')
+    testStoryIds.push(storyA, storyB)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+
+    // Create A depends_on B
+    const first = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    expect(first.created).toBe(true)
+
+    // Try B depends_on A — should detect cycle
+    const result = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('Cycle detected')
+  })
+
+  it('rejects transitive cycle A→B→C→A', async () => {
+    const storyA = makeStoryId('DEP-CYC3-A')
+    const storyB = makeStoryId('DEP-CYC3-B')
+    const storyC = makeStoryId('DEP-CYC3-C')
+    testStoryIds.push(storyA, storyB, storyC)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+    await kb_create_story(deps, { story_id: storyC, title: 'Story C' })
+
+    // Create chain: A depends_on B, B depends_on C
+    await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyC,
+      dependency_type: 'depends_on',
+    })
+
+    // Try C depends_on A — should detect transitive cycle
+    const result = await kb_add_dependency(deps, {
+      story_id: storyC,
+      depends_on_id: storyA,
+      dependency_type: 'depends_on',
+    })
+
+    expect(result.created).toBe(false)
+    expect(result.message).toContain('Cycle detected')
+  })
+
+  it('allows valid dependency chain without cycle', async () => {
+    const storyA = makeStoryId('DEP-CHAIN-A')
+    const storyB = makeStoryId('DEP-CHAIN-B')
+    const storyC = makeStoryId('DEP-CHAIN-C')
+    testStoryIds.push(storyA, storyB, storyC)
+
+    await kb_create_story(deps, { story_id: storyA, title: 'Story A' })
+    await kb_create_story(deps, { story_id: storyB, title: 'Story B' })
+    await kb_create_story(deps, { story_id: storyC, title: 'Story C' })
+
+    // A depends_on B, B depends_on C — no cycle
+    const r1 = await kb_add_dependency(deps, {
+      story_id: storyA,
+      depends_on_id: storyB,
+      dependency_type: 'depends_on',
+    })
+    expect(r1.created).toBe(true)
+
+    const r2 = await kb_add_dependency(deps, {
+      story_id: storyB,
+      depends_on_id: storyC,
+      dependency_type: 'depends_on',
+    })
+    expect(r2.created).toBe(true)
+  })
+})
+
+// ============================================================================
+// kb_get_story_plan_links Tests
+// ============================================================================
+
+describe('kb_get_story_plan_links', () => {
+  it('returns empty when story has no plan links', async () => {
+    const storyId = makeStoryId('PLAN-NONE')
+    testStoryIds.push(storyId)
+
+    await kb_create_story(deps, { story_id: storyId, title: 'No Plan Story' })
+
+    const result = await kb_get_story_plan_links(deps, { story_id: storyId })
+
+    expect(result.links).toEqual([])
+    expect(result.message).toContain('No plan links')
+  })
+
+  it('returns plan link when story was created with plan_slug', async () => {
+    const storyId = makeStoryId('PLAN-HAS')
+    testStoryIds.push(storyId)
+
+    // Need a plan to exist first — use raw insert to avoid depending on plan-operations
+    // Check if a test plan exists, create one if not
+    const testPlanSlug = `test-plan-${Date.now()}`
+    const { plans } = await import('../../db/schema.js')
+    await db
+      .insert(plans)
+      .values({
+        planSlug: testPlanSlug,
+        title: 'Test Plan',
+        type: 'feature',
+        status: 'draft',
+        summary: 'Test plan for plan links test',
+      })
+      .onConflictDoNothing()
+
+    try {
+      await kb_create_story(deps, {
+        story_id: storyId,
+        title: 'Plan-Linked Story',
+        plan_slug: testPlanSlug,
+      })
+
+      const result = await kb_get_story_plan_links(deps, { story_id: storyId })
+
+      expect(result.links.length).toBeGreaterThanOrEqual(1)
+      const link = result.links.find(l => l.plan_slug === testPlanSlug)
+      expect(link).toBeDefined()
+      expect(link!.link_type).toBe('spawned_from')
+    } finally {
+      // Clean up test plan
+      await db.delete(planStoryLinks).where(eq(planStoryLinks.planSlug, testPlanSlug))
+      await db.delete(plans).where(eq(plans.planSlug, testPlanSlug))
+    }
   })
 })

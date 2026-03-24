@@ -4,7 +4,7 @@ updated: 2026-02-01
 version: 3.1.0
 type: leader
 permission_level: orchestrator
-triggers: ["/dev-implement-story", "/dev-fix-story"]
+triggers: ['/dev-implement-story', '/dev-fix-story']
 consolidates: [dev-implement-verification-leader, dev-fix-verification-leader]
 skills_used:
   - /checkpoint
@@ -16,6 +16,7 @@ skills_used:
 **Model**: haiku (implement uses sonnet-level logic internally)
 
 ## Role
+
 Verification Leader - Verify build, tests, and E2E (UI and/or API).
 Orchestrates Verifier and Playwright workers based on scope.
 
@@ -23,10 +24,10 @@ Orchestrates Verifier and Playwright workers based on scope.
 
 ## Mode Selection
 
-| Mode | Source | Workers | Output |
-|------|--------|---------|--------|
-| `implement` | `/dev-implement-story` | Verifier + Playwright (if frontend or backend) | Full VERIFICATION-SUMMARY.md |
-| `fix` | `/dev-fix-story` | Verifier + Playwright (if frontend or backend) | CHECKPOINT.yaml fix_cycles entry |
+| Mode        | Source                 | Workers                                        | Output                                             |
+| ----------- | ---------------------- | ---------------------------------------------- | -------------------------------------------------- |
+| `implement` | `/dev-implement-story` | Verifier + Playwright (if frontend or backend) | KB verification artifact (full summary)            |
+| `fix`       | `/dev-fix-story`       | Verifier + Playwright (if frontend or backend) | KB checkpoint artifact (fix_cycles entry appended) |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -34,26 +35,25 @@ Orchestrates Verifier and Playwright workers based on scope.
 
 ## Workers
 
-| Worker | Agent File | Output | Condition |
-|--------|------------|--------|-----------|
-| Verifier | `dev-implement-verifier.agent.md` | `VERIFICATION.md` | Always |
-| Playwright | `dev-implement-playwright.agent.md` | Appends to `VERIFICATION.md` | `scope.frontend=true` OR `scope.backend=true` |
+| Worker     | Agent File                          | Output                              | Condition                                     |
+| ---------- | ----------------------------------- | ----------------------------------- | --------------------------------------------- |
+| Verifier   | `dev-implement-verifier.agent.md`   | KB verification artifact            | Always                                        |
+| Playwright | `dev-implement-playwright.agent.md` | Appends to KB verification artifact | `scope.frontend=true` OR `scope.backend=true` |
 
 ---
 
 ## Inputs
 
 From orchestrator context:
-- Feature directory (e.g., `plans/future/wishlist`)
+
 - Story ID (e.g., WISH-001)
 - Mode: `implement` or `fix`
-- Base path: `{FEATURE_DIR}/stories/{STORY_ID}/`
-- Artifacts path: `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/`
 
-From filesystem:
-- `{STORY_ID}/{STORY_ID}.md` - story definition
-- `_implementation/AGENT-CONTEXT.md` - context including mode
-- `_implementation/SCOPE.md` - scope flags (implement mode)
+From Knowledge Base (via MCP tools):
+
+- `kb_get_story_context({ story_id: '{STORY_ID}' })` - story definition
+- `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'context' })` - context including mode
+- `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })` - scope flags (implement mode)
 
 ---
 
@@ -61,7 +61,12 @@ From filesystem:
 
 ### Step 1: Read Scope
 
-Read `_implementation/SCOPE.md` and extract:
+Read scope from KB and extract:
+
+```javascript
+kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })
+```
+
 - `frontend_impacted`: true/false (determines if Playwright UI tests run)
 - `backend_impacted`: true/false (determines if Playwright API tests run)
 
@@ -83,10 +88,9 @@ Task tool:
 
     ---
     STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
-    Output file: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
+    Story context: kb_get_story_context({ story_id: '{STORY_ID}' })
+    Output: kb_write_artifact({ story_id: '{STORY_ID}', artifact_type: 'verification', content: '...' })
 ```
 
 **If frontend_impacted OR backend_impacted = true (same message):**
@@ -101,10 +105,9 @@ Task tool:
 
     ---
     STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
-    Append to: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
+    Story context: kb_get_story_context({ story_id: '{STORY_ID}' })
+    Append to KB verification artifact: kb_read_artifact then kb_write_artifact({ story_id: '{STORY_ID}', artifact_type: 'verification', content: '<existing + playwright results>' })
 
     SCOPE FLAGS:
     frontend_impacted: {true/false}
@@ -117,20 +120,24 @@ Use TaskOutput to wait for each background worker to complete.
 
 ### Step 4: Aggregate Results
 
-Read `VERIFICATION.md` and create `VERIFICATION-SUMMARY.md`:
+Read KB verification artifact and create verification summary:
+
+```javascript
+kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'verification' })
+```
 
 ```markdown
 # Verification Summary - {STORY_ID}
 
 ## Quick Status
 
-| Check | Result | Details |
-|-------|--------|---------|
-| Build | PASS/FAIL | — |
-| Type Check | PASS/FAIL | — errors |
-| Lint | PASS/FAIL | — warnings |
-| Unit Tests | PASS/FAIL | X/Y passed |
-| E2E Tests | PASS/FAIL/SKIPPED | X/Y passed |
+| Check      | Result            | Details    |
+| ---------- | ----------------- | ---------- |
+| Build      | PASS/FAIL         | —          |
+| Type Check | PASS/FAIL         | — errors   |
+| Lint       | PASS/FAIL         | — warnings |
+| Unit Tests | PASS/FAIL         | X/Y passed |
+| E2E Tests  | PASS/FAIL/SKIPPED | X/Y passed |
 
 ## Overall: PASS / FAIL
 
@@ -140,19 +147,19 @@ Read `VERIFICATION.md` and create `VERIFICATION-SUMMARY.md`:
 
 ## Commands Run
 
-| Command | Result | Duration |
-|---------|--------|----------|
-| pnpm build | PASS/FAIL | — |
-| pnpm check-types | PASS/FAIL | — |
-| pnpm lint | PASS/FAIL | — |
-| pnpm test | PASS/FAIL | — |
-| pnpm playwright | PASS/FAIL/SKIPPED | — |
+| Command          | Result            | Duration |
+| ---------------- | ----------------- | -------- |
+| pnpm build       | PASS/FAIL         | —        |
+| pnpm check-types | PASS/FAIL         | —        |
+| pnpm lint        | PASS/FAIL         | —        |
+| pnpm test        | PASS/FAIL         | —        |
+| pnpm playwright  | PASS/FAIL/SKIPPED | —        |
 ```
 
 ### Output (implement mode)
 
-- `_implementation/VERIFICATION.md` (from Verifier)
-- `_implementation/VERIFICATION-SUMMARY.md` (created by leader)
+- KB verification artifact (from Verifier, written via `kb_write_artifact`)
+- KB verification summary written to verification artifact (created by leader)
 
 ---
 
@@ -160,8 +167,18 @@ Read `VERIFICATION.md` and create `VERIFICATION-SUMMARY.md`:
 
 ### Step 1: Read Context and Scope
 
-Read `_implementation/AGENT-CONTEXT.md` for story paths.
-Read `_implementation/SCOPE.md` and extract:
+Read context from KB:
+
+```javascript
+kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'context' })
+```
+
+Read scope from KB and extract:
+
+```javascript
+kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'scope' })
+```
+
 - `frontend_impacted`: true/false
 - `backend_impacted`: true/false
 
@@ -181,10 +198,9 @@ Task tool:
 
     ---
     STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
     Mode: FIX verification
-    Output file: _implementation/VERIFICATION.md
+    Output: kb_write_artifact({ story_id: '{STORY_ID}', artifact_type: 'verification', content: '...' })
 ```
 
 **If frontend_impacted OR backend_impacted = true (same message):**
@@ -199,10 +215,9 @@ Task tool:
 
     ---
     STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/stories/{STORY_ID}/{STORY_ID}.md
-    Append to: {FEATURE_DIR}/stories/{STORY_ID}/_implementation/VERIFICATION.md
+    Story context: kb_get_story_context({ story_id: '{STORY_ID}' })
+    Append to KB verification artifact: kb_read_artifact then kb_write_artifact({ story_id: '{STORY_ID}', artifact_type: 'verification', content: '<existing + playwright results>' })
 
     SCOPE FLAGS:
     frontend_impacted: {true/false}
@@ -213,38 +228,56 @@ Task tool:
 
 Use TaskOutput to wait for each background worker to complete.
 
-### Step 4: Append to CHECKPOINT.yaml fix_cycles
+### Step 4: Update KB checkpoint artifact fix_cycles
 
-Read `_implementation/CHECKPOINT.yaml` and append to `fix_cycles` array:
+Read the existing KB checkpoint artifact and append a new fix_cycles entry:
+
+```javascript
+const checkpoint = await kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'checkpoint' })
+// append fix_cycles entry, then write back:
+await kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'checkpoint',
+  content: updatedCheckpoint,
+})
+```
+
+Fix cycles entry structure:
 
 ```yaml
 fix_cycles:
-  - schema_version: 1              # backward compatibility tracking
-    iteration: N                   # increment from last entry, or 1 if first
-    triggered_by: code_review      # code_review | qa
-    started_at: "{ISO_TIMESTAMP}"  # from AGENT-CONTEXT.md or current time
-    completed_at: "{ISO_TIMESTAMP}"
+  - schema_version: 1 # backward compatibility tracking
+    iteration: N # increment from last entry, or 1 if first
+    triggered_by: code_review # code_review | qa
+    started_at: '{ISO_TIMESTAMP}' # from KB context artifact or current time
+    completed_at: '{ISO_TIMESTAMP}'
     issues_fixed:
-      - file: "src/..."
+      - file: 'src/...'
         line: N
-        issue: "..."
+        issue: '...'
         severity: high
-    verification_result: PASS      # PASS | FAIL
+    verification_result: PASS # PASS | FAIL
 ```
 
-Populate `issues_fixed` from `_implementation/FIX-CONTEXT.yaml` if it exists.
+Populate `issues_fixed` from KB fix_summary artifact if it exists:
+
+```javascript
+kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'fix_summary' })
+```
+
 Set `verification_result` to `PASS` if all checks passed, `FAIL` otherwise.
 
 ### Output (fix mode)
 
-- `_implementation/VERIFICATION.md` (from Verifier + Playwright)
-- `_implementation/CHECKPOINT.yaml` (fix_cycles entry appended)
+- KB verification artifact updated (from Verifier + Playwright)
+- KB checkpoint artifact updated (fix_cycles entry appended)
 
 ---
 
 ## Completion Signal
 
 End with exactly one of:
+
 - `VERIFICATION COMPLETE` - all checks passed
 - `VERIFICATION FAILED: <summary>` - one or more checks failed
 - `VERIFICATION BLOCKED: <reason>` - worker blocked
@@ -255,10 +288,10 @@ End with exactly one of:
 
 No retries. Failures are reported back to parent leader or user for manual intervention.
 
-| Scenario | Action |
-|----------|--------|
-| Any check fails | No retry - return FAILED |
-| Worker blocked | No retry - return BLOCKED |
+| Scenario        | Action                    |
+| --------------- | ------------------------- |
+| Any check fails | No retry - return FAILED  |
+| Worker blocked  | No retry - return BLOCKED |
 
 ---
 
@@ -280,6 +313,6 @@ Before reporting completion signal, call the token-log skill:
 - Do NOT skip any verification step
 - Do NOT retry failures (report them)
 - ALWAYS spawn parallel workers in a SINGLE message (implement mode)
-- implement mode: ALWAYS create VERIFICATION-SUMMARY.md
-- fix mode: ALWAYS append fix_cycles entry to CHECKPOINT.yaml
+- implement mode: ALWAYS write verification summary to KB verification artifact
+- fix mode: ALWAYS append fix_cycles entry to KB checkpoint artifact
 - ALWAYS report specific failure details

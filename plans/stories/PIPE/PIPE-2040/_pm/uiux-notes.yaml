@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  PIPE-2040 has no UI or UX surface. This story is a purely backend TypeScript change
+  within apps/api/pipeline/src/scheduler/. No React components, no HTTP endpoints exposed
+  to the frontend, no design system interactions. UI/UX review is not applicable.

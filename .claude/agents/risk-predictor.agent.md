@@ -51,15 +51,12 @@ From orchestrator context:
 - `story_seed_path`: Path to STORY-SEED.md
 - `epic`: Epic/domain (for similar story search)
 
-From filesystem:
-
-- STORY-SEED.md at `{story_seed_path}` (contains ACs, scope description)
-- PATTERNS-{month}.yaml from WKFL-006 (optional, degrades gracefully if missing)
-
 From Knowledge Base:
 
+- STORY-SEED content via `kb_read_artifact({ story_id, artifact_type: 'story-seed' })` (contains ACs, scope description)
 - Similar stories via `kb_search` with tags: ['outcome']
-- OUTCOME.yaml files for similar stories
+- OUTCOME data for similar stories via `kb_read_artifact({ story_id: similar_story_id, artifact_type: 'outcome' })`
+- PATTERNS-{month}.yaml from WKFL-006 (optional, degrades gracefully if missing)
 
 ---
 
@@ -71,7 +68,12 @@ From Knowledge Base:
 
 **Actions**:
 
-1. **Read STORY-SEED.md**
+1. **Read story seed from KB**:
+
+   ```javascript
+   const storySeed = await kb_read_artifact({ story_id, artifact_type: 'story-seed' })
+   // storySeed.content contains frontmatter, acceptance_criteria, and scope description
+   ```
 
 2. **Extract AC count**:
    - Count number of items in `acceptance_criteria:` section
@@ -137,21 +139,23 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
    const similar_stories = results.filter(r => r.similarity_score > 0.7).slice(0, 5)
    ```
 
-3. **Load OUTCOME.yaml for each similar story to extract actual_tokens**:
+3. **Load outcome data for each similar story to extract actual_tokens**:
 
    ```javascript
    const story_data = []
    for (const story of similar_stories) {
      try {
-       const outcome_path = `${story.feature_dir}/in-progress/${story.story_id}/_implementation/OUTCOME.yaml`
-       const outcome = parseYaml(readFile(outcome_path))
+       const outcome = await kb_read_artifact({
+         story_id: story.story_id,
+         artifact_type: 'outcome',
+       })
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
-         actual_tokens: outcome?.totals?.tokens_total || null,
+         actual_tokens: outcome?.content?.totals?.tokens_total || null,
        })
      } catch (error) {
-       logger.warn(`Failed to load OUTCOME.yaml for ${story.story_id}`)
+       logger.warn(`Failed to load outcome artifact for ${story.story_id}`)
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
@@ -338,11 +342,11 @@ predictions:
 
 **Logic**:
 
-1. **Load predictions from story YAML**:
+1. **Load predictions from KB**:
 
    ```javascript
-   const story_yaml = parseYaml(readFile(`{feature_dir}/stories/{story_id}/{story_id}.md`))
-   const predictions = story_yaml.predictions
+   const storyArtifact = await kb_read_artifact({ story_id, artifact_type: 'story-seed' })
+   const predictions = storyArtifact?.content?.predictions
 
    if (!predictions) {
      logger.info('No predictions found for story, skipping accuracy tracking')
@@ -350,14 +354,15 @@ predictions:
    }
    ```
 
-2. **Load actuals from OUTCOME.yaml**:
+2. **Load actuals from KB outcome artifact**:
 
    ```javascript
-   const outcome = parseYaml(readFile(outcome_path))
+   const outcomeArtifact = await kb_read_artifact({ story_id, artifact_type: 'outcome' })
+   const outcome = outcomeArtifact?.content
    const actuals = {
-     split: outcome.split_occurred || false,
-     review_cycles: outcome.phases?.dev_implementation?.review_cycles || null,
-     tokens: outcome.totals?.tokens_total || null,
+     split: outcome?.split_occurred || false,
+     review_cycles: outcome?.phases?.dev_implementation?.review_cycles || null,
+     tokens: outcome?.totals?.tokens_total || null,
    }
    ```
 

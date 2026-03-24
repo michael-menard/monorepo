@@ -1,0 +1,57 @@
+feasible: true
+confidence: high
+rationale: >
+  CDBE-3010 is a well-scoped DDL-only migration: one CREATE OR REPLACE VIEW statement
+  plus a pgtap test file. All prerequisites are confirmed in place — exited_at column
+  (migration 1010), idx_story_state_history_open_rows partial index (migration 1010),
+  CDBE-1010 dependency satisfied. LATERAL join pattern is already established in
+  migration 1000. No TypeScript, no API routes, no UI changes. Migration slot 1030
+  is confirmed available. Idempotency is guaranteed by CREATE OR REPLACE VIEW.
+complexity: low
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (1 new SQL file)'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ (1 new test SQL file)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Apply migration 1030 to KB database (port 5433) — psql $KB_DATABASE_URL -f 1030_cdbe3010_stories_current_view.sql'
+    - 'Run pgtap tests — psql $KB_DATABASE_URL -f pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove'
+
+risks:
+  - finding: 'Migration slot collision — dual-1011 collision exists in codebase already'
+    mitigation: 'Verify ls migrations/ at implementation time; slot 1030 is confirmed free as of seed generation. Use next available slot if 1030 is taken.'
+  - finding: 'Trigger enforce_story_state_history_transition (migration 1010) validates transitions; invalid from_state/to_state pairs in pgtap test fixtures will cause INSERT errors'
+    mitigation: 'Use NULL -> backlog (initial) and backlog -> created as pgtap test fixture transitions, which are confirmed valid transitions per migration 1001.'
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pg_prove exits 0 against KB database with all pgtap assertions passing'
+  - 'SELECT * FROM workflow.stories_current LIMIT 5 returns rows with current_state and entered_at populated'
+  - 'Second run of migration SQL exits 0 (idempotency proof)'
+
+subtasks:
+  - id: ST-1
+    title: 'Write migration SQL: 1030_cdbe3010_stories_current_view.sql'
+    goal: 'Create the workflow.stories_current view with safety preamble, explicit column list, LATERAL join, and COMMENT statements'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1000_create_story_details_view.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/999_add_plan_churn_tracking.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql (new file)'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-10', 'AC-11', 'AC-12']
+    depends_on: none
+    verification: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/1030_cdbe3010_stories_current_view.sql && echo "Migration applied successfully"'
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Write pgtap test file: 1030_cdbe3010_stories_current_view_test.sql'
+    goal: 'Write pgtap tests covering view existence, story with one open row, story with no history, story with closed + open rows, and idempotency'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql (new file)'
+    acs: ['AC-9', 'AC-10']
+    depends_on: ST-1
+    verification: 'psql $KB_DATABASE_URL -f apps/api/knowledge-base/src/db/migrations/pgtap/1030_cdbe3010_stories_current_view_test.sql | pg_prove'
+    estimated_tokens: 4000

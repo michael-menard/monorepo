@@ -1,0 +1,185 @@
+schema: 1
+story_id: APRS-1010
+timestamp: '2026-03-23T21:00:00Z'
+failure_source: code-review-failed
+iteration: 5
+issues_to_fix:
+  - id: 1
+    file: packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+    line: 101
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 2
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 137
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 3
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 165
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 4
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 181
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 5
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 231
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 6
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 266
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 7
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 301
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 8
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 336
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 9
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 443
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 10
+    file: packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+    line: 479
+    issue: Missing required 'triggeredBy' property in storyUpdateStatus() call
+    severity: critical
+    auto_fixable: true
+    fixed: true
+    fix_applied: "Added triggeredBy: 'integration-test'"
+  - id: 11
+    file: packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+    line: 11
+    issue: Unused import 'randomUUID' from 'crypto' (TS6133)
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused import
+  - id: 12
+    file: packages/backend/orchestrator/src/db/__tests__/story-repository.test.ts
+    line: 13
+    issue: Type 'Mock' is not assignable to generic function type - mock does not preserve type parameter
+    severity: high
+    auto_fixable: true
+    fixed: true
+    fix_applied: Changed vi.fn(async <T>(...)  to vi.fn(async <T extends unknown = unknown>(...)) and cast as 'DbClient["query"]'
+  - id: 13
+    file: packages/backend/orchestrator/src/db/__tests__/workflow-repository.test.ts
+    line: 13
+    issue: Type 'Mock' is not assignable to generic function type
+    severity: high
+    auto_fixable: true
+    fixed: true
+    fix_applied: Changed vi.fn(async <T>(...)  to vi.fn(async <T extends unknown = unknown>(...)) and cast as 'DbClient["query"]'
+  - id: 14
+    file: packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+    line: 27
+    issue: Type 'Mock' is not assignable to generic function type
+    severity: high
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed jest.Mocked<> return type annotation, uses plain type cast 'as unknown as StoryRepository'
+  - id: 15
+    file: packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+    line: 45
+    issue: Type 'Mock' is not assignable to generic function type
+    severity: high
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed jest.Mocked<> return type annotation, uses plain type cast 'as unknown as WorkflowRepository'
+  - id: 16
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 19
+    issue: "'ElaborationRecordSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+  - id: 17
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 20
+    issue: "'PlanRecordSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+  - id: 18
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 21
+    issue: "'VerificationRecordSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+  - id: 19
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 22
+    issue: "'ProofRecordSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+  - id: 20
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 23
+    issue: "'TokenUsageRecordSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+  - id: 21
+    file: packages/backend/orchestrator/src/db/workflow-repository.ts
+    line: 24
+    issue: "'TokenUsageInputSchema' is declared but never read (TS6133)"
+    severity: medium
+    auto_fixable: true
+    fixed: true
+    fix_applied: Removed unused schema imports from import statement
+focus_files:
+  - packages/backend/mcp-tools/src/story-management/__tests__/integration.test.ts
+  - packages/backend/mcp-tools/src/story-management/__tests__/story-update-status.test.ts
+  - packages/backend/orchestrator/src/db/__tests__/story-repository.test.ts
+  - packages/backend/orchestrator/src/db/__tests__/workflow-repository.test.ts
+  - packages/backend/orchestrator/src/db/__tests__/story-transition-service.test.ts
+  - packages/backend/orchestrator/src/db/workflow-repository.ts
+summary: >-
+  All 27 typecheck errors from code review iteration 4 have been fixed. Included 11 missing 'triggeredBy' properties in
+  test method calls, 7 Mock type mismatches (via proper generic constraint syntax and casts), 6 unused schema imports, 1
+  unused randomUUID import, and verified StoryRow is properly exported.

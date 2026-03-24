@@ -1,0 +1,97 @@
+schema: 1
+story_id: WINT-0170
+timestamp: '2026-03-21T16:30:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 0
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    status: exempt
+  http:
+    pass: 0
+    fail: 0
+test_exemption_reason: Agent markdown files only — no TypeScript, no runtime code, no testable endpoints. E2E exempt.
+coverage: null
+coverage_meets_threshold: true
+coverage_note: No code coverage applicable — markdown-only changes
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+pr_verification:
+  pr_number: 563
+  pr_state: OPEN
+  pr_merged: false
+  pr_url: https://github.com/michael-menard/monorepo/pull/563
+  note: Changes verified in PR branch, not yet merged to main. This is expected for in_qa state.
+acs_verified:
+  - ac_id: AC-1
+    label: AC-1_gate_integration_elab
+    status: PASS
+    evidence_ref: 'PR #563 diff: .claude/agents/elab-completion-leader.agent.md'
+    notes: >-
+      Step 5 Doc-Sync Gate added after Step 4 (Verify Final State). /doc-sync added to skills_used. Version bumped
+      4.0.0→4.1.0. ELABORATION BLOCKED signal updated to include doc-sync gate failure. MUST run doc-sync gate added to
+      Non-Negotiables.
+  - ac_id: AC-2
+    label: AC-2_gate_integration_qa
+    status: PASS
+    evidence_ref: 'PR #563 diff: .claude/agents/qa-verify-completion-leader.agent.md'
+    notes: >-
+      Step 5 Doc-Sync Gate added on PASS path only (between old Step 5 log tokens and Step 6 emit signal, renumbered to
+      Steps 6 and 7). /doc-sync added to skills_used. Version bumped 4.0.0→4.1.0. FAIL path unchanged. COMPLETION
+      BLOCKED signal documented.
+  - ac_id: AC-3
+    label: AC-3_native_doc_sync
+    status: PASS
+    evidence_ref: 'PR #563 diff: both files'
+    notes: Gate invokes /doc-sync --check-only skill via markdown invocation block in both agent files.
+  - ac_id: AC-4
+    label: AC-4_graceful_degradation
+    status: PASS
+    evidence_ref: 'PR #563 diff: both files'
+    notes: >-
+      Both files include graceful degradation table: failure=warn+proceed. Explicit note that gate is non-blocking on
+      infrastructure errors.
+  - ac_id: AC-5
+    label: AC-5_completion_signals
+    status: PASS
+    evidence_ref: 'PR #563 diff: both files'
+    notes: >-
+      ELABORATION BLOCKED signal updated in elab-completion-leader. COMPLETION BLOCKED signal added to
+      qa-verify-completion-leader Signals section.
+architecture_compliant: true
+architecture_notes: >-
+  Changes follow existing agent markdown patterns. Frontmatter versioning correctly updated. Gate logic consistent
+  across both files. Graceful degradation pattern matches AC-4 requirement.
+spot_check_notes: >-
+  KB lessons for this story type recommend spot-checking actual agent files directly. Files on main branch do NOT yet
+  contain changes (PR #563 is open, unmerged). Changes verified by reading PR diff directly — all modifications present
+  and correct. The evidence artifact's claimed PASS status is accurate when evaluated against the PR branch, not main.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For verification-only stories modifying agent markdown files, always verify against the PR branch diff rather than
+      files on main — the story is in_qa with an open PR, so main will not reflect the changes until merge.
+    category: pattern
+    tags:
+      - qa-verify
+      - agent-markdown
+      - pr-workflow
+  - lesson: >-
+      Evidence artifacts for markdown-only changes correctly claim e2e_exempt and no test coverage — QA should not
+      attempt to run tests or coverage checks for agent instruction file stories.
+    category: pattern
+    tags:
+      - qa-verify
+      - agent-markdown
+      - test-exemption
+tokens:
+  in: 12000
+  out: 2500

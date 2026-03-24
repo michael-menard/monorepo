@@ -1,0 +1,129 @@
+feasible: true
+confidence: high
+rationale: >
+  The story is well-scoped with clear canonical patterns to follow. The cron
+  job infrastructure (APIP-3090) is fully built and tested — the partition
+  management job is a near-copy of patternMinerJob with different schedule
+  and implementation function. The SQL migration strategy (rename → create
+  partitioned parent → migrate data → drop old) is idiomatic PostgreSQL.
+  The primary risk is the table rewrite requiring a maintenance window; the
+  cron job itself is low-risk. LOCK_KEYS.PARTITION_MANAGER = 42_005 is the
+  next available integer (existing keys: 42_001–42_004). The story is blocked
+  from implementation (not from elaboration) by CDBE-5010 dependency.
+complexity: high
+change_surface:
+  areas:
+    - 'packages/backend/db (raw SQL migration for lego_dev)'
+    - 'packages/backend/orchestrator/src/cron/jobs/ (new partition-manager.job.ts)'
+    - 'packages/backend/orchestrator/src/cron/constants.ts (add LOCK_KEYS.PARTITION_MANAGER)'
+    - 'packages/backend/orchestrator/src/cron/registry.ts (register new job)'
+    - 'packages/backend/orchestrator/src/cron/ (new partition-manager.ts implementation)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Raw SQL migration must be deployed against lego_dev (not knowledgebase) — requires correct DB connection string in deployment pipeline'
+    - 'Migration should run in a maintenance window due to table rewrite lock duration'
+    - 'Orchestrator must be redeployed after new cron job is registered'
+    - 'Confirm CDBE-5010 is merged and telemetry.agent_invocations + telemetry.token_usage are partitioned before running CDBE-5020 migration (shared maintenance window recommended)'
+
+risks:
+  - finding: 'Table rewrite for telemetry.workflow_events requires full lock on the table for duration of data migration — potentially long-running if table is large'
+    mitigation: 'Schedule migration in a maintenance window with telemetry SDK writes temporarily paused or redirected. Document estimated row count and expected duration. Consider pg_repack as alternative if zero-downtime is required.'
+  - finding: 'CDBE-5010 must be merged before production deployment of CDBE-5020 (partition management job ideally covers all three tables in single maintenance window)'
+    mitigation: 'Coordinate release planning. CDBE-5020 can be elaborated and merged to main behind a feature flag or kept in branch until CDBE-5010 is deployed.'
+  - finding: 'Migration targets lego_dev; existing KB migrations target knowledgebase — wrong DB connection string would apply migration to wrong database'
+    mitigation: 'Include DB safety preamble: DO $$ BEGIN IF current_database() != ''lego_dev'' THEN RAISE EXCEPTION ...; END IF; END $$. Test connection string in staging before production.'
+
+missing_requirements:
+  - 'Confirm whether the partition migration file should live in packages/backend/db/migrations/ (as a raw SQL file alongside Drizzle generated migrations) or as a standalone script — deployment automation depends on this decision'
+  - 'Confirm row count of telemetry.workflow_events in production to estimate maintenance window duration for table rewrite'
+  - 'Confirm DISABLE_CRON_JOB_PARTITION_MANAGER env var convention is consistent with existing DISABLE_CRON_JOB_* env var pattern in buildCronRegistry()'
+
+evidence_expectations:
+  - 'pnpm check-types --filter @repo/orchestrator exits 0'
+  - 'Vitest: CronJobDefinitionSchema.parse(partitionManagerJob) passes'
+  - 'Vitest: advisory lock skip path tested (mock returns false → runPartitionManager not called)'
+  - 'Vitest: December → January boundary produces workflow_events_y2027m01 with correct date range'
+  - 'Vitest: IF NOT EXISTS idempotency (second run logs skip, no error)'
+  - 'Manual: migration deployed to staging lego_dev; SELECT COUNT(*) from partitioned parent matches pre-migration count'
+  - 'Manual: insert via telemetry SDK routes to correct child partition'
+
+subtasks:
+  - id: ST-1
+    title: 'SQL migration — convert telemetry.workflow_events to partitioned table'
+    goal: 'Author raw SQL migration that: adds lego_dev safety preamble, renames existing table, creates partitioned parent with same schema, migrates all rows into appropriate partition(s), creates current month + 2 months ahead partitions, recreates indexes on parent, includes rollback comment block. Migration must be idempotent.'
+    files_to_read:
+      - 'packages/backend/db/src/schema.ts (lines 551-579 — workflowEvents definition)'
+      - 'packages/backend/db/src/migrations/ (confirm migration file location and naming)'
+    files_to_modify:
+      - 'packages/backend/db/src/migrations/<next-migration-file>.sql (new file — raw SQL migration)'
+    acs: ['AC-1', 'AC-12']
+    depends_on: none
+    verification: 'Run migration against lego_dev test DB; verify relkind=p, child partitions exist, row count matches'
+    estimated_tokens: 12000
+
+  - id: ST-2
+    title: 'Add LOCK_KEYS.PARTITION_MANAGER constant'
+    goal: 'Add PARTITION_MANAGER: 42_005 to the LOCK_KEYS object in constants.ts. Value must not conflict with existing keys (42_001–42_004).'
+    files_to_read:
+      - 'packages/backend/orchestrator/src/cron/constants.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/cron/constants.ts'
+    acs: ['AC-4']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/orchestrator exits 0; LOCK_KEYS.PARTITION_MANAGER === 42005'
+    estimated_tokens: 2000
+
+  - id: ST-3
+    title: 'Implement runPartitionManager() function with Zod config schema'
+    goal: 'Create packages/backend/orchestrator/src/cron/partition-manager.ts implementing runPartitionManager(dbClient, config?): determines upcoming month(s) partition names using correct YYYY/MM date arithmetic (including year rollover), executes CREATE TABLE IF NOT EXISTS telemetry.workflow_events_y<YYYY>m<MM> PARTITION OF telemetry.workflow_events FOR VALUES FROM (<start>) TO (<end>) for each month, logs success/skip via @repo/logger, handles DB errors gracefully. Define PartitionManagerConfigSchema (z.object) with monthsAhead defaulting to 2.'
+    files_to_read:
+      - 'packages/backend/orchestrator/src/cron/advisory-lock.ts'
+      - 'packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/cron/partition-manager.ts (new file)'
+      - 'packages/backend/orchestrator/src/cron/__types__/index.ts (if shared types needed)'
+    acs: ['AC-5', 'AC-6', 'AC-8']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter @repo/orchestrator; Vitest: month boundary tests pass (Dec→Jan, Feb leap year), idempotency test passes'
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: 'Create partitionManagerJob cron job definition and register in registry'
+    goal: 'Create packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts following patternMinerJob pattern: acquire advisory lock LOCK_KEYS.PARTITION_MANAGER, lazy-import runPartitionManager, call with pool, release in finally. Register in registry.ts. Support DISABLE_CRON_JOB_PARTITION_MANAGER=true env var.'
+    files_to_read:
+      - 'packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts'
+      - 'packages/backend/orchestrator/src/cron/registry.ts'
+      - 'packages/backend/orchestrator/src/cron/schemas.ts'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts (new file)'
+      - 'packages/backend/orchestrator/src/cron/registry.ts'
+    acs: ['AC-3', 'AC-7', 'AC-11']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter @repo/orchestrator; Vitest: CronJobDefinitionSchema.parse passes; registry includes job; DISABLE env var excludes job'
+    estimated_tokens: 6000
+
+  - id: ST-5
+    title: 'Write unit tests for partition manager cron job and implementation function'
+    goal: 'Write Vitest tests covering: (a) partitionManagerJob validates against CronJobDefinitionSchema, (b) advisory lock skip path (mock db returns false → runPartitionManager not called), (c) runPartitionManager generates correct partition names for month boundaries (Dec→Jan year rollover, Feb leap year), (d) idempotency (IF NOT EXISTS logs skip, no error), (e) DB error is caught and logged without crashing. Use InMemoryCronAdapter for job tests and mock pg Pool for implementation tests.'
+    files_to_read:
+      - 'packages/backend/orchestrator/src/cron/__tests__/cron.test.ts'
+      - 'packages/backend/orchestrator/src/cron/jobs/partition-manager.job.ts (from ST-4)'
+      - 'packages/backend/orchestrator/src/cron/partition-manager.ts (from ST-3)'
+    files_to_modify:
+      - 'packages/backend/orchestrator/src/cron/__tests__/partition-manager.test.ts (new file)'
+    acs: ['AC-9', 'AC-10']
+    depends_on: ST-4
+    verification: 'pnpm test --filter @repo/orchestrator -- partition-manager; all tests pass; pnpm check-types exits 0'
+    estimated_tokens: 8000
+
+  - id: ST-6
+    title: 'Validate telemetry SDK compatibility post-migration'
+    goal: 'Verify insertWorkflowEvent() and batch-insert.ts continue to work correctly after partition migration. Run existing telemetry SDK tests against a post-migration lego_dev schema. Document verification results in story PROOF.md.'
+    files_to_read:
+      - 'packages/backend/db/src/telemetry-sdk/init.ts'
+      - 'packages/backend/db/src/telemetry-sdk/batch-insert.ts'
+    files_to_modify: []
+    acs: ['AC-2']
+    depends_on: ST-1
+    verification: 'Existing telemetry SDK tests pass against post-migration schema; manual verification: insert routes to correct child partition'
+    estimated_tokens: 4000

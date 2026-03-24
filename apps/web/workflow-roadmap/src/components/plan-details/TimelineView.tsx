@@ -93,24 +93,24 @@ export function TimelineView({ stories }: { stories: PlanStory[] }) {
                       className="w-52 shrink-0 flex flex-col px-2 py-1 hover:bg-slate-800/50 rounded transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
-                        {story.priority && (
+                        {story.priority ? (
                           <span
                             className={`text-xs font-mono font-bold ${getPriorityColor(story.priority, 'text')}`}
                           >
                             {story.priority}
                           </span>
-                        )}
+                        ) : null}
                         <span className="font-mono text-xs text-cyan-400/80">{story.storyId}</span>
-                        {story.isExternal && (
+                        {story.isExternal ? (
                           <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-slate-700/60 text-slate-400 border border-slate-600/40">
                             EXT
                           </span>
-                        )}
-                        {(story.isBlocked || story.hasBlockers) && (
+                        ) : null}
+                        {story.isBlocked || story.hasBlockers ? (
                           <span title="Has blockers" className="text-xs leading-none">
                             ⚠️
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <span className="text-xs text-slate-500 truncate leading-tight">
                         {story.title ?? '—'}

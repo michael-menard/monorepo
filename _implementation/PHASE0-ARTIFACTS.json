@@ -1,0 +1,107 @@
+{
+  "phase": "setup",
+  "iteration": 0,
+  "story_id": "WINT-8090",
+  "timestamp": "2026-03-22T22:05:00Z",
+  "artifacts": [
+    {
+      "type": "checkpoint",
+      "schema": 1,
+      "content": {
+        "story_id": "WINT-8090",
+        "timestamp": "2026-03-22T22:05:00Z",
+        "current_phase": "setup",
+        "last_successful_phase": null,
+        "iteration": 0,
+        "max_iterations": 3,
+        "blocked": false,
+        "forced": false,
+        "warnings": [
+          "Performance flag on new queries — test coverage required"
+        ],
+        "gen_mode": false,
+        "worktree_path": "/Users/michaelmenard/Development/monorepo/tree/story/WINT-8090",
+        "branch_name": "story/WINT-8090"
+      }
+    },
+    {
+      "type": "scope",
+      "schema": 1,
+      "content": {
+        "story_id": "WINT-8090",
+        "timestamp": "2026-03-22T22:05:00Z",
+        "gen_mode": false,
+        "summary": "Add backlog health and activity metrics (total open, by priority/type, intake rate, aging distribution) to workflow-roadmap dashboard via extended SQL queries and new frontend panels",
+        "touches": {
+          "backend": true,
+          "frontend": true,
+          "packages": false,
+          "db": false,
+          "contracts": true,
+          "ui": true,
+          "infra": false
+        },
+        "touched_paths_globs": [
+          "apps/api/workflow-admin/roadmap-svc/src/services/dashboardService.ts",
+          "apps/web/workflow-roadmap/src/pages/DashboardPage/index.tsx",
+          "apps/web/workflow-roadmap/src/components/dashboard/**",
+          "apps/web/workflow-roadmap/src/store/roadmapApi.ts"
+        ],
+        "risk_flags": {
+          "auth": false,
+          "payments": false,
+          "migrations": false,
+          "external_apis": false,
+          "security": false,
+          "performance": true
+        },
+        "elaboration": "completed",
+        "files_to_create": [
+          "apps/web/workflow-roadmap/src/components/dashboard/BacklogSummaryCard/index.tsx",
+          "apps/web/workflow-roadmap/src/components/dashboard/BacklogSummaryCard/__tests__/BacklogSummaryCard.test.tsx",
+          "apps/web/workflow-roadmap/src/components/dashboard/BacklogAgingList/index.tsx",
+          "apps/web/workflow-roadmap/src/components/dashboard/BacklogAgingList/__tests__/BacklogAgingList.test.tsx"
+        ],
+        "files_to_modify": [
+          "apps/api/workflow-admin/roadmap-svc/src/services/dashboardService.ts",
+          "apps/web/workflow-roadmap/src/pages/DashboardPage/index.tsx",
+          "apps/web/workflow-roadmap/src/store/roadmapApi.ts"
+        ],
+        "dependencies": [
+          "Existing DashboardResponse type in dashboardService.ts",
+          "RTK Query useGetDashboardQuery hook",
+          "Tailwind CSS utility classes",
+          "@repo/app-component-library components (Card, Button, Table, Badge, etc.)",
+          "workflow.stories table for backlog metrics",
+          "workflow.story_state_history table for aging distribution"
+        ],
+        "blocked_by": [],
+        "ac_summary": {
+          "total": 8,
+          "verdict": "CONDITIONAL_PASS",
+          "notes": "BacklogIntakeChart explicitly OUT of scope. Test plan added. Chart ambiguity resolved."
+        },
+        "implementation_notes": [
+          "Backend: extend getDashboard() with new SQL queries against workflow.stories for backlog metrics",
+          "Extend DashboardResponse type with backlog metrics fields (total open, by priority, by type, intake rate, aging distribution)",
+          "Frontend: add BacklogSummaryCard component showing summary stats in grid layout",
+          "Frontend: add BacklogAgingList component showing aging distribution",
+          "Both components integrate into existing DashboardPage polling cycle (60-second intervals)",
+          "AC-7: unit tests for new SQL queries",
+          "AC-8: component tests for new panels"
+        ]
+      }
+    }
+  ],
+  "setup_log": {
+    "preconditions_verified": true,
+    "story_exists": true,
+    "status": "ready-to-work",
+    "no_prior_implementation": true,
+    "no_blocking_dependencies": true,
+    "branch_exists": true,
+    "worktree_accessible": true
+  },
+  "next_phase": "implementation",
+  "status": "COMPLETE"
+}

@@ -179,6 +179,25 @@ export interface StoryDetails {
   } | null
 }
 
+export interface PlanImpact {
+  exclusiveStories: Array<{
+    storyId: string
+    title: string
+    state: string | null
+    hasActiveWorktree: boolean
+  }>
+  sharedStories: Array<{
+    storyId: string
+    title: string
+    state: string | null
+    otherPlanSlugs: string[]
+  }>
+  downstreamPlans: Array<{
+    planSlug: string
+    title: string
+  }>
+}
+
 export interface DashboardResponse {
   flowHealth: {
     totalStories: number
@@ -221,6 +240,15 @@ export interface DashboardResponse {
     fanOut: number
     plans: Array<{ planSlug: string; title: string }>
   }>
+  backlogSummary: {
+    totalOpen: number
+    byPriority: Array<{ priority: string; count: number }>
+    byType: Array<{ taskType: string; count: number }>
+  }
+  backlogAging: Array<{
+    bucket: string
+    count: number
+  }>
 }
 
 export const roadmapApi = createApi({
@@ -249,6 +277,24 @@ export const roadmapApi = createApi({
         url: '/roadmap',
         params,
       }),
+      // Infinite scroll: cache key ignores `page` so pages accumulate
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { page: _page, ...rest } = queryArgs
+        return rest
+      },
+      // Merge new page data into existing cached data
+      merge: (currentCache, newItems) => {
+        if (newItems.pagination.page === 1) {
+          // Filter reset — replace entirely
+          return newItems
+        }
+        return {
+          data: [...currentCache.data, ...newItems.data],
+          pagination: newItems.pagination,
+        }
+      },
+      // Re-fetch when page changes (even though cache key is the same)
+      forceRefetch: ({ currentArg, previousArg }) => currentArg !== previousArg,
       providesTags: ['Plans'],
     }),
     getPlanBySlug: builder.query<PlanDetails, string>({
@@ -309,6 +355,20 @@ export const roadmapApi = createApi({
         'Dashboard',
       ],
     }),
+    getPlanImpact: builder.query<PlanImpact, string>({
+      query: slug => `/roadmap/${slug}/impact`,
+    }),
+    retirePlan: builder.mutation<
+      { success: boolean },
+      { slug: string; action: 'delete' | 'supersede' }
+    >({
+      query: ({ slug, action }) => ({
+        url: `/roadmap/${slug}/retire`,
+        method: 'POST',
+        body: { action },
+      }),
+      invalidatesTags: ['Plans', 'Stories', 'Dashboard'],
+    }),
     updateStoryContentSection: builder.mutation<
       { storyId: string; sectionName: string },
       { storyId: string; sectionName: string; contentText: string }
@@ -329,7 +389,9 @@ export const {
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
   useGetStoryByIdQuery,
+  useLazyGetPlanImpactQuery,
   useReorderPlansMutation,
+  useRetirePlanMutation,
   useUpdatePlanMutation,
   useUpdateStoryMutation,
   useUpdateStoryContentSectionMutation,

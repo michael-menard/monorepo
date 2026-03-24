@@ -4,7 +4,8 @@
 #
 # Runs the pgtap SQL test suite on every pull request and on pushes to main.
 # Uses a postgres:16 service container with pgtap installed via pg_prove,
-# applies the knowledge-base schema baseline, then runs all tests under tests/db/.
+# applies the knowledge-base schema baseline + all incremental migrations,
+# then runs all tests under tests/db/ and apps/api/knowledge-base/src/db/migrations/pgtap/.
 #
 # Acceptance Criteria Coverage:
 #   AC1 — pgtap installed and runnable in CI
@@ -45,7 +46,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: pgtap
-          POSTGRES_PASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap_ci_test_pw' }}
           POSTGRES_DB: pgtap_test
         ports:
           - 5434:5432
@@ -59,7 +60,7 @@ jobs:
       PGTAP_DB_HOST: localhost
       PGTAP_DB_PORT: 5434
       PGTAP_DB_USER: pgtap
-      PGTAP_DB_PASS: ${{ secrets.PGTAP_DB_PASSWORD }}
+      PGTAP_DB_PASS: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap_ci_test_pw' }}
       PGTAP_DB_NAME: pgtap_test
 
     steps:
@@ -76,17 +77,30 @@ jobs:
 
       - name: Install pgtap extension into test database
         env:
-          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap_ci_test_pw' }}
         run: |
           psql -h localhost -p 5434 -U pgtap -d pgtap_test -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
 
       - name: Apply knowledge-base schema baseline
         env:
-          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap_ci_test_pw' }}
         run: |
           # Apply the full schema so trigger functions, tables, and extensions exist
           psql -h localhost -p 5434 -U pgtap -d pgtap_test \
             -f apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql
+
+      - name: Apply incremental migrations
+        env:
+          PGPASSWORD: ${{ secrets.PGTAP_DB_PASSWORD || 'pgtap_ci_test_pw' }}
+        run: |
+          # Apply all numbered incremental migrations in order so story-specific
+          # tables and functions exist when their pgtap tests run.
+          # Using || true so that already-applied migrations (e.g. covered by
+          # the baseline) don't abort the run.
+          for f in $(ls apps/api/knowledge-base/src/db/migrations/1*.sql 2>/dev/null | sort); do
+            echo "Applying $f..."
+            psql -h localhost -p 5434 -U pgtap -d pgtap_test -f "$f" || true
+          done
 
       - name: Verify pg_prove is available
         run: pg_prove --version

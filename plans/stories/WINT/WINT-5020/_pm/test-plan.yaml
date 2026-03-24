@@ -1,0 +1,100 @@
+strategy: unit+content-inspection
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: 'Agent file exists with all required frontmatter fields'
+    setup: 'Agent file written to .claude/agents/classification.agent.md'
+    action: 'Read file content and parse YAML frontmatter block'
+    expected: 'Frontmatter contains type, permission_level, model, kb_tools (including mlModelGetActive and mlPredictionRecord), shared, and story_id: WINT-5020'
+    evidence: 'Content-inspection test in .claude/agents/__tests__/classification.test.ts'
+  - id: HP-2
+    title: 'Agent file contains all required sections'
+    setup: 'Agent file written to .claude/agents/classification.agent.md'
+    action: 'Read file content and scan for section headings'
+    expected: 'File includes ## Role, ## Mission, ## Inputs, ## Execution (or equivalent phase headings), ## Output, ## Completion Signal sections'
+    evidence: 'Content-inspection test in .claude/agents/__tests__/classification.test.ts'
+  - id: HP-3
+    title: 'Classification Agent records prediction for story entity'
+    setup: 'Active risk_classifier model registered in workflow.ml_models; storyId provided; features object provided'
+    action: 'Agent invokes mlModelGetActive({ modelType: "risk_classifier" }), then mlPredictionRecord with entityType: "story", entityId: storyId, features, prediction'
+    expected: 'Prediction row inserted into workflow.model_predictions with valid modelId; no errors thrown'
+    evidence: 'Unit test mocking mlModelGetActive (returns model row) and mlPredictionRecord (asserts called with correct shape)'
+  - id: HP-4
+    title: 'Quality predictor classification target resolves correctly'
+    setup: 'Active quality_predictor model registered; classificationTarget: "quality"'
+    action: 'Agent invokes mlModelGetActive({ modelType: "quality_predictor" })'
+    expected: 'Agent uses quality_predictor model ID for prediction recording'
+    evidence: 'Unit test asserting mlModelGetActive called with quality_predictor when classificationTarget is "quality"'
+error_cases:
+  - id: EC-1
+    title: 'Heuristic fallback fires when no active model found'
+    setup: 'No active model in workflow.ml_models for the requested type; mlModelGetActive returns empty array'
+    action: 'Agent invokes mlModelGetActive, receives empty result'
+    expected: 'Agent logs a warning via @repo/logger, returns heuristic-based prediction or null, does NOT throw or call mlPredictionRecord with undefined modelId'
+    evidence: 'Unit test mocking mlModelGetActive to return []; asserts logger.warn called; mlPredictionRecord NOT called or called with heuristic-derived result'
+  - id: EC-2
+    title: 'Invalid classificationTarget rejected'
+    setup: 'Agent called with classificationTarget not in enum (quality | risk | effort)'
+    action: 'Agent receives unknown target value'
+    expected: 'Agent returns an error signal or defaults to heuristic; does not pass unknown model type to mlModelGetActive'
+    evidence: 'Unit test passing invalid target string; assert no DB write attempted with invalid modelType'
+  - id: EC-3
+    title: 'mlPredictionRecord failure does not crash agent'
+    setup: 'Active model found; mlPredictionRecord throws DB error'
+    action: 'Agent attempts to record prediction, receives exception from mlPredictionRecord'
+    expected: 'Agent catches error, logs via @repo/logger, emits failure signal to caller; does not propagate uncaught exception'
+    evidence: 'Unit test mocking mlPredictionRecord to throw; assert error caught and logged'
+edge_cases:
+  - id: ED-1
+    title: 'Features override provided by caller'
+    setup: 'Caller provides optional features override object in addition to storyId'
+    action: 'Agent receives features object; uses it directly rather than deriving features from storyId'
+    expected: 'mlPredictionRecord called with caller-supplied features; derived features not computed'
+    evidence: 'Unit test passing features override; assert mlPredictionRecord called with those exact features'
+  - id: ED-2
+    title: 'storyId missing — required input validation'
+    setup: 'Agent invoked without storyId'
+    action: 'Agent attempts to process without required entityId'
+    expected: 'Agent emits error signal or skips prediction recording with descriptive log; does NOT write prediction with null/undefined entityId'
+    evidence: 'Unit test omitting storyId; assert no DB write; logger.error called'
+  - id: ED-3
+    title: 'WINT-5010 not deployed — no training data does not break agent'
+    setup: 'workflow.training_data has zero hitl_interview rows; no active ML model registered'
+    action: 'Agent invokes mlModelGetActive; receives empty; falls back to heuristic'
+    expected: 'Agent operates in heuristic mode; returns deferred/null prediction; emits warning signal; does not fail'
+    evidence: 'EC-1 test covers this; document in test description that this simulates WINT-5010 not deployed'
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'Agent frontmatter: type, permission_level, model, kb_tools, story_id fields present'
+      - 'Agent sections: Role, Mission, Inputs, Execution, Output, Completion Signal present'
+      - 'mlPredictionRecord called with entityType: "story", entityId: storyId'
+      - 'mlModelGetActive called with correct modelType for classificationTarget'
+      - 'logger.warn called when no active model found (not console.warn)'
+      - 'No wint.* or kbar.* schema references in any new files'
+manual_cases:
+  - id: MC-1
+    title: 'End-to-end classification via KB tools (smoke test)'
+    steps:
+      - 'Register a test risk_classifier model via mlModelRegister MCP tool'
+      - 'Invoke classification agent with a real storyId and classificationTarget: "risk"'
+      - 'Verify prediction row appears in workflow.model_predictions via mlPredictionGetByEntity'
+    expected: 'Prediction row present with correct modelId, entityType: "story", entityId matching storyId'
+fixture_definitions:
+  - name: 'MockActiveModel'
+    type: 'object'
+    description: 'Mock return value for mlModelGetActive — { id: uuid, modelType: "risk_classifier", status: "active" }'
+  - name: 'MockPredictionInput'
+    type: 'object'
+    description: 'Valid mlPredictionRecord input: { modelId, predictionType, entityType: "story", entityId: storyId, features: {}, prediction: {} }'
+  - name: 'EmptyModelList'
+    type: 'array'
+    description: 'Empty array [] returned by mlModelGetActive to simulate no active model'
+risks:
+  - 'Agent file content tests are fragile if section headings change — tie to specific heading strings from the agent spec'
+  - 'mlModelGetActive behavior depends on WINT-5010 deployment state; EC-1 and ED-3 must cover the no-model path thoroughly'
+  - 'If compute helper is not delivered in this story, HP-3 and HP-4 will be deferred to a future compute helper story'

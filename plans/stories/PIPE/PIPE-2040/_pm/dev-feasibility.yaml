@@ -1,0 +1,125 @@
+feasible: true
+confidence: high
+rationale: >
+  Both deliverables are straightforward additive changes to the existing SchedulerLoop class.
+  (1) The jobId addition is a single-line change to queue.add() in dispatchStory() — BullMQ
+  already supports JobsOptions including jobId, and the pipeline-queue PipelineQueue.add()
+  signature already forwards opts?: JobsOptions to bullQueue.add(). No wrapper changes needed.
+  (2) The strictFinishBeforeNewStart config flag can reuse the exact SQL pattern from the
+  existing applyFinishBeforeNewStart() method (lines 202–215 of scheduler/index.ts). The
+  Drizzle raw SQL query pattern and makeKbDeps() test mock are both established. The only
+  ambiguity is where attemptNumber comes from in dispatchStory() — reviewing the code confirms
+  it is already a parameter of dispatchStory(story, attemptNumber: number) and is currently
+  hardcoded to 1 at the call site in runOnce() (line 140). The jobId will be
+  `${story.storyId}:implementation:${attemptNumber}` which is fully derivable from available data.
+
+complexity: low
+
+change_surface:
+  areas:
+    - apps/api/pipeline/src/scheduler/index.ts
+    - apps/api/pipeline/src/scheduler/__types__/index.ts
+    - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: >
+      The strictFinishBeforeNewStart filter requires a DB query to detect whether any plan
+      has in_progress stories. The query must return plan-level in_progress data for stories
+      NOT in the eligible list (unlike applyFinishBeforeNewStart which queries for the eligible
+      stories' own plan siblings). The query must answer: "are there any plans with in_progress
+      stories at all?" so that non-sibling stories can be filtered out.
+    mitigation: >
+      Use a two-step approach: (1) existing applyFinishBeforeNewStart() result already identifies
+      which eligible stories have in_progress plan siblings (hasSiblingInProgress Set). (2) To
+      determine "does ANY plan have in_progress work?", run a simple COUNT query:
+      SELECT COUNT(*) FROM workflow.plan_story_links psl JOIN workflow.stories s ON s.story_id = psl.story_id
+      WHERE s.state = 'in_progress'. If count > 0 AND strictFinishBeforeNewStart is true, filter
+      eligible list to only those with hasSiblingInProgress. This reuses the existing DB query
+      pattern and avoids a new complex join.
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pnpm check-types --filter @repo/pipeline exits 0 after all changes'
+  - 'pnpm test --filter @repo/pipeline exits 0 with all tests passing'
+  - 'queue.add() spy shows third argument containing { jobId: "STORY-001:implementation:1" } in test output'
+
+subtasks:
+  - id: ST-1
+    title: 'Add strictFinishBeforeNewStart field to SchedulerConfigSchema'
+    goal: >
+      Extend SchedulerConfigSchema with strictFinishBeforeNewStart: z.boolean().default(false).
+      All existing callers remain unaffected because the field has a default value.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
+    acs:
+      - AC-3
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 2000
+
+  - id: ST-2
+    title: 'Add BullMQ jobId option to dispatchStory() queue.add() call'
+    goal: >
+      In dispatchStory(), pass { jobId: `${story.storyId}:implementation:${attemptNumber}` }
+      as the third argument to queue.add(). The jobId aligns with the thread ID convention
+      {storyId}:{stage}:{attemptNumber}. No other changes to dispatchStory().
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - packages/backend/pipeline-queue/src/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs:
+      - AC-1
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 2000
+
+  - id: ST-3
+    title: 'Implement applyStrictFinishFilter() and wire into runOnce()'
+    goal: >
+      Add private method applyStrictFinishFilter(eligible: StoryRow[]) that:
+      (1) counts in_progress stories across all plan_story_links (raw SQL, same pattern as
+      applyFinishBeforeNewStart); (2) if count > 0, filters eligible list to only stories
+      with in_progress plan siblings (reusing hasSiblingInProgress Set from applyFinishBeforeNewStart
+      or a combined query); (3) returns filtered list. Wire into runOnce() after the existing
+      finishBeforeNewStart reordering step, gated on config.strictFinishBeforeNewStart.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - apps/api/pipeline/src/scheduler/__types__/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs:
+      - AC-4
+      - AC-8
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 8000
+
+  - id: ST-4
+    title: 'Add unit tests for jobId, F006 preservation, and strictFinishBeforeNewStart'
+    goal: >
+      Extend scheduler.test.ts with: (1) test verifying queue.add() receives correct jobId
+      (AC-2); (2) test verifying queue.add() not called when KB returns updated:false (AC-7);
+      (3) test verifying strictFinishBeforeNewStart:true filters correctly (AC-5);
+      (4) test verifying strictFinishBeforeNewStart:false dispatches all (AC-6).
+      All tests use makeQueue(), makeStory(), makeKbDeps() factory helpers.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+      - apps/api/pipeline/src/scheduler/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    acs:
+      - AC-2
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-9
+      - AC-10
+    depends_on: ST-2
+    verification: 'pnpm test --filter @repo/pipeline'
+    estimated_tokens: 10000

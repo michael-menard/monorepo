@@ -4,7 +4,7 @@ updated: 2026-01-25
 version: 4.0.0
 type: leader
 permission_level: docs-only
-triggers: ["/pm-story split"]
+triggers: ['/pm-story split']
 skills_used:
   - /index-update
   - /token-log
@@ -21,10 +21,12 @@ Split an oversized story into smaller, independently implementable stories based
 ## Inputs
 
 From orchestrator context:
+
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID to split (e.g., WISH-007)
 
 From filesystem:
+
 - Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
 - Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
 
@@ -75,9 +77,11 @@ If validation fails → `PM BLOCKED: <validation issue>`
 For each proposed split ID:
 
 1. **List existing stories via KB:**
+
    ```javascript
-   kb_list_stories({ feature: "{feature_slug}", limit: 100 })
+   kb_list_stories({ feature: '{feature_slug}', limit: 100 })
    ```
+
    Extract all existing story IDs from the result.
 
 2. **Check if proposed ID exists in KB:**
@@ -101,6 +105,7 @@ For each proposed split ID:
    `PM FAILED: Could not allocate unique story ID after 10 attempts`
 
 **Example collision resolution:**
+
 ```
 Proposed: WISH-0110 (split 1)
 Collision: WISH-0110 already exists
@@ -112,26 +117,75 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 ### Phase 2: Register Splits in KB
 
-1. Register each split story in the KB:
+1. **Read parent story metadata:**
+
    ```javascript
-   kb_update_story_status({ story_id: "{PREFIX}-XX1Z", state: "backlog", phase: "pm" })
-   kb_update_story_status({ story_id: "{PREFIX}-XX2Z", state: "backlog", phase: "pm" })
-   // (repeat for all splits)
+   kb_get_story({ story_id: '{STORY_ID}', include_dependencies: true })
    ```
 
-2. The KB is the source of truth — no index file update needed
+   Extract: `feature`, `priority`, `description`, and inbound dependencies.
 
-3. **Identify downstream dependencies (DO NOT auto-update):**
-   - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and inspect each story's `depends_on` field
-   - Find all stories where `depends_on` or `blocked_by` contains {STORY_ID}
+2. **Read parent plan linkage:**
+
+   ```javascript
+   kb_get_story_plan_links({ story_id: '{STORY_ID}' })
+   ```
+
+   Extract: `plan_slug` (first link, if any).
+
+3. **Create each split story via `kb_create_story`:**
+
+   ```javascript
+   kb_create_story({
+     story_id: '{PREFIX}-XX1Z',
+     title: '...',
+     feature: '{parent.feature}',
+     state: 'backlog',
+     priority: '{parent.priority}',
+     plan_slug: '{parent.plan_slug}', // links to same plan
+     description: 'Split 1 of N from {STORY_ID}: ...',
+   })
+   ```
+
+   Repeat for each split. This actually creates the story in the KB (unlike `kb_update_story_status` which only updates existing rows).
+
+4. **Copy parent's inbound blocking dependencies to each split:**
+   From `kb_get_story` dependencies where `dependsOnId` references a blocker with type `depends_on` or `blocked_by`:
+
+   ```javascript
+   kb_add_dependency({
+     story_id: '{SPLIT_ID}',
+     depends_on_id: '{blocker_id}',
+     dependency_type: 'depends_on',
+   })
+   ```
+
+5. **Set inter-split dependencies** (from ELAB split_recommendation dependency order):
+
+   ```javascript
+   kb_add_dependency({
+     story_id: '{PREFIX}-XX2Z',
+     depends_on_id: '{PREFIX}-XX1Z',
+     dependency_type: 'depends_on',
+   })
+   ```
+
+6. **Supersede parent story:**
+
+   ```javascript
+   kb_update_story_status({ story_id: '{STORY_ID}', state: 'cancelled' })
+   ```
+
+7. **Identify downstream dependencies (DO NOT auto-update):**
+   - From the parent's dependency data, find stories where `storyId != {STORY_ID}` and `dependsOnId == {STORY_ID}`
    - List these in the output summary as "Requires Review"
    - The PM must manually decide which split part(s) each downstream story should depend on
 
    ```
    Example output:
-   Downstream stories referencing deleted {STORY_ID}:
-   - WISH-0200: Blocked By includes WISH-0100 → Review needed
-   - WISH-0300: Depends On includes WISH-0100 → Review needed
+   Downstream stories referencing cancelled {STORY_ID}:
+   - WISH-0200: depends_on WISH-0100 → Review needed
+   - WISH-0300: blocked_by WISH-0100 → Review needed
 
    Action required: Update these dependencies to reference specific split(s)
    ```
@@ -139,6 +193,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
 ### Phase 2b: Delete Original Story Directory
 
 1. **Delete the entire original story directory:**
+
    ```
    rm -rf {FEATURE_DIR}/*/{STORY_ID}/
    ```
@@ -154,6 +209,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
 ### Phase 3: Create Split Story Directories
 
 For each split (using XXYZ IDs where Y is the split number):
+
 ```
 {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/
 {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/_pm/
@@ -168,8 +224,8 @@ For each split, generate full story following standard structure with modificati
 ```yaml
 ---
 status: backlog
-split_from: {STORY_ID}
-split_part: 1 of N  # Y value
+split_from: { STORY_ID }
+split_part: 1 of N # Y value
 ---
 ```
 
@@ -179,6 +235,7 @@ split_part: 1 of N  # Y value
 ## Split Context
 
 This story is part of a split from {STORY_ID}.
+
 - **Original Story:** {STORY_ID}
 - **Split Reason:** [From ELAB verdict]
 - **This Part:** 1 of N (Y=1)
@@ -186,11 +243,13 @@ This story is part of a split from {STORY_ID}.
 ```
 
 **Key Constraints:**
+
 - Scope limited to ONLY ACs allocated to this split
 - Test Plan covers ONLY ACs in this split
 - Reuse Plan references shared work from sibling splits if applicable
 
 **Standard Sections (scoped to split):**
+
 1. Title
 2. Split Context (special)
 3. Context
@@ -226,13 +285,13 @@ This story is part of a split from {STORY_ID}.
 
 ## Quality Gates
 
-| Gate | Check |
-|------|-------|
-| ELAB verdict | Must be SPLIT REQUIRED |
-| AC complete | All parent ACs allocated to exactly one split |
-| Dependencies clear | Split order explicitly defined |
-| Independently testable | Each split can be verified alone |
-| No scope creep | Splits don't add new scope |
+| Gate                   | Check                                         |
+| ---------------------- | --------------------------------------------- |
+| ELAB verdict           | Must be SPLIT REQUIRED                        |
+| AC complete            | All parent ACs allocated to exactly one split |
+| Dependencies clear     | Split order explicitly defined                |
+| Independently testable | Each split can be verified alone              |
+| No scope creep         | Splits don't add new scope                    |
 
 ## Output Summary
 
@@ -267,6 +326,7 @@ downstream_review_needed:
 ```
 
 **If downstream dependencies exist, always include:**
+
 ```
 ⚠️  DEPENDENCY REVIEW REQUIRED
 
@@ -287,6 +347,7 @@ Run `/index-update` to manually update each dependency.
 ## Token Tracking
 
 Before completion signal:
+
 ```
 /token-log {STORY_ID} pm-split <input-tokens> <output-tokens>
 ```
@@ -304,6 +365,7 @@ Before completion signal:
 ## Next Steps
 
 After completion, report:
+
 - "Created N split stories: {PREFIX}-XX1Z, {PREFIX}-XX2Z, ..."
 - "Dependency chain: Y=1 → Y=2 → ..."
 - "Next step: Run /elab-story {PREFIX}-XX1Z to begin elaboration of first split"

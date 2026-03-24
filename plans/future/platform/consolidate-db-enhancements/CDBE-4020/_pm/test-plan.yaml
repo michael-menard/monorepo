@@ -1,0 +1,130 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'Migration applies cleanly to knowledgebase DB'
+    setup: 'Clean knowledgebase DB with migrations 1001–1010 applied. pgvector >= 0.5.0 installed.'
+    action: 'Apply migration 1011_cdbe4020_embedding_columns_knowledge_tables.sql to knowledgebase DB.'
+    expected: 'Migration executes with zero errors. RAISE NOTICE messages confirm each of five tables altered and each HNSW index created.'
+    evidence: 'psql output shows no ERROR lines; pg_catalog.pg_attribute confirms embedding column on all five tables.'
+
+  - id: HP-2
+    title: 'embedding column exists on all five tables with correct type'
+    setup: 'Migration 1011 applied.'
+    action: 'Run pgtap test 1011_cdbe4020_embedding_columns_knowledge_tables_test.sql.'
+    expected: 'col_type_is assertions pass for public.lessons_learned, public.adrs, public.code_standards, public.rules, public.cohesion_rules — all USER-DEFINED (vector).'
+    evidence: 'pg_prove output: all assertions pass.'
+
+  - id: HP-3
+    title: 'HNSW indexes exist on all five tables'
+    setup: 'Migration 1011 applied.'
+    action: 'Query pg_indexes WHERE tablename IN (five tables) AND indexdef LIKE ''%hnsw%''.'
+    expected: 'Five rows returned, each with indexdef containing ''USING hnsw'' and ''vector_cosine_ops''.'
+    evidence: 'pg_prove col_type_is + has_index assertions pass; pg_indexes query returns 5 rows.'
+
+  - id: HP-4
+    title: 'Drizzle schema compiles clean after kb.ts update'
+    setup: 'kb.ts updated with embedding column on all five table definitions.'
+    action: 'Run pnpm check-types --filter @repo/knowledge-base from monorepo root.'
+    expected: 'Exit code 0. No TypeScript errors.'
+    evidence: 'CI output shows 0 errors for @repo/knowledge-base.'
+
+  - id: HP-5
+    title: 'embedding column is nullable — existing rows unaffected'
+    setup: 'Migration 1011 applied. Tables have pre-existing rows.'
+    action: 'Query SELECT COUNT(*) FROM public.lessons_learned WHERE embedding IS NULL.'
+    expected: 'Count equals total row count (all pre-existing rows have NULL embedding). No NOT NULL constraint violation.'
+    evidence: 'pgtap col_is_null assertion passes; row count unchanged after migration.'
+
+error_cases:
+  - id: EC-1
+    title: 'Migration rejects execution against wrong database'
+    setup: 'lego_dev DB (port 5432) is running. Migration script prepared.'
+    action: 'Run migration SQL against lego_dev (port 5432) instead of knowledgebase.'
+    expected: 'DO block raises EXCEPTION with message containing ''must run against the knowledgebase database'' and current database name. Migration halts with no DDL applied.'
+    evidence: 'psql output shows EXCEPTION, no embedding column on lego_dev tables.'
+
+  - id: EC-2
+    title: 'Migration raises EXCEPTION for pgvector version < 0.5.0'
+    setup: 'Temporarily set extversion to 0.4.4 in pg_extension (or use test DB with older pgvector).'
+    action: 'Run migration SQL.'
+    expected: 'pgvector version guard DO block raises EXCEPTION with message indicating HNSW requires pgvector >= 0.5.0.'
+    evidence: 'psql output shows EXCEPTION. No HNSW index creation attempted.'
+
+  - id: EC-3
+    title: 'Migration is idempotent — second run produces no errors'
+    setup: 'Migration 1011 fully applied.'
+    action: 'Re-run migration 1011 SQL against same database.'
+    expected: 'Zero errors. ADD COLUMN IF NOT EXISTS and CREATE INDEX CONCURRENTLY IF NOT EXISTS guards prevent duplicate objects. RAISE NOTICE messages indicate guards triggered.'
+    evidence: 'No ERROR lines in psql output on second run. pg_indexes count per table unchanged (still 1 HNSW index each).'
+
+edge_cases:
+  - id: ED-1
+    title: 'Table has 0 rows — HNSW index creation succeeds on empty table'
+    setup: 'One or more of the five tables is empty (0 rows).'
+    action: 'Apply migration.'
+    expected: 'HNSW index created successfully on empty table. RAISE NOTICE row count shows 0. No error.'
+    evidence: 'pg_indexes shows HNSW index on empty table.'
+
+  - id: ED-2
+    title: 'Pre-flight row count RAISE NOTICE fires for all five tables'
+    setup: 'Tables have varying row counts (0, 5, 100 rows).'
+    action: 'Apply migration and capture psql output.'
+    expected: 'Eight RAISE NOTICE messages appear: DB safety check, pgvector version check, and one row-count notice per table (5 total).'
+    evidence: 'psql output contains NOTICE lines with COUNT(*) values for all five tables.'
+
+  - id: ED-3
+    title: 'COMMENT ON COLUMN present for all five new embedding columns'
+    setup: 'Migration 1011 applied.'
+    action: 'Query pg_catalog.col_description() or information_schema for all five embedding columns.'
+    expected: 'Each column has a non-null comment containing the migration number prefix (e.g., "1011:") and "CDBE-4020".'
+    evidence: 'pgtap col_comment_is assertion (or manual query) confirms comment on all five columns.'
+
+  - id: ED-4
+    title: 'CREATE INDEX CONCURRENTLY executes outside transaction block'
+    setup: 'Review migration SQL structure.'
+    action: 'Inspect migration SQL to confirm each CREATE INDEX CONCURRENTLY statement is NOT inside a BEGIN/COMMIT transaction block.'
+    expected: 'Each HNSW index creation is a top-level statement (not wrapped in a transaction). Migration SQL structure is reviewed manually or via grep for transaction wrapping around CONCURRENTLY statements.'
+    evidence: 'Code review confirms no BEGIN...COMMIT wraps any CREATE INDEX CONCURRENTLY statement.'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'col_type_is(''public'', ''lessons_learned'', ''embedding'', ''USER-DEFINED'', ...)'
+      - 'col_type_is(''public'', ''adrs'', ''embedding'', ''USER-DEFINED'', ...)'
+      - 'col_type_is(''public'', ''code_standards'', ''embedding'', ''USER-DEFINED'', ...)'
+      - 'col_type_is(''public'', ''rules'', ''embedding'', ''USER-DEFINED'', ...)'
+      - 'col_type_is(''public'', ''cohesion_rules'', ''embedding'', ''USER-DEFINED'', ...)'
+      - 'has_index(''public'', ''lessons_learned'', ''lessons_learned_embedding_idx'', ...)'
+      - 'pg_indexes.indexdef LIKE ''%USING hnsw%'' for all five tables'
+      - 'col_is_nullable(''public'', ''<table>'', ''embedding'', ...) for all five tables'
+      - 'pnpm check-types --filter @repo/knowledge-base exits 0'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify migration filename matches slot'
+    steps:
+      - 'Run: ls apps/api/knowledge-base/src/db/migrations/ | grep -v 999 | sort | tail -5'
+      - 'Confirm migration filename starts with the next free slot number (expected 1011 as of 2026-03-18, but verify at implementation time)'
+      - 'Confirm pgtap test filename has matching slot number'
+    expected: 'Migration filename and pgtap test filename have matching, sequential slot numbers.'
+
+fixture_definitions:
+  - name: knowledgebase_with_migrations_1001_to_1010
+    type: postgresql_db
+    description: 'knowledgebase DB (port 5435) with all migrations up to 1010 applied, pgvector >= 0.5.0 installed, five public-schema knowledge tables populated with at least 1 row each.'
+  - name: knowledge_tables_row_counts
+    type: sql_query
+    description: 'SELECT tablename, COUNT(*) from each of the five target tables — used by pre-flight RAISE NOTICE assertions.'
+
+risks:
+  - 'CREATE INDEX CONCURRENTLY cannot run inside a transaction block in PostgreSQL. If migration SQL wraps HNSW index creation in BEGIN/COMMIT, the migration will fail with "CREATE INDEX CONCURRENTLY cannot run inside a transaction block". Must be verified during code review.'
+  - 'pgtap tests must run AFTER the migration is applied — they do not apply the migration inline. If run against a DB without 1011 applied, all assertions will fail. Document this clearly in the pgtap test file header.'
+  - 'Migration slot 1011 assumed but must be verified at implementation time. If another story claims 1011 before CDBE-4020 implementation begins, all filenames and COMMENT ON prefixes must be updated.'
+  - 'pg_prove tooling must be installed (apt install libtap-parser-sourcehandler-pgtap-perl or equivalent). This is a test environment prerequisite — not managed by this story.'
+  - 'Test for pgvector version < 0.5.0 is difficult to automate without a specially configured DB. Manual verification or documentation of the guard is acceptable as evidence.'

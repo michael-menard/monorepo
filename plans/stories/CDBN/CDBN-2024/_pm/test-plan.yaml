@@ -1,0 +1,117 @@
+strategy: unit+pgtap
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: 'DROP TABLE IF EXISTS public.stories is idempotent'
+    setup: 'Run migration on DB where public.stories does not exist (baseline state)'
+    action: 'Execute the cleanup migration SQL'
+    expected: 'Migration completes with no errors; no exception thrown for missing table'
+    evidence: 'pgtap hasnt_table assertion passes; migration exits with code 0'
+
+  - id: HP-2
+    title: 'findSimilarStories queries workflow.stories successfully'
+    setup: >
+      workflow.stories has embedding vector(1536) column; seed 2-3 story rows with
+      non-null embeddings in workflow.stories; import updated story-similarity.ts
+    action: 'Call findSimilarStories({ embedding: <test vector>, limit: 3 })'
+    expected: 'Returns array of SimilarStoryResult objects with correct shape (validated by Zod schema)'
+    evidence: 'Vitest test passes; returned objects satisfy SimilarStoryResultSchema.parse()'
+
+  - id: HP-3
+    title: 'SimilarStoryResult Zod schema validates correct result shape'
+    setup: 'Construct a plain object matching the expected SimilarStoryResult fields'
+    action: 'Call SimilarStoryResultSchema.parse(object)'
+    expected: 'Returns typed object without throwing; type SimilarStoryResult is inferred correctly'
+    evidence: 'pnpm check-types and Vitest pass with no type errors'
+
+  - id: HP-4
+    title: 'storyDetails removed from legacy.ts with no lingering imports'
+    setup: 'Codebase has storyDetails definition removed from legacy.ts'
+    action: 'Run pnpm check-types'
+    expected: 'No TypeScript errors referencing storyDetails'
+    evidence: 'pnpm check-types exits 0; grep for storyDetails finds no non-comment references'
+
+error_cases:
+  - id: EC-1
+    title: 'findSimilarStories handles empty workflow.stories gracefully'
+    setup: 'workflow.stories table has zero rows with non-null embeddings'
+    action: 'Call findSimilarStories({ embedding: <test vector>, limit: 5 })'
+    expected: 'Returns empty array []; does not throw'
+    evidence: 'Vitest assertion: expect(result).toEqual([])'
+
+  - id: EC-2
+    title: 'Migration does not fail if public.stories already absent'
+    setup: 'DB does not have public.stories table (baseline state after CDBN-2021)'
+    action: 'Re-run the cleanup migration'
+    expected: 'Migration is idempotent; no ERROR logged; exits 0'
+    evidence: 'Second migration run completes without error; pgtap hasnt_table still passes'
+
+  - id: EC-3
+    title: 'findSimilarStories handles null embedding column gracefully'
+    setup: 'workflow.stories has embedding column but all rows have NULL embedding'
+    action: 'Call findSimilarStories with a valid input vector'
+    expected: 'Returns empty array; no runtime SQL error about NULL embedding filter'
+    evidence: 'Vitest assertion passes; no DB exception thrown'
+
+edge_cases:
+  - id: ED-1
+    title: 'Migration slot collision — migration with same slot number already exists'
+    setup: 'Developer picks a migration slot number that already exists in directory'
+    action: 'Try to run migrations'
+    expected: >
+      Migration runner detects duplicate slot and either skips or errors with a clear
+      message. Story AC covers verifying slot at implementation time.
+    evidence: 'Manual check: ls apps/api/knowledge-base/src/db/migrations/ confirms no slot collision'
+
+  - id: ED-2
+    title: 'workflow.stories missing embedding column at runtime'
+    setup: 'embedding column not yet added to workflow.stories in the live DB'
+    action: 'Call findSimilarStories'
+    expected: >
+      Runtime SQL error — this is the blocking conflict. AC-3 prevents this by requiring
+      embedding column confirmed before redirect. Test confirms the AC gate.
+    evidence: 'AC-3 verification query: SELECT column_name FROM information_schema.columns WHERE table_schema=''workflow'' AND table_name=''stories'' AND column_name=''embedding'' returns 1 row'
+
+  - id: ED-3
+    title: 'SimilarStoryResultSchema rejects malformed DB row'
+    setup: 'Mock db.execute to return a row missing required fields (e.g., no storyId)'
+    action: 'Call SimilarStoryResultSchema.safeParse(badRow)'
+    expected: 'Returns { success: false } with descriptive error; does not throw uncaught exception'
+    evidence: 'Vitest: expect(result.success).toBe(false)'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'pgtap: hasnt_table(''public'', ''stories'', ''public.stories should be dropped by CDBN-2024'')'
+      - 'pgtap: has_column(''workflow'', ''stories'', ''embedding'', ''workflow.stories has embedding column'')'
+      - 'Vitest: SimilarStoryResultSchema.parse(row) succeeds for valid shape'
+      - 'pnpm check-types exits 0 with no new errors'
+      - 'pnpm test --filter apps/api/knowledge-base exits 0'
+
+manual_cases:
+  - id: MC-1
+    title: 'Verify cascade-dropped objects are documented in migration'
+    steps:
+      - 'Read the migration SQL file'
+      - 'Confirm inline SQL comments list all objects that will be cascade-dropped (triggers, indexes, functions)'
+      - 'Confirm audit_story_changes() and set_story_completed_at() disposition is documented'
+    expected: 'Migration has inline comments explaining each dropped dependency'
+
+fixture_definitions:
+  - name: 'mockWorkflowStoryRow'
+    type: 'object'
+    description: 'A row matching workflow.stories shape with storyId, title, embedding (vector), similarity score'
+  - name: 'testEmbeddingVector'
+    type: 'number[]'
+    description: '1536-dimension float array for use in findSimilarStories test calls'
+
+risks:
+  - 'embedding column dependency: if workflow.stories lacks embedding in test DB, HP-2 and EC-1 will fail at the DB layer'
+  - 'Migration slot number: must be verified against actual directory listing at implementation time; test assumes slot is correctly assigned'
+  - 'storyDetails import audit: if any file imports storyDetails and is not caught by pnpm check-types (dynamic require), the removal may silently break'
+  - 'audit_story_changes() function: if it still references public.stories columns after the drop, any remaining call sites will error at runtime'

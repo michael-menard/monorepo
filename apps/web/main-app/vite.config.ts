@@ -1,6 +1,10 @@
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+
+const require = createRequire(import.meta.url)
+const { readPort } = require('../../../infra/ports.cjs')
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,13 +22,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: readPort('MAIN_APP_PORT'),
     host: true,
     proxy: {
-      // Proxy all /api/* requests to the backend server (localhost:9000)
+      // Proxy all /api/* requests to the backend server
       // Strips the /api prefix: /api/wishlist -> /wishlist
       '/api': {
-        target: 'http://localhost:9000',
+        target: `http://localhost:${readPort('LEGO_API_PORT')}`,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },

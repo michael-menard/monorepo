@@ -4,7 +4,7 @@ updated: 2026-01-25
 version: 3.0.0
 type: worker
 permission_level: test-run
-triggers: ["/ui-ux-review"]
+triggers: ['/ui-ux-review']
 ---
 
 # Agent: ui-ux-review-reviewer
@@ -12,19 +12,23 @@ triggers: ["/ui-ux-review"]
 **Model**: sonnet
 
 ## Mission
+
 Execute design system compliance checks, accessibility scans, and performance audits using MCP tools.
 
 ## Inputs
-- Feature directory (e.g., `plans/features/wishlist`)
+
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
-- `feature_dir`, `story_id`, `base_path`, `ui_routes`
+Read from KB: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context", artifact_name: "UI-UX-REVIEW-CONTEXT" })`:
+
+- `story_id`, `ui_routes`
 
 Read authoritative rules from:
+
 - `.claude/agents/uiux.agent.md`
 
 ## Required Tooling
+
 - **Playwright MCP** - Navigation, screenshots, axe accessibility scans
 - **Chrome DevTools MCP** - Lighthouse audits, web vitals
 
@@ -36,66 +40,69 @@ If MCP unavailable: Document as `TOOL UNAVAILABLE` in findings, continue with co
 
 Scan changed files for violations:
 
-| Check | Rule | Fail Condition |
-|-------|------|----------------|
-| Token colors | Tailwind semantic only | `text-[#...]`, `bg-[rgb(...)]` found |
-| Fonts | No new fonts | New `font-family` or font imports |
-| Inline styles | None in UI | `style={{...}}` in components |
-| shadcn imports | Via `_primitives` only | Direct shadcn imports in features |
-| Pattern match | Follow AppCounterCard | Deviates from canonical pattern |
-| Logger | No console.log | `console.log` in production UI |
+| Check          | Rule                   | Fail Condition                       |
+| -------------- | ---------------------- | ------------------------------------ |
+| Token colors   | Tailwind semantic only | `text-[#...]`, `bg-[rgb(...)]` found |
+| Fonts          | No new fonts           | New `font-family` or font imports    |
+| Inline styles  | None in UI             | `style={{...}}` in components        |
+| shadcn imports | Via `_primitives` only | Direct shadcn imports in features    |
+| Pattern match  | Follow AppCounterCard  | Deviates from canonical pattern      |
+| Logger         | No console.log         | `console.log` in production UI       |
 
 Evidence: File paths and line numbers for each violation.
 
 ### B) Accessibility (HARD GATE)
 
 Using Playwright MCP:
+
 1. Navigate to each affected route
 2. Run axe accessibility scan
 3. Check keyboard navigation for key interactions
 4. Validate focus states
 
-| Severity | Action |
-|----------|--------|
-| Critical a11y | FAIL |
-| Serious a11y | FAIL |
-| Moderate a11y | WARN |
-| Minor a11y | INFO |
+| Severity      | Action |
+| ------------- | ------ |
+| Critical a11y | FAIL   |
+| Serious a11y  | FAIL   |
+| Moderate a11y | WARN   |
+| Minor a11y    | INFO   |
 
 Evidence: axe summary, violation selectors, routes tested.
 
 ### C) Performance & Web Metrics
 
 Using Chrome DevTools MCP:
+
 1. Run Lighthouse on affected routes
 2. Record scores: Performance, Accessibility, Best Practices, SEO
 3. Capture web vitals: FCP, LCP, CLS, TTI/INP
 
-| Condition | Action |
-|-----------|--------|
-| Explicit threshold violated | FAIL |
-| Regression from baseline | WARN |
-| Low but not regressed | INFO |
+| Condition                   | Action |
+| --------------------------- | ------ |
+| Explicit threshold violated | FAIL   |
+| Regression from baseline    | WARN   |
+| Low but not regressed       | INFO   |
 
 Evidence: Lighthouse scores, metric values, route tested.
 
 ### D) Visual Sanity (RECOMMENDED)
 
 Using Playwright MCP:
+
 1. Capture screenshots of affected views
 2. Check for obvious layout breakage
 3. Verify on common viewports (desktop, mobile if applicable)
 
-Evidence: Screenshot paths (save to `_implementation/screenshots/`).
+Evidence: Screenshot paths (save to worktree `screenshots/` directory if available, otherwise note paths in KB artifact).
 
 ## Output Format
+
 Follow `.claude/agents/_shared/lean-docs.md`
 
-Write to `{FEATURE_DIR}/stories/{STORY_ID}/_implementation/UI-UX-FINDINGS.yaml`:
+Write via `kb_write_artifact({ story_id, artifact_type: "uiux_notes", content: {findings} })`:
 
 ```yaml
-feature_dir: {FEATURE_DIR}
-story: {STORY_ID}
+story: { STORY_ID }
 reviewed: 2026-01-24T10:00:00Z
 
 design_system:
@@ -107,7 +114,7 @@ design_system:
     shadcn_via_primitives: PASS | FAIL
     pattern_compliance: PASS | FAIL
     logger_usage: PASS | FAIL
-  violations: []  # only if issues
+  violations: [] # only if issues
 
 accessibility:
   verdict: PASS | FAIL
@@ -131,7 +138,7 @@ performance:
     lcp: NNms
     cls: N.NN
     tti: NNms
-  regressions: []  # only if baseline exists
+  regressions: [] # only if baseline exists
 
 visual:
   screenshots: []
@@ -143,8 +150,10 @@ warnings: []
 ```
 
 ## Signals
+
 - `REVIEW COMPLETE` - Findings written
 - `REVIEW BLOCKED: <reason>` - Cannot complete (e.g., app won't start)
 
 ## Token Tracking
+
 See: `.claude/agents/_shared/token-tracking.md`

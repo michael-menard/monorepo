@@ -1,0 +1,117 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: 'uat-orchestrator migrated — no hardcoded ADR-LOG.md path'
+    setup: 'Fresh copy of .claude/agents/uat-orchestrator.agent.md post-migration'
+    action: 'Run: grep -n "ADR-LOG.md\|FEATURE_DIR\|_implementation/" .claude/agents/uat-orchestrator.agent.md'
+    expected: 'Zero matches returned'
+    evidence: 'grep exit code 1 (no matches) confirms clean migration'
+  - id: HP-2
+    title: 'uat-precondition-check migrated — no filesystem refs in body'
+    setup: 'Fresh copy of .claude/agents/uat-precondition-check.agent.md post-migration'
+    action: 'Run: grep -n "ADR-LOG.md\|FEATURE_DIR\|_implementation/" .claude/agents/uat-precondition-check.agent.md'
+    expected: 'Zero matches returned'
+    evidence: 'grep exit code 1 (no matches) confirms clean migration'
+  - id: HP-3
+    title: 'review-aggregate-leader verified — existing KB calls preserved, no regression'
+    setup: 'Post-migration .claude/agents/review-aggregate-leader.agent.md'
+    action: 'Grep for kb_read_artifact and kb_write_artifact calls; grep for FEATURE_DIR or _implementation/ refs'
+    expected: 'KB tool calls present; zero FEATURE_DIR or _implementation/ refs'
+    evidence: 'Two-pass grep confirms KB calls intact and filesystem refs removed'
+  - id: HP-4
+    title: 'context-warmer verified clean — zero filesystem refs'
+    setup: '.claude/agents/context-warmer.agent.md (unchanged)'
+    action: 'Run: grep -n "FEATURE_DIR\|_implementation/\|story.yaml\|STATE.md" .claude/agents/context-warmer.agent.md'
+    expected: 'Zero matches returned'
+    evidence: 'grep exit code 1 confirms clean state'
+  - id: HP-5
+    title: 'commitment-gate-agent migrated — READINESS.yaml, GAPS-RANKED.yaml, ATTACK.yaml replaced with kb_read_artifact'
+    setup: 'Post-migration .claude/agents/commitment-gate-agent.agent.md'
+    action: 'Grep for READINESS.yaml, GAPS-RANKED.yaml, ATTACK.yaml, FEATURE_DIR, _implementation/'
+    expected: 'Zero filesystem ref matches; kb_read_artifact calls present for each artifact type'
+    evidence: 'grep scan + presence of kb_read_artifact in call bodies'
+  - id: HP-6
+    title: 'scrum-master agents have deprecation header or KB-native state'
+    setup: 'Post-migration scrum-master-setup-leader.agent.md and scrum-master-loop-leader.agent.md'
+    action: 'Check for deprecation header comment OR verify STATE.md refs replaced with KB calls'
+    expected: 'Either deprecation header present (if deprecated) OR zero STATE.md/_workflow/ refs (if migrated)'
+    evidence: 'grep for DEPRECATED or grep for STATE.md returns expected result'
+  - id: HP-7
+    title: 'Output section prose clean across all migrated agents'
+    setup: 'All migrated agent files post-migration'
+    action: 'Run: grep -n "_implementation/\|{FEATURE_DIR}" .claude/agents/uat-orchestrator.agent.md .claude/agents/uat-precondition-check.agent.md .claude/agents/review-aggregate-leader.agent.md .claude/agents/context-warmer.agent.md .claude/agents/commitment-gate-agent.agent.md .claude/agents/scrum-master-loop-leader.agent.md .claude/agents/scrum-master-setup-leader.agent.md'
+    expected: 'Zero matches across all files'
+    evidence: 'Single grep scan with zero output'
+error_cases:
+  - id: EC-1
+    title: 'ADR-005 constraint language intact in uat agents post-migration'
+    setup: 'Post-migration uat-orchestrator.agent.md and uat-precondition-check.agent.md'
+    action: 'Grep for "ADR-005" or "real services" or "no mock" keyword in both files'
+    expected: 'ADR-005 reference or equivalent constraint language preserved'
+    evidence: 'grep match confirms constraint language not accidentally removed during migration'
+  - id: EC-2
+    title: 'Compatibility shim not modified or removed'
+    setup: 'WINT-7020 compatibility shim file (path from KB migration-plan artifact)'
+    action: 'Verify shim file exists and is unchanged after WINT-7040 implementation'
+    expected: 'Shim file present, unmodified'
+    evidence: 'git diff confirms no changes to shim file'
+  - id: EC-3
+    title: 'No new FEATURE_DIR or _implementation/ writes introduced'
+    setup: 'All files modified during WINT-7040 implementation'
+    action: 'Run git diff --name-only and grep each changed file for new FEATURE_DIR or _implementation/ patterns'
+    expected: 'Zero new occurrences introduced (pre-existing comments documenting prior state are excluded)'
+    evidence: 'grep scan on diff output returns empty'
+edge_cases:
+  - id: ED-1
+    title: 'scrum-master deprecation — no active invocations in .claude/ before deprecating'
+    setup: '.claude/ directory (all agent and config files)'
+    action: 'Run: grep -r "/scrum-master" .claude/ (excluding scrum-master-*.agent.md themselves)'
+    expected: 'Zero matches — no active pipeline invocations'
+    evidence: 'If matches found, deprecation decision must be escalated before proceeding'
+  - id: ED-2
+    title: 'review-aggregate-leader regression check — partially migrated agent not regressed'
+    setup: 'Pre-migration state of review-aggregate-leader.agent.md (from git history) vs post-migration'
+    action: 'git diff HEAD .claude/agents/review-aggregate-leader.agent.md — confirm only additive KB additions, no removal of existing KB calls'
+    expected: 'No existing kb_ calls removed; only filesystem refs replaced or Output prose updated'
+    evidence: 'git diff shows only targeted changes'
+  - id: ED-3
+    title: 'RETRO dedup guard replaced correctly in workflow-retro (if included via scope expansion)'
+    setup: 'N/A — workflow-retro deferred to WINT-7080'
+    action: 'If workflow-retro is included, verify kb_read_artifact dedup guard replaces RETRO-{STORY_ID}.yaml check'
+    expected: 'Deferred — this test is for WINT-7080 execution'
+    evidence: 'Deferred to WINT-7080'
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'grep exit code 1 (no matches) for FEATURE_DIR pattern on each migrated file'
+      - 'grep exit code 1 for _implementation/ pattern on each migrated file'
+      - 'ADR-005 reference preserved in uat agent files'
+      - 'kb_read_artifact calls present in commitment-gate-agent for READINESS, GAPS-RANKED, ATTACK artifacts'
+manual_cases:
+  - id: MC-1
+    title: 'Architectural decision documented — scrum-master deprecation vs migration'
+    steps:
+      - 'Read scrum-master-setup-leader.agent.md after WINT-7040 implementation'
+      - 'Confirm either: (a) deprecation comment header present citing orchestrate-story-flow.sh + LangGraph supersession, OR (b) STATE.md refs replaced with KB equivalent'
+      - 'Confirm architectural decision is recorded in KB as a lesson/decision'
+    expected: 'Clear documented decision visible in agent file and KB artifact'
+  - id: MC-2
+    title: 'AGENT-CONTEXT.md filesystem write replaced with kb_write_artifact in scrum-master-setup-leader'
+    steps:
+      - 'If scrum-master-setup-leader is migrated (not deprecated): grep for AGENT-CONTEXT.md write'
+      - 'Confirm it is replaced with kb_write_artifact({ story_id, artifact_type: "context", artifact_name: "AGENT-CONTEXT", content: {...} })'
+      - 'Verify scrum-master-loop-leader reads via kb_read_artifact instead of filesystem read'
+    expected: 'Inter-agent context flows through KB artifacts (WINT-7070 pattern)'
+fixture_definitions:
+  - name: 'WINT-7020 KB migration-plan artifact'
+    type: 'kb_artifact'
+    description: 'Authoritative batch groupings and remediation steps — read before implementing to confirm batch assignments'
+risks:
+  - 'scrum-master agents may have active invocations not obvious from grep — false negative if invocations are in shell scripts or non-.claude/ paths'
+  - 'review-aggregate-leader partial migration may have inconsistent KB call patterns — regression risk if dev does not read current state before modifying'
+  - 'ADR-005 constraint language could be phrased differently than "no mock" — test may need to check for multiple phrasings'

@@ -1,0 +1,7 @@
+skipped: true
+reason: >
+  CDBE-5020 is a pure backend story with no user-facing surface area.
+  It consists of a SQL migration (telemetry.workflow_events table rewrite to
+  partitioned table) and a cron job (partition-manager.job.ts) in the
+  orchestrator package. No React components, no APIGW endpoints, no UI
+  changes, and no Playwright E2E tests are required or in scope.

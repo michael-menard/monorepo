@@ -1,0 +1,2 @@
+skipped: true
+reason: 'PIPE-3020 is a backend orchestrator package change only. No UI surface area. No React components, no HTTP API routes, no browser interactions.'

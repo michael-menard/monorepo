@@ -1,102 +1,121 @@
-# Setup Complete for ST-3010
+# WINT-9010: Setup Complete
 
-**Timestamp**: 2026-03-08T07:08:12Z
-**Story ID**: ST-3010
-**Feature Dir**: plans/future/platform/story-generation-small-llm-compat
-**Gen Mode**: true
-**Autonomy Level**: aggressive
+## Story
 
-## Phase: Setup (Iteration 0)
+Create Shared Business Logic Package — Extend @repo/workflow-logic with Decision, Artifact, Context, and Token Modules
 
-### Actions Completed
+## Setup Summary
 
-#### Skipped (gen_mode=true)
-- Step 1: Move story directory (orchestrator already moved)
-- Step 2: Update story status (orchestrator already updated)
-- Step 3: Update story index (orchestrator already updated)
+### Preconditions Validated
 
-#### Completed
-- Step 4: Write CHECKPOINT.yaml artifact
-  - File: /Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/CHECKPOINT.yaml
-  - Schema: 1
-  - Current phase: setup
-  - Iteration: 0
-  - Status: SUCCESS
+- Story found in KB: ✓ WINT-9010
+- Story status ready-to-work: ✓ (standard implement flow, gen_mode=false)
+- No prior implementation artifacts: ✓ (new story, fresh worktree setup)
 
-- Step 5: Write SCOPE.yaml artifact
-  - File: /Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/SCOPE.yaml
-  - Schema: 1
-  - Touches: agent file only (.claude/agents/dev-plan-leader.agent.md)
-  - Risk flags: all false (no security concerns)
-  - Status: SUCCESS
+### Artifacts Created
 
-- Step 6: Sync working set constraints
-  - File: /Users/michaelmenard/Development/monorepo/tree/story/ST-3010/_implementation/WORKING-SET-SYNC.md
-  - Constraints inherited from CLAUDE.md
-  - Story-specific constraints documented
-  - Status: SUCCESS
+1. **CHECKPOINT.yaml** (Phase: setup, Iteration: 0)
+   - Current phase: setup
+   - Last successful phase: null
+   - Iteration tracking: 0/3 max iterations
+   - Gen mode: false
 
-- Step 8: Update story status in KB (conceptual)
-  - Story: ST-3010
-  - State: in_progress
-  - Phase: setup
-  - Iteration: 0
+2. **SCOPE.yaml** (Phase: setup, Iteration: 0)
+   - Touches: backend, packages
+   - No risk flags (pure TypeScript work)
+   - Touched paths: packages/backend/workflow-logic/src/\*\*
+   - Summary: "Extend @repo/workflow-logic with decision, artifact, context, and token modules"
 
-### Story Context
+3. **WORKING-SET.md**
+   - Constraints documented (Zod-first, no barrel files, etc.)
+   - Next steps clearly outlined
+   - Worktree path: /Users/michaelmenard/Development/monorepo/tree/story/WINT-9010
 
-**Title**: Dev Plan Leader: Map Story Subtasks 1:1 to PLAN.yaml Steps
+### Working Set Details
 
-**Summary**: Verify that dev-plan-leader.agent.md v1.3.0 correctly maps story subtasks 1:1 to PLAN.yaml steps with proper validation rules.
+#### Story ID
 
-**Key Details**:
-- Story is a verification task (audit of existing implementation)
-- Risk: "Already fully implemented — this story may be a no-op"
-- Focus: Verify Step 3, Step 4, and Step 5 of dev-plan-leader.agent.md
-- Dependencies: ST-1040
-- Sizing warning: false
+WINT-9010
 
-### Scope Analysis
+#### Worktree Path
 
-**Touched Paths**:
-- `.claude/agents/dev-plan-leader.agent.md` (agent file modification only)
-- `.claude/agents/_shared/**` (related shared utilities)
+/Users/michaelmenard/Development/monorepo/tree/story/WINT-9010
 
-**Risk Flags**: All false
-- No auth concerns
-- No payment processing
-- No database migrations
-- No external API calls
-- No security issues
-- No performance impact
+#### Branch
 
-### Next Phase: Execution
+story/WINT-9010
 
-The dev-implement-leader agent will now:
-1. Read the current dev-plan-leader.agent.md implementation
-2. Verify Steps 3-5 meet story requirements
-3. Audit existing test coverage
-4. Create verification tests if needed
-5. Document findings and acceptance criteria verification
+#### Implementation Plan
 
-### Constraints for Execution
+1. Read story requirements and canonical reference files
+2. Implement decision/ module
+   - DecisionTierSchema (5-tier enum)
+   - classifyDecisionTier() pure function
+   - shouldEscalate() pure function
+3. Implement artifact/ module
+   - ArtifactTypeSchema, ArtifactPhaseSchema
+   - getArtifactPhase() pure function
+   - isValidArtifactForPhase() pure function
+4. Implement context/ module
+   - buildContextQuery() pure function
+   - buildBlockerQuery() pure function
+5. Implement token/ module
+   - TokenUsageSchema
+   - estimateTokenCount() pure function
+   - formatTokenSummary() pure function
+6. Wire all modules into src/index.ts
+7. Write comprehensive unit tests (60% coverage target)
+8. Verify (pnpm test, pnpm check-types)
 
-1. **Technical** (CLAUDE.md):
-   - Use Zod schemas for all types
-   - No barrel files
-   - Use @repo/logger, not console
-   - Named exports preferred
+#### Canonical Reference Files
 
-2. **Story-Specific**:
-   - Verification task: confirm v1.3.0 implementation is complete
-   - No new files needed (agent file modifications only)
-   - Focus on audit and acceptance criteria verification
+- Decision tier system: .claude/agents/\_shared/decision-handling.md (lines 11-47)
+- Artifact/context patterns: .claude/agents/\_shared/kb-integration.md
+- Token formatting: .claude/agents/\_shared/token-tracking.md
 
-3. **Risk Management**:
-   - Primary risk: scope may already be satisfied
-   - Mitigation: thorough verification against story requirements
+#### CLAUDE.md Constraints
 
----
+- Use Zod schemas for all types (no interfaces)
+- No barrel files
+- Named exports preferred
+- 45% minimum test coverage (target 60% for new modules)
+- No new runtime dependencies allowed
 
-**Setup Ready**: YES
-**Execution Ready**: YES
-**Blocked**: NO
+#### Module Structure Template
+
+All modules follow this pattern (from evidence-judge/index.ts):
+
+1. JSDoc header with purpose and AC reference
+2. Schemas (Zod at top)
+3. Type exports via z.infer<>
+4. Constants/decision tables as const
+5. Pure function implementations
+6. No dependencies on MCP SDK, LangGraph, AWS services, DB clients
+
+### Subtasks
+
+| ID   | Title            | Acceptance Criteria     |
+| ---- | ---------------- | ----------------------- |
+| ST-1 | decision/ module | AC-1, AC-7              |
+| ST-2 | artifact/ module | AC-2, AC-7              |
+| ST-3 | context/ module  | AC-3, AC-7              |
+| ST-4 | token/ module    | AC-4, AC-7              |
+| ST-5 | Export wiring    | AC-5, AC-7              |
+| ST-6 | Unit tests       | AC-6, AC-8, AC-9, AC-10 |
+
+### KB Integration
+
+When synced to KB via kb_sync_working_set:
+
+- story_id: WINT-9010
+- phase: implementation
+- constraints: [5 CLAUDE.md rules documented]
+- next_steps: [6 implementation phases]
+
+## Status
+
+SETUP COMPLETE - Ready for implementation phase
+
+## Next Action
+
+Begin implementation with decision/ module (ST-1)

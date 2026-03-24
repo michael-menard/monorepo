@@ -9,6 +9,7 @@ import {
   createRoute,
   Outlet,
   Link,
+  ScrollRestoration,
 } from '@tanstack/react-router'
 import { Hexagon, GitBranch } from 'lucide-react'
 import { store } from './store'
@@ -40,6 +41,7 @@ function ShellLayout() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="workflow-admin-theme">
       <TooltipProvider>
+        <ScrollRestoration />
         <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-950 text-slate-100">
           <header className="border-b border-slate-700/50 bg-black/40 backdrop-blur-md sticky top-0 z-50">
             <nav

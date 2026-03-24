@@ -1,0 +1,2 @@
+skipped: true
+reason: 'PIPE-2050 is a backend scheduler process (SchedulerLoop) with no frontend components, UI surfaces, or user-facing interactions. The SchedulerLoop runs as a long-lived server-side process loop with no HTTP endpoints exposed to browsers or user interfaces.'

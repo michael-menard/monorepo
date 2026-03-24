@@ -1,0 +1,278 @@
+{
+  "auditDate": "2026-03-20",
+  "totalPlans": 65,
+  "audited": 3,
+  "summary": {
+    "ARCHIVE": 3
+  },
+  "entries": [
+    {
+      "slug": "worktree-first-draft-pr-lifecycle",
+      "title": "Worktree-First Development Workflow",
+      "status": "draft",
+      "priority": "P1",
+      "planType": "monorepo:tooling",
+      "verdict": "ARCHIVE",
+      "verdictRationale": "65-70% implemented across wt-* skills and agent leaders. Remaining gaps are minor wiring issues (draft PR creation, gh pr ready call). Plan references obsolete filesystem architecture (CHECKPOINT.yaml as files, FEATURE_DIR directories, hyphenated status names).",
+      "validity": {
+        "stillNeeded": "partially",
+        "problemStillReal": false,
+        "duplicates": ["sequential-dancing-lobster"],
+        "architectureAlignment": "drifted",
+        "notes": "Core workflow already implemented in pm-story-generation-leader Phase 5.5, git-ops agent, qa-verify-completion-leader. Architecture shifted from .claude/commands/ to .claude/agents/ leader/worker pattern."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 70,
+        "implemented": [
+          "wt-new creates worktrees at story creation (pm-story-generation-leader Phase 5.5)",
+          "wt-commit-and-pr repurposed for incremental pushes to existing draft PRs",
+          "wt-merge-pr squash-merges and cleans up worktree on QA PASS",
+          "qa-verify-completion-leader calls wt-merge-pr on PASS",
+          "git-ops agent has create-draft-pr and promote-pr actions",
+          "CHECKPOINT.yaml stores pr_number and pr_url via KB artifacts",
+          "Worktree DB tracking via MCP tools (worktree_register, worktree_get_by_story)"
+        ],
+        "notImplemented": [
+          "wt-new doesn't auto-create draft PR (git-ops has the action but it's not wired)",
+          "pm-story Phase 5.5 creates worktree but not draft PR",
+          "No code-review completion step calls gh pr ready (promote-pr exists but nothing invokes it)",
+          "Leader-only commit policy documented but not enforced in agent guidelines"
+        ]
+      },
+      "modifications": {
+        "staleReferences": [
+          ".claude/commands/*.md referenced as primary \u2014 agents (.claude/agents/) are now the orchestration layer",
+          "CHECKPOINT.yaml assumed as filesystem file \u2014 now KB artifacts via kb_read_artifact/kb_write_artifact",
+          "FEATURE_DIR pattern throughout \u2014 stories are KB-only, no filesystem directories",
+          "/story-move {FEATURE_DIR} {STORY_ID} \u2014 still works but kb_update_story_status() is authoritative"
+        ],
+        "architectureChanges": [
+          "Update to KB artifact model (kb_read_artifact/kb_write_artifact) instead of filesystem CHECKPOINT.yaml",
+          "Use correct KB state names: ready_for_review (not needs-code-review), in_qa (not uat)",
+          "Reference agent leader/worker pattern instead of monolithic command files"
+        ],
+        "newPatterns": [
+          "LangGraph orchestrator integration (dev-implement.ts graph) not mentioned in plan",
+          "Worktree MCP tools (worktree_register, worktree_get_by_story, worktree_mark_complete) not referenced",
+          "KB-first state management via kb_update_story_status() not referenced"
+        ]
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [
+          {
+            "claim": "Plan is 70% implemented",
+            "challenge": "Draft PR creation \u2014 the core feature \u2014 is NOT wired. That's the headline deliverable, not a minor gap.",
+            "resolution": "Sustained \u2014 but the infrastructure exists (git-ops has create-draft-pr action). It's a wiring task, not a design task. Verdict still holds as ARCHIVE since the plan itself is stale.",
+            "evidencePaths": [".claude/agents/git-ops.agent.md:103-111"]
+          }
+        ],
+        "challengesOverruled": [
+          {
+            "claim": "CHECKPOINT.yaml is obsolete",
+            "challenge": "dev-implement-story.md Step 1.3 still reads CHECKPOINT.yaml at line 366",
+            "resolution": "Overruled \u2014 it reads via kb_read_artifact now, not filesystem. The field name persists but the mechanism changed.",
+            "evidencePaths": [".claude/commands/dev-implement-story.md:366-386"]
+          },
+          {
+            "claim": "Architecture shifted to agents",
+            "challenge": ".claude/commands/ files still exist and are actively used",
+            "resolution": "Overruled \u2014 commands exist as entry points but delegate to agents. The plan's proposed changes target the command files which are now thin wrappers.",
+            "evidencePaths": [
+              ".claude/commands/dev-implement-story.md",
+              ".claude/agents/dev-implement-implementation-leader.agent.md"
+            ]
+          }
+        ],
+        "confidenceAdjustment": "Verdict stands at ARCHIVE. Devil's advocate confirmed the core finding: plan is mostly implemented but the flagship feature (auto-draft-PR) needs wiring. However, the plan document itself is too stale to be useful as implementation guidance \u2014 better to create fresh stories for remaining gaps."
+      },
+      "decisions": [
+        {
+          "question": "Should remaining gaps (draft PR wiring, gh pr ready) be tracked as new stories?",
+          "options": [
+            "Create stories under pipeline-orchestrator-activation",
+            "Create a new slimmed-down plan",
+            "Defer \u2014 not blocking anything currently"
+          ],
+          "recommendation": "Create 2-3 focused stories under an existing plan \u2014 these are small wiring tasks, not a plan-level effort",
+          "decided": true,
+          "choice": "Archive plan, defer remaining gaps \u2014 not blocking current work",
+          "decidedBy": "user",
+          "decidedAt": "2026-03-21T03:30:00Z"
+        }
+      ],
+      "recommendedActions": [
+        "Archive this plan and its duplicate (sequential-dancing-lobster)",
+        "Create focused stories for: wire draft PR into wt-new, add gh pr ready to code-review completion",
+        "No plan rewrite needed \u2014 remaining work is tactical, not architectural"
+      ],
+      "actionsTaken": [
+        {
+          "action": "Updated plan status to archived",
+          "target": "worktree-first-draft-pr-lifecycle",
+          "timestamp": "2026-03-21T03:30:25Z",
+          "tool": "kb_update_plan"
+        },
+        {
+          "action": "Updated duplicate plan status to archived",
+          "target": "sequential-dancing-lobster",
+          "timestamp": "2026-03-21T03:30:25Z",
+          "tool": "kb_update_plan"
+        }
+      ],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "archived"
+      },
+      "applied": true,
+      "appliedAt": "2026-03-21T03:30:25Z"
+    },
+    {
+      "slug": "sequential-dancing-lobster",
+      "title": "Worktree-First Development Workflow",
+      "status": "active",
+      "priority": "P1",
+      "planType": "workflow:migration",
+      "verdict": "ARCHIVE",
+      "verdictRationale": "Duplicate of worktree-first-draft-pr-lifecycle with identical title and overlapping content. No unique content \u2014 same plan ingested under auto-generated slug.",
+      "validity": {
+        "stillNeeded": false,
+        "problemStillReal": false,
+        "duplicates": ["worktree-first-draft-pr-lifecycle"],
+        "architectureAlignment": "drifted",
+        "notes": "Pure duplicate. Summary even references the original slug: 'Absorbs: worktree-first-draft-pr-lifecycle'."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 70,
+        "implemented": ["See worktree-first-draft-pr-lifecycle entry"],
+        "notImplemented": ["See worktree-first-draft-pr-lifecycle entry"]
+      },
+      "modifications": {
+        "staleReferences": ["Same as worktree-first-draft-pr-lifecycle"],
+        "architectureChanges": [],
+        "newPatterns": []
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [],
+        "challengesOverruled": [
+          {
+            "claim": "This is a pure duplicate",
+            "challenge": "The summary says 'Absorbs' the original \u2014 maybe this is the consolidated/canonical version?",
+            "resolution": "Overruled \u2014 both plans have identical scope. The 'Absorbs' note indicates this was meant to replace the original but neither was cleaned up. Both should be archived.",
+            "evidencePaths": ["KB plan summary field"]
+          }
+        ],
+        "confidenceAdjustment": "Verdict confirmed. This is unambiguously a duplicate."
+      },
+      "decisions": [],
+      "recommendedActions": ["Archive as duplicate of worktree-first-draft-pr-lifecycle"],
+      "actionsTaken": [
+        {
+          "action": "Updated plan status to archived",
+          "target": "sequential-dancing-lobster",
+          "timestamp": "2026-03-21T03:30:25Z",
+          "tool": "kb_update_plan"
+        }
+      ],
+      "suggestedStatusChange": {
+        "from": "active",
+        "to": "archived"
+      },
+      "applied": true,
+      "appliedAt": "2026-03-21T03:30:25Z"
+    },
+    {
+      "slug": "update-turbo-dev-command",
+      "title": "Update Turbo Dev Command",
+      "status": "draft",
+      "priority": "P3",
+      "planType": "monorepo:tooling",
+      "verdict": "ARCHIVE",
+      "verdictRationale": "100% implemented. Every change described in the plan is already present in turbo.json and package.json. The plan proposed 3 changes (turbo.json task config, package.json script simplification, Docker check) \u2014 all 3 are verbatim in the codebase. Duplicate plan (agile-exploring-karp) also exists and should be archived.",
+      "validity": {
+        "stillNeeded": false,
+        "problemStillReal": false,
+        "duplicates": ["agile-exploring-karp"],
+        "architectureAlignment": "current",
+        "notes": "The problem (messy concurrently-based dev script) has been fully solved. turbo.json has the //#infra:up task and dev dependency chain. package.json has the exact scripts proposed. Docker check is present in infra:up."
+      },
+      "implementationStatus": {
+        "estimatedCompletion": 100,
+        "implemented": [
+          "//#infra:up task in turbo.json with cache: false \u2014 evidence: turbo.json:9-11",
+          "dev task with dependsOn //#infra:up, cache: false, persistent: true \u2014 evidence: turbo.json:25-29",
+          "dev script uses turbo dev --filter=@repo/lego-api --filter=@repo/main-app \u2014 evidence: package.json:27",
+          "dev:api convenience script \u2014 evidence: package.json:28",
+          "dev:web convenience script \u2014 evidence: package.json:29",
+          "infra:up with Docker availability check \u2014 evidence: package.json:30",
+          "infra:down script \u2014 evidence: package.json:31",
+          "infra:reset script with -v flag \u2014 evidence: package.json:32",
+          "concurrently removed from dev script (no longer used for orchestration) \u2014 evidence: package.json:27",
+          "infra/compose.lego-app.yaml exists as referenced \u2014 evidence: infra/compose.lego-app.yaml"
+        ],
+        "notImplemented": []
+      },
+      "modifications": {
+        "staleReferences": [],
+        "architectureChanges": [],
+        "newPatterns": []
+      },
+      "devilsAdvocate": {
+        "challengesSustained": [],
+        "challengesOverruled": [
+          {
+            "claim": "concurrently is still in devDependencies",
+            "challenge": "The plan says to remove concurrently usage \u2014 it's still listed as a devDependency in package.json line 80",
+            "resolution": "Overruled \u2014 the plan's scope was to remove concurrently from the dev script orchestration, not to uninstall the package. The dev script no longer uses concurrently. The package may be used by other scripts or is a leftover that knip would catch. Not a plan gap.",
+            "evidencePaths": ["package.json:27", "package.json:80"]
+          },
+          {
+            "claim": "Plan is 100% complete \u2014 nothing left to do",
+            "challenge": "Workspace packages may still have dev scripts using old patterns (concurrently, manual docker). Were all workspace package.json files checked?",
+            "resolution": "Overruled \u2014 the plan explicitly scopes to 2 files (turbo.json and root package.json). Workspace packages have their own dev scripts that are orchestrated by Turbo, which is exactly what the plan intended. No workspace packages reference concurrently in their dev scripts.",
+            "evidencePaths": ["turbo.json:25-29", "package.json:27"]
+          }
+        ],
+        "confidenceAdjustment": "Verdict confirmed at ARCHIVE. All challenges overruled with evidence. This plan is unambiguously fully implemented."
+      },
+      "decisions": [
+        {
+          "question": "Should the duplicate plan (agile-exploring-karp) also be archived?",
+          "options": [
+            "Archive both plans",
+            "Archive only update-turbo-dev-command, keep agile-exploring-karp",
+            "Defer"
+          ],
+          "recommendation": "Archive both \u2014 identical content, both fully implemented",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        },
+        {
+          "question": "Should the concurrently devDependency be removed as cleanup?",
+          "options": [
+            "Remove concurrently from devDependencies",
+            "Leave it \u2014 knip will flag if unused",
+            "Defer"
+          ],
+          "recommendation": "Leave it \u2014 out of scope for this plan, knip will catch it if truly unused",
+          "decided": false,
+          "choice": null,
+          "decidedBy": null,
+          "decidedAt": null
+        }
+      ],
+      "recommendedActions": [
+        "Archive this plan (update-turbo-dev-command) \u2014 fully implemented",
+        "Archive duplicate plan (agile-exploring-karp) \u2014 same content, auto-generated slug",
+        "Optionally run knip to check if concurrently can be removed from devDependencies"
+      ],
+      "actionsTaken": [],
+      "suggestedStatusChange": {
+        "from": "draft",
+        "to": "archived"
+      },
+      "applied": false
+    }
+  ]
+}

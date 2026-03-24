@@ -1,0 +1,143 @@
+schema: 1
+story_id: WINT-7060
+version: 1
+timestamp: '2026-03-22T00:00:00Z'
+story_type: docs
+
+acceptance_criteria:
+  - ac_id: AC1
+    ac_text: 'evidence-judge.agent.md reads EVIDENCE.yaml via KB (kb_read_artifact) instead of filesystem path'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_read_artifact' .claude/agents/evidence-judge.agent.md"
+        result: 'PASS - kb_read_artifact present at lines 34, 59 (replaces {story_dir}/_implementation/EVIDENCE.yaml)'
+
+  - ac_id: AC2
+    ac_text: 'evidence-judge.agent.md reads AC text via kb_get_story instead of story .md file'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_get_story' .claude/agents/evidence-judge.agent.md"
+        result: 'PASS - kb_get_story present at lines 41, 62 (replaces {story_dir}/{STORY_ID}.md)'
+
+  - ac_id: AC3
+    ac_text: 'evidence-judge.agent.md writes ac-verdict via kb_write_artifact instead of filesystem write'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/agents/evidence-judge.agent.md"
+        result: 'PASS - kb_write_artifact present at lines 112, 175, 289, 341 (replaces {story_dir}/_implementation/ac-verdict.json)'
+
+  - ac_id: AC4
+    ac_text: 'Non-Goal #2 updated to permit kb_write_artifact (no longer prohibits all MCP storage)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -A2 'Write to database' .claude/agents/evidence-judge.agent.md"
+        result: "PASS - Now reads: 'Write to database directly — Output is KB artifact-based only. Uses kb_write_artifact'"
+
+  - ac_id: AC5
+    ac_text: 'qa-verify-story.md reads ac-verdict via kb_read_artifact instead of filesystem path'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_read_artifact.*ac-verdict' .claude/commands/qa-verify-story.md"
+        result: "PASS - kb_read_artifact with artifact_type: 'analysis', artifact_name: 'ac-verdict' at line 85"
+
+  - ac_id: AC6
+    ac_text: 'evidence-judge and qa-verify-story use same artifact_type/artifact_name scheme (analysis/ac-verdict)'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep \"artifact_type.*analysis.*ac-verdict\\|artifact_name.*ac-verdict\" .claude/agents/evidence-judge.agent.md .claude/commands/qa-verify-story.md"
+        result: "PASS - Both files use artifact_type: 'analysis', artifact_name: 'ac-verdict'"
+
+  - ac_id: AC7
+    ac_text: 'qa-gate/SKILL.md reads story data via kb_get_story instead of docs/stories glob'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_get_story' .claude/skills/qa-gate/SKILL.md"
+        result: 'PASS - kb_get_story present at line 64 (replaces docs/stories/{STORY_NUM}.*.md glob)'
+
+  - ac_id: AC8
+    ac_text: 'qa-gate/SKILL.md writes gate result via kb_write_artifact instead of docs/qa/gates file'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/skills/qa-gate/SKILL.md"
+        result: 'PASS - kb_write_artifact present at lines 66, 192, 195 (replaces docs/qa/gates/{slug}.yml write)'
+
+  - ac_id: AC9
+    ac_text: 'review/SKILL.md Phase 0A reads story via kb_get_story and prior QA gate via kb_read_artifact'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_get_story\\|kb_read_artifact' .claude/skills/review/SKILL.md"
+        result: 'PASS - kb_get_story at line 158, kb_read_artifact at line 159 (Phase 0A gather context)'
+
+  - ac_id: AC10
+    ac_text: 'review/SKILL.md Phase 7 writes review findings via kb_write_artifact instead of story file append'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'kb_write_artifact' .claude/skills/review/SKILL.md"
+        result: 'PASS - kb_write_artifact at lines 776, 994 (replaces ## Review Findings story file append)'
+
+  - ac_id: AC11
+    ac_text: 'All {story_dir}, {FEATURE_DIR}, _implementation/ path references removed from evidence-judge'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'story_dir\\|_implementation\\|FEATURE_DIR' .claude/agents/evidence-judge.agent.md"
+        result: 'PASS - Count: 0 (all filesystem path references removed)'
+
+touched_files:
+  - path: '.claude/agents/evidence-judge.agent.md'
+    action: modified
+    description: 'Replaced filesystem reads/writes with KB calls: kb_read_artifact for evidence, kb_get_story for AC text, kb_write_artifact for ac-verdict output. Updated Non-Goals, Non-Negotiables, LangGraph porting notes.'
+
+  - path: '.claude/commands/qa-verify-story.md'
+    action: modified
+    description: 'Updated Phase 1.5 to read ac-verdict via kb_read_artifact instead of tree/story/{STORY_ID}/_implementation/ac-verdict.json'
+
+  - path: '.claude/skills/qa-gate/SKILL.md'
+    action: modified
+    description: 'Replaced docs/stories glob read with kb_get_story, docs/qa/gates file write with kb_write_artifact(qa_gate), story file append with kb_update_story_status/kb_add_task'
+
+  - path: '.claude/skills/review/SKILL.md'
+    action: modified
+    description: 'Replaced story file read with kb_get_story + kb_read_artifact(qa_gate), story file append (Phase 7) with kb_write_artifact(review). Added Mode B KB preference note.'
+
+commands_run:
+  - command: "grep -c 'story_dir|_implementation|FEATURE_DIR' .claude/agents/evidence-judge.agent.md"
+    result: '0 - no filesystem path references remain'
+  - command: "grep -c 'tree/story.*_implementation|story_dir' .claude/commands/qa-verify-story.md"
+    result: '0 - no filesystem path references remain'
+  - command: "grep -c 'docs/stories/|docs/qa/gates' .claude/skills/qa-gate/SKILL.md"
+    result: '0 - no legacy file path references remain'
+  - command: "grep -c 'story file append|Update story file|appended to each story file' .claude/skills/review/SKILL.md"
+    result: '0 - no legacy story file append references remain'
+
+endpoints_exercised: []
+notable_decisions:
+  - 'Mode B (directory scan) in review/SKILL.md kept as-is per plan — backwards compatibility preserved'
+  - 'Semantic/conceptual references to EVIDENCE.yaml and ac-verdict.json as artifact names preserved (they are logical names, not file paths)'
+  - 'LangGraph porting notes updated to reflect WINT-7060 completion'
+
+known_deviations: []
+
+test_summary:
+  total: 0
+  passed: 0
+  failed: 0
+  note: 'docs story — no TypeScript code changes, no test suite applicable'
+
+e2e_tests:
+  exempt: true
+  reason: 'story_type: docs — all changes are markdown agent/skill/command files'
+
+coverage: {}
+
+token_summary: {}

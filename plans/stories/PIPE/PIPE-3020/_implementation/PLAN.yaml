@@ -1,0 +1,193 @@
+schema: 2
+story_id: PIPE-3020
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Read canonical implementations before writing any code — internalize GitRunner pattern, injectable factory
+      signatures, and warn-only teardown contract from create-worktree.ts and cleanup-worktree.ts
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/nodes/merge/cleanup-worktree.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-register.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-mark-complete.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-get-by-story.ts
+      - packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+    dependencies: []
+    slice: backend
+    verification: N/A — read-only step
+    acs_covered: []
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement real createWorktreeSetupNode factory in elab-story.ts: import GitRunner and defaultGitRunner from
+      create-worktree.ts, add opts parameter, call git worktree add -b elab/{storyId} {worktreePath} via injected
+      gitRunner, call worktreeRegister after success (null-safe), handle git failure returning worktreeSetup:false,
+      remove WINT-9060 warning strings (AC-1, AC-2, AC-5, AC-6, AC-7)
+    files:
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-register.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-5
+      - AC-6
+      - AC-7
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement real createWorktreeTeardownNode factory in elab-story.ts: add opts parameter with gitRunner, call
+      worktreeGetByStory to retrieve worktree ID, call git worktree remove --force via injected gitRunner (warn-only on
+      failure), call worktreeMarkComplete with status:'abandoned' if record found, skip if null (warn), remove WINT-9060
+      warning strings, never change workflowSuccess (AC-3, AC-4, AC-7)
+    files:
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/merge/cleanup-worktree.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-mark-complete.ts
+      - packages/backend/mcp-tools/src/worktree-management/worktree-get-by-story.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-7
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Write unit tests in packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts covering: HP-1
+      git worktree add called with elab/ branch prefix, HP-2 worktreeSetup:true on success, HP-3 teardown calls
+      worktreeMarkComplete with abandoned status, EC-1 worktreeSetup:false on git failure, EC-2 setup continues when
+      worktreeRegister returns null, EC-3 teardown warn-only when git remove fails, EC-4 teardown skips markComplete
+      when worktreeGetByStory returns null (AC-8)
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator --run
+    acs_covered:
+      - AC-8
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write integration test in
+      packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts: TempGitRepo
+      fixture (os.tmpdir, git init + initial commit), HP-4 full setup→teardown lifecycle (worktree dir exists after
+      setup, absent after teardown), ED-3 git worktree add fails with no initial commit; verify pnpm test and
+      check-types both pass (AC-9, AC-10)
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/__tests__/integration/create-worktree.integration.test.ts
+      - packages/backend/orchestrator/src/graphs/elab-story.ts
+    dependencies:
+      - 4
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator --run && pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-9
+      - AC-10
+files_to_change:
+  - path: packages/backend/orchestrator/src/graphs/elab-story.ts
+    action: modify
+    reason: >-
+      Replace createWorktreeSetupNode stub (lines 202-215) and createWorktreeTeardownNode stub (lines 289-304) with real
+      implementations using injectable GitRunner and MCP tool calls
+  - path: packages/backend/orchestrator/src/graphs/__tests__/elab-story-worktree.test.ts
+    action: create
+    reason: Unit tests for real worktree setup and teardown node factories (AC-8)
+  - path: packages/backend/orchestrator/src/__tests__/integration/elab-story-worktree.integration.test.ts
+    action: create
+    reason: Integration test for full setup→teardown lifecycle with real git CLI (AC-9)
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-2 and ST-3 (after each elab-story.ts edit)
+    required: true
+  - command: pnpm test --filter @repo/orchestrator --run
+    when: after ST-4 and ST-5 (after each test file)
+    required: true
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: final pass after all changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: 'Unit test HP-1: mockRunner spy asserts args contain [''worktree'',''add'',''-b'',''elab/PIPE-3020'',''<path>'']'
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test HP-2: worktreeRegister mock called with {storyId, worktreePath, branchName:'elab/...'};
+      state.worktreeSetup === true
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: 'Unit test EC-3: teardown returns worktreeTornDown:true even when gitRunner rejects; workflowSuccess not changed'
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test HP-3: worktreeMarkComplete mock called with {worktreeId:'wt-uuid', status:'abandoned'}; EC-4: not called
+      when worktreeGetByStory returns null
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit test EC-1: state.worktreeSetup === false, state.worktreePath === null, errors array populated when gitRunner
+      rejects with exit code 128
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test ED-2: gitRunner called with path containing custom worktreeBaseDir; no hardcoded /tmp/worktrees in
+      production code path
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'Edge case ED-1: grep for ''WINT-9060'' in elab-story.ts returns zero matches after implementation'
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: 'All HP/EC tests pass in elab-story-worktree.test.ts: HP-1 through HP-3, EC-1 through EC-4'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: 'Integration test HP-4 passes: fs.existsSync asserts worktree dir exists after setup, absent after teardown'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      pnpm test --filter @repo/orchestrator passes with zero regressions; pnpm check-types --filter @repo/orchestrator
+      reports zero errors
+    evidence_type: command
+architectural_decisions: []
+complexity: moderate
+notes:
+  - >-
+    GitRunner type and defaultGitRunner are imported from packages/backend/orchestrator/src/nodes/create-worktree.ts —
+    do NOT redeclare
+  - >-
+    Branch naming convention for elab worktrees: elab/{storyId} (not impl/ which is used by create-worktree.ts for
+    dev-implement)
+  - >-
+    createWorktreeSetupNode and createWorktreeTeardownNode signatures change from () to (opts?: { gitRunner?: GitRunner;
+    repoRoot?: string }) — this is a non-breaking change since createElabStoryGraph passes no args today
+  - >-
+    worktreeRegister returns null on error (does not throw) — check for null before emitting warning; worktreeSetup
+    stays true
+  - >-
+    worktreeGetByStory returns null when no active record — skip worktreeMarkComplete with logger.warn, still return
+    worktreeTornDown:true
+  - >-
+    Teardown uses awaited async (not void IIFE) because it is an explicit graph node — void IIFE is the
+    create-worktree.ts non-blocking cleanup pattern for outside-the-graph use only
+  - MCP tool imports use @repo/mcp-tools package path — confirm the exact import path from the existing package.json
+  - >-
+    worktreePath in setup: path.join(worktreeBaseDir, storyId) — use path.join (not string template) to match
+    create-worktree.ts pattern
+  - All new/changed code must pass pnpm lint via /lint-fix and pnpm check-types before commit

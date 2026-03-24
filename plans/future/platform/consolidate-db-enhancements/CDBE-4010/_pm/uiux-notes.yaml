@@ -1,0 +1,6 @@
+skipped: true
+reason: >
+  CDBE-4010 is a pure database schema migration story. It creates workflow.story_embeddings,
+  workflow.plan_embeddings, and embedding_section_lookup tables, registers them in the Drizzle
+  schema, and fixes the findSimilarStories() query target. No user-facing UI components,
+  API endpoints, or frontend surfaces are modified or created.

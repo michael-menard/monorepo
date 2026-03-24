@@ -1,0 +1,116 @@
+schema: 1
+story_id: APRS-1020
+timestamp: '2026-03-23T19:38:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 30
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    note: exempt — backend-only story
+  http:
+    pass: 0
+    fail: 0
+    note: no HTTP endpoint changes
+pre_existing_failures:
+  count: 19
+  description: >-
+    19 pre-existing test failures on main and PR branch alike: FK constraint in kb_update_story_status gate enforcement
+    tests (story_state_history_story_id_fkey), and content field round-trip in kb_create_story tests. None introduced by
+    APRS-1020.
+  verified_pre_existing: true
+new_tests_added: 5
+branch_note: >-
+  Implementation is on PR branch story/APRS-1020 (PR #571, OPEN, not yet merged to main). Tests verified by temporarily
+  applying PR branch files to local working tree.
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >-
+    All 5 new tests use live PostgreSQL DB via Drizzle (ADR-005 pattern). Tests cover: orphan depends_on_id, orphan
+    story_id, direct cycle A→B→A, transitive cycle A→B→C→A, valid chain (no false positive). Correct use of async/await,
+    no setTimeout anti-patterns, proper setup/teardown.
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-1
+    notes: >-
+      detectCycle() BFS traversal confirmed in PR diff (lines 1051-1100 of story-crud-operations.ts).
+      MAX_CYCLE_DEPTH=10. Two cycle tests pass: direct A→B→A and transitive A→B→C→A. Both return 'Cycle detected'
+      message.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-2
+    notes: >-
+      Orphan guard confirmed: EXISTS check on both depends_on_id (targetExists) and story_id (sourceExists) against
+      workflow.stories table. Both orphan tests pass with correct error messages.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-3
+    notes: >-
+      Duplicate detection via idempotent triple check confirmed. Comment updated to document existing
+      uq_story_dependency constraint on (story_id, depends_on_id). Idempotent test passes. Race-safe via DB constraint.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-4
+    notes: >-
+      Self-reference guard at lines 1074-1080 preserved in PR branch. Existing 'rejects self-referential dependency'
+      test passes.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-5
+    notes: >-
+      5 new tests confirmed present and passing in PR branch: rejects orphan (depends_on_id), rejects orphan (story_id),
+      rejects direct cycle A→B→A, rejects transitive cycle A→B→C→A, allows valid dependency chain without cycle.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:ac_coverage.AC-6
+    notes: >-
+      All tests run against live PostgreSQL via Drizzle — confirmed integration test pattern (ADR-005). No mocks used
+      for DB layer.
+architecture_compliant: true
+architecture_notes: >-
+  Backend-only change. No barrel files created. No console.log usage (no logging needed for guard returns). Zod schema
+  used for input validation (KbAddDependencyInputSchema). Functional implementation pattern. No TypeScript interfaces
+  introduced.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      PR branch verification requires fetching branch and temporarily applying files to run tests against live DB — git
+      show FETCH_HEAD: pipe to temp files then cp to working tree is the correct pattern for KB-only stories with no
+      local checkout
+    category: pattern
+    tags:
+      - qa
+      - testing
+      - git
+      - kb-story
+  - lesson: >-
+      19 pre-existing test failures in story-crud-operations.test.ts due to FK constraint on story_state_history and
+      missing content fields — these are pre-existing and should not block APRS-1020 QA
+    category: blocker
+    tags:
+      - pre-existing
+      - test-failures
+      - knowledge-base
+      - fk-constraint
+  - lesson: >-
+      BFS cycle detection with bounded depth (MAX_CYCLE_DEPTH=10) is the correct application-level approach for
+      dependency graph validation when DB trigger (migration 1090 recursive CTE) may not be available or sufficient
+    category: pattern
+    tags:
+      - cycle-detection
+      - graph-validation
+      - dependencies
+      - BFS
+tokens:
+  in: 9500
+  out: 2500

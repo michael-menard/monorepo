@@ -40,7 +40,7 @@ export function SectionContent({
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-300 leading-relaxed">{item.title}</p>
-                  {item.files && item.files.length > 0 && (
+                  {item.files && item.files.length > 0 ? (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {item.files.map(f => (
                         <span
@@ -51,7 +51,7 @@ export function SectionContent({
                         </span>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </li>
             ))}

@@ -1,0 +1,134 @@
+feasible: true
+confidence: high
+rationale: >
+  WINT-5010 follows a well-established sidecar pattern (role-pack, cohesion) with all canonical
+  reference files available in the repo. The core dependency trainingDataIngest is already
+  implemented and tested (WINT-0140). The port conflict (3093 → 3094) is fully resolved in the
+  ACs. The only risk is whether trainingDataIngest is importable cross-package; this is addressed
+  in ST-2 with an explicit cross-package import check before proceeding.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/sidecars/hitl-interview/ (new package — all files new)
+    - pnpm-workspace.yaml (add hitl-interview entry)
+    - infra/ports.cjs (register port 3094)
+  endpoints:
+    - POST /hitl-interview
+  deploy_touchpoints:
+    - 'Register @repo/sidecar-hitl-interview in pnpm workspace before build'
+    - 'infra/compose or equivalent: add hitl-interview service on port 3094'
+
+risks:
+  - finding: 'trainingDataIngest cross-package import — apps/api/knowledge-base is not a workspace library package in the typical sense; need to verify @repo/knowledge-base is exported as a workspace:* dep or whether trainingDataIngest must be re-exported via @repo/mcp-tools'
+    mitigation: 'Check if @repo/mcp-tools exports trainingDataIngest (cohesion sidecar uses @repo/mcp-tools). If yes, import from there. If not, add trainingDataIngest to @repo/mcp-tools exports before implementing sidecar.'
+  - finding: 'hitlDecisions Drizzle table must be exported from @repo/db for the sidecar to query it'
+    mitigation: 'Verify hitlDecisions is exported from apps/api/knowledge-base/src/db/index.ts and accessible via @repo/db. If not, add the export before ST-4.'
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pnpm check-types --filter @repo/sidecar-hitl-interview passes with zero errors'
+  - 'pnpm test --filter @repo/sidecar-hitl-interview shows ≥45% coverage'
+  - 'POST /hitl-interview with valid payload returns 200 and trainingDataIngest mock was called with correct shape'
+  - 'No INSERT on workflow.hitl_decisions in any test path'
+
+subtasks:
+  - id: ST-1
+    title: 'Scaffold package directory and config files'
+    goal: 'Create packages/backend/sidecars/hitl-interview/ with package.json, tsconfig.json, vitest.config.ts; register in pnpm-workspace.yaml and infra/ports.cjs'
+    files_to_read:
+      - packages/backend/sidecars/role-pack/package.json
+      - packages/backend/sidecars/cohesion/package.json
+      - pnpm-workspace.yaml
+      - infra/ports.cjs
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/package.json (new)
+      - pnpm-workspace.yaml
+      - infra/ports.cjs
+    acs: ['AC-1']
+    depends_on: none
+    verification: 'pnpm install --filter @repo/sidecar-hitl-interview (no errors)'
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Verify cross-package import path for trainingDataIngest'
+    goal: 'Confirm whether trainingDataIngest is importable from @repo/mcp-tools or if @repo/knowledge-base needs to be added as a dep; resolve before writing compute logic'
+    files_to_read:
+      - packages/backend/sidecars/cohesion/package.json
+      - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
+      - apps/api/knowledge-base/package.json
+    files_to_modify: []
+    acs: ['AC-5']
+    depends_on: ST-1
+    verification: 'Resolve correct import path for trainingDataIngest; document in code comment'
+    estimated_tokens: 2000
+
+  - id: ST-3
+    title: 'Write Zod types in src/__types__/index.ts'
+    goal: 'Define HitlInterviewInputSchema, InterviewAnswersSchema, FeatureVectorSchema, HTTP request/response schemas'
+    files_to_read:
+      - packages/backend/sidecars/role-pack/src/__types__/index.ts
+      - apps/api/knowledge-base/src/ml-pipeline/__types__/index.ts
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/src/__types__/index.ts (new)
+    acs: ['AC-2', 'AC-7', 'AC-8']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/sidecar-hitl-interview'
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: 'Write core compute function src/hitl-interview.ts'
+    goal: 'Implement performHitlInterview(input): reads hitl_decisions for context enrichment, validates InterviewAnswersSchema + FeatureVectorSchema, calls trainingDataIngest with features/labels'
+    files_to_read:
+      - apps/api/knowledge-base/src/ml-pipeline/training-data-ingest.ts
+      - apps/api/knowledge-base/src/db/schema/workflow.ts
+      - packages/backend/sidecars/cohesion/src/compute-audit.ts
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/src/hitl-interview.ts (new)
+    acs: ['AC-3', 'AC-4', 'AC-5', 'AC-6']
+    depends_on: ST-3
+    verification: 'pnpm check-types --filter @repo/sidecar-hitl-interview'
+    estimated_tokens: 8000
+
+  - id: ST-5
+    title: 'Write HTTP handler src/http-handler.ts and server entry src/server.ts'
+    goal: 'POST /hitl-interview route handler using sendJson/readBody from @repo/sidecar-http-utils; server.ts with PORT ?? 3094'
+    files_to_read:
+      - packages/backend/sidecars/role-pack/src/http-handler.ts
+      - packages/backend/sidecars/role-pack/src/server.ts
+      - packages/backend/sidecars/http-utils/src/index.ts
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/src/http-handler.ts (new)
+      - packages/backend/sidecars/hitl-interview/src/server.ts (new)
+    acs: ['AC-1', 'AC-9']
+    depends_on: ST-4
+    verification: 'pnpm check-types --filter @repo/sidecar-hitl-interview'
+    estimated_tokens: 6000
+
+  - id: ST-6
+    title: 'Write MCP tool wrapper src/mcp-tools/hitl-interview.ts and export from src/index.ts'
+    goal: 'hitlInterview MCP tool calls performHitlInterview directly (ARCH-001 — no HTTP self-call); export from src/index.ts'
+    files_to_read:
+      - packages/backend/sidecars/cohesion/src/mcp-tools/cohesion-audit.ts
+      - packages/backend/sidecars/cohesion/src/index.ts
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/src/mcp-tools/hitl-interview.ts (new)
+      - packages/backend/sidecars/hitl-interview/src/index.ts (new)
+    acs: ['AC-2', 'AC-9']
+    depends_on: ST-5
+    verification: 'pnpm check-types --filter @repo/sidecar-hitl-interview'
+    estimated_tokens: 5000
+
+  - id: ST-7
+    title: 'Write unit and integration tests'
+    goal: 'src/__tests__/hitl-interview.test.ts and http-handler.test.ts; vi.mock trainingDataIngest; makeRequest/makeResponse helpers; ≥45% coverage'
+    files_to_read:
+      - packages/backend/sidecars/role-pack/src/__tests__/http-endpoint.test.ts
+      - apps/api/knowledge-base/src/ml-pipeline/__tests__/ml-pipeline.test.ts
+    files_to_modify:
+      - packages/backend/sidecars/hitl-interview/src/__tests__/hitl-interview.test.ts (new)
+      - packages/backend/sidecars/hitl-interview/src/__tests__/http-handler.test.ts (new)
+    acs: ['AC-10']
+    depends_on: ST-6
+    verification: 'pnpm test --filter @repo/sidecar-hitl-interview -- --coverage (≥45%)'
+    estimated_tokens: 10000

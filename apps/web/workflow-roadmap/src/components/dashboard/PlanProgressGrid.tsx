@@ -35,9 +35,9 @@ function PlanCard({ plan }: { plan: PlanProgressItem }) {
         <h3 className="text-sm font-medium text-slate-200 truncate" title={plan.title}>
           {plan.title}
         </h3>
-        {plan.priority && (
+        {plan.priority ? (
           <span className="text-xs font-mono text-slate-500 shrink-0">{plan.priority}</span>
-        )}
+        ) : null}
       </div>
 
       <ProgressBar completed={plan.completedStories} total={plan.totalStories} />

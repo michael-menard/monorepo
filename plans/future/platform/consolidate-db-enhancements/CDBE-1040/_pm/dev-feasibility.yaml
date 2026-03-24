@@ -1,0 +1,104 @@
+feasible: true
+confidence: high
+rationale: >
+  CDBE-1040 is a well-bounded database-only story. All required patterns exist in the
+  codebase (trigger function pattern from 1020, pgtap structure from 1010 tests, RLS
+  pattern from 1005). The two blocking pre-conditions identified in the seed
+  (schema mismatch + execution_id NOT NULL FK) are both fully resolved by creating a
+  new workflow.story_mutation_audit_log table rather than inserting into the existing
+  workflow.workflow_audit_log. This avoids all RLS restrictions and FK constraints.
+  No API or UI changes required.
+
+complexity: medium
+
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (new 1040_audit_trigger.sql)'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ (new 1040_audit_trigger_test.sql)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Run migration 1040_audit_trigger.sql against KB database'
+    - 'Run pgtap test file to verify trigger deployment'
+
+risks:
+  - finding: 'execution_id NOT NULL FK on workflow.workflow_audit_log blocks any INSERT from a generic trigger that lacks a workflow execution context'
+    mitigation: 'Create workflow.story_mutation_audit_log as a new dedicated table without the execution_id FK. This is explicitly lower risk than modifying the existing RLS-enabled table.'
+  - finding: 'agent_role has no INSERT policy on workflow.workflow_audit_log (RLS enforcement)'
+    mitigation: 'Resolved by using a new table (workflow.story_mutation_audit_log) without RLS, or with a permissive policy for trigger context. New table avoids modifying existing RLS configuration.'
+  - finding: 'SECURITY INVOKER trigger running under agent_role context may lack INSERT on new audit table'
+    mitigation: 'GRANT INSERT ON workflow.story_mutation_audit_log TO agent_role in the migration. Verify with pgtap has_role_permission or lives_ok insert test.'
+  - finding: 'Trigger ordering: plan_archival_cascade (1020) fires AFTER UPDATE on workflow.plans, which cascades to bulk UPDATE on workflow.stories, which fires audit_story_mutations — potential high write volume during plan archival'
+    mitigation: 'Expected behavior — each cascaded story state change should be audited. Document in COMMENT ON. No recursive loop risk since audit trigger writes to a different table.'
+
+missing_requirements:
+  - 'AC-3 and AC-4 must explicitly state which columns are in the auditable column list for workflow.stories and workflow.plans. The current ACs say "compares OLD.* to NEW.* for each auditable column" without specifying the column list. Dev must enumerate columns in trigger body or document the explicit list.'
+  - 'The security model for INSERT into workflow.story_mutation_audit_log must be confirmed: SECURITY INVOKER + GRANT INSERT to agent_role is the correct approach.'
+
+evidence_expectations:
+  - 'pgtap test file passes with all plan(N) assertions green'
+  - 'Second migration run exits 0 (idempotency)'
+  - 'Manual: SELECT count(*) FROM workflow.story_mutation_audit_log after a test UPDATE confirms rows written'
+  - 'Manual: sensitive column update produces [REDACTED] values in audit table'
+
+subtasks:
+  - id: ST-1
+    title: 'Create workflow.story_mutation_audit_log table DDL'
+    goal: 'Define the new audit log table with correct shape (id, table_name, row_id, column_name, old_value, new_value, changed_at) and GRANT INSERT to agent_role. No execution_id FK.'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1005_workflow_rls.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql (new file)'
+    acs: ['AC-10', 'AC-13']
+    depends_on: none
+    verification: 'psql $DB_URL -f 1040_audit_trigger.sql; echo $?'
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Implement redact_sensitive_value() helper function'
+    goal: 'CREATE OR REPLACE FUNCTION workflow.redact_sensitive_value(column_name text, value text) RETURNS text with SECURITY INVOKER, hardcoded sensitive column array, returns [REDACTED] for matches.'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql'
+    acs: ['AC-1', 'AC-2', 'AC-8', 'AC-9']
+    depends_on: ST-1
+    verification: "SELECT workflow.redact_sensitive_value('api_key', 'test'); -- expect [REDACTED]"
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: 'Implement audit_story_mutations() trigger function and trigger'
+    goal: 'CREATE OR REPLACE FUNCTION workflow.audit_story_mutations() RETURNS trigger, AFTER UPDATE FOR EACH ROW on workflow.stories, enumerating auditable columns, using IS DISTINCT FROM comparison, calling redact_sensitive_value().'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql'
+    acs: ['AC-3', 'AC-5', 'AC-7', 'AC-9', 'AC-12']
+    depends_on: ST-2
+    verification: 'UPDATE workflow.stories SET priority = ''high'' WHERE story_id = ''test''; SELECT count(*) FROM workflow.story_mutation_audit_log;'
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: 'Implement audit_plan_mutations() trigger function and trigger'
+    goal: 'CREATE OR REPLACE FUNCTION workflow.audit_plan_mutations() RETURNS trigger, AFTER UPDATE FOR EACH ROW on workflow.plans, same column-diff and redaction logic as ST-3 but table_name = ''workflow.plans'' and row_id = NEW.plan_slug.'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1020_artifact_cascade_triggers.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql'
+    acs: ['AC-4', 'AC-6', 'AC-7', 'AC-9', 'AC-12']
+    depends_on: ST-3
+    verification: 'UPDATE workflow.plans SET status = ''active''; SELECT count(*) FROM workflow.story_mutation_audit_log WHERE table_name = ''workflow.plans'';'
+    estimated_tokens: 3000
+
+  - id: ST-5
+    title: 'Write pgtap test file 1040_audit_trigger_test.sql'
+    goal: 'pgtap test file covering: has_trigger for both tables, lives_ok for legal UPDATEs producing audit rows, unchanged columns produce zero rows, sensitive column produces [REDACTED], INSERT does not produce audit rows, idempotency.'
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1040_audit_trigger.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql (new file)'
+    acs: ['AC-11']
+    depends_on: ST-4
+    verification: 'psql $DB_URL -f pgtap/1040_audit_trigger_test.sql | pg_prove'
+    estimated_tokens: 6000

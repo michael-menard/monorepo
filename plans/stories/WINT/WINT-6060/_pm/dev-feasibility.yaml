@@ -1,0 +1,108 @@
+feasible: true
+confidence: high
+rationale: >
+  Both deliverables are well-defined with clear canonical templates. The MCP registration
+  sub-task (AC-1, AC-2) is pure boilerplate copy-adapt from the existing kb_get_churn_analysis
+  pattern at tool-schemas.ts lines 3381-3425 and tool-handlers.ts lines 4439-4479. The
+  KbGetScoreboardInputSchema and kb_get_scoreboard function already exist in analytics-operations.ts
+  — no business logic required. The agent file creation (AC-3 through AC-12) is the primary
+  creative work; workflow-retro.agent.md provides the exact structural peer. Estimated token
+  budget 80,000-120,000 is realistic for this scope.
+complexity: low
+change_surface:
+  areas:
+    - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    - .claude/agents/weekly-analyst.agent.md
+    - .claude/agents/__tests__/weekly-analyst.test.ts
+  endpoints: []
+  deploy_touchpoints:
+    - 'MCP server restart required after tool-schemas.ts and tool-handlers.ts changes to expose kb_get_scoreboard'
+
+risks:
+  - finding: 'Import of KbGetScoreboardInputSchema from analytics-operations.ts must be added to tool-schemas.ts'
+    mitigation: >
+      The import pattern is identical to KbGetChurnAnalysisInputSchema. Search tool-schemas.ts
+      for the existing churn import line and add scoreboard import below it. Risk: low.
+
+  - finding: 'kb_get_scoreboard must also be imported in tool-handlers.ts from analytics-operations.ts'
+    mitigation: >
+      Same pattern as kb_get_churn_analysis import. Search for the churn import and add
+      scoreboard import. Risk: low.
+
+missing_requirements: []
+
+evidence_expectations:
+  - 'pnpm check-types --filter @repo/knowledge-base passes after MCP registration changes'
+  - '__tests__/weekly-analyst.test.ts passes with content-validation assertions'
+  - 'Grep confirms kb_get_scoreboard present in toolDefinitions push statements in tool-schemas.ts'
+  - 'Grep confirms handleKbGetScoreboard exported from tool-handlers.ts'
+
+subtasks:
+  - id: ST-1
+    title: 'Add kb_get_scoreboard schema and tool definition to tool-schemas.ts'
+    goal: >
+      Register kb_get_scoreboard in the MCP tool schema layer following the exact
+      kb_get_churn_analysis pattern (import schema, define tool definition object with
+      description, push to toolDefinitions array).
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - apps/api/knowledge-base/src/crud-operations/analytics-operations.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    acs: ['AC-1']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 8000
+
+  - id: ST-2
+    title: 'Add kb_get_scoreboard handler function and dispatch case to tool-handlers.ts'
+    goal: >
+      Register kb_get_scoreboard in the MCP tool handler layer: import the function
+      from analytics-operations.ts, implement handleKbGetScoreboard following the
+      handleKbGetChurnAnalysis pattern, add dispatch case in the tool router.
+    files_to_read:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+      - apps/api/knowledge-base/src/crud-operations/analytics-operations.ts
+    files_to_modify:
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    acs: ['AC-2']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 10000
+
+  - id: ST-3
+    title: 'Create .claude/agents/weekly-analyst.agent.md'
+    goal: >
+      Write the weekly-analyst leader agent file with complete YAML frontmatter
+      (type: leader, permission_level: orchestrator, model: sonnet, all kb_tools,
+      shared references, story_id: WINT-6060), Role, Mission, Inputs, Execution phases
+      (4 phases: retro lessons, 4 analytics calls, synthesis, kb_write_artifact),
+      WeeklyAnalysis schema, week-over-week comparison, Completion Signal, Non-Negotiables.
+      Use workflow-retro.agent.md as structural peer.
+    files_to_read:
+      - .claude/agents/workflow-retro.agent.md
+      - .claude/agents/elab-analyst.agent.md
+    files_to_modify:
+      - .claude/agents/weekly-analyst.agent.md
+    acs: ['AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-7', 'AC-8', 'AC-9', 'AC-10', 'AC-11']
+    depends_on: none
+    verification: 'Read .claude/agents/weekly-analyst.agent.md and verify all required sections present'
+    estimated_tokens: 45000
+
+  - id: ST-4
+    title: 'Create .claude/agents/__tests__/weekly-analyst.test.ts content-validation test'
+    goal: >
+      Write a Vitest content-validation test that reads weekly-analyst.agent.md and
+      asserts: (1) YAML frontmatter parses with required fields, (2) all required section
+      headings are present, (3) kb_write_artifact is referenced in output section,
+      (4) no filesystem paths like _implementation/ appear. Follow WINT-2080 agent-only
+      test pattern.
+    files_to_read:
+      - .claude/agents/__tests__/
+    files_to_modify:
+      - .claude/agents/__tests__/weekly-analyst.test.ts
+    acs: ['AC-12']
+    depends_on: ST-3
+    verification: 'pnpm test --filter @repo/knowledge-base -- weekly-analyst'
+    estimated_tokens: 12000

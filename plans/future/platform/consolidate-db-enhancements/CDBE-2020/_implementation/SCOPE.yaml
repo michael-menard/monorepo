@@ -1,0 +1,31 @@
+schema: 1
+story_id: CDBE-2020
+timestamp: '2026-03-18T03:50:00Z'
+gen_mode: false
+
+touches:
+  backend: true        # Database stored procedures, no API changes
+  frontend: false      # No UI changes
+  packages: false      # No package/library changes
+  db: true             # Two SQL functions in workflow schema
+  contracts: false     # No API contracts
+  ui: false            # No UI
+  infra: false         # No infrastructure changes
+
+touched_paths_globs:
+  - 'apps/api/knowledge-base/src/db/migrations/'
+  - 'apps/api/knowledge-base/src/db/migrations/pgtap/'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true           # Migration slot collision with CDBE-2010, CDBE-2030
+  external_apis: false
+  security: true             # validate_caller entry point guard required
+  performance: false
+
+summary: >
+  Implement atomic stored procedures resolve_blocker() and complete_artifact()
+  for Phase 2 workflow DB layer, with resolution_notes column addition and pgtap test suite
+
+elaboration: completed

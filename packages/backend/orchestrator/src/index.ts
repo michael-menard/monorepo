@@ -592,3 +592,6 @@ export {
   type ArtifactWriteResult,
   type StageSearchOrder,
 } from './services/artifact-service.js'
+
+// Models module exports - unified model interface and router (WINT-0230)
+export { ModelRouter, ModelRouterFactory } from './models/unified-interface.js'

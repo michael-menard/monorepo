@@ -1,0 +1,134 @@
+story_id: PIPE-2020
+strategy: unit
+framework: vitest
+test_file: apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+action: extend_existing
+
+test_cases:
+  - id: HP-4
+    describe: "HP-4: implementation job routes to runDevImplement()"
+    type: happy_path
+    covers: [AC-3, AC-9]
+    cases:
+      - desc: "calls runDevImplement with { storyId, attempt }"
+        fixture: createImplementationJobData()
+        assert:
+          - runners.runDevImplement called once
+          - args match { storyId, attempt: attemptNumber }
+          - runners.runElaboration not called
+          - runners.runStoryCreation not called
+          - runners.runReview not called
+          - runners.runQAVerify not called
+      - desc: "completed log event includes required fields"
+        assert:
+          - logger.info called with 'completed'
+          - event contains storyId, stage='implementation', threadId, attemptNumber, durationMs
+
+  - id: HP-5
+    describe: "HP-5: review job routes to runReview()"
+    type: happy_path
+    covers: [AC-4, AC-9]
+    cases:
+      - desc: "calls runReview with worktreePath and featureDir from payload"
+        fixture: "createReviewJobData({ worktreePath: '/tmp/worktrees/PIPE-2020', featureDir: 'plans/future/platform/x' })"
+        assert:
+          - runners.runReview called once
+          - args match { storyId, worktreePath: '/tmp/worktrees/PIPE-2020', featureDir: 'plans/future/platform/x', attempt }
+          - no other runners called
+      - desc: "fallback to '' and 'plans/future/platform' when payload fields absent"
+        fixture: createReviewJobData() # no worktreePath/featureDir
+        assert:
+          - runners.runReview called with { worktreePath: '', featureDir: 'plans/future/platform' }
+
+  - id: HP-6
+    describe: "HP-6: qa job routes to runQAVerify()"
+    type: happy_path
+    covers: [AC-5, AC-9]
+    cases:
+      - desc: "calls runQAVerify with { storyId, attempt }"
+        fixture: createQaJobData()
+        assert:
+          - runners.runQAVerify called once
+          - args match { storyId, attempt: attemptNumber }
+          - no other runners called
+      - desc: "completed log event includes required fields"
+        assert:
+          - logger.info called with 'completed'
+          - event contains storyId, stage='qa', threadId, attemptNumber, durationMs
+
+  - id: EC-timeout-impl
+    describe: "wall clock timeout: implementation"
+    type: edge_case
+    covers: [AC-6]
+    pattern: vi.useFakeTimers() + vi.advanceTimersByTime()
+    assert:
+      - dispatchJob rejects with wall_clock_timeout error
+      - logger.info called with 'timeout' event containing threadId matching 'PIPE-2020:implementation:1'
+
+  - id: EC-timeout-review
+    describe: "wall clock timeout: review"
+    type: edge_case
+    covers: [AC-6]
+    pattern: vi.useFakeTimers() + vi.advanceTimersByTime()
+    assert:
+      - dispatchJob rejects with wall_clock_timeout error
+      - logger.info called with 'timeout' event containing threadId matching 'PIPE-2020:review:1'
+
+  - id: EC-timeout-qa
+    describe: "wall clock timeout: qa"
+    type: edge_case
+    covers: [AC-6]
+    pattern: vi.useFakeTimers() + vi.advanceTimersByTime()
+    assert:
+      - dispatchJob rejects with wall_clock_timeout error
+      - logger.info called with 'timeout' event containing threadId matching 'PIPE-2020:qa:1'
+
+  - id: CB-impl
+    describe: "circuit breaker: implementation"
+    type: edge_case
+    covers: [AC-7]
+    config: circuitBreakerFailureThreshold=1
+    assert:
+      - second dispatch triggers circuit open
+      - job.moveToDelayed called
+      - logger.info called with 'circuit_open' event
+
+  - id: CB-review
+    describe: "circuit breaker: review"
+    type: edge_case
+    covers: [AC-7]
+    config: circuitBreakerFailureThreshold=1
+    assert:
+      - second dispatch triggers circuit open
+      - job.moveToDelayed called
+      - logger.info called with 'circuit_open' event
+
+  - id: CB-qa
+    describe: "circuit breaker: qa"
+    type: edge_case
+    covers: [AC-7]
+    config: circuitBreakerFailureThreshold=1
+    assert:
+      - second dispatch triggers circuit open
+      - job.moveToDelayed called
+      - logger.info called with 'circuit_open' event
+
+regression_guard:
+  command: "pnpm test --filter @repo/pipeline"
+  requirement: all existing tests pass (elaboration + story-creation coverage unaffected)
+
+compile_check:
+  command: "pnpm check-types"
+  applies_to: AC-8 and AC-11 (post PIPE-2010)
+  grep_verify: "grep -n 'as StorySnapshotPayload &' apps/api/pipeline/src/supervisor/dispatch-router.ts returns empty"
+
+patterns_to_follow:
+  - "vi.useFakeTimers() scoped to describe block — see dispatch-router.test.ts lines 321–388"
+  - "circuitBreakerFailureThreshold: 1 two-dispatch trip — see dispatch-router.test.ts lines 493–548"
+  - "vi.mocked(logger).info.mock.calls.find() for log event assertion"
+  - "injectable runners via dispatchJob(job, data, config, runners) — no vi.mock('./graph-loader')"
+
+constraints:
+  - Do not add Redis or BullMQ Worker to tests
+  - Do not create a new test file — extend dispatch-router.test.ts
+  - Do not use vi.mock('./graph-loader')

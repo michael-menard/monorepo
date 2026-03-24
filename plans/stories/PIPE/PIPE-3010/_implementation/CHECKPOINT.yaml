@@ -1,0 +1,7 @@
+schema: 1
+story_id: PIPE-3010
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+blocked: false
+timestamp: '2026-03-18T23:04:00Z'

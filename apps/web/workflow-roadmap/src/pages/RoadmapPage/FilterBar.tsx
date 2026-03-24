@@ -13,30 +13,54 @@ import {
   setStatus,
   setPriority,
   setType,
+  setTag,
   setExcludeCompleted,
   setSearch,
+  resetFilters,
 } from '../../store/roadmapFiltersSlice'
 import type { RootState } from '../../store'
 import { ALL, STATUS_OPTIONS, PRIORITY_OPTIONS, TYPE_OPTIONS, fromSelect } from './constants'
 
 export function FilterBar() {
   const dispatch = useDispatch()
-  const { status, priority, type, excludeCompleted, search } = useSelector(
+  const { status, priority, type, tag, excludeCompleted, search } = useSelector(
     (state: RootState) => state.roadmapFilters,
   )
+
+  const hasActiveFilter = !!status || !!priority || !!type || !!tag || !!search || !excludeCompleted
 
   return (
     <section
       aria-label="Filters"
       className="mb-6 bg-slate-900/50 border border-slate-700/50 backdrop-blur-sm rounded-xl p-4 flex flex-col gap-3"
     >
-      <Input
-        aria-label="Search plans"
-        placeholder="Search plans..."
-        value={search}
-        onChange={e => dispatch(setSearch(e.target.value))}
-        className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50"
-      />
+      <div className="relative">
+        <Input
+          aria-label="Search plans"
+          placeholder="Search plans..."
+          value={search}
+          onChange={e => dispatch(setSearch(e.target.value))}
+          className="bg-slate-800/50 border-slate-600/50 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/50 pr-8"
+        />
+        {search ? (
+          <button
+            type="button"
+            onClick={() => dispatch(setSearch(''))}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            aria-label="Clear search"
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
 
       <div className="flex items-center gap-3">
         <Select value={status || ALL} onValueChange={v => dispatch(setStatus(fromSelect(v)))}>
@@ -113,6 +137,34 @@ export function FilterBar() {
           </Label>
         </div>
       </div>
+
+      {tag || hasActiveFilter ? (
+        <div className="flex items-center gap-2">
+          {tag ? (
+            <>
+              <span className="text-xs text-slate-500">Tag:</span>
+              <button
+                type="button"
+                onClick={() => dispatch(setTag(''))}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors"
+                aria-label={`Remove tag filter: ${tag}`}
+              >
+                {tag}
+                <span aria-hidden="true">{'\u00D7'}</span>
+              </button>
+            </>
+          ) : null}
+          {hasActiveFilter ? (
+            <button
+              type="button"
+              onClick={() => dispatch(resetFilters())}
+              className="ml-auto text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Clear all filters
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   )
 }

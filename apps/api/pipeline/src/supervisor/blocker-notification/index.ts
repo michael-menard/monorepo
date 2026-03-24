@@ -1,7 +1,7 @@
 /**
  * BlockerNotificationModule
  *
- * Handles persistence of pipeline blockers to wint.story_blockers and optional
+ * Handles persistence of pipeline blockers to workflow.story_blockers and optional
  * webhook notification on PERMANENT failure, wall-clock timeout, and circuit OPEN.
  *
  * APIP-2010:
@@ -78,7 +78,7 @@ export function createBlockerNotificationModule(
         logger.warn('blocker_insert_skipped_no_uuid', {
           event: 'blocker_insert_skipped_no_uuid',
           storyId,
-          reason: 'storyId not found in wint.stories — skipping blocker insert',
+          reason: 'storyId not found in workflow.stories — skipping blocker insert',
         })
         return
       }
@@ -96,7 +96,7 @@ export function createBlockerNotificationModule(
 
       // AC-5: Idempotency guard — check for existing unresolved blocker
       const existing = await db.execute(sql`
-        SELECT id FROM wint.story_blockers
+        SELECT id FROM workflow.story_blockers
         WHERE story_id = ${storyUuid}::uuid
           AND blocker_type = 'technical'
           AND resolved_at IS NULL
@@ -114,7 +114,7 @@ export function createBlockerNotificationModule(
 
       // Insert blocker row
       await db.execute(sql`
-        INSERT INTO wint.story_blockers (story_id, blocker_type, blocker_description, severity)
+        INSERT INTO workflow.story_blockers (story_id, blocker_type, blocker_description, severity)
         VALUES (
           ${storyUuid}::uuid,
           'technical',
@@ -165,7 +165,7 @@ export function createBlockerNotificationModule(
           event: 'dependency_blocker_insert_skipped_no_uuid',
           storyId,
           stage,
-          reason: 'storyId not found in wint.stories — skipping blocker insert',
+          reason: 'storyId not found in workflow.stories — skipping blocker insert',
         })
         return
       }
@@ -174,7 +174,7 @@ export function createBlockerNotificationModule(
 
       // AC-5: Idempotency guard — check for existing unresolved dependency blocker
       const existing = await db.execute(sql`
-        SELECT id FROM wint.story_blockers
+        SELECT id FROM workflow.story_blockers
         WHERE story_id = ${storyUuid}::uuid
           AND blocker_type = 'dependency'
           AND resolved_at IS NULL
@@ -192,7 +192,7 @@ export function createBlockerNotificationModule(
       }
 
       await db.execute(sql`
-        INSERT INTO wint.story_blockers (story_id, blocker_type, blocker_description, severity)
+        INSERT INTO workflow.story_blockers (story_id, blocker_type, blocker_description, severity)
         VALUES (
           ${storyUuid}::uuid,
           'dependency',
@@ -248,7 +248,7 @@ export function createBlockerNotificationModule(
       }
 
       const result = await db.execute(sql`
-        UPDATE wint.story_blockers
+        UPDATE workflow.story_blockers
         SET resolved_at = NOW(), updated_at = NOW()
         WHERE story_id = ${storyUuid}::uuid
           AND resolved_at IS NULL
@@ -273,10 +273,10 @@ export function createBlockerNotificationModule(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Resolve a storyId (e.g. 'APIP-001') to a wint.stories UUID.
+ * Resolve a storyId (e.g. 'APIP-001') to a workflow.stories UUID.
  *
  * ARCH-002: Uses module-level Map cache for O(1) lookups after first resolution.
- * Returns null if the storyId is not found in wint.stories (skip with warning).
+ * Returns null if the storyId is not found in workflow.stories (skip with warning).
  */
 
 async function resolveStoryUuid(db: NodePgDatabase<any>, storyId: string): Promise<string | null> {
@@ -287,7 +287,7 @@ async function resolveStoryUuid(db: NodePgDatabase<any>, storyId: string): Promi
 
   try {
     const result = await db.execute(sql`
-      SELECT id FROM wint.stories WHERE story_id = ${storyId} LIMIT 1
+      SELECT id FROM workflow.stories WHERE story_id = ${storyId} LIMIT 1
     `)
 
     if (result.rows.length === 0) {

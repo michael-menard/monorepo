@@ -1,0 +1,24 @@
+story_id: CDBE-1030
+verdict: pass
+summary: >-
+  Migration 1020 creates two PostgreSQL triggers covering all 16 ACs. 27/27 pgtap tests pass. E2E exempt (pure DB
+  migration).
+test_results:
+  pgtap:
+    passed: 27
+    failed: 0
+    total: 27
+    mode: live
+e2e_gate:
+  status: exempt
+  reason: 'story_type: infra — pure PostgreSQL migration with no API or UI surface'
+ac_coverage:
+  total: 16
+  passed: 16
+  failed: 0
+  details: AC-1 through AC-16 all pass
+review_iteration: 1
+review_result: pass
+review_notes: >-
+  Initial review found AC-13 SAVEPOINT pattern missing in pgtap tests. Fixed in iteration 1. Re-review passes all
+  checks.

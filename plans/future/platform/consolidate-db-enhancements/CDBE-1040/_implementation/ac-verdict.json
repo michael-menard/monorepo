@@ -1,0 +1,151 @@
+{
+  "story_id": "CDBE-1040",
+  "generated_at": "2026-03-19T05:30:00Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "A `redact_sensitive_value(column_name text, value text) RETURNS text` function is created using `CREATE OR REPLACE FUNCTION` in the `workflow` schema, `LANGUAGE plpgsql`, `SECURITY INVOKER`. It accepts a column name and its text-serialized value, and returns `'[REDACTED]'` if `column_name` matches any entry in a defined sensitive columns list (e.g., columns containing `api_key`, `token`, `secret`, `credential`, `password`). For non-sensitive columns it returns the original value unchanged.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "A sensitive columns definition is persisted as either: (a) a `workflow.sensitive_audit_columns` table with a `column_name text PRIMARY KEY` and seed rows, or (b) a hardcoded constant array within the trigger function body. The choice must be documented in a `COMMENT ON` statement. (Recommendation: hardcoded array for MVP — zero SELECT overhead per trigger invocation.)",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "A trigger function `workflow.audit_story_mutations()` is created using `CREATE OR REPLACE FUNCTION`, `LANGUAGE plpgsql`, `SECURITY INVOKER`. It fires AFTER UPDATE on `workflow.stories`, compares `OLD.*` to `NEW.*` for each auditable column using `IS DISTINCT FROM`, and for each changed column writes one row to `workflow.story_mutation_audit_log` containing: `table_name = 'workflow.stories'`, `row_id = NEW.story_id`, `column_name`, `old_value = redact_sensitive_value(column_name, OLD_value::text)`, `new_value = redact_sensitive_value(column_name, NEW_value::text)`, `changed_at = NOW()`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "A trigger function `workflow.audit_plan_mutations()` is created using `CREATE OR REPLACE FUNCTION`, `LANGUAGE plpgsql`, `SECURITY INVOKER`. It fires AFTER UPDATE on `workflow.plans`, using the same column-diff and redaction logic as AC-3, with `table_name = 'workflow.plans'` and `row_id = NEW.plan_slug`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "An AFTER UPDATE trigger named `audit_story_mutations` is attached to `workflow.stories` FOR EACH ROW executing `workflow.audit_story_mutations()`. Created using `DROP TRIGGER IF EXISTS / CREATE TRIGGER` (idempotent).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "An AFTER UPDATE trigger named `audit_plan_mutations` is attached to `workflow.plans` FOR EACH ROW executing `workflow.audit_plan_mutations()`. Created using `DROP TRIGGER IF EXISTS / CREATE TRIGGER` (idempotent).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "Unchanged columns are NOT written to the audit log. Only columns where `OLD.col IS DISTINCT FROM NEW.col` generate a row.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "Columns with values matching the sensitive list have their `old_value` and `new_value` replaced with `'[REDACTED]'` before INSERT into the audit log. The column name itself is still logged.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "`COMMENT ON` statements are included for: both trigger functions, both triggers, the `redact_sensitive_value` function, and the `workflow.story_mutation_audit_log` table — each citing migration `1040`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "The migration is idempotent: second run exits 0 with no errors. Uses `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS`, and `CREATE TABLE IF NOT EXISTS` for the new audit table.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "pgtap test file at `apps/api/knowledge-base/src/db/migrations/pgtap/1040_audit_trigger_test.sql` passes, covering: trigger existence on both tables (`has_trigger`), a legal UPDATE to `workflow.stories` produces an audit row (`lives_ok` + row count assertion), a legal UPDATE to `workflow.plans` produces an audit row, unchanged columns produce no audit row, a sensitive column update produces `'[REDACTED]'` in both `old_value` and `new_value` in the audit row, `redact_sensitive_value()` returns `'[REDACTED]'` for a known sensitive column name, `redact_sensitive_value()` returns the original value for a non-sensitive column name, INSERT to `workflow.stories` produces no audit rows.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "The audit trigger does NOT fire on INSERT or DELETE — only UPDATE operations are audited (`AFTER UPDATE FOR EACH ROW`).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 2,
+      "strong_evidence_count": 2,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "The migration number slot `1040` is verified as available at implementation time (no existing `1040_*.sql` file in `apps/api/knowledge-base/src/db/migrations/`).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "The trigger bodies for `workflow.audit_story_mutations()` and `workflow.audit_plan_mutations()` must enumerate the auditable columns explicitly. For `workflow.stories`, the auditable columns are: `state`, `priority`, `title`, `description`, `blocked_reason`, `blocked_by_story`, `points`, `feature`, `epic`. For `workflow.plans`, the auditable columns are: `status`, `title`, `description`, `priority`. Columns that are system/housekeeping columns (`id`, `created_at`, `updated_at`, `file_hash`, `started_at`, `completed_at`) are explicitly excluded from the auditable set to avoid high-noise audit rows on every write. This enumeration must appear as a comment block at the top of each trigger function body.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 3,
+      "strong_evidence_count": 3,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    }
+  ],
+  "total_acs": 14,
+  "accepted": 14,
+  "challenged": 0,
+  "rejected": 0
+}

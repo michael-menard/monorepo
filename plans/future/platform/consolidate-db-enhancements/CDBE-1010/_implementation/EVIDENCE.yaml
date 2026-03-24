@@ -1,0 +1,18 @@
+story_id: CDBE-1010
+touched_files:
+  - path: apps/api/knowledge-base/src/db/migrations/1010_story_state_history_trigger.sql
+    action: create
+  - path: apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql
+    action: create
+pr_number: 535
+pr_url: https://github.com/michael-menard/monorepo/pull/535
+branch: story/CDBE-1010
+e2e_tests:
+  status: exempt
+  reason: Pure database migration - no API or UI surface
+unit_tests:
+  status: pass
+  count: 19
+  framework: pgtap
+build:
+  status: pass

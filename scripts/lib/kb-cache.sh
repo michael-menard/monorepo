@@ -17,6 +17,12 @@
 # All functions are bash 3.2 safe (no associative arrays, no readarray).
 #
 
+# Ensure spinner is available
+SCRIPT_DIR_KC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -z "${SPIN_PID+x}" ]]; then
+  source "$SCRIPT_DIR_KC/spinner.sh"
+fi
+
 # ── Cache file path ──────────────────────────────────────────────────
 KB_CACHE_FILE=""
 KB_STORY_IDS=()
@@ -34,26 +40,57 @@ kb_fetch_stories() {
   KB_CACHE_FILE="/tmp/kb-cache-${plan_slug}-$$.ndjson"
   KB_STORY_IDS=()
 
-  # Single claude -p call: fetch all stories as NDJSON
-  local raw_result
-  raw_result=$(env -u CLAUDECODE claude -p \
-    "Call kb_list_stories with feature='${plan_slug}'. For each story, output ONE JSON object per line (NDJSON format) with keys: id, state, phase, storyDir. Output ONLY the NDJSON lines — no markdown fences, no explanation, no wrapper array. If no stories are found, output nothing." \
-    --allowedTools "mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_get_story" \
-    --output-format text 2>/dev/null) || true
+  spin_start "Fetching KB stories for '$plan_slug'..."
 
-  if [[ -z "$raw_result" ]]; then
-    echo "Warning: kb_fetch_stories got empty result for '$plan_slug'" >&2
+  # Direct DB query — fast and reliable vs claude -p which can hang/timeout
+  local container
+  container=$(docker ps --filter "publish=5435" -q 2>/dev/null | head -1)
+
+  if [[ -z "$container" ]]; then
+    spin_fail "No docker container found on port 5435"
     touch "$KB_CACHE_FILE"
     return 0
   fi
 
-  # Extract JSON lines (skip any non-JSON preamble/postamble)
-  echo "$raw_result" | grep -E '^\s*\{' | while IFS= read -r line; do
-    # Validate it's parseable JSON with an 'id' field
-    if echo "$line" | jq -e '.id' >/dev/null 2>&1; then
-      echo "$line"
+  local raw_result
+  raw_result=$(docker exec "$container" psql -U kbuser -d knowledgebase \
+    -t -A -F '|' -c "
+      SELECT s.story_id, s.state, s.epic, s.feature
+      FROM workflow.stories s
+      JOIN workflow.plan_story_links psl ON s.story_id = psl.story_id
+      WHERE psl.plan_slug = '${plan_slug}'
+        AND s.state NOT IN ('completed', 'cancelled', 'deferred', 'uat')
+      ORDER BY s.story_id
+    " 2>/dev/null) || true
+
+  if [[ -z "$raw_result" ]]; then
+    # Fallback: prefix-based lookup
+    local prefix="${STORY_PREFIX:-}"
+    if [[ -n "$prefix" ]]; then
+      raw_result=$(docker exec "$container" psql -U kbuser -d knowledgebase \
+        -t -A -F '|' -c "
+          SELECT s.story_id, s.state, s.epic, s.feature
+          FROM workflow.stories s
+          WHERE s.story_id LIKE '${prefix}-%'
+            AND s.state NOT IN ('completed', 'cancelled', 'deferred', 'uat')
+          ORDER BY s.story_id
+        " 2>/dev/null) || true
     fi
-  done > "$KB_CACHE_FILE"
+  fi
+
+  if [[ -z "$raw_result" ]]; then
+    spin_fail "KB returned empty for '$plan_slug'"
+    touch "$KB_CACHE_FILE"
+    return 0
+  fi
+
+  # Convert pipe-delimited rows to NDJSON
+  > "$KB_CACHE_FILE"
+  while IFS='|' read -r sid state epic feature; do
+    [[ -z "$sid" ]] && continue
+    printf '{"id":"%s","state":"%s","phase":"%s","storyDir":"%s"}\n' \
+      "$sid" "$state" "${epic:-}" "${feature:-}" >> "$KB_CACHE_FILE"
+  done <<< "$raw_result"
 
   # Build sorted story ID array
   while IFS= read -r story_id; do
@@ -61,7 +98,9 @@ kb_fetch_stories() {
   done < <(jq -r '.id' "$KB_CACHE_FILE" 2>/dev/null | sort)
 
   if [[ ${#KB_STORY_IDS[@]} -eq 0 ]]; then
-    echo "Warning: No stories found in KB cache for '$plan_slug'" >&2
+    spin_fail "No stories in KB for '$plan_slug'"
+  else
+    spin_stop "Cached ${#KB_STORY_IDS[@]} stories for '$plan_slug'"
   fi
 }
 
@@ -86,30 +125,51 @@ kb_fetch_by_ids() {
   KB_CACHE_FILE="${KB_CACHE_FILE:-/tmp/kb-cache-byids-$$.ndjson}"
   KB_STORY_IDS=()
 
-  # Build the prompt: ask claude to fetch each story and output NDJSON
-  local raw_result
-  raw_result=$(env -u CLAUDECODE claude -p \
-    "For each of these story IDs: ${ids_csv} — call kb_get_story for each one. Output ONE JSON object per line (NDJSON format) with keys: id, state, phase, storyDir. Output ONLY the NDJSON lines — no markdown fences, no explanation, no wrapper array. If a story is not found in the KB, skip it (do not output a line for it)." \
-    --allowedTools "mcp__knowledge-base__kb_get_story" \
-    --output-format text 2>/dev/null) || true
+  spin_start "Fetching KB states for stories..."
 
-  if [[ -z "$raw_result" ]]; then
+  # Direct DB query — convert comma-separated IDs to SQL IN list
+  local container
+  container=$(docker ps --filter "publish=5435" -q 2>/dev/null | head -1)
+
+  if [[ -z "$container" ]]; then
+    spin_fail "No docker container found on port 5435"
     touch "$KB_CACHE_FILE"
     return 0
   fi
 
-  # Extract valid JSON lines (append to existing cache if kb_fetch_stories ran first)
-  echo "$raw_result" | grep -E '^\s*\{' | while IFS= read -r line; do
-    if echo "$line" | jq -e '.id' >/dev/null 2>&1; then
-      echo "$line"
-    fi
-  done >> "$KB_CACHE_FILE"
+  # Build SQL-safe IN clause: 'ID1','ID2','ID3'
+  local sql_in
+  sql_in=$(echo "$ids_csv" | tr ',' '\n' | sed "s/^.*$/'\0'/" | tr '\n' ',' | sed 's/,$//')
+
+  local raw_result
+  raw_result=$(docker exec "$container" psql -U kbuser -d knowledgebase \
+    -t -A -F '|' -c "
+      SELECT story_id, state, epic, feature
+      FROM workflow.stories
+      WHERE story_id IN (${sql_in})
+      ORDER BY story_id
+    " 2>/dev/null) || true
+
+  if [[ -z "$raw_result" ]]; then
+    spin_fail "KB returned empty for story IDs"
+    touch "$KB_CACHE_FILE"
+    return 0
+  fi
+
+  # Convert pipe-delimited rows to NDJSON (append to existing cache)
+  while IFS='|' read -r sid state epic feature; do
+    [[ -z "$sid" ]] && continue
+    printf '{"id":"%s","state":"%s","phase":"%s","storyDir":"%s"}\n' \
+      "$sid" "$state" "${epic:-}" "${feature:-}" >> "$KB_CACHE_FILE"
+  done <<< "$raw_result"
 
   # Rebuild sorted story ID array from full cache
   KB_STORY_IDS=()
   while IFS= read -r story_id; do
     [[ -n "$story_id" ]] && KB_STORY_IDS+=("$story_id")
   done < <(jq -r '.id' "$KB_CACHE_FILE" 2>/dev/null | sort -u)
+
+  spin_stop "Cached ${#KB_STORY_IDS[@]} stories from KB"
 }
 
 # ── Lookup functions (read from cache, zero claude -p calls) ─────────
@@ -195,9 +255,245 @@ kb_is_completed() {
   esac
 }
 
+# ── Wave computation (dependency-based execution ordering) ─────────
+#
+# Computes wave numbers for stories based on their dependencies.
+# Stories with no deps → wave 0. Stories depending on wave N → wave N+1.
+# Matches the roadmap app's `computeWaves` algorithm.
+#
+# Args:
+#   $1 = plan_slug (optional — if empty, uses story IDs from FILTERED_STORIES)
+#   $2 = LOG_DIR (for writing .wave-cache and .deps-cache)
+#
+# Writes:
+#   $LOG_DIR/.wave-cache — STORY_ID<TAB>WAVE_NUM
+#   $LOG_DIR/.deps-cache — STORY_ID<TAB>DEP1,DEP2 (or STORY_ID<TAB>none)
+#
+# Sets:
+#   KB_WAVE_MAX — highest wave number
+#
+KB_WAVE_MAX=0
+
+kb_compute_waves() {
+  local plan_slug="${1:-}"
+  local log_dir="${2:-/tmp}"
+  local wave_cache="$log_dir/.wave-cache"
+  local deps_cache="$log_dir/.deps-cache"
+
+  KB_WAVE_MAX=0
+  : > "$wave_cache"
+  : > "$deps_cache"
+
+  spin_start "Computing dependency waves..."
+
+  local container
+  container=$(docker ps --filter "publish=5435" -q 2>/dev/null | head -1)
+
+  if [[ -z "$container" ]]; then
+    spin_fail "No docker container found on port 5435 — all stories in wave 0"
+    # Put all stories in wave 0
+    local sid
+    for sid in "${FILTERED_STORIES[@]}"; do
+      printf '%s\t0\n' "$sid" >> "$wave_cache"
+      printf '%s\tnone\n' "$sid" >> "$deps_cache"
+    done
+    return 0
+  fi
+
+  # Fetch all deps for stories in scope
+  local deps_result=""
+  if [[ -n "$plan_slug" ]]; then
+    deps_result=$(docker exec "$container" psql -U kbuser -d knowledgebase \
+      -t -A -F '|' -c "
+        SELECT sd.story_id, sd.depends_on_id
+        FROM workflow.story_dependencies sd
+        JOIN workflow.plan_story_links psl ON sd.story_id = psl.story_id
+        WHERE psl.plan_slug = '${plan_slug}'
+      " 2>/dev/null) || true
+  else
+    # Work-order mode: query by explicit story IDs
+    local sql_in=""
+    local sid
+    for sid in "${FILTERED_STORIES[@]}"; do
+      [[ -n "$sql_in" ]] && sql_in="${sql_in},"
+      sql_in="${sql_in}'${sid}'"
+    done
+    if [[ -n "$sql_in" ]]; then
+      deps_result=$(docker exec "$container" psql -U kbuser -d knowledgebase \
+        -t -A -F '|' -c "
+          SELECT story_id, depends_on_id
+          FROM workflow.story_dependencies
+          WHERE story_id IN (${sql_in})
+        " 2>/dev/null) || true
+    fi
+  fi
+
+  # Build deps cache: story → comma-separated deps
+  # Use temp file for accumulation
+  local deps_tmp="$log_dir/.deps-tmp-$$"
+  : > "$deps_tmp"
+
+  if [[ -n "$deps_result" ]]; then
+    while IFS='|' read -r sid dep_id; do
+      [[ -z "$sid" || -z "$dep_id" ]] && continue
+      printf '%s\t%s\n' "$sid" "$dep_id" >> "$deps_tmp"
+    done <<< "$deps_result"
+  fi
+
+  # Collapse per-story deps into comma-separated format for .deps-cache
+  local seen_stories=""
+  for sid in "${FILTERED_STORIES[@]}"; do
+    local story_deps=""
+    while IFS=$'\t' read -r s d; do
+      [[ "$s" == "$sid" ]] && {
+        [[ -n "$story_deps" ]] && story_deps="${story_deps},"
+        story_deps="${story_deps}${d}"
+      }
+    done < "$deps_tmp"
+
+    if [[ -n "$story_deps" ]]; then
+      printf '%s\t%s\n' "$sid" "$story_deps" >> "$deps_cache"
+    else
+      printf '%s\tnone\n' "$sid" >> "$deps_cache"
+    fi
+  done
+
+  rm -f "$deps_tmp"
+
+  # ── Iterative wave computation (matching computeWaves algorithm) ──
+  # Wave 0: stories with no deps (or deps outside the current scope)
+  # Wave N+1: stories whose deps are all in wave ≤ N
+  #
+  # Build in-scope set for fast lookup
+  local in_scope=""
+  for sid in "${FILTERED_STORIES[@]}"; do
+    in_scope="${in_scope}|${sid}|"
+  done
+
+  # Initialize: assign wave -1 (unresolved) to all stories
+  local wave_tmp="$log_dir/.wave-tmp-$$"
+  : > "$wave_tmp"
+  for sid in "${FILTERED_STORIES[@]}"; do
+    printf '%s\t-1\n' "$sid" >> "$wave_tmp"
+  done
+
+  local changed=true
+  local iteration=0
+  local max_iterations=100
+
+  while $changed && [[ $iteration -lt $max_iterations ]]; do
+    changed=false
+    ((iteration++))
+
+    for sid in "${FILTERED_STORIES[@]}"; do
+      # Skip already-resolved stories
+      local current_wave
+      current_wave=$(grep "^${sid}	" "$wave_tmp" | cut -f2)
+      [[ "$current_wave" != "-1" ]] && continue
+
+      # Get this story's deps
+      local deps_line
+      deps_line=$(grep "^${sid}	" "$deps_cache" | cut -f2)
+
+      if [[ -z "$deps_line" || "$deps_line" == "none" ]]; then
+        # No deps → wave 0
+        sed -i '' "s/^${sid}	-1$/${sid}	0/" "$wave_tmp" 2>/dev/null || \
+          sed -i "s/^${sid}	-1$/${sid}	0/" "$wave_tmp"
+        changed=true
+        continue
+      fi
+
+      # Check if all in-scope deps are resolved
+      local max_dep_wave=-1
+      local all_resolved=true
+      local IFS_SAVE="$IFS"
+      IFS=',' read -ra dep_arr <<< "$deps_line"
+      IFS="$IFS_SAVE"
+
+      for dep in "${dep_arr[@]}"; do
+        dep=$(echo "$dep" | tr -d ' ')
+        [[ -z "$dep" ]] && continue
+
+        # If dep is not in scope, treat as already satisfied (wave -1 → ignore)
+        if [[ "$in_scope" != *"|${dep}|"* ]]; then
+          continue
+        fi
+
+        local dep_wave
+        dep_wave=$(grep "^${dep}	" "$wave_tmp" | cut -f2)
+        if [[ "$dep_wave" == "-1" ]]; then
+          all_resolved=false
+          break
+        fi
+        if [[ $dep_wave -gt $max_dep_wave ]]; then
+          max_dep_wave=$dep_wave
+        fi
+      done
+
+      if $all_resolved; then
+        local new_wave=$((max_dep_wave + 1))
+        [[ $max_dep_wave -lt 0 ]] && new_wave=0
+        sed -i '' "s/^${sid}	-1$/${sid}	${new_wave}/" "$wave_tmp" 2>/dev/null || \
+          sed -i "s/^${sid}	-1$/${sid}	${new_wave}/" "$wave_tmp"
+        changed=true
+        if [[ $new_wave -gt $KB_WAVE_MAX ]]; then
+          KB_WAVE_MAX=$new_wave
+        fi
+      fi
+    done
+  done
+
+  # Any still-unresolved stories (circular deps) → wave KB_WAVE_MAX+1
+  local unresolved=0
+  for sid in "${FILTERED_STORIES[@]}"; do
+    local w
+    w=$(grep "^${sid}	" "$wave_tmp" | cut -f2)
+    if [[ "$w" == "-1" ]]; then
+      local fallback_wave=$((KB_WAVE_MAX + 1))
+      sed -i '' "s/^${sid}	-1$/${sid}	${fallback_wave}/" "$wave_tmp" 2>/dev/null || \
+        sed -i "s/^${sid}	-1$/${sid}	${fallback_wave}/" "$wave_tmp"
+      ((unresolved++))
+    fi
+  done
+  [[ $unresolved -gt 0 ]] && KB_WAVE_MAX=$((KB_WAVE_MAX + 1))
+
+  # Write final wave cache
+  cp "$wave_tmp" "$wave_cache"
+  rm -f "$wave_tmp"
+
+  # Count stories per wave for summary
+  local wave_summary=""
+  local w=0
+  while [[ $w -le $KB_WAVE_MAX ]]; do
+    local count
+    count=$(grep "	${w}$" "$wave_cache" | wc -l | tr -d ' ')
+    [[ $count -gt 0 ]] && wave_summary="${wave_summary} w${w}=${count}"
+    ((w++))
+  done
+
+  if [[ $unresolved -gt 0 ]]; then
+    spin_stop "Computed ${KB_WAVE_MAX} waves (${#FILTERED_STORIES[@]} stories:${wave_summary}) — $unresolved with circular deps"
+  else
+    spin_stop "Computed $((KB_WAVE_MAX + 1)) wave(s) (${#FILTERED_STORIES[@]} stories:${wave_summary})"
+  fi
+}
+
+# Get the wave number for a story from the wave cache
+kb_story_wave() {
+  local story_id="$1"
+  local log_dir="${2:-/tmp}"
+  local wave_cache="$log_dir/.wave-cache"
+  if [[ -f "$wave_cache" ]]; then
+    grep "^${story_id}	" "$wave_cache" | cut -f2 | head -1
+  else
+    echo "0"
+  fi
+}
+
 # ── Cleanup ──────────────────────────────────────────────────────────
 
 kb_cleanup() {
+  spin_kill 2>/dev/null || true
   if [[ -n "$KB_CACHE_FILE" ]] && [[ -f "$KB_CACHE_FILE" ]]; then
     rm -f "$KB_CACHE_FILE"
   fi

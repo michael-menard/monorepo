@@ -1,0 +1,144 @@
+feasible: true
+confidence: high
+rationale: >
+  All foundational infrastructure is in place: pgvector extension is installed, the vector
+  customType exists in kb.ts, the workflow.ts Drizzle file has established patterns for vector
+  columns (workflow.plans), and migration 1007 provides the gold-standard safety preamble
+  structure. The work is well-scoped DDL + Drizzle schema registration. The only open item
+  reducing confidence from "high" to "medium" would be the undefined schema for
+  embedding_section_lookup (AC-5), but this is isolated and all other ACs are unambiguous.
+complexity: medium
+change_surface:
+  areas:
+    - 'apps/api/knowledge-base/src/db/migrations/ (new SQL migration file)'
+    - 'apps/api/knowledge-base/src/db/migrations/pgtap/ (new pgtap test file)'
+    - 'apps/api/knowledge-base/src/db/schema/workflow.ts (Drizzle table registration)'
+    - 'apps/api/knowledge-base/src/search/story-similarity.ts (fix wrong table query)'
+  endpoints: []
+  deploy_touchpoints:
+    - 'Run migration against knowledgebase DB (port 5433) only — not lego_dev'
+    - 'Verify HNSW index build completes without timeout in CI environment'
+    - 'pnpm check-types after workflow.ts changes'
+
+risks:
+  - finding: 'embedding_section_lookup schema is undefined (AC-5)'
+    mitigation: >
+      Confirm schema with product owner before implementation. At minimum the table
+      needs id, section_name, display_order as seeded. Block implementation of AC-5
+      until schema is signed off. All other ACs can proceed independently.
+
+  - finding: 'Migration slot 1009 may be claimed by a concurrent story'
+    mitigation: >
+      Verify slot at implementation time with: ls apps/api/knowledge-base/src/db/migrations/
+      sorted. If 1009 is taken, use next free slot and update all references (filename,
+      pgtap test, story evidence). Slot verified free as of 2026-03-18.
+
+  - finding: 'HNSW requires pgvector >= 0.5.0; environment must be verified'
+    mitigation: >
+      Confirm version: SELECT extversion FROM pg_extension WHERE extname = 'vector'.
+      If < 0.5.0, fall back to ivfflat and document the decision. Aurora PostgreSQL
+      15.2+ is required for pgvector support.
+
+  - finding: 'findSimilarStories() currently broken (queries non-existent public.stories)'
+    mitigation: >
+      Fix is included as AC-10 / ST-4. The fix is straightforward: change FROM public.stories
+      to JOIN workflow.story_embeddings for the vector and workflow.stories for metadata.
+      Also remove deleted_at filter (no such column on workflow.stories). Vitest test
+      must be updated.
+
+  - finding: 'HNSW index build is memory-intensive on large tables'
+    mitigation: >
+      New tables are empty at migration time so build overhead is negligible.
+      Use CONCURRENTLY IF NOT EXISTS regardless to establish safe pattern for future
+      backfill scenarios.
+
+missing_requirements:
+  - 'AC-5: embedding_section_lookup table schema must be confirmed before implementation. The seed proposes (id SERIAL PK, section_name TEXT NOT NULL UNIQUE, display_order INT) but requires product owner sign-off.'
+
+evidence_expectations:
+  - 'Migration applies without errors (exit code 0) on clean knowledgebase DB'
+  - 'pgtap test file passes: all table/column/index/FK assertions green'
+  - 'pnpm check-types --filter @repo/knowledge-base exits 0 after workflow.ts changes'
+  - 'findSimilarStories() Vitest unit test updated and passing with new query target'
+  - 'Migration idempotency confirmed: second run produces no errors'
+
+subtasks:
+  - id: ST-1
+    title: 'Write migration 1009: story_embeddings and plan_embeddings tables'
+    goal: >
+      Create the SQL migration file with DB safety preamble, CREATE TABLE IF NOT EXISTS
+      for workflow.story_embeddings and workflow.plan_embeddings, HNSW index creation
+      with CONCURRENTLY IF NOT EXISTS, COMMENT ON TABLE statements, and UNIQUE constraints.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1007_pipe_0020_ghost_state_audit.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/999_full_schema_baseline.sql'
+      - 'apps/api/knowledge-base/src/db/migrations/1002_artifact_precondition_index.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1009_cdbe4010_pgvector_embedding_tables.sql (CREATE)'
+    acs: ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-6', 'AC-8']
+    depends_on: none
+    verification: 'psql -d knowledgebase -f migration-file.sql && echo "exit $?"'
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: 'Write migration section: embedding_section_lookup table'
+    goal: >
+      Add the embedding_section_lookup reference table to the migration. Schema must be
+      confirmed during elaboration before implementation. Create with IF NOT EXISTS,
+      COMMENT ON TABLE, and appropriate constraints.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/1009_cdbe4010_pgvector_embedding_tables.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/1009_cdbe4010_pgvector_embedding_tables.sql'
+    acs: ['AC-5', 'AC-6', 'AC-8']
+    depends_on: ST-1
+    verification: "SELECT table_name FROM information_schema.tables WHERE table_schema='workflow' AND table_name='embedding_section_lookup'"
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: 'Register storyEmbeddings, planEmbeddings, embeddingSectionLookup in workflow.ts'
+    goal: >
+      Add Drizzle table definitions for all three new tables to workflow.ts. Import vector
+      from './kb.js'. Follow the workflow.plans pattern (lines 140-166) for the embedding
+      tables. Export TypeScript inferred types for each table.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+      - 'apps/api/knowledge-base/src/db/schema/kb.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/schema/workflow.ts'
+    acs: ['AC-7']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/knowledge-base'
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: 'Fix findSimilarStories() to query workflow.story_embeddings'
+    goal: >
+      Update story-similarity.ts to query workflow.story_embeddings JOIN workflow.stories
+      instead of the non-existent public.stories table. Remove deleted_at filter.
+      Update or create Vitest unit test verifying the corrected SQL target.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/search/story-similarity.ts'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/search/story-similarity.ts'
+      - 'apps/api/knowledge-base/src/search/__tests__/story-similarity.test.ts (CREATE or UPDATE)'
+    acs: ['AC-10']
+    depends_on: ST-3
+    verification: 'pnpm test --filter @repo/knowledge-base -- story-similarity'
+    estimated_tokens: 4000
+
+  - id: ST-5
+    title: 'Write pgtap test file for migration 1009'
+    goal: >
+      Create pgtap SQL test file verifying: all three tables exist in workflow schema,
+      embedding columns have type USER-DEFINED (vector(1536)), HNSW indexes exist and
+      use hnsw access method, FK constraints reference correct parent tables, UNIQUE
+      constraints are present, migration is idempotent.
+    files_to_read:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1007_pipe_0020_ghost_state_audit_test.sql'
+    files_to_modify:
+      - 'apps/api/knowledge-base/src/db/migrations/pgtap/1009_cdbe4010_pgvector_embedding_tables_test.sql (CREATE)'
+    acs: ['AC-9']
+    depends_on: ST-1
+    verification: 'psql -d knowledgebase -f pgtap-test-file.sql'
+    estimated_tokens: 5000

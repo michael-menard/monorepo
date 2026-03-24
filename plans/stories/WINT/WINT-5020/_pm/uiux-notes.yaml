@@ -1,0 +1,2 @@
+skipped: true
+reason: 'WINT-5020 delivers a .claude/agents/classification.agent.md file and optionally a TypeScript compute helper. There is no UI surface. All classification results are written to workflow.model_predictions and retrievable via mlPredictionGetByEntity MCP tool. No frontend components, routes, or user-facing interactions are in scope.'

@@ -1,0 +1,180 @@
+strategy: manual+scoped-unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: 'All APIP-1031 deliverable files exist on main filesystem'
+    setup: 'Checkout main branch, navigate to packages/backend/orchestrator/src/'
+    action: |
+      Run:
+        ls packages/backend/orchestrator/src/graphs/implementation.ts
+        ls packages/backend/orchestrator/src/nodes/create-worktree.ts
+        ls packages/backend/orchestrator/src/nodes/evidence-production.ts
+        ls packages/backend/orchestrator/src/nodes/load-story.ts
+        ls packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+    expected: 'All 5 files exist with no "No such file or directory" errors'
+    evidence: 'Terminal output showing 5 file paths successfully listed'
+
+  - id: HP-2
+    title: 'APIP-1032 deliverable files exist on main filesystem'
+    setup: 'On main branch'
+    action: |
+      Run:
+        ls packages/backend/orchestrator/src/nodes/change-loop.ts
+        ls packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    expected: 'Both files exist'
+    evidence: 'Terminal output confirming both paths present'
+
+  - id: HP-3
+    title: 'Key exports are present in implementation files'
+    setup: 'On main branch'
+    action: |
+      Run grep commands:
+        grep -n "export.*runImplementation\|export function runImplementation\|export.*RunImplementation" packages/backend/orchestrator/src/graphs/implementation.ts
+        grep -n "export.*CommitRecordSchema" packages/backend/orchestrator/src/graphs/implementation.ts
+        grep -n "export.*changeLoopNode\|export.*ChangeLoopStatus" packages/backend/orchestrator/src/nodes/change-loop.ts
+    expected: 'Each grep returns at least one matching line'
+    evidence: 'grep output showing matched export declarations'
+
+  - id: HP-4
+    title: 'Scoped APIP-1031/1032 tests all pass (89 tests)'
+    setup: 'On main branch, orchestrator package dependencies installed'
+    action: |
+      Run:
+        pnpm --filter @repo/orchestrator run test --reporter=verbose 2>&1 | grep -E "change-loop|implementation|evidence-production|load-story|create-worktree"
+    expected: |
+      - change-loop.test.ts: 15 tests pass
+      - implementation.test.ts: 13 tests pass
+      - implementation-graph.test.ts: 13 tests pass
+      - change-loop.integration.test.ts: 6 tests pass
+      - create-worktree.integration.test.ts: 4 tests pass
+      - evidence-production.test.ts: 7 tests pass
+      - load-story.test.ts: 5 tests pass
+      - create-worktree.test.ts: 7 tests pass
+      Total: 89 tests passing
+    evidence: 'Vitest verbose output showing all 89 APIP-specific tests passing'
+
+  - id: HP-5
+    title: 'Merge commits confirmed as ancestors of HEAD on main'
+    setup: 'On main branch'
+    action: |
+      Run:
+        git log --oneline 2164bd74 2>/dev/null | head -1
+        git log --oneline c525a8b5 2>/dev/null | head -1
+        git merge-base --is-ancestor 2164bd74 HEAD && echo "2164bd74 is ancestor of HEAD"
+        git merge-base --is-ancestor c525a8b5 HEAD && echo "c525a8b5 is ancestor of HEAD"
+    expected: 'Both SHAs are ancestors of HEAD (commands succeed without error)'
+    evidence: 'git output confirming both SHAs are reachable from HEAD'
+
+error_cases:
+  - id: EC-1
+    title: 'Pre-existing test failures are not misclassified as APIP-1031/1032 regressions'
+    setup: 'Run full orchestrator test suite'
+    action: 'pnpm --filter @repo/orchestrator run test 2>&1 | grep -E "FAIL|failed"'
+    expected: |
+      Failures appear ONLY in known pre-existing files:
+        - src/adapters/__tests__/index-adapter.integration.test.ts
+        - src/adapters/__tests__/story-file-adapter.integration.test.ts
+        - src/adapters/__tests__/story-file-adapter.test.ts
+        - src/models/__tests__/integration.test.ts
+        - src/nodes/dep-audit/__tests__/dep-audit.integration.test.ts
+        - src/nodes/elaboration/__tests__/structurer-affinity.test.ts
+        - src/nodes/health/__tests__/health-gate.integration.test.ts
+        - src/nodes/audit/__tests__/persist-trends.test.ts
+      None of these are APIP-1031/1032 files.
+    evidence: 'Test output showing failure set matches pre-existing baseline (37 failures, not in APIP files)'
+
+  - id: EC-2
+    title: 'runImplementation export gap in public API surface is detected (not a blocker)'
+    setup: 'On main branch'
+    action: 'grep -n "runImplementation" packages/backend/orchestrator/src/graphs/index.ts'
+    expected: |
+      If missing: grep returns no output — this is a DOCUMENTED GAP for PIPE-3010 to resolve.
+      If present: grep returns the export line — no gap.
+    evidence: 'grep output confirming current state; gap documented in story if absent'
+
+edge_cases:
+  - id: ED-1
+    title: 'Story plan documents directory absent but implementation code present'
+    setup: 'On main filesystem'
+    action: |
+      ls plans/future/platform/autonomous-pipeline/ 2>/dev/null && echo "EXISTS" || echo "NOT_EXISTS"
+      git show 2164bd74 --stat | grep "autonomous-pipeline"
+    expected: |
+      Filesystem ls returns NOT_EXISTS (directory was restructured post-merge — expected).
+      git show confirms the path WAS included in the original commit.
+    evidence: 'ls output + git show output confirming deliberate absence is expected'
+
+  - id: ED-2
+    title: 'APIP story KB state check handles non-existent stories gracefully'
+    setup: 'KB connection available'
+    action: 'kb_get_story({ story_id: "APIP-1031" }) and kb_get_story({ story_id: "APIP-1032" })'
+    expected: |
+      Either:
+        - Stories found → state can be inspected and updated if not completed
+        - Stories not found → KB note created recording merge confirmation
+      No exception or crash in either case.
+    evidence: 'KB tool response showing story state or successful note creation'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'git merge-base --is-ancestor exits 0 for both SHAs'
+      - 'ls exits 0 for all 7 deliverable file paths'
+      - 'grep finds all key exports (runImplementation, CommitRecordSchema, changeLoopNode, ChangeLoopStatus)'
+      - 'vitest scoped run shows 89 passing tests in APIP-specific files'
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: 'KB state verification and update for APIP-1031/APIP-1032'
+    steps:
+      - 'Call kb_get_story({ story_id: "APIP-1031" })'
+      - 'Call kb_get_story({ story_id: "APIP-1032" })'
+      - 'If either story exists and is not in completed state, call kb_update_story_status to advance'
+      - 'If stories do not exist in KB, create a KB note documenting the merge confirmation'
+    expected: 'APIP-1031 and APIP-1032 reflect completed or UAT status in KB after this step'
+
+  - id: MC-2
+    title: 'Pre-existing failure baseline documentation in KB'
+    steps:
+      - 'Compose a KB note or artifact listing the 37 pre-existing failure file paths'
+      - 'Include the orchestrator suite total: 4877/4946 tests pass as of 2026-03-18'
+      - 'Tag this as a known baseline so future agents do not flag these as regressions'
+    expected: 'KB entry created with baseline failure list and timestamp'
+
+fixture_definitions:
+  - name: 'APIP-1031/1032 file paths'
+    type: 'path list'
+    description: |
+      7 implementation files expected on main:
+        packages/backend/orchestrator/src/graphs/implementation.ts
+        packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+        packages/backend/orchestrator/src/nodes/change-loop.ts
+        packages/backend/orchestrator/src/nodes/create-worktree.ts
+        packages/backend/orchestrator/src/nodes/evidence-production.ts
+        packages/backend/orchestrator/src/nodes/load-story.ts
+        packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+
+  - name: 'Pre-existing failure baseline'
+    type: 'file list'
+    description: |
+      10 files with 37 known pre-existing test failures (unrelated to APIP-1031/1032):
+        src/adapters/__tests__/index-adapter.integration.test.ts
+        src/adapters/__tests__/story-file-adapter.integration.test.ts
+        src/adapters/__tests__/story-file-adapter.test.ts
+        src/models/__tests__/integration.test.ts
+        src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts
+        src/adapters/__tests__/integration/real-story-compatibility.integration.test.ts
+        src/nodes/dep-audit/__tests__/dep-audit.integration.test.ts
+        src/nodes/elaboration/__tests__/structurer-affinity.test.ts
+        src/nodes/health/__tests__/health-gate.integration.test.ts
+        src/nodes/audit/__tests__/persist-trends.test.ts
+
+risks:
+  - 'Scoped vitest run may need explicit --testPathPattern flag syntax adjustment depending on vitest version'
+  - 'kb_get_story for APIP-1031/APIP-1032 may return not-found if those stories were never added to KB — graceful fallback required'
+  - 'Full suite failure count may drift from 37 if other stories were merged between seed generation and story execution'

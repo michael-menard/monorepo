@@ -211,3 +211,138 @@ export type TrainingDataMarkValidatedInput = z.infer<typeof TrainingDataMarkVali
 export const TrainingDataMarkValidatedOutputSchema = TrainingDataRowSchema.nullable()
 
 export type TrainingDataMarkValidatedOutput = z.infer<typeof TrainingDataMarkValidatedOutputSchema>
+
+// ============================================================================
+// TRAINING_DATA_COLLECT SCHEMAS (WINT-5040)
+// ============================================================================
+
+export const DatasetTypeSchema = z.enum(['routing', 'quality', 'preference'])
+
+export type DatasetType = z.infer<typeof DatasetTypeSchema>
+
+export const TrainingDataCollectInputSchema = z.object({
+  datasetType: DatasetTypeSchema,
+  minRows: z.number().int().min(1).default(50),
+  since: z.string().datetime().optional(),
+})
+
+export type TrainingDataCollectInput = z.infer<typeof TrainingDataCollectInputSchema>
+
+export const RoutingDatasetRowSchema = z.object({
+  features: z.object({
+    agentName: z.string(),
+    phase: z.string().nullable(),
+    inputTokens: z.number().nullable(),
+    outputTokens: z.number().nullable(),
+    durationMs: z.number().nullable(),
+    status: z.string(),
+  }),
+  labels: z.object({
+    finalVerdict: z.string(),
+    qualityScore: z.number(),
+  }),
+})
+
+export type RoutingDatasetRow = z.infer<typeof RoutingDatasetRowSchema>
+
+export const QualityDatasetRowSchema = z.object({
+  features: z.object({
+    testsWritten: z.number(),
+    testsPassed: z.number(),
+    testsFailed: z.number(),
+    lintErrors: z.number(),
+    typeErrors: z.number(),
+    codeQuality: z.number().nullable(),
+    testCoverage: z.number().nullable(),
+  }),
+  labels: z.object({
+    finalVerdict: z.string(),
+    qualityScore: z.number(),
+    reviewIterations: z.number(),
+    qaIterations: z.number(),
+  }),
+})
+
+export type QualityDatasetRow = z.infer<typeof QualityDatasetRowSchema>
+
+export const PreferenceDatasetRowSchema = z.object({
+  features: z.object({
+    decisionType: z.string(),
+    storyId: z.string(),
+    operatorId: z.string(),
+  }),
+  labels: z.object({
+    rationale: z.string(),
+    confidence: z.number(),
+    alternativesConsidered: z.string(),
+    riskAssessment: z.string(),
+  }),
+})
+
+export type PreferenceDatasetRow = z.infer<typeof PreferenceDatasetRowSchema>
+
+export const DatasetValidationSchema = z.object({
+  valid: z.boolean(),
+  reason: z.string().optional(),
+})
+
+export type DatasetValidation = z.infer<typeof DatasetValidationSchema>
+
+export const ColdStartResponseSchema = z.object({
+  coldStart: z.literal(true),
+  available: z.number().int(),
+  required: z.number().int(),
+  recommendation: z.string(),
+})
+
+export type ColdStartResponse = z.infer<typeof ColdStartResponseSchema>
+
+export const DatasetStatsSchema = z.object({
+  totalRows: z.number().int(),
+  validRows: z.number().int(),
+  featureCompleteness: z.number().min(0).max(1),
+  labelDistribution: z.record(z.number().int()),
+})
+
+export type DatasetStats = z.infer<typeof DatasetStatsSchema>
+
+export const TrainingDataCollectOutputSchema = z.union([
+  z.object({
+    rows: z.array(
+      z.union([RoutingDatasetRowSchema, QualityDatasetRowSchema, PreferenceDatasetRowSchema]),
+    ),
+    validation: DatasetValidationSchema,
+    stats: DatasetStatsSchema,
+  }),
+  ColdStartResponseSchema,
+])
+
+export type TrainingDataCollectOutput = z.infer<typeof TrainingDataCollectOutputSchema>
+
+// ============================================================================
+// TRAINING_DATASET_EXPORT SCHEMAS (WINT-5040)
+// ============================================================================
+
+export const TrainingDatasetExportInputSchema = z.object({
+  datasetType: DatasetTypeSchema,
+  format: z.enum(['jsonl', 'csv']),
+  minCompleteness: z.number().min(0).max(1).default(0.8),
+  minRows: z.number().int().min(1).default(50),
+  since: z.string().datetime().optional(),
+})
+
+export type TrainingDatasetExportInput = z.infer<typeof TrainingDatasetExportInputSchema>
+
+export const TrainingDatasetExportOutputSchema = z.union([
+  z.object({
+    rows: z.array(z.string()),
+    stats: DatasetStatsSchema,
+  }),
+  ColdStartResponseSchema,
+  z.object({
+    valid: z.literal(false),
+    reason: z.string(),
+  }),
+])
+
+export type TrainingDatasetExportOutput = z.infer<typeof TrainingDatasetExportOutputSchema>

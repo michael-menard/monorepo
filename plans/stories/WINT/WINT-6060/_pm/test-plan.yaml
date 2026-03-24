@@ -1,0 +1,128 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: 'kb_get_scoreboard appears in MCP tool list'
+    setup: 'MCP server initialized with tool-schemas.ts and tool-handlers.ts changes applied'
+    action: 'Call the MCP list_tools endpoint or inspect toolDefinitions export'
+    expected: 'kb_get_scoreboard is present in the tool definitions array with correct name and inputSchema'
+    evidence: 'Grep tool-schemas.ts for kbGetScoreboardToolDefinition and confirm it is pushed to toolDefinitions array'
+
+  - id: HP-2
+    title: 'kb_get_scoreboard dispatches to handler correctly'
+    setup: 'MCP server initialized, db mock available'
+    action: 'Invoke kb_get_scoreboard via MCP tool call with valid input {}'
+    expected: 'handleKbGetScoreboard is called, returns MCP tool result with scoreboard JSON content'
+    evidence: 'Integration test in apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts confirms dispatch and response shape'
+
+  - id: HP-3
+    title: 'weekly-analyst.agent.md exists with all required frontmatter fields'
+    setup: 'Story implementation complete, agent file created at .claude/agents/weekly-analyst.agent.md'
+    action: 'Read the agent file and parse YAML frontmatter'
+    expected: >
+      Frontmatter contains: type=leader, permission_level=orchestrator, model=sonnet,
+      kb_tools includes kb_get_scoreboard/kb_get_token_summary/kb_get_bottleneck_analysis/
+      kb_get_churn_analysis/kb_search/kb_write_artifact, story_id=WINT-6060,
+      shared includes _shared/decision-handling.md and _shared/autonomy-tiers.md
+    evidence: '__tests__/weekly-analyst.test.ts content-validation test passes'
+
+  - id: HP-4
+    title: 'weekly-analyst.agent.md contains all required sections'
+    setup: 'Agent file exists at .claude/agents/weekly-analyst.agent.md'
+    action: 'Read agent file and check for required markdown sections'
+    expected: >
+      File contains: ## Role, ## Mission, ## Inputs, ## Execution (phases with steps for
+      retro lessons, 4 analytics calls, synthesis, kb_write_artifact), WeeklyAnalysis schema,
+      week-over-week comparison section, ## Completion Signal
+    evidence: '__tests__/weekly-analyst.test.ts content-validation test passes (same pattern as WINT-2080)'
+
+  - id: HP-5
+    title: 'WeeklyAnalysis artifact schema contains all required fields'
+    setup: 'Agent file exists and readable'
+    action: 'Parse agent file for WeeklyAnalysis schema definition'
+    expected: >
+      Schema includes all 13 required fields: week_of, throughput, cycle_time, first_pass_rate,
+      cost_efficiency, agent_reliability, high_churn_stories, bottlenecks, stuck_stories,
+      token_summary, retro_lessons_applied, anomalies, recommendations
+    evidence: 'Content inspection or __tests__/weekly-analyst.test.ts grep for field names'
+
+error_cases:
+  - id: EC-1
+    title: 'kb_get_scoreboard handler returns error on invalid input'
+    setup: 'MCP server initialized'
+    action: 'Invoke kb_get_scoreboard with invalid input {start_date: "not-a-date"}'
+    expected: 'Returns MCP error result (not an unhandled exception), error message references parse failure'
+    evidence: 'errorToToolResult wraps Zod parse error, follows same pattern as kb_get_churn_analysis'
+
+  - id: EC-2
+    title: 'kb_get_scoreboard handler propagates db error gracefully'
+    setup: 'MCP server initialized, db mock throws error on query'
+    action: 'Invoke kb_get_scoreboard with valid input'
+    expected: 'Returns MCP error result via errorToToolResult, no unhandled rejection'
+    evidence: 'Try/catch in handleKbGetScoreboard follows kb_get_churn_analysis error handling pattern'
+
+edge_cases:
+  - id: ED-1
+    title: 'weekly-analyst.agent.md Output section has no filesystem path references'
+    setup: 'Agent file exists'
+    action: 'Grep agent file for _implementation/ or plans/stories/ path patterns'
+    expected: 'Zero matches — all outputs reference kb_write_artifact calls only'
+    evidence: 'grep -c "_implementation/" .claude/agents/weekly-analyst.agent.md returns 0'
+
+  - id: ED-2
+    title: 'week-over-week comparison section handles no prior WeeklyAnalysis artifact'
+    setup: 'Agent file specifies behavior when no prior WeeklyAnalysis artifact exists in KB'
+    action: 'Read agent execution phase for week-over-week comparison'
+    expected: >
+      Agent specifies fallback behavior: if no prior WeeklyAnalysis found via kb_search,
+      skip comparison section and note "First week analyzed — no prior baseline available"
+    evidence: 'Content inspection of agent execution phases'
+
+  - id: ED-3
+    title: 'kb_get_scoreboard input schema accepts optional fields only'
+    setup: 'tool-schemas.ts updated with kbGetScoreboardToolDefinition'
+    action: 'Inspect zodToMcpSchema(KbGetScoreboardInputSchema) output'
+    expected: >
+      All three parameters (start_date, end_date, feature) marked as optional/not required
+      in MCP JSON Schema
+    evidence: 'KbGetScoreboardInputSchema uses z.coerce.date().optional() and z.string().optional()'
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - 'tool name kb_get_scoreboard present in toolDefinitions'
+      - 'handleKbGetScoreboard exported from tool-handlers.ts'
+      - 'dispatch case kb_get_scoreboard routes to handleKbGetScoreboard'
+      - 'agent file frontmatter parses as valid YAML'
+      - 'agent file contains all required section headings'
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: 'Human review of weekly-analyst.agent.md for instruction quality'
+    steps:
+      - 'Read .claude/agents/weekly-analyst.agent.md in full'
+      - 'Verify Mission clearly describes aggregation from 4 analytics tools + retro lessons'
+      - 'Verify execution phases are clear and actionable for a Claude agent'
+      - 'Verify WeeklyAnalysis artifact schema is complete and unambiguous'
+      - 'Verify week-over-week comparison instructions are concrete'
+      - 'Verify Completion Signal section follows standard pattern'
+    expected: 'Agent file is production-ready for use by WINT-6070 (Weekly Report Command)'
+
+fixture_definitions:
+  - name: mockScoreboardResult
+    type: object
+    description: 'Mock return value for kb_get_scoreboard with all 5 metric groups populated'
+  - name: mockWeeklyAnalysisArtifact
+    type: object
+    description: 'Prior WeeklyAnalysis KB artifact for week-over-week comparison test'
+
+risks:
+  - 'Tool dispatch test requires full MCP integration test harness — check if mcp-integration.test.ts already has the setup pattern for existing analytics tools'
+  - 'Agent file content tests depend on exact section heading strings matching — test should use flexible regex not exact string match'
+  - 'KbGetScoreboardInputSchema is defined in analytics-operations.ts but must be imported in tool-schemas.ts — verify import path is correct in the plumbing'

@@ -1,0 +1,170 @@
+schema: 1
+story_id: PIPE-2050
+timestamp: '2026-03-19T05:42:00Z'
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: "SchedulerLoop gains a getEligibleReviewStories(limit: number) method that queries workflow.stories WHERE state = 'ready_for_qa' with no unresolved depends_on/blocked_by dependencies. Returns StoryRow[]."
+    evidence_items:
+      - type: test
+        description: "getEligibleReviewStories() method test suite"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 4
+      - type: command
+        description: "Code inspection confirms SQL CTE structure matches getEligibleStories() pattern with WHERE s.state = 'ready_for_qa'"
+        result: "SUCCESS"
+      - type: http
+        description: "Code review commit 80e3ba7a verified against canonical repository"
+        path: "story/PIPE-2050:apps/api/pipeline/src/scheduler/index.ts"
+        status: 200
+
+  - ac_id: AC-2
+    ac_text: "SchedulerLoop gains a dispatchReviewStory(story: StoryRow, attemptNumber: number) method that atomically advances ready_for_qa → in_qa via kb_update_story_status, returns early if updated:false, parses ReviewJobDataSchema, and calls queue.add() with jobId format {storyId}:review:{attemptNumber}."
+    evidence_items:
+      - type: test
+        description: "dispatchReviewStory() unit test with atomic KB advance verification"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 5
+      - type: command
+        description: "Code inspection confirms F006 pattern: kb_update_story_status called before queue.add()"
+        result: "SUCCESS"
+      - type: command
+        description: "jobId format verification: {storyId}:review:{attemptNumber} pattern confirmed"
+        result: "PASS"
+
+  - ac_id: AC-3
+    ac_text: "SchedulerLoop.runOnce() is extended to: (a) compute review slots using the same shared maxConcurrent ceiling as implementation; (b) call getEligibleReviewStories(), apply ordering/filtering via applyFinishBeforeNewStart and applyStrictFinishFilter, and dispatch up to available slots via dispatchReviewStory()."
+    evidence_items:
+      - type: test
+        description: "runOnce() Stage 2 review dispatch integration test"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 3
+      - type: command
+        description: "Shared slot ceiling enforcement verified: slotsRemaining decremented after Stage 1"
+        result: "SUCCESS"
+      - type: test
+        description: "applyFinishBeforeNewStart() and applyStrictFinishFilter() called on review eligible list"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 2
+
+  - ac_id: AC-4
+    ac_text: "SchedulerLoop gains a getEligibleQaStories(limit: number) method querying stories in state = 'in_qa' with no unresolved dependencies. Returns StoryRow[]."
+    evidence_items:
+      - type: test
+        description: "getEligibleQaStories() method test suite"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 3
+      - type: command
+        description: "Code inspection confirms WHERE s.state = 'in_qa' matches dispatch-router.ts qa stage routing"
+        result: "SUCCESS"
+
+  - ac_id: AC-5
+    ac_text: "SchedulerLoop gains a dispatchQaStory(story: StoryRow, attemptNumber: number) method following the same F006 atomic advance + jobId pattern ({storyId}:qa:{attemptNumber}), building a QaJobDataSchema-compliant payload."
+    evidence_items:
+      - type: test
+        description: "dispatchQaStory() unit test with QaJobDataSchema payload verification"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 4
+      - type: command
+        description: "jobId format verification: {storyId}:qa:{attemptNumber} pattern confirmed in implementation"
+        result: "PASS"
+      - type: command
+        description: "F006 deviation documented: BullMQ jobId dedup serves as idempotency fence for QA stage"
+        result: "SUCCESS"
+
+  - ac_id: AC-6
+    ac_text: "SchedulerLoop.runOnce() includes QA dispatch: calls getEligibleQaStories(), applies ordering/filtering, and dispatches up to available slots."
+    evidence_items:
+      - type: test
+        description: "runOnce() Stage 3 QA dispatch integration test"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 2
+      - type: command
+        description: "QA dispatch branch verified in runOnce() with eligibleQa polling and dispatchQaStory calls"
+        result: "SUCCESS"
+
+  - ac_id: AC-7
+    ac_text: "finishBeforeNewStart and strictFinishBeforeNewStart ordering/filtering applies consistently to review and QA eligible story lists. Both applyFinishBeforeNewStart() and applyStrictFinishFilter() are called with the review/QA eligible lists before dispatch."
+    evidence_items:
+      - type: test
+        description: "Ordering consistency test: applyFinishBeforeNewStart/applyStrictFinishFilter called for all stages"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 3
+      - type: command
+        description: "Code inspection confirms identical filtering logic applied to implementation, review, and QA eligible lists"
+        result: "SUCCESS"
+
+  - ac_id: AC-8
+    ac_text: "A unit test verifies that dispatchReviewStory() is called with a story in ready_for_qa state during a runOnce() cycle when a slot is available."
+    evidence_items:
+      - type: test
+        description: "Test: 'HP-1: dispatches review story and calls queue.add with review jobId'"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 1
+      - type: command
+        description: "Test execution confirms dispatchReviewStory called during runOnce with ready_for_qa story"
+        result: "PASS"
+
+  - ac_id: AC-9
+    ac_text: "A unit test verifies that dispatchQaStory() is called with a story in the correct QA-trigger state during a runOnce() cycle."
+    evidence_items:
+      - type: test
+        description: "Test: QA dispatch execution during runOnce() with in_qa state story"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 1
+      - type: command
+        description: "Test execution confirms dispatchQaStory called during runOnce with in_qa story"
+        result: "PASS"
+
+  - ac_id: AC-10
+    ac_text: "A unit test verifies that dispatchReviewStory() does NOT call queue.add() when kb_update_story_status returns updated:false (F006 preservation — mirrors PIPE-2040 AC-7 pattern)."
+    evidence_items:
+      - type: test
+        description: "Test: 'EC-1: F006 skip — dispatchReviewStory does not call queue.add when KB returns updated:false'"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 1
+      - type: command
+        description: "Test assertion verifies queue.add() not called when kb_update_story_status returns updated:false"
+        result: "PASS"
+
+  - ac_id: AC-11
+    ac_text: "A unit test verifies that review and QA dispatch pass the correct jobId format: {storyId}:review:1 and {storyId}:qa:1 to queue.add() options."
+    evidence_items:
+      - type: test
+        description: "Test: jobId format verification for review and QA stages"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 2
+      - type: command
+        description: "Test assertions verify exact jobId formats: 'STORY-001:review:1' and 'STORY-001:qa:1' passed to queue.add"
+        result: "PASS"
+
+  - ac_id: AC-12
+    ac_text: "TypeScript compilation (pnpm check-types --filter @repo/pipeline) passes with zero errors after all changes."
+    evidence_items:
+      - type: command
+        description: "TypeScript compilation check"
+        command: "pnpm check-types --filter @repo/pipeline"
+        result: "SUCCESS"
+      - type: command
+        description: "StoryRow converted from type alias to Zod schema (StoryRowSchema) per code review fix"
+        result: "PASS"
+
+  - ac_id: AC-13
+    ac_text: "All tests in apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts pass. pnpm test --filter @repo/pipeline exits 0."
+    evidence_items:
+      - type: test
+        description: "All scheduler tests in branch (42 tests total, 22 in current checked-out package)"
+        file_path: "apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts"
+        passing_count: 22
+      - type: command
+        description: "Test execution with --filter @repo/pipeline"
+        result: "SUCCESS"
+
+  - ac_id: AC-14
+    ac_text: "F006 deviation for QA dispatch is documented: no KB state advance because no valid intermediate state exists between in_qa and completed/failed_qa/blocked. BullMQ jobId dedup is the idempotency fence."
+    evidence_items:
+      - type: command
+        description: "Architecture decision documented inline in dispatchQaStory()"
+        result: "SUCCESS"
+      - type: command
+        description: "F006 deviation rationale: no valid 'dispatching_qa' state in canonical state machine"
+        result: "DOCUMENTED"

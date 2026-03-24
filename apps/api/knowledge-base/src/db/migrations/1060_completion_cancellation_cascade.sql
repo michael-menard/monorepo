@@ -13,9 +13,9 @@
 -- (PL/pgSQL does not support calling a RETURNS TRIGGER function from another function).
 -- The named cascade functions exist as standalone testable trigger functions.
 --
--- NOTE: The worktrees table (workflow.story_worktrees) is managed outside of
--- SQL migrations in this repo. The completion cascade checks for its existence
--- via pg_class at runtime before attempting any UPDATE. Missing table = no error.
+-- NOTE: The worktrees table (workflow.worktrees) is created by migration 1110.
+-- The completion cascade checks for its existence via pg_class at runtime
+-- before attempting any UPDATE. Missing table = no error.
 -- Expected columns when present: story_id text, merged_at timestamptz, abandoned_at timestamptz.
 --
 -- Flag mechanism for AC-8 (cancelled-blocked stories):
@@ -71,18 +71,18 @@ BEGIN
    WHERE depends_on_id = NEW.story_id
      AND resolved_at IS NULL;
 
-  -- AC-3: Mark worktree merged (only if workflow.story_worktrees exists at runtime).
-  -- The worktrees table is managed outside SQL migrations. Check pg_class first.
+  -- AC-3: Mark worktree merged (only if workflow.worktrees exists at runtime).
+  -- The worktrees table is created by migration 1110. Check pg_class first.
   -- If the table does not exist, skip gracefully — no error raised.
   SELECT EXISTS (
     SELECT 1 FROM pg_class c
       JOIN pg_namespace n ON c.relnamespace = n.oid
     WHERE n.nspname = 'workflow'
-      AND c.relname = 'story_worktrees'
+      AND c.relname = 'worktrees'
   ) INTO v_worktrees_exist;
 
   IF v_worktrees_exist THEN
-    UPDATE workflow.story_worktrees
+    UPDATE workflow.worktrees
        SET merged_at = NOW()
      WHERE story_id = NEW.story_id
        AND merged_at IS NULL
@@ -103,7 +103,7 @@ COMMENT ON FUNCTION workflow.story_completion_cascade() IS
   '1060: RETURNS TRIGGER function for the completed state cascade. '
   'Fires only when NEW.state = ''completed'' (AC-9 early exit for all other states). '
   'AC-2: Sets resolved_at = NOW() on story_dependencies where depends_on_id = NEW.story_id. '
-  'AC-3: Sets merged_at = NOW() on story_worktrees (guarded by pg_class check — missing table is not an error). '
+  'AC-3: Sets merged_at = NOW() on worktrees (guarded by pg_class check — missing table is not an error). '
   'AC-4: Soft-deletes open story_assignments (deleted_at IS NULL). 0-row UPDATE is valid. '
   'SECURITY INVOKER — caller privileges, does not bypass RLS. '
   'Atomicity: any exception rolls back the entire triggering transaction.';
@@ -227,11 +227,11 @@ BEGIN
       SELECT 1 FROM pg_class c
         JOIN pg_namespace n ON c.relnamespace = n.oid
       WHERE n.nspname = 'workflow'
-        AND c.relname = 'story_worktrees'
+        AND c.relname = 'worktrees'
     ) INTO v_worktrees_exist;
 
     IF v_worktrees_exist THEN
-      UPDATE workflow.story_worktrees
+      UPDATE workflow.worktrees
          SET merged_at = NOW()
        WHERE story_id = NEW.story_id
          AND merged_at IS NULL

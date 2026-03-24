@@ -1,0 +1,94 @@
+story_id: PIPE-2020
+verdict: feasible
+effort: small
+risk: low
+
+rationale: |
+  All three dispatch branches (implementation, review, qa) already exist and are correct in
+  dispatch-router.ts (lines 222–244). No new source dispatch logic is required. The work
+  is mechanical extension of well-established test patterns already present in the 634-line
+  test file. TypeScript will enforce correctness at compile time via the GraphRunners interface.
+  The only non-test change (type cast removal in AC-8) is a 3-line diff gated on PIPE-2010.
+
+sequencing:
+  - AC-1 through AC-7, AC-9, AC-10: Can be implemented and merged independently without PIPE-2010
+  - AC-8, AC-11: Gated on PIPE-2010 merge. Merge strategy options:
+      option_a: "Wait for PIPE-2010, then do everything in one PR"
+      option_b: "Two PRs — test coverage first (ACs 1-7, 9-10), cast removal second (ACs 8, 11)"
+
+blockers:
+  - id: PIPE-2010
+    severity: blocking_for_ac8_only
+    description: "ReviewPayloadSchema required to eliminate unsafe type cast. ACs 1-7 and 9-10 are unblocked."
+
+packages_affected:
+  - package: apps/api/pipeline
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+      - apps/api/pipeline/src/supervisor/dispatch-router.ts
+    change_type: test_addition + type_cast_removal
+
+new_dependencies: none
+
+subtasks:
+  - id: ST-1
+    title: "Extend createMockRunners() with all five runner stubs"
+    covers_acs: [AC-1]
+    depends_on: []
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Add factory functions for implementation, review, qa job data"
+    covers_acs: [AC-2]
+    depends_on: [ST-1]
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    estimated_tokens: 3000
+
+  - id: ST-3
+    title: "Add happy path describe blocks HP-4, HP-5, HP-6"
+    covers_acs: [AC-3, AC-4, AC-5, AC-9]
+    depends_on: [ST-2]
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: "Add wall clock timeout tests for implementation, review, qa"
+    covers_acs: [AC-6]
+    depends_on: [ST-3]
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    estimated_tokens: 4000
+
+  - id: ST-5
+    title: "Add circuit breaker tests for implementation, review, qa"
+    covers_acs: [AC-7]
+    depends_on: [ST-3]
+    files:
+      - apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts
+    estimated_tokens: 4000
+
+  - id: ST-6
+    title: "Remove unsafe type cast in dispatch-router.ts review branch"
+    covers_acs: [AC-8, AC-11]
+    depends_on: [PIPE-2010]
+    files:
+      - apps/api/pipeline/src/supervisor/dispatch-router.ts
+    estimated_tokens: 3000
+    gate: "PIPE-2010 merged and ReviewPayloadSchema available from @repo/pipeline-queue"
+
+ac_subtask_coverage:
+  AC-1: [ST-1]
+  AC-2: [ST-2]
+  AC-3: [ST-3]
+  AC-4: [ST-3]
+  AC-5: [ST-3]
+  AC-6: [ST-4]
+  AC-7: [ST-5]
+  AC-8: [ST-6]
+  AC-9: [ST-3]
+  AC-10: [ST-3, ST-4, ST-5]
+  AC-11: [ST-6]

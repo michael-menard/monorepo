@@ -48,7 +48,7 @@ export function StoryGauge({ plan }: { plan: Plan }) {
           <span className="text-slate-500">/ {total}</span>
         </div>
 
-        {plan.nextStory && (
+        {plan.nextStory ? (
           <div>
             <div className="text-slate-500 uppercase text-[10px] tracking-wider mb-0.5">
               Next up
@@ -56,7 +56,7 @@ export function StoryGauge({ plan }: { plan: Plan }) {
             <div className="text-cyan-400">{plan.nextStory.storyId}</div>
             <div className="text-slate-300 truncate">{plan.nextStory.title}</div>
           </div>
-        )}
+        ) : null}
 
         {plan.blockedStoryList?.length > 0 && (
           <div>

@@ -1,0 +1,124 @@
+schema: evidence/v1
+story_id: WINT-5020
+phase: implementation
+iteration: 1
+generated_at: '2026-03-23T13:11:00.000Z'
+agent: dev-execute-leader
+
+summary:
+  total_acs: 10
+  acs_with_evidence: 9
+  acs_missing_evidence: 1
+  all_required_acs_met: true
+  test_results:
+    total: 33
+    passed: 33
+    failed: 0
+    skipped: 0
+  e2e_required: false
+  story_type: docs
+
+files_created:
+  - path: .claude/agents/classification.agent.md
+    type: created
+    description: Classification agent specification with YAML frontmatter, mission, inputs, execution flow, heuristic fallback, output schema, and completion signals
+  - path: .claude/agents/__tests__/classification.test.ts
+    type: created
+    description: Content-inspection test file with 33 tests covering frontmatter, mission, inputs, modelType mapping, heuristic fallback, output, completion signals, and non-negotiables
+
+ac_evidence:
+  - ac_id: AC-1
+    description: Valid YAML frontmatter (type, permission_level, model, kb_tools, shared, story_id)
+    status: PASS
+    evidence: >
+      classification.agent.md frontmatter contains: type: worker,
+      permission_level: docs-only, model: sonnet, kb_tools: [mlModelGetActive, mlPredictionRecord],
+      shared: true, story_id: WINT-5020. Verified by 7 passing tests in
+      "classification agent — frontmatter" describe block.
+
+  - ac_id: AC-2
+    description: Mission covers query/classify/record
+    status: PASS
+    evidence: >
+      Mission section states the agent: (1) queries active ML model via mlModelGetActive,
+      (2) classifies workflow entity using that model, (3) records prediction via mlPredictionRecord.
+      Verified by 3 passing tests in "classification agent — mission".
+
+  - ac_id: AC-3
+    description: Inputs section (storyId required, classificationTarget enum, features override)
+    status: PASS
+    evidence: >
+      Inputs section documents storyId and classificationTarget as Required, features as Optional.
+      classificationTarget enum values quality | risk | effort are present in the Inputs section
+      and mapping table. Verified by 4 passing tests in "classification agent — inputs".
+
+  - ac_id: AC-4
+    description: Graceful fallback on empty mlModelGetActive result
+    status: PASS
+    evidence: >
+      Phase 3 "Heuristic Fallback" section explicitly handles empty array from mlModelGetActive:
+      logs warning, computes heuristic score from AC count/phase/scope, uses 'heuristic' as modelId
+      (never undefined), emits CLASSIFICATION WARNING signal. Verified by 5 passing tests in
+      "classification agent — heuristic fallback".
+
+  - ac_id: AC-5
+    description: Output references KB tool calls
+    status: PASS
+    evidence: >
+      Output section contains a KB Tool Calls table listing mlModelGetActive and mlPredictionRecord
+      with their purposes. classification_result structure is documented with score, confidence,
+      method, predictionId fields. Verified by 4 passing tests in "classification agent — output".
+
+  - ac_id: AC-6
+    description: Completion Signal with 3 standard strings
+    status: PASS
+    evidence: >
+      Completion Signal section defines exactly 3 signals:
+      "CLASSIFICATION COMPLETE: {storyId} — {classificationTarget} score={score} method=model",
+      "CLASSIFICATION COMPLETE: {storyId} — {classificationTarget} score={score} method=heuristic (WARNING: no active model)",
+      "CLASSIFICATION FAILED: {reason}".
+      Verified by 3 passing tests in "classification agent — completion signals".
+
+  - ac_id: AC-7
+    description: Content test verifies frontmatter + sections
+    status: PASS
+    evidence: >
+      .claude/agents/__tests__/classification.test.ts created with 33 content-inspection tests.
+      All 33 tests pass: pnpm vitest run .claude/agents/__tests__/classification.test.ts
+      → "33 passed (33)". Tests cover frontmatter fields, mission content, inputs, modelType
+      mapping, heuristic fallback, output structure, completion signals, and non-negotiables.
+
+  - ac_id: AC-8
+    description: N/A (no compute helper)
+    status: N/A
+    evidence: >
+      Per implementation plan: "AC-8: N/A (no compute helper)". This is a docs-only story
+      creating an agent spec file. No TypeScript compute helper is needed.
+
+  - ac_id: AC-9
+    description: No console.* in TS files
+    status: PASS
+    evidence: >
+      classification.test.ts uses only Vitest APIs (readFileSync, describe, it, expect, beforeAll).
+      No console.* calls present. The agent.md explicitly states "Do NOT use console.* — use
+      @repo/logger patterns in any TS files". Verified by passing non-negotiables test.
+
+  - ac_id: AC-10
+    description: No wint.*/kbar.* schema references
+    status: PASS
+    evidence: >
+      Neither classification.agent.md nor classification.test.ts contains any wint.* or kbar.*
+      references. Confirmed by code inspection during file creation.
+
+build_verification:
+  command: pnpm vitest run .claude/agents/__tests__/classification.test.ts
+  exit_code: 0
+  output: |
+    ✓ .claude/agents/__tests__/classification.test.ts (33 tests) 4ms
+    Test Files  1 passed (1)
+    Tests  33 passed (33)
+  timestamp: '2026-03-23T13:10:54.000Z'
+
+e2e_verification:
+  status: exempt
+  reason: story_type is docs — agent spec file creation, no UI or API surfaces touched

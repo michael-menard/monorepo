@@ -1,0 +1,2 @@
+skipped: true
+reason: 'WINT-5010 is a pure backend sidecar service with no UI surface. The operator prompting described in the story is MCP-tool-driven (an LLM agent calls hitlInterview and presents questions via its context window), not a web interface. No React components, no Tailwind, no shadcn primitives, no Playwright journey applies.'

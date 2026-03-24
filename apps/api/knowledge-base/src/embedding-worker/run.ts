@@ -16,10 +16,8 @@
 
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-
 import { config } from 'dotenv'
 import { Client as PgClient } from 'pg'
-
 import { logger } from '@repo/logger'
 import { EmbeddingClient } from '../embedding-client/index.js'
 import { EmbeddingWorker } from './embedding-worker.js'

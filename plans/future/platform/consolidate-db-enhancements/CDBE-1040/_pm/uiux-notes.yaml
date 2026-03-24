@@ -1,0 +1,2 @@
+skipped: true
+reason: 'Pure database migration story with no UI components, no API endpoints, and no frontend changes. CDBE-1040 is entirely contained within PostgreSQL DDL (trigger functions, a new audit table, and pgtap tests).'

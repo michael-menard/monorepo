@@ -1,0 +1,162 @@
+feasible: true
+confidence: high
+rationale: >
+  The SchedulerLoop in apps/api/pipeline/src/scheduler/index.ts is well-structured for extension.
+  The dispatchStory() method, getEligibleStories() SQL CTE, and applyFinishBeforeNewStart/applyStrictFinishFilter
+  methods all follow consistent patterns that are straightforward to replicate for review and QA stages.
+  ReviewJobDataSchema and QaJobDataSchema already exist in @repo/pipeline-queue with correct payload shapes.
+  The canonical state machine clarifies the dispatch triggers: stories in ready_for_qa dispatch as
+  'review' stage jobs (advancing to in_qa), and the QA dispatch trigger is less clear from the state
+  machine but can be inferred from the dispatch-router's runQAVerify path.
+  One key clarification is needed: the AC-2 spec mentions advancing to 'in_review' which is not a
+  canonical state — the correct canonical advance from ready_for_qa is to in_qa. This must be
+  corrected in the implementation. No new infrastructure is required.
+
+complexity: medium
+
+change_surface:
+  areas:
+    - apps/api/pipeline/src/scheduler/index.ts
+    - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+  endpoints: []
+  deploy_touchpoints:
+    - 'SchedulerLoop process restart required after deployment (long-lived process)'
+
+risks:
+  - finding: >
+      AC-2 specifies advancing story to 'in_review' state before review dispatch, but 'in_review'
+      is NOT in the canonical 13-state model. The valid transition from ready_for_qa is to in_qa.
+      If the implementation blindly uses 'in_review', kb_update_story_status will reject the transition
+      and no review jobs will ever be dispatched (F006 guard will return updated:false every time).
+    mitigation: >
+      Use state 'in_qa' as the target advance state for review dispatch (ready_for_qa → in_qa).
+      The 'review' stage in BullMQ terminology corresponds to the QA gate in the state model.
+      Confirm this interpretation against dispatch-router.ts runReview() function behavior.
+
+  - finding: >
+      QA dispatch trigger state is ambiguous from the AC spec. AC-4 says "state = in_qa or a
+      QA-ready trigger state". If review dispatch already advances to in_qa, there is no separate
+      state that triggers QA dispatch — unless the QA stage is separate from code review automation.
+      Possible resolution: review stage = automated code review bot (dispatched from ready_for_qa),
+      QA stage = human/automated QA verification (dispatched from needs_code_review after fix?).
+    mitigation: >
+      Verify dispatch-router.ts routing: runReview() handles 'review' stage, runQAVerify() handles 'qa' stage.
+      Look at what KB state each advances the story to after completion to determine the correct scheduler
+      trigger states. If review = code review (ready_for_qa → in_qa) and qa = QA verification (in_qa → completed),
+      then: review dispatch trigger = ready_for_qa, qa dispatch trigger = in_qa.
+      This would mean the scheduler dispatches QA jobs for stories already in in_qa state,
+      which is unusual (normally in_qa means QA is already running). Needs confirmation.
+
+missing_requirements:
+  - >
+    AC-2: Specify the correct canonical state to advance to for review dispatch. 'in_review' is not
+    canonical. Expected answer: 'in_qa' (ready_for_qa → in_qa transition in state machine).
+  - >
+    AC-4/AC-5: Specify the exact QA dispatch trigger state. Is it 'ready_for_qa' (dispatch review job)
+    or 'in_qa' (dispatch qa job for stories already in_qa)? The state machine shows in_qa → completed
+    is triggered by /qa-verify-story, which maps to the qa stage job.
+
+evidence_expectations:
+  - 'pnpm check-types --filter @repo/pipeline exits 0 with zero TypeScript errors'
+  - 'pnpm test --filter @repo/pipeline exits 0 with all scheduler tests passing'
+  - 'dispatchReviewStory() calls kb_update_story_status BEFORE queue.add() — verified by test execution order'
+  - 'dispatchQaStory() calls kb_update_story_status BEFORE queue.add() — verified by test'
+  - 'queue.add() not called when KB returns updated:false — verified by EC-1, EC-2 test cases'
+  - 'jobId format {storyId}:review:1 and {storyId}:qa:1 — verified by test assertions'
+
+subtasks:
+  - id: ST-1
+    title: 'Add getEligibleReviewStories() method to SchedulerLoop'
+    goal: >
+      Add a new DB query method that returns stories in ready_for_qa state with no unresolved
+      dependencies, following the same raw SQL CTE pattern as getEligibleStories().
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs: ['AC-1']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 4000
+
+  - id: ST-2
+    title: 'Add getEligibleQaStories() method to SchedulerLoop'
+    goal: >
+      Add a DB query method that returns stories in the correct QA-trigger state (to be confirmed:
+      in_qa or ready_for_qa depending on state machine interpretation) with no unresolved deps.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - packages/backend/orchestrator/src/state/story-state-machine.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs: ['AC-4']
+    depends_on: none
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 3500
+
+  - id: ST-3
+    title: 'Add dispatchReviewStory() method to SchedulerLoop'
+    goal: >
+      Add the F006 atomic dispatch method for review stage: advance KB state to canonical target
+      (in_qa) before enqueuing, build ReviewJobDataSchema-compliant payload, call queue.add() with
+      jobId {storyId}:review:{attemptNumber}. Pass empty string defaults for worktreePath/featureDir.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - packages/backend/pipeline-queue/src/__types__/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs: ['AC-2']
+    depends_on: ST-1
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 5000
+
+  - id: ST-4
+    title: 'Add dispatchQaStory() method to SchedulerLoop'
+    goal: >
+      Add the F006 atomic dispatch method for QA stage: advance KB state to correct target before
+      enqueuing, build QaJobDataSchema-compliant payload, call queue.add() with
+      jobId {storyId}:qa:{attemptNumber}.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+      - packages/backend/pipeline-queue/src/__types__/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs: ['AC-5']
+    depends_on: ST-2
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 4000
+
+  - id: ST-5
+    title: 'Extend runOnce() with review and QA dispatch branches'
+    goal: >
+      Extend SchedulerLoop.runOnce() to: (a) compute remaining slots after implementation dispatch,
+      (b) call getEligibleReviewStories(), apply ordering/filtering via applyFinishBeforeNewStart and
+      applyStrictFinishFilter, dispatch review stories; (c) same for QA stories. All stages share the
+      maxConcurrent ceiling.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/index.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/index.ts
+    acs: ['AC-3', 'AC-6', 'AC-7']
+    depends_on: ST-3
+    verification: 'pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 6000
+
+  - id: ST-6
+    title: 'Add unit tests for review and QA dispatch'
+    goal: >
+      Extend apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts with:
+      AC-8 (dispatchReviewStory called for ready_for_qa story in runOnce()),
+      AC-9 (dispatchQaStory called for QA-trigger state story in runOnce()),
+      AC-10 (queue.add NOT called when KB returns updated:false for review),
+      AC-11 (correct jobId format for review and QA dispatch).
+      Use existing makeQueue(), makeStory(), makeKbDeps() helpers. Add reviewStory and qaStory
+      factory helpers using makeStory() overrides.
+    files_to_read:
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    files_to_modify:
+      - apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts
+    acs: ['AC-8', 'AC-9', 'AC-10', 'AC-11', 'AC-12', 'AC-13']
+    depends_on: ST-5
+    verification: 'pnpm test --filter @repo/pipeline && pnpm check-types --filter @repo/pipeline'
+    estimated_tokens: 8000

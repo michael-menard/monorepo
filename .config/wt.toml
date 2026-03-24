@@ -1,0 +1,62 @@
+# Worktrunk project config for LEGO MOC monorepo
+# Docs: https://worktrunk.dev/tips-patterns/
+
+# ─── Worktree creation (blocking — completes before you can work) ───
+
+[post-create]
+# Copy gitignored files (node_modules, .env, caches) so pnpm install is fast
+copy-ignored = "wt step copy-ignored"
+
+# Install dependencies using the copied node_modules as cache
+deps = "pnpm install --frozen-lockfile"
+
+# ─── Worktree creation (background — runs while you start working) ───
+
+[post-start]
+# Build shared packages so imports resolve immediately
+build = "pnpm turbo build --filter='./packages/**'"
+
+# ─── Switching between worktrees ───
+
+[post-switch]
+# Rename tmux window to branch name for easy identification
+tmux = '[ -n "$TMUX" ] && tmux rename-window {{ branch | sanitize }} || true'
+
+# ─── Pre-commit checks (during wt merge, before squash commit) ───
+
+[pre-commit]
+# Fast checks: formatting and lint
+lint = "pnpm eslint --no-warn-ignored --max-warnings=0 --quiet ."
+format = "pnpm prettier --check ."
+
+# ─── Pre-merge checks (after rebase, before merge to target) ───
+
+[pre-merge]
+# Full quality gates — failures abort the merge
+typecheck = "pnpm check-types"
+test = "pnpm test"
+build = "pnpm build"
+
+# ─── Cleanup after worktree removal ───
+
+[post-remove]
+# Kill any Vite dev servers that were running for this worktree
+kill-vite = "lsof -ti :{{ branch | hash_port }} -sTCP:LISTEN | xargs kill 2>/dev/null || true"
+
+# ─── List display ───
+
+[list]
+# Show LLM-generated one-line branch summaries
+summary = true
+
+# ─── Project aliases (run with: wt step <name>) ───
+
+[aliases]
+# Quick dev server on a per-branch port (useful for parallel worktree dev)
+dev = "pnpm dev -- --port {{ branch | hash_port }}"
+
+# Run tests for only the packages that changed vs main
+test-changed = "pnpm turbo test --filter='...[main]'"
+
+# Type-check only changed packages
+types-changed = "pnpm turbo check-types --filter='...[main]'"

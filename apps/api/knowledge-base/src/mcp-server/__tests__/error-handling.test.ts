@@ -73,6 +73,21 @@ describe('Error Type Guards', () => {
       expect(isDatabaseError(error)).toBe(true)
     })
 
+    it('should detect errors with PostgreSQL SQLSTATE codes', () => {
+      const error = Object.assign(new Error('some error'), { code: '23505' })
+      expect(isDatabaseError(error)).toBe(true)
+    })
+
+    it('should NOT match errors with non-SQLSTATE .code properties', () => {
+      const error = Object.assign(new Error('some API error'), { code: 'ENOENT' })
+      expect(isDatabaseError(error)).toBe(false)
+    })
+
+    it('should NOT match errors with numeric .code that is not 5 chars', () => {
+      const error = Object.assign(new Error('some error'), { code: '404' })
+      expect(isDatabaseError(error)).toBe(false)
+    })
+
     it('should return false for non-database errors', () => {
       expect(isDatabaseError(new Error('regular error'))).toBe(false)
       expect(isDatabaseError(null)).toBe(false)
@@ -90,9 +105,24 @@ describe('Error Type Guards', () => {
       expect(isOpenAIError(error)).toBe(true)
     })
 
-    it('should detect embedding errors', () => {
-      const error = new Error('Embedding generation failed')
+    it('should detect OpenAI SDK error classes', () => {
+      class APIError extends Error {
+        constructor(message: string) {
+          super(message)
+        }
+      }
+      const error = new APIError('Request failed')
       expect(isOpenAIError(error)).toBe(true)
+    })
+
+    it('should NOT match generic "embedding" in message (DB column name)', () => {
+      const error = new Error('column "embedding" does not exist')
+      expect(isOpenAIError(error)).toBe(false)
+    })
+
+    it('should NOT match "Embedding generation failed" without OpenAI context', () => {
+      const error = new Error('Embedding generation failed')
+      expect(isOpenAIError(error)).toBe(false)
     })
 
     it('should return false for non-OpenAI errors', () => {
@@ -269,6 +299,34 @@ describe('sanitizeError', () => {
     const error = sampleErrors.generic
     const result = sanitizeError(error)
     expect(result.code).toBe(ErrorCode.INTERNAL_ERROR)
+  })
+
+  it('should classify DB errors about "embedding" column as DATABASE_ERROR, not API_ERROR', () => {
+    // This was the root cause of the flakey embedding bug — DB errors containing
+    // the word "embedding" were misclassified as OpenAI API errors
+    const error = new Error('column "embedding" of relation "knowledge_entries" does not exist')
+    const result = sanitizeError(error)
+    expect(result.code).toBe(ErrorCode.DATABASE_ERROR)
+  })
+
+  it('should classify enum cast errors with "embedding" as DATABASE_ERROR', () => {
+    const error = new Error('invalid input value for enum embedding_status: "unknown"')
+    Object.assign(error, { code: '22P02' }) // SQLSTATE: invalid text representation
+    const result = sanitizeError(error)
+    expect(result.code).toBe(ErrorCode.DATABASE_ERROR)
+  })
+
+  it('should classify real OpenAI errors before DB errors', () => {
+    // OpenAI SDK errors may have a .code property; they should still route to API_ERROR
+    class APIError extends Error {
+      code = 'rate_limit_exceeded'
+      constructor() {
+        super('OpenAI rate_limit exceeded')
+      }
+    }
+    const error = new APIError()
+    const result = sanitizeError(error)
+    expect(result.code).toBe(ErrorCode.API_ERROR)
   })
 })
 

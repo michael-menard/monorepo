@@ -52,6 +52,7 @@
     "prepare": "husky",
     "lint-staged": "lint-staged",
     "circular": "madge --circular --extensions ts,tsx,js,jsx",
+    "scrape": "turbo run scrape --filter=@repo/scraper-rebrickable --",
     "knip": "knip"
   },
   "dependencies": {

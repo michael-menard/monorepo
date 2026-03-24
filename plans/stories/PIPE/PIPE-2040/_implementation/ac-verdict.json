@@ -1,0 +1,111 @@
+{
+  "story_id": "PIPE-2040",
+  "generated_at": "2026-03-18T00:00:00Z",
+  "overall_verdict": "FAIL",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "dispatchStory() in apps/api/pipeline/src/scheduler/index.ts passes { jobId: `${story.storyId}:implementation:${attemptNumber}` } as opts to queue.add(). The jobId format matches the thread ID convention {storyId}:{stage}:{attemptNumber}.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting implementation of jobId parameter, including file paths, test assertions, or deployment confirmations."
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "A unit test in scheduler.test.ts verifies that queue.add() is called with the correct jobId option when dispatching a story. The test uses the makeQueue() mock and asserts expect(queue.add).toHaveBeenCalledWith('story-STORY-001', expect.anything(), expect.objectContaining({ jobId: 'STORY-001:implementation:1' })).",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting test implementation, including test file paths, test output, or passing test counts."
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "SchedulerConfigSchema in apps/api/pipeline/src/scheduler/__types__/index.ts adds a strictFinishBeforeNewStart: z.boolean().default(false) field. All existing callers remain unaffected (no config changes required).",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting schema extension, including file paths and code snippets showing the new field definition."
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "When strictFinishBeforeNewStart: true is configured, runOnce() filters the eligible stories list before dispatching: if any plan in the KB has a story currently in_progress, only stories from plans that already have in_progress siblings are eligible in that cycle. Stories from plans with no in_progress work are deferred to the next poll cycle.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting strict filter implementation, including code paths and filtering logic verification."
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "A unit test verifies that with strictFinishBeforeNewStart: true, if story STORY-A belongs to a plan with an in_progress sibling and story STORY-B belongs to a plan with no in_progress siblings, only STORY-A is dispatched in the current cycle.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting test execution, including test file paths and test results."
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "A unit test verifies that with strictFinishBeforeNewStart: false (default), both STORY-A and STORY-B are eligible in the same cycle regardless of plan in_progress state (confirming the default behaviour is unchanged from today).",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting default behavior preservation test."
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "A unit test verifies that dispatchStory() does NOT call queue.add() when kb_update_story_status returns updated: false (existing F006 behaviour is preserved and tested explicitly).",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting F006 preservation test."
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "The existing applyFinishBeforeNewStart() method and finishBeforeNewStart config flag continue to function as before (priority reordering, not filtering). No regression in existing scheduler tests.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting regression test results."
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "TypeScript compilation (pnpm check-types) passes with zero errors after all changes.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting TypeScript compilation success, including command output or build logs."
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "All tests in apps/api/pipeline/src/scheduler/__tests__/scheduler.test.ts pass. pnpm test --filter @repo/pipeline exits 0.",
+      "verdict": "REJECT",
+      "evidence_evaluated": 0,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 0,
+      "challenge_reason": "No evidence bundle found. EVIDENCE.yaml is missing.",
+      "proof_required": "Provide EVIDENCE.yaml with evidence_items documenting all tests passing, including test output and exit codes."
+    }
+  ],
+  "total_acs": 10,
+  "accepted": 0,
+  "challenged": 0,
+  "rejected": 10
+}

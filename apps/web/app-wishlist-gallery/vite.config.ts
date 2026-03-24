@@ -1,15 +1,10 @@
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { config } from 'dotenv'
 
-// Load .env files before config is processed (Vite loads these after config, so we do it manually)
-// Priority: local app .env.local > local app .env > root .env.local > root .env
-const rootDir = resolve(__dirname, '../../..')
-config({ path: resolve(__dirname, '.env.local') })
-config({ path: resolve(__dirname, '.env') })
-config({ path: resolve(rootDir, '.env.local') })
-config({ path: resolve(rootDir, '.env') })
+const require = createRequire(import.meta.url)
+const { readPort } = require('../../../infra/ports.cjs')
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -28,7 +23,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3000,
+    port: readPort('WISHLIST_GALLERY_PORT'),
     host: true,
   },
   build: {

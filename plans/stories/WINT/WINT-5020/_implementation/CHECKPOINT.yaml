@@ -1,0 +1,7 @@
+schema: checkpoint/v1
+story_id: WINT-5020
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+blocked: false
+updated_at: '2026-03-23T13:11:00.000Z'

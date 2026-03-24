@@ -19,9 +19,13 @@
       "import": "./src/__types__/index.ts",
       "types": "./src/__types__/index.ts"
     },
-    "./ml-pipeline": {
-      "import": "./src/ml-pipeline/index.ts",
-      "types": "./src/ml-pipeline/index.ts"
+    "./worktree-management": {
+      "import": "./src/worktree-management/index.ts",
+      "types": "./src/worktree-management/index.ts"
+    },
+    "./telemetry": {
+      "import": "./src/telemetry/index.ts",
+      "types": "./src/telemetry/index.ts"
     }
   },
   "scripts": {
@@ -59,10 +63,8 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@repo/context-pack-sidecar": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@repo/mcp-tools": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.44.0",
     "glob": "^10.3.10",

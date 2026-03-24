@@ -1090,3 +1090,83 @@ export type NewTokenUsageInput = z.infer<typeof NewTokenUsageSchema>
  */
 export const TokenGroupBySchema = z.enum(['phase', 'feature', 'story', 'agent'])
 export type TokenGroupBy = z.infer<typeof TokenGroupBySchema>
+
+/**
+ * APRS-1040: Plan flow source/confidence tracking
+ *
+ * Zod schemas for workflow.plan_flows and workflow.plan_flow_steps tables.
+ * Provides runtime validation for flow provenance and step ordering.
+ */
+
+/**
+ * Source enum: where the flow came from.
+ */
+export const PlanFlowSourceSchema = z.enum(['user', 'inferred', 'merged'])
+export type PlanFlowSource = z.infer<typeof PlanFlowSourceSchema>
+
+/**
+ * Status enum: editorial lifecycle status for a plan flow.
+ */
+export const PlanFlowStatusSchema = z.enum(['approved', 'unconfirmed', 'rejected', 'deferred'])
+export type PlanFlowStatus = z.infer<typeof PlanFlowStatusSchema>
+
+/**
+ * Schema for a plan flow record (workflow.plan_flows).
+ * Represents one identified workflow flow for a plan with source/confidence/status tracking.
+ */
+export const PlanFlowSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  source: PlanFlowSourceSchema,
+  confidence: z.number().min(0).max(1).nullable(),
+  status: PlanFlowStatusSchema,
+  notes: z.string().nullable().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type PlanFlow = z.infer<typeof PlanFlowSchema>
+
+/**
+ * Schema for creating a new plan flow.
+ * Omits id (auto-generated) and timestamps.
+ */
+export const NewPlanFlowSchema = z.object({
+  planId: z.string().uuid(),
+  source: PlanFlowSourceSchema,
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  status: PlanFlowStatusSchema.optional(),
+  notes: z.string().nullable().optional(),
+})
+
+export type NewPlanFlow = z.infer<typeof NewPlanFlowSchema>
+
+/**
+ * Schema for a plan flow step record (workflow.plan_flow_steps).
+ * Represents one ordered step within a plan flow execution sequence.
+ */
+export const PlanFlowStepSchema = z.object({
+  id: z.string().uuid(),
+  flowId: z.string().uuid(),
+  stepOrder: z.number().int().min(1, 'step_order must be > 0'),
+  stepLabel: z.string().min(1),
+  stepDescription: z.string().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+  createdAt: z.date(),
+})
+
+export type PlanFlowStep = z.infer<typeof PlanFlowStepSchema>
+
+/**
+ * Schema for creating a new plan flow step.
+ * Omits id (auto-generated) and createdAt timestamp.
+ */
+export const NewPlanFlowStepSchema = z.object({
+  flowId: z.string().uuid(),
+  stepOrder: z.number().int().min(1, 'step_order must be > 0'),
+  stepLabel: z.string().min(1),
+  stepDescription: z.string().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+})
+
+export type NewPlanFlowStep = z.infer<typeof NewPlanFlowStepSchema>

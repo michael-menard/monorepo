@@ -1,0 +1,37 @@
+deferred_at: '2026-03-19'
+reason: 'KB MCP tools not available as direct function calls in story generation session'
+writes:
+  - operation: kb_update_story_status
+    story_id: CDBE-5020
+    state: ready
+    metadata:
+      experiment_variant: control
+      generated_at: '2026-03-19'
+      story_file: plans/future/platform/consolidate-db-enhancements/CDBE-5020/CDBE-5020.md
+
+  - operation: INSERT INTO stories
+    story_id: CDBE-5020
+    feature: cdbe
+    title: 'Partition telemetry.workflow_events Table and Add Partition Management Cron Job'
+    story_dir: plans/future/platform/consolidate-db-enhancements/CDBE-5020
+    story_file: plans/future/platform/consolidate-db-enhancements/CDBE-5020/CDBE-5020.md
+    story_type: tech_debt
+    points: 8
+    priority: high
+    state: ready
+    touches_backend: true
+    touches_frontend: false
+    touches_database: true
+    touches_infra: false
+
+  - operation: kb_artifact
+    type: pm_test_plan
+    story_id: CDBE-5020
+    source_file: plans/future/platform/consolidate-db-enhancements/CDBE-5020/_pm/test-plan.yaml
+
+  - operation: kb_artifact
+    type: pm_dev_feasibility
+    story_id: CDBE-5020
+    source_file: plans/future/platform/consolidate-db-enhancements/CDBE-5020/_pm/dev-feasibility.yaml
+
+  # uiux-notes.yaml skipped: true — omit per agent instructions

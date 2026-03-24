@@ -1,0 +1,201 @@
+schema: 2
+story_id: PIPE-3010
+timestamp: '2026-03-18T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Extend DevImplementConfigSchema with modelDispatch injection field and DevImplementStateAnnotation with
+      worktreePath, changeSpecs, currentChangeIndex, completedChanges, and changeLoopStatus fields
+    files:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-6
+      - AC-7
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Replace createExecuteNode stub with real implementation: parse planContent into ChangeSpec[], delegate each spec
+      to createChangeLoopNode, track completedChanges in state, emit structured log events, remove WINT-9070 warning
+      string
+    files:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-5
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Wire shouldEscalate into afterExecute conditional edge: handle abort_to_blocked routing to complete node with
+      workflowSuccess=false, add 'complete' to afterExecute return type and addConditionalEdges map
+    files:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-3
+      - AC-8
+      - AC-11
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Replace createCollectEvidenceNode stub with real implementation: build Evidence record from state.completedChanges
+      (touched files from CommitRecord.touchedFiles, commit SHAs as commands_run), remove stub path 'stub' and WINT-9080
+      reference
+    files:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-4
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Update dev-implement.test.ts: extend createTestState with new state field defaults (worktreePath, changeSpecs,
+      currentChangeIndex, completedChanges, changeLoopStatus, storyTransitioned), add tests for execute node (HP-1,
+      EC-1, EC-5, ED-3, ED-4), escalation routing (HP-2, HP-3, EC-2, EC-3, ED-2), and evidence collection (HP-4, EC-4,
+      HP-5 integration)
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/dev-implement.ts
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    dependencies:
+      - 2
+      - 3
+      - 4
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-9
+      - AC-10
+files_to_change:
+  - path: packages/backend/orchestrator/src/graphs/dev-implement.ts
+    action: modify
+    reason: >-
+      Replace execute and collect_evidence stubs; extend state annotation and config schema; wire shouldEscalate into
+      afterExecute with abort_to_blocked routing
+  - path: packages/backend/orchestrator/src/graphs/__tests__/dev-implement.test.ts
+    action: modify
+    reason: >-
+      Extend createTestState with new fields; add tests for execute node, escalation routing, and evidence collection
+      per test plan
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after each ST (steps 1-4)
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after ST-5
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Unit test HP-1: mock IModelDispatch.dispatch called once per ChangeSpec; EC-1: no modelDispatch →
+      executeComplete=true, completedChanges=[]
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test HP-1: createChangeLoopNode called with worktreePath from config; createChangeLoopNode mock receives
+      correct args
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test ED-2: shouldEscalate returns escalate_to_opus at iterationCount=1; EC-2: returns abort_to_blocked at
+      maxIterations
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test HP-4: saveProof called with real file paths from CommitRecord.touchedFiles, no 'stub' path; EC-4: no
+      throw when workflowRepo absent
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit test ED-4: no warning containing 'WINT-9070' in result; grep confirms string absent in source after
+      implementation
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      pnpm check-types passes with all new Annotation fields present: worktreePath, changeSpecs, currentChangeIndex,
+      completedChanges, changeLoopStatus
+    evidence_type: command
+  - ac_id: AC-7
+    planned_evidence: 'pnpm check-types passes with modelDispatch: z.custom<IModelDispatch>().optional() in DevImplementConfigSchema'
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: >-
+      Unit test HP-2: afterExecute returns 'review_subgraph' on success+runReview=true; HP-3: returns 'collect_evidence'
+      when runReview=false; EC-3: returns 'complete' on abort_to_blocked
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: 'Vitest test suite: HP-1..HP-5 happy path + EC-1..EC-5 error cases + ED-1..ED-4 edge cases all pass'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: pnpm test --filter @repo/orchestrator exits 0; pnpm check-types exits 0
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: >-
+      pnpm check-types passes with afterExecute typed as returning 'review_subgraph' | 'collect_evidence' | 'complete';
+      addConditionalEdges map includes complete: 'complete' entry
+    evidence_type: command
+architectural_decisions: []
+complexity: moderate
+notes:
+  - >-
+    ST-1 and ST-4 have no inter-dependency; both can be authored in the same editing pass since both modify
+    dev-implement.ts
+  - >-
+    createChangeLoopNode expects ImplementationGraphState — the execute node must build a compatible partial state
+    projection for each ChangeSpec iteration, since DevImplementState has different field names
+  - >-
+    The execute node does NOT directly call createChangeLoopNode's returned function in a subgraph loop — it must invoke
+    the node function for each ChangeSpec in a sequential for-loop, passing a constructed ImplementationGraphState
+    slice, and accumulate CommitRecord results into completedChanges
+  - >-
+    afterExecute currently typed as returning 'review_subgraph' | 'collect_evidence'; ST-3 must extend this to include
+    'complete' AND add complete: 'complete' to addConditionalEdges to satisfy TypeScript and LangGraph schema validation
+    (AC-11)
+  - >-
+    Existing test 'sets executeComplete=true with stub warning' will need updating in ST-5 — it asserts on stub warning
+    which will no longer be emitted after ST-2
+  - >-
+    createTestState must add storyTransitioned, worktreePath, changeSpecs, currentChangeIndex, completedChanges,
+    changeLoopStatus to avoid TS errors in ST-5
+  - >-
+    Do NOT import from change-spec-schema.ts (used in implementation.ts) — dev-implement.ts should import from
+    change-spec.ts (the canonical path confirmed in PIPE-3010.md scope)
+  - >-
+    worktreePath derivation: use path.join(config.worktreePath, storyId) per architecture notes — not just
+    config.worktreePath directly

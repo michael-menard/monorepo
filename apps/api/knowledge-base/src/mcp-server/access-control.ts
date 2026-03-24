@@ -70,6 +70,7 @@ export const ToolNameSchema = z.enum([
   'kb_search_plans',
   'kb_get_plan_dashboard',
   'kb_get_plan_revisions',
+  'kb_get_plan_revision_diff',
   'kb_log_plan_event',
   'kb_get_plan_events',
   // Artifact search tool (KBAR-0130)
@@ -83,6 +84,12 @@ export const ToolNameSchema = z.enum([
   'workflow_log_decision',
   'workflow_log_outcome',
   'workflow_get_story_telemetry',
+  // Story dependency and context tools
+  'kb_add_dependency',
+  'kb_get_story_plan_links',
+  'kb_ingest_story_from_yaml',
+  'kb_find_similar_stories',
+  'kb_get_story_context',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -162,6 +169,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_search_plans: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_dashboard: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_revisions: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_plan_revision_diff: new Set(['pm', 'dev', 'qa', 'all']),
   kb_log_plan_event: new Set(['pm', 'dev']),
   kb_get_plan_events: new Set(['pm', 'dev', 'qa', 'all']),
   // Artifact search tool (KBAR-0130) - available to all roles
@@ -175,6 +183,12 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   workflow_log_decision: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_log_outcome: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_get_story_telemetry: new Set(['pm', 'dev', 'qa', 'all']),
+  // Story dependency and context tools - available to all roles
+  kb_add_dependency: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_plan_links: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_ingest_story_from_yaml: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_find_similar_stories: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_context: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

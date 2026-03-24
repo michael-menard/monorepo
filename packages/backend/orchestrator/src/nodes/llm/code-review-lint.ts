@@ -40,7 +40,7 @@ export const LintReviewResultSchema = z.object({
   summary: z.string(),
   passesLint: z.boolean(),
   modelUsed: z.string(),
-  provider: z.enum(['ollama', 'claude']),
+  provider: z.string(),
 })
 
 export type LintReviewResult = z.infer<typeof LintReviewResultSchema>
@@ -133,7 +133,10 @@ async function codeReviewLintImpl(
         issues: [],
         summary: 'No code provided for review',
         passesLint: true,
-        modelUsed: llmResult.provider === 'ollama' ? llmResult.model.fullName : llmResult.model,
+        modelUsed:
+          llmResult.provider === 'ollama'
+            ? ((llmResult.model as any).fullName ?? String(llmResult.model))
+            : String(llmResult.model),
         provider: llmResult.provider,
       },
     }
@@ -141,13 +144,15 @@ async function codeReviewLintImpl(
 
   // Ollama path - invoke directly
   if (llmResult.provider === 'ollama') {
+    const ollamaModel =
+      llmResult.model as import('../../config/model-assignments.js').ParsedOllamaModel
     logger.info('Using Ollama for lint review', {
-      model: llmResult.model.fullName,
+      model: ollamaModel.fullName,
       codeLength: codeToReview.length,
     })
 
     try {
-      const response = await llmResult.llm.invoke([
+      const response = await llmResult.llm!.invoke([
         new SystemMessage(SYSTEM_PROMPT),
         new HumanMessage(`Please review this code:\n\n${codeToReview}`),
       ])
@@ -167,13 +172,13 @@ async function codeReviewLintImpl(
           issues: parsed.issues ?? [],
           summary: parsed.summary ?? 'Review complete',
           passesLint: parsed.passesLint ?? true,
-          modelUsed: llmResult.model.fullName,
+          modelUsed: ollamaModel.fullName,
           provider: 'ollama',
         },
       }
     } catch (error) {
       logger.error('Ollama lint review failed', {
-        model: llmResult.model.fullName,
+        model: ollamaModel.fullName,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
 
@@ -200,7 +205,7 @@ async function codeReviewLintImpl(
 
   return {
     pendingClaudeCall: {
-      model: llmResult.model,
+      model: String(llmResult.model),
       systemPrompt: SYSTEM_PROMPT,
       userPrompt: `Please review this code:\n\n${codeToReview}`,
       nodeId: 'code-review-lint',

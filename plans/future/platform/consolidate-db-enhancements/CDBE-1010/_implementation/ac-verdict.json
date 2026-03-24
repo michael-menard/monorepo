@@ -1,0 +1,152 @@
+{
+  "story_id": "CDBE-1010",
+  "generated_at": "2026-03-19T01:14:45Z",
+  "overall_verdict": "PASS",
+  "ac_verdicts": [
+    {
+      "ac_id": "AC-1",
+      "ac_text": "Migration adds `exited_at timestamptz` column to `workflow.story_state_history` using `ADD COLUMN IF NOT EXISTS` (idempotent).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-2",
+      "ac_text": "Migration adds `duration_seconds numeric(12,3)` column to `workflow.story_state_history` using `ADD COLUMN IF NOT EXISTS` (idempotent).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-3",
+      "ac_text": "A trigger function `workflow.validate_story_state_history_insert()` is created using `CREATE OR REPLACE FUNCTION`, declared with `SECURITY INVOKER` (documented explicitly in a COMMENT even though it is the PostgreSQL default), written in `plpgsql`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-4",
+      "ac_text": "The trigger function validates the incoming `(NEW.from_state, NEW.to_state)` pair against `workflow.valid_transitions` using a `NOT EXISTS` subquery with `COALESCE(from_state, '__NULL__')` on both sides (not a hardcoded IF chain).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-5",
+      "ac_text": "When an illegal transition is detected, the trigger function raises an exception with `ERRCODE = 'check_violation'` (SQLSTATE 23514) and a descriptive message identifying the illegal pair (e.g., `'Illegal state transition: completed → in_progress'`).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-6",
+      "ac_text": "When a legal transition is detected, the trigger function finds the most recent open row in `story_state_history` for the same `story_id` (where `exited_at IS NULL`, ordered by `created_at DESC LIMIT 1`) and sets `exited_at = NOW()` and `duration_seconds = EXTRACT(EPOCH FROM (NOW() - created_at))` on that row before returning `NEW`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-7",
+      "ac_text": "The trigger function handles `NULL from_state` (initial insert) without raising a false rejection — `NULL → any` transitions are present in `valid_transitions` with `label = 'initial_insert'`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-8",
+      "ac_text": "A BEFORE INSERT trigger named `enforce_story_state_history_transition` is attached to `workflow.story_state_history` FOR EACH ROW, executing `workflow.validate_story_state_history_insert()`.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-9",
+      "ac_text": "The trigger is created with `DROP TRIGGER IF EXISTS … / CREATE TRIGGER …` to ensure idempotency.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-10",
+      "ac_text": "`COMMENT ON` statements are included for the trigger function, the trigger itself, and the added columns, citing the migration number (e.g., `'1010: …'`).",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-11",
+      "ac_text": "pgtap test file `apps/api/knowledge-base/src/db/migrations/pgtap/1010_story_state_history_trigger_test.sql` is written following the `BEGIN / SELECT plan(N) / … / SELECT * FROM finish() / ROLLBACK` pattern and passes, covering: column existence (`has_column`), trigger existence (`has_trigger`), legal transition acceptance, illegal transition rejection (`throws_ok` with SQLSTATE 23514), NULL `from_state` acceptance (initial insert), and `exited_at`/`duration_seconds` population on the previous open row.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-12",
+      "ac_text": "Migration is safe to run multiple times (idempotent): second run exits 0 with no errors; uses `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS`, `ADD COLUMN IF NOT EXISTS` throughout.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-13",
+      "ac_text": "The `event_type` value used in the new trigger function and test fixtures is a valid value per the `story_state_history.event_type` CHECK constraint (use `'transition'`). The pre-existing `record_state_transition` function's `event_type='state_changed'` bug is fixed in the same migration: existing rows updated to `'state_change'`, function updated to insert `'state_change'` going forward.",
+      "verdict": "ACCEPT",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 1,
+      "weak_evidence_count": 0,
+      "challenge_reason": null,
+      "proof_required": null
+    },
+    {
+      "ac_id": "AC-14",
+      "ac_text": "agent_role UPDATE grant verified in migration comment; GRANT UPDATE added if not present from 1005; pgtap UPDATE attempt succeeds under agent_role SAVEPOINT",
+      "verdict": "CHALLENGE",
+      "evidence_evaluated": 1,
+      "strong_evidence_count": 0,
+      "weak_evidence_count": 1,
+      "challenge_reason": "GRANT UPDATE statement is present in migration (line 165: GRANT UPDATE (exited_at, duration_seconds) ON workflow.story_state_history TO agent_role) and documented in comments, but pgtap test coverage for this AC is missing. No test explicitly verifies that agent_role can execute UPDATE on story_state_history.",
+      "proof_required": "Add pgtap test that attempts an UPDATE on story_state_history under agent_role privileges (e.g., within a SAVEPOINT executed as agent_role) and verifies success, or provide evidence that agent_role was tested separately."
+    }
+  ],
+  "total_acs": 14,
+  "accepted": 13,
+  "challenged": 1,
+  "rejected": 0,
+  "warnings": 0
+}

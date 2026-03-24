@@ -21,7 +21,7 @@ export function StoryHeader({
               Roadmap
             </Link>
           </li>
-          {fromPlan && (
+          {fromPlan ? (
             <>
               <li aria-hidden="true">
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -36,7 +36,7 @@ export function StoryHeader({
                 </Link>
               </li>
             </>
-          )}
+          ) : null}
           <li aria-hidden="true">
             <ChevronRight className="h-3.5 w-3.5" />
           </li>
@@ -59,20 +59,20 @@ export function StoryHeader({
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <StateTag state={data.state} />
-          {data.priority && <PriorityTag priority={data.priority} />}
-          {data.outcome && (
+          {data.priority ? <PriorityTag priority={data.priority} /> : null}
+          {data.outcome ? (
             <span className="text-xs text-slate-500 font-mono border border-slate-700/50 rounded px-2 py-0.5">
               ${parseFloat(data.outcome.estimatedTotalCost).toFixed(4)}
               {data.outcome.reviewIterations != null && ` · ${data.outcome.reviewIterations}r`}
               {data.outcome.qaIterations != null && ` · ${data.outcome.qaIterations}qa`}
             </span>
-          )}
-          {data.storyType && <AppBadge variant="secondary">{data.storyType}</AppBadge>}
-          {data.epic && (
+          ) : null}
+          {data.storyType ? <AppBadge variant="secondary">{data.storyType}</AppBadge> : null}
+          {data.epic ? (
             <AppBadge variant="outline" className="font-mono text-xs">
               {data.epic}
             </AppBadge>
-          )}
+          ) : null}
           {data.linkedPlans.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
               {data.linkedPlans.map(lp => (

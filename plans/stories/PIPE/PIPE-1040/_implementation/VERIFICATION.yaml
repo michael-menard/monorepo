@@ -1,0 +1,107 @@
+schema: 1
+story_id: PIPE-1040
+timestamp: '2026-03-18T20:43:00Z'
+verdict: PASS
+tests_executed: true
+test_results:
+  unit:
+    pass: 70
+    fail: 0
+  integration:
+    pass: 19
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  scoped_total:
+    pass: 89
+    fail: 0
+  full_suite_pre_existing_failures: 37
+  full_suite_note: >-
+    37 failures in 10 unrelated files confirmed as pre-existing baseline (wint.codebase_health schema missing, adapter
+    integration failures, dep-audit DB integration). None attributable to APIP-1031/1032.
+coverage: N/A — verification-only chore, no new code written
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-1
+    notes: >-
+      implementation.ts confirmed on main. grep finds export of runImplementation at line 428 and CommitRecordSchema at
+      line 48. SHA 2164bd74 confirmed as ancestor of HEAD via git merge-base.
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-2
+    notes: >-
+      change-loop.ts confirmed on main. grep finds ChangeLoopStatusSchema at line 51 (type inferred at line 52) and
+      changeLoopNode at line 562. SHA c525a8b5 confirmed as ancestor of HEAD.
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-3
+    notes: >-
+      All 5 APIP-1031 deliverable files confirmed present on main via ls: create-worktree.ts, evidence-production.ts,
+      load-story.ts, i-model-dispatch.ts, implementation.ts. All exit 0.
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-4
+    notes: >-
+      Scoped test run executed via explicit file paths. All 8 test files: 89/89 tests passed, 0 failures. Files:
+      change-loop.test.ts (15), implementation.test.ts (32), implementation-graph.test.ts (13),
+      change-loop.integration.test.ts (6), create-worktree.integration.test.ts (4), create-worktree.test.ts (7),
+      evidence-production.test.ts (7), load-story.test.ts (5). Note: proof artifact lists implementation.test.ts at 13
+      but actual run shows 32 — this is because the proof may have counted only a subset; 89 total is confirmed correct.
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-5
+    notes: >-
+      Full suite confirmed: 37 failures in 10 files matching the documented baseline exactly. Files:
+      index-adapter.integration, story-file-adapter.integration, story-file-adapter, models/integration,
+      performance-benchmarks.integration, real-story-compatibility.integration, dep-audit.integration,
+      structurer-affinity, health-gate.integration, persist-trends. None in APIP-1031/1032 scope.
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-6
+    notes: >-
+      APIP-1031 and APIP-1032 are pre-KB-first architecture stories with no KB entries. Merge confirmed via git
+      merge-base --is-ancestor for both SHAs (both TRUE). Documented in proof known_deviations. No KB state update
+      needed — absence is expected per pre-KB architecture.
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-7
+    notes: >-
+      grep for runImplementation in graphs/index.ts returned no matches. Gap confirmed — runImplementation is NOT
+      exported from the public API surface. Documented for PIPE-3010 to resolve.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: proof:acceptance_criteria.AC-8
+    notes: >-
+      Zero source code modifications. This is a verification-only chore story. git diff evidence confirms
+      source_code_modified=false. All verification was read-only (ls, grep, git, pnpm test).
+architecture_compliant: true
+e2e_gate: exempt
+e2e_exemption_reason: Verification-only chore story with zero source code modifications. No user-facing flows changed.
+issues: []
+lessons_to_record:
+  - lesson: >-
+      For verification-only chore stories, vitest positional glob patterns (e.g. change-loop|implementation) do not
+      match file paths directly in vitest 3.x — explicit file paths must be provided for scoped runs. The story's Reuse
+      Plan recommended a pattern filter but explicit paths were required.
+    category: anti_pattern
+    tags:
+      - testing
+      - vitest
+      - orchestrator
+  - lesson: >-
+      The proof artifact listed implementation.test.ts at 13 tests but the actual scoped run showed 32 tests in that
+      file. Total of 89 was correct. QA must re-run tests rather than trusting per-file counts from proof artifacts.
+    category: pattern
+    tags:
+      - qa
+      - verification
+      - test-counts
+tokens:
+  in: 18000
+  out: 3500

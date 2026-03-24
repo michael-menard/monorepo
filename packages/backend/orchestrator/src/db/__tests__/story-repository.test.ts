@@ -7,10 +7,11 @@ function createMockDbClient(): DbClient & { mockRows: StoryRow[]; mockQueries: s
   const mockRows: StoryRow[] = []
   const mockQueries: string[] = []
 
-  return {
-    mockRows,
-    mockQueries,
-    query: vi.fn(async <T>(text: string, values?: unknown[]): Promise<{ rows: T[]; rowCount: number }> => {
+  const queryFn = vi.fn(
+    async <T extends unknown = unknown>(
+      text: string,
+      values?: unknown[],
+    ): Promise<{ rows: T[]; rowCount: number }> => {
       mockQueries.push(text)
 
       // Return mock data based on query type
@@ -50,7 +51,13 @@ function createMockDbClient(): DbClient & { mockRows: StoryRow[]; mockQueries: s
       }
 
       return { rows: [], rowCount: 0 }
-    }),
+    },
+  ) as unknown as DbClient['query']
+
+  return {
+    mockRows,
+    mockQueries,
+    query: queryFn,
   }
 }
 

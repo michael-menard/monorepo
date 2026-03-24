@@ -1,0 +1,24 @@
+schema: 1
+story_id: PIPE-2050
+timestamp: 2026-03-18T00:00:00Z
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - apps/api/pipeline/src/scheduler/**
+  - packages/backend/pipeline-queue/src/__types__/**
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+summary: "Extend SchedulerLoop to dispatch review and QA stage jobs, implementing new dispatchReviewStory() and dispatchQaStory() methods following F006 atomic pattern"
+elaboration: completed

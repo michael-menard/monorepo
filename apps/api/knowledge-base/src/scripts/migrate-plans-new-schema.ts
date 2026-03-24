@@ -129,7 +129,7 @@ function extractStoryIds(content: string): string[] {
 
 function extractPhases(content: string): { number: number; name: string }[] {
   const phases: { number: number; name: string }[] = []
-  const matches = content.matchAll(/##\s+Phase\s+(\d+)[:\-]?\s*(.+)/gi)
+  const matches = content.matchAll(/##\s+Phase\s+(\d+)[:-]?\s*(.+)/gi)
   for (const match of matches) {
     phases.push({ number: parseInt(match[1], 10), name: match[2].trim() })
   }
