@@ -1,11 +1,14 @@
 schema: 1
-story_id: WINT-3090
-timestamp: '2026-03-24T00:30:00.000Z'
+story_id: WINT-6020
+timestamp: '2026-03-23T18:45:00Z'
 verdict: PASS
-tests_executed: true
+tests_executed: false
+tests_not_applicable_reason: >-
+  Markdown-only deliverable. Story explicitly exempt from 45% global coverage threshold. No TypeScript source files
+  created.
 test_results:
   unit:
-    pass: 17
+    pass: 0
     fail: 0
   integration:
     pass: 0
@@ -16,99 +19,82 @@ test_results:
   http:
     pass: 0
     fail: 0
-coverage: 67.75
+coverage: null
 coverage_meets_threshold: true
+coverage_note: Exempt — Markdown-only deliverable, no executable code.
 test_quality:
-  verdict: PASS
+  verdict: N/A
   anti_patterns: []
 acs_verified:
-  - ac_id: AC1
+  - ac_id: AC-1
     status: PASS
-    evidence_ref: 'EVIDENCE (iteration 0): unit_tests.passed=17, files_modified includes analytics-operations.ts'
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
     notes: >-
-      kb_get_scoreboard function implemented in analytics-operations.ts line 398. Returns all 5 metric sections
-      (throughput, cycle_time, first_pass_success_rate, cost_efficiency, agent_reliability) in a single response. TC-09
-      verifies all required top-level keys present.
-  - ac_id: AC2
+      File exists at .claude/skills/batch-process/SKILL.md. Frontmatter: name=batch-process, description present,
+      kb_tools=[kb_list_stories, kb_get_story]. Spot-checked directly.
+  - ac_id: AC-2
     status: PASS
-    evidence_ref: analytics-scoreboard.test.ts TC-01
-    notes: >-
-      TC-01 verifies zero-data safety: all metrics return sensible defaults (0, null, empty arrays) when DB returns
-      empty. Tested and passing.
-  - ac_id: AC3
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+    notes: Step 1 handles space-separated positional tokens and comma-separated values. Lines 64-68 of SKILL.md confirmed.
+  - ac_id: AC-3
     status: PASS
-    evidence_ref: analytics-scoreboard.test.ts TC-08
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
     notes: >-
-      KbGetScoreboardInputSchema includes optional start_date and end_date fields. TC-08 verifies date range filter
-      accepted and applied without throwing.
-  - ac_id: AC4
+      Arguments table shows --max=N default 20. Step 1 uses parseInt(N,10). Step 5 passes max_stories as number type.
+      Confirmed in SKILL.md lines 52, 69, 131.
+  - ac_id: AC-4
     status: PASS
-    evidence_ref: analytics-scoreboard.test.ts TC-07
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
     notes: >-
-      KbGetScoreboardInputSchema includes optional feature field. TC-07 passes feature filter without error.
-      access-control.ts line 156 confirms pm+dev roles.
-  - ac_id: AC5
+      --dry-run default false in arguments table. Step 1 sets dry_run=true. Step 5 passes dry_run as boolean. Confirmed
+      in SKILL.md lines 54, 71, 132.
+  - ac_id: AC-5
     status: PASS
-    evidence_ref: >-
-      EVIDENCE (iteration 0): files_modified includes tool-schemas.ts, tool-handlers.ts; access-control.ts grep confirms
-      registration
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
     notes: >-
-      Verified: tool-schemas.ts line 3433 registers kb_get_scoreboard definition. tool-handlers.ts line 4490 implements
-      handleKbGetScoreboard. access-control.ts line 156 sets pm+dev roles. tool-handlers.ts line 148 imports
-      kb_get_scoreboard.
-  - ac_id: AC6
+      Step 2 emits exact required error string and explicitly states stop without spawning coordinator. Confirmed lines
+      82-86.
+  - ac_id: AC-6
     status: PASS
-    evidence_ref: .claude/skills/scoreboard/SKILL.md exists in worktree
-    notes: >-
-      Scoreboard skill file exists at .claude/skills/scoreboard/SKILL.md with usage, options table, examples, and output
-      format. Formats MCP output as markdown table for human CLI consumption.
-  - ac_id: AC7
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+    notes: Step 3 reads .claude/agents/batch-coordinator.agent.md before Step 5. Confirmed lines 96-98.
+  - ac_id: AC-7
     status: PASS
-    evidence_ref: 'analytics-scoreboard.test.ts: 17 tests passing, analytics-operations.ts coverage 67.75%'
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
     notes: >-
-      17 unit tests pass (TC-01 through TC-09). analytics-operations.ts statement coverage 67.75% exceeds 45% threshold.
-      Tests use vi.mock for DB, cover all 5 metrics plus zero-data and filter cases.
+      Step 5 uses Task tool in foreground mode. Parameter types enforced: plan_slugs=string[], max_stories=number,
+      dry_run=boolean. Confirmed lines 110-133.
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+    notes: Steps 6+7 await signal and surface verbatim without modification. Confirmed lines 134-145.
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+    notes: Step 4 emits DRY RUN MODE notice as first line when --dry-run passed. Confirmed lines 100-108.
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+    notes: Non-Negotiables section prohibits /token-log. No /token-log call appears anywhere in SKILL.md. Confirmed line 180.
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+    notes: >-
+      Usage section contains 3 labeled examples: Example 1 (single slug), Example 2 (multiple slugs with cap), Example 3
+      (dry-run). Confirmed lines 24-46.
 architecture_compliant: true
+architecture_notes: No ADRs applicable — Markdown-only deliverable with no API, frontend, backend, or infrastructure touchpoints.
 issues: []
-pre_existing_test_failures:
-  count: 15
-  cause: >-
-    worktree-management directory missing from story worktree (module predates this worktree's base commit). All
-    mcp-server test failures are caused by Cannot resolve ../worktree-management/index.js — confirmed present on main,
-    absent from WINT-3090 worktree base.
-  introduced_by_story: false
-  evidence: >-
-    Same failures reproduce at cce9e839d~1 (before any WINT-3090 code changes). Main branch (d4265f2) shows identical
-    failures in worktree-management/__tests__ for a different pre-existing reason.
-zod_first_types_fix:
-  status: CONFIRMED
-  files:
-    - file: apps/api/knowledge-base/src/crud-operations/analytics-operations.ts
-      change: >-
-        interface AnalyticsDeps → export const AnalyticsDepsSchema = z.object({ db: z.custom<NodePgDatabase<typeof
-        schema>>... }); type AnalyticsDeps = z.infer<typeof AnalyticsDepsSchema>
-      line: 94
-    - file: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
-      change: >-
-        interface McpToolDefinition → export const McpToolDefinitionSchema = z.object({...}); type McpToolDefinition =
-        z.infer<typeof McpToolDefinitionSchema>
-      line: 278
-    - file: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
-      change: >-
-        interface ToolHandlerDeps extends ... {} → export const ToolHandlerDepsSchema = z.object({...}); type
-        ToolHandlerDeps = KbAddDeps & KbGetDeps & ...
-      line: 295
 lessons_to_record:
   - lesson: >-
-      Story worktrees may be missing modules added to main after the worktree base commit. When mcp-server tests fail
-      with Cannot resolve ../worktree-management/index.js in a worktree but pass on main, verify the module exists on
-      main and was added after the worktree base commit — this is a pre-existing environment gap, not a regression.
-    category: blocker
+      Markdown-only SKILL.md deliverables are fully exempt from build, lint, test, E2E, and coverage gates. All quality
+      checks correctly classified as N/A with explicit reasons.
+    category: pattern
     tags:
-      - worktree
-      - test-failures
-      - module-resolution
-      - pre-existing
+      - skills
+      - qa
+      - markdown
+      - coverage-exemption
 tokens:
-  in: 42000
-  out: 3500
+  in: 8500
+  out: 1800
