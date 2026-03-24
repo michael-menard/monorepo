@@ -1,138 +1,242 @@
 schema: 2
-story_id: APRS-5040
-timestamp: '2026-03-23T22:15:00Z'
+story_id: APRS-2030
+timestamp: '2026-03-24T01:00:00Z'
 subtask_source: story
 steps:
   - id: 1
     subtask_id: ST-1
     description: >-
-      Implement createCLIDecisionCallbackAdapter in adapters/plan-refinement/ — bridges graph DecisionContext to
-      inquirer prompt, returning {decision, confirmedFlowIds, rejectedFlowIds, reason}
+      Extend PlanRefinementStateAnnotation and RefinementPhaseSchema with HiTL fields. The state file lives at
+      packages/backend/orchestrator/src/state/plan-refinement-state.ts and does not yet exist in this worktree. Create
+      it from the APRS-5030 reference implementation which includes all APRS-2010 base fields plus the APRS-2030 HiTL
+      additions (hitlDecision, humanReviewResult, readinessScore, storyReadiness, validationResult) and the APRS-2020
+      gap-coverage fields (gapFindings, specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen,
+      previousGapCount, consecutiveLlmFailures). RefinementPhaseSchema must include human_review, final_validation,
+      story_readiness phases.
     files:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
-    files_to_read:
-      - packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
-      - packages/backend/orchestrator/src/adapters/decision-callbacks/cli-callback.ts
       - packages/backend/orchestrator/src/state/plan-refinement-state.ts
+    files_to_read:
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/state/plan-refinement-state.ts
     dependencies: []
     slice: packages
     verification: pnpm check-types --filter @repo/orchestrator
     acs_covered:
       - AC-1
-      - AC-2
   - id: 2
     subtask_id: ST-2
     description: >-
-      Implement CLI entrypoint run-plan-refinement.ts following generate-stories.ts pattern — parseArgs (--plan-slug,
-      --help), stub planLoader, wires createPlanRefinementGraph with bridged callback, structured stdout output, exit
-      codes
+      Implement human_review_checkpoint node with DecisionCallback injection. Create
+      packages/backend/orchestrator/src/nodes/plan-refinement/ directory and human-review-checkpoint.ts. Also create
+      __tests__/human-review-checkpoint.test.ts with makeState helper that includes ALL fields from PlanRefinementState
+      — critically, the AC-9 fix requires the makeState helper to include the APRS-2020 gap-coverage fields:
+      gapFindings, specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount,
+      consecutiveLlmFailures.
     files:
-      - packages/backend/orchestrator/src/cli/run-plan-refinement.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/cli/generate-stories.ts
-      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
     dependencies:
       - 1
     slice: packages
-    verification: pnpm check-types --filter @repo/orchestrator
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- human-review-checkpoint
     acs_covered:
-      - AC-1
       - AC-2
+      - AC-3
+      - AC-7
+      - AC-9
   - id: 3
     subtask_id: ST-3
     description: >-
-      Unit tests for bridge adapter — all 4 decision paths (approve, edit, reject, defer), prompt format (displays plan
-      slug, flow summaries, warnings, errors), confirmedFlowIds/rejectedFlowIds population
+      Implement final_validation node (validate-only, no LLM). Create final-validation.ts and
+      __tests__/final-validation.test.ts. The makeState helper in final-validation.test.ts must also include all
+      APRS-2020 gap-coverage fields to satisfy AC-9 / pnpm check-types.
     files:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
-      - packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/cli-callback.test.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
     dependencies:
       - 1
     slice: packages
-    verification: pnpm test --filter @repo/orchestrator -- adapters/plan-refinement
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- final-validation
     acs_covered:
-      - AC-3
+      - AC-4
+      - AC-7
   - id: 4
     subtask_id: ST-4
     description: >-
-      Integration test: graph.invoke() with bridged callback using stub planLoader — verifies the full wire from CLI
-      adapter through createPlanRefinementGraph with all 4 HiTL outcomes
+      Implement story_readiness_check node with injectable scorer. Create story-readiness-check.ts and
+      __tests__/story-readiness-check.test.ts. Default formula: flows_confirmed_ratio*40 + warnings_cleared_ratio*30 +
+      no_errors*30. Pass threshold: 70. The makeState helper in story-readiness-check.test.ts must also include all
+      APRS-2020 gap-coverage fields.
     files:
-      - >-
-        packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
     files_to_read:
-      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
-      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
-      - packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
     dependencies:
       - 1
-      - 2
     slice: packages
-    verification: pnpm test --filter @repo/orchestrator -- integration
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- story-readiness-check
     acs_covered:
-      - AC-3
+      - AC-5
+      - AC-7
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Wire all three nodes into the plan-refinement graph with conditional edges. Create plan-refinement.ts in graphs/
+      and update/create graphs/__tests__/plan-refinement.test.ts. The graph must include:
+      coverage_agent→human_review_checkpoint (conditional via afterGapCoverage),
+      human_review_checkpoint→final_validation (approve), human_review_checkpoint→extract_flows (edit, DEC-6 stub),
+      human_review_checkpoint→END (reject/defer), final_validation→story_readiness_check (pass), final_validation→END
+      (error), story_readiness_check→END. PlanRefinementGraphConfigSchema must include decisionCallback and scoreFn
+      fields. APRS-2010 routing tests must continue to pass (backward compat).
+    files:
+      - packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+    files_to_read:
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/graphs/plan-refinement.ts
+      - >-
+        /Users/michaelmenard/Development/monorepo/tree/story/APRS-5030/packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts
+      - packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts
+    dependencies:
+      - 2
+      - 3
+      - 4
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- plan-refinement
+    acs_covered:
+      - AC-6
+      - AC-8
 files_to_change:
-  - path: packages/backend/orchestrator/src/adapters/plan-refinement/cli-decision-callback-adapter.ts
+  - path: packages/backend/orchestrator/src/state/plan-refinement-state.ts
     action: create
     reason: >-
-      Bridge adapter satisfying AC-1 (DecisionCallback interface) and AC-2 (prompt format with 4 choices, flow
-      summaries, warnings, errors, confirmed/rejected flow IDs)
-  - path: packages/backend/orchestrator/src/cli/run-plan-refinement.ts
+      AC-1: Add HiTL state fields (hitlDecision, humanReviewResult, readinessScore, storyReadiness, validationResult)
+      and RefinementPhaseSchema phases (human_review, final_validation, story_readiness). File does not yet exist in
+      this worktree.
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts
+    action: create
+    reason: 'AC-2, AC-3: Injectable DecisionCallback factory, AutoDecisionCallback, routeHiTLDecision phase function.'
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts
     action: create
     reason: >-
-      CLI entrypoint following generate-stories.ts pattern per story description — parseArgs, printHelp, stub planLoader
-      injection, structured stdout, exit codes
-  - path: packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.test.ts
+      AC-8, AC-9: Unit tests for all four HiTL flows. makeState helper MUST include APRS-2020 gap-coverage fields to
+      satisfy pnpm check-types.
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts
     action: create
-    reason: Unit tests for bridge adapter covering all 4 decision paths per AC-3
-  - path: >-
-      packages/backend/orchestrator/src/adapters/plan-refinement/__tests__/cli-decision-callback-adapter.integration.test.ts
+    reason: 'AC-4: Validate-only node — NormalizedPlanSchema.safeParse, confirmed flows have steps, no critical warnings.'
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts
     action: create
-    reason: Integration test wiring graph.invoke() with bridged callback + stub planLoader per AC-3 / ST-4
+    reason: >-
+      AC-8: Unit tests for validatePlan and createFinalValidationNode. makeState helper must include gap-coverage
+      fields.
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts
+    action: create
+    reason: 'AC-5: Injectable ReadinessScoreFn, default DEC-4 formula, computeReadinessScore phase function.'
+  - path: packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts
+    action: create
+    reason: >-
+      AC-8: Unit tests for defaultReadinessScoreFn, computeReadinessScore, and createStoryReadinessCheckNode. makeState
+      helper must include gap-coverage fields.
+  - path: packages/backend/orchestrator/src/graphs/plan-refinement.ts
+    action: create
+    reason: >-
+      AC-6: Wire all nodes with conditional edges. PlanRefinementGraphConfigSchema with decisionCallback and scoreFn.
+      File does not yet exist in this worktree.
+  - path: packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts
+    action: create
+    reason: >-
+      AC-8: Graph-level routing tests for all four APRS-2030 conditional edge scenarios (approve, reject, defer, edit)
+      plus final_validation failure path. APRS-2010 backward-compat tests preserved.
 commands_to_run:
   - command: pnpm check-types --filter @repo/orchestrator
-    when: after all code changes
+    when: after each step
     required: true
   - command: pnpm test --filter @repo/orchestrator
     when: after all code changes
     required: true
-  - command: pnpm lint --filter @repo/orchestrator
+  - command: pnpm build --filter @repo/orchestrator
     when: after all code changes
-    required: true
+    required: false
 acceptance_criteria_map:
   - ac_id: AC-1
     planned_evidence: >-
-      cli-decision-callback-adapter.ts: createCLIDecisionCallbackAdapter returns an object satisfying graph's
-      DecisionCallback type (ask(DecisionContext)->{decision, confirmedFlowIds, rejectedFlowIds, reason}), handling
-      approve/edit/reject/defer
-    evidence_type: test
+      plan-refinement-state.ts exports PlanRefinementStateAnnotation with hitlDecision, humanReviewResult,
+      readinessScore, storyReadiness, validationResult fields and RefinementPhaseSchema includes human_review,
+      final_validation, story_readiness. pnpm check-types passes.
+    evidence_type: file
   - ac_id: AC-2
     planned_evidence: >-
-      cli-decision-callback-adapter.ts: inquirer prompt lists 4 choices, displays plan slug header, flow name summaries,
-      warnings, errors; answer maps to confirmedFlowIds/rejectedFlowIds
+      human-review-checkpoint.test.ts tests all four HiTL flows (approve→final_validation, edit→gap_coverage,
+      reject→error, defer→complete). AutoDecisionCallback tests included.
     evidence_type: test
   - ac_id: AC-3
     planned_evidence: >-
-      Unit test file (4 decision paths) + integration test (graph.invoke() with bridged callback + stub planLoader), all
-      passing
+      createHumanReviewCheckpointNode accepts optional decisionCallback config. PlanRefinementGraphConfigSchema includes
+      decisionCallback field. Test verifies default AutoDecisionCallback is used when none provided.
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      final-validation.test.ts covers: null normalizedPlan fails, confirmed flow with no steps fails, critical warnings
+      surfaced, no mutations to state. pnpm check-types passes.
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      story-readiness-check.test.ts covers: DEC-4 formula, threshold=70, injectable scoreFn, reasons[] populated. pnpm
+      check-types passes.
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      plan-refinement.test.ts routing tests: approve→complete path, reject→error, defer→complete+warning, edit loop
+      (edit then approve), final_validation failure→error without story_readiness.
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      routeHiTLDecision, validatePlan, computeReadinessScore exported as named phase functions from their respective
+      node files. Tests invoke them directly.
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      All four test files exist and pass: human-review-checkpoint.test.ts, final-validation.test.ts,
+      story-readiness-check.test.ts, plan-refinement.test.ts. pnpm test --filter @repo/orchestrator passes.
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      makeState helper in human-review-checkpoint.test.ts (and all other test makeState helpers) includes gapFindings,
+      specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount,
+      consecutiveLlmFailures. pnpm check-types passes against all test files.
     evidence_type: test
 architectural_decisions: []
-complexity: simple
+complexity: moderate
 notes:
   - >-
-    The graph's DecisionCallback (human-review-checkpoint.ts) is DIFFERENT from the adapters/decision-callbacks/types.ts
-    DecisionCallback. The former is plan-refinement-specific with ask(DecisionContext); the latter is a generic
-    ask(DecisionRequest). The bridge adapter creates a NEW graph-compatible DecisionCallback — it does not extend
-    CLIDecisionCallback.
+    CRITICAL: All 5 canonical files do NOT exist yet in the APRS-2030 worktree. The seed analysis claim of 'already
+    implemented' refers to the APRS-5030 worktree. Files must be CREATED, not modified.
   - >-
-    The bridge adapter uses inquirer directly (same approach as cli-callback.ts) since it needs to render flow-specific
-    UI beyond generic options.
-  - The adapters/plan-refinement/ directory is new — needs to be created.
-  - ST-3 and ST-4 both live in adapters/plan-refinement/__tests__/ to follow existing test co-location pattern.
+    APRS-5030 is the authoritative reference implementation — all 5 files can be ported directly with the AC-9 makeState
+    fix applied.
   - >-
-    The CLI entrypoint uses a stub planLoader (same pattern as generate-stories.ts stubKbGetPlan) with an INJECTION
-    POINT comment.
-  - inquirer is already a dependency in the orchestrator package.json.
+    AC-9 fix applies to ALL test makeState helpers, not just human-review-checkpoint.test.ts. The
+    final-validation.test.ts and story-readiness-check.test.ts makeState helpers in APRS-5030 also lack gap-coverage
+    fields and will fail pnpm check-types in this worktree.
+  - 'DEC-6: edit flow routes to extract_flows (not gap_coverage) — this is intentional per the story decisions.'
+  - 'DEC-7: PHASE_TO_CHECKPOINT_MAP is NOT modified in this story — deferred.'
+  - 'E2E exempt: backend-only orchestrator nodes, no UI surface or API endpoints.'
+  - >-
+    plan-refinement.ts graph must import normalize-plan.ts and extract-flows.ts nodes that already exist in this
+    worktree. Verify those paths exist before creating graph.
+  - The plan-refinement/ directory under nodes/ must be created — it does not exist in the APRS-2030 worktree.

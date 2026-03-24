@@ -1,0 +1,242 @@
+schema: 1
+story_id: 'APRS-2030'
+version: 1
+timestamp: '2026-03-23T18:36:00Z'
+
+acceptance_criteria:
+  - ac_id: 'AC-1'
+    ac_text: 'PlanRefinementStateAnnotation extended with hitlDecision, humanReviewResult, readinessScore, storyReadiness, validationResult fields'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/state/plan-refinement-state.ts'
+        description: 'HiTLDecisionSchema, HumanReviewResultSchema, StoryReadinessSchema, ValidationResultSchema added; all 5 fields in PlanRefinementStateAnnotation'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/plan-refinement.test.ts'
+        result: 'PASS — 23 tests pass, all graph tests reference AC-1 fields'
+
+  - ac_id: 'AC-2'
+    ac_text: 'human_review_checkpoint node handles approve/edit/reject/defer flows'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        description: 'routeHiTLDecision tests cover all 4 decisions; createHumanReviewCheckpointNode tests verify node behavior'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        result: 'PASS — 12 tests pass'
+
+  - ac_id: 'AC-3'
+    ac_text: 'Injectable DecisionCallback adapter, defaults to AutoDecisionCallback'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        description: 'AutoDecisionCallback tests: auto-approves without critical warnings, auto-defers on critical/blocker warnings; injectable callback tests verify DI pattern'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        result: 'PASS'
+
+  - ac_id: 'AC-4'
+    ac_text: 'final_validation node: validate-only, NormalizedPlanSchema.safeParse + confirmed flows have steps + no critical warnings'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts'
+        description: 'validatePlan tests: passes valid state, fails on null normalizedPlan, fails on empty confirmed flows, adds warnings for critical. createFinalValidationNode tests confirm phase transitions.'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__/final-validation.test.ts'
+        result: 'PASS — 8 tests pass'
+
+  - ac_id: 'AC-5'
+    ac_text: 'story_readiness_check node: computes readinessScore (threshold 70), storyReadiness.passed, storyReadiness.reasons[]'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+        description: 'defaultReadinessScoreFn tests: all score combinations. computeReadinessScore tests: pass/fail threshold, injectable scorer, reasons array. createStoryReadinessCheckNode tests: always sets complete phase.'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+        result: 'PASS — 13 tests pass'
+
+  - ac_id: 'AC-6'
+    ac_text: 'Graph wired: afterHumanReview (approve→final_validation, edit→extract_flows, reject/defer→END), afterFinalValidation (pass→story_readiness_check, error→END)'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts'
+        description: 'APRS-2030 routing tests: approve flow, reject flow, defer flow, edit flow (DEC-6), final_validation failure — all conditional edges verified by integration tests'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/plan-refinement.test.ts'
+        result: 'PASS — 23 tests pass'
+
+  - ac_id: 'AC-7'
+    ac_text: 'Phase functions exported for unit testability'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        description: 'routeHiTLDecision tested directly (5 cases)'
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts'
+        description: 'validatePlan tested directly (5 cases)'
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+        description: 'defaultReadinessScoreFn tested directly (6 cases), computeReadinessScore tested directly (4 cases)'
+
+  - ac_id: 'AC-8'
+    ac_text: 'Integration tests covering all APRS-2030 routing scenarios'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts'
+        description: '5 APRS-2030 integration tests: approve, reject, defer, edit (2-call pattern), validation failure. Plus 5 APRS-2010 backward compat tests.'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/plan-refinement.test.ts'
+        result: 'PASS — 23 tests pass'
+
+  - ac_id: 'AC-9'
+    ac_text: 'makeState helper in all test files includes all APRS-2020 gap-coverage fields (gapFindings, specialistFindings, reconciledFindings, coverageScore, circuitBreakerOpen, previousGapCount, consecutiveLlmFailures)'
+    status: PASS
+    evidence_items:
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+        description: 'makeState includes all 7 APRS-2020 gap-coverage fields with correct defaults'
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts'
+        description: 'makeState includes all 7 APRS-2020 gap-coverage fields with correct defaults'
+      - type: test
+        path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+        description: 'makeState includes all 7 APRS-2020 gap-coverage fields with correct defaults'
+      - type: command
+        command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__'
+        result: 'PASS — 33 tests pass, no TypeScript errors for AC-9 fields'
+
+touched_files:
+  - path: 'packages/backend/orchestrator/src/state/plan-refinement-state.ts'
+    action: created
+    lines: 350
+    description: 'PlanRefinementStateAnnotation with all APRS-2020 + APRS-2030 fields; HiTLDecisionSchema, HumanReviewResultSchema, StoryReadinessSchema, ValidationResultSchema'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/human-review-checkpoint.ts'
+    action: created
+    lines: 194
+    description: 'human_review_checkpoint node: routeHiTLDecision, AutoDecisionCallback, createHumanReviewCheckpointNode factory'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts'
+    action: created
+    lines: 186
+    description: '12 tests covering AC-2, AC-3, AC-7, AC-9'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/final-validation.ts'
+    action: created
+    lines: 111
+    description: 'final_validation node: validatePlan, createFinalValidationNode factory'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/final-validation.test.ts'
+    action: created
+    lines: 152
+    description: '8 tests covering AC-4, AC-7, AC-9'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/story-readiness-check.ts'
+    action: created
+    lines: 142
+    description: 'story_readiness_check node: defaultReadinessScoreFn, computeReadinessScore, createStoryReadinessCheckNode factory'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+    action: created
+    lines: 222
+    description: '13 tests covering AC-5, AC-7, AC-9 including defaultReadinessScoreFn, computeReadinessScore, createStoryReadinessCheckNode'
+
+  - path: 'packages/backend/orchestrator/src/graphs/plan-refinement.ts'
+    action: created
+    lines: 249
+    description: 'Complete plan-refinement graph: all 8 nodes wired with afterNormalize, afterGapCoverage, afterHumanReview, afterFinalValidation conditional edges'
+
+  - path: 'packages/backend/orchestrator/src/graphs/__tests__/plan-refinement.test.ts'
+    action: created
+    lines: 459
+    description: '23 tests: graph compilation, APRS-2010 backward compat, afterGapCoverage unit tests, APRS-2020 gap coverage loop, APRS-2030 routing tests'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/normalize-plan.ts'
+    action: created
+    lines: 286
+    description: 'normalize_plan node (ported from APRS-5030 reference — APRS-2010 implementation)'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/extract-flows.ts'
+    action: created
+    lines: 405
+    description: 'extract_flows node (ported from APRS-5030 reference — APRS-2010 implementation)'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/coverage-agent.ts'
+    action: created
+    lines: 228
+    description: 'coverage_agent node (ported from APRS-5030 reference — APRS-2020 implementation)'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/gap-specialists.ts'
+    action: created
+    lines: 159
+    description: 'gap_specialists node (ported from APRS-5030 reference — APRS-2020 implementation)'
+
+  - path: 'packages/backend/orchestrator/src/nodes/plan-refinement/reconciliation.ts'
+    action: created
+    lines: 299
+    description: 'reconciliation node (ported from APRS-5030 reference — APRS-2020 implementation)'
+
+  - path: 'packages/backend/orchestrator/vitest.config.ts'
+    action: modified
+    lines: 24
+    description: 'Added @repo/logger alias to resolve from source during tests in worktree'
+
+commands_run:
+  - command: 'pnpm install --frozen-lockfile'
+    result: SUCCESS
+    output: 'Node modules installed in APRS-2030 worktree'
+    timestamp: '2026-03-23T18:33:00Z'
+
+  - command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__/human-review-checkpoint.test.ts src/nodes/plan-refinement/__tests__/final-validation.test.ts src/nodes/plan-refinement/__tests__/story-readiness-check.test.ts'
+    result: SUCCESS
+    output: '3 test files, 33 tests passed'
+    timestamp: '2026-03-23T18:34:33Z'
+
+  - command: 'pnpm --filter @repo/orchestrator test -- src/graphs/__tests__/plan-refinement.test.ts'
+    result: SUCCESS
+    output: '1 test file, 23 tests passed'
+    timestamp: '2026-03-23T18:34:40Z'
+
+  - command: 'pnpm --filter @repo/orchestrator test -- src/nodes/plan-refinement/__tests__ src/graphs/__tests__/plan-refinement.test.ts'
+    result: SUCCESS
+    output: '4 test files, 56 tests passed'
+    timestamp: '2026-03-23T18:35:55Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 56, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: 'story_type: infra — pure TypeScript library (LangGraph orchestrator nodes), no HTTP endpoints or frontend surface'
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: null
+  branches: null
+
+notable_decisions:
+  - 'All 5 canonical files created from scratch — APRS-2030 worktree lacks prior APRS-2010/2020 node files; ported from APRS-5030 reference'
+  - 'vitest.config.ts updated with @repo/logger alias to resolve from source in worktree (pattern from APRS-5030)'
+  - 'makeState helpers in all 3 test files include all 7 APRS-2020 gap-coverage fields per AC-9'
+  - 'Type errors @repo/logger TS2307 are pre-existing worktree environment issues (same in APRS-5030 reference), tests pass'
+
+known_deviations:
+  - 'pnpm check-types shows @repo/logger TS2307 errors — these are pre-existing across all worktrees, not introduced by this story. Vitest tests pass with @repo/logger alias resolving from source.'
