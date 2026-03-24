@@ -40,6 +40,7 @@ const BASE_STATE = {
   orderedStories: [],
   validationResult: null,
   generatedStoriesWithDeps: [],
+  writeResult: null,
   generationPhase: 'wire_dependencies' as const,
   errors: [],
   warnings: [],
