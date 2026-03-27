@@ -9,6 +9,8 @@ import {
 } from '@repo/app-component-library'
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Pencil,
   Check,
   LayoutGrid,
@@ -19,12 +21,16 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useState, useEffect, useRef, startTransition, useMemo } from 'react'
+import { useSelector } from 'react-redux'
+import type { RootState } from '../../store'
 import {
   useGetPlanBySlugQuery,
   useGetStoriesByPlanSlugQuery,
+  useGetPlansQuery,
   useUpdatePlanMutation,
   useLazyGetPlanImpactQuery,
   useRetirePlanMutation,
+  type Plan,
 } from '../../store/roadmapApi'
 import { useStorySSE } from '../../hooks/useStorySSE'
 import { relativeTime } from '../../utils/formatters'
@@ -46,6 +52,58 @@ export function PlanDetailsPage() {
     pollingInterval: 30_000,
   })
   useStorySSE()
+
+  // --- Filter-aware prev/next navigation ---
+  const { status, priority, type, tag, excludeCompleted, search, sortKey, sortDirection } =
+    useSelector((state: RootState) => state.roadmapFilters)
+
+  const navQueryParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 500,
+      status: status ? [status] : undefined,
+      priority: priority ? [priority] : undefined,
+      planType: type ? [type] : undefined,
+      tags: tag ? [tag] : undefined,
+      excludeCompleted,
+      search: search.trim() || undefined,
+    }),
+    [status, priority, type, tag, excludeCompleted, search],
+  )
+
+  const { data: navPlansData } = useGetPlansQuery(navQueryParams)
+
+  const sortedNavPlans = useMemo((): Plan[] => {
+    if (!navPlansData?.data) return []
+    const plans = [...navPlansData.data]
+    const key = sortKey as keyof Plan
+    plans.sort((a, b) => {
+      const av = a[key]
+      const bv = b[key]
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      let cmp: number
+      if (typeof av === 'number' && typeof bv === 'number') {
+        cmp = av - bv
+      } else {
+        cmp = String(av).localeCompare(String(bv))
+      }
+      return sortDirection === 'desc' ? -cmp : cmp
+    })
+    return plans
+  }, [navPlansData, sortKey, sortDirection])
+
+  const currentNavIndex = useMemo(
+    () => sortedNavPlans.findIndex(p => p.planSlug === slug),
+    [sortedNavPlans, slug],
+  )
+
+  const prevSlug = currentNavIndex > 0 ? sortedNavPlans[currentNavIndex - 1]?.planSlug : null
+  const nextSlug =
+    currentNavIndex >= 0 && currentNavIndex < sortedNavPlans.length - 1
+      ? sortedNavPlans[currentNavIndex + 1]?.planSlug
+      : null
 
   const storyStats = useMemo((): StoryStats | null => {
     if (!storiesData || storiesData.length === 0) return null
@@ -231,13 +289,48 @@ export function PlanDetailsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Link
-        to="/"
-        className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Roadmap
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          to="/"
+          className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Roadmap
+        </Link>
+        {currentNavIndex >= 0 && (
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-slate-600 font-mono mr-1">
+              {currentNavIndex + 1} / {sortedNavPlans.length}
+            </span>
+            <CustomButton
+              variant="ghost"
+              size="sm"
+              disabled={!prevSlug}
+              onClick={() => {
+                if (prevSlug) navigate({ to: '/plan/$slug', params: { slug: prevSlug } })
+              }}
+              className="h-7 px-2 text-slate-400 hover:text-cyan-400 disabled:opacity-30"
+              title="Previous plan"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="text-xs">Prev</span>
+            </CustomButton>
+            <CustomButton
+              variant="ghost"
+              size="sm"
+              disabled={!nextSlug}
+              onClick={() => {
+                if (nextSlug) navigate({ to: '/plan/$slug', params: { slug: nextSlug } })
+              }}
+              className="h-7 px-2 text-slate-400 hover:text-cyan-400 disabled:opacity-30"
+              title="Next plan"
+            >
+              <span className="text-xs">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </CustomButton>
+          </div>
+        )}
+      </div>
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
