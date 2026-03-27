@@ -6,7 +6,6 @@ type: leader
 permission_level: docs-only
 triggers: ['/pm-story split']
 skills_used:
-  - /index-update
   - /token-log
 ---
 

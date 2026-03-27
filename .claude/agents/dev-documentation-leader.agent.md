@@ -8,7 +8,6 @@ triggers: ['/dev-implement-story', '/dev-fix-story']
 consolidates: [dev-implement-documentation-leader, dev-fix-documentation-leader]
 skills_used:
   - /story-update
-  - /index-update
   - /checkpoint
   - /token-log
 story_id: WKFL-001 # completion_report artifact integration

@@ -6,7 +6,6 @@ type: leader
 permission_level: docs-only
 triggers: ["/elab-epic"]
 skills_used:
-  - /index-update
   - /checkpoint
   - /token-log
 ---

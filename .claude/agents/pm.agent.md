@@ -8,7 +8,6 @@ triggers: ["/pm-story", "/pm-fix-story", "/pm-refine-story"]
 skills_used:
   - /token-log
   - /story-update
-  - /index-update
 ---
 
 # PM Agent (Product Manager) — Orchestrator
