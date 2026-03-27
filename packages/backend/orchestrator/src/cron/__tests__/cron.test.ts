@@ -140,29 +140,29 @@ describe('advisory lock skip path', () => {
     }
     vi.mocked(getCronDbClient).mockReturnValue(mockPool as any)
 
-    // Import pattern-miner job (after mocks are in place)
-    const { patternMinerJob } = await import('../jobs/pattern-miner.job.js')
+    // Import partition-manager job (after mocks are in place)
+    const { partitionManagerJob } = await import('../jobs/partition-manager.job.js')
 
-    const runFnSpy = vi.spyOn(patternMinerJob, 'runFn')
+    const runFnSpy = vi.spyOn(partitionManagerJob, 'runFn')
 
     // Wrap the job in a registry and adapter
     const adapter = new InMemoryCronAdapter()
-    const registry = { jobs: [patternMinerJob] }
+    const registry = { jobs: [partitionManagerJob] }
     registerCronJobs(adapter, registry)
 
     // Trigger the job manually
-    await adapter.triggerJob('pattern-miner')
+    await adapter.triggerJob('partition-manager')
 
     // runFn was called (it's the wrapped function), but the internal
     // run function skipped due to lock miss
     expect(mockClient.query).toHaveBeenCalledWith(
       'SELECT pg_try_advisory_lock($1)',
-      [42001],
+      [42005],
     )
     expect(mockPool.end).toHaveBeenCalled()
 
     // The spy tracks calls to runFn — it should have been called once
-    // (the adapter called it), but no runPatternMiner was called
+    // (the adapter called it), but no runPartitionManager was called
     runFnSpy.mockRestore()
   })
 })
