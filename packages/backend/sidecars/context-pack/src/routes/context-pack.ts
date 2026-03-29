@@ -13,17 +13,9 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { logger } from '@repo/logger'
+import { sendJson } from '@repo/sidecar-utils'
 import { ContextPackRequestSchema } from '../__types__/index.js'
 import { assembleContextPack, type AssembleContextPackDeps } from '../assemble-context-pack.js'
-
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  const payload = JSON.stringify(body)
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Content-Length': Buffer.byteLength(payload),
-  })
-  res.end(payload)
-}
 
 /**
  * Maximum allowed request body size in bytes (1 MB).
