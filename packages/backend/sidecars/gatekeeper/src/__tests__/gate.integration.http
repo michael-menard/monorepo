@@ -1,0 +1,243 @@
+### Gatekeeper Sidecar HTTP Integration Tests
+### WINT-3010: Create Gatekeeper Sidecar
+### Base URL: http://localhost:3094
+### Start server: pnpm --filter @repo/gatekeeper-sidecar start
+
+###############################################################################
+# POST_BOOTSTRAP stage — PASS
+###############################################################################
+
+### POST_BOOTSTRAP — valid proof (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "POST_BOOTSTRAP",
+  "story_id": "WINT-3010",
+  "proof": {
+    "checkpoint": {
+      "phase": "setup_complete"
+    }
+  }
+}
+
+###############################################################################
+# POST_BOOTSTRAP stage — FAIL (missing proofs)
+###############################################################################
+
+### POST_BOOTSTRAP — missing checkpoint.phase (expect 422 ok:false with missing_proofs)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "POST_BOOTSTRAP",
+  "story_id": "WINT-3010",
+  "proof": {
+    "checkpoint": {}
+  }
+}
+
+###############################################################################
+# ELAB_COMPLETE stage — PASS
+###############################################################################
+
+### ELAB_COMPLETE — PASS verdict (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "ELAB_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "elab": {
+      "verdict": "PASS",
+      "findings": ["AC coverage complete", "No gaps found"]
+    }
+  }
+}
+
+### ELAB_COMPLETE — CONDITIONAL_PASS verdict (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "ELAB_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "elab": {
+      "verdict": "CONDITIONAL_PASS",
+      "findings": ["Minor gaps noted but non-blocking"]
+    }
+  }
+}
+
+###############################################################################
+# ELAB_COMPLETE stage — FAIL
+###############################################################################
+
+### ELAB_COMPLETE — FAIL verdict (expect 422 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "ELAB_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "elab": {
+      "verdict": "FAIL",
+      "findings": ["Critical gaps"]
+    }
+  }
+}
+
+### ELAB_COMPLETE — empty findings (expect 422 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "ELAB_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "elab": {
+      "verdict": "PASS",
+      "findings": []
+    }
+  }
+}
+
+###############################################################################
+# SCOPE_OK stage — PASS
+###############################################################################
+
+### SCOPE_OK — non-empty included_files (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "SCOPE_OK",
+  "story_id": "WINT-3010",
+  "proof": {
+    "scope": {
+      "included_files": [
+        "packages/backend/sidecars/gatekeeper/src/gate-check.ts",
+        "packages/backend/sidecars/gatekeeper/src/server.ts"
+      ]
+    }
+  }
+}
+
+### SCOPE_OK — no_scope_files:true escape hatch (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "SCOPE_OK",
+  "story_id": "WINT-3010",
+  "proof": {
+    "scope": {
+      "no_scope_files": true
+    }
+  }
+}
+
+###############################################################################
+# SCOPE_OK stage — FAIL
+###############################################################################
+
+### SCOPE_OK — empty included_files and no_scope_files:false (expect 422 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "SCOPE_OK",
+  "story_id": "WINT-3010",
+  "proof": {
+    "scope": {
+      "included_files": [],
+      "no_scope_files": false
+    }
+  }
+}
+
+###############################################################################
+# PATCH_COMPLETE stage — PASS
+###############################################################################
+
+### PATCH_COMPLETE — touched_files > 0 (expect 200 ok:true)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "PATCH_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "evidence": {
+      "touched_files": 8
+    }
+  }
+}
+
+###############################################################################
+# PATCH_COMPLETE stage — FAIL
+###############################################################################
+
+### PATCH_COMPLETE — touched_files=0 (expect 422 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "PATCH_COMPLETE",
+  "story_id": "WINT-3010",
+  "proof": {
+    "evidence": {
+      "touched_files": 0
+    }
+  }
+}
+
+###############################################################################
+# Error cases
+###############################################################################
+
+### Invalid JSON body (expect 400 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+not-valid-json
+
+### Empty body (expect 400 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+
+### Invalid stage value (expect 400 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "UNKNOWN_STAGE",
+  "story_id": "WINT-3010",
+  "proof": {}
+}
+
+### Missing required field story_id (expect 400 ok:false)
+POST http://localhost:3094/gate/check
+Content-Type: application/json
+
+{
+  "stage": "POST_BOOTSTRAP",
+  "proof": {
+    "checkpoint": {
+      "phase": "setup_complete"
+    }
+  }
+}
+
+### Method not allowed — GET (expect 405 ok:false)
+GET http://localhost:3094/gate/check
+
+### Unknown path (expect 404 ok:false)
+POST http://localhost:3094/unknown/path
+Content-Type: application/json
+
+{}

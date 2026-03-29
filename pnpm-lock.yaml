@@ -1848,12 +1848,12 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../db
+      '@repo/gatekeeper-sidecar':
+        specifier: workspace:*
+        version: link:../sidecars/gatekeeper
       '@repo/logger':
         specifier: workspace:*
         version: link:../../core/logger
-      '@repo/sidecar-rules-registry':
-        specifier: workspace:*
-        version: link:../sidecars/rules-registry
       '@repo/workflow-logic':
         specifier: workspace:*
         version: link:../workflow-logic
@@ -2076,6 +2076,9 @@ importers:
       bullmq:
         specifier: ^5.0.0
         version: 5.70.1
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.2.0)(pg@8.18.0)
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -2246,14 +2249,45 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/backend/sidecar-utils:
+  packages/backend/sidecars/cohesion:
+    dependencies:
+      '@repo/database-schema':
+        specifier: workspace:*
+        version: link:../../database-schema
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../db
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
+      '@repo/mcp-tools':
+        specifier: workspace:*
+        version: link:../../mcp-tools
+      '@repo/sidecar-http-utils':
+        specifier: workspace:*
+        version: link:../http-utils
+      drizzle-orm:
+        specifier: ^0.44.3
+        version: 0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.2.0)(pg@8.18.0)
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: 25.2.1
         version: 25.2.1
+      '@vitest/coverage-v8':
+        specifier: 2.1.9
+        version: 2.1.9(vitest@2.1.9(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3)))
+      dotenv:
+        specifier: 17.3.1
+        version: 17.3.1
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3))
 
   packages/backend/sidecars/context-pack:
     dependencies:
@@ -2266,9 +2300,6 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../core/logger
-      '@repo/sidecar-utils':
-        specifier: workspace:*
-        version: link:../../sidecar-utils
       drizzle-orm:
         specifier: ^0.44.3
         version: 0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.2.0)(pg@8.18.0)
@@ -2282,6 +2313,31 @@ importers:
       dotenv:
         specifier: 17.3.1
         version: 17.3.1
+      typescript:
+        specifier: ^5.8.0
+        version: 5.8.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3))
+
+  packages/backend/sidecars/gatekeeper:
+    dependencies:
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
+      '@repo/sidecar-http-utils':
+        specifier: workspace:*
+        version: link:../http-utils
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: 25.2.1
+        version: 25.2.1
+      '@vitest/coverage-v8':
+        specifier: 2.1.9
+        version: 2.1.9(vitest@2.1.9(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3)))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
@@ -2303,9 +2359,6 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../core/logger
-      '@repo/sidecar-utils':
-        specifier: workspace:*
-        version: link:../../sidecar-utils
       zod:
         specifier: ^3.22.4
         version: 3.25.76
