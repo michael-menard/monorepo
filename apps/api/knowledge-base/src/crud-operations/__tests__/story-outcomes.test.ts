@@ -1,7 +1,7 @@
 /**
  * Integration tests for story outcome logging (WINT-3050).
  *
- * Verifies that the workflow.story_outcomes table correctly stores outcome records
+ * Verifies that the wint.story_outcomes table correctly stores outcome records
  * with upsert semantics, quality score clamping, and correct field values.
  *
  * These tests exercise the DB layer directly (INSERT ... ON CONFLICT DO UPDATE)
@@ -10,11 +10,11 @@
  * handler instead.
  *
  * Prerequisites:
- * - workflow schema migration applied (creates workflow.story_outcomes table)
+ * - WINT-0040 migration applied (creates wint.story_outcomes table)
  * - Real postgres-knowledgebase on port 5433 (ADR-005: no mocks in integration tests)
  *
  * @see WINT-3050 AC-7, AC-8
- * @see workflow schema for workflow.story_outcomes table schema
+ * @see WINT-0040 for wint.story_outcomes table schema
  * @see WINT-0120 for workflow_log_outcome MCP tool (pending merge)
  */
 
@@ -46,7 +46,7 @@ function computeQualityScore(reviewIterations: number, qaIterations: number): nu
 }
 
 // ============================================================================
-// Pre-check: Verify workflow.story_outcomes table exists (WINT-0040 migration gate)
+// Pre-check: Verify wint.story_outcomes table exists (WINT-0040 migration gate)
 // ============================================================================
 
 let storyOutcomesTableExists = false
@@ -55,14 +55,14 @@ beforeAll(async () => {
   const result = await db.execute(`
     SELECT table_name
     FROM information_schema.tables
-    WHERE table_schema = 'workflow'
+    WHERE table_schema = 'wint'
       AND table_name = 'story_outcomes'
   ` as any)
   storyOutcomesTableExists = (result.rows as { table_name: string }[]).length > 0
 
   if (!storyOutcomesTableExists) {
     logger.warn(
-      'SKIP: workflow.story_outcomes table not found — apply workflow schema migration before running these tests',
+      'SKIP: wint.story_outcomes table not found — apply WINT-0040 migration before running these tests',
     )
   }
 })
@@ -72,7 +72,7 @@ afterEach(async () => {
   // Clean up test rows
   for (const storyId of createdStoryIds) {
     await db.execute(
-      `DELETE FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `DELETE FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
   }
@@ -84,7 +84,7 @@ afterAll(async () => {
   // Final safety cleanup
   for (const storyId of createdStoryIds) {
     await db.execute(
-      `DELETE FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `DELETE FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
   }
@@ -118,7 +118,7 @@ async function upsertStoryOutcome(input: UpsertStoryOutcomeInput): Promise<{ id:
   } = input
 
   const result = await db.execute(
-    `INSERT INTO workflow.story_outcomes
+    `INSERT INTO wint.story_outcomes
        (story_id, final_verdict, quality_score, review_iterations, qa_iterations, primary_blocker, completed_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (story_id) DO UPDATE SET
@@ -144,7 +144,7 @@ async function upsertStoryOutcome(input: UpsertStoryOutcomeInput): Promise<{ id:
 describe('WINT-3050: story outcome — PASS flow (HP-1)', () => {
   it('AC-7: PASS scenario inserts 1 row with correct final_verdict and quality_score', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP HP-1: workflow.story_outcomes table not present')
+      logger.warn('SKIP HP-1: wint.story_outcomes table not present')
       return
     }
 
@@ -166,7 +166,7 @@ describe('WINT-3050: story outcome — PASS flow (HP-1)', () => {
 
     const rows = await db.execute(
       `SELECT story_id, final_verdict, quality_score, review_iterations, qa_iterations
-       FROM workflow.story_outcomes
+       FROM wint.story_outcomes
        WHERE story_id = $1` as any,
       [storyId] as any,
     )
@@ -188,7 +188,7 @@ describe('WINT-3050: story outcome — PASS flow (HP-1)', () => {
 describe('WINT-3050: story outcome — FAIL flow (HP-2)', () => {
   it('AC-7: FAIL scenario inserts 1 row with final_verdict=fail and primary_blocker', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP HP-2: workflow.story_outcomes table not present')
+      logger.warn('SKIP HP-2: wint.story_outcomes table not present')
       return
     }
 
@@ -212,7 +212,7 @@ describe('WINT-3050: story outcome — FAIL flow (HP-2)', () => {
 
     const rows = await db.execute(
       `SELECT story_id, final_verdict, quality_score, primary_blocker
-       FROM workflow.story_outcomes
+       FROM wint.story_outcomes
        WHERE story_id = $1` as any,
       [storyId] as any,
     )
@@ -233,7 +233,7 @@ describe('WINT-3050: story outcome — FAIL flow (HP-2)', () => {
 describe('WINT-3050: story outcome — upsert semantics (HP-3)', () => {
   it('AC-8: second call for same story_id updates existing row, no duplicate', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP HP-3: workflow.story_outcomes table not present')
+      logger.warn('SKIP HP-3: wint.story_outcomes table not present')
       return
     }
 
@@ -257,14 +257,14 @@ describe('WINT-3050: story outcome — upsert semantics (HP-3)', () => {
     })
 
     const countResult = await db.execute(
-      `SELECT COUNT(*) AS cnt FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `SELECT COUNT(*) AS cnt FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
     const count = Number((countResult.rows as { cnt: string }[])[0].cnt)
 
     const rowResult = await db.execute(
       `SELECT final_verdict, quality_score, primary_blocker
-       FROM workflow.story_outcomes
+       FROM wint.story_outcomes
        WHERE story_id = $1` as any,
       [storyId] as any,
     )
@@ -287,7 +287,7 @@ describe('WINT-3050: story outcome — upsert semantics (HP-3)', () => {
 describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
   it('ED-1: quality_score clamped to 0 when iterations are very high', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP ED-1: workflow.story_outcomes table not present')
+      logger.warn('SKIP ED-1: wint.story_outcomes table not present')
       return
     }
 
@@ -310,7 +310,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
     })
 
     const rows = await db.execute(
-      `SELECT quality_score FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `SELECT quality_score FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
     const result = (rows.rows as Record<string, unknown>[])[0]
@@ -320,7 +320,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
 
   it('ED-2: quality_score = 100 when reviewIterations=0 and qaIterations=0', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP ED-2: workflow.story_outcomes table not present')
+      logger.warn('SKIP ED-2: wint.story_outcomes table not present')
       return
     }
 
@@ -341,7 +341,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
     })
 
     const rows = await db.execute(
-      `SELECT quality_score FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `SELECT quality_score FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
     const result = (rows.rows as Record<string, unknown>[])[0]
@@ -357,7 +357,7 @@ describe('WINT-3050: quality score edge cases (ED-1, ED-2)', () => {
 describe('WINT-3050: completedAt population (ED-3)', () => {
   it('ED-3: completed_at is non-null and approximately current time after upsert', async () => {
     if (!storyOutcomesTableExists) {
-      logger.warn('SKIP ED-3: workflow.story_outcomes table not present')
+      logger.warn('SKIP ED-3: wint.story_outcomes table not present')
       return
     }
 
@@ -375,7 +375,7 @@ describe('WINT-3050: completedAt population (ED-3)', () => {
     const after = new Date()
 
     const rows = await db.execute(
-      `SELECT completed_at FROM workflow.story_outcomes WHERE story_id = $1` as any,
+      `SELECT completed_at FROM wint.story_outcomes WHERE story_id = $1` as any,
       [storyId] as any,
     )
     const result = (rows.rows as Record<string, unknown>[])[0]
