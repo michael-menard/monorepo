@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, notInArray, inArray } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { getDbClient } from '../db/client.js'
 import { scrapeCheckpoints, scrapeRuns } from '../db/schema.js'
@@ -101,6 +101,66 @@ export class CheckpointManager {
       downloaded: run.downloaded,
       instructionsFound: run.instructionsFound,
     }
+  }
+
+  /**
+   * Find MOCs that were partially scraped (reached detail_scraped) but never
+   * completed (no completed checkpoint in any run). These are MOCs where the
+   * description/images were saved but the file download failed.
+   *
+   * Returns an array of { mocNumber, rebrickableUrl } for use as the instruction
+   * list in --retry-failed mode. The rebrickableUrl is stored in the
+   * detail_scraped checkpoint's scrapedData.
+   */
+  static async findPartialMocs(): Promise<Array<{ mocNumber: string; rebrickableUrl: string; title: string }>> {
+    const db = getDbClient()
+
+    // MOCs that have at least one detail_scraped checkpoint
+    const detailScraped = await db
+      .select({ mocNumber: scrapeCheckpoints.mocNumber, scrapedData: scrapeCheckpoints.scrapedData })
+      .from(scrapeCheckpoints)
+      .where(eq(scrapeCheckpoints.phase, 'detail_scraped'))
+      .orderBy(desc(scrapeCheckpoints.createdAt))
+
+    if (detailScraped.length === 0) return []
+
+    const allMocNumbers = [...new Set(detailScraped.map(r => r.mocNumber))]
+
+    // MOCs that have a completed checkpoint in any run
+    const completedRows = await db
+      .select({ mocNumber: scrapeCheckpoints.mocNumber })
+      .from(scrapeCheckpoints)
+      .where(
+        and(
+          eq(scrapeCheckpoints.phase, 'completed'),
+          inArray(scrapeCheckpoints.mocNumber, allMocNumbers),
+        ),
+      )
+
+    const completedSet = new Set(completedRows.map(r => r.mocNumber))
+
+    // Keep the most recent detail_scraped checkpoint per MOC (dedup)
+    const seenMoc = new Set<string>()
+    const partial: Array<{ mocNumber: string; rebrickableUrl: string; title: string }> = []
+
+    for (const row of detailScraped) {
+      if (completedSet.has(row.mocNumber)) continue
+      if (seenMoc.has(row.mocNumber)) continue
+      seenMoc.add(row.mocNumber)
+
+      const data = row.scrapedData as Record<string, unknown>
+      const rebrickableUrl = (data.rebrickableUrl as string) || ''
+      const title = (data.title as string) || `MOC-${row.mocNumber}`
+
+      if (!rebrickableUrl) {
+        logger.warn(`[checkpoint] MOC-${row.mocNumber} has no rebrickableUrl in checkpoint data — skipping`)
+        continue
+      }
+
+      partial.push({ mocNumber: row.mocNumber, rebrickableUrl, title })
+    }
+
+    return partial
   }
 
   static async findRunningRun(): Promise<string | null> {

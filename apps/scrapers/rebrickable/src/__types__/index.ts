@@ -7,6 +7,7 @@ export const CliOptionsSchema = z.object({
   dryRun: z.boolean().default(false),
   resume: z.boolean().default(false),
   force: z.boolean().default(false),
+  retryFailed: z.boolean().default(false),
   limit: z.number().int().positive().optional(),
   ignoreRobots: z.boolean().default(false),
 })
@@ -150,6 +151,11 @@ export const ScrapedMocDetailSchema = z.object({
   parts: z.array(ScrapedPartSchema).default([]),
   downloadUrl: z.string().optional(),
   fileType: z.string().default(''),
+  description: z.string().default(''),
+  descriptionHtml: z.string().default(''),
+  dateAdded: z.string().optional(),
+  authorProfileUrl: z.string().default(''),
+  tags: z.array(z.string()).default([]),
 })
 
 export type ScrapedMocDetail = z.infer<typeof ScrapedMocDetailSchema>

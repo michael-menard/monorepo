@@ -27,6 +27,9 @@ function parseArgs(argv: string[]) {
       case '--force':
         options.force = true
         break
+      case '--retry-failed':
+        options.retryFailed = true
+        break
       case '--ignore-robots':
         options.ignoreRobots = true
         break
@@ -68,6 +71,7 @@ async function main(): Promise<void> {
     dryRun: options.dryRun,
     resume: options.resume,
     force: options.force,
+    retryFailed: options.retryFailed,
     limit: options.limit ?? 'all',
     ignoreRobots: options.ignoreRobots,
   })
