@@ -41,16 +41,19 @@ function pipeStreamToLog(
   let buffer = ''
 
   function read() {
-    reader.read().then(({ done, value }) => {
-      if (done) return
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() ?? ''
-      for (const line of lines) {
-        if (line.trim()) appendLog(key, streamName, line)
-      }
-      read()
-    }).catch(() => {})
+    reader
+      .read()
+      .then(({ done, value }) => {
+        if (done) return
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (line.trim()) appendLog(key, streamName, line)
+        }
+        read()
+      })
+      .catch(() => {})
   }
   read()
 }
