@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux'
 import { roadmapApi } from '../store/roadmapApi'
 
 /**
- * Subscribes to server-sent events for story state changes.
+ * Subscribes to server-sent events for story state changes and agent activity.
  * On each event, invalidates RTK Query cache tags so queries auto-refetch.
  * EventSource auto-reconnects on disconnect (built-in browser behavior).
  */
@@ -22,6 +22,10 @@ export function useStorySSE() {
           { type: 'Story', id: payload.storyId },
         ]),
       )
+    })
+
+    es.addEventListener('agent_activity_changed', () => {
+      dispatch(roadmapApi.util.invalidateTags(['ActiveAgents']))
     })
 
     return () => es.close()

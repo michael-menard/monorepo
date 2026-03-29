@@ -16,8 +16,10 @@ import {
   StateTag,
   PriorityTag,
 } from '@repo/app-component-library'
-import type { PlanStory } from '../store/roadmapApi'
+import type { ActiveAgent, PlanStory } from '../store/roadmapApi'
+import { useGetActiveAgentsQuery } from '../store/roadmapApi'
 import { getConfig } from '../config'
+import { AgentActiveBadge } from './AgentActiveBadge'
 
 const col = createColumnHelper<PlanStory>()
 
@@ -35,7 +37,7 @@ function relativeTime(iso: string | null) {
   return <span className="text-xs text-slate-400 font-mono">{label}</span>
 }
 
-function createColumns(fromPlan?: FromPlanInfo) {
+function createColumns(activeAgentMap: Map<string, ActiveAgent>, fromPlan?: FromPlanInfo) {
   const stateUpdater = fromPlan ? (((prev: any) => ({ ...prev, fromPlan })) as any) : undefined
   return [
     col.accessor('storyId', {
@@ -78,12 +80,16 @@ function createColumns(fromPlan?: FromPlanInfo) {
     }),
     col.accessor('state', {
       header: 'State',
-      size: 130,
+      size: 160,
       cell: info => {
         const row = info.row.original
+        const activeAgent = activeAgentMap.get(row.storyId)
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <StateTag state={row.state ?? '-'} />
+            {activeAgent ? (
+              <AgentActiveBadge agentName={activeAgent.agentName} phase={activeAgent.phase} />
+            ) : null}
             {row.isBlocked || row.hasBlockers ? (
               <span title="Has blockers" className="text-destructive">
                 ⚠️
@@ -144,7 +150,11 @@ export function StoriesTable({
   planSlug?: string
   planTitle?: string
 }) {
+  const { data: activeAgents } = useGetActiveAgentsQuery(undefined, { pollingInterval: 30_000 })
+  const activeAgentMap = new Map((activeAgents ?? []).map(a => [a.storyId, a]))
+
   const columns = createColumns(
+    activeAgentMap,
     planSlug ? { slug: planSlug, title: planTitle ?? planSlug } : undefined,
   )
   const table = useReactTable({

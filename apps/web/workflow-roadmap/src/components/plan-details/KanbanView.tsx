@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { AppBadge, PriorityTag } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
+import { useGetActiveAgentsQuery } from '../../store/roadmapApi'
+import { AgentActiveBadge } from '../AgentActiveBadge'
 
 const KANBAN_COLUMNS = [
   { id: 'ready_to_work', label: 'Ready to Work', states: ['ready_to_work'], color: 'bg-cyan-500' },
@@ -16,6 +18,10 @@ const KANBAN_COLUMNS = [
 ]
 
 export function KanbanView({ stories }: { stories: PlanStory[] }) {
+  const { data: activeAgents } = useGetActiveAgentsQuery(undefined, { pollingInterval: 30_000 })
+
+  const activeAgentMap = new Map((activeAgents ?? []).map(a => [a.storyId, a]))
+
   const totalOnBoard = KANBAN_COLUMNS.reduce(
     (sum, col) => sum + stories.filter(s => col.states.includes(s.state ?? '')).length,
     0,
@@ -64,39 +70,50 @@ export function KanbanView({ stories }: { stories: PlanStory[] }) {
                   <span className="text-xs text-slate-600 font-mono">empty</span>
                 </div>
               ) : (
-                cards.map(story => (
-                  <Link
-                    key={story.storyId}
-                    to="/story/$storyId"
-                    params={{ storyId: story.storyId }}
-                    className={`block ${story.isExternal ? 'border-dashed' : ''} bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 hover:border-cyan-500/40 hover:bg-slate-800 transition-colors`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs text-cyan-400">{story.storyId}</span>
-                        {story.isExternal ? (
-                          <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-slate-700/60 text-slate-400 border border-slate-600/40">
-                            EXT
-                          </span>
+                cards.map(story => {
+                  const activeAgent = activeAgentMap.get(story.storyId)
+                  return (
+                    <Link
+                      key={story.storyId}
+                      to="/story/$storyId"
+                      params={{ storyId: story.storyId }}
+                      className={`block ${story.isExternal ? 'border-dashed' : ''} bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 hover:border-cyan-500/40 hover:bg-slate-800 transition-colors`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs text-cyan-400">{story.storyId}</span>
+                          {story.isExternal ? (
+                            <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-slate-700/60 text-slate-400 border border-slate-600/40">
+                              EXT
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {activeAgent ? (
+                            <AgentActiveBadge
+                              agentName={activeAgent.agentName}
+                              phase={activeAgent.phase}
+                            />
+                          ) : null}
+                          {story.isBlocked || story.hasBlockers ? (
+                            <span title="Has blockers" className="text-xs">
+                              ⚠️
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-200 leading-snug line-clamp-2 mb-2">
+                        {story.title ?? '—'}
+                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {story.priority ? <PriorityTag priority={story.priority} /> : null}
+                        {story.state && story.state !== col.states[0] ? (
+                          <AppBadge variant="secondary">{story.state}</AppBadge>
                         ) : null}
                       </div>
-                      {story.isBlocked || story.hasBlockers ? (
-                        <span title="Has blockers" className="text-xs">
-                          ⚠️
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="text-sm text-slate-200 leading-snug line-clamp-2 mb-2">
-                      {story.title ?? '—'}
-                    </p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {story.priority ? <PriorityTag priority={story.priority} /> : null}
-                      {story.state && story.state !== col.states[0] ? (
-                        <AppBadge variant="secondary">{story.state}</AppBadge>
-                      ) : null}
-                    </div>
-                  </Link>
-                ))
+                    </Link>
+                  )
+                })
               )}
             </div>
           </div>
