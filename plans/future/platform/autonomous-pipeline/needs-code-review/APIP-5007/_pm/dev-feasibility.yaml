@@ -1,0 +1,113 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-5007 is a documentation + DDL artifact story. All 8 ACs are clearly scoped to producing
+  written decisions (ADRs), SQL DDL files, and runbooks. No runtime code changes to existing
+  protected packages are required. The primary implementation risk is the LangGraph checkpoint
+  table ownership decision (AC-2) which requires a spike to observe @langchain/langgraph-checkpoint-postgres
+  behavior — but this is explicitly scoped within the story. The established patterns from
+  apps/api/knowledge-base/src/db/migrations/ provide a complete template. High confidence.
+complexity: medium
+change_surface:
+  areas:
+    - "plans/future/platform/autonomous-pipeline/backlog/APIP-5007/ (documentation artifacts)"
+    - "plans/future/platform/autonomous-pipeline/ADRs/ (new ADR file)"
+    - "apps/api/autonomous-pipeline/ or packages/backend/pipeline-schema/ (new SQL migration directory — location TBD in ADR)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Docker Compose Aurora PostgreSQL (port 5432) — migration must be applied on first local dev startup"
+    - "LangGraph server startup sequence — checkpoint initialization order documented in runbook"
+
+risks:
+  - finding: "LangGraph @langchain/langgraph-checkpoint-postgres checkpoint table schema is version-dependent and could change between releases. If APIP hand-rolls checkpoint DDL and it mismatches the package's expected schema, LangGraph initialization will fail on APIP-0020 implementation."
+    mitigation: "AC-2 explicitly requires spike to observe tables created by @langchain/langgraph-checkpoint-postgres before deciding delegation vs. hand-roll. Delegation is the recommended approach — let LangGraph own its tables. Pin the package version in package.json once verified."
+  - finding: "If sequential SQL scripts (KB pattern) are chosen over Drizzle Kit, there is no automatic migration runner — developer must manually run psql or a startup script. This could cause drift if the runbook is not followed."
+    mitigation: "AC-6 (local dev runbook) must include explicit migration application steps and a startup script or Docker Compose entrypoint that auto-applies pending migrations on container start. Consider a lightweight Node.js migration runner script (not Drizzle Kit) that applies pending NNN_*.sql files in order."
+
+missing_requirements: []
+evidence_expectations:
+  - "psql screenshot or terminal output showing apip schema and schema_migrations table created after migration application"
+  - "psql output showing idempotent re-application (no errors on second run)"
+  - "LangGraph server startup log showing checkpoint table initialization without conflict"
+  - "ADR document committed to plans/future/platform/autonomous-pipeline/ADRs/ directory"
+  - "Rollback procedure document committed alongside ADR"
+  - "Thread ID convention referenced from ARCHITECTURE-REVIEW.md Section 2.2"
+
+subtasks:
+  - id: ST-1
+    title: "Spike: Run @langchain/langgraph-checkpoint-postgres and document checkpoint table schema"
+    goal: "Determine exactly which tables LangGraph's PostgreSQL checkpointer creates, in which schema namespace, and whether delegation is safe. This unblocks AC-2 and informs the apip schema namespace decision."
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+      - "apps/api/knowledge-base/src/db/migrations/013_add_plans_tables.sql"
+    files_to_modify:
+      - "plans/future/platform/autonomous-pipeline/backlog/APIP-5007/_pm/STORY-SEED.md (add spike findings)"
+    acs: ["AC-2"]
+    depends_on: none
+    verification: "Document produced: spike-langgraph-checkpoint.md with table list and namespace"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Write ADR: Migration tooling decision (Drizzle Kit vs sequential SQL) for pipeline-owned tables"
+    goal: "Produce an ADR documenting the chosen migration tooling for pipeline-owned tables, with explicit rationale citing the KB migration 014 anti-pattern and the Docker Compose environment constraint."
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/014_consolidate_orphaned_002_objects.sql"
+      - "packages/backend/database-schema/drizzle.config.ts"
+    files_to_modify:
+      - "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md (new file)"
+    acs: ["AC-1", "AC-2"]
+    depends_on: ST-1
+    verification: "ADR file exists with Decision section explicitly choosing one tooling approach and documenting LangGraph checkpoint delegation"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Write baseline DDL: apip schema namespace + schema_migrations version tracking table"
+    goal: "Produce the first SQL migration file (001_apip_schema_baseline.sql) creating the apip pgSchema namespace and schema_migrations version tracking table, following KB migration 013 pattern exactly."
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/013_add_plans_tables.sql"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    files_to_modify:
+      - "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql (new file, path confirmed in ST-2 ADR)"
+    acs: ["AC-3", "AC-7"]
+    depends_on: ST-2
+    verification: "psql -f 001_apip_schema_baseline.sql runs without errors on fresh DB; SELECT table_name FROM information_schema.tables WHERE table_schema = 'apip' returns schema_migrations"
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Document thread ID convention and rollback procedures"
+    goal: "Produce two documentation artifacts: (1) thread ID convention doc ({story_id}:{stage}:{attempt_number}) for APIP-0020 implementers, (2) rollback procedure doc covering additive, destructive, and enum change categories."
+    files_to_read:
+      - "plans/future/platform/autonomous-pipeline/backlog/APIP-5007/_pm/STORY-SEED.md"
+    files_to_modify:
+      - "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md (new file)"
+      - "plans/future/platform/autonomous-pipeline/docs/migration-rollback-procedures.md (new file)"
+    acs: ["AC-4", "AC-5"]
+    depends_on: ST-2
+    verification: "Both documents exist; rollback doc has explicit section for each of: additive, destructive, enum; destructive section states downtime required; enum section states irreversible without data migration"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Write local development runbook for Docker Compose migration workflow"
+    goal: "Produce a runbook documenting how to apply pipeline migrations in the Docker Compose environment, including LangGraph checkpoint initialization startup sequence order."
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+      - "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md (from ST-4)"
+    files_to_modify:
+      - "plans/future/platform/autonomous-pipeline/docs/local-migration-runbook.md (new file)"
+    acs: ["AC-6"]
+    depends_on: ST-3
+    verification: "Runbook documents explicit startup sequence: (1) Aurora up, (2) APIP migration applied, (3) LangGraph starts. Health check dependency documented."
+    estimated_tokens: 4000
+
+  - id: ST-6
+    title: "Consult APIP-5001 and produce gap analysis for migration strategy compatibility"
+    goal: "Review APIP-5001 story scope and confirm the migration strategy and DDL artifacts produced by this story are sufficient for APIP-5001's test database setup and migration testing utilities. Document any gaps."
+    files_to_read:
+      - "plans/future/platform/autonomous-pipeline/backlog/APIP-5001/story.yaml (if exists)"
+      - "plans/future/platform/autonomous-pipeline/stories.index.md"
+    files_to_modify:
+      - "plans/future/platform/autonomous-pipeline/backlog/APIP-5007/_pm/APIP-5001-gap-analysis.md (new file)"
+    acs: ["AC-8"]
+    depends_on: ST-3
+    verification: "Gap analysis document exists; explicitly states whether APIP-5001 can build test fixtures against the schema defined in ST-3; any gaps documented with owner"
+    estimated_tokens: 3000
