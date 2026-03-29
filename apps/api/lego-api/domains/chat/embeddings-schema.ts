@@ -1,23 +1,20 @@
 import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core'
-import { chatConversations } from './schema.js'
 import { sql } from 'drizzle-orm'
+import { chatConversations } from './schema.js'
 
 // Note: The vector column type isn't natively supported by drizzle-orm.
 // We create the table via raw SQL migration, but define the non-vector columns here
 // for type-safe selects on non-vector fields.
 
-export const chatConversationEmbeddings = pgTable(
-  'chat_conversation_embeddings',
-  {
-    conversationId: uuid('conversation_id')
-      .primaryKey()
-      .references(() => chatConversations.id, { onDelete: 'cascade' }),
-    summaryText: text('summary_text').notNull(),
-    model: text('model').notNull().default('text-embedding-3-small'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-)
+export const chatConversationEmbeddings = pgTable('chat_conversation_embeddings', {
+  conversationId: uuid('conversation_id')
+    .primaryKey()
+    .references(() => chatConversations.id, { onDelete: 'cascade' }),
+  summaryText: text('summary_text').notNull(),
+  model: text('model').notNull().default('text-embedding-3-small'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 /**
  * Raw SQL to create the embeddings table with the vector column.

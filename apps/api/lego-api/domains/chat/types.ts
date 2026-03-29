@@ -36,16 +36,33 @@ export const SendMessageInputSchema = z
     content: z.string().optional(),
     attachments: z.array(AttachmentSchema).optional(),
   })
-  .refine(data => (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0), {
-    message: 'Either content or attachments must be provided',
-  })
+  .refine(
+    data =>
+      (data.content && data.content.trim().length > 0) ||
+      (data.attachments && data.attachments.length > 0),
+    {
+      message: 'Either content or attachments must be provided',
+    },
+  )
 
 export type SendMessageInput = z.infer<typeof SendMessageInputSchema>
 
 export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 export const ALLOWED_TEXT_EXTENSIONS = [
-  '.txt', '.md', '.json', '.yaml', '.yml', '.ts', '.tsx',
-  '.js', '.jsx', '.css', '.html', '.xml', '.csv', '.log',
+  '.txt',
+  '.md',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.css',
+  '.html',
+  '.xml',
+  '.csv',
+  '.log',
 ]
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export const MAX_FILES_PER_MESSAGE = 5

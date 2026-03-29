@@ -23,10 +23,7 @@ function estimateTokens(text: string): number {
 
 type OpenAIMessage = { role: 'user' | 'assistant' | 'system'; content: string }
 
-function trimToTokenBudget(
-  messages: OpenAIMessage[],
-  budget: number,
-): OpenAIMessage[] {
+function trimToTokenBudget(messages: OpenAIMessage[], budget: number): OpenAIMessage[] {
   if (messages.length === 0) return []
 
   // Always include the latest user message
@@ -55,7 +52,11 @@ type ChatServiceDeps = {
   embeddingClient?: EmbeddingClient
 }
 
-export function createChatService({ db, openai, embeddingClient: injectedClient }: ChatServiceDeps) {
+export function createChatService({
+  db,
+  openai,
+  embeddingClient: injectedClient,
+}: ChatServiceDeps) {
   let _embeddingClient: EmbeddingClient | undefined = injectedClient
 
   function getOrCreateEmbeddingClient(): EmbeddingClient {
@@ -158,7 +159,9 @@ export function createChatService({ db, openai, embeddingClient: injectedClient 
 
       // Auto-title on first user message
       const isFirstMessage = existingMessages.length === 0
-      const titleSource = content || (attachments ? `Files: ${attachments.map(a => a.filename).join(', ')}` : 'New Chat')
+      const titleSource =
+        content ||
+        (attachments ? `Files: ${attachments.map(a => a.filename).join(', ')}` : 'New Chat')
       const newTitle = isFirstMessage ? titleSource.slice(0, 40) : conversation.title
 
       // Save user message
@@ -256,9 +259,7 @@ export function createChatService({ db, openai, embeddingClient: injectedClient 
       const messages = conversation.messages as ChatMessage[]
       if (messages.length === 0) throw new Error('No messages to summarize')
 
-      const transcript = messages
-        .map(m => `${m.role}: ${m.content}`)
-        .join('\n')
+      const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n')
 
       const response = await openai.chat.completions.create({
         model: process.env.OPENAI_CHAT_MODEL ?? 'gpt-4o',
@@ -343,9 +344,7 @@ export function createChatService({ db, openai, embeddingClient: injectedClient 
       const messages = conversation.messages as ChatMessage[]
       if (messages.length === 0) throw new Error('No messages to convert')
 
-      const transcript = messages
-        .map(m => `${m.role}: ${m.content}`)
-        .join('\n')
+      const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n')
 
       // Find similar conversations for context enrichment
       let similarContext = ''
