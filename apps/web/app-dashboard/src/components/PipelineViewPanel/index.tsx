@@ -120,7 +120,7 @@ function StoryCard({ story }: { story: PipelineStory }) {
     >
       <div className="flex items-start justify-between gap-2">
         <span className="font-mono text-xs text-muted-foreground shrink-0">{story.story_id}</span>
-        {story.priority && (
+        {story.priority ? (
           <span
             className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-xs font-medium ${
               PRIORITY_BADGE[story.priority] ?? 'bg-slate-500/20 text-slate-700 dark:text-slate-300'
@@ -128,14 +128,14 @@ function StoryCard({ story }: { story: PipelineStory }) {
           >
             {story.priority}
           </span>
-        )}
+        ) : null}
       </div>
       <p className="mt-1 text-xs text-card-foreground line-clamp-2 leading-relaxed">
         {story.title}
       </p>
       <div className="mt-2 flex items-center gap-2">
         <span className="text-xs text-muted-foreground truncate">{story.feature}</span>
-        {story.blocked_by && (
+        {story.blocked_by ? (
           <span
             className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 shrink-0"
             aria-label="Blocked"
@@ -143,7 +143,7 @@ function StoryCard({ story }: { story: PipelineStory }) {
             <AlertTriangle className="h-3 w-3" aria-hidden="true" />
             Blocked
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   )

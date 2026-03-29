@@ -51,7 +51,7 @@ export function BulkControls({
         </div>
       </div>
 
-      {confirmAction && (
+      {confirmAction ? (
         <>
           <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setConfirmAction(null)} />
           <div className="fixed left-1/2 top-1/2 z-40 -translate-x-1/2 -translate-y-1/2 w-80 rounded-lg border border-slate-700 bg-slate-800 p-4 shadow-xl">
@@ -106,7 +106,7 @@ export function BulkControls({
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </>
   )
 }

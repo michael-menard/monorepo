@@ -40,18 +40,13 @@ export function LogPanel({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
 
       {/* Panel */}
       <div className="fixed inset-y-0 right-0 z-50 w-[600px] flex flex-col border-l border-slate-700 bg-slate-950 shadow-2xl transition-transform">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-          <h3 className="text-sm font-semibold text-slate-200 font-mono">
-            {serviceKey}
-          </h3>
+          <h3 className="text-sm font-semibold text-slate-200 font-mono">{serviceKey}</h3>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -79,7 +74,9 @@ export function LogPanel({
           className="flex-1 overflow-y-auto p-3 font-mono text-sm leading-relaxed"
         >
           {filteredLines.length === 0 ? (
-            <p className="text-slate-600 text-center mt-8">No logs yet. Start the service to see output.</p>
+            <p className="text-slate-600 text-center mt-8">
+              No logs yet. Start the service to see output.
+            </p>
           ) : (
             filteredLines.map((line, i) => (
               <div

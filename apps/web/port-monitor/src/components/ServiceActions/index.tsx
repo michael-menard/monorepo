@@ -67,7 +67,7 @@ export function ServiceActions({
         </button>
       )}
 
-      {open && !isLoading && (
+      {open && !isLoading ? (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-20 mt-1 w-36 rounded-md border border-slate-700 bg-slate-800 shadow-lg">
@@ -98,17 +98,16 @@ export function ServiceActions({
             </button>
           </div>
         </>
-      )}
+      ) : null}
 
-      {confirmAction && (
+      {confirmAction ? (
         <>
           <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setConfirmAction(null)} />
           <div className="fixed left-1/2 top-1/2 z-40 -translate-x-1/2 -translate-y-1/2 w-80 rounded-lg border border-slate-700 bg-slate-800 p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-slate-200 mb-2">
-              Confirm {confirmAction}
-            </h3>
+            <h3 className="text-sm font-semibold text-slate-200 mb-2">Confirm {confirmAction}</h3>
             <p className="text-xs text-slate-400 mb-4">
-              Are you sure you want to {confirmAction} <span className="font-mono">{serviceKey}</span>?
+              Are you sure you want to {confirmAction}{' '}
+              <span className="font-mono">{serviceKey}</span>?
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -128,7 +127,7 @@ export function ServiceActions({
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   )
 }

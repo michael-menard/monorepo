@@ -52,7 +52,11 @@ export function RefreshCountdown({
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className={isFetching ? 'animate-pulse' : ''}
         role="img"
-        aria-label={isFetching ? 'Refreshing' : `Next refresh in ${Math.ceil((1 - progress) * intervalMs / 1000)}s`}
+        aria-label={
+          isFetching
+            ? 'Refreshing'
+            : `Next refresh in ${Math.ceil(((1 - progress) * intervalMs) / 1000)}s`
+        }
       >
         <circle
           cx={SIZE / 2}
@@ -76,11 +80,13 @@ export function RefreshCountdown({
           transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
         />
       </svg>
-      {lastCheckedAt && (
+      {lastCheckedAt ? (
         <span>
-          {isFetching ? 'Refreshing\u2026' : `Last checked: ${new Date(lastCheckedAt).toLocaleTimeString()}`}
+          {isFetching
+            ? 'Refreshing\u2026'
+            : `Last checked: ${new Date(lastCheckedAt).toLocaleTimeString()}`}
         </span>
-      )}
+      ) : null}
     </div>
   )
 }
