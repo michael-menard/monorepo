@@ -82,23 +82,23 @@ export function ChatMessages() {
                 : 'rounded-2xl rounded-bl-md bg-slate-800 text-slate-200',
             )}
           >
-            {msg.content && <div className="whitespace-pre-wrap">{msg.content}</div>}
-            {msg.attachments && msg.attachments.length > 0 && (
+            {msg.content ? <div className="whitespace-pre-wrap">{msg.content}</div> : null}
+            {msg.attachments && msg.attachments.length > 0 ? (
               <MessageAttachments attachments={msg.attachments} />
-            )}
+            ) : null}
             {msg.id === streamingMessageId && (
               <span className="inline-block w-1.5 h-4 ml-0.5 bg-cyan-400 animate-pulse" />
             )}
           </div>
         </motion.div>
       ))}
-      {isStreaming && messages.length > 0 && !messages.find(m => m.id === streamingMessageId) && (
+      {isStreaming && messages.length > 0 && !messages.find(m => m.id === streamingMessageId) ? (
         <div className="flex justify-start">
           <div className="rounded-2xl rounded-bl-md bg-slate-800 px-3 py-2 text-sm text-slate-400 animate-pulse">
             Thinking...
           </div>
         </div>
-      )}
+      ) : null}
       <div ref={bottomRef} />
     </div>
   )

@@ -66,10 +66,7 @@ export async function deleteConversation(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete conversation: ${res.status}`)
 }
 
-export async function uploadFiles(
-  conversationId: string,
-  files: File[],
-): Promise<ApiAttachment[]> {
+export async function uploadFiles(conversationId: string, files: File[]): Promise<ApiAttachment[]> {
   const formData = new FormData()
   for (const file of files) {
     formData.append('file', file)
@@ -153,9 +150,7 @@ export async function sendMessage(
   }
 }
 
-export async function archiveConversation(
-  id: string,
-): Promise<{ summary: string }> {
+export async function archiveConversation(id: string): Promise<{ summary: string }> {
   const res = await fetch(`/api/chat/${id}/archive`, { method: 'POST' })
   if (!res.ok) throw new Error(`Failed to archive conversation: ${res.status}`)
   return res.json()
@@ -173,9 +168,7 @@ export async function searchConversations(
   return res.json()
 }
 
-export async function convertToPlan(
-  id: string,
-): Promise<{ planId: string; title: string }> {
+export async function convertToPlan(id: string): Promise<{ planId: string; title: string }> {
   const res = await fetch(`/api/chat/${id}/convert-to-plan`, { method: 'POST' })
   if (!res.ok) throw new Error(`Failed to convert to plan: ${res.status}`)
   return res.json()
