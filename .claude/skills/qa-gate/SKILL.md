@@ -11,11 +11,11 @@ Generate a quality gate decision with persistent YAML output. Runs automated che
 
 **Key Features:**
 
-- Persistent KB gate artifacts for traceability
+- Persistent YAML gate files for traceability
 - Standardized severity scale (low, medium, high)
 - Issue ID prefixes for categorization (SEC-, PERF-, TEST-, etc.)
 - WAIVED status with approval tracking
-- Writes qa_gate artifact to KB for the story
+- Updates story file with gate reference
 - NFR validation (security, performance, reliability, accessibility)
 
 ## Usage
@@ -51,22 +51,20 @@ Generate a quality gate decision with persistent YAML output. Runs automated che
 - **--waive** - Mark gate as WAIVED (requires --reason and --approved-by)
 - **--reason** - Reason for waiver
 - **--approved-by** - Who approved the waiver
-- **--dry-run** - Run checks but don't persist gate artifact to KB
+- **--dry-run** - Run checks but don't persist gate file
 
 ---
 
 ## EXECUTION INSTRUCTIONS
 
-### Phase 1: Parse Arguments & Locate Story
+### Phase 1: Parse Arguments & Load Story Data
 
 ```
-1. Parse story number or --branch flag
+1. Parse story number/story_id or --branch flag
 2. If story provided:
-   - Fetch from KB: kb_get_story({ story_id: "{STORY_ID}" })
-   - Extract story title and slug from KB record
-3. Gate output will be written as a KB artifact: kb_write_artifact({ story_id, artifact_type: "qa_gate", content: {...} })
-4. Check if a qa_gate artifact already exists for this story (for history tracking):
-   kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true }) and inspect artifacts
+   - Load story data: kb_get_story({ story_id: "{STORY_ID}" })
+   - Extract story title and slug from returned story data
+3. Check if prior QA gate artifact exists: kb_read_artifact({ story_id, artifact_type: 'qa_gate' }) (for history tracking)
 ```
 
 ### Phase 2: Run Required Checks
@@ -192,11 +190,12 @@ ELSE:
 - FAIL: "{reason for failure - e.g., 'Tests failing' or 'High severity security issue'}"
 - WAIVED: "{user-provided reason}"
 
-### Phase 5: Write Gate Artifact to KB
+### Phase 5: Write Gate Artifact
 
-**Call `kb_write_artifact({ story_id: "{STORY_ID}", artifact_type: "qa_gate", content: {gate_content} })` with the following content structure:**
+**Write QA gate artifact via `kb_write_artifact({ story_id, artifact_type: 'qa_gate', content: {...} })`:**
 
 ```yaml
+# Written via: kb_write_artifact({ story_id, artifact_type: 'qa_gate', content: { ... } })
 schema: 1
 story: '{STORY_NUM}'
 story_title: '{STORY_TITLE}'
@@ -237,16 +236,13 @@ risk_summary:
     should_fix: [] # medium severity items
 ```
 
-### Phase 6: KB Artifact as Persistent Record (if story provided)
+### Phase 6: Record Gate Result (if story provided)
 
-The `qa_gate` artifact written to KB in Phase 5 serves as the persistent record for this gate decision. No story file update is needed.
+**Record gate result to KB. If story_id is available, use `kb_update_story_status()` to advance state. For follow-up items, use `kb_add_task()`.**
 
-To retrieve the gate result later:
+The gate outcome is stored in the `qa_gate` KB artifact (written in Phase 5). No story file append is needed — the KB artifact is the canonical record.
 
-```
-kb_get_story({ story_id: "{STORY_ID}", include_artifacts: true })
-# Inspect the artifact with artifact_type: "qa_gate"
-```
+If there are actionable follow-up items from top_issues, record them via `kb_add_task({ story_id, task: "{issue_id}: {finding}" })`.
 
 ### Phase 7: Report Summary
 
@@ -274,7 +270,7 @@ Top Issues ({N} total):
   [{ID}] {severity}: {finding}
   ...
 
-Gate artifact written to KB (artifact_type: qa_gate, story_id: {STORY_ID})
+Gate Artifact: qa_gate KB artifact for {STORY_NUM}
 
 {If FAIL:}
 Recommendation: Address high-severity issues before proceeding.
@@ -365,7 +361,7 @@ The `/implement` skill calls `/qa-gate` for its QA phase:
 ```bash
 /qa-gate 3.1.5
 # Runs: tests, types, lint
-# Output: KB artifact (artifact_type: qa_gate, story_id: 3.1.5)
+# Output: qa_gate KB artifact for story 3.1.5
 ```
 
 ### Deep Gate (all specialists)
@@ -373,7 +369,7 @@ The `/implement` skill calls `/qa-gate` for its QA phase:
 ```bash
 /qa-gate 3.1.5 --deep
 # Runs: tests, types, lint + security, performance, accessibility
-# Output: KB artifact (artifact_type: qa_gate, story_id: 3.1.5)
+# Output: qa_gate KB artifact for story 3.1.5
 ```
 
 ### Waive Known Issues
@@ -388,5 +384,5 @@ The `/implement` skill calls `/qa-gate` for its QA phase:
 ```bash
 /qa-gate --branch --deep
 # Reviews current branch without story reference
-# Output: Findings reported to user only (no KB artifact without a story ID)
+# Output: qa_gate KB artifact for branch-{branch-name}
 ```
