@@ -12,7 +12,7 @@
 import { eq, and, sql, SQL } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { rules } from '@repo/knowledge-base/db'
+import { rules } from '@repo/database-schema'
 import { detectConflicts, normalizeRuleText } from './conflict-detector.js'
 import {
   type GetRulesQuery,
@@ -34,23 +34,22 @@ export { normalizeRuleText }
 function toRule(row: {
   id: string
   ruleText: string
-  ruleType: string
+  ruleType: 'gate' | 'lint' | 'prompt_injection'
   scope: string
-  severity: string
-  status: string
+  severity: 'error' | 'warning' | 'info'
+  status: 'proposed' | 'active' | 'deprecated'
   sourceStoryId: string | null
   sourceLessonId: string | null
   createdAt: Date
   updatedAt: Date
-  [key: string]: unknown
 }): Rule {
   return {
     id: row.id,
     rule_text: row.ruleText,
-    rule_type: row.ruleType as 'gate' | 'lint' | 'prompt_injection',
+    rule_type: row.ruleType,
     scope: row.scope,
-    severity: row.severity as 'error' | 'warning' | 'info',
-    status: row.status as 'proposed' | 'active' | 'deprecated',
+    severity: row.severity,
+    status: row.status,
     source_story_id: row.sourceStoryId,
     source_lesson_id: row.sourceLessonId,
     created_at: row.createdAt,

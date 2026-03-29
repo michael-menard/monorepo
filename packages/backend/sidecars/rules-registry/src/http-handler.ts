@@ -54,7 +54,11 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 /**
  * GET /rules — list rules with optional ?type, ?scope, ?status filters.
  */
-async function handleGetRules(_req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+async function handleGetRules(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
   const rawQuery = {
     type: url.searchParams.get('type') ?? undefined,
     scope: url.searchParams.get('scope') ?? undefined,
@@ -62,7 +66,9 @@ async function handleGetRules(_req: IncomingMessage, res: ServerResponse, url: U
   }
 
   // Remove undefined keys
-  const filtered = Object.fromEntries(Object.entries(rawQuery).filter(([, v]) => v !== undefined))
+  const filtered = Object.fromEntries(
+    Object.entries(rawQuery).filter(([, v]) => v !== undefined),
+  )
 
   const parsed = GetRulesQuerySchema.safeParse(filtered)
   if (!parsed.success) {

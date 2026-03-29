@@ -236,8 +236,8 @@ vi.mock('@repo/db', () => ({
   },
 }))
 
-// Mock @repo/knowledge-base/db
-vi.mock('@repo/knowledge-base/db', () => ({
+// Mock @repo/database-schema
+vi.mock('@repo/database-schema', () => ({
   rules: {
     id: 'id',
     ruleText: 'rule_text',

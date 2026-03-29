@@ -11,7 +11,7 @@
 import { sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { rules } from '@repo/knowledge-base/db'
+import { rules } from '@repo/database-schema'
 
 /**
  * Normalize rule_text for conflict detection.
