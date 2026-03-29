@@ -1,6 +1,10 @@
 ---
 name: token-report
 description: Generate a summary report aggregating all logged token usage for a story. Queries KB storyTokenUsage and produces TOKEN-SUMMARY.md with cost estimates and analysis.
+kb_tools:
+  - kb_get_story
+  - kb_search
+  - kb_write_artifact
 ---
 
 # /token-report - Generate Token Summary Report
@@ -17,14 +21,14 @@ description: Generate a summary report aggregating all logged token usage for a 
 
 ## Locate Story
 
-Retrieve the story from the KB:
+Use KB:
 
 ```javascript
-const story = await kb_get_story({ story_id: 'STORY-XXX' })
-const story_dir = story?.story_dir // canonical directory path
+kb_get_story({ story_id: 'STORY-XXX' })
+// Returns story metadata including current state/phase
 ```
 
-If `kb_get_story` fails or returns no result, STOP and report: "Story STORY-XXX not found in KB — ensure the story is registered."
+If story is not found in KB, report: "Story STORY-XXX not found in KB — ensure it has been created via the KB workflow."
 
 ## Preconditions
 
@@ -39,7 +43,7 @@ If `kb_get_story` fails or returns no result, STOP and report: "Story STORY-XXX 
    // Returns array of { phase, input_tokens, output_tokens, timestamp }
    ```
 2. Aggregate phase data
-3. Write TOKEN-SUMMARY.md via `kb_write_artifact({ story_id: "STORY-XXX", artifact_type: "token_summary", content: summaryContent })`
+3. Write summary to KB: `kb_write_artifact({ story_id: "STORY-XXX", artifact_type: "evidence", artifact_name: "TOKEN-SUMMARY", content: { ... } })`
 
 ## Token Summary Format
 
@@ -162,7 +166,7 @@ Phases: N phases logged
 Highest: phase-name (XX,XXX tokens)
 Status: [Under budget / On budget / Over budget]
 
-File: written to KB as artifact (artifact_type: "token_summary") via kb_write_artifact
+KB artifact: TOKEN-SUMMARY written to story STORY-XXX (artifact_type: evidence)
 ```
 
 ## Error Handling

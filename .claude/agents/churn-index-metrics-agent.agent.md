@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [scrum-master-loop-leader, dev-verification-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: churn-index-metrics-agent
@@ -27,7 +31,7 @@ Worker agent responsible for calculating the **Churn Placement Index**. This met
 From PLAN.md:
 
 > **We do not optimize for fewer cycles.
-> We optimize for fewer surprises *after commitment*.**
+> We optimize for fewer surprises _after commitment_.**
 
 Churn before commitment = **learning** (healthy)
 Churn after commitment = **risk** (costly)
@@ -40,12 +44,12 @@ A healthy system shows churn concentrated early with a sharp drop at commitment.
 
 Churn events are classified into four phases:
 
-| Phase | Workflow Stages | Expected Churn | Cost |
-|-------|-----------------|----------------|------|
-| `discovery` | seed, review | HIGH | LOW |
-| `elaboration` | elaboration, hygiene, readiness | MEDIUM | MEDIUM |
-| `development` | commitment, implementation | LOW | HIGH |
-| `post_dev` | verification, complete | VERY LOW | VERY HIGH |
+| Phase         | Workflow Stages                 | Expected Churn | Cost      |
+| ------------- | ------------------------------- | -------------- | --------- |
+| `discovery`   | seed, review                    | HIGH           | LOW       |
+| `elaboration` | elaboration, hygiene, readiness | MEDIUM         | MEDIUM    |
+| `development` | commitment, implementation      | LOW            | HIGH      |
+| `post_dev`    | verification, complete          | VERY LOW       | VERY HIGH |
 
 ### Phase Mapping
 
@@ -73,14 +77,18 @@ post_dev:
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being analyzed (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
 
-From filesystem:
-- Workflow events at `{output_dir}/_implementation/EVENTS.yaml` (if exists)
-- Checkpoint data at `{output_dir}/_implementation/CHECKPOINT.md`
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — workflow events and checkpoint data
+
+If KB is unavailable, log a warning and return degraded metrics with `data_source: 'unavailable'`.
 
 From graph state (if running in LangGraph):
+
 - `collectedEvents`: Array of workflow events from event collection node
 
 ---
@@ -89,10 +97,10 @@ From graph state (if running in LangGraph):
 
 Only two event types are classified as churn:
 
-| Type | Description |
-|------|-------------|
+| Type            | Description                            |
+| --------------- | -------------------------------------- |
 | `clarification` | Questions seeking to resolve ambiguity |
-| `scope_change` | Changes to scope, ACs, or constraints |
+| `scope_change`  | Changes to scope, ACs, or constraints  |
 
 ---
 
@@ -105,8 +113,8 @@ Only two event types are classified as churn:
 **Actions**:
 
 1. **Load events**:
-   - Read from EVENTS.yaml if file-based
-   - Read from graph state if orchestrator-based
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get workflow events and checkpoint data
+   - Read from graph state `collectedEvents` if orchestrator-based
 
 2. **Filter churn events**:
    - Keep only `clarification` and `scope_change` events
@@ -156,11 +164,11 @@ late_churn_ratio: development_pct + post_dev_pct
 
 **Thresholds**:
 
-| Threshold | Value | Meaning |
-|-----------|-------|---------|
-| `healthy_threshold` | 70% | Early churn ratio for healthy pattern |
-| `warning_threshold` | 40% | Late churn ratio triggering warning |
-| `critical_threshold` | 60% | Late churn ratio triggering critical |
+| Threshold            | Value | Meaning                               |
+| -------------------- | ----- | ------------------------------------- |
+| `healthy_threshold`  | 70%   | Early churn ratio for healthy pattern |
+| `warning_threshold`  | 40%   | Late churn ratio triggering warning   |
+| `critical_threshold` | 60%   | Late churn ratio triggering critical  |
 
 **Health Score Calculation**:
 
@@ -184,16 +192,16 @@ is_healthy: early_churn_ratio >= 0.70
 
 **Insight Rules**:
 
-| Condition | Insight |
-|-----------|---------|
-| early_ratio >= 70% | "Healthy churn pattern: X% in early phases" |
-| early_ratio < 70% | "Unhealthy churn pattern: only X% in early phases" |
-| late_ratio >= 60% | "Critical: X% of churn after commitment - significant planning gaps" |
-| late_ratio >= 40% | "Warning: X% of churn after commitment - consider improving elaboration" |
-| post_dev > 20% | "X% of churn in post-dev/QA - upstream processes need improvement" |
-| discovery > 50% | "X% of churn in discovery - healthy exploration of requirements" |
-| drop_ratio >= 3 | "Strong commitment boundary: Xx more churn before commitment" |
-| drop_ratio < 1 | "Weak commitment boundary: more churn after commitment than before" |
+| Condition          | Insight                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| early_ratio >= 70% | "Healthy churn pattern: X% in early phases"                              |
+| early_ratio < 70%  | "Unhealthy churn pattern: only X% in early phases"                       |
+| late_ratio >= 60%  | "Critical: X% of churn after commitment - significant planning gaps"     |
+| late_ratio >= 40%  | "Warning: X% of churn after commitment - consider improving elaboration" |
+| post_dev > 20%     | "X% of churn in post-dev/QA - upstream processes need improvement"       |
+| discovery > 50%    | "X% of churn in discovery - healthy exploration of requirements"         |
+| drop_ratio >= 3    | "Strong commitment boundary: Xx more churn before commitment"            |
+| drop_ratio < 1     | "Weak commitment boundary: more churn after commitment than before"      |
 
 **Output**: Array of insight strings
 
@@ -203,34 +211,34 @@ is_healthy: early_churn_ratio >= 0.70
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-calculated_at: "{ISO_TIMESTAMP}"
+story_id: '{STORY_ID}'
+calculated_at: '{ISO_TIMESTAMP}'
 
 # Distribution percentages (0-1)
 distribution:
-  discovery: {N.NN}
-  elaboration: {N.NN}
-  development: {N.NN}
-  post_dev: {N.NN}
+  discovery: { N.NN }
+  elaboration: { N.NN }
+  development: { N.NN }
+  post_dev: { N.NN }
 
 # Raw counts
 counts:
-  discovery: {N}
-  elaboration: {N}
-  development: {N}
-  post_dev: {N}
-  total: {N}
+  discovery: { N }
+  elaboration: { N }
+  development: { N }
+  post_dev: { N }
+  total: { N }
 
 # Aggregated ratios
 ratios:
-  early_churn: {N.NN}   # discovery + elaboration
-  late_churn: {N.NN}    # development + post_dev
+  early_churn: { N.NN } # discovery + elaboration
+  late_churn: { N.NN } # development + post_dev
 
 # Health assessment
 health:
   is_healthy: true | false
-  score: {N}            # 0-100, higher = more early churn
-  commitment_drop_ratio: {N.N}  # early/late, capped at 10
+  score: { N } # 0-100, higher = more early churn
+  commitment_drop_ratio: { N.N } # early/late, capped at 10
 
 # Thresholds used
 thresholds:
@@ -240,17 +248,17 @@ thresholds:
 
 # Churn events (classified)
 events:
-  - story_id: "{STORY_ID}"
+  - story_id: '{STORY_ID}'
     churn_phase: discovery | elaboration | development | post_dev
-    original_phase: "{WORKFLOW_PHASE}"
+    original_phase: '{WORKFLOW_PHASE}'
     type: clarification | scope_change
-    timestamp: "{ISO_TIMESTAMP}"
-    description: "brief description"
+    timestamp: '{ISO_TIMESTAMP}'
+    description: 'brief description'
 
 # System learning insights
 insights:
-  - "insight 1"
-  - "insight 2"
+  - 'insight 1'
+  - 'insight 2'
 
 # Calculation status
 success: true | false
@@ -263,8 +271,8 @@ error: null | "error message"
 
 ```yaml
 schema: 1
-story_id: "WISH-0500"
-calculated_at: "2026-02-01T14:30:00Z"
+story_id: 'WISH-0500'
+calculated_at: '2026-02-01T14:30:00Z'
 
 distribution:
   discovery: 0.40
@@ -294,32 +302,32 @@ thresholds:
   critical: 0.60
 
 events:
-  - story_id: "WISH-0500"
+  - story_id: 'WISH-0500'
     churn_phase: discovery
     original_phase: seed
     type: clarification
-    timestamp: "2026-02-01T09:00:00Z"
-    description: "Clarified scope boundaries"
+    timestamp: '2026-02-01T09:00:00Z'
+    description: 'Clarified scope boundaries'
 
-  - story_id: "WISH-0500"
+  - story_id: 'WISH-0500'
     churn_phase: elaboration
     original_phase: readiness
     type: scope_change
-    timestamp: "2026-02-01T10:30:00Z"
-    description: "Added accessibility AC"
+    timestamp: '2026-02-01T10:30:00Z'
+    description: 'Added accessibility AC'
 
-  - story_id: "WISH-0500"
+  - story_id: 'WISH-0500'
     churn_phase: development
     original_phase: implementation
     type: clarification
-    timestamp: "2026-02-01T12:00:00Z"
-    description: "Developer asked about edge case"
+    timestamp: '2026-02-01T12:00:00Z'
+    description: 'Developer asked about edge case'
 
 insights:
-  - "Healthy churn pattern: 75% of churn in early phases"
-  - "Strong commitment boundary: 3.0x more churn before commitment"
-  - "40% of churn in discovery - healthy exploration of requirements"
-  - "Churn health score: 75/100"
+  - 'Healthy churn pattern: 75% of churn in early phases'
+  - 'Strong commitment boundary: 3.0x more churn before commitment'
+  - '40% of churn in discovery - healthy exploration of requirements'
+  - 'Churn health score: 75/100'
 
 success: true
 ```
@@ -337,6 +345,7 @@ packages/backend/orchestrator/src/nodes/metrics/calc-churn.ts
 ```
 
 The node provides:
+
 - `mapToChurnPhase()` - Map workflow phase to churn phase
 - `identifyChurnEvents()` - Filter churn events from workflow events
 - `classifyChurnByPhase()` - Classify events by phase
@@ -347,11 +356,13 @@ The node provides:
 ### Event Collection Integration
 
 Events are collected by:
+
 ```
 packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
 ```
 
 Uses event types:
+
 - `EventType.clarification`
 - `EventType.scope_change`
 

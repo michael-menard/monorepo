@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: sonnet
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: gap-hygiene-agent
@@ -23,18 +27,18 @@ Worker agent responsible for consolidating gaps from fanout perspectives (PM, UX
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being analyzed (e.g., `WISH-0500`)
-- `feature_dir`: Feature directory path
+- `feature_slug`: Feature identifier (e.g., `wish`, `auth`)
 - `fanout_gaps`: Combined gap reports from PM, UX, QA fanout agents
 - `attack_findings`: Attack agent output with assumptions, challenges, edge cases
-- `previous_gaps_path`: Path to previous gap history (if exists)
 
-From filesystem:
-- PM gaps at `{output_dir}/_pm/FANOUT-PM.yaml`
-- UX gaps at `{output_dir}/_pm/FANOUT-UX.yaml`
-- QA gaps at `{output_dir}/_pm/FANOUT-QA.yaml`
-- Attack findings at `{output_dir}/_pm/ATTACK.yaml`
-- Previous gap history at `{feature_dir}/_gaps/GAP-HISTORY.yaml` (if exists)
+From KB:
+
+- `kb_read_artifact({ story_id, artifact_type: 'analysis' })` — attack findings and previous gap history
+- `kb_read_artifact({ story_id, artifact_type: 'scope' })` — fanout gaps from PM, UX, QA perspectives
+- `kb_read_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis', artifact_name: 'GAP-HISTORY' })` — previous gap history for this feature
+- `kb_search({ query: 'gap history {feature_slug}', tags: ['gap-history'] })` — fallback search if direct artifact lookup returns nothing
 
 ---
 
@@ -43,6 +47,7 @@ From filesystem:
 ### 1. NEVER Delete Gaps
 
 All gaps are preserved. Gaps that are resolved, merged, or superseded are marked with status — never removed. This enables:
+
 - System learning from gap patterns
 - Trend analysis over time
 - Understanding what types of gaps emerge most often
@@ -73,13 +78,13 @@ business_impact_weight:
 
 ### 3. Categorize for Action
 
-| Category | Criteria | Action |
-|----------|----------|--------|
-| `mvp-blocking` | risk_score ≥ 24 OR severity=critical+likelihood≥medium | Must resolve before commitment |
-| `mvp-important` | risk_score ≥ 12 AND <24 | Should resolve, may accept with mitigation |
-| `future` | risk_score < 12 OR explicitly marked as non-MVP | Track for future iterations |
-| `resolved` | Gap addressed by story updates or decisions | Archived, not actioned |
-| `merged` | Deduplicated into another gap | Points to canonical gap |
+| Category        | Criteria                                               | Action                                     |
+| --------------- | ------------------------------------------------------ | ------------------------------------------ |
+| `mvp-blocking`  | risk_score ≥ 24 OR severity=critical+likelihood≥medium | Must resolve before commitment             |
+| `mvp-important` | risk_score ≥ 12 AND <24                                | Should resolve, may accept with mitigation |
+| `future`        | risk_score < 12 OR explicitly marked as non-MVP        | Track for future iterations                |
+| `resolved`      | Gap addressed by story updates or decisions            | Archived, not actioned                     |
+| `merged`        | Deduplicated into another gap                          | Points to canonical gap                    |
 
 ---
 
@@ -97,6 +102,7 @@ Gaps are considered duplicates if they meet ANY of:
 ### Merge Strategy
 
 When gaps are merged:
+
 1. Keep the gap with highest `risk_score` as canonical
 2. Mark others as `merged` with reference to canonical
 3. Combine unique context from all sources into canonical
@@ -108,8 +114,8 @@ When gaps are merged:
 merged_gaps:
   - canonical_id: GAP-007
     merged_ids: [PM-003, UX-005, EDGE-002]
-    reason: "Same root cause: missing loading state"
-    combined_context: "PM: missing AC; UX: no feedback; QA: untestable"
+    reason: 'Same root cause: missing loading state'
+    combined_context: 'PM: missing AC; UX: no feedback; QA: untestable'
 ```
 
 ---
@@ -182,7 +188,7 @@ recommendations:
     - gap_id: GAP-006
       rationale: "Non-MVP, track for v2"
 
-# History entry (appended to GAP-HISTORY.yaml)
+# History entry (written to KB via kb_write_artifact)
 history_entry:
   processed: "{ISO_TIMESTAMP}"
   story_id: "{STORY_ID}"
@@ -212,13 +218,13 @@ history_entry:
 4. Read Attack findings (`assumption_challenges[]`, `edge_cases[]`, `blocking_risks[]`)
 5. Normalize all to common gap schema:
    ```yaml
-   id: "{SOURCE}-{N}"
+   id: '{SOURCE}-{N}'
    source: pm | ux | qa | attack
    raw_severity: critical | high | medium | low
    raw_likelihood: high | medium | low
-   description: "..."
-   impact: "..."
-   action: "..."
+   description: '...'
+   impact: '...'
+   action: '...'
    ```
 
 **Output**: Normalized gap list (all sources)
@@ -276,7 +282,8 @@ history_entry:
 
 1. Aggregate statistics (counts by source, category, merge rate)
 2. Format history entry
-3. This entry will be appended to GAP-HISTORY.yaml by orchestrator
+3. Write to KB: `kb_write_artifact({ story_id: '{feature_slug}', artifact_type: 'analysis', content: { history_entries: [...] } })`
+4. History is persisted in the KB analysis artifact — no filesystem side output
 
 **Output**: History entry
 
@@ -286,16 +293,16 @@ history_entry:
 
 When source doesn't explicitly state business impact, infer from:
 
-| Signal | Inferred Impact |
-|--------|-----------------|
-| "blocks core", "cannot complete", "MVP" | `core_journey_blocked` |
-| "degrades", "poor experience", "slow" | `feature_degraded` |
-| "usability", "a11y", "flow" | `ux_impacted` |
-| "minor", "edge case", "rare" | `minor_inconvenience` |
-| PM source + critical severity | `core_journey_blocked` |
-| UX source + a11y blocker | `ux_impacted` or `feature_degraded` |
-| QA source + untestable | `feature_degraded` |
-| Attack source + critical risk | `core_journey_blocked` |
+| Signal                                  | Inferred Impact                     |
+| --------------------------------------- | ----------------------------------- |
+| "blocks core", "cannot complete", "MVP" | `core_journey_blocked`              |
+| "degrades", "poor experience", "slow"   | `feature_degraded`                  |
+| "usability", "a11y", "flow"             | `ux_impacted`                       |
+| "minor", "edge case", "rare"            | `minor_inconvenience`               |
+| PM source + critical severity           | `core_journey_blocked`              |
+| UX source + a11y blocker                | `ux_impacted` or `feature_degraded` |
+| QA source + untestable                  | `feature_degraded`                  |
+| Attack source + critical risk           | `core_journey_blocked`              |
 
 ---
 
@@ -333,6 +340,7 @@ When source doesn't explicitly state business impact, infer from:
 ### Story Synthesis
 
 The `story.synthesize` agent consumes gap hygiene output to:
+
 - Include mvp-blocking gaps in story requirements
 - Add mvp-important gaps as considerations
 - Track future gaps in non-goals or future work section
@@ -340,13 +348,15 @@ The `story.synthesize` agent consumes gap hygiene output to:
 ### Readiness Scoring
 
 The `readiness.score` agent uses gap counts:
+
 - `mvp_blocking > 0` → readiness cannot exceed 50
 - `mvp_important > 3` → readiness capped at 70
 - All gaps resolved → enables readiness ≥ 85
 
 ### Gap Analytics
 
-The `gap.analytics` agent reads GAP-HISTORY.yaml to:
+The `gap.analytics` agent reads gap history from KB (`kb_read_artifact` with `artifact_name: 'GAP-HISTORY'`) to:
+
 - Track gap yield over time
 - Identify patterns in gap sources
 - Calibrate fanout and attack agents

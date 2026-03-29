@@ -1,13 +1,15 @@
 ---
 created: 2026-02-07
-updated: 2026-02-22
-version: 2.0.0
+updated: 2026-03-22
+version: 2.2.0
 type: analyzer
 permission_level: read-write
 model: sonnet
 kb_tools:
   - kb_search
-  - kb_add
+  - kb_add_lesson
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: improvement-proposer
@@ -42,10 +44,9 @@ From command invocation (via /improvement-proposals):
 
 ### 2. Pattern Mining (WKFL-006)
 
-- **Source**: `.claude/patterns/PATTERNS-{YYYY-MM}.yaml` files
-- **Glob**: `.claude/patterns/PATTERNS-*.yaml` (filter by date range using file modification time)
-- **YAML path pattern**: `.claude/patterns/PATTERNS-*.yaml`
-- **Cold-start behavior**: If no pattern files found in date range, log "SKIP patterns: No PATTERNS-\*.yaml files found (run /pattern-mine to generate)" and continue with remaining sources
+- **Source (preferred)**: `kb_read_artifact({ story_id: 'WKFL-006', artifact_type: 'evidence' })` — pattern data from KB
+- **Fallback**: `kb_search({ query: 'patterns workflow cross-story', tags: ['pattern', 'workflow'], limit: 50 })` to find pattern entries
+- **Cold-start behavior**: If no KB artifact and no pattern entries found in date range, log "SKIP patterns: No pattern artifacts found in KB (run /pattern-mine to generate)" and continue with remaining sources
 - **Proposal triggers**:
   - File pattern correlation ≥ 0.70 with failures → "Add agent hint" or "Pre-check step"
   - AC pattern with failure_rate ≥ 0.40 → "Update AC template"
@@ -53,10 +54,10 @@ From command invocation (via /improvement-proposals):
 
 ### 3. Heuristic Proposals (WKFL-003)
 
-- **Source**: `.claude/config/HEURISTIC-PROPOSALS.yaml`
-- **YAML path pattern**: `.claude/config/HEURISTIC-PROPOSALS.yaml`
-- **Query**: Read file; filter by `status: 'validated'` and `tier: 'experiment'` or `tier: 'production'`
-- **Cold-start behavior**: If file not found, log "SKIP heuristics: .claude/config/HEURISTIC-PROPOSALS.yaml not found" and continue with remaining sources
+- **Source (preferred)**: `kb_read_artifact({ story_id: 'WKFL-003', artifact_type: 'plan' })` — heuristic proposals from KB
+- **Fallback**: `kb_search({ query: 'heuristic proposals tier autonomy', tags: ['heuristic', 'proposal'], limit: 20 })` to find proposal entries
+- **Query**: Read artifact; filter by `status: 'validated'` and `tier: 'experiment'` or `tier: 'production'`
+- **Cold-start behavior**: If KB artifact missing and no KB entries found, log "SKIP heuristics: No heuristic proposal artifact found in KB (run /heuristic-evolver to generate)" and continue with remaining sources
 - **Proposal triggers**:
   - Validated heuristics ready for tier promotion
   - Production heuristics consistently triggering (promote to 'core')
@@ -248,7 +249,7 @@ Calculate acceptance rates:
 - If high-effort acceptance rate < 40%: "High-effort proposals have {rate}% historical acceptance rate"
 - If source X acceptance rate < 30%: "{source} proposals have {rate}% acceptance rate (consider threshold adjustment)"
 
-**PROPOSAL-ACCEPTANCE-BASELINE.yaml** (after 3 completed runs):
+**PROPOSAL-ACCEPTANCE-BASELINE** (after 3 completed runs):
 
 After each run (non-dry-run), increment the run counter stored in KB:
 
@@ -257,35 +258,44 @@ const runHistory = await kb_search({ tags: ['improvement-proposer', 'run-log'], 
 const completedRuns = runHistory.length
 ```
 
-When `completedRuns === 3` (i.e., after the third completed run), create `.claude/proposals/PROPOSAL-ACCEPTANCE-BASELINE.yaml`:
+When `completedRuns === 3` (i.e., after the third completed run), write baseline to KB:
 
-```yaml
-schema: 1
-generated_at: '{ISO timestamp of 3rd run}'
-baseline_period_start: '{date of 1st run}'
-baseline_period_end: '{date of 3rd run}'
-total_proposed: { total proposals across 3 runs }
-accepted: { count of proposals with status:accepted }
-rejected: { count of proposals with status:rejected }
-acceptance_rate: { accepted / total_proposed, decimal 0–1 }
-by_source:
-  calibration: { proposed: N, accepted: N, rate: 0.0 }
-  patterns: { proposed: N, accepted: N, rate: 0.0 }
-  heuristics: { proposed: N, accepted: N, rate: 0.0 }
-  feedback: { proposed: N, accepted: N, rate: 0.0 }
-  experiments: { proposed: N, accepted: N, rate: 0.0 }
-by_effort:
-  low: { proposed: N, accepted: N, rate: 0.0 }
-  medium: { proposed: N, accepted: N, rate: 0.0 }
-  high: { proposed: N, accepted: N, rate: 0.0 }
-notes: 'Baseline captured after 3 completed /improvement-proposals runs'
+```javascript
+kb_write_artifact({
+  story_id: 'WINT-7080',
+  artifact_type: 'evidence',
+  artifact_name: 'PROPOSAL-ACCEPTANCE-BASELINE',
+  content: {
+    schema: 1,
+    generated_at: '{ISO timestamp of 3rd run}',
+    baseline_period_start: '{date of 1st run}',
+    baseline_period_end: '{date of 3rd run}',
+    total_proposed: '{total proposals across 3 runs}',
+    accepted: '{count of proposals with status:accepted}',
+    rejected: '{count of proposals with status:rejected}',
+    acceptance_rate: '{accepted / total_proposed, decimal 0-1}',
+    by_source: {
+      calibration: { proposed: 0, accepted: 0, rate: 0.0 },
+      patterns: { proposed: 0, accepted: 0, rate: 0.0 },
+      heuristics: { proposed: 0, accepted: 0, rate: 0.0 },
+      feedback: { proposed: 0, accepted: 0, rate: 0.0 },
+      experiments: { proposed: 0, accepted: 0, rate: 0.0 },
+    },
+    by_effort: {
+      low: { proposed: 0, accepted: 0, rate: 0.0 },
+      medium: { proposed: 0, accepted: 0, rate: 0.0 },
+      high: { proposed: 0, accepted: 0, rate: 0.0 },
+    },
+    notes: 'Baseline captured after 3 completed /improvement-proposals runs',
+  },
+})
 ```
 
-On all subsequent runs (run 4+), read this baseline to contextualize current acceptance data and note divergence from baseline.
+On all subsequent runs (run 4+), read this baseline via `kb_read_artifact({ story_id: 'WINT-7080', artifact_type: 'evidence' })` to contextualize current acceptance data and note divergence from baseline.
 
 ### Phase 8: Output Generation
 
-Generate `IMPROVEMENT-PROPOSALS-{YYYY-MM-DD}.md`:
+Generate the proposals content (to be stored in KB via Phase 9). Structure:
 
 **YAML Frontmatter**:
 
@@ -328,7 +338,7 @@ ROI = impact_value \* effort_inverse
 
 > Sources skipped due to no data in analysis period:
 >
-> - experiments: SKIP experiments: No KB entries with tags ['experiment', 'result'] found (WKFL-008 may not have run yet)
+> - experiments: SKIP experiments: No KB entries with tags ['experiment', 'result'] found (run /experiment-report to generate)
 
 (Omit this section if all sources succeeded)
 
@@ -418,8 +428,8 @@ No data sources returned results for the analysis period ({start} to {end}).
 ### Sources Skipped
 
 - SKIP calibration: No KB entries with tag 'calibration' in date range
-- SKIP patterns: No PATTERNS-\*.yaml files found (run /pattern-mine to generate)
-- SKIP heuristics: .claude/config/HEURISTIC-PROPOSALS.yaml not found
+- SKIP patterns: No pattern artifacts found in KB (run /pattern-mine to generate)
+- SKIP heuristics: No heuristic proposal artifact found in KB (run /heuristic-evolver to generate)
 - SKIP feedback: No KB entries with tag 'feedback' in date range
 - SKIP experiments: No KB entries with tags ['experiment', 'result'] found (WKFL-008 may not have run yet)
 
@@ -428,32 +438,35 @@ Run prerequisite agents (WKFL-002, WKFL-003, WKFL-004, WKFL-006, WKFL-008) and r
 
 ### Phase 9: KB Persistence (skip if `--dry-run`)
 
-For each proposal, persist to KB:
+For each proposal, persist to KB as a lesson:
 
 ```javascript
-await kb_add({
-  content: JSON.stringify({
-    proposal_id: 'P-001',
-    title: proposal.title,
-    source: proposal.source,
-    status: 'proposed',
-    impact: proposal.impact,
-    effort: proposal.effort,
-    roi_score: proposal.roi_score,
-    evidence: proposal.evidence,
-    created_at: new Date().toISOString(),
-    accepted_at: null,
-    implemented_at: null,
-    rejection_reason: null,
-    tags: ['proposal', 'status:proposed', `source:${source}`, `priority:${priority}`],
-  }),
-  role: 'dev',
-  entryType: 'note',
-  tags: ['proposal', 'status:proposed', `source:${source}`, `priority:${priority}`],
+await kb_add_lesson({
+  title: proposal.title,
+  story_id: 'WINT-7080', // improvement-proposer story
+  category: 'architecture', // use 'architecture' for workflow proposals
+  what_happened: proposal.evidence,
+  resolution: proposal.description,
+  tags: ['proposal', 'status:proposed', `source:${proposal.source}`, `priority:${priority}`],
 })
 ```
 
-KB entries are tagged to enable lifecycle queries:
+Also write the full proposals batch as an artifact for lifecycle tracking:
+
+```javascript
+await kb_write_artifact({
+  story_id: 'WINT-7080',
+  artifact_type: 'evidence',
+  content: {
+    proposals: allProposals,
+    sources_used: sources_used,
+    sources_failed: sources_failed,
+    generated_at: new Date().toISOString(),
+  },
+})
+```
+
+KB lesson tags enable lifecycle queries:
 
 - `status:proposed` — newly generated proposals (queryable: all current proposals)
 - `status:accepted` — proposals accepted for implementation (queryable: accepted set)
@@ -465,16 +478,12 @@ KB entries are tagged to enable lifecycle queries:
 Also log the run completion to KB for baseline tracking:
 
 ```javascript
-await kb_add({
-  content: JSON.stringify({
-    event: 'improvement-proposer-run',
-    run_date: new Date().toISOString(),
-    proposals_generated: N,
-    sources_used: sources_used,
-    sources_failed: sources_failed,
-  }),
-  role: 'dev',
-  entryType: 'note',
+await kb_add_lesson({
+  title: 'improvement-proposer run log',
+  story_id: 'WINT-7080',
+  category: 'performance',
+  what_happened: `improvement-proposer run on ${new Date().toISOString()}`,
+  resolution: `Generated ${N} proposals from sources: ${sources_used.join(', ')}`,
   tags: ['improvement-proposer', 'run-log'],
 })
 ```
@@ -485,11 +494,11 @@ await kb_add({
 - Write proposals to output file only
 - Do not log run completion to KB (does not count toward baseline)
 
-## Output Files
+## Output Artifacts
 
-- `.claude/proposals/IMPROVEMENT-PROPOSALS-{YYYY-MM-DD}.md` (primary output)
-- `.claude/proposals/PROPOSAL-ACCEPTANCE-BASELINE.yaml` (created after 3rd non-dry-run, updated never — baseline is fixed)
-- KB entries (if not --dry-run)
+- KB `evidence` artifact via `kb_write_artifact({ story_id: 'WINT-7080', artifact_type: 'evidence', artifact_name: 'IMPROVEMENT-PROPOSALS', content: { ... } })` (primary output)
+- KB `evidence` artifact `PROPOSAL-ACCEPTANCE-BASELINE` via `kb_write_artifact` (created after 3rd non-dry-run, updated never — baseline is fixed)
+- KB lesson entries per proposal via `kb_add_lesson` (if not --dry-run)
 
 ## Error Handling
 
@@ -511,17 +520,17 @@ await kb_add({
 
 ## Non-Negotiables
 
-| Rule                     | Description                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| KB availability          | CRITICAL PATH - fail fast if KB unavailable                                      |
-| Minimum 3 samples        | Skip or mark proposals with < 3 data points                                      |
-| ROI transparency         | Document formula (impact_value \* effort_inverse) in output header               |
-| ROI range                | 1–9 (integer), not 0–10                                                          |
-| Cold-start skip-with-log | Log skip message per source; never silently skip                                 |
-| Deduplication threshold  | 0.85 (conservative, from WKFL-007)                                               |
-| Promise.allSettled       | Use for multi-source loading (not Promise.all)                                   |
-| Proposal lifecycle       | Track: proposed → accepted → rejected → implemented                              |
-| Baseline capture         | Create PROPOSAL-ACCEPTANCE-BASELINE.yaml after exactly 3 non-dry-run completions |
+| Rule                     | Description                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| KB availability          | CRITICAL PATH - fail fast if KB unavailable                                            |
+| Minimum 3 samples        | Skip or mark proposals with < 3 data points                                            |
+| ROI transparency         | Document formula (impact_value \* effort_inverse) in output header                     |
+| ROI range                | 1–9 (integer), not 0–10                                                                |
+| Cold-start skip-with-log | Log skip message per source; never silently skip                                       |
+| Deduplication threshold  | 0.85 (conservative, from WKFL-007)                                                     |
+| Promise.allSettled       | Use for multi-source loading (not Promise.all)                                         |
+| Proposal lifecycle       | Track: proposed → accepted → rejected → implemented                                    |
+| Baseline capture         | Write PROPOSAL-ACCEPTANCE-BASELINE KB artifact after exactly 3 non-dry-run completions |
 
 ## Completion Signal
 
@@ -529,7 +538,7 @@ Return:
 
 ```
 PROPOSAL GENERATION COMPLETE: {N} proposals generated
-Output: .claude/proposals/IMPROVEMENT-PROPOSALS-{date}.md
+Output: KB evidence artifact IMPROVEMENT-PROPOSALS (story: WINT-7080)
 KB persistence: {N} entries written (or "SKIPPED (dry-run)")
 Sources used: {list}
 Sources skipped: {list or "none"}

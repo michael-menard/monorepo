@@ -1,10 +1,14 @@
 ---
 created: 2026-02-11
-updated: 2026-02-11
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: leader
 permission_level: test-run
-triggers: ["/code-audit debt-map"]
+triggers: ['/code-audit debt-map']
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: audit-debt-map-leader
@@ -12,35 +16,44 @@ triggers: ["/code-audit debt-map"]
 **Model**: haiku
 
 ## Mission
+
 Generate a lint/type debt map of the codebase. Score each file by violation count and severity. Identify worst offenders for cleanup-on-touch policy.
 
 ## Inputs
+
 From orchestrator context:
+
 - `granularity`: file | category | line (default: file)
 - `top`: number of worst files to report (default: 20)
 
 ## Task
 
 ### 1. Run Linter Across Codebase
+
 ```bash
 pnpm eslint apps/ packages/ --format json 2>/dev/null || true
 ```
+
 Parse JSON output for error/warning counts per file.
 
 ### 2. Run TypeScript Check
+
 ```bash
 pnpm check-types 2>&1 || true
 ```
+
 Parse tsc output for error counts per file.
 
 ### 3. Score Each File
 
 **Debt Score Formula:**
+
 ```
 score = (critical_count * 10) + (error_count * 5) + (warning_count * 1)
 ```
 
 Where:
+
 - `critical_count` = type errors + build errors
 - `error_count` = lint errors
 - `warning_count` = lint warnings
@@ -48,23 +61,28 @@ Where:
 ### 4. Generate Debt Map
 
 **File granularity (default):**
+
 - Score per file, sorted by score descending
 - Top N worst files
 
 **Category granularity:**
+
 - Group violations by ESLint rule and TS error code
 - Count per category
 
 **Line granularity:**
+
 - Exact file:line for each violation
 - Grouped by file
 
 ## Output Format
-Write to `plans/audit/DEBT-MAP-{YYYY-MM-DD}.yaml`:
+
+Write to KB: `kb_write_artifact({ story_id: 'WINT-7080', artifact_type: 'evidence', artifact_name: 'DEBT-MAP', content: { ... } })`
+Also present the following as formatted output to the user (debt map summary):
 
 ```yaml
 schema: 1
-generated: "2026-02-11T18:30:00Z"
+generated: '2026-02-11T18:30:00Z'
 granularity: file
 total_files_scanned: 450
 total_violations: 285
@@ -82,18 +100,18 @@ summary:
 
 worst_offenders:
   - rank: 1
-    file: "apps/web/main-app/src/App.tsx"
+    file: 'apps/web/main-app/src/App.tsx'
     debt_score: 85
     lint_errors: 8
     lint_warnings: 5
     type_errors: 6
     top_rules:
-      - rule: "no-unused-vars"
+      - rule: 'no-unused-vars'
         count: 3
-      - rule: "TS2322"
+      - rule: 'TS2322'
         count: 4
   - rank: 2
-    file: "apps/api/lego-api/src/handlers/sets.ts"
+    file: 'apps/api/lego-api/src/handlers/sets.ts'
     debt_score: 62
     lint_errors: 5
     lint_warnings: 8
@@ -125,12 +143,14 @@ Top 20 Worst Offenders:
 ```
 
 ## Rules
+
 - Run REAL commands and parse REAL output
 - Include all `.ts`, `.tsx` files in `apps/` and `packages/`
 - Exclude `node_modules/`, `dist/`, `.next/`, `coverage/`
 - If linter or tsc fails to run, report the error and continue with available data
-- Date in filename uses current date
+- Include generated date in the KB artifact content (`generated` field)
 - Debt map is used by code review to enforce cleanup-on-touch
 
 ## Completion Signal
+
 - `DEBT-MAP COMPLETE: {total_files} files, {total_violations} violations, top offender: {worst_file}`

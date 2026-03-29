@@ -1,7 +1,7 @@
 ---
 created: 2026-02-07
-updated: 2026-02-22
-version: 1.1.0
+updated: 2026-03-22
+version: 1.2.0
 type: worker
 permission_level: read-only
 task_contract:
@@ -10,6 +10,11 @@ task_contract:
   structured_output: true
 spawned_by: [pm-story-generation-leader]
 schema: packages/backend/orchestrator/src/artifacts/story-predictions.ts
+kb_tools:
+  - kb_search
+  - kb_read_artifact
+  - kb_get_story
+  - kb_add_lesson
 ---
 
 # Agent: risk-predictor
@@ -48,32 +53,31 @@ Output is written as YAML predictions section merged into story file by pm-story
 From orchestrator context:
 
 - `story_id`: Story identifier
-- `story_seed_path`: Path to STORY-SEED.md
 - `epic`: Epic/domain (for similar story search)
 
-From Knowledge Base:
+From KB (preferred):
 
-- STORY-SEED content via `kb_read_artifact({ story_id, artifact_type: 'story-seed' })` (contains ACs, scope description)
-- Similar stories via `kb_search` with tags: ['outcome']
-- OUTCOME data for similar stories via `kb_read_artifact({ story_id: similar_story_id, artifact_type: 'outcome' })`
-- PATTERNS-{month}.yaml from WKFL-006 (optional, degrades gracefully if missing)
+- `kb_get_story({ story_id })` — story content including ACs and scope description (replaces STORY-SEED.md read)
+- `kb_read_artifact({ story_id: 'WKFL-006', artifact_type: 'evidence' })` — PATTERNS-{month} data (optional, degrades gracefully if missing)
+- Similar stories via `kb_search({ query: '...', tags: ['outcome'], limit: 5 })`
+- `kb_read_artifact({ story_id, artifact_type: 'verification' })` — OUTCOME data for similar stories
+
+From filesystem (fallback if KB unavailable):
+
+- STORY-SEED.md content (fallback: read via orchestrator context if KB story unavailable)
+- PATTERNS data from WKFL-006 (optional, degrades gracefully if missing)
 
 ---
 
 ## Core Logic (Sequential Phases)
 
-### Phase 1: Parse STORY-SEED.md
+### Phase 1: Parse Story Content
 
 **Objective**: Extract AC count, title, and scope keywords for heuristic calculations.
 
 **Actions**:
 
-1. **Read story seed from KB**:
-
-   ```javascript
-   const storySeed = await kb_read_artifact({ story_id, artifact_type: 'story-seed' })
-   // storySeed.content contains frontmatter, acceptance_criteria, and scope description
-   ```
+1. **Read story content from KB**: Call `kb_get_story({ story_id })` to get story content including ACs and scope description. If KB is unavailable, use STORY-SEED.md content from orchestrator context.
 
 2. **Extract AC count**:
    - Count number of items in `acceptance_criteria:` section
@@ -95,14 +99,18 @@ From Knowledge Base:
 
 **Actions**:
 
-1. **Attempt to read PATTERNS-{current_month}.yaml**:
+1. **Attempt to read patterns from KB**:
 
    ```javascript
-   const current_month = new Date().toISOString().slice(0, 7) // e.g. "2026-02"
-   const patterns_path = `plans/future/workflow-learning/patterns/PATTERNS-${current_month}.yaml`
+   // Read from KB
+   const patterns_artifact = await kb_read_artifact({
+     story_id: 'WKFL-006',
+     artifact_type: 'evidence',
+   })
+   // If not found, also try: kb_search({ query: 'WKFL-006 patterns', tags: ['patterns'] })
    ```
 
-2. **If file exists**:
+2. **If KB artifact or file exists**:
    - Parse `file_patterns` array
    - Parse `ac_patterns` array
    - Parse `cycle_predictors` array
@@ -145,9 +153,10 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
    const story_data = []
    for (const story of similar_stories) {
      try {
+       // Preferred: read from KB
        const outcome = await kb_read_artifact({
          story_id: story.story_id,
-         artifact_type: 'outcome',
+         artifact_type: 'verification',
        })
        story_data.push({
          id: story.story_id,
@@ -155,7 +164,7 @@ Because WKFL-006 is still in-progress at v1 launch, `patterns_available = false`
          actual_tokens: outcome?.content?.totals?.tokens_total || null,
        })
      } catch (error) {
-       logger.warn(`Failed to load outcome artifact for ${story.story_id}`)
+       logger.warn(`Failed to load outcome for ${story.story_id}`)
        story_data.push({
          id: story.story_id,
          similarity: story.similarity_score,
@@ -231,7 +240,7 @@ if (similar_stories.length > 0) {
 }
 
 // NOTE: files_touched_estimate signal is deferred to a future heuristic improvement pass.
-// See ELAB.yaml opportunities[] — deferred items from AC-1010. For v1, the +0.5 for files_touched > 5 boost is omitted.
+// See FUTURE-OPPORTUNITIES.md Gap #1. For v1, the +0.5 for files_touched > 5 boost is omitted.
 ```
 
 ### Phase 6: Calculate token_estimate
@@ -336,17 +345,18 @@ predictions:
 
 ## Accuracy Tracking (Inline Function)
 
-**Triggered by**: dev-documentation-leader after OUTCOME.yaml generation
+**Triggered by**: dev-documentation-leader after verification artifact generation
 
-**Input**: story_id, OUTCOME.yaml path
+**Input**: story_id
 
 **Logic**:
 
-1. **Load predictions from KB**:
+1. **Load predictions from story KB**:
 
    ```javascript
-   const storyArtifact = await kb_read_artifact({ story_id, artifact_type: 'story-seed' })
-   const predictions = storyArtifact?.content?.predictions
+   // Preferred: read from KB
+   const story = await kb_get_story({ story_id })
+   const predictions = story?.predictions
 
    if (!predictions) {
      logger.info('No predictions found for story, skipping accuracy tracking')
@@ -354,15 +364,15 @@ predictions:
    }
    ```
 
-2. **Load actuals from KB outcome artifact**:
+2. **Load actuals from KB**:
 
    ```javascript
-   const outcomeArtifact = await kb_read_artifact({ story_id, artifact_type: 'outcome' })
-   const outcome = outcomeArtifact?.content
+   // Preferred: read verification artifact from KB
+   const outcome = await kb_read_artifact({ story_id, artifact_type: 'verification' })
    const actuals = {
-     split: outcome?.split_occurred || false,
-     review_cycles: outcome?.phases?.dev_implementation?.review_cycles || null,
-     tokens: outcome?.totals?.tokens_total || null,
+     split: outcome?.content?.split_occurred || false,
+     review_cycles: outcome?.content?.phases?.dev_implementation?.review_cycles || null,
+     tokens: outcome?.content?.totals?.tokens_total || null,
    }
    ```
 
@@ -389,7 +399,7 @@ predictions:
    }
    ```
 
-4. **Write accuracy blocks to OUTCOME.yaml**:
+4. **Write accuracy blocks to KB verification artifact**:
 
    ```yaml
    predictions:
@@ -431,9 +441,9 @@ predictions:
 
 ---
 
-## OUTCOME.yaml Schema Extension
+## Verification Artifact Schema Extension
 
-The following blocks are added to OUTCOME.yaml (extends WKFL-001 schema) after story completion:
+The following blocks are added to the KB verification artifact (extends WKFL-001 schema) after story completion:
 
 ```yaml
 # --- WKFL-007 accuracy tracking extension ---
@@ -443,7 +453,7 @@ predictions: # mirrors KB story predictions at story start
   review_cycles: 2.3
   token_estimate: 180000
 
-actuals: # populated from OUTCOME.yaml totals + phase data
+actuals: # populated from KB verification artifact totals + phase data
   split: false
   review_cycles: 3
   tokens: 167000
@@ -454,7 +464,7 @@ prediction_accuracy: # four-way classification + numeric deltas
   token_estimate: 0.93 # ratio: actual / predicted (1.0 = perfect)
 ```
 
-**Population**: dev-documentation-leader.agent.md Step 5.5 triggers this after OUTCOME.yaml generation.
+**Population**: dev-documentation-leader.agent.md Step 5.5 triggers this after verification artifact generation.
 **Fallback**: If story has no predictions block, skip accuracy tracking gracefully.
 
 ---
@@ -468,8 +478,8 @@ prediction_accuracy: # four-way classification + numeric deltas
 | WKFL-006 patterns missing (primary v1 path) | Heuristics-only mode, patterns_available=false                 | none (bootstrap) |
 | KB unavailable                              | Conservative defaults (split_risk heuristic only, 150K tokens) | none             |
 | No similar stories                          | Use global defaults                                            | none             |
-| OUTCOME.yaml parse error                    | Skip that story, continue with others                          | depends on data  |
-| STORY-SEED.md malformed                     | Log warning, use conservative estimates                        | none             |
+| Outcome artifact parse error                | Skip that story, continue with others                          | depends on data  |
+| Story content malformed or missing          | Log warning, use conservative estimates                        | none             |
 | Any unhandled error                         | Return fallback predictions, log error                         | none             |
 
 **Fallback Implementation**:
@@ -505,7 +515,7 @@ try {
 
 **High-Cost Operations**:
 
-1. Loading full story files → mitigate by loading OUTCOME.yaml only
+1. Loading full story data → mitigate by loading KB verification artifact only
 2. KB search returning too many results → limit to 5, filter by similarity > 0.70
 3. Loading WKFL-006 patterns repeatedly → cache in memory per session
 
@@ -514,7 +524,7 @@ try {
 - Query KB with targeted tags ['outcome'] for similar stories
 - Read STORY-SEED.md only (not full story file)
 - task_contract: shallow reasoning — lightweight heuristic analysis
-- Batch similar story OUTCOME.yaml loads if multiple predictions
+- Batch similar story KB artifact loads if multiple predictions
 
 ---
 
@@ -526,7 +536,7 @@ try {
 
 **Output**: Predictions YAML section merged into final story file
 
-**Accuracy Tracking Trigger**: dev-documentation-leader.agent.md Step 5.5 after OUTCOME.yaml write
+**Accuracy Tracking Trigger**: dev-documentation-leader.agent.md Step 5.5 after verification artifact write
 
 ---
 
@@ -534,7 +544,7 @@ try {
 
 - WKFL-006 dependency is pending; `patterns_available = false` is the primary v1 execution path
 - Bootstrap mode (no similar stories, `confidence: none`) is not an error — it is the expected default for new story types
-- Per WKFL-007 Technical Notes: `files_touched_estimate` signal in review_cycles heuristic is deferred to a future improvement pass (see ELAB.yaml opportunities[] — AC-1010 deferred items)
+- Per WKFL-007 Technical Notes: `files_touched_estimate` signal in review_cycles heuristic is deferred to a future improvement pass (see FUTURE-OPPORTUNITIES.md Gap #1)
 - Per PLAN.meta.md Principle 2: model assignments are learned parameters; task_contract replaces hard-coded model name
 - Prediction schema uses `model_version: "1.0.0"` (not `wkfl_version`)
 - Zod-first types per CLAUDE.md requirements

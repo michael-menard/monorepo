@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [scrum-master-loop-leader, dev-verification-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: leakage-metrics-agent
@@ -29,11 +33,13 @@ From PLAN.md:
 > **Any leakage indicates upstream failure.**
 
 Unknown leakage is a critical signal for improving the planning process. If unknowns are discovered after commitment, it means:
+
 - Discovery phase was incomplete
 - Elaboration missed important considerations
 - Commitment happened too early
 
 This metric answers:
+
 - Are we discovering requirements during development that should have been caught earlier?
 - Where are unknowns leaking through?
 - What categories of unknowns are we missing upstream?
@@ -43,17 +49,20 @@ This metric answers:
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being analyzed (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
 - `commitment_timestamp`: When commitment gate was passed (ISO timestamp)
 
-From filesystem:
-- Workflow events at `{output_dir}/_implementation/EVENTS.yaml` (if exists)
-- Checkpoint data at `{output_dir}/_implementation/CHECKPOINT.md`
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
-- Known unknowns at `{output_dir}/_pm/ATTACK.yaml` or `{output_dir}/_implementation/SYNTHESIS.yaml`
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — workflow events and checkpoint data
+- `kb_read_artifact({ story_id, artifact_type: 'analysis' })` — known unknowns (ATTACK / SYNTHESIS data)
+
+If KB is unavailable, log a warning and return degraded metrics with `data_source: 'unavailable'`.
 
 From graph state (if running in LangGraph):
+
 - `collectedEvents`: Array of workflow events from event collection node
 - `knownUnknowns`: Array of known unknowns from synthesis phase
 
@@ -64,6 +73,7 @@ From graph state (if running in LangGraph):
 ### Known Unknowns (DO NOT count as leakage)
 
 These were explicitly identified during planning:
+
 - Documented in ATTACK.yaml findings
 - Listed in story synthesis output
 - Acknowledged in commitment gate evaluation
@@ -71,6 +81,7 @@ These were explicitly identified during planning:
 ### Unknown Unknowns (COUNT as leakage)
 
 These were NOT anticipated during planning but discovered after commitment:
+
 - New requirements emerged during implementation
 - Edge cases not covered in AC
 - Technical constraints not identified
@@ -94,26 +105,26 @@ An event is classified as **leakage** if ALL conditions are met:
 
 ### Leakage Categories
 
-| Category | Description | Detection Signals |
-|----------|-------------|-------------------|
-| `requirement` | New requirement discovered | "need to add", "also needs", "discovered" |
-| `constraint` | Technical/business constraint | "constraint", "limit", "restriction" |
-| `dependency` | External dependency not accounted for | "depends on", "waiting for", "blocked by" |
-| `edge_case` | Edge case not covered in AC | "edge case", "corner case", "special case" |
-| `integration` | Integration issue not anticipated | "integration", "API", "external" |
-| `performance` | Performance requirement not specified | "performance", "slow", "optimize" |
-| `security` | Security consideration overlooked | "security", "auth", "permission" |
-| `accessibility` | A11y requirement missed | "accessibility", "a11y", "screen reader" |
-| `other` | Other unknown type | Default |
+| Category        | Description                           | Detection Signals                          |
+| --------------- | ------------------------------------- | ------------------------------------------ |
+| `requirement`   | New requirement discovered            | "need to add", "also needs", "discovered"  |
+| `constraint`    | Technical/business constraint         | "constraint", "limit", "restriction"       |
+| `dependency`    | External dependency not accounted for | "depends on", "waiting for", "blocked by"  |
+| `edge_case`     | Edge case not covered in AC           | "edge case", "corner case", "special case" |
+| `integration`   | Integration issue not anticipated     | "integration", "API", "external"           |
+| `performance`   | Performance requirement not specified | "performance", "slow", "optimize"          |
+| `security`      | Security consideration overlooked     | "security", "auth", "permission"           |
+| `accessibility` | A11y requirement missed               | "accessibility", "a11y", "screen reader"   |
+| `other`         | Other unknown type                    | Default                                    |
 
 ### Severity Classification
 
-| Severity | Criteria | Phase Context |
-|----------|----------|---------------|
-| `critical` | Security, data loss, breaking changes | Any phase |
-| `high` | Major functionality, blockers, regressions | Verification/Complete |
-| `medium` | Missing functionality, constraints | Implementation |
-| `low` | Minor additions, clarifications | Implementation |
+| Severity   | Criteria                                   | Phase Context         |
+| ---------- | ------------------------------------------ | --------------------- |
+| `critical` | Security, data loss, breaking changes      | Any phase             |
+| `high`     | Major functionality, blockers, regressions | Verification/Complete |
+| `medium`   | Missing functionality, constraints         | Implementation        |
+| `low`      | Minor additions, clarifications            | Implementation        |
 
 Post-verification leakage is inherently more severe (late discovery = higher cost).
 
@@ -128,48 +139,48 @@ leakage_signals:
   discovery_patterns:
     - "didn't know"
     - "wasn't aware"
-    - "missed"
-    - "forgot"
-    - "overlooked"
-    - "not mentioned"
-    - "not specified"
-    - "not covered"
-    - "new requirement"
-    - "discovered"
-    - "just realized"
-    - "turns out"
-    - "unexpected"
-    - "unforeseen"
-    - "surprise"
+    - 'missed'
+    - 'forgot'
+    - 'overlooked'
+    - 'not mentioned'
+    - 'not specified'
+    - 'not covered'
+    - 'new requirement'
+    - 'discovered'
+    - 'just realized'
+    - 'turns out'
+    - 'unexpected'
+    - 'unforeseen'
+    - 'surprise'
     - "didn't consider"
     - "wasn't considered"
-    - "need to add"
-    - "needs to handle"
-    - "also needs"
-    - "additionally"
-    - "found an issue"
-    - "found a bug"
-    - "breaking change"
+    - 'need to add'
+    - 'needs to handle'
+    - 'also needs'
+    - 'additionally'
+    - 'found an issue'
+    - 'found a bug'
+    - 'breaking change'
 
   exclusion_patterns:
-    - "as documented"
-    - "per the AC"
-    - "as expected"
-    - "known issue"
-    - "already tracked"
+    - 'as documented'
+    - 'per the AC'
+    - 'as expected'
+    - 'known issue'
+    - 'already tracked'
 ```
 
 ### Root Cause Indicators
 
 For each leakage event, identify likely root cause:
 
-| Root Cause | Indicators | Upstream Fix |
-|------------|------------|--------------|
-| `incomplete_discovery` | Edge cases, scenarios | Improve story attack phase |
-| `missing_context` | Integration issues | Improve reality intake |
-| `inadequate_elaboration` | AC gaps, ambiguity | Improve PM/UX elaboration |
-| `scope_creep` | New features, nice-to-haves | Strengthen commitment gate |
-| `technical_blind_spot` | Constraints, dependencies | Improve architect review |
+| Root Cause               | Indicators                  | Upstream Fix               |
+| ------------------------ | --------------------------- | -------------------------- |
+| `incomplete_discovery`   | Edge cases, scenarios       | Improve story attack phase |
+| `missing_context`        | Integration issues          | Improve reality intake     |
+| `inadequate_elaboration` | AC gaps, ambiguity          | Improve PM/UX elaboration  |
+| `scope_creep`            | New features, nice-to-haves | Strengthen commitment gate |
+| `technical_blind_spot`   | Constraints, dependencies   | Improve architect review   |
 
 ---
 
@@ -182,18 +193,16 @@ For each leakage event, identify likely root cause:
 **Actions**:
 
 1. **Find commitment timestamp**:
-   - Check CHECKPOINT.md for commitment phase timestamp
-   - Check EVENTS.yaml for commitment event
-   - Check graph state for commitment gate result
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get checkpoint data including commitment phase timestamp
+   - Check graph state for commitment gate result (if running in LangGraph)
 
 2. **Load known unknowns**:
-   - Read from ATTACK.yaml findings
-   - Read from SYNTHESIS.yaml unknowns section
-   - Read from graph state if orchestrator-based
+   - Call `kb_read_artifact({ story_id, artifact_type: 'analysis' })` to get known unknowns (ATTACK / SYNTHESIS data)
+   - Read from graph state `knownUnknowns` if orchestrator-based
 
 3. **Load workflow events**:
-   - Read from EVENTS.yaml if file-based
-   - Read from graph state if orchestrator-based
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get workflow events (same artifact as step 1)
+   - Read from graph state `collectedEvents` if orchestrator-based
 
 4. **Verify commitment exists**:
    - Leakage is only meaningful if commitment occurred
@@ -245,38 +254,38 @@ For each leakage event, identify likely root cause:
 
 ```yaml
 metrics:
-  count: {N}  # Total leakage events
-  rate: {N}   # Leakage per story (N for single story)
-  high_severity_rate: {N}  # High + Critical per story
+  count: { N } # Total leakage events
+  rate: { N } # Leakage per story (N for single story)
+  high_severity_rate: { N } # High + Critical per story
 
   by_phase:
-    implementation: {N}
-    verification: {N}
-    complete: {N}
+    implementation: { N }
+    verification: { N }
+    complete: { N }
 
   by_category:
-    requirement: {N}
-    constraint: {N}
-    dependency: {N}
-    edge_case: {N}
-    integration: {N}
-    performance: {N}
-    security: {N}
-    accessibility: {N}
-    other: {N}
+    requirement: { N }
+    constraint: { N }
+    dependency: { N }
+    edge_case: { N }
+    integration: { N }
+    performance: { N }
+    security: { N }
+    accessibility: { N }
+    other: { N }
 
   by_severity:
-    low: {N}
-    medium: {N}
-    high: {N}
-    critical: {N}
+    low: { N }
+    medium: { N }
+    high: { N }
+    critical: { N }
 
   by_root_cause:
-    incomplete_discovery: {N}
-    missing_context: {N}
-    inadequate_elaboration: {N}
-    scope_creep: {N}
-    technical_blind_spot: {N}
+    incomplete_discovery: { N }
+    missing_context: { N }
+    inadequate_elaboration: { N }
+    scope_creep: { N }
+    technical_blind_spot: { N }
 ```
 
 ### Phase 5: Generate Insights
@@ -285,12 +294,12 @@ metrics:
 
 **Insight Categories**:
 
-| Leakage Level | Count | Insight |
-|---------------|-------|---------|
-| Excellent | 0 | Zero post-commitment leakage - planning was comprehensive |
-| Low | 1-2 | Minor leakage - monitor for patterns |
-| Moderate | 3-4 | Review upstream phases for improvement |
-| High | 5+ | Significant planning gaps - process investigation needed |
+| Leakage Level | Count | Insight                                                   |
+| ------------- | ----- | --------------------------------------------------------- |
+| Excellent     | 0     | Zero post-commitment leakage - planning was comprehensive |
+| Low           | 1-2   | Minor leakage - monitor for patterns                      |
+| Moderate      | 3-4   | Review upstream phases for improvement                    |
+| High          | 5+    | Significant planning gaps - process investigation needed  |
 
 **Pattern Insights**:
 
@@ -400,17 +409,17 @@ error: null | "error message"
 
 ```yaml
 schema: 1
-story_id: "WISH-0500"
-calculated_at: "2026-02-01T14:30:00Z"
+story_id: 'WISH-0500'
+calculated_at: '2026-02-01T14:30:00Z'
 
 commitment:
   found: true
-  timestamp: "2026-02-01T10:00:00Z"
-  phase_when_committed: "commitment"
+  timestamp: '2026-02-01T10:00:00Z'
+  phase_when_committed: 'commitment'
 
 known_unknowns:
   count: 3
-  source: "ATTACK.yaml"
+  source: 'ATTACK.yaml'
 
 metrics:
   count: 2
@@ -437,21 +446,21 @@ metrics:
     missing_context: 1
 
 events:
-  - id: "LEAK-WISH-0500-1706788200-0001"
+  - id: 'LEAK-WISH-0500-1706788200-0001'
     type: clarification
-    timestamp: "2026-02-01T11:30:00Z"
+    timestamp: '2026-02-01T11:30:00Z'
     phase: implementation
-    description: "Discovered need for retry logic on API timeout"
+    description: 'Discovered need for retry logic on API timeout'
     category: edge_case
     severity: medium
     root_cause: incomplete_discovery
     known_unknown_match: null
 
-  - id: "LEAK-WISH-0500-1706791800-0002"
+  - id: 'LEAK-WISH-0500-1706791800-0002'
     type: scope_change
-    timestamp: "2026-02-01T12:30:00Z"
+    timestamp: '2026-02-01T12:30:00Z'
     phase: verification
-    description: "Third-party API rate limit not accounted for"
+    description: 'Third-party API rate limit not accounted for'
     category: integration
     severity: high
     root_cause: missing_context
@@ -469,13 +478,13 @@ assessment:
   upstream_failure: true
 
 insights:
-  - "2 unknown(s) leaked post-commitment - indicates upstream planning gaps"
-  - "1 event discovered in verification - QA caught gap that should be found earlier"
-  - "Root causes split between discovery (1) and context (1) - review both phases"
+  - '2 unknown(s) leaked post-commitment - indicates upstream planning gaps'
+  - '1 event discovered in verification - QA caught gap that should be found earlier'
+  - 'Root causes split between discovery (1) and context (1) - review both phases'
 
 root_cause_summary:
-  primary: "incomplete_discovery, missing_context"
-  recommendation: "Strengthen story attack phase for edge cases; improve reality intake for integration context"
+  primary: 'incomplete_discovery, missing_context'
+  recommendation: 'Strengthen story attack phase for edge cases; improve reality intake for integration context'
 
 success: true
 ```
@@ -493,6 +502,7 @@ packages/backend/orchestrator/src/nodes/metrics/track-leakage.ts
 ```
 
 The node provides:
+
 - `detectUnknownLeakage()` - Filter and detect leakage events
 - `calculateLeakageMetrics()` - Compute aggregated metrics
 - `LeakageEvent` schema for event structure
@@ -501,28 +511,33 @@ The node provides:
 ### Event Collection Integration
 
 Events are collected by:
+
 ```
 packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
 ```
 
 Uses event types:
+
 - `EventType.clarification`
 - `EventType.scope_change`
 
 ### Commitment Gate Integration
 
 Commitment timestamp comes from:
+
 ```
 .claude/agents/commitment-gate-agent.agent.md
 ```
 
 The commitment gate records:
+
 - `evaluated_at` timestamp
 - `decision: PASS | BLOCKED | OVERRIDE`
 
 ### PCAR Metrics Integration
 
 Leakage metrics complement PCAR:
+
 - PCAR counts ALL post-commitment ambiguity
 - Leakage specifically identifies UNKNOWN unknowns
 - Together they provide full picture of planning effectiveness

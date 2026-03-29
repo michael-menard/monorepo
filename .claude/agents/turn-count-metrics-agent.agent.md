@@ -1,11 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-03-22
+version: 1.1.0
 type: worker
 permission_level: docs-only
 model: haiku
 spawned_by: [scrum-master-loop-leader, dev-verification-leader]
+kb_tools:
+  - kb_read_artifact
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: turn-count-metrics-agent
@@ -27,9 +31,10 @@ Worker agent responsible for counting stakeholder turns (interactions) that occu
 From PLAN.md:
 
 > **We do not optimize for fewer cycles.
-> We optimize for fewer surprises *after commitment*.**
+> We optimize for fewer surprises _after commitment_.**
 
 Turn count metrics measure post-commitment collaboration overhead. They answer:
+
 - How much stakeholder coordination happened after commitment?
 - Which stakeholder pairs have highest interaction counts?
 - What triggers most post-commitment turns (clarification vs scope_change)?
@@ -41,16 +46,19 @@ Pre-commitment turns are **EXPLICITLY EXCLUDED** per PLAN.md - learning cycles b
 ## Inputs
 
 From orchestrator context:
+
 - `story_id`: Story ID being analyzed (e.g., `WISH-0500`)
 - `feature_dir`: Feature directory path
 - `commitment_timestamp`: When commitment gate was passed (ISO timestamp)
 
-From filesystem:
-- Workflow events at `{output_dir}/_implementation/EVENTS.yaml` (if exists)
-- Checkpoint data at `{output_dir}/_implementation/CHECKPOINT.md`
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
+From KB (preferred):
+
+- `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` — workflow events and checkpoint data
+
+If KB is unavailable, log a warning and return degraded metrics with `data_source: 'unavailable'`.
 
 From graph state (if running in LangGraph):
+
 - `collectedEvents`: Array of workflow events from event collection node
 
 ---
@@ -61,20 +69,20 @@ A **turn** is an interaction between two stakeholders that occurs post-commitmen
 
 ### Stakeholder Pairs Tracked
 
-| Pair | Description |
-|------|-------------|
-| PM<->Dev | Product requirement clarifications |
-| UX<->Dev | Design and accessibility clarifications |
+| Pair     | Description                                   |
+| -------- | --------------------------------------------- |
+| PM<->Dev | Product requirement clarifications            |
+| UX<->Dev | Design and accessibility clarifications       |
 | QA<->Dev | Test criteria and verification clarifications |
 
 ### Turn Triggers
 
 Only two event types count as turn triggers:
 
-| Trigger | Description |
-|---------|-------------|
+| Trigger         | Description                                            |
+| --------------- | ------------------------------------------------------ |
 | `clarification` | Questions about requirements, design, or test criteria |
-| `scope_change` | AC additions, modifications, or constraint changes |
+| `scope_change`  | AC additions, modifications, or constraint changes     |
 
 ### Post-Commitment Definition
 
@@ -99,13 +107,12 @@ An event is **post-commitment** if ANY of these conditions are true:
 **Actions**:
 
 1. **Find commitment timestamp**:
-   - Check CHECKPOINT.md for commitment phase timestamp
-   - Check EVENTS.yaml for commitment event
-   - Check graph state for commitment gate result
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get checkpoint data including commitment phase timestamp
+   - Check graph state for commitment gate result (if running in LangGraph)
 
 2. **Load workflow events**:
-   - Read from EVENTS.yaml if file-based
-   - Read from graph state if orchestrator-based
+   - Call `kb_read_artifact({ story_id, artifact_type: 'checkpoint' })` to get workflow events (same artifact as above)
+   - Read from graph state `collectedEvents` if orchestrator-based
 
 3. **Verify commitment exists**:
    - Turn metrics are only meaningful if commitment occurred
@@ -142,6 +149,7 @@ An event is **post-commitment** if ANY of these conditions are true:
    - Skip self-turns (same stakeholder on both sides)
 
 2. **Stakeholder mapping**:
+
    ```yaml
    actor_mapping:
      pm | product | product_manager: pm
@@ -149,8 +157,8 @@ An event is **post-commitment** if ANY of these conditions are true:
      qa | test | tester | quality: qa
      dev | developer | engineer: dev
      architect: architect
-     system: dev  # Default
-     assistant: dev  # Default
+     system: dev # Default
+     assistant: dev # Default
    ```
 
 3. **Recipient inference**:
@@ -167,18 +175,18 @@ An event is **post-commitment** if ANY of these conditions are true:
 
 ```yaml
 by_pair:
-  dev_pm: {count}
-  dev_qa: {count}
-  dev_ux: {count}
+  dev_pm: { count }
+  dev_qa: { count }
+  dev_ux: { count }
 
 by_trigger:
-  clarification: {count}
-  scope_change: {count}
+  clarification: { count }
+  scope_change: { count }
 
 by_phase:
-  implementation: {count}
-  verification: {count}
-  complete: {count}
+  implementation: { count }
+  verification: { count }
+  complete: { count }
 ```
 
 ### Phase 5: Generate Insights
@@ -187,18 +195,18 @@ by_phase:
 
 **Insight Rules**:
 
-| Condition | Insight |
-|-----------|---------|
-| total_turns = 0 | "Excellent: Zero post-commitment turns - planning was thorough" |
-| total_turns >= high_threshold | "High turn count - consider improving pre-commitment planning" |
-| total_turns >= critical_threshold | "Critical turn count - significant communication overhead needs investigation" |
-| clarification >> scope_change | "Clarification-heavy - requirements may lack clarity" |
-| scope_change >> clarification | "Scope-change-heavy - scope may not be fully defined at commitment" |
-| dev_pm > dev_qa + dev_ux | "High PM<->Dev interaction - requirements may need more upfront elaboration" |
-| dev_qa highest | "High QA<->Dev interaction - test criteria may need earlier definition" |
-| dev_ux highest | "High UX<->Dev interaction - design specs may need more detail upfront" |
-| implementation_ratio > 70% | "Most turns in implementation - consider more thorough pre-dev review" |
-| verification_turns > 0 | "Turns during verification - QA identifying issues that should be caught earlier" |
+| Condition                         | Insight                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| total_turns = 0                   | "Excellent: Zero post-commitment turns - planning was thorough"                   |
+| total_turns >= high_threshold     | "High turn count - consider improving pre-commitment planning"                    |
+| total_turns >= critical_threshold | "Critical turn count - significant communication overhead needs investigation"    |
+| clarification >> scope_change     | "Clarification-heavy - requirements may lack clarity"                             |
+| scope_change >> clarification     | "Scope-change-heavy - scope may not be fully defined at commitment"               |
+| dev_pm > dev_qa + dev_ux          | "High PM<->Dev interaction - requirements may need more upfront elaboration"      |
+| dev_qa highest                    | "High QA<->Dev interaction - test criteria may need earlier definition"           |
+| dev_ux highest                    | "High UX<->Dev interaction - design specs may need more detail upfront"           |
+| implementation_ratio > 70%        | "Most turns in implementation - consider more thorough pre-dev review"            |
+| verification_turns > 0            | "Turns during verification - QA identifying issues that should be caught earlier" |
 
 ---
 
@@ -206,38 +214,38 @@ by_phase:
 
 ```yaml
 schema: 1
-story_id: "{STORY_ID}"
-calculated_at: "{ISO_TIMESTAMP}"
+story_id: '{STORY_ID}'
+calculated_at: '{ISO_TIMESTAMP}'
 
 # Commitment context
 commitment:
   found: true | false
-  timestamp: "{ISO_TIMESTAMP}"  # Only if found
+  timestamp: '{ISO_TIMESTAMP}' # Only if found
 
 # Turn metrics
 metrics:
   # Total turns
-  total_turns: {N}
+  total_turns: { N }
 
   # By stakeholder pair
   by_pair:
-    dev_pm: {N}
-    dev_qa: {N}
-    dev_ux: {N}
+    dev_pm: { N }
+    dev_qa: { N }
+    dev_ux: { N }
 
   # By trigger type
   by_trigger:
-    clarification: {N}
-    scope_change: {N}
+    clarification: { N }
+    scope_change: { N }
 
   # By phase (post-commitment only)
   by_phase:
-    implementation: {N}
-    verification: {N}
-    complete: {N}
+    implementation: { N }
+    verification: { N }
+    complete: { N }
 
   # Rate
-  average_turns_per_story: {N.N}
+  average_turns_per_story: { N.N }
   stories_analyzed: 1
 
 # Turn events (post-commitment only)
@@ -245,9 +253,9 @@ events:
   - from: pm | ux | qa | dev
     to: pm | ux | qa | dev
     trigger: clarification | scope_change
-    timestamp: "{ISO_TIMESTAMP}"
+    timestamp: '{ISO_TIMESTAMP}'
     phase: implementation | verification | complete
-    description: "brief description"
+    description: 'brief description'
 
 # Thresholds
 thresholds:
@@ -262,8 +270,8 @@ assessment:
 
 # Insights for system learning
 insights:
-  - "insight 1"
-  - "insight 2"
+  - 'insight 1'
+  - 'insight 2'
 
 # Calculation status
 success: true | false
@@ -276,12 +284,12 @@ error: null | "error message"
 
 ```yaml
 schema: 1
-story_id: "WISH-0500"
-calculated_at: "2026-02-01T14:30:00Z"
+story_id: 'WISH-0500'
+calculated_at: '2026-02-01T14:30:00Z'
 
 commitment:
   found: true
-  timestamp: "2026-02-01T10:00:00Z"
+  timestamp: '2026-02-01T10:00:00Z'
 
 metrics:
   total_turns: 4
@@ -303,30 +311,30 @@ events:
   - from: dev
     to: pm
     trigger: clarification
-    timestamp: "2026-02-01T11:30:00Z"
+    timestamp: '2026-02-01T11:30:00Z'
     phase: implementation
-    description: "Asked about error handling edge case"
+    description: 'Asked about error handling edge case'
 
   - from: pm
     to: dev
     trigger: scope_change
-    timestamp: "2026-02-01T12:15:00Z"
+    timestamp: '2026-02-01T12:15:00Z'
     phase: implementation
-    description: "Added AC for timeout handling"
+    description: 'Added AC for timeout handling'
 
   - from: dev
     to: ux
     trigger: clarification
-    timestamp: "2026-02-01T13:00:00Z"
+    timestamp: '2026-02-01T13:00:00Z'
     phase: implementation
-    description: "Clarified loading state design"
+    description: 'Clarified loading state design'
 
   - from: dev
     to: qa
     trigger: clarification
-    timestamp: "2026-02-01T14:00:00Z"
+    timestamp: '2026-02-01T14:00:00Z'
     phase: verification
-    description: "Confirmed test coverage expectations"
+    description: 'Confirmed test coverage expectations'
 
 thresholds:
   high_turn_count: 5
@@ -338,10 +346,10 @@ assessment:
   exceeds_critical: false
 
 insights:
-  - "Moderate turn count (4 turns) - room for improvement in upfront planning"
-  - "Clarification-heavy (3 vs 1 scope changes) - requirements may lack clarity"
-  - "75% of turns in implementation phase - consider more thorough pre-dev review"
-  - "1 turn during verification - QA identifying issues that should be caught earlier"
+  - 'Moderate turn count (4 turns) - room for improvement in upfront planning'
+  - 'Clarification-heavy (3 vs 1 scope changes) - requirements may lack clarity'
+  - '75% of turns in implementation phase - consider more thorough pre-dev review'
+  - '1 turn during verification - QA identifying issues that should be caught earlier'
 
 success: true
 ```
@@ -359,6 +367,7 @@ packages/backend/orchestrator/src/nodes/metrics/count-turns.ts
 ```
 
 The node provides:
+
 - `filterPostCommitmentTurns()` - Filter events by phase/timestamp
 - `classifyStakeholderTurn()` - Classify events by stakeholder pair
 - `countTurnsByPair()` - Aggregate by stakeholder pair
@@ -368,17 +377,20 @@ The node provides:
 ### Event Collection Integration
 
 Events are collected by:
+
 ```
 packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
 ```
 
 Uses event types:
+
 - `EventType.clarification`
 - `EventType.scope_change`
 
 ### PCAR Metrics Relationship
 
 Turn count metrics complement PCAR:
+
 - PCAR counts total ambiguity events
 - Turn count breaks down by stakeholder pair
 - Both exclude pre-commitment events
@@ -386,11 +398,13 @@ Turn count metrics complement PCAR:
 ### Commitment Gate Integration
 
 Commitment timestamp comes from:
+
 ```
 .claude/agents/commitment-gate-agent.agent.md
 ```
 
 The commitment gate records:
+
 - `evaluated_at` timestamp
 - `decision: PASS | BLOCKED | OVERRIDE`
 
