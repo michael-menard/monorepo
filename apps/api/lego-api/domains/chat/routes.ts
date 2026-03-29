@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
-import { streamSSE } from 'hono/streaming'
-import { stream } from 'hono/streaming'
+import { streamSSE, stream } from 'hono/streaming'
 import OpenAI from 'openai'
 import { logger } from '@repo/logger'
 import { getDb } from './db.js'

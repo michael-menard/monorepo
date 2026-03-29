@@ -45,10 +45,9 @@ From KB (primary source):
 - Elab/QA feedback artifact: `kb_read_artifact({ story_id: STORY_ID, artifact_type: "elab" })`
 - PM artifacts (test_plan, uiux_notes, dev_feasibility): `kb_read_artifact({ story_id: STORY_ID, artifact_type: "pm_artifacts" })`
 
-From filesystem (fallback only, if KB artifacts unavailable):
+From KB (fallback for story content, if artifacts unavailable):
 
-- Story file at `{FEATURE_DIR}/{stage}/{STORY_ID}/{STORY_ID}.md` (resolve stage from KB story record)
-- `_pm/QA-FEEDBACK.md` if present
+- Story content via `kb_get_story({ story_id: '{STORY_ID}' })` — always use KB; no filesystem fallback
 
 ---
 
@@ -67,7 +66,7 @@ From filesystem (fallback only, if KB artifacts unavailable):
    ```
 2. Extract QA feedback from `elabArtifact.content` (look for `qa_feedback`, `gaps`, `issues` fields)
 3. Extract PM artifacts (`test_plan`, `uiux_notes`, `dev_feasibility`) from `pmArtifacts.content`
-4. **Fallback**: If KB artifacts unavailable, read story file from filesystem to extract content
+4. **Fallback**: If KB artifacts unavailable, report `PM BLOCKED: KB unavailable — cannot load story artifacts` and do not proceed
 
 ### Phase 2: Analyze Gaps
 
@@ -240,7 +239,7 @@ When complete, report:
 ```markdown
 ## Story Fix Summary
 
-**Feature**: {FEATURE_DIR}
+**Feature**: {FEATURE_SLUG}
 **Story**: {STORY_ID}
 **Status**: FIXED / BLOCKED
 

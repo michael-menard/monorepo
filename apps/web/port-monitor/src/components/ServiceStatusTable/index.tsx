@@ -88,11 +88,11 @@ export function ServiceStatusTable({
                       ) : (
                         service.name
                       )}
-                      {service.unregistered && (
+                      {service.unregistered ? (
                         <AppBadge variant="warning" size="sm" className="ml-2">
                           new
                         </AppBadge>
-                      )}
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 font-mono text-slate-400">{service.port}</td>
                     <td className="px-4 py-3">

@@ -25,10 +25,11 @@ From orchestrator context:
 - User-provided bug description/context
 - Optional: failing artifacts, logs, screenshots
 
+From KB:
+- Related story (if bug relates to specific story): `kb_get_story({ story_id: '{RELATED_STORY_ID}' })`
+
 From filesystem:
-- `{FEATURE_DIR}/PLAN.exec.md` (execution rules)
-- `{FEATURE_DIR}/PLAN.meta.md` (documentation principles)
-- Related story files (if bug relates to specific story)
+- Related story artifacts (if available): `kb_read_artifact({ story_id: '{RELATED_STORY_ID}', artifact_type: 'evidence' })`
 
 ## When to Use
 
@@ -55,11 +56,17 @@ If bug ID not provided:
 2. Find highest existing BUG-NNN
 3. Assign next sequential: BUG-(NNN+1)
 
-### Phase 2: Create Directory Structure
+### Phase 2: Register Bug Story in KB
 
-```
-{FEATURE_DIR}/backlog/{BUG_ID}/
-{FEATURE_DIR}/backlog/{BUG_ID}/_pm/
+```javascript
+kb_create_story({
+  story_id: '{BUG_ID}',
+  title: '{title}',
+  feature: '{FEATURE_SLUG}',
+  state: 'backlog',
+  story_type: 'bug',
+  description: '{description}',
+})
 ```
 
 ### Phase 3: Generate Bug Story
@@ -124,8 +131,15 @@ related_story: STORY-XXX | null
 
 ### Phase 4: Create PM Artifacts
 
-Write:
-- `_pm/BLOCKERS.md` (empty or with blockers)
+Write minimal PM artifacts to KB:
+```javascript
+kb_write_artifact({
+  story_id: '{BUG_ID}',
+  artifact_type: 'pm_artifacts',
+  phase: 'analysis',
+  content: { blockers: [] } // or with blockers if any
+})
+```
 
 ## Severity Guidelines
 
@@ -149,15 +163,14 @@ Write:
 ## Output Summary
 
 ```yaml
-feature_dir: {FEATURE_DIR}
 story: {BUG_ID}
 type: bug
 severity: P0 | P1 | P2 | P3
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
-files_created:
-  - {FEATURE_DIR}/backlog/{BUG_ID}/{BUG_ID}.md
-  - {FEATURE_DIR}/backlog/{BUG_ID}/_pm/BLOCKERS.md
+kb_created:
+  - story: {BUG_ID} (via kb_create_story)
+  - pm_artifacts: {BUG_ID} (via kb_write_artifact, artifact_type: pm_artifacts)
 index_update_needed: true | false
 ```
 

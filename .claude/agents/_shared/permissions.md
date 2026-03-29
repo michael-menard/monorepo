@@ -51,9 +51,6 @@ Standard permission levels for the agent system. Each agent declares its require
 ```
 ALLOWED:
   plans/**
-  */_implementation/**
-  */_pm/**
-  */_workflow/**
   **/*.yaml
   **/*.md (in plans/)
 
@@ -63,6 +60,9 @@ FORBIDDEN:
   src/**
   *.ts, *.tsx, *.js, *.jsx
 ```
+
+**Note**: `_implementation/` and `_workflow/` directory writes are deprecated (KB-native artifact pattern).
+All workflow artifacts must be written to and read from the KB via `kb_write_artifact` / `kb_read_artifact`.
 
 **Agents**:
 - `dev-implement-learnings`
@@ -182,7 +182,6 @@ git diff --name-only
 **Path Restrictions**:
 ```
 ALLOWED mv/mkdir/cp:
-  {FEATURE_DIR}/**           # e.g., plans/stories/WISH/
   plans/future/**
   plans/*.bootstrap/**
   plans/*.epic-elab/**
@@ -192,6 +191,10 @@ FORBIDDEN:
   packages/**
   .git/**
 ```
+
+**Note**: `{FEATURE_DIR}/**` story directory management is deprecated — stories are managed via KB
+tool calls (`kb_create_story`, `kb_update_story_status`). Directory operations on story directories
+should not be used.
 
 **Agents**:
 - `dev-setup-leader`

@@ -24,9 +24,10 @@ From orchestrator context:
 - Story ID (optional, e.g., WISH-099)
 - User-provided context about the emergent work
 
+From KB:
+- Story record (if exists): `kb_get_story({ story_id: '{STORY_ID}' })`
+
 From filesystem:
-- `{FEATURE_DIR}/PLAN.exec.md` (execution rules)
-- `{FEATURE_DIR}/PLAN.meta.md` (documentation principles)
 - `.claude/agents/pm.agent.md` (PM constraints)
 
 ## When to Use
@@ -54,11 +55,17 @@ If story ID not provided:
 2. Find highest existing {PREFIX}-NNN or AD-HOC-NNN
 3. Assign next sequential: AD-HOC-(NNN+1)
 
-### Phase 2: Create Directory Structure
+### Phase 2: Register Story in KB
 
-```
-{FEATURE_DIR}/backlog/{STORY_ID}/
-{FEATURE_DIR}/backlog/{STORY_ID}/_pm/
+```javascript
+kb_create_story({
+  story_id: '{STORY_ID}',
+  title: '{title}',
+  feature: '{FEATURE_SLUG}',
+  state: 'backlog',
+  story_type: 'ad-hoc',
+  description: '{description}',
+})
 ```
 
 ### Phase 3: Generate Story
@@ -108,8 +115,15 @@ story_type: ad-hoc
 
 ### Phase 4: Create PM Artifacts
 
-Write minimal PM artifacts:
-- `_pm/BLOCKERS.md` (empty or with blockers)
+Write minimal PM artifacts to KB:
+```javascript
+kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'pm_artifacts',
+  phase: 'analysis',
+  content: { blockers: [] } // or with blockers if any
+})
+```
 
 ## Quality Gates
 
@@ -124,14 +138,14 @@ Write minimal PM artifacts:
 ## Output Summary
 
 ```yaml
-feature_dir: {FEATURE_DIR}
+feature: {FEATURE_SLUG}
 story: {STORY_ID}
 type: ad-hoc
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
-files_created:
-  - {FEATURE_DIR}/backlog/{STORY_ID}/{STORY_ID}.md
-  - {FEATURE_DIR}/backlog/{STORY_ID}/_pm/BLOCKERS.md
+kb_created:
+  - story: {STORY_ID} (via kb_create_story)
+  - pm_artifacts: {STORY_ID} (via kb_write_artifact, artifact_type: pm_artifacts)
 index_update_needed: true | false
 ```
 

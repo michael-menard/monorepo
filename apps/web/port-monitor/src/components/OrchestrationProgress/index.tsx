@@ -22,7 +22,7 @@ export function OrchestrationProgress({
           <h3 className="text-sm font-semibold text-slate-200">
             {isRunning ? 'Running...' : 'Complete'}
           </h3>
-          {isComplete && (
+          {isComplete ? (
             <button
               type="button"
               className="px-3 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
@@ -30,7 +30,7 @@ export function OrchestrationProgress({
             >
               Close
             </button>
-          )}
+          ) : null}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -41,15 +41,9 @@ export function OrchestrationProgress({
                 {event.type === 'starting' && (
                   <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
                 )}
-                {event.type === 'started' && (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                )}
-                {event.type === 'error' && (
-                  <XCircle className="h-4 w-4 text-red-500" />
-                )}
-                {event.type === 'skipped' && (
-                  <MinusCircle className="h-4 w-4 text-slate-500" />
-                )}
+                {event.type === 'started' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                {event.type === 'error' && <XCircle className="h-4 w-4 text-red-500" />}
+                {event.type === 'skipped' && <MinusCircle className="h-4 w-4 text-slate-500" />}
                 <span className="font-mono text-xs text-slate-400">{event.key}</span>
                 <span className="text-xs text-slate-500 truncate flex-1">{event.message}</span>
               </div>

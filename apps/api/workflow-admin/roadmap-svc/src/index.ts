@@ -19,6 +19,7 @@ import {
   updateStoryContentSection,
   getPlanImpactAnalysis,
   executePlanRetire,
+  getActiveAgents,
   RetireActionSchema,
   type PlanListParams,
   type PlanUpdateInput,
@@ -124,6 +125,16 @@ app.get('/', c => {
 
 app.get('/health', c => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.get('/api/v1/active-agents', async c => {
+  try {
+    const result = await getActiveAgents()
+    return c.json({ data: result })
+  } catch (error) {
+    logger.error('Failed to fetch active agents', { error: String(error) })
+    return c.json({ error: 'Failed to fetch active agents', detail: String(error) }, 500)
+  }
 })
 
 app.get('/api/v1/dashboard', async c => {

@@ -27,7 +27,6 @@ Draft a runnable test plan for {STORY_ID}:
 Read from:
 
 - `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB
-- `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 
 ## Non-negotiables
@@ -38,7 +37,17 @@ Read from:
 
 ## Output (MUST WRITE)
 
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
+Write test plan to KB via:
+```javascript
+kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'test_plan',
+  phase: 'analysis',
+  content: { /* test-plan structure below */ }
+})
+```
+
+Test plan content structure:
 
 ```yaml
 strategy: unit+integration+e2e # unit | integration | e2e | manual
@@ -79,4 +88,4 @@ fixture_definitions: [] # { name, type, description }
 risks: [] # test fragility, ambiguity, missing prereqs
 ```
 
-The leader reads this file and stores it as a `pm_test_plan` KB artifact.
+The leader reads this KB artifact via `kb_read_artifact({ story_id, artifact_type: 'test_plan' })`.

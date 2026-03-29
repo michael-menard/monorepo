@@ -1,4 +1,14 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { z } from 'zod'
+
+export const ActiveAgentSchema = z.object({
+  storyId: z.string(),
+  agentName: z.string().nullable(),
+  phase: z.string().nullable(),
+  startedAt: z.string().nullable(),
+})
+
+export type ActiveAgent = z.infer<typeof ActiveAgentSchema>
 
 export interface Plan {
   id: string
@@ -254,7 +264,7 @@ export interface DashboardResponse {
 export const roadmapApi = createApi({
   reducerPath: 'roadmapApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
-  tagTypes: ['Plans', 'Stories', 'Story', 'Dashboard'],
+  tagTypes: ['Plans', 'Stories', 'Story', 'Dashboard', 'ActiveAgents'],
   endpoints: builder => ({
     getDashboard: builder.query<DashboardResponse, void>({
       query: () => '/dashboard',
@@ -380,6 +390,12 @@ export const roadmapApi = createApi({
       }),
       invalidatesTags: (_r, _e, { storyId }) => [{ type: 'Story', id: storyId }],
     }),
+    getActiveAgents: builder.query<ActiveAgent[], void>({
+      query: () => '/active-agents',
+      transformResponse: (response: { data: ActiveAgent[] }) => response.data,
+      providesTags: ['ActiveAgents'],
+      keepUnusedDataFor: 30,
+    }),
   }),
 })
 
@@ -395,4 +411,5 @@ export const {
   useUpdatePlanMutation,
   useUpdateStoryMutation,
   useUpdateStoryContentSectionMutation,
+  useGetActiveAgentsQuery,
 } = roadmapApi

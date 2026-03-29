@@ -75,9 +75,9 @@ export function PortMonitorPage() {
         ariaLabel="Service health statistics"
       />
 
-      {data?.conflicts && data.conflicts.length > 0 && (
+      {data?.conflicts && data.conflicts.length > 0 ? (
         <ConflictBanner conflicts={data.conflicts} />
-      )}
+      ) : null}
 
       <ServiceStatusTable
         services={data?.services}
@@ -102,10 +102,7 @@ export function PortMonitorPage() {
         onClose={() => orchestration.cancel()}
       />
 
-      <LogPanel
-        serviceKey={selectedServiceKey}
-        onClose={() => setSelectedServiceKey(null)}
-      />
+      <LogPanel serviceKey={selectedServiceKey} onClose={() => setSelectedServiceKey(null)} />
     </div>
   )
 }

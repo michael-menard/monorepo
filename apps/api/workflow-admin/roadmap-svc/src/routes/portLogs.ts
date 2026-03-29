@@ -19,10 +19,12 @@ app.get('/api/v1/ports/:key/logs', async c => {
 
     // Subscribe to new lines
     const onLine = (line: LogLine) => {
-      stream.writeSSE({
-        event: 'log',
-        data: JSON.stringify(line),
-      }).catch(() => {})
+      stream
+        .writeSSE({
+          event: 'log',
+          data: JSON.stringify(line),
+        })
+        .catch(() => {})
     }
 
     subscribe(key, onLine)

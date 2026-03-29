@@ -7,6 +7,8 @@ permission_level: docs-only
 triggers: ['/pm-story followup']
 skills_used:
   - /token-log
+kb_tools:
+  - kb_add_dependency
 ---
 
 # Agent: pm-story-followup-leader
@@ -26,15 +28,15 @@ From orchestrator context:
 - Finding number (optional, for specific finding)
 - **Pre-allocated story ID** (optional, provided when spawned in parallel)
 
-From filesystem:
+From KB:
 
-- Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
+- Source story: `kb_get_story({ story_id: '{STORY_ID}' })` — includes description with QA Discovery Notes
+- Elaboration: `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis' })`
 
 ## Preconditions (Hard Stop)
 
-1. `{STORY_ID}.md` exists
-2. Story contains `## QA Discovery Notes` section
+1. Story exists in KB: `kb_get_story({ story_id: '{STORY_ID}' })` returns a result
+2. Story description contains `## QA Discovery Notes` section
 3. QA Discovery Notes contain at least one:
    - Item in `### Follow-up Stories Suggested` list, OR
    - Item marked with decision "Follow-up" in tables
@@ -45,8 +47,8 @@ If no follow-up items: `PM BLOCKED: No follow-up stories found in {STORY_ID}`
 
 ### Phase 1: Parse Follow-up Suggestions
 
-1. Read `{STORY_ID}.md`
-2. Locate `## QA Discovery Notes` section
+1. Read source story via `kb_get_story({ story_id: '{STORY_ID}' })`
+2. Locate `## QA Discovery Notes` section in story description
 3. Extract follow-up items from:
 
    a) **Checklist format:**
@@ -138,13 +140,9 @@ For the proposed follow-up ID:
    - Search returned story IDs for `{NEW_STORY_ID}`
    - If found (regardless of status): ID is taken
 
-3. **Check if directory exists:**
-   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+3. **Check if proposed ID exists in KB (re-check):**
+   - Search returned story IDs for `{NEW_STORY_ID}` again to confirm collision
+   - KB list result from step 1 is authoritative for collision detection
 
 4. **If collision detected:**
    - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and find the highest story ID matching `{PREFIX}-*`
@@ -169,14 +167,9 @@ Use: WISH-2060
 
 For each selected follow-up:
 
-1. Create directory:
+1. Register follow-up story in KB (see Phase 5 below for the `kb_create_story` call — do this before generating content).
 
-   ```
-   {FEATURE_DIR}/backlog/{NEW_STORY_ID}/
-   {FEATURE_DIR}/backlog/{NEW_STORY_ID}/_pm/
-   ```
-
-2. Write `{NEW_STORY_ID}.md`:
+2. Write follow-up story content as KB artifact and inline in the `kb_create_story` description:
 
 ```yaml
 ---
@@ -282,9 +275,10 @@ follow_up_from: { STORY_ID }
 
 ### Phase 6: Update Source Story
 
-1. Open `{STORY_ID}.md`
-2. In `### Follow-up Stories Suggested` section:
-   - Change `- [ ] [description]` to `- [x] [description] → {NEW_STORY_ID}`
+1. Read source story via `kb_get_story({ story_id: '{STORY_ID}' })`
+2. In the `### Follow-up Stories Suggested` section of the story description:
+   - Update the relevant item from `- [ ] [description]` to `- [x] [description] → {NEW_STORY_ID}`
+3. Write updated description back via `kb_update_story({ story_id: '{STORY_ID}', description: '<updated description>' })`
 
 ## Quality Gates
 
@@ -299,7 +293,6 @@ follow_up_from: { STORY_ID }
 ## Output Summary
 
 ```yaml
-feature_dir: {FEATURE_DIR}
 parent_story: {STORY_ID}
 follow_ups_created:
   - story: {NEW_STORY_ID}
@@ -307,10 +300,10 @@ follow_ups_created:
     category: Gap | Enhancement
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
-files_created:
-  - {FEATURE_DIR}/backlog/{NEW_STORY_ID}/{NEW_STORY_ID}.md
-files_updated:
-  - {STORY_ID}.md (checkbox marked)
+kb_created:
+  - story: {NEW_STORY_ID} (via kb_create_story)
+kb_updated:
+  - {STORY_ID} description (checkbox marked via kb_update_story)
 ```
 
 ## Completion Signal

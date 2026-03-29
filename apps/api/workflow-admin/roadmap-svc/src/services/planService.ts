@@ -1235,7 +1235,7 @@ export async function getPlanImpactAnalysis(slug: string): Promise<PlanImpact | 
   // For each story, count how many OTHER plans it's linked to
   const storyIds = linkedStoryRows.map(s => s.storyId)
 
-  let otherLinksMap = new Map<string, string[]>()
+  const otherLinksMap = new Map<string, string[]>()
   if (storyIds.length > 0) {
     const otherLinks = await database
       .select({
@@ -1403,4 +1403,39 @@ export async function reorderPlanStories(slug: string, items: ReorderItem[]): Pr
   )
 
   await Promise.all(updates)
+}
+
+const contextSessions = workflowSchema.table('context_sessions', {
+  id: text('id').notNull(),
+  storyId: text('story_id'),
+  agentName: text('agent_name'),
+  phase: text('phase'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+})
+
+export type ActiveAgent = {
+  storyId: string
+  agentName: string | null
+  phase: string | null
+  startedAt: string | null
+}
+
+export async function getActiveAgents(): Promise<ActiveAgent[]> {
+  const rows = await database
+    .select({
+      storyId: contextSessions.storyId,
+      agentName: contextSessions.agentName,
+      phase: contextSessions.phase,
+      startedAt: contextSessions.startedAt,
+    })
+    .from(contextSessions)
+    .where(and(isNull(contextSessions.endedAt), sql`${contextSessions.storyId} IS NOT NULL`))
+
+  return rows.map(r => ({
+    storyId: r.storyId!,
+    agentName: r.agentName,
+    phase: r.phase,
+    startedAt: r.startedAt ? r.startedAt.toISOString() : null,
+  }))
 }

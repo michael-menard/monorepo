@@ -43,12 +43,12 @@ export function ConversationHeader() {
     <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-2">
       <h2 className="truncate text-sm font-medium text-slate-200">{conversation.title}</h2>
       <div className="flex items-center gap-2">
-        {planResult && (
+        {planResult ? (
           <span className="flex items-center gap-1 text-xs text-emerald-400">
             <ExternalLink className="h-3 w-3" />
             Plan created: {planResult.title}
           </span>
-        )}
+        ) : null}
         <Button
           onClick={handleArchive}
           disabled={!hasMessages || isArchiving}
@@ -56,7 +56,11 @@ export function ConversationHeader() {
           size="sm"
           className="gap-1.5 text-xs text-slate-400 hover:text-slate-200"
         >
-          {isArchiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+          {isArchiving ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Archive className="h-3.5 w-3.5" />
+          )}
           Archive
         </Button>
         <Button
@@ -66,7 +70,11 @@ export function ConversationHeader() {
           size="sm"
           className="gap-1.5 text-xs text-slate-400 hover:text-slate-200"
         >
-          {isConverting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileOutput className="h-3.5 w-3.5" />}
+          {isConverting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FileOutput className="h-3.5 w-3.5" />
+          )}
           Convert to Plan
         </Button>
       </div>

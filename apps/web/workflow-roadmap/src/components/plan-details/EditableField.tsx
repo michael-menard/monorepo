@@ -203,7 +203,9 @@ export function EditableField({
             <Pencil className="h-3 w-3" />
           </CustomButton>
         </div>
-        <dd className="text-slate-300 text-sm leading-relaxed">{value ?? '-'}</dd>
+        <dd className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+          {value ?? '-'}
+        </dd>
       </div>
     )
   }

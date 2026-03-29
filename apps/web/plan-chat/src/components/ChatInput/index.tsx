@@ -48,7 +48,9 @@ export function ChatInput() {
 
     // Create conversation via API if none active
     if (!conversationId) {
-      const result = await (dispatch as any)(createConversationAsync(trimmed.slice(0, 40) || undefined))
+      const result = await (dispatch as any)(
+        createConversationAsync(trimmed.slice(0, 40) || undefined),
+      )
       if (result.error) return
       conversationId = result.payload.id
     }

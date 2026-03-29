@@ -29,10 +29,12 @@ From orchestrator context:
 - `proposed_changes`: Description of proposed changes or activities (optional)
 - `validation_trigger`: What triggered validation (e.g., "phase_transition", "activity_check", "churn_review")
 
+From KB:
+- Story record: `kb_get_story({ story_id: '{story_id}' })`
+- Readiness analysis: `kb_read_artifact({ story_id: '{story_id}', artifact_type: 'analysis' })` (READINESS.yaml equivalent, if exists)
+
 From filesystem:
 - Phase contract schema at `.claude/schemas/phase-contracts-schema.md`
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
-- Readiness score at `{feature_dir}/{stage}/{story_id}/_implementation/READINESS.yaml` (if exists)
 - Contract history at `{feature_dir}/_contracts/CONTRACT-HISTORY.yaml` (if exists)
 
 ---

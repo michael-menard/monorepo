@@ -14,9 +14,7 @@ export function TopologyGraph({
 
   if (!topology || topology.nodes.length === 0) return null
 
-  const statusMap = new Map(
-    healthData?.services.map(s => [s.key, s.status]) ?? [],
-  )
+  const statusMap = new Map(healthData?.services.map(s => [s.key, s.status]) ?? [])
 
   const frontends = topology.nodes.filter(n => n.kind === 'frontend')
   const backends = topology.nodes.filter(n => n.kind === 'backend')
@@ -43,11 +41,7 @@ export function TopologyGraph({
           className="flex items-center gap-2 text-lg font-semibold w-full text-left"
           onClick={() => setCollapsed(!collapsed)}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           Service Topology
         </button>
       </CardHeader>

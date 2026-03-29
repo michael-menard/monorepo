@@ -45,6 +45,27 @@ export async function runPipeline(
   let page: Page | undefined
   let scrapeRunId: string | undefined
 
+  // Proactive session refresh: re-authenticate before cookies expire.
+  // Rebrickable sessions degrade silently — AJAX modal requests start returning 403
+  // while isLoggedIn() still returns true because the page DOM is already loaded.
+  // Refreshing every 45 min prevents cascade download failures mid-batch.
+  const SESSION_REFRESH_INTERVAL_MS = 45 * 60 * 1000
+  let lastAuthTime = Date.now()
+
+  async function refreshSessionIfStale(): Promise<void> {
+    const elapsed = Date.now() - lastAuthTime
+    if (elapsed < SESSION_REFRESH_INTERVAL_MS) return
+
+    logger.info(
+      `[pipeline] Session is ${Math.round(elapsed / 60000)}m old — proactively refreshing auth...`,
+    )
+    const loginPage = new LoginPage(page!)
+    await loginPage.login(config.username, config.password)
+    await saveSession(context!)
+    lastAuthTime = Date.now()
+    logger.info('[pipeline] Session refreshed')
+  }
+
   // Signal handling for graceful shutdown
   let interrupted = false
   const handleSignal = async () => {
@@ -141,25 +162,59 @@ export async function runPipeline(
     } else {
       logger.info('[pipeline] Existing session is valid')
     }
+    lastAuthTime = Date.now()
 
-    // ── Step 6: Scrape purchases list ────────────────────────────────────
-    const purchasesPage = new PurchasesPage(page)
-    await rateLimiter.acquire()
-    await purchasesPage.navigate(config.userSlug)
+    // ── Step 6: Build instruction list ───────────────────────────────────
+    let instructionList: Array<{ mocNumber: string; title: string; url: string; author: string; purchaseDate?: string }>
 
-    const allInstructions = await purchasesPage.scrapeAllInstructions(options.limit)
-    let instructionList = allInstructions
+    if (options.retryFailed) {
+      // --retry-failed: load partial MOCs from checkpoint (detail_scraped but never completed)
+      const partialMocs = await CheckpointManager.findPartialMocs()
+      logger.info(`[pipeline] --retry-failed: found ${partialMocs.length} partially scraped MOCs`)
 
-    // Apply limit
-    if (options.limit) {
-      instructionList = instructionList.slice(0, options.limit)
-      logger.info(`[pipeline] Limited to ${options.limit} instructions`)
+      if (partialMocs.length === 0) {
+        logger.info('[pipeline] No partial MOCs found — nothing to retry')
+        await db
+          .update(scrapeRuns)
+          .set({ status: 'completed', completedAt: new Date(), instructionsFound: 0 })
+          .where(eq(scrapeRuns.id, scrapeRunId))
+        return
+      }
+
+      instructionList = partialMocs.map(m => ({
+        mocNumber: m.mocNumber,
+        title: m.title,
+        url: m.rebrickableUrl,
+        author: '',
+      }))
+
+      if (options.limit) {
+        instructionList = instructionList.slice(0, options.limit)
+      }
+    } else {
+      // Normal mode: scrape purchases list from Rebrickable
+      const purchasesPage = new PurchasesPage(page)
+      await rateLimiter.acquire()
+      await purchasesPage.navigate(config.userSlug)
+
+      const allInstructions = await purchasesPage.scrapeAllInstructions(options.limit)
+      instructionList = allInstructions
+
+      if (options.limit) {
+        instructionList = instructionList.slice(0, options.limit)
+        logger.info(`[pipeline] Limited to ${options.limit} instructions`)
+      }
+
+      await db
+        .update(scrapeRuns)
+        .set({ instructionsFound: allInstructions.length })
+        .where(eq(scrapeRuns.id, scrapeRunId))
     }
 
     // Update run counts
     await db
       .update(scrapeRuns)
-      .set({ instructionsFound: allInstructions.length })
+      .set({ instructionsFound: instructionList.length })
       .where(eq(scrapeRuns.id, scrapeRunId))
 
     // ── Step 7: Process each instruction ─────────────────────────────────
@@ -186,6 +241,9 @@ export async function runPipeline(
       }
 
       try {
+        // Proactively refresh session every 45 min to prevent silent AJAX 403s
+        await refreshSessionIfStale()
+
         await rateLimiter.acquire()
         await humanWait('thinking')
 
@@ -210,7 +268,10 @@ export async function runPipeline(
           logger.info(`[pipeline] MOC-${item.mocNumber}: downloaded ${images.length} images`)
         }
 
-        await checkpoint.save(item.mocNumber, 'detail_scraped', detail as unknown as Record<string, unknown>)
+        await checkpoint.save(item.mocNumber, 'detail_scraped', {
+          ...(detail as unknown as Record<string, unknown>),
+          rebrickableUrl: item.url,
+        })
 
         if (options.dryRun) {
           progress.tick(`MOC-${item.mocNumber} — ${item.title} (dry run, ${detail.partsCount} parts)`)
@@ -229,10 +290,35 @@ export async function runPipeline(
           // Download ALL files via the modal-based flow
           let primaryDownloadPath: string | null = null
           let totalFileSize = 0
+          let consecutiveFileFailures = 0
 
           for (let fi = 0; fi < fileList.length; fi++) {
             const file = fileList[fi]
             logger.info(`[pipeline] MOC-${item.mocNumber}: downloading file ${fi + 1}/${fileList.length}: ${file.fileName}`)
+
+            // If we've hit 3 consecutive failures the session/rate-limit window
+            // is likely exhausted. Check auth first, then re-navigate to the MOC page.
+            if (consecutiveFileFailures >= 3) {
+              logger.warn(
+                `[pipeline] MOC-${item.mocNumber}: ${consecutiveFileFailures} consecutive file failures — ` +
+                `checking session and re-navigating...`,
+              )
+
+              const loginPage = new LoginPage(page!)
+              const stillLoggedIn = await loginPage.isLoggedIn()
+              if (!stillLoggedIn) {
+                logger.warn('[pipeline] Session expired mid-batch — re-authenticating...')
+                await loginPage.login(config.username, config.password)
+                await saveSession(context!)
+                lastAuthTime = Date.now()
+                logger.info('[pipeline] Re-authenticated, resuming downloads...')
+              }
+
+              await rateLimiter.acquire()
+              await mocPage.navigate(item.url)
+              await humanWait('reading')
+              consecutiveFileFailures = 0
+            }
 
             const downloadPath = await retry.execute(
               () => mocPage.triggerDownload(file, item.mocNumber),
@@ -240,6 +326,7 @@ export async function runPipeline(
             )
 
             if (downloadPath) {
+              consecutiveFileFailures = 0
               const buffer = await readFile(downloadPath)
               const fileSize = buffer.length
               totalFileSize += fileSize
@@ -254,6 +341,7 @@ export async function runPipeline(
                 primaryDownloadPath = downloadPath
               }
             } else {
+              consecutiveFileFailures++
               logger.warn(`[pipeline] MOC-${item.mocNumber}: failed to download ${file.fileName}`)
             }
           }
@@ -293,6 +381,11 @@ export async function runPipeline(
                 contentHash,
                 minioKey: `mocs/MOC-${item.mocNumber}/${fileName}`,
                 minioUrl: `mocs/MOC-${item.mocNumber}/${fileName}`,
+                description: detail.description || null,
+                descriptionHtml: detail.descriptionHtml || null,
+                dateAdded: safeDate(detail.dateAdded),
+                authorProfileUrl: detail.authorProfileUrl || null,
+                tags: detail.tags.length > 0 ? detail.tags : null,
                 scrapeRunId,
               })
               .onConflictDoUpdate({
@@ -307,6 +400,11 @@ export async function runPipeline(
                   contentHash,
                   minioKey: `mocs/MOC-${item.mocNumber}/${fileName}`,
                   minioUrl: `mocs/MOC-${item.mocNumber}/${fileName}`,
+                  description: detail.description || null,
+                  descriptionHtml: detail.descriptionHtml || null,
+                  dateAdded: safeDate(detail.dateAdded),
+                  authorProfileUrl: detail.authorProfileUrl || null,
+                  tags: detail.tags.length > 0 ? detail.tags : null,
                   scrapeRunId,
                   updatedAt: new Date(),
                 },
@@ -396,6 +494,7 @@ export async function runPipeline(
           const loginPage = new LoginPage(page!)
           await loginPage.login(config.username, config.password)
           await saveSession(context!)
+          lastAuthTime = Date.now()
         }
       }
     }
@@ -472,4 +571,10 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
+function safeDate(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : d
 }

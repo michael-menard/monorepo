@@ -44,6 +44,15 @@ const SELECTORS = {
   downloadFileLink: 'a.js-load-page-modal[data-url*="/purchases/"]',
   downloadFileLinkAlt: 'a[data-modaltitle="Download Purchase"]',
 
+  // Details tab content (default active tab)
+  detailsContent: '#details, .tab-pane.active',
+
+  // Date added metadata in sidebar
+  dateAdded: 'time, .mb-10 small',
+
+  // Tags
+  tagLinks: 'a[href*="/tags/"]',
+
   // Inventory tab
   inventoryTab: '.nav-tabs a:has-text("Inventory")',
   inventoryTabAlt: 'a[href*="#bi"]',
@@ -92,6 +101,7 @@ export class MocDetailPage extends BasePage {
       // Author: extract from the URL path which is /mocs/MOC-{id}/{author}/{slug}/
       // or from breadcrumb "MOCs by {author}" or from sidebar "by {author}"
       let author = ''
+      let authorProfileUrl = ''
       try {
         // Method 1: Extract from current URL path
         const urlMatch = this.page.url().match(/\/mocs\/MOC-\d+\/([^/]+)\//)
@@ -111,6 +121,20 @@ export class MocDetailPage extends BasePage {
             logger.info(`[moc-detail] Author found with selector "${sel}": "${author}"`)
             break
           }
+        }
+      }
+
+      // Author profile URL: extract href from the author link
+      for (const sel of [SELECTORS.authorLink, SELECTORS.authorLinkAlt]) {
+        try {
+          const href = await this.page.$eval(sel, el => el.getAttribute('href') || '')
+          if (href) {
+            authorProfileUrl = href.startsWith('http') ? href : `https://rebrickable.com${href}`
+            logger.info(`[moc-detail] Author profile URL: "${authorProfileUrl}"`)
+            break
+          }
+        } catch {
+          // try next selector
         }
       }
 
@@ -143,6 +167,15 @@ export class MocDetailPage extends BasePage {
         ? files[0].fileName.match(/\.(pdf|io|studio|ldr|mpd|lxf)$/i)?.[1]?.toUpperCase() || 'PDF'
         : ''
 
+      // Scrape details tab description text
+      const { description, descriptionHtml } = await this.scrapeDetailsText()
+
+      // Scrape date added
+      const dateAdded = await this.scrapeDateAdded()
+
+      // Scrape tags
+      const tags = await this.scrapeTags()
+
       const detail = ScrapedMocDetailSchema.parse({
         mocNumber,
         title,
@@ -150,6 +183,11 @@ export class MocDetailPage extends BasePage {
         partsCount,
         downloadUrl,
         fileType,
+        description,
+        descriptionHtml,
+        dateAdded,
+        authorProfileUrl,
+        tags,
       })
 
       logger.info(
@@ -158,6 +196,114 @@ export class MocDetailPage extends BasePage {
 
       return detail
     })
+  }
+
+  /**
+   * Scrape the Details tab description text.
+   * The Details tab is active by default, so the content is already in the DOM.
+   */
+  async scrapeDetailsText(): Promise<{ description: string; descriptionHtml: string }> {
+    try {
+      const result = await this.page.evaluate(() => {
+        // The Details tab content is in the first .tab-pane or #details
+        const pane =
+          document.querySelector('#details') ||
+          document.querySelector('.tab-pane.active') ||
+          document.querySelector('.tab-pane:first-child')
+
+        if (!pane) return { description: '', descriptionHtml: '' }
+
+        // Clone to strip ads and non-content elements
+        const clone = pane.cloneNode(true) as HTMLElement
+        clone
+          .querySelectorAll('script, style, iframe, .ad, .adsbygoogle, ins, [class*="sponsor"]')
+          .forEach(el => el.remove())
+
+        return {
+          description: clone.innerText?.trim() || clone.textContent?.trim() || '',
+          descriptionHtml: clone.innerHTML?.trim() || '',
+        }
+      })
+
+      if (result.description) {
+        logger.info(`[moc-detail] Description extracted: ${result.description.length} chars`)
+      }
+      return result
+    } catch {
+      logger.info('[moc-detail] Could not extract details tab text')
+      return { description: '', descriptionHtml: '' }
+    }
+  }
+
+  /**
+   * Scrape the date the MOC was added from sidebar metadata.
+   * Looks for <time> elements or date patterns in small text.
+   */
+  async scrapeDateAdded(): Promise<string | undefined> {
+    try {
+      // Try <time> element first (has datetime attribute)
+      const timeDate = await this.page.$eval('time[datetime]', el =>
+        el.getAttribute('datetime') || '',
+      ).catch(() => '')
+
+      if (timeDate) {
+        logger.info(`[moc-detail] Date added from <time>: "${timeDate}"`)
+        return timeDate
+      }
+
+      // Fallback: scan small text elements for date patterns
+      const dateText = await this.page.evaluate(() => {
+        const smalls = document.querySelectorAll('.mb-10 small, .row small, small')
+        for (const el of smalls) {
+          const text = el.textContent?.trim() || ''
+          // Match patterns like "Mar 15, 2024" or "2024-03-15" or "Added: ..."
+          if (/\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(text) ||
+              /\w{3}\s+\d{1,2},?\s+\d{4}/.test(text)) {
+            return text.replace(/^(added|uploaded|published)\s*:?\s*/i, '').trim()
+          }
+        }
+        return ''
+      })
+
+      if (dateText) {
+        // Try to parse into ISO format
+        const parsed = new Date(dateText)
+        if (!isNaN(parsed.getTime())) {
+          const iso = parsed.toISOString()
+          logger.info(`[moc-detail] Date added from text: "${dateText}" → ${iso}`)
+          return iso
+        }
+        logger.info(`[moc-detail] Date added (unparsed): "${dateText}"`)
+        return dateText
+      }
+
+      return undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * Scrape tags from the MOC detail page.
+   * Tags are typically links to /tags/ pages or badge elements.
+   */
+  async scrapeTags(): Promise<string[]> {
+    try {
+      const tags = await this.page.$$eval(SELECTORS.tagLinks, links =>
+        links
+          .map(a => a.textContent?.trim() || '')
+          .filter(t => t.length > 0 && t.length < 100),
+      )
+
+      const unique = [...new Set(tags)]
+      if (unique.length > 0) {
+        logger.info(`[moc-detail] Tags found: ${unique.join(', ')}`)
+      }
+      return unique
+    } catch {
+      logger.info('[moc-detail] No tags found')
+      return []
+    }
   }
 
   /**
@@ -205,85 +351,183 @@ export class MocDetailPage extends BasePage {
    * Click a download file link to open the modal, then click the Download button
    * which has data-url="/users/.../download/{id}/{hash}/?expire=..."
    * This triggers a POST that initiates the file download.
+   *
+   * Self-heals on modal timeout: reloads the page between attempts to clear stale
+   * AJAX/session state (the common cause of mid-batch cascade failures).
    */
   async triggerDownload(fileLink: ScrapedFile, mocNumber?: string): Promise<string | null> {
+    const MAX_ATTEMPTS = 3
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      // On retries, reload the page to reset CSRF tokens, rate-limit windows, and
+      // stale Bootstrap modal state — the most common cause of cascade failures.
+      if (attempt > 1) {
+        const backoffMs = attempt === 2 ? 5000 : 30000
+        logger.warn(
+          `[moc-detail] Retrying download for ${fileLink.fileName} (attempt ${attempt}/${MAX_ATTEMPTS}), ` +
+          `waiting ${backoffMs}ms then reloading page...`,
+        )
+        await this.page.waitForTimeout(backoffMs)
+        await this.page.goto(this.page.url(), { waitUntil: 'networkidle' })
+        await this.page.waitForTimeout(2000)
+
+        // If the reload redirected us to the login page, the session expired.
+        // Return null immediately so the pipeline's consecutive-failure handler
+        // can re-authenticate before wasting another 10s modal timeout.
+        if (this.page.url().includes('/login')) {
+          logger.warn('[moc-detail] Session expired — reload redirected to login page')
+          return null
+        }
+      }
+
+      const result = await this.attemptDownload(fileLink, mocNumber, attempt)
+      if (result !== null) return result
+    }
+
+    logger.warn(`[moc-detail] All ${MAX_ATTEMPTS} download attempts failed for ${fileLink.fileName}`)
+    return null
+  }
+
+  private async attemptDownload(fileLink: ScrapedFile, mocNumber?: string, attempt = 1): Promise<string | null> {
+    const tag = `[moc-detail][MOC-${mocNumber ?? '?'}][attempt ${attempt}]`
+    const linkSelector = `a.js-load-page-modal[data-url="${fileLink.downloadDataUrl}"]`
+
+    logger.info(`${tag} Starting download: "${fileLink.fileName}"`, {
+      dataUrl: fileLink.downloadDataUrl,
+      pageUrl: this.page.url(),
+    })
+
+    // Step 0: Dismiss any stale modal before clicking
+    await this.dismissModal()
+
+    // Step 1: Click the file link to open the download modal
     try {
-      // Step 0: Ensure no stale modals/backdrops are lingering before clicking a new file link
-      await this.dismissModal()
-
-      // Step 1: Click the file link to open the download modal
-      const linkSelector = `a.js-load-page-modal[data-url="${fileLink.downloadDataUrl}"]`
       await this.click(linkSelector)
-      logger.info(`[moc-detail] Clicked file link to open modal: ${fileLink.fileName}`)
+      logger.info(`${tag} Clicked file link — waiting for modal`)
+    } catch (err) {
+      logger.warn(`${tag} FAIL step 1 — could not click file link selector`, {
+        selector: linkSelector,
+        pageUrl: this.page.url(),
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return null
+    }
 
-      // Step 2: Wait for the modal to appear and its AJAX content to load
+    // Step 2: Wait for the modal overlay
+    try {
       await this.page.waitForSelector('.modal.in, .modal.show, .modal[style*="display: block"]', {
         timeout: 10000,
       })
-      logger.info(`[moc-detail] Modal visible, waiting for download button...`)
+      logger.info(`${tag} Modal visible`)
+    } catch (err) {
+      logger.warn(`${tag} FAIL step 2 — modal did not appear within 10s`, {
+        pageUrl: this.page.url(),
+        error: err instanceof Error ? err.message : String(err),
+      })
+      await this.dismissModal()
+      return null
+    }
 
-      // Wait for the Download button — AJAX-loaded content inside the modal
-      const downloadBtnSelector = 'button.js-post-button[data-url*="/download/"]'
-      try {
-        await this.page.waitForSelector(downloadBtnSelector, { timeout: 10000 })
-      } catch {
-        // Debug: capture what's in the modal
-        await this.screenshot(`modal-debug-${fileLink.fileName}`, 'discovery')
-        const modalHtml = await this.page.evaluate(() => {
-          const modal = document.querySelector('.modal.in, .modal.show, .modal[style*="display: block"]')
-          return modal ? modal.innerHTML.substring(0, 2000) : '(no modal found)'
-        })
-        logger.warn(`[moc-detail] Download button not found in modal. HTML: ${modalHtml.substring(0, 500)}`)
-        return null
-      }
+    // Step 3: Wait for AJAX-loaded download button inside modal
+    const downloadBtnSelector = 'button.js-post-button[data-url*="/download/"]'
+    try {
+      await this.page.waitForSelector(downloadBtnSelector, { timeout: 10000 })
+      logger.info(`${tag} Download button found`)
+    } catch (err) {
+      await this.screenshot(`modal-no-btn-${mocNumber}-attempt${attempt}`, 'discovery')
+      const modalText = await this.page.evaluate(() => {
+        const modal = document.querySelector('.modal.in, .modal.show, .modal[style*="display: block"]')
+        if (!modal) return '(no modal in DOM)'
+        // Text content is more readable than raw HTML for diagnosing "not purchased" / rate-limit messages
+        return (modal as HTMLElement).innerText?.trim().substring(0, 600) || modal.innerHTML.substring(0, 600)
+      })
+      logger.warn(`${tag} FAIL step 3 — download button not found in modal after 10s`, {
+        pageUrl: this.page.url(),
+        modalContent: modalText,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      await this.dismissModal()
+      return null
+    }
 
-      // Step 3: Extract the download URL from the button's data-url
-      const downloadUrl = await this.page.$eval(
-        downloadBtnSelector,
-        el => el.getAttribute('data-url') || '',
-      )
+    // Step 4: Extract the download URL from the button
+    const downloadUrl = await this.page.$eval(
+      downloadBtnSelector,
+      el => el.getAttribute('data-url') || '',
+    ).catch(() => '')
 
-      if (!downloadUrl) {
-        logger.warn(`[moc-detail] Download button found but no data-url`)
-        return null
-      }
+    if (!downloadUrl) {
+      logger.warn(`${tag} FAIL step 4 — download button has no data-url attribute`)
+      await this.dismissModal()
+      return null
+    }
 
-      const fullUrl = downloadUrl.startsWith('http')
-        ? downloadUrl
-        : `https://rebrickable.com${downloadUrl}`
+    const fullUrl = downloadUrl.startsWith('http')
+      ? downloadUrl
+      : `https://rebrickable.com${downloadUrl}`
 
-      logger.info(`[moc-detail] Download URL: ${fullUrl}`)
+    // Log the expiry so we can diagnose expired tokens
+    const expireMatch = fullUrl.match(/[?&]expire=(\d+)/)
+    const expireTs = expireMatch ? parseInt(expireMatch[1], 10) : null
+    const expireInfo = expireTs
+      ? `expires ${new Date(expireTs * 1000).toISOString()} (${expireTs - Math.floor(Date.now() / 1000)}s from now)`
+      : 'no expiry param'
 
-      // Step 4: Set up download listener, then click the button
-      const [download] = await Promise.all([
+    logger.info(`${tag} Download URL acquired`, { fullUrl, expireInfo })
+
+    // Step 5: Click button and wait for browser download event
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let download: any
+    try {
+      ;[download] = await Promise.all([
         this.page.waitForEvent('download', { timeout: 30000 }),
         this.page.click(downloadBtnSelector),
       ])
-
-      // Step 5: Save the downloaded file into MOC-specific directory
-      const suggestedFilename = download.suggestedFilename()
-      const mocDir = mocNumber ? resolve(DOWNLOAD_DIR, `MOC-${mocNumber}`) : DOWNLOAD_DIR
-      if (!existsSync(mocDir)) {
-        mkdirSync(mocDir, { recursive: true })
-      }
-      const filePath = resolve(mocDir, suggestedFilename)
-      await download.saveAs(filePath)
-      logger.info(`[moc-detail] Downloaded: ${suggestedFilename} → ${filePath}`)
-
-      // Close modal and fully reset Bootstrap modal state before returning
-      await this.dismissModal()
-
-      return filePath
-    } catch (error) {
-      logger.warn(`[moc-detail] Could not download ${fileLink.fileName}`, {
-        error: error instanceof Error ? error.message : String(error),
+      logger.info(`${tag} Download event fired: "${download.suggestedFilename()}"`)
+    } catch (err) {
+      logger.warn(`${tag} FAIL step 5 — no download event within 30s`, {
+        pageUrl: this.page.url(),
+        downloadUrl: fullUrl,
+        error: err instanceof Error ? err.message : String(err),
       })
-
-      // Try to close modal
       await this.dismissModal()
-
       return null
     }
+
+    // Step 6: Save file to disk
+    const suggestedFilename = download.suggestedFilename()
+    const mocDir = mocNumber ? resolve(DOWNLOAD_DIR, `MOC-${mocNumber}`) : DOWNLOAD_DIR
+    if (!existsSync(mocDir)) {
+      mkdirSync(mocDir, { recursive: true })
+    }
+    const filePath = resolve(mocDir, suggestedFilename)
+
+    try {
+      await download.saveAs(filePath)
+    } catch (err) {
+      const failureReason = await download.failure().catch(() => 'unknown')
+      logger.warn(`${tag} FAIL step 6 — could not save file to disk`, {
+        suggestedFilename,
+        filePath,
+        playwrightFailure: failureReason,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      await this.dismissModal()
+      return null
+    }
+
+    // Sanity-check: non-zero file size
+    const { statSync } = await import('fs')
+    const fileSize = statSync(filePath).size
+    if (fileSize === 0) {
+      logger.warn(`${tag} FAIL step 6 — file saved but is 0 bytes`, { filePath })
+      await this.dismissModal()
+      return null
+    }
+
+    logger.info(`${tag} SUCCESS — saved "${suggestedFilename}" (${fileSize} bytes) → ${filePath}`)
+    await this.dismissModal()
+    return filePath
   }
 
   /**

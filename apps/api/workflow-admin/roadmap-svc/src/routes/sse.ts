@@ -7,17 +7,28 @@ const app = new Hono()
 
 let pgClient: Client | null = null
 let listeners = new Set<(payload: string) => void>()
+let agentActivityListeners = new Set<(payload: string) => void>()
 
 async function ensurePgListener() {
   if (pgClient) return
 
-  pgClient = new Client({ connectionString: process.env.DATABASE_URL })
+  // Use DATABASE_URL_DIRECT (bypass PgBouncer) — LISTEN/NOTIFY requires a
+  // persistent connection to Postgres directly; PgBouncer in transaction
+  // pooling mode does not forward LISTEN/NOTIFY notifications.
+  const connStr = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL
+  pgClient = new Client({ connectionString: connStr })
   await pgClient.connect()
   await pgClient.query('LISTEN story_state_changed')
+  await pgClient.query('LISTEN agent_activity_changed')
 
   pgClient.on('notification', msg => {
     if (msg.channel === 'story_state_changed' && msg.payload) {
       for (const cb of listeners) {
+        cb(msg.payload)
+      }
+    }
+    if (msg.channel === 'agent_activity_changed' && msg.payload) {
+      for (const cb of agentActivityListeners) {
         cb(msg.payload)
       }
     }
@@ -29,18 +40,23 @@ async function ensurePgListener() {
     setTimeout(() => ensurePgListener().catch(() => {}), 3000)
   })
 
-  logger.info('PG LISTEN story_state_changed connected')
+  logger.info('PG LISTEN story_state_changed + agent_activity_changed connected')
 }
 
 app.get('/api/v1/events/stories', async c => {
   await ensurePgListener()
 
   return streamSSE(c, async (stream: SSEStreamingApi) => {
-    const onNotification = (payload: string) => {
+    const onStoryNotification = (payload: string) => {
       stream.writeSSE({ event: 'story_state_changed', data: payload }).catch(() => {})
     }
 
-    listeners.add(onNotification)
+    const onAgentNotification = (payload: string) => {
+      stream.writeSSE({ event: 'agent_activity_changed', data: payload }).catch(() => {})
+    }
+
+    listeners.add(onStoryNotification)
+    agentActivityListeners.add(onAgentNotification)
 
     // Heartbeat every 30s to keep connection alive through proxies
     const heartbeat = setInterval(() => {
@@ -48,7 +64,8 @@ app.get('/api/v1/events/stories', async c => {
     }, 30_000)
 
     stream.onAbort(() => {
-      listeners.delete(onNotification)
+      listeners.delete(onStoryNotification)
+      agentActivityListeners.delete(onAgentNotification)
       clearInterval(heartbeat)
     })
 
@@ -63,6 +80,7 @@ app.get('/api/v1/events/stories', async c => {
 export function _resetForTests() {
   pgClient = null
   listeners = new Set()
+  agentActivityListeners = new Set()
 }
 
 export const sseRoutes = app

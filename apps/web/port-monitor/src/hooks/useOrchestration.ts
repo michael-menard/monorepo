@@ -12,42 +12,39 @@ export function useOrchestration() {
   const [events, setEvents] = useState<OrchestrationEvent[]>([])
   const esRef = useRef<EventSource | null>(null)
 
-  const run = useCallback(
-    (action: 'start-all' | 'stop-all', filter?: 'frontend' | 'backend') => {
-      setIsRunning(true)
-      setEvents([])
+  const run = useCallback((action: 'start-all' | 'stop-all', filter?: 'frontend' | 'backend') => {
+    setIsRunning(true)
+    setEvents([])
 
-      const params = filter ? `?filter=${filter}` : ''
-      const es = new EventSource(`/api/v1/ports/${action}${params}`)
-      esRef.current = es
+    const params = filter ? `?filter=${filter}` : ''
+    const es = new EventSource(`/api/v1/ports/${action}${params}`)
+    esRef.current = es
 
-      const handleEvent = (eventType: string) => (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data) as OrchestrationEvent
-          setEvents(prev => [...prev, data])
+    const handleEvent = (eventType: string) => (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as OrchestrationEvent
+        setEvents(prev => [...prev, data])
 
-          if (data.type === 'complete') {
-            es.close()
-            setIsRunning(false)
-          }
-        } catch {
-          // ignore malformed
+        if (data.type === 'complete') {
+          es.close()
+          setIsRunning(false)
         }
+      } catch {
+        // ignore malformed
       }
+    }
 
-      es.addEventListener('starting', handleEvent('starting'))
-      es.addEventListener('started', handleEvent('started'))
-      es.addEventListener('error', handleEvent('error'))
-      es.addEventListener('skipped', handleEvent('skipped'))
-      es.addEventListener('complete', handleEvent('complete'))
+    es.addEventListener('starting', handleEvent('starting'))
+    es.addEventListener('started', handleEvent('started'))
+    es.addEventListener('error', handleEvent('error'))
+    es.addEventListener('skipped', handleEvent('skipped'))
+    es.addEventListener('complete', handleEvent('complete'))
 
-      es.onerror = () => {
-        es.close()
-        setIsRunning(false)
-      }
-    },
-    [],
-  )
+    es.onerror = () => {
+      es.close()
+      setIsRunning(false)
+    }
+  }, [])
 
   const cancel = useCallback(() => {
     esRef.current?.close()

@@ -25,11 +25,7 @@ function getServicesByKind(filter?: 'frontend' | 'backend') {
   return { frontends, backends }
 }
 
-function event(
-  type: OrchestrationEvent['type'],
-  key: string,
-  message: string,
-): OrchestrationEvent {
+function event(type: OrchestrationEvent['type'], key: string, message: string): OrchestrationEvent {
   return { type, key, message, timestamp: new Date().toISOString() }
 }
 

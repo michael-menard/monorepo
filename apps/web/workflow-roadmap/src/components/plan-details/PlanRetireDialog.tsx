@@ -55,7 +55,7 @@ export function PlanRetireDialog({
           </div>
         ) : impact ? (
           <div className="space-y-4 max-h-64 overflow-y-auto">
-            {hasExclusive && (
+            {hasExclusive ? (
               <div>
                 <h4 className="text-sm font-medium text-red-400 mb-1">
                   Stories that will be cancelled ({impact.exclusiveStories.length})
@@ -68,18 +68,18 @@ export function PlanRetireDialog({
                     >
                       <span className="font-mono text-slate-500">{s.storyId}</span>
                       <span className="truncate">{s.title}</span>
-                      {s.hasActiveWorktree && (
+                      {s.hasActiveWorktree ? (
                         <span title="Has active worktree">
                           <GitBranch className="h-3 w-3 text-amber-400 shrink-0" />
                         </span>
-                      )}
+                      ) : null}
                     </li>
                   ))}
                 </ul>
               </div>
-            )}
+            ) : null}
 
-            {hasShared && (
+            {hasShared ? (
               <div>
                 <h4 className="text-sm font-medium text-slate-300 mb-1">
                   Stories kept (linked to other plans) ({impact.sharedStories.length})
@@ -97,9 +97,9 @@ export function PlanRetireDialog({
                   ))}
                 </ul>
               </div>
-            )}
+            ) : null}
 
-            {hasDownstream && (
+            {hasDownstream ? (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-red-400 flex items-center gap-1.5 mb-1">
                   <AlertTriangle className="h-3.5 w-3.5" />
@@ -113,7 +113,7 @@ export function PlanRetireDialog({
                   ))}
                 </ul>
               </div>
-            )}
+            ) : null}
 
             {!hasExclusive && !hasShared && !hasDownstream && (
               <p className="text-sm text-slate-400">

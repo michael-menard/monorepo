@@ -50,7 +50,7 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 ## Inputs
 
 - Story ID
-- Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
+- Seed artifact: read via `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'story_seed' })`
 
 ---
 

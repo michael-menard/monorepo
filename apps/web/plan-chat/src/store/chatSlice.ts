@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import type { Attachment, ChatMessage, ChatState, Conversation } from './__types__'
 import * as chatApi from '../api/chatApi'
+import type { Attachment, ChatMessage, ChatState, Conversation } from './__types__'
 
 const initialState: ChatState = {
   conversations: {},
@@ -15,18 +15,15 @@ const initialState: ChatState = {
 
 // --- Async Thunks ---
 
-export const fetchConversations = createAsyncThunk(
-  'chat/fetchConversations',
-  async () => {
-    const summaries = await chatApi.listConversations()
-    return summaries.map(s => ({
-      id: s.id,
-      title: s.title,
-      messageCount: s.messageCount,
-      updatedAt: new Date(s.updatedAt).getTime(),
-    }))
-  },
-)
+export const fetchConversations = createAsyncThunk('chat/fetchConversations', async () => {
+  const summaries = await chatApi.listConversations()
+  return summaries.map(s => ({
+    id: s.id,
+    title: s.title,
+    messageCount: s.messageCount,
+    updatedAt: new Date(s.updatedAt).getTime(),
+  }))
+})
 
 export const createConversationAsync = createAsyncThunk(
   'chat/createConversation',
@@ -51,26 +48,23 @@ export const deleteConversationAsync = createAsyncThunk(
   },
 )
 
-export const loadConversation = createAsyncThunk(
-  'chat/loadConversation',
-  async (id: string) => {
-    const convo = await chatApi.getConversation(id)
-    return {
-      id: convo.id,
-      title: convo.title,
-      messages: convo.messages.map(m => ({
-        id: m.id,
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        timestamp: new Date(m.timestamp).getTime(),
-        attachments: m.attachments,
-      })),
-      messagesLoaded: true,
-      createdAt: new Date(convo.createdAt).getTime(),
-      updatedAt: new Date(convo.updatedAt).getTime(),
-    } satisfies Conversation
-  },
-)
+export const loadConversation = createAsyncThunk('chat/loadConversation', async (id: string) => {
+  const convo = await chatApi.getConversation(id)
+  return {
+    id: convo.id,
+    title: convo.title,
+    messages: convo.messages.map(m => ({
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+      timestamp: new Date(m.timestamp).getTime(),
+      attachments: m.attachments,
+    })),
+    messagesLoaded: true,
+    createdAt: new Date(convo.createdAt).getTime(),
+    updatedAt: new Date(convo.updatedAt).getTime(),
+  } satisfies Conversation
+})
 
 export const sendMessageAsync = createAsyncThunk(
   'chat/sendMessage',
@@ -103,43 +97,38 @@ export const sendMessageAsync = createAsyncThunk(
 
     dispatch(chatSlice.actions.setStreaming(true))
 
-    await chatApi.sendMessage(
-      conversationId,
-      content,
-      uploadedAttachments,
-      {
-        onUserMessage: msg => {
-          dispatch(
-            chatSlice.actions.addMessage({
-              conversationId,
-              message: {
-                id: msg.id,
-                role: 'user',
-                content: msg.content,
-                timestamp: new Date(msg.timestamp).getTime(),
-                attachments: msg.attachments,
-              },
-            }),
-          )
-        },
-        onAssistantChunk: (id, chunkContent) => {
-          dispatch(
-            chatSlice.actions.appendAssistantContent({
-              conversationId,
-              messageId: id,
-              content: chunkContent,
-            }),
-          )
-        },
-        onDone: id => {
-          dispatch(chatSlice.actions.finalizeAssistantMessage({ conversationId, messageId: id }))
-        },
-        onError: error => {
-          dispatch(chatSlice.actions.setError(error.message))
-          dispatch(chatSlice.actions.setStreaming(false))
-        },
+    await chatApi.sendMessage(conversationId, content, uploadedAttachments, {
+      onUserMessage: msg => {
+        dispatch(
+          chatSlice.actions.addMessage({
+            conversationId,
+            message: {
+              id: msg.id,
+              role: 'user',
+              content: msg.content,
+              timestamp: new Date(msg.timestamp).getTime(),
+              attachments: msg.attachments,
+            },
+          }),
+        )
       },
-    )
+      onAssistantChunk: (id, chunkContent) => {
+        dispatch(
+          chatSlice.actions.appendAssistantContent({
+            conversationId,
+            messageId: id,
+            content: chunkContent,
+          }),
+        )
+      },
+      onDone: id => {
+        dispatch(chatSlice.actions.finalizeAssistantMessage({ conversationId, messageId: id }))
+      },
+      onError: error => {
+        dispatch(chatSlice.actions.setError(error.message))
+        dispatch(chatSlice.actions.setStreaming(false))
+      },
+    })
   },
 )
 
@@ -161,10 +150,7 @@ export const chatSlice = createSlice({
         convo.title = action.payload.title
       }
     },
-    addMessage(
-      state,
-      action: PayloadAction<{ conversationId: string; message: ChatMessage }>,
-    ) {
+    addMessage(state, action: PayloadAction<{ conversationId: string; message: ChatMessage }>) {
       const convo = state.conversations[action.payload.conversationId]
       if (convo) {
         convo.messages.push(action.payload.message)
@@ -314,9 +300,7 @@ type RootState = { chat: ChatState }
 export const selectConversations = (state: RootState) => state.chat.conversations
 export const selectActiveConversationId = (state: RootState) => state.chat.activeConversationId
 export const selectActiveConversation = (state: RootState) =>
-  state.chat.activeConversationId
-    ? state.chat.conversations[state.chat.activeConversationId]
-    : null
+  state.chat.activeConversationId ? state.chat.conversations[state.chat.activeConversationId] : null
 export const selectMessages = (state: RootState) => {
   const convo = selectActiveConversation(state)
   return convo?.messages ?? []

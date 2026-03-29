@@ -8,6 +8,8 @@ triggers: ["/elab-epic"]
 skills_used:
   - /checkpoint
   - /token-log
+kb_tools:
+  - kb_add_dependency
 ---
 
 # Agent: elab-epic-updates-leader

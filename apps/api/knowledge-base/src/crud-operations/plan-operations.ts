@@ -203,6 +203,9 @@ export const KbUpsertPlanInputSchema = z.object({
   /** Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan) */
   parent_plan_slug: z.string().optional(),
 
+  /** Plan slug that this plan supersedes/replaces (forward link from V2 → original) */
+  supersedes_plan_slug: z.string().nullable().optional(),
+
   /** Parsed heading breakdown [{heading, level, startLine}] */
   sections: z.array(z.record(z.unknown())).optional(),
 
@@ -247,6 +250,9 @@ export const KbUpdatePlanInputSchema = z.object({
   /** New title */
   title: z.string().min(1).optional(),
 
+  /** New summary (1-3 sentence description of the plan) */
+  summary: z.string().nullable().optional(),
+
   /** New plan type - simple types or compound format {work_type}:{domain} */
   plan_type: z.string().optional(),
 
@@ -261,6 +267,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** UUID of the plan that supersedes/replaces this one */
   superseded_by: z.string().uuid().nullable().optional(),
+
+  /** Plan slug that this plan supersedes/replaces (forward link from V2 → original) */
+  supersedes_plan_slug: z.string().nullable().optional(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -507,6 +516,7 @@ export async function kb_upsert_plan(
     tags: validated.tags ?? null,
     rawContent: validated.raw_content,
     sections: validated.sections ?? null,
+    supersedesPlanSlug: validated.supersedes_plan_slug ?? null,
     updatedAt: now,
   }
 
@@ -597,9 +607,12 @@ export async function kb_update_plan(
   if (validated.status !== undefined) updates.status = validated.status
   if (validated.tags !== undefined) updates.tags = validated.tags
   if (validated.title !== undefined) updates.title = validated.title
+  if (validated.summary !== undefined) updates.summary = validated.summary
   if (validated.plan_type !== undefined) updates.planType = validated.plan_type
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
   if (validated.superseded_by !== undefined) updates.supersededBy = validated.superseded_by
+  if (validated.supersedes_plan_slug !== undefined)
+    updates.supersedesPlanSlug = validated.supersedes_plan_slug
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null

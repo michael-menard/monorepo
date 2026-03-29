@@ -27,6 +27,11 @@ export const instructions = pgTable('instructions', {
   contentHash: text('content_hash').notNull().default(''),
   minioKey: text('minio_key').notNull().default(''),
   minioUrl: text('minio_url').notNull().default(''),
+  description: text('description'),
+  descriptionHtml: text('description_html'),
+  dateAdded: timestamp('date_added', { withTimezone: true }),
+  authorProfileUrl: text('author_profile_url'),
+  tags: jsonb('tags').$type<string[]>(),
   scrapeRunId: uuid('scrape_run_id')
     .notNull()
     .references(() => scrapeRuns.id),

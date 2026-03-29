@@ -48,10 +48,12 @@ From orchestrator context:
 - `delta_result`: Output from delta detection containing changed sections
 - `iteration_number`: Current elaboration iteration (for history context)
 
+From KB:
+- Story record: `kb_get_story({ story_id: '{story_id}' })`
+- Previous story snapshot: `kb_read_artifact({ story_id: '{story_id}', artifact_type: 'elaboration' })` (STORY-SNAPSHOT, if exists)
+- Prior elaboration analysis: `kb_read_artifact({ story_id: '{story_id}', artifact_type: 'analysis' })` (ELAB.yaml equivalent)
+
 From filesystem:
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
-- Previous story version at `{feature_dir}/{stage}/{story_id}/_implementation/STORY-SNAPSHOT-{prev_iteration}.md` (if exists)
-- Prior ELAB.yaml (audit section) at `{feature_dir}/{stage}/{story_id}/_implementation/ELAB.yaml`
 - Phase contract schema at `.claude/schemas/phase-contracts-schema.md`
 
 ---

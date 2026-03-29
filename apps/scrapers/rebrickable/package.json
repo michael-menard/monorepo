@@ -8,6 +8,8 @@
     "scrape": "tsx src/index.ts",
     "scrape:headed": "tsx src/index.ts --headed",
     "scrape:dry-run": "tsx src/index.ts --dry-run",
+    "scrape:retry-failed": "tsx src/index.ts --retry-failed",
+    "scrape:sync-to-gallery": "tsx src/sync-to-gallery.ts",
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
