@@ -2,9 +2,8 @@
  * Simple logger utility for immediate use
  * This is a lightweight logger that can be used to replace console statements
  * without requiring the full logger infrastructure setup.
+ * Uses native console so it is safe for browser and Node environments.
  */
-
-import pino from 'pino'
 
 export enum LogLevel {
   DEBUG = 0,
@@ -19,9 +18,8 @@ interface LoggerConfig {
   enableConsole: boolean
 }
 
-class SimpleLogger {
+export class SimpleLogger {
   private config: LoggerConfig
-  private pinoLogger: pino.Logger
 
   constructor(config: Partial<LoggerConfig> = {}) {
     this.config = {
@@ -29,73 +27,42 @@ class SimpleLogger {
       enableConsole: true,
       ...config,
     }
-
-    // Create Pino logger instance
-    // Note: pino-pretty removed - it uses worker threads which are incompatible with Lambda
-    // Write to stderr (fd 2) to avoid corrupting stdio-based protocols like MCP
-    // pino.destination is Node-only — skip it in browser environments
-    const isBrowser = typeof window !== 'undefined'
-    this.pinoLogger = isBrowser
-      ? pino({ level: this.getPinoLevel(this.config.level) })
-      : pino({ level: this.getPinoLevel(this.config.level) }, pino.destination(2))
   }
 
   private shouldLog(level: LogLevel): boolean {
     return level >= this.config.level
   }
 
-  private getPinoLevel(level: LogLevel): string {
-    switch (level) {
-      case LogLevel.DEBUG:
-        return 'debug'
-      case LogLevel.INFO:
-        return 'info'
-      case LogLevel.WARN:
-        return 'warn'
-      case LogLevel.ERROR:
-        return 'error'
-      default:
-        return 'info'
-    }
+  private formatMessage(message: string): string {
+    return this.config.context ? `[${this.config.context}] ${message}` : message
   }
 
   debug(message: string, ...args: any[]): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return
-
-    const context = this.config.context ? { context: this.config.context } : {}
-    this.pinoLogger.debug({ ...context, args }, message)
+    // eslint-disable-next-line no-console
+    console.debug(this.formatMessage(message), ...args)
   }
 
   info(message: string, ...args: any[]): void {
     if (!this.shouldLog(LogLevel.INFO)) return
-
-    const context = this.config.context ? { context: this.config.context } : {}
-    this.pinoLogger.info({ ...context, args }, message)
+    // eslint-disable-next-line no-console
+    console.info(this.formatMessage(message), ...args)
   }
 
   warn(message: string, ...args: any[]): void {
     if (!this.shouldLog(LogLevel.WARN)) return
-
-    const context = this.config.context ? { context: this.config.context } : {}
-    this.pinoLogger.warn({ ...context, args }, message)
+    // eslint-disable-next-line no-console
+    console.warn(this.formatMessage(message), ...args)
   }
 
   error(message: string, error?: unknown, ...args: any[]): void {
     if (!this.shouldLog(LogLevel.ERROR)) return
-
-    const context = this.config.context ? { context: this.config.context } : {}
-    const errorObj =
-      error instanceof Error
-        ? error
-        : error !== undefined
-          ? { message: String(error), name: 'UnknownError' }
-          : undefined
-    this.pinoLogger.error({ ...context, err: errorObj, args }, message)
+    // eslint-disable-next-line no-console
+    console.error(this.formatMessage(message), ...(error !== undefined ? [error] : []), ...args)
   }
 
   setLevel(level: LogLevel): void {
     this.config.level = level
-    this.pinoLogger.level = this.getPinoLevel(level)
   }
 
   setContext(context: string): void {
@@ -140,6 +107,4 @@ export const createLogger = (context: string, config?: Partial<LoggerConfig>) =>
   })
 }
 
-// Convenience exports
-export { SimpleLogger }
 export default logger

@@ -357,7 +357,7 @@ app.get('/api/v1/stories/:storyId', async c => {
   }
 })
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 9103
+const PORT = parseInt(process.env.PORT ?? '9103')
 
 logger.info(`Starting Roadmap API on port ${PORT}`)
 

@@ -1,4 +1,3 @@
-import pino from 'pino'
 import {
   ILogger,
   ILogTransport,
@@ -15,24 +14,10 @@ export class Logger implements ILogger {
   private config: LoggerConfig
   private transports: ILogTransport[] = []
   private context?: string
-  private fallbackLogger: pino.Logger
 
   constructor(config: Partial<LoggerConfig> = {}) {
     this.config = LoggerConfigSchema.parse(config)
     this.context = this.config.context
-
-    // Create fallback logger for transport errors
-    this.fallbackLogger = pino({
-      level: 'error',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      },
-    })
   }
 
   /**
@@ -132,7 +117,8 @@ export class Logger implements ILogger {
         transport.log(entry)
       } catch (transportError) {
         // Don't let transport errors break logging - use fallback logger
-        this.fallbackLogger.error({ err: transportError }, 'Logger transport error')
+        // eslint-disable-next-line no-console
+        console.error('Logger transport error', transportError)
       }
     })
   }
