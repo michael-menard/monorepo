@@ -7,6 +7,8 @@ permission_level: docs-only
 triggers: ['/pm-story split']
 skills_used:
   - /token-log
+kb_tools:
+  - kb_add_dependency
 ---
 
 # Agent: pm-story-split-leader
@@ -24,16 +26,17 @@ From orchestrator context:
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID to split (e.g., WISH-007)
 
-From filesystem:
+From KB:
 
-- Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
+- Story record: `kb_get_story({ story_id: '{STORY_ID}' })`
+- Elaboration analysis: `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis' })`
 
 ## Preconditions (Hard Stop)
 
-1. `_implementation/ELAB.yaml` exists with `preliminary_verdict: SPLIT_REQUIRED`
-2. `{STORY_ID}.md` has `status: needs-split` in frontmatter
-3. `_implementation/ELAB.yaml` `split_recommendation` section contains:
+1. Elaboration artifact exists with `preliminary_verdict: SPLIT_REQUIRED`:
+   `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis' })`
+2. Story has `status: needs-split` in KB (check via `kb_get_story`)
+3. Elaboration artifact `split_recommendation` section contains:
    - Named splits ({STORY_ID}-A, {STORY_ID}-B, etc.)
    - AC allocation per split
    - Recommended dependency order
@@ -44,7 +47,7 @@ If preconditions fail → `PM BLOCKED: <missing precondition>`
 
 ### Phase 1: Parse Split Recommendations
 
-1. Read `_implementation/ELAB.yaml`
+1. Read elaboration via `kb_read_artifact({ story_id: '{STORY_ID}', artifact_type: 'analysis' })`
 2. Extract from `split_recommendation.splits[]`:
    - Number of splits recommended
    - Scope summary per split
@@ -87,13 +90,9 @@ For each proposed split ID:
    - Search returned story IDs for `{NEW_STORY_ID}`
    - If found (regardless of status): ID is taken
 
-3. **Check if directory exists:**
-   - `{FEATURE_DIR}/backlog/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/elaboration/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/ready-to-work/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/in-progress/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/UAT/{NEW_STORY_ID}/`
-   - `{FEATURE_DIR}/completed/{NEW_STORY_ID}/`
+3. **Check if proposed ID exists in KB (re-check):**
+   - Search returned story IDs for `{NEW_STORY_ID}` again to confirm collision
+   - KB list result from step 1 is authoritative for collision detection
 
 4. **If collision detected:**
    - Call `kb_list_stories({ feature: "{feature_slug}", limit: 100 })` and find the highest story ID matching `{PREFIX}-*`
@@ -189,34 +188,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
    Action required: Update these dependencies to reference specific split(s)
    ```
 
-### Phase 2b: Delete Original Story Directory
-
-1. **Delete the entire original story directory:**
-
-   ```
-   rm -rf {FEATURE_DIR}/*/{STORY_ID}/
-   ```
-
-2. This removes:
-   - `{STORY_ID}.md` (the original story file)
-   - `_implementation/ELAB.yaml` (the elaboration that triggered the split)
-   - `_pm/` subdirectory and all contents
-   - Any `_implementation/` artifacts if they exist
-
-3. **Rationale:** Superseded stories are replaced entirely by their splits. Keeping them creates confusion and stale references. The split context in each child story provides lineage.
-
-### Phase 3: Create Split Story Directories
-
-For each split (using XXYZ IDs where Y is the split number):
-
-```
-{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/
-{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/_pm/
-{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/
-{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/_pm/
-```
-
-### Phase 4: Generate Split Stories
+### Phase 3: Generate Split Stories
 
 For each split, generate full story following standard structure with modifications:
 
@@ -261,21 +233,20 @@ This story is part of a split from {STORY_ID}.
 10. Test Plan (for this split's ACs only)
 11. Risks / Edge Cases
 
-### Phase 5: Verification
+### Phase 4: Verification
 
-1. Verify all split stories created:
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md` exists
-   - `{FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md` exists
+1. Verify all split stories created in KB:
+   - `kb_get_story({ story_id: '{PREFIX}-XX1Z' })` returns result
+   - `kb_get_story({ story_id: '{PREFIX}-XX2Z' })` returns result
    - (etc. for all splits)
 
-2. Verify original story deleted:
-   - `{FEATURE_DIR}/*/{STORY_ID}/` directory no longer exists
-   - Original {STORY_ID} entry removed from index
+2. Verify original story superseded:
+   - `kb_get_story({ story_id: '{STORY_ID}' })` shows `state: cancelled`
 
-3. Verify index updated:
-   - All split stories appear with `pending` status
-   - Dependencies between splits correctly recorded
-   - No orphan references to deleted {STORY_ID}
+3. Verify KB state:
+   - All split stories appear with `backlog` state
+   - Dependencies between splits correctly recorded via `kb_add_dependency`
+   - No orphan references to cancelled {STORY_ID}
 
 4. Verify AC coverage:
    - Count total ACs across all splits
@@ -295,7 +266,6 @@ This story is part of a split from {STORY_ID}.
 ## Output Summary
 
 ```yaml
-feature_dir: {FEATURE_DIR}
 parent_story: {STORY_ID}  # e.g., WISH-0100
 splits_created:
   - story: {PREFIX}-XX1Z  # e.g., WISH-0110
@@ -306,14 +276,11 @@ splits_created:
     depends_on: {PREFIX}-XX1Z
 status: COMPLETE | BLOCKED | FAILED
 reason: (if not complete)
-files_created:
-  - {FEATURE_DIR}/backlog/{PREFIX}-XX1Z/{PREFIX}-XX1Z.md
-  - {FEATURE_DIR}/backlog/{PREFIX}-XX2Z/{PREFIX}-XX2Z.md
+kb_created:
+  - {PREFIX}-XX1Z (via kb_create_story, state: backlog)
+  - {PREFIX}-XX2Z (via kb_create_story, state: backlog)
 kb_updated:
-  - {PREFIX}-XX1Z registered as backlog
-  - {PREFIX}-XX2Z registered as backlog
-files_deleted:
-  - {FEATURE_DIR}/*/{STORY_ID}/ (entire directory)
+  - {STORY_ID} (via kb_update_story_status, state: cancelled)
 verification:
   total_acs_parent: N
   total_acs_splits: N
@@ -354,7 +321,7 @@ Before completion signal:
 ## Constraints
 
 - Do NOT implement code
-- ALWAYS delete original {STORY_ID} directory after creating splits
+- ALWAYS cancel original {STORY_ID} in KB via `kb_update_story_status({ story_id: '{STORY_ID}', state: 'cancelled' })` after creating splits
 - Do NOT skip any split from ELAB recommendations
 - Do NOT combine splits back together
 - Do NOT generate splits not in ELAB recommendations

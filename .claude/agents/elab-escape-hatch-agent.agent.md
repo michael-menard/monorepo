@@ -48,9 +48,11 @@ From orchestrator context:
 - `delta_review_findings`: Output from delta-review-agent
 - `iteration_number`: Current elaboration iteration
 
+From KB:
+- Story record: `kb_get_story({ story_id: '{story_id}' })`
+- Prior elaboration analysis: `kb_read_artifact({ story_id: '{story_id}', artifact_type: 'analysis' })` (ELAB.yaml equivalent)
+
 From filesystem:
-- Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
-- Prior ELAB.yaml at `{feature_dir}/{stage}/{story_id}/_implementation/ELAB.yaml`
 - Phase contract schema at `.claude/schemas/phase-contracts-schema.md`
 
 ---

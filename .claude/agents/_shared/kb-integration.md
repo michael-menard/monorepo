@@ -294,6 +294,8 @@ Before marking work complete, verify:
 
 All workflow artifacts — CHECKPOINT, SCOPE, PLAN, EVIDENCE, REVIEW, ANALYSIS, VERIFICATION, etc. — MUST be written to and read from the Knowledge Base via `kb_write_artifact` and `kb_read_artifact`. **File-based artifacts in `_implementation/` directories are deprecated.** Do NOT create `_implementation/` directories or write artifact YAML/MD files.
 
+<!-- DOCUMENTARY: The `_implementation/` reference above is an intentional anti-pattern example — it explicitly states what NOT to do. This is educational context showing the deprecated pattern being replaced by KB-native writes. Do not remove or replace this text. -->
+
 ### Write Pattern
 
 ```javascript
@@ -373,6 +375,7 @@ kb_tools:
 
 ### Artifact Non-Negotiables
 
+<!-- DOCUMENTARY: The two `_implementation/` references in the table below are intentional anti-pattern examples — they state what to NEVER do. Educational context for what the deprecated pattern looked like. -->
 | Rule | Enforcement |
 |------|-------------|
 | KB-only artifacts | NEVER write artifact files to `_implementation/` |
@@ -384,6 +387,7 @@ kb_tools:
 
 ## Story State: KB Is the Single Source of Truth (KSOT)
 
+<!-- DOCUMENTARY: The `{FEATURE_DIR}/stories/{STORY_ID}/` reference and the `_implementation/` reference in this table are intentional anti-pattern examples — they appear under "Deprecated Source" to document what the OLD approach was. These refs are educational, not operational. -->
 | Data | Authoritative Source | Deprecated Source |
 |------|---------------------|-------------------|
 | Story status/state | `kb_get_story()` / `kb_list_stories()` | ~~Filesystem directory names~~ (KSOT-3010: stories now live in flat `stories/` dir) |

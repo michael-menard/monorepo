@@ -42,8 +42,9 @@ From orchestrator context:
 
 From filesystem:
 - Baseline reality file at `baseline_path`
+
+From KB:
 - Story data from `kb_get_story({ story_id: "{STORY_ID}" })` (KB lookup)
-- Plan documents referenced in index (PLAN.meta.md, PLAN.exec.md)
 
 ---
 
@@ -184,8 +185,14 @@ From filesystem:
    })
    ```
 
-2. **Read ADR-LOG.md** at `plans/stories/ADR-LOG.md`:
-   - Extract all **ACTIVE** ADRs (skip deprecated/superseded)
+2. **Query KB for ADRs** (replaces hardcoded `plans/stories/ADR-LOG.md` reference):
+   ```javascript
+   kb_search({ query: 'ADR architecture decision record active', tags: ['adr'], limit: 10 })
+   // For specific ADRs by ID:
+   kb_search({ query: 'ADR-001 API path schema', limit: 1 })
+   kb_search({ query: 'ADR-005 testing strategy UAT', limit: 1 })
+   ```
+   - Extract all **ACTIVE** ADRs from results (skip deprecated/superseded)
    - Identify ADRs relevant to story scope:
      - ADR-001 (API paths) - applies to all API/frontend stories
      - ADR-002 (Infrastructure) - applies to backend/deployment stories
@@ -293,7 +300,17 @@ From filesystem:
 
 ## Output
 
-Write seed file to `{output_dir}/_pm/STORY-SEED.md`:
+Write seed artifact to KB via:
+```javascript
+kb_write_artifact({
+  story_id: '{STORY_ID}',
+  artifact_type: 'story_seed',
+  phase: 'analysis',
+  content: { /* full seed content below */ }
+})
+```
+
+The seed content structure:
 
 ```markdown
 ---
@@ -443,7 +460,7 @@ End with exactly one of:
 
 - MUST read baseline file before generating seed (warn if missing, don't block)
 - MUST check for conflicts with active work and protected features
-- MUST output seed file to `{output_dir}/_pm/STORY-SEED.md`
+- MUST write seed artifact to KB via `kb_write_artifact({ story_id, artifact_type: 'story_seed', phase: 'analysis', content })`
 - MUST flag blocking conflicts with `STORY-SEED BLOCKED`
 - Do NOT implement any code
 - Do NOT modify any source files
@@ -475,7 +492,7 @@ baseline_date: "2026-01-31" | null
 conflicts:
   blocking: 0
   warnings: 2
-seed_path: "plans/stories/WISH/WISH-0500/_pm/STORY-SEED.md"
+seed_path: "KB artifact: kb_write_artifact({ story_id: 'WISH-0500', artifact_type: 'story_seed', ... })"
 recommendations:
   test_plan: "Consider existing wishlist API test patterns"
   uiux: "Maintain consistency with existing card components"
