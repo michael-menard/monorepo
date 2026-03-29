@@ -57,6 +57,8 @@ export const stories = workflow.table('stories', {
   acceptanceCriteria: jsonb('acceptance_criteria'),
   nonGoals: text('non_goals').array(),
   packages: text('packages').array(),
+  // APRS-1030: minimum viable path flag
+  minimumPath: boolean('minimum_path').notNull().default(false),
 })
 
 export const worktrees = workflow.table('worktrees', {

@@ -872,6 +872,7 @@ export const StorySchema = z.object({
   touchesFrontend: z.boolean().optional().default(false),
   touchesDatabase: z.boolean().optional().default(false),
   touchesInfra: z.boolean().optional().default(false),
+  minimumPath: z.boolean().optional().default(false),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
   startedAt: z.date().optional().nullable(),
@@ -905,6 +906,7 @@ export const NewStorySchema = z.object({
   touchesFrontend: z.boolean().optional().default(false),
   touchesDatabase: z.boolean().optional().default(false),
   touchesInfra: z.boolean().optional().default(false),
+  minimumPath: z.boolean().optional().default(false),
   fileHash: z.string().optional().nullable(),
 })
 
@@ -932,6 +934,7 @@ export const UpdateStorySchema = z.object({
   touchesFrontend: z.boolean().optional(),
   touchesDatabase: z.boolean().optional(),
   touchesInfra: z.boolean().optional(),
+  minimumPath: z.boolean().optional(),
   startedAt: z.date().optional().nullable(),
   completedAt: z.date().optional().nullable(),
   fileSyncedAt: z.date().optional().nullable(),
