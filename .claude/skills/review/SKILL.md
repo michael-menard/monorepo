@@ -7,6 +7,8 @@ mcp_tools_available:
   - chrome-devtools # For performance and network debugging
   - postgres-mcp # For query analysis and optimization review
   - kb_search # For project-specific patterns and past decisions
+  - mcp__postgres-knowledgebase__sessionCreate # Telemetry: open session for badge visibility
+  - mcp__postgres-knowledgebase__sessionComplete # Telemetry: close session when done
 ---
 
 # /review - Comprehensive Code Review
@@ -130,6 +132,25 @@ TodoWrite([
 
 ---
 
+## Phase 0S: Open Session (Telemetry — non-blocking)
+
+Call `mcp__knowledge-base__session_create` to record that an agent is actively working on this story. This is fire-and-forget telemetry — if it fails, log a warning and continue.
+
+```javascript
+// Extract storyId from the resolved target (e.g. "WINT-6070"), or null for branch reviews
+const sessionResult = await mcp__knowledge_base__session_create({
+  agentName: 'review',
+  storyId: resolvedStoryId ?? null, // null for --branch mode
+  phase: 'review',
+})
+// Store sessionId for Phase 8S at the end
+const _reviewSessionId = sessionResult?.sessionId ?? null
+```
+
+If the tool is not available or throws, skip silently and set `_reviewSessionId = null`.
+
+---
+
 ## Phase 0A: Gather Context (Single Story)
 
 **For single story review:**
@@ -223,6 +244,90 @@ pnpm lint --filter='...[origin/main]'
 - Re-run checks
 
 **If still failing:** Report and continue (will affect gate decision)
+
+---
+
+## Phase 1.5: SonarQube Scan (conditional)
+
+**Controlled by `SONAR_ENABLED` in `.env`:**
+
+```
+auto   — run only when change complexity signals warrant it (default)
+always — always run; block review if server is unreachable
+never  — always skip
+```
+
+### Step 1: Decide whether to run
+
+**If `SONAR_ENABLED=never`** → skip, set `sonar_skipped=true`, continue to Phase 2.
+
+**If `SONAR_ENABLED=always`** → proceed to Step 2 (server probe).
+
+**If `SONAR_ENABLED=auto` (or unset)** → evaluate the changed files list from Phase 0A against these thresholds. Run Sonar if **any one** is true:
+
+| Signal                                                                            | Threshold                                  | Rationale                         |
+| --------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------- |
+| Files changed                                                                     | > 15                                       | Wide surface area                 |
+| Lines changed (`git diff --stat`)                                                 | > 300                                      | Significant volume                |
+| Packages/apps touched                                                             | > 1 distinct `apps/*` or `packages/*` root | Cross-cutting change              |
+| Any file under `apps/api/` or `packages/backend/`                                 | present                                    | Backend changes carry higher risk |
+| Any file matching `*auth*`, `*secret*`, `*payment*`, `*security*`, `*permission*` | present                                    | High-risk paths                   |
+| Previous gate for this story was `FAIL` or `CONCERNS`                             | true                                       | Regression risk                   |
+
+If no threshold is met → skip, set `sonar_skipped=true`, log reason ("change is localised — Sonar skipped"), continue to Phase 2.
+
+### Step 2: Probe server
+
+```bash
+curl -sf $SONAR_HOST_URL/api/system/status
+```
+
+(default `SONAR_HOST_URL=http://localhost:9001`)
+
+- Unreachable AND `SONAR_ENABLED=always` → **halt**: "SonarQube required but server is not running. Run `pnpm sonar:up` or set `SONAR_ENABLED=never`."
+- Unreachable AND `SONAR_ENABLED=auto` → skip gracefully, set `sonar_skipped=true`, continue.
+
+### Step 3: Run scan
+
+```bash
+pnpm sonar:test   # generates coverage/lcov.info
+pnpm sonar:scan
+```
+
+Fetch quality gate result:
+
+```bash
+curl -s "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=lego-moc-instructions-platform" \
+  -u "$SONAR_TOKEN:"
+```
+
+Parse JSON — extract `projectStatus.status` (`OK` / `WARN` / `ERROR`) and failed `conditions`. Store as `sonar_result`:
+
+```yaml
+sonar_result:
+  gate: OK|WARN|ERROR
+  skipped: false
+  triggered_by: files_changed|lines_changed|cross_package|backend_files|high_risk_path|previous_gate|always
+  conditions: # only failed/warning conditions
+    - metric: new_coverage
+      status: ERROR
+      actual_value: '62.5'
+      error_threshold: '80'
+    - metric: new_duplicated_lines_density
+      status: WARN
+      actual_value: '4.1'
+      error_threshold: '3'
+```
+
+### Metric → finding category map (used in Phase 4)
+
+| Sonar metric prefix                                          | Finding category       |
+| ------------------------------------------------------------ | ---------------------- |
+| `security_*`, `new_vulnerabilities`, `new_security_hotspots` | security (SEC-)        |
+| `new_bugs`, `reliability_*`                                  | code_quality (QUAL-)   |
+| `new_code_smells`, `sqale_*`, `maintainability_*`            | technical_debt (DEBT-) |
+| `new_coverage`, `new_uncovered_*`                            | test_coverage (TEST-)  |
+| `new_duplicated_*`                                           | code_quality (QUAL-)   |
 
 ---
 
@@ -613,13 +718,14 @@ results = {
 
 ## Phase 4: Aggregate Findings
 
-**Combine all findings into unified structure:**
+**Combine all findings into unified structure. If `sonar_result` is available (not skipped), merge its failed conditions as findings into the appropriate categories using the metric→category map from Phase 1.5.**
 
 ```yaml
 review_summary:
   story: '{STORY_NUM}'
   reviewed_at: '{ISO-8601}'
   files_analyzed: { count }
+  sonar_gate: OK|WARN|ERROR|skipped # from Phase 1.5
 
   t_shirt_sizing:
     recommended_size: M # Synthesized from all specialists
@@ -912,6 +1018,7 @@ REQUIRED CHECKS
   Tests:    {PASS|FAIL}
   Types:    {PASS|FAIL}
   Lint:     {PASS|FAIL}
+  Sonar:    {OK|WARN|ERROR|skipped}
 
 SPECIALIST FINDINGS ({total} total)
   Security:       {N} issues ({high}H {medium}M {low}L) → Size: S
@@ -1057,6 +1164,22 @@ Review detailed findings for each story in KB:
 2. Sum total findings across all stories
 3. Identify most common issue types across stories
 4. Provide actionable next steps
+
+---
+
+## Phase 8S: Close Session (Telemetry — non-blocking)
+
+After the final report is emitted, close the session opened in Phase 0S. This marks the agent as no longer active, removing the badge from the roadmap UI.
+
+```javascript
+if (_reviewSessionId) {
+  await mcp__knowledge_base__session_complete({
+    sessionId: _reviewSessionId,
+  }).catch(() => {}) // fire-and-forget
+}
+```
+
+If `mcp__knowledge_base__session_complete` is not available, skip silently.
 
 ---
 

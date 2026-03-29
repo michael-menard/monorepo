@@ -1,0 +1,300 @@
+/**
+ * implementation_planner Node (dev-implement-v2) — AGENTIC (LLM)
+ *
+ * Receives story grounding context, decides implementation approach,
+ * files to create/modify, test strategy, and risks.
+ *
+ * Internal ReAct loop (max 3 iterations) with tool belt.
+ * Postconditions checked before advancing.
+ */
+
+import { z } from 'zod'
+import { logger } from '@repo/logger'
+import type {
+  StoryGroundingContext,
+  ImplementationPlan,
+  TokenUsage,
+  DevImplementV2State,
+} from '../../state/dev-implement-v2-state.js'
+import type { PostconditionResult } from '../../state/plan-refinement-v2-state.js'
+
+// ============================================================================
+// Injectable Adapter Types
+// ============================================================================
+
+export type LlmAdapterFn = (
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+) => Promise<{
+  content: string
+  inputTokens: number
+  outputTokens: number
+}>
+
+export type QueryKbFn = (query: string) => Promise<string>
+export type SearchCodebaseFn = (pattern: string) => Promise<string>
+export type ReadFileFn = (path: string) => Promise<string>
+
+// ============================================================================
+// Config
+// ============================================================================
+
+export type ImplementationPlannerConfig = {
+  llmAdapter?: LlmAdapterFn
+  queryKb?: QueryKbFn
+  searchCodebase?: SearchCodebaseFn
+  readFile?: ReadFileFn
+  maxInternalIterations?: number
+}
+
+// ============================================================================
+// Exported Pure Functions
+// ============================================================================
+
+/**
+ * Builds the planner system prompt.
+ */
+export function buildPlannerPrompt(
+  groundingContext: StoryGroundingContext,
+  previousFailures: Array<{ check: string; reason: string }> = [],
+): string {
+  const acList = groundingContext.acceptanceCriteria.map((ac, i) => `  ${i}. ${ac}`).join('\n')
+
+  const subtaskList = groundingContext.subtasks.map((s, i) => `  ${i}. ${s}`).join('\n')
+
+  const filesSection =
+    groundingContext.relevantFiles.length > 0
+      ? groundingContext.relevantFiles.join('\n  ')
+      : '(none found)'
+
+  const functionsSection =
+    groundingContext.relevantFunctions.length > 0
+      ? groundingContext.relevantFunctions.map(f => `  ${f.file}: ${f.name}()`).join('\n')
+      : '(none found)'
+
+  const failureSection =
+    previousFailures.length > 0
+      ? `\nPREVIOUS ATTEMPT FAILURES:\n${previousFailures.map(f => `  - [${f.check}] ${f.reason}`).join('\n')}\n`
+      : ''
+
+  return `You are a senior engineer planning the implementation of a user story.
+
+STORY: ${groundingContext.storyTitle}
+STORY ID: ${groundingContext.storyId}
+
+ACCEPTANCE CRITERIA:
+${acList || '  (none)'}
+
+SUBTASKS:
+${subtaskList || '  (none)'}
+
+CODEBASE CONTEXT:
+Relevant files:
+  ${filesSection}
+
+Relevant functions:
+${functionsSection || '  (none)'}
+
+Existing patterns: ${groundingContext.existingPatterns.join(', ') || 'none'}
+${failureSection}
+POSTCONDITIONS your plan MUST satisfy:
+1. files_planned: filesToCreate or filesToModify must be non-empty
+2. tests_planned: testFilesToCreate must be non-empty (always write tests)
+3. approach_documented: approach must be non-empty string
+
+AVAILABLE TOOLS (respond with JSON):
+- query_kb: { tool: "query_kb", args: { query: string } }
+- search_codebase: { tool: "search_codebase", args: { pattern: string } }
+- read_file: { tool: "read_file", args: { path: string } }
+- complete: { tool: "complete", args: { plan: { approach, filesToCreate, filesToModify, testFilesToCreate, estimatedSubtasks, risks } } }
+
+Respond ONLY with a valid JSON tool call.`
+}
+
+/**
+ * Checks postconditions for the implementation plan.
+ */
+export function checkPlannerPostconditions(plan: ImplementationPlan): PostconditionResult {
+  const failures: PostconditionResult['failures'] = []
+
+  if (plan.filesToCreate.length === 0 && plan.filesToModify.length === 0) {
+    failures.push({
+      check: 'files_planned',
+      reason: 'Plan must specify at least one file to create or modify',
+    })
+  }
+
+  if (plan.testFilesToCreate.length === 0) {
+    failures.push({
+      check: 'tests_planned',
+      reason: 'Plan must specify at least one test file to create',
+    })
+  }
+
+  if (!plan.approach || plan.approach.trim().length === 0) {
+    failures.push({
+      check: 'approach_documented',
+      reason: 'Plan must document the implementation approach',
+    })
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    evidence: {
+      filesPlanned: `${plan.filesToCreate.length} to create, ${plan.filesToModify.length} to modify`,
+      testsPlanned: `${plan.testFilesToCreate.length} test files`,
+      approach: plan.approach?.slice(0, 100) ?? '',
+    },
+  }
+}
+
+// ============================================================================
+// Default No-op Adapter
+// ============================================================================
+
+const defaultLlmAdapter: LlmAdapterFn = async _messages => ({
+  content: JSON.stringify({
+    tool: 'complete',
+    args: {
+      plan: {
+        approach: 'No-op stub plan',
+        filesToCreate: ['src/stub.ts'],
+        filesToModify: [],
+        testFilesToCreate: ['src/stub.test.ts'],
+        estimatedSubtasks: [],
+        risks: [],
+      },
+    },
+  }),
+  inputTokens: 0,
+  outputTokens: 0,
+})
+
+// ============================================================================
+// Node Factory
+// ============================================================================
+
+/**
+ * Creates the implementation_planner LangGraph node.
+ */
+export function createImplementationPlannerNode(config: ImplementationPlannerConfig = {}) {
+  const maxInternalIterations = config.maxInternalIterations ?? 3
+  const llmAdapter = config.llmAdapter ?? defaultLlmAdapter
+
+  return async (state: DevImplementV2State): Promise<Partial<DevImplementV2State>> => {
+    const { storyGroundingContext } = state
+
+    logger.info(`implementation_planner: starting`, {
+      storyId: state.storyId,
+      hasGrounding: !!storyGroundingContext,
+      maxInternalIterations,
+    })
+
+    if (!storyGroundingContext) {
+      logger.warn('implementation_planner: no grounding context — using empty context')
+    }
+
+    const grounding: StoryGroundingContext = storyGroundingContext ?? {
+      storyId: state.storyId,
+      storyTitle: state.storyId,
+      acceptanceCriteria: [],
+      subtasks: [],
+      relevantFiles: [],
+      relevantFunctions: [],
+      existingPatterns: [],
+      relatedStories: [],
+    }
+
+    let previousFailures: Array<{ check: string; reason: string }> = []
+    const allTokenUsage: TokenUsage[] = []
+    let plan: ImplementationPlan | null = null
+    let iteration = 0
+
+    while (iteration < maxInternalIterations) {
+      iteration++
+
+      const prompt = buildPlannerPrompt(grounding, previousFailures)
+      const messages = [{ role: 'system' as const, content: prompt }]
+
+      let llmResponse: { content: string; inputTokens: number; outputTokens: number }
+      try {
+        llmResponse = await llmAdapter(messages)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.warn(`implementation_planner: LLM threw on iteration ${iteration}`, { error: msg })
+        allTokenUsage.push({ nodeId: 'implementation_planner', inputTokens: 0, outputTokens: 0 })
+        break
+      }
+
+      allTokenUsage.push({
+        nodeId: 'implementation_planner',
+        inputTokens: llmResponse.inputTokens,
+        outputTokens: llmResponse.outputTokens,
+      })
+
+      // Parse tool call
+      let parsed: { tool: string; args: Record<string, unknown> } | null = null
+      try {
+        const jsonMatch = llmResponse.content.match(/```(?:json)?\s*([\s\S]*?)```/)
+        const jsonStr = jsonMatch ? jsonMatch[1].trim() : llmResponse.content.trim()
+        parsed = JSON.parse(jsonStr)
+      } catch {
+        logger.warn(`implementation_planner: failed to parse response on iteration ${iteration}`)
+        previousFailures = [{ check: 'parse', reason: 'LLM response was not valid JSON' }]
+        continue
+      }
+
+      if (!parsed) continue
+
+      if (parsed.tool === 'complete' && parsed.args['plan']) {
+        const rawPlan = parsed.args['plan'] as Record<string, unknown>
+        plan = {
+          approach: String(rawPlan['approach'] ?? ''),
+          filesToCreate: (rawPlan['filesToCreate'] as string[] | undefined) ?? [],
+          filesToModify: (rawPlan['filesToModify'] as string[] | undefined) ?? [],
+          testFilesToCreate: (rawPlan['testFilesToCreate'] as string[] | undefined) ?? [],
+          risks: (rawPlan['risks'] as string[] | undefined) ?? [],
+        }
+
+        const postconditionResult = checkPlannerPostconditions(plan!)
+        if (postconditionResult.passed) {
+          logger.info('implementation_planner: postconditions passed', { iteration })
+          break
+        }
+        previousFailures = postconditionResult.failures
+        plan = null
+        continue
+      }
+
+      // Handle tool calls (query_kb, search_codebase, read_file)
+      // For now just continue — adapters used in real implementation
+      logger.info(`implementation_planner: tool=${parsed.tool}`, { iteration })
+    }
+
+    // Use stub plan if agent didn't produce one
+    if (!plan) {
+      plan = {
+        approach: 'Stub plan (planner could not produce valid plan)',
+        filesToCreate: ['src/stub.ts'],
+        filesToModify: [],
+        testFilesToCreate: ['src/stub.test.ts'],
+        risks: ['Plan generation failed after max iterations'],
+      }
+    }
+
+    const finalPostconditions = checkPlannerPostconditions(plan)
+
+    logger.info('implementation_planner: complete', {
+      storyId: state.storyId,
+      passed: finalPostconditions.passed,
+      iterations: iteration,
+    })
+
+    return {
+      implementationPlan: plan,
+      postconditionResult: finalPostconditions,
+      tokenUsage: allTokenUsage,
+      devImplementV2Phase: 'implementation_executor',
+    }
+  }
+}

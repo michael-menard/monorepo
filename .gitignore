@@ -107,3 +107,4 @@ tree/
 .scannerwork/
 .sonar/
 sonar-project.properties.bak
+sonarqube-plugins/*.jar

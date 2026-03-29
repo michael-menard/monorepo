@@ -1,4 +1,0 @@
-schema: 1
-story_id: TEST-001
-  bad_indentation: this is malformed
-current_phase: setup

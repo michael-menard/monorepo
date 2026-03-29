@@ -1,7 +1,0 @@
----
-id: TEST-BAD
-title: Malformed YAML
-{invalid yaml syntax
-broken: [unclosed
----
-Content here
