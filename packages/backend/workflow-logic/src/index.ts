@@ -24,6 +24,9 @@
  * Token:
  * - TokenUsageSchema, estimateTokenCount, formatTokenSummary
  *
+ * Telemetry:
+ * - McpInvocationPhaseSchema, mapArtifactPhaseToMcpPhase
+ *
  * @module @repo/workflow-logic
  */
 
@@ -78,3 +81,7 @@ export { buildContextQuery, buildBlockerQuery } from './context/index.js'
 // Token — usage estimation and formatting
 export { estimateTokenCount, formatTokenSummary, TokenUsageSchema } from './token/index.js'
 export type { TokenUsage } from './token/index.js'
+
+// Telemetry — phase mapping between ArtifactPhase and MCP invocation phase
+export { mapArtifactPhaseToMcpPhase, McpInvocationPhaseSchema } from './telemetry/index.js'
+export type { McpInvocationPhase } from './telemetry/index.js'
