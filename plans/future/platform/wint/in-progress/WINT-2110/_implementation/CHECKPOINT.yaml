@@ -1,0 +1,14 @@
+schema: 1
+story_id: WINT-2110
+forced: false
+blocked: false
+blocked_reason: null
+e2e_gate: null
+warnings:
+  - "pnpm check-types:all shows pre-existing failures in @repo/orchestrator (unrelated to WINT-2110)"
+iteration: 0
+feature_dir: plans/future/platform/wint
+completed_at: null
+current_phase: execute
+last_successful_phase: plan
+max_iterations: 3
