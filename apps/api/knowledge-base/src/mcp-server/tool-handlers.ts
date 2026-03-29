@@ -162,15 +162,9 @@ import {
 } from '../crud-operations/telemetry-operations.js'
 import {
   session_create,
-  session_update,
   session_complete,
-  session_query,
-  session_cleanup,
   SessionCreateInputSchema,
-  SessionUpdateInputSchema,
   SessionCompleteInputSchema,
-  SessionQueryInputSchema,
-  SessionCleanupInputSchema,
 } from '../crud-operations/session-operations.js'
 import {
   kb_sync_working_set,
@@ -5352,6 +5346,48 @@ async function handleWorkflowGetStoryTelemetry(
 }
 
 /**
+ * Handle session_create tool call.
+ * Inserts a row to workflow.context_sessions (ended_at=NULL → agent active).
+ */
+async function handleSessionCreate(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+  try {
+    const validated = SessionCreateInputSchema.parse(input)
+    const result = await session_create({ db: deps.db }, validated)
+    logger.info('session_create succeeded', { correlation_id: correlationId, ...result })
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  } catch (error) {
+    logger.error('session_create failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle session_complete tool call.
+ * Sets ended_at=NOW() on a context session row.
+ */
+async function handleSessionComplete(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+  try {
+    const validated = SessionCompleteInputSchema.parse(input)
+    const result = await session_complete({ db: deps.db }, validated)
+    logger.info('session_complete succeeded', { correlation_id: correlationId, ...result })
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  } catch (error) {
+    logger.error('session_complete failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Tool handler type with context support.
  */
 type ToolHandler = (
@@ -5449,6 +5485,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_roadmap: handleKbGetRoadmap,
   kb_update_plan: handleKbUpdatePlan,
   kb_upsert_plan: handleKbUpsertPlan,
+  // Session tracking — real-time agent activity badge
+  session_create: handleSessionCreate,
+  session_complete: handleSessionComplete,
   // PDBM Phase 0 plan tools
   kb_search_plans: handleKbSearchPlans,
   kb_get_plan_dashboard: handleKbGetPlanDashboard,
@@ -5467,12 +5506,6 @@ export const toolHandlers: Record<string, ToolHandler> = {
   workflow_log_decision: handleWorkflowLogDecision,
   workflow_log_outcome: handleWorkflowLogOutcome,
   workflow_get_story_telemetry: handleWorkflowGetStoryTelemetry,
-  // Session management tools (WINT-2090)
-  session_create: handleSessionCreate,
-  session_update: handleSessionUpdate,
-  session_complete: handleSessionComplete,
-  session_query: handleSessionQuery,
-  session_cleanup: handleSessionCleanup,
 }
 
 /**
@@ -5691,233 +5724,3 @@ export async function handleWorkflowLogInvocation(
 
 // Register in toolHandlers map
 toolHandlers['workflow_log_invocation'] = handleWorkflowLogInvocation
-
-// ============================================================================
-// Session Management Tool Handlers (WINT-2090)
-// ============================================================================
-
-/**
- * Handle session_create tool invocation.
- * Creates a new agent context session in workflow.context_sessions.
- *
- * Session tracking is telemetry — null return must NOT block workflow.
- */
-export async function handleSessionCreate(
-  input: unknown,
-  deps: ToolHandlerDeps,
-  context?: ToolCallContext,
-): Promise<McpToolResult> {
-  const correlationId = context?.correlation_id ?? 'no-correlation-id'
-
-  const inputObj = input as Record<string, unknown>
-  logger.info('session_create tool invoked', {
-    correlation_id: correlationId,
-    agent_name: inputObj?.agentName,
-    story_id: inputObj?.storyId,
-    phase: inputObj?.phase,
-  })
-
-  try {
-    enforceAuthorization('session_create' as ToolName, context)
-    const validated = SessionCreateInputSchema.parse(input)
-    const result = await session_create({ db: deps.db }, validated)
-
-    if (result === null) {
-      logger.warn('session_create: returned null (DB error) — session tracking unavailable', {
-        correlation_id: correlationId,
-        agent_name: validated.agentName,
-      })
-    } else {
-      logger.info('session_create succeeded', {
-        correlation_id: correlationId,
-        session_id: result.sessionId,
-        agent_name: result.agentName,
-      })
-    }
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    }
-  } catch (error) {
-    logger.error('session_create failed', { correlation_id: correlationId, error })
-    return errorToToolResult(error)
-  }
-}
-
-// Register in toolHandlers map
-toolHandlers['session_create'] = handleSessionCreate
-
-/**
- * Handle session_update tool invocation.
- * Updates token metrics for an existing agent session.
- */
-export async function handleSessionUpdate(
-  input: unknown,
-  deps: ToolHandlerDeps,
-  context?: ToolCallContext,
-): Promise<McpToolResult> {
-  const correlationId = context?.correlation_id ?? 'no-correlation-id'
-
-  const inputObj = input as Record<string, unknown>
-  logger.info('session_update tool invoked', {
-    correlation_id: correlationId,
-    session_id: inputObj?.sessionId,
-    mode: inputObj?.mode,
-  })
-
-  try {
-    enforceAuthorization('session_update' as ToolName, context)
-    const validated = SessionUpdateInputSchema.parse(input)
-    const result = await session_update({ db: deps.db }, validated)
-
-    logger.info('session_update succeeded', {
-      correlation_id: correlationId,
-      session_id: validated.sessionId,
-      updated: result !== null,
-    })
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    }
-  } catch (error) {
-    logger.error('session_update failed', { correlation_id: correlationId, error })
-    return errorToToolResult(error)
-  }
-}
-
-// Register in toolHandlers map
-toolHandlers['session_update'] = handleSessionUpdate
-
-/**
- * Handle session_complete tool invocation.
- * Marks an agent session as completed with final metrics.
- *
- * Session tracking is telemetry — null return must NOT block workflow.
- */
-export async function handleSessionComplete(
-  input: unknown,
-  deps: ToolHandlerDeps,
-  context?: ToolCallContext,
-): Promise<McpToolResult> {
-  const correlationId = context?.correlation_id ?? 'no-correlation-id'
-
-  const inputObj = input as Record<string, unknown>
-  logger.info('session_complete tool invoked', {
-    correlation_id: correlationId,
-    session_id: inputObj?.sessionId,
-  })
-
-  try {
-    enforceAuthorization('session_complete' as ToolName, context)
-    const validated = SessionCompleteInputSchema.parse(input)
-    const result = await session_complete({ db: deps.db }, validated)
-
-    if (result === null) {
-      logger.warn('session_complete: returned null (DB error) — session tracking unavailable', {
-        correlation_id: correlationId,
-        session_id: validated.sessionId,
-      })
-    } else {
-      logger.info('session_complete succeeded', {
-        correlation_id: correlationId,
-        session_id: result.sessionId,
-        ended_at: result.endedAt,
-      })
-    }
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    }
-  } catch (error) {
-    logger.error('session_complete failed', { correlation_id: correlationId, error })
-    return errorToToolResult(error)
-  }
-}
-
-// Register in toolHandlers map
-toolHandlers['session_complete'] = handleSessionComplete
-
-/**
- * Handle session_query tool invocation.
- * Retrieves agent sessions with flexible filtering and pagination.
- */
-export async function handleSessionQuery(
-  input: unknown,
-  deps: ToolHandlerDeps,
-  context?: ToolCallContext,
-): Promise<McpToolResult> {
-  const correlationId = context?.correlation_id ?? 'no-correlation-id'
-
-  const inputObj = input as Record<string, unknown>
-  logger.info('session_query tool invoked', {
-    correlation_id: correlationId,
-    story_id: inputObj?.storyId,
-    agent_name: inputObj?.agentName,
-    active_only: inputObj?.activeOnly,
-  })
-
-  try {
-    enforceAuthorization('session_query' as ToolName, context)
-    const validated = SessionQueryInputSchema.parse(input)
-    const result = await session_query({ db: deps.db }, validated)
-
-    logger.info('session_query succeeded', {
-      correlation_id: correlationId,
-      count: result.length,
-    })
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    }
-  } catch (error) {
-    logger.error('session_query failed', { correlation_id: correlationId, error })
-    return errorToToolResult(error)
-  }
-}
-
-// Register in toolHandlers map
-toolHandlers['session_query'] = handleSessionQuery
-
-/**
- * Handle session_cleanup tool invocation.
- * Archives old completed sessions by deletion.
- *
- * SAFETY: Defaults to dryRun=true — must explicitly opt in to actual deletion.
- */
-export async function handleSessionCleanup(
-  input: unknown,
-  deps: ToolHandlerDeps,
-  context?: ToolCallContext,
-): Promise<McpToolResult> {
-  const correlationId = context?.correlation_id ?? 'no-correlation-id'
-
-  const inputObj = input as Record<string, unknown>
-  logger.info('session_cleanup tool invoked', {
-    correlation_id: correlationId,
-    retention_days: inputObj?.retentionDays,
-    dry_run: inputObj?.dryRun,
-  })
-
-  try {
-    enforceAuthorization('session_cleanup' as ToolName, context)
-    const validated = SessionCleanupInputSchema.parse(input)
-    const result = await session_cleanup({ db: deps.db }, validated)
-
-    logger.info('session_cleanup succeeded', {
-      correlation_id: correlationId,
-      deleted_count: result.deletedCount,
-      dry_run: result.dryRun,
-      cutoff_date: result.cutoffDate,
-    })
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-    }
-  } catch (error) {
-    logger.error('session_cleanup failed', { correlation_id: correlationId, error })
-    return errorToToolResult(error)
-  }
-}
-
-// Register in toolHandlers map
-toolHandlers['session_cleanup'] = handleSessionCleanup

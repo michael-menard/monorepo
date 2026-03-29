@@ -24,6 +24,10 @@ import {
 } from '../worktree-management/index.js'
 import { WorkflowLogInvocationInputSchema } from '../telemetry/index.js'
 import {
+  SessionCreateInputSchema,
+  SessionCompleteInputSchema,
+} from '../crud-operations/session-operations.js'
+import {
   KbAddInputSchema,
   KbGetInputSchema,
   KbUpdateInputSchema,
@@ -90,13 +94,6 @@ import {
   type KbGetChurnAnalysisInput,
   type KbGetScoreboardInput,
 } from '../crud-operations/analytics-operations.js'
-import {
-  SessionCreateInputSchema,
-  SessionUpdateInputSchema,
-  SessionCompleteInputSchema,
-  SessionQueryInputSchema,
-  SessionCleanupInputSchema,
-} from '../crud-operations/session-operations.js'
 // Re-export schemas and types for external use
 export {
   KbCreateStoryInputSchema,
@@ -3048,9 +3045,10 @@ Example (complete a story):
  */
 export const kbUpdateStoryToolDefinition: McpToolDefinition = {
   name: 'kb_update_story',
-  description: `Update story metadata fields (epic, feature, title, priority, points).
+  description: `Update story metadata fields (epic, feature, title, priority, points, plan_slug).
 
 Use this to correct metadata like epic assignment without touching workflow state.
+Use plan_slug to move a story to a different plan (replaces existing plan link).
 
 Parameters:
 - story_id (required): Story ID to update (e.g., 'LNGG-0010')
@@ -3059,6 +3057,7 @@ Parameters:
 - title (optional): New title
 - priority (optional): New priority (null to clear)
 - points (optional): New story points (null to clear)
+- plan_slug (optional): Move story to this plan (replaces existing plan links, null to unlink)
 
 Returns: Updated story object
 
@@ -3068,11 +3067,10 @@ Example (reassign epic):
   "epic": "LNGG"
 }
 
-Example (set multiple fields):
+Example (move story to a different plan):
 {
   "story_id": "KBAR-0060",
-  "epic": "KBAR",
-  "feature": "kb-artifact-migration"
+  "plan_slug": "my-plan-v2"
 }`,
   inputSchema: zodToMcpSchema(KbUpdateStoryInputSchema),
 }
@@ -3689,6 +3687,7 @@ Parameters:
 - dependencies (optional): Array of plan slugs that must reach 'implemented' before this plan can start
 - source_file (optional): Original source file path
 - parent_plan_slug (optional): Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan)
+- supersedes_plan_slug (optional): Plan slug that this plan supersedes/replaces (forward link from V2 → original)
 
 Returns: The upserted plan record (includes parentPlanId) and whether it was created or updated.`,
   inputSchema: zodToMcpSchema(KbUpsertPlanInputSchema),
@@ -3711,12 +3710,14 @@ Parameters:
 - status (optional): New status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
 - tags (optional): New tags array (replaces existing tags)
 - title (optional): New title
+- summary (optional): New summary text (null to clear)
 - plan_type (optional): New plan type
 - feature_dir (optional): New feature directory (null to clear)
 - story_prefix (optional): New story prefix (null to clear)
 - estimated_stories (optional): New estimated stories count (null to clear)
 - dependencies (optional): Plan slugs that must reach 'implemented' before this plan can start (null to clear)
 - parent_plan_slug (optional): Parent plan slug for hierarchy (null to clear, string to set)
+- supersedes_plan_slug (optional): Plan slug that this plan supersedes/replaces (null to clear)
 
 Returns: Updated plan object (includes parentPlanId)
 
@@ -4468,145 +4469,39 @@ toolDefinitions.push(
   workflowGetStoryTelemetryToolDefinition,
 )
 
-// ============================================================================
-// Session Tool Definitions (WINT-2090)
-// ============================================================================
-
+// Session tracking tools — real-time agent activity for roadmap badge
 const sessionCreateToolDefinition = {
   name: 'session_create',
-  description: `Create a new agent context session in workflow.context_sessions.
+  description: `Open a context session to signal that an agent is actively working on a story.
+Inserts a row to workflow.context_sessions with ended_at = NULL.
+The roadmap UI polls this table and shows an "Agent active" badge on the story card.
+Non-blocking telemetry — if this fails, the caller's workflow continues.
 
-Session tracking is telemetry — a null return must NOT block workflow execution.
-Auto-generates a UUID sessionId if not provided.
-
-Parameters:
-- agentName (required): Name of the leader agent opening the session (e.g., 'dev-execute-leader')
-- storyId (optional): Story ID for this workflow (e.g., 'WINT-2090')
-- phase (optional): Current workflow phase (e.g., 'execute', 'plan', 'qa')
-- sessionId (optional): Override the session UUID (auto-generated if omitted)
-- inputTokens (optional): Initial input token count (default: 0)
-- outputTokens (optional): Initial output token count (default: 0)
-- cachedTokens (optional): Initial cached token count (default: 0)
-
-Returns: Created session record or null on DB error. Null must NOT block workflow.
+Returns: { sessionId, id }
 
 Example:
 {
-  "agentName": "dev-execute-leader",
-  "storyId": "WINT-2090",
-  "phase": "execute"
+  "agentName": "review",
+  "storyId": "WINT-6070",
+  "phase": "review"
 }`,
   inputSchema: zodToMcpSchema(SessionCreateInputSchema),
 }
 
-const sessionUpdateToolDefinition = {
-  name: 'session_update',
-  description: `Update an existing agent session's token metrics.
-
-Supports two modes:
-- incremental (default): Adds values to existing counts (concurrent-safe with SQL arithmetic)
-- absolute: Sets values directly (last-write-wins)
-
-Cannot update completed sessions (endedAt IS NOT NULL).
-
-Parameters:
-- sessionId (required): UUID of the session to update
-- mode (optional): 'incremental' (default) or 'absolute'
-- inputTokens (optional): Token count to add/set
-- outputTokens (optional): Token count to add/set
-- cachedTokens (optional): Token count to add/set
-
-Returns: Updated session record or null on error.
-
-Example (incremental):
-{
-  "sessionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "inputTokens": 1000,
-  "outputTokens": 500
-}`,
-  inputSchema: zodToMcpSchema(SessionUpdateInputSchema),
-}
-
 const sessionCompleteToolDefinition = {
   name: 'session_complete',
-  description: `Mark an agent session as completed with final metrics.
+  description: `Close a context session opened by session_create.
+Sets ended_at = NOW() on the matching row in workflow.context_sessions.
+The roadmap badge disappears within seconds via SSE.
+Non-blocking telemetry — if this fails, the caller's workflow continues.
 
-Sets the endedAt timestamp and optionally updates final token counts.
-Cannot complete an already-completed session (idempotency check).
-
-Parameters:
-- sessionId (required): UUID of the session to complete
-- endedAt (optional): ISO timestamp for completion (defaults to now())
-- inputTokens (optional): Final input token count (absolute)
-- outputTokens (optional): Final output token count (absolute)
-- cachedTokens (optional): Final cached token count (absolute)
-
-Returns: Completed session record or null on error.
+Returns: { sessionId, endedAt }
 
 Example:
 {
-  "sessionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "inputTokens": 5000,
-  "outputTokens": 2500
+  "sessionId": "uuid-returned-by-session_create"
 }`,
   inputSchema: zodToMcpSchema(SessionCompleteInputSchema),
 }
 
-const sessionQueryToolDefinition = {
-  name: 'session_query',
-  description: `Query agent sessions with flexible filtering and pagination.
-
-Results are ordered by startedAt DESC (most recent first).
-Filter by agentName, storyId, or active-only (endedAt IS NULL).
-
-Parameters:
-- agentName (optional): Filter by agent name
-- storyId (optional): Filter by story ID
-- activeOnly (optional): If true, return only sessions without endedAt (default: false)
-- limit (optional): Max results (1-1000, default: 50)
-- offset (optional): Pagination offset (default: 0)
-
-Returns: Array of matching session records.
-
-Example:
-{
-  "storyId": "WINT-2090",
-  "activeOnly": true
-}`,
-  inputSchema: zodToMcpSchema(SessionQueryInputSchema),
-}
-
-const sessionCleanupToolDefinition = {
-  name: 'session_cleanup',
-  description: `Archive old completed agent sessions by deletion.
-
-SAFETY: Defaults to dryRun=true — must explicitly set dryRun=false to delete.
-Only deletes completed sessions (endedAt IS NOT NULL) older than retentionDays.
-
-Parameters:
-- retentionDays (optional): Sessions older than this many days are eligible (default: 90, min: 1)
-- dryRun (optional): If true (default), count sessions without deleting
-
-Returns: { deletedCount, dryRun, cutoffDate }
-
-Example (dry run):
-{
-  "retentionDays": 90
-}
-
-Example (actual cleanup):
-{
-  "retentionDays": 90,
-  "dryRun": false
-}`,
-  inputSchema: zodToMcpSchema(SessionCleanupInputSchema),
-}
-
-// Append session tools to toolDefinitions (WINT-2090)
-toolDefinitions.push(
-  sessionCreateToolDefinition,
-  sessionUpdateToolDefinition,
-  sessionCompleteToolDefinition,
-  sessionQueryToolDefinition,
-  sessionCleanupToolDefinition,
-)
+toolDefinitions.push(sessionCreateToolDefinition, sessionCompleteToolDefinition)

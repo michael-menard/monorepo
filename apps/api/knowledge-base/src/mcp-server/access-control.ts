@@ -54,6 +54,7 @@ export const ToolNameSchema = z.enum([
   'kb_get_token_summary',
   'kb_get_bottleneck_analysis',
   'kb_get_churn_analysis',
+  'kb_get_scoreboard',
   // Worktree management tools (WINT-1130)
   'worktree_register',
   'worktree_get_by_story',
@@ -69,6 +70,7 @@ export const ToolNameSchema = z.enum([
   'kb_search_plans',
   'kb_get_plan_dashboard',
   'kb_get_plan_revisions',
+  'kb_get_plan_revision_diff',
   'kb_log_plan_event',
   'kb_get_plan_events',
   // Artifact search tool (KBAR-0130)
@@ -82,12 +84,15 @@ export const ToolNameSchema = z.enum([
   'workflow_log_decision',
   'workflow_log_outcome',
   'workflow_get_story_telemetry',
-  // Session management tools (WINT-2090)
+  // Session tracking (real-time agent activity badge)
   'session_create',
-  'session_update',
   'session_complete',
-  'session_query',
-  'session_cleanup',
+  // Story dependency and context tools
+  'kb_add_dependency',
+  'kb_get_story_plan_links',
+  'kb_ingest_story_from_yaml',
+  'kb_find_similar_stories',
+  'kb_get_story_context',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -151,6 +156,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_get_token_summary: new Set(['pm', 'dev']),
   kb_get_bottleneck_analysis: new Set(['pm', 'dev']),
   kb_get_churn_analysis: new Set(['pm', 'dev']),
+  kb_get_scoreboard: new Set(['pm', 'dev']),
   // Worktree management tools (WINT-1130) - available to all roles
   worktree_register: new Set(['pm', 'dev', 'qa', 'all']),
   worktree_get_by_story: new Set(['pm', 'dev', 'qa', 'all']),
@@ -166,6 +172,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_search_plans: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_dashboard: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_plan_revisions: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_plan_revision_diff: new Set(['pm', 'dev', 'qa', 'all']),
   kb_log_plan_event: new Set(['pm', 'dev']),
   kb_get_plan_events: new Set(['pm', 'dev', 'qa', 'all']),
   // Artifact search tool (KBAR-0130) - available to all roles
@@ -179,12 +186,15 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   workflow_log_decision: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_log_outcome: new Set(['pm', 'dev', 'qa', 'all']),
   workflow_get_story_telemetry: new Set(['pm', 'dev', 'qa', 'all']),
-  // Session management tools (WINT-2090) - available to all roles (observability/telemetry)
+  // Story dependency and context tools - available to all roles
+  kb_add_dependency: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_plan_links: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_ingest_story_from_yaml: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_find_similar_stories: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_story_context: new Set(['pm', 'dev', 'qa', 'all']),
+  // Session tracking tools - available to all roles (telemetry)
   session_create: new Set(['pm', 'dev', 'qa', 'all']),
-  session_update: new Set(['pm', 'dev', 'qa', 'all']),
   session_complete: new Set(['pm', 'dev', 'qa', 'all']),
-  session_query: new Set(['pm', 'dev', 'qa', 'all']),
-  session_cleanup: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**
@@ -203,8 +213,7 @@ export const ADMIN_TOOLS: readonly ToolName[] = [
  * @returns Normalized lowercase role or null if invalid
  */
 export function normalizeRole(role: string): AgentRole | null {
-  const normalized = role.toLowerCase() as AgentRole
-  const result = AgentRoleSchema.safeParse(normalized)
+  const result = AgentRoleSchema.safeParse(role.toLowerCase())
   return result.success ? result.data : null
 }
 
