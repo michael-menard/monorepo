@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 73 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + pdbm-plans + artifact_search + story_similarity + story_context + context_pack + telemetry)', () => {
+    it('should return all 81 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + pdbm-plans + artifact_search + story_similarity + story_context + context_pack + telemetry + session)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(73)
+      expect(tools).toHaveLength(81)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -134,6 +134,11 @@ describe('MCP Server Integration', () => {
         'kb_update_story_status',
         'kb_update_story',
         'kb_get_next_story',
+        // Story dependency and plan link tools
+        'kb_add_dependency',
+        'kb_get_story_plan_links',
+        // Story ingest tool (CDBE-2030)
+        'kb_ingest_story_from_yaml',
         // Token logging tools
         'kb_log_tokens',
         // Analytics tools
@@ -172,6 +177,12 @@ describe('MCP Server Integration', () => {
         'workflow_log_decision',
         'workflow_log_outcome',
         'workflow_get_story_telemetry',
+        // Session management tools (WINT-2090)
+        'session_create',
+        'session_update',
+        'session_complete',
+        'session_query',
+        'session_cleanup',
       ])
     })
 
