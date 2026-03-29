@@ -9,6 +9,7 @@ import { z } from 'zod'
 // Lifecycle Stage
 // ============================================================================
 
+/** Valid CRUD lifecycle stages for capabilities */
 export const LifecycleStageSchema = z.enum(['create', 'read', 'update', 'delete'])
 export type LifecycleStage = z.infer<typeof LifecycleStageSchema>
 
@@ -17,45 +18,47 @@ export type LifecycleStage = z.infer<typeof LifecycleStageSchema>
 // ============================================================================
 
 /**
- * A capability inferred from story text analysis.
- * Maps to an InsertCapability row in graph.capabilities.
+ * A single capability row inferred from story keyword analysis.
+ * Matches graph.capabilities table fields.
  */
 export const InferredCapabilitySchema = z.object({
   capabilityName: z.string().min(1),
   capabilityType: z.literal('business'),
-  maturityLevel: z.literal('beta'),
   lifecycleStage: LifecycleStageSchema,
+  maturityLevel: z.literal('beta'),
   featureId: z.string().uuid(),
 })
 export type InferredCapability = z.infer<typeof InferredCapabilitySchema>
 
 // ============================================================================
-// Story Entry (from scanning plans/)
+// Story Scan Result
 // ============================================================================
 
 /**
- * A story entry extracted from story YAML files under plans/future/platform/
+ * A single story entry extracted from story YAML/MD files during scanning.
  */
 export const StoryEntrySchema = z.object({
-  storyId: z.string(),
-  epic: z.string(), // uppercase prefix, e.g. "WINT", "WISH"
+  storyId: z.string().min(1),
+  epic: z.string().min(1),
   title: z.string(),
-  text: z.string(), // combined AC text + title for keyword analysis
+  text: z.string(),
 })
 export type StoryEntry = z.infer<typeof StoryEntrySchema>
 
 // ============================================================================
-// Capability Inference Result
+// Capability Inference Result (matches PopulateResultSchema shape)
 // ============================================================================
 
 /**
- * Summary result matching CapabilityInferenceResultSchema (AC-8)
+ * Summary result emitted by inferCapabilities().
+ * Shape: { attempted, succeeded, failed, skipped }
+ * Matching PopulateResultSchema from populate-domain-kb.ts (extended with skipped).
  */
 export const CapabilityInferenceResultSchema = z.object({
-  attempted: z.number().int().min(0),
-  succeeded: z.number().int().min(0),
-  failed: z.number().int().min(0),
-  skipped: z.number().int().min(0),
+  attempted: z.number().int().nonnegative(),
+  succeeded: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
 })
 export type CapabilityInferenceResult = z.infer<typeof CapabilityInferenceResultSchema>
 
@@ -64,39 +67,31 @@ export type CapabilityInferenceResult = z.infer<typeof CapabilityInferenceResult
 // ============================================================================
 
 /**
- * Options for inferCapabilities() — injectable for testability (AC-10)
- * Input type allows all fields to be optional; defaults applied inside the function.
+ * Options for inferCapabilities().
+ * insertFn is injectable for testability — no real DB needed in CI.
+ * dbFn is injectable for resolveFeatureId — no real DB needed in CI.
  */
 export const InferCapabilitiesOptionsSchema = z.object({
-  dryRun: z.boolean().optional(),
-  validate: z.boolean().optional(),
-  rootDir: z.string().optional(), // override plans/ root for tests
+  dryRun: z.boolean().optional().default(false),
+  validate: z.boolean().optional().default(false),
+  rootDir: z.string().optional(),
 })
 export type InferCapabilitiesOptions = z.infer<typeof InferCapabilitiesOptionsSchema>
 
-// ============================================================================
-// Injectable function types
-// ============================================================================
-
 /**
- * Injectable DB insert function for testability (AC-10)
- * Production: uses real Drizzle client
- * Tests: use vi.fn() mocks
+ * Injectable insert function signature.
+ * Default implementation uses Drizzle ORM with @repo/db.
+ * Tests pass a mock — no real DB needed in CI.
  */
 export type InsertFn = (rows: InferredCapability[], dryRun: boolean) => Promise<void>
 
 /**
- * A row returned from graph.features query
+ * Injectable DB query function for feature resolution.
+ * Returns { featureId: UUID } or null.
  */
-export const FeatureRowSchema = z.object({
-  id: z.string().uuid(),
-  featureName: z.string(),
-})
-export type FeatureRow = z.infer<typeof FeatureRowSchema>
+export type FeatureRow = {
+  id: string
+  featureName: string
+}
 
-/**
- * Injectable DB feature query function for testability (AC-10)
- * Production: queries real graph.features
- * Tests: use mock functions
- */
 export type DbFeatureQueryFn = () => Promise<FeatureRow[]>

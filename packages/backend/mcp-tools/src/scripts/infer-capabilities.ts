@@ -247,7 +247,7 @@ export function scanStories(rootDir?: string): StoryEntry[] {
 export async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
   // Dynamic import to avoid circular dependencies at module load time
   const { db } = await import('@repo/db')
-  const { features } = await import('@repo/knowledge-base/db')
+  const { features } = await import('@repo/database-schema')
 
   const rows = await db
     .select({ id: features.id, featureName: features.featureName })
@@ -309,7 +309,7 @@ export async function defaultInsertFn(rows: InferredCapability[], dryRun: boolea
 
   // Dynamic import to avoid circular dependencies at module load time
   const { db } = await import('@repo/db')
-  const { capabilities } = await import('@repo/knowledge-base/db')
+  const { capabilities } = await import('@repo/database-schema')
 
   await db
     .insert(capabilities)
