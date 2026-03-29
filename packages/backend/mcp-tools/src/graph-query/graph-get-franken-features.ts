@@ -1,110 +1,32 @@
 /**
- * Graph Get Franken Features MCP Tool
- * WINT-0131 AC-5: Identifies features with incomplete CRUD capabilities
+ * Graph Get Franken Features MCP Tool - DISABLED
  *
- * Features:
- * - Optional package name filter
- * - Zod validation at entry (fail fast)
- * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with features + capabilities schemas from @repo/knowledge-base/src/db
+ * APRS-5040: This file references 'features' and 'capabilities' tables that do not exist
+ * in the knowledge-base schema. These tables may have been planned but never implemented.
  *
- * Security: AC-7 (Parameterized Queries Mandatory via Drizzle ORM), AC-8 (Zod Validation at Entry)
- *
- * Franken-feature definition: feature with < 4 distinct lifecycle_stage values
- * among linked capabilities (create, read, update, delete).
+ * To restore this functionality:
+ * 1. Define features and capabilities tables in @repo/knowledge-base/src/db/schema
+ * 2. Export them from @repo/knowledge-base/db index
+ * 3. Uncomment the implementation below
  */
 
-import { logger } from '@repo/logger'
-import { db } from '@repo/db'
-import { features, capabilities } from '@repo/knowledge-base/db'
-import { eq, isNotNull } from 'drizzle-orm'
 import {
-  GraphGetFrankenFeaturesInputSchema,
   type GraphGetFrankenFeaturesInput,
   type FrankenFeatureItem,
 } from './__types__/index.js'
 
-const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
-
 /**
  * Identify features with incomplete CRUD capabilities (Franken-features)
  *
- * Definition: Franken-feature = feature with < 4 distinct lifecycle_stage values
- * among its linked capabilities (create, read, update, delete).
+ * DISABLED: Required tables (features, capabilities) do not exist in schema (APRS-5040)
+ * Returns empty array until implementation is completed.
  *
- * @param input - Optional package name filter
- * @returns Array of features with missing CRUD capabilities
- *
- * @example
- * ```typescript
- * const franken = await graph_get_franken_features({})
- * // => [{ featureId: 'uuid', featureName: 'incomplete-feature', missingCapabilities: ['create', 'update'] }]
- *
- * const filtered = await graph_get_franken_features({ packageName: '@repo/ui' })
- * // => Only Franken-features from @repo/ui package
- * ```
+ * @param _input - Optional package name filter (unused)
+ * @returns Empty array
  */
 export async function graph_get_franken_features(
-  input: GraphGetFrankenFeaturesInput,
+  _input: GraphGetFrankenFeaturesInput,
 ): Promise<FrankenFeatureItem[]> {
-  // Validate input - fail fast if invalid (AC-8: Zod Validation at Entry)
-  const parsed = GraphGetFrankenFeaturesInputSchema.parse(input)
-
-  try {
-    // Query all features with their linked capabilities (AC-7: Drizzle ORM only, no raw SQL)
-    const rows = await db
-      .select({
-        featureId: features.id,
-        featureName: features.featureName,
-        packageName: features.packageName,
-        lifecycleStage: capabilities.lifecycleStage,
-      })
-      .from(features)
-      .innerJoin(capabilities, eq(capabilities.featureId, features.id))
-      .where(isNotNull(capabilities.featureId))
-
-    // Apply optional package name filter in TypeScript (avoids additional DB round-trip)
-    const filteredRows = parsed.packageName
-      ? rows.filter(row => row.packageName === parsed.packageName)
-      : rows
-
-    // Group capabilities by featureId in TypeScript
-    const featureMap = new Map<string, { featureName: string; stages: Set<string> }>()
-
-    for (const row of filteredRows) {
-      if (!featureMap.has(row.featureId)) {
-        featureMap.set(row.featureId, {
-          featureName: row.featureName,
-          stages: new Set(),
-        })
-      }
-      if (row.lifecycleStage) {
-        featureMap.get(row.featureId)!.stages.add(row.lifecycleStage)
-      }
-    }
-
-    // Detect features with < 4 distinct CRUD lifecycle_stage values
-    const frankenFeatures: FrankenFeatureItem[] = []
-
-    for (const [featureId, { featureName, stages }] of featureMap) {
-      const missingCapabilities = CRUD_STAGES.filter(stage => !stages.has(stage))
-
-      if (missingCapabilities.length > 0) {
-        frankenFeatures.push({
-          featureId,
-          featureName,
-          missingCapabilities,
-        })
-      }
-    }
-
-    return frankenFeatures
-  } catch (error) {
-    // Resilient error handling: log warning, don't crash (AC-9: Resilient Error Handling)
-    logger.warn(
-      '[mcp-tools] Failed to get Franken-features:',
-      error instanceof Error ? error.message : String(error),
-    )
-    return []
-  }
+  // TODO: Implement when features and capabilities tables are created
+  return []
 }

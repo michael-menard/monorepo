@@ -79,25 +79,17 @@ async function main() {
         // For each rule, match it against franken-features
         for (const ff of frankenFeatures) {
           // Check if rule applies to this feature
-          // Simple pattern: check if feature name matches any pattern in rule conditions
-          const ruleConditions = rule.conditions as any || {}
-          const featurePatterns = ruleConditions.featurePatterns?.include || []
-          
-          let matches = featurePatterns.length === 0 // If no patterns, match all
-          if (featurePatterns.length > 0) {
-            matches = featurePatterns.some((pattern: string) => 
-              ff.featureName.includes(pattern)
-            )
-          }
-          
-          if (matches) {
+          // Simple pattern: check if rule scope matches franken-feature scope
+          const ruleAppliesToAll = rule.scope === 'global'
+
+          if (ruleAppliesToAll) {
             violations.push({
               rule_id: rule.id,
               feature_id: ff.featureId,
               feature_name: ff.featureName,
-              description: `Rule violation: ${rule.name}`,
+              description: `Rule violation: ${rule.rule_text}`,
               severity: rule.severity || 'warning',
-              actionable_hint: rule.remediation || `Fix feature ${ff.featureName} to match rule ${rule.name}`,
+              actionable_hint: `Fix feature ${ff.featureName} to comply with rule: ${rule.rule_text}`,
             })
           }
         }
