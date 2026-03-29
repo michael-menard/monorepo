@@ -69,6 +69,65 @@ export const FrankenFeatureItemSchema = z.object({
 export type FrankenFeatureItem = z.infer<typeof FrankenFeatureItemSchema>
 
 /**
+ * Capability Coverage Schema
+ * Per-feature CRUD stage coverage (boolean per stage).
+ * Distinct from CapabilityCoverageOutputSchema which uses counts.
+ * Used by CohesionCheckResultSchema and cohesion-check LangGraph node.
+ */
+export const CapabilityCoverageSchema = z.object({
+  create: z.boolean().optional(),
+  read: z.boolean().optional(),
+  update: z.boolean().optional(),
+  delete: z.boolean().optional(),
+})
+
+export type CapabilityCoverage = z.infer<typeof CapabilityCoverageSchema>
+
+/**
+ * Cohesion Status Schema
+ * Represents the result of a per-feature cohesion check.
+ */
+export const CohesionStatusSchema = z.enum(['complete', 'incomplete', 'unknown'])
+
+export type CohesionStatus = z.infer<typeof CohesionStatusSchema>
+
+/**
+ * Cohesion Check Result Schema
+ * Per-feature cohesion check result with status, violations, and CRUD coverage.
+ */
+export const CohesionCheckResultSchema = z.object({
+  featureId: z.string(),
+  status: CohesionStatusSchema,
+  violations: z.array(z.string()),
+  capabilityCoverage: CapabilityCoverageSchema,
+})
+
+export type CohesionCheckResult = z.infer<typeof CohesionCheckResultSchema>
+
+/**
+ * Coverage Summary Schema
+ * Aggregate coverage across all features in an audit.
+ */
+export const CoverageSummarySchema = z.object({
+  totalFeatures: z.number().int().min(0),
+  completeCount: z.number().int().min(0),
+  incompleteCount: z.number().int().min(0),
+})
+
+export type CoverageSummary = z.infer<typeof CoverageSummarySchema>
+
+/**
+ * Cohesion Audit Result Schema
+ * Full audit result — franken-features list + coverage summary.
+ */
+export const CohesionAuditResultSchema = z.object({
+  frankenFeatures: z.array(FrankenFeatureItemSchema),
+  coverageSummary: CoverageSummarySchema,
+})
+
+export type CohesionAuditResult = z.infer<typeof CohesionAuditResultSchema>
+
+/**
  * Graph Get Capability Coverage Input Schema
  * Queries capability coverage breakdown per feature
  *
