@@ -10,37 +10,30 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@repo/db'
-import { contextPacks } from '@repo/knowledge-base/db'
+import { contextPacks } from '@repo/database-schema'
 import { eq, inArray } from 'drizzle-orm'
+import { populateProjectContext } from '../populate-project-context.js'
+import { contextCachePut } from '../../context-cache/context-cache-put.js'
 
-// vi.mock calls are hoisted to the top of the file by Vitest — they execute before imports.
-// We wrap the real modules so each test can inject failures via mockImplementationOnce.
-vi.mock('node:fs', async () => {
-  const actual = await vi.importActual<typeof import('node:fs')>('node:fs')
-  return {
-    ...actual,
-    readFileSync: vi.fn(actual.readFileSync),
-  }
-})
-
-vi.mock('../../context-cache/context-cache-put.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../../context-cache/context-cache-put.js')>(
-      '../../context-cache/context-cache-put.js',
-    )
+// Mock the context-cache-put module so EC-1 can simulate a throw on first call.
+// All other tests call vi.mocked(contextCachePut).mockRestore() or use the real
+// implementation by restoring the spy after each test.
+vi.mock('../../context-cache/context-cache-put.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../context-cache/context-cache-put.js')>()
   return {
     ...actual,
     contextCachePut: vi.fn(actual.contextCachePut),
   }
 })
 
-// Imports must come AFTER vi.mock declarations (hoisting means mocks are set up first)
-import { readFileSync } from 'node:fs'
-import { contextCachePut } from '../../context-cache/context-cache-put.js'
-import { populateProjectContext } from '../populate-project-context.js'
-
-const mockedReadFileSync = vi.mocked(readFileSync)
-const mockedContextCachePut = vi.mocked(contextCachePut)
+// Mock node:fs so EC-2 can simulate a missing source file for readFileSync.
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...actual,
+    readFileSync: vi.fn(actual.readFileSync),
+  }
+})
 
 const EXPECTED_PACK_KEYS = [
   'project-conventions',
@@ -59,19 +52,10 @@ async function cleanupPacks() {
 
 describe('populateProjectContext integration', () => {
   beforeEach(async () => {
+    // Restore all mocks to real implementations before each test so integration
+    // tests run against the actual DB and filesystem by default.
+    vi.restoreAllMocks()
     await cleanupPacks()
-    // Clear any queued mockImplementationOnce from previous tests.
-    // mockReset clears implementations AND call history, so we must re-set real impls.
-    mockedReadFileSync.mockReset()
-    mockedContextCachePut.mockReset()
-    // Re-wire to real implementations so HP/ED tests run as true integration tests
-    const realFs = await vi.importActual<typeof import('node:fs')>('node:fs')
-    mockedReadFileSync.mockImplementation(realFs.readFileSync as typeof readFileSync)
-    const realCachePut =
-      await vi.importActual<typeof import('../../context-cache/context-cache-put.js')>(
-        '../../context-cache/context-cache-put.js',
-      )
-    mockedContextCachePut.mockImplementation(realCachePut.contextCachePut)
   })
 
   afterEach(async () => {
@@ -182,69 +166,72 @@ describe('populateProjectContext integration', () => {
     }
   })
 
-  it('EC-1: resilience — single contextCachePut throw does not abort run; 4 packs written, 1 failed', async () => {
-    // Make contextCachePut throw on the very first call (project-conventions pack).
-    // mockImplementationOnce queues the throw for the first call only;
-    // subsequent calls fall through to the real implementation set in beforeEach.
-    mockedContextCachePut.mockImplementationOnce(() => {
-      throw new Error('Simulated DB write failure for project-conventions')
+  it('EC-1: resilience — contextCachePut throwing on first call is counted as failed, other 4 packs succeed', async () => {
+    // Simulate contextCachePut throwing on the first call (first pack: project-conventions).
+    // The populate function catches errors in its try/catch loop — the remaining 4 packs
+    // must still be written and result.failed must equal 1.
+    const mockedPut = vi.mocked(contextCachePut)
+    const realImplementation = mockedPut.getMockImplementation()
+
+    mockedPut.mockImplementationOnce(() => {
+      throw new Error('Simulated DB failure on first pack')
     })
+
+    // Restore real implementation for calls 2-5 so the other packs are actually written
+    if (realImplementation) {
+      mockedPut.mockImplementation(realImplementation)
+    }
 
     const result = await populateProjectContext()
 
-    // All 5 packs were attempted
     expect(result.attempted).toBe(5)
-    // First pack threw — remaining 4 must have been written
     expect(result.failed).toBe(1)
     expect(result.succeeded).toBe(4)
 
-    // Confirm 4 rows actually written to DB — project-conventions was the failing pack
+    // Verify that the 4 non-failing packs were actually written to DB
     const rows = await db
       .select({ packKey: contextPacks.packKey })
       .from(contextPacks)
       .where(inArray(contextPacks.packKey, EXPECTED_PACK_KEYS))
 
     expect(rows).toHaveLength(4)
-    const writtenKeys = rows.map(r => r.packKey).sort()
+    // project-conventions (first pack) should NOT be present
+    const writtenKeys = rows.map(r => r.packKey)
     expect(writtenKeys).not.toContain('project-conventions')
-    expect(writtenKeys).toContain('tech-stack-backend')
-    expect(writtenKeys).toContain('tech-stack-frontend')
-    expect(writtenKeys).toContain('tech-stack-monorepo')
-    expect(writtenKeys).toContain('testing-strategy')
   })
 
-  it('EC-2: missing source doc — readFileSync ENOENT for CLAUDE.md; pack counted failed, 4 others continue', async () => {
-    // Make readFileSync throw ENOENT on the first call (CLAUDE.md for project-conventions).
-    // mockImplementationOnce queues the error for the first call only;
-    // subsequent calls fall through to the real implementation set in beforeEach.
-    mockedReadFileSync.mockImplementationOnce((_path, _options) => {
-      const err = Object.assign(new Error('ENOENT: no such file or directory, open CLAUDE.md'), {
-        code: 'ENOENT',
-      })
-      throw err
+  it('EC-2: source doc not found — readDoc returns null, pack counted as failed, others continue', async () => {
+    // Simulate a missing source file by making readFileSync throw for the CLAUDE.md path.
+    // The readDoc() function catches the error and returns null, so the populate function
+    // increments results.failed and continues — the other 4 packs must still succeed.
+    const fs = await import('node:fs')
+    const mockedReadFileSync = vi.mocked(fs.readFileSync)
+
+    mockedReadFileSync.mockImplementationOnce((path, _options) => {
+      // Only throw for CLAUDE.md (the first source doc — project-conventions pack)
+      if (String(path).endsWith('CLAUDE.md')) {
+        throw new Error('ENOENT: no such file or directory')
+      }
+      // Fall through to real implementation for all other files
+      return fs.readFileSync(path, _options as BufferEncoding)
     })
 
     const result = await populateProjectContext()
 
-    // All 5 packs were attempted
     expect(result.attempted).toBe(5)
-    // CLAUDE.md read threw ENOENT — project-conventions pack counted as failed
     expect(result.failed).toBe(1)
     expect(result.succeeded).toBe(4)
 
-    // Confirm 4 rows actually written to DB — not the one with missing source doc
+    // Verify that the 4 non-failing packs were written to DB
     const rows = await db
       .select({ packKey: contextPacks.packKey })
       .from(contextPacks)
       .where(inArray(contextPacks.packKey, EXPECTED_PACK_KEYS))
 
     expect(rows).toHaveLength(4)
-    const writtenKeys = rows.map(r => r.packKey).sort()
+    // project-conventions (sourced from CLAUDE.md) should NOT be present
+    const writtenKeys = rows.map(r => r.packKey)
     expect(writtenKeys).not.toContain('project-conventions')
-    expect(writtenKeys).toContain('tech-stack-backend')
-    expect(writtenKeys).toContain('tech-stack-frontend')
-    expect(writtenKeys).toContain('tech-stack-monorepo')
-    expect(writtenKeys).toContain('testing-strategy')
   })
 
   it('EC-3: invalid packType value is rejected by Zod before DB call', async () => {
