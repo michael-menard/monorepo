@@ -27,9 +27,9 @@
     "dev": "turbo dev --filter=@repo/lego-api --filter=@repo/main-app",
     "dev:api": "pnpm --filter @repo/lego-api dev",
     "dev:web": "pnpm --filter @repo/main-app dev",
-    "infra:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && docker compose -f infra/compose.lego-app.yaml up -d",
-    "infra:down": "docker compose -f infra/compose.lego-app.yaml down",
-    "infra:reset": "docker compose -f infra/compose.lego-app.yaml down -v",
+    "infra:up": "docker info > /dev/null 2>&1 || (echo '❌ Docker is not running. Please start Docker Desktop first.' && exit 1) && docker compose --env-file .env -f infra/compose.lego-app.yaml up -d",
+    "infra:down": "docker compose --env-file .env -f infra/compose.lego-app.yaml down",
+    "infra:reset": "docker compose --env-file .env -f infra/compose.lego-app.yaml down -v",
     "build": "turbo run build",
     "clean": "turbo run clean",
     "db:generate": "turbo run db:generate",
@@ -53,6 +53,7 @@
     "lint-staged": "lint-staged",
     "circular": "madge --circular --extensions ts,tsx,js,jsx",
     "scrape": "turbo run scrape --filter=@repo/scraper-rebrickable --",
+    "scrape:sync-to-gallery": "pnpm --filter @repo/scraper-rebrickable scrape:sync-to-gallery",
     "knip": "knip"
   },
   "dependencies": {

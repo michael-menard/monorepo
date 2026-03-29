@@ -1,5 +1,8 @@
 # Local Development Services
 #
+# Project name: langgraph-workflow
+name: langgraph-workflow
+
 # Usage:
 #   docker compose -f infra/compose.lego-app.yaml up -d          # Start all services
 #   docker compose -f infra/compose.lego-app.yaml up -d postgres # Start only PostgreSQL
@@ -105,10 +108,10 @@ services:
     image: otel/opentelemetry-collector-contrib:0.96.0
     container_name: monorepo-otel-collector
     ports:
-      - '4317:4317'   # OTLP gRPC
-      - '4318:4318'   # OTLP HTTP
-      - '8888:8888'   # Prometheus metrics (self)
-      - '8889:8889'   # Prometheus exporter
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP
+      - '8888:8888' # Prometheus metrics (self)
+      - '8889:8889' # Prometheus exporter
       - '13133:13133' # Health check
     volumes:
       - ./otel/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
@@ -130,8 +133,8 @@ services:
     image: minio/minio:latest
     container_name: monorepo-minio
     ports:
-      - '9000:9000'   # S3 API
-      - '9001:9001'   # Web Console
+      - '9000:9000' # S3 API
+      - '9001:9001' # Web Console
     volumes:
       - minio_data:/data
     environment:
@@ -161,9 +164,86 @@ services:
       "
     restart: 'no'
 
+  # Knowledge Base PostgreSQL with pgvector + PgBouncer
+  # Architecture: MCP processes (port 5433) -> PgBouncer -> PostgreSQL
+  kb-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: knowledge-base-postgres
+    command: >-
+      postgres
+      -c max_connections=300
+      -c statement_timeout=15000
+      -c lock_timeout=5000
+      -c idle_in_transaction_session_timeout=30000
+      -c shared_buffers=256MB
+      -c work_mem=8MB
+      -c maintenance_work_mem=256MB
+      -c autovacuum_vacuum_scale_factor=0.02
+      -c autovacuum_vacuum_cost_delay=2
+    environment:
+      POSTGRES_USER: ${KB_DB_USER:?KB_DB_USER must be set in .env file}
+      POSTGRES_PASSWORD: ${KB_DB_PASSWORD:?KB_DB_PASSWORD must be set in .env file}
+      POSTGRES_DB: ${KB_DB_NAME:-knowledgebase}
+    # Port 5435: direct access for LISTEN/NOTIFY (SSE); pgbouncer transaction mode blocks LISTEN
+    # Port 5433: normal app traffic routes through pgbouncer
+    ports:
+      - '${KB_DB_DIRECT_PORT:-5435}:5432'
+    volumes:
+      - workflow_db:/var/lib/postgresql/data
+      - ../apps/api/knowledge-base/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${KB_DB_USER} -d ${KB_DB_NAME:-knowledgebase}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  kb-pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: knowledge-base-pgbouncer
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${KB_DB_USER:?}:${KB_DB_PASSWORD:?}@kb-postgres:5432/${KB_DB_NAME:-knowledgebase}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 300
+      DEFAULT_POOL_SIZE: 30
+      RESERVE_POOL_SIZE: 10
+      RESERVE_POOL_TIMEOUT: 3
+      SERVER_IDLE_TIMEOUT: 60
+      CLIENT_IDLE_TIMEOUT: 300
+      QUERY_TIMEOUT: 15
+      LOG_CONNECTIONS: 0
+      LOG_DISCONNECTIONS: 0
+    ports:
+      - '${KB_DB_PORT:-5433}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -p 5432']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+    name: monorepo_postgres_data
+    external: true
   redis_data:
+    name: monorepo_redis_data
+    external: true
   prometheus_data:
+    name: monorepo_prometheus_data
+    external: true
   grafana_data:
+    name: monorepo_grafana_data
+    external: true
   minio_data:
+    name: monorepo_minio_data
+    external: true
+  workflow_db:
+    name: workflow_db
+    external: true
