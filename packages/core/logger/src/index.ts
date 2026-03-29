@@ -6,7 +6,10 @@ export {
   RemoteTransport,
   NullTransport,
   BrowserConsoleTransport,
+  FileTransport,
+  FileTransportConfigSchema,
 } from './transports.js'
+export type { FileTransportConfig } from './transports.js'
 export {
   LoggerFactory,
   createEnvironmentConfig,

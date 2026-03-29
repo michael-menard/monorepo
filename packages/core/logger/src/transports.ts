@@ -1,4 +1,6 @@
+import { join } from 'path'
 import pino from 'pino'
+import { z } from 'zod'
 import { ILogTransport, LogEntry, LogLevel } from './types.js'
 
 /**
@@ -183,6 +185,100 @@ export class NullTransport implements ILogTransport {
 
   async flush(): Promise<void> {
     // Do nothing
+  }
+}
+
+export const FileTransportConfigSchema = z.object({
+  /** Directory to write log files into */
+  dir: z.string(),
+  /** Base filename without extension (e.g. "app" → app.2025-01-01.1.log) */
+  filename: z.string().optional().default('app'),
+  /** Rotate frequency — 'daily' | 'hourly' | milliseconds */
+  frequency: z.union([z.literal('daily'), z.literal('hourly'), z.number()]).optional().default('daily'),
+  /** Max number of rotated files to keep (in addition to the active file).
+   *  Defaults to 13, giving 14 days of retention with daily rotation. */
+  retainCount: z.number().int().positive().optional().default(13),
+  /** Create the log directory if it doesn't exist */
+  mkdir: z.boolean().optional().default(true),
+})
+
+export type FileTransportConfig = z.infer<typeof FileTransportConfigSchema>
+
+/**
+ * File transport with daily rotation and configurable retention.
+ *
+ * Uses pino-roll for high-performance file writing. Log files are named
+ * using the Extension Last Format: `{filename}.{date}.{count}.log`
+ * e.g. `app.2025-01-15.1.log`
+ *
+ * @example
+ * ```typescript
+ * const fileTransport = new FileTransport({ dir: '/var/log/myapp' })
+ * logger.addTransport(fileTransport)
+ * await fileTransport.destroy() // call on shutdown to flush & close
+ * ```
+ */
+export class FileTransport implements ILogTransport {
+  private readonly pinoLogger: pino.Logger
+  private readonly config: FileTransportConfig
+
+  constructor(options: z.input<typeof FileTransportConfigSchema>) {
+    this.config = FileTransportConfigSchema.parse(options)
+
+    const filePath = join(this.config.dir, this.config.filename)
+
+    const transport = pino.transport({
+      target: 'pino-roll',
+      options: {
+        file: filePath,
+        frequency: this.config.frequency,
+        dateFormat: 'yyyy-MM-dd',
+        mkdir: this.config.mkdir,
+        limit: { count: this.config.retainCount },
+        symlink: true,
+      },
+    })
+
+    this.pinoLogger = pino({ level: 'trace' }, transport)
+  }
+
+  log(entry: LogEntry): void {
+    const { level, message, context, metadata, error } = entry
+
+    const logData: Record<string, unknown> = {
+      ...(context && { context }),
+      ...(metadata && { metadata }),
+      ...(error && { err: error }),
+    }
+
+    switch (level) {
+      case LogLevel.DEBUG:
+        this.pinoLogger.debug(logData, message)
+        break
+      case LogLevel.INFO:
+        this.pinoLogger.info(logData, message)
+        break
+      case LogLevel.WARN:
+        this.pinoLogger.warn(logData, message)
+        break
+      case LogLevel.ERROR:
+        this.pinoLogger.error(logData, message)
+        break
+    }
+  }
+
+  async flush(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      this.pinoLogger.flush(err => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
+  }
+
+  /** Flush and close the underlying transport. Call on process shutdown. */
+  async destroy(): Promise<void> {
+    await this.flush()
   }
 }
 

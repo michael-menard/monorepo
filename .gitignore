@@ -90,6 +90,8 @@ build/
 coverage/
 .cache/
 *.tsbuildinfo
+build-output.txt
+vite.config.ts.timestamp-*.mjs
 
 
 apps/api/lego-projects-api/uploads/**/*.jpg.envrc
