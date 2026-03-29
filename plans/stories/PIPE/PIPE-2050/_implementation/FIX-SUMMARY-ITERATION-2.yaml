@@ -1,0 +1,61 @@
+schema: 1
+story_id: WINT-2060
+timestamp: 2026-03-07T16:30:00Z
+failure_source: code-review-failed
+iteration: 2
+issues_to_fix:
+  - id: 1
+    file: "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+    line: null
+    issue: "Duplicated readDoc utility function — identical implementation exists in populate-domain-kb.ts and populate-project-context.ts. Extract to shared utility."
+    severity: critical
+    auto_fixable: false
+    fix_status: "COMPLETED in iteration 1"
+    resolution: "Removed local readDoc wrapper. Now uses direct readDocUtil(relPath, CALLER_TAG) calls."
+
+  - id: 2
+    file: "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    line: null
+    issue: "Duplicated readDoc utility function — identical implementation exists in populate-library-cache.ts and populate-project-context.ts. Extract to shared utility."
+    severity: critical
+    auto_fixable: false
+    fix_status: "COMPLETED in iteration 1"
+    resolution: "Removed local readDoc wrapper. Now uses direct readDocUtil(relPath, CALLER_TAG) calls."
+
+  - id: 3
+    file: "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    line: null
+    issue: "Duplicated readDoc utility function — identical implementation exists in populate-library-cache.ts and populate-domain-kb.ts. Extract to shared utility."
+    severity: critical
+    auto_fixable: false
+    fix_status: "COMPLETED in iteration 1"
+    resolution: "Removed local readDoc wrapper. Now uses direct readDocUtil(relPath, CALLER_TAG) calls."
+
+focus_files:
+  - "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+  - "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+  - "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+  - "packages/backend/mcp-tools/src/scripts/utils/read-doc.ts"
+
+summary: "All critical issues from iteration 1 review have been resolved. Duplicated readDoc wrappers removed from all three populate-* scripts. Ready for code review re-verification."
+
+re_verification_checklist:
+  - id: RV-1
+    check: "No local readDoc wrappers in populate-library-cache.ts"
+    expected_result: "Function removed, using readDocUtil directly"
+    
+  - id: RV-2
+    check: "No local readDoc wrappers in populate-domain-kb.ts"
+    expected_result: "Function removed, using readDocUtil directly"
+    
+  - id: RV-3
+    check: "No local readDoc wrappers in populate-project-context.ts"
+    expected_result: "Function removed, using readDocUtil directly"
+    
+  - id: RV-4
+    check: "All three scripts call readDocUtil with CALLER_TAG"
+    expected_result: "Consistent pattern across all scripts"
+    
+  - id: RV-5
+    check: "Tests pass for all three populate-* scripts"
+    expected_result: "100% test pass rate"

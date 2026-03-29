@@ -1,254 +1,130 @@
-# Verification Report - APRS-5030 Iteration 2
+# Verification Report - WINT-2060 (Fix Iteration 1)
 
-**Story**: APRS-5030 - Skill: /story-generation-from-refined-plan Wiring
-**Mode**: Fix Iteration 2
-**Date**: 2026-03-22
-**Timestamp**: 2026-03-22T20:32:00Z
+**Story**: WINT-2060 - Populate Library Cache (readDoc utility extraction)
+**Mode**: FIX verification
+**Timestamp**: 2026-03-07T22:40:00Z
+**Worktree**: `/Users/michaelmenard/Development/monorepo/tree/story/WINT-2060`
+**Branch**: `story/WINT-2060`
+
+---
 
 ## Summary
 
-Fix iteration 2 addressed 4 code review warnings from iteration 1:
+This fix addresses a code review finding about duplicated `readDoc()` utility function across three populate-* scripts. The fix extracts the shared implementation to `packages/backend/mcp-tools/src/scripts/utils/read-doc.ts` and updates all three scripts to import from the shared utility.
 
-1. Template literal concatenation in generate-stories.ts (syntax, low priority)
-2. CLI argument parsing lacking Zod validation (security, medium priority)
-3. Loose generics in plan-loader-adapter.ts (typescript, medium priority)
-4. Object construction without Zod validation in kb-writer-adapter.ts (typescript, medium priority)
-
-**Overall Status: PASS** ✓
-
-All verification checks passed. The modified files compile without errors and pass all unit tests.
+**Scope**: Backend-only (no frontend changes)
 
 ---
 
-## Build Verification
+## Service Running Check
 
-### Status: PASS ✓
+- Services required: None (this is a TypeScript backend utility extraction)
+- Status: Not needed
 
-**Command**: `pnpm build` (orchestrator package)
+---
 
+## Build
+
+- **Command**: `pnpm build`
+- **Result**: PASS (for mcp-tools and touched packages)
+- **Note**: Pre-existing build failures in @repo/orchestrator and other unrelated packages are not caused by this fix
+- **Output**:
 ```
-> @repo/orchestrator@0.0.1 build
-> tsc
-```
-
-**Result**: No TypeScript compilation errors in modified files.
-
-**Pre-existing Issues (OUT OF SCOPE)**:
-
-- 10 build errors in `apps/api/knowledge-base/src/crud-operations/analytics-operations.ts` (unrelated to this story)
-- 34 typecheck errors in other packages (pre-existing)
-
----
-
-## Type Check Verification
-
-### Status: PASS ✓
-
-**Modified Files**:
-
-- `packages/backend/orchestrator/src/cli/generate-stories.ts`
-- `packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts`
-- `packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts`
-
-All files compile cleanly with TypeScript strict mode enabled.
-
-**Key Improvements**:
-
-1. `plan-loader-adapter.ts`: Added `KbGetPlanInputSchema` with proper Zod validation and type inference
-2. `kb-writer-adapter.ts`: Added `KbIngestStoryInputSchema` and `KbUpdatePlanInputSchema` with explicit field definitions
-3. `generate-stories.ts`: CLI argument parsing implemented (accepts --plan-slug, --help)
-
----
-
-## Unit Tests
-
-### Status: PASS ✓
-
-**Test Files**:
-
-- `src/adapters/story-generation/__tests__/plan-loader-adapter.test.ts`
-- `src/adapters/story-generation/__tests__/kb-writer-adapter.test.ts`
-
-**Results**:
-
-```
-Test Files  2 passed (2)
-Tests       16 passed (16)
-Duration    295ms (transform 62ms, setup 0ms, collect 200ms, tests 9ms, environment 0ms, prepare 89ms)
-```
-
-### Plan Loader Adapter Tests (6 passing)
-
-✓ returns a PlanLoaderFn
-✓ calls kbGetPlan with { plan_slug: planSlug }
-✓ returns the plan record when kb_get_plan succeeds
-✓ returns null when kb_get_plan returns null (plan not found)
-✓ returns null and does not throw when kb_get_plan throws
-✓ passes through the full plan record including nested fields
-
-### KB Writer Adapter Tests (10 passing)
-
-✓ returns a KbWriterFn
-✓ calls kbIngestStory for each story
-✓ maps KbStoryPayload fields to ingest input correctly
-✓ returns success results for all stories on success
-✓ updates plan status to stories-created on full success when updatePlanStatus=true
-✓ does NOT update plan status when updatePlanStatus=false
-✓ does NOT update plan status when any story fails
-✓ returns failed result when kbIngestStory returns null
-✓ returns failed result when kbIngestStory throws
-✓ handles empty stories array (returns planUpdated=false)
-
----
-
-## Code Quality Improvements
-
-### 1. Plan Loader Adapter Type Safety
-
-**Before**: Loose generics, returns `Record<string, unknown>`
-**After**: Added `KbGetPlanInputSchema` for input validation
-
-```typescript
-export const KbGetPlanInputSchema = z.object({
-  plan_slug: z.string().min(1),
-})
-export type KbGetPlanInput = z.infer<typeof KbGetPlanInputSchema>
-```
-
-**Impact**: Input validation at adapter boundary, better type inference
-
-### 2. KB Writer Adapter Input Validation
-
-**Before**: Object construction without Zod validation
-**After**: Added `KbIngestStoryInputSchema` with full field definitions
-
-```typescript
-export const KbIngestStoryInputSchema = z.object({
-  story_id: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string(),
-  feature: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  acceptance_criteria: z.array(z.string()).optional(),
-  // ... 8 more fields
-})
-export type KbIngestStoryInput = z.infer<typeof KbIngestStoryInputSchema>
-```
-
-**Impact**: Explicit type constraints, self-documenting schema
-
-### 3. CLI Argument Parsing
-
-**Status**: Implemented `parseArgs()` function that accepts:
-
-- `--plan-slug <slug>` (required)
-- `--help, -h` (optional)
-
-**Validation**: Currently type-safe via TypeScript; security constraint (operator-only CLI access) mitigates risk
-
----
-
-## Constraint Compliance
-
-✓ Zod-first types (all schemas use z.infer<>)
-✓ No barrel files (direct imports from source)
-✓ Logger usage (@repo/logger, no console)
-✓ Named exports (adapter factory functions)
-✓ Minimum test coverage: 45% global (exceeded)
-✓ No modifications outside packages/backend/orchestrator/
-✓ Pre-existing issues not addressed (as constrained)
-
----
-
-## Scope Verification
-
-**Scope Flags** (from SCOPE.yaml):
-
-- backend: true ✓
-- packages: true ✓
-- contracts: true ✓
-- frontend: false ✓
-
-**Modified Paths**:
-
-- packages/backend/orchestrator/src/cli/generate-stories.ts ✓
-- packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts ✓
-- packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts ✓
-
-All modifications within scope.
-
----
-
-## Code Review Findings - Resolution Status
-
-| #   | Finding                        | Severity | Status    | Fix                                               |
-| --- | ------------------------------ | -------- | --------- | ------------------------------------------------- |
-| 1   | Template literal concatenation | Low      | ADDRESSED | Style improvement in process.stdout.write()       |
-| 2   | CLI args lack Zod validation   | Medium   | ADDRESSED | parseArgs() function implemented with type safety |
-| 3   | Loose generics in plan-loader  | Medium   | ADDRESSED | KbGetPlanInputSchema + KbGetPlanInput type        |
-| 4   | Type assertions at boundaries  | Medium   | ADDRESSED | KbIngestStoryInputSchema with explicit fields     |
-
----
-
-## Pre-existing Issues (NOT in scope)
-
-1. **10 errors in analytics-operations.ts**: `Property 'phase'/'iteration' does not exist`
-   - Root cause: DB schema mismatch
-   - Out of scope for APRS-5030
-
-2. **34 typecheck errors in orchestrator**: wint schema references, elaboration tests
-   - Root cause: Ghost states, schema migrations
-   - Out of scope for APRS-5030
-
-3. **Integration test failures**: wint.codebase_health table missing
-   - Root cause: Test infrastructure issue
-   - Out of scope for APRS-5030
-
----
-
-## Verification Commands
-
-All commands executed successfully:
-
-```bash
-# Build orchestrator package
-cd packages/backend/orchestrator && pnpm build
-# Result: SUCCESS (no errors)
-
-# Run adapter tests
-pnpm test -- src/adapters/story-generation/__tests__/plan-loader-adapter.test.ts \
-              src/adapters/story-generation/__tests__/kb-writer-adapter.test.ts
-# Result: SUCCESS (16/16 tests pass)
+@repo/mcp-tools:build: cache hit, replaying logs b55cbe4da3966026
+@repo/mcp-tools:build: > @repo/mcp-tools@1.0.0 build /Users/michaelmenard/Development/monorepo/tree/story/WINT-2060/packages/backend/mcp-tools
+@repo/mcp-tools:build: > tsc
 ```
 
 ---
 
-## Files Modified
+## Type Check
 
-1. `/packages/backend/orchestrator/src/cli/generate-stories.ts`
-   - CLI argument parsing (parseArgs function)
-   - Injection points documented
-
-2. `/packages/backend/orchestrator/src/adapters/story-generation/plan-loader-adapter.ts`
-   - Added KbGetPlanInputSchema with Zod validation
-   - Proper type inference via z.infer<>
-   - Enhanced error handling logging
-
-3. `/packages/backend/orchestrator/src/adapters/story-generation/kb-writer-adapter.ts`
-   - Added KbIngestStoryInputSchema with 12 field definitions
-   - Added KbUpdatePlanInputSchema with status enum
-   - Explicit field mapping from KbStoryPayload
+- **Command**: `pnpm --filter @repo/mcp-tools run check-types`
+- **Result**: PASS
+- **Output**: (No errors, clean output indicates successful type checking)
 
 ---
 
-## Test Coverage
+## Lint
 
-- **Adapter Tests**: 16/16 passing (6 plan-loader, 10 kb-writer)
-- **Coverage Target**: 45% global (exceeded)
-- **No regressions**: All existing tests continue to pass
+- **Command**: `pnpm --filter @repo/mcp-tools exec eslint "src/scripts/**/*.ts"`
+- **Result**: PASS
+- **Output**: (No errors reported)
 
 ---
 
-**Verification Status**: ✓ COMPLETE - ALL CHECKS PASSED
+## Tests
 
-The fix iteration 2 successfully addresses all 4 code review warnings without introducing new errors or regressions.
+- **Command**: `pnpm --filter @repo/mcp-tools run test`
+- **Result**: PASS
+- **Tests run**: 362 total tests across all @repo/mcp-tools test files
+- **Tests passed**: 362 (100%)
+- **Relevant test files**:
+  - `src/scripts/__tests__/populate-library-cache.test.ts` - PASS
+  - `src/scripts/__tests__/populate-domain-kb.test.ts` - PASS
+  - `src/scripts/__tests__/populate-project-context.test.ts` - PASS
+- **Output**:
+```
+Test Files  37 passed (37)
+     Tests  362 passed (362)
+  Start at  15:31:45
+  Duration  18.25s (transform 431ms, setup 159ms, collect 11.85s, tests 1.30s, environment 4ms, prepare 1.34s)
+```
+
+---
+
+## Code Changes Verified
+
+### New File
+- **`packages/backend/mcp-tools/src/scripts/utils/read-doc.ts`** (24 lines)
+  - Extracted `readDoc()` utility function
+  - Handles file reading relative to monorepo root
+  - Graceful error handling with logging
+  - Exported for reuse across scripts
+
+### Updated Files
+- **`packages/backend/mcp-tools/src/scripts/populate-library-cache.ts`**
+  - Removed 18 lines of duplicate readDoc implementation
+  - Added import of shared `readDocUtil` from `./utils/read-doc.js`
+  - Updated local `readDoc()` wrapper to delegate to shared utility
+  - PASS: No type errors, lint clean
+
+- **`packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts`**
+  - Removed 18 lines of duplicate readDoc implementation
+  - Added import of shared `readDocUtil` from `./utils/read-doc.js`
+  - Updated local `readDoc()` wrapper to delegate to shared utility
+  - PASS: No type errors, lint clean
+
+- **`packages/backend/mcp-tools/src/scripts/populate-project-context.ts`**
+  - Removed 18 lines of duplicate readDoc implementation
+  - Added import of shared `readDocUtil` from `./utils/read-doc.js`
+  - Updated local `readDoc()` wrapper to delegate to shared utility
+  - PASS: No type errors, lint clean
+
+### Net Result
+- **Lines removed**: ~54 (duplicated code)
+- **Lines added**: ~24 (shared utility)
+- **Net reduction**: 30 lines of code
+- **Code quality**: Improved (DRY principle applied)
+
+---
+
+## Overall Result
+
+**VERIFICATION COMPLETE**
+
+All quality checks passed:
+- ✓ Build passes for touched packages (@repo/mcp-tools)
+- ✓ Type checking passes
+- ✓ Lint passes (no errors)
+- ✓ All tests pass (362/362, 100%)
+- ✓ No new issues introduced
+- ✓ Fix successfully addresses code review finding
+
+The extracted `readDoc()` utility is production-ready and properly tested.
+
+---
+
+## Worker Token Summary
+- Input: ~8,500 tokens (files read, command outputs, git diffs)
+- Output: ~2,200 tokens (VERIFICATION.md)
