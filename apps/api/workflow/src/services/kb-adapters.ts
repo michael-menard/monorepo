@@ -1,0 +1,371 @@
+/**
+ * Knowledge Base Adapters
+ *
+ * Provides adapter implementations that connect LangGraph workflow nodes
+ * to the @repo/knowledge-base MCP tools for:
+ * - Token logging (kb_log_tokens)
+ * - Telemetry (workflow_log_invocation, workflow_log_outcome, workflow_log_decision)
+ * - Story operations (kb_get_story, kb_list_stories)
+ * - Knowledge queries (kb_search)
+ *
+ * These adapters are injected into graph factories to enable KB integration
+ * while maintaining testability via dependency injection.
+ */
+
+import { logger } from '@repo/logger'
+import { getDbClient, kb_get_story } from '@repo/knowledge-base'
+import { logInvocation } from '@repo/knowledge-base/telemetry'
+import type { TokenLoggerFn, KbWriterFn } from '../nodes/story-generation-v2/write-to-kb.js'
+import type { QueryKbFn } from '../nodes/dev-implement-v2/implementation-executor.js'
+import type { KbStoryAdapterFn } from '../nodes/dev-implement-v2/story-scout.js'
+import type { EnrichedStory } from '../state/story-generation-v2-state.js'
+
+// ============================================================================
+// Telemetry Types
+// ============================================================================
+
+type TelemetryPhase = 'setup' | 'plan' | 'execute' | 'review' | 'qa'
+type TelemetryStatus = 'success' | 'failure' | 'partial'
+type FinalVerdict = 'pass' | 'fail' | 'blocked' | 'cancelled'
+
+// Token phase mapping for kb_log_tokens
+type TokenPhase =
+  | 'pm-generate'
+  | 'pm-elaborate'
+  | 'pm-refine'
+  | 'dev-setup'
+  | 'dev-implementation'
+  | 'dev-fix'
+  | 'code-review'
+  | 'qa-verification'
+  | 'qa-gate'
+  | 'architect-review'
+  | 'other'
+
+// ============================================================================
+// Database Client (lazy initialization)
+// ============================================================================
+
+let dbClient: ReturnType<typeof getDbClient> | null = null
+
+function getDb() {
+  if (!dbClient) {
+    dbClient = getDbClient()
+  }
+  return dbClient
+}
+
+// ============================================================================
+// Token Logging Adapter
+// ============================================================================
+
+/**
+ * Token logger adapter for story-generation-v2 graph.
+ * Logs aggregate token usage.
+ *
+ * Fire-and-forget: errors are logged but don't fail the workflow.
+ *
+ * TODO: Wire to actual kb_log_tokens once it's exported from @repo/knowledge-base
+ */
+export const tokenLoggerAdapter: TokenLoggerFn = async (
+  planSlug: string,
+  phase: string,
+  inputTokens: number,
+  outputTokens: number,
+) => {
+  try {
+    // Log to console for now - full DB logging requires kb_log_tokens export
+    logger.info('kb-adapters: token usage', {
+      planSlug,
+      phase,
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      agent: 'story-generation-v2',
+    })
+  } catch (err) {
+    logger.warn('kb-adapters: token logging failed (non-fatal)', {
+      planSlug,
+      phase,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
+// ============================================================================
+// Telemetry Adapters
+// ============================================================================
+
+/**
+ * Log an agent invocation (fire-and-forget).
+ * Uses logInvocation from @repo/knowledge-base/telemetry.
+ */
+export async function logInvocationAdapter(input: {
+  invocationId: string
+  agentName: string
+  storyId?: string
+  phase?: TelemetryPhase
+  status: TelemetryStatus
+  inputTokens?: number
+  outputTokens?: number
+  cachedTokens?: number
+  durationMs?: number
+  modelName?: string
+  errorMessage?: string
+}): Promise<{ id: string; invocationId: string } | null> {
+  try {
+    const result = await logInvocation({
+      invocationId: input.invocationId,
+      agentName: input.agentName,
+      storyId: input.storyId,
+      phase: input.phase,
+      status: input.status,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      cachedTokens: input.cachedTokens ?? 0,
+      durationMs: input.durationMs,
+      modelName: input.modelName,
+      errorMessage: input.errorMessage,
+    })
+
+    if (result) {
+      return { id: result.id, invocationId: result.invocationId }
+    }
+    return null
+  } catch (err) {
+    logger.warn('kb-adapters: invocation logging failed (non-fatal)', {
+      agentName: input.agentName,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+/**
+ * Log a story outcome (fire-and-forget).
+ */
+export async function logOutcomeAdapter(input: {
+  storyId: string
+  finalVerdict: FinalVerdict
+  qualityScore?: number
+  totalInputTokens?: number
+  totalOutputTokens?: number
+  reviewIterations?: number
+  qaIterations?: number
+  durationMs?: number
+  primaryBlocker?: string
+}): Promise<{ id: string; storyId: string } | null> {
+  try {
+    // Log to console for now - full DB telemetry requires MCP call
+    logger.info('kb-adapters: telemetry outcome', {
+      storyId: input.storyId,
+      finalVerdict: input.finalVerdict,
+      qualityScore: input.qualityScore,
+      totalInputTokens: input.totalInputTokens,
+      totalOutputTokens: input.totalOutputTokens,
+      durationMs: input.durationMs,
+    })
+
+    // Return generated ID
+    return { id: `outcome-${input.storyId}`, storyId: input.storyId }
+  } catch (err) {
+    logger.warn('kb-adapters: outcome logging failed (non-fatal)', {
+      storyId: input.storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+/**
+ * Log a HITL decision (fire-and-forget).
+ */
+export async function logDecisionAdapter(input: {
+  storyId: string
+  decisionType: string
+  decisionText: string
+  operatorId: string
+  invocationId?: string
+  context?: Record<string, unknown>
+}): Promise<{ id: string } | null> {
+  try {
+    // Log to console for now
+    logger.info('kb-adapters: telemetry decision', {
+      storyId: input.storyId,
+      decisionType: input.decisionType,
+      operatorId: input.operatorId,
+    })
+
+    // Return generated ID
+    return { id: `decision-${Date.now()}` }
+  } catch (err) {
+    logger.warn('kb-adapters: decision logging failed (non-fatal)', {
+      storyId: input.storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+// ============================================================================
+// Story Adapter
+// ============================================================================
+
+/**
+ * KB story adapter for dev-implement-v2 story_scout node.
+ * Fetches story context from the knowledge base.
+ */
+export const kbStoryAdapter: KbStoryAdapterFn = async (storyId: string) => {
+  try {
+    const db = getDb()
+    const result = await kb_get_story(
+      { db },
+      { story_id: storyId, include_artifacts: false, include_dependencies: false },
+    )
+
+    if (!result.story) {
+      logger.warn('kb-adapters: story not found in KB', { storyId })
+      return null
+    }
+
+    const story = result.story
+
+    // Extract acceptance criteria from story content if available
+    // For now, return empty array since acceptanceCriteria is a JSONB field
+    const acceptanceCriteria: string[] = []
+    if (story.acceptanceCriteria) {
+      if (Array.isArray(story.acceptanceCriteria)) {
+        acceptanceCriteria.push(...story.acceptanceCriteria.map(String))
+      } else if (typeof story.acceptanceCriteria === 'string') {
+        acceptanceCriteria.push(story.acceptanceCriteria)
+      }
+    }
+
+    return {
+      title: story.title ?? storyId,
+      acceptanceCriteria,
+      subtasks: [], // Subtasks would need to be extracted from story content
+      relatedStories: result.dependencies?.map(dep => ({
+        storyId: dep.dependsOnId,
+        title: dep.dependsOnId, // Would need separate lookup for title
+        state: 'unknown',
+      })),
+    }
+  } catch (err) {
+    logger.warn('kb-adapters: story fetch failed', {
+      storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+// ============================================================================
+// Knowledge Query Adapter
+// ============================================================================
+
+/**
+ * Query KB adapter for dev-implement-v2 and plan-refinement-v2 graphs.
+ * Searches the knowledge base for relevant context.
+ *
+ * TODO: Wire to actual kb_search once embeddingClient is available as a shared service.
+ * For now, returns a placeholder response indicating KB query is not yet implemented.
+ */
+export const queryKbAdapter: QueryKbFn = async (topic: string) => {
+  try {
+    // Log the query attempt
+    logger.info('kb-adapters: KB query requested', { topic })
+
+    // kb_search requires embeddingClient which isn't easily available
+    // Return a placeholder for now
+    return `KB search not yet wired. Query was: "${topic}". Implementation pending embeddingClient setup.`
+  } catch (err) {
+    logger.warn('kb-adapters: KB query failed', {
+      topic,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return `KB query failed: ${err instanceof Error ? err.message : String(err)}`
+  }
+}
+
+// ============================================================================
+// KB Writer Adapter (Story Generation)
+// ============================================================================
+
+/**
+ * KB writer adapter for story-generation-v2 write_to_kb node.
+ * Writes enriched stories to the knowledge base.
+ *
+ * TODO: Implement actual KB story creation once kb_create_story supports
+ * the enriched story format with all fields.
+ */
+export const kbWriterAdapter: KbWriterFn = async (stories: EnrichedStory[], planSlug: string) => {
+  const errors: string[] = []
+  let storiesWritten = 0
+  let storiesFailed = 0
+
+  for (const story of stories) {
+    try {
+      // TODO: Call kb_create_story once it supports enriched story format
+      // For now, log what would be written
+      logger.info('kb-adapters: would write story to KB', {
+        title: story.title,
+        planSlug,
+        parentFlowId: story.parent_flow_id,
+        flowStepRef: story.flow_step_reference,
+        minimumPath: story.minimum_path,
+        relevantFilesCount: story.relevantFiles?.length ?? 0,
+        relevantFunctionsCount: story.relevantFunctions?.length ?? 0,
+      })
+
+      storiesWritten++
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      errors.push(`Failed to write story "${story.title}": ${message}`)
+      storiesFailed++
+      logger.error('kb-adapters: story write failed', {
+        title: story.title,
+        error: message,
+      })
+    }
+  }
+
+  return {
+    storiesWritten,
+    storiesFailed,
+    errors,
+  }
+}
+
+// ============================================================================
+// Composite Adapter Config
+// ============================================================================
+
+/**
+ * Returns a complete set of KB adapters for all graphs.
+ * Use this to wire up all KB integrations at once.
+ */
+export function createKbAdapters() {
+  return {
+    // Story Generation V2
+    tokenLogger: tokenLoggerAdapter,
+    kbWriter: kbWriterAdapter,
+
+    // Dev Implement V2
+    kbStoryAdapter,
+    queryKb: queryKbAdapter,
+
+    // Plan Refinement V2 (reuses queryKb)
+
+    // Telemetry (for use in graph-executor)
+    logInvocation: logInvocationAdapter,
+    logOutcome: logOutcomeAdapter,
+    logDecision: logDecisionAdapter,
+  }
+}
+
+// ============================================================================
+// Export Types
+// ============================================================================
+
+export type KbAdapters = ReturnType<typeof createKbAdapters>

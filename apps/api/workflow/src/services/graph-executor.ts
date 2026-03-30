@@ -1,0 +1,452 @@
+import { randomUUID } from 'node:crypto'
+import { logger } from '@repo/logger'
+import { createDevImplementV2Graph } from '../graphs/dev-implement-v2.js'
+import { createPlanRefinementV2Graph } from '../graphs/plan-refinement-v2.js'
+import { createQAVerifyV2Graph } from '../graphs/qa-verify-v2.js'
+import { createReviewV2Graph } from '../graphs/review-v2.js'
+import { createStoryGenerationV2Graph } from '../graphs/story-generation-v2.js'
+import type { DevImplementV2State } from '../state/dev-implement-v2-state.js'
+import type { PlanRefinementV2State } from '../state/plan-refinement-v2-state.js'
+import type { QAVerifyV2State } from '../state/qa-verify-v2-state.js'
+import type { ReviewV2State } from '../state/review-v2-state.js'
+import type { StoryGenerationV2State } from '../state/story-generation-v2-state.js'
+import type {
+  GraphInvokeRequest,
+  GraphInvokeResponse,
+  PlanGraphInvokeRequest,
+  ReviewGraphInvokeRequest,
+} from '../routes/__types__/graph-invoke.js'
+import { createKbAdapters, logInvocationAdapter, logOutcomeAdapter } from './kb-adapters.js'
+
+// ============================================================================
+// KB Adapters (lazy initialization)
+// ============================================================================
+
+let kbAdapters: ReturnType<typeof createKbAdapters> | null = null
+
+function getKbAdapters() {
+  if (!kbAdapters) {
+    kbAdapters = createKbAdapters()
+  }
+  return kbAdapters
+}
+
+// ============================================================================
+// Dev Implement V2
+// ============================================================================
+
+export async function executeDevImplementV2(
+  request: GraphInvokeRequest,
+): Promise<GraphInvokeResponse> {
+  const threadId = request.threadId ?? randomUUID()
+  const invocationId = `dev-implement-v2-${request.storyId}-${Date.now()}`
+  const startTime = Date.now()
+
+  logger.info('Starting dev-implement-v2 execution', { storyId: request.storyId, threadId })
+
+  // Get KB adapters for telemetry and story context
+  const adapters = getKbAdapters()
+
+  const graph = createDevImplementV2Graph({
+    kbStoryAdapter: adapters.kbStoryAdapter,
+    queryKb: adapters.queryKb,
+  })
+
+  try {
+    const result = (await graph.invoke({
+      storyId: request.storyId,
+    })) as DevImplementV2State
+
+    const durationMs = Date.now() - startTime
+    const status = result.errors?.length ? 'failed' : 'completed'
+    const verdict = result.executorOutcome?.verdict ?? 'complete'
+
+    // Log telemetry (fire-and-forget)
+    const totalTokens = result.tokenUsage?.reduce(
+      (acc, t) => ({ input: acc.input + t.inputTokens, output: acc.output + t.outputTokens }),
+      { input: 0, output: 0 },
+    ) ?? { input: 0, output: 0 }
+
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'dev-implement-v2',
+      storyId: request.storyId,
+      phase: 'execute',
+      status: status === 'completed' ? 'success' : 'failure',
+      inputTokens: totalTokens.input,
+      outputTokens: totalTokens.output,
+      durationMs,
+    })
+
+    void logOutcomeAdapter({
+      storyId: request.storyId,
+      finalVerdict: verdict === 'complete' ? 'pass' : 'fail',
+      totalInputTokens: totalTokens.input,
+      totalOutputTokens: totalTokens.output,
+      durationMs,
+      primaryBlocker: result.executorOutcome?.diagnosis,
+    })
+
+    return {
+      status,
+      threadId,
+      storyId: request.storyId,
+      phase: result.devImplementV2Phase ?? 'complete',
+      durationMs,
+      summary: {
+        verdict,
+        filesCreated: result.executorOutcome?.filesCreated ?? [],
+        filesModified: result.executorOutcome?.filesModified ?? [],
+        errors: result.errors ?? [],
+      },
+    }
+  } catch (err) {
+    const durationMs = Date.now() - startTime
+
+    // Log failure telemetry
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'dev-implement-v2',
+      storyId: request.storyId,
+      phase: 'execute',
+      status: 'failure',
+      durationMs,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+
+    logger.error('Graph execution failed', { threadId, error: err })
+    return {
+      status: 'error',
+      threadId,
+      storyId: request.storyId,
+      phase: 'error',
+      durationMs,
+      summary: {
+        verdict: 'error',
+        errors: [err instanceof Error ? err.message : String(err)],
+      },
+    }
+  }
+}
+
+// ============================================================================
+// Plan Refinement V2
+// ============================================================================
+
+export async function executePlanRefinementV2(
+  request: PlanGraphInvokeRequest,
+): Promise<GraphInvokeResponse> {
+  const threadId = request.threadId ?? randomUUID()
+  const invocationId = `plan-refinement-v2-${request.planSlug}-${Date.now()}`
+  const startTime = Date.now()
+
+  logger.info('Starting plan-refinement-v2 execution', { planSlug: request.planSlug, threadId })
+
+  // Get KB adapters for queryKb
+  const adapters = getKbAdapters()
+
+  const graph = createPlanRefinementV2Graph({
+    queryKb: adapters.queryKb,
+  })
+
+  try {
+    const result = (await graph.invoke({
+      planSlug: request.planSlug,
+    })) as PlanRefinementV2State
+
+    const durationMs = Date.now() - startTime
+    const status = result.errors?.length ? 'failed' : 'completed'
+    const verdict = result.postconditionResult?.passed ? 'complete' : 'stuck'
+
+    // Log telemetry (fire-and-forget)
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'plan-refinement-v2',
+      storyId: request.planSlug,
+      phase: 'plan',
+      status: status === 'completed' && verdict === 'complete' ? 'success' : 'failure',
+      durationMs,
+    })
+
+    return {
+      status,
+      threadId,
+      storyId: request.planSlug, // Use planSlug as identifier
+      phase: result.refinementV2Phase ?? 'complete',
+      durationMs,
+      summary: {
+        verdict,
+        errors: result.errors ?? [],
+      },
+    }
+  } catch (err) {
+    const durationMs = Date.now() - startTime
+
+    // Log failure telemetry
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'plan-refinement-v2',
+      storyId: request.planSlug,
+      phase: 'plan',
+      status: 'failure',
+      durationMs,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+
+    logger.error('Graph execution failed', { threadId, error: err })
+    return {
+      status: 'error',
+      threadId,
+      storyId: request.planSlug,
+      phase: 'error',
+      durationMs,
+      summary: {
+        verdict: 'error',
+        errors: [err instanceof Error ? err.message : String(err)],
+      },
+    }
+  }
+}
+
+// ============================================================================
+// QA Verify V2
+// ============================================================================
+
+export async function executeQAVerifyV2(request: GraphInvokeRequest): Promise<GraphInvokeResponse> {
+  const threadId = request.threadId ?? randomUUID()
+  const invocationId = `qa-verify-v2-${request.storyId}-${Date.now()}`
+  const startTime = Date.now()
+
+  logger.info('Starting qa-verify-v2 execution', { storyId: request.storyId, threadId })
+
+  const graph = createQAVerifyV2Graph()
+
+  try {
+    const result = (await graph.invoke({
+      storyId: request.storyId,
+    })) as QAVerifyV2State
+
+    const durationMs = Date.now() - startTime
+    const status = result.errors?.length ? 'failed' : 'completed'
+    const verdict = result.qaVerdict === 'pass' ? 'complete' : 'stuck'
+
+    // Log telemetry (fire-and-forget)
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'qa-verify-v2',
+      storyId: request.storyId,
+      phase: 'qa',
+      status: status === 'completed' && verdict === 'complete' ? 'success' : 'failure',
+      durationMs,
+    })
+
+    return {
+      status,
+      threadId,
+      storyId: request.storyId,
+      phase: result.qaVerifyV2Phase ?? 'complete',
+      durationMs,
+      summary: {
+        verdict,
+        errors: result.errors ?? [],
+      },
+    }
+  } catch (err) {
+    const durationMs = Date.now() - startTime
+
+    // Log failure telemetry
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'qa-verify-v2',
+      storyId: request.storyId,
+      phase: 'qa',
+      status: 'failure',
+      durationMs,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+
+    logger.error('Graph execution failed', { threadId, error: err })
+    return {
+      status: 'error',
+      threadId,
+      storyId: request.storyId,
+      phase: 'error',
+      durationMs,
+      summary: {
+        verdict: 'error',
+        errors: [err instanceof Error ? err.message : String(err)],
+      },
+    }
+  }
+}
+
+// ============================================================================
+// Review V2
+// ============================================================================
+
+export async function executeReviewV2(
+  request: ReviewGraphInvokeRequest,
+): Promise<GraphInvokeResponse> {
+  const threadId = request.threadId ?? randomUUID()
+  const invocationId = `review-v2-${request.storyId}-${Date.now()}`
+  const startTime = Date.now()
+
+  logger.info('Starting review-v2 execution', {
+    storyId: request.storyId,
+    worktreePath: request.worktreePath,
+    threadId,
+  })
+
+  // Get KB adapters for queryKb
+  const adapters = getKbAdapters()
+
+  const graph = createReviewV2Graph({
+    queryKb: adapters.queryKb,
+  })
+
+  try {
+    const result = (await graph.invoke({
+      storyId: request.storyId,
+      worktreePath: request.worktreePath ?? '',
+    })) as ReviewV2State
+
+    const durationMs = Date.now() - startTime
+    const status = result.errors?.length ? 'failed' : 'completed'
+    const verdict = result.reviewVerdict === 'pass' ? 'complete' : 'stuck'
+
+    // Log telemetry (fire-and-forget)
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'review-v2',
+      storyId: request.storyId,
+      phase: 'review',
+      status: status === 'completed' && verdict === 'complete' ? 'success' : 'failure',
+      durationMs,
+    })
+
+    return {
+      status,
+      threadId,
+      storyId: request.storyId,
+      phase: result.reviewV2Phase ?? 'complete',
+      durationMs,
+      summary: {
+        verdict,
+        errors: result.errors ?? [],
+      },
+    }
+  } catch (err) {
+    const durationMs = Date.now() - startTime
+
+    // Log failure telemetry
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'review-v2',
+      storyId: request.storyId,
+      phase: 'review',
+      status: 'failure',
+      durationMs,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+
+    logger.error('Graph execution failed', { threadId, error: err })
+    return {
+      status: 'error',
+      threadId,
+      storyId: request.storyId,
+      phase: 'error',
+      durationMs,
+      summary: {
+        verdict: 'error',
+        errors: [err instanceof Error ? err.message : String(err)],
+      },
+    }
+  }
+}
+
+// ============================================================================
+// Story Generation V2
+// ============================================================================
+
+export async function executeStoryGenerationV2(
+  request: PlanGraphInvokeRequest,
+): Promise<GraphInvokeResponse> {
+  const threadId = request.threadId ?? randomUUID()
+  const invocationId = `story-generation-v2-${request.planSlug}-${Date.now()}`
+  const startTime = Date.now()
+
+  logger.info('Starting story-generation-v2 execution', { planSlug: request.planSlug, threadId })
+
+  // Get KB adapters for token logging and story writing
+  const adapters = getKbAdapters()
+
+  const graph = createStoryGenerationV2Graph({
+    tokenLogger: adapters.tokenLogger,
+    kbWriter: adapters.kbWriter,
+  })
+
+  try {
+    const result = (await graph.invoke({
+      planSlug: request.planSlug,
+    })) as StoryGenerationV2State
+
+    const durationMs = Date.now() - startTime
+    const status = result.errors?.length ? 'failed' : 'completed'
+    const verdict = result.writeResult?.storiesFailed === 0 ? 'complete' : 'stuck'
+
+    // Log telemetry (fire-and-forget)
+    const totalTokens = result.tokenUsage?.reduce(
+      (acc, t) => ({ input: acc.input + t.inputTokens, output: acc.output + t.outputTokens }),
+      { input: 0, output: 0 },
+    ) ?? { input: 0, output: 0 }
+
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'story-generation-v2',
+      storyId: request.planSlug,
+      phase: 'plan',
+      status: status === 'completed' ? 'success' : 'failure',
+      inputTokens: totalTokens.input,
+      outputTokens: totalTokens.output,
+      durationMs,
+    })
+
+    return {
+      status,
+      threadId,
+      storyId: request.planSlug, // Use planSlug as identifier
+      phase: result.generationV2Phase ?? 'complete',
+      durationMs,
+      summary: {
+        verdict,
+        errors: result.errors ?? [],
+      },
+    }
+  } catch (err) {
+    const durationMs = Date.now() - startTime
+
+    // Log failure telemetry
+    void logInvocationAdapter({
+      invocationId,
+      agentName: 'story-generation-v2',
+      storyId: request.planSlug,
+      phase: 'plan',
+      status: 'failure',
+      durationMs,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+
+    logger.error('Graph execution failed', { threadId, error: err })
+    return {
+      status: 'error',
+      threadId,
+      storyId: request.planSlug,
+      phase: 'error',
+      durationMs,
+      summary: {
+        verdict: 'error',
+        errors: [err instanceof Error ? err.message : String(err)],
+      },
+    }
+  }
+}
