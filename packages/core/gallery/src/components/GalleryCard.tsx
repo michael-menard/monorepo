@@ -37,7 +37,7 @@ export const GalleryCardPropsSchema = z.object({
   /** Whether the card can be selected (shows checkbox overlay) */
   selectable: z.boolean().optional(),
   /** Callback when selection state changes */
-  onSelect: z.function().args(z.boolean()).returns(z.void()).optional(),
+  onSelect: z.function(z.tuple([z.boolean()]), z.void()).optional(),
   /** Position of selection checkbox (ignored when both selectable+draggable, defaults to 'top-left') */
   selectionPosition: OverlayPositionSchema.optional(),
 

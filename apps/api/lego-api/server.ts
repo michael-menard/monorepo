@@ -72,7 +72,14 @@ app.use(
     },
     credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    allowHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-CSRF-Token',
+      'X-Request-Id',
+      'X-Request-ID',
+      'X-Client-Version',
+    ],
     exposeHeaders: ['Content-Length', 'X-Request-Id'],
     maxAge: 86400, // 24 hours
   }),

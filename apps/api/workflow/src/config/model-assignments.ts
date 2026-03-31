@@ -168,6 +168,12 @@ export function loadModelAssignments(yamlPath?: string): ModelAssignments {
   const searchPaths = yamlPath
     ? [yamlPath]
     : [
+        // Monorepo root (most reliable - hardcoded for this project)
+        '/Users/michaelmenard/Development/monorepo/.claude/config/model-assignments.yaml',
+        // From MONOREPO_ROOT env var
+        process.env.MONOREPO_ROOT
+          ? resolve(process.env.MONOREPO_ROOT, '.claude/config/model-assignments.yaml')
+          : '',
         // Relative to this file (in dist)
         resolve(
           dirname(fileURLToPath(import.meta.url)),
@@ -175,7 +181,9 @@ export function loadModelAssignments(yamlPath?: string): ModelAssignments {
         ),
         // Relative to project root (common case)
         resolve(process.cwd(), '.claude/config/model-assignments.yaml'),
-      ]
+        // Walk up from cwd to find monorepo root
+        resolve(process.cwd(), '../../../.claude/config/model-assignments.yaml'),
+      ].filter(Boolean)
 
   for (const path of searchPaths) {
     if (existsSync(path)) {

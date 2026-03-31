@@ -5,7 +5,7 @@
  * Story 3.1.1: Instructions Gallery Page Scaffolding
  * Story 3.1.2: Instructions Card Component
  */
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { z } from 'zod'
 import { BookOpen } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -44,36 +44,57 @@ export type MainPageProps = z.infer<typeof MainPagePropsSchema>
  * Displays the Instructions Gallery with header and grid of InstructionCards.
  * Uses GalleryGrid for layout and GalleryEmptyState when no instructions exist.
  */
+const LIMIT = 100
+
+function mapApiItem(api: any): Instruction {
+  return {
+    id: api.id,
+    name: api.title,
+    description: api.description ?? undefined,
+    thumbnail: api.thumbnailUrl ?? '',
+    images: [],
+    pieceCount: api.partsCount ?? 0,
+    theme: api.theme ?? '',
+    tags: api.tags ?? [],
+    pdfUrl: undefined,
+    createdAt: typeof api.createdAt === 'string' ? api.createdAt : String(api.createdAt),
+    updatedAt: api.updatedAt
+      ? typeof api.updatedAt === 'string'
+        ? api.updatedAt
+        : String(api.updatedAt)
+      : undefined,
+    isFavorite: api.isFeatured,
+  }
+}
+
 export function MainPage({ className }: MainPageProps) {
   const [instructions, setInstructions] = useState<Instruction[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const accumulatedRef = useRef<Map<string, Instruction>>(new Map())
 
   const { data, isLoading, isError, error, refetch } = useGetInstructionsQuery({
-    page: 1,
-    limit: 50,
+    page: currentPage,
+    limit: LIMIT,
   })
 
-  // Hydrate local instructions state from API response when it changes
-  // INST-1100: Fixed schema alignment - API returns { items, pagination }, not { data: { items } }
-  // API field mapping: title→name, partsCount→pieceCount, thumbnailUrl→thumbnail, isFeatured→isFavorite
+  // Accumulate pages into a deduplicated map, then set state
   useEffect(() => {
     if (!data) return
-    const next: Instruction[] = data.items.map(api => ({
-      id: api.id,
-      name: api.title,
-      description: api.description ?? undefined,
-      thumbnail: api.thumbnailUrl ?? '',
-      images: [],
-      pieceCount: api.partsCount ?? 0,
-      theme: api.theme ?? '',
-      tags: api.tags ?? [],
-      pdfUrl: undefined,
-      createdAt: api.createdAt.toISOString(),
-      updatedAt: api.updatedAt?.toISOString(),
-      isFavorite: api.isFeatured,
-    }))
-    setInstructions(next)
+    setTotalPages(data.pagination.totalPages)
+    data.items.forEach(api => {
+      accumulatedRef.current.set(api.id, mapApiItem(api))
+    })
+    setInstructions(Array.from(accumulatedRef.current.values()))
   }, [data])
+
+  const hasMore = currentPage < totalPages
+  const isLoadingMore = isLoading && currentPage > 1
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoading) setCurrentPage(p => p + 1)
+  }, [hasMore, isLoading])
 
   // Initial view mode from URL (?view=grid|datatable)
   const initialUrlMode = useMemo(() => {
@@ -143,7 +164,7 @@ export function MainPage({ className }: MainPageProps) {
 
   const isEmpty = filteredTableItems.length === 0
 
-  const showLoadingState = isLoading && !instructions.length
+  const showLoadingState = isLoading && instructions.length === 0
   const showErrorState = isError && !isLoading
 
   // Sync view mode to URL query param
@@ -251,21 +272,37 @@ export function MainPage({ className }: MainPageProps) {
                   />
                 </div>
               ) : (
-                <GalleryGrid>
-                  {filteredTableItems.map(item => {
-                    const instruction = instructionsMap.get(item.id)
-                    if (!instruction) return null
-                    return (
-                      <InstructionCard
-                        key={instruction.id}
-                        instruction={instruction}
-                        onClick={handleCardClick}
-                        onFavorite={handleFavorite}
-                        onEdit={handleEdit}
-                      />
-                    )
-                  })}
-                </GalleryGrid>
+                <>
+                  <GalleryGrid>
+                    {filteredTableItems.map(item => {
+                      const instruction = instructionsMap.get(item.id)
+                      if (!instruction) return null
+                      return (
+                        <InstructionCard
+                          key={instruction.id}
+                          instruction={instruction}
+                          onClick={handleCardClick}
+                          onFavorite={handleFavorite}
+                          onEdit={handleEdit}
+                        />
+                      )
+                    })}
+                  </GalleryGrid>
+                  {hasMore && !searchTerm && (
+                    <div className="flex justify-center pt-4">
+                      <button
+                        type="button"
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {isLoadingMore
+                          ? 'Loading...'
+                          : `Load More (${instructions.length} of ${totalPages * LIMIT})`}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           ) : (

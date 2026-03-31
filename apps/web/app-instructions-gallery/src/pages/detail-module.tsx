@@ -54,8 +54,8 @@ export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
     theme: data.theme ?? '',
     tags: data.tags ?? [],
     pdfUrl: undefined,
-    createdAt: data.createdAt.toISOString(),
-    updatedAt: data.updatedAt.toISOString(),
+    createdAt: typeof data.createdAt === 'string' ? data.createdAt : data.createdAt.toISOString(),
+    updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : data.updatedAt.toISOString(),
     isFavorite: data.isFeatured,
   }
 

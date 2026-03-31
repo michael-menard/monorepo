@@ -54,7 +54,7 @@ export type ProviderEntry = z.infer<typeof ProviderEntrySchema>
 export const PROVIDER_CHAIN: ProviderEntry[] = [
   {
     name: 'ollama',
-    defaultModel: 'ollama/qwen2.5-coder:7b',
+    defaultModel: 'ollama/qwen2.5-coder:14b',
     rateLimits: { capacity: 10, refillRate: 2, maxWaitMs: 30000 },
     isExplorationCapable: true,
   },

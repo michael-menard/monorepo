@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { roadmapApi } from './roadmapApi'
 import { roadmapFiltersSlice } from './roadmapFiltersSlice'
+import { notificationsSlice } from './notificationsSlice'
 
 export const store = configureStore({
   reducer: {
     [roadmapApi.reducerPath]: roadmapApi.reducer,
     roadmapFilters: roadmapFiltersSlice.reducer,
+    notifications: notificationsSlice.reducer,
   },
   middleware: getDefaultMiddleware => getDefaultMiddleware().concat(roadmapApi.middleware),
 })

@@ -13,7 +13,8 @@
  */
 
 import { logger } from '@repo/logger'
-import { getDbClient, kb_get_story } from '@repo/knowledge-base'
+import { getDbClient, kb_get_story, kb_search } from '@repo/knowledge-base'
+import { EmbeddingClient } from '@repo/knowledge-base/embedding-client'
 import { logInvocation } from '@repo/knowledge-base/telemetry'
 import type { TokenLoggerFn, KbWriterFn } from '../nodes/story-generation-v2/write-to-kb.js'
 import type { QueryKbFn } from '../nodes/dev-implement-v2/implementation-executor.js'
@@ -261,24 +262,84 @@ export const kbStoryAdapter: KbStoryAdapterFn = async (storyId: string) => {
 }
 
 // ============================================================================
+// Embedding Client (lazy singleton)
+// ============================================================================
+
+let embeddingClient: EmbeddingClient | null = null
+
+function getEmbeddingClient(): EmbeddingClient | null {
+  if (embeddingClient) return embeddingClient
+
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    logger.warn('kb-adapters: OPENAI_API_KEY not set, KB search will be unavailable')
+    return null
+  }
+
+  try {
+    embeddingClient = new EmbeddingClient({
+      apiKey,
+      model: process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small',
+    })
+    return embeddingClient
+  } catch (err) {
+    logger.error('kb-adapters: Failed to initialize EmbeddingClient', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+// ============================================================================
 // Knowledge Query Adapter
 // ============================================================================
 
 /**
  * Query KB adapter for dev-implement-v2 and plan-refinement-v2 graphs.
- * Searches the knowledge base for relevant context.
+ * Searches the knowledge base for relevant context using hybrid semantic + keyword search.
  *
- * TODO: Wire to actual kb_search once embeddingClient is available as a shared service.
- * For now, returns a placeholder response indicating KB query is not yet implemented.
+ * Prerequisites:
+ * - OPENAI_API_KEY env var must be set for semantic search
+ * - KB must have relevant patterns/knowledge entries populated
+ *
+ * Falls back to keyword-only search if OpenAI is unavailable.
  */
 export const queryKbAdapter: QueryKbFn = async (topic: string) => {
   try {
-    // Log the query attempt
     logger.info('kb-adapters: KB query requested', { topic })
 
-    // kb_search requires embeddingClient which isn't easily available
-    // Return a placeholder for now
-    return `KB search not yet wired. Query was: "${topic}". Implementation pending embeddingClient setup.`
+    const client = getEmbeddingClient()
+    if (!client) {
+      return `KB search unavailable: OPENAI_API_KEY not configured. Query was: "${topic}"`
+    }
+
+    const db = getDb()
+    const result = await kb_search(
+      {
+        query: topic,
+        role: 'dev',
+        limit: 10,
+        min_confidence: 0.3,
+      },
+      { db, embeddingClient: client },
+    )
+
+    if (result.results.length === 0) {
+      return `No relevant knowledge found for: "${topic}". Consider adding patterns to the KB.`
+    }
+
+    // Format results for LLM consumption
+    const formattedResults = result.results
+      .map((entry, i) => {
+        const tags = entry.tags?.join(', ') || 'none'
+        const score = entry.relevance_score?.toFixed(3) ?? 'N/A'
+        return `[${i + 1}] (relevance: ${score}, tags: ${tags})\n${entry.content}`
+      })
+      .join('\n\n---\n\n')
+
+    const modeNote = result.metadata.fallback_mode ? ' (keyword-only fallback)' : ''
+
+    return `Found ${result.results.length} relevant entries${modeNote}:\n\n${formattedResults}`
   } catch (err) {
     logger.warn('kb-adapters: KB query failed', {
       topic,

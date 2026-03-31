@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { S3Client } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { eq, and, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { auth } from '../../middleware/auth.js'
@@ -38,6 +39,29 @@ const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
 })
 const s3Bucket = process.env.S3_BUCKET || ''
+
+// MinIO-aware S3 client for presigning stored files (supports local dev + prod)
+const s3Endpoint = process.env.S3_ENDPOINT
+const presignClient = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  ...(s3Endpoint ? { endpoint: s3Endpoint, forcePathStyle: true } : {}),
+})
+const presignBucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET || ''
+
+async function presignFileUrl(fileUrl: string): Promise<string> {
+  try {
+    // Parse bucket + key from the stored fileUrl
+    const urlObj = new URL(fileUrl)
+    const pathParts = urlObj.pathname.split('/').filter(Boolean)
+    const bucket = pathParts[0]
+    const key = pathParts.slice(1).join('/')
+    if (!bucket || !key) return fileUrl
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+    return await getSignedUrl(presignClient, command, { expiresIn: 3600 })
+  } catch {
+    return fileUrl
+  }
+}
 const cloudfrontDomain = process.env.CLOUDFRONT_DOMAIN
 
 const sessionRepo = createUploadSessionRepository(db, schema)
@@ -189,45 +213,53 @@ mocs.get('/', async c => {
     const totalPages = Math.ceil(total / validatedQuery.limit)
 
     // Map items to response format with proper type handling
-    const mappedItems = items.map(item => ({
-      id: item.id,
-      userId: item.userId,
-      title: item.title,
-      description: item.description,
-      type: item.type.toLowerCase() as 'moc' | 'set',
-      mocId: item.mocId,
-      slug: item.slug,
-      author: item.author,
-      partsCount: item.partsCount,
-      minifigCount: item.minifigCount,
-      theme: item.theme,
-      themeId: item.themeId,
-      subtheme: item.subtheme,
-      uploadedDate: item.uploadedDate?.toISOString() ?? null,
-      brand: item.brand,
-      setNumber: item.setNumber,
-      releaseYear: item.releaseYear,
-      retired: item.retired,
-      designer: item.designer,
-      dimensions: item.dimensions,
-      instructionsMetadata: item.instructionsMetadata,
-      features: item.features,
-      descriptionHtml: item.descriptionHtml,
-      shortDescription: item.shortDescription,
-      difficulty: item.difficulty,
-      buildTimeHours: item.buildTimeHours,
-      ageRecommendation: item.ageRecommendation,
-      status: item.status,
-      visibility: item.visibility,
-      isFeatured: item.isFeatured,
-      isVerified: item.isVerified,
-      tags: item.tags,
-      thumbnailUrl: item.thumbnailUrl,
-      totalPieceCount: item.totalPieceCount,
-      publishedAt: item.publishedAt?.toISOString() ?? null,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-    }))
+    const mappedItems = await Promise.all(
+      items.map(async item => ({
+        id: item.id,
+        userId: item.userId,
+        title: item.title,
+        description: item.description,
+        type: item.type.toLowerCase() as 'moc' | 'set',
+        mocId: item.mocId,
+        slug: item.slug,
+        author: item.author,
+        partsCount: item.partsCount,
+        minifigCount: item.minifigCount,
+        theme: item.theme,
+        themeId: item.themeId,
+        subtheme: item.subtheme,
+        uploadedDate:
+          item.uploadedDate instanceof Date
+            ? item.uploadedDate.toISOString()
+            : (item.uploadedDate ?? null),
+        brand: item.brand,
+        setNumber: item.setNumber,
+        releaseYear: item.releaseYear,
+        retired: item.retired,
+        designer: item.designer,
+        dimensions: item.dimensions,
+        instructionsMetadata: item.instructionsMetadata,
+        features: item.features,
+        descriptionHtml: item.descriptionHtml,
+        shortDescription: item.shortDescription,
+        difficulty: item.difficulty,
+        buildTimeHours: item.buildTimeHours,
+        ageRecommendation: item.ageRecommendation,
+        status: item.status,
+        visibility: item.visibility,
+        isFeatured: item.isFeatured,
+        isVerified: item.isVerified,
+        tags: item.tags,
+        thumbnailUrl: item.thumbnailUrl ? await presignFileUrl(item.thumbnailUrl) : null,
+        totalPieceCount: item.totalPieceCount,
+        publishedAt:
+          item.publishedAt instanceof Date
+            ? item.publishedAt.toISOString()
+            : (item.publishedAt ?? null),
+        createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : item.createdAt,
+        updatedAt: item.updatedAt instanceof Date ? item.updatedAt.toISOString() : item.updatedAt,
+      })),
+    )
 
     const response = {
       items: mappedItems,
@@ -307,8 +339,8 @@ mocs.post('/', async c => {
       tags: moc.tags,
       slug: moc.slug,
       type: moc.type,
-      createdAt: moc.createdAt.toISOString(),
-      updatedAt: moc.updatedAt.toISOString(),
+      createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
+      updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
     }
 
     // Validate response with Zod
@@ -385,8 +417,8 @@ mocs.patch('/:id', async c => {
       tags: moc.tags,
       slug: moc.slug,
       type: moc.type,
-      createdAt: moc.createdAt.toISOString(),
-      updatedAt: moc.updatedAt.toISOString(),
+      createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
+      updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
     }
 
     // AC-11: Validate response with Zod (200 with updated MOC data)
@@ -425,18 +457,23 @@ mocs.get('/:id', async c => {
       return c.json({ error: 'NOT_FOUND' }, 404)
     }
 
-    // Map files to response format
-    const mappedFiles = moc.files.map(file => ({
-      id: file.id,
-      mocId: file.mocId,
-      fileType: file.fileType,
-      name: file.originalFilename || 'Unnamed file',
-      size: 0, // Size not stored in current schema
-      mimeType: file.mimeType,
-      s3Key: file.s3Key || '',
-      uploadedAt: file.createdAt.toISOString(),
-      downloadUrl: file.fileUrl,
-    }))
+    // Presign all file URLs (files are private in S3/MinIO)
+    const mappedFiles = await Promise.all(
+      moc.files.map(async file => ({
+        id: file.id,
+        mocId: file.mocId,
+        fileType: file.fileType,
+        name: file.originalFilename || 'Unnamed file',
+        size: 0,
+        mimeType: file.mimeType,
+        s3Key: file.s3Key || '',
+        uploadedAt: file.createdAt instanceof Date ? file.createdAt.toISOString() : file.createdAt,
+        downloadUrl: await presignFileUrl(file.fileUrl),
+      })),
+    )
+
+    // Presign thumbnailUrl if present
+    const thumbnailUrl = moc.thumbnailUrl ? await presignFileUrl(moc.thumbnailUrl) : null
 
     // Map stats
     const stats = {
@@ -451,9 +488,9 @@ mocs.get('/:id', async c => {
       description: moc.description,
       theme: moc.theme,
       tags: moc.tags,
-      thumbnailUrl: moc.thumbnailUrl,
-      createdAt: moc.createdAt.toISOString(),
-      updatedAt: moc.updatedAt.toISOString(),
+      thumbnailUrl,
+      createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
+      updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
       files: mappedFiles,
       stats,
     }

@@ -16,8 +16,12 @@ import { RoadmapPage } from './pages/RoadmapPage'
 import { PlanDetailsPage } from './pages/PlanDetailsPage'
 import { StoryDetailsPage } from './pages/StoryDetailsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { NotificationBell } from './components/NotificationBell'
+import { useNotificationsWS } from './hooks/useNotificationsWS'
 
 function RootLayout() {
+  useNotificationsWS()
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="workflow-roadmap-theme">
       <TooltipProvider>
@@ -46,12 +50,15 @@ function RootLayout() {
               >
                 Dashboard
               </Link>
-              <div role="status" className="ml-auto flex items-center gap-2">
-                <div
-                  className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse"
-                  aria-hidden="true"
-                />
-                <span className="text-xs font-mono text-slate-400">LIVE</span>
+              <div role="status" className="ml-auto flex items-center gap-4">
+                <NotificationBell />
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse"
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs font-mono text-slate-400">LIVE</span>
+                </div>
               </div>
             </nav>
           </header>

@@ -5,7 +5,7 @@ export type BuiltFilterValue = z.infer<typeof BuiltFilterValueSchema>
 
 export const BuildStatusFilterPropsSchema = z.object({
   value: BuiltFilterValueSchema,
-  onChange: z.function().args(BuiltFilterValueSchema).returns(z.void()),
+  onChange: z.function(z.tuple([BuiltFilterValueSchema]), z.void()),
   className: z.string().optional(),
   'data-testid': z.string().optional(),
   'aria-label': z.string().optional(),

@@ -139,11 +139,7 @@ export const MocInstructionsSchema = z.object({
   theme: z.string().nullable(),
   themeId: z.number().int().nullable(),
   subtheme: z.string().nullable(),
-  uploadedDate: z
-    .string()
-    .nullable()
-    .transform(val => (val ? new Date(val) : null)),
-
+  uploadedDate: z.string().nullable(),
   // Set-specific fields
   brand: z.string().nullable(),
   setNumber: z.string().nullable(),
@@ -177,12 +173,9 @@ export const MocInstructionsSchema = z.object({
   totalPieceCount: z.number().int().nullable(),
 
   // Timestamps
-  publishedAt: z
-    .string()
-    .nullable()
-    .transform(val => (val ? new Date(val) : null)),
-  createdAt: z.string().transform(val => new Date(val)),
-  updatedAt: z.string().transform(val => new Date(val)),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 })
 
 export type MocInstructions = z.infer<typeof MocInstructionsSchema>
@@ -198,15 +191,9 @@ export const MocFileSchema = z.object({
   fileUrl: z.string().url(),
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
-  createdAt: z.string().transform(val => new Date(val)),
-  updatedAt: z
-    .string()
-    .nullable()
-    .transform(val => (val ? new Date(val) : null)),
-  deletedAt: z
-    .string()
-    .nullable()
-    .transform(val => (val ? new Date(val) : null)),
+  createdAt: z.string(),
+  updatedAt: z.string().nullable(),
+  deletedAt: z.string().nullable(),
 })
 
 export type MocFile = z.infer<typeof MocFileSchema>
@@ -337,7 +324,7 @@ export const MocDetailFileSchema = z.object({
   size: z.number().int(),
   mimeType: z.string().nullable(),
   s3Key: z.string(),
-  uploadedAt: z.string().transform(val => new Date(val)),
+  uploadedAt: z.string(),
   downloadUrl: z.string().url(),
 })
 
@@ -358,8 +345,8 @@ export const GetMocDetailResponseSchema = z.object({
   theme: z.string().nullable(),
   tags: z.array(z.string()).nullable(),
   thumbnailUrl: z.string().nullable(),
-  createdAt: z.string().transform(val => new Date(val)),
-  updatedAt: z.string().transform(val => new Date(val)),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
 })
@@ -381,7 +368,7 @@ export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSche
 
 export const GetFileDownloadUrlResponseSchema = z.object({
   downloadUrl: z.string().url(),
-  expiresAt: z.string().transform(val => new Date(val)),
+  expiresAt: z.string(),
 })
 
 export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>
@@ -418,7 +405,7 @@ export const CreateUploadSessionResponseSchema = z.object({
       ),
     }),
   ),
-  expiresAt: z.string().transform(val => new Date(val)),
+  expiresAt: z.string(),
 })
 
 export type CreateUploadSessionResponse = z.infer<typeof CreateUploadSessionResponseSchema>

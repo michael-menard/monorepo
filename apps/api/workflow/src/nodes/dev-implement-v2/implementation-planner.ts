@@ -111,6 +111,68 @@ Respond ONLY with a valid JSON tool call.`
 }
 
 /**
+ * Parses a tool call from the LLM response.
+ * Uses multiple extraction strategies to handle various LLM output formats.
+ */
+export function parseToolCall(
+  response: string,
+): { tool: string; args: Record<string, unknown> } | null {
+  try {
+    const responseContent = response.trim()
+    let jsonStr: string | null = null
+
+    // Strategy 1: Extract from markdown code blocks (```json ... ``` or ``` ... ```)
+    const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim()
+    }
+
+    // Strategy 2: Find JSON object starting with { "tool": or {"tool":
+    if (!jsonStr) {
+      const toolJsonMatch = responseContent.match(
+        /\{\s*"tool"\s*:\s*"[^"]+"\s*,[\s\S]*?\}(?=\s*$|\s*[^}\]])/s,
+      )
+      if (toolJsonMatch) {
+        jsonStr = toolJsonMatch[0]
+      }
+    }
+
+    // Strategy 3: Find any JSON object with balanced braces
+    if (!jsonStr) {
+      const firstBrace = responseContent.indexOf('{')
+      if (firstBrace !== -1) {
+        let braceCount = 0
+        let lastBrace = firstBrace
+        for (let i = firstBrace; i < responseContent.length; i++) {
+          if (responseContent[i] === '{') braceCount++
+          if (responseContent[i] === '}') {
+            braceCount--
+            if (braceCount === 0) {
+              lastBrace = i
+              break
+            }
+          }
+        }
+        jsonStr = responseContent.slice(firstBrace, lastBrace + 1)
+      }
+    }
+
+    // Strategy 4: Try the whole response as JSON
+    if (!jsonStr) {
+      jsonStr = responseContent
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    if (parsed && typeof parsed.tool === 'string') {
+      return parsed as { tool: string; args: Record<string, unknown> }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Checks postconditions for the implementation plan.
  */
 export function checkPlannerPostconditions(plan: ImplementationPlan): PostconditionResult {
@@ -205,17 +267,18 @@ export function createImplementationPlannerNode(config: ImplementationPlannerCon
       relatedStories: [],
     }
 
-    let previousFailures: Array<{ check: string; reason: string }> = []
     const allTokenUsage: TokenUsage[] = []
     let plan: ImplementationPlan | null = null
-    let iteration = 0
+    let iterationsUsed = 0
 
-    while (iteration < maxInternalIterations) {
-      iteration++
+    // Build initial system prompt and conversation history
+    const systemPrompt = buildPlannerPrompt(grounding, [])
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+    ]
 
-      const prompt = buildPlannerPrompt(grounding, previousFailures)
-      const messages = [{ role: 'system' as const, content: prompt }]
-
+    for (let iteration = 0; iteration < maxInternalIterations; iteration++) {
+      iterationsUsed = iteration + 1
       let llmResponse: { content: string; inputTokens: number; outputTokens: number }
       try {
         llmResponse = await llmAdapter(messages)
@@ -232,20 +295,26 @@ export function createImplementationPlannerNode(config: ImplementationPlannerCon
         outputTokens: llmResponse.outputTokens,
       })
 
-      // Parse tool call
-      let parsed: { tool: string; args: Record<string, unknown> } | null = null
-      try {
-        const jsonMatch = llmResponse.content.match(/```(?:json)?\s*([\s\S]*?)```/)
-        const jsonStr = jsonMatch ? jsonMatch[1].trim() : llmResponse.content.trim()
-        parsed = JSON.parse(jsonStr)
-      } catch {
-        logger.warn(`implementation_planner: failed to parse response on iteration ${iteration}`)
-        previousFailures = [{ check: 'parse', reason: 'LLM response was not valid JSON' }]
+      // Add assistant response to conversation
+      messages.push({ role: 'assistant', content: llmResponse.content })
+
+      // Parse tool call - robust extraction for various LLM output formats
+      const parsed = parseToolCall(llmResponse.content)
+
+      if (!parsed) {
+        logger.warn(`implementation_planner: failed to parse response on iteration ${iteration}`, {
+          responsePreview: llmResponse.content.slice(0, 200),
+        })
+        messages.push({
+          role: 'user',
+          content: 'ERROR: Response was not valid JSON. Respond ONLY with a JSON tool call.',
+        })
         continue
       }
 
-      if (!parsed) continue
+      logger.debug(`implementation_planner: parsed tool=${parsed.tool} on iteration ${iteration}`)
 
+      // Handle 'complete' tool - terminal
       if (parsed.tool === 'complete' && parsed.args['plan']) {
         const rawPlan = parsed.args['plan'] as Record<string, unknown>
         plan = {
@@ -261,14 +330,41 @@ export function createImplementationPlannerNode(config: ImplementationPlannerCon
           logger.info('implementation_planner: postconditions passed', { iteration })
           break
         }
-        previousFailures = postconditionResult.failures
+        // Postconditions failed - tell the LLM to fix the plan
+        const failures = postconditionResult.failures
+          .map(f => `[${f.check}] ${f.reason}`)
+          .join(', ')
+        messages.push({
+          role: 'user',
+          content: `POSTCONDITION FAILED: ${failures}. Fix the plan and call complete again.`,
+        })
         plan = null
         continue
       }
 
-      // Handle tool calls (query_kb, search_codebase, read_file)
-      // For now just continue — adapters used in real implementation
-      logger.info(`implementation_planner: tool=${parsed.tool}`, { iteration })
+      // Handle tool calls with actual execution
+      let toolResult: string
+      try {
+        const { tool, args } = parsed
+        if (tool === 'query_kb' && config.queryKb) {
+          toolResult = await config.queryKb(String(args['query'] ?? ''))
+        } else if (tool === 'search_codebase' && config.searchCodebase) {
+          toolResult = await config.searchCodebase(String(args['pattern'] ?? ''))
+        } else if (tool === 'read_file' && config.readFile) {
+          toolResult = await config.readFile(String(args['path'] ?? ''))
+        } else {
+          toolResult = `Tool '${tool}' not available or not configured. Available: complete, query_kb, search_codebase, read_file.`
+        }
+      } catch (err) {
+        toolResult = `ERROR: ${err instanceof Error ? err.message : String(err)}`
+      }
+
+      // Add tool result as user message for next iteration
+      messages.push({
+        role: 'user',
+        content: `Tool result for ${parsed.tool}: ${toolResult.slice(0, 5000)}`,
+      })
+      logger.info(`implementation_planner: executed tool=${parsed.tool}`, { iteration })
     }
 
     // Use stub plan if agent didn't produce one
@@ -287,7 +383,7 @@ export function createImplementationPlannerNode(config: ImplementationPlannerCon
     logger.info('implementation_planner: complete', {
       storyId: state.storyId,
       passed: finalPostconditions.passed,
-      iterations: iteration,
+      iterations: iterationsUsed,
     })
 
     return {

@@ -21,7 +21,7 @@ import { eq, and, sql } from 'drizzle-orm'
 import { Pool } from 'pg'
 import { logger } from '@repo/logger'
 import * as scraperSchema from './db/schema.js'
-import * as gallerySchema from '@repo/db/schema'
+import * as gallerySchema from '../../../../packages/backend/db/src/schema.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '../.env') })
@@ -95,6 +95,8 @@ async function main() {
             }
           : null
 
+        const thumbnailUrl = instr.imageUrl || null
+
         // 2. Upsert moc_instructions
         const [upsertedMoc] = await galleryDb
           .insert(gallerySchema.mocInstructions)
@@ -109,7 +111,8 @@ async function main() {
             descriptionHtml: instr.descriptionHtml || null,
             uploadedDate: instr.dateAdded || null,
             designer,
-            tags: (instr.tags as string[] | null)?.length ? instr.tags as string[] : null,
+            tags: (instr.tags as string[] | null)?.length ? (instr.tags as string[]) : null,
+            thumbnailUrl,
             status: 'published',
             visibility: 'public',
             sourcePlatform: {
@@ -127,7 +130,8 @@ async function main() {
               descriptionHtml: instr.descriptionHtml || null,
               uploadedDate: instr.dateAdded || null,
               designer,
-              tags: (instr.tags as string[] | null)?.length ? instr.tags as string[] : null,
+              tags: (instr.tags as string[] | null)?.length ? (instr.tags as string[]) : null,
+              thumbnailUrl,
               status: 'published',
               visibility: 'public',
               sourcePlatform: {
@@ -154,7 +158,6 @@ async function main() {
             mocId: galleryMocId,
             fileType: 'instruction',
             fileUrl,
-            s3Key,
             originalFilename: filename,
             mimeType,
           })
@@ -162,7 +165,6 @@ async function main() {
             target: [gallerySchema.mocFiles.mocId, gallerySchema.mocFiles.originalFilename],
             set: {
               fileUrl,
-              s3Key,
               mimeType,
               updatedAt: new Date(),
             },

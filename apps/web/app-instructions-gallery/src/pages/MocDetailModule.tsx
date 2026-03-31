@@ -41,8 +41,10 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
       id: f.id,
       url: f.downloadUrl,
     })),
-    updatedAt: apiData.updatedAt.toISOString(),
-    publishDate: apiData.createdAt.toISOString(),
+    updatedAt:
+      typeof apiData.updatedAt === 'string' ? apiData.updatedAt : apiData.updatedAt.toISOString(),
+    publishDate:
+      typeof apiData.createdAt === 'string' ? apiData.createdAt : apiData.createdAt.toISOString(),
     purchasedDate: undefined,
     author: undefined,
     partsCount: apiData.stats.pieceCount || 0,

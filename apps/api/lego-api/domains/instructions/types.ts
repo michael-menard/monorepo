@@ -126,7 +126,7 @@ export const MocInstructionsSchema = z.object({
   theme: z.string().nullable(),
   themeId: z.number().int().nullable(),
   subtheme: z.string().nullable(),
-  uploadedDate: z.date().nullable(),
+  uploadedDate: z.string().nullable(),
 
   // Set-specific fields
   brand: z.string().nullable(),
@@ -161,9 +161,9 @@ export const MocInstructionsSchema = z.object({
   totalPieceCount: z.number().int().nullable(),
 
   // Timestamps
-  publishedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 })
 
 export type MocInstructions = z.infer<typeof MocInstructionsSchema>
@@ -179,9 +179,9 @@ export const MocFileSchema = z.object({
   fileUrl: z.string().url(),
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date().nullable(),
-  deletedAt: z.date().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string().nullable(),
+  deletedAt: z.string().nullable(),
 })
 
 export type MocFile = z.infer<typeof MocFileSchema>

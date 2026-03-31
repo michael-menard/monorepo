@@ -26,6 +26,10 @@
     "./telemetry": {
       "import": "./src/telemetry/index.ts",
       "types": "./src/telemetry/index.ts"
+    },
+    "./embedding-client": {
+      "import": "./src/embedding-client/index.ts",
+      "types": "./src/embedding-client/index.ts"
     }
   },
   "scripts": {

@@ -166,13 +166,58 @@ export function buildExecutorTools(): ToolDefinition[] {
 
 /**
  * Parses a tool call from the LLM response.
+ * Uses multiple extraction strategies to handle various LLM output formats.
  */
 export function parseExecutorToolCall(
   response: string,
 ): { tool: string; args: Record<string, unknown> } | null {
   try {
-    const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/)
-    const jsonStr = jsonMatch ? jsonMatch[1].trim() : response.trim()
+    const responseContent = response.trim()
+
+    // Try multiple JSON extraction strategies
+    let jsonStr: string | null = null
+
+    // Strategy 1: Extract from markdown code blocks (```json ... ``` or ``` ... ```)
+    const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim()
+    }
+
+    // Strategy 2: Find JSON object starting with { "tool": or {"tool":
+    if (!jsonStr) {
+      const toolJsonMatch = responseContent.match(
+        /\{\s*"tool"\s*:\s*"[^"]+"\s*,[\s\S]*?\}(?=\s*$|\s*[^}\]])/s,
+      )
+      if (toolJsonMatch) {
+        jsonStr = toolJsonMatch[0]
+      }
+    }
+
+    // Strategy 3: Find any JSON object with balanced braces
+    if (!jsonStr) {
+      const firstBrace = responseContent.indexOf('{')
+      if (firstBrace !== -1) {
+        let braceCount = 0
+        let lastBrace = firstBrace
+        for (let i = firstBrace; i < responseContent.length; i++) {
+          if (responseContent[i] === '{') braceCount++
+          if (responseContent[i] === '}') {
+            braceCount--
+            if (braceCount === 0) {
+              lastBrace = i
+              break
+            }
+          }
+        }
+        jsonStr = responseContent.slice(firstBrace, lastBrace + 1)
+      }
+    }
+
+    // Strategy 4: Try the whole response as JSON
+    if (!jsonStr) {
+      jsonStr = responseContent
+    }
+
     const parsed = JSON.parse(jsonStr)
     if (parsed && typeof parsed.tool === 'string')
       return parsed as { tool: string; args: Record<string, unknown> }

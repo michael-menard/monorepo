@@ -427,7 +427,8 @@ export class ModelRouter {
    */
   private async checkOllamaAvailability(): Promise<boolean> {
     try {
-      const ollamaProvider = await getProviderForModel('ollama/qwen2.5-coder:7b')
+      const ollamaModel = process.env.OLLAMA_MODEL ?? 'qwen2.5-coder:14b'
+      const ollamaProvider = await getProviderForModel(`ollama/${ollamaModel}`)
       return await ollamaProvider.checkAvailability(5000, false) // Use cache
     } catch (error) {
       logger.warn('Ollama availability check failed', { event: 'ollama_check_failed', error })

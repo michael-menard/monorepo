@@ -17,18 +17,36 @@ import type {
   ReviewGraphInvokeRequest,
 } from '../routes/__types__/graph-invoke.js'
 import { createKbAdapters, logInvocationAdapter, logOutcomeAdapter } from './kb-adapters.js'
+import { createLlmAdapters } from './llm-adapters.js'
+import { createToolAdapters } from './tool-adapters.js'
 
 // ============================================================================
 // KB Adapters (lazy initialization)
 // ============================================================================
 
 let kbAdapters: ReturnType<typeof createKbAdapters> | null = null
+let llmAdapters: ReturnType<typeof createLlmAdapters> | null = null
+let toolAdapters: ReturnType<typeof createToolAdapters> | null = null
 
 function getKbAdapters() {
   if (!kbAdapters) {
     kbAdapters = createKbAdapters()
   }
   return kbAdapters
+}
+
+function getLlmAdapters() {
+  if (!llmAdapters) {
+    llmAdapters = createLlmAdapters()
+  }
+  return llmAdapters
+}
+
+function getToolAdapters() {
+  if (!toolAdapters) {
+    toolAdapters = createToolAdapters()
+  }
+  return toolAdapters
 }
 
 // ============================================================================
@@ -44,12 +62,26 @@ export async function executeDevImplementV2(
 
   logger.info('Starting dev-implement-v2 execution', { storyId: request.storyId, threadId })
 
-  // Get KB adapters for telemetry and story context
-  const adapters = getKbAdapters()
+  // Get all adapters for the graph
+  const kbAdaptersLocal = getKbAdapters()
+  const llmAdaptersLocal = getLlmAdapters()
+  const toolAdaptersLocal = getToolAdapters()
 
+  // Create graph with full adapter wiring
+  // This enables real LLM calls via MODL-0010 providers (Ollama/Qwen)
+  // and real tool execution (file I/O, test running)
   const graph = createDevImplementV2Graph({
-    kbStoryAdapter: adapters.kbStoryAdapter,
-    queryKb: adapters.queryKb,
+    // KB adapters
+    kbStoryAdapter: kbAdaptersLocal.kbStoryAdapter,
+    queryKb: kbAdaptersLocal.queryKb,
+    // LLM adapters - wire to MODL-0010 providers
+    plannerLlmAdapter: llmAdaptersLocal.plannerLlmAdapter,
+    executorLlmAdapter: llmAdaptersLocal.executorLlmAdapter,
+    // Tool adapters - wire to filesystem and test runner
+    readFile: toolAdaptersLocal.readFile,
+    writeFile: toolAdaptersLocal.writeFile,
+    searchCodebase: toolAdaptersLocal.searchCodebase,
+    runTests: toolAdaptersLocal.runTests,
   })
 
   try {

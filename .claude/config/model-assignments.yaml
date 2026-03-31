@@ -59,18 +59,18 @@ qa-verify-verification-leader: sonnet
 # ==============================================================================
 
 # Gap Analysis - Requires multi-perspective reasoning
-story-fanout-pm: sonnet          # PM gap analysis - strategic product thinking
-story-fanout-ux: sonnet          # UX gap analysis - user empathy & design reasoning
-story-fanout-qa: sonnet          # QA gap analysis - risk assessment & test strategy
+story-fanout-pm: sonnet # PM gap analysis - strategic product thinking
+story-fanout-ux: sonnet # UX gap analysis - user empathy & design reasoning
+story-fanout-qa: sonnet # QA gap analysis - risk assessment & test strategy
 
 # Attack Analysis - Adversarial reasoning to challenge assumptions
-story-attack: sonnet             # Red team analysis - creative critical thinking
+story-attack: sonnet # Red team analysis - creative critical thinking
 
 # Readiness Scoring - Multi-factor decision making with judgment calls
-story-readiness-score: sonnet    # Complex scoring with weighted factors
+story-readiness-score: sonnet # Complex scoring with weighted factors
 
 # Synthesis - Combine multiple analyses into coherent narrative
-story-synthesize: sonnet         # Synthesize PM, UX, QA insights with conflict resolution
+story-synthesize: sonnet # Synthesize PM, UX, QA insights with conflict resolution
 
 # Gap Hygiene - Quality checks (can use mid-tier Ollama)
 story-gap-hygiene: ollama:codellama:13b
@@ -93,7 +93,7 @@ pm-uiux-recommendations: ollama:llama3.2:8b
 code-review-lint: ollama:qwen2.5-coder:7b
 code-review-syntax: ollama:qwen2.5-coder:7b
 code-review-style-compliance: ollama:qwen2.5-coder:7b
-code-review-security: sonnet                    # KEEP ON CLAUDE - security requires deep analysis
+code-review-security: sonnet # KEEP ON CLAUDE - security requires deep analysis
 code-review-typecheck: ollama:qwen2.5-coder:7b
 code-review-build: ollama:qwen2.5-coder:7b
 
@@ -101,15 +101,15 @@ code-review-build: ollama:qwen2.5-coder:7b
 # Dev Implementation Workers
 # Mix: Ollama for routine, Claude for strategic, DeepSeek for complex code
 # ==============================================================================
-dev-implement-planner: sonnet                              # Strategic planning requires reasoning
-dev-implement-plan-validator: ollama:codellama:13b         # Structural validation
-dev-implement-backend-coder: ollama:deepseek-coder-v2:33b  # Best coding model (use :16b if <20GB RAM)
+dev-implement-planner: ollama:qwen2.5-coder:14b # Using Qwen 14B for planning
+dev-implement-plan-validator: ollama:codellama:13b # Structural validation
+dev-implement-backend-coder: ollama:qwen2.5-coder:14b # Using Qwen 14B for implementation
 dev-implement-frontend-coder: ollama:deepseek-coder-v2:33b # Best coding model (use :16b if <20GB RAM)
-dev-implement-contracts: ollama:qwen2.5-coder:7b           # Interface definitions
-dev-implement-verifier: ollama:codellama:13b               # Verification logic
-dev-implement-playwright: ollama:qwen2.5-coder:7b          # E2E test generation
-dev-implement-proof-writer: ollama:llama3.2:8b             # Documentation writing
-dev-implement-learnings: ollama:llama3.2:8b                # Extract learnings
+dev-implement-contracts: ollama:qwen2.5-coder:7b # Interface definitions
+dev-implement-verifier: ollama:codellama:13b # Verification logic
+dev-implement-playwright: ollama:qwen2.5-coder:7b # E2E test generation
+dev-implement-proof-writer: ollama:llama3.2:8b # Documentation writing
+dev-implement-learnings: ollama:llama3.2:8b # Extract learnings
 
 # ==============================================================================
 # Epic Elaboration Workers - Routine Analysis
@@ -120,7 +120,7 @@ elab-epic-product: ollama:llama3.2:8b
 elab-epic-qa: ollama:qwen2.5-coder:7b
 elab-epic-ux: ollama:llama3.2:8b
 elab-epic-platform: ollama:codellama:13b
-elab-epic-security: sonnet                      # KEEP ON CLAUDE - security analysis
+elab-epic-security: sonnet # KEEP ON CLAUDE - security analysis
 
 # ==============================================================================
 # Completion Leaders - Status Updates & Formatting
@@ -176,7 +176,7 @@ architect-aggregation-leader: sonnet
 architect-api-leader: sonnet
 architect-frontend-leader: sonnet
 architect-packages-leader: sonnet
-architect-setup-leader: ollama:qwen2.5-coder:7b    # Setup validation → Tier 3
+architect-setup-leader: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
 architect-story-review: sonnet
 architect-types-leader: sonnet
 
@@ -205,7 +205,7 @@ audit-devils-advocate: sonnet
 audit-moderator: sonnet
 audit-promote-leader: sonnet
 audit-trends-leader: sonnet
-audit-security: sonnet                              # KEEP ON CLAUDE - security analysis
+audit-security: sonnet # KEEP ON CLAUDE - security analysis
 
 # ==============================================================================
 # Code Review Extensions
@@ -267,7 +267,7 @@ pattern-miner: ollama:llama3.2:8b
 # ADDED: WINT-0220 v1.1.0
 # ==============================================================================
 scrum-master-setup-leader: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
-uat-precondition-check: ollama:qwen2.5-coder:7b     # Deterministic checks → Tier 3
+uat-precondition-check: ollama:qwen2.5-coder:7b # Deterministic checks → Tier 3
 
 # ==============================================================================
 # Elab Autonomous & Delta Agents
@@ -286,17 +286,17 @@ elab-phase-contract-agent: sonnet
 # ADDED: WINT-0220 v1.1.0
 # ==============================================================================
 evidence-judge: sonnet
-quick-review: sonnet                                # Code review context → Tier 1
-quick-security: sonnet                              # Security analysis → KEEP ON CLAUDE
-quick-test: ollama:codellama:13b                   # Test execution checks → Tier 2
+quick-review: sonnet # Code review context → Tier 1
+quick-security: sonnet # Security analysis → KEEP ON CLAUDE
+quick-test: ollama:codellama:13b # Test execution checks → Tier 2
 
 # ==============================================================================
 # Reality Intake Agents
 # Tier 3: Structured data collection; Tier 1 for analysis
 # ADDED: WINT-0220 v1.1.0
 # ==============================================================================
-reality-intake-collector: sonnet                    # Analysis and synthesis → Tier 1
-reality-intake-setup: ollama:qwen2.5-coder:7b      # Setup validation → Tier 3
+reality-intake-collector: sonnet # Analysis and synthesis → Tier 1
+reality-intake-setup: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
 
 # ==============================================================================
 # Heuristic & Experiment Agents
@@ -328,10 +328,10 @@ ui-ux-review-setup-leader: ollama:qwen2.5-coder:7b # Setup validation → Tier 3
 # General / Catch-all Agents
 # ADDED: WINT-0220 v1.1.0
 # ==============================================================================
-pm: sonnet                                         # PM reasoning → Tier 1
-qa: ollama:codellama:13b                           # QA structural checks → Tier 2
-uiux: sonnet                                       # UX reasoning → Tier 1
-commitment-gate-agent: sonnet                      # Alias for commitment-gate (critical decisions)
-story-attack-agent: sonnet                         # Alias for story-attack
-story-synthesize-agent: sonnet                     # Alias for story-synthesize
-readiness-score-agent: sonnet                      # Readiness scoring → Tier 1
+pm: sonnet # PM reasoning → Tier 1
+qa: ollama:codellama:13b # QA structural checks → Tier 2
+uiux: sonnet # UX reasoning → Tier 1
+commitment-gate-agent: sonnet # Alias for commitment-gate (critical decisions)
+story-attack-agent: sonnet # Alias for story-attack
+story-synthesize-agent: sonnet # Alias for story-synthesize
+readiness-score-agent: sonnet # Readiness scoring → Tier 1

@@ -348,12 +348,18 @@ const DEFAULT_STRATEGY: Strategy = {
     {
       tier: 3,
       name: 'Simple Tasks',
-      description: 'Lint, formatting',
+      description: 'Lint, formatting, local model execution',
       models: {
-        primary: [{ provider: 'anthropic', model: 'claude-haiku-3.5', cost_per_1m_tokens: 0.25 }],
-        fallback: [],
+        primary: [
+          {
+            provider: 'ollama',
+            model: process.env.OLLAMA_MODEL ?? 'qwen2.5-coder:14b',
+            cost_per_1m_tokens: 0.0,
+          },
+        ],
+        fallback: [{ provider: 'anthropic', model: 'claude-haiku-3.5', cost_per_1m_tokens: 0.25 }],
       },
-      use_cases: ['Simple tasks'],
+      use_cases: ['Simple tasks', 'Local code generation', 'Lint and formatting'],
       quality_expectations: 'Adequate',
       latency_tolerance: 'very low',
     },

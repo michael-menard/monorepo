@@ -46,6 +46,7 @@ export const MODEL_LEADERBOARD_PATH: string = path.join(
 export const REQUIRED_MODELS: readonly string[] = [
   'deepseek-coder-v2:16b',
   'codellama:13b',
+  'qwen2.5-coder:32b',
   'qwen2.5-coder:14b',
   'qwen2.5-coder:7b',
   'llama3.2:8b',

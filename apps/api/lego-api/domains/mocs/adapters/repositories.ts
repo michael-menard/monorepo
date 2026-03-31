@@ -102,8 +102,8 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         originalFilename: file.originalFilename,
         mimeType: file.mimeType,
         s3Key: file.s3Key,
-        createdAt: file.createdAt,
-        updatedAt: file.updatedAt,
+        createdAt: file.createdAt instanceof Date ? file.createdAt.toISOString() : file.createdAt,
+        updatedAt: file.updatedAt instanceof Date ? file.updatedAt.toISOString() : file.updatedAt,
       }))
 
       return {
@@ -161,15 +161,16 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         tags: row.tags,
         slug: row.slug,
         type: row.type,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
+        createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+        updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
         mocId: row.mocId,
         author: row.author,
         partsCount: row.partsCount,
         minifigCount: row.minifigCount,
         themeId: row.themeId,
         subtheme: row.subtheme,
-        uploadedDate: row.uploadedDate,
+        uploadedDate:
+          row.uploadedDate instanceof Date ? row.uploadedDate.toISOString() : row.uploadedDate,
         brand: row.brand,
         setNumber: row.setNumber,
         releaseYear: row.releaseYear,
@@ -189,7 +190,8 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         isVerified: row.isVerified ?? false,
         thumbnailUrl: row.thumbnailUrl,
         totalPieceCount: row.totalPieceCount,
-        publishedAt: row.publishedAt,
+        publishedAt:
+          row.publishedAt instanceof Date ? row.publishedAt.toISOString() : row.publishedAt,
       }))
 
       return { items, total }
@@ -236,8 +238,10 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         originalFilename: result.originalFilename,
         mimeType: result.mimeType,
         s3Key: result.s3Key,
-        createdAt: result.createdAt,
-        updatedAt: result.updatedAt,
+        createdAt:
+          result.createdAt instanceof Date ? result.createdAt.toISOString() : result.createdAt,
+        updatedAt:
+          result.updatedAt instanceof Date ? result.updatedAt.toISOString() : result.updatedAt,
       }
     },
   }
@@ -257,7 +261,7 @@ function mapRowToMoc(row: any): Moc {
     slug: row.slug,
     type: row.type,
     thumbnailUrl: row.thumbnailUrl || null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   }
 }

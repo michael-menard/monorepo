@@ -342,7 +342,7 @@ function mapRowToMoc(row: {
     theme: row.theme,
     themeId: row.themeId,
     subtheme: row.subtheme,
-    uploadedDate: row.uploadedDate,
+    uploadedDate: row.uploadedDate?.toISOString() ?? null,
     brand: row.brand,
     setNumber: row.setNumber,
     releaseYear: row.releaseYear,
@@ -363,9 +363,9 @@ function mapRowToMoc(row: {
     tags: row.tags as string[] | null,
     thumbnailUrl: row.thumbnailUrl,
     totalPieceCount: row.totalPieceCount,
-    publishedAt: row.publishedAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   }
 }
 
@@ -387,8 +387,8 @@ function mapRowToFile(row: {
     fileUrl: row.fileUrl,
     originalFilename: row.originalFilename,
     mimeType: row.mimeType,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    deletedAt: row.deletedAt,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+    deletedAt: row.deletedAt?.toISOString() ?? null,
   }
 }

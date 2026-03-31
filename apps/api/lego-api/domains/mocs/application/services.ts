@@ -43,10 +43,12 @@ export function createMocService(deps: MocServiceDeps) {
   const { mocRepo, imageStorage } = deps
 
   // Initialize S3 client for presigned URLs
+  const s3Endpoint = process.env.S3_ENDPOINT
   const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'us-east-1',
+    ...(s3Endpoint ? { endpoint: s3Endpoint, forcePathStyle: true } : {}),
   })
-  const bucket = process.env.S3_BUCKET
+  const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET
 
   return {
     /**
@@ -359,19 +361,31 @@ export function createMocService(deps: MocServiceDeps) {
         }
 
         // AC-6, AC-7, AC-8, AC-13: Generate presigned S3 URL
-        if (!file.s3Key) {
-          logger.error('File missing s3Key', undefined, { userId, mocId, fileId })
+        // Derive s3Key (and bucket) from fileUrl if not stored directly
+        let s3Key = file.s3Key
+        let fileBucket = bucket
+        if (!s3Key && file.fileUrl) {
+          // fileUrl format: http(s)://endpoint/bucket/key...
+          const urlObj = new URL(file.fileUrl)
+          const pathParts = urlObj.pathname.split('/').filter(Boolean)
+          // First segment is bucket name, rest is the key
+          fileBucket = pathParts[0]
+          s3Key = pathParts.slice(1).join('/')
+        }
+
+        if (!s3Key) {
+          logger.error('File missing s3Key and fileUrl', undefined, { userId, mocId, fileId })
           return err('DB_ERROR')
         }
 
-        if (!bucket) {
+        if (!fileBucket) {
           logger.error('S3 bucket not configured', undefined, { userId, mocId, fileId })
           return err('PRESIGN_FAILED')
         }
 
         const command = new GetObjectCommand({
-          Bucket: bucket,
-          Key: file.s3Key,
+          Bucket: fileBucket,
+          Key: s3Key,
           // AC-7, AC-13: ResponseContentDisposition with RFC 5987 encoding
           ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(file.originalFilename || 'download')}`,
         })
