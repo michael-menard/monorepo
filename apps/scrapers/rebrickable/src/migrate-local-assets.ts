@@ -38,6 +38,28 @@ const IMAGE_MIME: Record<string, string> = {
   '.gif': 'image/gif',
 }
 
+const INSTRUCTION_MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.io': 'application/octet-stream',
+  '.studio': 'application/octet-stream',
+  '.ldr': 'text/plain',
+  '.mpd': 'text/plain',
+  '.lxf': 'application/octet-stream',
+  '.zip': 'application/zip',
+  '.7z': 'application/x-7z-compressed',
+  '.xml': 'application/xml',
+  '.txt': 'text/plain',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+}
+
+const PARTS_EXPORT_FILES: Array<{ filename: string; mimeType: string }> = [
+  { filename: 'parts-rebrickable_csv.csv', mimeType: 'text/csv' },
+  { filename: 'parts-lego_pab_csv.csv', mimeType: 'text/csv' },
+  { filename: 'parts-bricklink_xml.xml', mimeType: 'application/xml' },
+]
+
 function createGalleryPool() {
   return new Pool({
     host: process.env.GALLERY_DB_HOST || 'localhost',
@@ -67,6 +89,7 @@ async function main() {
   logger.info(`[migrate] Found ${mocFolders.length} MOC folders in downloads`)
 
   let imagesUploaded = 0
+  let instructionFilesUploaded = 0
   let partsImported = 0
   let thumbnailsSet = 0
   let partsFilesUploaded = 0
@@ -152,46 +175,86 @@ async function main() {
       }
     }
 
-    // ── 2. Upload Rebrickable CSV as a parts-list file ───────────────────────
-    const csvFilename = 'parts-rebrickable_csv.csv'
-    const csvPath = resolve(mocDir, csvFilename)
-    let partsListFileUrl: string | null = null
+    // ── 2. Upload all instruction files from the MOC folder ─────────────────
+    const allFiles = await readdir(mocDir)
+    const instructionFiles = allFiles.filter(f => {
+      const ext = extname(f).toLowerCase()
+      return INSTRUCTION_MIME[ext] && !f.startsWith('parts-') && f !== 'images'
+    })
 
-    if (existsSync(csvPath)) {
-      const csvS3Key = `mocs/${mocId}/${csvFilename}`
-      partsListFileUrl = `${S3_ENDPOINT}/${S3_BUCKET}/${csvS3Key}`
+    for (const instrFile of instructionFiles) {
+      const instrPath = resolve(mocDir, instrFile)
+      const ext = extname(instrFile).toLowerCase()
+      const contentType = INSTRUCTION_MIME[ext] || 'application/octet-stream'
+      const s3Key = `mocs/${mocId}/${instrFile}`
+      const fileUrl = `${S3_ENDPOINT}/${S3_BUCKET}/${s3Key}`
 
-      const existingCsv = await db
+      const existing = await db
         .select()
         .from(gallerySchema.mocFiles)
         .where(
           and(
             eq(gallerySchema.mocFiles.mocId, galleryMocId),
-            eq(gallerySchema.mocFiles.originalFilename, csvFilename),
+            eq(gallerySchema.mocFiles.originalFilename, instrFile),
           ),
         )
         .limit(1)
 
-      if (existingCsv.length === 0) {
-        const buffer = await readFile(csvPath)
+      if (existing.length === 0) {
+        const buffer = await readFile(instrPath)
+        await uploadToS3({ key: s3Key, body: buffer, contentType, bucket: S3_BUCKET })
+        await db.insert(gallerySchema.mocFiles).values({
+          mocId: galleryMocId,
+          fileType: 'instruction',
+          fileUrl,
+          originalFilename: instrFile,
+          mimeType: contentType,
+        })
+        instructionFilesUploaded++
+      }
+    }
+
+    // ── 3. Upload all parts export files as parts-list files ────────────────
+    for (const { filename: partsFilename, mimeType: partsMime } of PARTS_EXPORT_FILES) {
+      const partsFilePath = resolve(mocDir, partsFilename)
+      if (!existsSync(partsFilePath)) continue
+
+      const partsS3Key = `mocs/${mocId}/${partsFilename}`
+      const partsFileUrl = `${S3_ENDPOINT}/${S3_BUCKET}/${partsS3Key}`
+
+      const existingParts = await db
+        .select()
+        .from(gallerySchema.mocFiles)
+        .where(
+          and(
+            eq(gallerySchema.mocFiles.mocId, galleryMocId),
+            eq(gallerySchema.mocFiles.originalFilename, partsFilename),
+          ),
+        )
+        .limit(1)
+
+      if (existingParts.length === 0) {
+        const buffer = await readFile(partsFilePath)
         await uploadToS3({
-          key: csvS3Key,
+          key: partsS3Key,
           body: buffer,
-          contentType: 'text/csv',
+          contentType: partsMime,
           bucket: S3_BUCKET,
         })
         await db.insert(gallerySchema.mocFiles).values({
           mocId: galleryMocId,
           fileType: 'parts-list',
-          fileUrl: partsListFileUrl,
-          originalFilename: csvFilename,
-          mimeType: 'text/csv',
+          fileUrl: partsFileUrl,
+          originalFilename: partsFilename,
+          mimeType: partsMime,
         })
         partsFilesUploaded++
       }
     }
 
-    // ── 3. Import parts from rebrickable CSV ─────────────────────────────────
+    // ── 4. Import parts from rebrickable CSV ─────────────────────────────────
+    const csvFilename = 'parts-rebrickable_csv.csv'
+    const csvPath = resolve(mocDir, csvFilename)
     if (existsSync(csvPath)) {
       const csvText = await readFile(csvPath, 'utf-8')
       const parts = parseCsv(csvText)
@@ -264,7 +327,8 @@ async function main() {
   logger.info('  Migration Complete')
   logger.info(`  Images uploaded:   ${imagesUploaded}`)
   logger.info(`  Thumbnails set:    ${thumbnailsSet}`)
-  logger.info(`  Parts CSVs:        ${partsFilesUploaded}`)
+  logger.info(`  Instruction files: ${instructionFilesUploaded}`)
+  logger.info(`  Parts files:       ${partsFilesUploaded}`)
   logger.info(`  Parts imported:    ${partsImported}`)
   logger.info(`  Skipped (no DB):   ${skipped}`)
   logger.info('═══════════════════════════════════════════════════════')
