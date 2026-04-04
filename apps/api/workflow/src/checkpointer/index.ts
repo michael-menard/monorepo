@@ -26,7 +26,13 @@ export type { CheckpointConfig, CheckpointPayload, NodeHistoryEntry }
 export type { RollbackAction, CheckpointRow, ExecutionRow, SerdeResult } from './__types__/index.js'
 export { serializeState, deserializeState, parseCheckpointPayload } from './serializer.js'
 export { archiveExpiredCheckpoints } from './checkpoint-cleanup.js'
-export { PHASE_TO_CHECKPOINT_MAP, translatePhaseToNode } from './phase-mapping.js'
+export {
+  PHASE_TO_CHECKPOINT_MAP,
+  translatePhaseToNode,
+  ORCHESTRATOR_PHASE_TO_NODE_MAP,
+  translateOrchestratorPhaseToNode,
+  getNextOrchestratorNode,
+} from './phase-mapping.js'
 
 // ============================================================================
 // withCheckpointer() Factory
