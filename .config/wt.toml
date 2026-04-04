@@ -40,20 +40,42 @@ build = "pnpm build"
 # ─── Cleanup after worktree removal ───
 
 [post-remove]
-# Kill any Vite dev servers that were running for this worktree
+# Kill the Vite dev server (any frontend)
 kill-vite = "lsof -ti :{{ branch | hash_port }} -sTCP:LISTEN | xargs kill 2>/dev/null || true"
+# Kill roadmap-svc if it was running
+kill-roadmap-api = "lsof -ti :{{ ('api-' ~ branch) | hash_port }} -sTCP:LISTEN | xargs kill 2>/dev/null || true"
+# Kill lego-api if it was running
+kill-lego-api = "lsof -ti :{{ ('lego-' ~ branch) | hash_port }} -sTCP:LISTEN | xargs kill 2>/dev/null || true"
 
 # ─── List display ───
 
 [list]
 # Show LLM-generated one-line branch summaries
 summary = true
+# Show the per-branch frontend URL
+url = "http://localhost:{{ branch | hash_port }}"
 
 # ─── Project aliases (run with: wt step <name>) ───
 
 [aliases]
 # Quick dev server on a per-branch port (useful for parallel worktree dev)
 dev = "pnpm dev -- --port {{ branch | hash_port }}"
+
+# Start main-app + lego-api on per-branch hashed ports
+# Frontend: http://localhost:{{ branch | hash_port }}
+# Backend:  http://localhost:{{ ('lego-' ~ branch) | hash_port }}
+lego = "MAIN_APP_PORT={{ branch | hash_port }} LEGO_API_PORT={{ ('lego-' ~ branch) | hash_port }} pnpm --filter @repo/main-app dev -- --port {{ branch | hash_port }} & LEGO_API_PORT={{ ('lego-' ~ branch) | hash_port }} pnpm --filter @repo/lego-api dev"
+
+# Start workflow-roadmap + roadmap-svc on per-branch hashed ports
+# Frontend: http://localhost:{{ branch | hash_port }}
+# Backend:  http://localhost:{{ ('api-' ~ branch) | hash_port }}
+roadmap = "WORKFLOW_ROADMAP_PORT={{ branch | hash_port }} ROADMAP_SVC_PORT={{ ('api-' ~ branch) | hash_port }} pnpm --filter @repo/workflow-roadmap dev -- --port {{ branch | hash_port }} & PORT={{ ('api-' ~ branch) | hash_port }} pnpm --filter @repo/roadmap-svc dev"
+
+# Start workflow-admin-app + roadmap-svc + lego-api on per-branch hashed ports
+# Frontend: http://localhost:{{ branch | hash_port }}
+# roadmap-svc: http://localhost:{{ ('api-' ~ branch) | hash_port }}
+# lego-api:    http://localhost:{{ ('lego-' ~ branch) | hash_port }}
+workflow-admin = "WORKFLOW_ADMIN_PORT={{ branch | hash_port }} ROADMAP_SVC_PORT={{ ('api-' ~ branch) | hash_port }} LEGO_API_PORT={{ ('lego-' ~ branch) | hash_port }} pnpm --filter @repo/workflow-admin-app dev -- --port {{ branch | hash_port }} & PORT={{ ('api-' ~ branch) | hash_port }} pnpm --filter @repo/roadmap-svc dev & LEGO_API_PORT={{ ('lego-' ~ branch) | hash_port }} pnpm --filter @repo/lego-api dev"
 
 # Run tests for only the packages that changed vs main
 test-changed = "pnpm turbo test --filter='...[main]'"

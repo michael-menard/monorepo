@@ -22,13 +22,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: readPort('MAIN_APP_PORT'),
+    port: process.env.MAIN_APP_PORT
+      ? parseInt(process.env.MAIN_APP_PORT)
+      : readPort('MAIN_APP_PORT'),
     host: true,
     proxy: {
       // Proxy all /api/* requests to the backend server
       // Strips the /api prefix: /api/wishlist -> /wishlist
       '/api': {
-        target: `http://localhost:${readPort('LEGO_API_PORT')}`,
+        target: `http://localhost:${process.env.LEGO_API_PORT ?? readPort('LEGO_API_PORT')}`,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },

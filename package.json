@@ -53,7 +53,6 @@
     "lint-staged": "lint-staged",
     "circular": "madge --circular --extensions ts,tsx,js,jsx",
     "scrape": "turbo run scrape --filter=@repo/scraper-rebrickable --",
-    "scrape:sync-to-gallery": "pnpm --filter @repo/scraper-rebrickable scrape:sync-to-gallery",
     "knip": "knip"
   },
   "dependencies": {

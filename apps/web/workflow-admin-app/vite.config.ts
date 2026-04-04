@@ -22,17 +22,19 @@ export default defineConfig({
     },
   },
   server: {
-    port: readPort('WORKFLOW_ADMIN_PORT'),
+    port: process.env.WORKFLOW_ADMIN_PORT
+      ? parseInt(process.env.WORKFLOW_ADMIN_PORT)
+      : readPort('WORKFLOW_ADMIN_PORT'),
     host: true,
     proxy: {
       // Roadmap service (plans, stories, dashboard)
       '/api/v1': {
-        target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,
+        target: `http://localhost:${process.env.ROADMAP_SVC_PORT ?? readPort('ROADMAP_SVC_PORT')}`,
         changeOrigin: true,
       },
       // Default API gateway
       '/api': {
-        target: `http://localhost:${readPort('LEGO_API_PORT')}`,
+        target: `http://localhost:${process.env.LEGO_API_PORT ?? readPort('LEGO_API_PORT')}`,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },

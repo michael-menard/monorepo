@@ -21,13 +21,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: readPort('WORKFLOW_ROADMAP_PORT'),
+    port: process.env.WORKFLOW_ROADMAP_PORT
+      ? parseInt(process.env.WORKFLOW_ROADMAP_PORT)
+      : readPort('WORKFLOW_ROADMAP_PORT'),
     host: true,
     proxy: {
       // SSE endpoint — must come before the generic /api catch-all.
       // Disables http-proxy's response timeout so the stream stays open indefinitely.
       '/api/v1/events': {
-        target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,
+        target: `http://localhost:${process.env.ROADMAP_SVC_PORT ?? readPort('ROADMAP_SVC_PORT')}`,
         changeOrigin: true,
         configure: proxy => {
           proxy.on('proxyReq', (_proxyReq, _req, res) => {
@@ -41,7 +43,7 @@ export default defineConfig({
         },
       },
       '/api': {
-        target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,
+        target: `http://localhost:${process.env.ROADMAP_SVC_PORT ?? readPort('ROADMAP_SVC_PORT')}`,
         changeOrigin: true,
       },
     },

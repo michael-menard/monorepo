@@ -39,6 +39,24 @@ services:
     networks:
       - workflow-network
 
+  # Bun + Hono + Socket.io Notifications Server
+  notifications-server:
+    build:
+      context: ./apps/api/notifications-server
+      dockerfile: Dockerfile
+    container_name: workflow-notifications-server
+    ports:
+      - '3098:3098'
+    environment:
+      - NODE_ENV=production
+      - NOTIFICATIONS_PORT=3098
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379}
+      - NOTIFICATIONS_HMAC_SECRET=${NOTIFICATIONS_HMAC_SECRET:-changeme}
+      - DATABASE_URL=${KB_DB_URL:-postgresql://postgres:postgres@localhost:5433/knowledgebase}
+    restart: unless-stopped
+    networks:
+      - workflow-network
+
 networks:
   workflow-network:
     driver: bridge
