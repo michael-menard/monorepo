@@ -2,7 +2,11 @@
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDirs": [
+      "./src",
+      "../../../packages/backend/db/src",
+      "../../../packages/backend/s3-client/src"
+    ],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

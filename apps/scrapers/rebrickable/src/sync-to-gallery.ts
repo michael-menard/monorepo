@@ -95,7 +95,7 @@ async function main() {
             }
           : null
 
-        const thumbnailUrl = instr.imageUrl || null
+        const thumbnailUrl = null
 
         // 2. Upsert moc_instructions
         const [upsertedMoc] = await galleryDb

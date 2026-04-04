@@ -11,7 +11,7 @@
  * Env vars: same as sync-to-gallery (.env)
  */
 
-import { resolve, dirname, basename, extname } from 'path'
+import { resolve, dirname, extname } from 'path'
 import { fileURLToPath } from 'url'
 import { readdir, readFile } from 'fs/promises'
 import { existsSync } from 'fs'
@@ -97,7 +97,6 @@ async function main() {
 
   for (const folder of mocFolders) {
     // folder = "MOC-100690", mocNumber = "100690"
-    const mocNumber = folder.replace('MOC-', '')
     const mocDir = resolve(DOWNLOADS_DIR, folder)
     const mocId = folder // "MOC-100690"
 

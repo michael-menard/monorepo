@@ -1,4 +1,4 @@
-import { eq, and, desc, notInArray, inArray } from 'drizzle-orm'
+import { eq, and, desc, inArray } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { getDbClient } from '../db/client.js'
 import { scrapeCheckpoints, scrapeRuns } from '../db/schema.js'
@@ -112,12 +112,17 @@ export class CheckpointManager {
    * list in --retry-failed mode. The rebrickableUrl is stored in the
    * detail_scraped checkpoint's scrapedData.
    */
-  static async findPartialMocs(): Promise<Array<{ mocNumber: string; rebrickableUrl: string; title: string }>> {
+  static async findPartialMocs(): Promise<
+    Array<{ mocNumber: string; rebrickableUrl: string; title: string }>
+  > {
     const db = getDbClient()
 
     // MOCs that have at least one detail_scraped checkpoint
     const detailScraped = await db
-      .select({ mocNumber: scrapeCheckpoints.mocNumber, scrapedData: scrapeCheckpoints.scrapedData })
+      .select({
+        mocNumber: scrapeCheckpoints.mocNumber,
+        scrapedData: scrapeCheckpoints.scrapedData,
+      })
       .from(scrapeCheckpoints)
       .where(eq(scrapeCheckpoints.phase, 'detail_scraped'))
       .orderBy(desc(scrapeCheckpoints.createdAt))
@@ -153,7 +158,9 @@ export class CheckpointManager {
       const title = (data.title as string) || `MOC-${row.mocNumber}`
 
       if (!rebrickableUrl) {
-        logger.warn(`[checkpoint] MOC-${row.mocNumber} has no rebrickableUrl in checkpoint data — skipping`)
+        logger.warn(
+          `[checkpoint] MOC-${row.mocNumber} has no rebrickableUrl in checkpoint data — skipping`,
+        )
         continue
       }
 
@@ -161,6 +168,21 @@ export class CheckpointManager {
     }
 
     return partial
+  }
+
+  async hasBackfillCompleted(mocNumber: string): Promise<boolean> {
+    const results = await this.db
+      .select()
+      .from(scrapeCheckpoints)
+      .where(
+        and(
+          eq(scrapeCheckpoints.mocNumber, mocNumber),
+          eq(scrapeCheckpoints.phase, 'backfill_completed'),
+        ),
+      )
+      .limit(1)
+
+    return results.length > 0
   }
 
   static async findRunningRun(): Promise<string | null> {

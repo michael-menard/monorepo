@@ -8,6 +8,8 @@ export const CliOptionsSchema = z.object({
   resume: z.boolean().default(false),
   force: z.boolean().default(false),
   retryFailed: z.boolean().default(false),
+  retryMissing: z.boolean().default(false),
+  likedMocs: z.boolean().default(false),
   limit: z.number().int().positive().optional(),
   ignoreRobots: z.boolean().default(false),
 })
@@ -104,6 +106,7 @@ export const CheckpointPhaseSchema = z.enum([
   'downloaded',
   'uploaded',
   'completed',
+  'backfill_completed',
 ])
 
 export type CheckpointPhase = z.infer<typeof CheckpointPhaseSchema>
@@ -176,14 +179,12 @@ export type RateLimiterConfig = z.infer<typeof RateLimiterConfigSchema>
 export const BrowserConfigSchema = z.object({
   headed: z.boolean().default(false),
   profileDir: z.string().default('data/browser-profile'),
-  viewportPool: z
-    .array(z.object({ width: z.number(), height: z.number() }))
-    .default([
-      { width: 1366, height: 768 },
-      { width: 1440, height: 900 },
-      { width: 1536, height: 864 },
-      { width: 1920, height: 1080 },
-    ]),
+  viewportPool: z.array(z.object({ width: z.number(), height: z.number() })).default([
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1536, height: 864 },
+    { width: 1920, height: 1080 },
+  ]),
 })
 
 export type BrowserConfig = z.infer<typeof BrowserConfigSchema>

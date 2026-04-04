@@ -3,7 +3,7 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { logger } from '@repo/logger'
 import { CliOptionsSchema, EnvConfigSchema } from './__types__/index.js'
-import { runPipeline } from './scraper/pipeline.js'
+import { runPipeline, runBackfillPipeline } from './scraper/pipeline.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '../.env') })
@@ -29,6 +29,12 @@ function parseArgs(argv: string[]) {
         break
       case '--retry-failed':
         options.retryFailed = true
+        break
+      case '--retry-missing':
+        options.retryMissing = true
+        break
+      case '--liked-mocs':
+        options.likedMocs = true
         break
       case '--ignore-robots':
         options.ignoreRobots = true
@@ -72,18 +78,30 @@ async function main(): Promise<void> {
     resume: options.resume,
     force: options.force,
     retryFailed: options.retryFailed,
+    retryMissing: options.retryMissing,
+    likedMocs: options.likedMocs,
     limit: options.limit ?? 'all',
     ignoreRobots: options.ignoreRobots,
   })
 
-  await runPipeline(options, {
-    username: envConfig.REBRICKABLE_USERNAME,
-    password: envConfig.REBRICKABLE_PASSWORD,
-    userSlug: envConfig.REBRICKABLE_USER_SLUG,
-    bucket: envConfig.SCRAPER_BUCKET,
-    rateLimit: envConfig.SCRAPER_RATE_LIMIT,
-    minDelayMs: envConfig.SCRAPER_MIN_DELAY_MS,
-  })
+  if (options.retryMissing) {
+    await runBackfillPipeline(options, {
+      username: envConfig.REBRICKABLE_USERNAME,
+      password: envConfig.REBRICKABLE_PASSWORD,
+      bucket: envConfig.SCRAPER_BUCKET,
+      rateLimit: envConfig.SCRAPER_RATE_LIMIT,
+      minDelayMs: envConfig.SCRAPER_MIN_DELAY_MS,
+    })
+  } else {
+    await runPipeline(options, {
+      username: envConfig.REBRICKABLE_USERNAME,
+      password: envConfig.REBRICKABLE_PASSWORD,
+      userSlug: envConfig.REBRICKABLE_USER_SLUG,
+      bucket: envConfig.SCRAPER_BUCKET,
+      rateLimit: envConfig.SCRAPER_RATE_LIMIT,
+      minDelayMs: envConfig.SCRAPER_MIN_DELAY_MS,
+    })
+  }
 }
 
 main().catch(error => {

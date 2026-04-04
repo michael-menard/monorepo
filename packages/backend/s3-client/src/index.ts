@@ -13,6 +13,8 @@ export {
   deleteFromS3,
   uploadToS3Multipart,
   initializeBucket,
+  objectExistsInS3,
+  listObjectsFromS3,
 } from './s3-client'
 
 export { loadS3Config, isLocalMode } from './config'

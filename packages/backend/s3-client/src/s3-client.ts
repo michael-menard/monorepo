@@ -17,6 +17,8 @@ import {
   AbortMultipartUploadCommand,
   CreateBucketCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3'
 import { loadS3Config, isLocalMode } from './config'
 
@@ -128,6 +130,47 @@ export async function uploadToS3(params: {
 
   // Return URL (MinIO-aware)
   return getObjectUrl(params.bucket, params.key)
+}
+
+/**
+ * Check if an object exists in S3
+ */
+export async function objectExistsInS3(params: { key: string; bucket: string }): Promise<boolean> {
+  const s3 = getS3Client()
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: params.bucket, Key: params.key }))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * List objects in S3 under a given prefix
+ */
+export async function listObjectsFromS3(params: {
+  bucket: string
+  prefix: string
+}): Promise<string[]> {
+  const s3 = getS3Client()
+  const keys: string[] = []
+  let continuationToken: string | undefined
+
+  do {
+    const response = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: params.bucket,
+        Prefix: params.prefix,
+        ContinuationToken: continuationToken,
+      }),
+    )
+    for (const obj of response.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key)
+    }
+    continuationToken = response.NextContinuationToken
+  } while (continuationToken)
+
+  return keys
 }
 
 /**
