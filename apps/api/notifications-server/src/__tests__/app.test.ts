@@ -9,10 +9,10 @@ describe('notifications-server', () => {
       const res = await app.request('/health')
       expect(res.status).toBe(200)
 
-      const body = await res.json()
+      const body = (await res.json()) as Record<string, unknown>
       expect(body.status).toBe('ok')
       expect(typeof body.uptime).toBe('number')
-      expect(body.uptime).toBeGreaterThanOrEqual(0)
+      expect(body.uptime as number).toBeGreaterThanOrEqual(0)
     })
   })
 
@@ -21,7 +21,7 @@ describe('notifications-server', () => {
       const res = await app.request('/')
       expect(res.status).toBe(200)
 
-      const body = await res.json()
+      const body = (await res.json()) as Record<string, unknown>
       expect(body.message).toBe('Notifications Server')
     })
   })

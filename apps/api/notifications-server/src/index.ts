@@ -6,7 +6,14 @@ import { logger } from '@repo/logger'
 import { createApp } from './app'
 import { env } from './env'
 
-const app = createApp()
+const io = new SocketIOServer({
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+})
+
+const app = createApp(io)
 
 const httpServer = createServer()
 
@@ -16,15 +23,15 @@ serve({
   port: env.NOTIFICATIONS_PORT,
 })
 
-const io = new SocketIOServer(httpServer, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-  },
-})
+io.attach(httpServer)
 
 io.on('connection', socket => {
   logger.info('Socket.io client connected', { socketId: socket.id })
+
+  socket.on('join', (channel: string) => {
+    socket.join(channel)
+    logger.info('Socket joined channel', { socketId: socket.id, channel })
+  })
 
   socket.on('disconnect', reason => {
     logger.info('Socket.io client disconnected', { socketId: socket.id, reason })
