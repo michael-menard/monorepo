@@ -320,7 +320,9 @@ export function createDeepSeekAdapter(size: '33b' | '16b' = '33b'): LlmAdapterFn
 export function createRefinementLlmAdapter(model = 'sonnet'): RefinementLlmAdapterFn {
   const provider = getClaudeCodeProvider({ model })
   return async messages => {
-    const prompt = messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n')
+    const prompt =
+      messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n') +
+      '\n\n[REMINDER] Respond with ONLY a single valid JSON tool call object. No markdown, no prose, no explanation. Example: {"tool":"update_flows","args":{...}}'
     const response = await provider.invoke(prompt)
     return {
       content: response.content,

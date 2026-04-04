@@ -241,6 +241,15 @@ export function checkPostconditions(
 ): PostconditionResult {
   const failures: PostconditionResult['failures'] = []
 
+  // 0. at_least_one_flow
+  if (flows.length === 0) {
+    failures.push({
+      check: 'at_least_one_flow',
+      reason:
+        'No flows defined — call update_flows with at least 3 concrete user flows derived from the plan before calling complete',
+    })
+  }
+
   // 1. every_flow_has_source_confidence
   const missingSourceOrConfidence = flows.filter(
     f => !f.source || f.confidence === undefined || f.confidence === null,
