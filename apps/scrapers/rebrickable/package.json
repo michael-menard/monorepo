@@ -13,7 +13,6 @@
     "scrape:retry-missing:dry-run": "tsx src/index.ts --retry-missing --dry-run",
     "scrape:liked-mocs": "tsx src/index.ts --liked-mocs",
     "scrape:liked-mocs:dry-run": "tsx src/index.ts --liked-mocs --dry-run",
-    "scrape:sync-to-gallery": "tsx src/sync-to-gallery.ts",
     "migrate:assets": "tsx src/migrate-local-assets.ts",
     "build": "tsc",
     "dev": "tsc --watch",

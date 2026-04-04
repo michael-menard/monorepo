@@ -50,8 +50,8 @@ const SELECTORS = {
   // Date added metadata in sidebar
   dateAdded: 'time, .mb-10 small',
 
-  // Tags
-  tagLinks: 'a[href*="/tags/"]',
+  // Tags — Rebrickable uses ?tag= query params, e.g. /mocs/?tag=city
+  tagLinks: 'a[href*="/tags/"], a[href*="?tag="], a[href*="&tag="]',
 
   // Inventory tab
   inventoryTab: '.nav-tabs a:has-text("Inventory")',
@@ -114,7 +114,11 @@ export class MocDetailPage extends BasePage {
       }
       if (!author) {
         // Method 2: Try extracting from breadcrumb link "MOCs by {author}"
-        for (const sel of ['a[href*="/mocs/"][href$="/mocs/"]', SELECTORS.authorLink, SELECTORS.authorLinkAlt]) {
+        for (const sel of [
+          'a[href*="/mocs/"][href$="/mocs/"]',
+          SELECTORS.authorLink,
+          SELECTORS.authorLinkAlt,
+        ]) {
           const text = await this.extractText(sel)
           if (text && text !== 'Browse MOCs') {
             author = text.replace(/^(MOCs\s+by\s+|by\s+)/i, '').trim()
@@ -158,14 +162,14 @@ export class MocDetailPage extends BasePage {
       logger.info(`[moc-detail] Found ${files.length} download files`)
 
       // Use first file's data-url as the download trigger
-      const downloadUrl = files.length > 0
-        ? `https://rebrickable.com${files[0].downloadDataUrl}`
-        : undefined
+      const downloadUrl =
+        files.length > 0 ? `https://rebrickable.com${files[0].downloadDataUrl}` : undefined
 
       // Determine file type from filename
-      const fileType = files.length > 0
-        ? files[0].fileName.match(/\.(pdf|io|studio|ldr|mpd|lxf)$/i)?.[1]?.toUpperCase() || 'PDF'
-        : ''
+      const fileType =
+        files.length > 0
+          ? files[0].fileName.match(/\.(pdf|io|studio|ldr|mpd|lxf)$/i)?.[1]?.toUpperCase() || 'PDF'
+          : ''
 
       // Scrape details tab description text
       const { description, descriptionHtml } = await this.scrapeDetailsText()
@@ -242,9 +246,9 @@ export class MocDetailPage extends BasePage {
   async scrapeDateAdded(): Promise<string | undefined> {
     try {
       // Try <time> element first (has datetime attribute)
-      const timeDate = await this.page.$eval('time[datetime]', el =>
-        el.getAttribute('datetime') || '',
-      ).catch(() => '')
+      const timeDate = await this.page
+        .$eval('time[datetime]', el => el.getAttribute('datetime') || '')
+        .catch(() => '')
 
       if (timeDate) {
         logger.info(`[moc-detail] Date added from <time>: "${timeDate}"`)
@@ -257,8 +261,7 @@ export class MocDetailPage extends BasePage {
         for (const el of smalls) {
           const text = el.textContent?.trim() || ''
           // Match patterns like "Mar 15, 2024" or "2024-03-15" or "Added: ..."
-          if (/\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(text) ||
-              /\w{3}\s+\d{1,2},?\s+\d{4}/.test(text)) {
+          if (/\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(text) || /\w{3}\s+\d{1,2},?\s+\d{4}/.test(text)) {
             return text.replace(/^(added|uploaded|published)\s*:?\s*/i, '').trim()
           }
         }
@@ -285,19 +288,49 @@ export class MocDetailPage extends BasePage {
 
   /**
    * Scrape tags from the MOC detail page.
-   * Tags are typically links to /tags/ pages or badge elements.
+   * Rebrickable renders tags as links with href containing ?tag= or /tags/.
+   * Falls back to inspecting all links in the details tab for tag-shaped hrefs.
    */
   async scrapeTags(): Promise<string[]> {
     try {
-      const tags = await this.page.$$eval(SELECTORS.tagLinks, links =>
-        links
-          .map(a => a.textContent?.trim() || '')
-          .filter(t => t.length > 0 && t.length < 100),
+      // Primary: href-based selectors (covers /tags/ and ?tag= patterns)
+      let tags = await this.page.$$eval(SELECTORS.tagLinks, links =>
+        links.map(a => a.textContent?.trim() || '').filter(t => t.length > 0 && t.length < 100),
       )
+
+      // Fallback: scan all links in the details tab for ?tag= or /tags/ in href
+      if (tags.length === 0) {
+        tags = await this.page.$$eval('#details a, .tab-pane.active a, .tab-content a', links =>
+          links
+            .filter(a => {
+              const href = a.getAttribute('href') || ''
+              return href.includes('/tags/') || href.includes('tag=')
+            })
+            .map(a => a.textContent?.trim() || '')
+            .filter(t => t.length > 0 && t.length < 100),
+        )
+        if (tags.length > 0) {
+          logger.info(`[moc-detail] Tags found via fallback selector: ${tags.join(', ')}`)
+        } else {
+          // Debug: log all unique href patterns in the details tab to diagnose selector misses
+          const sampleHrefs = await this.page
+            .$$eval('#details a, .tab-pane.active a, .tab-content a', links =>
+              [
+                ...new Set(links.map(a => a.getAttribute('href') || '').filter(h => h.length > 0)),
+              ].slice(0, 20),
+            )
+            .catch(() => [] as string[])
+          logger.info(
+            `[moc-detail] No tags found. Sample hrefs in details: ${sampleHrefs.join(' | ')}`,
+          )
+        }
+      }
 
       const unique = [...new Set(tags)]
       if (unique.length > 0) {
         logger.info(`[moc-detail] Tags found: ${unique.join(', ')}`)
+      } else {
+        logger.info('[moc-detail] No tags found')
       }
       return unique
     } catch {
@@ -316,17 +349,19 @@ export class MocDetailPage extends BasePage {
       await this.page.waitForSelector(selector, { timeout: 5000 })
 
       const rawFiles = await this.page.$$eval(SELECTORS.downloadFileLink, links =>
-        links.map(link => {
-          const row = link.closest('.row')
-          const smallEls = row ? Array.from(row.querySelectorAll('small')) : []
+        links
+          .map(link => {
+            const row = link.closest('.row')
+            const smallEls = row ? Array.from(row.querySelectorAll('small')) : []
 
-          return {
-            fileName: link.textContent?.trim() || '',
-            downloadDataUrl: link.getAttribute('data-url') || '',
-            fileSize: smallEls.length > 1 ? smallEls[1]?.textContent?.trim() || '' : '',
-            uploadDate: smallEls.length > 0 ? smallEls[0]?.textContent?.trim() || '' : '',
-          }
-        }).filter(f => f.downloadDataUrl),
+            return {
+              fileName: link.textContent?.trim() || '',
+              downloadDataUrl: link.getAttribute('data-url') || '',
+              fileSize: smallEls.length > 1 ? smallEls[1]?.textContent?.trim() || '' : '',
+              uploadDate: smallEls.length > 0 ? smallEls[0]?.textContent?.trim() || '' : '',
+            }
+          })
+          .filter(f => f.downloadDataUrl),
       )
 
       // Deduplicate by downloadDataUrl — the DOM has two <a> elements per file
@@ -365,7 +400,7 @@ export class MocDetailPage extends BasePage {
         const backoffMs = attempt === 2 ? 5000 : 30000
         logger.warn(
           `[moc-detail] Retrying download for ${fileLink.fileName} (attempt ${attempt}/${MAX_ATTEMPTS}), ` +
-          `waiting ${backoffMs}ms then reloading page...`,
+            `waiting ${backoffMs}ms then reloading page...`,
         )
         await this.page.waitForTimeout(backoffMs)
         await this.page.goto(this.page.url(), { waitUntil: 'networkidle' })
@@ -384,11 +419,17 @@ export class MocDetailPage extends BasePage {
       if (result !== null) return result
     }
 
-    logger.warn(`[moc-detail] All ${MAX_ATTEMPTS} download attempts failed for ${fileLink.fileName}`)
+    logger.warn(
+      `[moc-detail] All ${MAX_ATTEMPTS} download attempts failed for ${fileLink.fileName}`,
+    )
     return null
   }
 
-  private async attemptDownload(fileLink: ScrapedFile, mocNumber?: string, attempt = 1): Promise<string | null> {
+  private async attemptDownload(
+    fileLink: ScrapedFile,
+    mocNumber?: string,
+    attempt = 1,
+  ): Promise<string | null> {
     const tag = `[moc-detail][MOC-${mocNumber ?? '?'}][attempt ${attempt}]`
     const linkSelector = `a.js-load-page-modal[data-url="${fileLink.downloadDataUrl}"]`
 
@@ -436,10 +477,15 @@ export class MocDetailPage extends BasePage {
     } catch (err) {
       await this.screenshot(`modal-no-btn-${mocNumber}-attempt${attempt}`, 'discovery')
       const modalText = await this.page.evaluate(() => {
-        const modal = document.querySelector('.modal.in, .modal.show, .modal[style*="display: block"]')
+        const modal = document.querySelector(
+          '.modal.in, .modal.show, .modal[style*="display: block"]',
+        )
         if (!modal) return '(no modal in DOM)'
         // Text content is more readable than raw HTML for diagnosing "not purchased" / rate-limit messages
-        return (modal as HTMLElement).innerText?.trim().substring(0, 600) || modal.innerHTML.substring(0, 600)
+        return (
+          (modal as HTMLElement).innerText?.trim().substring(0, 600) ||
+          modal.innerHTML.substring(0, 600)
+        )
       })
       logger.warn(`${tag} FAIL step 3 — download button not found in modal after 10s`, {
         pageUrl: this.page.url(),
@@ -451,10 +497,9 @@ export class MocDetailPage extends BasePage {
     }
 
     // Step 4: Extract the download URL from the button
-    const downloadUrl = await this.page.$eval(
-      downloadBtnSelector,
-      el => el.getAttribute('data-url') || '',
-    ).catch(() => '')
+    const downloadUrl = await this.page
+      .$eval(downloadBtnSelector, el => el.getAttribute('data-url') || '')
+      .catch(() => '')
 
     if (!downloadUrl) {
       logger.warn(`${tag} FAIL step 4 — download button has no data-url attribute`)
@@ -643,7 +688,9 @@ export class MocDetailPage extends BasePage {
       for (let i = 0; i < uniqueUrls.length; i++) {
         const url = uniqueUrls[i]
         try {
-          logger.info(`[moc-detail] Downloading image ${i + 1}/${uniqueUrls.length}: ${url.substring(0, 100)}...`)
+          logger.info(
+            `[moc-detail] Downloading image ${i + 1}/${uniqueUrls.length}: ${url.substring(0, 100)}...`,
+          )
           const response = await this.page.context().request.get(url)
           if (!response.ok()) {
             logger.warn(`[moc-detail] Image fetch failed (${response.status()}): ${url}`)
@@ -700,14 +747,15 @@ export class MocDetailPage extends BasePage {
           logger.info(`[moc-detail] Clicked inventory tab, waiting for content to load...`)
 
           // Wait for any spinner/loading indicator to disappear
-          await this.page.waitForSelector('.spinner', { state: 'hidden', timeout: 5000 }).catch(() => {})
+          await this.page
+            .waitForSelector('.spinner', { state: 'hidden', timeout: 5000 })
+            .catch(() => {})
 
           // Wait for actual inventory content — the Export Parts button or parts table
           // The .js-export-parts-list container holds the Export dropdown
-          await this.page.waitForSelector(
-            '.js-export-parts-list, #parts_standard, table.table',
-            { timeout: 30000 },
-          )
+          await this.page.waitForSelector('.js-export-parts-list, #parts_standard, table.table', {
+            timeout: 30000,
+          })
 
           // Small additional wait for any remaining AJAX to settle
           await this.page.waitForTimeout(1000)
@@ -736,7 +784,9 @@ export class MocDetailPage extends BasePage {
 
     try {
       // Wait for the Export Parts dropdown container
-      const exportContainer = await this.page.waitForSelector('.js-export-parts-list', { timeout: 10000 })
+      const exportContainer = await this.page.waitForSelector('.js-export-parts-list', {
+        timeout: 10000,
+      })
       if (!exportContainer) {
         logger.info('[moc-detail] No .js-export-parts-list container found')
         return exports
@@ -767,10 +817,12 @@ export class MocDetailPage extends BasePage {
       }
 
       // Wait for dropdown menu to appear
-      await this.page.waitForSelector('.js-export-parts-list .dropdown-menu, .dropdown-menu.show', {
-        state: 'visible',
-        timeout: 5000,
-      }).catch(() => {})
+      await this.page
+        .waitForSelector('.js-export-parts-list .dropdown-menu, .dropdown-menu.show', {
+          state: 'visible',
+          timeout: 5000,
+        })
+        .catch(() => {})
       await this.page.waitForTimeout(500)
 
       await this.screenshot('export-dropdown-open', 'discovery')
@@ -778,10 +830,11 @@ export class MocDetailPage extends BasePage {
       // Extract ALL links from the dropdown menu
       const allLinks = await this.page.$$eval(
         '.js-export-parts-list .dropdown-menu a[href]',
-        links => links.map(a => ({
-          href: a.getAttribute('href') || '',
-          text: a.textContent?.trim() || '',
-        })),
+        links =>
+          links.map(a => ({
+            href: a.getAttribute('href') || '',
+            text: a.textContent?.trim() || '',
+          })),
       )
 
       logger.info(`[moc-detail] Export dropdown links: ${JSON.stringify(allLinks)}`)
@@ -860,7 +913,7 @@ export class MocDetailPage extends BasePage {
           continue
         } else {
           // Fetch using the page's authenticated session
-          content = await this.page.evaluate(async (url) => {
+          content = await this.page.evaluate(async url => {
             const res = await fetch(url, { credentials: 'same-origin' })
             return res.text()
           }, exp.url)
@@ -914,14 +967,18 @@ export class MocDetailPage extends BasePage {
       await this.page.waitForTimeout(500)
 
       // Click the BrickLink XML link — listen for download or page changes
-      const blLink = await this.page.$('.js-export-parts-list .dropdown-menu a:has-text("BrickLink")')
+      const blLink = await this.page.$(
+        '.js-export-parts-list .dropdown-menu a:has-text("BrickLink")',
+      )
       if (!blLink) {
         logger.warn('[moc-detail] Could not find BrickLink XML link in dropdown')
         return ''
       }
 
       // Set up download listener before clicking
-      const downloadPromise = this.page.waitForEvent('download', { timeout: 5000 }).catch(() => null)
+      const downloadPromise = this.page
+        .waitForEvent('download', { timeout: 5000 })
+        .catch(() => null)
 
       await blLink.click()
       await this.page.waitForTimeout(2000)
@@ -955,7 +1012,9 @@ export class MocDetailPage extends BasePage {
         }
 
         // Also check for any modal or overlay
-        const modals = document.querySelectorAll('.modal.in, .modal.show, .modal[style*="display: block"]')
+        const modals = document.querySelectorAll(
+          '.modal.in, .modal.show, .modal[style*="display: block"]',
+        )
         for (const modal of modals) {
           const text = modal.textContent || ''
           if (text.includes('<INVENTORY>') || text.includes('<ITEM>')) {
@@ -972,13 +1031,17 @@ export class MocDetailPage extends BasePage {
       }
 
       // Last resort: check if there's a notification bar with a link we can follow
-      const notifLink = await this.page.$('.alert a[href*="bricklink"], .notification a, a[href*="xml"]')
+      const notifLink = await this.page.$(
+        '.alert a[href*="bricklink"], .notification a, a[href*="xml"]',
+      )
       if (notifLink) {
-        const href = await notifLink.evaluate(el => (el as HTMLAnchorElement).getAttribute('href') || '')
+        const href = await notifLink.evaluate(
+          el => (el as HTMLAnchorElement).getAttribute('href') || '',
+        )
         if (href && href !== '#') {
           const url = href.startsWith('http') ? href : `https://rebrickable.com${href}`
           logger.info(`[moc-detail] Following BrickLink notification link: ${url}`)
-          const content = await this.page.evaluate(async (fetchUrl) => {
+          const content = await this.page.evaluate(async fetchUrl => {
             const res = await fetch(fetchUrl, { credentials: 'same-origin' })
             return res.text()
           }, url)
@@ -989,8 +1052,12 @@ export class MocDetailPage extends BasePage {
       // Dump page HTML near the notification for debugging
       const notifHtml = await this.page.evaluate(() => {
         // Look for notification/alert elements
-        const alerts = document.querySelectorAll('.alert, [class*="notif"], [class*="toast"], [class*="message"]')
-        return Array.from(alerts).map(el => el.outerHTML).join('\n---\n')
+        const alerts = document.querySelectorAll(
+          '.alert, [class*="notif"], [class*="toast"], [class*="message"]',
+        )
+        return Array.from(alerts)
+          .map(el => el.outerHTML)
+          .join('\n---\n')
       })
       if (notifHtml) {
         logger.info(`[moc-detail] Notification HTML found: ${notifHtml.substring(0, 500)}`)

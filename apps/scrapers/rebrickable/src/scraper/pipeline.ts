@@ -12,6 +12,13 @@ import {
   instructionParts as instructionPartsTable,
 } from '../db/schema.js'
 import * as gallerySchema from '../../../../../packages/backend/db/src/schema.js'
+import {
+  writeToGallery,
+  writeImagesToGallery,
+  patchGalleryMeta,
+  findGalleryMoc,
+} from '../gallery/write-to-gallery.js'
+import type { GalleryPartData } from '../gallery/write-to-gallery.js'
 import { createStealthBrowser, saveSession, hasExistingSession } from './browser.js'
 import { cleanupDownload as _cleanupDownload } from './downloader.js'
 import { computeHash } from '../utils/hash.js'
@@ -43,6 +50,9 @@ export async function runPipeline(
   },
 ): Promise<void> {
   const db = getDbClient()
+  const galleryPool = createGalleryPool()
+  const galleryDb = drizzle(galleryPool, { schema: gallerySchema })
+  const syncUserId = process.env.SYNC_USER_ID || ''
   const rateLimiter = new TokenBucketRateLimiter({
     requestsPerMinute: config.rateLimit,
     minDelayMs: config.minDelayMs,
@@ -488,6 +498,32 @@ export async function runPipeline(
               )
             }
 
+            // Write to gallery DB inline (replaces sync-to-gallery)
+            if (syncUserId) {
+              const galleryParts: GalleryPartData[] = normalizedParts.map(p => ({
+                partNumber: p.partNumber,
+                partName: p.name,
+                color: p.color,
+                quantity: p.quantity,
+              }))
+
+              await writeToGallery(galleryDb as any, syncUserId, {
+                mocNumber: item.mocNumber,
+                title: detail.title,
+                author: detail.author || item.author,
+                description: detail.description || null,
+                descriptionHtml: detail.descriptionHtml || null,
+                dateAdded: safeDate(detail.dateAdded),
+                authorProfileUrl: detail.authorProfileUrl || null,
+                tags: detail.tags.length > 0 ? detail.tags : null,
+                partsCount: detail.partsCount,
+                rebrickableUrl: item.url,
+                s3Key: `mocs/MOC-${item.mocNumber}/${fileName}`,
+                fileType: fileType,
+                parts: galleryParts.length > 0 ? galleryParts : undefined,
+              })
+            }
+
             await checkpoint.save(item.mocNumber, 'completed')
             downloadedCount++
 
@@ -606,6 +642,7 @@ export async function runPipeline(
     if (browser) {
       await browser.close().catch(() => {})
     }
+    await galleryPool.end().catch(() => {})
     await closeDbClient()
   }
 }
@@ -675,7 +712,7 @@ async function assessBackfillNeeds(
     .limit(1)
 
   if (galleryMocs.length === 0) {
-    // Not synced at all — not our job here, sync-to-gallery handles this
+    // Not in gallery DB yet — writeToGallery in the main pipeline handles initial sync
     return {
       scraperDetailMissing,
       imagesMissingInMinio,
@@ -715,132 +752,7 @@ async function assessBackfillNeeds(
   }
 }
 
-async function syncImagesToGallery(
-  instr: typeof instructionsTable.$inferSelect,
-  minioKeys: string[],
-  galleryDb: ReturnType<typeof drizzle>,
-  s3Endpoint: string,
-  s3Bucket: string,
-): Promise<void> {
-  const mocId = `MOC-${instr.mocNumber}`
-
-  const galleryMocs = await (galleryDb as any)
-    .select()
-    .from(gallerySchema.mocInstructions)
-    .where(eq(gallerySchema.mocInstructions.mocId, mocId))
-    .limit(1)
-
-  if (galleryMocs.length === 0) {
-    logger.warn(`[backfill] MOC-${instr.mocNumber}: not in gallery DB, skipping image sync`)
-    return
-  }
-
-  const galleryMoc = galleryMocs[0]
-  let firstImageUrl: string | null = null
-
-  for (const key of minioKeys.sort()) {
-    const fileName = key.split('/').pop() || key
-    const ext = extname(fileName).toLowerCase()
-    const mimeMap: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.webp': 'image/webp',
-      '.gif': 'image/gif',
-    }
-    const mimeType = mimeMap[ext] || 'image/jpeg'
-    const fileUrl = `${s3Endpoint}/${s3Bucket}/${key}`
-
-    const existing = await (galleryDb as any)
-      .select()
-      .from(gallerySchema.mocFiles)
-      .where(
-        and(
-          eq(gallerySchema.mocFiles.mocId, galleryMoc.id),
-          eq(gallerySchema.mocFiles.originalFilename, fileName),
-        ),
-      )
-      .limit(1)
-
-    if (existing.length === 0) {
-      await (galleryDb as any).insert(gallerySchema.mocFiles).values({
-        mocId: galleryMoc.id,
-        fileType: 'gallery-image',
-        fileUrl,
-        originalFilename: fileName,
-        mimeType,
-      })
-      logger.info(`[backfill] MOC-${instr.mocNumber}: inserted gallery-image row for ${fileName}`)
-    }
-
-    if (!firstImageUrl) firstImageUrl = fileUrl
-  }
-
-  if (firstImageUrl && !galleryMoc.thumbnailUrl) {
-    await (galleryDb as any)
-      .update(gallerySchema.mocInstructions)
-      .set({ thumbnailUrl: firstImageUrl, updatedAt: new Date() })
-      .where(eq(gallerySchema.mocInstructions.id, galleryMoc.id))
-    logger.info(`[backfill] MOC-${instr.mocNumber}: set thumbnailUrl`)
-  }
-}
-
-async function patchGalleryMeta(
-  instr: typeof instructionsTable.$inferSelect,
-  galleryDb: ReturnType<typeof drizzle>,
-): Promise<void> {
-  const mocId = `MOC-${instr.mocNumber}`
-
-  const galleryMocs = await (galleryDb as any)
-    .select()
-    .from(gallerySchema.mocInstructions)
-    .where(eq(gallerySchema.mocInstructions.mocId, mocId))
-    .limit(1)
-
-  if (galleryMocs.length === 0) return
-
-  const galleryMoc = galleryMocs[0]
-  const patch: Record<string, unknown> = { updatedAt: new Date() }
-
-  if (!galleryMoc.description && instr.description) {
-    patch.description = instr.description
-  }
-  if (!galleryMoc.descriptionHtml && instr.descriptionHtml) {
-    patch.descriptionHtml = instr.descriptionHtml
-  }
-  if (
-    (!galleryMoc.tags || (galleryMoc.tags as string[]).length === 0) &&
-    (instr.tags as string[] | null)?.length
-  ) {
-    patch.tags = instr.tags
-  }
-  if (!galleryMoc.uploadedDate && instr.dateAdded) {
-    patch.uploadedDate = instr.dateAdded
-  }
-
-  const existingDesigner = galleryMoc.designer as {
-    username?: string
-    profileUrl?: string | null
-  } | null
-  if (instr.author && !existingDesigner?.profileUrl && instr.authorProfileUrl) {
-    patch.designer = {
-      username: instr.author,
-      profileUrl: instr.authorProfileUrl,
-    }
-  }
-
-  if (Object.keys(patch).length > 1) {
-    await (galleryDb as any)
-      .update(gallerySchema.mocInstructions)
-      .set(patch)
-      .where(eq(gallerySchema.mocInstructions.id, galleryMoc.id))
-    logger.info(
-      `[backfill] MOC-${instr.mocNumber}: patched gallery meta fields: ${Object.keys(patch)
-        .filter(k => k !== 'updatedAt')
-        .join(', ')}`,
-    )
-  }
-}
+// Old syncImagesToGallery and patchGalleryMeta removed — now imported from gallery/write-to-gallery.ts
 
 export async function runBackfillPipeline(
   options: CliOptions,
@@ -855,8 +767,6 @@ export async function runBackfillPipeline(
   const db = getDbClient()
   const galleryPool = createGalleryPool()
   const galleryDb = drizzle(galleryPool, { schema: gallerySchema })
-  const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
-  const s3Bucket = process.env.S3_BUCKET || config.bucket
 
   const rateLimiter = new TokenBucketRateLimiter({
     requestsPerMinute: config.rateLimit,
@@ -1070,20 +980,29 @@ export async function runBackfillPipeline(
 
         // ── Sync images from MinIO → gallery DB ──────────────────────────────
         if (!options.dryRun) {
-          const minioImages = await listImages(instr.mocNumber, config.bucket)
-          if (minioImages.length > 0 && needs.imagesMissingInGallery) {
-            await syncImagesToGallery(
-              updatedInstr,
-              minioImages,
-              galleryDb as any,
-              s3Endpoint,
-              s3Bucket,
-            )
-          }
+          const galleryMoc = await findGalleryMoc(galleryDb as any, instr.mocNumber)
 
-          // ── Patch gallery meta ────────────────────────────────────────────
-          if (needs.galleryMetaMissing || needs.scraperDetailMissing) {
-            await patchGalleryMeta(updatedInstr, galleryDb as any)
+          if (galleryMoc) {
+            const minioImages = await listImages(instr.mocNumber, config.bucket)
+            if (minioImages.length > 0 && needs.imagesMissingInGallery) {
+              const imageData = minioImages.map(key => ({
+                s3Key: key,
+                fileName: key.split('/').pop() || 'unknown',
+              }))
+              await writeImagesToGallery(galleryDb as any, galleryMoc.id, imageData)
+            }
+
+            // ── Patch gallery meta ──────────────────────────────────────────
+            if (needs.galleryMetaMissing || needs.scraperDetailMissing) {
+              await patchGalleryMeta(galleryDb as any, galleryMoc.id, {
+                description: updatedInstr.description,
+                descriptionHtml: updatedInstr.descriptionHtml,
+                tags: updatedInstr.tags as string[] | null,
+                dateAdded: updatedInstr.dateAdded,
+                authorProfileUrl: updatedInstr.authorProfileUrl,
+                author: updatedInstr.author,
+              })
+            }
           }
         }
 
