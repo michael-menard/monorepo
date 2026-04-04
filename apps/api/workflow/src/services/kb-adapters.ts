@@ -471,7 +471,7 @@ export const kbWriterAdapter: KbWriterFn = async (stories: EnrichedStory[], plan
           title: story.title,
           feature: prefix.toLowerCase(),
           description: descriptionParts.join(''),
-          state: 'backlog',
+          state: 'ready',
           priority: story.minimum_path ? 'P2' : 'P3',
           acceptance_criteria: story.acceptance_criteria,
           plan_slug: planSlug,

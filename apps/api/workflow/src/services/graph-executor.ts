@@ -211,6 +211,9 @@ export async function executePlanRefinementV2(
           (existingPlan.plan as Record<string, unknown> | null)?.['rawContent'] ?? '',
         )
         const updatedContent = serializeFlowsToContent(currentContent, result.flows)
+        const existing = (existingPlan.plan as Record<string, unknown> | null) ?? {}
+        const existingPriority = existing['priority'] as string | undefined
+        const validPriorities = ['P1', 'P2', 'P3', 'P4', 'P5'] as const
         await kb_upsert_plan(
           { db },
           {
@@ -218,7 +221,13 @@ export async function executePlanRefinementV2(
             title: result.normalizedPlan.title,
             raw_content: updatedContent,
             status: 'accepted',
-            priority: 'P3',
+            priority: validPriorities.includes(existingPriority as (typeof validPriorities)[number])
+              ? (existingPriority as (typeof validPriorities)[number])
+              : 'P3',
+            plan_type: (existing['planType'] as string | undefined) ?? undefined,
+            story_prefix: (existing['storyPrefix'] as string | undefined) ?? undefined,
+            summary: (existing['summary'] as string | undefined) ?? undefined,
+            tags: (existing['tags'] as string[] | undefined) ?? undefined,
           },
         )
         logger.info('executePlanRefinementV2: wrote refined flows back to KB', {

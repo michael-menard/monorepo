@@ -1,0 +1,248 @@
+strategy_version: '1.1.0'
+effective_date: '2026-02-15'
+review_date: '2026-06-15'
+
+tiers:
+  - tier: 0
+    name: 'Critical Decision'
+    description: 'Highest quality models for irreversible or high-stakes decisions'
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-opus-4-6
+          cost_per_1m_tokens: 15.0
+      fallback: []
+    use_cases:
+      - 'Security review and threat analysis'
+      - 'Epic planning and architectural decisions'
+      - 'Commitment gates and final verdicts'
+      - 'Human-in-the-loop escalation final tier'
+    quality_expectations: 'Maximum accuracy required; cost is secondary'
+    latency_tolerance: 'high'
+    availability_requirement: '99.9%'
+
+  - tier: 1
+    name: 'Complex Reasoning'
+    description: 'High-quality models for multi-step reasoning and complex code generation'
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4-6
+          cost_per_1m_tokens: 3.0
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-4-5-20251001
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - 'Gap analysis and coverage review'
+      - 'Attack surface analysis'
+      - 'Complex multi-file code generation'
+      - 'Dependency wiring and architecture review'
+    quality_expectations: 'High accuracy with complex reasoning'
+    latency_tolerance: 'medium'
+
+  - tier: 2
+    name: 'Standard Generation'
+    description: 'Balanced cost/quality models for standard code generation tasks'
+    models:
+      primary:
+        - provider: ollama
+          model: deepseek-coder-v2:16b
+          cost_per_1m_tokens: 0
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-4-5-20251001
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - 'Simple single-file code generation'
+      - 'Contract and interface generation'
+      - 'Playwright test generation'
+      - 'Standard implementation tasks'
+    quality_expectations: 'Good quality for well-scoped tasks'
+    latency_tolerance: 'low'
+
+  - tier: 3
+    name: 'Deterministic / Mechanical'
+    description: 'Lightweight models for deterministic and mechanical tasks'
+    models:
+      primary:
+        - provider: ollama
+          model: qwen2.5-coder:7b
+          cost_per_1m_tokens: 0
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-4-5-20251001
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - 'Linting and syntax checking'
+      - 'Setup validation'
+      - 'Completion reporting'
+      - 'Mechanical transformations'
+    quality_expectations: 'Adequate for rule-based tasks'
+    latency_tolerance: 'none'
+
+task_types:
+  - type: setup_validation
+    description: 'Validate environment setup and preconditions before running a phase'
+    recommended_tier: 3
+    rationale: 'Simple rule-based checks; no reasoning required'
+    examples:
+      - 'Check required env vars exist'
+      - 'Validate story state before proceeding'
+
+  - type: lint_and_syntax
+    description: 'Run linting and syntax checks on code changes'
+    recommended_tier: 3
+    rationale: 'Deterministic; output is pass/fail with line numbers'
+    examples:
+      - 'ESLint run'
+      - 'TypeScript syntax check'
+
+  - type: completion_reporting
+    description: 'Generate completion and summary reports for a phase'
+    recommended_tier: 3
+    rationale: 'Template-driven; minimal reasoning required'
+    examples:
+      - 'Generate QA completion report'
+      - 'Summarize implementation outcomes'
+
+  - type: gap_analysis
+    description: 'Analyze gaps in story coverage, acceptance criteria, or plan flows'
+    recommended_tier: 1
+    rationale: 'Requires multi-step reasoning and cross-referencing multiple documents'
+    escalation_to_tier_0: 'When gap analysis surfaces potential security or architectural issues'
+    examples:
+      - 'PM gap analysis for story completeness'
+      - 'UX flow gap detection'
+      - 'QA coverage gap analysis'
+
+  - type: attack_analysis
+    description: 'Analyze attack surface and threat vectors in implementation'
+    recommended_tier: 1
+    rationale: 'Complex security reasoning across multiple files'
+    escalation_to_tier_0: 'When critical vulnerabilities are found requiring architectural decision'
+    examples:
+      - 'Input validation attack surface review'
+      - 'Authentication flow threat analysis'
+
+  - type: simple_code_generation
+    description: 'Generate or modify a single file or small self-contained change'
+    recommended_tier: 2
+    rationale: 'Well-scoped single-file tasks with clear requirements'
+    escalation_to_tier_1: 'When change spans multiple files or requires complex reasoning'
+    examples:
+      - 'Generate TypeScript interface file'
+      - 'Add a single API endpoint'
+      - 'Update Playwright test file'
+
+  - type: complex_code_generation
+    description: 'Generate or modify multiple interdependent files'
+    recommended_tier: 1
+    rationale: 'Requires understanding of cross-file dependencies and patterns'
+    escalation_to_tier_0: 'When architectural patterns are unclear or security is involved'
+    examples:
+      - 'Implement backend service with repository and routes'
+      - 'React feature with state management and tests'
+
+  - type: security_review
+    description: 'Review code or design for security vulnerabilities'
+    recommended_tier: 1
+    rationale: 'Complex reasoning required; escalates to Tier 0 when security_sensitive=true'
+    escalation_to_tier_0: 'When security_sensitive=true or critical vulnerability found'
+    examples:
+      - 'Auth middleware security review'
+      - 'SQL injection surface review'
+
+  - type: epic_planning
+    description: 'Plan and decompose an epic into stories and phases'
+    recommended_tier: 0
+    rationale: 'Architectural decisions with long-term consequences'
+    examples:
+      - 'Plan notification system epic'
+      - 'Decompose migration epic into phases'
+
+  - type: commitment_gate
+    description: 'Make a final yes/no decision on whether to proceed with a high-stakes action'
+    recommended_tier: 0
+    rationale: 'Irreversible decisions requiring maximum confidence'
+    examples:
+      - 'Approve production deployment'
+      - 'Approve schema migration'
+
+  - type: implementation_planning
+    description: 'Create an implementation plan for a story or feature'
+    recommended_tier: 1
+    rationale: 'Requires reasoning about code structure and dependencies'
+    examples:
+      - 'Plan implementation approach for backend story'
+      - 'Identify files to create/modify'
+
+  - type: synthesis
+    description: 'Synthesize findings from multiple specialist reviews'
+    recommended_tier: 1
+    rationale: 'Cross-specialist reasoning and conflict resolution'
+    examples:
+      - 'Synthesize PM, UX, QA gap findings'
+
+  - type: readiness_scoring
+    description: 'Score story or plan readiness based on defined criteria'
+    recommended_tier: 1
+    rationale: 'Requires understanding of multiple criteria and trade-offs'
+    examples:
+      - 'Score elaboration readiness'
+
+  - type: triage
+    description: 'Triage and prioritize a backlog of items'
+    recommended_tier: 1
+    rationale: 'Requires reasoning about priority and dependencies'
+    examples:
+      - 'Triage new stories into phases'
+
+escalation_triggers:
+  quality:
+    - trigger: gate_failure
+      description: 'Quality gate failed after retries; escalate to higher tier'
+      action: 'Escalate from Tier 3 → 2 → 1 → 0 until pass'
+      max_retries: 3
+
+    - trigger: low_confidence_output
+      description: 'Model output confidence below threshold'
+      action: 'Escalate from Tier 3 → 2 → 1 until confidence met'
+      max_retries: 2
+
+  cost:
+    - trigger: budget_warning
+      description: 'Story has consumed 80% of token budget'
+      action: 'De-escalate from Tier 1 → 2 → 3 to reduce cost'
+
+    - trigger: budget_exceeded
+      description: 'Story token budget exceeded'
+      action: 'Halt and escalate to human for budget approval'
+
+  failure:
+    - trigger: provider_unavailable
+      description: 'Primary provider is unavailable or rate-limited'
+      action: 'Switch to fallback provider in same tier'
+      max_retries: 3
+
+    - trigger: max_retries_exhausted
+      description: 'Node exhausted all retries without success'
+      action: 'Escalate from Tier 3 → 2 → 1 → 0, then human'
+      max_retries: 5
+
+  human:
+    - trigger: confidence_too_low
+      description: 'Model confidence in output is below human-review threshold'
+      action: 'Route to human review before proceeding'
+
+    - trigger: scope_violation_detected
+      description: 'Implementation exceeds agreed story scope'
+      action: 'Block and route to human for scope approval'
+
+    - trigger: security_concern
+      description: 'Security-sensitive change detected without explicit sign-off'
+      action: 'Block and route to security reviewer'
+
+    - trigger: architectural_decision
+      description: 'Change requires architectural decision not covered by existing ADRs'
+      action: 'Block and route to architect for ADR creation'

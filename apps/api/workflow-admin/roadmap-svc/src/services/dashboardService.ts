@@ -191,18 +191,11 @@ export async function getDashboard(): Promise<DashboardResponse> {
       .innerJoin(plans, eq(planStoryLinks.planSlug, plans.planSlug)),
 
     // 5. Latest state entry per story (for days-in-state)
-    database
-      .select({
-        storyId: storyStateHistory.storyId,
-        createdAt: storyStateHistory.createdAt,
-      })
-      .from(
-        sql`(
-          select distinct on (story_id) story_id, created_at
-          from workflow.story_state_history
-          order by story_id, created_at desc
-        ) as ${storyStateHistory}`,
-      ),
+    database.execute<{ story_id: string; created_at: Date }>(sql`
+      select distinct on (story_id) story_id, created_at
+      from workflow.story_state_history
+      order by story_id, created_at desc
+    `),
 
     // 6. Backlog summary: group by priority and taskType
     database
@@ -225,9 +218,9 @@ export async function getDashboard(): Promise<DashboardResponse> {
       .select({
         bucket: sql<string>`
           case
-            when now() - ${tasks.createdAt} < interval '7 days' then '<7d'
-            when now() - ${tasks.createdAt} < interval '14 days' then '7-14d'
-            when now() - ${tasks.createdAt} < interval '30 days' then '14-30d'
+            when now() - "tasks"."created_at" < interval '7 days' then '<7d'
+            when now() - "tasks"."created_at" < interval '14 days' then '7-14d'
+            when now() - "tasks"."created_at" < interval '30 days' then '14-30d'
             else '30+d'
           end
         `,
@@ -280,8 +273,8 @@ export async function getDashboard(): Promise<DashboardResponse> {
 
   // State history by story (latest entry date)
   const stateEntryDate = new Map<string, Date>()
-  for (const row of stateHistoryRows) {
-    stateEntryDate.set(row.storyId, row.createdAt)
+  for (const row of stateHistoryRows.rows) {
+    stateEntryDate.set(row.story_id, new Date(row.created_at))
   }
 
   // --- Flow Health ---

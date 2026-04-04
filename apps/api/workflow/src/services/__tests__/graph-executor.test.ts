@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { executeDevImplementV2 } from '../graph-executor.js'
 
 vi.mock('@repo/logger', () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }))
 
 describe('executeDevImplementV2', () => {

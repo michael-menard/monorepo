@@ -141,9 +141,27 @@ export async function importAffinitySeeds(
     const confidenceLevel = entry.confidence_level ?? deriveConfidenceLevel(entry.sample_size)
 
     try {
-      // TODO(WINT-0250): wint.model_affinity has no canonical schema target — table does not exist in any migration.
-      // Implement analytics.model_affinity migration before restoring this query. See GAP-1/GAP-2 in ELABORATION artifact.
-      // Gracefully skip DB write and count as seeded for result reporting.
+      await db.execute({
+        sql: `
+          INSERT INTO analytics.model_affinity
+            (model, change_type, file_type, success_rate, sample_size, confidence_level)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (model, change_type, file_type)
+          DO UPDATE SET
+            success_rate = EXCLUDED.success_rate,
+            sample_size = EXCLUDED.sample_size,
+            confidence_level = EXCLUDED.confidence_level,
+            updated_at = NOW()
+        `,
+        params: [
+          entry.model,
+          entry.change_type,
+          entry.file_type,
+          entry.success_rate,
+          entry.sample_size,
+          confidenceLevel,
+        ],
+      })
 
       seeded++
 
