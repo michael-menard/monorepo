@@ -75,13 +75,24 @@ export const InstructionCard = ({
       className={className}
       data-testid={`instruction-card-${instruction.id}`}
       metadata={
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" data-testid="piece-count-badge">
-            {instruction.pieceCount.toLocaleString()} pieces
-          </Badge>
-          <span className="text-sm text-muted-foreground" data-testid="theme-tag">
-            {instruction.theme}
-          </span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" data-testid="piece-count-badge">
+              {instruction.pieceCount.toLocaleString()} pieces
+            </Badge>
+            <span className="text-sm text-muted-foreground" data-testid="theme-tag">
+              {instruction.theme}
+            </span>
+          </div>
+          {instruction.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1" data-testid="tags">
+              {instruction.tags.map(tag => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       }
       actions={

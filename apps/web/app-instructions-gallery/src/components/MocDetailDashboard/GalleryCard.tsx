@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/app-component-library'
-import { ImageIcon } from 'lucide-react'
+import { ImageIcon, AlertCircle } from 'lucide-react'
 import { DashboardCard } from './DashboardCard'
 import type { MocGalleryImage } from './__types__/moc'
 
@@ -11,8 +11,16 @@ interface GalleryCardProps {
 export function GalleryCard({ galleryImages }: GalleryCardProps) {
   const safeImages = galleryImages ?? []
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [imgError, setImgError] = useState(false)
 
   const currentImage = openIndex != null ? safeImages[openIndex] : null
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setOpenIndex(null)
+      setImgError(false)
+    }
+  }
 
   return (
     <DashboardCard
@@ -38,7 +46,10 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
             <button
               key={image.id}
               type="button"
-              onClick={() => setOpenIndex(index)}
+              onClick={() => {
+                console.log('opening index', index, safeImages[index])
+                setOpenIndex(index)
+              }}
               className="group relative aspect-square overflow-hidden rounded-xl bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <img
@@ -51,20 +62,44 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
         </div>
       )}
 
-      <Dialog open={openIndex != null} onOpenChange={open => !open && setOpenIndex(null)}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={openIndex != null} onOpenChange={handleOpenChange}>
+        <DialogContent
+          style={{
+            maxWidth: '48rem',
+            backgroundColor: 'hsl(var(--background))',
+            border: '1px solid hsl(var(--border))',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>Gallery image</DialogTitle>
+            <DialogTitle>Gallery image {openIndex != null ? openIndex + 1 : ''}</DialogTitle>
           </DialogHeader>
-          {currentImage ? (
-            <div className="mt-4 flex items-center justify-center">
+          <div className="mt-4 flex items-center justify-center" style={{ minHeight: '200px' }}>
+            {currentImage && !imgError ? (
               <img
                 src={currentImage.url}
                 alt="Selected gallery image"
-                className="max-h-[70vh] max-w-full object-contain rounded-lg"
+                className="w-full object-contain rounded-lg"
+                style={{ maxHeight: '70vh' }}
+                onError={() => setImgError(true)}
               />
-            </div>
-          ) : null}
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <AlertCircle className="h-8 w-8" />
+                <p className="text-sm">Image could not be loaded</p>
+                {currentImage && (
+                  <a
+                    href={currentImage.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary underline break-all"
+                  >
+                    Open directly
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardCard>
