@@ -284,7 +284,7 @@ export const mocFiles = pgTable(
       .notNull()
       .references(() => mocInstructions.id, { onDelete: 'cascade' }),
     fileType: text('file_type').notNull(), // e.g., 'instruction', 'parts-list', 'thumbnail', 'gallery-image'
-    fileUrl: text('file_url').notNull(),
+    s3Key: text('s3_key').notNull(),
     originalFilename: text('original_filename'),
     mimeType: text('mime_type'), // Optional: for clarity on file format
     createdAt: timestamp('created_at').notNull().defaultNow(),

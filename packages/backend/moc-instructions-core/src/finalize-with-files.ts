@@ -198,7 +198,7 @@ export async function finalizeWithFiles(
     )
 
     if (imageFiles.length > 0) {
-      thumbnailUrl = imageFiles[0].fileUrl
+      thumbnailUrl = imageFiles[0].s3Key
       await deps.db.updateMocFile(imageFiles[0].id, { fileType: 'thumbnail' })
     }
 
@@ -266,7 +266,7 @@ async function verifyFilesInS3(
   let hasBlockingErrors = false
 
   for (const file of fileRecords) {
-    const s3Key = extractS3KeyFromUrl(file.fileUrl)
+    const s3Key = file.s3Key
     const result: FileValidationResult = {
       fileId: file.id,
       filename: file.originalFilename || 'unknown',
@@ -388,14 +388,6 @@ async function verifyFilesInS3(
   }
 
   return { validatedFiles, hasBlockingErrors }
-}
-
-/**
- * Extract S3 key from full S3 URL
- */
-function extractS3KeyFromUrl(fileUrl: string): string {
-  const url = new URL(fileUrl)
-  return url.pathname.substring(1) // Remove leading slash
 }
 
 /**

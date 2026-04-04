@@ -263,6 +263,21 @@ export const UpdateMocInputSchema = z.object({
 
 export type UpdateMocInput = z.infer<typeof UpdateMocInputSchema>
 
+export const UpdateMocResponseSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  theme: z.string().nullable(),
+  tags: z.array(z.string()).nullable(),
+  slug: z.string().nullable(),
+  type: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type UpdateMocResponse = z.infer<typeof UpdateMocResponseSchema>
+
 // ─────────────────────────────────────────────────────────────────────────
 // List/Query Schemas
 // ─────────────────────────────────────────────────────────────────────────
@@ -345,6 +360,7 @@ export const GetMocDetailResponseSchema = z.object({
   theme: z.string().nullable(),
   tags: z.array(z.string()).nullable(),
   thumbnailUrl: z.string().nullable(),
+  author: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   files: z.array(MocDetailFileSchema),

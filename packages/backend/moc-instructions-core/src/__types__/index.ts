@@ -52,7 +52,7 @@ export const MocFileRowSchema = z.object({
   id: z.string().uuid(),
   mocId: z.string().uuid(),
   fileType: z.enum(['instruction', 'parts-list', 'thumbnail', 'gallery-image']),
-  fileUrl: z.string(),
+  s3Key: z.string(),
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
   createdAt: z.date(),
@@ -663,7 +663,7 @@ export interface UploadPartsListDeps {
     createMocFile: (data: {
       mocId: string
       fileType: string
-      fileUrl: string
+      s3Key: string
       originalFilename: string
       mimeType: string
     }) => Promise<MocFileRow>
@@ -954,7 +954,7 @@ export interface EditFinalizeDeps {
       files: Array<{
         mocId: string
         fileType: string
-        fileUrl: string
+        s3Key: string
         originalFilename: string
         mimeType: string
       }>,

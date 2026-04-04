@@ -86,9 +86,8 @@ export async function uploadPartsList(
 
   const s3Key = `${stage}/moc-instructions/${userId}/${mocId}/parts-list/${fileKey}`
 
-  let fileUrl: string
   try {
-    fileUrl = await deps.uploadToS3(deps.s3Bucket, s3Key, file.buffer, file.mimeType)
+    await deps.uploadToS3(deps.s3Bucket, s3Key, file.buffer, file.mimeType)
   } catch (error) {
     return {
       success: false,
@@ -103,7 +102,7 @@ export async function uploadPartsList(
     const fileRecord = await deps.db.createMocFile({
       mocId,
       fileType: 'parts-list',
-      fileUrl,
+      s3Key,
       originalFilename: file.filename,
       mimeType: file.mimeType,
     })

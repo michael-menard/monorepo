@@ -63,6 +63,8 @@ export {
   type CreateMocInput,
   UpdateMocInputSchema,
   type UpdateMocInput,
+  UpdateMocResponseSchema,
+  type UpdateMocResponse,
   ListMocsQuerySchema,
   type ListMocsQuery,
   PaginationSchema,

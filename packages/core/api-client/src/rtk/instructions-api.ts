@@ -26,6 +26,8 @@ import {
   type MocFile,
   type CreateMocInput,
   type UpdateMocInput,
+  UpdateMocResponseSchema,
+  type UpdateMocResponse,
   type ListMocsQuery,
   type MocListResponse,
   type GetMocDetailResponse,
@@ -231,7 +233,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
        *
        * Story INST-1008: Update MOC mutation
        */
-      updateMoc: builder.mutation<MocInstructions, { id: string; input: UpdateMocInput }>({
+      updateMoc: builder.mutation<UpdateMocResponse, { id: string; input: UpdateMocInput }>({
         query: ({ id, input }) => {
           logger.debug('Updating MOC instruction', undefined, { id })
           return {
@@ -241,7 +243,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
           }
         },
         transformResponse: (response: unknown) => {
-          const validated = MocInstructionsSchema.parse(response)
+          const validated = UpdateMocResponseSchema.parse(response)
           logger.info('MOC instruction updated', undefined, { id: validated.id })
           return validated
         },

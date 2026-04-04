@@ -34,14 +34,6 @@ function editKeyToPermanentKey(editKey: string): string {
 }
 
 /**
- * Extract S3 key from full S3 URL
- */
-function extractS3KeyFromUrl(fileUrl: string): string {
-  const url = new URL(fileUrl)
-  return url.pathname.substring(1) // Remove leading slash
-}
-
-/**
  * Finalize MOC edit
  *
  * Business rules:
@@ -219,7 +211,7 @@ export async function editFinalize(
         const fileRecords = filesWithPermanentPaths.map(f => ({
           mocId,
           fileType: f.category === 'image' ? 'gallery-image' : f.category,
-          fileUrl: `https://${deps.s3Bucket}.s3.amazonaws.com/${f.permanentS3Key}`,
+          s3Key: f.permanentS3Key,
           originalFilename: f.filename,
           mimeType: f.mimeType,
         }))
@@ -290,10 +282,9 @@ export async function editFinalize(
     nonDeletedFiles.map(async file => {
       let presignedUrl: string | null = null
 
-      if (deps.generatePresignedGetUrl && file.fileUrl) {
+      if (deps.generatePresignedGetUrl && file.s3Key) {
         try {
-          const s3Key = extractS3KeyFromUrl(file.fileUrl)
-          presignedUrl = await deps.generatePresignedGetUrl(deps.s3Bucket, s3Key, 3600)
+          presignedUrl = await deps.generatePresignedGetUrl(deps.s3Bucket, file.s3Key, 3600)
         } catch {
           // Ignore presigned URL errors
         }
@@ -304,7 +295,7 @@ export async function editFinalize(
         fileType: file.fileType,
         filename: file.originalFilename,
         mimeType: file.mimeType,
-        url: file.fileUrl,
+        url: file.s3Key,
         presignedUrl,
         createdAt: file.createdAt?.toISOString() || null,
       }

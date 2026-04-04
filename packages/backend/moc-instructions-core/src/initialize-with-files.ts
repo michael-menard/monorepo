@@ -197,7 +197,7 @@ export async function initializeWithFiles(
         id: fileId,
         mocId,
         fileType: file.fileType,
-        fileUrl: `https://${deps.s3Bucket}.s3.${deps.s3Region}.amazonaws.com/${s3Key}`,
+        s3Key,
         originalFilename: file.filename,
         mimeType: file.mimeType,
         createdAt: new Date(),

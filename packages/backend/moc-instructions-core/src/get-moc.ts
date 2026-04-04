@@ -115,7 +115,7 @@ export async function getMoc(
         category: file.fileType,
         filename: file.originalFilename || 'file',
         mimeType: file.mimeType,
-        url: file.fileUrl, // CDN URL for MVP (no presigned URLs)
+        url: file.s3Key, // S3 key — caller constructs full URL
         uploadedAt: file.createdAt.toISOString(),
       })),
       isOwner,
