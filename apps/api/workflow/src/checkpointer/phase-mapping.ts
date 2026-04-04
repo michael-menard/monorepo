@@ -27,6 +27,7 @@
  */
 
 import type { Phase } from '../artifacts/checkpoint.js'
+import type { PipelinePhase } from '../state/pipeline-orchestrator-v2-state.js'
 
 /**
  * Mapping from legacy CHECKPOINT.yaml Phase strings to LangGraph node names.
@@ -110,6 +111,77 @@ export const PHASE_TO_CHECKPOINT_MAP: Record<Phase, string> = {
    * Maps to 'complete' — the terminal completion node.
    */
   done: 'complete',
+}
+
+// ============================================================================
+// Orchestrator V2 Phase → Node Mapping
+// ============================================================================
+
+/**
+ * Mapping from pipeline orchestrator V2 PipelinePhase values to graph node names.
+ *
+ * Used by the resume handler to determine which orchestrator node corresponds
+ * to the checkpoint phase. The node name is the graph node that completed
+ * when this checkpoint was written.
+ *
+ * Node names correspond to nodes defined in createPipelineOrchestratorV2Graph()
+ * in apps/api/workflow/src/graphs/pipeline-orchestrator-v2.ts.
+ */
+export const ORCHESTRATOR_PHASE_TO_NODE_MAP: Record<PipelinePhase, string> = {
+  preflight: 'preflight_checks',
+  routing: 'route_input',
+  story_picking: 'story_picker',
+  worktree_setup: 'create_worktree',
+  dev_implement: 'dev_implement',
+  commit_push: 'commit_push',
+  review: 'review',
+  review_decision: 'review_decision',
+  create_pr: 'create_pr',
+  qa_verify: 'qa_verify',
+  qa_decision: 'qa_decision',
+  merge_cleanup: 'merge_cleanup',
+  post_completion: 'post_completion',
+  block_story: 'block_story',
+  pipeline_complete: 'pipeline_complete',
+  pipeline_stalled: 'pipeline_stalled',
+}
+
+/**
+ * Translates an orchestrator V2 PipelinePhase to the corresponding graph node name.
+ *
+ * @param phase - PipelinePhase value from orchestrator V2 state
+ * @returns Graph node name, or null if the phase is not in the mapping
+ */
+export function translateOrchestratorPhaseToNode(phase: PipelinePhase): string | null {
+  return ORCHESTRATOR_PHASE_TO_NODE_MAP[phase] ?? null
+}
+
+/**
+ * Given a completed orchestrator node name, determines the next node in the
+ * linear pipeline sequence that should be resumed.
+ *
+ * For nodes with conditional edges (review_decision, qa_decision, story_picker),
+ * returns null — the graph's own routing logic handles those.
+ */
+export function getNextOrchestratorNode(completedNode: string): string | null {
+  const linearSequence: Record<string, string> = {
+    preflight_checks: 'route_input',
+    route_input: 'story_picker',
+    // story_picker has conditional edges — handled by graph routing
+    create_worktree: 'dev_implement',
+    dev_implement: 'commit_push',
+    commit_push: 'review',
+    review: 'review_decision',
+    // review_decision has conditional edges
+    create_pr: 'qa_verify',
+    qa_verify: 'qa_decision',
+    // qa_decision has conditional edges
+    merge_cleanup: 'post_completion',
+    post_completion: 'story_picker',
+    block_story: 'story_picker',
+  }
+
+  return linearSequence[completedNode] ?? null
 }
 
 /**
