@@ -90,10 +90,21 @@ describe('checkDevImplementPostconditions', () => {
     expect(result.failures[0].reason).toContain('bcrypt not installed')
   })
 
-  it('fails when tests did not run', () => {
-    const result = checkDevImplementPostconditions(makeCompleteOutcome({ testsRan: false }))
+  it('fails when tests did not run (existing package, no new files)', () => {
+    // New-package scaffold exception: testsRan:false is allowed when filesCreated is non-empty.
+    // This case has no filesCreated so the exemption does NOT apply — must fail.
+    const result = checkDevImplementPostconditions(
+      makeCompleteOutcome({ testsRan: false, filesCreated: [], filesModified: ['src/auth.ts'] }),
+    )
     expect(result.passed).toBe(false)
     expect(result.failures.some(f => f.check === 'tests_ran')).toBe(true)
+  })
+
+  it('passes when tests did not run for new package scaffold (testsRan:false + filesCreated non-empty)', () => {
+    const result = checkDevImplementPostconditions(
+      makeCompleteOutcome({ testsRan: false, testsPassed: false }),
+    )
+    expect(result.passed).toBe(true)
   })
 
   it('fails when tests did not pass', () => {

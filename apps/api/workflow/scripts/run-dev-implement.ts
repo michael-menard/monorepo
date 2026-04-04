@@ -35,24 +35,27 @@ import { logger } from '@repo/logger'
 import { createDevImplementV2Graph } from '../src/graphs/dev-implement-v2.js'
 import { createKbAdapters } from '../src/services/kb-adapters.js'
 import { createToolAdapters } from '../src/services/tool-adapters.js'
-import { createLlmAdapter } from '../src/services/llm-adapters.js'
+import { createLlmAdapter, createClaudeCodeExecutorAdapter } from '../src/services/llm-adapters.js'
 
 const storyId = process.env.STORY_ID ?? 'NOTI-0010'
 
-// Use OpenRouter → Anthropic haiku for both planner and executor
-const MODEL = 'openrouter/meta-llama/llama-3.1-8b-instruct'
+// Planner: claude-code/sonnet for planning (ReAct JSON simulation)
+// Executor: dedicated claude-code executor that uses --dangerously-skip-permissions
+//           to write files natively instead of simulating a JSON tool loop
+const PLANNER_MODEL = 'claude-code/sonnet'
 
 logger.info('run-dev-implement: starting', {
   storyId,
   mainRepoRoot: MAIN_REPO_ROOT,
   worktreePath: WORKTREE_PATH,
-  model: MODEL,
+  plannerModel: PLANNER_MODEL,
+  executorMode: 'claude-code-native (--dangerously-skip-permissions)',
 })
 
 const kbAdapters = createKbAdapters()
 const toolAdapters = createToolAdapters()
-const plannerLlmAdapter = createLlmAdapter({ modelString: MODEL })
-const executorLlmAdapter = createLlmAdapter({ modelString: MODEL })
+const plannerLlmAdapter = createLlmAdapter({ modelString: PLANNER_MODEL })
+const executorLlmAdapter = createClaudeCodeExecutorAdapter('sonnet')
 
 const graph = createDevImplementV2Graph({
   kbStoryAdapter: kbAdapters.kbStoryAdapter,
@@ -63,8 +66,8 @@ const graph = createDevImplementV2Graph({
   writeFile: toolAdapters.writeFile,
   searchCodebase: toolAdapters.searchCodebase,
   runTests: toolAdapters.runTests,
-  maxInternalIterations: 12,
-  maxPlannerIterations: 5,
+  maxInternalIterations: 15,
+  maxPlannerIterations: 3,
 })
 
 const startTime = Date.now()

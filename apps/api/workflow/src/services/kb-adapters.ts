@@ -13,12 +13,20 @@
  */
 
 import { logger } from '@repo/logger'
-import { getDbClient, kb_get_story, kb_search } from '@repo/knowledge-base'
+import {
+  getDbClient,
+  kb_get_story,
+  kb_search,
+  kb_get_plan,
+  kb_create_story,
+} from '@repo/knowledge-base'
 import { EmbeddingClient } from '@repo/knowledge-base/embedding-client'
 import { logInvocation } from '@repo/knowledge-base/telemetry'
 import type { TokenLoggerFn, KbWriterFn } from '../nodes/story-generation-v2/write-to-kb.js'
 import type { QueryKbFn } from '../nodes/dev-implement-v2/implementation-executor.js'
 import type { KbStoryAdapterFn } from '../nodes/dev-implement-v2/story-scout.js'
+import type { PlanLoaderFn } from '../nodes/plan-refinement-v2/load-plan.js'
+import { normalizeKbPlan } from '../nodes/plan-refinement-v2/load-plan.js'
 import type { EnrichedStory } from '../state/story-generation-v2-state.js'
 
 // ============================================================================
@@ -209,6 +217,40 @@ export async function logDecisionAdapter(input: {
 }
 
 // ============================================================================
+// Plan Loader Adapter (Plan Refinement V2)
+// ============================================================================
+
+/**
+ * Plan loader adapter for plan-refinement-v2 load_plan node.
+ * Fetches a plan from the KB by planSlug and normalizes it into a NormalizedPlan.
+ */
+export const planLoaderAdapter: PlanLoaderFn = async (planSlug: string) => {
+  try {
+    const db = getDb()
+    const result = await kb_get_plan({ db }, { plan_slug: planSlug })
+
+    if (!result.plan) {
+      logger.warn('kb-adapters: plan not found in KB', { planSlug })
+      return null
+    }
+
+    const normalized = normalizeKbPlan(planSlug, result.plan as Record<string, unknown>)
+    if (!normalized) {
+      logger.warn('kb-adapters: plan normalization failed', { planSlug })
+      return null
+    }
+
+    return normalized
+  } catch (err) {
+    logger.warn('kb-adapters: plan fetch failed', {
+      planSlug,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+// ============================================================================
 // Story Adapter
 // ============================================================================
 
@@ -231,8 +273,7 @@ export const kbStoryAdapter: KbStoryAdapterFn = async (storyId: string) => {
 
     const story = result.story
 
-    // Extract acceptance criteria from story content if available
-    // For now, return empty array since acceptanceCriteria is a JSONB field
+    // Extract acceptance criteria: prefer JSONB field, fall back to parsing description
     const acceptanceCriteria: string[] = []
     if (story.acceptanceCriteria) {
       if (Array.isArray(story.acceptanceCriteria)) {
@@ -241,11 +282,36 @@ export const kbStoryAdapter: KbStoryAdapterFn = async (storyId: string) => {
         acceptanceCriteria.push(story.acceptanceCriteria)
       }
     }
+    if (acceptanceCriteria.length === 0 && story.description) {
+      const acMatch = story.description.match(/ACCEPTANCE CRITERIA:\n([\s\S]*?)(?:\n\n[A-Z]|$)/)
+      if (acMatch) {
+        acceptanceCriteria.push(
+          ...acMatch[1]
+            .split('\n')
+            .map(l => l.replace(/^[-*]\s*/, '').trim())
+            .filter(Boolean),
+        )
+      }
+    }
+
+    // Extract subtasks from description
+    const subtasks: string[] = []
+    if (story.description) {
+      const subtaskMatch = story.description.match(/SUBTASKS:\n([\s\S]*?)(?:\n\n[A-Z]|$)/)
+      if (subtaskMatch) {
+        subtasks.push(
+          ...subtaskMatch[1]
+            .split('\n')
+            .map(l => l.replace(/^\d+\.\s*/, '').trim())
+            .filter(Boolean),
+        )
+      }
+    }
 
     return {
       title: story.title ?? storyId,
       acceptanceCriteria,
-      subtasks: [], // Subtasks would need to be extracted from story content
+      subtasks,
       relatedStories: result.dependencies?.map(dep => ({
         storyId: dep.dependsOnId,
         title: dep.dependsOnId, // Would need separate lookup for title
@@ -354,37 +420,79 @@ export const queryKbAdapter: QueryKbFn = async (topic: string) => {
 // ============================================================================
 
 /**
+ * Derives a story ID prefix from a plan slug.
+ * e.g. "ai-part-recommender" → "APR"
+ */
+function planSlugToPrefix(planSlug: string): string {
+  const words = planSlug.replace(/-/g, ' ').split(' ').filter(Boolean).slice(0, 5)
+  return words.map(w => w[0]!.toUpperCase()).join('')
+}
+
+/**
  * KB writer adapter for story-generation-v2 write_to_kb node.
- * Writes enriched stories to the knowledge base.
- *
- * TODO: Implement actual KB story creation once kb_create_story supports
- * the enriched story format with all fields.
+ * Writes enriched stories to the knowledge base via kb_create_story.
  */
 export const kbWriterAdapter: KbWriterFn = async (stories: EnrichedStory[], planSlug: string) => {
   const errors: string[] = []
   let storiesWritten = 0
   let storiesFailed = 0
 
-  for (const story of stories) {
+  const db = getDb()
+  const prefix = planSlugToPrefix(planSlug)
+  const startSequence = 1010
+  const step = 10
+
+  for (let i = 0; i < stories.length; i++) {
+    const story = stories[i]!
+    const storyId = `${prefix}-${startSequence + i * step}`
+
     try {
-      // TODO: Call kb_create_story once it supports enriched story format
-      // For now, log what would be written
-      logger.info('kb-adapters: would write story to KB', {
+      // Build description including enrichment context
+      const descriptionParts = [story.description]
+      if (story.implementationHints.length > 0) {
+        descriptionParts.push(
+          `\n\nImplementation hints:\n${story.implementationHints.map(h => `- ${h}`).join('\n')}`,
+        )
+      }
+      if (story.relevantFiles.length > 0) {
+        descriptionParts.push(`\nRelevant files: ${story.relevantFiles.join(', ')}`)
+      }
+      if (story.scopeBoundary.inScope.length > 0) {
+        descriptionParts.push(`\nIn scope: ${story.scopeBoundary.inScope.join('; ')}`)
+      }
+      if (story.scopeBoundary.outOfScope.length > 0) {
+        descriptionParts.push(`\nOut of scope: ${story.scopeBoundary.outOfScope.join('; ')}`)
+      }
+
+      await kb_create_story(
+        { db },
+        {
+          story_id: storyId,
+          title: story.title,
+          feature: prefix.toLowerCase(),
+          description: descriptionParts.join(''),
+          state: 'backlog',
+          priority: story.minimum_path ? 'P2' : 'P3',
+          acceptance_criteria: story.acceptance_criteria,
+          plan_slug: planSlug,
+        },
+      )
+
+      logger.info('kb-adapters: story written to KB', {
+        storyId,
         title: story.title,
         planSlug,
         parentFlowId: story.parent_flow_id,
-        flowStepRef: story.flow_step_reference,
         minimumPath: story.minimum_path,
-        relevantFilesCount: story.relevantFiles?.length ?? 0,
-        relevantFunctionsCount: story.relevantFunctions?.length ?? 0,
       })
 
       storiesWritten++
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      errors.push(`Failed to write story "${story.title}": ${message}`)
+      errors.push(`Failed to write story "${story.title}" (${storyId}): ${message}`)
       storiesFailed++
       logger.error('kb-adapters: story write failed', {
+        storyId,
         title: story.title,
         error: message,
       })
@@ -416,7 +524,8 @@ export function createKbAdapters() {
     kbStoryAdapter,
     queryKb: queryKbAdapter,
 
-    // Plan Refinement V2 (reuses queryKb)
+    // Plan Refinement V2
+    planLoader: planLoaderAdapter,
 
     // Telemetry (for use in graph-executor)
     logInvocation: logInvocationAdapter,

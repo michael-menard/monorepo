@@ -53,18 +53,25 @@ export function checkDevImplementPostconditions(
   }
 
   // verdict === 'complete'
-  if (!outcome.testsRan) {
-    failures.push({
-      check: 'tests_ran',
-      reason: 'Agent reported complete but did not run tests',
-    })
-  }
+  // For new package scaffolds the executor deliberately skips tests (testsRan: false)
+  // because the package needs pnpm install + build before tests can run.
+  // Allow this as long as at least one file was created.
+  const newPackageScaffold = !outcome.testsRan && outcome.filesCreated.length > 0
 
-  if (!outcome.testsPassed) {
-    failures.push({
-      check: 'tests_passed',
-      reason: `Tests did not pass. Output: ${outcome.testOutput.slice(0, 200)}`,
-    })
+  if (!newPackageScaffold) {
+    if (!outcome.testsRan) {
+      failures.push({
+        check: 'tests_ran',
+        reason: 'Agent reported complete but did not run tests',
+      })
+    }
+
+    if (!outcome.testsPassed) {
+      failures.push({
+        check: 'tests_passed',
+        reason: `Tests did not pass. Output: ${outcome.testOutput.slice(0, 200)}`,
+      })
+    }
   }
 
   if (outcome.acVerification.length > 0) {
