@@ -96,6 +96,10 @@ ${functionsSection || '  (none)'}
 
 Existing patterns: ${groundingContext.existingPatterns.join(', ') || 'none'}
 ${failureSection}
+IMPORTANT: All file paths MUST be full monorepo-relative paths from the repo root.
+For example: "apps/api/notifications-server/src/index.ts" NOT "src/index.ts".
+Test files go under the same package, e.g.: "apps/api/notifications-server/src/__tests__/health.test.ts".
+
 POSTCONDITIONS your plan MUST satisfy:
 1. files_planned: filesToCreate or filesToModify must be non-empty
 2. tests_planned: testFilesToCreate must be non-empty (always write tests)
@@ -119,52 +123,44 @@ export function parseToolCall(
 ): { tool: string; args: Record<string, unknown> } | null {
   try {
     const responseContent = response.trim()
-    let jsonStr: string | null = null
+    const candidates: string[] = []
 
     // Strategy 1: Extract from markdown code blocks (```json ... ``` or ``` ... ```)
     const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (codeBlockMatch) {
-      jsonStr = codeBlockMatch[1].trim()
+      candidates.push(codeBlockMatch[1].trim())
     }
 
-    // Strategy 2: Find JSON object starting with { "tool": or {"tool":
-    if (!jsonStr) {
-      const toolJsonMatch = responseContent.match(
-        /\{\s*"tool"\s*:\s*"[^"]+"\s*,[\s\S]*?\}(?=\s*$|\s*[^}\]])/s,
-      )
-      if (toolJsonMatch) {
-        jsonStr = toolJsonMatch[0]
-      }
-    }
-
-    // Strategy 3: Find any JSON object with balanced braces
-    if (!jsonStr) {
-      const firstBrace = responseContent.indexOf('{')
-      if (firstBrace !== -1) {
-        let braceCount = 0
-        let lastBrace = firstBrace
-        for (let i = firstBrace; i < responseContent.length; i++) {
-          if (responseContent[i] === '{') braceCount++
-          if (responseContent[i] === '}') {
-            braceCount--
-            if (braceCount === 0) {
-              lastBrace = i
-              break
-            }
+    // Strategy 2: Find any JSON object with balanced braces (handles nested JSON correctly)
+    const firstBrace = responseContent.indexOf('{')
+    if (firstBrace !== -1) {
+      let braceCount = 0
+      let lastBrace = firstBrace
+      for (let i = firstBrace; i < responseContent.length; i++) {
+        if (responseContent[i] === '{') braceCount++
+        if (responseContent[i] === '}') {
+          braceCount--
+          if (braceCount === 0) {
+            lastBrace = i
+            break
           }
         }
-        jsonStr = responseContent.slice(firstBrace, lastBrace + 1)
       }
+      candidates.push(responseContent.slice(firstBrace, lastBrace + 1))
     }
 
-    // Strategy 4: Try the whole response as JSON
-    if (!jsonStr) {
-      jsonStr = responseContent
-    }
+    // Strategy 3: Try the whole response as JSON
+    candidates.push(responseContent)
 
-    const parsed = JSON.parse(jsonStr)
-    if (parsed && typeof parsed.tool === 'string') {
-      return parsed as { tool: string; args: Record<string, unknown> }
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(candidate)
+        if (parsed && typeof parsed.tool === 'string') {
+          return parsed as { tool: string; args: Record<string, unknown> }
+        }
+      } catch {
+        // try next candidate
+      }
     }
     return null
   } catch {

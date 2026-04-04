@@ -116,6 +116,7 @@ export class OpenRouterProvider extends BaseProvider {
       },
       temperature: openRouterConfig.temperature,
       timeout: openRouterConfig.timeoutMs,
+      maxTokens: 4096,
     })
 
     logger.debug('Created ChatOpenAI instance for OpenRouter', { model: modelName })

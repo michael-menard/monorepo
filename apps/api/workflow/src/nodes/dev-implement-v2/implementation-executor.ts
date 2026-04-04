@@ -103,12 +103,16 @@ AVAILABLE TOOLS (call one per response as JSON):
 - complete:        { "tool": "complete", "args": { "filesCreated": [], "filesModified": [], "testsRan": true, "testsPassed": true, "testOutput": "<string>", "acVerification": [{ "acIndex": 0, "acText": "<string>", "verified": true, "evidence": "<string>" }] } }
 - stuck:           { "tool": "stuck", "args": { "diagnosis": "<specific reason>", "filesCreated": [], "filesModified": [] } }
 
+IMPORTANT: All file paths MUST be full monorepo-relative paths from the repo root.
+For example: "apps/api/notifications-server/src/index.ts" NOT "src/index.ts".
+The run_tests filter should match the package directory, e.g.: "apps/api/notifications-server".
+If the package doesn't exist yet (new scaffold), skip run_tests and call complete with testsRan: false.
+
 WORKFLOW:
-1. Read relevant files for context
-2. Implement the changes (write_file)
-3. Run tests to verify (run_tests)
-4. Interpret output — fix within remaining iterations if possible
-5. Call complete when tests pass, or stuck with a specific diagnosis if you cannot proceed
+1. Read relevant files for context if needed
+2. Implement all files from the plan (write_file) using full monorepo-relative paths
+3. For new packages: call complete with testsRan: false once all files are written
+4. For existing packages: run_tests then call complete or stuck based on result
 
 You MUST call complete or stuck before running out of iterations.
 Respond ONLY with valid JSON.`
@@ -177,49 +181,49 @@ export function parseExecutorToolCall(
     // Try multiple JSON extraction strategies
     let jsonStr: string | null = null
 
+    // Collect candidate strings in priority order, try parsing each in turn
+    const candidates: string[] = []
+
     // Strategy 1: Extract from markdown code blocks (```json ... ``` or ``` ... ```)
     const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (codeBlockMatch) {
-      jsonStr = codeBlockMatch[1].trim()
+      candidates.push(codeBlockMatch[1].trim())
     }
 
-    // Strategy 2: Find JSON object starting with { "tool": or {"tool":
-    if (!jsonStr) {
-      const toolJsonMatch = responseContent.match(
-        /\{\s*"tool"\s*:\s*"[^"]+"\s*,[\s\S]*?\}(?=\s*$|\s*[^}\]])/s,
-      )
-      if (toolJsonMatch) {
-        jsonStr = toolJsonMatch[0]
-      }
-    }
-
-    // Strategy 3: Find any JSON object with balanced braces
-    if (!jsonStr) {
-      const firstBrace = responseContent.indexOf('{')
-      if (firstBrace !== -1) {
-        let braceCount = 0
-        let lastBrace = firstBrace
-        for (let i = firstBrace; i < responseContent.length; i++) {
-          if (responseContent[i] === '{') braceCount++
-          if (responseContent[i] === '}') {
-            braceCount--
-            if (braceCount === 0) {
-              lastBrace = i
-              break
-            }
+    // Strategy 2: Find any JSON object with balanced braces (most reliable for nested JSON)
+    const firstBrace = responseContent.indexOf('{')
+    if (firstBrace !== -1) {
+      let braceCount = 0
+      let lastBrace = firstBrace
+      for (let i = firstBrace; i < responseContent.length; i++) {
+        if (responseContent[i] === '{') braceCount++
+        if (responseContent[i] === '}') {
+          braceCount--
+          if (braceCount === 0) {
+            lastBrace = i
+            break
           }
         }
-        jsonStr = responseContent.slice(firstBrace, lastBrace + 1)
+      }
+      candidates.push(responseContent.slice(firstBrace, lastBrace + 1))
+    }
+
+    // Strategy 3: Try the whole response as JSON
+    candidates.push(responseContent)
+
+    let parsed: unknown = null
+    for (const candidate of candidates) {
+      try {
+        const p = JSON.parse(candidate)
+        if (p && typeof p.tool === 'string') {
+          parsed = p
+          break
+        }
+      } catch {
+        // try next candidate
       }
     }
-
-    // Strategy 4: Try the whole response as JSON
-    if (!jsonStr) {
-      jsonStr = responseContent
-    }
-
-    const parsed = JSON.parse(jsonStr)
-    if (parsed && typeof parsed.tool === 'string')
+    if (parsed && typeof (parsed as Record<string, unknown>).tool === 'string')
       return parsed as { tool: string; args: Record<string, unknown> }
     return null
   } catch {

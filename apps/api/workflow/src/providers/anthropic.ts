@@ -129,7 +129,7 @@ export class AnthropicProvider extends BaseProvider {
       headers: {
         'anthropic-version': '2023-06-01',
       },
-      acceptableStatuses: [200, 400, 401], // Service is up if we get these
+      acceptableStatuses: [200, 400, 401, 404], // Service is up if we get these
       cacheTtlMs: config.availabilityCacheTtlMs,
       forceCheck,
       cache: {

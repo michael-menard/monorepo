@@ -32,9 +32,11 @@ const execAsync = promisify(exec)
 
 /**
  * Root directory for all file operations.
- * All paths are resolved relative to this and cannot escape it.
+ * Read lazily so callers can set MONOREPO_ROOT after module load (e.g. in scripts).
  */
-const MONOREPO_ROOT = process.env.MONOREPO_ROOT ?? '/Users/michaelmenard/Development/monorepo'
+function getMonorepoRoot(): string {
+  return process.env.MONOREPO_ROOT ?? '/Users/michaelmenard/Development/monorepo'
+}
 
 /**
  * Maximum file size to read (10MB).
@@ -64,12 +66,12 @@ export function resolveSafePath(inputPath: string): string {
   if (isAbsolute(inputPath)) {
     resolvedPath = inputPath
   } else {
-    resolvedPath = resolve(MONOREPO_ROOT, inputPath)
+    resolvedPath = resolve(getMonorepoRoot(), inputPath)
   }
 
   // Normalize and check for traversal
   const normalizedPath = resolve(resolvedPath)
-  const relativePath = relative(MONOREPO_ROOT, normalizedPath)
+  const relativePath = relative(getMonorepoRoot(), normalizedPath)
 
   // Check for path traversal (starts with .. or is absolute)
   if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
@@ -183,7 +185,7 @@ export function createSearchCodebaseAdapter(): SearchCodebaseFn {
     try {
       // Use ripgrep for fast searching
       // Limit results to prevent overwhelming output
-      const cmd = `rg --color=never --max-count=50 --heading --line-number "${pattern.replace(/"/g, '\\"')}" "${MONOREPO_ROOT}" 2>/dev/null || true`
+      const cmd = `rg --color=never --max-count=50 --heading --line-number "${pattern.replace(/"/g, '\\"')}" "${getMonorepoRoot()}" 2>/dev/null || true`
 
       const { stdout, stderr } = await execAsync(cmd, {
         timeout: 30000, // 30 second timeout
@@ -244,7 +246,7 @@ export function createRunTestsAdapter(): RunTestsFn {
       // Use --reporter=verbose for detailed output
       // --run to not watch
       const filterArg = filter ? `--filter="${filter.replace(/"/g, '\\"')}"` : ''
-      const cmd = `cd "${MONOREPO_ROOT}" && pnpm vitest run ${filterArg} --reporter=verbose 2>&1`
+      const cmd = `cd "${getMonorepoRoot()}" && pnpm vitest run ${filterArg} --reporter=verbose 2>&1`
 
       logger.info('tool-adapters: running tests', { filter, cmd })
 
