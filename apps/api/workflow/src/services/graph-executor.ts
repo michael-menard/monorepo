@@ -16,7 +16,13 @@ import type {
   PlanGraphInvokeRequest,
   ReviewGraphInvokeRequest,
 } from '../routes/__types__/graph-invoke.js'
-import { getDbClient, kb_get_plan, kb_upsert_plan } from '@repo/knowledge-base'
+import {
+  getDbClient,
+  kb_get_plan,
+  kb_upsert_plan,
+  kb_write_artifact,
+  kb_update_story_status,
+} from '@repo/knowledge-base'
 import { createKbAdapters, logInvocationAdapter, logOutcomeAdapter } from './kb-adapters.js'
 import { createLlmAdapters } from './llm-adapters.js'
 import { createToolAdapters } from './tool-adapters.js'
@@ -364,11 +370,17 @@ export async function executeReviewV2(
     threadId,
   })
 
-  // Get KB adapters for queryKb
-  const adapters = getKbAdapters()
+  const kbAdaptersLocal = getKbAdapters()
+  const llmAdaptersLocal = getLlmAdapters()
+  const toolAdaptersLocal = getToolAdapters()
 
   const graph = createReviewV2Graph({
-    queryKb: adapters.queryKb,
+    diffReader: toolAdaptersLocal.diffReader,
+    riskLlmAdapter: llmAdaptersLocal.riskAssessorLlmAdapter,
+    reviewLlmAdapter: llmAdaptersLocal.reviewAgentLlmAdapter,
+    readFile: toolAdaptersLocal.readFile,
+    searchCodebase: toolAdaptersLocal.searchCodebase,
+    queryKb: kbAdaptersLocal.queryKb,
   })
 
   try {
@@ -378,16 +390,26 @@ export async function executeReviewV2(
     })) as ReviewV2State
 
     const durationMs = Date.now() - startTime
+    const verdict = result.reviewVerdict ?? 'fail'
     const status = result.errors?.length ? 'failed' : 'completed'
-    const verdict = result.reviewVerdict === 'pass' ? 'complete' : 'stuck'
 
-    // Log telemetry (fire-and-forget)
+    const totalTokens = result.tokenUsage?.reduce(
+      (acc, t) => ({ input: acc.input + t.inputTokens, output: acc.output + t.outputTokens }),
+      { input: 0, output: 0 },
+    ) ?? { input: 0, output: 0 }
+
+    // Write review artifact to KB then advance story state (fire-and-forget)
+    void writeReviewArtifactToKb(request.storyId, result, verdict, durationMs)
+    void advanceStoryAfterReview(request.storyId, verdict)
+
     void logInvocationAdapter({
       invocationId,
       agentName: 'review-v2',
       storyId: request.storyId,
       phase: 'review',
-      status: status === 'completed' && verdict === 'complete' ? 'success' : 'failure',
+      status: status === 'completed' && verdict === 'pass' ? 'success' : 'failure',
+      inputTokens: totalTokens.input,
+      outputTokens: totalTokens.output,
       durationMs,
     })
 
@@ -398,14 +420,13 @@ export async function executeReviewV2(
       phase: result.reviewV2Phase ?? 'complete',
       durationMs,
       summary: {
-        verdict,
+        verdict: verdict === 'pass' ? 'complete' : 'stuck',
         errors: result.errors ?? [],
       },
     }
   } catch (err) {
     const durationMs = Date.now() - startTime
 
-    // Log failure telemetry
     void logInvocationAdapter({
       invocationId,
       agentName: 'review-v2',
@@ -428,6 +449,80 @@ export async function executeReviewV2(
         errors: [err instanceof Error ? err.message : String(err)],
       },
     }
+  }
+}
+
+/**
+ * Writes the review artifact to KB after graph completion.
+ * Fire-and-forget — errors are logged but don't fail the response.
+ */
+async function writeReviewArtifactToKb(
+  storyId: string,
+  result: ReviewV2State,
+  verdict: 'pass' | 'fail',
+  durationMs: number,
+): Promise<void> {
+  try {
+    const db = getDbClient()
+    const criticalCount = result.reviewFindings.filter(f => f.severity === 'critical').length
+    const highCount = result.reviewFindings.filter(f => f.severity === 'high').length
+
+    await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'review',
+        phase: 'code_review',
+        content: {
+          verdict,
+          reviewedDimensions: result.selectedReviewDimensions,
+          findingsCount: result.reviewFindings.length,
+          criticalCount,
+          highCount,
+          findings: result.reviewFindings,
+          riskSurface: result.diffAnalysis?.riskSurface ?? 'unknown',
+          changedFiles: result.diffAnalysis?.changedFiles.map(f => f.path) ?? [],
+          durationMs,
+          warnings: result.warnings ?? [],
+        },
+        summary: { verdict, findingsCount: result.reviewFindings.length, criticalCount, highCount },
+      },
+      { db },
+    )
+
+    logger.info('graph-executor: review artifact written to KB', { storyId, verdict })
+  } catch (err) {
+    logger.warn('graph-executor: failed to write review artifact (non-fatal)', {
+      storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
+/**
+ * Advances story state in KB after review completes.
+ * pass → ready_for_qa | fail → failed_code_review
+ * Fire-and-forget.
+ */
+async function advanceStoryAfterReview(storyId: string, verdict: 'pass' | 'fail'): Promise<void> {
+  try {
+    const db = getDbClient()
+    const newState = verdict === 'pass' ? 'ready_for_qa' : 'failed_code_review'
+
+    await kb_update_story_status(
+      { db },
+      {
+        story_id: storyId,
+        state: newState,
+        phase: verdict === 'pass' ? 'qa_verification' : 'code_review',
+      },
+    )
+
+    logger.info('graph-executor: story state advanced after review', { storyId, newState })
+  } catch (err) {
+    logger.warn('graph-executor: failed to advance story state after review (non-fatal)', {
+      storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
   }
 }
 

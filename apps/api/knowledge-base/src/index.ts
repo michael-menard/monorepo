@@ -122,6 +122,14 @@ export {
   type KbListStoriesInput,
 } from './crud-operations/story-crud-operations.js'
 
+// Artifact CRUD exports (subset for external consumers)
+export {
+  kb_write_artifact,
+  KbWriteArtifactInputSchema,
+  type KbWriteArtifactInput,
+  type ArtifactOperationsDeps,
+} from './crud-operations/artifact-operations.js'
+
 // Plan CRUD exports (subset for external consumers)
 export {
   kb_get_plan,

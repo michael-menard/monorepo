@@ -616,6 +616,46 @@ export function createDependencyWirerLlmAdapter(model = 'sonnet'): DependencyWir
 }
 
 // ============================================================================
+// Review V2 Adapters
+// ============================================================================
+
+/**
+ * Risk assessor adapter for review-v2.
+ * Expects a JSON response with { selectedDimensions: [...] }.
+ * Uses claude-code/sonnet — small, fast, deterministic output needed.
+ */
+export function createRiskAssessorLlmAdapter(model = 'sonnet'): RiskLlmAdapterFn {
+  const provider = getClaudeCodeProvider({ model })
+  return async messages => {
+    const prompt = messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n')
+    const response = await provider.invoke(prompt)
+    return {
+      content: response.content,
+      inputTokens: response.inputTokens,
+      outputTokens: response.outputTokens,
+    }
+  }
+}
+
+/**
+ * Review agent adapter for review-v2.
+ * Runs one LLM call per review dimension, expects JSON findings array.
+ * Uses claude-code/sonnet — reads file context and returns structured findings.
+ */
+export function createReviewAgentLlmAdapter(model = 'sonnet'): ReviewLlmAdapterFn {
+  const provider = getClaudeCodeProvider({ model, timeoutMs: 300_000 })
+  return async messages => {
+    const prompt = messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n')
+    const response = await provider.invoke(prompt)
+    return {
+      content: response.content,
+      inputTokens: response.inputTokens,
+      outputTokens: response.outputTokens,
+    }
+  }
+}
+
+// ============================================================================
 // Composite Adapter Config
 // ============================================================================
 
@@ -637,6 +677,10 @@ export function createLlmAdapters() {
     slicerLlmAdapter: createSlicerLlmAdapter(),
     enricherLlmAdapter: createEnricherLlmAdapter(),
     dependencyWirerLlmAdapter: createDependencyWirerLlmAdapter(),
+
+    // Review V2 (via claude -p)
+    riskAssessorLlmAdapter: createRiskAssessorLlmAdapter(),
+    reviewAgentLlmAdapter: createReviewAgentLlmAdapter(),
   }
 }
 

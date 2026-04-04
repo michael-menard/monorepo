@@ -23,6 +23,7 @@ import type {
   SearchCodebaseFn,
   RunTestsFn,
 } from '../nodes/dev-implement-v2/implementation-executor.js'
+import type { DiffReaderFn } from '../nodes/review-v2/diff-analyzer.js'
 
 const execAsync = promisify(exec)
 
@@ -333,6 +334,160 @@ function extractTestFailures(output: string): string[] {
 }
 
 // ============================================================================
+// Diff Reader Adapter
+// ============================================================================
+
+/**
+ * Creates a diff reader adapter for the review-v2 graph.
+ *
+ * Runs `git diff` between the worktree branch and its merge base with main
+ * to produce the list of files changed in this story's implementation.
+ *
+ * Falls back to `git status --short` if the diff command fails (e.g. new
+ * worktrees with no upstream configured).
+ */
+export function createDiffReaderAdapter(): DiffReaderFn {
+  return async worktreePath => {
+    const startTime = Date.now()
+
+    try {
+      // Prefer diff against merge-base with main so we only see story changes
+      const { stdout: diffStat } = await execAsync(
+        `git -C "${worktreePath}" diff --stat $(git -C "${worktreePath}" merge-base HEAD origin/main 2>/dev/null || echo HEAD~1) HEAD 2>/dev/null`,
+        { timeout: 30_000 },
+      ).catch(() => ({ stdout: '' }))
+
+      // Also get the actual diff content (first 2000 lines total)
+      const { stdout: diffContent } = await execAsync(
+        `git -C "${worktreePath}" diff $(git -C "${worktreePath}" merge-base HEAD origin/main 2>/dev/null || echo HEAD~1) HEAD -- 2>/dev/null | head -2000`,
+        { timeout: 30_000 },
+      ).catch(() => ({ stdout: '' }))
+
+      if (diffStat.trim()) {
+        const files = parseDiffStat(diffStat, diffContent)
+        const durationMs = Date.now() - startTime
+        logger.info('tool-adapters: diff reader complete (merge-base)', {
+          worktreePath,
+          fileCount: files.length,
+          durationMs,
+        })
+        return files
+      }
+
+      // Fallback: untracked + modified files via git status
+      const { stdout: statusOut } = await execAsync(
+        `git -C "${worktreePath}" status --short 2>/dev/null`,
+        { timeout: 10_000 },
+      ).catch(() => ({ stdout: '' }))
+
+      const files = parseGitStatus(statusOut)
+      const durationMs = Date.now() - startTime
+      logger.info('tool-adapters: diff reader complete (git status fallback)', {
+        worktreePath,
+        fileCount: files.length,
+        durationMs,
+      })
+      return files
+    } catch (err) {
+      logger.warn('tool-adapters: diff reader failed', {
+        worktreePath,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return []
+    }
+  }
+}
+
+/**
+ * Parses `git diff --stat` output into DiffReaderFn result entries.
+ * Uses the full diff content to count actual lines added/removed per file.
+ */
+function parseDiffStat(
+  statOutput: string,
+  diffContent: string,
+): Array<{
+  path: string
+  changeType: 'created' | 'modified' | 'deleted'
+  linesAdded: number
+  linesRemoved: number
+  content?: string
+}> {
+  const results: Array<{
+    path: string
+    changeType: 'created' | 'modified' | 'deleted'
+    linesAdded: number
+    linesRemoved: number
+    content?: string
+  }> = []
+
+  // Split diff content into per-file sections
+  const fileSections = new Map<string, string>()
+  const fileSectionRegex = /^diff --git a\/.+ b\/(.+)$/gm
+  let match: RegExpExecArray | null
+  const sectionStarts: Array<{ path: string; index: number }> = []
+
+  while ((match = fileSectionRegex.exec(diffContent)) !== null) {
+    sectionStarts.push({ path: match[1], index: match.index })
+  }
+  for (let i = 0; i < sectionStarts.length; i++) {
+    const start = sectionStarts[i]!
+    const end = sectionStarts[i + 1]?.index ?? diffContent.length
+    fileSections.set(start.path, diffContent.slice(start.index, end))
+  }
+
+  // Parse stat lines: " path/to/file | 42 ++++----"
+  const statLineRegex = /^\s*(.+?)\s+\|\s+(\d+)\s*([\+\-]*)/gm
+  while ((match = statLineRegex.exec(statOutput)) !== null) {
+    const path = match[1].trim()
+    if (path === '' || path.includes('changed') || path.includes('insertion')) continue
+
+    const section = fileSections.get(path) ?? ''
+
+    // Count actual +/- lines in the diff section
+    const lines = section.split('\n')
+    const linesAdded = lines.filter(l => l.startsWith('+') && !l.startsWith('+++')).length
+    const linesRemoved = lines.filter(l => l.startsWith('-') && !l.startsWith('---')).length
+
+    // Determine change type from diff header
+    let changeType: 'created' | 'modified' | 'deleted' = 'modified'
+    if (section.includes('new file mode')) changeType = 'created'
+    else if (section.includes('deleted file mode')) changeType = 'deleted'
+
+    // Include first 2000 chars of file diff as content hint
+    const content = section.slice(0, 2000)
+
+    results.push({ path, changeType, linesAdded, linesRemoved, content })
+  }
+
+  return results
+}
+
+/**
+ * Parses `git status --short` output into DiffReaderFn result entries.
+ * Used as a fallback when no merge-base diff is available.
+ */
+function parseGitStatus(statusOutput: string): Array<{
+  path: string
+  changeType: 'created' | 'modified' | 'deleted'
+  linesAdded: number
+  linesRemoved: number
+}> {
+  return statusOutput
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const code = line.slice(0, 2).trim()
+      const path = line.slice(3).trim()
+      let changeType: 'created' | 'modified' | 'deleted' = 'modified'
+      if (code === '??' || code === 'A') changeType = 'created'
+      else if (code === 'D') changeType = 'deleted'
+      return { path, changeType, linesAdded: 0, linesRemoved: 0 }
+    })
+    .filter(f => !f.path.endsWith('/')) // exclude bare directory entries
+}
+
+// ============================================================================
 // Composite Adapter Config
 // ============================================================================
 
@@ -345,6 +500,7 @@ export function createToolAdapters() {
     writeFile: createWriteFileAdapter(),
     searchCodebase: createSearchCodebaseAdapter(),
     runTests: createRunTestsAdapter(),
+    diffReader: createDiffReaderAdapter(),
   }
 }
 
