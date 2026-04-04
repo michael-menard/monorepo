@@ -20,6 +20,10 @@ import {
   type PlanRefinementV2State,
 } from '../state/plan-refinement-v2-state.js'
 import {
+  createLoadPlanRefinementNode,
+  type PlanLoaderFn,
+} from '../nodes/plan-refinement-v2/load-plan.js'
+import {
   createGroundingScoutNode,
   type KbStoriesAdapterFn,
   type KbRelatedPlansAdapterFn,
@@ -43,6 +47,8 @@ import {
 // ============================================================================
 
 export const PlanRefinementV2GraphConfigSchema = z.object({
+  // load_plan adapter
+  planLoader: z.function().optional(),
   // grounding_scout adapters
   kbStoriesAdapter: z.function().optional(),
   kbRelatedPlansAdapter: z.function().optional(),
@@ -59,6 +65,8 @@ export const PlanRefinementV2GraphConfigSchema = z.object({
 })
 
 export type PlanRefinementV2GraphConfig = {
+  // load_plan
+  planLoader?: PlanLoaderFn
   // grounding_scout
   kbStoriesAdapter?: KbStoriesAdapterFn
   kbRelatedPlansAdapter?: KbRelatedPlansAdapterFn
@@ -72,6 +80,20 @@ export type PlanRefinementV2GraphConfig = {
   maxRetries?: number
   maxInternalIterations?: number
   bakeOffVersion?: string
+}
+
+// ============================================================================
+// Conditional Edge Functions
+// ============================================================================
+
+/**
+ * After load_plan: proceed to grounding_scout or END on error.
+ */
+function afterLoadPlan(state: PlanRefinementV2State): 'grounding_scout' | '__end__' {
+  if (state.refinementV2Phase === 'error') {
+    return '__end__'
+  }
+  return 'grounding_scout'
 }
 
 // ============================================================================
@@ -89,6 +111,7 @@ export type PlanRefinementV2GraphConfig = {
  */
 export function createPlanRefinementV2Graph(config: PlanRefinementV2GraphConfig = {}) {
   const graph = new StateGraph(PlanRefinementV2StateAnnotation)
+    .addNode('load_plan', createLoadPlanRefinementNode({ planLoader: config.planLoader }))
     .addNode(
       'grounding_scout',
       createGroundingScoutNode({
@@ -110,7 +133,11 @@ export function createPlanRefinementV2Graph(config: PlanRefinementV2GraphConfig 
     )
     .addNode('postcondition_gate', createPostconditionGateNode())
 
-    .addEdge(START, 'grounding_scout')
+    .addEdge(START, 'load_plan')
+    .addConditionalEdges('load_plan', afterLoadPlan, {
+      grounding_scout: 'grounding_scout',
+      __end__: END,
+    })
     .addEdge('grounding_scout', 'feasibility_scan')
     .addEdge('feasibility_scan', 'refinement_agent')
     .addEdge('refinement_agent', 'postcondition_gate')

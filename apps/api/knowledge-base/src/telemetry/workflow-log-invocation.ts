@@ -7,7 +7,7 @@
 
 import { randomUUID } from 'crypto'
 import { logger } from '@repo/logger'
-import { db } from '@repo/db'
+import { getDbClient } from '../db/client.js'
 import { agentInvocations } from '../db/index.js'
 import { WorkflowLogInvocationInputSchema } from './__types__/index.js'
 import type { WorkflowLogInvocationInput } from './__types__/index.js'
@@ -23,6 +23,7 @@ export async function logInvocation(input: WorkflowLogInvocationInput | unknown)
   const invocationId = parsed.invocationId ?? randomUUID()
 
   try {
+    const db = getDbClient()
     const [row] = await db
       .insert(agentInvocations)
       .values({

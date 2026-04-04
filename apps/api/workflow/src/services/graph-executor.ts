@@ -16,9 +16,11 @@ import type {
   PlanGraphInvokeRequest,
   ReviewGraphInvokeRequest,
 } from '../routes/__types__/graph-invoke.js'
+import { getDbClient, kb_get_plan, kb_upsert_plan } from '@repo/knowledge-base'
 import { createKbAdapters, logInvocationAdapter, logOutcomeAdapter } from './kb-adapters.js'
 import { createLlmAdapters } from './llm-adapters.js'
 import { createToolAdapters } from './tool-adapters.js'
+import { serializeFlowsToContent } from '../nodes/plan-refinement-v2/load-plan.js'
 
 // ============================================================================
 // KB Adapters (lazy initialization)
@@ -177,8 +179,12 @@ export async function executePlanRefinementV2(
   // Get KB adapters for queryKb
   const adapters = getKbAdapters()
 
+  const llms = getLlmAdapters()
+
   const graph = createPlanRefinementV2Graph({
+    planLoader: adapters.planLoader,
     queryKb: adapters.queryKb,
+    llmAdapter: llms.refinementLlmAdapter,
   })
 
   try {
@@ -190,11 +196,41 @@ export async function executePlanRefinementV2(
     const status = result.errors?.length ? 'failed' : 'completed'
     const verdict = result.postconditionResult?.passed ? 'complete' : 'stuck'
 
+    // Write refined flows back to the KB plan so story-generation can load them
+    if (result.flows?.length && result.normalizedPlan) {
+      try {
+        const db = getDbClient()
+        const existingPlan = await kb_get_plan({ db }, { plan_slug: request.planSlug })
+        const currentContent = String(
+          (existingPlan.plan as Record<string, unknown> | null)?.['rawContent'] ?? '',
+        )
+        const updatedContent = serializeFlowsToContent(currentContent, result.flows)
+        await kb_upsert_plan(
+          { db },
+          {
+            plan_slug: request.planSlug,
+            title: result.normalizedPlan.title,
+            raw_content: updatedContent,
+            status: 'accepted',
+            priority: 'P3',
+          },
+        )
+        logger.info('executePlanRefinementV2: wrote refined flows back to KB', {
+          planSlug: request.planSlug,
+          flowCount: result.flows.length,
+        })
+      } catch (writeErr) {
+        logger.warn('executePlanRefinementV2: failed to write flows back to KB (non-fatal)', {
+          planSlug: request.planSlug,
+          error: writeErr instanceof Error ? writeErr.message : String(writeErr),
+        })
+      }
+    }
+
     // Log telemetry (fire-and-forget)
     void logInvocationAdapter({
       invocationId,
       agentName: 'plan-refinement-v2',
-      storyId: request.planSlug,
       phase: 'plan',
       status: status === 'completed' && verdict === 'complete' ? 'success' : 'failure',
       durationMs,
@@ -203,7 +239,7 @@ export async function executePlanRefinementV2(
     return {
       status,
       threadId,
-      storyId: request.planSlug, // Use planSlug as identifier
+      storyId: request.planSlug,
       phase: result.refinementV2Phase ?? 'complete',
       durationMs,
       summary: {
@@ -218,7 +254,6 @@ export async function executePlanRefinementV2(
     void logInvocationAdapter({
       invocationId,
       agentName: 'plan-refinement-v2',
-      storyId: request.planSlug,
       phase: 'plan',
       status: 'failure',
       durationMs,
@@ -412,9 +447,15 @@ export async function executeStoryGenerationV2(
   // Get KB adapters for token logging and story writing
   const adapters = getKbAdapters()
 
+  const llmsLocal = getLlmAdapters()
+
   const graph = createStoryGenerationV2Graph({
+    planLoader: adapters.planLoader,
     tokenLogger: adapters.tokenLogger,
     kbWriter: adapters.kbWriter,
+    slicerLlmAdapter: llmsLocal.slicerLlmAdapter,
+    enricherLlmAdapter: llmsLocal.enricherLlmAdapter,
+    dependencyWirerLlmAdapter: llmsLocal.dependencyWirerLlmAdapter,
   })
 
   try {
@@ -435,7 +476,6 @@ export async function executeStoryGenerationV2(
     void logInvocationAdapter({
       invocationId,
       agentName: 'story-generation-v2',
-      storyId: request.planSlug,
       phase: 'plan',
       status: status === 'completed' ? 'success' : 'failure',
       inputTokens: totalTokens.input,
@@ -461,7 +501,6 @@ export async function executeStoryGenerationV2(
     void logInvocationAdapter({
       invocationId,
       agentName: 'story-generation-v2',
-      storyId: request.planSlug,
       phase: 'plan',
       status: 'failure',
       durationMs,

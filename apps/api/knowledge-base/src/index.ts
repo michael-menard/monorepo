@@ -106,18 +106,32 @@ export {
 
 // Story CRUD exports (subset for external consumers)
 export {
+  kb_create_story,
   kb_update_story_status,
   kb_get_story,
   kb_list_stories,
+  KbCreateStoryInputSchema,
   KbUpdateStoryStatusInputSchema,
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   type StoryCrudDeps,
+  type KbCreateStoryInput,
   type KbUpdateStoryStatusInput,
   type KbGetStoryInput,
   type KbGetStoryResult,
   type KbListStoriesInput,
 } from './crud-operations/story-crud-operations.js'
+
+// Plan CRUD exports (subset for external consumers)
+export {
+  kb_get_plan,
+  kb_upsert_plan,
+  KbGetPlanInputSchema,
+  KbUpsertPlanInputSchema,
+  type PlanCrudDeps,
+  type KbGetPlanInput,
+  type KbUpsertPlanInput,
+} from './crud-operations/plan-operations.js'
 
 // Story state types (for external consumers like pipeline supervisor)
 export { StoryStateSchema, type StoryState } from './__types__/index.js'

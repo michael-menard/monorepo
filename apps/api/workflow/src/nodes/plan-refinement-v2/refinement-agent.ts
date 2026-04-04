@@ -152,6 +152,11 @@ export function buildSystemPrompt(
       ? `\nPREVIOUS ATTEMPT FAILURES:\n${previousFailures.map(f => `  - [${f.check}] ${f.reason}`).join('\n')}\n`
       : ''
 
+  const noFlowsInstruction =
+    flows.length === 0
+      ? `\n\nIMPORTANT: There are NO flows defined yet. You MUST derive user flows from the plan content and call update_flows before calling complete. Extract 3-8 concrete user flows from the SOLUTION section. Each flow must have: id (e.g. "flow-1"), name, actor ("user" or "system"), trigger, steps (array of {index, description}), successOutcome, source ("inferred"), confidence (0.0-1.0), status ("confirmed").`
+      : ''
+
   return `You are a plan refinement agent for a LEGO MOC instructions platform.
 
 PLAN: ${plan.planSlug}
@@ -161,7 +166,7 @@ PROBLEM: ${plan.problemStatement}
 SOLUTION: ${plan.proposedSolution}
 
 CURRENT FLOWS:
-${flowSummary || '  (no flows)'}
+${flowSummary || '  (no flows — you must create them, see instructions below)'}
 
 GROUNDING CONTEXT:
 Existing Stories:
@@ -169,7 +174,8 @@ ${existingStoriesSummary}
 
 Feasibility Flags:
 ${feasibilityFlagSummary}
-${previousFailureSection}
+${previousFailureSection}${noFlowsInstruction}
+
 POSTCONDITIONS you must satisfy before calling 'complete':
 1. every_flow_has_source_confidence: Every flow has non-empty source and confidence set (0.0-1.0)
 2. low_confidence_flows_addressed: Every flow with confidence < 0.7 must either have confidence raised OR be flagged for human review

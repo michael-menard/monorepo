@@ -766,7 +766,7 @@ export type StoryType = z.infer<typeof StoryTypeSchema>
 /**
  * Valid story priority levels.
  */
-export const StoryPrioritySchema = z.enum(['critical', 'high', 'medium', 'low'])
+export const StoryPrioritySchema = z.enum(['P1', 'P2', 'P3', 'P4', 'P5'])
 export type StoryPriority = z.infer<typeof StoryPrioritySchema>
 
 /**

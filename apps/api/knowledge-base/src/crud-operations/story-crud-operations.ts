@@ -747,11 +747,12 @@ export async function kb_get_next_story(
     .orderBy(
       // Sort by priority (using CASE for custom order)
       sql`CASE
-        WHEN ${stories.priority} = 'critical' THEN 1
-        WHEN ${stories.priority} = 'high' THEN 2
-        WHEN ${stories.priority} = 'medium' THEN 3
-        WHEN ${stories.priority} = 'low' THEN 4
-        ELSE 5
+        WHEN ${stories.priority} = 'P1' THEN 1
+        WHEN ${stories.priority} = 'P2' THEN 2
+        WHEN ${stories.priority} = 'P3' THEN 3
+        WHEN ${stories.priority} = 'P4' THEN 4
+        WHEN ${stories.priority} = 'P5' THEN 5
+        ELSE 6
       END`,
       asc(stories.createdAt),
     )

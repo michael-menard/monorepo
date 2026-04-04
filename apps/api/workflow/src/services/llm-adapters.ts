@@ -23,6 +23,8 @@ import type { LlmAdapterFn as RefinementLlmAdapterFn } from '../nodes/plan-refin
 import type { SlicerLlmAdapterFn } from '../nodes/story-generation-v2/story-slicer-agent.js'
 import type { EnricherLlmAdapterFn } from '../nodes/story-generation-v2/story-enricher-agent.js'
 import type { DependencyWirerLlmAdapterFn } from '../nodes/story-generation-v2/dependency-wirer-agent.js'
+import type { LlmAdapterFn as ReviewLlmAdapterFn } from '../nodes/review-v2/review-agent.js'
+import type { LlmAdapterFn as RiskLlmAdapterFn } from '../nodes/review-v2/risk-assessor.js'
 
 // ============================================================================
 // Types
