@@ -93,7 +93,6 @@ const mockMocFile: MocFile = {
   id: 'file-new-1',
   mocId: TEST_MOC_ID,
   fileType: 'instruction',
-  fileUrl: `https://${TEST_CLOUDFRONT_DOMAIN}/dev/moc-instructions/${TEST_USER_ID}/${TEST_MOC_ID}/instructions/${mockSessionId}-castle-instructions.pdf`,
   originalFilename: validCreateRequest.filename,
   mimeType: 'application/pdf',
   s3Key: `dev/moc-instructions/${TEST_USER_ID}/${TEST_MOC_ID}/instructions/${mockSessionId}-castle-instructions.pdf`,
@@ -586,7 +585,7 @@ describe('UploadSessionService - INST-1105', () => {
           expect(result.data.id).toBeDefined()
           expect(result.data.mocId).toBe(TEST_MOC_ID)
           expect(result.data.fileType).toBe('instruction')
-          expect(result.data.fileUrl).toContain('https://')
+          expect(result.data.s3Key).toBeDefined()
           expect(result.data.originalFilename).toBe(validCreateRequest.filename)
           expect(result.data.mimeType).toBe('application/pdf')
           expect(result.data.fileSize).toBe(validCreateRequest.fileSize)
@@ -609,7 +608,6 @@ describe('UploadSessionService - INST-1105', () => {
         expect(deps.insertMocFile).toHaveBeenCalledWith({
           mocId: TEST_MOC_ID,
           fileType: 'instruction',
-          fileUrl: expect.stringContaining('https://'),
           originalFilename: validCreateRequest.filename,
           mimeType: 'application/pdf',
           s3Key: expect.stringContaining(`${TEST_MOC_ID}/instructions/`),
@@ -628,7 +626,7 @@ describe('UploadSessionService - INST-1105', () => {
         expect(deps.incrementRateLimit).toHaveBeenCalledWith(TEST_USER_ID)
       })
 
-      it('uses CloudFront domain for fileUrl when configured', async () => {
+      it('stores s3Key (not full URL) in result', async () => {
         const result = await service.completeUploadSession(
           TEST_USER_ID,
           TEST_MOC_ID,
@@ -637,7 +635,7 @@ describe('UploadSessionService - INST-1105', () => {
 
         expect(result.ok).toBe(true)
         if (result.ok) {
-          expect(result.data.fileUrl).toContain(TEST_CLOUDFRONT_DOMAIN)
+          expect(result.data.s3Key).toContain(`${TEST_MOC_ID}/instructions/`)
         }
       })
     })

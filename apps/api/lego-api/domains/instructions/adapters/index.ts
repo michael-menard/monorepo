@@ -7,6 +7,7 @@
 export { createInstructionRepository, createFileRepository } from './repositories.js'
 export {
   createFileStorage,
+  buildFileUrl,
   generateInstructionFileKey,
   generateThumbnailKey,
   generateGalleryImageKey,

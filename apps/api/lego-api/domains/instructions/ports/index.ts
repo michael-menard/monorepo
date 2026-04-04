@@ -100,21 +100,16 @@ export interface FileRepository {
 
 export interface FileStorage {
   /**
-   * Upload a file and return the URL
+   * Upload a file and return the S3 key
    */
   upload(
     key: string,
     buffer: Buffer,
     contentType: string,
-  ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
+  ): Promise<Result<{ key: string }, 'UPLOAD_FAILED'>>
 
   /**
    * Delete a file by key
    */
   delete(key: string): Promise<Result<void, 'DELETE_FAILED'>>
-
-  /**
-   * Extract S3 key from URL (for deletion)
-   */
-  extractKeyFromUrl(url: string): string | null
 }

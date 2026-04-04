@@ -50,7 +50,6 @@ const mockFiles: MocFile[] = [
     id: 'file-1',
     mocId: '123e4567-e89b-12d3-a456-426614174000',
     fileType: 'instruction',
-    fileUrl: 'https://s3.amazonaws.com/bucket/instructions.pdf',
     originalFilename: 'castle-instructions.pdf',
     mimeType: 'application/pdf',
     s3Key: 'instructions/user-123/castle-instructions.pdf',
@@ -61,7 +60,6 @@ const mockFiles: MocFile[] = [
     id: 'file-2',
     mocId: '123e4567-e89b-12d3-a456-426614174000',
     fileType: 'parts-list',
-    fileUrl: 'https://s3.amazonaws.com/bucket/parts-list.csv',
     originalFilename: 'castle-parts.csv',
     mimeType: 'text/csv',
     s3Key: 'parts-lists/user-123/castle-parts.csv',
@@ -72,7 +70,6 @@ const mockFiles: MocFile[] = [
     id: 'file-3',
     mocId: '123e4567-e89b-12d3-a456-426614174000',
     fileType: 'gallery-image',
-    fileUrl: 'https://s3.amazonaws.com/bucket/gallery-1.jpg',
     originalFilename: 'castle-gallery-1.jpg',
     mimeType: 'image/jpeg',
     s3Key: 'gallery/user-123/castle-gallery-1.jpg',
@@ -92,7 +89,6 @@ const mockFileWithS3Key = {
   id: 'file-1',
   mocId: '123e4567-e89b-12d3-a456-426614174000',
   fileType: 'instruction',
-  fileUrl: 'https://s3.amazonaws.com/bucket/instructions.pdf',
   originalFilename: 'castle-instructions.pdf',
   mimeType: 'application/pdf',
   s3Key: 'instructions/user-123/castle-instructions.pdf',
@@ -239,7 +235,7 @@ describe('MocService - INST-1101', () => {
         expect(instructionFile).toBeDefined()
         expect(instructionFile!.originalFilename).toBe('castle-instructions.pdf')
         expect(instructionFile!.mimeType).toBe('application/pdf')
-        expect(instructionFile!.fileUrl).toContain('https://')
+        expect(instructionFile!.s3Key).toBeDefined()
         expect(instructionFile!.createdAt).toBeInstanceOf(Date)
 
         const partsListFile = result.data.files.find(f => f.fileType === 'parts-list')
@@ -326,7 +322,7 @@ describe('MocService - INST-1101', () => {
           expect(file.id).toBeDefined()
           expect(file.mocId).toBe(mockMoc.id)
           expect(file.fileType).toBeDefined()
-          expect(file.fileUrl).toBeDefined()
+          expect(file.s3Key).toBeDefined()
           expect(file.originalFilename).toBeDefined()
           expect(file.mimeType).toBeDefined()
           expect(file.createdAt).toBeInstanceOf(Date)
@@ -676,7 +672,6 @@ describe('MocService - INST-1101', () => {
         id: `file-${i}`,
         mocId: mockMoc.id,
         fileType: i % 3 === 0 ? 'instruction' : i % 3 === 1 ? 'parts-list' : 'gallery-image',
-        fileUrl: `https://s3.amazonaws.com/bucket/file-${i}.pdf`,
         originalFilename: `file-${i}.pdf`,
         mimeType: 'application/pdf',
         s3Key: `uploads/user-123/${mockMoc.id}/file-${i}.pdf`,

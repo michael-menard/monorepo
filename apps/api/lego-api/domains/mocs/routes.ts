@@ -45,21 +45,21 @@ const s3Endpoint = process.env.S3_ENDPOINT
 const presignClient = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
   ...(s3Endpoint ? { endpoint: s3Endpoint, forcePathStyle: true } : {}),
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  },
 })
 const presignBucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET || ''
 
-async function presignFileUrl(fileUrl: string): Promise<string> {
+async function presignS3Key(s3Key: string): Promise<string> {
   try {
-    // Parse bucket + key from the stored fileUrl
-    const urlObj = new URL(fileUrl)
-    const pathParts = urlObj.pathname.split('/').filter(Boolean)
-    const bucket = pathParts[0]
-    const key = pathParts.slice(1).join('/')
-    if (!bucket || !key) return fileUrl
-    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+    const command = new GetObjectCommand({ Bucket: presignBucket, Key: s3Key })
     return await getSignedUrl(presignClient, command, { expiresIn: 3600 })
   } catch {
-    return fileUrl
+    // Fallback: construct a direct URL
+    const { buildFileUrl } = await import('../instructions/adapters/storage.js')
+    return buildFileUrl(s3Key)
   }
 }
 const cloudfrontDomain = process.env.CLOUDFRONT_DOMAIN
@@ -114,7 +114,6 @@ async function incrementRateLimit(userId: string) {
 async function insertMocFile(data: {
   mocId: string
   fileType: string
-  fileUrl: string
   originalFilename: string
   mimeType: string
   s3Key: string
@@ -124,10 +123,9 @@ async function insertMocFile(data: {
     .values({
       mocId: data.mocId,
       fileType: data.fileType,
-      fileUrl: data.fileUrl,
+      s3Key: data.s3Key,
       originalFilename: data.originalFilename,
       mimeType: data.mimeType,
-      s3Key: data.s3Key,
     })
     .returning()
 
@@ -135,7 +133,6 @@ async function insertMocFile(data: {
     id: row.id,
     mocId: row.mocId,
     fileType: row.fileType,
-    fileUrl: row.fileUrl,
     originalFilename: row.originalFilename,
     mimeType: row.mimeType,
     s3Key: row.s3Key,
@@ -250,7 +247,7 @@ mocs.get('/', async c => {
         isFeatured: item.isFeatured,
         isVerified: item.isVerified,
         tags: item.tags,
-        thumbnailUrl: item.thumbnailUrl ? await presignFileUrl(item.thumbnailUrl) : null,
+        thumbnailUrl: item.thumbnailUrl ? await presignS3Key(item.thumbnailUrl) : null,
         totalPieceCount: item.totalPieceCount,
         publishedAt:
           item.publishedAt instanceof Date
@@ -468,12 +465,12 @@ mocs.get('/:id', async c => {
         mimeType: file.mimeType,
         s3Key: file.s3Key || '',
         uploadedAt: file.createdAt instanceof Date ? file.createdAt.toISOString() : file.createdAt,
-        downloadUrl: await presignFileUrl(file.fileUrl),
+        downloadUrl: await presignS3Key(file.s3Key),
       })),
     )
 
-    // Presign thumbnailUrl if present
-    const thumbnailUrl = moc.thumbnailUrl ? await presignFileUrl(moc.thumbnailUrl) : null
+    // Presign thumbnailUrl if present (thumbnailUrl now stores an s3Key)
+    const thumbnailUrl = moc.thumbnailUrl ? await presignS3Key(moc.thumbnailUrl) : null
 
     // Map stats
     const stats = {
@@ -489,6 +486,7 @@ mocs.get('/:id', async c => {
       theme: moc.theme,
       tags: moc.tags,
       thumbnailUrl,
+      author: moc.author ?? null,
       createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
       updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
       files: mappedFiles,
@@ -792,8 +790,13 @@ mocs.post('/:id/upload-sessions/:sessionId/complete', async c => {
       }
     }
 
-    // Validate and return response
-    const response = CompleteUploadSessionResponseSchema.parse(result.data)
+    // Transform s3Key to fileUrl for API response
+    const { buildFileUrl } = await import('../instructions/adapters/storage.js')
+    const { s3Key: _key, ...rest } = result.data
+    const response = CompleteUploadSessionResponseSchema.parse({
+      ...rest,
+      fileUrl: buildFileUrl(result.data.s3Key),
+    })
     return c.json(response, 200)
   } catch (error) {
     logger.error('Unhandled error in POST /mocs/:id/upload-sessions/:sessionId/complete', error, {

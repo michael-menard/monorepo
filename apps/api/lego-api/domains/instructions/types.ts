@@ -176,7 +176,7 @@ export const MocFileSchema = z.object({
   id: z.string().uuid(),
   mocId: z.string().uuid(),
   fileType: z.string(),
-  fileUrl: z.string().url(),
+  s3Key: z.string(),
   originalFilename: z.string().nullable(),
   mimeType: z.string().nullable(),
   createdAt: z.string(),

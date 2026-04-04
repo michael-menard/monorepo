@@ -361,20 +361,11 @@ export function createMocService(deps: MocServiceDeps) {
         }
 
         // AC-6, AC-7, AC-8, AC-13: Generate presigned S3 URL
-        // Derive s3Key (and bucket) from fileUrl if not stored directly
-        let s3Key = file.s3Key
-        let fileBucket = bucket
-        if (!s3Key && file.fileUrl) {
-          // fileUrl format: http(s)://endpoint/bucket/key...
-          const urlObj = new URL(file.fileUrl)
-          const pathParts = urlObj.pathname.split('/').filter(Boolean)
-          // First segment is bucket name, rest is the key
-          fileBucket = pathParts[0]
-          s3Key = pathParts.slice(1).join('/')
-        }
+        const s3Key = file.s3Key
+        const fileBucket = bucket
 
         if (!s3Key) {
-          logger.error('File missing s3Key and fileUrl', undefined, { userId, mocId, fileId })
+          logger.error('File missing s3Key', undefined, { userId, mocId, fileId })
           return err('DB_ERROR')
         }
 
@@ -440,7 +431,6 @@ export interface UploadSessionServiceDeps {
   insertMocFile: (data: {
     mocId: string
     fileType: string
-    fileUrl: string
     originalFilename: string
     mimeType: string
     s3Key: string
@@ -465,7 +455,7 @@ export interface CompleteUploadSessionResult {
   id: string
   mocId: string
   fileType: string
-  fileUrl: string
+  s3Key: string
   originalFilename: string
   mimeType: string
   fileSize: number
@@ -780,16 +770,10 @@ export function createUploadSessionService(deps: UploadSessionServiceDeps) {
 
       // AC57-61: Transaction - Insert moc_files + Update session status
       try {
-        // Generate public URL
-        const fileUrl = deps.cloudfrontDomain
-          ? `https://${deps.cloudfrontDomain}/${s3Key}`
-          : s3Storage.getPublicUrl(s3Bucket, s3Key)
-
-        // AC58: Insert moc_files record
+        // AC58: Insert moc_files record (store s3Key, not full URL)
         const mocFile = await deps.insertMocFile({
           mocId,
           fileType: 'instruction',
-          fileUrl,
           originalFilename: session.originalFilename || 'unknown',
           mimeType: 'application/pdf',
           s3Key,
@@ -815,7 +799,7 @@ export function createUploadSessionService(deps: UploadSessionServiceDeps) {
           id: mocFile.id,
           mocId,
           fileType: 'instruction',
-          fileUrl,
+          s3Key,
           originalFilename: session.originalFilename || 'unknown',
           mimeType: 'application/pdf',
           fileSize: actualSize,

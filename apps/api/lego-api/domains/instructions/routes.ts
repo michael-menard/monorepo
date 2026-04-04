@@ -9,8 +9,28 @@ import {
   createInstructionRepository,
   createFileRepository,
   createFileStorage,
+  buildFileUrl,
 } from './adapters/index.js'
 import { CreateMocInputSchema, UpdateMocInputSchema, ListMocsQuerySchema } from './types.js'
+import type { MocFile, MocInstructions } from './types.js'
+
+/**
+ * Transform internal MocFile (s3Key) to API response (fileUrl)
+ */
+function toFileResponse(file: MocFile) {
+  const { s3Key, ...rest } = file
+  return { ...rest, fileUrl: buildFileUrl(s3Key) }
+}
+
+/**
+ * Transform MOC thumbnailUrl (s3Key) to full URL in API response
+ */
+function toMocResponse(moc: MocInstructions) {
+  return {
+    ...moc,
+    thumbnailUrl: moc.thumbnailUrl ? buildFileUrl(moc.thumbnailUrl) : null,
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Setup: Wire dependencies
@@ -63,7 +83,10 @@ instructions.get('/mocs', async c => {
     { search, type, status, theme },
   )
 
-  return c.json(result)
+  return c.json({
+    ...result,
+    data: result.data.map(toMocResponse),
+  })
 })
 
 /**
@@ -80,7 +103,10 @@ instructions.get('/mocs/:id', async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data)
+  return c.json({
+    moc: toMocResponse(result.data.moc),
+    files: result.data.files.map(toFileResponse),
+  })
 })
 
 /**
@@ -116,7 +142,7 @@ instructions.post('/mocs', requireQuota('mocs'), async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data, 201)
+  return c.json(toMocResponse(result.data), 201)
 })
 
 /**
@@ -147,7 +173,7 @@ instructions.patch('/mocs/:id', async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data)
+  return c.json(toMocResponse(result.data))
 })
 
 /**
@@ -191,7 +217,7 @@ instructions.get('/mocs/:id/files', async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data)
+  return c.json(result.data.map(toFileResponse))
 })
 
 /**
@@ -247,7 +273,7 @@ instructions.post('/mocs/:id/files/instruction', async c => {
     )
   }
 
-  return c.json(result.data, 201)
+  return c.json(toFileResponse(result.data), 201)
 })
 
 /**
@@ -289,7 +315,7 @@ instructions.post('/mocs/:id/files/parts-list', async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data, 201)
+  return c.json(toFileResponse(result.data), 201)
 })
 
 /**
@@ -332,7 +358,9 @@ instructions.post('/mocs/:id/thumbnail', async c => {
   }
 
   // Return only the thumbnailUrl to match frontend UploadThumbnailResponseSchema
-  return c.json({ thumbnailUrl: result.data.thumbnailUrl })
+  return c.json({
+    thumbnailUrl: result.data.thumbnailUrl ? buildFileUrl(result.data.thumbnailUrl) : null,
+  })
 })
 
 /**

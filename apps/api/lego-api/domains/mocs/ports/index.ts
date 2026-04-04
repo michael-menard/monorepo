@@ -55,7 +55,6 @@ export interface MocFile {
   id: string
   mocId: string
   fileType: string
-  fileUrl: string
   originalFilename: string | null
   mimeType: string | null
   s3Key: string
@@ -66,6 +65,7 @@ export interface MocFile {
 export interface MocWithFiles extends Moc {
   files: MocFile[]
   totalPieceCount: number | null
+  author: string | null
 }
 
 export interface MocRepository {

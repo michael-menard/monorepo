@@ -3,18 +3,35 @@ import type { Result } from '@repo/api-core'
 import type { FileStorage } from '../ports/index.js'
 
 /**
+ * Build a full URL from an S3 key.
+ * Works with both local MinIO and production S3.
+ */
+export function buildFileUrl(s3Key: string): string {
+  const endpoint = process.env.S3_ENDPOINT || `https://${process.env.S3_BUCKET}.s3.amazonaws.com`
+  const bucket = process.env.S3_BUCKET || 'lego-moc-files'
+
+  // MinIO-style: http://localhost:9000/bucket/key
+  if (endpoint.includes('localhost') || endpoint.includes('127.0.0.1')) {
+    return `${endpoint}/${bucket}/${s3Key}`
+  }
+
+  // AWS S3-style: https://bucket.s3.amazonaws.com/key
+  return `https://${bucket}.s3.amazonaws.com/${s3Key}`
+}
+
+/**
  * Create a FileStorage implementation using S3
  */
 export function createFileStorage(): FileStorage {
-  const bucket = process.env.S3_BUCKET
-
   return {
     async upload(
       key: string,
       buffer: Buffer,
       contentType: string,
-    ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>> {
-      return uploadToS3(key, buffer, contentType)
+    ): Promise<Result<{ key: string }, 'UPLOAD_FAILED'>> {
+      const result = await uploadToS3(key, buffer, contentType)
+      if (!result.ok) return result
+      return ok({ key })
     },
 
     async delete(key: string): Promise<Result<void, 'DELETE_FAILED'>> {
@@ -25,26 +42,6 @@ export function createFileStorage(): FileStorage {
         return ok(undefined)
       }
       return ok(undefined)
-    },
-
-    extractKeyFromUrl(url: string): string | null {
-      if (!bucket) return null
-
-      // URL format: https://{bucket}.s3.amazonaws.com/{key}
-      // or: https://{bucket}.s3.{region}.amazonaws.com/{key}
-      const patterns = [
-        new RegExp(`https://${bucket}\\.s3\\.amazonaws\\.com/(.+)`),
-        new RegExp(`https://${bucket}\\.s3\\.[^/]+\\.amazonaws\\.com/(.+)`),
-      ]
-
-      for (const pattern of patterns) {
-        const match = url.match(pattern)
-        if (match?.[1]) {
-          return match[1]
-        }
-      }
-
-      return null
     },
   }
 }

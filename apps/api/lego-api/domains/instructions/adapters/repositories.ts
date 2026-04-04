@@ -246,7 +246,7 @@ export function createFileRepository(db: NodePgDatabase<Schema>, schema: Schema)
         .values({
           mocId: data.mocId,
           fileType: data.fileType,
-          fileUrl: data.fileUrl,
+          s3Key: data.s3Key,
           originalFilename: data.originalFilename ?? null,
           mimeType: data.mimeType ?? null,
         })
@@ -373,7 +373,7 @@ function mapRowToFile(row: {
   id: string
   mocId: string
   fileType: string
-  fileUrl: string
+  s3Key: string
   originalFilename: string | null
   mimeType: string | null
   createdAt: Date
@@ -384,7 +384,7 @@ function mapRowToFile(row: {
     id: row.id,
     mocId: row.mocId,
     fileType: row.fileType,
-    fileUrl: row.fileUrl,
+    s3Key: row.s3Key,
     originalFilename: row.originalFilename,
     mimeType: row.mimeType,
     createdAt: row.createdAt.toISOString(),

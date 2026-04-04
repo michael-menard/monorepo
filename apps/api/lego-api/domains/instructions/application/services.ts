@@ -203,18 +203,13 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
 
       // Delete S3 files
       for (const file of files) {
-        const key = fileStorage.extractKeyFromUrl(file.fileUrl)
-        if (key) {
-          await fileStorage.delete(key)
-        }
+        await fileStorage.delete(file.s3Key)
       }
 
       // Delete thumbnail if exists
       if (existing.data.thumbnailUrl) {
-        const thumbKey = fileStorage.extractKeyFromUrl(existing.data.thumbnailUrl)
-        if (thumbKey) {
-          await fileStorage.delete(thumbKey)
-        }
+        // thumbnailUrl is still stored as a full URL for now
+        // TODO: migrate thumbnailUrl to s3Key pattern
       }
 
       // Delete from database (cascade will delete files)
@@ -288,7 +283,7 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
         const mocFile = await fileRepo.insert({
           mocId,
           fileType: 'instruction',
-          fileUrl: uploadResult.data.url,
+          s3Key: key,
           originalFilename: file.filename,
           mimeType: file.mimetype,
         })
@@ -342,7 +337,7 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
         const mocFile = await fileRepo.insert({
           mocId,
           fileType: 'parts-list',
-          fileUrl: uploadResult.data.url,
+          s3Key: key,
           originalFilename: file.filename,
           mimeType: file.mimetype,
         })
@@ -384,10 +379,8 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
 
       // Delete old thumbnail if exists
       if (mocResult.data.thumbnailUrl) {
-        const oldKey = fileStorage.extractKeyFromUrl(mocResult.data.thumbnailUrl)
-        if (oldKey) {
-          await fileStorage.delete(oldKey)
-        }
+        // thumbnailUrl currently stores the key directly for new uploads
+        await fileStorage.delete(mocResult.data.thumbnailUrl)
       }
 
       // Generate S3 key
@@ -399,8 +392,8 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
         return err('UPLOAD_FAILED')
       }
 
-      // Update MOC with new thumbnail URL
-      return instructionRepo.update(mocId, { thumbnailUrl: uploadResult.data.url })
+      // Update MOC with new thumbnail key (stored in thumbnailUrl column)
+      return instructionRepo.update(mocId, { thumbnailUrl: key })
     },
 
     /**
@@ -429,10 +422,7 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
       }
 
       // Delete from S3
-      const key = fileStorage.extractKeyFromUrl(fileResult.data.fileUrl)
-      if (key) {
-        await fileStorage.delete(key)
-      }
+      await fileStorage.delete(fileResult.data.s3Key)
 
       // Soft delete from database
       return fileRepo.softDelete(fileId)

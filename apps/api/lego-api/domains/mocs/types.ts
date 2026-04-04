@@ -69,6 +69,7 @@ export const GetMocResponseSchema = z.object({
   theme: z.string().nullable(),
   tags: z.array(z.string()).nullable(),
   thumbnailUrl: z.string().nullable(),
+  author: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   files: z.array(MocDetailFileSchema),

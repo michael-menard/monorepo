@@ -98,18 +98,18 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         id: file.id,
         mocId: file.mocId,
         fileType: file.fileType,
-        fileUrl: file.fileUrl,
         originalFilename: file.originalFilename,
         mimeType: file.mimeType,
         s3Key: file.s3Key,
-        createdAt: file.createdAt instanceof Date ? file.createdAt.toISOString() : file.createdAt,
-        updatedAt: file.updatedAt instanceof Date ? file.updatedAt.toISOString() : file.updatedAt,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt,
       }))
 
       return {
         ...mapRowToMoc(result),
         files,
         totalPieceCount: result.totalPieceCount,
+        author: result.author ?? null,
       }
     },
 
@@ -234,14 +234,11 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         id: result.id,
         mocId: result.mocId,
         fileType: result.fileType,
-        fileUrl: result.fileUrl,
         originalFilename: result.originalFilename,
         mimeType: result.mimeType,
         s3Key: result.s3Key,
-        createdAt:
-          result.createdAt instanceof Date ? result.createdAt.toISOString() : result.createdAt,
-        updatedAt:
-          result.updatedAt instanceof Date ? result.updatedAt.toISOString() : result.updatedAt,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
       }
     },
   }

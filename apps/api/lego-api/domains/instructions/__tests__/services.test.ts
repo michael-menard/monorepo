@@ -55,7 +55,7 @@ const mockFile: MocFile = {
   id: 'file-123',
   mocId: '123e4567-e89b-12d3-a456-426614174000',
   fileType: 'instruction',
-  fileUrl: 'https://bucket.s3.amazonaws.com/mocs/user-123/123e4567/instructions/1234567890.pdf',
+  s3Key: 'mocs/user-123/123e4567/instructions/1234567890.pdf',
   originalFilename: 'instructions.pdf',
   mimeType: 'application/pdf',
   createdAt: new Date(),
@@ -90,9 +90,8 @@ function createMockFileRepo(): FileRepository {
 
 function createMockStorage(): FileStorage {
   return {
-    upload: vi.fn().mockResolvedValue({ ok: true, data: { url: 'https://bucket.s3.amazonaws.com/test.pdf' } }),
+    upload: vi.fn().mockResolvedValue({ ok: true, data: { key: 'mocs/user-123/123e4567/test.pdf' } }),
     delete: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
-    extractKeyFromUrl: vi.fn().mockReturnValue('mocs/user-123/123e4567/test.pdf'),
   }
 }
 
