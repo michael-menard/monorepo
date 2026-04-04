@@ -3905,7 +3905,13 @@ export async function handleKbCreateStory(
         validated.feature,
         validated.acceptance_criteria,
         correlationId,
-      ).catch(() => {}) // swallow — embedding is best-effort
+      ).catch(err => {
+        logger.warn('Story embedding fire-and-forget failed', {
+          correlation_id: correlationId,
+          story_id: validated.story_id,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
     }
 
     const queryTimeMs = Date.now() - startTime
@@ -4104,7 +4110,13 @@ export async function handleKbUpdateStory(
         story.feature,
         undefined,
         correlationId,
-      ).catch(() => {}) // swallow — embedding is best-effort
+      ).catch(err => {
+        logger.warn('Story embedding fire-and-forget failed', {
+          correlation_id: correlationId,
+          story_id: validated.story_id,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
     }
 
     const queryTimeMs = Date.now() - startTime

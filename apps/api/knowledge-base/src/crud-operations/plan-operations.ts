@@ -33,6 +33,7 @@ const planColumns = {
   parentPlanId: plans.parentPlanId,
   tags: plans.tags,
   supersededBy: plans.supersededBy,
+  sortOrder: plans.sortOrder,
   rawContent: plans.rawContent,
   sections: plans.sections,
   createdAt: plans.createdAt,
@@ -270,6 +271,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** Plan slug that this plan supersedes/replaces (forward link from V2 → original) */
   supersedes_plan_slug: z.string().nullable().optional(),
+
+  /** Work order number for sequencing plans (lower = do first, null to clear) */
+  sort_order: z.number().int().min(1).nullable().optional(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -613,6 +617,7 @@ export async function kb_update_plan(
   if (validated.superseded_by !== undefined) updates.supersededBy = validated.superseded_by
   if (validated.supersedes_plan_slug !== undefined)
     updates.supersedesPlanSlug = validated.supersedes_plan_slug
+  if (validated.sort_order !== undefined) updates.sortOrder = validated.sort_order
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null

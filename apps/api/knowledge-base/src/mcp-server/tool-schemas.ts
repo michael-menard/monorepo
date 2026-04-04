@@ -2840,7 +2840,7 @@ Parameters:
 - story_file (optional): Story file name (default: story.yaml)
 - story_type (optional): 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt'
 - points (optional): Story points estimate
-- priority (optional): 'critical' | 'high' | 'medium' | 'low'
+- priority (optional): 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
 - state (optional): Workflow state
 - phase (optional): Implementation phase
 - blocked (optional): Whether story is blocked
@@ -2938,7 +2938,7 @@ Parameters:
 - states (optional): Filter by multiple workflow states (takes precedence over state)
 - phase (optional): Filter by implementation phase (setup, implementation, etc.)
 - blocked (optional): Filter by blocked status (true/false)
-- priority (optional): Filter by priority (critical, high, medium, low)
+- priority (optional): Filter by priority ('P1', 'P2', 'P3', 'P4', 'P5')
 - plan_tag (optional): Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui', 'testing')
 - plan_status (optional): Filter stories linked to plans with this status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
 - plan_slug (optional): Filter stories linked to this specific plan slug via plan_story_links (e.g., 'langgraph-integration-adapters')
@@ -3090,7 +3090,7 @@ Returns the highest priority story that is:
 - Not blocked
 - Has all dependencies satisfied (from story_dependencies table)
 
-Stories are sorted by priority (critical > high > medium > low), then by created_at (oldest first).
+Stories are sorted by priority (P1 > P2 > P3 > P4 > P5), then by created_at (oldest first).
 
 Parameters:
 - epic (required): Epic name to find next story in
@@ -3216,7 +3216,7 @@ Required keys in story_yaml:
 
 Optional keys in story_yaml:
 - state (string): Workflow state (default: 'backlog')
-- priority (string): 'critical' | 'high' | 'medium' | 'low'
+- priority (string): 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
 - description (string): Human-readable description
 - blocked_reason (string): Reason for being blocked
 - blocked_by_story (string): Story ID that blocks this one
@@ -3718,6 +3718,7 @@ Parameters:
 - dependencies (optional): Plan slugs that must reach 'implemented' before this plan can start (null to clear)
 - parent_plan_slug (optional): Parent plan slug for hierarchy (null to clear, string to set)
 - supersedes_plan_slug (optional): Plan slug that this plan supersedes/replaces (null to clear)
+- sort_order (optional): Work order number for sequencing plans — lower numbers are done first (null to clear)
 
 Returns: Updated plan object (includes parentPlanId)
 
