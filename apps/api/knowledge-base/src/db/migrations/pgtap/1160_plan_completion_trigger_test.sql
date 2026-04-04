@@ -94,7 +94,7 @@ SELECT is(
 
 SELECT is(
   (SELECT COUNT(*)::int FROM workflow.plan_execution_log
-   WHERE plan_slug = 'test-plan-1160' AND entry_type = 'plan_completed'),
+   WHERE plan_slug = 'test-plan-1160' AND entry_type = 'status_change'),
   1,
   'plan_execution_log has exactly 1 plan_completed entry'
 );

@@ -56,15 +56,19 @@ BEGIN
       WHERE plan_slug = _plan_slug
         AND status != 'implemented';
 
-      -- Write plan_status_history
+      -- Write plan_status_history (only if not already written for this transition)
       INSERT INTO workflow.plan_status_history (plan_slug, from_status, to_status, changed_at)
-      VALUES (_plan_slug, _plan_status, 'implemented', NOW());
+      SELECT _plan_slug, _plan_status, 'implemented', NOW()
+      WHERE NOT EXISTS (
+        SELECT 1 FROM workflow.plan_status_history
+        WHERE plan_slug = _plan_slug AND to_status = 'implemented'
+      );
 
       -- Write plan_execution_log
       INSERT INTO workflow.plan_execution_log (plan_slug, entry_type, story_id, message, metadata)
       VALUES (
         _plan_slug,
-        'plan_completed',
+        'status_change',
         NEW.story_id,
         'Plan auto-promoted to implemented — all ' || _total_stories || ' linked stories are completed or cancelled',
         jsonb_build_object(
