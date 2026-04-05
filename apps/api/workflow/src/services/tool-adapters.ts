@@ -258,6 +258,105 @@ export function createSearchCodebaseAdapter(): SearchCodebaseFn {
 }
 
 // ============================================================================
+// Codebase Search (Structured) Adapter — for story_scout
+// ============================================================================
+
+/**
+ * Structured codebase search result for story_scout grounding.
+ */
+export type CodebaseSearchResult = {
+  files: string[]
+  functions: Array<{ file: string; name: string; signature?: string }>
+  patterns: string[]
+}
+
+export type CodebaseSearchStructuredFn = (terms: string[]) => Promise<CodebaseSearchResult>
+
+/**
+ * Creates a structured codebase search adapter for the story_scout node.
+ *
+ * Takes multiple search terms, runs ripgrep for each, and extracts:
+ * - files: unique file paths that match any term
+ * - functions: function/class/export declarations found in matching files
+ * - patterns: existing naming conventions detected
+ */
+export function createCodebaseSearchAdapter(): CodebaseSearchStructuredFn {
+  return async (terms: string[]): Promise<CodebaseSearchResult> => {
+    const root = getMonorepoRoot()
+    const allFiles = new Set<string>()
+    const functions: Array<{ file: string; name: string; signature?: string }> = []
+    const patterns = new Set<string>()
+
+    for (const term of terms.slice(0, 10)) {
+      try {
+        // Search for the term in source files only
+        const { stdout } = await execAsync(
+          `rg --color=never --files-with-matches -g '*.{ts,tsx,js,jsx}' -g '!node_modules' -g '!dist' -g '!.next' "${term.replace(/"/g, '\\"')}" "${root}" 2>/dev/null | head -20`,
+          { timeout: 15000, maxBuffer: 5 * 1024 * 1024 },
+        )
+
+        for (const file of stdout.trim().split('\n').filter(Boolean)) {
+          const relPath = relative(root, file)
+          allFiles.add(relPath)
+        }
+      } catch {
+        // term not found — continue
+      }
+    }
+
+    // For each found file, extract function/class/export declarations
+    const filesToScan = [...allFiles].slice(0, 30)
+    for (const relPath of filesToScan) {
+      try {
+        const absPath = resolve(root, relPath)
+        const { stdout } = await execAsync(
+          `rg --color=never -n "^export (function|const|class|type|interface|async function) " "${absPath}" 2>/dev/null | head -10`,
+          { timeout: 5000 },
+        )
+
+        for (const line of stdout.trim().split('\n').filter(Boolean)) {
+          const match = line.match(
+            /^(\d+):export (?:async )?(?:function|const|class|type|interface)\s+(\w+)/,
+          )
+          if (match) {
+            functions.push({
+              file: relPath,
+              name: match[2],
+              signature: line
+                .slice(line.indexOf(':') + 1)
+                .trim()
+                .slice(0, 120),
+            })
+          }
+        }
+
+        // Detect naming patterns from the file path
+        if (relPath.includes('__tests__')) patterns.add('__tests__/ directories for tests')
+        if (relPath.includes('.test.')) patterns.add('.test.ts files for tests')
+        if (relPath.endsWith('index.ts')) patterns.add('index.ts barrel files')
+        if (relPath.includes('/hooks/')) patterns.add('hooks/ directory for React hooks')
+        if (relPath.includes('__types__')) patterns.add('__types__/ directories for Zod schemas')
+      } catch {
+        // ignore scan errors
+      }
+    }
+
+    logger.info('tool-adapters: structured codebase search complete', {
+      terms: terms.length,
+      filesFound: allFiles.size,
+      functionsFound: functions.length,
+      patternsFound: patterns.size,
+    })
+
+    return {
+      files: [...allFiles].slice(0, 50),
+      functions: functions.slice(0, 50),
+      patterns: [...patterns],
+    }
+  }
+}
+
+// ============================================================================
 // List Directory Adapter
 // ============================================================================
 
@@ -579,6 +678,7 @@ export function createToolAdapters() {
     readFile: createReadFileAdapter(),
     writeFile: createWriteFileAdapter(),
     searchCodebase: createSearchCodebaseAdapter(),
+    codebaseSearchStructured: createCodebaseSearchAdapter(),
     listDirectory: createListDirectoryAdapter(),
     runTests: createRunTestsAdapter(),
     diffReader: createDiffReaderAdapter(),

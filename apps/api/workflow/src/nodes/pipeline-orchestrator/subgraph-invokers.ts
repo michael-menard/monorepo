@@ -487,6 +487,7 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
         const graphConfig: DevImplementV2GraphConfig = {
           ...adapters,
           kbStoryAdapter: kbAdapters.kbStory,
+          codebaseSearch: toolAdapters.codebaseSearchStructured,
           queryKb: kbAdapters.queryKb,
           searchCodebase: toolAdapters.searchCodebase,
           readFile: toolAdapters.readFile,
