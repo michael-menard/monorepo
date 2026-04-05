@@ -116,10 +116,10 @@ export const ModelConfigSchema = z.object({
   // Format: 'ollama:<model>' for local, 'claude-code/<model>' for Claude -p
   planRefinement: z.string().default('claude-code/opus'),
   storyGeneration: z.string().default('claude-code/sonnet'),
-  devExecutor: z.string().default('ollama:qwen2.5-coder:14b'),
-  devPlanner: z.string().default('ollama:qwen2.5-coder:14b'),
-  reviewAgent: z.string().default('ollama:qwen2.5-coder:7b'),
-  qaVerifier: z.string().default('ollama:deepseek-coder-v2:latest'),
+  devExecutor: z.string().default('ollama:minimax-m2.7:cloud'),
+  devPlanner: z.string().default('ollama:minimax-m2.7:cloud'),
+  reviewAgent: z.string().default('ollama:minimax-m2.7:cloud'),
+  qaVerifier: z.string().default('ollama:minimax-m2.7:cloud'),
   // Legacy fields for backward compat
   primaryModel: z.string().default('sonnet'),
   escalationModel: z.string().default('opus'),
