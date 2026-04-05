@@ -29,6 +29,7 @@ import type { InputMode } from '../state/pipeline-orchestrator-v2-state.js'
 import { defaultShellExec } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import { createNotiAdapter, createNoopNotiAdapter } from '../services/noti-adapter.js'
 import { createLlmAdapterFactory } from '../services/llm-adapter-factory.js'
+import { DEFAULT_MODEL_CONFIG } from '../config/model-config.js'
 import { storyListAdapter, getNextPlanWithEligibleStories } from '../services/kb-adapters.js'
 
 // ============================================================================
@@ -306,20 +307,10 @@ async function main(): Promise<void> {
     monorepoRoot,
     defaultBaseBranch,
     ollamaBaseUrl,
-    requiredModel: 'qwen2.5-coder:14b',
+    requiredModel: DEFAULT_MODEL_CONFIG.requiredLocalModel,
     maxStories: 0,
     dryRun: cliArgs.dryRun,
-    modelConfig: {
-      planRefinement: 'claude-code/opus',
-      storyGeneration: 'claude-code/sonnet',
-      devExecutor: 'ollama:qwen3-coder-next:cloud',
-      devPlanner: 'ollama:qwen3-coder-next:cloud',
-      reviewAgent: 'ollama:minimax-m2.7:cloud',
-      qaVerifier: 'ollama:deepseek-v3.2:cloud',
-      primaryModel: 'sonnet',
-      escalationModel: 'opus',
-      ollamaModel: 'qwen2.5-coder:14b',
-    },
+    modelConfig: DEFAULT_MODEL_CONFIG,
   }
 
   try {
@@ -419,19 +410,9 @@ async function runContinuousMode(
         monorepoRoot: envConfig.monorepoRoot,
         defaultBaseBranch: envConfig.defaultBaseBranch,
         ollamaBaseUrl: envConfig.ollamaBaseUrl,
-        requiredModel: 'qwen2.5-coder:14b',
+        requiredModel: DEFAULT_MODEL_CONFIG.requiredLocalModel,
         maxStories: 0,
-        modelConfig: {
-          planRefinement: 'claude-code/opus',
-          storyGeneration: 'claude-code/sonnet',
-          devExecutor: 'ollama:qwen2.5-coder:14b',
-          devPlanner: 'ollama:qwen2.5-coder:14b',
-          reviewAgent: 'ollama:qwen2.5-coder:7b',
-          qaVerifier: 'ollama:deepseek-coder-v2:latest',
-          primaryModel: 'sonnet',
-          escalationModel: 'opus',
-          ollamaModel: 'qwen2.5-coder:14b',
-        },
+        modelConfig: DEFAULT_MODEL_CONFIG,
       }
 
       const result = await runPipelineSupervisor(supervisorConfig, supervisorAdapters)

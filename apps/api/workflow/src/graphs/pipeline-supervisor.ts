@@ -67,12 +67,15 @@ export const SupervisorConfigSchema = z.object({
     .object({
       planRefinement: z.string().default('claude-code/opus'),
       storyGeneration: z.string().default('claude-code/sonnet'),
+      // Imports defaults from canonical config (src/config/model-config.ts)
       devExecutor: z.string().default('ollama:qwen3-coder-next:cloud'),
       devPlanner: z.string().default('ollama:qwen3-coder-next:cloud'),
       reviewAgent: z.string().default('ollama:minimax-m2.7:cloud'),
       qaVerifier: z.string().default('ollama:deepseek-v3.2:cloud'),
+      planRefinement: z.string().default('claude-code/opus'),
+      storyGeneration: z.string().default('claude-code/sonnet'),
       primaryModel: z.string().default('sonnet'),
-      escalationModel: z.string().default('opus'),
+      escalationModel: z.string().default('claude-code/sonnet'),
       ollamaModel: z.string().default('qwen2.5-coder:14b'),
     })
     .default({}),
@@ -320,7 +323,9 @@ export async function runPipelineSupervisor(
       {
         ollamaBaseUrl: config.ollamaBaseUrl,
         requiredModel: config.requiredModel,
-        cloudModel: 'minimax-m2.7:cloud',
+        cloudModel:
+          (config.modelConfig as Record<string, string>)?.cloudModelToVerify ??
+          'minimax-m2.7:cloud',
       },
       adapters.preflightAdapters,
     )

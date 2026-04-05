@@ -111,22 +111,10 @@ export type RetryContext = z.infer<typeof RetryContextSchema>
 // Model Config
 // ============================================================================
 
-export const ModelConfigSchema = z.object({
-  // Per-stage model assignments
-  // Format: 'ollama:<model>' for local, 'claude-code/<model>' for Claude -p
-  planRefinement: z.string().default('claude-code/opus'),
-  storyGeneration: z.string().default('claude-code/sonnet'),
-  devExecutor: z.string().default('ollama:qwen3-coder-next:cloud'),
-  devPlanner: z.string().default('ollama:qwen3-coder-next:cloud'),
-  reviewAgent: z.string().default('ollama:minimax-m2.7:cloud'),
-  qaVerifier: z.string().default('ollama:deepseek-v3.2:cloud'),
-  // Legacy fields for backward compat
-  primaryModel: z.string().default('sonnet'),
-  escalationModel: z.string().default('opus'),
-  ollamaModel: z.string().default('qwen2.5-coder:14b'),
-})
-
-export type ModelConfig = z.infer<typeof ModelConfigSchema>
+// Re-export from canonical config — single source of truth for model assignments
+// To change models, edit: src/config/model-config.ts
+export { ModelConfigSchema, type ModelConfig } from '../config/model-config.js'
+import { ModelConfigSchema } from '../config/model-config.js'
 
 // ============================================================================
 // Resume Phase
