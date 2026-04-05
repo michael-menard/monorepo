@@ -62,6 +62,7 @@ export const SupervisorConfigSchema = z.object({
   ollamaBaseUrl: z.string().default('http://localhost:11434'),
   requiredModel: z.string().default('qwen2.5-coder:14b'),
   maxStories: z.number().int().min(0).default(0),
+  dryRun: z.boolean().default(false),
   modelConfig: z
     .object({
       primaryModel: z.string().default('sonnet'),
@@ -254,6 +255,56 @@ export async function runPipelineSupervisor(
   // Lazy-load heavy modules
   const subgraphs = await loadSubgraphInvokers()
   const emitter = await loadEventEmitter(adapters.eventEmitterAdapters)
+
+  // ---- Step 0: Self-check — verify all adapters and imports resolve ----
+  const selfCheckErrors: string[] = []
+
+  if (!adapters.storyListAdapter) selfCheckErrors.push('storyListAdapter is not configured')
+  if (!adapters.getStoryState) selfCheckErrors.push('getStoryState is not configured')
+  if (!adapters.kbAdapter) selfCheckErrors.push('kbAdapter is not configured')
+  if (!adapters.kbAdapter?.updateStoryStatus)
+    selfCheckErrors.push('kbAdapter.updateStoryStatus is not configured')
+  if (!adapters.kbAdapter?.writeArtifact)
+    selfCheckErrors.push('kbAdapter.writeArtifact is not configured')
+  if (!adapters.kbAdapter?.listStories)
+    selfCheckErrors.push('kbAdapter.listStories is not configured')
+  if (!subgraphs.createDevImplementWrapper)
+    selfCheckErrors.push('subgraph invoker: createDevImplementWrapper failed to load')
+  if (!subgraphs.createReviewWrapper)
+    selfCheckErrors.push('subgraph invoker: createReviewWrapper failed to load')
+  if (!subgraphs.createQAVerifyWrapper)
+    selfCheckErrors.push('subgraph invoker: createQAVerifyWrapper failed to load')
+  if (!subgraphs.transitionToCompleted)
+    selfCheckErrors.push('subgraph invoker: transitionToCompleted failed to load')
+
+  if (selfCheckErrors.length > 0) {
+    logger.error('supervisor: self-check failed — adapters or modules missing', {
+      errors: selfCheckErrors,
+    })
+    return {
+      finalPhase: 'error',
+      completed: [],
+      blocked: [],
+      errors: selfCheckErrors,
+      storiesProcessed: 0,
+      durationMs: Date.now() - startTime,
+    }
+  }
+
+  logger.info('supervisor: self-check passed — all adapters and modules loaded')
+
+  // ---- Dry-run mode: exit after self-check ----
+  if (config.dryRun) {
+    logger.info('supervisor: dry-run mode — self-check passed, exiting')
+    return {
+      finalPhase: 'pipeline_complete',
+      completed: [],
+      blocked: [],
+      errors: [],
+      storiesProcessed: 0,
+      durationMs: Date.now() - startTime,
+    }
+  }
 
   try {
     // ---- Step 1: Preflight ----

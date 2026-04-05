@@ -40,6 +40,7 @@ const CliArgsSchema = z.object({
   story: z.array(z.string()).optional(),
   concurrency: z.number().int().min(1).default(1),
   continuous: z.boolean().default(false),
+  dryRun: z.boolean().default(false),
   help: z.boolean().default(false),
 })
 
@@ -91,6 +92,12 @@ function parseArgs(argv: string[]): CliArgs {
       continue
     }
 
+    if (arg === '--dry-run') {
+      args.dryRun = true
+      i++
+      continue
+    }
+
     if (arg === '--concurrency') {
       i++
       if (i >= argv.length) {
@@ -137,6 +144,7 @@ Options:
   --plan <slug>         Process all ready stories from the given plan
   --story <id>          Process a specific story (repeatable)
   --continuous          Loop through all plans with eligible stories depth-first
+  --dry-run             Verify all imports, adapters, and DB connections without processing
   --concurrency <n>     Max concurrent stories (default: 1)
   --help, -h            Show this help message
 
@@ -211,9 +219,16 @@ async function main(): Promise<void> {
     process.exit(0)
   }
 
-  // Validate that at least one of --plan, --story, or --continuous is provided
-  if (!cliArgs.continuous && !cliArgs.plan && (!cliArgs.story || cliArgs.story.length === 0)) {
-    process.stderr.write('Error: must provide --plan <slug>, --story <id>, or --continuous\n\n')
+  // Validate that at least one of --plan, --story, --continuous, or --dry-run is provided
+  if (
+    !cliArgs.continuous &&
+    !cliArgs.dryRun &&
+    !cliArgs.plan &&
+    (!cliArgs.story || cliArgs.story.length === 0)
+  ) {
+    process.stderr.write(
+      'Error: must provide --plan <slug>, --story <id>, --continuous, or --dry-run\n\n',
+    )
     printUsage()
     process.exit(1)
   }
@@ -293,6 +308,7 @@ async function main(): Promise<void> {
     ollamaBaseUrl,
     requiredModel: 'qwen2.5-coder:14b',
     maxStories: 0,
+    dryRun: cliArgs.dryRun,
     modelConfig: {
       primaryModel: 'sonnet',
       escalationModel: 'opus',
