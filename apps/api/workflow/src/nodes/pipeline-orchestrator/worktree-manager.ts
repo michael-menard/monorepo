@@ -197,7 +197,9 @@ export function createWorktreeNode(config: WorktreeNodeConfig) {
     const branchExists = branchCheck.exitCode === 0
 
     const wtBin = process.env.WORKTRUNK_BIN ?? '/opt/homebrew/bin/wt'
-    const switchArgs = branchExists ? ['switch', storyId] : ['switch', '--create', storyId, '--yes']
+    const switchArgs = branchExists
+      ? ['switch', storyId, '--yes']
+      : ['switch', '--create', storyId, '--yes']
 
     logger.info('createWorktreeNode: wt command', { wtBin, args: switchArgs, branchExists })
 
