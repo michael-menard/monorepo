@@ -21,6 +21,7 @@ export const PreflightChecksResultSchema = z.object({
   ollamaModel: z.string().nullable(),
   ollamaStarted: z.boolean(),
   modelPulled: z.boolean(),
+  cloudAuthVerified: z.boolean().default(false),
 })
 
 export type PreflightChecksResult = z.infer<typeof PreflightChecksResultSchema>
@@ -28,6 +29,7 @@ export type PreflightChecksResult = z.infer<typeof PreflightChecksResultSchema>
 export const PreflightChecksConfigSchema = z.object({
   ollamaBaseUrl: z.string().default('http://localhost:11434'),
   requiredModel: z.string().default('qwen2.5-coder:14b'),
+  cloudModel: z.string().optional(),
   healthTimeoutMs: z.number().default(30_000),
   pollIntervalMs: z.number().default(1_000),
 })
@@ -59,11 +61,18 @@ export type ModelPullerFn = (model: string) => Promise<void>
  */
 export type SleepFn = (ms: number) => Promise<void>
 
+/**
+ * Verifies cloud model auth by making a trivial API call.
+ * Returns true if auth succeeds, false if rejected.
+ */
+export type CloudAuthCheckerFn = (baseUrl: string, cloudModel: string) => Promise<boolean>
+
 export type PreflightAdapters = {
   healthChecker?: HealthCheckerFn
   processSpawner?: ProcessSpawnerFn
   modelPuller?: ModelPullerFn
   sleep?: SleepFn
+  cloudAuthChecker?: CloudAuthCheckerFn
 }
 
 // ============================================================================
@@ -102,6 +111,34 @@ export const defaultModelPuller: ModelPullerFn = async model => {
 
 const defaultSleep: SleepFn = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+export const defaultCloudAuthChecker: CloudAuthCheckerFn = async (baseUrl, cloudModel) => {
+  try {
+    const res = await fetch(`${baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: cloudModel,
+        messages: [{ role: 'user', content: 'respond with ok' }],
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      logger.warn('preflight_checks: cloud auth check failed', {
+        status: res.status,
+        body: body.slice(0, 200),
+      })
+      return false
+    }
+    return true
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn('preflight_checks: cloud auth check error', { error: msg })
+    return false
+  }
+}
+
 // ============================================================================
 // Pure Logic
 // ============================================================================
@@ -134,6 +171,7 @@ export function createPreflightChecksNode(
   const processSpawner = adapters.processSpawner ?? defaultProcessSpawner
   const modelPuller = adapters.modelPuller ?? defaultModelPuller
   const sleep = adapters.sleep ?? defaultSleep
+  const cloudAuthChecker = adapters.cloudAuthChecker ?? defaultCloudAuthChecker
 
   return async (): Promise<PreflightChecksResult> => {
     logger.info('preflight_checks: starting Ollama health check', {
@@ -223,11 +261,33 @@ export function createPreflightChecksNode(
       }
     }
 
+    // --- Step 4: Verify cloud model authentication (if configured) ---
+    let cloudAuthVerified = false
+    if (resolved.cloudModel) {
+      logger.info('preflight_checks: verifying cloud model auth', {
+        cloudModel: resolved.cloudModel,
+      })
+      cloudAuthVerified = await cloudAuthChecker(resolved.ollamaBaseUrl, resolved.cloudModel)
+      if (!cloudAuthVerified) {
+        logger.error(
+          'preflight_checks: cloud model auth failed — run "ollama signin" to authenticate',
+          {
+            cloudModel: resolved.cloudModel,
+          },
+        )
+      } else {
+        logger.info('preflight_checks: cloud model auth verified', {
+          cloudModel: resolved.cloudModel,
+        })
+      }
+    }
+
     logger.info('preflight_checks: complete', {
       ollamaAvailable: true,
       ollamaModel: resolved.requiredModel,
       ollamaStarted,
       modelPulled,
+      cloudAuthVerified,
     })
 
     return {
@@ -235,6 +295,7 @@ export function createPreflightChecksNode(
       ollamaModel: resolved.requiredModel,
       ollamaStarted,
       modelPulled,
+      cloudAuthVerified,
     }
   }
 }

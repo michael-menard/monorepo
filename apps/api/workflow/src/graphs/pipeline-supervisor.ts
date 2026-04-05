@@ -317,7 +317,11 @@ export async function runPipelineSupervisor(
     // ---- Step 1: Preflight ----
     logger.info('supervisor: running preflight checks')
     const preflightNode = createPreflightChecksNode(
-      { ollamaBaseUrl: config.ollamaBaseUrl, requiredModel: config.requiredModel },
+      {
+        ollamaBaseUrl: config.ollamaBaseUrl,
+        requiredModel: config.requiredModel,
+        cloudModel: 'minimax-m2.7:cloud',
+      },
       adapters.preflightAdapters,
     )
     const preflightResult = await preflightNode()
