@@ -62,13 +62,14 @@ async function verifyDatabaseConnectivity(): Promise<void> {
  *
  * @throws Error if embedding client initialization fails
  */
-function verifyOpenAIConnectivity(): void {
-  logger.info('Verifying OpenAI API configuration')
+function verifyEmbeddingConnectivity(): void {
+  const provider = process.env.EMBEDDING_PROVIDER?.toLowerCase() ?? 'auto'
+  logger.info('Verifying embedding client configuration', { provider })
 
-  // createEmbeddingClient will throw if OPENAI_API_KEY is missing
+  // createEmbeddingClient will throw if config is invalid
   createEmbeddingClient()
 
-  logger.info('OpenAI API configuration verified')
+  logger.info('Embedding client configuration verified', { provider })
 }
 
 /**
@@ -87,7 +88,7 @@ async function main(): Promise<void> {
 
   // Step 2: Verify connectivity
   await verifyDatabaseConnectivity()
-  verifyOpenAIConnectivity()
+  verifyEmbeddingConnectivity()
 
   // Step 3: Initialize dependencies
   logger.info('Initializing dependencies')

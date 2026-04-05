@@ -58,7 +58,8 @@ export const MAX_TOOL_CALL_DEPTH = 5
  */
 export const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  EMBEDDING_PROVIDER: z.enum(['ollama', 'openai']).default('ollama'),
+  OPENAI_API_KEY: z.string().optional(),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   DB_POOL_SIZE: z.coerce.number().int().positive().max(20).default(3),

@@ -20,6 +20,7 @@ import {
 import { computeContentHash, getFromCache, saveToCache } from './cache-manager.js'
 import { generateEmbeddingWithRetry, type RetryConfig } from './retry-handler.js'
 import { processBatchWithSplitting } from './batch-processor.js'
+import { OllamaEmbeddingClient } from './ollama-embedding-client.js'
 
 /**
  * Configuration for EmbeddingClient.
@@ -235,21 +236,48 @@ export class EmbeddingClient {
 }
 
 /**
- * Singleton instance for easy consumption.
- *
- * Configured via environment variables:
- * - OPENAI_API_KEY (required)
- * - EMBEDDING_MODEL (default: text-embedding-3-small)
- * - OPENAI_TIMEOUT_MS (default: 30000)
- * - OPENAI_RETRY_COUNT (default: 3)
- * - CACHE_ENABLED (default: true)
+ * Common interface for embedding clients.
+ * Both OpenAI and Ollama clients implement this.
  */
-export function createEmbeddingClient(): EmbeddingClient {
-  const apiKey = process.env.OPENAI_API_KEY
+export type EmbeddingClientInterface = {
+  generateEmbedding(text: string): Promise<Embedding>
+  generateEmbeddingsBatch(texts: string[]): Promise<Embedding[]>
+}
 
+/**
+ * Creates an embedding client based on environment configuration.
+ *
+ * Provider selection (checked in order):
+ * 1. EMBEDDING_PROVIDER=ollama → OllamaEmbeddingClient (local, free)
+ * 2. OPENAI_API_KEY set → OpenAI EmbeddingClient
+ * 3. Neither → OllamaEmbeddingClient as fallback
+ *
+ * Environment variables:
+ * - EMBEDDING_PROVIDER: 'ollama' | 'openai' (default: auto-detect)
+ * - OLLAMA_BASE_URL: Ollama server URL (default: http://localhost:11434)
+ * - EMBEDDING_MODEL: Model name (default depends on provider)
+ * - OPENAI_API_KEY: Required only for OpenAI provider
+ * - CACHE_ENABLED: Enable/disable caching (default: true)
+ */
+export function createEmbeddingClient(): EmbeddingClientInterface {
+  const provider = process.env.EMBEDDING_PROVIDER?.toLowerCase()
+  const cacheEnabled = process.env.CACHE_ENABLED !== 'false'
+
+  // Explicit Ollama selection or fallback when no OpenAI key
+  if (provider === 'ollama' || (!provider && !process.env.OPENAI_API_KEY)) {
+    return new OllamaEmbeddingClient({
+      baseUrl: process.env.OLLAMA_BASE_URL,
+      model: process.env.EMBEDDING_MODEL,
+      cacheEnabled,
+    })
+  }
+
+  // OpenAI provider
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     throw new Error(
-      'OPENAI_API_KEY environment variable is required. See apps/api/knowledge-base/.env.example',
+      'OPENAI_API_KEY environment variable is required when EMBEDDING_PROVIDER=openai. ' +
+        'Set EMBEDDING_PROVIDER=ollama to use local embeddings instead.',
     )
   }
 
@@ -262,6 +290,6 @@ export function createEmbeddingClient(): EmbeddingClient {
     retryCount: process.env.OPENAI_RETRY_COUNT
       ? parseInt(process.env.OPENAI_RETRY_COUNT, 10)
       : undefined,
-    cacheEnabled: process.env.CACHE_ENABLED !== 'false',
+    cacheEnabled,
   })
 }
