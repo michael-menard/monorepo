@@ -100,7 +100,25 @@ export function createReadFileAdapter(): ReadFileFn {
       // Check if file exists
       if (!existsSync(safePath)) {
         logger.warn('tool-adapters: file not found', { path: safePath })
-        return `ERROR: File not found: ${path}`
+        // Help the model recover by listing nearby files
+        const dir = dirname(safePath)
+        let hint = ''
+        if (existsSync(dir)) {
+          try {
+            const { stdout } = await execAsync(`ls -1 "${dir}" 2>/dev/null | head -20`, {
+              timeout: 5000,
+            })
+            if (stdout.trim()) {
+              hint = `\nFiles in ${relative(getMonorepoRoot(), dir)}/:\n${stdout.trim()}`
+            }
+          } catch {
+            // ignore
+          }
+        } else {
+          // Directory doesn't exist — suggest searching
+          hint = `\nDirectory does not exist. Try search_codebase to find the correct path.`
+        }
+        return `ERROR: File not found: ${path}${hint}\nHINT: Use search_codebase to find the correct path, or list_directory to explore.`
       }
 
       // Read file with encoding
@@ -199,13 +217,31 @@ export function createSearchCodebaseAdapter(): SearchCodebaseFn {
         logger.warn('tool-adapters: search returned stderr only', { pattern, stderr })
       }
 
-      const result = stdout || 'No matches found.'
+      const result = stdout || ''
 
       logger.debug('tool-adapters: search completed', {
         pattern,
         resultLength: result.length,
         durationMs,
       })
+
+      if (!result.trim()) {
+        // Help the model by listing top-level directories
+        const root = getMonorepoRoot()
+        let dirHint = ''
+        try {
+          const { stdout: dirs } = await execAsync(
+            `ls -1d "${root}"/apps/*/ "${root}"/packages/*/ 2>/dev/null | sed 's|${root}/||g'`,
+            { timeout: 5000 },
+          )
+          if (dirs.trim()) {
+            dirHint = `\nAvailable app/package directories:\n${dirs.trim()}`
+          }
+        } catch {
+          // ignore
+        }
+        return `No matches found for pattern: "${pattern}".${dirHint}\nHINT: Try a broader pattern, a different search term, or use list_directory to explore the codebase structure.`
+      }
 
       // Truncate if too long
       if (result.length > 50000) {
@@ -217,6 +253,42 @@ export function createSearchCodebaseAdapter(): SearchCodebaseFn {
       const errorMessage = err instanceof Error ? err.message : String(err)
       logger.error('tool-adapters: search failed', { pattern, error: errorMessage })
       return `ERROR: Search failed: ${errorMessage}`
+    }
+  }
+}
+
+// ============================================================================
+// List Directory Adapter
+// ============================================================================
+
+export type ListDirectoryFn = (path: string) => Promise<string>
+
+/**
+ * Creates a list directory adapter.
+ * Lists directory contents with type indicators — helps the model navigate the codebase.
+ */
+export function createListDirectoryAdapter(): ListDirectoryFn {
+  return async (dirPath: string): Promise<string> => {
+    try {
+      const safePath = resolveSafePath(dirPath || '.')
+
+      if (!existsSync(safePath)) {
+        return `ERROR: Directory not found: ${dirPath}\nHINT: Use search_codebase to find the correct path.`
+      }
+
+      const { stdout } = await execAsync(`ls -1F "${safePath}" 2>/dev/null | head -50`, {
+        timeout: 5000,
+      })
+
+      if (!stdout.trim()) {
+        return `Directory is empty: ${dirPath}`
+      }
+
+      const relPath = relative(getMonorepoRoot(), safePath) || '.'
+      return `Contents of ${relPath}/:\n${stdout.trim()}`
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      return `ERROR: ${errorMessage}`
     }
   }
 }
@@ -284,19 +356,26 @@ export function createRunTestsAdapter(): RunTestsFn {
       const errorMessage = err instanceof Error ? err.message : String(err)
 
       // exec throws on non-zero exit code, which includes test failures
-      const output = (err as any)?.stdout || (err as any)?.stderr || errorMessage
+      const stdout = (err as any)?.stdout ?? ''
+      const stderr = (err as any)?.stderr ?? ''
+      const output = stdout || stderr || errorMessage
 
       logger.warn('tool-adapters: tests failed or errored', {
         filter,
         durationMs,
         error: errorMessage,
+        hasStderr: !!stderr,
       })
 
       const failures = extractTestFailures(output)
 
+      // Include stderr separately so the model can see build errors vs test failures
+      const fullOutput =
+        stderr && stdout ? `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}` : String(output)
+
       return {
         passed: false,
-        output: String(output).slice(0, 100000),
+        output: fullOutput.slice(0, 100000),
         failures: failures.length > 0 ? failures : [errorMessage],
       }
     }
@@ -500,6 +579,7 @@ export function createToolAdapters() {
     readFile: createReadFileAdapter(),
     writeFile: createWriteFileAdapter(),
     searchCodebase: createSearchCodebaseAdapter(),
+    listDirectory: createListDirectoryAdapter(),
     runTests: createRunTestsAdapter(),
     diffReader: createDiffReaderAdapter(),
   }

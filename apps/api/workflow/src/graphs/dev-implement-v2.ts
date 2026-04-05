@@ -32,6 +32,7 @@ import {
   type QueryKbFn,
   type SearchCodebaseFn,
   type ReadFileFn,
+  type ListDirectoryFn as PlannerListDirectoryFn,
 } from '../nodes/dev-implement-v2/implementation-planner.js'
 import {
   createImplementationExecutorNode,
@@ -39,6 +40,7 @@ import {
   type WriteFileFn,
   type RunTestsFn,
   type QueryKbFn as ExecutorQueryKbFn,
+  type ListDirectoryFn as ExecutorListDirectoryFn,
 } from '../nodes/dev-implement-v2/implementation-executor.js'
 import {
   createEvidenceCollectorNode,
@@ -62,6 +64,7 @@ export const DevImplementV2GraphConfigSchema = z.object({
   queryKb: z.function().optional(),
   searchCodebase: z.function().optional(),
   readFile: z.function().optional(),
+  listDirectory: z.function().optional(),
   // implementation_executor adapters
   executorLlmAdapter: z.function().optional(),
   writeFile: z.function().optional(),
@@ -79,6 +82,7 @@ export type DevImplementV2GraphConfig = {
   queryKb?: QueryKbFn
   searchCodebase?: SearchCodebaseFn
   readFile?: ReadFileFn
+  listDirectory?: PlannerListDirectoryFn
   executorLlmAdapter?: ExecutorLlmAdapterFn
   writeFile?: WriteFileFn
   runTests?: RunTestsFn
@@ -128,6 +132,7 @@ export function createDevImplementV2Graph(config: DevImplementV2GraphConfig = {}
         queryKb: config.queryKb,
         searchCodebase: config.searchCodebase,
         readFile: config.readFile,
+        listDirectory: config.listDirectory,
         maxInternalIterations: config.maxPlannerIterations,
       }),
     )
@@ -139,6 +144,7 @@ export function createDevImplementV2Graph(config: DevImplementV2GraphConfig = {}
         writeFile: config.writeFile,
         runTests: config.runTests,
         queryKb: config.queryKb as ExecutorQueryKbFn | undefined,
+        listDirectory: config.listDirectory as ExecutorListDirectoryFn | undefined,
         maxInternalIterations: config.maxInternalIterations,
       }),
     )

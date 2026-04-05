@@ -45,6 +45,7 @@ export type RunTestsFn = (
   filter: string,
 ) => Promise<{ passed: boolean; output: string; failures: string[] }>
 export type QueryKbFn = (topic: string) => Promise<string>
+export type ListDirectoryFn = (path: string) => Promise<string>
 
 // ============================================================================
 // Config
@@ -57,6 +58,7 @@ export type ImplementationExecutorConfig = {
   searchCodebase?: SearchCodebaseFn
   runTests?: RunTestsFn
   queryKb?: QueryKbFn
+  listDirectory?: ListDirectoryFn
   maxInternalIterations?: number
 }
 
@@ -98,6 +100,7 @@ AVAILABLE TOOLS (call one per response as JSON):
 - read_file:       { "tool": "read_file", "args": { "path": "<string>" } }
 - write_file:      { "tool": "write_file", "args": { "path": "<string>", "content": "<string>" } }
 - search_codebase: { "tool": "search_codebase", "args": { "pattern": "<string>" } }
+- list_directory:  { "tool": "list_directory", "args": { "path": "<string>" } }
 - run_tests:       { "tool": "run_tests", "args": { "filter": "<string>" } }
 - query_kb:        { "tool": "query_kb", "args": { "topic": "<string>" } }
 - complete:        { "tool": "complete", "args": { "filesCreated": [], "filesModified": [], "testsRan": true, "testsPassed": true, "testOutput": "<string>", "acVerification": [{ "acIndex": 0, "acText": "<string>", "verified": true, "evidence": "<string>" }] } }
@@ -137,6 +140,11 @@ export function buildExecutorTools(): ToolDefinition[] {
       name: 'search_codebase',
       description: 'Search codebase for a pattern',
       parameters: { pattern: 'string' },
+    },
+    {
+      name: 'list_directory',
+      description: 'List contents of a directory to explore codebase structure',
+      parameters: { path: 'string' },
     },
     {
       name: 'run_tests',
@@ -390,6 +398,8 @@ export function createImplementationExecutorNode(config: ImplementationExecutorC
           toolResult = `Written: ${args['path']}`
         } else if (tool === 'search_codebase' && config.searchCodebase) {
           toolResult = await config.searchCodebase(String(args['pattern'] ?? ''))
+        } else if (tool === 'list_directory' && config.listDirectory) {
+          toolResult = await config.listDirectory(String(args['path'] ?? '.'))
         } else if (tool === 'run_tests' && config.runTests) {
           const testRes = await config.runTests(String(args['filter'] ?? ''))
           toolResult = JSON.stringify(testRes)

@@ -492,6 +492,7 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
           readFile: toolAdapters.readFile,
           writeFile: toolAdapters.writeFile,
           runTests: toolAdapters.runTests,
+          listDirectory: toolAdapters.listDirectory,
           maxInternalIterations: 15,
           maxPlannerIterations: 5,
         }

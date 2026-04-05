@@ -33,6 +33,7 @@ export type LlmAdapterFn = (
 export type QueryKbFn = (query: string) => Promise<string>
 export type SearchCodebaseFn = (pattern: string) => Promise<string>
 export type ReadFileFn = (path: string) => Promise<string>
+export type ListDirectoryFn = (path: string) => Promise<string>
 
 // ============================================================================
 // Config
@@ -43,6 +44,7 @@ export type ImplementationPlannerConfig = {
   queryKb?: QueryKbFn
   searchCodebase?: SearchCodebaseFn
   readFile?: ReadFileFn
+  listDirectory?: ListDirectoryFn
   maxInternalIterations?: number
 }
 
@@ -109,6 +111,7 @@ AVAILABLE TOOLS (respond with JSON):
 - query_kb: { tool: "query_kb", args: { query: string } }
 - search_codebase: { tool: "search_codebase", args: { pattern: string } }
 - read_file: { tool: "read_file", args: { path: string } }
+- list_directory: { tool: "list_directory", args: { path: string } }
 - complete: { tool: "complete", args: { plan: { approach, filesToCreate, filesToModify, testFilesToCreate, estimatedSubtasks, risks } } }
 
 Respond ONLY with a valid JSON tool call.`
@@ -348,8 +351,10 @@ export function createImplementationPlannerNode(config: ImplementationPlannerCon
           toolResult = await config.searchCodebase(String(args['pattern'] ?? ''))
         } else if (tool === 'read_file' && config.readFile) {
           toolResult = await config.readFile(String(args['path'] ?? ''))
+        } else if (tool === 'list_directory' && config.listDirectory) {
+          toolResult = await config.listDirectory(String(args['path'] ?? '.'))
         } else {
-          toolResult = `Tool '${tool}' not available or not configured. Available: complete, query_kb, search_codebase, read_file.`
+          toolResult = `Tool '${tool}' not available or not configured. Available: complete, query_kb, search_codebase, read_file, list_directory.`
         }
       } catch (err) {
         toolResult = `ERROR: ${err instanceof Error ? err.message : String(err)}`
