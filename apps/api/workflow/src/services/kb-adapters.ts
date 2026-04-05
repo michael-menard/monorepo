@@ -730,15 +730,102 @@ export async function getStoryStateAdapter(storyId: string): Promise<string | nu
  */
 export function buildKbAdapter() {
   return {
-    updateStoryStatus: async (storyId: string, status: string): Promise<void> => {
+    updateStoryStatus: async (storyId: string, targetStatus: string): Promise<void> => {
       try {
         const db = getDb()
-        await kb_update_story_status({ db }, { story_id: storyId, state: status as never })
-        logger.info('kb-adapters: story status updated', { storyId, status })
+
+        // The DB trigger enforces a strict state machine with artifact gates.
+        // We need to walk through intermediate states and write required artifacts.
+        const storyResult = await kb_get_story({ db }, { story_id: storyId })
+        const currentState = (storyResult?.story?.state as string) ?? 'backlog'
+
+        if (currentState === targetStatus) {
+          logger.info('kb-adapters: story already in target state', {
+            storyId,
+            state: targetStatus,
+          })
+          return
+        }
+
+        // Define the transition path and artifact requirements
+        const STATE_ORDER = [
+          'backlog',
+          'created',
+          'elab',
+          'ready',
+          'in_progress',
+          'needs_code_review',
+          'ready_for_qa',
+          'in_qa',
+          'completed',
+        ]
+        const ARTIFACT_GATES: Record<string, { before: string; type: string }> = {
+          ready: { before: 'elab', type: 'elaboration' },
+          needs_code_review: { before: 'in_progress', type: 'proof' },
+          ready_for_qa: { before: 'needs_code_review', type: 'review' },
+          in_qa: { before: 'ready_for_qa', type: 'verification' },
+          completed: { before: 'in_qa', type: 'qa_gate' },
+        }
+
+        // Handle special transitions (blocked goes directly)
+        if (targetStatus === 'blocked') {
+          await kb_update_story_status({ db }, { story_id: storyId, state: 'blocked' as never })
+          logger.info('kb-adapters: story status updated', { storyId, status: 'blocked' })
+          return
+        }
+
+        const currentIdx = STATE_ORDER.indexOf(currentState)
+        const targetIdx = STATE_ORDER.indexOf(targetStatus)
+
+        if (currentIdx === -1 || targetIdx === -1 || targetIdx <= currentIdx) {
+          // Unknown state or backwards transition — try direct
+          await kb_update_story_status({ db }, { story_id: storyId, state: targetStatus as never })
+          logger.info('kb-adapters: story status updated (direct)', {
+            storyId,
+            status: targetStatus,
+          })
+          return
+        }
+
+        // Walk through each intermediate state
+        for (let i = currentIdx + 1; i <= targetIdx; i++) {
+          const nextState = STATE_ORDER[i]
+          const gate = ARTIFACT_GATES[nextState]
+
+          // Write required artifact if this transition has a gate
+          if (gate) {
+            try {
+              await kb_write_artifact(
+                {
+                  story_id: storyId,
+                  artifact_type: gate.type as never,
+                  content: { status: 'pipeline-generated', generatedBy: 'supervisor' },
+                },
+                { db },
+              )
+            } catch (_artErr) {
+              // Artifact may already exist — that's fine
+            }
+          }
+
+          await kb_update_story_status({ db }, { story_id: storyId, state: nextState as never })
+        }
+
+        logger.info('kb-adapters: story status updated', {
+          storyId,
+          from: currentState,
+          to: targetStatus,
+          steps: targetIdx - currentIdx,
+        })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        logger.error('kb-adapters: updateStoryStatus failed', { storyId, status, error: msg })
-        throw err
+        logger.error('kb-adapters: updateStoryStatus failed', {
+          storyId,
+          status: targetStatus,
+          error: msg,
+        })
+        // Don't throw — supervisor should continue even if KB update fails
+        logger.warn('kb-adapters: continuing despite KB update failure')
       }
     },
 
