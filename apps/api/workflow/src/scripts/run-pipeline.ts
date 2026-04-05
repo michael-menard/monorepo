@@ -144,14 +144,14 @@ Environment Variables:
 // Monorepo Root Detection
 // ============================================================================
 
-function detectMonorepoRoot(): string {
+async function detectMonorepoRoot(): Promise<string> {
   if (process.env.MONOREPO_ROOT) {
     return process.env.MONOREPO_ROOT
   }
 
   // Walk up from cwd looking for pnpm-workspace.yaml
-  const { existsSync } = require('fs') as typeof import('fs')
-  const { resolve, dirname } = require('path') as typeof import('path')
+  const { existsSync } = await import('fs')
+  const { resolve, dirname } = await import('path')
 
   let dir = process.cwd()
   while (dir !== dirname(dir)) {
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
   const storyIds = cliArgs.story ?? []
 
   // Resolve configuration from environment
-  const monorepoRoot = detectMonorepoRoot()
+  const monorepoRoot = await detectMonorepoRoot()
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
   const defaultBaseBranch = process.env.DEFAULT_BASE_BRANCH ?? 'main'
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY
