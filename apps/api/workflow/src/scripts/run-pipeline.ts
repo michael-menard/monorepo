@@ -29,6 +29,7 @@ import { defaultShellExec } from '../nodes/pipeline-orchestrator/worktree-manage
 import { createNotiAdapter, createNoopNotiAdapter } from '../services/noti-adapter.js'
 import { createEventEmitter } from '../nodes/pipeline-orchestrator/event-emitter.js'
 import { createLlmAdapterFactory } from '../services/llm-adapter-factory.js'
+import { storyListAdapter } from '../services/kb-adapters.js'
 
 // ============================================================================
 // CLI Argument Schema
@@ -240,6 +241,7 @@ async function main(): Promise<void> {
     ollamaBaseUrl,
     defaultBaseBranch,
     shellExec: defaultShellExec,
+    storyListAdapter,
   }
 
   // Build initial state

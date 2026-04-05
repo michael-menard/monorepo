@@ -16,12 +16,14 @@ import { logger } from '@repo/logger'
 import {
   getDbClient,
   kb_get_story,
+  kb_list_stories,
   kb_search,
   kb_get_plan,
   kb_create_story,
 } from '@repo/knowledge-base'
 import { EmbeddingClient } from '@repo/knowledge-base/embedding-client'
 import { logInvocation } from '@repo/knowledge-base/telemetry'
+import type { StoryEntry, StoryListAdapterFn } from '../nodes/pipeline-orchestrator/story-picker.js'
 import type { TokenLoggerFn, KbWriterFn } from '../nodes/story-generation-v2/write-to-kb.js'
 import type { QueryKbFn } from '../nodes/dev-implement-v2/implementation-executor.js'
 import type { KbStoryAdapterFn } from '../nodes/dev-implement-v2/story-scout.js'
@@ -507,6 +509,47 @@ export const kbWriterAdapter: KbWriterFn = async (stories: EnrichedStory[], plan
 }
 
 // ============================================================================
+// Story List Adapter (Pipeline Orchestrator — Story Picker)
+// ============================================================================
+
+/**
+ * Story list adapter for the pipeline orchestrator story picker.
+ * Fetches all stories linked to a plan from the KB and maps them
+ * to StoryEntry objects with state, priority, and blocker info.
+ */
+export const storyListAdapter: StoryListAdapterFn = async (planSlug: string) => {
+  try {
+    const db = getDb()
+    const result = await kb_list_stories({ db }, {
+      plan_slug: planSlug,
+      limit: 100,
+      offset: 0,
+    })
+
+    const entries: StoryEntry[] = result.stories.map(s => ({
+      storyId: s.storyId ?? '',
+      state: (s.state as string) ?? 'backlog',
+      priority: (s.priority as StoryEntry['priority']) ?? null,
+      blockedByStory: (s.blockedByStory as string) ?? null,
+    }))
+
+    logger.info('kb-adapters: loaded stories for plan', {
+      planSlug,
+      count: entries.length,
+      total: result.total,
+    })
+
+    return entries
+  } catch (err) {
+    logger.error('kb-adapters: story list fetch failed', {
+      planSlug,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return []
+  }
+}
+
+// ============================================================================
 // Composite Adapter Config
 // ============================================================================
 
@@ -526,6 +569,9 @@ export function createKbAdapters() {
 
     // Plan Refinement V2
     planLoader: planLoaderAdapter,
+
+    // Pipeline Orchestrator — Story Picker
+    storyListAdapter,
 
     // Telemetry (for use in graph-executor)
     logInvocation: logInvocationAdapter,

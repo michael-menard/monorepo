@@ -32,7 +32,11 @@ import {
 } from '../state/pipeline-orchestrator-v2-state.js'
 import { createPreflightChecksNode } from '../nodes/pipeline-orchestrator/preflight-checks.js'
 import type { PreflightAdapters } from '../nodes/pipeline-orchestrator/preflight-checks.js'
-import { createStoryPickerNode } from '../nodes/pipeline-orchestrator/story-picker.js'
+import {
+  createStoryPickerNode,
+  type StoryPickerAdapters,
+  type StoryListAdapterFn,
+} from '../nodes/pipeline-orchestrator/story-picker.js'
 import { createWorktreeNode } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import type { ShellExecFn } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import { createPhaseRouterNode } from '../nodes/pipeline-orchestrator/phase-router.js'
@@ -75,6 +79,8 @@ export const PipelineOrchestratorV2GraphConfigSchema = z.object({
   preflightAdapters: z.any().optional(),
   /** Injectable phase router adapters */
   phaseRouterAdapters: z.any().optional(),
+  /** Injectable story list adapter for story picker */
+  storyListAdapter: z.any().optional(),
 })
 
 export type PipelineOrchestratorV2GraphConfig = {
@@ -86,6 +92,7 @@ export type PipelineOrchestratorV2GraphConfig = {
   shellExec?: ShellExecFn
   preflightAdapters?: PreflightAdapters
   phaseRouterAdapters?: PhaseRouterAdapters
+  storyListAdapter?: StoryListAdapterFn
 }
 
 // ============================================================================
@@ -184,6 +191,71 @@ function createWorktreeWrapper(config: PipelineOrchestratorV2GraphConfig) {
 }
 
 // ============================================================================
+// Story Picker Wrapper Node
+// ============================================================================
+
+/**
+ * Wraps the story picker node to bridge between graph state and the
+ * story picker's adapter-based API. Extracts planSlug from state,
+ * calls the story picker, and maps the result back to orchestrator state.
+ */
+function createStoryPickerWrapper(config: PipelineOrchestratorV2GraphConfig) {
+  // Build a no-op adapter that returns empty if none provided
+  const adapter: StoryListAdapterFn = config.storyListAdapter ?? (async () => [])
+
+  return async (
+    state: PipelineOrchestratorV2State,
+  ): Promise<Partial<PipelineOrchestratorV2State>> => {
+    const planSlug = state.planSlug
+
+    if (!planSlug) {
+      logger.warn('story_picker_wrapper: no planSlug in state, returning pipeline_complete')
+      return {
+        storyPickerResult: {
+          signal: 'pipeline_complete',
+          storyId: null,
+          reason: 'No planSlug provided',
+        },
+        currentStoryId: null,
+        pipelinePhase: 'pipeline_complete',
+      }
+    }
+
+    const adapters: StoryPickerAdapters = { storyListAdapter: adapter }
+    const pickerNode = createStoryPickerNode({ planSlug }, adapters)
+    const result = await pickerNode()
+
+    return {
+      storyPickerResult: {
+        signal: result.signal,
+        storyId: result.storyId,
+        reason: result.reason,
+      },
+      currentStoryId: result.storyId,
+      pipelinePhase:
+        result.signal === 'story_ready'
+          ? 'story_picking'
+          : result.signal === 'pipeline_complete'
+            ? 'pipeline_complete'
+            : 'pipeline_stalled',
+      // Reset per-story state for fresh processing
+      retryContext: {
+        reviewAttempts: 0,
+        qaAttempts: 0,
+        maxReviewRetries: 2,
+        maxQaRetries: 2,
+        lastFailureReason: '',
+      },
+      devResult: null,
+      reviewResult: null,
+      qaResult: null,
+      worktreePath: null,
+      branch: null,
+    }
+  }
+}
+
+// ============================================================================
 // Conditional Edge Functions
 // ============================================================================
 
@@ -277,7 +349,7 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     .addNode('route_input', createRouteInputNode())
     .addNode('plan_refinement', createPlanRefinementWrapper())
     .addNode('story_generation', createStoryGenerationWrapper())
-    .addNode('story_picker', createStoryPickerNode())
+    .addNode('story_picker', createStoryPickerWrapper(config))
     .addNode('phase_router', createPhaseRouterNode(config.phaseRouterAdapters))
     .addNode('create_worktree', createWorktreeWrapper(config))
     .addNode('dev_implement', createDevImplementWrapper())
