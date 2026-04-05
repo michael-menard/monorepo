@@ -17,6 +17,8 @@ import type { ModelConfig } from '../state/pipeline-orchestrator-v2-state.js'
 import type { DevImplementV2GraphConfig } from '../graphs/dev-implement-v2.js'
 import type { ReviewV2GraphConfig } from '../graphs/review-v2.js'
 import type { QAVerifyV2GraphConfig } from '../graphs/qa-verify-v2.js'
+import type { PlanRefinementV2GraphConfig } from '../graphs/plan-refinement-v2.js'
+import type { StoryGenerationV2GraphConfig } from '../graphs/story-generation-v2.js'
 import { createLlmAdapter } from './llm-adapters.js'
 import type { SimpleMessage, LlmResponse } from './llm-adapters.js'
 
@@ -134,6 +136,39 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
     }
   }
 
+  /**
+   * Builds the LLM adapter config for the plan-refinement-v2 subgraph.
+   */
+  function buildPlanRefinementAdapters(
+    modelConfig: ModelConfig,
+    ollamaAvailable = false,
+  ): Pick<PlanRefinementV2GraphConfig, 'llmAdapter'> {
+    return {
+      llmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'plan-refinement'),
+    }
+  }
+
+  /**
+   * Builds the LLM adapter config for the story-generation-v2 subgraph.
+   */
+  function buildStoryGenerationAdapters(
+    modelConfig: ModelConfig,
+    ollamaAvailable = false,
+  ): Pick<
+    StoryGenerationV2GraphConfig,
+    'slicerLlmAdapter' | 'enricherLlmAdapter' | 'dependencyWirerLlmAdapter'
+  > {
+    return {
+      slicerLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'story-slicer'),
+      enricherLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'story-enricher'),
+      dependencyWirerLlmAdapter: selectAdapter(
+        modelConfig,
+        ollamaAvailable,
+        'story-dependency-wirer',
+      ),
+    }
+  }
+
   return {
     createOllamaAdapter,
     createAnthropicAdapter,
@@ -141,6 +176,8 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
     buildDevImplementAdapters,
     buildReviewAdapters,
     buildQAVerifyAdapters,
+    buildPlanRefinementAdapters,
+    buildStoryGenerationAdapters,
   }
 }
 

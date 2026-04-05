@@ -39,6 +39,9 @@ function makeState(overrides: Partial<PipelineOrchestratorV2State> = {}): Pipeli
   return {
     inputMode: 'story',
     planSlug: null,
+    refinedPlan: null,
+    planFlows: [],
+    planPostconditionResult: null,
     currentStoryId: null,
     worktreePath: null,
     branch: null,

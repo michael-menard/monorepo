@@ -6,7 +6,8 @@
  *
  * Graph structure:
  *   START → preflight_checks → route_input
- *     → [plan path: story_picker] or [story path: story_picker]
+ *     → [plan path: plan_refinement → story_generation → story_picker]
+ *     → [story path: story_picker]
  *   story_picker → [story_ready: create_worktree] | [complete: END] | [stalled: END]
  *   create_worktree → dev_implement → commit_push → review → review_decision
  *     → [pass: create_pr] | [retry: dev_implement] | [block: block_story]
@@ -15,8 +16,8 @@
  *   merge_cleanup → post_completion → story_picker (loop)
  *   block_story → story_picker (loop)
  *
- * For MVP, subgraph invocations (dev, review, QA) are stubs.
- * The graph structure and routing logic is fully wired.
+ * Subgraph invocations (plan refinement, story generation, dev, review, QA)
+ * are wired with real V2 subgraphs via wrapper nodes.
  */
 
 import { z } from 'zod'
@@ -33,6 +34,8 @@ import { createStoryPickerNode } from '../nodes/pipeline-orchestrator/story-pick
 import { createWorktreeNode } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import type { ShellExecFn } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import {
+  createPlanRefinementWrapper,
+  createStoryGenerationWrapper,
   createDevImplementWrapper,
   createReviewWrapper,
   createReviewDecisionNode,
@@ -112,8 +115,8 @@ function createPreflightWrapper(config: PipelineOrchestratorV2GraphConfig) {
 
 /**
  * Routing node that determines the path based on inputMode.
- * For plan mode: would invoke plan refinement + story generation first.
- * For MVP: both modes proceed directly to story_picker.
+ * Plan mode routes to plan_refinement → story_generation → story_picker.
+ * Story mode routes directly to story_picker.
  */
 function createRouteInputNode() {
   return async (
@@ -179,13 +182,13 @@ function createWorktreeWrapper(config: PipelineOrchestratorV2GraphConfig) {
 
 /**
  * Routes after route_input based on inputMode.
- * For MVP: both plan and story modes go to story_picker.
+ * Plan mode: plan_refinement → story_generation → story_picker.
+ * Story mode: directly to story_picker.
  */
 export function routeByInputMode(
   state: PipelineOrchestratorV2State,
 ): 'plan_refinement' | 'story_picker' {
   if (state.inputMode === 'plan') {
-    // MVP: skip plan refinement/generation, go straight to picker
     return 'plan_refinement'
   }
   return 'story_picker'
@@ -244,6 +247,8 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     // ---- Nodes ----
     .addNode('preflight_checks', createPreflightWrapper(config))
     .addNode('route_input', createRouteInputNode())
+    .addNode('plan_refinement', createPlanRefinementWrapper())
+    .addNode('story_generation', createStoryGenerationWrapper())
     .addNode('story_picker', createStoryPickerNode())
     .addNode('create_worktree', createWorktreeWrapper(config))
     .addNode('dev_implement', createDevImplementWrapper())
@@ -264,11 +269,14 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     .addEdge('preflight_checks', 'route_input')
 
     // Route by input mode (plan vs story)
-    // MVP: both paths go to story_picker
     .addConditionalEdges('route_input', routeByInputMode, {
-      plan_refinement: 'story_picker',
+      plan_refinement: 'plan_refinement',
       story_picker: 'story_picker',
     })
+
+    // Plan path: plan_refinement → story_generation → story_picker
+    .addEdge('plan_refinement', 'story_generation')
+    .addEdge('story_generation', 'story_picker')
 
     // Story picker → create_worktree | END
     .addConditionalEdges('story_picker', routeByPickerSignal, {

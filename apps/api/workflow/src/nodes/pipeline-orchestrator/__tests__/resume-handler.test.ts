@@ -61,6 +61,9 @@ function makeDefaultState(): PipelineOrchestratorV2State {
   return {
     inputMode: 'story',
     planSlug: null,
+    refinedPlan: null,
+    planFlows: [],
+    planPostconditionResult: null,
     currentStoryId: null,
     worktreePath: null,
     branch: null,
