@@ -520,11 +520,14 @@ export const kbWriterAdapter: KbWriterFn = async (stories: EnrichedStory[], plan
 export const storyListAdapter: StoryListAdapterFn = async (planSlug: string) => {
   try {
     const db = getDb()
-    const result = await kb_list_stories({ db }, {
-      plan_slug: planSlug,
-      limit: 100,
-      offset: 0,
-    })
+    const result = await kb_list_stories(
+      { db },
+      {
+        plan_slug: planSlug,
+        limit: 100,
+        offset: 0,
+      },
+    )
 
     const entries: StoryEntry[] = result.stories.map(s => ({
       storyId: s.storyId ?? '',
@@ -560,7 +563,7 @@ const TERMINAL_STORY_STATES = new Set(['completed', 'cancelled', 'blocked', 'def
  * Finds the next plan with eligible stories for continuous-mode processing.
  *
  * Queries plans with status 'stories-created' or 'in-progress', ordered by
- * priority (P1 first) then creation date. For each plan, checks whether it
+ * sort_order (work order position), then priority (P1 first), then creation date. For each plan, checks whether it
  * has at least one story that is not in a terminal state and whose blocker
  * (if any) is completed.
  *
@@ -575,13 +578,15 @@ export async function getNextPlanWithEligibleStories(): Promise<string | null> {
     const planRows = await db.execute<{
       plan_slug: string
       priority: string | null
+      sort_order: number | null
       created_at: Date
     }>(
-      `SELECT plan_slug, priority, created_at
+      `SELECT plan_slug, priority, sort_order, created_at
        FROM workflow.plans
        WHERE status IN ('stories-created', 'in-progress')
          AND deleted_at IS NULL
        ORDER BY
+         sort_order ASC NULLS LAST,
          CASE priority
            WHEN 'P1' THEN 1
            WHEN 'P2' THEN 2
@@ -603,11 +608,14 @@ export async function getNextPlanWithEligibleStories(): Promise<string | null> {
     for (const plan of planRows.rows) {
       const planSlug = plan.plan_slug
       try {
-        const result = await kb_list_stories({ db }, {
-          plan_slug: planSlug,
-          limit: 100,
-          offset: 0,
-        })
+        const result = await kb_list_stories(
+          { db },
+          {
+            plan_slug: planSlug,
+            limit: 100,
+            offset: 0,
+          },
+        )
 
         // Check for at least one non-terminal story whose blocker is resolved
         const storyMap = new Map<string, Record<string, unknown>>(
