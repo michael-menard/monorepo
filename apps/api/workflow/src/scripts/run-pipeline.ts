@@ -8,6 +8,7 @@
  *   pnpm tsx src/scripts/run-pipeline.ts --plan <slug>
  *   pnpm tsx src/scripts/run-pipeline.ts --story <id> [--story <id2>]
  *   pnpm tsx src/scripts/run-pipeline.ts --plan <slug> --concurrency 2
+ *   pnpm tsx src/scripts/run-pipeline.ts --continuous
  *   pnpm tsx src/scripts/run-pipeline.ts --help
  *
  * Environment Variables:
@@ -29,7 +30,7 @@ import { defaultShellExec } from '../nodes/pipeline-orchestrator/worktree-manage
 import { createNotiAdapter, createNoopNotiAdapter } from '../services/noti-adapter.js'
 import { createEventEmitter } from '../nodes/pipeline-orchestrator/event-emitter.js'
 import { createLlmAdapterFactory } from '../services/llm-adapter-factory.js'
-import { storyListAdapter } from '../services/kb-adapters.js'
+import { storyListAdapter, getNextPlanWithEligibleStories } from '../services/kb-adapters.js'
 
 // ============================================================================
 // CLI Argument Schema
@@ -39,6 +40,7 @@ const CliArgsSchema = z.object({
   plan: z.string().optional(),
   story: z.array(z.string()).optional(),
   concurrency: z.number().int().min(1).default(1),
+  continuous: z.boolean().default(false),
   help: z.boolean().default(false),
 })
 
@@ -84,6 +86,12 @@ function parseArgs(argv: string[]): CliArgs {
       continue
     }
 
+    if (arg === '--continuous') {
+      args.continuous = true
+      i++
+      continue
+    }
+
     if (arg === '--concurrency') {
       i++
       if (i >= argv.length) {
@@ -123,13 +131,19 @@ Pipeline Orchestrator V2 — CLI Runner
 Usage:
   pnpm tsx src/scripts/run-pipeline.ts --plan <slug>
   pnpm tsx src/scripts/run-pipeline.ts --story <id> [--story <id2> ...]
+  pnpm tsx src/scripts/run-pipeline.ts --continuous
   pnpm tsx src/scripts/run-pipeline.ts --help
 
 Options:
   --plan <slug>         Process all ready stories from the given plan
   --story <id>          Process a specific story (repeatable)
+  --continuous          Loop through all plans with eligible stories depth-first
   --concurrency <n>     Max concurrent stories (default: 1)
   --help, -h            Show this help message
+
+Continuous mode exhausts all eligible stories in a plan before moving to the
+next plan. Plans are processed in priority order (P1 first). The loop exits
+when no plans have eligible stories remaining or on SIGINT/SIGTERM.
 
 Environment Variables:
   MONOREPO_ROOT         Root path of the monorepo (default: auto-detected)
@@ -198,34 +212,25 @@ async function main(): Promise<void> {
     process.exit(0)
   }
 
-  // Validate that at least one of --plan or --story is provided
-  if (!cliArgs.plan && (!cliArgs.story || cliArgs.story.length === 0)) {
-    process.stderr.write('Error: must provide --plan <slug> or --story <id>\n\n')
+  // Validate that at least one of --plan, --story, or --continuous is provided
+  if (!cliArgs.continuous && !cliArgs.plan && (!cliArgs.story || cliArgs.story.length === 0)) {
+    process.stderr.write('Error: must provide --plan <slug>, --story <id>, or --continuous\n\n')
     printUsage()
     process.exit(1)
   }
 
-  // Determine input mode
-  const inputMode: InputMode = cliArgs.plan ? 'plan' : 'story'
-  const planSlug = cliArgs.plan ?? null
-  const storyIds = cliArgs.story ?? []
+  // Validate that --continuous is not combined with --plan or --story
+  if (cliArgs.continuous && (cliArgs.plan || (cliArgs.story && cliArgs.story.length > 0))) {
+    process.stderr.write('Error: --continuous cannot be combined with --plan or --story\n\n')
+    printUsage()
+    process.exit(1)
+  }
 
   // Resolve configuration from environment
   const monorepoRoot = await detectMonorepoRoot()
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
   const defaultBaseBranch = process.env.DEFAULT_BASE_BRANCH ?? 'main'
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY
-
-  logger.info('run-pipeline: starting pipeline orchestrator V2', {
-    inputMode,
-    planSlug,
-    storyIds,
-    concurrency: cliArgs.concurrency,
-    monorepoRoot,
-    ollamaBaseUrl,
-    defaultBaseBranch,
-    hasAnthropicKey: !!anthropicApiKey,
-  })
 
   // Build adapters
   const notiAdapter = buildNotiAdapter()
@@ -243,6 +248,35 @@ async function main(): Promise<void> {
     shellExec: defaultShellExec,
     storyListAdapter,
   }
+
+  // Continuous mode — loop through all plans depth-first
+  if (cliArgs.continuous) {
+    logger.info('run-pipeline: starting continuous mode', {
+      monorepoRoot,
+      ollamaBaseUrl,
+      defaultBaseBranch,
+      hasAnthropicKey: !!anthropicApiKey,
+    })
+
+    await runContinuousMode(graphConfig)
+    return
+  }
+
+  // Single-plan or single-story mode
+  const inputMode: InputMode = cliArgs.plan ? 'plan' : 'story'
+  const planSlug = cliArgs.plan ?? null
+  const storyIds = cliArgs.story ?? []
+
+  logger.info('run-pipeline: starting pipeline orchestrator V2', {
+    inputMode,
+    planSlug,
+    storyIds,
+    concurrency: cliArgs.concurrency,
+    monorepoRoot,
+    ollamaBaseUrl,
+    defaultBaseBranch,
+    hasAnthropicKey: !!anthropicApiKey,
+  })
 
   // Build initial state
   const initialState = {
@@ -316,6 +350,112 @@ async function main(): Promise<void> {
     process.stderr.write(`\nFatal error: ${msg}\n`)
     process.exit(1)
   }
+}
+
+// ============================================================================
+// Continuous Mode
+// ============================================================================
+
+/**
+ * Runs the pipeline in continuous mode: loops through all plans with eligible
+ * stories, processing them depth-first (exhaust all eligible stories in one
+ * plan before moving to the next).
+ *
+ * Plans are selected by priority (P1 first), then creation date.
+ * The loop exits when no plans have eligible stories or on shutdown signal.
+ */
+async function runContinuousMode(
+  graphConfig: PipelineOrchestratorV2GraphConfig,
+): Promise<void> {
+  let totalCompleted = 0
+  let totalBlocked = 0
+  let totalErrors = 0
+  let plansProcessed = 0
+  const overallStart = Date.now()
+
+  while (!shutdownRequested) {
+    const planSlug = await getNextPlanWithEligibleStories()
+
+    if (!planSlug) {
+      logger.info('continuous: no more plans with eligible stories')
+      break
+    }
+
+    plansProcessed++
+    logger.info('continuous: processing plan', { planSlug, plansProcessed })
+
+    const planStart = Date.now()
+
+    try {
+      const compiledGraph = createPipelineOrchestratorV2Graph(graphConfig)
+
+      const finalState = await compiledGraph.invoke({
+        inputMode: 'plan' as InputMode,
+        planSlug,
+        storyIds: [],
+        modelConfig: {
+          primaryModel: 'sonnet',
+          escalationModel: 'opus',
+          ollamaModel: 'qwen2.5-coder:14b',
+        },
+      })
+
+      const planCompleted = finalState.completedStories?.length ?? 0
+      const planBlocked = finalState.blockedStories?.length ?? 0
+      const planErrors = finalState.errors?.length ?? 0
+      const planDurationMs = Date.now() - planStart
+
+      totalCompleted += planCompleted
+      totalBlocked += planBlocked
+      totalErrors += planErrors
+
+      logger.info('continuous: plan finished', {
+        planSlug,
+        completed: planCompleted,
+        blocked: planBlocked,
+        errors: planErrors,
+        phase: finalState.pipelinePhase,
+        durationMs: planDurationMs,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const planDurationMs = Date.now() - planStart
+
+      logger.error('continuous: plan failed with error', {
+        planSlug,
+        error: msg,
+        durationMs: planDurationMs,
+      })
+
+      totalErrors++
+      // Continue to next plan — don't let one plan failure stop the loop
+    }
+  }
+
+  const overallDurationMs = Date.now() - overallStart
+
+  // Print overall summary
+  logger.info('continuous: all plans exhausted', {
+    plansProcessed,
+    totalCompleted,
+    totalBlocked,
+    totalErrors,
+    durationMs: overallDurationMs,
+    shutdownRequested,
+  })
+
+  process.stdout.write('\n--- Continuous Mode Summary ---\n')
+  process.stdout.write(`Plans processed: ${plansProcessed}\n`)
+  process.stdout.write(`Total completed: ${totalCompleted}\n`)
+  process.stdout.write(`Total blocked: ${totalBlocked}\n`)
+  process.stdout.write(`Total errors: ${totalErrors}\n`)
+  process.stdout.write(`Duration: ${(overallDurationMs / 1000).toFixed(1)}s\n`)
+
+  if (shutdownRequested) {
+    process.stdout.write('Exited due to shutdown signal.\n')
+  }
+
+  process.exit(totalErrors > 0 ? 1 : 0)
 }
 
 // ============================================================================

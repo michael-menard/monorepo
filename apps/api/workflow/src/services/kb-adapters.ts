@@ -550,6 +550,113 @@ export const storyListAdapter: StoryListAdapterFn = async (planSlug: string) => 
 }
 
 // ============================================================================
+// Continuous Mode — Next Plan Discovery
+// ============================================================================
+
+/** Terminal story states that are not eligible for pipeline processing. */
+const TERMINAL_STORY_STATES = new Set(['completed', 'cancelled', 'blocked', 'deferred'])
+
+/**
+ * Finds the next plan with eligible stories for continuous-mode processing.
+ *
+ * Queries plans with status 'stories-created' or 'in-progress', ordered by
+ * priority (P1 first) then creation date. For each plan, checks whether it
+ * has at least one story that is not in a terminal state and whose blocker
+ * (if any) is completed.
+ *
+ * @returns The plan slug of the first plan with eligible stories, or null.
+ */
+export async function getNextPlanWithEligibleStories(): Promise<string | null> {
+  try {
+    const db = getDb()
+
+    // Query plans with eligible statuses via raw SQL (kb_list_plans is not
+    // re-exported from @repo/knowledge-base, so we use the DB client directly)
+    const planRows = await db.execute<{
+      plan_slug: string
+      priority: string | null
+      created_at: Date
+    }>(
+      `SELECT plan_slug, priority, created_at
+       FROM workflow.plans
+       WHERE status IN ('stories-created', 'in-progress')
+         AND deleted_at IS NULL
+       ORDER BY
+         CASE priority
+           WHEN 'P1' THEN 1
+           WHEN 'P2' THEN 2
+           WHEN 'P3' THEN 3
+           WHEN 'P4' THEN 4
+           WHEN 'P5' THEN 5
+           ELSE 99
+         END,
+         created_at ASC
+       LIMIT 50`,
+    )
+
+    if (!planRows.rows || planRows.rows.length === 0) {
+      logger.info('getNextPlanWithEligibleStories: no eligible plans found')
+      return null
+    }
+
+    // For each plan, check if it has at least one eligible story
+    for (const plan of planRows.rows) {
+      const planSlug = plan.plan_slug
+      try {
+        const result = await kb_list_stories({ db }, {
+          plan_slug: planSlug,
+          limit: 100,
+          offset: 0,
+        })
+
+        // Check for at least one non-terminal story whose blocker is resolved
+        const storyMap = new Map<string, Record<string, unknown>>(
+          result.stories.map(s => [s.storyId ?? '', s as Record<string, unknown>]),
+        )
+
+        const hasEligible = result.stories.some(s => {
+          const story = s as Record<string, unknown>
+          const state = (story.state as string) ?? 'backlog'
+          if (TERMINAL_STORY_STATES.has(state)) return false
+
+          // If story has a blocker, check if blocker is completed
+          const blockerId = story.blockedByStory as string | null
+          if (blockerId) {
+            const blocker = storyMap.get(blockerId)
+            if (blocker && (blocker.state as string) !== 'completed') return false
+          }
+
+          return true
+        })
+
+        if (hasEligible) {
+          logger.info('getNextPlanWithEligibleStories: found plan', {
+            planSlug,
+            priority: plan.priority,
+            storyCount: result.stories.length,
+          })
+          return planSlug
+        }
+      } catch (err) {
+        logger.warn('getNextPlanWithEligibleStories: error checking plan stories', {
+          planSlug,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        // Continue to next plan
+      }
+    }
+
+    logger.info('getNextPlanWithEligibleStories: no plans with eligible stories')
+    return null
+  } catch (err) {
+    logger.error('getNextPlanWithEligibleStories: query failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+// ============================================================================
 // Composite Adapter Config
 // ============================================================================
 
