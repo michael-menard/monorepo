@@ -312,7 +312,7 @@ async function main(): Promise<void> {
     modelConfig: {
       planRefinement: 'claude-code/opus',
       storyGeneration: 'claude-code/sonnet',
-      devExecutor: 'ollama:qwen2.5-coder:32b',
+      devExecutor: 'ollama:qwen2.5-coder:14b',
       devPlanner: 'ollama:qwen2.5-coder:14b',
       reviewAgent: 'ollama:qwen2.5-coder:7b',
       qaVerifier: 'ollama:deepseek-coder-v2:latest',
@@ -424,7 +424,7 @@ async function runContinuousMode(
         modelConfig: {
           planRefinement: 'claude-code/opus',
           storyGeneration: 'claude-code/sonnet',
-          devExecutor: 'ollama:qwen2.5-coder:32b',
+          devExecutor: 'ollama:qwen2.5-coder:14b',
           devPlanner: 'ollama:qwen2.5-coder:14b',
           reviewAgent: 'ollama:qwen2.5-coder:7b',
           qaVerifier: 'ollama:deepseek-coder-v2:latest',

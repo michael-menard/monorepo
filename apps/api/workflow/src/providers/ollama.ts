@@ -29,7 +29,7 @@ export const OllamaConfigSchema = z.object({
   temperature: z.number().min(0).max(2).default(0),
 
   /** Request timeout in milliseconds */
-  timeoutMs: z.number().positive().default(60000),
+  timeoutMs: z.number().positive().default(180000),
 
   /** Cache TTL for availability checks (ms) */
   availabilityCacheTtlMs: z.number().positive().default(30000),
