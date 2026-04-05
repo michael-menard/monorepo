@@ -492,6 +492,8 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
           readFile: toolAdapters.readFile,
           writeFile: toolAdapters.writeFile,
           runTests: toolAdapters.runTests,
+          maxInternalIterations: 15,
+          maxPlannerIterations: 5,
         }
         const { createDevImplementV2Graph } = await import('../../graphs/dev-implement-v2.js')
         const graph = createDevImplementV2Graph(graphConfig)
