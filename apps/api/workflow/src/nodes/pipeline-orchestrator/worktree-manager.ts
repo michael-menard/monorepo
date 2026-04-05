@@ -182,10 +182,10 @@ export function createWorktreeNode(config: WorktreeNodeConfig) {
       }
     }
 
-    // Step 3: Create new worktree via `wt switch --create <storyId> --yes`
-    logger.info('createWorktreeNode: creating new worktree', { storyId })
+    // Step 3: Create or switch to worktree via `wtc <storyId>`
+    logger.info('createWorktreeNode: creating/switching worktree', { storyId })
 
-    const switchResult = await exec('wt', ['switch', '--create', storyId, '--yes'], {
+    const switchResult = await exec('wtc', [storyId], {
       cwd: monorepoRoot,
     })
 
