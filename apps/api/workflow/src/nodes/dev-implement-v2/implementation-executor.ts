@@ -86,13 +86,13 @@ export function buildExecutorSystemPrompt(
 STORY: ${grounding.storyTitle}
 APPROACH: ${plan.approach}
 
-FILES TO CREATE: ${plan.filesToCreate.join(', ') || 'none'}
-FILES TO MODIFY: ${plan.filesToModify.join(', ') || 'none'}
-TEST FILES TO CREATE: ${plan.testFilesToCreate.join(', ') || 'none'}
-RISKS: ${plan.risks.join(', ') || 'none'}
+FILES TO CREATE: ${Array.isArray(plan.filesToCreate) ? plan.filesToCreate.join(', ') : plan.filesToCreate || 'none'}
+FILES TO MODIFY: ${Array.isArray(plan.filesToModify) ? plan.filesToModify.join(', ') : plan.filesToModify || 'none'}
+TEST FILES TO CREATE: ${Array.isArray(plan.testFilesToCreate) ? plan.testFilesToCreate.join(', ') : plan.testFilesToCreate || 'none'}
+RISKS: ${Array.isArray(plan.risks) ? plan.risks.join(', ') : plan.risks || 'none'}
 
 ACCEPTANCE CRITERIA:
-${grounding.acceptanceCriteria.map((ac, i) => `  ${i}. ${ac}`).join('\n') || '  (none)'}
+${Array.isArray(grounding.acceptanceCriteria) ? grounding.acceptanceCriteria.map((ac, i) => `  ${i}. ${ac}`).join('\n') : '  (none)'}
 
 AVAILABLE TOOLS (call one per response as JSON):
 - read_file:       { "tool": "read_file", "args": { "path": "<string>" } }
