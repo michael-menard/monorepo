@@ -182,10 +182,26 @@ export function createWorktreeNode(config: WorktreeNodeConfig) {
       }
     }
 
-    // Step 3: Create or switch to worktree via `wtc <storyId>`
+    // Step 3: Create or switch to worktree
+    // Check if branch already exists (git branch or worktree from previous run)
+    // If so, switch to it. Otherwise, create new.
     logger.info('createWorktreeNode: creating/switching worktree', { storyId })
 
-    const switchResult = await exec('wtc', [storyId], {
+    const branchCheck = await exec(
+      'git',
+      ['show-ref', '--verify', '--quiet', `refs/heads/${storyId}`],
+      {
+        cwd: monorepoRoot,
+      },
+    )
+    const branchExists = branchCheck.exitCode === 0
+
+    const wtBin = process.env.WORKTRUNK_BIN ?? '/opt/homebrew/bin/wt'
+    const switchArgs = branchExists ? ['switch', storyId] : ['switch', '--create', storyId, '--yes']
+
+    logger.info('createWorktreeNode: wt command', { wtBin, args: switchArgs, branchExists })
+
+    const switchResult = await exec(wtBin, switchArgs, {
       cwd: monorepoRoot,
     })
 
