@@ -18,6 +18,7 @@ import type { ReviewV2State } from '../../state/review-v2-state.js'
 import type { QAVerifyV2State } from '../../state/qa-verify-v2-state.js'
 import type { PlanRefinementV2State } from '../../state/plan-refinement-v2-state.js'
 import type { StoryGenerationV2State } from '../../state/story-generation-v2-state.js'
+import type { TestRunResult } from '../../state/dev-implement-v2-state.js'
 import type { DevImplementV2GraphConfig } from '../../graphs/dev-implement-v2.js'
 import type { ReviewV2GraphConfig } from '../../graphs/review-v2.js'
 import type { QAVerifyV2GraphConfig } from '../../graphs/qa-verify-v2.js'
@@ -30,6 +31,69 @@ import { createMergePrNode } from './git-operations.js'
 import type { GitOpsConfig } from './git-operations.js'
 import { createCleanupWorktreeNode } from './worktree-manager.js'
 import type { WorktreeNodeConfig } from './worktree-manager.js'
+
+// ============================================================================
+// Lazy Adapter Loaders
+// ============================================================================
+
+/**
+ * Lazily imports KB adapters to avoid triggering @repo/knowledge-base
+ * env validation at module load time (which breaks DI-based tests).
+ */
+async function loadKbAdapters() {
+  const mod = await import('../../services/kb-adapters.js')
+  return {
+    planLoader: mod.planLoaderAdapter,
+    kbStory: mod.kbStoryAdapter,
+    queryKb: mod.queryKbAdapter,
+    kbWriter: mod.kbWriterAdapter,
+    tokenLogger: mod.tokenLoggerAdapter,
+  }
+}
+
+/**
+ * Lazily imports tool adapters (filesystem, test runner, diff reader).
+ */
+async function loadToolAdapters() {
+  const mod = await import('../../services/tool-adapters.js')
+  return {
+    readFile: mod.createReadFileAdapter(),
+    writeFile: mod.createWriteFileAdapter(),
+    searchCodebase: mod.createSearchCodebaseAdapter(),
+    runTests: mod.createRunTestsAdapter(),
+    diffReader: mod.createDiffReaderAdapter(),
+  }
+}
+
+// ============================================================================
+// Test Runner Shape Adapter
+// ============================================================================
+
+/**
+ * Wraps the tool-adapter's RunTestsFn (simple shape) into
+ * the qa-verify-v2 UnitTestRunnerFn (structured TestRunResult shape).
+ *
+ * tool-adapters returns: { passed, output, failures: string[] }
+ * qa-verify expects:     { passed, passedCount, failedCount, failures: {testName, error, file?}[], rawOutput }
+ */
+async function createUnitTestRunnerAdapter() {
+  const { createRunTestsAdapter } = await import('../../services/tool-adapters.js')
+  const runTests = createRunTestsAdapter()
+
+  return async (filter: string): Promise<TestRunResult> => {
+    const result = await runTests(filter)
+    return {
+      passed: result.passed,
+      passedCount: result.passed ? 1 : 0,
+      failedCount: result.failures.length,
+      failures: result.failures.map(f => ({
+        testName: f,
+        error: f,
+      })),
+      rawOutput: result.output,
+    }
+  }
+}
 
 // ============================================================================
 // Zod Schemas for Adapter Types
@@ -268,18 +332,22 @@ export function createPlanRefinementWrapper(config: SubgraphInvokerConfig = {}) 
       const factory = config.adapterFactory ?? createLlmAdapterFactory()
       const adapters = factory.buildPlanRefinementAdapters(modelConfig, ollamaAvailable)
 
-      // Build subgraph config — LLM adapter from factory, other adapters are
-      // no-op stubs (degrade gracefully without KB/codebase adapters)
-      const graphConfig: PlanRefinementV2GraphConfig = {
-        ...adapters,
-      }
-
       let result: PlanRefinementV2State
       if (config.createPlanRefinementGraph) {
+        // Test path — use injected graph factory (no real adapters needed)
+        const graphConfig: PlanRefinementV2GraphConfig = { ...adapters }
         const graph = config.createPlanRefinementGraph(graphConfig)
         result = await graph.invoke({ planSlug })
       } else {
-        // Dynamic import to avoid circular dependencies at module load time
+        // Production path — load real KB/IO adapters lazily
+        const kbAdapters = await loadKbAdapters()
+        const toolAdapters = await loadToolAdapters()
+        const graphConfig: PlanRefinementV2GraphConfig = {
+          ...adapters,
+          planLoader: kbAdapters.planLoader,
+          queryKb: kbAdapters.queryKb,
+          searchCodebase: toolAdapters.searchCodebase,
+        }
         const { createPlanRefinementV2Graph } = await import('../../graphs/plan-refinement-v2.js')
         const graph = createPlanRefinementV2Graph(graphConfig)
         result = await graph.invoke({ planSlug })
@@ -333,18 +401,24 @@ export function createStoryGenerationWrapper(config: SubgraphInvokerConfig = {})
       const factory = config.adapterFactory ?? createLlmAdapterFactory()
       const adapters = factory.buildStoryGenerationAdapters(modelConfig, ollamaAvailable)
 
-      // Build subgraph config — LLM adapters from factory, other adapters are
-      // no-op stubs (degrade gracefully without KB/codebase adapters)
-      const graphConfig: StoryGenerationV2GraphConfig = {
-        ...adapters,
-      }
-
       let result: StoryGenerationV2State
       if (config.createStoryGenerationGraph) {
+        // Test path — use injected graph factory (no real adapters needed)
+        const graphConfig = { ...adapters } as StoryGenerationV2GraphConfig
         const graph = config.createStoryGenerationGraph(graphConfig)
         result = await graph.invoke({ planSlug })
       } else {
-        // Dynamic import to avoid circular dependencies at module load time
+        // Production path — load real KB/IO adapters lazily
+        const kbAdapters = await loadKbAdapters()
+        const toolAdapters = await loadToolAdapters()
+        const graphConfig = {
+          ...adapters,
+          planLoader: kbAdapters.planLoader,
+          kbWriter: kbAdapters.kbWriter,
+          tokenLogger: kbAdapters.tokenLogger,
+          searchCodebase: toolAdapters.searchCodebase,
+          readFileSummary: toolAdapters.readFile,
+        } as StoryGenerationV2GraphConfig
         const { createStoryGenerationV2Graph } = await import('../../graphs/story-generation-v2.js')
         const graph = createStoryGenerationV2Graph(graphConfig)
         result = await graph.invoke({ planSlug })
@@ -398,17 +472,25 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
       const factory = config.adapterFactory ?? createLlmAdapterFactory()
       const adapters = factory.buildDevImplementAdapters(modelConfig, ollamaAvailable)
 
-      // Create and invoke subgraph
-      const graphConfig: DevImplementV2GraphConfig = {
-        ...adapters,
-      }
-
       let result: DevImplementV2State
       if (config.createDevGraph) {
+        // Test path — use injected graph factory (no real adapters needed)
+        const graphConfig: DevImplementV2GraphConfig = { ...adapters }
         const graph = config.createDevGraph(graphConfig)
         result = await graph.invoke({ storyId: currentStoryId })
       } else {
-        // Dynamic import to avoid circular dependencies at module load time
+        // Production path — load real KB/IO adapters lazily
+        const kbAdapters = await loadKbAdapters()
+        const toolAdapters = await loadToolAdapters()
+        const graphConfig: DevImplementV2GraphConfig = {
+          ...adapters,
+          kbStoryAdapter: kbAdapters.kbStory,
+          queryKb: kbAdapters.queryKb,
+          searchCodebase: toolAdapters.searchCodebase,
+          readFile: toolAdapters.readFile,
+          writeFile: toolAdapters.writeFile,
+          runTests: toolAdapters.runTests,
+        }
         const { createDevImplementV2Graph } = await import('../../graphs/dev-implement-v2.js')
         const graph = createDevImplementV2Graph(graphConfig)
         result = await graph.invoke({ storyId: currentStoryId })
@@ -464,19 +546,26 @@ export function createReviewWrapper(config: SubgraphInvokerConfig = {}) {
       const factory = config.adapterFactory ?? createLlmAdapterFactory()
       const adapters = factory.buildReviewAdapters(modelConfig, ollamaAvailable)
 
-      // Create and invoke subgraph
-      const graphConfig: ReviewV2GraphConfig = {
-        ...adapters,
-      }
-
       let result: ReviewV2State
       if (config.createReviewGraph) {
+        // Test path — use injected graph factory (no real adapters needed)
+        const graphConfig: ReviewV2GraphConfig = { ...adapters }
         const graph = config.createReviewGraph(graphConfig)
         result = await graph.invoke({
           storyId: currentStoryId,
           worktreePath: worktreePath ?? '',
         })
       } else {
+        // Production path — load real KB/IO adapters lazily
+        const kbAdapters = await loadKbAdapters()
+        const toolAdapters = await loadToolAdapters()
+        const graphConfig: ReviewV2GraphConfig = {
+          ...adapters,
+          diffReader: toolAdapters.diffReader,
+          readFile: toolAdapters.readFile,
+          searchCodebase: toolAdapters.searchCodebase,
+          queryKb: kbAdapters.queryKb,
+        }
         const { createReviewV2Graph } = await import('../../graphs/review-v2.js')
         const graph = createReviewV2Graph(graphConfig)
         result = await graph.invoke({
@@ -571,16 +660,20 @@ export function createQAVerifyWrapper(config: SubgraphInvokerConfig = {}) {
       const factory = config.adapterFactory ?? createLlmAdapterFactory()
       const adapters = factory.buildQAVerifyAdapters(modelConfig, ollamaAvailable)
 
-      // Create and invoke subgraph
-      const graphConfig: QAVerifyV2GraphConfig = {
-        ...adapters,
-      }
-
       let result: QAVerifyV2State
       if (config.createQAGraph) {
+        // Test path — use injected graph factory (no real adapters needed)
+        const graphConfig: QAVerifyV2GraphConfig = { ...adapters }
         const graph = config.createQAGraph(graphConfig)
         result = await graph.invoke({ storyId: currentStoryId })
       } else {
+        // Production path — load real KB/IO adapters lazily
+        const kbAdapters = await loadKbAdapters()
+        const graphConfig: QAVerifyV2GraphConfig = {
+          ...adapters,
+          kbStoryAdapter: kbAdapters.kbStory,
+          unitTestRunner: await createUnitTestRunnerAdapter(),
+        }
         const { createQAVerifyV2Graph } = await import('../../graphs/qa-verify-v2.js')
         const graph = createQAVerifyV2Graph(graphConfig)
         result = await graph.invoke({ storyId: currentStoryId })
