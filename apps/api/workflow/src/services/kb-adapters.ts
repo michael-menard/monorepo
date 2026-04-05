@@ -20,6 +20,8 @@ import {
   kb_search,
   kb_get_plan,
   kb_create_story,
+  kb_update_story_status,
+  kb_write_artifact,
 } from '@repo/knowledge-base'
 import { EmbeddingClient } from '@repo/knowledge-base/embedding-client'
 import { logInvocation } from '@repo/knowledge-base/telemetry'
@@ -692,6 +694,98 @@ export function createKbAdapters() {
     logInvocation: logInvocationAdapter,
     logOutcome: logOutcomeAdapter,
     logDecision: logDecisionAdapter,
+  }
+}
+
+// ============================================================================
+// Pipeline Supervisor Adapters
+// ============================================================================
+
+/**
+ * Gets a story's current state from KB.
+ * Used by the pipeline supervisor phase router.
+ */
+export async function getStoryStateAdapter(storyId: string): Promise<string | null> {
+  try {
+    const db = getDb()
+    const result = await kb_get_story(
+      { db },
+      { story_id: storyId, include_artifacts: false, include_dependencies: false },
+    )
+
+    if (!result.story) return null
+    return (result.story.state as string) ?? null
+  } catch (err) {
+    logger.warn('kb-adapters: getStoryState failed', {
+      storyId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+/**
+ * Builds a KbAdapter for the pipeline supervisor.
+ * Provides updateStoryStatus, writeArtifact, and listStories operations.
+ */
+export function buildKbAdapter() {
+  return {
+    updateStoryStatus: async (storyId: string, status: string): Promise<void> => {
+      try {
+        const db = getDb()
+        await kb_update_story_status({ db }, { story_id: storyId, state: status as never })
+        logger.info('kb-adapters: story status updated', { storyId, status })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.error('kb-adapters: updateStoryStatus failed', { storyId, status, error: msg })
+        throw err
+      }
+    },
+
+    writeArtifact: async (storyId: string, type: string, content: object): Promise<void> => {
+      try {
+        const db = getDb()
+        await kb_write_artifact(
+          {
+            story_id: storyId,
+            artifact_type: type as never,
+            content: content as Record<string, unknown>,
+          },
+          { db },
+        )
+        logger.info('kb-adapters: artifact written', { storyId, type })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        logger.error('kb-adapters: writeArtifact failed', { storyId, type, error: msg })
+        throw err
+      }
+    },
+
+    listStories: async (filter: { blockedBy?: string }) => {
+      try {
+        const db = getDb()
+        // Query stories that are blocked by a specific story
+        if (filter.blockedBy) {
+          const result = await kb_list_stories({ db }, { limit: 100, offset: 0 })
+
+          return result.stories
+            .filter(s => (s.blockedByStory as string | null) === filter.blockedBy)
+            .map(s => ({
+              id: s.storyId ?? '',
+              blockedBy: (s.blockedByStory as string | null) ?? null,
+              status: (s.state as string) ?? 'unknown',
+            }))
+        }
+
+        return []
+      } catch (err) {
+        logger.warn('kb-adapters: listStories failed', {
+          filter,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return []
+      }
+    },
   }
 }
 

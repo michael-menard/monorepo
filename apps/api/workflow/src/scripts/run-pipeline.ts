@@ -23,12 +23,11 @@
 import 'dotenv/config'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { createPipelineOrchestratorV2Graph } from '../graphs/pipeline-orchestrator-v2.js'
-import type { PipelineOrchestratorV2GraphConfig } from '../graphs/pipeline-orchestrator-v2.js'
+import { runPipelineSupervisor } from '../graphs/pipeline-supervisor.js'
+import type { SupervisorConfig, SupervisorAdapters } from '../graphs/pipeline-supervisor.js'
 import type { InputMode } from '../state/pipeline-orchestrator-v2-state.js'
 import { defaultShellExec } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import { createNotiAdapter, createNoopNotiAdapter } from '../services/noti-adapter.js'
-import { createEventEmitter } from '../nodes/pipeline-orchestrator/event-emitter.js'
 import { createLlmAdapterFactory } from '../services/llm-adapter-factory.js'
 import { storyListAdapter, getNextPlanWithEligibleStories } from '../services/kb-adapters.js'
 
@@ -234,19 +233,21 @@ async function main(): Promise<void> {
 
   // Build adapters
   const notiAdapter = buildNotiAdapter()
-  const _emitter = createEventEmitter({ notiAdapter })
   const _llmFactory = createLlmAdapterFactory({
     ollamaBaseUrl,
     anthropicApiKey,
   })
 
-  // Build graph config
-  const graphConfig: PipelineOrchestratorV2GraphConfig = {
-    monorepoRoot,
-    ollamaBaseUrl,
-    defaultBaseBranch,
-    shellExec: defaultShellExec,
+  // Lazily import KB adapter builders to avoid env validation at module load
+  const { buildKbAdapter, getStoryStateAdapter } = await import('../services/kb-adapters.js')
+
+  // Build supervisor adapters
+  const supervisorAdapters: SupervisorAdapters = {
     storyListAdapter,
+    getStoryState: getStoryStateAdapter,
+    kbAdapter: buildKbAdapter(),
+    shellExec: defaultShellExec,
+    eventEmitterAdapters: { notiAdapter },
   }
 
   // Continuous mode — loop through all plans depth-first
@@ -258,7 +259,11 @@ async function main(): Promise<void> {
       hasAnthropicKey: !!anthropicApiKey,
     })
 
-    await runContinuousMode(graphConfig)
+    await runContinuousMode(supervisorAdapters, {
+      monorepoRoot,
+      ollamaBaseUrl,
+      defaultBaseBranch,
+    })
     return
   }
 
@@ -267,7 +272,7 @@ async function main(): Promise<void> {
   const planSlug = cliArgs.plan ?? null
   const storyIds = cliArgs.story ?? []
 
-  logger.info('run-pipeline: starting pipeline orchestrator V2', {
+  logger.info('run-pipeline: starting pipeline supervisor', {
     inputMode,
     planSlug,
     storyIds,
@@ -278,11 +283,16 @@ async function main(): Promise<void> {
     hasAnthropicKey: !!anthropicApiKey,
   })
 
-  // Build initial state
-  const initialState = {
+  // Build supervisor config
+  const supervisorConfig: SupervisorConfig = {
     inputMode,
     planSlug,
     storyIds,
+    monorepoRoot,
+    defaultBaseBranch,
+    ollamaBaseUrl,
+    requiredModel: 'qwen2.5-coder:14b',
+    maxStories: 0,
     modelConfig: {
       primaryModel: 'sonnet',
       escalationModel: 'opus',
@@ -290,63 +300,51 @@ async function main(): Promise<void> {
     },
   }
 
-  // Compile and invoke graph
-  const startTime = Date.now()
-
   try {
-    const compiledGraph = createPipelineOrchestratorV2Graph(graphConfig)
+    logger.info('run-pipeline: invoking supervisor...')
 
-    logger.info('run-pipeline: graph compiled, invoking...')
-
-    const finalState = await compiledGraph.invoke(initialState)
-
-    const durationMs = Date.now() - startTime
-    const completedCount = finalState.completedStories?.length ?? 0
-    const blockedCount = finalState.blockedStories?.length ?? 0
-    const errors = finalState.errors ?? []
-    const phase = finalState.pipelinePhase
+    const result = await runPipelineSupervisor(supervisorConfig, supervisorAdapters)
 
     logger.info('run-pipeline: pipeline finished', {
-      phase,
-      completedCount,
-      blockedCount,
-      errorCount: errors.length,
-      durationMs,
+      phase: result.finalPhase,
+      completedCount: result.completed.length,
+      blockedCount: result.blocked.length,
+      errorCount: result.errors.length,
+      durationMs: result.durationMs,
     })
 
     // Print summary to stdout for CLI consumers
     process.stdout.write('\n--- Pipeline Summary ---\n')
-    process.stdout.write(`Phase: ${phase}\n`)
-    process.stdout.write(`Completed: ${completedCount}\n`)
-    process.stdout.write(`Blocked: ${blockedCount}\n`)
-    process.stdout.write(`Errors: ${errors.length}\n`)
-    process.stdout.write(`Duration: ${(durationMs / 1000).toFixed(1)}s\n`)
+    process.stdout.write(`Phase: ${result.finalPhase}\n`)
+    process.stdout.write(`Completed: ${result.completed.length}\n`)
+    process.stdout.write(`Blocked: ${result.blocked.length}\n`)
+    process.stdout.write(`Errors: ${result.errors.length}\n`)
+    process.stdout.write(`Duration: ${(result.durationMs / 1000).toFixed(1)}s\n`)
 
-    if (errors.length > 0) {
+    if (result.errors.length > 0) {
       process.stdout.write('\nErrors:\n')
-      for (const err of errors) {
+      for (const err of result.errors) {
         process.stdout.write(`  - ${err}\n`)
       }
     }
 
-    if (blockedCount > 0) {
+    if (result.blocked.length > 0) {
       process.stdout.write('\nBlocked stories:\n')
-      for (const id of finalState.blockedStories ?? []) {
+      for (const id of result.blocked) {
         process.stdout.write(`  - ${id}\n`)
       }
     }
 
     // Exit code: 0 on pipeline_complete, 1 on stalled/error
-    if (phase === 'pipeline_stalled' || errors.length > 0) {
+    if (result.finalPhase === 'pipeline_stalled' || result.errors.length > 0) {
       process.exit(1)
     }
 
     process.exit(0)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    const durationMs = Date.now() - startTime
 
-    logger.error('run-pipeline: fatal error', { error: msg, durationMs })
+    logger.error('run-pipeline: fatal error', { error: msg })
     process.stderr.write(`\nFatal error: ${msg}\n`)
     process.exit(1)
   }
@@ -365,7 +363,12 @@ async function main(): Promise<void> {
  * The loop exits when no plans have eligible stories or on shutdown signal.
  */
 async function runContinuousMode(
-  graphConfig: PipelineOrchestratorV2GraphConfig,
+  supervisorAdapters: SupervisorAdapters,
+  envConfig: {
+    monorepoRoot: string
+    ollamaBaseUrl: string
+    defaultBaseBranch: string
+  },
 ): Promise<void> {
   let totalCompleted = 0
   let totalBlocked = 0
@@ -387,34 +390,36 @@ async function runContinuousMode(
     const planStart = Date.now()
 
     try {
-      const compiledGraph = createPipelineOrchestratorV2Graph(graphConfig)
-
-      const finalState = await compiledGraph.invoke({
-        inputMode: 'plan' as InputMode,
+      const supervisorConfig: SupervisorConfig = {
+        inputMode: 'plan',
         planSlug,
         storyIds: [],
+        monorepoRoot: envConfig.monorepoRoot,
+        defaultBaseBranch: envConfig.defaultBaseBranch,
+        ollamaBaseUrl: envConfig.ollamaBaseUrl,
+        requiredModel: 'qwen2.5-coder:14b',
+        maxStories: 0,
         modelConfig: {
           primaryModel: 'sonnet',
           escalationModel: 'opus',
           ollamaModel: 'qwen2.5-coder:14b',
         },
-      })
+      }
 
-      const planCompleted = finalState.completedStories?.length ?? 0
-      const planBlocked = finalState.blockedStories?.length ?? 0
-      const planErrors = finalState.errors?.length ?? 0
+      const result = await runPipelineSupervisor(supervisorConfig, supervisorAdapters)
+
       const planDurationMs = Date.now() - planStart
 
-      totalCompleted += planCompleted
-      totalBlocked += planBlocked
-      totalErrors += planErrors
+      totalCompleted += result.completed.length
+      totalBlocked += result.blocked.length
+      totalErrors += result.errors.length
 
       logger.info('continuous: plan finished', {
         planSlug,
-        completed: planCompleted,
-        blocked: planBlocked,
-        errors: planErrors,
-        phase: finalState.pipelinePhase,
+        completed: result.completed.length,
+        blocked: result.blocked.length,
+        errors: result.errors.length,
+        phase: result.finalPhase,
         durationMs: planDurationMs,
       })
     } catch (err) {
