@@ -19,6 +19,8 @@ import { Annotation } from '@langchain/langgraph'
 export const PipelinePhaseSchema = z.enum([
   'preflight',
   'routing',
+  'plan_refinement',
+  'story_generation',
   'story_picking',
   'worktree_setup',
   'dev_implement',
@@ -141,6 +143,24 @@ export const PipelineOrchestratorV2StateAnnotation = Annotation.Root({
 
   /** Plan slug when inputMode is 'plan' */
   planSlug: Annotation<string | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** Refined plan data from plan_refinement subgraph */
+  refinedPlan: Annotation<Record<string, unknown> | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** Plan flows extracted during refinement */
+  planFlows: Annotation<Record<string, unknown>[]>({
+    reducer: overwrite,
+    default: () => [],
+  }),
+
+  /** Postcondition result from plan refinement */
+  planPostconditionResult: Annotation<Record<string, unknown> | null>({
     reducer: overwrite,
     default: () => null,
   }),

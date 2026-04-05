@@ -130,6 +130,8 @@ export const PHASE_TO_CHECKPOINT_MAP: Record<Phase, string> = {
 export const ORCHESTRATOR_PHASE_TO_NODE_MAP: Record<PipelinePhase, string> = {
   preflight: 'preflight_checks',
   routing: 'route_input',
+  plan_refinement: 'plan_refinement',
+  story_generation: 'story_generation',
   story_picking: 'story_picker',
   worktree_setup: 'create_worktree',
   dev_implement: 'dev_implement',

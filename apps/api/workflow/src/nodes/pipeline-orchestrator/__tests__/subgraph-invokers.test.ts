@@ -19,10 +19,16 @@ import {
   createMergeCleanupNode,
   createPostCompletionNode,
   createBlockStoryNode,
+  createPlanRefinementWrapper,
+  createStoryGenerationWrapper,
+  mapPlanRefinementResultToOrchestratorState,
+  mapStoryGenerationResultToOrchestratorState,
   transitionToCompleted,
   resolveDownstreamDependencies,
 } from '../subgraph-invokers.js'
 import type { KbAdapter, KbStory } from '../subgraph-invokers.js'
+import type { PlanRefinementV2State } from '../../../state/plan-refinement-v2-state.js'
+import type { StoryGenerationV2State } from '../../../state/story-generation-v2-state.js'
 import type { PipelineOrchestratorV2State } from '../../../state/pipeline-orchestrator-v2-state.js'
 import type { ShellExecResult } from '../worktree-manager.js'
 
@@ -36,6 +42,9 @@ function makeState(
   return {
     inputMode: 'story',
     planSlug: null,
+    refinedPlan: null,
+    planFlows: [],
+    planPostconditionResult: null,
     currentStoryId: 'TEST-001',
     worktreePath: '/tmp/monorepo/.worktrees/TEST-001',
     branch: 'TEST-001',
@@ -400,5 +409,302 @@ describe('createBlockStoryNode', () => {
 
     expect(result.blockedStories).toEqual([])
     expect(adapter.updateStoryStatus).not.toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
+// mapPlanRefinementResultToOrchestratorState tests
+// ============================================================================
+
+describe('mapPlanRefinementResultToOrchestratorState', () => {
+  it('maps successful refinement result', () => {
+    const subgraphResult = {
+      planSlug: 'test-plan',
+      rawPlan: null,
+      normalizedPlan: { title: 'Test Plan', flows: [] },
+      flows: [{ id: 'flow-1', name: 'Flow 1', steps: [] }],
+      groundingContext: null,
+      postconditionResult: { passed: true, failures: [], evidence: {} },
+      refinementV2Phase: 'complete' as const,
+      retryCount: 0,
+      maxRetries: 3,
+      internalIterations: 2,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: [],
+    } as PlanRefinementV2State
+
+    const result = mapPlanRefinementResultToOrchestratorState(subgraphResult)
+
+    expect(result.pipelinePhase).toBe('plan_refinement')
+    expect(result.refinedPlan).toEqual({ title: 'Test Plan', flows: [] })
+    expect(result.planFlows).toHaveLength(1)
+    expect(result.planPostconditionResult).toEqual({ passed: true, failures: [], evidence: {} })
+    expect(result.errors).toEqual([])
+  })
+
+  it('maps error refinement result with errors', () => {
+    const subgraphResult = {
+      planSlug: 'test-plan',
+      rawPlan: null,
+      normalizedPlan: null,
+      flows: [],
+      groundingContext: null,
+      postconditionResult: null,
+      refinementV2Phase: 'error' as const,
+      retryCount: 3,
+      maxRetries: 3,
+      internalIterations: 0,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: ['Plan not found'],
+    } as PlanRefinementV2State
+
+    const result = mapPlanRefinementResultToOrchestratorState(subgraphResult)
+
+    expect(result.pipelinePhase).toBe('plan_refinement')
+    expect(result.errors).toEqual(['Plan not found'])
+    expect(result.refinedPlan).toBeNull()
+  })
+})
+
+// ============================================================================
+// mapStoryGenerationResultToOrchestratorState tests
+// ============================================================================
+
+describe('mapStoryGenerationResultToOrchestratorState', () => {
+  it('maps successful generation result with ordered stories', () => {
+    const subgraphResult = {
+      planSlug: 'test-plan',
+      refinedPlan: null,
+      flows: [],
+      flowScoutResults: [],
+      storyOutlines: [],
+      enrichedStories: [],
+      dependencyEdges: [],
+      parallelGroups: [],
+      orderedStories: [
+        { title: 'STORY-001', description: 'First story' },
+        { title: 'STORY-002', description: 'Second story' },
+      ],
+      validationResult: null,
+      writeResult: null,
+      generationV2Phase: 'complete' as const,
+      enricherRetryCount: 0,
+      maxEnricherRetries: 2,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: [],
+    } as unknown as StoryGenerationV2State
+
+    const result = mapStoryGenerationResultToOrchestratorState(subgraphResult)
+
+    expect(result.pipelinePhase).toBe('story_generation')
+    expect(result.storyIds).toEqual(['STORY-001', 'STORY-002'])
+    expect(result.errors).toEqual([])
+  })
+
+  it('maps error generation result', () => {
+    const subgraphResult = {
+      planSlug: 'test-plan',
+      refinedPlan: null,
+      flows: [],
+      flowScoutResults: [],
+      storyOutlines: [],
+      enrichedStories: [],
+      dependencyEdges: [],
+      parallelGroups: [],
+      orderedStories: [],
+      validationResult: null,
+      writeResult: null,
+      generationV2Phase: 'error' as const,
+      enricherRetryCount: 0,
+      maxEnricherRetries: 2,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: ['Slicer failed'],
+    } as unknown as StoryGenerationV2State
+
+    const result = mapStoryGenerationResultToOrchestratorState(subgraphResult)
+
+    expect(result.pipelinePhase).toBe('story_generation')
+    expect(result.storyIds).toEqual([])
+    expect(result.errors).toEqual(['Slicer failed'])
+  })
+
+  it('falls back to enrichedStories when orderedStories is empty', () => {
+    const subgraphResult = {
+      planSlug: 'test-plan',
+      refinedPlan: null,
+      flows: [],
+      flowScoutResults: [],
+      storyOutlines: [],
+      enrichedStories: [
+        { title: 'ENRICHED-001', description: 'Enriched story' },
+      ],
+      dependencyEdges: [],
+      parallelGroups: [],
+      orderedStories: [],
+      validationResult: null,
+      writeResult: null,
+      generationV2Phase: 'complete' as const,
+      enricherRetryCount: 0,
+      maxEnricherRetries: 2,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: [],
+    } as unknown as StoryGenerationV2State
+
+    const result = mapStoryGenerationResultToOrchestratorState(subgraphResult)
+
+    expect(result.storyIds).toEqual(['ENRICHED-001'])
+  })
+})
+
+// ============================================================================
+// createPlanRefinementWrapper tests
+// ============================================================================
+
+describe('createPlanRefinementWrapper', () => {
+  it('returns error when no planSlug set', async () => {
+    const node = createPlanRefinementWrapper()
+    const state = makeState({ planSlug: null })
+    const result = await node(state)
+
+    expect(result.pipelinePhase).toBe('plan_refinement')
+    expect(result.errors).toContain('plan_refinement_wrapper: no planSlug set')
+  })
+
+  it('invokes injected graph factory with planSlug', async () => {
+    const mockResult: PlanRefinementV2State = {
+      planSlug: 'my-plan',
+      rawPlan: null,
+      normalizedPlan: { title: 'My Plan', flows: [] } as any,
+      flows: [],
+      groundingContext: null,
+      postconditionResult: { passed: true, failures: [], evidence: {} },
+      refinementV2Phase: 'complete',
+      retryCount: 0,
+      maxRetries: 3,
+      internalIterations: 1,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: [],
+    }
+
+    const mockGraphInvoke = vi.fn().mockResolvedValue(mockResult)
+    const mockCreateGraph = vi.fn().mockReturnValue({ invoke: mockGraphInvoke })
+
+    const node = createPlanRefinementWrapper({
+      createPlanRefinementGraph: mockCreateGraph,
+    })
+
+    const state = makeState({
+      planSlug: 'my-plan',
+      inputMode: 'plan',
+    })
+
+    const result = await node(state)
+
+    expect(mockCreateGraph).toHaveBeenCalled()
+    expect(mockGraphInvoke).toHaveBeenCalledWith({ planSlug: 'my-plan' })
+    expect(result.pipelinePhase).toBe('plan_refinement')
+    expect(result.refinedPlan).toEqual({ title: 'My Plan', flows: [] })
+    expect(result.errors).toEqual([])
+  })
+
+  it('catches subgraph errors and returns error state', async () => {
+    const mockCreateGraph = vi.fn().mockReturnValue({
+      invoke: vi.fn().mockRejectedValue(new Error('Subgraph crashed')),
+    })
+
+    const node = createPlanRefinementWrapper({
+      createPlanRefinementGraph: mockCreateGraph,
+    })
+
+    const state = makeState({ planSlug: 'fail-plan', inputMode: 'plan' })
+    const result = await node(state)
+
+    expect(result.pipelinePhase).toBe('plan_refinement')
+    expect(result.errors).toContain('plan_refinement_wrapper: Subgraph crashed')
+  })
+})
+
+// ============================================================================
+// createStoryGenerationWrapper tests
+// ============================================================================
+
+describe('createStoryGenerationWrapper', () => {
+  it('returns error when no planSlug set', async () => {
+    const node = createStoryGenerationWrapper()
+    const state = makeState({ planSlug: null })
+    const result = await node(state)
+
+    expect(result.pipelinePhase).toBe('story_generation')
+    expect(result.errors).toContain('story_generation_wrapper: no planSlug set')
+  })
+
+  it('invokes injected graph factory with planSlug', async () => {
+    const mockResult = {
+      planSlug: 'gen-plan',
+      refinedPlan: null,
+      flows: [],
+      flowScoutResults: [],
+      storyOutlines: [],
+      enrichedStories: [],
+      dependencyEdges: [],
+      parallelGroups: [],
+      orderedStories: [
+        { title: 'GEN-001', description: 'Generated' },
+        { title: 'GEN-002', description: 'Generated 2' },
+      ],
+      validationResult: null,
+      writeResult: null,
+      generationV2Phase: 'complete',
+      enricherRetryCount: 0,
+      maxEnricherRetries: 2,
+      tokenUsage: [],
+      bakeOffVersion: 'v2-agentic',
+      warnings: [],
+      errors: [],
+    } as unknown as StoryGenerationV2State
+
+    const mockGraphInvoke = vi.fn().mockResolvedValue(mockResult)
+    const mockCreateGraph = vi.fn().mockReturnValue({ invoke: mockGraphInvoke })
+
+    const node = createStoryGenerationWrapper({
+      createStoryGenerationGraph: mockCreateGraph,
+    })
+
+    const state = makeState({ planSlug: 'gen-plan', inputMode: 'plan' })
+    const result = await node(state)
+
+    expect(mockCreateGraph).toHaveBeenCalled()
+    expect(mockGraphInvoke).toHaveBeenCalledWith({ planSlug: 'gen-plan' })
+    expect(result.pipelinePhase).toBe('story_generation')
+    expect(result.storyIds).toEqual(['GEN-001', 'GEN-002'])
+    expect(result.errors).toEqual([])
+  })
+
+  it('catches subgraph errors and returns error state', async () => {
+    const mockCreateGraph = vi.fn().mockReturnValue({
+      invoke: vi.fn().mockRejectedValue(new Error('Generation failed')),
+    })
+
+    const node = createStoryGenerationWrapper({
+      createStoryGenerationGraph: mockCreateGraph,
+    })
+
+    const state = makeState({ planSlug: 'fail-gen', inputMode: 'plan' })
+    const result = await node(state)
+
+    expect(result.pipelinePhase).toBe('story_generation')
+    expect(result.errors).toContain('story_generation_wrapper: Generation failed')
   })
 })

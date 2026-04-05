@@ -16,9 +16,13 @@ import type { PipelineOrchestratorV2State } from '../../state/pipeline-orchestra
 import type { DevImplementV2State } from '../../state/dev-implement-v2-state.js'
 import type { ReviewV2State } from '../../state/review-v2-state.js'
 import type { QAVerifyV2State } from '../../state/qa-verify-v2-state.js'
+import type { PlanRefinementV2State } from '../../state/plan-refinement-v2-state.js'
+import type { StoryGenerationV2State } from '../../state/story-generation-v2-state.js'
 import type { DevImplementV2GraphConfig } from '../../graphs/dev-implement-v2.js'
 import type { ReviewV2GraphConfig } from '../../graphs/review-v2.js'
 import type { QAVerifyV2GraphConfig } from '../../graphs/qa-verify-v2.js'
+import type { PlanRefinementV2GraphConfig } from '../../graphs/plan-refinement-v2.js'
+import type { StoryGenerationV2GraphConfig } from '../../graphs/story-generation-v2.js'
 import { createLlmAdapterFactory } from '../../services/llm-adapter-factory.js'
 import type { LlmAdapterFactory } from '../../services/llm-adapter-factory.js'
 import { updateRetryContext } from './retry-escalation.js'
@@ -85,6 +89,10 @@ export const SubgraphInvokerConfigSchema = z.object({
   createReviewGraph: z.function().optional(),
   /** Override qa-verify graph factory — injectable for testing */
   createQAGraph: z.function().optional(),
+  /** Override plan-refinement graph factory — injectable for testing */
+  createPlanRefinementGraph: z.function().optional(),
+  /** Override story-generation graph factory — injectable for testing */
+  createStoryGenerationGraph: z.function().optional(),
 })
 
 export type SubgraphInvokerConfig = {
@@ -97,6 +105,12 @@ export type SubgraphInvokerConfig = {
   }
   createQAGraph?: (config: QAVerifyV2GraphConfig) => {
     invoke: (input: Partial<QAVerifyV2State>) => Promise<QAVerifyV2State>
+  }
+  createPlanRefinementGraph?: (config: PlanRefinementV2GraphConfig) => {
+    invoke: (input: Partial<PlanRefinementV2State>) => Promise<PlanRefinementV2State>
+  }
+  createStoryGenerationGraph?: (config: StoryGenerationV2GraphConfig) => {
+    invoke: (input: Partial<StoryGenerationV2State>) => Promise<StoryGenerationV2State>
   }
 }
 
@@ -167,6 +181,187 @@ export function mapQAResultToOrchestratorState(
     },
     pipelinePhase: 'qa_verify',
     errors: subgraphResult.errors?.length ? subgraphResult.errors : [],
+  }
+}
+
+// ============================================================================
+// Plan Refinement State Mapping
+// ============================================================================
+
+/**
+ * Maps plan-refinement-v2 subgraph output to orchestrator state.
+ */
+export function mapPlanRefinementResultToOrchestratorState(
+  subgraphResult: PlanRefinementV2State,
+): Partial<PipelineOrchestratorV2State> {
+  const errors = subgraphResult.errors ?? []
+  const isError = subgraphResult.refinementV2Phase === 'error'
+
+  return {
+    refinedPlan: subgraphResult.normalizedPlan as Record<string, unknown> | null,
+    planFlows: (subgraphResult.flows ?? []) as unknown as Record<string, unknown>[],
+    planPostconditionResult: subgraphResult.postconditionResult as Record<string, unknown> | null,
+    pipelinePhase: 'plan_refinement',
+    errors: isError || errors.length > 0 ? errors : [],
+  }
+}
+
+// ============================================================================
+// Story Generation State Mapping
+// ============================================================================
+
+/**
+ * Maps story-generation-v2 subgraph output to orchestrator state.
+ * Extracts generated story IDs from orderedStories or writeResult.
+ */
+export function mapStoryGenerationResultToOrchestratorState(
+  subgraphResult: StoryGenerationV2State,
+): Partial<PipelineOrchestratorV2State> {
+  const errors = subgraphResult.errors ?? []
+  const isError = subgraphResult.generationV2Phase === 'error'
+
+  // Extract story IDs from ordered stories (preferred) or enriched stories
+  const orderedStories = subgraphResult.orderedStories ?? []
+  const enrichedStories = subgraphResult.enrichedStories ?? []
+  const stories = orderedStories.length > 0 ? orderedStories : enrichedStories
+
+  // Story IDs come from the title field (used as identifier) — these are
+  // written to KB by write_to_kb node and available as story identifiers
+  const generatedStoryIds = stories.map(s => s.title).filter(Boolean)
+
+  return {
+    storyIds: generatedStoryIds,
+    pipelinePhase: 'story_generation',
+    errors: isError || errors.length > 0 ? errors : [],
+  }
+}
+
+// ============================================================================
+// Plan Refinement Wrapper
+// ============================================================================
+
+/**
+ * Wraps the plan-refinement-v2 subgraph invocation.
+ *
+ * Builds LLM adapters from the factory, creates the subgraph,
+ * invokes it with planSlug from orchestrator state, and maps the result back.
+ */
+export function createPlanRefinementWrapper(config: SubgraphInvokerConfig = {}) {
+  return async (
+    state: PipelineOrchestratorV2State,
+  ): Promise<Partial<PipelineOrchestratorV2State>> => {
+    const { planSlug, modelConfig, ollamaAvailable } = state
+
+    logger.info('plan_refinement_wrapper: invoking plan-refinement-v2', {
+      planSlug,
+    })
+
+    if (!planSlug) {
+      return {
+        pipelinePhase: 'plan_refinement',
+        errors: ['plan_refinement_wrapper: no planSlug set'],
+      }
+    }
+
+    try {
+      // Build LLM adapters
+      const factory = config.adapterFactory ?? createLlmAdapterFactory()
+      const adapters = factory.buildPlanRefinementAdapters(modelConfig, ollamaAvailable)
+
+      // Build subgraph config — LLM adapter from factory, other adapters are
+      // no-op stubs (degrade gracefully without KB/codebase adapters)
+      const graphConfig: PlanRefinementV2GraphConfig = {
+        ...adapters,
+      }
+
+      let result: PlanRefinementV2State
+      if (config.createPlanRefinementGraph) {
+        const graph = config.createPlanRefinementGraph(graphConfig)
+        result = await graph.invoke({ planSlug })
+      } else {
+        // Dynamic import to avoid circular dependencies at module load time
+        const { createPlanRefinementV2Graph } = await import('../../graphs/plan-refinement-v2.js')
+        const graph = createPlanRefinementV2Graph(graphConfig)
+        result = await graph.invoke({ planSlug })
+      }
+
+      return mapPlanRefinementResultToOrchestratorState(result)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('plan_refinement_wrapper: subgraph invocation failed', {
+        planSlug,
+        error: msg,
+      })
+      return {
+        pipelinePhase: 'plan_refinement',
+        errors: [`plan_refinement_wrapper: ${msg}`],
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Story Generation Wrapper
+// ============================================================================
+
+/**
+ * Wraps the story-generation-v2 subgraph invocation.
+ *
+ * Builds LLM adapters from the factory, creates the subgraph,
+ * invokes it with planSlug and refined plan data from orchestrator state,
+ * and maps the result back (extracting generated story IDs).
+ */
+export function createStoryGenerationWrapper(config: SubgraphInvokerConfig = {}) {
+  return async (
+    state: PipelineOrchestratorV2State,
+  ): Promise<Partial<PipelineOrchestratorV2State>> => {
+    const { planSlug, modelConfig, ollamaAvailable } = state
+
+    logger.info('story_generation_wrapper: invoking story-generation-v2', {
+      planSlug,
+    })
+
+    if (!planSlug) {
+      return {
+        pipelinePhase: 'story_generation',
+        errors: ['story_generation_wrapper: no planSlug set'],
+      }
+    }
+
+    try {
+      // Build LLM adapters
+      const factory = config.adapterFactory ?? createLlmAdapterFactory()
+      const adapters = factory.buildStoryGenerationAdapters(modelConfig, ollamaAvailable)
+
+      // Build subgraph config — LLM adapters from factory, other adapters are
+      // no-op stubs (degrade gracefully without KB/codebase adapters)
+      const graphConfig: StoryGenerationV2GraphConfig = {
+        ...adapters,
+      }
+
+      let result: StoryGenerationV2State
+      if (config.createStoryGenerationGraph) {
+        const graph = config.createStoryGenerationGraph(graphConfig)
+        result = await graph.invoke({ planSlug })
+      } else {
+        // Dynamic import to avoid circular dependencies at module load time
+        const { createStoryGenerationV2Graph } = await import('../../graphs/story-generation-v2.js')
+        const graph = createStoryGenerationV2Graph(graphConfig)
+        result = await graph.invoke({ planSlug })
+      }
+
+      return mapStoryGenerationResultToOrchestratorState(result)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('story_generation_wrapper: subgraph invocation failed', {
+        planSlug,
+        error: msg,
+      })
+      return {
+        pipelinePhase: 'story_generation',
+        errors: [`story_generation_wrapper: ${msg}`],
+      }
+    }
   }
 }
 
