@@ -72,7 +72,18 @@ export type StoryPickerAdapters = {
 
 const DONE_STATES = new Set(['completed', 'cancelled'])
 const BLOCKED_STATES = new Set(['blocked'])
-const ELIGIBLE_STATES = new Set(['ready', 'backlog', 'created', 'elab'])
+const ELIGIBLE_STATES = new Set([
+  'ready',
+  'backlog',
+  'created',
+  'elab',
+  'in_progress',
+  'needs_code_review',
+  'ready_for_qa',
+  'in_qa',
+  'failed_code_review',
+  'failed_qa',
+])
 
 /** Returns true when a story is in a terminal (done) state. */
 export function isDone(state: string): boolean {
