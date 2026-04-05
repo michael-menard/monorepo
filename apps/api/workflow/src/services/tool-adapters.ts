@@ -246,7 +246,8 @@ export function createRunTestsAdapter(): RunTestsFn {
       // Build vitest command
       // Use --reporter=verbose for detailed output
       // --run to not watch
-      const filterArg = filter ? `--filter="${filter.replace(/"/g, '\\"')}"` : ''
+      // Pass filter as positional arg (file path or pattern), not --filter (which is for workspace filtering)
+      const filterArg = filter ? `"${filter.replace(/"/g, '\\"')}"` : ''
       const cmd = `cd "${getMonorepoRoot()}" && pnpm vitest run ${filterArg} --reporter=verbose 2>&1`
 
       logger.info('tool-adapters: running tests', { filter, cmd })
