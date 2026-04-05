@@ -5,17 +5,121 @@
  * individual subgraph inputs/outputs. Each invoker:
  *
  * 1. Extracts relevant fields from the orchestrator state
- * 2. Invokes the subgraph (or a stub for MVP)
- * 3. Maps the subgraph result back to orchestrator state fields
- *
- * For MVP, subgraph invocations are stubs that set result fields
- * to allow the graph to compile and route correctly. Real subgraph
- * invocation will be wired in a subsequent story.
+ * 2. Builds LLM adapters from the factory using current modelConfig
+ * 3. Creates and invokes the real subgraph
+ * 4. Maps the subgraph result back to orchestrator state fields
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type { PipelineOrchestratorV2State } from '../../state/pipeline-orchestrator-v2-state.js'
+import type { DevImplementV2State } from '../../state/dev-implement-v2-state.js'
+import type { ReviewV2State } from '../../state/review-v2-state.js'
+import type { QAVerifyV2State } from '../../state/qa-verify-v2-state.js'
+import type { DevImplementV2GraphConfig } from '../../graphs/dev-implement-v2.js'
+import type { ReviewV2GraphConfig } from '../../graphs/review-v2.js'
+import type { QAVerifyV2GraphConfig } from '../../graphs/qa-verify-v2.js'
+import { createLlmAdapterFactory } from '../../services/llm-adapter-factory.js'
+import type { LlmAdapterFactory } from '../../services/llm-adapter-factory.js'
 import { updateRetryContext } from './retry-escalation.js'
+
+// ============================================================================
+// Wrapper Config Schema
+// ============================================================================
+
+export const SubgraphInvokerConfigSchema = z.object({
+  /** LLM adapter factory — injectable for testing */
+  adapterFactory: z.any().optional(),
+  /** Override dev-implement graph factory — injectable for testing */
+  createDevGraph: z.function().optional(),
+  /** Override review graph factory — injectable for testing */
+  createReviewGraph: z.function().optional(),
+  /** Override qa-verify graph factory — injectable for testing */
+  createQAGraph: z.function().optional(),
+})
+
+export type SubgraphInvokerConfig = {
+  adapterFactory?: LlmAdapterFactory
+  createDevGraph?: (config: DevImplementV2GraphConfig) => {
+    invoke: (input: Partial<DevImplementV2State>) => Promise<DevImplementV2State>
+  }
+  createReviewGraph?: (config: ReviewV2GraphConfig) => {
+    invoke: (input: Partial<ReviewV2State>) => Promise<ReviewV2State>
+  }
+  createQAGraph?: (config: QAVerifyV2GraphConfig) => {
+    invoke: (input: Partial<QAVerifyV2State>) => Promise<QAVerifyV2State>
+  }
+}
+
+// ============================================================================
+// State Mapping Helpers
+// ============================================================================
+
+/**
+ * Maps dev-implement-v2 subgraph output to orchestrator state.
+ */
+export function mapDevResultToOrchestratorState(
+  subgraphResult: DevImplementV2State,
+): Partial<PipelineOrchestratorV2State> {
+  const verdict = subgraphResult.executorOutcome?.verdict ?? 'stuck'
+  const errors = subgraphResult.errors ?? []
+
+  return {
+    devResult: {
+      verdict,
+      errors,
+    },
+    pipelinePhase: 'dev_implement',
+    errors: errors.length > 0 ? errors : [],
+  }
+}
+
+/**
+ * Maps review-v2 subgraph output to orchestrator state.
+ */
+export function mapReviewResultToOrchestratorState(
+  subgraphResult: ReviewV2State,
+): Partial<PipelineOrchestratorV2State> {
+  const reviewVerdict = subgraphResult.reviewVerdict
+  // Map review verdict to orchestrator verdict (pass/fail/block)
+  const verdict: 'pass' | 'fail' | 'block' =
+    reviewVerdict === 'pass' ? 'pass' : reviewVerdict === 'fail' ? 'fail' : 'block'
+
+  return {
+    reviewResult: {
+      verdict,
+      findings: subgraphResult.reviewFindings ?? [],
+    },
+    pipelinePhase: 'review',
+    errors: subgraphResult.errors?.length ? subgraphResult.errors : [],
+  }
+}
+
+/**
+ * Maps qa-verify-v2 subgraph output to orchestrator state.
+ */
+export function mapQAResultToOrchestratorState(
+  subgraphResult: QAVerifyV2State,
+): Partial<PipelineOrchestratorV2State> {
+  const qaVerdict = subgraphResult.qaVerdict
+  // Map qa verdict to orchestrator verdict (pass/fail/block)
+  // 'conditional_pass' is treated as 'pass' at the orchestrator level
+  const verdict: 'pass' | 'fail' | 'block' =
+    qaVerdict === 'pass' || qaVerdict === 'conditional_pass'
+      ? 'pass'
+      : qaVerdict === 'fail'
+        ? 'fail'
+        : 'block'
+
+  return {
+    qaResult: {
+      verdict,
+      failures: subgraphResult.acVerificationResults?.filter(r => r.verdict === 'fail') ?? [],
+    },
+    pipelinePhase: 'qa_verify',
+    errors: subgraphResult.errors?.length ? subgraphResult.errors : [],
+  }
+}
 
 // ============================================================================
 // Dev Implement Wrapper
@@ -24,25 +128,60 @@ import { updateRetryContext } from './retry-escalation.js'
 /**
  * Wraps the dev-implement-v2 subgraph invocation.
  *
- * MVP stub: returns a successful dev result so the graph can route.
+ * Builds LLM adapters from the factory, creates the subgraph,
+ * invokes it with mapped orchestrator state, and maps the result back.
  */
-export function createDevImplementWrapper() {
+export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
   return async (
     state: PipelineOrchestratorV2State,
   ): Promise<Partial<PipelineOrchestratorV2State>> => {
-    const { currentStoryId } = state
+    const { currentStoryId, modelConfig, ollamaAvailable } = state
 
     logger.info('dev_implement_wrapper: invoking dev-implement-v2', {
       storyId: currentStoryId,
     })
 
-    // MVP stub — in production this will invoke createDevImplementV2Graph
-    return {
-      devResult: {
-        verdict: 'complete',
-        errors: [],
-      },
-      pipelinePhase: 'dev_implement',
+    if (!currentStoryId) {
+      return {
+        devResult: { verdict: 'stuck', errors: ['No currentStoryId set'] },
+        pipelinePhase: 'dev_implement',
+        errors: ['dev_implement_wrapper: no currentStoryId'],
+      }
+    }
+
+    try {
+      // Build adapters
+      const factory = config.adapterFactory ?? createLlmAdapterFactory()
+      const adapters = factory.buildDevImplementAdapters(modelConfig, ollamaAvailable)
+
+      // Create and invoke subgraph
+      const graphConfig: DevImplementV2GraphConfig = {
+        ...adapters,
+      }
+
+      let result: DevImplementV2State
+      if (config.createDevGraph) {
+        const graph = config.createDevGraph(graphConfig)
+        result = await graph.invoke({ storyId: currentStoryId })
+      } else {
+        // Dynamic import to avoid circular dependencies at module load time
+        const { createDevImplementV2Graph } = await import('../../graphs/dev-implement-v2.js')
+        const graph = createDevImplementV2Graph(graphConfig)
+        result = await graph.invoke({ storyId: currentStoryId })
+      }
+
+      return mapDevResultToOrchestratorState(result)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('dev_implement_wrapper: subgraph invocation failed', {
+        storyId: currentStoryId,
+        error: msg,
+      })
+      return {
+        devResult: { verdict: 'stuck', errors: [msg] },
+        pipelinePhase: 'dev_implement',
+        errors: [`dev_implement_wrapper: ${msg}`],
+      }
     }
   }
 }
@@ -54,26 +193,66 @@ export function createDevImplementWrapper() {
 /**
  * Wraps the review-v2 subgraph invocation.
  *
- * MVP stub: returns a passing review result.
+ * Builds LLM adapters from the factory, creates the subgraph,
+ * invokes it with mapped orchestrator state, and maps the result back.
  */
-export function createReviewWrapper() {
+export function createReviewWrapper(config: SubgraphInvokerConfig = {}) {
   return async (
     state: PipelineOrchestratorV2State,
   ): Promise<Partial<PipelineOrchestratorV2State>> => {
-    const { currentStoryId, worktreePath } = state
+    const { currentStoryId, worktreePath, modelConfig, ollamaAvailable } = state
 
     logger.info('review_wrapper: invoking review-v2', {
       storyId: currentStoryId,
       worktreePath,
     })
 
-    // MVP stub — in production this will invoke createReviewV2Graph
-    return {
-      reviewResult: {
-        verdict: 'pass',
-        findings: [],
-      },
-      pipelinePhase: 'review',
+    if (!currentStoryId) {
+      return {
+        reviewResult: { verdict: 'block', findings: [] },
+        pipelinePhase: 'review',
+        errors: ['review_wrapper: no currentStoryId'],
+      }
+    }
+
+    try {
+      // Build adapters
+      const factory = config.adapterFactory ?? createLlmAdapterFactory()
+      const adapters = factory.buildReviewAdapters(modelConfig, ollamaAvailable)
+
+      // Create and invoke subgraph
+      const graphConfig: ReviewV2GraphConfig = {
+        ...adapters,
+      }
+
+      let result: ReviewV2State
+      if (config.createReviewGraph) {
+        const graph = config.createReviewGraph(graphConfig)
+        result = await graph.invoke({
+          storyId: currentStoryId,
+          worktreePath: worktreePath ?? '',
+        })
+      } else {
+        const { createReviewV2Graph } = await import('../../graphs/review-v2.js')
+        const graph = createReviewV2Graph(graphConfig)
+        result = await graph.invoke({
+          storyId: currentStoryId,
+          worktreePath: worktreePath ?? '',
+        })
+      }
+
+      return mapReviewResultToOrchestratorState(result)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('review_wrapper: subgraph invocation failed', {
+        storyId: currentStoryId,
+        error: msg,
+      })
+      return {
+        reviewResult: { verdict: 'block', findings: [] },
+        pipelinePhase: 'review',
+        errors: [`review_wrapper: ${msg}`],
+      }
     }
   }
 }
@@ -122,25 +301,59 @@ export function createReviewDecisionNode() {
 /**
  * Wraps the qa-verify-v2 subgraph invocation.
  *
- * MVP stub: returns a passing QA result.
+ * Builds LLM adapters from the factory, creates the subgraph,
+ * invokes it with mapped orchestrator state, and maps the result back.
  */
-export function createQAVerifyWrapper() {
+export function createQAVerifyWrapper(config: SubgraphInvokerConfig = {}) {
   return async (
     state: PipelineOrchestratorV2State,
   ): Promise<Partial<PipelineOrchestratorV2State>> => {
-    const { currentStoryId } = state
+    const { currentStoryId, modelConfig, ollamaAvailable } = state
 
     logger.info('qa_verify_wrapper: invoking qa-verify-v2', {
       storyId: currentStoryId,
     })
 
-    // MVP stub — in production this will invoke createQAVerifyV2Graph
-    return {
-      qaResult: {
-        verdict: 'pass',
-        failures: [],
-      },
-      pipelinePhase: 'qa_verify',
+    if (!currentStoryId) {
+      return {
+        qaResult: { verdict: 'block', failures: [] },
+        pipelinePhase: 'qa_verify',
+        errors: ['qa_verify_wrapper: no currentStoryId'],
+      }
+    }
+
+    try {
+      // Build adapters
+      const factory = config.adapterFactory ?? createLlmAdapterFactory()
+      const adapters = factory.buildQAVerifyAdapters(modelConfig, ollamaAvailable)
+
+      // Create and invoke subgraph
+      const graphConfig: QAVerifyV2GraphConfig = {
+        ...adapters,
+      }
+
+      let result: QAVerifyV2State
+      if (config.createQAGraph) {
+        const graph = config.createQAGraph(graphConfig)
+        result = await graph.invoke({ storyId: currentStoryId })
+      } else {
+        const { createQAVerifyV2Graph } = await import('../../graphs/qa-verify-v2.js')
+        const graph = createQAVerifyV2Graph(graphConfig)
+        result = await graph.invoke({ storyId: currentStoryId })
+      }
+
+      return mapQAResultToOrchestratorState(result)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('qa_verify_wrapper: subgraph invocation failed', {
+        storyId: currentStoryId,
+        error: msg,
+      })
+      return {
+        qaResult: { verdict: 'block', failures: [] },
+        pipelinePhase: 'qa_verify',
+        errors: [`qa_verify_wrapper: ${msg}`],
+      }
     }
   }
 }
