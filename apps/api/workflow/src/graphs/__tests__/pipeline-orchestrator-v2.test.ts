@@ -29,6 +29,8 @@ import {
   routeByPickerSignal,
   routeByReviewVerdict,
   routeByQAVerdict,
+  routeByResumePhase,
+  routeAfterWorktree,
   type PipelineOrchestratorV2State,
 } from '../pipeline-orchestrator-v2.js'
 import type { RetryContext } from '../../state/pipeline-orchestrator-v2-state.js'
@@ -60,6 +62,7 @@ const makeState = (
   errors: [],
   ollamaAvailable: false,
   storyIds: [],
+  resumePhase: null,
   ...overrides,
 })
 
@@ -163,6 +166,42 @@ describe('routeByPickerSignal', () => {
 
   it('defaults to pipeline_stalled when no picker result', () => {
     expect(routeByPickerSignal(makeState())).toBe('pipeline_stalled')
+  })
+})
+
+describe('routeByResumePhase', () => {
+  it('returns create_worktree when resumePhase is set to dev_implement', () => {
+    expect(routeByResumePhase(makeState({ resumePhase: 'dev_implement' }))).toBe('create_worktree')
+  })
+
+  it('returns create_worktree when resumePhase is set to review', () => {
+    expect(routeByResumePhase(makeState({ resumePhase: 'review' }))).toBe('create_worktree')
+  })
+
+  it('returns create_worktree when resumePhase is set to qa_verify', () => {
+    expect(routeByResumePhase(makeState({ resumePhase: 'qa_verify' }))).toBe('create_worktree')
+  })
+
+  it('returns story_picker when resumePhase is null (completed/blocked skip)', () => {
+    expect(routeByResumePhase(makeState({ resumePhase: null }))).toBe('story_picker')
+  })
+})
+
+describe('routeAfterWorktree', () => {
+  it('returns dev_implement when resumePhase is dev_implement', () => {
+    expect(routeAfterWorktree(makeState({ resumePhase: 'dev_implement' }))).toBe('dev_implement')
+  })
+
+  it('returns review when resumePhase is review', () => {
+    expect(routeAfterWorktree(makeState({ resumePhase: 'review' }))).toBe('review')
+  })
+
+  it('returns qa_verify when resumePhase is qa_verify', () => {
+    expect(routeAfterWorktree(makeState({ resumePhase: 'qa_verify' }))).toBe('qa_verify')
+  })
+
+  it('defaults to dev_implement when resumePhase is null', () => {
+    expect(routeAfterWorktree(makeState({ resumePhase: null }))).toBe('dev_implement')
   })
 })
 
