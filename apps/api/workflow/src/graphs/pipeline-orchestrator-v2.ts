@@ -253,7 +253,7 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     .addNode('create_pr', createCreatePrNode(gitOpsConfig))
     .addNode('qa_verify', createQAVerifyWrapper())
     .addNode('qa_decision', createQADecisionNode())
-    .addNode('merge_cleanup', createMergeCleanupNode())
+    .addNode('merge_cleanup', createMergeCleanupNode(gitOpsConfig))
     .addNode('post_completion', createPostCompletionNode())
     .addNode('block_story', createBlockStoryNode())
 
