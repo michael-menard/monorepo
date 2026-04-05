@@ -23,8 +23,11 @@ export const ModelConfigSchema = z.object({
   requiredLocalModel: z.string().default('qwen3-embedding:latest'),
   cloudModelToVerify: z.string().default('minimax-m2.7:cloud'),
 
-  // Escalation (future — ORCH-9050)
-  escalationModel: z.string().default('claude-code/sonnet'),
+  // Escalation chain for dev executor (ORCH-9050)
+  // When the executor gets stuck, retry with next model in chain
+  devEscalationChain: z
+    .array(z.string())
+    .default(['ollama:deepseek-v3.2:cloud', 'claude-code/sonnet']),
 
   // Legacy compat
   primaryModel: z.string().default('sonnet'),

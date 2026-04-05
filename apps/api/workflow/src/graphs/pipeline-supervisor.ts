@@ -552,9 +552,13 @@ async function processStory(
     lastFailureReason: '',
   }
   let phaseCount = 0
+  let devEscalationTier = 0 // Index into modelConfig.devEscalationChain
+  // Local copy of model config for this story — escalation mutates this, not the shared config
+  const storyModelConfig = { ...(config.modelConfig as Record<string, unknown>) }
+  const storyConfig = { ...config, modelConfig: storyModelConfig }
 
   const makeState = () =>
-    buildOrchestratorState(config, {
+    buildOrchestratorState(storyConfig, {
       currentStoryId: storyId,
       worktreePath,
       branch,
@@ -590,8 +594,14 @@ async function processStory(
   }
 
   // ---- Phase loop ----
+  const MAX_PHASE_ITERATIONS = 15
   while (phase !== 'complete' && phase !== 'blocked') {
     phaseCount++
+    if (phaseCount > MAX_PHASE_ITERATIONS) {
+      logger.error('supervisor: phase loop exceeded max iterations', { storyId, phaseCount })
+      phase = 'blocked'
+      break
+    }
 
     switch (phase) {
       case 'dev_implement': {
@@ -615,8 +625,31 @@ async function processStory(
           await emitter.storyPhaseComplete(storyId, 'commit_push', 'complete')
           phase = 'review'
         } else {
-          retryContext = updateRetryContext(retryContext, 'review', 'Dev implementation stuck')
-          phase = 'blocked'
+          // --- Model Escalation (ORCH-9050) ---
+          const escalationChain =
+            (storyModelConfig.devEscalationChain as string[] | undefined) ?? []
+          if (devEscalationTier < escalationChain.length) {
+            const nextModel = escalationChain[devEscalationTier]
+            devEscalationTier++
+            logger.warn('supervisor: escalating dev model', {
+              storyId,
+              tier: devEscalationTier,
+              from: storyModelConfig.devExecutor,
+              to: nextModel,
+            })
+            // Override model config for this story only
+            storyModelConfig.devExecutor = nextModel
+            storyModelConfig.devPlanner = nextModel
+            // Stay in dev_implement — loop will re-enter this case with escalated model
+            phase = 'dev_implement'
+          } else {
+            retryContext = updateRetryContext(
+              retryContext,
+              'review',
+              'Dev implementation stuck (all escalation tiers exhausted)',
+            )
+            phase = 'blocked'
+          }
         }
         break
       }
