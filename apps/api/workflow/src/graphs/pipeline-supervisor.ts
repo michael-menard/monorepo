@@ -67,10 +67,10 @@ export const SupervisorConfigSchema = z.object({
     .object({
       planRefinement: z.string().default('claude-code/opus'),
       storyGeneration: z.string().default('claude-code/sonnet'),
-      devExecutor: z.string().default('ollama:minimax-m2.7:cloud'),
-      devPlanner: z.string().default('ollama:minimax-m2.7:cloud'),
+      devExecutor: z.string().default('ollama:qwen3-coder-next:cloud'),
+      devPlanner: z.string().default('ollama:qwen3-coder-next:cloud'),
       reviewAgent: z.string().default('ollama:minimax-m2.7:cloud'),
-      qaVerifier: z.string().default('ollama:minimax-m2.7:cloud'),
+      qaVerifier: z.string().default('ollama:deepseek-v3.2:cloud'),
       primaryModel: z.string().default('sonnet'),
       escalationModel: z.string().default('opus'),
       ollamaModel: z.string().default('qwen2.5-coder:14b'),

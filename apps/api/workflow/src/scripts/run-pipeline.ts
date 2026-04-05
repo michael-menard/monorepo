@@ -312,10 +312,10 @@ async function main(): Promise<void> {
     modelConfig: {
       planRefinement: 'claude-code/opus',
       storyGeneration: 'claude-code/sonnet',
-      devExecutor: 'ollama:minimax-m2.7:cloud',
-      devPlanner: 'ollama:minimax-m2.7:cloud',
+      devExecutor: 'ollama:qwen3-coder-next:cloud',
+      devPlanner: 'ollama:qwen3-coder-next:cloud',
       reviewAgent: 'ollama:minimax-m2.7:cloud',
-      qaVerifier: 'ollama:minimax-m2.7:cloud',
+      qaVerifier: 'ollama:deepseek-v3.2:cloud',
       primaryModel: 'sonnet',
       escalationModel: 'opus',
       ollamaModel: 'qwen2.5-coder:14b',
