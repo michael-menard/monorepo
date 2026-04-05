@@ -457,6 +457,8 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
 
     logger.info('dev_implement_wrapper: invoking dev-implement-v2', {
       storyId: currentStoryId,
+      devExecutor: (modelConfig as Record<string, unknown>)?.devExecutor,
+      devPlanner: (modelConfig as Record<string, unknown>)?.devPlanner,
     })
 
     if (!currentStoryId) {

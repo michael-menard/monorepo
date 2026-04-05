@@ -298,6 +298,7 @@ export async function runPipelineSupervisor(
   }
 
   logger.info('supervisor: self-check passed — all adapters and modules loaded')
+  logger.info('supervisor: modelConfig', { modelConfig: config.modelConfig })
 
   // ---- Dry-run mode: exit after self-check ----
   if (config.dryRun) {
