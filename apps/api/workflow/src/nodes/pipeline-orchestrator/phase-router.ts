@@ -40,7 +40,15 @@ export type PhaseRouterAdapters = {
 // ============================================================================
 
 /** States that require starting from dev_implement */
-const DEV_STATES = new Set(['ready', 'in_progress', 'failed_code_review', 'failed_qa'])
+const DEV_STATES = new Set([
+  'backlog',
+  'created',
+  'elab',
+  'ready',
+  'in_progress',
+  'failed_code_review',
+  'failed_qa',
+])
 
 /** States that skip dev and go straight to review */
 const REVIEW_STATES = new Set(['needs_code_review'])
