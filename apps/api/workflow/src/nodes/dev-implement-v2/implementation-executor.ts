@@ -176,7 +176,10 @@ export function parseExecutorToolCall(
   response: string,
 ): { tool: string; args: Record<string, unknown> } | null {
   try {
-    const responseContent = response.trim()
+    let responseContent = response.trim()
+
+    // Strip <think>...</think> blocks that some models produce (Qwen, DeepSeek)
+    responseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
 
     // Try multiple JSON extraction strategies
     let jsonStr: string | null = null
@@ -329,7 +332,9 @@ export function createImplementationExecutorNode(config: ImplementationExecutorC
 
       const toolCall = parseExecutorToolCall(llmResponse.content)
       if (!toolCall) {
-        logger.warn(`implementation_executor: failed to parse tool call on iteration ${i}`)
+        logger.warn(`implementation_executor: failed to parse tool call on iteration ${i}`, {
+          responsePreview: llmResult.content.slice(0, 500),
+        })
         messages.push({
           role: 'user',
           content: 'ERROR: Response was not valid JSON. Respond ONLY with a JSON tool call.',
