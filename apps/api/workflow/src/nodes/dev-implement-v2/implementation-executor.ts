@@ -333,7 +333,7 @@ export function createImplementationExecutorNode(config: ImplementationExecutorC
       const toolCall = parseExecutorToolCall(llmResponse.content)
       if (!toolCall) {
         logger.warn(`implementation_executor: failed to parse tool call on iteration ${i}`, {
-          responsePreview: llmResult.content.slice(0, 500),
+          responsePreview: llmResponse.content.slice(0, 500),
         })
         messages.push({
           role: 'user',
