@@ -98,15 +98,25 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
   }
 
   /**
+   * Creates an adapter for a specific model string.
+   * Auto-detects provider from prefix: 'ollama:*', 'claude-code/*', etc.
+   */
+  function createAdapterForModel(modelString: string, role: string): GenericLlmAdapterFn {
+    logger.debug('llm_adapter_factory: creating adapter for model', { modelString, role })
+    return createLlmAdapter({ modelString })
+  }
+
+  /**
    * Builds the adapter config for the dev-implement-v2 subgraph.
+   * Uses per-stage models from modelConfig.
    */
   function buildDevImplementAdapters(
     modelConfig: ModelConfig,
-    ollamaAvailable = false,
+    _ollamaAvailable = false,
   ): Pick<DevImplementV2GraphConfig, 'plannerLlmAdapter' | 'executorLlmAdapter'> {
     return {
-      plannerLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'dev-planner'),
-      executorLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'dev-executor'),
+      plannerLlmAdapter: createAdapterForModel(modelConfig.devPlanner, 'dev-planner'),
+      executorLlmAdapter: createAdapterForModel(modelConfig.devExecutor, 'dev-executor'),
     }
   }
 
@@ -115,11 +125,11 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
    */
   function buildReviewAdapters(
     modelConfig: ModelConfig,
-    ollamaAvailable = false,
+    _ollamaAvailable = false,
   ): Pick<ReviewV2GraphConfig, 'riskLlmAdapter' | 'reviewLlmAdapter'> {
     return {
-      riskLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'review-risk'),
-      reviewLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'review-agent'),
+      riskLlmAdapter: createAdapterForModel(modelConfig.reviewAgent, 'review-risk'),
+      reviewLlmAdapter: createAdapterForModel(modelConfig.reviewAgent, 'review-agent'),
     }
   }
 
@@ -128,11 +138,11 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
    */
   function buildQAVerifyAdapters(
     modelConfig: ModelConfig,
-    ollamaAvailable = false,
+    _ollamaAvailable = false,
   ): Pick<QAVerifyV2GraphConfig, 'strategyLlmAdapter' | 'interpreterLlmAdapter'> {
     return {
-      strategyLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'qa-strategy'),
-      interpreterLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'qa-interpreter'),
+      strategyLlmAdapter: createAdapterForModel(modelConfig.qaVerifier, 'qa-strategy'),
+      interpreterLlmAdapter: createAdapterForModel(modelConfig.qaVerifier, 'qa-interpreter'),
     }
   }
 
@@ -141,10 +151,10 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
    */
   function buildPlanRefinementAdapters(
     modelConfig: ModelConfig,
-    ollamaAvailable = false,
+    _ollamaAvailable = false,
   ): Pick<PlanRefinementV2GraphConfig, 'llmAdapter'> {
     return {
-      llmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'plan-refinement'),
+      llmAdapter: createAdapterForModel(modelConfig.planRefinement, 'plan-refinement'),
     }
   }
 
@@ -153,19 +163,16 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
    */
   function buildStoryGenerationAdapters(
     modelConfig: ModelConfig,
-    ollamaAvailable = false,
+    _ollamaAvailable = false,
   ): Pick<
     StoryGenerationV2GraphConfig,
     'slicerLlmAdapter' | 'enricherLlmAdapter' | 'dependencyWirerLlmAdapter'
   > {
+    const storyGenModel = modelConfig.storyGeneration
     return {
-      slicerLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'story-slicer'),
-      enricherLlmAdapter: selectAdapter(modelConfig, ollamaAvailable, 'story-enricher'),
-      dependencyWirerLlmAdapter: selectAdapter(
-        modelConfig,
-        ollamaAvailable,
-        'story-dependency-wirer',
-      ),
+      slicerLlmAdapter: createAdapterForModel(storyGenModel, 'story-slicer'),
+      enricherLlmAdapter: createAdapterForModel(storyGenModel, 'story-enricher'),
+      dependencyWirerLlmAdapter: createAdapterForModel(storyGenModel, 'story-dependency-wirer'),
     }
   }
 
