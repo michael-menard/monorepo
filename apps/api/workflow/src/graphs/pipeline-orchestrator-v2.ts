@@ -8,8 +8,10 @@
  *   START → preflight_checks → route_input
  *     → [plan path: plan_refinement → story_generation → story_picker]
  *     → [story path: story_picker]
- *   story_picker → [story_ready: create_worktree] | [complete: END] | [stalled: END]
- *   create_worktree → dev_implement → commit_push → review → review_decision
+ *   story_picker → [story_ready: phase_router] | [complete: END] | [stalled: END]
+ *   phase_router → [has resumePhase: create_worktree] | [skip: story_picker]
+ *   create_worktree → [dev_implement | review | qa_verify] (based on resumePhase)
+ *   dev_implement → commit_push → review → review_decision
  *     → [pass: create_pr] | [retry: dev_implement] | [block: block_story]
  *   create_pr → qa_verify → qa_decision
  *     → [pass: merge_cleanup] | [retry: dev_implement] | [block: block_story]
@@ -33,6 +35,8 @@ import type { PreflightAdapters } from '../nodes/pipeline-orchestrator/preflight
 import { createStoryPickerNode } from '../nodes/pipeline-orchestrator/story-picker.js'
 import { createWorktreeNode } from '../nodes/pipeline-orchestrator/worktree-manager.js'
 import type { ShellExecFn } from '../nodes/pipeline-orchestrator/worktree-manager.js'
+import { createPhaseRouterNode } from '../nodes/pipeline-orchestrator/phase-router.js'
+import type { PhaseRouterAdapters } from '../nodes/pipeline-orchestrator/phase-router.js'
 import {
   createPlanRefinementWrapper,
   createStoryGenerationWrapper,
@@ -69,6 +73,8 @@ export const PipelineOrchestratorV2GraphConfigSchema = z.object({
   shellExec: z.function().optional(),
   /** Injectable preflight adapters */
   preflightAdapters: z.any().optional(),
+  /** Injectable phase router adapters */
+  phaseRouterAdapters: z.any().optional(),
 })
 
 export type PipelineOrchestratorV2GraphConfig = {
@@ -79,6 +85,7 @@ export type PipelineOrchestratorV2GraphConfig = {
   defaultBaseBranch?: string
   shellExec?: ShellExecFn
   preflightAdapters?: PreflightAdapters
+  phaseRouterAdapters?: PhaseRouterAdapters
 }
 
 // ============================================================================
@@ -222,6 +229,27 @@ export function routeByQAVerdict(state: PipelineOrchestratorV2State): 'pass' | '
   return makeRetryDecision(verdict, 'qa', state.retryContext)
 }
 
+/**
+ * Routes after phase_router based on whether the story needs processing
+ * or should be skipped (completed/blocked).
+ */
+export function routeByResumePhase(
+  state: PipelineOrchestratorV2State,
+): 'create_worktree' | 'story_picker' {
+  if (!state.resumePhase) return 'story_picker'
+  return 'create_worktree'
+}
+
+/**
+ * Routes after create_worktree based on resumePhase to determine
+ * which processing phase to enter (dev, review, or QA).
+ */
+export function routeAfterWorktree(
+  state: PipelineOrchestratorV2State,
+): 'dev_implement' | 'review' | 'qa_verify' {
+  return state.resumePhase ?? 'dev_implement'
+}
+
 // ============================================================================
 // Graph Factory
 // ============================================================================
@@ -250,6 +278,7 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     .addNode('plan_refinement', createPlanRefinementWrapper())
     .addNode('story_generation', createStoryGenerationWrapper())
     .addNode('story_picker', createStoryPickerNode())
+    .addNode('phase_router', createPhaseRouterNode(config.phaseRouterAdapters))
     .addNode('create_worktree', createWorktreeWrapper(config))
     .addNode('dev_implement', createDevImplementWrapper())
     .addNode('commit_push', createCommitPushNode(gitOpsConfig))
@@ -278,15 +307,25 @@ export function createPipelineOrchestratorV2Graph(config: PipelineOrchestratorV2
     .addEdge('plan_refinement', 'story_generation')
     .addEdge('story_generation', 'story_picker')
 
-    // Story picker → create_worktree | END
+    // Story picker → phase_router | END
     .addConditionalEdges('story_picker', routeByPickerSignal, {
-      story_ready: 'create_worktree',
+      story_ready: 'phase_router',
       pipeline_complete: END,
       pipeline_stalled: END,
     })
 
-    // Linear path: create_worktree → dev → commit → review → review_decision
-    .addEdge('create_worktree', 'dev_implement')
+    // Phase router → create_worktree (has resumePhase) | story_picker (skip)
+    .addConditionalEdges('phase_router', routeByResumePhase, {
+      create_worktree: 'create_worktree',
+      story_picker: 'story_picker',
+    })
+
+    // After worktree, route to appropriate phase based on resumePhase
+    .addConditionalEdges('create_worktree', routeAfterWorktree, {
+      dev_implement: 'dev_implement',
+      review: 'review',
+      qa_verify: 'qa_verify',
+    })
     .addEdge('dev_implement', 'commit_push')
     .addEdge('commit_push', 'review')
     .addEdge('review', 'review_decision')
@@ -325,6 +364,8 @@ export {
   routeByPickerSignal as _routeByPickerSignal,
   routeByReviewVerdict as _routeByReviewVerdict,
   routeByQAVerdict as _routeByQAVerdict,
+  routeByResumePhase as _routeByResumePhase,
+  routeAfterWorktree as _routeAfterWorktree,
 }
 
 // Re-export state type for consumers

@@ -133,6 +133,7 @@ export const ORCHESTRATOR_PHASE_TO_NODE_MAP: Record<PipelinePhase, string> = {
   plan_refinement: 'plan_refinement',
   story_generation: 'story_generation',
   story_picking: 'story_picker',
+  phase_routing: 'phase_router',
   worktree_setup: 'create_worktree',
   dev_implement: 'dev_implement',
   commit_push: 'commit_push',

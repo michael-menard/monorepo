@@ -22,6 +22,7 @@ export const PipelinePhaseSchema = z.enum([
   'plan_refinement',
   'story_generation',
   'story_picking',
+  'phase_routing',
   'worktree_setup',
   'dev_implement',
   'commit_push',
@@ -117,6 +118,14 @@ export const ModelConfigSchema = z.object({
 })
 
 export type ModelConfig = z.infer<typeof ModelConfigSchema>
+
+// ============================================================================
+// Resume Phase
+// ============================================================================
+
+export const ResumePhaseSchema = z.enum(['dev_implement', 'review', 'qa_verify'])
+
+export type ResumePhase = z.infer<typeof ResumePhaseSchema>
 
 // ============================================================================
 // State Annotation
@@ -253,6 +262,12 @@ export const PipelineOrchestratorV2StateAnnotation = Annotation.Root({
   storyIds: Annotation<string[]>({
     reducer: overwrite,
     default: () => [],
+  }),
+
+  /** Phase to resume from after phase_router determines story state */
+  resumePhase: Annotation<ResumePhase | null>({
+    reducer: overwrite,
+    default: () => null,
   }),
 })
 
