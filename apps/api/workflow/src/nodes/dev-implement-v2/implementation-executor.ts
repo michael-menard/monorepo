@@ -24,6 +24,7 @@ import type {
   ExecutorOutcome,
   TokenUsage,
   DevImplementV2State,
+  RetryFeedback,
 } from '../../state/dev-implement-v2-state.js'
 
 // ============================================================================
@@ -78,13 +79,66 @@ export type ToolDefinition = {
 
 /**
  * Builds the executor system prompt for the LLM.
+ * When retryFeedback is provided, the prompt includes explicit retry guidance
+ * with the specific findings/failures from the prior attempt.
  */
 export function buildExecutorSystemPrompt(
   plan: ImplementationPlan,
   grounding: StoryGroundingContext,
+  retryFeedback?: RetryFeedback | null,
 ): string {
-  return `You are a senior engineer implementing a user story.
+  // HEAL: build retry feedback block if this is a retry attempt
+  let retryBlock = ''
+  if (retryFeedback) {
+    const source = retryFeedback.source
+    if (source === 'review' && retryFeedback.reviewFindings.length > 0) {
+      const findingsText = retryFeedback.reviewFindings
+        .slice(0, 10)
+        .map(
+          (f, i) =>
+            `${i + 1}. [${f.severity}] ${f.file}${f.line ? ':' + f.line : ''}\n   ${f.description}${f.suggestion ? '\n   Suggestion: ' + f.suggestion : ''}\n   Evidence: ${f.evidence}`,
+        )
+        .join('\n\n')
+      retryBlock = `
 
+RETRY MODE — Attempt ${retryFeedback.attempt} — A previous implementation was REJECTED by code review.
+
+CODE REVIEW FINDINGS — you MUST fix ALL of these:
+${findingsText}
+
+IMPORTANT:
+- Read the files mentioned in the findings FIRST
+- Make TARGETED fixes — do NOT rewrite files from scratch
+- Address every finding listed above
+- Run tests after fixing to verify
+- Call complete when all issues are resolved, or stuck if you cannot fix them
+`
+    } else if (source === 'qa' && retryFeedback.failedACs.length > 0) {
+      const failedText = retryFeedback.failedACs
+        .slice(0, 10)
+        .map(
+          (f, i) =>
+            `${i + 1}. AC${f.acIndex}: ${f.acText}\n   Verdict: ${f.verdict}\n   Evidence: ${f.evidence}${f.testOutput ? '\n   Test output: ' + f.testOutput.slice(0, 200) : ''}`,
+        )
+        .join('\n\n')
+      retryBlock = `
+
+RETRY MODE — Attempt ${retryFeedback.attempt} — A previous implementation FAILED QA verification.
+
+FAILED ACCEPTANCE CRITERIA — these must pass:
+${failedText}
+
+IMPORTANT:
+- Focus on fixing the specific ACs that failed
+- Do NOT rewrite unrelated code
+- Run tests after fixing to verify each AC
+- Call complete when all failed ACs pass, or stuck if you cannot fix them
+`
+    }
+  }
+
+  return `You are a senior engineer implementing a user story.
+${retryBlock}
 STORY: ${grounding.storyTitle}
 APPROACH: ${plan.approach}
 
@@ -302,8 +356,21 @@ export function createImplementationExecutorNode(config: ImplementationExecutorC
     }
 
     const allTokenUsage: TokenUsage[] = []
+    // HEAL: read retryFeedback from state (null on first attempt)
+    const retryFeedback = state.retryFeedback ?? null
+    if (retryFeedback) {
+      logger.info('implementation_executor: retry mode', {
+        storyId: state.storyId,
+        source: retryFeedback.source,
+        attempt: retryFeedback.attempt,
+        findingCount:
+          retryFeedback.source === 'review'
+            ? retryFeedback.reviewFindings.length
+            : retryFeedback.failedACs.length,
+      })
+    }
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: buildExecutorSystemPrompt(plan, groundingCtx) },
+      { role: 'system', content: buildExecutorSystemPrompt(plan, groundingCtx, retryFeedback) },
     ]
 
     let outcome: ExecutorOutcome | null = null

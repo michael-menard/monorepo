@@ -63,6 +63,10 @@ export const SupervisorConfigSchema = z.object({
   requiredModel: z.string().default('qwen2.5-coder:14b'),
   maxStories: z.number().int().min(0).default(0),
   dryRun: z.boolean().default(false),
+  /** When true, exit after plan refinement + story generation (skip dev/review/QA) */
+  skipDevPhase: z.boolean().default(false),
+  /** Plan status — used to skip refinement for already-accepted plans */
+  planStatus: z.string().optional(),
   modelConfig: z
     .object({
       planRefinement: z.string().default('claude-code/opus'),
@@ -236,6 +240,7 @@ function buildOrchestratorState(
     ollamaAvailable: false,
     storyIds: config.storyIds,
     resumePhase: null,
+    retryFeedback: null,
     ...overrides,
   }
 }
@@ -340,6 +345,8 @@ export async function runPipelineSupervisor(
       if (planStories.length === 0) {
         logger.info('supervisor: plan has no stories, running refinement + generation', {
           planSlug: config.planSlug,
+          planStatus: config.planStatus,
+          skipDevPhase: config.skipDevPhase,
         })
 
         const orchState = buildOrchestratorState(config, {
@@ -347,24 +354,51 @@ export async function runPipelineSupervisor(
           planSlug: config.planSlug,
         })
 
-        // Run plan refinement
-        const refinementWrapper = subgraphs.createPlanRefinementWrapper(adapters.subgraphConfig)
-        const refinementResult = await refinementWrapper(orchState)
+        // Skip refinement for accepted plans — they've already been refined
+        const skipRefinement = config.planStatus === 'accepted'
 
-        if (refinementResult.errors && refinementResult.errors.length > 0) {
-          errors.push(...refinementResult.errors)
+        if (!skipRefinement) {
+          // Run plan refinement
+          const refinementWrapper = subgraphs.createPlanRefinementWrapper(adapters.subgraphConfig)
+          const refinementResult = await refinementWrapper(orchState)
+
+          if (refinementResult.errors && refinementResult.errors.length > 0) {
+            errors.push(...refinementResult.errors)
+          }
+
+          Object.assign(orchState, {
+            refinedPlan: refinementResult.refinedPlan ?? null,
+            planFlows: refinementResult.planFlows ?? [],
+          })
+        } else {
+          logger.info('supervisor: skipping refinement for accepted plan', {
+            planSlug: config.planSlug,
+          })
         }
 
         // Run story generation
         const generationWrapper = subgraphs.createStoryGenerationWrapper(adapters.subgraphConfig)
-        Object.assign(orchState, {
-          refinedPlan: refinementResult.refinedPlan ?? null,
-          planFlows: refinementResult.planFlows ?? [],
-        })
         const generationResult = await generationWrapper(orchState)
 
         if (generationResult.errors && generationResult.errors.length > 0) {
           errors.push(...generationResult.errors)
+        }
+
+        // If skipDevPhase, return early with summary — don't enter story processing loop
+        if (config.skipDevPhase) {
+          logger.info('supervisor: skipDevPhase=true, returning after refinement + generation', {
+            planSlug: config.planSlug,
+            errorCount: errors.length,
+          })
+
+          return {
+            completed: [],
+            blocked: [],
+            errors,
+            storiesProcessed: 0,
+            durationMs: Date.now() - startTime,
+            finalPhase: errors.length > 0 ? 'error' : 'pipeline_complete',
+          }
         }
       }
     }
@@ -550,12 +584,35 @@ async function processStory(
     maxReviewRetries: 2,
     maxQaRetries: 2,
     lastFailureReason: '',
+    lastReviewFindings: [],
+    lastQAFailures: [],
   }
   let phaseCount = 0
   let devEscalationTier = 0 // Index into modelConfig.devEscalationChain
+  // HEAL: track the source of the last retry to build retryFeedback for dev
+  let lastRetrySource: 'review' | 'qa' | null = null
   // Local copy of model config for this story — escalation mutates this, not the shared config
   const storyModelConfig = { ...(config.modelConfig as Record<string, unknown>) }
   const storyConfig = { ...config, modelConfig: storyModelConfig }
+
+  // HEAL: build retryFeedback from last review/QA findings if we're retrying
+  const buildRetryFeedback = () => {
+    if (!lastRetrySource) return null
+    if (lastRetrySource === 'review') {
+      return {
+        source: 'review' as const,
+        attempt: retryContext.reviewAttempts,
+        reviewFindings: (retryContext.lastReviewFindings ?? []) as Record<string, unknown>[],
+        failedACs: [],
+      }
+    }
+    return {
+      source: 'qa' as const,
+      attempt: retryContext.qaAttempts,
+      reviewFindings: [],
+      failedACs: (retryContext.lastQAFailures ?? []) as Record<string, unknown>[],
+    }
+  }
 
   const makeState = () =>
     buildOrchestratorState(storyConfig, {
@@ -568,6 +625,7 @@ async function processStory(
       ollamaAvailable,
       storyIds: [storyId],
       resumePhase: phase === 'complete' || phase === 'blocked' ? null : phase,
+      retryFeedback: buildRetryFeedback(),
     })
 
   // Create worktree
@@ -681,11 +739,21 @@ async function processStory(
           await emitter.storyPhaseComplete(storyId, 'create_pr', 'complete')
           phase = 'qa_verify'
         } else if (reviewDecision === 'retry') {
+          const findings = (reviewStateUpdate.reviewResult?.findings ?? []) as Record<
+            string,
+            unknown
+          >[]
+          const summary = findings
+            .slice(0, 3)
+            .map(f => `[${f.severity}] ${f.file}${f.line ? ':' + f.line : ''} — ${f.description}`)
+            .join('; ')
           retryContext = updateRetryContext(
             retryContext,
             'review',
-            reviewStateUpdate.reviewResult?.findings?.[0]?.toString() ?? 'Review failed',
+            summary || 'Review failed',
+            findings,
           )
+          lastRetrySource = 'review'
           await emitter.storyRetry(
             storyId,
             'review',
@@ -695,11 +763,11 @@ async function processStory(
           )
           phase = 'dev_implement'
         } else {
-          retryContext = updateRetryContext(
-            retryContext,
-            'review',
-            reviewStateUpdate.reviewResult?.findings?.[0]?.toString() ?? 'Review blocked',
-          )
+          const findings = (reviewStateUpdate.reviewResult?.findings ?? []) as Record<
+            string,
+            unknown
+          >[]
+          retryContext = updateRetryContext(retryContext, 'review', 'Review blocked', findings)
           phase = 'blocked'
         }
         break
@@ -770,11 +838,13 @@ async function processStory(
           await emitter.storyCompleted(storyId, phaseCount, storyDurationMs)
           phase = 'complete'
         } else if (qaDecision === 'retry') {
-          retryContext = updateRetryContext(
-            retryContext,
-            'qa',
-            qaStateUpdate.qaResult?.failures?.[0]?.toString() ?? 'QA failed',
-          )
+          const failures = (qaStateUpdate.qaResult?.failures ?? []) as Record<string, unknown>[]
+          const summary = failures
+            .slice(0, 3)
+            .map(f => `AC${f.acIndex} [${f.verdict}]: ${f.acText}`)
+            .join('; ')
+          retryContext = updateRetryContext(retryContext, 'qa', summary || 'QA failed', failures)
+          lastRetrySource = 'qa'
           await emitter.storyRetry(
             storyId,
             'qa_verify',
@@ -784,11 +854,8 @@ async function processStory(
           )
           phase = 'dev_implement'
         } else {
-          retryContext = updateRetryContext(
-            retryContext,
-            'qa',
-            qaStateUpdate.qaResult?.failures?.[0]?.toString() ?? 'QA blocked',
-          )
+          const failures = (qaStateUpdate.qaResult?.failures ?? []) as Record<string, unknown>[]
+          retryContext = updateRetryContext(retryContext, 'qa', 'QA blocked', failures)
           phase = 'blocked'
         }
         break

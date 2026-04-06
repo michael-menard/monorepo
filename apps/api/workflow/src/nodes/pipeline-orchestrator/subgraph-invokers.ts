@@ -499,7 +499,15 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
         }
         const { createDevImplementV2Graph } = await import('../../graphs/dev-implement-v2.js')
         const graph = createDevImplementV2Graph(graphConfig)
-        result = await graph.invoke({ storyId: currentStoryId })
+        // HEAL: pass retryFeedback from orchestrator state into dev graph
+        const retryFeedback = (state as Record<string, unknown>).retryFeedback as
+          | Record<string, unknown>
+          | null
+          | undefined
+        result = await graph.invoke({
+          storyId: currentStoryId,
+          ...(retryFeedback ? { retryFeedback } : {}),
+        } as Record<string, unknown>)
       }
 
       return mapDevResultToOrchestratorState(result)
