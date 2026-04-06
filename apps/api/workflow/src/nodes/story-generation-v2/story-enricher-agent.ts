@@ -330,15 +330,33 @@ export function createStoryEnricherAgentNode(
 
         let enriched: EnrichedStory
 
-        const enrichment = await config.llmAdapter(prompt)
+        try {
+          const enrichment = await config.llmAdapter(prompt)
 
-        newTokenUsage.push({
-          nodeId: 'story_enricher_agent',
-          inputTokens: enrichment.inputTokens,
-          outputTokens: enrichment.outputTokens,
-        })
+          newTokenUsage.push({
+            nodeId: 'story_enricher_agent',
+            inputTokens: enrichment.inputTokens,
+            outputTokens: enrichment.outputTokens,
+          })
 
-        enriched = mergeEnrichment(story, enrichment, scout)
+          enriched = mergeEnrichment(story, enrichment, scout)
+        } catch (llmErr) {
+          const msg = llmErr instanceof Error ? llmErr.message : String(llmErr)
+          logger.warn('story_enricher_agent: LLM failed for story, using passthrough', {
+            storyTitle: story.title,
+            error: msg,
+          })
+          // Passthrough: keep the story as-is with minimal enrichment from scout
+          enriched = {
+            ...story,
+            relevantFiles: scout?.relevantFiles ?? [],
+            implementationHints: [],
+            acFlowTraceability: [],
+            scopeBoundary: { inScope: [], outOfScope: [] },
+            postconditionsPassed: false,
+            enrichmentFailures: [`llm_failure: ${msg}`],
+          } as EnrichedStory
+        }
 
         // Check postconditions
         const postconditionResult = checkStoryPostconditions(enriched)

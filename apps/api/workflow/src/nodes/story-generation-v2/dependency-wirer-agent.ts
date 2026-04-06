@@ -234,19 +234,31 @@ export function createDependencyWirerAgentNode(
       let edges: DependencyEdgeV2[] = []
       let minimumPathTitles: string[] = []
 
+      let llmSucceeded = false
       if (config.llmAdapter && stories.length > 0) {
         const prompt = buildDependencyPrompt(stories)
-        const response = await config.llmAdapter(prompt)
+        try {
+          const response = await config.llmAdapter(prompt)
 
-        newTokenUsage.push({
-          nodeId: 'dependency_wirer_agent',
-          inputTokens: response.inputTokens,
-          outputTokens: response.outputTokens,
-        })
+          newTokenUsage.push({
+            nodeId: 'dependency_wirer_agent',
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+          })
 
-        edges = response.edges.map(e => ({ from: e.from, to: e.to, type: e.type }))
-        minimumPathTitles = response.minimumPath
-      } else {
+          edges = response.edges.map(e => ({ from: e.from, to: e.to, type: e.type }))
+          minimumPathTitles = response.minimumPath
+          llmSucceeded = true
+        } catch (llmErr) {
+          const msg = llmErr instanceof Error ? llmErr.message : String(llmErr)
+          logger.warn('dependency_wirer_agent: LLM failed, falling back to heuristic wirer', {
+            error: msg,
+            planSlug: state.planSlug,
+          })
+        }
+      }
+
+      if (!llmSucceeded) {
         edges = fallbackWireDependencies(stories)
         // Minimum path = all stories (conservative fallback)
         minimumPathTitles = storyTitles

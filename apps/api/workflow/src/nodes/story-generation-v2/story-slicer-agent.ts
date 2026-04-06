@@ -252,45 +252,58 @@ export function createStorySlicerAgentNode(
       const storyOutlines: GeneratedStory[] = []
       const newTokenUsage: TokenUsage[] = []
 
+      let llmSucceeded = false
       if (config.llmAdapter && state.flows.length > 0) {
         // Agentic path: ask LLM for slice boundaries
         const prompt = buildSlicerPrompt(state.flows, state.flowScoutResults)
 
-        const response = await config.llmAdapter(prompt)
+        try {
+          const response = await config.llmAdapter(prompt)
 
-        newTokenUsage.push({
-          nodeId: 'story_slicer_agent',
-          inputTokens: response.inputTokens,
-          outputTokens: response.outputTokens,
-        })
+          newTokenUsage.push({
+            nodeId: 'story_slicer_agent',
+            inputTokens: response.inputTokens,
+            outputTokens: response.outputTokens,
+          })
 
-        // Build a flow map for quick lookup
-        const flowMap = new Map(state.flows.map(f => [f.id, f]))
+          // Build a flow map for quick lookup
+          const flowMap = new Map(state.flows.map(f => [f.id, f]))
 
-        // Convert slices to stories, enforcing maxStoriesPerFlow
-        const flowSliceCounts = new Map<string, number>()
+          // Convert slices to stories, enforcing maxStoriesPerFlow
+          const flowSliceCounts = new Map<string, number>()
 
-        for (const slice of response.slices) {
-          const flow = flowMap.get(slice.flowId)
-          if (!flow) {
-            logger.warn('story_slicer_agent: unknown flowId in slice', { flowId: slice.flowId })
-            continue
+          for (const slice of response.slices) {
+            const flow = flowMap.get(slice.flowId)
+            if (!flow) {
+              logger.warn('story_slicer_agent: unknown flowId in slice', { flowId: slice.flowId })
+              continue
+            }
+
+            const count = flowSliceCounts.get(slice.flowId) ?? 0
+            if (count >= maxStoriesPerFlow) {
+              logger.warn('story_slicer_agent: maxStoriesPerFlow reached, skipping slice', {
+                flowId: slice.flowId,
+                maxStoriesPerFlow,
+              })
+              continue
+            }
+
+            const story = sliceToStory(slice, flow, state.planSlug, count)
+            storyOutlines.push(story)
+            flowSliceCounts.set(slice.flowId, count + 1)
           }
-
-          const count = flowSliceCounts.get(slice.flowId) ?? 0
-          if (count >= maxStoriesPerFlow) {
-            logger.warn('story_slicer_agent: maxStoriesPerFlow reached, skipping slice', {
-              flowId: slice.flowId,
-              maxStoriesPerFlow,
-            })
-            continue
-          }
-
-          const story = sliceToStory(slice, flow, state.planSlug, count)
-          storyOutlines.push(story)
-          flowSliceCounts.set(slice.flowId, count + 1)
+          llmSucceeded = true
+        } catch (llmErr) {
+          const msg = llmErr instanceof Error ? llmErr.message : String(llmErr)
+          logger.warn('story_slicer_agent: LLM failed, falling back to heuristic slicer', {
+            error: msg,
+            planSlug: state.planSlug,
+          })
+          // Fall through to heuristic path below
         }
-      } else {
+      }
+
+      if (!llmSucceeded) {
         // Fallback: v1-style heuristic per flow
         for (const flow of state.flows) {
           const slices = fallbackSlice(flow)
