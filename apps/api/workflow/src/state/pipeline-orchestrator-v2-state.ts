@@ -103,6 +103,10 @@ export const RetryContextSchema = z.object({
   maxReviewRetries: z.number().int().min(0).default(2),
   maxQaRetries: z.number().int().min(0).default(2),
   lastFailureReason: z.string().default(''),
+  /** Full structured review findings from last failed review (HEAL plan) */
+  lastReviewFindings: z.array(z.record(z.unknown())).default([]),
+  /** Full structured AC failures from last failed QA (HEAL plan) */
+  lastQAFailures: z.array(z.record(z.unknown())).default([]),
 })
 
 export type RetryContext = z.infer<typeof RetryContextSchema>

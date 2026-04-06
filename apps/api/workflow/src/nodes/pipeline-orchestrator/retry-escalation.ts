@@ -64,6 +64,7 @@ export function updateRetryContext(
   retryContext: RetryContext | null,
   stage: 'review' | 'qa',
   failureReason: string,
+  structuredFindings?: Record<string, unknown>[],
 ): RetryContext {
   const base: RetryContext = retryContext ?? {
     reviewAttempts: 0,
@@ -71,6 +72,8 @@ export function updateRetryContext(
     maxReviewRetries: 2,
     maxQaRetries: 2,
     lastFailureReason: '',
+    lastReviewFindings: [],
+    lastQAFailures: [],
   }
 
   if (stage === 'review') {
@@ -78,6 +81,7 @@ export function updateRetryContext(
       ...base,
       reviewAttempts: base.reviewAttempts + 1,
       lastFailureReason: failureReason,
+      lastReviewFindings: structuredFindings ?? [],
     }
   }
 
@@ -85,6 +89,7 @@ export function updateRetryContext(
     ...base,
     qaAttempts: base.qaAttempts + 1,
     lastFailureReason: failureReason,
+    lastQAFailures: structuredFindings ?? [],
   }
 }
 

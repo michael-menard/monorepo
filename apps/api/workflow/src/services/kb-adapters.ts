@@ -12,6 +12,7 @@
  * while maintaining testability via dependency injection.
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import {
   getDbClient,
@@ -22,6 +23,7 @@ import {
   kb_create_story,
   kb_update_story_status,
   kb_write_artifact,
+  kb_update_plan,
 } from '@repo/knowledge-base'
 import { EmbeddingClient } from '@repo/knowledge-base/embedding-client'
 import { logInvocation } from '@repo/knowledge-base/telemetry'
@@ -667,6 +669,120 @@ export async function getNextPlanWithEligibleStories(): Promise<string | null> {
 }
 
 // ============================================================================
+// Batch Plan Query — Plans Without Stories
+// ============================================================================
+
+/**
+ * Plan entry returned by getPlansWithoutStories.
+ */
+export const PlanEntrySchema = z.object({
+  planSlug: z.string(),
+  status: z.string(),
+  priority: z.string().nullable(),
+  title: z.string().nullable(),
+  sortOrder: z.number().nullable(),
+  createdAt: z.coerce.date(),
+})
+
+export type PlanEntry = z.infer<typeof PlanEntrySchema>
+
+/**
+ * Queries plans that match the given statuses and have no stories yet.
+ *
+ * Returns plans ordered by priority (P1 first), sort_order, then created_at.
+ * For each plan, checks story count via kb_list_stories — plans with any
+ * stories are excluded regardless of their status.
+ *
+ * @param statuses - Plan statuses to include (default: ['draft', 'accepted'])
+ * @returns Plans without stories, in processing order
+ */
+export async function getPlansWithoutStories(
+  statuses: string[] = ['draft', 'accepted'],
+): Promise<PlanEntry[]> {
+  try {
+    const db = getDb()
+
+    // Build IN clause with sanitized status strings (safe — values are from our code, not user input)
+    const statusList = statuses.map(s => `'${s.replace(/'/g, "''")}'`).join(', ')
+    const planRows = await db.execute<{
+      plan_slug: string
+      status: string
+      priority: string | null
+      title: string | null
+      sort_order: number | null
+      created_at: Date
+    }>(
+      `SELECT plan_slug, status, priority, title, sort_order, created_at
+       FROM workflow.plans
+       WHERE status IN (${statusList})
+         AND deleted_at IS NULL
+       ORDER BY
+         CASE priority
+           WHEN 'P1' THEN 1
+           WHEN 'P2' THEN 2
+           WHEN 'P3' THEN 3
+           WHEN 'P4' THEN 4
+           WHEN 'P5' THEN 5
+           ELSE 99
+         END,
+         sort_order ASC NULLS LAST,
+         created_at ASC`,
+    )
+
+    if (!planRows.rows || planRows.rows.length === 0) {
+      logger.info('getPlansWithoutStories: no plans found matching statuses', { statuses })
+      return []
+    }
+
+    // Filter to plans that have zero stories
+    const plansWithoutStories: PlanEntry[] = []
+
+    for (const plan of planRows.rows) {
+      try {
+        const result = await kb_list_stories(
+          { db },
+          {
+            plan_slug: plan.plan_slug,
+            limit: 1,
+            offset: 0,
+          },
+        )
+
+        if (result.stories.length === 0) {
+          plansWithoutStories.push({
+            planSlug: plan.plan_slug,
+            status: plan.status,
+            priority: plan.priority,
+            title: plan.title,
+            sortOrder: plan.sort_order,
+            createdAt: plan.created_at,
+          })
+        }
+      } catch (err) {
+        logger.warn('getPlansWithoutStories: error checking stories for plan', {
+          planSlug: plan.plan_slug,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        // Skip this plan — don't include if we can't verify story count
+      }
+    }
+
+    logger.info('getPlansWithoutStories: found plans without stories', {
+      statuses,
+      totalPlans: planRows.rows.length,
+      plansWithoutStories: plansWithoutStories.length,
+    })
+
+    return plansWithoutStories
+  } catch (err) {
+    logger.error('getPlansWithoutStories: query failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return []
+  }
+}
+
+// ============================================================================
 // Composite Adapter Config
 // ============================================================================
 
@@ -873,6 +989,53 @@ export function buildKbAdapter() {
         return []
       }
     },
+  }
+}
+
+// ============================================================================
+// Plan Status Update Adapter
+// ============================================================================
+
+/**
+ * Updates a plan's status in the KB.
+ * Used by the generate-stories batch mode to transition plans through
+ * draft → accepted → stories-created.
+ *
+ * Fire-and-forget semantics: logs errors but doesn't throw.
+ */
+type PlanStatus =
+  | 'draft'
+  | 'accepted'
+  | 'stories-created'
+  | 'in-progress'
+  | 'implemented'
+  | 'superseded'
+  | 'archived'
+  | 'blocked'
+
+export async function updatePlanStatus(planSlug: string, status: PlanStatus): Promise<boolean> {
+  try {
+    const db = getDb()
+    const result = await kb_update_plan({ db }, { plan_slug: planSlug, status })
+
+    if (!result.updated) {
+      logger.warn('kb-adapters: plan status update failed', {
+        planSlug,
+        status,
+        message: result.message,
+      })
+      return false
+    }
+
+    logger.info('kb-adapters: plan status updated', { planSlug, status })
+    return true
+  } catch (err) {
+    logger.error('kb-adapters: updatePlanStatus failed', {
+      planSlug,
+      status,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return false
   }
 }
 

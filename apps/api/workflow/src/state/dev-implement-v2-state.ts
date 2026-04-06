@@ -115,6 +115,41 @@ export const ExecutorOutcomeSchema = z.object({
 export type ExecutorOutcome = z.infer<typeof ExecutorOutcomeSchema>
 
 // ============================================================================
+// Retry Feedback Schema — carries review/QA findings into dev retry
+// ============================================================================
+
+export const RetryFeedbackFindingSchema = z.object({
+  severity: z.string(),
+  category: z.string().optional(),
+  file: z.string(),
+  line: z.number().optional(),
+  description: z.string(),
+  suggestion: z.string().optional(),
+  evidence: z.string(),
+})
+
+export const RetryFeedbackFailedACSchema = z.object({
+  acIndex: z.number(),
+  acText: z.string(),
+  verdict: z.string(),
+  evidence: z.string(),
+  testOutput: z.string().optional(),
+})
+
+export const RetryFeedbackSchema = z.object({
+  /** Where the feedback came from */
+  source: z.enum(['review', 'qa']),
+  /** Which retry attempt this is (1-based) */
+  attempt: z.number().int().min(1),
+  /** Structured review findings (populated when source='review') */
+  reviewFindings: z.array(RetryFeedbackFindingSchema).default([]),
+  /** Failed acceptance criteria (populated when source='qa') */
+  failedACs: z.array(RetryFeedbackFailedACSchema).default([]),
+})
+
+export type RetryFeedback = z.infer<typeof RetryFeedbackSchema>
+
+// ============================================================================
 // DevImplementV2Phase Enum
 // ============================================================================
 
@@ -205,6 +240,12 @@ export const DevImplementV2StateAnnotation = Annotation.Root({
   errors: Annotation<string[]>({
     reducer: append,
     default: () => [],
+  }),
+
+  /** Feedback from review/QA on retry — null on first attempt */
+  retryFeedback: Annotation<RetryFeedback | null>({
+    reducer: overwrite,
+    default: () => null,
   }),
 })
 
