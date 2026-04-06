@@ -161,6 +161,36 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
   /**
    * Builds the LLM adapter config for the story-generation-v2 subgraph.
    */
+  /**
+   * Wraps a message-based LLM adapter into a prompt-string adapter that
+   * returns parsed JSON. Used by story-generation nodes which expect
+   * (prompt: string) => Promise<StructuredOutput> instead of
+   * (messages: SimpleMessage[]) => Promise<LlmResponse>.
+   */
+  function wrapAsPromptAdapter<T>(
+    messageAdapter: GenericLlmAdapterFn,
+    role: string,
+  ): (prompt: string) => Promise<T & { inputTokens: number; outputTokens: number }> {
+    return async (prompt: string) => {
+      const response = await messageAdapter([{ role: 'user', content: prompt }])
+      let content = response.content.trim()
+      // Strip <think> blocks
+      content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+      // Extract JSON from code blocks if present
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (codeBlockMatch) content = codeBlockMatch[1].trim()
+      try {
+        const parsed = JSON.parse(content) as T
+        return { ...parsed, inputTokens: response.inputTokens, outputTokens: response.outputTokens }
+      } catch {
+        logger.warn(`llm_adapter_factory: failed to parse JSON from ${role}`, {
+          contentPreview: content.slice(0, 200),
+        })
+        throw new Error(`Failed to parse JSON response from ${role}: ${content.slice(0, 100)}`)
+      }
+    }
+  }
+
   function buildStoryGenerationAdapters(
     modelConfig: ModelConfig,
     _ollamaAvailable = false,
@@ -169,10 +199,11 @@ export function createLlmAdapterFactory(factoryConfig: Partial<LlmAdapterFactory
     'slicerLlmAdapter' | 'enricherLlmAdapter' | 'dependencyWirerLlmAdapter'
   > {
     const storyGenModel = modelConfig.storyGeneration
+    const baseAdapter = createAdapterForModel(storyGenModel, 'story-gen')
     return {
-      slicerLlmAdapter: createAdapterForModel(storyGenModel, 'story-slicer'),
-      enricherLlmAdapter: createAdapterForModel(storyGenModel, 'story-enricher'),
-      dependencyWirerLlmAdapter: createAdapterForModel(storyGenModel, 'story-dependency-wirer'),
+      slicerLlmAdapter: wrapAsPromptAdapter(baseAdapter, 'story-slicer'),
+      enricherLlmAdapter: wrapAsPromptAdapter(baseAdapter, 'story-enricher'),
+      dependencyWirerLlmAdapter: wrapAsPromptAdapter(baseAdapter, 'story-dependency-wirer'),
     }
   }
 
