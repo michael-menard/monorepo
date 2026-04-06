@@ -47,7 +47,7 @@ export const FlowSchema = z.object({
   /** Expected outcome when flow completes successfully */
   successOutcome: z.string().min(1),
   /** Where the flow came from */
-  source: z.enum(['user', 'inferred', 'merged']),
+  source: z.enum(['user', 'inferred', 'merged', 'designed']),
   /** Confidence score: 0.0-1.0 */
   confidence: z.number().min(0).max(1),
   /** Current review status */
