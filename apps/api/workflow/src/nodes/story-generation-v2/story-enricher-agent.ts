@@ -200,7 +200,10 @@ export function checkStoryPostconditions(story: EnrichedStory): StoryPostconditi
   }
 
   // 4. At least 1 subtask with a file reference
-  const hasFileRefInSubtask = story.subtasks.some(
+  // Defensive: filter to strings — subtasks may contain objects if upstream
+  // nodes produced non-string entries (e.g. LLM returned structured subtasks)
+  const subtaskStrings = (story.subtasks ?? []).filter((s): s is string => typeof s === 'string')
+  const hasFileRefInSubtask = subtaskStrings.some(
     s => s.includes('.ts') || s.includes('.js') || s.includes('src/') || s.includes(':'),
   )
   if (!hasFileRefInSubtask) {
@@ -349,6 +352,13 @@ export function createStoryEnricherAgentNode(
           // Passthrough: keep the story as-is with minimal enrichment from scout
           enriched = {
             ...story,
+            // Ensure arrays exist (defensive against v1 heuristic slicer output)
+            subtasks: Array.isArray(story.subtasks)
+              ? story.subtasks.filter((s: unknown): s is string => typeof s === 'string')
+              : [],
+            acceptance_criteria: Array.isArray(story.acceptance_criteria)
+              ? story.acceptance_criteria
+              : [],
             relevantFiles: scout?.relevantFiles ?? [],
             implementationHints: [],
             acFlowTraceability: [],
