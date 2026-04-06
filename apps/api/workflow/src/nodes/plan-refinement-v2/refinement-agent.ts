@@ -191,7 +191,13 @@ AVAILABLE TOOLS (respond with JSON tool call):
 - update_flows: { tool: "update_flows", args: { flows: Flow[] } } — replace the flows array
 - complete: { tool: "complete", args: { evidence: Record<string,string> } } — finish when all postconditions pass
 
-Respond ONLY with a valid JSON tool call object.`
+CRITICAL: Your entire response must be a single JSON object matching one of the tool schemas above.
+Do NOT include explanatory text, markdown prose, or commentary before or after the JSON.
+Do NOT wrap the JSON in markdown code fences.
+Your response must start with { and end with }. Nothing else.
+
+Example valid response:
+{"tool":"query_kb","args":{"query":"existing feedback loop patterns"}}`
 }
 
 /**
@@ -202,25 +208,68 @@ Respond ONLY with a valid JSON tool call object.`
  * @returns Parsed ToolCall or null
  */
 export function parseToolCall(llmResponse: string): ToolCall | null {
-  try {
-    // Extract JSON from markdown code blocks if present
-    const jsonMatch = llmResponse.match(/```(?:json)?\s*([\s\S]*?)```/)
-    const jsonStr = jsonMatch ? jsonMatch[1].trim() : llmResponse.trim()
-    const parsed = JSON.parse(jsonStr)
-    const result = ToolCallSchema.safeParse(parsed)
-    if (!result.success) {
-      logger.warn('refinement_agent: tool call parsed but failed Zod validation', {
-        errors: result.error.errors,
-      })
-      return null
-    }
-    return result.data
-  } catch {
-    logger.warn('refinement_agent: failed to parse LLM response as tool call', {
-      response: llmResponse.slice(0, 200),
-    })
-    return null
+  // Strip <think>...</think> blocks that some models produce
+  let content = llmResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+
+  // Collect candidate JSON strings in priority order
+  const candidates: string[] = []
+
+  // Strategy 1: Extract from markdown code blocks (```json ... ``` or ``` ... ```)
+  const codeBlockMatches = [...content.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)]
+  for (const match of codeBlockMatches) {
+    candidates.push(match[1].trim())
   }
+
+  // Strategy 2: Brace-matching — find the first {...} with balanced braces
+  // (handles prose followed by a JSON object without markdown fencing)
+  const firstBrace = content.indexOf('{')
+  if (firstBrace !== -1) {
+    let braceCount = 0
+    let inString = false
+    let escapeNext = false
+    for (let i = firstBrace; i < content.length; i++) {
+      const ch = content[i]
+      if (escapeNext) {
+        escapeNext = false
+        continue
+      }
+      if (ch === '\\') {
+        escapeNext = true
+        continue
+      }
+      if (ch === '"') {
+        inString = !inString
+        continue
+      }
+      if (inString) continue
+      if (ch === '{') braceCount++
+      if (ch === '}') {
+        braceCount--
+        if (braceCount === 0) {
+          candidates.push(content.slice(firstBrace, i + 1))
+          break
+        }
+      }
+    }
+  }
+
+  // Strategy 3: Try the whole response as JSON
+  candidates.push(content)
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate)
+      const result = ToolCallSchema.safeParse(parsed)
+      if (result.success) return result.data
+    } catch {
+      // try next candidate
+    }
+  }
+
+  logger.warn('refinement_agent: failed to parse LLM response as tool call', {
+    response: llmResponse.slice(0, 200),
+  })
+  return null
 }
 
 /**
@@ -417,6 +466,12 @@ export function createRefinementAgentNode(config: RefinementAgentConfig = {}) {
         previousFailures = [
           { check: 'tool_call_parse', reason: 'LLM response was not a valid tool call' },
         ]
+        // Push correction message so the LLM knows to try again with JSON
+        messages.push({
+          role: 'user',
+          content:
+            'ERROR: Your previous response was not valid JSON. Respond with ONLY a JSON tool call object starting with { and ending with }. No prose, no markdown fences, no explanation.',
+        })
         continue
       }
 
