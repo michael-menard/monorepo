@@ -1055,6 +1055,172 @@ export async function kb_create_story(
 }
 
 // ============================================================================
+// kb_create_stories_batch
+// ============================================================================
+
+/**
+ * Input schema for kb_create_stories_batch tool.
+ *
+ * Accepts an array of story inputs that will all be inserted atomically
+ * within a single database transaction with deferred FK constraints.
+ */
+export const KbCreateStoriesBatchInputSchema = z.object({
+  /** Array of stories to create in a single transaction */
+  stories: z.array(KbCreateStoryInputSchema).min(1, 'At least one story is required'),
+})
+
+export type KbCreateStoriesBatchInput = z.infer<typeof KbCreateStoriesBatchInputSchema>
+
+/**
+ * Result schema for kb_create_stories_batch tool.
+ */
+export const KbCreateStoriesBatchResultSchema = z.object({
+  /** Results for each story in the batch (same order as input) */
+  results: z.array(
+    z.object({
+      story_id: z.string(),
+      created: z.boolean(),
+    }),
+  ),
+  /** Total number of stories created (vs updated) */
+  created_count: z.number(),
+  /** Total number of stories updated (vs created) */
+  updated_count: z.number(),
+  message: z.string(),
+})
+
+export type KbCreateStoriesBatchResult = z.infer<typeof KbCreateStoriesBatchResultSchema>
+
+/**
+ * Batch-create stories within a single database transaction.
+ *
+ * Uses `SET CONSTRAINTS ALL DEFERRED` so that FK checks (e.g. blocked_by_story
+ * referencing another story in the same batch) are deferred until COMMIT.
+ * This allows stories to reference each other regardless of insertion order.
+ *
+ * All stories either insert/update or none do (atomic batch).
+ * On failure, the transaction rolls back and the error includes which story
+ * failed and why.
+ *
+ * @param deps - Database dependencies
+ * @param input - Batch of stories to create
+ * @returns Results for each story in the batch
+ */
+export async function kb_create_stories_batch(
+  deps: StoryCrudDeps,
+  input: KbCreateStoriesBatchInput,
+): Promise<KbCreateStoriesBatchResult> {
+  const validated = KbCreateStoriesBatchInputSchema.parse(input)
+
+  const batchResults: { story_id: string; created: boolean }[] = []
+
+  const transactionResult = await deps.db.transaction(async tx => {
+    // Defer all FK constraint checks until COMMIT so that stories
+    // referencing each other via blocked_by_story can be inserted in any order.
+    await tx.execute(sql`SET CONSTRAINTS ALL DEFERRED`)
+
+    for (let i = 0; i < validated.stories.length; i++) {
+      const storyInput = validated.stories[i]!
+      const now = new Date()
+
+      try {
+        // Attempt atomic insert — do nothing on conflict (story already exists)
+        const insertResult = await tx
+          .insert(stories)
+          .values({
+            storyId: storyInput.story_id,
+            title: storyInput.title ?? '',
+            feature: storyInput.feature ?? 'unknown',
+            state: storyInput.state ?? null,
+            priority: storyInput.priority ?? null,
+            description: storyInput.description ?? null,
+            blockedReason: storyInput.blocked_reason ?? null,
+            blockedByStory: storyInput.blocked_by_story ?? null,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoNothing({ target: stories.storyId })
+          .returning(storyColumns)
+
+        if (insertResult.length > 0) {
+          // Row was newly inserted — validate title requirement
+          if (!storyInput.title) {
+            throw new Error(
+              `title is required when creating a new story (story_id: ${storyInput.story_id})`,
+            )
+          }
+
+          // Create plan_story_link if plan_slug provided
+          if (storyInput.plan_slug) {
+            await tx
+              .insert(planStoryLinks)
+              .values({
+                planSlug: storyInput.plan_slug,
+                storyId: storyInput.story_id,
+                linkType: 'spawned_from',
+              })
+              .onConflictDoNothing()
+          }
+
+          batchResults.push({ story_id: storyInput.story_id, created: true })
+        } else {
+          // Conflict: story already exists — perform partial-merge UPDATE
+          const updates: Partial<typeof stories.$inferInsert> = { updatedAt: now }
+
+          if (storyInput.title !== undefined) updates.title = storyInput.title
+          if (storyInput.feature !== undefined) updates.feature = storyInput.feature ?? undefined
+          if (storyInput.state !== undefined) updates.state = storyInput.state
+          if (storyInput.priority !== undefined) updates.priority = storyInput.priority
+          if (storyInput.description !== undefined) updates.description = storyInput.description
+          if (storyInput.blocked_reason !== undefined)
+            updates.blockedReason = storyInput.blocked_reason
+          if (storyInput.blocked_by_story !== undefined)
+            updates.blockedByStory = storyInput.blocked_by_story
+          if (storyInput.blocked === false) {
+            updates.blockedReason = null
+            updates.blockedByStory = null
+          }
+
+          await tx.update(stories).set(updates).where(eq(stories.storyId, storyInput.story_id))
+
+          if (storyInput.plan_slug) {
+            await tx
+              .insert(planStoryLinks)
+              .values({
+                planSlug: storyInput.plan_slug,
+                storyId: storyInput.story_id,
+                linkType: 'spawned_from',
+              })
+              .onConflictDoNothing()
+          }
+
+          batchResults.push({ story_id: storyInput.story_id, created: false })
+        }
+      } catch (err) {
+        // Re-throw with context about which story failed.
+        // The Drizzle transaction wrapper will automatically ROLLBACK.
+        const message = err instanceof Error ? err.message : String(err)
+        throw new Error(
+          `Batch story creation failed at story index ${i} (story_id: ${storyInput.story_id}): ${message}`,
+        )
+      }
+    }
+
+    return batchResults
+  })
+
+  const createdCount = transactionResult.filter(r => r.created).length
+  const updatedCount = transactionResult.filter(r => !r.created).length
+
+  return {
+    results: transactionResult,
+    created_count: createdCount,
+    updated_count: updatedCount,
+    message: `Batch complete: ${createdCount} created, ${updatedCount} updated (${transactionResult.length} total)`,
+  }
+}
+
+// ============================================================================
 // Dependency graph validation helpers
 // ============================================================================
 

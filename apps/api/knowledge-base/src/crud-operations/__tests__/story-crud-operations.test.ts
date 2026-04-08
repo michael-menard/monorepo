@@ -21,6 +21,7 @@ import { getDbClient } from '../../db/client.js'
 import { stories, planStoryLinks, storyArtifacts, storyDependencies } from '../../db/schema.js'
 import {
   kb_create_story,
+  kb_create_stories_batch,
   kb_get_story,
   kb_list_stories,
   kb_update_story,
@@ -1131,5 +1132,153 @@ describe('kb_get_story_plan_links', () => {
       await db.delete(planStoryLinks).where(eq(planStoryLinks.planSlug, testPlanSlug))
       await db.delete(plans).where(eq(plans.planSlug, testPlanSlug))
     }
+  })
+})
+
+// ============================================================================
+// kb_create_stories_batch Tests
+// ============================================================================
+
+describe('kb_create_stories_batch', () => {
+  it('BATCH-1: creates multiple stories atomically', async () => {
+    const idA = makeStoryId('BATCH-1-A')
+    const idB = makeStoryId('BATCH-1-B')
+    const idC = makeStoryId('BATCH-1-C')
+    testStoryIds.push(idA, idB, idC)
+
+    const result = await kb_create_stories_batch(deps, {
+      stories: [
+        { story_id: idA, title: 'Batch Story A' },
+        { story_id: idB, title: 'Batch Story B' },
+        { story_id: idC, title: 'Batch Story C' },
+      ],
+    })
+
+    expect(result.created_count).toBe(3)
+    expect(result.updated_count).toBe(0)
+    expect(result.results).toHaveLength(3)
+
+    // Verify all stories exist
+    for (const id of [idA, idB, idC]) {
+      const get = await kb_get_story(deps, { story_id: id })
+      expect(get.story).not.toBeNull()
+    }
+  })
+
+  it('BATCH-2: stories with blockedByStory references within the same batch succeed regardless of order', async () => {
+    const idA = makeStoryId('BATCH-2-A')
+    const idB = makeStoryId('BATCH-2-B')
+    testStoryIds.push(idA, idB)
+
+    // Insert B first (which references A via blocked_by_story), then A.
+    // With deferred constraints, this should succeed even though A does not
+    // exist yet when B is inserted.
+    const result = await kb_create_stories_batch(deps, {
+      stories: [
+        { story_id: idB, title: 'Batch Story B (blocked by A)', blocked_by_story: idA },
+        { story_id: idA, title: 'Batch Story A' },
+      ],
+    })
+
+    expect(result.created_count).toBe(2)
+    expect(result.results[0]!.story_id).toBe(idB)
+    expect(result.results[1]!.story_id).toBe(idA)
+
+    // Verify B has correct blocked_by_story
+    const getB = await kb_get_story(deps, { story_id: idB })
+    expect(getB.story).not.toBeNull()
+    expect(getB.story!.blockedByStory).toBe(idA)
+  })
+
+  it('BATCH-3: invalid story causes entire batch to roll back', async () => {
+    const idGood = makeStoryId('BATCH-3-GOOD')
+    const idBad = makeStoryId('BATCH-3-BAD')
+    testStoryIds.push(idGood, idBad)
+
+    // Second story has no title and is new — should fail title validation
+    await expect(
+      kb_create_stories_batch(deps, {
+        stories: [
+          { story_id: idGood, title: 'Good Story' },
+          { story_id: idBad },
+        ],
+      }),
+    ).rejects.toThrow(/Batch story creation failed at story index 1/)
+
+    // Verify first story was NOT created (rollback)
+    const getGood = await kb_get_story(deps, { story_id: idGood })
+    expect(getGood.story).toBeNull()
+  })
+
+  it('BATCH-4: batch with plan_slug creates plan_story_links for all stories', async () => {
+    const idA = makeStoryId('BATCH-4-A')
+    const idB = makeStoryId('BATCH-4-B')
+    testStoryIds.push(idA, idB)
+
+    const testPlanSlug = `test-batch-plan-${Date.now()}`
+    const { plans } = await import('../../db/schema.js')
+    await db
+      .insert(plans)
+      .values({
+        planSlug: testPlanSlug,
+        title: 'Test Batch Plan',
+        type: 'feature',
+        status: 'draft',
+        summary: 'Test plan for batch links test',
+      })
+      .onConflictDoNothing()
+
+    try {
+      await kb_create_stories_batch(deps, {
+        stories: [
+          { story_id: idA, title: 'Batch Plan Story A', plan_slug: testPlanSlug },
+          { story_id: idB, title: 'Batch Plan Story B', plan_slug: testPlanSlug },
+        ],
+      })
+
+      // Verify plan links exist for both stories
+      const linksA = await kb_get_story_plan_links(deps, { story_id: idA })
+      const linksB = await kb_get_story_plan_links(deps, { story_id: idB })
+
+      expect(linksA.links.find(l => l.plan_slug === testPlanSlug)).toBeDefined()
+      expect(linksB.links.find(l => l.plan_slug === testPlanSlug)).toBeDefined()
+    } finally {
+      await db.delete(planStoryLinks).where(eq(planStoryLinks.planSlug, testPlanSlug))
+      await db.delete(plans).where(eq(plans.planSlug, testPlanSlug))
+    }
+  })
+
+  it('BATCH-5: empty stories array is rejected by Zod validation', async () => {
+    await expect(
+      kb_create_stories_batch(deps, { stories: [] }),
+    ).rejects.toThrow()
+  })
+
+  it('BATCH-6: upsert semantics — existing stories are updated, new ones created', async () => {
+    const idExisting = makeStoryId('BATCH-6-EXIST')
+    const idNew = makeStoryId('BATCH-6-NEW')
+    testStoryIds.push(idExisting, idNew)
+
+    // Pre-create one story
+    await kb_create_story(deps, {
+      story_id: idExisting,
+      title: 'Original Title',
+    })
+
+    const result = await kb_create_stories_batch(deps, {
+      stories: [
+        { story_id: idExisting, title: 'Updated Title' },
+        { story_id: idNew, title: 'New Story' },
+      ],
+    })
+
+    expect(result.created_count).toBe(1)
+    expect(result.updated_count).toBe(1)
+    expect(result.results.find(r => r.story_id === idExisting)!.created).toBe(false)
+    expect(result.results.find(r => r.story_id === idNew)!.created).toBe(true)
+
+    // Verify update applied
+    const getExisting = await kb_get_story(deps, { story_id: idExisting })
+    expect(getExisting.story!.title).toBe('Updated Title')
   })
 })
