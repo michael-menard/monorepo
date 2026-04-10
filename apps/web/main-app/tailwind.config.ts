@@ -7,7 +7,8 @@ const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
     './index.html',
-    '../../packages/core/app-component-library/src/**/*.{ts,tsx}',
+    '../../../packages/core/app-component-library/src/**/*.{ts,tsx}',
+    '../../../packages/core/gallery/src/**/*.{ts,tsx}',
     '../app-instructions-gallery/src/**/*.{ts,tsx}',
   ],
   // Safelist animation classes used by Radix Dialog/AlertDialog with data-state variants

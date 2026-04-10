@@ -68,8 +68,9 @@ export const InstructionCard = ({
       image={{
         src: instruction.thumbnail,
         alt: instruction.name,
-        aspectRatio: '4/3',
+        aspectRatio: '1/1',
       }}
+      contentDrawer={true}
       title={instruction.name}
       onClick={handleClick}
       className={className}

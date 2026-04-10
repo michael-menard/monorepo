@@ -205,6 +205,31 @@ All code must pass before commit, and **all new additions must pass linting and 
 - Use `pnpm` commands - never edit package.json manually
 - Workspace dependencies use `workspace:*`
 
+### Package Exports (REQUIRED)
+
+All packages under `packages/` **must export built JavaScript + declaration files from `dist/`**, not raw TypeScript source. This ensures packages work for all consumers (Vite, Node/Lambda, tests) and keeps type errors contained within the package that owns them.
+
+```jsonc
+// CORRECT - export built JS + types from dist/
+"exports": {
+  ".": {
+    "import": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  }
+}
+
+// WRONG - never export raw TypeScript source
+"exports": {
+  ".": "./src/index.ts"
+}
+```
+
+Every package with a `build` script must produce `dist/` output. Turborepo handles build ordering automatically — `pnpm dev` runs `^build` on all workspace dependencies before starting dev servers.
+
+### Worktree Awareness
+
+This repo uses git worktrees (managed by [Worktrunk](https://github.com/anthropics/worktrunk)). Worktrees share `node_modules` with the main tree but **do not share `dist/` output**. The `^build` dependency in turbo's `dev` task ensures packages are built before dev servers start, even in fresh worktrees.
+
 ## Git
 
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, etc.

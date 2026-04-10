@@ -10,14 +10,14 @@ import {
 } from '@repo/app-component-library'
 import { Calendar, User, ExternalLink } from 'lucide-react'
 import type { Moc } from './__types__/moc'
-import { CoverCard } from './CoverCard'
+import { GalleryCard } from '@repo/gallery'
 import { MetaCard } from './MetaCard'
 import { StatsCard } from './StatsCard'
 import { PartsGauge } from './PartsGauge'
 import { PartsListsCard } from './PartsListsCard'
 import { InstructionsCard } from './InstructionsCard'
 import { OrdersCard } from './OrdersCard'
-import { GalleryCard } from './GalleryCard'
+import { GalleryCard as ImageGridCard } from './GalleryCard'
 import { DescriptionCard } from './DescriptionCard'
 
 function formatDate(isoDate: string): string {
@@ -43,7 +43,19 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
     <div className="container mx-auto px-4 py-6 xl:py-8" data-testid="moc-detail-dashboard">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         <aside className="lg:col-span-4 xl:col-span-3 space-y-6 lg:sticky lg:top-20 lg:self-start">
-          <CoverCard moc={{ title: moc.title, coverImageUrl: moc.coverImageUrl }} />
+          <GalleryCard
+            image={
+              moc.coverImageUrl
+                ? {
+                    src: moc.coverImageUrl,
+                    alt: `Cover image for ${moc.title}`,
+                    aspectRatio: '1/1',
+                  }
+                : undefined
+            }
+            title={moc.title}
+            showContent={false}
+          />
           {moc.author ||
           moc.publishDate ||
           moc.updatedAt ||
@@ -150,7 +162,7 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
               />
             </TabsContent>
             <TabsContent value="gallery">
-              <GalleryCard galleryImages={moc.galleryImages} />
+              <ImageGridCard galleryImages={moc.galleryImages} />
             </TabsContent>
             <TabsContent value="parts-lists">
               <PartsListsCard partsLists={moc.partsLists} />
