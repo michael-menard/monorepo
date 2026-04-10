@@ -295,7 +295,15 @@ export class MocDetailPage extends BasePage {
     try {
       // Primary: href-based selectors (covers /tags/ and ?tag= patterns)
       let tags = await this.page.$$eval(SELECTORS.tagLinks, links =>
-        links.map(a => a.textContent?.trim() || '').filter(t => t.length > 0 && t.length < 100),
+        links
+          .map(a =>
+            (a.textContent || '')
+              .replace(/[\n\r\t]+/g, ' ')
+              .replace(/\s{2,}/g, ' ')
+              .trim()
+              .replace(/\s+\d[\d,]*$/, ''),
+          )
+          .filter(t => t.length > 0 && t.length < 100),
       )
 
       // Fallback: scan all links in the details tab for ?tag= or /tags/ in href
@@ -306,7 +314,13 @@ export class MocDetailPage extends BasePage {
               const href = a.getAttribute('href') || ''
               return href.includes('/tags/') || href.includes('tag=')
             })
-            .map(a => a.textContent?.trim() || '')
+            .map(a =>
+              (a.textContent || '')
+                .replace(/[\n\r\t]+/g, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim()
+                .replace(/\s+\d[\d,]*$/, ''),
+            )
             .filter(t => t.length > 0 && t.length < 100),
         )
         if (tags.length > 0) {
