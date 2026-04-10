@@ -289,7 +289,7 @@ export function MainPage({ className }: MainPageProps) {
                 </div>
               ) : (
                 <>
-                  <GalleryGrid>
+                  <GalleryGrid columns={{ sm: 2, md: 3, lg: 4, xl: 5 }}>
                     {filteredTableItems.map(item => {
                       const instruction = instructionsMap.get(item.id)
                       if (!instruction) return null
