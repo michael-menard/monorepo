@@ -540,8 +540,9 @@ export const GalleryCard = ({
             className={cn(
               'absolute bottom-0 left-0 right-0 z-20',
               'flex flex-col overflow-hidden',
-              'bg-card/95 dark:bg-surface/95 backdrop-blur-sm',
-              'border-t border-border dark:border-surface-border',
+              'bg-black/40 backdrop-blur-md backdrop-saturate-150',
+              'border-t border-white/10',
+              'text-white',
               'transition-all duration-300 ease-in-out',
               'max-h-10 group-hover:max-h-64',
             )}
