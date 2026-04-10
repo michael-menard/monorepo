@@ -474,7 +474,7 @@ mocs.get('/:id', async c => {
 
     // Map stats
     const stats = {
-      pieceCount: moc.totalPieceCount,
+      pieceCount: moc.partsCount ?? moc.totalPieceCount,
       fileCount: moc.files.length,
     }
 

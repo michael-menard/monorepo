@@ -11,6 +11,7 @@ export interface Moc {
   slug: string | null
   type: string
   thumbnailUrl: string | null
+  partsCount: number | null
   createdAt: Date
   updatedAt: Date
 }

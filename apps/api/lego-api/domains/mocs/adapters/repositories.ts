@@ -258,6 +258,7 @@ function mapRowToMoc(row: any): Moc {
     slug: row.slug,
     type: row.type,
     thumbnailUrl: row.thumbnailUrl || null,
+    partsCount: row.partsCount ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   }

@@ -47,7 +47,7 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
       typeof apiData.createdAt === 'string' ? apiData.createdAt : apiData.createdAt.toISOString(),
     purchasedDate: undefined,
     author: apiData.author ? { displayName: apiData.author } : undefined,
-    partsCount: apiData.stats.pieceCount || 0,
+    partsCount: apiData.stats.pieceCount ?? 0,
     partsOwned: undefined,
     orders: [],
   }
