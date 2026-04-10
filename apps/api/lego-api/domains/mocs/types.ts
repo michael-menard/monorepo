@@ -20,7 +20,7 @@ export const CreateMocRequestSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   theme: ThemeEnum,
-  tags: z.array(z.string().max(30)).max(20).optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
 })
 
 // Request schema for updating a MOC (INST-1108: AC-2, AC-5)

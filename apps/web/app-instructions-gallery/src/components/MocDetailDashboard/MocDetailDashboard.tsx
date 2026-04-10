@@ -4,7 +4,6 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-  AppBadge as Badge,
   Card,
   CardContent,
 } from '@repo/app-component-library'
@@ -19,6 +18,7 @@ import { InstructionsCard } from './InstructionsCard'
 import { OrdersCard } from './OrdersCard'
 import { GalleryCard as ImageGridCard } from './GalleryCard'
 import { DescriptionCard } from './DescriptionCard'
+import { TagsSection } from './TagsSection'
 
 function formatDate(isoDate: string): string {
   try {
@@ -56,83 +56,62 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
             title={moc.title}
             showContent={false}
           />
-          {moc.author ||
-          moc.publishDate ||
-          moc.updatedAt ||
-          moc.purchasedDate ||
-          (moc.tags ?? []).length > 0 ? (
-            <Card className="border-border shadow-sm">
-              <CardContent className="p-4 space-y-3">
-                {moc.author ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>By</span>
-                    {moc.author.url ? (
-                      <a
-                        href={moc.author.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                      >
-                        {moc.author.displayName}
-                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                      </a>
-                    ) : (
-                      <span className="font-medium text-foreground">{moc.author.displayName}</span>
-                    )}
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              {moc.author ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>By</span>
+                  {moc.author.url ? (
+                    <a
+                      href={moc.author.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      {moc.author.displayName}
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span className="font-medium text-foreground">{moc.author.displayName}</span>
+                  )}
+                </div>
+              ) : null}
+              <dl className="space-y-1.5 text-sm">
+                {moc.publishDate ? (
+                  <div className="flex items-center gap-2">
+                    <Calendar
+                      className="h-4 w-4 text-muted-foreground shrink-0"
+                      aria-hidden="true"
+                    />
+                    <dt className="text-muted-foreground">Published</dt>
+                    <dd className="font-medium text-foreground">{formatDate(moc.publishDate)}</dd>
                   </div>
                 ) : null}
-                <dl className="space-y-1.5 text-sm">
-                  {moc.publishDate ? (
-                    <div className="flex items-center gap-2">
-                      <Calendar
-                        className="h-4 w-4 text-muted-foreground shrink-0"
-                        aria-hidden="true"
-                      />
-                      <dt className="text-muted-foreground">Published</dt>
-                      <dd className="font-medium text-foreground">{formatDate(moc.publishDate)}</dd>
-                    </div>
-                  ) : null}
-                  {moc.updatedAt ? (
-                    <div className="flex items-center gap-2">
-                      <Calendar
-                        className="h-4 w-4 text-muted-foreground shrink-0"
-                        aria-hidden="true"
-                      />
-                      <dt className="text-muted-foreground">Updated</dt>
-                      <dd className="font-medium text-foreground">{formatDate(moc.updatedAt)}</dd>
-                    </div>
-                  ) : null}
-                  {moc.purchasedDate ? (
-                    <div className="flex items-center gap-2">
-                      <Calendar
-                        className="h-4 w-4 text-muted-foreground shrink-0"
-                        aria-hidden="true"
-                      />
-                      <dt className="text-muted-foreground">Purchased</dt>
-                      <dd className="font-medium text-foreground">
-                        {formatDate(moc.purchasedDate)}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-                {(moc.tags ?? []).length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5" role="list" aria-label="Tags">
-                    {moc.tags.map(tag => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        role="listitem"
-                        className="bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 border-0 text-xs"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
+                {moc.updatedAt ? (
+                  <div className="flex items-center gap-2">
+                    <Calendar
+                      className="h-4 w-4 text-muted-foreground shrink-0"
+                      aria-hidden="true"
+                    />
+                    <dt className="text-muted-foreground">Updated</dt>
+                    <dd className="font-medium text-foreground">{formatDate(moc.updatedAt)}</dd>
                   </div>
                 ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
+                {moc.purchasedDate ? (
+                  <div className="flex items-center gap-2">
+                    <Calendar
+                      className="h-4 w-4 text-muted-foreground shrink-0"
+                      aria-hidden="true"
+                    />
+                    <dt className="text-muted-foreground">Purchased</dt>
+                    <dd className="font-medium text-foreground">{formatDate(moc.purchasedDate)}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              <TagsSection mocId={moc.id} tags={moc.tags} />
+            </CardContent>
+          </Card>
         </aside>
 
         <main className="lg:col-span-8 xl:col-span-9 space-y-6">
