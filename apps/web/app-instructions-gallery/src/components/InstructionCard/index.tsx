@@ -65,11 +65,17 @@ export const InstructionCard = ({
 
   return (
     <GalleryCard
-      image={{
-        src: instruction.thumbnail,
-        alt: instruction.name,
-        aspectRatio: '4/3',
-      }}
+      image={
+        instruction.thumbnail
+          ? { src: instruction.thumbnail, alt: instruction.name, aspectRatio: '1/1' }
+          : undefined
+      }
+      imageFallback={
+        <div className="flex h-full w-full items-center justify-center pb-12 bg-gradient-to-br from-primary/10 to-primary/5">
+          <span className="text-4xl font-bold text-muted-foreground/70">{instruction.name}</span>
+        </div>
+      }
+      contentDrawer={true}
       title={instruction.name}
       onClick={handleClick}
       className={className}

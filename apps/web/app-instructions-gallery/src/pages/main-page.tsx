@@ -96,6 +96,22 @@ export function MainPage({ className }: MainPageProps) {
     if (hasMore && !isLoading) setCurrentPage(p => p + 1)
   }, [hasMore, isLoading])
 
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
+  useEffect(() => {
+    if (observerRef.current) observerRef.current.disconnect()
+    observerRef.current = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) handleLoadMore()
+      },
+      { rootMargin: '200px' },
+    )
+    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current)
+    return () => observerRef.current?.disconnect()
+  }, [handleLoadMore])
+
   // Initial view mode from URL (?view=grid|datatable)
   const initialUrlMode = useMemo(() => {
     if (typeof window === 'undefined') return null
@@ -273,7 +289,7 @@ export function MainPage({ className }: MainPageProps) {
                 </div>
               ) : (
                 <>
-                  <GalleryGrid>
+                  <GalleryGrid columns={{ sm: 2, md: 3, lg: 4, xl: 5 }}>
                     {filteredTableItems.map(item => {
                       const instruction = instructionsMap.get(item.id)
                       if (!instruction) return null
@@ -289,17 +305,14 @@ export function MainPage({ className }: MainPageProps) {
                     })}
                   </GalleryGrid>
                   {hasMore && !searchTerm && (
-                    <div className="flex justify-center pt-4">
-                      <button
-                        type="button"
-                        onClick={handleLoadMore}
-                        disabled={isLoadingMore}
-                        className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {isLoadingMore
-                          ? 'Loading...'
-                          : `Load More (${instructions.length} of ${totalPages * LIMIT})`}
-                      </button>
+                    <div
+                      ref={sentinelRef}
+                      className="flex justify-center py-8"
+                      data-testid="infinite-scroll-sentinel"
+                    >
+                      {isLoadingMore && (
+                        <GallerySkeleton count={4} data-testid="load-more-skeleton" />
+                      )}
                     </div>
                   )}
                 </>

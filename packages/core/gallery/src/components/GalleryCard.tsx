@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { z } from 'zod'
-import { Check, GripVertical } from 'lucide-react'
+import { Check, GripVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@repo/app-component-library'
 import { GalleryCardImageSchema, GalleryAspectRatioSchema, OverlayPositionSchema } from '../types'
 
@@ -14,6 +14,8 @@ import { GalleryCardImageSchema, GalleryAspectRatioSchema, OverlayPositionSchema
 export const GalleryCardPropsSchema = z.object({
   /** Image configuration (optional - renders muted placeholder or imageFallback when omitted) */
   image: GalleryCardImageSchema.optional(),
+  /** Multiple images for carousel mode — shows dot indicators and prev/next on hover */
+  images: z.array(GalleryCardImageSchema).optional(),
   /** Card title (required) */
   title: z.string().min(1),
   /** Optional subtitle text */
@@ -58,6 +60,12 @@ export const GalleryCardPropsSchema = z.object({
   imageFallback: z.custom<React.ReactNode>().optional(),
   /** Whether to show the content area below the image (default: true) */
   showContent: z.boolean().optional(),
+  /** Show a compact title overlay at the bottom of the image (hides content area) */
+  compactTitle: z.boolean().optional(),
+  /** Whether to show hover effects (border glow, shadow lift). Defaults to true. */
+  hoverEffects: z.boolean().optional(),
+  /** Content drawer mode: collapsed to title-only by default, slides up on hover to reveal full content */
+  contentDrawer: z.boolean().optional(),
 })
 
 /**
@@ -147,6 +155,7 @@ const aspectRatioClassMap: Record<string, string> = {
  */
 export const GalleryCard = ({
   image,
+  images,
   title,
   subtitle,
   metadata,
@@ -168,12 +177,20 @@ export const GalleryCard = ({
   hoverOverlay,
   imageFallback,
   showContent = true,
+  compactTitle = false,
+  hoverEffects = true,
+  contentDrawer = true,
 }: GalleryCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
-  const aspectRatioClass = aspectRatioClassMap[image?.aspectRatio ?? '4/3']
-  const hasImage = Boolean(image?.src)
+  // Resolve image list: prefer `images` array, fall back to single `image`
+  const imageList = images?.length ? images : image ? [image] : []
+  const hasMultipleImages = imageList.length > 1
+  const activeImage = imageList[activeImageIndex] ?? image
+  const aspectRatioClass = aspectRatioClassMap[activeImage?.aspectRatio ?? '1/1']
+  const hasImage = Boolean(activeImage?.src)
   const isInteractive = Boolean(onClick ?? href ?? (selectable && onSelect))
 
   // Position conflict resolution (Decision #1): When both selectable AND draggable,
@@ -214,6 +231,26 @@ export const GalleryCard = ({
     }
   }, [selectable, selected, onClick, onSelect])
 
+  const handlePrevImage = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation()
+      setImageLoaded(false)
+      setImageError(false)
+      setActiveImageIndex(i => (i === 0 ? imageList.length - 1 : i - 1))
+    },
+    [imageList.length],
+  )
+
+  const handleNextImage = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation()
+      setImageLoaded(false)
+      setImageError(false)
+      setActiveImageIndex(i => (i === imageList.length - 1 ? 0 : i + 1))
+    },
+    [imageList.length],
+  )
+
   const handleCheckboxClick = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation()
@@ -242,16 +279,18 @@ export const GalleryCard = ({
         'bg-card/80 dark:bg-surface backdrop-blur-sm',
         'border border-border dark:border-surface-border',
         'text-card-foreground shadow-sm',
+        // Hover effects - on by default, opt out with hoverEffects={false}
+        hoverEffects && [
+          'transition-all duration-200 ease-in-out',
+          'hover:border-primary/50 dark:hover:border-glow-primary',
+          'hover:shadow-md dark:hover:shadow-glow-primary',
+        ],
         // Interactive states
         isInteractive && [
           'cursor-pointer',
           'outline-none',
           'ring-offset-background',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          // Hover effects - glow border, NO scale transform
-          'transition-all duration-200 ease-in-out',
-          'hover:border-primary/50 dark:hover:border-glow-primary',
-          'hover:shadow-md dark:hover:shadow-glow-primary',
         ],
         // Selected state - with glow
         selected && 'ring-2 ring-primary ring-offset-2 dark:shadow-glow-primary',
@@ -275,8 +314,8 @@ export const GalleryCard = ({
             {/* Image */}
             {!imageError ? (
               <img
-                src={image!.src}
-                alt={image!.alt}
+                src={activeImage!.src}
+                alt={activeImage!.alt}
                 loading="lazy"
                 onLoad={handleImageLoad}
                 onError={handleImageError}
@@ -336,6 +375,69 @@ export const GalleryCard = ({
           <div className="absolute inset-0 bg-muted" data-testid={`${testId}-image-placeholder`} />
         )}
 
+        {/* Image carousel controls */}
+        {hasMultipleImages ? (
+          <>
+            {/* Prev/Next buttons - visible on hover */}
+            <button
+              type="button"
+              onClick={handlePrevImage}
+              aria-label="Previous image"
+              className={cn(
+                'absolute left-1 top-1/2 -translate-y-1/2 z-20',
+                'h-7 w-7 rounded-full bg-black/50 text-white',
+                'flex items-center justify-center',
+                'transition-opacity duration-200',
+                'opacity-0 group-hover:opacity-100',
+                'hover:bg-black/70',
+              )}
+              data-testid={`${testId}-image-prev`}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextImage}
+              aria-label="Next image"
+              className={cn(
+                'absolute right-1 top-1/2 -translate-y-1/2 z-20',
+                'h-7 w-7 rounded-full bg-black/50 text-white',
+                'flex items-center justify-center',
+                'transition-opacity duration-200',
+                'opacity-0 group-hover:opacity-100',
+                'hover:bg-black/70',
+              )}
+              data-testid={`${testId}-image-next`}
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+
+            {/* Dot indicators */}
+            <div
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex gap-1"
+              data-testid={`${testId}-image-dots`}
+            >
+              {imageList.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation()
+                    setImageLoaded(false)
+                    setImageError(false)
+                    setActiveImageIndex(i)
+                  }}
+                  aria-label={`View image ${i + 1} of ${imageList.length}`}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-200',
+                    i === activeImageIndex ? 'w-3 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80',
+                  )}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+
         {/* Hover overlay (REPA-009 - replaces actions overlay) */}
         {hoverOverlay ? (
           <div
@@ -352,6 +454,16 @@ export const GalleryCard = ({
             onKeyDown={e => e.stopPropagation()}
           >
             {hoverOverlay}
+          </div>
+        ) : null}
+
+        {/* Compact title overlay — always-visible small label at bottom of image */}
+        {compactTitle ? (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/50 to-transparent px-1.5 py-1"
+            data-testid={`${testId}-compact-title`}
+          >
+            <span className="text-white text-[10px] font-medium truncate block">{title}</span>
           </div>
         ) : null}
 
@@ -420,37 +532,87 @@ export const GalleryCard = ({
         ) : null}
       </div>
 
-      {/* Content Area (hidden when showContent=false, e.g. overlay-only cards) */}
-      {showContent ? (
-        <div className="flex flex-col gap-1 p-4">
-          {/* Title */}
-          <h3
-            className="font-semibold text-base leading-tight line-clamp-2"
-            data-testid={`${testId}-title`}
+      {/* Content Area (hidden when showContent=false or compactTitle=true) */}
+      {showContent && !compactTitle ? (
+        contentDrawer ? (
+          /* Drawer mode: slides up from bottom over the image on hover */
+          <div
+            className={cn(
+              'absolute bottom-0 left-0 right-0 z-20',
+              'flex flex-col overflow-hidden',
+              'bg-black/40 backdrop-blur-md backdrop-saturate-150',
+              'border-t border-white/10',
+              'text-white',
+              'transition-all duration-300 ease-in-out',
+              'max-h-10 group-hover:max-h-64',
+            )}
+            data-testid={`${testId}-content-drawer`}
           >
-            {title}
-          </h3>
-
-          {/* Subtitle */}
-          {subtitle ? (
-            <p
-              className="text-sm text-muted-foreground line-clamp-1"
-              data-testid={`${testId}-subtitle`}
-            >
-              {subtitle}
-            </p>
-          ) : null}
-
-          {/* Metadata slot */}
-          {metadata ? (
-            <div
-              className="mt-2 flex flex-wrap items-center gap-2"
-              data-testid={`${testId}-metadata`}
-            >
-              {metadata}
+            <div className="flex flex-col gap-1 p-3 pb-1">
+              {/* Title - always visible, single line */}
+              <h3
+                className="font-semibold text-sm leading-tight truncate"
+                data-testid={`${testId}-title`}
+              >
+                {title}
+              </h3>
             </div>
-          ) : null}
-        </div>
+
+            {/* Drawer content - revealed on hover */}
+            <div className="flex flex-col gap-1 px-3 pb-3">
+              {/* Subtitle */}
+              {subtitle ? (
+                <p
+                  className="text-xs text-muted-foreground line-clamp-1"
+                  data-testid={`${testId}-subtitle`}
+                >
+                  {subtitle}
+                </p>
+              ) : null}
+
+              {/* Metadata slot */}
+              {metadata ? (
+                <div
+                  className="mt-1 flex flex-wrap items-center gap-1.5"
+                  data-testid={`${testId}-metadata`}
+                >
+                  {metadata}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          /* Standard mode: full content always visible */
+          <div className="flex flex-col gap-1 p-4">
+            {/* Title */}
+            <h3
+              className="font-semibold text-base leading-tight line-clamp-2"
+              data-testid={`${testId}-title`}
+            >
+              {title}
+            </h3>
+
+            {/* Subtitle */}
+            {subtitle ? (
+              <p
+                className="text-sm text-muted-foreground line-clamp-1"
+                data-testid={`${testId}-subtitle`}
+              >
+                {subtitle}
+              </p>
+            ) : null}
+
+            {/* Metadata slot */}
+            {metadata ? (
+              <div
+                className="mt-2 flex flex-wrap items-center gap-2"
+                data-testid={`${testId}-metadata`}
+              >
+                {metadata}
+              </div>
+            ) : null}
+          </div>
+        )
       ) : null}
     </WrapperElement>
   )

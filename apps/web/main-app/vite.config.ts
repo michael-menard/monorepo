@@ -51,6 +51,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    force: true,
     include: ['react', 'react-dom', '@tanstack/react-router'],
     exclude: [
       // Exclude all workspace packages from pre-bundling
