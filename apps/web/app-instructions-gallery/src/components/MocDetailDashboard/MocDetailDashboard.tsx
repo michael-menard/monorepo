@@ -144,6 +144,7 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
                 mocId={moc.id}
                 instructionsPdfUrls={moc.instructionsPdfUrls}
                 instructionFiles={moc.instructionFiles}
+                coverImageUrl={moc.coverImageUrl || undefined}
                 onFilesUploaded={handleFilesUploaded}
               />
             </TabsContent>

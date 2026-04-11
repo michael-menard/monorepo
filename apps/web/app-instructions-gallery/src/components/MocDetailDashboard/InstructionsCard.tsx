@@ -15,6 +15,7 @@ interface InstructionsCardProps {
   mocId: string
   instructionsPdfUrls: string[]
   instructionFiles?: InstructionFile[]
+  coverImageUrl?: string
   onFilesUploaded?: () => void
 }
 
@@ -22,6 +23,7 @@ export function InstructionsCard({
   mocId,
   instructionsPdfUrls,
   instructionFiles,
+  coverImageUrl,
   onFilesUploaded,
 }: InstructionsCardProps) {
   const safeUrls = instructionsPdfUrls ?? []
@@ -62,9 +64,17 @@ export function InstructionsCard({
                     key={url}
                     className="flex items-center gap-3 rounded-lg p-3 border border-border hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-300">
-                      <FileText className="h-4 w-4" aria-hidden="true" />
-                    </div>
+                    {coverImageUrl ? (
+                      <img
+                        src={coverImageUrl}
+                        alt=""
+                        className="h-10 w-10 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-300">
+                        <FileText className="h-4 w-4" aria-hidden="true" />
+                      </div>
+                    )}
 
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
