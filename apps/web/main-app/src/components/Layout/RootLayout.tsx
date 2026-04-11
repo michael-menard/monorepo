@@ -19,6 +19,7 @@ import { MainArea } from './MainArea'
 import { setActiveRoute } from '@/store/slices/navigationSlice'
 import { selectAuth } from '@/store/slices/authSlice'
 import { AuthProvider } from '@/services/auth/AuthProvider'
+import { DevAuthProvider } from '@/services/auth/DevAuthProvider'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { useNavigationSync } from '@/hooks/useNavigationSync'
 
@@ -220,10 +221,12 @@ function RootLayoutContent() {
  * access to TanStack Router's navigation context.
  */
 export function RootLayout() {
+  const Provider = import.meta.env.VITE_AUTH_BYPASS === 'true' ? DevAuthProvider : AuthProvider
+
   return (
-    <AuthProvider>
+    <Provider>
       <RootLayoutContent />
-    </AuthProvider>
+    </Provider>
   )
 }
 
