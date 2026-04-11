@@ -1,66 +1,90 @@
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err } from '@repo/api-core'
-import type { SetRepository, SetImageRepository, ImageStorage } from '../ports/index.js'
+import type {
+  SetRepository,
+  SetImageRepository,
+  StoreRepository,
+  ImageStorage,
+} from '../ports/index.js'
 import type {
   Set,
   SetImage,
+  Store,
   CreateSetInput,
   UpdateSetInput,
+  ReorderInput,
+  PurchaseInput,
   CreateSetImageInput,
   RegisterSetImageInput,
   UploadedFile,
   SetError,
+  BuildStatus,
 } from '../types.js'
 import { generateSetImageKey, generateSetThumbnailKey } from '../adapters/storage.js'
 
-/**
- * Sets Service Dependencies
- *
- * Injected via function parameters - no global state.
- */
+// ─────────────────────────────────────────────────────────────────────────
+// Dependencies
+// ─────────────────────────────────────────────────────────────────────────
+
 export interface SetsServiceDeps {
   setRepo: SetRepository
   setImageRepo: SetImageRepository
+  storeRepo: StoreRepository
   imageStorage: ImageStorage
 }
 
-/**
- * Create the Sets Service
- *
- * Pure business logic - no infrastructure dependencies.
- * All I/O is done through injected ports.
- */
+// ─────────────────────────────────────────────────────────────────────────
+// Service
+// ─────────────────────────────────────────────────────────────────────────
+
 export function createSetsService(deps: SetsServiceDeps) {
-  const { setRepo, setImageRepo, imageStorage } = deps
+  const { setRepo, setImageRepo, storeRepo, imageStorage } = deps
 
   return {
     // ─────────────────────────────────────────────────────────────────────
-    // Set Operations
+    // Store Operations
     // ─────────────────────────────────────────────────────────────────────
 
-    /**
-     * Create a new set
-     */
+    async listStores(): Promise<Store[]> {
+      return storeRepo.findAll()
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Set CRUD
+    // ─────────────────────────────────────────────────────────────────────
+
     async createSet(userId: string, input: CreateSetInput): Promise<Result<Set, SetError>> {
       try {
+        // For wanted items, auto-assign sort order
+        let sortOrder: number | null = null
+        if (input.status === 'wanted') {
+          const maxSort = await setRepo.getMaxSortOrder(userId)
+          sortOrder = maxSort + 1
+        }
+
         const set = await setRepo.insert({
           userId,
+          status: input.status ?? 'wanted',
+          statusChangedAt: null,
           title: input.title,
           setNumber: input.setNumber ?? null,
-          store: input.store ?? null,
           sourceUrl: input.sourceUrl ?? null,
+          storeId: input.storeId ?? null,
           pieceCount: input.pieceCount ?? null,
           releaseDate: input.releaseDate ?? null,
-          theme: input.theme ?? null,
-          tags: input.tags ?? null,
           notes: input.notes ?? null,
-          isBuilt: input.isBuilt ?? false,
-          quantity: input.quantity ?? 1,
+          condition: input.condition ?? null,
+          completeness: input.completeness ?? null,
+          buildStatus: input.buildStatus ?? (input.status === 'owned' ? 'not_started' : null),
           purchasePrice: input.purchasePrice ?? null,
-          tax: input.tax ?? null,
-          shipping: input.shipping ?? null,
+          purchaseTax: input.purchaseTax ?? null,
+          purchaseShipping: input.purchaseShipping ?? null,
           purchaseDate: input.purchaseDate ?? null,
-          wishlistItemId: input.wishlistItemId ?? null,
+          quantity: input.quantity ?? 1,
+          priority: input.priority ?? (input.status === 'wanted' ? 0 : null),
+          sortOrder,
+          imageUrl: input.imageUrl ?? null,
+          imageVariants: null,
         })
 
         return ok(set)
@@ -70,9 +94,6 @@ export function createSetsService(deps: SetsServiceDeps) {
       }
     },
 
-    /**
-     * Get set by ID (with ownership check)
-     */
     async getSet(userId: string, setId: string): Promise<Result<Set, SetError>> {
       const result = await setRepo.findById(setId)
 
@@ -80,7 +101,6 @@ export function createSetsService(deps: SetsServiceDeps) {
         return result
       }
 
-      // Check ownership
       if (result.data.userId !== userId) {
         return err('FORBIDDEN')
       }
@@ -88,9 +108,6 @@ export function createSetsService(deps: SetsServiceDeps) {
       return result
     },
 
-    /**
-     * Get set with its images
-     */
     async getSetWithImages(
       userId: string,
       setId: string,
@@ -108,26 +125,30 @@ export function createSetsService(deps: SetsServiceDeps) {
       })
     },
 
-    /**
-     * List sets for a user
-     */
     async listSets(
       userId: string,
       pagination: PaginationInput,
-      filters?: { search?: string; theme?: string; isBuilt?: boolean },
+      filters?: {
+        search?: string
+        status?: 'wanted' | 'owned'
+        storeId?: string
+        tags?: string[]
+        priority?: number
+        priorityRange?: { min: number; max: number }
+        priceRange?: { min: number; max: number }
+        isBuilt?: boolean
+        sort?: string
+        order?: 'asc' | 'desc'
+      },
     ): Promise<PaginatedResult<Set>> {
       return setRepo.findByUserId(userId, pagination, filters)
     },
 
-    /**
-     * Update a set
-     */
     async updateSet(
       userId: string,
       setId: string,
       input: UpdateSetInput,
     ): Promise<Result<Set, SetError>> {
-      // Check ownership first
       const existing = await setRepo.findById(setId)
       if (!existing.ok) {
         return existing
@@ -136,14 +157,35 @@ export function createSetsService(deps: SetsServiceDeps) {
         return err('FORBIDDEN')
       }
 
-      return setRepo.update(setId, input)
+      const updateData: Record<string, unknown> = {}
+
+      if (input.status !== undefined) {
+        updateData.status = input.status
+        updateData.statusChangedAt = new Date()
+      }
+      if (input.title !== undefined) updateData.title = input.title
+      if (input.setNumber !== undefined) updateData.setNumber = input.setNumber
+      if (input.sourceUrl !== undefined) updateData.sourceUrl = input.sourceUrl
+      if (input.storeId !== undefined) updateData.storeId = input.storeId
+      if (input.pieceCount !== undefined) updateData.pieceCount = input.pieceCount
+      if (input.releaseDate !== undefined) updateData.releaseDate = input.releaseDate
+      if (input.notes !== undefined) updateData.notes = input.notes
+      if (input.condition !== undefined) updateData.condition = input.condition
+      if (input.completeness !== undefined) updateData.completeness = input.completeness
+      if (input.buildStatus !== undefined) updateData.buildStatus = input.buildStatus
+      if (input.purchasePrice !== undefined) updateData.purchasePrice = input.purchasePrice
+      if (input.purchaseTax !== undefined) updateData.purchaseTax = input.purchaseTax
+      if (input.purchaseShipping !== undefined) updateData.purchaseShipping = input.purchaseShipping
+      if (input.purchaseDate !== undefined) updateData.purchaseDate = input.purchaseDate
+      if (input.quantity !== undefined) updateData.quantity = input.quantity
+      if (input.priority !== undefined) updateData.priority = input.priority
+      if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder
+      if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl
+
+      return setRepo.update(setId, updateData)
     },
 
-    /**
-     * Delete a set (also deletes all images)
-     */
     async deleteSet(userId: string, setId: string): Promise<Result<void, SetError>> {
-      // Check ownership first
       const existing = await setRepo.findById(setId)
       if (!existing.ok) {
         return existing
@@ -152,7 +194,7 @@ export function createSetsService(deps: SetsServiceDeps) {
         return err('FORBIDDEN')
       }
 
-      // Delete all images from S3 first
+      // Delete images from S3
       const images = await setImageRepo.findBySetId(setId)
       for (const image of images) {
         const mainKey = imageStorage.extractKeyFromUrl(image.imageUrl)
@@ -160,55 +202,115 @@ export function createSetsService(deps: SetsServiceDeps) {
           ? imageStorage.extractKeyFromUrl(image.thumbnailUrl)
           : null
 
-        if (mainKey) {
-          await imageStorage.delete(mainKey)
-        }
-        if (thumbKey) {
-          await imageStorage.delete(thumbKey)
-        }
+        if (mainKey) await imageStorage.delete(mainKey)
+        if (thumbKey) await imageStorage.delete(thumbKey)
       }
 
-      // Delete image records (cascade from schema should handle this, but explicit is clearer)
       await setImageRepo.deleteBySetId(setId)
-
-      // Delete set
       return setRepo.delete(setId)
     },
 
     // ─────────────────────────────────────────────────────────────────────
-    // Set Image Operations
+    // Reorder (wanted items)
     // ─────────────────────────────────────────────────────────────────────
 
-    /**
-     * Generate a presigned URL for client-side image upload
-     */
+    async reorderSets(
+      userId: string,
+      input: ReorderInput,
+    ): Promise<Result<{ updated: number }, SetError>> {
+      const itemIds = input.items.map(item => item.id)
+      const ownsAll = await setRepo.verifyOwnership(userId, itemIds)
+
+      if (!ownsAll) {
+        return err('VALIDATION_ERROR')
+      }
+
+      const result = await setRepo.updateSortOrders(userId, input.items)
+
+      if (!result.ok) {
+        return result
+      }
+
+      return ok({ updated: result.data })
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Purchase (wanted → owned)
+    // ─────────────────────────────────────────────────────────────────────
+
+    async purchaseSet(
+      userId: string,
+      setId: string,
+      input: PurchaseInput,
+    ): Promise<Result<Set, SetError>> {
+      const existing = await setRepo.findById(setId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      if (existing.data.status !== 'wanted') {
+        return err('INVALID_STATUS')
+      }
+
+      const now = new Date()
+      const updateData: Record<string, unknown> = {
+        status: 'owned',
+        statusChangedAt: now,
+        purchaseDate: input.purchaseDate ?? now,
+        purchasePrice: input.purchasePrice ?? null,
+        purchaseTax: input.purchaseTax ?? null,
+        purchaseShipping: input.purchaseShipping ?? null,
+        condition: input.condition ?? null,
+        completeness: input.completeness ?? null,
+        buildStatus: input.buildStatus ?? 'not_started',
+      }
+
+      return setRepo.update(setId, updateData)
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Build Status
+    // ─────────────────────────────────────────────────────────────────────
+
+    async updateBuildStatus(
+      userId: string,
+      setId: string,
+      buildStatus: BuildStatus,
+    ): Promise<Result<Set, SetError>> {
+      const existing = await setRepo.findById(setId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      if (existing.data.status !== 'owned') {
+        return err('INVALID_STATUS')
+      }
+
+      return setRepo.update(setId, { buildStatus })
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Image Operations
+    // ─────────────────────────────────────────────────────────────────────
+
     async presignSetImage(
       userId: string,
       setId: string,
       filename: string,
       contentType: string,
     ): Promise<Result<{ uploadUrl: string; imageUrl: string; key: string }, SetError>> {
-      // Validate set ownership
       const setResult = await this.getSet(userId, setId)
-      if (!setResult.ok) {
-        return setResult
-      }
+      if (!setResult.ok) return setResult
 
-      // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
       if (!allowedTypes.includes(contentType)) {
         return err('INVALID_FILE')
       }
 
-      // Generate unique key
       const imageId = crypto.randomUUID()
       const extension = filename.split('.').pop()?.toLowerCase() || 'webp'
       const key = `sets/${userId}/${setId}/${imageId}.${extension}`
 
       const result = await imageStorage.generatePresignedUrl(key, contentType)
-      if (!result.ok) {
-        return err('UPLOAD_FAILED')
-      }
+      if (!result.ok) return err('UPLOAD_FAILED')
 
       return ok({
         uploadUrl: result.data.uploadUrl,
@@ -217,19 +319,13 @@ export function createSetsService(deps: SetsServiceDeps) {
       })
     },
 
-    /**
-     * Register an image that was uploaded via presigned URL
-     */
     async registerSetImage(
       userId: string,
       setId: string,
       input: RegisterSetImageInput,
     ): Promise<Result<SetImage, SetError>> {
-      // Validate set ownership
       const setResult = await this.getSet(userId, setId)
-      if (!setResult.ok) {
-        return setResult
-      }
+      if (!setResult.ok) return setResult
 
       const position = await setImageRepo.getNextPosition(setId)
 
@@ -248,58 +344,36 @@ export function createSetsService(deps: SetsServiceDeps) {
       }
     },
 
-    /**
-     * Upload an image for a set
-     */
     async uploadSetImage(
       userId: string,
       setId: string,
       file: UploadedFile,
       input?: Partial<CreateSetImageInput>,
     ): Promise<Result<SetImage, SetError>> {
-      // Validate set ownership
       const setResult = await this.getSet(userId, setId)
-      if (!setResult.ok) {
-        return setResult
-      }
+      if (!setResult.ok) return setResult
 
-      // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(file.mimetype)) {
-        return err('INVALID_FILE')
-      }
+      if (!allowedTypes.includes(file.mimetype)) return err('INVALID_FILE')
 
-      // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        return err('INVALID_FILE')
-      }
+      if (file.size > maxSize) return err('INVALID_FILE')
 
-      // Generate unique ID for the image
       const imageId = crypto.randomUUID()
-
-      // Generate S3 keys
       const mainKey = generateSetImageKey(userId, setId, imageId)
       const thumbKey = generateSetThumbnailKey(userId, setId, imageId)
 
-      // Upload main image
       const uploadResult = await imageStorage.upload(mainKey, file.buffer, file.mimetype)
-      if (!uploadResult.ok) {
-        return err('UPLOAD_FAILED')
-      }
+      if (!uploadResult.ok) return err('UPLOAD_FAILED')
 
-      // Upload thumbnail (same file for MVP - TODO: resize)
       const thumbResult = await imageStorage.upload(thumbKey, file.buffer, file.mimetype)
       if (!thumbResult.ok) {
-        // Clean up main image
         await imageStorage.delete(mainKey)
         return err('UPLOAD_FAILED')
       }
 
-      // Get next position if not specified
       const position = input?.position ?? (await setImageRepo.getNextPosition(setId))
 
-      // Save to database
       try {
         const image = await setImageRepo.insert({
           setId,
@@ -310,7 +384,6 @@ export function createSetsService(deps: SetsServiceDeps) {
 
         return ok(image)
       } catch (error) {
-        // Clean up S3 files on DB error
         await imageStorage.delete(mainKey)
         await imageStorage.delete(thumbKey)
         console.error('Failed to save set image to database:', error)
@@ -318,89 +391,52 @@ export function createSetsService(deps: SetsServiceDeps) {
       }
     },
 
-    /**
-     * Get a set image (with ownership check via parent set)
-     */
     async getSetImage(userId: string, imageId: string): Promise<Result<SetImage, SetError>> {
       const imageResult = await setImageRepo.findById(imageId)
+      if (!imageResult.ok) return imageResult
 
-      if (!imageResult.ok) {
-        return imageResult
-      }
-
-      // Check ownership via parent set
       const setResult = await setRepo.findById(imageResult.data.setId)
-      if (!setResult.ok) {
-        return err('NOT_FOUND')
-      }
-      if (setResult.data.userId !== userId) {
-        return err('FORBIDDEN')
-      }
+      if (!setResult.ok) return err('NOT_FOUND')
+      if (setResult.data.userId !== userId) return err('FORBIDDEN')
 
       return imageResult
     },
 
-    /**
-     * List images for a set
-     */
     async listSetImages(userId: string, setId: string): Promise<Result<SetImage[], SetError>> {
-      // Check ownership
       const setResult = await this.getSet(userId, setId)
-      if (!setResult.ok) {
-        return setResult
-      }
+      if (!setResult.ok) return setResult
 
       const images = await setImageRepo.findBySetId(setId)
       return ok(images)
     },
 
-    /**
-     * Update a set image (position)
-     */
     async updateSetImage(
       userId: string,
       imageId: string,
       input: { position?: number },
     ): Promise<Result<SetImage, SetError>> {
-      // Get image and verify ownership
       const imageResult = await this.getSetImage(userId, imageId)
-      if (!imageResult.ok) {
-        return imageResult
-      }
+      if (!imageResult.ok) return imageResult
 
       return setImageRepo.update(imageId, input)
     },
 
-    /**
-     * Delete a set image
-     */
     async deleteSetImage(userId: string, imageId: string): Promise<Result<void, SetError>> {
-      // Get image and verify ownership
       const imageResult = await this.getSetImage(userId, imageId)
-      if (!imageResult.ok) {
-        return imageResult
-      }
+      if (!imageResult.ok) return imageResult
 
       const image = imageResult.data
-
-      // Delete from S3
       const mainKey = imageStorage.extractKeyFromUrl(image.imageUrl)
       const thumbKey = image.thumbnailUrl
         ? imageStorage.extractKeyFromUrl(image.thumbnailUrl)
         : null
 
-      if (mainKey) {
-        await imageStorage.delete(mainKey)
-      }
-      if (thumbKey) {
-        await imageStorage.delete(thumbKey)
-      }
+      if (mainKey) await imageStorage.delete(mainKey)
+      if (thumbKey) await imageStorage.delete(thumbKey)
 
-      // Delete from database
       return setImageRepo.delete(imageId)
     },
   }
 }
 
-// Export the service type for use in routes
 export type SetsService = ReturnType<typeof createSetsService>

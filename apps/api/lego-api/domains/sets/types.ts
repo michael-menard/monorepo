@@ -1,42 +1,117 @@
 import { z } from 'zod'
 
 /**
- * Sets Domain Types
+ * Unified Sets Domain Types
  *
- * Zod schemas for validation + type inference
+ * Zod schemas for validation + type inference.
+ * Covers both wishlist (status='wanted') and collection (status='owned') items.
  */
 
 // ─────────────────────────────────────────────────────────────────────────
-// Set Types
+// Enums
+// ─────────────────────────────────────────────────────────────────────────
+
+export const SetStatusSchema = z.enum(['wanted', 'owned'])
+export type SetStatus = z.infer<typeof SetStatusSchema>
+
+export const ConditionSchema = z.enum(['new', 'used'])
+export type Condition = z.infer<typeof ConditionSchema>
+
+export const CompletenessSchema = z.enum(['sealed', 'complete', 'incomplete'])
+export type Completeness = z.infer<typeof CompletenessSchema>
+
+export const BuildStatusSchema = z.enum(['not_started', 'in_progress', 'completed', 'parted_out'])
+export type BuildStatus = z.infer<typeof BuildStatusSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Image Variants (WISH-2016)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const ImageVariantMetadataSchema = z.object({
+  url: z.string().url(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  sizeBytes: z.number().int().positive(),
+  format: z.enum(['jpeg', 'webp', 'png']),
+  watermarked: z.boolean().optional(),
+})
+
+export const ImageVariantsSchema = z.object({
+  original: ImageVariantMetadataSchema.optional(),
+  thumbnail: ImageVariantMetadataSchema.optional(),
+  medium: ImageVariantMetadataSchema.optional(),
+  large: ImageVariantMetadataSchema.optional(),
+  processingStatus: z.enum(['pending', 'processing', 'completed', 'failed']).optional(),
+  processedAt: z.string().datetime().optional(),
+  error: z.string().optional(),
+})
+
+export type ImageVariants = z.infer<typeof ImageVariantsSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Store
+// ─────────────────────────────────────────────────────────────────────────
+
+export const StoreSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  url: z.string().nullable(),
+  sortOrder: z.number().int(),
+  createdAt: z.date(),
+})
+
+export type Store = z.infer<typeof StoreSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set — unified (replaces WishlistItem + old Set)
 // ─────────────────────────────────────────────────────────────────────────
 
 export const SetSchema = z.object({
   id: z.string().uuid(),
   userId: z.string(),
 
-  // Basic info
+  // Lifecycle
+  status: SetStatusSchema,
+  statusChangedAt: z.date().nullable(),
+
+  // Identity
   title: z.string(),
   setNumber: z.string().nullable(),
-  store: z.string().nullable(),
   sourceUrl: z.string().nullable(),
+
+  // Store
+  storeId: z.string().uuid().nullable(),
+  storeName: z.string().nullable().optional(), // joined from stores table
+
+  // Physical
   pieceCount: z.number().int().nullable(),
   releaseDate: z.date().nullable(),
-  theme: z.string().nullable(),
-  tags: z.array(z.string()).nullable(),
   notes: z.string().nullable(),
 
-  // Set status
-  isBuilt: z.boolean(),
+  // Condition
+  condition: ConditionSchema.nullable(),
+  completeness: CompletenessSchema.nullable(),
+
+  // Build
+  buildStatus: BuildStatusSchema.nullable(),
+
+  // Purchase
+  purchasePrice: z.string().nullable(),
+  purchaseTax: z.string().nullable(),
+  purchaseShipping: z.string().nullable(),
+  purchaseDate: z.date().nullable(),
   quantity: z.number().int(),
 
-  // Purchase details
-  purchasePrice: z.string().nullable(), // decimal comes as string from Drizzle
-  tax: z.string().nullable(),
-  shipping: z.string().nullable(),
-  purchaseDate: z.date().nullable(),
+  // Wishlist-specific
+  priority: z.number().int().nullable(),
+  sortOrder: z.number().int().nullable(),
 
-  // Wishlist integration
-  wishlistItemId: z.string().uuid().nullable(),
+  // Images (legacy)
+  imageUrl: z.string().nullable(),
+  imageVariants: ImageVariantsSchema.nullable(),
+
+  // Tags (resolved from entity_tags)
+  tags: z.array(z.string()).optional(),
 
   // Timestamps
   createdAt: z.date(),
@@ -45,60 +120,185 @@ export const SetSchema = z.object({
 
 export type Set = z.infer<typeof SetSchema>
 
+// ─────────────────────────────────────────────────────────────────────────
+// Create Input
+// ─────────────────────────────────────────────────────────────────────────
+
 export const CreateSetInputSchema = z.object({
+  status: SetStatusSchema.default('wanted'),
   title: z.string().min(1).max(200),
   setNumber: z.string().max(50).optional(),
-  store: z.string().max(100).optional(),
   sourceUrl: z.string().url().optional(),
+  storeId: z.string().uuid().optional(),
   pieceCount: z.number().int().positive().optional(),
   releaseDate: z.coerce.date().optional(),
-  theme: z.string().max(100).optional(),
-  tags: z.array(z.string()).max(20).optional(),
   notes: z.string().max(5000).optional(),
-  isBuilt: z.boolean().optional(),
-  quantity: z.number().int().positive().optional(),
-  purchasePrice: z.string().optional(), // accepts string for decimal
-  tax: z.string().optional(),
-  shipping: z.string().optional(),
+  condition: ConditionSchema.optional(),
+  completeness: CompletenessSchema.optional(),
+  buildStatus: BuildStatusSchema.optional(),
+  purchasePrice: z.string().optional(),
+  purchaseTax: z.string().optional(),
+  purchaseShipping: z.string().optional(),
   purchaseDate: z.coerce.date().optional(),
-  wishlistItemId: z.string().uuid().optional(),
+  quantity: z.number().int().positive().optional(),
+  priority: z.number().int().min(0).max(5).optional(),
+  imageUrl: z.string().url().optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
 })
 
 export type CreateSetInput = z.infer<typeof CreateSetInputSchema>
 
+// ─────────────────────────────────────────────────────────────────────────
+// Update Input
+// ─────────────────────────────────────────────────────────────────────────
+
 export const UpdateSetInputSchema = z.object({
+  status: SetStatusSchema.optional(),
   title: z.string().min(1).max(200).optional(),
   setNumber: z.string().max(50).nullable().optional(),
-  store: z.string().max(100).nullable().optional(),
   sourceUrl: z.string().url().nullable().optional(),
+  storeId: z.string().uuid().nullable().optional(),
   pieceCount: z.number().int().positive().nullable().optional(),
   releaseDate: z.coerce.date().nullable().optional(),
-  theme: z.string().max(100).nullable().optional(),
-  tags: z.array(z.string()).max(20).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
-  isBuilt: z.boolean().optional(),
-  quantity: z.number().int().positive().optional(),
+  condition: ConditionSchema.nullable().optional(),
+  completeness: CompletenessSchema.nullable().optional(),
+  buildStatus: BuildStatusSchema.nullable().optional(),
   purchasePrice: z.string().nullable().optional(),
-  tax: z.string().nullable().optional(),
-  shipping: z.string().nullable().optional(),
+  purchaseTax: z.string().nullable().optional(),
+  purchaseShipping: z.string().nullable().optional(),
   purchaseDate: z.coerce.date().nullable().optional(),
-  wishlistItemId: z.string().uuid().nullable().optional(),
+  quantity: z.number().int().positive().optional(),
+  priority: z.number().int().min(0).max(5).nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
 })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Query
+// ─────────────────────────────────────────────────────────────────────────
+
+export const SortFieldSchema = z.enum([
+  'createdAt',
+  'title',
+  'purchasePrice',
+  'pieceCount',
+  'sortOrder',
+  'priority',
+  // Smart sorting (from wishlist)
+  'bestValue',
+  'expiringSoon',
+  'hiddenGems',
+])
+
+export type SortField = z.infer<typeof SortFieldSchema>
 
 export const ListSetsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
-  theme: z.string().optional(),
+  status: SetStatusSchema.optional(), // filter by wanted/owned
+  storeId: z.string().uuid().optional(),
+  tags: z.string().optional(), // comma-separated
+  priority: z.coerce.number().int().min(0).max(5).optional(),
+  priorityRange: z
+    .string()
+    .optional()
+    .transform(val => {
+      if (!val) return undefined
+      const [min, max] = val.split(',').map(Number)
+      return { min, max }
+    })
+    .refine(val => !val || (val.min >= 0 && val.max <= 5 && val.min <= val.max), {
+      message: 'Priority range must be 0-5 with min <= max',
+    }),
+  priceRange: z
+    .string()
+    .optional()
+    .transform(val => {
+      if (!val) return undefined
+      const [min, max] = val.split(',').map(Number)
+      return { min, max }
+    })
+    .refine(val => !val || (val.min >= 0 && val.max >= 0 && val.min <= val.max), {
+      message: 'Price range must be >= 0 with min <= max',
+    }),
   isBuilt: z.coerce.boolean().optional(),
+  sort: SortFieldSchema.default('createdAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
 })
 
 export type ListSetsQuery = z.infer<typeof ListSetsQuerySchema>
 
 // ─────────────────────────────────────────────────────────────────────────
-// Set Image Types
+// Reorder
+// ─────────────────────────────────────────────────────────────────────────
+
+export const ReorderItemSchema = z.object({
+  id: z.string().uuid(),
+  sortOrder: z.number().int().min(0),
+})
+
+export const ReorderInputSchema = z.object({
+  items: z.array(ReorderItemSchema).min(1),
+})
+
+export type ReorderInput = z.infer<typeof ReorderInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Purchase (status transition: wanted → owned)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const PurchaseInputSchema = z.object({
+  purchaseDate: z.coerce.date().optional(),
+  purchasePrice: z.string().optional(),
+  purchaseTax: z.string().optional(),
+  purchaseShipping: z.string().optional(),
+  condition: ConditionSchema.optional(),
+  completeness: CompletenessSchema.optional(),
+  buildStatus: BuildStatusSchema.optional().default('not_started'),
+})
+
+export type PurchaseInput = z.infer<typeof PurchaseInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Build Status Update
+// ─────────────────────────────────────────────────────────────────────────
+
+export const BuildStatusUpdateInputSchema = z.object({
+  buildStatus: BuildStatusSchema,
+})
+
+export type BuildStatusUpdateInput = z.infer<typeof BuildStatusUpdateInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Presign
+// ─────────────────────────────────────────────────────────────────────────
+
+export const PresignSetImageInputSchema = z.object({
+  filename: z.string().min(1),
+  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+})
+
+export type PresignSetImageInput = z.infer<typeof PresignSetImageInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Register Image (after presign upload)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const RegisterSetImageInputSchema = z.object({
+  imageUrl: z.string().url(),
+  key: z.string().min(1),
+  thumbnailUrl: z.string().url().optional(),
+})
+
+export type RegisterSetImageInput = z.infer<typeof RegisterSetImageInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set Image (from set_images table — deprecated, migrating to entity_files)
 // ─────────────────────────────────────────────────────────────────────────
 
 export const SetImageSchema = z.object({
@@ -126,29 +326,6 @@ export const UpdateSetImageInputSchema = z.object({
 export type UpdateSetImageInput = z.infer<typeof UpdateSetImageInputSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
-// Presign Types
-// ─────────────────────────────────────────────────────────────────────────
-
-export const PresignSetImageInputSchema = z.object({
-  filename: z.string().min(1),
-  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-})
-
-export type PresignSetImageInput = z.infer<typeof PresignSetImageInputSchema>
-
-// ─────────────────────────────────────────────────────────────────────────
-// Register Image Types (for presign flow)
-// ─────────────────────────────────────────────────────────────────────────
-
-export const RegisterSetImageInputSchema = z.object({
-  imageUrl: z.string().url(),
-  key: z.string().min(1),
-  thumbnailUrl: z.string().url().optional(),
-})
-
-export type RegisterSetImageInput = z.infer<typeof RegisterSetImageInputSchema>
-
-// ─────────────────────────────────────────────────────────────────────────
 // File Types
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -172,3 +349,4 @@ export type SetError =
   | 'INVALID_FILE'
   | 'DB_ERROR'
   | 'VALIDATION_ERROR'
+  | 'INVALID_STATUS'
