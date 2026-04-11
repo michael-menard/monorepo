@@ -912,6 +912,9 @@ importers:
       '@tiptap/extension-strike':
         specifier: 3.21.0
         version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))
+      '@tiptap/extension-youtube':
+        specifier: 3.21.0
+        version: 3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))
       '@tiptap/pm':
         specifier: 3.21.0
         version: 3.21.0
@@ -9495,6 +9498,11 @@ packages:
 
   '@tiptap/extension-underline@3.21.0':
     resolution: {integrity: sha512-gGmBEymbWnr8AIS8bI/bPw5rcwo7wAFcBw/TsLd1nAanu1dDqSRNDBrit3m02Ru+D88u2SfNvmbOPI1pz+1f5w==}
+    peerDependencies:
+      '@tiptap/core': ^3.21.0
+
+  '@tiptap/extension-youtube@3.21.0':
+    resolution: {integrity: sha512-Bx8XwodvybK5NTIROGaIM53MfCkikZeMTXc1Mp3nsWO8ZZv1LQsPSLNpZBV3fOseGczywIiKkwmwzUUh1ETadQ==}
     peerDependencies:
       '@tiptap/core': ^3.21.0
 
@@ -23824,6 +23832,10 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.21.0(@tiptap/pm@3.21.0)
 
+  '@tiptap/extension-youtube@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))':
+    dependencies:
+      '@tiptap/core': 3.21.0(@tiptap/pm@3.21.0)
+
   '@tiptap/extensions@3.21.0(@tiptap/core@3.21.0(@tiptap/pm@3.21.0))(@tiptap/pm@3.21.0)':
     dependencies:
       '@tiptap/core': 3.21.0(@tiptap/pm@3.21.0)
@@ -25109,7 +25121,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:

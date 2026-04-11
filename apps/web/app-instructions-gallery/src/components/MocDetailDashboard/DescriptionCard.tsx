@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
+import Youtube from '@tiptap/extension-youtube'
 import { Card, CardContent, Button } from '@repo/app-component-library'
 import {
   Pencil,
@@ -10,16 +11,14 @@ import {
   X,
   Bold,
   Italic,
-  Strikethrough,
-  Code,
-  Code2,
   List,
   ListOrdered,
+  Heading1,
   Heading2,
   Heading3,
-  Quote,
   Minus,
   Link as LinkIcon,
+  Youtube as YoutubeIcon,
 } from 'lucide-react'
 import { logger } from '@repo/logger'
 import { useUpdateMocMutation } from '@repo/api-client/rtk/instructions-api'
@@ -62,18 +61,21 @@ function TiptapEditor({
   onCancel,
   isLoading,
   saveError,
+  placeholder,
 }: {
   initialContent: string
   onSave: (html: string) => void
   onCancel: () => void
   isLoading: boolean
   saveError: string | null
+  placeholder?: string
 }) {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Placeholder.configure({ placeholder: 'Write a description…' }),
+      Placeholder.configure({ placeholder: placeholder ?? 'Write a description…' }),
       Link.configure({ openOnClick: false }),
+      Youtube.configure({ inline: false, ccLanguage: 'en' }),
     ],
     content: initialContent || '',
     editorProps: {
@@ -90,6 +92,7 @@ function TiptapEditor({
   }, [editor, onSave])
 
   const handleSetLink = useCallback(() => {
+    if (!editor) return
     const prev = editor.getAttributes('link').href as string | undefined
     const url = window.prompt('URL', prev ?? 'https://')
     if (url === null) return
@@ -98,6 +101,13 @@ function TiptapEditor({
     } else {
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
     }
+  }, [editor])
+
+  const handleAddYoutube = useCallback(() => {
+    if (!editor) return
+    const url = window.prompt('YouTube URL')
+    if (!url) return
+    editor.commands.setYoutubeVideo({ src: url })
   }, [editor])
 
   if (!editor) return null
@@ -119,23 +129,16 @@ function TiptapEditor({
         >
           <Italic className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          active={editor.isActive('strike')}
-          label="Strikethrough"
-        >
-          <Strikethrough className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          active={editor.isActive('code')}
-          label="Inline code"
-        >
-          <Code className="h-4 w-4" />
-        </ToolbarButton>
 
         <div className="w-px h-4 bg-border mx-1" />
 
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          active={editor.isActive('heading', { level: 1 })}
+          label="Heading 1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive('heading', { level: 2 })}
@@ -171,30 +174,16 @@ function TiptapEditor({
         <div className="w-px h-4 bg-border mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          active={editor.isActive('blockquote')}
-          label="Blockquote"
-        >
-          <Quote className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          active={editor.isActive('codeBlock')}
-          label="Code block"
-        >
-          <Code2 className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           label="Horizontal rule"
         >
           <Minus className="h-4 w-4" />
         </ToolbarButton>
-
-        <div className="w-px h-4 bg-border mx-1" />
-
         <ToolbarButton onClick={handleSetLink} active={editor.isActive('link')} label="Link">
           <LinkIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={handleAddYoutube} label="YouTube video">
+          <YoutubeIcon className="h-4 w-4" />
         </ToolbarButton>
       </div>
 
@@ -217,6 +206,8 @@ function TiptapEditor({
     </div>
   )
 }
+
+export { TiptapEditor }
 
 export function DescriptionCard({ mocId, description }: DescriptionCardProps) {
   const [isEditing, setIsEditing] = useState(false)
