@@ -44,6 +44,15 @@ export const MocSchema = z.object({
   // Allow empty string for MOCs without a thumbnail yet
   coverImageUrl: z.string().url().or(z.literal('')),
   instructionsPdfUrls: z.array(z.string().url()),
+  instructionFiles: z
+    .array(
+      z.object({
+        id: z.string(),
+        url: z.string().url(),
+        filename: z.string(),
+      }),
+    )
+    .optional(),
   partsLists: z.array(MocPartsListSchema),
   galleryImages: z.array(MocGalleryImageSchema),
   updatedAt: z.string(),

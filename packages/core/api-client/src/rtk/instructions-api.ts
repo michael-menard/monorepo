@@ -302,6 +302,24 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       }),
 
       /**
+       * POST /instructions/mocs/:id/pdf-captures - Extract PDF pages as gallery images
+       */
+      capturePdfPages: builder.mutation<
+        { capturedImages: Array<{ id: string; s3Key: string }> },
+        { mocId: string; fileId: string; pages: number[] }
+      >({
+        query: ({ mocId, ...body }) => ({
+          url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.CAPTURE_PDF_PAGES, { id: mocId }),
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+        ],
+      }),
+
+      /**
        * DELETE /instructions/mocs/:id - Delete MOC instruction
        *
        * Story INST-1008: Delete MOC mutation
@@ -605,6 +623,7 @@ export const {
   useMergeTagsMutation,
   useRenameTagMutation,
   useSetCoverImageMutation,
+  useCapturePdfPagesMutation,
   useUploadInstructionFileMutation,
   useUploadPartsListFileMutation,
   useUploadThumbnailMutation,

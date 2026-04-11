@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { eq, and, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
@@ -639,6 +639,141 @@ mocs.put('/:id/cover', async c => {
     return c.json({ ok: true, s3Key: file.s3Key }, 200)
   } catch (error) {
     logger.error('Unhandled error in PUT /mocs/:id/cover', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * POST /mocs/:id/pdf-captures
+ * Extract specific pages from a PDF as high-res gallery images
+ */
+mocs.post('/:id/pdf-captures', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const { fileId, pages } = body as { fileId?: string; pages?: number[] }
+
+    if (!fileId || !Array.isArray(pages) || pages.length === 0 || pages.length > 10) {
+      return c.json(
+        { error: 'VALIDATION_ERROR', message: 'fileId and pages[] (1-10) are required' },
+        400,
+      )
+    }
+
+    // Verify the file belongs to this MOC and is a PDF
+    const file = await mocRepo.getFileByIdAndMocId(fileId, mocId)
+    if (!file || file.fileType !== 'instruction') {
+      return c.json({ error: 'NOT_FOUND', message: 'Instruction file not found' }, 404)
+    }
+
+    // Download PDF from S3 to temp dir
+    const { randomUUID } = await import('crypto')
+    const { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } = await import('fs')
+    const { join } = await import('path')
+    const sharp = (await import('sharp')).default
+
+    const tmpDir = join('/tmp', `pdf-capture-${randomUUID()}`)
+    mkdirSync(tmpDir, { recursive: true })
+    const pdfPath = join(tmpDir, 'input.pdf')
+
+    try {
+      // Download PDF from S3
+      const getCmd = new GetObjectCommand({ Bucket: presignBucket, Key: file.s3Key })
+      const s3Response = await presignClient.send(getCmd)
+      const pdfBytes = await s3Response.Body?.transformToByteArray()
+      if (!pdfBytes) {
+        return c.json({ error: 'NOT_FOUND', message: 'PDF file not found in storage' }, 404)
+      }
+      writeFileSync(pdfPath, pdfBytes)
+
+      const capturedImages: Array<{ id: string; s3Key: string }> = []
+      const { mocFiles: mocFilesTable } = schema
+
+      for (const pageNum of pages) {
+        const outputPrefix = join(tmpDir, `page-${pageNum}`)
+
+        // Render page at 300 DPI using pdftoppm
+        const proc = Bun.spawn(
+          [
+            'pdftoppm',
+            '-png',
+            '-r',
+            '300',
+            '-f',
+            String(pageNum),
+            '-l',
+            String(pageNum),
+            pdfPath,
+            outputPrefix,
+          ],
+          { timeout: 30000 },
+        )
+        await proc.exited
+
+        // pdftoppm outputs {prefix}-{pagenum}.png (zero-padded)
+        const candidates = [
+          `${outputPrefix}-${String(pageNum).padStart(1, '0')}.png`,
+          `${outputPrefix}-${String(pageNum).padStart(2, '0')}.png`,
+          `${outputPrefix}-${String(pageNum).padStart(3, '0')}.png`,
+          `${outputPrefix}-${String(pageNum).padStart(4, '0')}.png`,
+          `${outputPrefix}-${String(pageNum).padStart(5, '0')}.png`,
+          `${outputPrefix}-${String(pageNum).padStart(6, '0')}.png`,
+        ]
+        const outputPath = candidates.find(p => existsSync(p))
+        if (!outputPath) {
+          logger.warn('pdftoppm did not produce output for page', undefined, { pageNum, mocId })
+          continue
+        }
+
+        // Process with sharp: resize and convert to WebP
+        const webpBuffer = await sharp(readFileSync(outputPath))
+          .resize({ width: 3000, height: 3000, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 85 })
+          .toBuffer()
+
+        // Upload to S3
+        const imageUuid = randomUUID()
+        const s3Key = `mocs/${mocId}/images/pdf-capture-p${pageNum}-${imageUuid}.webp`
+        const putCmd = new PutObjectCommand({
+          Bucket: presignBucket,
+          Key: s3Key,
+          Body: webpBuffer,
+          ContentType: 'image/webp',
+        })
+        await presignClient.send(putCmd)
+
+        // Insert moc_files row
+        const [row] = await db
+          .insert(mocFilesTable)
+          .values({
+            mocId,
+            fileType: 'gallery-image',
+            s3Key,
+            originalFilename: `pdf-capture-p${pageNum}.webp`,
+            mimeType: 'image/webp',
+          })
+          .returning()
+
+        capturedImages.push({ id: row.id, s3Key })
+      }
+
+      return c.json({ capturedImages }, 200)
+    } finally {
+      // Clean up temp directory
+      try {
+        rmSync(tmpDir, { recursive: true, force: true })
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+  } catch (error) {
+    logger.error('Unhandled error in POST /mocs/:id/pdf-captures', error, { userId, mocId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
   }
 })

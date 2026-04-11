@@ -32,6 +32,11 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
     tags: apiData.tags || [],
     coverImageUrl: apiData.thumbnailUrl || '',
     instructionsPdfUrls: instructionFiles.map(f => f.downloadUrl),
+    instructionFiles: instructionFiles.map(f => ({
+      id: f.id,
+      url: f.downloadUrl,
+      filename: f.name,
+    })),
     partsLists: partsListFiles.map(f => ({
       id: f.id,
       url: f.downloadUrl,

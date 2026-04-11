@@ -1,19 +1,32 @@
-import { FileText, Download, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { FileText, Download, ExternalLink, Camera } from 'lucide-react'
+import { Button } from '@repo/app-component-library'
 import { InstructionsUpload } from '@repo/upload/components'
 import { DashboardCard } from './DashboardCard'
+import { PdfPagePickerModal } from './PdfPagePickerModal'
+
+interface InstructionFile {
+  id: string
+  url: string
+  filename: string
+}
 
 interface InstructionsCardProps {
   mocId: string
   instructionsPdfUrls: string[]
+  instructionFiles?: InstructionFile[]
   onFilesUploaded?: () => void
 }
 
 export function InstructionsCard({
   mocId,
   instructionsPdfUrls,
+  instructionFiles,
   onFilesUploaded,
 }: InstructionsCardProps) {
   const safeUrls = instructionsPdfUrls ?? []
+  const files = instructionFiles ?? []
+  const [captureFile, setCaptureFile] = useState<InstructionFile | null>(null)
 
   return (
     <DashboardCard
@@ -22,10 +35,8 @@ export function InstructionsCard({
       titleIcon={<FileText className="h-4 w-4 text-rose-500" />}
     >
       <div className="space-y-4">
-        {/* Upload Component (INST-1104) */}
         <InstructionsUpload mocId={mocId} onSuccess={onFilesUploaded} />
 
-        {/* Existing Instructions List */}
         {safeUrls.length === 0 ? (
           <p className="text-sm text-muted-foreground">No instruction PDFs uploaded yet.</p>
         ) : (
@@ -33,6 +44,7 @@ export function InstructionsCard({
             <h4 className="text-sm font-medium mb-2">Uploaded Files ({safeUrls.length})</h4>
             <ul className="space-y-2" role="list" aria-label="Instruction PDF files">
               {safeUrls.map((url, index) => {
+                const file = files[index]
                 let filename = url
                 try {
                   const parsed = new URL(url)
@@ -59,6 +71,18 @@ export function InstructionsCard({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {file ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCaptureFile(file)}
+                          className="h-7 text-xs px-2"
+                          title="Capture pages as gallery images"
+                        >
+                          <Camera className="h-3 w-3 mr-1" />
+                          Capture
+                        </Button>
+                      ) : null}
                       <a
                         href={url}
                         target="_blank"
@@ -84,6 +108,16 @@ export function InstructionsCard({
           </div>
         )}
       </div>
+
+      {captureFile ? (
+        <PdfPagePickerModal
+          mocId={mocId}
+          fileId={captureFile.id}
+          pdfUrl={captureFile.url}
+          open={!!captureFile}
+          onClose={() => setCaptureFile(null)}
+        />
+      ) : null}
     </DashboardCard>
   )
 }

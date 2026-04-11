@@ -143,6 +143,7 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
               <InstructionsCard
                 mocId={moc.id}
                 instructionsPdfUrls={moc.instructionsPdfUrls}
+                instructionFiles={moc.instructionFiles}
                 onFilesUploaded={handleFilesUploaded}
               />
             </TabsContent>
