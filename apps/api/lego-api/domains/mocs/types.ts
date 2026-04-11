@@ -96,6 +96,7 @@ export const GetMocResponseSchema = z.object({
   author: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  publishedAt: z.string().nullable().optional(),
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
   dimensions: z.unknown().nullable().optional(),

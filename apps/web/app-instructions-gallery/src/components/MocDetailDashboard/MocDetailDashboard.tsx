@@ -79,16 +79,20 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
                 </div>
               ) : null}
               <dl className="space-y-1.5 text-sm">
-                {moc.publishDate ? (
-                  <div className="flex items-center gap-2">
-                    <Calendar
-                      className="h-4 w-4 text-muted-foreground shrink-0"
-                      aria-hidden="true"
-                    />
-                    <dt className="text-muted-foreground">Published</dt>
-                    <dd className="font-medium text-foreground">{formatDate(moc.publishDate)}</dd>
-                  </div>
-                ) : null}
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                  <dt className="text-muted-foreground">Added</dt>
+                  <dd className="font-medium text-foreground">
+                    {moc.addedDate ? formatDate(moc.addedDate) : '--'}
+                  </dd>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                  <dt className="text-muted-foreground">Published</dt>
+                  <dd className="font-medium text-foreground">
+                    {moc.publishedDate ? formatDate(moc.publishedDate) : '--'}
+                  </dd>
+                </div>
                 {moc.updatedAt ? (
                   <div className="flex items-center gap-2">
                     <Calendar

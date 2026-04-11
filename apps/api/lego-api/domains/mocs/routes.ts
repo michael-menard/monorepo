@@ -589,6 +589,7 @@ mocs.get('/:id', async c => {
       author: moc.author ?? null,
       createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
       updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
+      publishedAt: moc.publishedAt ?? null,
       files: mappedFiles,
       stats,
       dimensions: moc.dimensions ?? null,

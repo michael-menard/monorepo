@@ -68,6 +68,7 @@ export interface MocWithFiles extends Moc {
   totalPieceCount: number | null
   author: string | null
   dimensions: unknown | null
+  publishedAt: string | null
 }
 
 export interface MocRepository {
