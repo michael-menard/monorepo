@@ -17,7 +17,7 @@
 
 export { db, getPool, closePool, testConnection } from './client.js'
 export * from './schema.js'
-export * from './sets.js'
+export * from './sets.js' // sets, stores, tags, entityTags, files, entityFiles
 export * from './inspiration.js'
 export * from './feature-flags.js'
 export * from './generated-schemas.js'
