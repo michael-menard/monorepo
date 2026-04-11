@@ -3,9 +3,17 @@
  *
  * Main entry point for the App Sets Gallery feature module.
  * This module is designed to be lazy-loaded by the shell app.
+ * Uses TanStack Router with memory history to match the shell app's router.
  */
 import { z } from 'zod'
-import { Routes, Route, MemoryRouter } from 'react-router-dom'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+  Outlet,
+} from '@tanstack/react-router'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { AddSetPage } from './pages/add-set-page'
@@ -18,38 +26,72 @@ import { SetDetailPage } from './pages/set-detail-page'
 const AppSetsGalleryModulePropsSchema = z.object({
   /** Optional className for styling */
   className: z.string().optional(),
-  /** Whether to use MemoryRouter (for testing) or inherit parent router */
-  useMemoryRouter: z.boolean().optional(),
 })
 
 export type AppSetsGalleryModuleProps = z.infer<typeof AppSetsGalleryModulePropsSchema>
+
+/**
+ * Root layout component
+ */
+function RootLayout({ className }: { className?: string }) {
+  return (
+    <ModuleLayout className={className}>
+      <Outlet />
+    </ModuleLayout>
+  )
+}
+
+/**
+ * Create router with routes
+ */
+function createAppRouter(className?: string) {
+  const rootRoute = createRootRoute({
+    component: () => <RootLayout className={className} />,
+  })
+
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: MainPage,
+  })
+
+  const addRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/add',
+    component: AddSetPage,
+  })
+
+  const editRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/$id/edit',
+    component: EditSetPage,
+  })
+
+  const detailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/$id',
+    component: SetDetailPage,
+  })
+
+  const routeTree = rootRoute.addChildren([indexRoute, addRoute, editRoute, detailRoute])
+
+  return createRouter({
+    routeTree,
+    history: createMemoryHistory({
+      initialEntries: ['/'],
+    }),
+  })
+}
 
 /**
  * AppSetsGallery Module Component
  *
  * This is the main export that the shell app will lazy-load.
  */
-export function AppSetsGalleryModule({
-  className,
-  useMemoryRouter = false,
-}: AppSetsGalleryModuleProps) {
-  const content = (
-    <ModuleLayout className={className}>
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/sets/add" element={<AddSetPage />} />
-        <Route path="/sets/:id/edit" element={<EditSetPage />} />
-        <Route path="/sets/:id" element={<SetDetailPage />} />
-      </Routes>
-    </ModuleLayout>
-  )
+export function AppSetsGalleryModule({ className }: AppSetsGalleryModuleProps) {
+  const router = createAppRouter(className)
 
-  // Use MemoryRouter for standalone/testing, otherwise assume router context from parent
-  if (useMemoryRouter) {
-    return <MemoryRouter>{content}</MemoryRouter>
-  }
-
-  return content
+  return <RouterProvider router={router} />
 }
 
 // Default export for lazy loading

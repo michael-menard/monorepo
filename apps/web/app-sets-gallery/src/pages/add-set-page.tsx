@@ -3,7 +3,7 @@
  * Story sets-2002: Add Set Flow
  */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import {
   Button,
@@ -119,7 +119,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
       if (onBack) {
         onBack()
       } else {
-        navigate(`/sets/${newSet.id}`)
+        navigate({ to: `/${newSet.id}` })
       }
     } catch (err) {
       if (err instanceof z.ZodError) {

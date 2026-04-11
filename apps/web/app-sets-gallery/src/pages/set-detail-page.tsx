@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from '@tanstack/react-router'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { ArrowLeft, Edit, Trash2, Blocks, CheckCircle2 } from 'lucide-react'
 import { z } from 'zod'
@@ -196,7 +196,7 @@ function SetDetailError({ message, onBack }: { message: string; onBack: () => vo
  * Set Detail Page Component
  */
 export function SetDetailPage({ className }: SetDetailPageProps = {}) {
-  const { id } = useParams<{ id: string }>()
+  const { id } = useParams({ strict: false }) as { id: string }
   const navigate = useNavigate()
 
   const setId = id ?? ''
@@ -219,12 +219,12 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   const lightbox = useLightbox(lightboxImages.length)
 
   const handleBack = () => {
-    navigate('/sets')
+    navigate({ to: '/' })
   }
 
   const handleEdit = () => {
     if (!setId) return
-    navigate(`/sets/${setId}/edit`)
+    navigate({ to: `/${setId}/edit` })
   }
 
   const handleDelete = () => {
@@ -238,7 +238,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     try {
       await deleteSet({ id: set.id, title: set.title }).unwrap()
       toastSuccess(`"${set.title}" deleted`, 'The set has been removed from your collection.')
-      navigate('/sets')
+      navigate({ to: '/' })
     } catch (err) {
       toastError(err, `Failed to delete "${set.title}"`)
       setShowDeleteDialog(false)

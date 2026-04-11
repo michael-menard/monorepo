@@ -7,7 +7,7 @@
  * BUGF-003: Implement Edit Page for Sets Gallery
  */
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import {
   Button,
@@ -65,7 +65,7 @@ function EditSetSkeleton() {
 }
 
 export function EditSetPage() {
-  const { id } = useParams<{ id: string }>()
+  const { id } = useParams({ strict: false }) as { id: string }
   const navigate = useNavigate()
   const { success, error: toastError } = useToast()
 
@@ -119,7 +119,7 @@ export function EditSetPage() {
       const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?')
       if (!confirmed) return
     }
-    navigate(`/sets/${setId}`)
+    navigate({ to: `/${setId}` })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,7 +154,7 @@ export function EditSetPage() {
       success(`"${updatedSet.title}" updated`, 'Your set has been updated successfully.')
 
       setIsDirty(false)
-      navigate(`/sets/${setId}`)
+      navigate({ to: `/${setId}` })
     } catch (err) {
       if (err instanceof z.ZodError) {
         const errors: Record<string, string> = {}
@@ -177,7 +177,7 @@ export function EditSetPage() {
     return (
       <div className="container mx-auto py-6 max-w-2xl">
         <p className="text-destructive">No set specified.</p>
-        <Button variant="outline" onClick={() => navigate('/sets')} className="mt-4">
+        <Button variant="outline" onClick={() => navigate({ to: '/' })} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Sets
         </Button>
@@ -195,7 +195,7 @@ export function EditSetPage() {
         <p className="text-destructive">
           Failed to load set. It may not exist or you may not have access.
         </p>
-        <Button variant="outline" onClick={() => navigate('/sets')} className="mt-4">
+        <Button variant="outline" onClick={() => navigate({ to: '/' })} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Sets
         </Button>
