@@ -121,6 +121,56 @@ dashboard.get('/themes', async c => {
 })
 
 /**
+ * POST /dashboard/themes
+ * Create a new theme bucket
+ * Body: { name: string }
+ */
+dashboard.post('/themes', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const name = body?.name?.trim()
+    if (typeof name !== 'string' || !name) {
+      return c.json({ error: 'VALIDATION_ERROR', message: 'name is required' }, 400)
+    }
+
+    await dashboardRepo.createTheme(name)
+    return c.json({ ok: true, name }, 201)
+  } catch (error) {
+    logger.error('Failed to create theme', error)
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * DELETE /dashboard/themes/:name
+ * Delete a theme and its tag mappings
+ */
+dashboard.delete('/themes/:name', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const name = decodeURIComponent(c.req.param('name'))
+  if (!name) {
+    return c.json({ error: 'VALIDATION_ERROR', message: 'name parameter required' }, 400)
+  }
+
+  try {
+    await dashboardRepo.deleteTheme(name)
+    return c.json({ ok: true })
+  } catch (error) {
+    logger.error('Failed to delete theme', error, { name })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
  * POST /dashboard/tag-themes
  * Add tag-to-theme mappings (many-to-many, idempotent)
  * Body: { mappings: [{ tag: string, theme: string }] }

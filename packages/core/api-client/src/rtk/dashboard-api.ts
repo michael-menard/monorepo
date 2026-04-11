@@ -129,6 +129,31 @@ export const dashboardApi = createApi({
     }),
 
     /**
+     * POST /dashboard/themes — create a new theme bucket
+     */
+    createTheme: builder.mutation<{ ok: boolean; name: string }, string>({
+      query: name => ({
+        url: SERVERLESS_ENDPOINTS.DASHBOARD.THEMES,
+        method: 'POST',
+        body: { name },
+      }),
+      invalidatesTags: ['TagThemes'],
+    }),
+
+    /**
+     * DELETE /dashboard/themes/:name — delete a theme and its mappings
+     */
+    deleteTheme: builder.mutation<{ ok: boolean }, string>({
+      query: name => ({
+        url: buildEndpoint(SERVERLESS_ENDPOINTS.DASHBOARD.THEME, {
+          name: encodeURIComponent(name),
+        }),
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Dashboard', 'TagThemes'],
+    }),
+
+    /**
      * POST /dashboard/tag-themes — add tag-to-theme mappings (many-to-many)
      */
     addTagThemeMappings: builder.mutation<
@@ -164,6 +189,8 @@ export const {
   useRefreshDashboardMutation,
   useGetUserTagsQuery,
   useGetDistinctThemesQuery,
+  useCreateThemeMutation,
+  useDeleteThemeMutation,
   useAddTagThemeMappingsMutation,
   useRemoveTagThemeMappingMutation,
 } = dashboardApi

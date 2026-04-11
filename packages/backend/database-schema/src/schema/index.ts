@@ -560,6 +560,14 @@ export const wishlistItems = pgTable(
   }),
 )
 
+// Themes - User-defined theme buckets for organizing tags
+export const themes = pgTable('themes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
 // Tag-to-Theme Mappings - Maps tags to theme buckets for dashboard (many-to-many)
 export const tagThemeMappings = pgTable(
   'tag_theme_mappings',

@@ -120,13 +120,38 @@ export function createDashboardRepository(
 
     async getDistinctThemes(): Promise<string[]> {
       const result = await db.execute(sql`
-        SELECT DISTINCT theme FROM tag_theme_mappings ORDER BY theme
+        SELECT name FROM themes ORDER BY name
       `)
-      return result.rows.map((row: any) => row.theme as string)
+      return result.rows.map((row: any) => row.name as string)
+    },
+
+    async createTheme(name: string): Promise<void> {
+      await db.execute(sql`
+        INSERT INTO themes (name) VALUES (${name})
+        ON CONFLICT (name) DO NOTHING
+      `)
+    },
+
+    async deleteTheme(name: string): Promise<void> {
+      await db.execute(sql`
+        DELETE FROM themes WHERE name = ${name}
+      `)
+      // Also clean up any tag mappings for this theme
+      await db.execute(sql`
+        DELETE FROM tag_theme_mappings WHERE theme = ${name}
+      `)
     },
 
     async addTagThemeMappings(mappings: { tag: string; theme: string }[]): Promise<void> {
       if (mappings.length === 0) return
+      // Ensure all referenced themes exist
+      const uniqueThemes = [...new Set(mappings.map(m => m.theme))]
+      const themeValues = uniqueThemes.map(t => sql`(${t})`)
+      await db.execute(sql`
+        INSERT INTO themes (name) VALUES ${sql.join(themeValues, sql`, `)}
+        ON CONFLICT (name) DO NOTHING
+      `)
+      // Insert tag-theme mappings
       const values = mappings.map(m => sql`(${m.tag}, ${m.theme}, NOW(), NOW())`)
       await db.execute(sql`
         INSERT INTO tag_theme_mappings (tag, theme, created_at, updated_at)

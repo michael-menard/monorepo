@@ -47,6 +47,8 @@ export interface DashboardRepository {
   getActivityFeed(userId: string, limit: number): Promise<ActivityItem[]>
   getUserTags(userId: string): Promise<TagWithThemes[]>
   getDistinctThemes(): Promise<string[]>
+  createTheme(name: string): Promise<void>
+  deleteTheme(name: string): Promise<void>
   addTagThemeMappings(mappings: { tag: string; theme: string }[]): Promise<void>
   removeTagThemeMapping(tag: string, theme: string): Promise<void>
 }

@@ -62,7 +62,7 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
           </CardTitle>
           <a
             href="/settings"
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="relative z-10 p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors"
             title="Manage tag-theme mappings"
           >
             <Settings2 className="h-4 w-4" />

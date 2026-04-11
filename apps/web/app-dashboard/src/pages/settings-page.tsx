@@ -4,6 +4,8 @@ import { logger } from '@repo/logger'
 import {
   useGetUserTagsQuery,
   useGetDistinctThemesQuery,
+  useCreateThemeMutation,
+  useDeleteThemeMutation,
   useAddTagThemeMappingsMutation,
   useRemoveTagThemeMappingMutation,
 } from '@repo/api-client/rtk/dashboard-api'
@@ -12,6 +14,8 @@ import { TagThemeBoard } from '../components/TagThemeBoard'
 export function SettingsPage() {
   const { data: tags = [], isLoading: tagsLoading } = useGetUserTagsQuery()
   const { data: themes = [], isLoading: themesLoading } = useGetDistinctThemesQuery()
+  const [createTheme] = useCreateThemeMutation()
+  const [deleteTheme] = useDeleteThemeMutation()
   const [addMappings] = useAddTagThemeMappingsMutation()
   const [removeMapping] = useRemoveTagThemeMappingMutation()
 
@@ -31,6 +35,24 @@ export function SettingsPage() {
       })
     },
     [removeMapping],
+  )
+
+  const handleCreateTheme = useCallback(
+    (name: string) => {
+      createTheme(name).catch(error => {
+        logger.error('Failed to create theme', error)
+      })
+    },
+    [createTheme],
+  )
+
+  const handleDeleteTheme = useCallback(
+    (name: string) => {
+      deleteTheme(name).catch(error => {
+        logger.error('Failed to delete theme', error)
+      })
+    },
+    [deleteTheme],
   )
 
   const isLoading = tagsLoading || themesLoading
@@ -58,6 +80,8 @@ export function SettingsPage() {
           themes={themes}
           onAssign={handleAssign}
           onRemove={handleRemove}
+          onCreateTheme={handleCreateTheme}
+          onDeleteTheme={handleDeleteTheme}
         />
       )}
     </div>

@@ -22,22 +22,25 @@ interface TagThemeBoardProps {
   themes: string[]
   onAssign: (mappings: { tag: string; theme: string }[]) => void
   onRemove: (tag: string, theme: string) => void
+  onCreateTheme: (name: string) => void
+  onDeleteTheme: (name: string) => void
 }
 
-export function TagThemeBoard({ tags, themes, onAssign, onRemove }: TagThemeBoardProps) {
+export function TagThemeBoard({
+  tags,
+  themes,
+  onAssign,
+  onRemove,
+  onCreateTheme,
+  onDeleteTheme,
+}: TagThemeBoardProps) {
   const [activeTag, setActiveTag] = useState<TagWithThemes | null>(null)
   const [newThemeName, setNewThemeName] = useState('')
-  const [localThemes, setLocalThemes] = useState<string[]>([])
-
-  const allThemes = useMemo(() => {
-    const combined = new Set([...themes, ...localThemes])
-    return Array.from(combined).sort()
-  }, [themes, localThemes])
 
   // Build per-theme tag lists from the many-to-many data
   const tagsByTheme = useMemo(() => {
     const map = new Map<string, { tag: string; mocCount: number }[]>()
-    for (const theme of allThemes) {
+    for (const theme of themes) {
       map.set(theme, [])
     }
     for (const t of tags) {
@@ -48,7 +51,7 @@ export function TagThemeBoard({ tags, themes, onAssign, onRemove }: TagThemeBoar
       }
     }
     return map
-  }, [tags, allThemes])
+  }, [tags, themes])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -79,7 +82,6 @@ export function TagThemeBoard({ tags, themes, onAssign, onRemove }: TagThemeBoar
 
       if (overId.startsWith('theme:')) {
         const theme = overId.slice('theme:'.length)
-        // Check if already in this theme
         const tagData = tags.find(t => t.tag === tagName)
         if (tagData && !tagData.themes.includes(theme)) {
           onAssign([{ tag: tagName, theme }])
@@ -92,13 +94,13 @@ export function TagThemeBoard({ tags, themes, onAssign, onRemove }: TagThemeBoar
   const handleAddTheme = useCallback(() => {
     const name = newThemeName.trim()
     if (!name) return
-    if (allThemes.includes(name)) {
+    if (themes.includes(name)) {
       logger.warn('Theme already exists', undefined, { name })
       return
     }
-    setLocalThemes(prev => [...prev, name])
+    onCreateTheme(name)
     setNewThemeName('')
-  }, [newThemeName, allThemes])
+  }, [newThemeName, themes, onCreateTheme])
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -131,18 +133,19 @@ export function TagThemeBoard({ tags, themes, onAssign, onRemove }: TagThemeBoar
             </Button>
           </div>
 
-          {allThemes.length === 0 ? (
+          {themes.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
               Create a theme to get started, then drag tags into it.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {allThemes.map(theme => (
+              {themes.map(theme => (
                 <ThemeBucket
                   key={theme}
                   theme={theme}
                   tags={tagsByTheme.get(theme) ?? []}
                   onRemoveTag={onRemove}
+                  onDeleteTheme={onDeleteTheme}
                 />
               ))}
             </div>
