@@ -14,8 +14,23 @@ export const SERVERLESS_ENDPOINTS = {
     DELETE: '/gallery/images/{id}',
   },
 
-  // Wishlist API endpoints
-  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
+  // Unified Sets API endpoints (replaces wishlist + old sets)
+  SETS: {
+    LIST: '/sets',
+    GET: '/sets/{id}',
+    CREATE: '/sets',
+    UPDATE: '/sets/{id}',
+    DELETE: '/sets/{id}',
+    PURCHASE: '/sets/{id}/purchase',
+    BUILD_STATUS: '/sets/{id}/build-status',
+    REORDER: '/sets/reorder',
+    STORES: '/sets/stores',
+    IMAGES_PRESIGN: '/sets/{id}/images/presign',
+    IMAGES_REGISTER: '/sets/{id}/images',
+    IMAGES_DELETE: '/sets/{id}/images/{imageId}',
+  },
+
+  /** @deprecated Use SETS instead */
   WISHLIST: {
     GET_ITEMS: '/wishlist',
     ADD_ITEM: '/wishlist',
@@ -79,6 +94,15 @@ export const SERVERLESS_ENDPOINTS = {
     UPDATE_PROFILE: '/user/profile',
     GET_PREFERENCES: '/user/preferences',
     UPDATE_PREFERENCES: '/user/preferences',
+  },
+
+  // Dashboard endpoints
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+    TAGS: '/dashboard/tags',
+    THEMES: '/dashboard/themes',
+    TAG_THEMES: '/dashboard/tag-themes',
+    TAG_THEME: '/dashboard/tag-themes/{tag}/{theme}',
   },
 
   // Scraper endpoints

@@ -48,24 +48,56 @@ export {
   type SetItem,
 } from './wishlist'
 
-// Sets schemas
+// Sets schemas (unified — replaces both old sets + wishlist schemas)
 export {
+  // Enums
+  SetStatusSchema,
+  ConditionSchema,
+  CompletenessSchema,
+  BuildStatusSchema,
+  ImageFormatSchema,
+  ImageVariantsSchema,
+  SortFieldSchema,
+  // Entity schemas
+  StoreSchema,
   SetImageSchema,
   SetSchema,
+  // Input schemas
   CreateSetSchema,
   UpdateSetSchema,
+  BatchReorderSchema,
+  ReorderResponseSchema as SetReorderResponseSchema,
+  PurchaseInputSchema,
+  UpdateBuildStatusSchema,
+  PresignRequestSchema as SetPresignRequestSchema,
+  PresignResponseSchema as SetPresignResponseSchema,
+  // Query/Response schemas
   SetListQuerySchema,
   SetListPaginationSchema,
-  SetListFiltersSchema,
   SetListResponseSchema,
+  // Types
+  type SetStatus,
+  type Condition,
+  type Completeness,
+  type BuildStatus,
+  type ImageFormat,
+  type ImageVariants,
+  type ImageVariantMetadata,
+  type SortField,
+  type Store,
   type SetImage,
   type Set,
   type CreateSetInput,
   type UpdateSetInput,
   type SetListQuery,
   type SetListPagination,
-  type SetListFilters,
   type SetListResponse,
+  type BatchReorder,
+  type ReorderResponse as SetReorderResponse,
+  type PurchaseInput,
+  type UpdateBuildStatus,
+  type PresignRequest as SetPresignRequest,
+  type PresignResponse as SetPresignResponse,
 } from './sets'
 
 // Feature flags schemas (WISH-2009)

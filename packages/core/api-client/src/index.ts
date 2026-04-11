@@ -16,6 +16,23 @@ export { galleryApi } from './rtk/gallery-api'
 export { wishlistApi } from './rtk/wishlist-api'
 export { wishlistGalleryApi } from './rtk/wishlist-gallery-api'
 export { setsApi } from './rtk/sets-api'
+
+// RTK Query Hooks - Unified Sets API
+export {
+  useGetSetsQuery,
+  useLazyGetSetsQuery,
+  useGetSetByIdQuery,
+  useAddSetMutation,
+  useUpdateSetMutation,
+  useDeleteSetMutation,
+  usePurchaseSetMutation,
+  useUpdateBuildStatusMutation,
+  useReorderSetsMutation,
+  usePresignSetImageMutation,
+  useRegisterSetImageMutation,
+  useDeleteSetImageMutation,
+  useGetStoresQuery,
+} from './rtk/sets-api'
 export { dashboardApi } from './rtk/dashboard-api'
 export { instructionsApi } from './rtk/instructions-api'
 export { permissionsApi } from './rtk/permissions-api'
