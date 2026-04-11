@@ -299,6 +299,14 @@ export const mocInstructions = pgTable(
     shortDescription: text('short_description'), // Brief 1-2 sentence summary (max 500 chars)
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Personal Ratings
+    // ─────────────────────────────────────────────────────────────────────────
+    ratings: jsonb('ratings').$type<{
+      overall?: number | null
+      buildExperience?: number | null
+    }>(), // Personal 5-star ratings
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Difficulty & Build Info
     // ─────────────────────────────────────────────────────────────────────────
     difficulty: text('difficulty'), // 'beginner' | 'intermediate' | 'advanced' | 'expert'
@@ -1193,7 +1201,6 @@ export {
   type InsertChangeTelemetry,
   type SelectChangeTelemetry,
 } from './change-telemetry.js'
-
 
 // Re-export Rules Registry table (WINT-4020)
 export {

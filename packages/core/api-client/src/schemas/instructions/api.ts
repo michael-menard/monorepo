@@ -401,6 +401,13 @@ export const GetMocDetailResponseSchema = z.object({
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
   dimensions: DimensionsSchema.nullable().optional(),
+  ratings: z
+    .object({
+      overall: z.number().min(0).max(5).nullable().optional(),
+      buildExperience: z.number().min(0).max(5).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 export type GetMocDetailResponse = z.infer<typeof GetMocDetailResponseSchema>

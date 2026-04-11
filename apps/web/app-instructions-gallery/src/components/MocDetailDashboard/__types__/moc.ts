@@ -106,6 +106,13 @@ export const MocSchema = z.object({
     })
     .nullable()
     .optional(),
+  ratings: z
+    .object({
+      overall: z.number().min(0).max(5).nullable().optional(),
+      buildExperience: z.number().min(0).max(5).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 export type Moc = z.infer<typeof MocSchema>

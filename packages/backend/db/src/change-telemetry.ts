@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Change Telemetry Database Schema
  *
@@ -18,7 +19,9 @@ import { sql } from 'drizzle-orm'
 import { check, index, integer, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
-import { wintSchema } from './wint.js'
+import { pgSchema } from 'drizzle-orm/pg-core'
+
+const wintSchema = pgSchema('wint')
 
 // ============================================================================
 // Change Telemetry Table

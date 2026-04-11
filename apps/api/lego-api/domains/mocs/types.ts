@@ -49,6 +49,13 @@ export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
   })
     .nullable()
     .optional(),
+  ratings: z
+    .object({
+      overall: z.number().min(0).max(5).nullable().optional(),
+      buildExperience: z.number().min(0).max(5).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 // Response schema for created MOC
@@ -100,6 +107,13 @@ export const GetMocResponseSchema = z.object({
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
   dimensions: z.unknown().nullable().optional(),
+  ratings: z
+    .object({
+      overall: z.number().min(0).max(5).nullable().optional(),
+      buildExperience: z.number().min(0).max(5).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 // Query schema for listing MOCs

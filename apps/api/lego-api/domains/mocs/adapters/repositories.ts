@@ -115,6 +115,7 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
           result.publishedAt instanceof Date
             ? result.publishedAt.toISOString()
             : (result.publishedAt ?? null),
+        ratings: (result as any).ratings ?? null,
       }
     },
 

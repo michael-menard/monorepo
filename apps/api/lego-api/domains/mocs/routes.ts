@@ -593,6 +593,7 @@ mocs.get('/:id', async c => {
       files: mappedFiles,
       stats,
       dimensions: moc.dimensions ?? null,
+      ratings: moc.ratings ?? null,
     }
 
     // Validate response with Zod
