@@ -81,6 +81,12 @@ export const SERVERLESS_ENDPOINTS = {
     UPDATE_PREFERENCES: '/user/preferences',
   },
 
+  // Scraper endpoints
+  SCRAPER: {
+    TRIGGER: '/scraper/trigger',
+    STATUS: '/scraper/status',
+  },
+
   // Health and monitoring
   // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   HEALTH: {

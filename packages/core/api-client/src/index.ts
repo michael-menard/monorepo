@@ -58,6 +58,9 @@ export {
   // INST-1105: Presigned upload session hooks
   useCreateUploadSessionMutation,
   useCompleteUploadSessionMutation,
+  // Scraper hooks
+  useTriggerScraperMutation,
+  useLazyGetScraperStatusQuery,
 } from './rtk/instructions-api'
 
 // RTK Query Hooks - Uploads (BUGF-032)

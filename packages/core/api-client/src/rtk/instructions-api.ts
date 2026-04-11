@@ -560,6 +560,36 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       }),
 
       /**
+       * POST /scraper/trigger - Start rebrickable scraper in background
+       */
+      triggerScraper: builder.mutation<
+        { status: string; message: string; startedAt: string; args: string[] },
+        {
+          dryRun?: boolean
+          limit?: number
+          retryFailed?: boolean
+          retryMissing?: boolean
+          likedMocs?: boolean
+        } | void
+      >({
+        query: (body = {}) => ({
+          url: SERVERLESS_ENDPOINTS.SCRAPER.TRIGGER,
+          method: 'POST',
+          body: body || {},
+        }),
+      }),
+
+      /**
+       * GET /scraper/status - Check scraper status
+       */
+      getScraperStatus: builder.query<
+        { status: string; startedAt?: string; exitCode?: number },
+        void
+      >({
+        query: () => SERVERLESS_ENDPOINTS.SCRAPER.STATUS,
+      }),
+
+      /**
        * Toggle favorite status for an instruction
        *
        * Legacy mutation - uses optimistic update pattern
@@ -633,6 +663,9 @@ export const {
   // Story INST-1105: Presigned upload session
   useCreateUploadSessionMutation,
   useCompleteUploadSessionMutation,
+  // Scraper hooks
+  useTriggerScraperMutation,
+  useLazyGetScraperStatusQuery,
   // Legacy hooks
   useToggleInstructionFavoriteMutation,
 } = instructionsApi

@@ -59,7 +59,7 @@ export function Header({ showBreadcrumbs = false }: HeaderProps) {
   )
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
+    <header className="w-full border-b border-border bg-background/95 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Main header row */}
         <div className="flex h-16 items-center justify-between gap-4">

@@ -162,6 +162,7 @@ function RootLayoutContent() {
 
         {/* Header */}
         <motion.div
+          className="sticky top-0 z-50"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3 }}

@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { z } from 'zod'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   GalleryGrid,
@@ -20,7 +20,11 @@ import {
   useFirstTimeHint,
 } from '@repo/gallery'
 import { logger } from '@repo/logger'
-import { useGetInstructionsQuery } from '@repo/api-client/rtk/instructions-api'
+import { Button } from '@repo/app-component-library'
+import {
+  useGetInstructionsQuery,
+  useTriggerScraperMutation,
+} from '@repo/api-client/rtk/instructions-api'
 import { InstructionCard } from '../components/InstructionCard'
 import type { Instruction } from '../__types__'
 import {
@@ -125,6 +129,26 @@ export function MainPage({ className }: MainPageProps) {
   })
 
   const [showViewHint, dismissViewHint] = useFirstTimeHint()
+
+  // Scraper trigger
+  const [triggerScraper, { isLoading: isScraperStarting }] = useTriggerScraperMutation()
+  const [scraperStatus, setScraperStatus] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
+
+  const handleTriggerScraper = useCallback(async () => {
+    setScraperStatus(null)
+    try {
+      const result = await triggerScraper({}).unwrap()
+      setScraperStatus({ type: 'success', text: result.message })
+    } catch (error: unknown) {
+      const err = error as { data?: { message?: string } }
+      const message = err?.data?.message || 'Failed to start scraper'
+      logger.error('Scraper trigger failed', error)
+      setScraperStatus({ type: 'error', text: message })
+    }
+  }, [triggerScraper])
 
   const handleFavorite = useCallback((id: string) => {
     // TODO: Wire to toggle favorite mutation once backend supports it
@@ -246,12 +270,36 @@ export function MainPage({ className }: MainPageProps) {
           searchAriaLabel="Search instructions"
           data-testid="instructions-gallery-filter-bar"
           rightSlot={
-            <GalleryViewToggle
-              currentView={viewMode}
-              onViewChange={setViewMode}
-              showFirstTimeHint={showViewHint}
-              onDismissHint={dismissViewHint}
-            />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTriggerScraper}
+                  disabled={isScraperStarting}
+                  className="gap-2"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isScraperStarting ? 'animate-spin' : ''}`}
+                    aria-hidden="true"
+                  />
+                  {isScraperStarting ? 'Starting...' : 'Scrape Rebrickable'}
+                </Button>
+                {scraperStatus ? (
+                  <span
+                    className={`text-xs ${scraperStatus.type === 'success' ? 'text-emerald-600' : 'text-destructive'}`}
+                  >
+                    {scraperStatus.text}
+                  </span>
+                ) : null}
+              </div>
+              <GalleryViewToggle
+                currentView={viewMode}
+                onViewChange={setViewMode}
+                showFirstTimeHint={showViewHint}
+                onDismissHint={dismissViewHint}
+              />
+            </div>
           }
         />
 
