@@ -30,18 +30,27 @@ export type SetGalleryCardProps = z.infer<typeof SetGalleryCardPropsSchema>
 /**
  * Build status label helper
  */
-const formatBuildStatus = (isBuilt: boolean | null | undefined) => {
-  if (isBuilt) return 'Built'
-  return 'Not built yet'
+const formatBuildStatus = (status: string | null | undefined) => {
+  switch (status) {
+    case 'completed':
+      return 'Built'
+    case 'in_progress':
+      return 'In Progress'
+    case 'parted_out':
+      return 'Parted Out'
+    default:
+      return 'Not built yet'
+  }
 }
 
 /**
  * Build status badge variant
  */
 const getBuildStatusVariant = (
-  isBuilt: boolean | null | undefined,
+  status: string | null | undefined,
 ): 'default' | 'secondary' | 'outline' => {
-  if (isBuilt) return 'default'
+  if (status === 'completed' || status === 'parted_out') return 'default'
+  if (status === 'in_progress') return 'secondary'
   return 'outline'
 }
 
@@ -66,10 +75,10 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
         </span>
       )}
 
-      {/* Theme */}
-      {set.theme ? (
+      {/* Tags (first tag shown as badge) */}
+      {set.tags && set.tags.length > 0 ? (
         <Badge variant="outline" className="text-xs" data-testid="set-card-theme">
-          {set.theme}
+          {set.tags[0]}
         </Badge>
       ) : null}
 
@@ -82,19 +91,19 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
 
       {/* Build status with icon */}
       <Badge
-        variant={getBuildStatusVariant(set.isBuilt)}
+        variant={getBuildStatusVariant(set.buildStatus)}
         className="inline-flex items-center gap-1 text-xs"
         data-testid="set-card-build-status"
       >
-        {set.isBuilt ? (
+        {set.buildStatus === 'completed' || set.buildStatus === 'parted_out' ? (
           <>
             <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-            {formatBuildStatus(set.isBuilt)}
+            {formatBuildStatus(set.buildStatus)}
           </>
         ) : (
           <>
             <Blocks className="h-3 w-3" aria-hidden="true" />
-            {formatBuildStatus(set.isBuilt)}
+            {formatBuildStatus(set.buildStatus)}
           </>
         )}
       </Badge>

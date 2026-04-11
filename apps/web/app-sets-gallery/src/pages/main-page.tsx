@@ -34,7 +34,7 @@ const MainPagePropsSchema = z.object({
 
 export type MainPageProps = z.infer<typeof MainPagePropsSchema>
 
-type SortField = 'title' | 'pieceCount' | 'purchaseDate' | 'purchasePrice' | 'createdAt'
+type SortField = 'title' | 'pieceCount' | 'purchasePrice' | 'createdAt'
 
 /**
  * Main Page Component
@@ -45,7 +45,7 @@ export function MainPage({ className }: MainPageProps) {
   const navigate = useNavigate()
   const [viewMode, setViewMode] = useViewMode('sets')
   const [searchTerm, setSearchTerm] = useState('')
-  const [theme, setTheme] = useState<string | null>(null)
+  const [_theme, _setTheme] = useState<string | null>(null)
   const [builtFilter, setBuiltFilter] = useState<BuiltFilterValue>('all')
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [page, setPage] = useState(1)
@@ -62,33 +62,26 @@ export function MainPage({ className }: MainPageProps) {
     error,
   } = useGetSetsQuery({
     search: searchTerm || undefined,
-    theme: theme || undefined,
+    status: 'owned',
     isBuilt: builtFilter === 'all' ? undefined : builtFilter === 'built',
-    sortField,
-    sortDirection: 'desc',
+    sort: sortField,
+    order: 'desc',
     page,
     limit: pageSize,
   })
 
   const sets: Set[] = setsData?.items ?? []
-  const availableThemes = setsData?.filters?.availableThemes ?? []
   const pagination = setsData?.pagination
 
   const sortOptions: { value: SortField; label: string }[] = [
     { value: 'createdAt', label: 'Recently added' },
     { value: 'title', label: 'Title' },
     { value: 'pieceCount', label: 'Piece count' },
-    { value: 'purchaseDate', label: 'Purchase date' },
     { value: 'purchasePrice', label: 'Purchase price' },
   ]
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
-    setPage(1)
-  }
-
-  const handleThemeChange = (value: string | null) => {
-    setTheme(value)
     setPage(1)
   }
 
@@ -200,10 +193,6 @@ export function MainPage({ className }: MainPageProps) {
                     onSearchChange={handleSearchChange}
                     searchAriaLabel="Search sets"
                     searchPlaceholder="Search sets..."
-                    themes={availableThemes}
-                    selectedTheme={theme}
-                    onThemeChange={handleThemeChange}
-                    themeAriaLabel="Filter by theme"
                     sortOptions={sortOptions}
                     selectedSort={sortField}
                     onSortChange={value => handleSortFieldChange(value as SortField)}

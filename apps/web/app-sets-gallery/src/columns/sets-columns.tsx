@@ -11,20 +11,26 @@ const columnHelper = createColumnHelper<Set>()
  * Build status variant mapping for Badge component
  */
 const buildStatusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
-  complete: 'default',
-  'in-progress': 'secondary',
-  planned: 'outline',
+  completed: 'default',
+  parted_out: 'default',
+  in_progress: 'secondary',
+  not_started: 'outline',
 }
 
 /**
  * Format build status for display
  */
-const formatBuildStatus = (status?: string) => {
-  if (!status) return 'Not Started'
-  return status
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+const formatBuildStatus = (status?: string | null) => {
+  switch (status) {
+    case 'completed':
+      return 'Built'
+    case 'in_progress':
+      return 'In Progress'
+    case 'parted_out':
+      return 'Parted Out'
+    default:
+      return 'Not Started'
+  }
 }
 
 /**
@@ -59,13 +65,12 @@ export const setsColumns: ColumnDef<Set, any>[] = [
     enableSorting: true,
   }) as ColumnDef<Set, any>,
 
-  columnHelper.accessor('isBuilt', {
+  columnHelper.accessor('buildStatus', {
     header: 'Build Status',
     size: 200,
     cell: info => {
-      const isBuilt = info.getValue()
-      const status = isBuilt ? 'complete' : 'planned'
-      const variant = buildStatusVariantMap[status] || 'outline'
+      const status = info.getValue()
+      const variant = buildStatusVariantMap[status ?? 'not_started'] || 'outline'
       return <Badge variant={variant}>{formatBuildStatus(status)}</Badge>
     },
     enableSorting: true,

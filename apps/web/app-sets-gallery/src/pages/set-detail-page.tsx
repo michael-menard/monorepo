@@ -33,15 +33,24 @@ const SetDetailPagePropsSchema = z.object({
 
 export type SetDetailPageProps = z.infer<typeof SetDetailPagePropsSchema>
 
-function formatBuildStatus(isBuilt: boolean | null | undefined): string {
-  if (isBuilt) return 'Built'
-  return 'In pieces'
+function formatBuildStatus(status: string | null | undefined): string {
+  switch (status) {
+    case 'completed':
+      return 'Built'
+    case 'in_progress':
+      return 'In Progress'
+    case 'parted_out':
+      return 'Parted Out'
+    default:
+      return 'In pieces'
+  }
 }
 
 function getBuildStatusVariant(
-  isBuilt: boolean | null | undefined,
+  status: string | null | undefined,
 ): 'default' | 'secondary' | 'outline' {
-  if (isBuilt) return 'default'
+  if (status === 'completed' || status === 'parted_out') return 'default'
+  if (status === 'in_progress') return 'secondary'
   return 'outline'
 }
 
@@ -52,9 +61,11 @@ function formatDate(isoDate: string | null | undefined): string | null {
   return date.toLocaleDateString()
 }
 
-function formatCurrency(value: number | null | undefined): string | null {
-  if (typeof value !== 'number') return null
-  return `$${value.toFixed(2)}`
+function formatCurrency(value: string | number | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (Number.isNaN(num)) return null
+  return `$${num.toFixed(2)}`
 }
 
 function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
@@ -278,13 +289,13 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   }
 
   const purchasePrice = formatCurrency(set.purchasePrice)
-  const tax = formatCurrency(set.tax)
-  const shipping = formatCurrency(set.shipping)
+  const tax = formatCurrency(set.purchaseTax)
+  const shipping = formatCurrency(set.purchaseShipping)
 
   const totalNumeric =
-    (typeof set.purchasePrice === 'number' ? set.purchasePrice : 0) +
-    (typeof set.tax === 'number' ? set.tax : 0) +
-    (typeof set.shipping === 'number' ? set.shipping : 0)
+    (set.purchasePrice ? parseFloat(set.purchasePrice) : 0) +
+    (set.purchaseTax ? parseFloat(set.purchaseTax) : 0) +
+    (set.purchaseShipping ? parseFloat(set.purchaseShipping) : 0)
 
   const total = totalNumeric > 0 ? formatCurrency(totalNumeric) : null
 
@@ -398,17 +409,19 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                 </div>
               </div>
 
-              {/* Theme */}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Theme</p>
-                {set.theme ? (
-                  <div className="mt-1">
-                    <Badge data-testid="set-detail-theme-badge">{set.theme}</Badge>
+              {/* Tags (replaces theme) */}
+              {set.tags && set.tags.length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tags</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {set.tags.map(tag => (
+                      <Badge key={tag} data-testid="set-detail-theme-badge">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-sm mt-1 text-muted-foreground">No theme specified</p>
-                )}
-              </div>
+                </div>
+              ) : null}
 
               {/* Build status + quantity */}
               <div className="grid grid-cols-2 gap-4">
@@ -416,19 +429,19 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                   <p className="text-sm font-medium text-muted-foreground">Build status</p>
                   <div className="mt-1">
                     <Badge
-                      variant={getBuildStatusVariant(set.isBuilt)}
+                      variant={getBuildStatusVariant(set.buildStatus)}
                       className="inline-flex items-center gap-1 text-xs"
                       data-testid="set-detail-build-status"
                     >
-                      {set.isBuilt ? (
+                      {set.buildStatus === 'completed' || set.buildStatus === 'parted_out' ? (
                         <>
                           <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                          {formatBuildStatus(set.isBuilt)}
+                          {formatBuildStatus(set.buildStatus)}
                         </>
                       ) : (
                         <>
                           <Blocks className="h-3 w-3" aria-hidden="true" />
-                          {formatBuildStatus(set.isBuilt)}
+                          {formatBuildStatus(set.buildStatus)}
                         </>
                       )}
                     </Badge>
@@ -442,19 +455,8 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                 </div>
               </div>
 
-              {/* Tags */}
-              {hasTags ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tags</p>
-                  <div className="flex flex-wrap gap-1 mt-1" data-testid="set-detail-tags">
-                    {set.tags.map(tag => (
-                      <Badge key={tag} variant="outline">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              {/* Tags already rendered above in the theme section */}
+              {hasTags ? <div data-testid="set-detail-tags" className="hidden" /> : null}
 
               {/* Created / updated */}
               <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
