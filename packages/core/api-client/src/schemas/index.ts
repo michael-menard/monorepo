@@ -65,7 +65,7 @@ export {
   // Input schemas
   CreateSetSchema,
   UpdateSetSchema,
-  BatchReorderSchema,
+  BatchReorderSchema as SetBatchReorderSchema,
   ReorderResponseSchema as SetReorderResponseSchema,
   PurchaseInputSchema,
   UpdateBuildStatusSchema,
@@ -92,7 +92,7 @@ export {
   type SetListQuery,
   type SetListPagination,
   type SetListResponse,
-  type BatchReorder,
+  type BatchReorder as SetBatchReorder,
   type ReorderResponse as SetReorderResponse,
   type PurchaseInput,
   type UpdateBuildStatus,

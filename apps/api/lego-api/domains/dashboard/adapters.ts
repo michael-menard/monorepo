@@ -7,6 +7,7 @@ import type {
   ThemeBreakdownItem,
   RecentMoc,
   ActivityItem,
+  TagWithThemes,
 } from './ports.js'
 
 type Schema = typeof schema
@@ -92,6 +93,53 @@ export function createDashboardRepository(
         message: row.type === 'added' ? `Added: ${row.title}` : `Updated: ${row.title}`,
         timestamp: new Date(row.timestamp).toISOString(),
       }))
+    },
+
+    async getUserTags(userId: string): Promise<TagWithThemes[]> {
+      const result = await db.execute(sql`
+        SELECT
+          t.tag,
+          COUNT(DISTINCT mi.id)::int AS moc_count,
+          COALESCE(
+            array_agg(DISTINCT tm.theme) FILTER (WHERE tm.theme IS NOT NULL),
+            '{}'::text[]
+          ) AS themes
+        FROM moc_instructions mi,
+             jsonb_array_elements_text(mi.tags) AS t(tag)
+        LEFT JOIN tag_theme_mappings tm ON LOWER(t.tag) = LOWER(tm.tag)
+        WHERE mi.user_id = ${userId}
+        GROUP BY t.tag
+        ORDER BY t.tag
+      `)
+      return result.rows.map((row: any) => ({
+        tag: row.tag,
+        themes: row.themes ?? [],
+        mocCount: row.moc_count,
+      }))
+    },
+
+    async getDistinctThemes(): Promise<string[]> {
+      const result = await db.execute(sql`
+        SELECT DISTINCT theme FROM tag_theme_mappings ORDER BY theme
+      `)
+      return result.rows.map((row: any) => row.theme as string)
+    },
+
+    async addTagThemeMappings(mappings: { tag: string; theme: string }[]): Promise<void> {
+      if (mappings.length === 0) return
+      const values = mappings.map(m => sql`(${m.tag}, ${m.theme}, NOW(), NOW())`)
+      await db.execute(sql`
+        INSERT INTO tag_theme_mappings (tag, theme, created_at, updated_at)
+        VALUES ${sql.join(values, sql`, `)}
+        ON CONFLICT (tag, theme) DO NOTHING
+      `)
+    },
+
+    async removeTagThemeMapping(tag: string, theme: string): Promise<void> {
+      await db.execute(sql`
+        DELETE FROM tag_theme_mappings
+        WHERE LOWER(tag) = LOWER(${tag}) AND LOWER(theme) = LOWER(${theme})
+      `)
     },
   }
 }

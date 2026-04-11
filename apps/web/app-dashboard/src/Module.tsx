@@ -7,11 +7,13 @@
  * Routes:
  *   / -> MainPage (dashboard overview)
  *   /monitor -> MonitorPage (pipeline monitoring)
+ *   /settings -> SettingsPage (tag-theme mappings)
  */
 import { z } from 'zod'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { MonitorPage } from './pages/monitor-page'
+import { SettingsPage } from './pages/settings-page'
 
 /**
  * Module props schema - validated at runtime
@@ -37,11 +39,13 @@ export function AppDashboardModule({ className, route }: AppDashboardModuleProps
     route === '/monitor' ||
     (typeof window !== 'undefined' && window.location.pathname.includes('/monitor'))
 
-  return (
-    <ModuleLayout className={className}>
-      {isMonitorRoute ? <MonitorPage /> : <MainPage />}
-    </ModuleLayout>
-  )
+  const isSettingsRoute =
+    route === '/settings' ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('/settings'))
+
+  const page = isSettingsRoute ? <SettingsPage /> : isMonitorRoute ? <MonitorPage /> : <MainPage />
+
+  return <ModuleLayout className={className}>{page}</ModuleLayout>
 }
 
 // Default export for lazy loading

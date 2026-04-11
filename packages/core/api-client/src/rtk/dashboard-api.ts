@@ -6,6 +6,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { z } from 'zod'
 import { createLogger } from '@repo/logger'
+import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
 import { createServerlessBaseQuery } from './base-query'
 
 const logger = createLogger('api-client:dashboard')
@@ -54,20 +55,37 @@ export const DashboardDataSchema = z.object({
 
 export type DashboardData = z.infer<typeof DashboardDataSchema>
 
+// Tag-theme mapping schemas (many-to-many: a tag can belong to multiple themes)
+export const TagWithThemesSchema = z.object({
+  tag: z.string(),
+  themes: z.array(z.string()),
+  mocCount: z.number().int().nonnegative(),
+})
+
+export type TagWithThemes = z.infer<typeof TagWithThemesSchema>
+
+const UserTagsResponseSchema = z.object({
+  tags: z.array(TagWithThemesSchema),
+})
+
+const ThemesResponseSchema = z.object({
+  themes: z.array(z.string()),
+})
+
 export const dashboardApi = createApi({
   reducerPath: 'dashboardApi',
   baseQuery: createServerlessBaseQuery({
     enablePerformanceMonitoring: true,
     priority: 'high',
   }),
-  tagTypes: ['Dashboard'],
+  tagTypes: ['Dashboard', 'TagThemes'],
   endpoints: builder => ({
     /**
      * GET /dashboard/stats — all dashboard data in one call
      * Polls every 10 seconds for responsive feel
      */
     getDashboardData: builder.query<DashboardData, void>({
-      query: () => '/dashboard/stats',
+      query: () => SERVERLESS_ENDPOINTS.DASHBOARD.STATS,
       providesTags: ['Dashboard'],
       transformResponse: (response: unknown) => {
         const validated = DashboardDataSchema.parse(response)
@@ -85,10 +103,70 @@ export const dashboardApi = createApi({
       queryFn: () => ({ data: undefined }),
       invalidatesTags: ['Dashboard'],
     }),
+
+    /**
+     * GET /dashboard/tags — all user tags with theme mappings and MOC counts
+     */
+    getUserTags: builder.query<TagWithThemes[], void>({
+      query: () => SERVERLESS_ENDPOINTS.DASHBOARD.TAGS,
+      providesTags: ['TagThemes'],
+      transformResponse: (response: unknown) => {
+        const validated = UserTagsResponseSchema.parse(response)
+        return validated.tags
+      },
+    }),
+
+    /**
+     * GET /dashboard/themes — distinct theme names
+     */
+    getDistinctThemes: builder.query<string[], void>({
+      query: () => SERVERLESS_ENDPOINTS.DASHBOARD.THEMES,
+      providesTags: ['TagThemes'],
+      transformResponse: (response: unknown) => {
+        const validated = ThemesResponseSchema.parse(response)
+        return validated.themes
+      },
+    }),
+
+    /**
+     * POST /dashboard/tag-themes — add tag-to-theme mappings (many-to-many)
+     */
+    addTagThemeMappings: builder.mutation<
+      { ok: boolean; count: number },
+      { mappings: { tag: string; theme: string }[] }
+    >({
+      query: body => ({
+        url: SERVERLESS_ENDPOINTS.DASHBOARD.TAG_THEMES,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Dashboard', 'TagThemes'],
+    }),
+
+    /**
+     * DELETE /dashboard/tag-themes/:tag/:theme — remove a specific tag-theme pair
+     */
+    removeTagThemeMapping: builder.mutation<{ ok: boolean }, { tag: string; theme: string }>({
+      query: ({ tag, theme }) => ({
+        url: buildEndpoint(SERVERLESS_ENDPOINTS.DASHBOARD.TAG_THEME, {
+          tag: encodeURIComponent(tag),
+          theme: encodeURIComponent(theme),
+        }),
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Dashboard', 'TagThemes'],
+    }),
   }),
 })
 
-export const { useGetDashboardDataQuery, useRefreshDashboardMutation } = dashboardApi
+export const {
+  useGetDashboardDataQuery,
+  useRefreshDashboardMutation,
+  useGetUserTagsQuery,
+  useGetDistinctThemesQuery,
+  useAddTagThemeMappingsMutation,
+  useRemoveTagThemeMappingMutation,
+} = dashboardApi
 
 export const dashboardApiReducer = dashboardApi.reducer
 export const dashboardApiMiddleware = dashboardApi.middleware

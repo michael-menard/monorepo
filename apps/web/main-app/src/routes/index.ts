@@ -252,7 +252,7 @@ const profileRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
-  component: PlaceholderPage,
+  component: DashboardModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })

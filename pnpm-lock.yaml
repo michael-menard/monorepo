@@ -556,6 +556,12 @@ importers:
 
   apps/web/app-dashboard:
     dependencies:
+      '@dnd-kit/core':
+        specifier: 6.3.1
+        version: 6.3.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@dnd-kit/utilities':
+        specifier: 3.2.2
+        version: 3.2.2(react@19.2.4)
       '@repo/accessibility':
         specifier: workspace:*
         version: link:../../../packages/core/accessibility

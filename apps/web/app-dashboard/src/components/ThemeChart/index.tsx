@@ -4,6 +4,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
+import { Settings2 } from 'lucide-react'
 import { GroupedBarChart } from '@repo/charts'
 import type { ThemeBreakdown } from '../../__types__'
 
@@ -55,9 +56,18 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
   return (
     <Card className="bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
       <CardHeader className="pb-2 px-4 md:px-6">
-        <CardTitle className="text-base md:text-lg font-semibold text-card-foreground">
-          MOCs by Theme
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base md:text-lg font-semibold text-card-foreground">
+            MOCs by Theme
+          </CardTitle>
+          <a
+            href="/settings"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            title="Manage tag-theme mappings"
+          >
+            <Settings2 className="h-4 w-4" />
+          </a>
+        </div>
       </CardHeader>
       <CardContent className="px-4 md:px-6">
         <div className="h-56 md:h-64 overflow-hidden">

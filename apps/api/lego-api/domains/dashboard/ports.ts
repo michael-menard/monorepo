@@ -34,9 +34,19 @@ export interface DashboardData {
   activityFeed: ActivityItem[]
 }
 
+export interface TagWithThemes {
+  tag: string
+  themes: string[]
+  mocCount: number
+}
+
 export interface DashboardRepository {
   getStats(userId: string): Promise<DashboardStats>
   getThemeBreakdown(userId: string): Promise<ThemeBreakdownItem[]>
   getRecentMocs(userId: string, limit: number): Promise<RecentMoc[]>
   getActivityFeed(userId: string, limit: number): Promise<ActivityItem[]>
+  getUserTags(userId: string): Promise<TagWithThemes[]>
+  getDistinctThemes(): Promise<string[]>
+  addTagThemeMappings(mappings: { tag: string; theme: string }[]): Promise<void>
+  removeTagThemeMapping(tag: string, theme: string): Promise<void>
 }
