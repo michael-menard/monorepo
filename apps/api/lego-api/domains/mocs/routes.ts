@@ -163,6 +163,106 @@ mocs.use('*', loadPermissions)
 mocs.use('*', requireFeature('moc'))
 
 /**
+ * POST /tags/split
+ * Split a tag into multiple tags across all user's MOCs
+ * Must be registered before /:id routes to avoid path conflicts
+ */
+mocs.post('/tags/split', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const { oldTag, newTags } = body as { oldTag?: string; newTags?: string[] }
+
+    if (!oldTag || !Array.isArray(newTags) || newTags.length === 0) {
+      return c.json(
+        { error: 'VALIDATION_ERROR', message: 'oldTag and newTags[] are required' },
+        400,
+      )
+    }
+
+    const result = await mocService.splitTag(userId, oldTag, newTags)
+
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.error === 'VALIDATION_ERROR' ? 400 : 500)
+    }
+
+    return c.json(result.data, 200)
+  } catch (error) {
+    logger.error('Unhandled error in POST /tags/split', error, { userId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * POST /tags/merge
+ * Merge multiple tags into one across all user's MOCs
+ */
+mocs.post('/tags/merge', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const { oldTags, newTag } = body as { oldTags?: string[]; newTag?: string }
+
+    if (!Array.isArray(oldTags) || oldTags.length < 2 || !newTag) {
+      return c.json(
+        { error: 'VALIDATION_ERROR', message: 'oldTags[] (2+) and newTag are required' },
+        400,
+      )
+    }
+
+    const result = await mocService.mergeTags(userId, oldTags, newTag)
+
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.error === 'VALIDATION_ERROR' ? 400 : 500)
+    }
+
+    return c.json(result.data, 200)
+  } catch (error) {
+    logger.error('Unhandled error in POST /tags/merge', error, { userId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * POST /tags/rename
+ * Rename a tag across all user's MOCs
+ */
+mocs.post('/tags/rename', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const { oldTag, newTag } = body as { oldTag?: string; newTag?: string }
+
+    if (!oldTag || !newTag) {
+      return c.json({ error: 'VALIDATION_ERROR', message: 'oldTag and newTag are required' }, 400)
+    }
+
+    const result = await mocService.renameTag(userId, oldTag, newTag)
+
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.error === 'VALIDATION_ERROR' ? 400 : 500)
+    }
+
+    return c.json(result.data, 200)
+  } catch (error) {
+    logger.error('Unhandled error in POST /tags/rename', error, { userId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
  * GET /mocs
  * List MOCs for the authenticated user with pagination and filters
  * (INST-1102: Gallery listing support)
@@ -491,6 +591,7 @@ mocs.get('/:id', async c => {
       updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
       files: mappedFiles,
       stats,
+      dimensions: moc.dimensions ?? null,
     }
 
     // Validate response with Zod

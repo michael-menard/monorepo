@@ -25,7 +25,27 @@ export const CreateMocRequestSchema = z.object({
 
 // Request schema for updating a MOC (INST-1108: AC-2, AC-5)
 // All fields optional for partial update semantics
-export const UpdateMocRequestSchema = CreateMocRequestSchema.partial()
+export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
+  dimensions: z
+    .object({
+      height: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      width: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      depth: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      studsWidth: z.number().nullable().optional(),
+      studsDepth: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+})
 
 // Response schema for created MOC
 export const CreateMocResponseSchema = z.object({
@@ -74,6 +94,7 @@ export const GetMocResponseSchema = z.object({
   updatedAt: z.string(),
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
+  dimensions: z.unknown().nullable().optional(),
 })
 
 // Query schema for listing MOCs

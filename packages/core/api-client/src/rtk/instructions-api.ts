@@ -251,6 +251,42 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       }),
 
       /**
+       * POST /instructions/mocs/tags/split - Split a tag across all MOCs
+       */
+      splitTag: builder.mutation<{ updatedCount: number }, { oldTag: string; newTags: string[] }>({
+        query: body => ({
+          url: SERVERLESS_ENDPOINTS.MOC.SPLIT_TAG,
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: [{ type: 'Moc' }, { type: 'MocList' }],
+      }),
+
+      /**
+       * POST /instructions/mocs/tags/merge - Merge multiple tags into one across all MOCs
+       */
+      mergeTags: builder.mutation<{ updatedCount: number }, { oldTags: string[]; newTag: string }>({
+        query: body => ({
+          url: SERVERLESS_ENDPOINTS.MOC.MERGE_TAGS,
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: [{ type: 'Moc' }, { type: 'MocList' }],
+      }),
+
+      /**
+       * POST /instructions/mocs/tags/rename - Rename a tag across all MOCs
+       */
+      renameTag: builder.mutation<{ updatedCount: number }, { oldTag: string; newTag: string }>({
+        query: body => ({
+          url: SERVERLESS_ENDPOINTS.MOC.RENAME_TAG,
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: [{ type: 'Moc' }, { type: 'MocList' }],
+      }),
+
+      /**
        * DELETE /instructions/mocs/:id - Delete MOC instruction
        *
        * Story INST-1008: Delete MOC mutation
@@ -550,6 +586,9 @@ export const {
   useCreateMocMutation,
   useUpdateMocMutation,
   useDeleteMocMutation,
+  useSplitTagMutation,
+  useMergeTagsMutation,
+  useRenameTagMutation,
   useUploadInstructionFileMutation,
   useUploadPartsListFileMutation,
   useUploadThumbnailMutation,

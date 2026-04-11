@@ -251,6 +251,7 @@ export const UpdateMocInputSchema = z.object({
 
   // Metadata
   tags: z.array(z.string()).max(20).nullable().optional(),
+  dimensions: DimensionsSchema.nullable().optional(),
   difficulty: DifficultySchema.nullable().optional(),
   buildTimeHours: z.number().int().positive().nullable().optional(),
   ageRecommendation: z.string().max(20).nullable().optional(),
@@ -365,6 +366,7 @@ export const GetMocDetailResponseSchema = z.object({
   updatedAt: z.string(),
   files: z.array(MocDetailFileSchema),
   stats: MocStatsSchema,
+  dimensions: DimensionsSchema.nullable().optional(),
 })
 
 export type GetMocDetailResponse = z.infer<typeof GetMocDetailResponseSchema>

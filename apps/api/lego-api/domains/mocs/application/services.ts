@@ -163,6 +163,88 @@ export function createMocService(deps: MocServiceDeps) {
     },
 
     /**
+     * Split a tag across all user's MOCs
+     * Replaces oldTag with one or more newTags on every MOC that contains it
+     */
+    async splitTag(
+      userId: string,
+      oldTag: string,
+      newTags: string[],
+    ): Promise<Result<{ updatedCount: number }, 'VALIDATION_ERROR' | 'DB_ERROR'>> {
+      if (!oldTag.trim()) return err('VALIDATION_ERROR')
+      const cleaned = newTags.map(t => t.trim()).filter(Boolean)
+      if (cleaned.length === 0) return err('VALIDATION_ERROR')
+
+      try {
+        const result = await mocRepo.splitTag(userId, oldTag, cleaned)
+        logger.info('Tag split completed', undefined, {
+          userId,
+          oldTag,
+          newTags: cleaned,
+          updatedCount: result.updatedCount,
+        })
+        return ok(result)
+      } catch (error: any) {
+        logger.error('Failed to split tag', error, { userId, oldTag, newTags: cleaned })
+        return err('DB_ERROR')
+      }
+    },
+
+    /**
+     * Merge multiple tags into one across all user's MOCs
+     * Replaces all oldTags with a single newTag on every MOC that contains any of them
+     */
+    async mergeTags(
+      userId: string,
+      oldTags: string[],
+      newTag: string,
+    ): Promise<Result<{ updatedCount: number }, 'VALIDATION_ERROR' | 'DB_ERROR'>> {
+      if (!newTag.trim()) return err('VALIDATION_ERROR')
+      const cleaned = oldTags.map(t => t.trim()).filter(Boolean)
+      if (cleaned.length < 2) return err('VALIDATION_ERROR')
+
+      try {
+        const result = await mocRepo.mergeTags(userId, cleaned, newTag.trim())
+        logger.info('Tags merged', undefined, {
+          userId,
+          oldTags: cleaned,
+          newTag: newTag.trim(),
+          updatedCount: result.updatedCount,
+        })
+        return ok(result)
+      } catch (error: any) {
+        logger.error('Failed to merge tags', error, { userId, oldTags: cleaned, newTag })
+        return err('DB_ERROR')
+      }
+    },
+
+    /**
+     * Rename a tag across all user's MOCs
+     */
+    async renameTag(
+      userId: string,
+      oldTag: string,
+      newTag: string,
+    ): Promise<Result<{ updatedCount: number }, 'VALIDATION_ERROR' | 'DB_ERROR'>> {
+      if (!oldTag.trim() || !newTag.trim()) return err('VALIDATION_ERROR')
+      if (oldTag.trim() === newTag.trim()) return err('VALIDATION_ERROR')
+
+      try {
+        const result = await mocRepo.renameTag(userId, oldTag.trim(), newTag.trim())
+        logger.info('Tag renamed', undefined, {
+          userId,
+          oldTag: oldTag.trim(),
+          newTag: newTag.trim(),
+          updatedCount: result.updatedCount,
+        })
+        return ok(result)
+      } catch (error: any) {
+        logger.error('Failed to rename tag', error, { userId, oldTag, newTag })
+        return err('DB_ERROR')
+      }
+    },
+
+    /**
      * List MOCs for a user with pagination and filters
      * (INST-1102: Gallery listing)
      */

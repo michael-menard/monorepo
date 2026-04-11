@@ -50,6 +50,7 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
     partsCount: apiData.stats.pieceCount ?? 0,
     partsOwned: undefined,
     orders: [],
+    dimensions: (apiData as any).dimensions ?? null,
   }
 }
 

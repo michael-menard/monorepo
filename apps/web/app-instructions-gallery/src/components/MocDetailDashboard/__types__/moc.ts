@@ -53,6 +53,25 @@ export const MocSchema = z.object({
   partsCount: z.number().int().nonnegative(),
   partsOwned: z.number().int().nonnegative().optional(),
   orders: z.array(MocOrderSchema).optional(),
+  dimensions: z
+    .object({
+      height: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      width: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      depth: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      studsWidth: z.number().nullable().optional(),
+      studsDepth: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 export type Moc = z.infer<typeof MocSchema>

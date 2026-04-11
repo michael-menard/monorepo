@@ -67,6 +67,7 @@ export interface MocWithFiles extends Moc {
   files: MocFile[]
   totalPieceCount: number | null
   author: string | null
+  dimensions: unknown | null
 }
 
 export interface MocRepository {
@@ -77,6 +78,9 @@ export interface MocRepository {
   updateMoc(mocId: string, userId: string, data: Partial<CreateMocRequest>): Promise<Moc>
   updateThumbnail(mocId: string, userId: string, thumbnailUrl: string): Promise<void>
   getFileByIdAndMocId(fileId: string, mocId: string): Promise<MocFile | null>
+  splitTag(userId: string, oldTag: string, newTags: string[]): Promise<{ updatedCount: number }>
+  mergeTags(userId: string, oldTags: string[], newTag: string): Promise<{ updatedCount: number }>
+  renameTag(userId: string, oldTag: string, newTag: string): Promise<{ updatedCount: number }>
 }
 
 /**

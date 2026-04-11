@@ -19,6 +19,7 @@ import { OrdersCard } from './OrdersCard'
 import { GalleryCard as ImageGridCard } from './GalleryCard'
 import { DescriptionCard } from './DescriptionCard'
 import { TagsSection } from './TagsSection'
+import { DimensionsSection } from './DimensionsSection'
 
 function formatDate(isoDate: string): string {
   try {
@@ -109,6 +110,7 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
                   </div>
                 ) : null}
               </dl>
+              <DimensionsSection mocId={moc.id} dimensions={moc.dimensions} />
               <TagsSection mocId={moc.id} tags={moc.tags} />
             </CardContent>
           </Card>

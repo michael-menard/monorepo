@@ -168,6 +168,7 @@ export function createInstructionRepository(
       if (data.setNumber !== undefined) updateData.setNumber = data.setNumber
       if (data.releaseYear !== undefined) updateData.releaseYear = data.releaseYear
       if (data.tags !== undefined) updateData.tags = data.tags
+      if (data.dimensions !== undefined) updateData.dimensions = data.dimensions
       if (data.difficulty !== undefined) updateData.difficulty = data.difficulty
       if (data.buildTimeHours !== undefined) updateData.buildTimeHours = data.buildTimeHours
       if (data.ageRecommendation !== undefined)

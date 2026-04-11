@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { eq, and, like, count, desc } from 'drizzle-orm'
+import { eq, and, like, count, desc, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type * as schema from '@repo/db'
 import slugifyLib from 'slugify'
@@ -110,6 +110,7 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         files,
         totalPieceCount: result.totalPieceCount,
         author: result.author ?? null,
+        dimensions: result.dimensions ?? null,
       }
     },
 
@@ -218,6 +219,97 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         .update(mocInstructions)
         .set({ thumbnailUrl, updatedAt: new Date() })
         .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+    },
+
+    async splitTag(
+      userId: string,
+      oldTag: string,
+      newTags: string[],
+    ): Promise<{ updatedCount: number }> {
+      // Remove the old tag, then add new tags (deduped), in a single UPDATE
+      // Only affects rows owned by this user that contain the old tag
+      const result = await db.execute(sql`
+        UPDATE ${mocInstructions}
+        SET
+          tags = (
+            SELECT jsonb_agg(DISTINCT t)
+            FROM (
+              -- existing tags minus the old one
+              SELECT jsonb_array_elements(tags) AS t
+              FROM (SELECT ${mocInstructions.tags} AS tags) sub
+              UNION ALL
+              -- new replacement tags
+              SELECT jsonb_array_elements(${JSON.stringify(newTags)}::jsonb) AS t
+            ) combined
+            WHERE t != to_jsonb(${oldTag}::text)
+          ),
+          updated_at = NOW()
+        WHERE ${mocInstructions.userId} = ${userId}
+          AND ${mocInstructions.tags} @> ${JSON.stringify([oldTag])}::jsonb
+        RETURNING id
+      `)
+      return { updatedCount: result.rowCount ?? 0 }
+    },
+
+    async mergeTags(
+      userId: string,
+      oldTags: string[],
+      newTag: string,
+    ): Promise<{ updatedCount: number }> {
+      // Replace any of the old tags with the new tag across all matching MOCs
+      // A MOC matches if it contains ANY of the old tags
+      // Filter out old tags that aren't the new tag, then add the new tag
+      const tagsToRemove = oldTags.filter(t => t !== newTag)
+      const tagsToRemoveJson = JSON.stringify(tagsToRemove)
+      const result = await db.execute(sql`
+        UPDATE ${mocInstructions}
+        SET
+          tags = (
+            SELECT jsonb_agg(DISTINCT t)
+            FROM (
+              SELECT jsonb_array_elements(tags) AS t
+              FROM (SELECT ${mocInstructions.tags} AS tags) sub
+              UNION ALL
+              SELECT to_jsonb(${newTag}::text) AS t
+            ) combined
+            WHERE NOT (t IN (SELECT jsonb_array_elements(${tagsToRemoveJson}::jsonb)))
+          ),
+          updated_at = NOW()
+        WHERE ${mocInstructions.userId} = ${userId}
+          AND (${mocInstructions.tags} ?| array[${sql.join(
+            oldTags.map(t => sql`${t}`),
+            sql`, `,
+          )}])
+        RETURNING id
+      `)
+      return { updatedCount: result.rowCount ?? 0 }
+    },
+
+    async renameTag(
+      userId: string,
+      oldTag: string,
+      newTag: string,
+    ): Promise<{ updatedCount: number }> {
+      // Replace oldTag with newTag across all matching MOCs, deduplicating
+      const result = await db.execute(sql`
+        UPDATE ${mocInstructions}
+        SET
+          tags = (
+            SELECT jsonb_agg(DISTINCT t)
+            FROM (
+              SELECT jsonb_array_elements(tags) AS t
+              FROM (SELECT ${mocInstructions.tags} AS tags) sub
+              UNION ALL
+              SELECT to_jsonb(${newTag}::text) AS t
+            ) combined
+            WHERE t != to_jsonb(${oldTag}::text)
+          ),
+          updated_at = NOW()
+        WHERE ${mocInstructions.userId} = ${userId}
+          AND ${mocInstructions.tags} @> ${JSON.stringify([oldTag])}::jsonb
+        RETURNING id
+      `)
+      return { updatedCount: result.rowCount ?? 0 }
     },
 
     async getFileByIdAndMocId(fileId: string, mocId: string): Promise<MocFile | null> {
