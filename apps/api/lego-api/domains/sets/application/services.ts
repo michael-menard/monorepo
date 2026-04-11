@@ -7,6 +7,7 @@ import type {
   CreateSetInput,
   UpdateSetInput,
   CreateSetImageInput,
+  RegisterSetImageInput,
   UploadedFile,
   SetError,
 } from '../types.js'
@@ -177,6 +178,75 @@ export function createSetsService(deps: SetsServiceDeps) {
     // ─────────────────────────────────────────────────────────────────────
     // Set Image Operations
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Generate a presigned URL for client-side image upload
+     */
+    async presignSetImage(
+      userId: string,
+      setId: string,
+      filename: string,
+      contentType: string,
+    ): Promise<Result<{ uploadUrl: string; imageUrl: string; key: string }, SetError>> {
+      // Validate set ownership
+      const setResult = await this.getSet(userId, setId)
+      if (!setResult.ok) {
+        return setResult
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(contentType)) {
+        return err('INVALID_FILE')
+      }
+
+      // Generate unique key
+      const imageId = crypto.randomUUID()
+      const extension = filename.split('.').pop()?.toLowerCase() || 'webp'
+      const key = `sets/${userId}/${setId}/${imageId}.${extension}`
+
+      const result = await imageStorage.generatePresignedUrl(key, contentType)
+      if (!result.ok) {
+        return err('UPLOAD_FAILED')
+      }
+
+      return ok({
+        uploadUrl: result.data.uploadUrl,
+        imageUrl: result.data.imageUrl,
+        key,
+      })
+    },
+
+    /**
+     * Register an image that was uploaded via presigned URL
+     */
+    async registerSetImage(
+      userId: string,
+      setId: string,
+      input: RegisterSetImageInput,
+    ): Promise<Result<SetImage, SetError>> {
+      // Validate set ownership
+      const setResult = await this.getSet(userId, setId)
+      if (!setResult.ok) {
+        return setResult
+      }
+
+      const position = await setImageRepo.getNextPosition(setId)
+
+      try {
+        const image = await setImageRepo.insert({
+          setId,
+          imageUrl: input.imageUrl,
+          thumbnailUrl: input.thumbnailUrl ?? null,
+          position,
+        })
+
+        return ok(image)
+      } catch (error) {
+        console.error('Failed to register set image:', error)
+        return err('DB_ERROR')
+      }
+    },
 
     /**
      * Upload an image for a set

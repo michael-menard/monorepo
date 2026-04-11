@@ -1,6 +1,8 @@
-import { uploadToS3, deleteFromS3, ok } from '@repo/api-core'
+import { uploadToS3, deleteFromS3, getPresignedUploadUrl, ok, err } from '@repo/api-core'
 import type { Result } from '@repo/api-core'
 import type { ImageStorage } from '../ports/index.js'
+
+const PRESIGN_EXPIRATION_SECONDS = 900
 
 /**
  * Create an ImageStorage implementation using S3
@@ -15,6 +17,21 @@ export function createImageStorage(): ImageStorage {
       contentType: string,
     ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>> {
       return uploadToS3(key, buffer, contentType)
+    },
+
+    async generatePresignedUrl(
+      key: string,
+      contentType: string,
+    ): Promise<Result<{ uploadUrl: string; imageUrl: string }, 'PRESIGN_FAILED'>> {
+      try {
+        const uploadUrl = await getPresignedUploadUrl(key, contentType, PRESIGN_EXPIRATION_SECONDS)
+        const imageUrl = `https://${bucket}.s3.amazonaws.com/${key}`
+
+        return ok({ uploadUrl, imageUrl })
+      } catch (error) {
+        console.error('Failed to generate presigned URL:', error)
+        return err('PRESIGN_FAILED')
+      }
     },
 
     async delete(key: string): Promise<Result<void, 'DELETE_FAILED'>> {

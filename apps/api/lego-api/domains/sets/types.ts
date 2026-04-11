@@ -126,6 +126,29 @@ export const UpdateSetImageInputSchema = z.object({
 export type UpdateSetImageInput = z.infer<typeof UpdateSetImageInputSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
+// Presign Types
+// ─────────────────────────────────────────────────────────────────────────
+
+export const PresignSetImageInputSchema = z.object({
+  filename: z.string().min(1),
+  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+})
+
+export type PresignSetImageInput = z.infer<typeof PresignSetImageInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Register Image Types (for presign flow)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const RegisterSetImageInputSchema = z.object({
+  imageUrl: z.string().url(),
+  key: z.string().min(1),
+  thumbnailUrl: z.string().url().optional(),
+})
+
+export type RegisterSetImageInput = z.infer<typeof RegisterSetImageInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
 // File Types
 // ─────────────────────────────────────────────────────────────────────────
 

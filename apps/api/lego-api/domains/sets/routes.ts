@@ -13,6 +13,8 @@ import {
   ListSetsQuerySchema,
   CreateSetImageInputSchema,
   UpdateSetImageInputSchema,
+  PresignSetImageInputSchema,
+  RegisterSetImageInputSchema,
 } from './types.js'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -165,13 +167,73 @@ sets.get('/:setId/images', async c => {
 })
 
 /**
- * POST /:setId/images - Upload new image for a set
+ * POST /:setId/images/presign - Get presigned URL for client-side image upload
+ */
+sets.post('/:setId/images/presign', async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('setId')
+
+  const body = await c.req.json()
+  const input = PresignSetImageInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await setsService.presignSetImage(
+    userId,
+    setId,
+    input.data.filename,
+    input.data.contentType,
+  )
+
+  if (!result.ok) {
+    const status =
+      result.error === 'NOT_FOUND'
+        ? 404
+        : result.error === 'FORBIDDEN'
+          ? 403
+          : result.error === 'INVALID_FILE'
+            ? 400
+            : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
+})
+
+/**
+ * POST /:setId/images - Upload or register an image for a set
+ *
+ * Supports two flows:
+ * 1. Multipart form upload (direct): sends file as form data
+ * 2. JSON register (after presign): sends { imageUrl, key, thumbnailUrl? }
  */
 sets.post('/:setId/images', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('setId')
+  const contentType = c.req.header('content-type') || ''
 
-  // Parse multipart form
+  // JSON body = register flow (after presigned upload)
+  if (contentType.includes('application/json')) {
+    const body = await c.req.json()
+    const input = RegisterSetImageInputSchema.safeParse(body)
+
+    if (!input.success) {
+      return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+    }
+
+    const result = await setsService.registerSetImage(userId, setId, input.data)
+
+    if (!result.ok) {
+      const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+      return c.json({ error: result.error }, status)
+    }
+
+    return c.json(result.data, 201)
+  }
+
+  // Multipart = direct upload flow
   const formData = await c.req.formData()
   const file = formData.get('file') as File | null
 

@@ -99,6 +99,14 @@ export interface ImageStorage {
   ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
 
   /**
+   * Generate a presigned URL for client-side upload
+   */
+  generatePresignedUrl(
+    key: string,
+    contentType: string,
+  ): Promise<Result<{ uploadUrl: string; imageUrl: string }, 'PRESIGN_FAILED'>>
+
+  /**
    * Delete an image by key
    */
   delete(key: string): Promise<Result<void, 'DELETE_FAILED'>>
