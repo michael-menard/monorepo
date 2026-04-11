@@ -46,6 +46,15 @@ export {
   type MarkAsPurchasedInput,
   type GotItFormValues,
   type SetItem,
+  // Shim helper
+  setToWishlistItem,
+  // Collection management (SETS-MVP)
+  ItemStatusSchema,
+  type ItemStatus,
+  type BuildStatus as WishlistBuildStatus,
+  PurchaseDetailsInputSchema,
+  type PurchaseDetailsInput,
+  UpdateBuildStatusSchema as WishlistUpdateBuildStatusSchema,
 } from './wishlist'
 
 // Sets schemas (unified — replaces both old sets + wishlist schemas)
