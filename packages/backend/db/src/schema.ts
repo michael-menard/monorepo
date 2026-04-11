@@ -380,6 +380,15 @@ export const wishlistItems = pgTable(
   }),
 )
 
+// Tag-to-Theme Mappings - Maps tags to theme buckets for dashboard
+export const tagThemeMappings = pgTable('tag_theme_mappings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tag: text('tag').notNull().unique(),
+  theme: text('theme').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
 // MOC Parts Lists Table - Enhanced tracking for parts lists
 export const mocPartsLists = pgTable(
   'moc_parts_lists',

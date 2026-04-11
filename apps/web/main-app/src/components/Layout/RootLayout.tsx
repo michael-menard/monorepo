@@ -176,10 +176,7 @@ function RootLayoutContent() {
         <div className="hidden md:block border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <AppTabs value={activeTab} onValueChange={handleTabChange}>
-              <AppTabsList
-                variant="underline"
-                className="h-12 w-full justify-start gap-0 bg-transparent p-0"
-              >
+              <AppTabsList variant="underline" className="h-11 w-full justify-start">
                 {mainNavItems.map(item => {
                   const Icon = item.icon
                   return (
@@ -187,7 +184,7 @@ function RootLayoutContent() {
                       key={item.id}
                       value={item.href}
                       variant="underline"
-                      className="gap-2 px-4 h-full rounded-none data-[state=active]:border-primary border-b-2 border-transparent"
+                      className="gap-2 px-4"
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>

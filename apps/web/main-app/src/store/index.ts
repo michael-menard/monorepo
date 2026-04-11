@@ -153,8 +153,8 @@ export const {
   useManagePriceAlertsMutation,
 } = enhancedWishlistApi
 
-// Dashboard API hooks (Story 2.2, 2.3, 2.4)
-export const { useGetStatsQuery, useGetRecentMocsQuery, useRefreshDashboardMutation } = dashboardApi
+// Dashboard API hooks
+export const { useGetDashboardDataQuery, useRefreshDashboardMutation } = dashboardApi
 
 // Permissions API hooks (Cognito Scopes / Authorization)
 export const {
