@@ -25,24 +25,28 @@ export const CreateMocRequestSchema = z.object({
 
 // Request schema for updating a MOC (INST-1108: AC-2, AC-5)
 // All fields optional for partial update semantics
+const DimAxisSchema = z
+  .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+  .nullable()
+  .optional()
+
+const DimEntrySchema = z.object({
+  height: DimAxisSchema,
+  width: DimAxisSchema,
+  depth: DimAxisSchema,
+  studsWidth: z.number().nullable().optional(),
+  studsDepth: z.number().nullable().optional(),
+  studsHeight: z.number().nullable().optional(),
+})
+
 export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
-  dimensions: z
-    .object({
-      height: z
-        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
-        .nullable()
-        .optional(),
-      width: z
-        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
-        .nullable()
-        .optional(),
-      depth: z
-        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
-        .nullable()
-        .optional(),
-      studsWidth: z.number().nullable().optional(),
-      studsDepth: z.number().nullable().optional(),
-    })
+  dimensions: DimEntrySchema.extend({
+    subBuilds: z
+      .array(DimEntrySchema.extend({ name: z.string().max(100) }))
+      .max(30)
+      .nullable()
+      .optional(),
+  })
     .nullable()
     .optional(),
 })

@@ -95,6 +95,39 @@ export const DimensionsSchema = z.object({
     .optional(),
   studsWidth: z.number().nullable().optional(),
   studsDepth: z.number().nullable().optional(),
+  studsHeight: z.number().nullable().optional(),
+  subBuilds: z
+    .array(
+      z.object({
+        name: z.string(),
+        height: z
+          .object({
+            cm: z.number().nullable().optional(),
+            inches: z.number().nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+        width: z
+          .object({
+            cm: z.number().nullable().optional(),
+            inches: z.number().nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+        depth: z
+          .object({
+            cm: z.number().nullable().optional(),
+            inches: z.number().nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+        studsWidth: z.number().nullable().optional(),
+        studsDepth: z.number().nullable().optional(),
+        studsHeight: z.number().nullable().optional(),
+      }),
+    )
+    .nullable()
+    .optional(),
 })
 
 export type Dimensions = z.infer<typeof DimensionsSchema>
