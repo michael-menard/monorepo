@@ -17,11 +17,6 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Skeleton,
   Textarea,
   useToast,
@@ -30,26 +25,6 @@ import { z } from 'zod'
 import { UpdateSetSchema } from '@repo/api-client/schemas/sets'
 import { useGetSetByIdQuery, useUpdateSetMutation } from '@repo/api-client/rtk/sets-api'
 import { TagInput } from '../components/TagInput'
-
-const THEMES = [
-  'Architecture',
-  'Castle',
-  'City',
-  'Creator',
-  'Creator Expert',
-  'Disney',
-  'Friends',
-  'Harry Potter',
-  'Icons',
-  'Ideas',
-  'Marvel',
-  'Minecraft',
-  'Ninjago',
-  'Speed Champions',
-  'Star Wars',
-  'Technic',
-  'Other',
-]
 
 /**
  * Loading skeleton while fetching set data
@@ -113,7 +88,6 @@ export function EditSetPage() {
     title: '',
     setNumber: '',
     pieceCount: '',
-    theme: '',
     tags: [] as string[],
     purchaseDate: '',
     purchasePrice: '',
@@ -127,13 +101,9 @@ export function EditSetPage() {
         title: set.title,
         setNumber: set.setNumber ?? '',
         pieceCount: set.pieceCount !== null ? String(set.pieceCount) : '',
-        theme: set.theme ?? '',
         tags: set.tags ?? [],
         purchaseDate: set.purchaseDate ? set.purchaseDate.split('T')[0] : '',
-        purchasePrice:
-          set.purchasePrice !== null && set.purchasePrice !== undefined
-            ? String(set.purchasePrice)
-            : '',
+        purchasePrice: set.purchasePrice ?? '',
         notes: set.notes ?? '',
       })
     }
@@ -169,10 +139,9 @@ export function EditSetPage() {
         title: formData.title,
         setNumber: formData.setNumber || undefined,
         pieceCount: formData.pieceCount ? Number(formData.pieceCount) : undefined,
-        theme: formData.theme || undefined,
         tags: formData.tags,
         notes: formData.notes || undefined,
-        purchasePrice: formData.purchasePrice ? Number(formData.purchasePrice) : undefined,
+        purchasePrice: formData.purchasePrice || undefined,
         purchaseDate: formData.purchaseDate
           ? new Date(formData.purchaseDate).toISOString()
           : undefined,
@@ -303,33 +272,7 @@ export function EditSetPage() {
               ) : null}
             </div>
 
-            {/* Theme */}
-            <div className="space-y-2">
-              <label htmlFor="theme" className="text-sm font-medium">
-                Theme
-              </label>
-              <Select
-                value={formData.theme}
-                onValueChange={value => updateField('theme', value)}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger id="theme">
-                  <SelectValue placeholder="Select a theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {THEMES.map(theme => (
-                    <SelectItem key={theme} value={theme}>
-                      {theme}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.theme ? (
-                <p className="text-sm text-destructive">{formErrors.theme}</p>
-              ) : null}
-            </div>
-
-            {/* Tags */}
+            {/* Tags (themes are now captured as tags) */}
             <div className="space-y-2">
               <label htmlFor="tags" className="text-sm font-medium">
                 Tags

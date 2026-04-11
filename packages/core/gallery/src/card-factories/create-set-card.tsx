@@ -59,14 +59,27 @@ export function createSetCard(set: Set, options: SetCardOptions = {}): GalleryCa
           {set.pieceCount.toLocaleString()} pieces
         </Badge>
       ) : null}
-      {showTheme && set.theme ? (
+      {showTheme && set.tags && set.tags.length > 0 ? (
         <Badge variant="outline" className="text-xs">
-          {set.theme}
+          {set.tags[0]}
         </Badge>
       ) : null}
       {showBuildStatus ? (
-        <Badge variant={set.isBuilt ? 'default' : 'secondary'} className="text-xs">
-          {set.isBuilt ? 'Built' : 'Unbuilt'}
+        <Badge
+          variant={
+            set.buildStatus === 'completed' || set.buildStatus === 'parted_out'
+              ? 'default'
+              : 'secondary'
+          }
+          className="text-xs"
+        >
+          {set.buildStatus === 'completed'
+            ? 'Built'
+            : set.buildStatus === 'in_progress'
+              ? 'In Progress'
+              : set.buildStatus === 'parted_out'
+                ? 'Parted Out'
+                : 'Unbuilt'}
         </Badge>
       ) : null}
     </div>

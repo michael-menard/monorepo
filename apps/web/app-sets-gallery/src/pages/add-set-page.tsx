@@ -13,11 +13,6 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
   useToast,
 } from '@repo/app-component-library'
@@ -31,26 +26,6 @@ import {
 } from '@repo/api-client/rtk/sets-api'
 import { TagInput } from '../components/TagInput'
 import { ImageUploadZone } from '../components/ImageUploadZone'
-
-const THEMES = [
-  'Architecture',
-  'Castle',
-  'City',
-  'Creator',
-  'Creator Expert',
-  'Disney',
-  'Friends',
-  'Harry Potter',
-  'Icons',
-  'Ideas',
-  'Marvel',
-  'Minecraft',
-  'Ninjago',
-  'Speed Champions',
-  'Star Wars',
-  'Technic',
-  'Other',
-]
 
 export function AddSetPage({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate()
@@ -68,7 +43,6 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
     title: '',
     setNumber: '',
     pieceCount: '',
-    theme: '',
     tags: [] as string[],
     purchaseDate: '',
     purchasePrice: '',
@@ -84,13 +58,13 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
 
       // Map form state into CreateSetInput candidate (numbers/dates coerced)
       const candidate: Partial<CreateSetInput> = {
+        status: 'owned',
         title: formData.title,
         setNumber: formData.setNumber || undefined,
         pieceCount: formData.pieceCount ? Number(formData.pieceCount) : undefined,
-        theme: formData.theme || undefined,
         tags: formData.tags,
         notes: formData.notes || undefined,
-        purchasePrice: formData.purchasePrice ? Number(formData.purchasePrice) : undefined,
+        purchasePrice: formData.purchasePrice || undefined,
         purchaseDate: formData.purchaseDate
           ? new Date(formData.purchaseDate).toISOString()
           : undefined,
@@ -134,7 +108,6 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
         title: '',
         setNumber: '',
         pieceCount: '',
-        theme: '',
         tags: [],
         purchaseDate: '',
         purchasePrice: '',
@@ -237,33 +210,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
               ) : null}
             </div>
 
-            {/* Theme */}
-            <div className="space-y-2">
-              <label htmlFor="theme" className="text-sm font-medium">
-                Theme
-              </label>
-              <Select
-                value={formData.theme}
-                onValueChange={value => setFormData({ ...formData, theme: value })}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger id="theme">
-                  <SelectValue placeholder="Select a theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {THEMES.map(theme => (
-                    <SelectItem key={theme} value={theme}>
-                      {theme}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.theme ? (
-                <p className="text-sm text-destructive">{formErrors.theme}</p>
-              ) : null}
-            </div>
-
-            {/* Tags */}
+            {/* Tags (themes are now captured as tags) */}
             <div className="space-y-2">
               <label htmlFor="tags" className="text-sm font-medium">
                 Tags
