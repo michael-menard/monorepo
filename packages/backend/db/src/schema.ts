@@ -213,6 +213,7 @@ export const mocInstructions = pgTable(
       overall?: number | null
       buildExperience?: number | null
     }>(), // Personal 5-star ratings
+    notes: text('notes'), // Personal notes about the MOC (HTML)
 
     // ─────────────────────────────────────────────────────────────────────────
     // Difficulty & Build Info

@@ -56,6 +56,7 @@ export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
     })
     .nullable()
     .optional(),
+  notes: z.string().nullable().optional(),
 })
 
 // Response schema for created MOC
@@ -114,6 +115,7 @@ export const GetMocResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  notes: z.string().nullable().optional(),
 })
 
 // Query schema for listing MOCs

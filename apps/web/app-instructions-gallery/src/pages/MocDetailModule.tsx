@@ -53,6 +53,7 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
     orders: [],
     dimensions: (apiData as any).dimensions ?? null,
     ratings: (apiData as any).ratings ?? null,
+    notes: (apiData as any).notes ?? null,
   }
 }
 

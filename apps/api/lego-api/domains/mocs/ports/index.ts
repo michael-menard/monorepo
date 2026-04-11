@@ -70,6 +70,7 @@ export interface MocWithFiles extends Moc {
   dimensions: unknown | null
   publishedAt: string | null
   ratings: { overall?: number | null; buildExperience?: number | null } | null
+  notes: string | null
 }
 
 export interface MocRepository {

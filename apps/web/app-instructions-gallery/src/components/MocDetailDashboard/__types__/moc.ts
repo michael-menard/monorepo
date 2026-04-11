@@ -113,6 +113,7 @@ export const MocSchema = z.object({
     })
     .nullable()
     .optional(),
+  notes: z.string().nullable().optional(),
 })
 
 export type Moc = z.infer<typeof MocSchema>

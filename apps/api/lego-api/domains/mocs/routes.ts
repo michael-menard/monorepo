@@ -594,6 +594,7 @@ mocs.get('/:id', async c => {
       stats,
       dimensions: moc.dimensions ?? null,
       ratings: moc.ratings ?? null,
+      notes: moc.notes ?? null,
     }
 
     // Validate response with Zod
@@ -602,6 +603,42 @@ mocs.get('/:id', async c => {
     return c.json(validatedResponse, 200)
   } catch (error) {
     logger.error('Unhandled error in GET /mocs/:id', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * PUT /mocs/:id/cover
+ * Set a gallery image as the cover image
+ */
+mocs.put('/:id/cover', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+    const { fileId } = body as { fileId?: string }
+
+    if (!fileId) {
+      return c.json({ error: 'VALIDATION_ERROR', message: 'fileId is required' }, 400)
+    }
+
+    // Verify the file belongs to this MOC
+    const file = await mocRepo.getFileByIdAndMocId(fileId, mocId)
+    if (!file) {
+      return c.json({ error: 'NOT_FOUND', message: 'File not found' }, 404)
+    }
+
+    // Set the file's S3 key as the thumbnail
+    await mocRepo.updateThumbnail(mocId, userId, file.s3Key)
+
+    return c.json({ ok: true, s3Key: file.s3Key }, 200)
+  } catch (error) {
+    logger.error('Unhandled error in PUT /mocs/:id/cover', error, { userId, mocId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
   }
 })

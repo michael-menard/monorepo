@@ -45,6 +45,7 @@ export const SERVERLESS_ENDPOINTS = {
     SPLIT_TAG: '/instructions/mocs/tags/split',
     MERGE_TAGS: '/instructions/mocs/tags/merge',
     RENAME_TAG: '/instructions/mocs/tags/rename',
+    SET_COVER: '/instructions/mocs/{id}/cover',
 
     // File upload endpoints (INST-1008)
     UPLOAD_INSTRUCTION: '/instructions/mocs/{id}/files/instruction',

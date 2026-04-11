@@ -9,8 +9,8 @@ import {
 } from '@repo/app-component-library'
 import { Calendar, User, ExternalLink } from 'lucide-react'
 import type { Moc } from './__types__/moc'
-import { GalleryCard } from '@repo/gallery'
 import { MetaCard } from './MetaCard'
+import { CoverImagePicker } from './CoverImagePicker'
 import { StatsCard } from './StatsCard'
 import { PartsGauge } from './PartsGauge'
 import { PartsListsCard } from './PartsListsCard'
@@ -20,6 +20,7 @@ import { GalleryCard as ImageGridCard } from './GalleryCard'
 import { DescriptionCard } from './DescriptionCard'
 import { TagsSection } from './TagsSection'
 import { DimensionsSection } from './DimensionsSection'
+import { NotesCard } from './NotesCard'
 import { RatingsSection } from './RatingsSection'
 
 function formatDate(isoDate: string): string {
@@ -45,18 +46,11 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
     <div className="container mx-auto px-4 py-6 xl:py-8" data-testid="moc-detail-dashboard">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         <aside className="lg:col-span-4 xl:col-span-3 space-y-6 lg:sticky lg:top-20 lg:self-start">
-          <GalleryCard
-            image={
-              moc.coverImageUrl
-                ? {
-                    src: moc.coverImageUrl,
-                    alt: `Cover image for ${moc.title}`,
-                    aspectRatio: '1/1',
-                  }
-                : undefined
-            }
+          <CoverImagePicker
+            mocId={moc.id}
+            coverImageUrl={moc.coverImageUrl}
             title={moc.title}
-            showContent={false}
+            galleryImages={moc.galleryImages}
           />
           <Card className="border-border shadow-sm">
             <CardContent className="p-4 space-y-3">
@@ -131,15 +125,19 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
             partsListsCount={moc.partsLists.length}
           />
           <Tabs defaultValue="description">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="instructions">Instructions</TabsTrigger>
               <TabsTrigger value="gallery">Gallery</TabsTrigger>
+              <TabsTrigger value="instructions">Instructions</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
               <TabsTrigger value="parts-lists">Parts Lists</TabsTrigger>
               <TabsTrigger value="parts-orders">Parts Orders</TabsTrigger>
             </TabsList>
             <TabsContent value="description">
               <DescriptionCard mocId={moc.id} description={moc.description} />
+            </TabsContent>
+            <TabsContent value="gallery">
+              <ImageGridCard galleryImages={moc.galleryImages} />
             </TabsContent>
             <TabsContent value="instructions">
               <InstructionsCard
@@ -148,8 +146,8 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
                 onFilesUploaded={handleFilesUploaded}
               />
             </TabsContent>
-            <TabsContent value="gallery">
-              <ImageGridCard galleryImages={moc.galleryImages} />
+            <TabsContent value="notes">
+              <NotesCard mocId={moc.id} notes={moc.notes} />
             </TabsContent>
             <TabsContent value="parts-lists">
               <PartsListsCard partsLists={moc.partsLists} />

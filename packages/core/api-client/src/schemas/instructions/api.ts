@@ -290,6 +290,9 @@ export const UpdateMocInputSchema = z.object({
   ageRecommendation: z.string().max(20).nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
 
+  // Personal
+  notes: z.string().nullable().optional(),
+
   // Visibility
   status: StatusSchema.optional(),
   visibility: VisibilitySchema.optional(),
@@ -408,6 +411,7 @@ export const GetMocDetailResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  notes: z.string().nullable().optional(),
 })
 
 export type GetMocDetailResponse = z.infer<typeof GetMocDetailResponseSchema>

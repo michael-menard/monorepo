@@ -287,6 +287,21 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       }),
 
       /**
+       * PUT /instructions/mocs/:id/cover - Set a gallery image as cover
+       */
+      setCoverImage: builder.mutation<{ ok: boolean }, { mocId: string; fileId: string }>({
+        query: ({ mocId, fileId }) => ({
+          url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.SET_COVER, { id: mocId }),
+          method: 'PUT',
+          body: { fileId },
+        }),
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocList' },
+        ],
+      }),
+
+      /**
        * DELETE /instructions/mocs/:id - Delete MOC instruction
        *
        * Story INST-1008: Delete MOC mutation
@@ -589,6 +604,7 @@ export const {
   useSplitTagMutation,
   useMergeTagsMutation,
   useRenameTagMutation,
+  useSetCoverImageMutation,
   useUploadInstructionFileMutation,
   useUploadPartsListFileMutation,
   useUploadThumbnailMutation,
