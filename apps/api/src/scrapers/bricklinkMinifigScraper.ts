@@ -7,6 +7,12 @@ const BrickLinkMinifigImageDataSchema = z.object({
   thumbnails: z.array(z.string().url()),
 })
 
+const BrickLinkMinifigSetSchema = z.object({
+  setNumber: z.string(),
+  name: z.string(),
+  imageUrl: z.string(),
+})
+
 const BrickLinkMinifigItemInfoSchema = z.object({
   yearReleased: z.string(),
   weight: z.string(),
@@ -17,6 +23,7 @@ const BrickLinkMinifigItemInfoSchema = z.object({
   partsCount: z.number(),
   lotsForSale: z.number(),
   wantedListsCount: z.number(),
+  appearsInSets: z.array(BrickLinkMinifigSetSchema),
 })
 
 const BrickLinkMinifigScrapeResultSchema = z.object({
@@ -156,6 +163,7 @@ export async function scrapeBrickLinkMinifig(
         partsCount: 0,
         lotsForSale: 0,
         wantedListsCount: 0,
+        appearsInSets: [] as Array<{ setNumber: string; name: string; imageUrl: string }>,
       }
 
       const fontElements = document.querySelectorAll('font[face="Tahoma,Arial"]')
@@ -215,6 +223,41 @@ export async function scrapeBrickLinkMinifig(
         }
       })
 
+      const appearsInLink = document.querySelector('a[href*="catalogItemIn.asp"]')
+      if (appearsInLink) {
+        appearsInLink.click()
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        const setRows = document.querySelectorAll('tr')
+        setRows.forEach(row => {
+          const cells = row.querySelectorAll('td')
+          if (cells.length >= 2) {
+            const link = cells[0].querySelector('a[href*="catalogitem.page?S="]')
+            const img = cells[0].querySelector('img')
+            const nameCell = cells[1]
+
+            if (link) {
+              const href = link.href
+              const match = href.match(/[?&]S=([^&]+)/)
+              if (match) {
+                const setText = (nameCell?.textContent || '').trim()
+                itemInfo.appearsInSets.push({
+                  setNumber: match[1],
+                  name: setText
+                    .replace(/^Catalog:\s*/, '')
+                    .split('Catalog:')[0]
+                    .trim(),
+                  imageUrl: img?.src || '',
+                })
+              }
+            }
+          }
+        })
+
+        window.history.back()
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+
       const setName = document.title.split(' : ')[0].trim()
 
       return {
@@ -252,6 +295,7 @@ export async function scrapeBrickLinkMinifig(
         partsCount: 0,
         lotsForSale: 0,
         wantedListsCount: 0,
+        appearsInSets: [],
       },
     }
   }
@@ -299,6 +343,7 @@ export async function scrapeAllBrickLinkMinifigsFromCatalog(
           partsCount: 0,
           lotsForSale: 0,
           wantedListsCount: 0,
+          appearsInSets: [],
         },
       })
     }
