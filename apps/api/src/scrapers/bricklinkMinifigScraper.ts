@@ -46,63 +46,94 @@ const BrickLinkMinifigListItemSchema = z.object({
 
 export type BrickLinkMinifigListItem = z.infer<typeof BrickLinkMinifigListItemSchema>
 
-/**
- * Scrapes a BrickLink catalog list page for minifigures
- * @param catalogUrl - The catalog list URL (e.g., "https://www.bricklink.com/catalogList.asp?catType=M&catString=746.753")
- * @returns Array of minifigures found on the page
- */
-export async function scrapeBrickLinkMinifigCatalogList(catalogUrl: string) {
-  logger.info(`Scraping BrickLink minifig catalog list: ${catalogUrl}`)
+export async function scrapeBrickLinkMinifigCatalogList(
+  catalogUrl: string,
+  scrapeAllPages: boolean = false,
+) {
+  logger.info(
+    `Scraping BrickLink minifig catalog list: ${catalogUrl}${scrapeAllPages ? ' (all pages)' : ''}`,
+  )
 
   try {
-    await page.goto(catalogUrl, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
-    })
+    const allItems: Array<{ minifigNumber: string; name: string; imageUrl: string; href: string }> =
+      []
+    let currentPage = 1
+    let totalPages = 1
+    let baseUrl = catalogUrl.split('?')[0]
+    let queryParams = catalogUrl.includes('?') ? catalogUrl.split('?')[1] : ''
 
-    await page.waitForTimeout(2000)
+    while (currentPage <= totalPages) {
+      const pageUrl =
+        currentPage === 1
+          ? catalogUrl
+          : `${baseUrl}?${queryParams}${queryParams ? '&' : ''}pg=${currentPage}`
 
-    const result = await page.evaluate(() => {
-      const items: Array<{ minifigNumber: string; name: string; imageUrl: string; href: string }> =
-        []
+      logger.info(`Scraping page ${currentPage}${totalPages > 1 ? ` of ${totalPages}` : ''}...`)
 
-      // Find all minifigure links (pattern: catalogitem.page?M=XXXXX)
-      const itemLinks = document.querySelectorAll('a[href*="catalogitem.page?M="]')
-
-      itemLinks.forEach(link => {
-        const href = link.href
-        const text = (link.textContent || '').trim()
-
-        // Extract minifig number from URL
-        const match = href.match(/[?&]M=([^&]+)/)
-        if (!match) return
-
-        const minifigNumber = match[1]
-
-        // Skip if already added
-        if (items.some(item => item.minifigNumber === minifigNumber)) return
-
-        // Get image from closest row
-        const row = link.closest('tr') || link.closest('div')
-        const img = row?.querySelector('img')
-        const imageUrl = img?.src || ''
-
-        // Skip if no image or if it looks like a header/printer icon
-        if (!imageUrl || imageUrl.includes('printer') || imageUrl.includes('spacer')) return
-
-        items.push({
-          minifigNumber,
-          name: text,
-          imageUrl,
-          href,
-        })
+      await page.goto(pageUrl, {
+        waitUntil: 'networkidle',
+        timeout: 30000,
       })
 
-      return items
-    })
+      await page.waitForTimeout(2000)
 
-    logger.info(`Found ${result.length} minifigures in catalog`)
-    return result
+      const pageResult = await page.evaluate(() => {
+        const items: Array<{
+          minifigNumber: string
+          name: string
+          imageUrl: string
+          href: string
+        }> = []
+
+        const itemLinks = document.querySelectorAll('a[href*="catalogitem.page?M="]')
+
+        itemLinks.forEach(link => {
+          const href = link.href
+          const text = (link.textContent || '').trim()
+
+          const match = href.match(/[?&]M=([^&]+)/)
+          if (!match) return
+
+          const minifigNumber = match[1]
+
+          if (items.some(item => item.minifigNumber === minifigNumber)) return
+
+          const row = link.closest('tr') || link.closest('div')
+          const img = row?.querySelector('img')
+          const imageUrl = img?.src || ''
+
+          if (!imageUrl || imageUrl.includes('printer') || imageUrl.includes('spacer')) return
+
+          items.push({
+            minifigNumber,
+            name: text,
+            imageUrl,
+            href,
+          })
+        })
+
+        const bodyText = document.body.textContent || ''
+        const pageMatch = bodyText.match(/Page\s+(\d+)\s+of\s+(\d+)/i)
+        let currentPg = 1
+        let totalPgs = 1
+
+        if (pageMatch) {
+          currentPg = parseInt(pageMatch[1], 10)
+          totalPgs = parseInt(pageMatch[2], 10)
+        }
+
+        return { items, currentPage: currentPg, totalPages: totalPgs }
+      })
+
+      allItems.push(...pageResult.items)
+      currentPage++
+      totalPages = pageResult.totalPages
+
+      if (!scrapeAllPages) break
+    }
+
+    logger.info(`Found ${allItems.length} total minifigures across ${totalPages} pages`)
+    return allItems
   } catch (error) {
     logger.error(`Failed to scrape catalog list:`, error)
     return []
@@ -301,19 +332,21 @@ export async function scrapeBrickLinkMinifig(
   }
 }
 
-/**
- * Scrapes all minifigures from a catalog list page
- * @param catalogUrl - The catalog list URL
- * @param scrapeDetails - Whether to also scrape detailed info for each minifig
- * @returns Array of minifigure data
- */
+// Scrapes all minifigures from a catalog list page
+// catalogUrl: The catalog list URL
+// scrapeDetails: Whether to also scrape detailed info for each minifig
+// scrapeAllPages: Whether to scrape all pages (default: false)
+// Returns: Array of minifigure data
 export async function scrapeAllBrickLinkMinifigsFromCatalog(
   catalogUrl: string,
   scrapeDetails: boolean = false,
+  scrapeAllPages: boolean = false,
 ) {
-  logger.info(`Starting to scrape all minifigures from catalog: ${catalogUrl}`)
+  logger.info(
+    `Starting to scrape all minifigures from catalog: ${catalogUrl}${scrapeAllPages ? ' (all pages)' : ''}`,
+  )
 
-  const listItems = await scrapeBrickLinkMinifigCatalogList(catalogUrl)
+  const listItems = await scrapeBrickLinkMinifigCatalogList(catalogUrl, scrapeAllPages)
   logger.info(`Found ${listItems.length} minifigures to process`)
 
   const results = []
