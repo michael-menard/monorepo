@@ -166,5 +166,26 @@ export function createDashboardRepository(
         WHERE LOWER(tag) = LOWER(${tag}) AND LOWER(theme) = LOWER(${theme})
       `)
     },
+
+    async deleteTagGlobally(userId: string, tag: string): Promise<number> {
+      // Remove tag from all user's MOCs
+      const result = await db.execute(sql`
+        UPDATE moc_instructions
+        SET tags = (
+          SELECT COALESCE(jsonb_agg(t), '[]'::jsonb)
+          FROM jsonb_array_elements_text(tags) AS t
+          WHERE t != ${tag}
+        ),
+        updated_at = NOW()
+        WHERE user_id = ${userId}
+          AND tags @> ${JSON.stringify([tag])}::jsonb
+        RETURNING id
+      `)
+      // Remove from tag_theme_mappings
+      await db.execute(sql`
+        DELETE FROM tag_theme_mappings WHERE LOWER(tag) = LOWER(${tag})
+      `)
+      return result.rows.length
+    },
   }
 }

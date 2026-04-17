@@ -1,5 +1,13 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Settings } from 'lucide-react'
+import {
+  AppDialog,
+  AppDialogContent,
+  AppDialogHeader,
+  AppDialogTitle,
+  AppDialogFooter,
+  Button,
+} from '@repo/app-component-library'
 import { logger } from '@repo/logger'
 import {
   useGetUserTagsQuery,
@@ -8,6 +16,7 @@ import {
   useDeleteThemeMutation,
   useAddTagThemeMappingsMutation,
   useRemoveTagThemeMappingMutation,
+  useDeleteTagGloballyMutation,
 } from '@repo/api-client/rtk/dashboard-api'
 import { TagThemeBoard } from '../components/TagThemeBoard'
 
@@ -18,6 +27,8 @@ export function SettingsPage() {
   const [deleteTheme] = useDeleteThemeMutation()
   const [addMappings] = useAddTagThemeMappingsMutation()
   const [removeMapping] = useRemoveTagThemeMappingMutation()
+  const [deleteTagGlobally] = useDeleteTagGloballyMutation()
+  const [tagToDelete, setTagToDelete] = useState<string | null>(null)
 
   const handleAssign = useCallback(
     (mappings: { tag: string; theme: string }[]) => {
@@ -55,11 +66,21 @@ export function SettingsPage() {
     [deleteTheme],
   )
 
+  const handleConfirmDeleteTag = useCallback(() => {
+    if (!tagToDelete) return
+    deleteTagGlobally(tagToDelete).catch(error => {
+      logger.error('Failed to delete tag globally', error)
+    })
+    setTagToDelete(null)
+  }, [tagToDelete, deleteTagGlobally])
+
+  const tagInfo = tagToDelete ? tags.find(t => t.tag === tagToDelete) : null
+
   const isLoading = tagsLoading || themesLoading
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
+    <div className="flex flex-col h-[calc(100dvh-10rem)]">
+      <div className="space-y-1 shrink-0 mb-6">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />
           Tag Theme Mappings
@@ -82,8 +103,36 @@ export function SettingsPage() {
           onRemove={handleRemove}
           onCreateTheme={handleCreateTheme}
           onDeleteTheme={handleDeleteTheme}
+          onDeleteTag={setTagToDelete}
         />
       )}
+
+      <AppDialog open={!!tagToDelete} onOpenChange={open => !open && setTagToDelete(null)}>
+        <AppDialogContent>
+          <AppDialogHeader>
+            <AppDialogTitle>Delete tag globally?</AppDialogTitle>
+          </AppDialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will remove <strong>&ldquo;{tagToDelete}&rdquo;</strong> from{' '}
+            {tagInfo ? (
+              <>
+                <strong>{tagInfo.mocCount}</strong> MOC{tagInfo.mocCount !== 1 ? 's' : ''}
+              </>
+            ) : (
+              'all MOCs'
+            )}{' '}
+            and any theme mappings. This cannot be undone.
+          </p>
+          <AppDialogFooter>
+            <Button variant="outline" onClick={() => setTagToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteTag}>
+              Delete
+            </Button>
+          </AppDialogFooter>
+        </AppDialogContent>
+      </AppDialog>
     </div>
   )
 }

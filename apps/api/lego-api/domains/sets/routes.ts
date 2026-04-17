@@ -153,7 +153,10 @@ sets.get('/:id', async c => {
     return c.json({ error: result.error }, status)
   }
 
-  return c.json(result.data)
+  return c.json({
+    ...result.data.set,
+    images: result.data.images,
+  })
 })
 
 /**

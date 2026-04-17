@@ -255,29 +255,26 @@ export class MocDetailPage extends BasePage {
         return timeDate
       }
 
-      // Fallback: scan small text elements for date patterns
-      const dateText = await this.page.evaluate(() => {
-        const smalls = document.querySelectorAll('.mb-10 small, .row small, small')
-        for (const el of smalls) {
-          const text = el.textContent?.trim() || ''
-          // Match patterns like "Mar 15, 2024" or "2024-03-15" or "Added: ..."
-          if (/\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(text) || /\w{3}\s+\d{1,2},?\s+\d{4}/.test(text)) {
-            return text.replace(/^(added|uploaded|published)\s*:?\s*/i, '').trim()
-          }
-        }
-        return ''
+      // Look for fa-plus icon with title="Added" — date is in the parent <small>
+      // HTML: <small><i class="fa fa-fw fa-plus" title="Added"></i> April 13, 2026, 6:28 p.m. by <a>...</a></small>
+      const iconDate = await this.page.evaluate(() => {
+        const icon = document.querySelector('i.fa-plus[title="Added"], i[title="Added"]')
+        if (!icon) return ''
+        const parent = icon.parentElement
+        if (!parent) return ''
+        const text = parent.textContent?.trim() || ''
+        // Extract "Month DD, YYYY" — strip everything after the year
+        const match = text.match(/(\w+\s+\d{1,2},?\s+\d{4})/)
+        return match ? match[1] : ''
       })
 
-      if (dateText) {
-        // Try to parse into ISO format
-        const parsed = new Date(dateText)
+      if (iconDate) {
+        const parsed = new Date(iconDate)
         if (!isNaN(parsed.getTime())) {
           const iso = parsed.toISOString()
-          logger.info(`[moc-detail] Date added from text: "${dateText}" → ${iso}`)
+          logger.info(`[moc-detail] Date added: "${iconDate}" → ${iso}`)
           return iso
         }
-        logger.info(`[moc-detail] Date added (unparsed): "${dateText}"`)
-        return dateText
       }
 
       return undefined

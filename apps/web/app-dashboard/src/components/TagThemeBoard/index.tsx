@@ -24,6 +24,7 @@ interface TagThemeBoardProps {
   onRemove: (tag: string, theme: string) => void
   onCreateTheme: (name: string) => void
   onDeleteTheme: (name: string) => void
+  onDeleteTag: (tag: string) => void
 }
 
 export function TagThemeBoard({
@@ -33,6 +34,7 @@ export function TagThemeBoard({
   onRemove,
   onCreateTheme,
   onDeleteTheme,
+  onDeleteTag,
 }: TagThemeBoardProps) {
   const [activeTag, setActiveTag] = useState<TagWithThemes | null>(null)
   const [newThemeName, setNewThemeName] = useState('')
@@ -104,10 +106,10 @@ export function TagThemeBoard({
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
         {/* Left panel — all tags */}
-        <div className="lg:col-span-4">
-          <UnmappedPanel tags={tags} showAll />
+        <div className="lg:col-span-4 min-h-0">
+          <UnmappedPanel tags={tags} showAll onDeleteTag={onDeleteTag} />
         </div>
 
         {/* Right panel — theme buckets */}

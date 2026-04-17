@@ -51,4 +51,5 @@ export interface DashboardRepository {
   deleteTheme(name: string): Promise<void>
   addTagThemeMappings(mappings: { tag: string; theme: string }[]): Promise<void>
   removeTagThemeMapping(tag: string, theme: string): Promise<void>
+  deleteTagGlobally(userId: string, tag: string): Promise<number>
 }

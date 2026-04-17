@@ -131,6 +131,18 @@ export const CreateSetInputSchema = z.object({
   sourceUrl: z.string().url().optional(),
   storeId: z.string().uuid().optional(),
   pieceCount: z.number().int().positive().optional(),
+  theme: z.string().max(100).optional(),
+  description: z.string().max(5000).optional(),
+  dimensions: z
+    .object({
+      height: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      width: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      depth: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      studsWidth: z.number().optional(),
+      studsDepth: z.number().optional(),
+      studsHeight: z.number().optional(),
+    })
+    .optional(),
   releaseDate: z.coerce.date().optional(),
   notes: z.string().max(5000).optional(),
   condition: ConditionSchema.optional(),
@@ -159,6 +171,28 @@ export const UpdateSetInputSchema = z.object({
   sourceUrl: z.string().url().nullable().optional(),
   storeId: z.string().uuid().nullable().optional(),
   pieceCount: z.number().int().positive().nullable().optional(),
+  theme: z.string().max(100).nullable().optional(),
+  description: z.string().max(5000).nullable().optional(),
+  dimensions: z
+    .object({
+      height: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      width: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      depth: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      studsWidth: z.number().nullable().optional(),
+      studsDepth: z.number().nullable().optional(),
+      studsHeight: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   releaseDate: z.coerce.date().nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   condition: ConditionSchema.nullable().optional(),

@@ -168,7 +168,11 @@ export function createSetsService(deps: SetsServiceDeps) {
       if (input.sourceUrl !== undefined) updateData.sourceUrl = input.sourceUrl
       if (input.storeId !== undefined) updateData.storeId = input.storeId
       if (input.pieceCount !== undefined) updateData.pieceCount = input.pieceCount
+      if (input.theme !== undefined) updateData.theme = input.theme
+      if (input.description !== undefined) updateData.description = input.description
+      if (input.dimensions !== undefined) updateData.dimensions = input.dimensions
       if (input.releaseDate !== undefined) updateData.releaseDate = input.releaseDate
+      if (input.tags !== undefined) updateData.tags = input.tags
       if (input.notes !== undefined) updateData.notes = input.notes
       if (input.condition !== undefined) updateData.condition = input.condition
       if (input.completeness !== undefined) updateData.completeness = input.completeness

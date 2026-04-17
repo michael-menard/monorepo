@@ -60,15 +60,18 @@ export function MainPage({ className }: MainPageProps) {
     isLoading,
     isFetching,
     error,
-  } = useGetSetsQuery({
-    search: searchTerm || undefined,
-    status: 'owned',
-    isBuilt: builtFilter === 'all' ? undefined : builtFilter === 'built',
-    sort: sortField,
-    order: 'desc',
-    page,
-    limit: pageSize,
-  })
+  } = useGetSetsQuery(
+    {
+      search: searchTerm || undefined,
+      status: 'owned',
+      isBuilt: builtFilter === 'all' ? undefined : builtFilter === 'built',
+      sort: sortField,
+      order: 'desc',
+      page,
+      limit: pageSize,
+    },
+    { refetchOnFocus: true, refetchOnMountOrArgChange: true },
+  )
 
   const sets: Set[] = setsData?.items ?? []
   const pagination = setsData?.pagination

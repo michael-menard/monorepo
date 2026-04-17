@@ -88,6 +88,8 @@ export function EditSetPage() {
     title: '',
     setNumber: '',
     pieceCount: '',
+    theme: '',
+    description: '',
     tags: [] as string[],
     purchaseDate: '',
     purchasePrice: '',
@@ -101,6 +103,8 @@ export function EditSetPage() {
         title: set.title,
         setNumber: set.setNumber ?? '',
         pieceCount: set.pieceCount !== null ? String(set.pieceCount) : '',
+        theme: set.theme ?? '',
+        description: set.description ?? '',
         tags: set.tags ?? [],
         purchaseDate: set.purchaseDate ? set.purchaseDate.split('T')[0] : '',
         purchasePrice: set.purchasePrice ?? '',
@@ -139,6 +143,8 @@ export function EditSetPage() {
         title: formData.title,
         setNumber: formData.setNumber || undefined,
         pieceCount: formData.pieceCount ? Number(formData.pieceCount) : undefined,
+        theme: formData.theme || undefined,
+        description: formData.description || undefined,
         tags: formData.tags,
         notes: formData.notes || undefined,
         purchasePrice: formData.purchasePrice || undefined,
@@ -272,7 +278,36 @@ export function EditSetPage() {
               ) : null}
             </div>
 
-            {/* Tags (themes are now captured as tags) */}
+            {/* Theme */}
+            <div className="space-y-2">
+              <label htmlFor="theme" className="text-sm font-medium">
+                Theme
+              </label>
+              <Input
+                id="theme"
+                placeholder="e.g., Speed Champions"
+                value={formData.theme}
+                onChange={e => updateField('theme', e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label htmlFor="description" className="text-sm font-medium">
+                Description
+              </label>
+              <Textarea
+                id="description"
+                placeholder="Product description..."
+                className="min-h-[80px]"
+                value={formData.description}
+                onChange={e => updateField('description', e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Tags */}
             <div className="space-y-2">
               <label htmlFor="tags" className="text-sm font-medium">
                 Tags

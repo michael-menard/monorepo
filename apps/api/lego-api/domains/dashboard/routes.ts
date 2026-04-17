@@ -83,6 +83,30 @@ dashboard.get('/stats', async c => {
 })
 
 /**
+ * DELETE /dashboard/tags/:tag
+ * Remove a tag globally from all user's MOCs and from tag_theme_mappings
+ */
+dashboard.delete('/tags/:tag', async c => {
+  const userId = c.get('userId')
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  const tag = decodeURIComponent(c.req.param('tag'))
+  if (!tag) {
+    return c.json({ error: 'VALIDATION_ERROR', message: 'tag parameter required' }, 400)
+  }
+
+  try {
+    const updatedCount = await dashboardRepo.deleteTagGlobally(userId, tag)
+    return c.json({ ok: true, updatedCount })
+  } catch (error) {
+    logger.error('Failed to delete tag globally', error, { tag })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
  * GET /dashboard/tags
  * Returns all distinct tags from the user's MOCs with their theme mapping and MOC count
  */

@@ -100,6 +100,7 @@ export const SERVERLESS_ENDPOINTS = {
   DASHBOARD: {
     STATS: '/dashboard/stats',
     TAGS: '/dashboard/tags',
+    TAG: '/dashboard/tags/{tag}',
     THEMES: '/dashboard/themes',
     THEME: '/dashboard/themes/{name}',
     TAG_THEMES: '/dashboard/tag-themes',

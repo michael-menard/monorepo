@@ -306,7 +306,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     !!set.purchaseDate ||
     total !== null
 
-  const hasTags = set.tags.length > 0
+  const hasTags = (set.tags?.length ?? 0) > 0
   const hasNotes = !!set.notes
 
   return (
@@ -391,6 +391,14 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
               <CardDescription>Core information about this set</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Description */}
+              {set.description ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Description</p>
+                  <p className="text-sm mt-1">{set.description}</p>
+                </div>
+              ) : null}
+
               {/* Set number & piece count */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -409,13 +417,74 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                 </div>
               </div>
 
-              {/* Tags (replaces theme) */}
+              {/* Dimensions */}
+              {set.dimensions ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {set.dimensions.height ? (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">H: </span>
+                        {set.dimensions.height.inches != null
+                          ? `${set.dimensions.height.inches}"`
+                          : set.dimensions.height.cm != null
+                            ? `${set.dimensions.height.cm} cm`
+                            : '—'}
+                      </div>
+                    ) : null}
+                    {set.dimensions.width ? (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">W: </span>
+                        {set.dimensions.width.inches != null
+                          ? `${set.dimensions.width.inches}"`
+                          : set.dimensions.width.cm != null
+                            ? `${set.dimensions.width.cm} cm`
+                            : '—'}
+                      </div>
+                    ) : null}
+                    {set.dimensions.depth ? (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">D: </span>
+                        {set.dimensions.depth.inches != null
+                          ? `${set.dimensions.depth.inches}"`
+                          : set.dimensions.depth.cm != null
+                            ? `${set.dimensions.depth.cm} cm`
+                            : '—'}
+                      </div>
+                    ) : null}
+                  </div>
+                  {set.dimensions.studsWidth ||
+                  set.dimensions.studsDepth ||
+                  set.dimensions.studsHeight ? (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Studs:{' '}
+                      {[
+                        set.dimensions.studsWidth && `${set.dimensions.studsWidth}W`,
+                        set.dimensions.studsDepth && `${set.dimensions.studsDepth}D`,
+                        set.dimensions.studsHeight && `${set.dimensions.studsHeight}H`,
+                      ]
+                        .filter(Boolean)
+                        .join(' × ')}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* Theme */}
+              {set.theme ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Theme</p>
+                  <Badge data-testid="set-detail-theme-badge">{set.theme}</Badge>
+                </div>
+              ) : null}
+
+              {/* Tags */}
               {set.tags && set.tags.length > 0 ? (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Tags</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {set.tags.map(tag => (
-                      <Badge key={tag} data-testid="set-detail-theme-badge">
+                      <Badge key={tag} variant="secondary">
                         {tag}
                       </Badge>
                     ))}

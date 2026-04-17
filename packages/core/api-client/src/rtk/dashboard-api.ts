@@ -154,6 +154,19 @@ export const dashboardApi = createApi({
     }),
 
     /**
+     * DELETE /dashboard/tags/:tag — remove a tag globally from all MOCs
+     */
+    deleteTagGlobally: builder.mutation<{ ok: boolean; updatedCount: number }, string>({
+      query: tag => ({
+        url: buildEndpoint(SERVERLESS_ENDPOINTS.DASHBOARD.TAG, {
+          tag: encodeURIComponent(tag),
+        }),
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Dashboard', 'TagThemes'],
+    }),
+
+    /**
      * POST /dashboard/tag-themes — add tag-to-theme mappings (many-to-many)
      */
     addTagThemeMappings: builder.mutation<
@@ -189,6 +202,7 @@ export const {
   useRefreshDashboardMutation,
   useGetUserTagsQuery,
   useGetDistinctThemesQuery,
+  useDeleteTagGloballyMutation,
   useCreateThemeMutation,
   useDeleteThemeMutation,
   useAddTagThemeMappingsMutation,

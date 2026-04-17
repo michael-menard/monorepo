@@ -7,12 +7,12 @@ import type { TagWithThemes } from '@repo/api-client/rtk/dashboard-api'
 interface UnmappedPanelProps {
   tags: TagWithThemes[]
   showAll?: boolean
+  onDeleteTag?: (tag: string) => void
 }
 
-export function UnmappedPanel({ tags, showAll }: UnmappedPanelProps) {
+export function UnmappedPanel({ tags, showAll, onDeleteTag }: UnmappedPanelProps) {
   const [search, setSearch] = useState('')
 
-  // Show all tags (they can belong to multiple themes) or filter to unmapped
   const displayTags = showAll ? tags : tags.filter(t => t.themes.length === 0)
 
   const filtered = search
@@ -20,8 +20,8 @@ export function UnmappedPanel({ tags, showAll }: UnmappedPanelProps) {
     : displayTags
 
   return (
-    <Card className="h-full border-border">
-      <CardHeader className="pb-3 px-4">
+    <Card className="flex flex-col border-border h-full overflow-hidden">
+      <CardHeader className="pb-3 px-4 shrink-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Tag className="h-4 w-4 text-muted-foreground" />
           All Tags
@@ -37,7 +37,7 @@ export function UnmappedPanel({ tags, showAll }: UnmappedPanelProps) {
           />
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 overflow-y-auto max-h-[calc(100vh-280px)]">
+      <CardContent className="px-4 pb-4 overflow-y-auto min-h-0">
         {filtered.length === 0 ? (
           <p className="text-xs text-muted-foreground italic py-2">
             {search ? 'No matching tags' : 'No tags found'}
@@ -50,6 +50,7 @@ export function UnmappedPanel({ tags, showAll }: UnmappedPanelProps) {
                 tag={t.tag}
                 mocCount={t.mocCount}
                 themeCount={t.themes.length}
+                onDelete={onDeleteTag}
               />
             ))}
           </div>

@@ -146,6 +146,15 @@ export const sets = pgTable(
 
     // Physical
     pieceCount: integer('piece_count'),
+    description: text('description'),
+    dimensions: jsonb('dimensions').$type<{
+      height?: { cm?: number | null; inches?: number | null } | null
+      width?: { cm?: number | null; inches?: number | null } | null
+      depth?: { cm?: number | null; inches?: number | null } | null
+      studsWidth?: number | null
+      studsDepth?: number | null
+      studsHeight?: number | null
+    }>(),
     releaseDate: timestamp('release_date'),
     notes: text('notes'),
 
@@ -176,9 +185,7 @@ export const sets = pgTable(
     store: text('store'),
     /** @deprecated Use buildStatus enum instead */
     isBuilt: boolean('is_built').default(false).notNull(),
-    /** @deprecated Use entity_tags instead */
     theme: text('theme'),
-    /** @deprecated Use entity_tags instead */
     tags: text('tags').array().default([]),
     /** @deprecated Use purchaseTax instead */
     tax: decimal('tax', { precision: 10, scale: 2 }),

@@ -102,6 +102,28 @@ export const SetSchema = z.object({
 
   // Physical
   pieceCount: z.number().int().nullable(),
+  theme: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  dimensions: z
+    .object({
+      height: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      width: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      depth: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      studsWidth: z.number().nullable().optional(),
+      studsDepth: z.number().nullable().optional(),
+      studsHeight: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   releaseDate: z.string().datetime().nullable(),
   notes: z.string().nullable(),
 
@@ -149,6 +171,18 @@ export const CreateSetSchema = z.object({
   sourceUrl: z.string().url().optional(),
   storeId: z.string().uuid().optional(),
   pieceCount: z.number().int().positive().optional(),
+  theme: z.string().max(100).optional(),
+  description: z.string().max(5000).optional(),
+  dimensions: z
+    .object({
+      height: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      width: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      depth: z.object({ cm: z.number().optional(), inches: z.number().optional() }).optional(),
+      studsWidth: z.number().optional(),
+      studsDepth: z.number().optional(),
+      studsHeight: z.number().optional(),
+    })
+    .optional(),
   releaseDate: z.string().datetime().optional(),
   notes: z.string().max(5000).optional(),
   condition: ConditionSchema.optional(),

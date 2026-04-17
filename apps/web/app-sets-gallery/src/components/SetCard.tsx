@@ -55,9 +55,12 @@ const getBuildStatusVariant = (
 }
 
 export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGalleryCardProps) {
-  const primaryImage = set.images[0]
+  const primaryImage = set.images?.[0]
   const imageSrc =
-    primaryImage?.thumbnailUrl ?? primaryImage?.imageUrl ?? '/images/placeholder-lego.png'
+    primaryImage?.thumbnailUrl ??
+    primaryImage?.imageUrl ??
+    set.imageUrl ??
+    '/images/placeholder-lego.png'
 
   const subtitle = set.setNumber ? `Set #${set.setNumber}` : undefined
 
