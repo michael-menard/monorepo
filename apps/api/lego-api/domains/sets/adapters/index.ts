@@ -8,5 +8,6 @@ export {
   createSetRepository,
   createSetImageRepository,
   createStoreRepository,
+  createPartsLookup,
 } from './repositories.js'
 export { createImageStorage, generateSetImageKey, generateSetThumbnailKey } from './storage.js'

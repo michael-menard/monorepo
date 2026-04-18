@@ -7,6 +7,7 @@ import {
   createSetImageRepository,
   createStoreRepository,
   createImageStorage,
+  createPartsLookup,
 } from './adapters/index.js'
 import {
   CreateSetInputSchema,
@@ -29,6 +30,8 @@ const setRepo = createSetRepository(db, schema)
 const setImageRepo = createSetImageRepository(db, schema)
 const storeRepo = createStoreRepository(db, schema)
 const imageStorage = createImageStorage()
+
+const partsLookup = createPartsLookup(db, schema)
 
 const setsService = createSetsService({
   setRepo,
@@ -157,6 +160,32 @@ sets.get('/:id', async c => {
     ...result.data.set,
     images: result.data.images,
   })
+})
+
+/**
+ * GET /:id/parts - Get parts lists for a set (via linked MOC)
+ */
+sets.get('/:id/parts', async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('id')
+
+  // Verify ownership
+  const setResult = await setsService.getSet(userId, setId)
+  if (!setResult.ok) {
+    const status =
+      setResult.error === 'NOT_FOUND' ? 404 : setResult.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: setResult.error }, status)
+  }
+
+  const partsResult = await partsLookup.findPartsForSet(setId)
+  if (!partsResult.ok) {
+    if (partsResult.error === 'NO_MOC') {
+      return c.json({ partsLists: [] })
+    }
+    return c.json({ error: partsResult.error }, 404)
+  }
+
+  return c.json(partsResult.data)
 })
 
 /**

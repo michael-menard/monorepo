@@ -11,6 +11,7 @@ import {
   SetSchema,
   SetImageSchema,
   ReorderResponseSchema,
+  SetPartsResponseSchema,
   type SetListResponse,
   type Set,
   type SetImage,
@@ -22,6 +23,7 @@ import {
   type PurchaseInput,
   type UpdateBuildStatus,
   type Store,
+  type SetPartsResponse,
 } from '../schemas/sets'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -251,6 +253,16 @@ export const setsApi = createApi({
     }),
 
     /**
+     * GET /api/sets/:id/parts — parts lists from linked MOC
+     */
+    getSetParts: builder.query<SetPartsResponse, string>({
+      query: id => `/sets/${id}/parts`,
+      transformResponse: (response: unknown) => SetPartsResponseSchema.parse(response),
+      providesTags: (_result, _error, id) => [{ type: 'Set' as const, id: `${id}-parts` }],
+      ...getServerlessCacheConfig('long'),
+    }),
+
+    /**
      * GET /api/sets/stores
      */
     getStores: builder.query<Store[], void>({
@@ -274,5 +286,6 @@ export const {
   usePresignSetImageMutation,
   useRegisterSetImageMutation,
   useDeleteSetImageMutation,
+  useGetSetPartsQuery,
   useGetStoresQuery,
 } = setsApi
