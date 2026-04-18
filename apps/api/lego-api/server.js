@@ -8,6 +8,7 @@ import sets from './domains/sets/routes.js'
 import wishlist from './domains/wishlist/routes.js'
 import instructions from './domains/instructions/routes.js'
 import partsLists from './domains/parts-lists/routes.js'
+import minifigs from './domains/minifigs/routes.js'
 import config, { adminConfig } from './domains/config/routes.js'
 const app = new Hono()
 // Global middleware
@@ -21,6 +22,7 @@ app.route('/sets', sets)
 app.route('/wishlist', wishlist)
 app.route('/instructions', instructions)
 app.route('/parts-lists', partsLists)
+app.route('/minifigs', minifigs)
 app.route('/config', config)
 app.route('/admin', adminConfig)
 // Root endpoint

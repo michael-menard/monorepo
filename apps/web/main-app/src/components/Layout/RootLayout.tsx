@@ -9,7 +9,7 @@ import {
   AppTabsList,
   AppTabsTrigger,
 } from '@repo/app-component-library'
-import { LayoutDashboard, BookOpen, Package, Lightbulb } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Package, PersonStanding, Lightbulb } from 'lucide-react'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
 import { Header } from './Header'
@@ -27,6 +27,7 @@ const mainNavItems = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { id: 'instructions', label: 'Instructions', href: '/instructions', icon: BookOpen },
   { id: 'sets', label: 'Sets', href: '/sets', icon: Package },
+  { id: 'minifigs', label: 'Minifigs', href: '/minifigs', icon: PersonStanding },
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
 ]
 

@@ -42,6 +42,7 @@ import adminUsers from './domains/admin/routes.js'
 import inspiration from './domains/inspiration/routes.js'
 import monitor from './domains/monitor/routes.js'
 import dashboard from './domains/dashboard/routes.js'
+import minifigs from './domains/minifigs/routes.js'
 import scraper from './domains/scraper/routes.js'
 
 const app = new Hono()
@@ -110,6 +111,7 @@ app.route('/mocs', mocs)
 app.route('/inspiration', inspiration)
 app.route('/monitor', monitor)
 app.route('/dashboard', dashboard)
+app.route('/minifigs', minifigs)
 app.route('/scraper', scraper)
 
 // Root endpoint

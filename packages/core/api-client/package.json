@@ -32,6 +32,10 @@
       "import": "./src/rtk/sets-api.ts",
       "types": "./src/rtk/sets-api.ts"
     },
+    "./rtk/minifigs-api": {
+      "import": "./src/rtk/minifigs-api.ts",
+      "types": "./src/rtk/minifigs-api.ts"
+    },
     "./schemas/wishlist": {
       "import": "./src/schemas/wishlist.ts",
       "types": "./src/schemas/wishlist.ts"
@@ -55,6 +59,10 @@
     "./schemas/sets": {
       "import": "./src/schemas/sets.ts",
       "types": "./src/schemas/sets.ts"
+    },
+    "./schemas/minifigs": {
+      "import": "./src/schemas/minifigs.ts",
+      "types": "./src/schemas/minifigs.ts"
     },
     "./schemas/feature-flags": {
       "import": "./src/schemas/feature-flags.ts",

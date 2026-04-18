@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Package,
+  PersonStanding,
   Lightbulb,
   User,
   Settings,
@@ -20,6 +21,7 @@ const mainNavItems = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { id: 'instructions', label: 'Instructions', href: '/instructions', icon: BookOpen },
   { id: 'sets', label: 'Sets', href: '/sets', icon: Package },
+  { id: 'minifigs', label: 'Minifigs', href: '/minifigs', icon: PersonStanding },
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
 ]
 
