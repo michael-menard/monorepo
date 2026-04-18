@@ -146,6 +146,8 @@ export const sets = pgTable(
 
     // Physical
     pieceCount: integer('piece_count'),
+    brand: text('brand'),
+    year: integer('year'),
     description: text('description'),
     dimensions: jsonb('dimensions').$type<{
       height?: { cm?: number | null; inches?: number | null } | null
@@ -156,6 +158,7 @@ export const sets = pgTable(
       studsHeight?: number | null
     }>(),
     releaseDate: timestamp('release_date'),
+    retireDate: timestamp('retire_date'),
     notes: text('notes'),
 
     // Condition (primarily for owned)

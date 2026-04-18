@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
   LayoutDashboard,
-  Heart,
   BookOpen,
   Package,
   Lightbulb,
@@ -19,7 +18,6 @@ import { selectSidebarOpen, setSidebarOpen } from '@/store/slices/globalUISlice'
 
 const mainNavItems = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { id: 'wishlist', label: 'Wishlist', href: '/wishlist', icon: Heart },
   { id: 'instructions', label: 'Instructions', href: '/instructions', icon: BookOpen },
   { id: 'sets', label: 'Sets', href: '/sets', icon: Package },
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },

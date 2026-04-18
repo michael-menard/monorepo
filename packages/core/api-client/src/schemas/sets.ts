@@ -102,6 +102,8 @@ export const SetSchema = z.object({
 
   // Physical
   pieceCount: z.number().int().nullable(),
+  brand: z.string().nullable().optional(),
+  year: z.number().int().nullable().optional(),
   theme: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   dimensions: z
@@ -125,6 +127,7 @@ export const SetSchema = z.object({
     .nullable()
     .optional(),
   releaseDate: z.string().datetime().nullable(),
+  retireDate: z.string().datetime().nullable().optional(),
   notes: z.string().nullable(),
 
   // Condition
@@ -172,6 +175,7 @@ export const CreateSetSchema = z.object({
   storeId: z.string().uuid().optional(),
   pieceCount: z.number().int().positive().optional(),
   theme: z.string().max(100).optional(),
+  brand: z.string().max(100).optional(),
   description: z.string().max(5000).optional(),
   dimensions: z
     .object({
@@ -183,7 +187,9 @@ export const CreateSetSchema = z.object({
       studsHeight: z.number().optional(),
     })
     .optional(),
+  year: z.number().int().min(1900).max(2100).optional(),
   releaseDate: z.string().datetime().optional(),
+  retireDate: z.string().datetime().optional(),
   notes: z.string().max(5000).optional(),
   condition: ConditionSchema.optional(),
   completeness: CompletenessSchema.optional(),
@@ -200,9 +206,12 @@ export const CreateSetSchema = z.object({
 
 export type CreateSetInput = z.infer<typeof CreateSetSchema>
 
-export const UpdateSetSchema = CreateSetSchema.partial().extend({
-  sortOrder: z.number().int().min(0).optional(),
-})
+export const UpdateSetSchema = CreateSetSchema.partial()
+  .omit({ status: true })
+  .extend({
+    status: SetStatusSchema.optional(),
+    sortOrder: z.number().int().min(0).optional(),
+  })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetSchema>
 
@@ -326,3 +335,32 @@ export const PresignResponseSchema = z.object({
 })
 
 export type PresignResponse = z.infer<typeof PresignResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Parts (from linked MOC)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SetPartSchema = z.object({
+  id: z.string().uuid(),
+  partId: z.string(),
+  partName: z.string(),
+  quantity: z.number().int(),
+  color: z.string(),
+})
+
+export type SetPart = z.infer<typeof SetPartSchema>
+
+export const SetPartsListSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  totalPartsCount: z.string().nullable(),
+  parts: z.array(SetPartSchema),
+})
+
+export type SetPartsList = z.infer<typeof SetPartsListSchema>
+
+export const SetPartsResponseSchema = z.object({
+  partsLists: z.array(SetPartsListSchema),
+})
+
+export type SetPartsResponse = z.infer<typeof SetPartsResponseSchema>

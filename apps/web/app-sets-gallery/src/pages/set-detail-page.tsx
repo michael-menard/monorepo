@@ -24,7 +24,11 @@ import {
   useToast,
 } from '@repo/app-component-library'
 import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@repo/gallery'
-import { useGetSetByIdQuery, useDeleteSetMutation } from '@repo/api-client/rtk/sets-api'
+import {
+  useGetSetByIdQuery,
+  useDeleteSetMutation,
+  useGetSetPartsQuery,
+} from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
 
 const SetDetailPagePropsSchema = z.object({
@@ -207,6 +211,10 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     isError,
     error,
   } = useGetSetByIdQuery(setId, {
+    skip: !setId,
+  })
+
+  const { data: partsData, isLoading: partsLoading } = useGetSetPartsQuery(setId, {
     skip: !setId,
   })
 
@@ -470,11 +478,38 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                 </div>
               ) : null}
 
+              {/* Brand */}
+              {set.brand ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Brand</p>
+                  <p className="text-sm mt-1" data-testid="set-detail-brand">
+                    {set.brand}
+                  </p>
+                </div>
+              ) : null}
+
               {/* Theme */}
               {set.theme ? (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Theme</p>
                   <Badge data-testid="set-detail-theme-badge">{set.theme}</Badge>
+                </div>
+              ) : null}
+
+              {/* Year & availability */}
+              {set.year || set.releaseDate || set.retireDate ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Released</p>
+                  <p className="text-sm mt-1" data-testid="set-detail-year">
+                    {set.year ?? '—'}
+                    {set.releaseDate || set.retireDate ? (
+                      <span className="text-muted-foreground ml-1">
+                        ({formatDate(set.releaseDate) ?? '?'}
+                        {' to '}
+                        {formatDate(set.retireDate) ?? '?'})
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               ) : null}
 
@@ -613,6 +648,69 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
           ) : null}
         </div>
       </div>
+
+      {/* Parts List */}
+      {partsLoading ? (
+        <Card data-testid="set-detail-parts-skeleton">
+          <CardHeader>
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : partsData && partsData.partsLists.length > 0 ? (
+        <Card data-testid="set-detail-parts-card">
+          <CardHeader>
+            <CardTitle>Parts</CardTitle>
+            <CardDescription>
+              {partsData.partsLists
+                .reduce((sum, list) => {
+                  const count = list.totalPartsCount ? parseInt(list.totalPartsCount, 10) : 0
+                  return sum + count
+                }, 0)
+                .toLocaleString()}{' '}
+              total parts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {partsData.partsLists.map(list => (
+              <div key={list.id}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="pb-2 pr-4 font-medium">Part</th>
+                        <th className="pb-2 pr-4 font-medium">Color</th>
+                        <th className="pb-2 font-medium text-right">Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.parts.map(part => (
+                        <tr key={part.id} className="border-b last:border-0">
+                          <td className="py-1.5 pr-4">
+                            <span className="font-medium">{part.partName}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {part.partId}
+                            </span>
+                          </td>
+                          <td className="py-1.5 pr-4">{part.color}</td>
+                          <td className="py-1.5 text-right font-mono">{part.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Lightbox */}
       <GalleryLightbox

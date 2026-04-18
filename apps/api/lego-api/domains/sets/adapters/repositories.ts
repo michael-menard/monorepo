@@ -199,10 +199,13 @@ export function createSetRepository(db: NodePgDatabase<Schema>, schema: Schema):
           sourceUrl: data.sourceUrl ?? null,
           storeId: data.storeId ?? null,
           pieceCount: data.pieceCount ?? null,
+          brand: data.brand ?? null,
+          year: data.year ?? null,
           theme: data.theme ?? null,
           description: data.description ?? null,
           dimensions: data.dimensions ?? null,
           releaseDate: data.releaseDate ?? null,
+          retireDate: data.retireDate ?? null,
           notes: data.notes ?? null,
           condition: data.condition ?? null,
           completeness: data.completeness ?? null,
@@ -445,10 +448,13 @@ function mapRowToSet(row: Record<string, unknown>, storeName: string | null): Se
     storeId: r.storeId ?? null,
     storeName: storeName ?? null,
     pieceCount: r.pieceCount ?? null,
+    brand: r.brand ?? null,
+    year: r.year ?? null,
     theme: r.theme ?? null,
     description: r.description ?? null,
     dimensions: r.dimensions ?? null,
     releaseDate: r.releaseDate ?? null,
+    retireDate: r.retireDate ?? null,
     notes: r.notes ?? null,
     condition: (r.condition as Set['condition']) ?? null,
     completeness: (r.completeness as Set['completeness']) ?? null,
@@ -483,5 +489,90 @@ function mapRowToSetImage(row: {
     thumbnailUrl: row.thumbnailUrl,
     position: row.position,
     createdAt: row.createdAt,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Parts Lookup (bridges sets → moc_instructions → moc_parts)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SetPartsListData {
+  id: string
+  title: string
+  totalPartsCount: string | null
+  parts: Array<{
+    id: string
+    partId: string
+    partName: string
+    quantity: number
+    color: string
+  }>
+}
+
+export function createPartsLookup(db: NodePgDatabase<Schema>, schema: Schema) {
+  const { sets, mocInstructions, mocPartsLists, mocParts } = schema
+
+  return {
+    async findPartsForSet(
+      setId: string,
+    ): Promise<Result<{ partsLists: SetPartsListData[] }, 'NOT_FOUND' | 'NO_MOC'>> {
+      // 1. Get the set to find its setNumber
+      const setRow = await db
+        .select({ setNumber: sets.setNumber })
+        .from(sets)
+        .where(eq(sets.id, setId))
+        .limit(1)
+
+      if (!setRow[0] || !setRow[0].setNumber) {
+        return err('NOT_FOUND')
+      }
+
+      // 2. Find matching moc_instructions by mocId
+      const mocRow = await db
+        .select({ id: mocInstructions.id })
+        .from(mocInstructions)
+        .where(eq(mocInstructions.mocId, setRow[0].setNumber))
+        .limit(1)
+
+      if (!mocRow[0]) {
+        return err('NO_MOC')
+      }
+
+      const mocId = mocRow[0].id
+
+      // 3. Get parts lists with their parts
+      const lists = await db
+        .select({
+          id: mocPartsLists.id,
+          title: mocPartsLists.title,
+          totalPartsCount: mocPartsLists.totalPartsCount,
+        })
+        .from(mocPartsLists)
+        .where(eq(mocPartsLists.mocId, mocId))
+
+      const result: SetPartsListData[] = []
+
+      for (const list of lists) {
+        const parts = await db
+          .select({
+            id: mocParts.id,
+            partId: mocParts.partId,
+            partName: mocParts.partName,
+            quantity: mocParts.quantity,
+            color: mocParts.color,
+          })
+          .from(mocParts)
+          .where(eq(mocParts.partsListId, list.id))
+
+        result.push({
+          id: list.id,
+          title: list.title,
+          totalPartsCount: list.totalPartsCount,
+          parts,
+        })
+      }
+
+      return ok({ partsLists: result })
+    },
   }
 }

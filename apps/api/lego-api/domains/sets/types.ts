@@ -85,7 +85,10 @@ export const SetSchema = z.object({
 
   // Physical
   pieceCount: z.number().int().nullable(),
+  brand: z.string().nullable(),
+  year: z.number().int().nullable(),
   releaseDate: z.date().nullable(),
+  retireDate: z.date().nullable(),
   notes: z.string().nullable(),
 
   // Condition
@@ -132,6 +135,7 @@ export const CreateSetInputSchema = z.object({
   storeId: z.string().uuid().optional(),
   pieceCount: z.number().int().positive().optional(),
   theme: z.string().max(100).optional(),
+  brand: z.string().max(100).optional(),
   description: z.string().max(5000).optional(),
   dimensions: z
     .object({
@@ -143,7 +147,9 @@ export const CreateSetInputSchema = z.object({
       studsHeight: z.number().optional(),
     })
     .optional(),
+  year: z.number().int().min(1900).max(2100).optional(),
   releaseDate: z.coerce.date().optional(),
+  retireDate: z.coerce.date().optional(),
   notes: z.string().max(5000).optional(),
   condition: ConditionSchema.optional(),
   completeness: CompletenessSchema.optional(),
@@ -172,6 +178,7 @@ export const UpdateSetInputSchema = z.object({
   storeId: z.string().uuid().nullable().optional(),
   pieceCount: z.number().int().positive().nullable().optional(),
   theme: z.string().max(100).nullable().optional(),
+  brand: z.string().max(100).nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
   dimensions: z
     .object({
@@ -193,7 +200,9 @@ export const UpdateSetInputSchema = z.object({
     })
     .nullable()
     .optional(),
+  year: z.number().int().min(1900).max(2100).nullable().optional(),
   releaseDate: z.coerce.date().nullable().optional(),
+  retireDate: z.coerce.date().nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   condition: ConditionSchema.nullable().optional(),
   completeness: CompletenessSchema.nullable().optional(),

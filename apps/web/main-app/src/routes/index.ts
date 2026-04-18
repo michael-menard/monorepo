@@ -12,13 +12,13 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
-import { WishlistModule } from './modules/WishlistModule'
+import { SetsModule } from './modules/SetsModule'
 import { DashboardModule } from './modules/DashboardModule'
 import { InspirationModule } from './modules/InspirationModule'
 import { InstructionsModule } from './modules/InstructionsModule'
 import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
 import { InstructionsDetail } from './modules/InstructionsDetailModule'
-import { SetsGalleryModule } from './modules/SetsGalleryModule'
+// SetsGalleryModule no longer used directly — SetsModule renders it via sub-tabs
 import { AdminModule } from './admin/AdminModule'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
@@ -90,15 +90,12 @@ const newPasswordRoute = createRoute({
   component: NewPasswordPage,
 })
 
+// Legacy /wishlist route — redirect to unified /sets tab
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/wishlist',
-  component: WishlistModule,
-  beforeLoad: ({ context }: { context: RouteContext }) => {
-    // Check authentication
-    if (!context.auth?.isAuthenticated) {
-      throw redirect({ to: '/login' })
-    }
+  beforeLoad: () => {
+    throw redirect({ to: '/sets' })
   },
 })
 
@@ -159,11 +156,11 @@ const dashboardRoute = createRoute({
   },
 })
 
-// Sets routes - handled by the App Sets Gallery module
+// Sets routes - unified module with Collection / Wishlist sub-tabs
 const setsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sets',
-  component: SetsGalleryModule,
+  component: SetsModule,
   pendingComponent: LoadingPage,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
