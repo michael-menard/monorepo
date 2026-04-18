@@ -1,0 +1,3 @@
+-- SQL statements to alter the schema of the identified tables and move them to the workflow schema
+-- Example:
+-- ALTER TABLE old_schema.table_name SET SCHEMA workflow;

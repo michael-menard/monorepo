@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent template for the KB HTTP server.
+
+  Replace the placeholders below and install with:
+
+    cp apps/api/knowledge-base/launchd/com.user.kb-http-server.plist \
+       ~/Library/LaunchAgents/com.user.kb-http-server.plist
+    # edit ~/Library/LaunchAgents/com.user.kb-http-server.plist to fill in paths / env
+    launchctl load ~/Library/LaunchAgents/com.user.kb-http-server.plist
+    launchctl start com.user.kb-http-server
+
+  Tail logs with:
+    tail -f /tmp/kb-http-server.out.log /tmp/kb-http-server.err.log
+
+  Stop with:
+    launchctl stop  com.user.kb-http-server
+    launchctl unload ~/Library/LaunchAgents/com.user.kb-http-server.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.kb-http-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/REPLACE/WITH/ABSOLUTE/PATH/TO/pnpm</string>
+        <string>--filter</string>
+        <string>@repo/knowledge-base</string>
+        <string>http:start</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/REPLACE/WITH/ABSOLUTE/PATH/TO/monorepo</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+
+        <!-- DB / embeddings -->
+        <key>DATABASE_URL</key>
+        <string>postgres://user:pass@localhost:5432/knowledge_base</string>
+        <key>EMBEDDING_PROVIDER</key>
+        <string>ollama</string>
+
+        <!-- Cognito -->
+        <key>COGNITO_USER_POOL_ID</key>
+        <string>us-east-1_REPLACE</string>
+        <key>COGNITO_CLIENT_ID</key>
+        <string>REPLACE_WITH_KB_ADMIN_CLIENT_ID</string>
+        <key>COGNITO_REGION</key>
+        <string>us-east-1</string>
+        <key>ALLOWED_COGNITO_SUB</key>
+        <string>REPLACE_WITH_YOUR_COGNITO_SUB</string>
+
+        <!-- Network bind: use your tailscale0 IP, NEVER 0.0.0.0 -->
+        <key>KB_MCP_HTTP_BIND</key>
+        <string>100.x.y.z</string>
+        <key>KB_MCP_HTTP_PORT</key>
+        <string>4000</string>
+
+        <key>LOG_LEVEL</key>
+        <string>info</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/kb-http-server.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/kb-http-server.err.log</string>
+</dict>
+</plist>
