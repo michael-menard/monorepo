@@ -694,6 +694,7 @@ export function MainPage({ className }: MainPageProps) {
                         title={album.title}
                         description={album.description}
                         coverImageUrl={album.coverImage?.thumbnailUrl || album.coverImage?.imageUrl}
+                        previewImages={album.previewImages}
                         itemCount={album.itemCount}
                         childAlbumCount={album.childAlbumCount}
                         tags={album.tags}

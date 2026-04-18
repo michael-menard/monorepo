@@ -18,6 +18,7 @@ import { InspirationModule } from './modules/InspirationModule'
 import { InstructionsModule } from './modules/InstructionsModule'
 import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
 import { InstructionsDetail } from './modules/InstructionsDetailModule'
+import { MinifigsModule, MinifigsDetailModule } from './modules/MinifigsModule'
 // SetsGalleryModule no longer used directly — SetsModule renders it via sub-tabs
 import { AdminModule } from './admin/AdminModule'
 import { RootLayout } from '@/components/Layout/RootLayout'
@@ -161,6 +162,31 @@ const setsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sets',
   component: SetsModule,
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+// Minifigs route - Minifig Collection module
+const minifigsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/minifigs',
+  component: MinifigsModule,
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+const minifigDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/minifigs/$minifigId',
+  component: MinifigsDetailModule,
   pendingComponent: LoadingPage,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
@@ -384,6 +410,8 @@ const routeTree = rootRoute.addChildren([
   dashboardMocsUploadRoute, // Story 3.1.9: Alias route
   dashboardRoute,
   setsRoute,
+  minifigsRoute,
+  minifigDetailRoute,
   // Stub routes for planned features
   galleryRoute,
   galleryDetailRoute,

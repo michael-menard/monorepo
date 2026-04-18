@@ -90,8 +90,17 @@ export type Album = z.infer<typeof AlbumSchema>
 /**
  * Album with cover image and item counts.
  */
+export const AlbumPreviewImageSchema = z.object({
+  id: z.string().uuid(),
+  imageUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+})
+
+export type AlbumPreviewImage = z.infer<typeof AlbumPreviewImageSchema>
+
 export const AlbumWithMetadataSchema = AlbumSchema.extend({
   coverImage: InspirationSchema.nullable().optional(),
+  previewImages: z.array(AlbumPreviewImageSchema).optional(),
   itemCount: z.number().int().optional(),
   childAlbumCount: z.number().int().optional(),
 })

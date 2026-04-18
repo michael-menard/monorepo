@@ -1,16 +1,28 @@
 /**
  * AlbumCard Component
  *
- * Displays an album with a stacked card effect showing its cover image.
- * Shows item count and supports selection mode.
+ * Displays an album with an OrganicPile of preview images stacked together.
+ * On hover, ExpandableStack shows a grid preview of the album contents.
+ * Falls back to a folder icon for empty albums.
  *
  * REPA-009: Refactored to use GalleryCard
+ * INSP-028: Replaced CSS faux-stack with OrganicPile + ExpandableStack
  */
 
 import { z } from 'zod'
-import { cn } from '@repo/app-component-library'
+import { OrganicPile, ExpandableStack } from '@repo/app-component-library'
 import { GalleryCard } from '@repo/gallery'
 import { Folder, MoreVertical, FolderOpen } from 'lucide-react'
+import { MiniInspirationCard } from './MiniInspirationCard'
+
+/**
+ * Preview image shape matching the API response
+ */
+const PreviewImageSchema = z.object({
+  id: z.string().uuid(),
+  imageUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+})
 
 /**
  * Album card props schema (data fields only)
@@ -24,6 +36,8 @@ const AlbumCardPropsSchema = z.object({
   description: z.string().nullable().optional(),
   /** Cover image URL */
   coverImageUrl: z.string().nullable().optional(),
+  /** Preview images for stack display (first 4 items) */
+  previewImages: z.array(PreviewImageSchema).optional(),
   /** Number of items in the album */
   itemCount: z.number().int().optional(),
   /** Number of child albums */
@@ -49,22 +63,19 @@ export type AlbumCardProps = z.infer<typeof AlbumCardPropsSchema> & {
  * AlbumCard Component
  *
  * Displays an album in a card format with:
- * - Stacked card effect (visual depth)
- * - Cover image or folder icon
+ * - OrganicPile of preview images (replacing CSS faux-stack)
+ * - ExpandableStack hover preview grid
+ * - Folder icon fallback for empty albums
  * - Item count badge
  * - Selection checkbox in selection mode (via GalleryCard)
  * - More menu for additional actions
- *
- * @remarks
- * REPA-009: Refactored to use GalleryCard from @repo/gallery.
- * Eliminates ~100 LOC of duplicate code (image container, checkbox overlay, hover gradient).
- * Stacked card effect remains outside GalleryCard to preserve visual design.
  */
 export function AlbumCard({
   id,
   title,
   description,
   coverImageUrl,
+  previewImages = [],
   itemCount = 0,
   childAlbumCount = 0,
   tags,
@@ -79,33 +90,84 @@ export function AlbumCard({
     onMenuClick?.(event)
   }
 
-  return (
-    <div className="relative">
-      {/* Stacked cards effect (behind the main card) - PRESERVED */}
-      <div
-        className={cn(
-          'absolute inset-0 transform translate-x-1 translate-y-1 rounded-lg bg-muted/50',
-          'transition-transform duration-200',
-        )}
-      />
-      <div
-        className={cn(
-          'absolute inset-0 transform translate-x-0.5 translate-y-0.5 rounded-lg bg-muted/70',
-          'transition-transform duration-200',
-        )}
-      />
+  const hasPreviewImages = previewImages.length > 0
 
-      {/* Main card using GalleryCard */}
+  // Map preview images to StackItem format
+  const stackItems = previewImages.map(img => ({ id: img.id }))
+
+  // Build a lookup for rendering
+  const imageById = new Map(previewImages.map(img => [img.id, img]))
+
+  const renderStackItem = (item: { id: string }) => {
+    const img = imageById.get(item.id)
+    if (!img) return null
+    return <MiniInspirationCard imageUrl={img.thumbnailUrl ?? img.imageUrl} alt={title} />
+  }
+
+  const hoverOverlay = (
+    <>
+      {/* Top actions */}
+      <div className="absolute top-2 right-2 flex gap-1 z-20">
+        <button
+          onClick={handleMenuClick}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+          aria-label="More options"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Item count badge */}
+      <div className="absolute bottom-2 right-2 z-20">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-black/60 text-white">
+          {itemCount} item{itemCount !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Bottom info */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 z-20">
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 text-white/80" />
+          <h3 className="text-white font-medium text-sm truncate flex-1">{title}</h3>
+        </div>
+
+        {description ? (
+          <p className="text-white/70 text-xs mt-1 line-clamp-2">{description}</p>
+        ) : null}
+
+        {/* Sub-info row */}
+        <div className="flex items-center gap-2 mt-2">
+          {childAlbumCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-white/80">
+              <Folder className="h-3 w-3" />
+              {childAlbumCount} sub-album{childAlbumCount !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Tags (show first 2) */}
+        {tags && tags.length > 0 ? (
+          <div className="flex items-center gap-1 mt-2">
+            {tags.slice(0, 2).map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-white/20 text-white"
+              >
+                {tag}
+              </span>
+            ))}
+            {tags.length > 2 && <span className="text-xs text-white/70">+{tags.length - 2}</span>}
+          </div>
+        ) : null}
+      </div>
+    </>
+  )
+
+  // Empty album — use GalleryCard with folder icon fallback
+  if (!hasPreviewImages) {
+    return (
       <GalleryCard
-        image={
-          coverImageUrl
-            ? {
-                src: coverImageUrl,
-                alt: title,
-                aspectRatio: '1/1',
-              }
-            : undefined
-        }
+        image={coverImageUrl ? { src: coverImageUrl, alt: title, aspectRatio: '1/1' } : undefined}
         imageFallback={
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
             <Folder className="h-16 w-16 text-primary/40" />
@@ -118,68 +180,60 @@ export function AlbumCard({
         onSelect={onSelect}
         showContent={false}
         data-testid={`album-card-${id}`}
-        hoverOverlay={
-          <>
-            {/* Top actions */}
-            <div className="absolute top-2 right-2 flex gap-1 z-20">
-              <button
-                onClick={handleMenuClick}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-                aria-label="More options"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Item count badge */}
-            <div className="absolute bottom-2 right-2 z-20">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-black/60 text-white">
-                {itemCount} item{itemCount !== 1 ? 's' : ''}
-              </span>
-            </div>
-
-            {/* Bottom info */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 z-20">
-              <div className="flex items-center gap-2">
-                <FolderOpen className="h-4 w-4 text-white/80" />
-                <h3 className="text-white font-medium text-sm truncate flex-1">{title}</h3>
-              </div>
-
-              {description ? (
-                <p className="text-white/70 text-xs mt-1 line-clamp-2">{description}</p>
-              ) : null}
-
-              {/* Sub-info row */}
-              <div className="flex items-center gap-2 mt-2">
-                {childAlbumCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-xs text-white/80">
-                    <Folder className="h-3 w-3" />
-                    {childAlbumCount} sub-album{childAlbumCount !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-
-              {/* Tags (show first 2) */}
-              {tags && tags.length > 0 ? (
-                <div className="flex items-center gap-1 mt-2">
-                  {tags.slice(0, 2).map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-white/20 text-white"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {tags.length > 2 && (
-                    <span className="text-xs text-white/70">+{tags.length - 2}</span>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </>
-        }
+        hoverOverlay={hoverOverlay}
       />
-    </div>
+    )
+  }
+
+  // Album with preview images — OrganicPile wrapped in ExpandableStack
+  return (
+    <ExpandableStack
+      items={stackItems}
+      renderPreviewItem={renderStackItem}
+      onItemClick={onClick ? () => onClick() : undefined}
+      hoverDelayMs={300}
+      columns={2}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') onClick?.()
+        }}
+        className="relative cursor-pointer"
+        data-testid={`album-card-${id}`}
+      >
+        <OrganicPile
+          items={stackItems}
+          renderItem={renderStackItem}
+          maxVisible={4}
+          className="aspect-square"
+        />
+
+        {/* Selection overlay */}
+        {selectionMode && onSelect ? (
+          <div className="absolute top-2 left-2 z-30">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={e => {
+                e.stopPropagation()
+                onSelect(!isSelected)
+              }}
+              onClick={e => e.stopPropagation()}
+              className="h-5 w-5 rounded border-2 border-white/80 bg-black/30"
+              aria-label={`Select album ${title}`}
+            />
+          </div>
+        ) : null}
+
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity rounded-lg">
+          {hoverOverlay}
+        </div>
+      </div>
+    </ExpandableStack>
   )
 }
 

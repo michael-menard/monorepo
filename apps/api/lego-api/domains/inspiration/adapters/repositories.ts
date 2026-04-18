@@ -380,6 +380,22 @@ export function createAlbumRepository(
         .from(schema.albumParents)
         .where(eq(schema.albumParents.parentAlbumId, id))
 
+      // Get first 4 preview images
+      const previewRows = await db
+        .select({
+          id: schema.inspirations.id,
+          imageUrl: schema.inspirations.imageUrl,
+          thumbnailUrl: schema.inspirations.thumbnailUrl,
+        })
+        .from(schema.inspirationAlbumItems)
+        .innerJoin(
+          schema.inspirations,
+          eq(schema.inspirationAlbumItems.inspirationId, schema.inspirations.id),
+        )
+        .where(eq(schema.inspirationAlbumItems.albumId, id))
+        .orderBy(asc(schema.inspirationAlbumItems.sortOrder))
+        .limit(4)
+
       return ok({
         id: albumResult.id,
         userId: albumResult.userId,
@@ -391,6 +407,11 @@ export function createAlbumRepository(
         createdAt: albumResult.createdAt,
         updatedAt: albumResult.updatedAt,
         coverImage,
+        previewImages: previewRows.map(r => ({
+          id: r.id,
+          imageUrl: r.imageUrl,
+          thumbnailUrl: r.thumbnailUrl,
+        })),
         itemCount: itemCountResult?.count || 0,
         childAlbumCount: childCountResult?.count || 0,
       })
@@ -483,6 +504,22 @@ export function createAlbumRepository(
             .from(schema.albumParents)
             .where(eq(schema.albumParents.parentAlbumId, album.id))
 
+          // Get first 4 preview images
+          const previewRows = await db
+            .select({
+              id: schema.inspirations.id,
+              imageUrl: schema.inspirations.imageUrl,
+              thumbnailUrl: schema.inspirations.thumbnailUrl,
+            })
+            .from(schema.inspirationAlbumItems)
+            .innerJoin(
+              schema.inspirations,
+              eq(schema.inspirationAlbumItems.inspirationId, schema.inspirations.id),
+            )
+            .where(eq(schema.inspirationAlbumItems.albumId, album.id))
+            .orderBy(asc(schema.inspirationAlbumItems.sortOrder))
+            .limit(4)
+
           return {
             id: album.id,
             userId: album.userId,
@@ -495,6 +532,11 @@ export function createAlbumRepository(
             updatedAt: album.updatedAt,
             itemCount: itemCountResult?.count || 0,
             childAlbumCount: childCountResult?.count || 0,
+            previewImages: previewRows.map(r => ({
+              id: r.id,
+              imageUrl: r.imageUrl,
+              thumbnailUrl: r.thumbnailUrl,
+            })),
           }
         }),
       )
