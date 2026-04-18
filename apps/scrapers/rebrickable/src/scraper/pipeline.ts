@@ -507,7 +507,7 @@ export async function runPipeline(
                 quantity: p.quantity,
               }))
 
-              await writeToGallery(galleryDb as any, syncUserId, {
+              const galleryMocId = await writeToGallery(galleryDb as any, syncUserId, {
                 mocNumber: item.mocNumber,
                 title: detail.title,
                 author: detail.author || item.author,
@@ -522,6 +522,25 @@ export async function runPipeline(
                 fileType: fileType,
                 parts: galleryParts.length > 0 ? galleryParts : undefined,
               })
+
+              // Upload scraped images to MinIO and write to gallery DB
+              if (galleryMocId && images.length > 0) {
+                for (const img of images) {
+                  const imgFileName = basename(img.filePath)
+                  await uploadImage(img.filePath, item.mocNumber, imgFileName, config.bucket)
+                }
+                const minioImages = await listImages(item.mocNumber, config.bucket)
+                if (minioImages.length > 0) {
+                  const imageData = minioImages.map(key => ({
+                    s3Key: key,
+                    fileName: key.split('/').pop() || 'unknown',
+                  }))
+                  await writeImagesToGallery(galleryDb as any, galleryMocId, imageData)
+                  logger.info(
+                    `[pipeline] MOC-${item.mocNumber}: uploaded ${images.length} images to gallery`,
+                  )
+                }
+              }
             }
 
             await checkpoint.save(item.mocNumber, 'completed')
