@@ -53,6 +53,8 @@ export function MainPage({ className }: MainPageProps) {
             stats={{
               totalMocs: data?.stats.totalMocs ?? 0,
               wishlistCount: data?.stats.wishlistCount ?? 0,
+              ownedSetsCount: data?.stats.ownedSetsCount ?? 0,
+              ownedMinifigsCount: data?.stats.ownedMinifigsCount ?? 0,
               themeCount: data?.stats.themeCount ?? 0,
               lastUpdated: data?.stats.lastUpdated ?? new Date().toISOString(),
             }}
