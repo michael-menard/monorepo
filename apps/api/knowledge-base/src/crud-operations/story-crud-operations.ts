@@ -702,7 +702,9 @@ export async function kb_get_next_story(
   const validated = KbGetNextStoryInputSchema.parse(input)
 
   // Build state filter
-  const validStates = validated.include_backlog ? ['ready', 'backlog'] : ['ready']
+  const validStates = validated.include_backlog
+    ? (['ready', 'backlog'] as const)
+    : (['ready'] as const)
 
   // Build base conditions — epic filter mapped to feature since epic is not on workflow.stories
   const conditions: SQL<unknown>[] = [
@@ -792,9 +794,7 @@ export async function kb_get_next_story(
     const targetStories = await deps.db
       .select({ storyId: stories.storyId })
       .from(stories)
-      .where(
-        and(inArray(stories.storyId, dependsOnIds), inArray(stories.state, ['completed', 'UAT'])),
-      )
+      .where(and(inArray(stories.storyId, dependsOnIds), eq(stories.state, 'completed')))
 
     completedTargets = new Set(targetStories.map(t => t.storyId))
   }

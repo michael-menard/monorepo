@@ -30,6 +30,40 @@ import { knowledgeEntries, vector } from './kb.js'
 
 const workflow = pgSchema('workflow')
 
+// ── Enums (workflow schema) ───────────────────────────────────────────────────
+
+export const planStatusEnum = workflow.enum('plan_status_enum', [
+  'draft',
+  'active',
+  'accepted',
+  'stories-created',
+  'in-progress',
+  'implemented',
+  'superseded',
+  'archived',
+  'blocked',
+])
+
+export const priorityEnum = workflow.enum('priority_enum', ['P1', 'P2', 'P3', 'P4', 'P5'])
+
+export const storyStateEnum = workflow.enum('story_state_enum', [
+  'backlog',
+  'created',
+  'elab',
+  'ready',
+  'in_progress',
+  'needs_code_review',
+  'ready_for_qa',
+  'in_qa',
+  'completed',
+  'failed_code_review',
+  'failed_qa',
+  'blocked',
+  'cancelled',
+])
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+
 export const stories = workflow.table('stories', {
   storyId: text('story_id').primaryKey(),
   feature: text('feature').notNull(),
@@ -42,8 +76,8 @@ export const stories = workflow.table('stories', {
   startedAt: timestamp('started_at', { withTimezone: true }),
   completedAt: timestamp('completed_at', { withTimezone: true }),
   fileHash: text('file_hash'),
-  state: text('state'),
-  priority: text('priority'),
+  state: storyStateEnum('state'),
+  priority: priorityEnum('priority'),
   // tags: free-form and surface tags (surfaces encoded as 'surface:backend' etc.)
   tags: text('tags').array(),
   // experiment_variant: future A/B experiment tracking
@@ -164,8 +198,8 @@ export const plans = workflow.table('plans', {
   supersedesPlanSlug: text('supersedes_plan_slug'), // FK to plans.plan_slug enforced in migration SQL
   embedding: vector('embedding', { dimensions: 1536 }),
   sections: jsonb('sections'),
-  status: text('status'),
-  priority: text('priority'),
+  status: planStatusEnum('status'),
+  priority: priorityEnum('priority'),
   sortOrder: integer('sort_order'),
 })
 
