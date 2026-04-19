@@ -69,6 +69,8 @@ dashboard.get('/stats', async c => {
       stats: {
         totalMocs: stats.totalMocs,
         wishlistCount: stats.wishlistCount,
+        ownedSetsCount: stats.ownedSetsCount,
+        ownedMinifigsCount: stats.ownedMinifigsCount,
         themeCount: stats.themeCount,
         lastUpdated: stats.lastUpdated ?? new Date().toISOString(),
       },
