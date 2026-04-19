@@ -13,6 +13,15 @@ const dryRun = process.argv.includes('--dry-run')
 const isWishlist = process.argv.includes('--wishlist')
 
 // ─────────────────────────────────────────────────────────────────────────
+// Rate limiting — random delay to avoid Cloudflare detection
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Random delay between min and max milliseconds (default 5-8s) */
+function randomDelay(min = 5000, max = 8000): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Image download/upload
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -167,7 +176,7 @@ async function scrapeCatalogList(page: Page, catalogUrl: string): Promise<Catalo
     await page.waitForSelector('a[href*="catalogitem.page?M="], a[href*="catalogitem.page?S="]', {
       timeout: 60000,
     })
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(randomDelay())
 
     const pageResult = await page.evaluate(() => {
       const items: Array<{
@@ -280,7 +289,7 @@ async function scrapeMinifigDetail(
     console.log('  Waiting for page (click Cloudflare if prompted)...')
     await page.waitForSelector('img.pciImageMain', { timeout: 60000 })
   }
-  await page.waitForTimeout(1500)
+  await page.waitForTimeout(randomDelay())
 
   const basicInfo = await page.evaluate(() => {
     const mainImg = document.querySelector('img.pciImageMain')
@@ -350,8 +359,7 @@ async function scrapeMinifigDetail(
     console.log(`  Scraping price guides for ${parts.length} parts...`)
     for (const part of parts) {
       part.priceGuide = await scrapePriceGuide(page, 'P', part.partNumber, part.colorId)
-      // Small delay between requests to avoid rate limiting
-      await page.waitForTimeout(1500)
+      await page.waitForTimeout(randomDelay())
     }
   }
 
@@ -384,7 +392,7 @@ async function scrapePartsInventory(
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await waitForAgeGate(page)
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(randomDelay())
 
     const parts = await page.evaluate(() => {
       const results: Array<{
@@ -607,7 +615,7 @@ async function scrapePartsInventory(
       console.log(`  Expanding minifig sub-inventory: ${minifigNum}`)
       const subParts = await scrapePartsInventory(page, minifigNum, 'M')
       parts.push(...subParts)
-      await page.waitForTimeout(1000)
+      await page.waitForTimeout(randomDelay())
     }
 
     console.log(`  Parts total: ${parts.length} (after expansion)`)
@@ -671,7 +679,7 @@ async function scrapePriceGuide(
     await priceGuideTab.click({ timeout: 5000 }).catch(() => {
       // Tab might already be selected or page might use #T=P hash
     })
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(randomDelay())
 
     // Extract raw text from the DOM — no function declarations inside evaluate to avoid tsx __name issue
     // The BrickLink price guide layout: a table with "Last 6 Months Sales:" header,
@@ -779,7 +787,7 @@ async function scrapeAppearsInSets(page: Page, minifigNumber: string): Promise<A
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await waitForAgeGate(page)
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(randomDelay())
 
     const sets = await page.evaluate(() => {
       const results: Array<{ setNumber: string; name: string; imageUrl?: string }> = []
@@ -1049,9 +1057,9 @@ async function main() {
       for (let i = 0; i < items.length; i++) {
         await processAndSaveMinifig(page, items[i].itemNumber, items[i].itemType, i, items.length)
 
-        // Brief pause between requests to be polite
+        // Random delay between items to avoid rate limiting
         if (i < items.length - 1) {
-          await page.waitForTimeout(1000)
+          await page.waitForTimeout(randomDelay())
         }
       }
 
