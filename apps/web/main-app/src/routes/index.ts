@@ -21,6 +21,7 @@ import { InstructionsDetail } from './modules/InstructionsDetailModule'
 import { MinifigsModule, MinifigsDetailModule } from './modules/MinifigsModule'
 // SetsGalleryModule no longer used directly — SetsModule renders it via sub-tabs
 import { UserProfileModule } from './modules/UserProfileModule'
+import { DashboardSettingsModule } from './modules/DashboardSettingsModule'
 import { AdminModule } from './admin/AdminModule'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
@@ -276,7 +277,7 @@ const profileRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
-  component: UserProfileModule,
+  component: DashboardSettingsModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })
