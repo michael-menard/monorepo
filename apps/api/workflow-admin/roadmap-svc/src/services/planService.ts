@@ -358,7 +358,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
         from workflow.plan_story_links psl
         join workflow.stories s on s.story_id = psl.story_id
         where psl.plan_slug = plans.plan_slug
-          and s.state in ('in_progress','in_review','in_qa','uat','needs_code_review')
+          and s.state in ('in_progress','in_qa','needs_code_review','ready_for_qa')
       )`,
       blockedStories: sql<number>`(
         select count(*)::int
@@ -408,7 +408,7 @@ export async function getPlans(params: PlanListParams): Promise<PlanListResult> 
           join workflow.stories s on s.story_id = psl.story_id
           where psl.plan_slug = plans.plan_slug
             and (s.state is null or s.state not in (
-              'completed','in_progress','in_review','in_qa','uat','needs_code_review','blocked'
+              'completed','in_progress','in_qa','needs_code_review','ready_for_qa','blocked','cancelled'
             ))
           order by s.priority asc nulls last, s.created_at asc
           limit 1
@@ -657,20 +657,18 @@ export async function getStoriesByPlanSlug(slug: string): Promise<PlanStory[]> {
           and h.to_state is not null
           and (
             case h.from_state
-              when 'backlog' then 0 when 'created' then 1 when 'ready' then 2
-              when 'in_progress' then 3 when 'needs_code_review' then 4
-              when 'ready_for_review' then 5 when 'in_review' then 6
-              when 'ready_for_qa' then 7 when 'in_qa' then 8
-              when 'UAT' then 9 when 'completed' then 10
+              when 'backlog' then 0 when 'created' then 1 when 'elab' then 2
+              when 'ready' then 3 when 'in_progress' then 4
+              when 'needs_code_review' then 5 when 'ready_for_qa' then 6
+              when 'in_qa' then 7 when 'completed' then 8
               else 0
             end
           ) > (
             case h.to_state
-              when 'backlog' then 0 when 'created' then 1 when 'ready' then 2
-              when 'in_progress' then 3 when 'needs_code_review' then 4
-              when 'ready_for_review' then 5 when 'in_review' then 6
-              when 'ready_for_qa' then 7 when 'in_qa' then 8
-              when 'UAT' then 9 when 'completed' then 10
+              when 'backlog' then 0 when 'created' then 1 when 'elab' then 2
+              when 'ready' then 3 when 'in_progress' then 4
+              when 'needs_code_review' then 5 when 'ready_for_qa' then 6
+              when 'in_qa' then 7 when 'completed' then 8
               else 0
             end
           )
@@ -1101,7 +1099,7 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
       .filter(
         d =>
           (d.dependencyType === 'depends_on' || d.dependencyType === 'blocked_by') &&
-          !['completed', 'UAT', 'cancelled'].includes(d.dependsOnState ?? ''),
+          !['completed', 'cancelled'].includes(d.dependsOnState ?? ''),
       )
       .map(d => d.dependsOnId),
     // blocksIds: stories that are waiting on this story to complete
@@ -1182,7 +1180,7 @@ export async function getStoryById(storyId: string): Promise<StoryDetails | null
 
 // --- Impact Analysis & Retire ---
 
-const TERMINAL_STATES = ['cancelled', 'completed', 'UAT']
+const TERMINAL_STATES = ['cancelled', 'completed']
 
 export const PlanImpactSchema = z.object({
   exclusiveStories: z.array(
@@ -1365,7 +1363,7 @@ export async function executePlanRetire(
           .where(
             and(
               inArray(stories.storyId, exclusiveIds),
-              sql`coalesce(${stories.state}, 'backlog') NOT IN ('cancelled', 'completed', 'UAT')`,
+              sql`coalesce(${stories.state}, 'backlog') NOT IN ('cancelled', 'completed')`,
             ),
           )
 
@@ -1392,6 +1390,71 @@ export async function executePlanRetire(
   })
 
   return { success: true }
+}
+
+export async function executePlanComplete(
+  slug: string,
+): Promise<{ success: boolean; error?: string; completedStories: number }> {
+  const planRows = await database
+    .select({ id: plans.id })
+    .from(plans)
+    .where(and(eq(plans.planSlug, slug), isNull(plans.deletedAt)))
+    .limit(1)
+
+  if (planRows.length === 0) {
+    return { success: false, error: 'Plan not found', completedStories: 0 }
+  }
+
+  let completedCount = 0
+
+  await database.transaction(async tx => {
+    const now = new Date()
+
+    // 1. Mark the plan as implemented
+    await tx
+      .update(plans)
+      .set({ status: 'implemented', updatedAt: now })
+      .where(eq(plans.planSlug, slug))
+
+    // 2. Find all stories linked to this plan that are not already terminal
+    const linkedStoryIds = await tx
+      .select({ storyId: planStoryLinks.storyId })
+      .from(planStoryLinks)
+      .where(eq(planStoryLinks.planSlug, slug))
+
+    const storyIds = linkedStoryIds.map(s => s.storyId)
+
+    if (storyIds.length > 0) {
+      // 3. Complete non-terminal stories
+      const nonTerminal = await tx
+        .select({ storyId: stories.storyId })
+        .from(stories)
+        .where(
+          and(
+            inArray(stories.storyId, storyIds),
+            sql`coalesce(${stories.state}, 'backlog') NOT IN ('cancelled', 'completed')`,
+          ),
+        )
+
+      const toComplete = nonTerminal.map(s => s.storyId)
+      completedCount = toComplete.length
+
+      if (toComplete.length > 0) {
+        await tx
+          .update(stories)
+          .set({ state: 'completed', completedAt: now, updatedAt: now })
+          .where(inArray(stories.storyId, toComplete))
+
+        // 4. Mark active worktrees as completed
+        await tx
+          .update(worktrees)
+          .set({ status: 'completed', updatedAt: now })
+          .where(and(inArray(worktrees.storyId, toComplete), eq(worktrees.status, 'active')))
+      }
+    }
+  })
+
+  return { success: true, completedStories: completedCount }
 }
 
 export async function reorderPlanStories(slug: string, items: ReorderItem[]): Promise<void> {
