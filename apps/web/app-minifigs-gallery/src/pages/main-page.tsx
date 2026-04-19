@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { PersonStanding } from 'lucide-react'
-import { Badge, Skeleton, cn } from '@repo/app-component-library'
+import { PersonStanding, Trash2, X } from 'lucide-react'
+import { Badge, Skeleton, Button, cn } from '@repo/app-component-library'
 import { GalleryCard } from '@repo/gallery'
-import { useGetMinifigsQuery } from '@repo/api-client/rtk/minifigs-api'
+import {
+  useGetMinifigsQuery,
+  useBulkDeleteMinifigsMutation,
+} from '@repo/api-client/rtk/minifigs-api'
 import type { MinifigInstance } from '@repo/api-client/schemas/minifigs'
 
 function formatCondition(condition: string | null | undefined): string {
@@ -18,69 +21,112 @@ function formatCondition(condition: string | null | undefined): string {
   }
 }
 
-function MinifigCard({ minifig, onClick }: { minifig: MinifigInstance; onClick: () => void }) {
+function MinifigCard({
+  minifig,
+  onClick,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: {
+  minifig: MinifigInstance
+  onClick: () => void
+  selectionMode: boolean
+  selected: boolean
+  onToggleSelect: () => void
+}) {
   const imageUrl = minifig.imageUrl || minifig.variant?.imageUrl
   const statusLabel =
     minifig.status === 'owned' ? 'Owned' : minifig.status === 'wanted' ? 'Wanted' : 'Cataloged'
 
   return (
-    <GalleryCard
-      image={
-        imageUrl ? { src: imageUrl, alt: minifig.displayName, aspectRatio: 'auto' } : undefined
-      }
-      imageFallback={
-        <div className="flex h-full w-full items-center justify-center bg-muted">
-          <PersonStanding className="h-8 w-8 text-muted-foreground" />
-        </div>
-      }
-      contentDrawer={true}
-      title={minifig.displayName}
-      subtitle={minifig.variant?.legoNumber ?? undefined}
-      onClick={onClick}
-      data-testid={`minifig-card-${minifig.id}`}
-      metadata={
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            <Badge
-              variant={
-                minifig.status === 'owned'
-                  ? 'default'
-                  : minifig.status === 'wanted'
-                    ? 'outline'
-                    : 'secondary'
-              }
-              className="text-xs"
-            >
-              {statusLabel}
-            </Badge>
-            {minifig.condition ? (
-              <Badge variant="outline" className="text-xs">
-                {formatCondition(minifig.condition)}
+    <div className="relative">
+      {/* Selection checkbox overlay */}
+      {selectionMode && (
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation()
+            onToggleSelect()
+          }}
+          className={cn(
+            'absolute top-1 left-1 z-10 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors',
+            selected
+              ? 'bg-primary border-primary text-primary-foreground'
+              : 'bg-background/80 border-muted-foreground/50 hover:border-primary',
+          )}
+        >
+          {selected && (
+            <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 6l3 3 5-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </button>
+      )}
+      <GalleryCard
+        image={
+          imageUrl ? { src: imageUrl, alt: minifig.displayName, aspectRatio: 'auto' } : undefined
+        }
+        imageFallback={
+          <div className="flex h-full w-full items-center justify-center bg-muted">
+            <PersonStanding className="h-8 w-8 text-muted-foreground" />
+          </div>
+        }
+        contentDrawer={true}
+        title={minifig.displayName}
+        subtitle={minifig.variant?.legoNumber ?? undefined}
+        onClick={selectionMode ? onToggleSelect : onClick}
+        data-testid={`minifig-card-${minifig.id}`}
+        className={cn(selected && 'ring-2 ring-primary ring-offset-1')}
+        metadata={
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <Badge
+                variant={
+                  minifig.status === 'owned'
+                    ? 'default'
+                    : minifig.status === 'wanted'
+                      ? 'outline'
+                      : 'secondary'
+                }
+                className="text-xs"
+              >
+                {statusLabel}
               </Badge>
+              {minifig.condition ? (
+                <Badge variant="outline" className="text-xs">
+                  {formatCondition(minifig.condition)}
+                </Badge>
+              ) : null}
+            </div>
+            {minifig.variant?.theme ? (
+              <span className="text-xs text-white/70">{minifig.variant.theme}</span>
+            ) : null}
+            {minifig.variant?.year ? (
+              <span className="text-xs text-white/60">{minifig.variant.year}</span>
+            ) : null}
+            {minifig.tags && minifig.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {minifig.tags.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="text-xs border-white/20 text-white/80"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             ) : null}
           </div>
-          {minifig.variant?.theme ? (
-            <span className="text-xs text-white/70">{minifig.variant.theme}</span>
-          ) : null}
-          {minifig.variant?.year ? (
-            <span className="text-xs text-white/60">{minifig.variant.year}</span>
-          ) : null}
-          {minifig.tags && minifig.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {minifig.tags.map(tag => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="text-xs border-white/20 text-white/80"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      }
-    />
+        }
+      />
+    </div>
   )
 }
 
@@ -89,6 +135,36 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [bulkDeleteMinifigs, { isLoading: isDeleting }] = useBulkDeleteMinifigsMutation()
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+  }, [])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    await bulkDeleteMinifigs({ ids })
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+    setPage(1)
+    setAllItems([])
+  }, [selectedIds, bulkDeleteMinifigs])
 
   const { data, isLoading, isFetching } = useGetMinifigsQuery(
     {
@@ -148,6 +224,11 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Minifig Collection</h1>
+        {!selectionMode && allItems.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setSelectionMode(true)}>
+            Select
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -192,6 +273,21 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectionMode && (
+        <div className="sticky top-0 z-20 flex items-center gap-3 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 backdrop-blur-sm">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
+            <Trash2 className="h-4 w-4 mr-1" />
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
+            <X className="h-4 w-4 mr-1" />
+            Cancel
+          </Button>
+        </div>
+      )}
+
       {/* Grid */}
       {isLoading && allItems.length === 0 ? (
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
@@ -209,14 +305,13 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
           </p>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
             {allItems.map(minifig => (
-              <div
-                key={minifig.id}
-                className="min-w-0 overflow-hidden"
-                onClick={() => onNavigate?.(`/minifigs/${minifig.id}`)}
-              >
+              <div key={minifig.id} className="min-w-0 overflow-hidden">
                 <MinifigCard
                   minifig={minifig}
                   onClick={() => onNavigate?.(`/minifigs/${minifig.id}`)}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(minifig.id)}
+                  onToggleSelect={() => toggleSelect(minifig.id)}
                 />
               </div>
             ))}

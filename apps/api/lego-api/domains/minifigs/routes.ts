@@ -229,6 +229,27 @@ minifigs.patch('/:id', async c => {
 })
 
 /**
+ * POST /bulk-delete - Delete multiple minifig instances
+ */
+minifigs.post('/bulk-delete', async c => {
+  const userId = c.get('userId')
+  const body = await c.req.json()
+  const ids: string[] = body?.ids
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json({ error: 'VALIDATION_ERROR', message: 'ids must be a non-empty array' }, 400)
+  }
+
+  const results = await Promise.allSettled(
+    ids.map(id => minifigsService.deleteInstance(userId, id)),
+  )
+
+  const deleted = results.filter(r => r.status === 'fulfilled' && r.value.ok).length
+
+  return c.json({ deleted, total: ids.length })
+})
+
+/**
  * DELETE /:id - Delete minifig instance
  */
 minifigs.delete('/:id', async c => {

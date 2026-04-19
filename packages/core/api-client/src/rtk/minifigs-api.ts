@@ -110,6 +110,18 @@ export const minifigsApi = createApi({
     }),
 
     /**
+     * POST /minifigs/bulk-delete
+     */
+    bulkDeleteMinifigs: builder.mutation<{ deleted: number; total: number }, { ids: string[] }>({
+      query: ({ ids }) => ({
+        url: '/minifigs/bulk-delete',
+        method: 'POST',
+        body: { ids },
+      }),
+      invalidatesTags: [{ type: 'MinifigList' }],
+    }),
+
+    /**
      * GET /minifigs/archetypes
      */
     getArchetypes: builder.query<MinifigArchetype[], { search?: string }>({
@@ -150,6 +162,7 @@ export const {
   useUpdateMinifigMutation,
   useUpdateVariantMutation,
   useDeleteMinifigMutation,
+  useBulkDeleteMinifigsMutation,
   useGetArchetypesQuery,
   useGetVariantsQuery,
   useGetVariantByIdQuery,
