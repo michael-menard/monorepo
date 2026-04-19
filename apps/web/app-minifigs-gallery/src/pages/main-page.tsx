@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { PersonStanding, Trash2, X } from 'lucide-react'
-import { Badge, Skeleton, Button, cn } from '@repo/app-component-library'
+import { Badge, Skeleton, Button, ConfirmationDialog, cn } from '@repo/app-component-library'
 import { GalleryCard } from '@repo/gallery'
 import {
   useGetMinifigsQuery,
@@ -134,6 +134,7 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
   const [page, setPage] = useState(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [bulkDeleteMinifigs, { isLoading: isDeleting }] = useBulkDeleteMinifigsMutation()
   const hasSelection = selectedIds.size > 0
 
@@ -156,6 +157,7 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
     const ids = Array.from(selectedIds)
     await bulkDeleteMinifigs({ ids })
     setSelectedIds(new Set())
+    setShowDeleteConfirm(false)
     setPage(1)
     setAllItems([])
   }, [selectedIds, bulkDeleteMinifigs])
@@ -266,9 +268,9 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
       {hasSelection && (
         <div className="sticky top-0 z-20 flex items-center gap-3 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 backdrop-blur-sm">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
-          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
+          <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
             <Trash2 className="h-4 w-4 mr-1" />
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            Delete
           </Button>
           <Button variant="ghost" size="sm" onClick={clearSelection}>
             <X className="h-4 w-4 mr-1" />
@@ -276,6 +278,18 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
           </Button>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete minifigs?"
+        description={`This will permanently delete ${selectedIds.size} minifig${selectedIds.size === 1 ? '' : 's'}. This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        loading={isDeleting}
+        onConfirm={handleBulkDelete}
+      />
 
       {/* Grid */}
       {isLoading && allItems.length === 0 ? (
