@@ -32,4 +32,6 @@ export const {
   mocPartsLists,
   mocParts,
   featureFlags,
+  userProfiles,
+  activityEvents,
 } = schema

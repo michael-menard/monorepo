@@ -32,12 +32,34 @@ export type MinifigSourceType = z.infer<typeof MinifigSourceTypeSchema>
 // Parts JSONB
 // ─────────────────────────────────────────────────────────────────────────
 
+export const PriceGuideStatsSchema = z.object({
+  timesSold: z.number(),
+  totalQty: z.number(),
+  minPrice: z.number(),
+  avgPrice: z.number(),
+  qtyAvgPrice: z.number(),
+  maxPrice: z.number(),
+})
+
+export const PriceGuideSchema = z.object({
+  newSales: PriceGuideStatsSchema.optional(),
+  usedSales: PriceGuideStatsSchema.optional(),
+})
+
+export type PriceGuide = z.infer<typeof PriceGuideSchema>
+
 export const MinifigPartSchema = z.object({
   partNumber: z.string(),
   name: z.string(),
   color: z.string(),
+  colorId: z.number().int().optional(),
   quantity: z.number().int(),
   position: z.string().optional(),
+  imageUrl: z.string().optional(),
+  category: z.string().optional(),
+  bricklinkUrl: z.string().optional(),
+  hasInventory: z.boolean().optional(),
+  priceGuide: PriceGuideSchema.optional(),
 })
 
 export type MinifigPart = z.infer<typeof MinifigPartSchema>
@@ -88,6 +110,8 @@ export const MinifigVariantSchema = z.object({
   weight: z.string().nullable(),
   dimensions: z.string().nullable(),
   partsCount: z.number().int().nullable(),
+  bricklinkUrl: z.string().nullable(),
+  priceGuide: PriceGuideSchema.nullable(),
   parts: z.array(MinifigPartSchema).nullable(),
   appearsInSets: z.array(AppearsInSetSchema).nullable(),
   createdAt: z.date(),

@@ -133,8 +133,11 @@ async function dismissCookiePopup(page: Page) {
 // Catalog list scraping (multi-page)
 // ─────────────────────────────────────────────────────────────────────────
 
+type BricklinkItemType = 'M' | 'S'
+
 interface CatalogListItem {
-  minifigNumber: string
+  itemNumber: string
+  itemType: BricklinkItemType
   name: string
   imageUrl: string
 }
@@ -160,24 +163,35 @@ async function scrapeCatalogList(page: Page, catalogUrl: string): Promise<Catalo
     await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await waitForAgeGate(page)
     console.log('  Waiting for page to load (click Cloudflare/captcha if prompted)...')
-    // Wait for catalog items to appear — BrickLink uses table rows with minifig links
-    await page.waitForSelector('a[href*="catalogitem.page?M="]', { timeout: 60000 })
+    // Wait for catalog items to appear — BrickLink uses table rows with item links (M= for minifigs, S= for sets/CMF)
+    await page.waitForSelector('a[href*="catalogitem.page?M="], a[href*="catalogitem.page?S="]', {
+      timeout: 60000,
+    })
     await page.waitForTimeout(2000)
 
     const pageResult = await page.evaluate(() => {
-      const items: Array<{ minifigNumber: string; name: string; imageUrl: string }> = []
+      const items: Array<{
+        itemNumber: string
+        itemType: 'M' | 'S'
+        name: string
+        imageUrl: string
+      }> = []
 
-      const itemLinks = document.querySelectorAll('a[href*="catalogitem.page?M="]')
+      const itemLinks = document.querySelectorAll(
+        'a[href*="catalogitem.page?M="], a[href*="catalogitem.page?S="]',
+      )
 
       itemLinks.forEach(link => {
         const href = (link as HTMLAnchorElement).href
         const text = (link.textContent || '').trim()
 
-        const match = href.match(/[?&]M=([^&]+)/)
+        // Match both M= (minifigs) and S= (sets/CMF)
+        const match = href.match(/[?&]([MS])=([^&]+)/)
         if (!match) return
 
-        const minifigNumber = match[1]
-        if (items.some(item => item.minifigNumber === minifigNumber)) return
+        const itemType = match[1] as 'M' | 'S'
+        const itemNumber = match[2]
+        if (items.some(item => item.itemNumber === itemNumber)) return
 
         const row = link.closest('tr') || link.closest('div')
         const img = row?.querySelector('img')
@@ -185,7 +199,7 @@ async function scrapeCatalogList(page: Page, catalogUrl: string): Promise<Catalo
 
         if (!imageUrl || imageUrl.includes('printer') || imageUrl.includes('spacer')) return
 
-        items.push({ minifigNumber, name: text, imageUrl })
+        items.push({ itemNumber, itemType, name: text, imageUrl })
       })
 
       // Detect pagination
@@ -203,14 +217,12 @@ async function scrapeCatalogList(page: Page, catalogUrl: string): Promise<Catalo
 
     allItems.push(...pageResult.items)
     totalPages = pageResult.totalPages
-    console.log(
-      `  Found ${pageResult.items.length} minifigs on this page (${allItems.length} total)`,
-    )
+    console.log(`  Found ${pageResult.items.length} items on this page (${allItems.length} total)`)
 
     currentPage++
   }
 
-  console.log(`\nTotal: ${allItems.length} minifigs across ${totalPages} page(s)`)
+  console.log(`\nTotal: ${allItems.length} items across ${totalPages} page(s)`)
   return allItems
 }
 
@@ -218,12 +230,32 @@ async function scrapeCatalogList(page: Page, catalogUrl: string): Promise<Catalo
 // Single minifig detail scraping
 // ─────────────────────────────────────────────────────────────────────────
 
+interface PriceGuideStats {
+  timesSold: number
+  totalQty: number
+  minPrice: number
+  avgPrice: number
+  qtyAvgPrice: number
+  maxPrice: number
+}
+
+interface PriceGuide {
+  newSales?: PriceGuideStats
+  usedSales?: PriceGuideStats
+}
+
 interface MinifigPart {
   partNumber: string
   name: string
   color: string
+  colorId?: number
   quantity: number
   position?: string
+  imageUrl?: string
+  category?: string
+  bricklinkUrl?: string
+  hasInventory?: boolean
+  priceGuide?: PriceGuide
 }
 
 interface AppearsInSet {
@@ -232,9 +264,13 @@ interface AppearsInSet {
   imageUrl?: string
 }
 
-async function scrapeMinifigDetail(page: Page, minifigNumber: string) {
+async function scrapeMinifigDetail(
+  page: Page,
+  itemNumber: string,
+  itemType: BricklinkItemType = 'M',
+) {
   // 1. Main detail page
-  const url = `https://www.bricklink.com/v2/catalog/catalogitem.page?M=${minifigNumber}#T=S`
+  const url = `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}#T=S`
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await waitForAgeGate(page)
 
@@ -303,14 +339,30 @@ async function scrapeMinifigDetail(page: Page, minifigNumber: string) {
   })
 
   // 2. Parts inventory page
-  const parts = await scrapePartsInventory(page, minifigNumber)
+  const parts = await scrapePartsInventory(page, itemNumber, itemType)
 
-  // 3. Appears in sets page
-  const appearsInSets = await scrapeAppearsInSets(page, minifigNumber)
+  // 2b. Price guide for each part
+  if (parts.length > 0) {
+    console.log(`  Scraping price guides for ${parts.length} parts...`)
+    for (const part of parts) {
+      part.priceGuide = await scrapePriceGuide(page, 'P', part.partNumber, part.colorId)
+      // Small delay between requests to avoid rate limiting
+      await page.waitForTimeout(1500)
+    }
+  }
+
+  // 3. Item price guide
+  console.log(`  Scraping ${itemType === 'S' ? 'CMF set' : 'minifig'} price guide...`)
+  const priceGuide = await scrapePriceGuide(page, itemType, itemNumber)
+
+  // 4. Appears in sets page (skip for CMF sets — they ARE the source item)
+  const appearsInSets = itemType === 'S' ? [] : await scrapeAppearsInSets(page, itemNumber)
 
   return {
     ...basicInfo,
+    bricklinkUrl: `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}`,
     parts,
+    priceGuide,
     appearsInSets,
   }
 }
@@ -319,8 +371,12 @@ async function scrapeMinifigDetail(page: Page, minifigNumber: string) {
  * Scrape the parts inventory page for a minifig.
  * URL: https://www.bricklink.com/catalogItemInv.asp?M=<number>
  */
-async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<MinifigPart[]> {
-  const url = `https://www.bricklink.com/catalogItemInv.asp?M=${minifigNumber}`
+async function scrapePartsInventory(
+  page: Page,
+  itemNumber: string,
+  itemType: BricklinkItemType = 'M',
+): Promise<MinifigPart[]> {
+  const url = `https://www.bricklink.com/catalogItemInv.asp?${itemType}=${itemNumber}`
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await waitForAgeGate(page)
@@ -331,12 +387,15 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
         partNumber: string
         name: string
         color: string
+        colorId?: number
         quantity: number
         position?: string
+        imageUrl?: string
+        category?: string
+        bricklinkUrl?: string
+        hasInventory?: boolean
       }> = []
 
-      // BrickLink inventory tables have rows with part images, numbers, colors, and quantities
-      // The table structure: each part row has cells for image, qty, color, part number, description
       const rows = document.querySelectorAll('table.ta tr')
 
       let currentCategory = ''
@@ -344,7 +403,7 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
       for (const row of rows) {
         const cells = row.querySelectorAll('td')
 
-        // Category header rows (e.g., "Minifig Upper Body", "Minifig Lower Body")
+        // Category header rows (e.g., "Parts:", "Minifig Upper Body")
         if (cells.length === 1) {
           const headerText = cells[0].textContent?.trim() || ''
           if (
@@ -357,7 +416,7 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
           continue
         }
 
-        // Part rows typically have 5+ cells
+        // Part rows typically have 4-5 cells
         if (cells.length < 4) continue
 
         // Look for a link to a part page
@@ -371,9 +430,92 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
         if (!partMatch) continue
 
         const partNumber = partMatch[1]
-        const name = partLink.textContent?.trim() || ''
 
-        // Find quantity — usually the first cell with just a number
+        // Extract color ID from part link (e.g., idColor=11)
+        const colorIdMatch = href.match(/[?&]idColor=(\d+)/)
+        const colorId = colorIdMatch ? parseInt(colorIdMatch[1], 10) : undefined
+
+        // Build canonical BrickLink URL for this part
+        const bricklinkUrl = `https://www.bricklink.com/v2/catalog/catalogitem.page?P=${partNumber}${colorId ? `&idColor=${colorId}` : ''}`
+
+        // Extract image URL from the row's img element
+        const img = row.querySelector('img[src*="img.bricklink.com"]') as HTMLImageElement | null
+        const imageUrl = img?.src || undefined
+
+        // Extract full part name from the description cell's bold text
+        // The description cell contains: "<b>Color PartName</b><br><font>Catalog: Parts: Category</font>"
+        const descCell = cells.length >= 4 ? cells[3] : null
+        const boldEl = descCell?.querySelector('b')
+        const fullName = boldEl?.textContent?.trim() || partLink.textContent?.trim() || ''
+
+        // Extract category from the catalog breadcrumb in the description cell
+        // Pattern: Catalog: Parts: <category link text>
+        let category: string | undefined
+        const categoryLinks = descCell?.querySelectorAll('font.fv a') || []
+        if (categoryLinks.length > 0) {
+          // Last link in the breadcrumb is the most specific category
+          const lastCatLink = categoryLinks[categoryLinks.length - 1]
+          category = lastCatLink?.textContent?.trim() || undefined
+        }
+
+        // Check if this part has a sub-inventory link "(Inv)"
+        const hasInventory = !!row.querySelector('a[href*="catalogItemInv.asp"]')
+
+        // Extract color name from the beginning of the full name
+        // The full name format is "ColorName PartDescription" (e.g., "Black Minifigure, Hair...")
+        let color = ''
+        if (colorIdMatch) {
+          // Color is the prefix before the part description in the bold text
+          // Also check for a direct color link
+          const colorLink = row.querySelector('a[href*="colorID="]')
+          if (colorLink) {
+            color = colorLink.textContent?.trim() || ''
+          }
+        }
+        // If no color link found, try to infer from the full name
+        if (!color && fullName) {
+          // Known BrickLink color names that appear as prefixes
+          const colorPrefixes = [
+            'Black',
+            'White',
+            'Red',
+            'Blue',
+            'Yellow',
+            'Green',
+            'Brown',
+            'Tan',
+            'Dark Tan',
+            'Dark Red',
+            'Dark Blue',
+            'Dark Green',
+            'Dark Bluish Gray',
+            'Dark Brown',
+            'Light Bluish Gray',
+            'Light Gray',
+            'Medium Blue',
+            'Medium Lavender',
+            'Medium Nougat',
+            'Nougat',
+            'Orange',
+            'Pearl Gold',
+            'Reddish Brown',
+            'Sand Blue',
+            'Sand Green',
+            'Trans-Clear',
+            'Trans-Light Blue',
+            'Trans-Neon Green',
+            'Trans-Red',
+            'Trans-Yellow',
+          ]
+          for (const prefix of colorPrefixes) {
+            if (fullName.startsWith(prefix + ' ')) {
+              color = prefix
+              break
+            }
+          }
+        }
+
+        // Find quantity — the cell with just a number
         let quantity = 1
         for (const cell of cells) {
           const text = cell.textContent?.trim() || ''
@@ -383,35 +525,40 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
           }
         }
 
-        // Find color — look for a link to color catalog
-        let color = ''
-        const colorLink = row.querySelector('a[href*="colorID="]')
-        if (colorLink) {
-          color = colorLink.textContent?.trim() || ''
-        }
-
-        // Map category to position
+        // Map category to body position
         let position: string | undefined
-        const catLower = currentCategory.toLowerCase()
+        const catLower = (category || currentCategory).toLowerCase()
         if (catLower.includes('headgear') || catLower.includes('hair')) position = 'headgear'
         else if (catLower.includes('head') || catLower.includes('face')) position = 'head'
-        else if (catLower.includes('upper body') || catLower.includes('torso')) position = 'torso'
+        else if (catLower.includes('torso') || catLower.includes('upper body')) position = 'torso'
         else if (
-          catLower.includes('lower body') ||
           catLower.includes('leg') ||
-          catLower.includes('hip')
+          catLower.includes('hip') ||
+          catLower.includes('lower body')
         )
           position = 'legs'
         else if (
           catLower.includes('accessory') ||
           catLower.includes('weapon') ||
-          catLower.includes('tool')
+          catLower.includes('tool') ||
+          catLower.includes('cape') ||
+          catLower.includes('neck')
         )
           position = 'accessory'
-        else if (catLower.includes('cape') || catLower.includes('neck')) position = 'accessory'
 
-        if (partNumber && name) {
-          results.push({ partNumber, name, color, quantity, position })
+        if (partNumber && fullName) {
+          results.push({
+            partNumber,
+            name: fullName,
+            color,
+            colorId,
+            quantity,
+            position,
+            imageUrl,
+            category,
+            bricklinkUrl,
+            hasInventory,
+          })
         }
       }
 
@@ -419,10 +566,162 @@ async function scrapePartsInventory(page: Page, minifigNumber: string): Promise<
     })
 
     console.log(`  Parts: ${parts.length} found`)
+    for (const part of parts) {
+      console.log(
+        `    ${part.partNumber} — ${part.color || '?'} (colorId:${part.colorId ?? '?'}) qty:${part.quantity} [${part.category || part.position || '?'}]`,
+      )
+    }
     return parts
   } catch (error) {
     console.warn(`  Could not scrape parts inventory: ${error}`)
     return []
+  }
+}
+
+function parsePriceGuideText(text: string): PriceGuideStats | undefined {
+  const timesSoldMatch = text.match(/Times Sold:\s*([\d,]+)/)
+  const totalQtyMatch = text.match(/Total Qty:\s*([\d,]+)/)
+  if (!timesSoldMatch && !totalQtyMatch) return undefined
+
+  const parseNum = (s: string) => parseInt(s.replace(/,/g, ''), 10)
+  const parseUsd = (s: string) => {
+    const m = s.match(/US\s*\$\s*([\d,]+\.?\d*)/)
+    return m ? parseFloat(m[1].replace(',', '')) : 0
+  }
+
+  const minPriceMatch = text.match(/Min Price:\s*(US\s*\$[\d,.]+)/)
+  const avgPriceMatch = text.match(/Avg Price:\s*(US\s*\$[\d,.]+)/)
+  const qtyAvgPriceMatch = text.match(/Qty Avg Price:\s*(US\s*\$[\d,.]+)/)
+  const maxPriceMatch = text.match(/Max Price:\s*(US\s*\$[\d,.]+)/)
+
+  return {
+    timesSold: timesSoldMatch ? parseNum(timesSoldMatch[1]) : 0,
+    totalQty: totalQtyMatch ? parseNum(totalQtyMatch[1]) : 0,
+    minPrice: minPriceMatch ? parseUsd(minPriceMatch[1]) : 0,
+    avgPrice: avgPriceMatch ? parseUsd(avgPriceMatch[1]) : 0,
+    qtyAvgPrice: qtyAvgPriceMatch ? parseUsd(qtyAvgPriceMatch[1]) : 0,
+    maxPrice: maxPriceMatch ? parseUsd(maxPriceMatch[1]) : 0,
+  }
+}
+
+/**
+ * Scrape the Price Guide tab for a catalog item, extracting Last 6 Months Sales (New + Used).
+ * Works for both parts (P=) and minifigs (M=).
+ */
+async function scrapePriceGuide(
+  page: Page,
+  itemType: 'P' | 'M' | 'S',
+  itemNumber: string,
+  colorId?: number,
+): Promise<PriceGuide> {
+  const colorParam = colorId ? `&idColor=${colorId}` : ''
+  const url = `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}${colorParam}#T=P`
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    await waitForAgeGate(page)
+    await dismissCookiePopup(page)
+
+    // Click the Price Guide tab
+    const priceGuideTab = page.locator('text=Price Guide').first()
+    await priceGuideTab.click({ timeout: 5000 }).catch(() => {
+      // Tab might already be selected or page might use #T=P hash
+    })
+    await page.waitForTimeout(2000)
+
+    // Extract raw text from the DOM — no function declarations inside evaluate to avoid tsx __name issue
+    // The BrickLink price guide layout: a table with "Last 6 Months Sales:" header,
+    // then a row with "New" and "Used" column headers, then a row with two cells
+    // each containing a nested table with the stats (Times Sold, Min Price, etc.)
+    const rawSections = await page.evaluate(() => {
+      const sections: { newText?: string; usedText?: string } = {}
+
+      // Find all TDs that contain exactly "New" or "Used" as their direct text
+      // These are column headers in the price guide table
+      const allCells = document.querySelectorAll('td')
+      let newHeaderCell: Element | null = null
+      let usedHeaderCell: Element | null = null
+
+      for (const cell of allCells) {
+        const directText = (cell.textContent || '').trim()
+        // Only match cells within the "Last 6 Months Sales" section
+        const parentTable = cell.closest('table')
+        if (!parentTable) continue
+        const tableText = parentTable.textContent || ''
+        if (!tableText.includes('Last 6 Months Sales')) continue
+
+        if (directText === 'New' && !newHeaderCell) newHeaderCell = cell
+        if (directText === 'Used' && !usedHeaderCell) usedHeaderCell = cell
+      }
+
+      // For each header, find the stats cell in the same column position
+      // The header and stats are in adjacent rows of the same parent table
+      if (newHeaderCell) {
+        const headerRow = newHeaderCell.closest('tr')
+        const colIndex = headerRow
+          ? Array.from(headerRow.children).indexOf(newHeaderCell as HTMLElement)
+          : -1
+        if (headerRow && colIndex >= 0) {
+          // Look at subsequent rows in the same table for the stats
+          let nextRow = headerRow.nextElementSibling
+          while (nextRow) {
+            const statsCell = nextRow.children[colIndex]
+            if (statsCell) {
+              const t = statsCell.textContent || ''
+              if (t.includes('Times Sold') || t.includes('Total Qty')) {
+                sections.newText = t
+                break
+              }
+            }
+            nextRow = nextRow.nextElementSibling
+          }
+        }
+      }
+
+      if (usedHeaderCell) {
+        const headerRow = usedHeaderCell.closest('tr')
+        const colIndex = headerRow
+          ? Array.from(headerRow.children).indexOf(usedHeaderCell as HTMLElement)
+          : -1
+        if (headerRow && colIndex >= 0) {
+          let nextRow = headerRow.nextElementSibling
+          while (nextRow) {
+            const statsCell = nextRow.children[colIndex]
+            if (statsCell) {
+              const t = statsCell.textContent || ''
+              if (t.includes('Times Sold') || t.includes('Total Qty')) {
+                sections.usedText = t
+                break
+              }
+            }
+            nextRow = nextRow.nextElementSibling
+          }
+        }
+      }
+
+      return sections
+    })
+
+    // Parse the raw text in Node (not in browser context)
+    const priceData: { newSales?: PriceGuideStats; usedSales?: PriceGuideStats } = {}
+    if (rawSections.newText) priceData.newSales = parsePriceGuideText(rawSections.newText)
+    if (rawSections.usedText) priceData.usedSales = parsePriceGuideText(rawSections.usedText)
+
+    const guide: PriceGuide = {}
+    if (priceData.newSales) guide.newSales = priceData.newSales
+    if (priceData.usedSales) guide.usedSales = priceData.usedSales
+
+    if (guide.newSales || guide.usedSales) {
+      const n = guide.newSales
+      const u = guide.usedSales
+      console.log(
+        `    💰 ${itemNumber} — New: ${n ? `${n.timesSold} sold, avg $${n.avgPrice.toFixed(2)}` : 'n/a'} | Used: ${u ? `${u.timesSold} sold, avg $${u.avgPrice.toFixed(2)}` : 'n/a'}`,
+      )
+    }
+
+    return guide
+  } catch (error) {
+    console.warn(`    Could not scrape price guide for ${itemNumber}: ${error}`)
+    return {}
   }
 }
 
@@ -494,17 +793,21 @@ async function scrapeAppearsInSets(page: Page, minifigNumber: string): Promise<A
 
 async function processAndSaveMinifig(
   page: Page,
-  minifigNumber: string,
+  itemNumber: string,
+  itemType: BricklinkItemType,
   index: number,
   total: number,
 ) {
-  console.log(`\n[${index + 1}/${total}] Scraping ${minifigNumber}...`)
+  const isCmf = itemType === 'S'
+  console.log(
+    `\n[${index + 1}/${total}] Scraping ${isCmf ? 'CMF set' : 'minifig'} ${itemNumber}...`,
+  )
 
   let scraped
   try {
-    scraped = await scrapeMinifigDetail(page, minifigNumber)
+    scraped = await scrapeMinifigDetail(page, itemNumber, itemType)
   } catch (error) {
-    console.error(`  Failed to scrape ${minifigNumber}: ${error}`)
+    console.error(`  Failed to scrape ${itemNumber}: ${error}`)
     return
   }
 
@@ -520,34 +823,55 @@ async function processAndSaveMinifig(
   }
 
   // Download main image to MinIO
+  const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
   let primaryImageUrl = scraped.mainImage
   try {
     if (scraped.mainImage) {
-      const s3Key = await downloadAndUploadImage(scraped.mainImage, minifigNumber, 'main')
+      const s3Key = await downloadAndUploadImage(scraped.mainImage, itemNumber, 'main')
       if (s3Key) {
-        const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
         primaryImageUrl = `${s3Endpoint}/${S3_BUCKET}/${s3Key}`
       }
     }
 
     // Download thumbnails
     for (let i = 0; i < scraped.thumbnails.length; i++) {
-      await downloadAndUploadImage(scraped.thumbnails[i], minifigNumber, `thumb_${i + 1}`)
+      await downloadAndUploadImage(scraped.thumbnails[i], itemNumber, `thumb_${i + 1}`)
+    }
+
+    // Download part images
+    for (const part of scraped.parts) {
+      if (part.imageUrl) {
+        const partFileName = `part_${part.partNumber}${part.colorId ? `_c${part.colorId}` : ''}`
+        const s3Key = await downloadAndUploadImage(part.imageUrl, itemNumber, partFileName)
+        if (s3Key) {
+          part.imageUrl = `${s3Endpoint}/${S3_BUCKET}/${s3Key}`
+        }
+      }
     }
   } catch (error) {
     console.warn(`  Image download failed, using original URL: ${error}`)
   }
 
+  // Extract CMF series from category (e.g., "Collectible Minifigures Series 25" → "Series 25")
+  let cmfSeries: string | undefined
+  if (isCmf && scraped.category) {
+    const seriesMatch = scraped.category.match(/Series\s+\d+/i)
+    cmfSeries = seriesMatch ? seriesMatch[0] : scraped.category
+  }
+
   // Create variant (getOrCreate avoids duplicates)
   const variantPayload = {
-    legoNumber: minifigNumber,
+    legoNumber: itemNumber,
     name: scraped.description || scraped.name,
     theme: scraped.category || undefined,
     year: scraped.yearReleased ? parseInt(scraped.yearReleased, 10) : undefined,
+    cmfSeries,
     imageUrl: primaryImageUrl,
     weight: scraped.weight || undefined,
     dimensions: scraped.dimensions || undefined,
     partsCount: scraped.partsCount || undefined,
+    bricklinkUrl: scraped.bricklinkUrl,
+    priceGuide: scraped.priceGuide,
     parts: scraped.parts.length > 0 ? scraped.parts : undefined,
     appearsInSets: scraped.appearsInSets.length > 0 ? scraped.appearsInSets : undefined,
   }
@@ -565,7 +889,20 @@ async function processAndSaveMinifig(
   }
 
   const variant = await variantRes.json()
-  console.log(`  Variant: ${variant.id}`)
+  console.log(`  Variant: ${variant.id}${cmfSeries ? ` (${cmfSeries})` : ''}`)
+
+  // Check if an instance already exists for this variant
+  const existingRes = await fetch(
+    `${API_BASE}/minifigs?limit=1&search=${encodeURIComponent(itemNumber)}`,
+  )
+  const existingData = existingRes.ok ? await existingRes.json() : null
+  const existingInstances = existingData?.items ?? existingData?.data ?? []
+  const alreadyExists = existingInstances.some((inst: any) => inst.variantId === variant.id)
+
+  if (alreadyExists) {
+    console.log(`  Instance already exists for variant ${variant.id} — skipping`)
+    return
+  }
 
   // Create instance
   const status = isWishlist ? 'wanted' : 'none'
@@ -573,7 +910,7 @@ async function processAndSaveMinifig(
     displayName: scraped.description || scraped.name,
     variantId: variant.id,
     status,
-    sourceType: 'bricklink',
+    sourceType: isCmf ? 'cmf_pack' : 'bricklink',
     imageUrl: primaryImageUrl,
   }
 
@@ -597,12 +934,25 @@ async function processAndSaveMinifig(
 // Main
 // ─────────────────────────────────────────────────────────────────────────
 
+/**
+ * Detect BrickLink item type from a number/ID string.
+ * CMF sets use prefixes like "col" (e.g., col25-13), "colhp" (Harry Potter), "colmar" (Marvel).
+ * Regular minifigs use prefixes like "cas", "sw", "cty", etc.
+ */
+function detectItemType(itemId: string): BricklinkItemType {
+  // BrickLink CMF set numbers start with "col" (col25-13, colhp-1, colmar-6, etc.)
+  return /^col/i.test(itemId) ? 'S' : 'M'
+}
+
 async function main() {
   const arg = process.argv[2]
   if (!arg) {
     console.error('Usage:')
-    console.error('  pnpm scrape <minifig-number>                  — single minifig')
-    console.error('  pnpm scrape <catalog-list-url>                — all minifigs from catalog')
+    console.error('  pnpm scrape <minifig-number>                  — single minifig (e.g., cas002)')
+    console.error(
+      '  pnpm scrape <cmf-set-number>                  — single CMF set (e.g., col25-13)',
+    )
+    console.error('  pnpm scrape <catalog-list-url>                — all items from catalog')
     console.error('')
     console.error('Options:')
     console.error('  --wishlist   save as wanted instead of owned')
@@ -610,7 +960,11 @@ async function main() {
     console.error('')
     console.error('Examples:')
     console.error('  pnpm scrape cas002')
+    console.error('  pnpm scrape col25-13')
     console.error('  pnpm scrape https://www.bricklink.com/catalogList.asp?catType=M&catString=9')
+    console.error(
+      '  pnpm scrape https://www.bricklink.com/catalogList.asp?catType=S&catString=746.753',
+    )
     process.exit(1)
   }
 
@@ -634,14 +988,21 @@ async function main() {
       const items = await scrapeCatalogList(page, arg)
 
       if (items.length === 0) {
-        console.log('No minifigs found in catalog.')
+        console.log('No items found in catalog.')
         return
       }
 
-      console.log(`\nProcessing ${items.length} minifigs...`)
+      const cmfCount = items.filter(i => i.itemType === 'S').length
+      const minifigCount = items.filter(i => i.itemType === 'M').length
+      console.log(
+        `\nProcessing ${items.length} items` +
+          (cmfCount > 0 ? ` (${cmfCount} CMF sets)` : '') +
+          (minifigCount > 0 ? ` (${minifigCount} minifigs)` : '') +
+          '...',
+      )
 
       for (let i = 0; i < items.length; i++) {
-        await processAndSaveMinifig(page, items[i].minifigNumber, i, items.length)
+        await processAndSaveMinifig(page, items[i].itemNumber, items[i].itemType, i, items.length)
 
         // Brief pause between requests to be polite
         if (i < items.length - 1) {
@@ -649,10 +1010,14 @@ async function main() {
         }
       }
 
-      console.log(`\nDone. Processed ${items.length} minifigs.`)
+      console.log(`\nDone. Processed ${items.length} items.`)
     } else {
-      // Single minifig mode
-      await processAndSaveMinifig(page, arg, 0, 1)
+      // Single item mode — detect type from the item number
+      const itemType = detectItemType(arg)
+      if (itemType === 'S') {
+        console.log(`Detected CMF set number: ${arg}`)
+      }
+      await processAndSaveMinifig(page, arg, itemType, 0, 1)
     }
   } finally {
     await context.close()

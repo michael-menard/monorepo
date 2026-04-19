@@ -94,6 +94,8 @@ export const SERVERLESS_ENDPOINTS = {
     UPDATE_PROFILE: '/user/profile',
     GET_PREFERENCES: '/user/preferences',
     UPDATE_PREFERENCES: '/user/preferences',
+    PRESIGN_AVATAR: '/user/avatar/presign',
+    ACTIVITY: '/user/activity',
   },
 
   // Dashboard endpoints

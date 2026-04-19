@@ -9,6 +9,7 @@ import { permissionsApi } from '@repo/api-client/rtk/permissions-api'
 import { adminApi } from '@repo/api-client/rtk/admin-api'
 import { inspirationApi } from '@repo/api-client/rtk/inspiration-api'
 import { uploadsApi } from '@repo/api-client/rtk/uploads-api'
+import { userProfileApi } from '@repo/api-client/rtk/user-profile-api'
 import { createAuthFailureHandler, AUTH_PAGES } from '@repo/api-client/errors/auth-failure'
 import { authSlice, setUnauthenticated } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
@@ -46,6 +47,7 @@ const authFailureHandler = createAuthFailureHandler({
     store.dispatch(adminApi.util.resetApiState())
     store.dispatch(inspirationApi.util.resetApiState())
     store.dispatch(uploadsApi.util.resetApiState())
+    store.dispatch(userProfileApi.util.resetApiState())
   },
 })
 
@@ -85,6 +87,7 @@ export const store = configureStore({
     [adminApi.reducerPath]: adminApi.reducer,
     [inspirationApi.reducerPath]: inspirationApi.reducer,
     [uploadsApi.reducerPath]: uploadsApi.reducer,
+    [userProfileApi.reducerPath]: userProfileApi.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -104,7 +107,8 @@ export const store = configureStore({
       .concat(permissionsApi.middleware)
       .concat(adminApi.middleware)
       .concat(inspirationApi.middleware)
-      .concat(uploadsApi.middleware),
+      .concat(uploadsApi.middleware)
+      .concat(userProfileApi.middleware),
   devTools: import.meta.env.DEV,
 })
 

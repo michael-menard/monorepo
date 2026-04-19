@@ -189,6 +189,8 @@ export function createMinifigsService(deps: MinifigsServiceDeps) {
         weight?: string
         dimensions?: string
         partsCount?: number
+        bricklinkUrl?: string
+        priceGuide?: { newSales?: any; usedSales?: any }
         parts?: MinifigPart[]
         appearsInSets?: AppearsInSet[]
       },
@@ -207,6 +209,8 @@ export function createMinifigsService(deps: MinifigsServiceDeps) {
           weight: input.weight ?? null,
           dimensions: input.dimensions ?? null,
           partsCount: input.partsCount ?? null,
+          bricklinkUrl: input.bricklinkUrl ?? null,
+          priceGuide: input.priceGuide ?? null,
           parts: input.parts ?? null,
           appearsInSets: input.appearsInSets ?? null,
         })
@@ -218,8 +222,8 @@ export function createMinifigsService(deps: MinifigsServiceDeps) {
     },
 
     /**
-     * Find variant by lego number, or create it if it doesn't exist.
-     * Used by scrapers to avoid duplicates.
+     * Find variant by lego number — update it with new data if found, create if not.
+     * Used by scrapers to upsert on re-scrape.
      */
     async getOrCreateVariant(
       userId: string,
@@ -234,12 +238,35 @@ export function createMinifigsService(deps: MinifigsServiceDeps) {
         weight?: string
         dimensions?: string
         partsCount?: number
+        bricklinkUrl?: string
+        priceGuide?: { newSales?: any; usedSales?: any }
         parts?: MinifigPart[]
         appearsInSets?: AppearsInSet[]
       },
     ): Promise<Result<MinifigVariant, MinifigError>> {
       const existing = await variantRepo.findByLegoNumber(userId, legoNumber)
-      if (existing.ok) return existing
+      if (existing.ok) {
+        // Update the existing variant with fresh scraped data
+        const updateData: Record<string, unknown> = {}
+        if (input.name !== undefined) updateData.name = input.name
+        if (input.theme !== undefined) updateData.theme = input.theme
+        if (input.subtheme !== undefined) updateData.subtheme = input.subtheme
+        if (input.year !== undefined) updateData.year = input.year
+        if (input.cmfSeries !== undefined) updateData.cmfSeries = input.cmfSeries
+        if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl
+        if (input.weight !== undefined) updateData.weight = input.weight
+        if (input.dimensions !== undefined) updateData.dimensions = input.dimensions
+        if (input.partsCount !== undefined) updateData.partsCount = input.partsCount
+        if (input.bricklinkUrl !== undefined) updateData.bricklinkUrl = input.bricklinkUrl
+        if (input.priceGuide !== undefined) updateData.priceGuide = input.priceGuide
+        if (input.parts !== undefined) updateData.parts = input.parts
+        if (input.appearsInSets !== undefined) updateData.appearsInSets = input.appearsInSets
+
+        if (Object.keys(updateData).length > 0) {
+          return variantRepo.update(existing.data.id, updateData)
+        }
+        return existing
+      }
       return this.createVariant(userId, { ...input, legoNumber })
     },
   }

@@ -88,6 +88,10 @@
       "import": "./src/rtk/inspiration-api.ts",
       "types": "./src/rtk/inspiration-api.ts"
     },
+    "./rtk/user-profile-api": {
+      "import": "./src/rtk/user-profile-api.ts",
+      "types": "./src/rtk/user-profile-api.ts"
+    },
     "./schemas/inspiration": {
       "import": "./src/schemas/inspiration.ts",
       "types": "./src/schemas/inspiration.ts"

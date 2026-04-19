@@ -311,6 +311,12 @@ importers:
       hono:
         specifier: ^4.7.0
         version: 4.11.8
+      ioredis:
+        specifier: ^5.4.2
+        version: 5.9.3
+      pg:
+        specifier: ^8.13.1
+        version: 8.18.0
       socket.io:
         specifier: ^4.8.1
         version: 4.8.3
@@ -1461,6 +1467,9 @@ importers:
       '@repo/upload':
         specifier: workspace:*
         version: link:../../../packages/core/upload
+      '@repo/user-settings':
+        specifier: workspace:*
+        version: link:../user-settings
       '@tanstack/react-router':
         specifier: ^1.130.2
         version: 1.158.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1934,6 +1943,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       framer-motion:
         specifier: 12.23.24
         version: 12.23.24(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -24990,7 +25002,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@25.3.3)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.3.3)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:
@@ -28129,7 +28141,6 @@ snapshots:
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   ip-address@10.0.1: {}
 

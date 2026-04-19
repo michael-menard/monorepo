@@ -20,6 +20,7 @@ import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
 import { InstructionsDetail } from './modules/InstructionsDetailModule'
 import { MinifigsModule, MinifigsDetailModule } from './modules/MinifigsModule'
 // SetsGalleryModule no longer used directly — SetsModule renders it via sub-tabs
+import { UserProfileModule } from './modules/UserProfileModule'
 import { AdminModule } from './admin/AdminModule'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
@@ -264,7 +265,7 @@ const inspirationRoute = createRoute({
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/profile',
-  component: PlaceholderPage,
+  component: UserProfileModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })
@@ -275,7 +276,7 @@ const profileRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
-  component: DashboardModule,
+  component: UserProfileModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
       throw redirect({ to: '/login' })

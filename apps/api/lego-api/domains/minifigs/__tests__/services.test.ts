@@ -65,6 +65,8 @@ const mockVariant: MinifigVariant = {
   weight: '5.2g',
   dimensions: '4.0 x 1.6 x 1.3 cm',
   partsCount: 4,
+  bricklinkUrl: 'https://www.bricklink.com/v2/catalog/catalogitem.page?M=cas002',
+  priceGuide: null,
   parts: [
     { partNumber: '3626', name: 'Head', color: 'Yellow', quantity: 1, position: 'head' },
   ],

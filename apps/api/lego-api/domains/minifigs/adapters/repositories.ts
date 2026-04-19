@@ -331,6 +331,8 @@ export function createMinifigVariantRepository(
           weight: data.weight ?? null,
           dimensions: data.dimensions ?? null,
           partsCount: data.partsCount ?? null,
+          bricklinkUrl: data.bricklinkUrl ?? null,
+          priceGuide: data.priceGuide ?? null,
           parts: data.parts ?? null,
           appearsInSets: data.appearsInSets ?? null,
         })
@@ -343,9 +345,26 @@ export function createMinifigVariantRepository(
       id: string,
       data: Record<string, unknown>,
     ): Promise<Result<MinifigVariant, 'NOT_FOUND'>> {
+      // Map camelCase keys to Drizzle column references for snake_case columns
+      const setData: Record<string, unknown> = { updatedAt: new Date() }
+      if ('name' in data) setData.name = data.name
+      if ('theme' in data) setData.theme = data.theme
+      if ('subtheme' in data) setData.subtheme = data.subtheme
+      if ('year' in data) setData.year = data.year
+      if ('cmfSeries' in data) setData.cmfSeries = data.cmfSeries
+      if ('imageUrl' in data) setData.imageUrl = data.imageUrl
+      if ('weight' in data) setData.weight = data.weight
+      if ('dimensions' in data) setData.dimensions = data.dimensions
+      if ('partsCount' in data) setData.partsCount = data.partsCount
+      if ('bricklinkUrl' in data) setData.bricklinkUrl = data.bricklinkUrl
+      if ('priceGuide' in data) setData.priceGuide = data.priceGuide
+      if ('parts' in data) setData.parts = data.parts
+      if ('appearsInSets' in data) setData.appearsInSets = data.appearsInSets
+      if ('archetypeId' in data) setData.archetypeId = data.archetypeId
+
       const [row] = await db
         .update(minifigVariants)
-        .set({ ...data, updatedAt: new Date() })
+        .set(setData)
         .where(eq(minifigVariants.id, id))
         .returning()
 
@@ -526,6 +545,8 @@ function mapRowToVariant(
     weight: row.weight ?? null,
     dimensions: row.dimensions ?? null,
     partsCount: row.partsCount ?? null,
+    bricklinkUrl: row.bricklinkUrl ?? null,
+    priceGuide: (row.priceGuide as MinifigVariant['priceGuide']) ?? null,
     parts: (row.parts as MinifigVariant['parts']) ?? null,
     appearsInSets: (row.appearsInSets as MinifigVariant['appearsInSets']) ?? null,
     createdAt: row.createdAt,

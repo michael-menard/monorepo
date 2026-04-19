@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowLeft, Trash2, PersonStanding, Pencil, X, Plus, Minus } from 'lucide-react'
+import {
+  ArrowLeft,
+  Trash2,
+  PersonStanding,
+  Pencil,
+  X,
+  Plus,
+  Minus,
+  ExternalLink,
+} from 'lucide-react'
 import {
   AppInput,
   Badge,
@@ -490,7 +499,18 @@ export function MinifigDetailPage({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Source</p>
-                  <p className="text-sm mt-1">{formatSourceType(minifig.sourceType)}</p>
+                  {minifig.sourceType === 'bricklink' && minifig.variant?.bricklinkUrl ? (
+                    <a
+                      href={minifig.variant.bricklinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm mt-1 text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      BrickLink <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <p className="text-sm mt-1">{formatSourceType(minifig.sourceType)}</p>
+                  )}
                 </div>
                 {minifig.isCustom ? (
                   <div>
@@ -595,6 +615,73 @@ export function MinifigDetailPage({
             </Card>
           ) : null}
 
+          {/* Price Guide */}
+          {minifig.variant?.priceGuide &&
+          (minifig.variant.priceGuide.newSales || minifig.variant.priceGuide.usedSales) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Price Guide</CardTitle>
+                <CardDescription>Last 6 months sales from BrickLink</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  {minifig.variant.priceGuide.newSales ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">New</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Times Sold</span>
+                          <span className="font-mono">
+                            {minifig.variant.priceGuide.newSales.timesSold}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Avg Price</span>
+                          <span className="font-mono">
+                            ${minifig.variant.priceGuide.newSales.avgPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min / Max</span>
+                          <span className="font-mono">
+                            ${minifig.variant.priceGuide.newSales.minPrice.toFixed(2)} – $
+                            {minifig.variant.priceGuide.newSales.maxPrice.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                  {minifig.variant.priceGuide.usedSales ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Used</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Times Sold</span>
+                          <span className="font-mono">
+                            {minifig.variant.priceGuide.usedSales.timesSold}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Avg Price</span>
+                          <span className="font-mono">
+                            ${minifig.variant.priceGuide.usedSales.avgPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min / Max</span>
+                          <span className="font-mono">
+                            ${minifig.variant.priceGuide.usedSales.minPrice.toFixed(2)} – $
+                            {minifig.variant.priceGuide.usedSales.maxPrice.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {/* Parts List */}
           {minifig.variant?.parts && minifig.variant.parts.length > 0 ? (
             <Card>
@@ -605,29 +692,63 @@ export function MinifigDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 pr-4 font-medium">Part</th>
-                      <th className="pb-2 pr-4 font-medium">Color</th>
-                      <th className="pb-2 font-medium text-right">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {minifig.variant.parts.map((part, i) => (
-                      <tr key={`${part.partNumber}-${i}`} className="border-b last:border-0">
-                        <td className="py-1.5 pr-4">
-                          <span className="font-medium">{part.name}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {part.partNumber}
-                          </span>
-                        </td>
-                        <td className="py-1.5 pr-4">{part.color}</td>
-                        <td className="py-1.5 text-right font-mono">{part.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="space-y-3">
+                  {minifig.variant.parts.map((part, i) => (
+                    <div
+                      key={`${part.partNumber}-${i}`}
+                      className="flex items-start gap-3 border-b pb-3 last:border-0 last:pb-0"
+                    >
+                      {part.imageUrl ? (
+                        <img
+                          src={part.imageUrl}
+                          alt={part.name}
+                          className="h-12 w-16 rounded border object-contain bg-white shrink-0"
+                        />
+                      ) : (
+                        <div className="h-12 w-16 rounded border bg-muted shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{part.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {part.bricklinkUrl ? (
+                                <a
+                                  href={part.bricklinkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline font-mono"
+                                >
+                                  {part.partNumber}
+                                </a>
+                              ) : (
+                                <span className="font-mono">{part.partNumber}</span>
+                              )}
+                              {part.color ? <span>{part.color}</span> : null}
+                              {part.category ? (
+                                <span className="truncate">{part.category}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <span className="text-sm font-mono shrink-0">×{part.quantity}</span>
+                        </div>
+                        {part.priceGuide &&
+                        (part.priceGuide.newSales || part.priceGuide.usedSales) ? (
+                          <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                            {part.priceGuide.newSales ? (
+                              <span>New: ${part.priceGuide.newSales.avgPrice.toFixed(2)} avg</span>
+                            ) : null}
+                            {part.priceGuide.usedSales ? (
+                              <span>
+                                Used: ${part.priceGuide.usedSales.avgPrice.toFixed(2)} avg
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           ) : null}

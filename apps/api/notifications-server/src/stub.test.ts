@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { SCAFFOLD_COMPLETE } from './stub'
+import { isRedisConnected } from './stub'
 
-describe('Server scaffold', () => {
-  it('scaffold marker is set', () => {
-    expect(SCAFFOLD_COMPLETE).toBe(true)
+describe('Redis module', () => {
+  it('reports disconnected before initialization', () => {
+    expect(isRedisConnected()).toBe(false)
   })
 })

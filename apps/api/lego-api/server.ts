@@ -44,6 +44,7 @@ import monitor from './domains/monitor/routes.js'
 import dashboard from './domains/dashboard/routes.js'
 import minifigs from './domains/minifigs/routes.js'
 import scraper from './domains/scraper/routes.js'
+import userProfile from './domains/user-profile/routes.js'
 
 const app = new Hono()
 
@@ -113,6 +114,7 @@ app.route('/monitor', monitor)
 app.route('/dashboard', dashboard)
 app.route('/minifigs', minifigs)
 app.route('/scraper', scraper)
+app.route('/user', userProfile)
 
 // Root endpoint
 app.get('/', c => {

@@ -38,6 +38,15 @@ export { instructionsApi } from './rtk/instructions-api'
 export { permissionsApi } from './rtk/permissions-api'
 export { adminApi } from './rtk/admin-api'
 export { uploadsApi } from './rtk/uploads-api'
+export {
+  userProfileApi,
+  useGetUserProfileQuery,
+  useUpdateUserProfileMutation,
+  useGetUserPreferencesQuery,
+  useUpdateUserPreferencesMutation,
+  usePresignAvatarUploadMutation,
+  useGetUserActivityQuery,
+} from './rtk/user-profile-api'
 
 // Auth utilities
 export {

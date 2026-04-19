@@ -18,6 +18,7 @@
 export { db, getPool, closePool, testConnection } from './client.js'
 export * from './schema.js'
 export * from './sets.js' // sets, stores, tags, entityTags, files, entityFiles
+export * from './user-profile.js' // userProfiles, activityEvents
 export * from './minifigs.js' // minifigArchetypes, minifigVariants, minifigInstances
 export * from './inspiration.js'
 export * from './feature-flags.js'

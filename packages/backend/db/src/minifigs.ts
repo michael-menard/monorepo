@@ -54,13 +54,55 @@ export const minifigVariants = pgTable(
     weight: text('weight'),
     dimensions: text('dimensions'),
     partsCount: integer('parts_count'),
+    bricklinkUrl: text('bricklink_url'),
+    priceGuide: jsonb('price_guide').$type<{
+      newSales?: {
+        timesSold: number
+        totalQty: number
+        minPrice: number
+        avgPrice: number
+        qtyAvgPrice: number
+        maxPrice: number
+      }
+      usedSales?: {
+        timesSold: number
+        totalQty: number
+        minPrice: number
+        avgPrice: number
+        qtyAvgPrice: number
+        maxPrice: number
+      }
+    }>(),
     parts: jsonb('parts').$type<
       Array<{
         partNumber: string
         name: string
         color: string
+        colorId?: number
         quantity: number
         position?: string
+        imageUrl?: string
+        category?: string
+        bricklinkUrl?: string
+        hasInventory?: boolean
+        priceGuide?: {
+          newSales?: {
+            timesSold: number
+            totalQty: number
+            minPrice: number
+            avgPrice: number
+            qtyAvgPrice: number
+            maxPrice: number
+          }
+          usedSales?: {
+            timesSold: number
+            totalQty: number
+            minPrice: number
+            avgPrice: number
+            qtyAvgPrice: number
+            maxPrice: number
+          }
+        }
       }>
     >(),
     appearsInSets: jsonb('appears_in_sets').$type<
