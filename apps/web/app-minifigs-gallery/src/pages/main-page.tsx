@@ -203,11 +203,6 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
     [selectedIds, bulkEditTags],
   )
 
-  // Collect tags from selected items for removal options
-  const selectedTags = Array.from(
-    new Set(allItems.filter(m => selectedIds.has(m.id)).flatMap(m => m.tags ?? [])),
-  ).sort()
-
   const { data, isLoading, isFetching } = useGetMinifigsQuery(
     {
       status,
@@ -221,6 +216,11 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
   )
 
   const [allItems, setAllItems] = useState<MinifigInstance[]>(data?.items ?? [])
+
+  // Collect tags from selected items for removal options
+  const selectedTags = Array.from(
+    new Set(allItems.filter(m => selectedIds.has(m.id)).flatMap(m => m.tags ?? [])),
+  ).sort()
 
   // Sync items when data changes (pagination, filters, cache updates)
   useEffect(() => {
