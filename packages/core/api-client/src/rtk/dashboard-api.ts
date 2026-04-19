@@ -14,8 +14,8 @@ const logger = createLogger('api-client:dashboard')
 export const DashboardStatsSchema = z.object({
   totalMocs: z.number().int().nonnegative(),
   wishlistCount: z.number().int().nonnegative(),
-  ownedSetsCount: z.number().int().nonnegative(),
-  ownedMinifigsCount: z.number().int().nonnegative(),
+  ownedSetsCount: z.number().int().nonnegative().optional().default(0),
+  ownedMinifigsCount: z.number().int().nonnegative().optional().default(0),
   themeCount: z.number().int().nonnegative(),
   lastUpdated: z.string(),
 })

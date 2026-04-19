@@ -47,14 +47,14 @@ export function StatsCards({
     {
       icon: Box,
       label: 'Owned Sets',
-      value: stats.ownedSetsCount,
+      value: stats.ownedSetsCount ?? 0,
       colorClass: 'text-lego-blue',
       bgClass: 'bg-lego-blue/10',
     },
     {
       icon: User,
       label: 'Minifigs',
-      value: stats.ownedMinifigsCount,
+      value: stats.ownedMinifigsCount ?? 0,
       colorClass: 'text-lego-green',
       bgClass: 'bg-lego-green/10',
     },
