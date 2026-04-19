@@ -138,6 +138,8 @@ export type RetryContext = {
   maxReviewRetries: number
   maxQaRetries: number
   lastFailureReason: string
+  lastReviewFindings: Record<string, unknown>[]
+  lastQAFailures: Record<string, unknown>[]
 }
 
 /**

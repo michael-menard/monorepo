@@ -11,6 +11,11 @@
 
 import { z } from 'zod'
 import { Annotation } from '@langchain/langgraph'
+import type {
+  ImplementationPlan,
+  StoryGroundingContext,
+  RetryFeedback,
+} from './dev-implement-v2-state.js'
 
 // ============================================================================
 // Pipeline Phase Enum
@@ -267,6 +272,24 @@ export const PipelineOrchestratorV2StateAnnotation = Annotation.Root({
 
   /** Phase to resume from after phase_router determines story state */
   resumePhase: Annotation<ResumePhase | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** HEAL: Retry feedback from review/QA for targeted dev retry */
+  retryFeedback: Annotation<RetryFeedback | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** HEAL: Last implementation plan — preserved across retries to skip re-planning */
+  lastImplementationPlan: Annotation<ImplementationPlan | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+
+  /** HEAL: Last grounding context — preserved across retries to skip re-scouting */
+  lastGroundingContext: Annotation<StoryGroundingContext | null>({
     reducer: overwrite,
     default: () => null,
   }),

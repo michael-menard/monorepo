@@ -198,6 +198,9 @@ export function mapDevResultToOrchestratorState(
     },
     pipelinePhase: 'dev_implement',
     errors: errors.length > 0 ? errors : [],
+    // HEAL: preserve plan + grounding for retry feedback loop
+    lastImplementationPlan: subgraphResult.implementationPlan ?? null,
+    lastGroundingContext: subgraphResult.storyGroundingContext ?? null,
   }
 }
 
@@ -479,7 +482,18 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
         // Test path — use injected graph factory (no real adapters needed)
         const graphConfig: DevImplementV2GraphConfig = { ...adapters }
         const graph = config.createDevGraph(graphConfig)
-        result = await graph.invoke({ storyId: currentStoryId })
+        // HEAL: forward retryFeedback + prior plan/grounding on test path too
+        const testRetryFeedback = state.retryFeedback ?? null
+        result = await graph.invoke({
+          storyId: currentStoryId,
+          ...(testRetryFeedback ? { retryFeedback: testRetryFeedback } : {}),
+          ...(testRetryFeedback && state.lastImplementationPlan
+            ? { implementationPlan: state.lastImplementationPlan }
+            : {}),
+          ...(testRetryFeedback && state.lastGroundingContext
+            ? { storyGroundingContext: state.lastGroundingContext }
+            : {}),
+        })
       } else {
         // Production path — load real KB/IO adapters lazily
         const kbAdapters = await loadKbAdapters()
@@ -499,14 +513,15 @@ export function createDevImplementWrapper(config: SubgraphInvokerConfig = {}) {
         }
         const { createDevImplementV2Graph } = await import('../../graphs/dev-implement-v2.js')
         const graph = createDevImplementV2Graph(graphConfig)
-        // HEAL: pass retryFeedback from orchestrator state into dev graph
-        const retryFeedback = (state as Record<string, unknown>).retryFeedback as
-          | Record<string, unknown>
-          | null
-          | undefined
+        // HEAL: pass retryFeedback + prior plan/grounding from orchestrator state into dev graph
+        const retryFeedback = state.retryFeedback ?? null
+        const lastPlan = state.lastImplementationPlan ?? null
+        const lastGrounding = state.lastGroundingContext ?? null
         result = await graph.invoke({
           storyId: currentStoryId,
           ...(retryFeedback ? { retryFeedback } : {}),
+          ...(retryFeedback && lastPlan ? { implementationPlan: lastPlan } : {}),
+          ...(retryFeedback && lastGrounding ? { storyGroundingContext: lastGrounding } : {}),
         } as Record<string, unknown>)
       }
 

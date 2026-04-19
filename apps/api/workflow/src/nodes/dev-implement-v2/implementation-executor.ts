@@ -328,9 +328,13 @@ const defaultLlmAdapter: LlmAdapterFn = async _messages => ({
  */
 export function createImplementationExecutorNode(config: ImplementationExecutorConfig = {}) {
   const llmAdapter = config.llmAdapter ?? defaultLlmAdapter
-  const maxInternalIterations = config.maxInternalIterations ?? 5
+  const configuredMaxIterations = config.maxInternalIterations ?? 5
 
   return async (state: DevImplementV2State): Promise<Partial<DevImplementV2State>> => {
+    // HEAL: lower iteration budget on retry — targeted fixes need fewer iterations
+    const maxInternalIterations = state.retryFeedback
+      ? Math.min(configuredMaxIterations, 10)
+      : configuredMaxIterations
     logger.info(`implementation_executor: starting`, { storyId: state.storyId })
 
     const plan = state.implementationPlan

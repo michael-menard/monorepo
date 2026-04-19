@@ -96,6 +96,17 @@ export type DevImplementV2GraphConfig = {
 // ============================================================================
 
 /**
+ * HEAL: After START, skip scout+planner on retry if we have prior plan+grounding.
+ * Falls back to normal flow if retryFeedback is present but plan is missing.
+ */
+function routeAfterStart(state: DevImplementV2State): 'story_scout' | 'implementation_executor' {
+  if (state.retryFeedback && state.implementationPlan) {
+    return 'implementation_executor'
+  }
+  return 'story_scout'
+}
+
+/**
  * After implementation_executor: route to evidence_collector on complete,
  * or END on error (stuck verdict already attached diagnosis to errors[]).
  */
@@ -156,8 +167,11 @@ export function createDevImplementV2Graph(config: DevImplementV2GraphConfig = {}
     )
     .addNode('postcondition_gate', createDevImplementPostconditionGateNode())
 
-    // Linear start
-    .addEdge(START, 'story_scout')
+    // HEAL: conditional start — skip scout+planner on retry when prior plan exists
+    .addConditionalEdges(START, routeAfterStart, {
+      story_scout: 'story_scout',
+      implementation_executor: 'implementation_executor',
+    })
     .addEdge('story_scout', 'implementation_planner')
     .addEdge('implementation_planner', 'implementation_executor')
 

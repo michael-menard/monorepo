@@ -245,6 +245,8 @@ function createStoryPickerWrapper(config: PipelineOrchestratorV2GraphConfig) {
         maxReviewRetries: 2,
         maxQaRetries: 2,
         lastFailureReason: '',
+        lastReviewFindings: [],
+        lastQAFailures: [],
       },
       devResult: null,
       reviewResult: null,
