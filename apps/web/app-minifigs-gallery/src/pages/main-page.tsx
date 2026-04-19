@@ -24,14 +24,14 @@ function formatCondition(condition: string | null | undefined): string {
 function MinifigCard({
   minifig,
   onClick,
-  selectionMode,
   selected,
+  hasSelection,
   onToggleSelect,
 }: {
   minifig: MinifigInstance
   onClick: () => void
-  selectionMode: boolean
   selected: boolean
+  hasSelection: boolean
   onToggleSelect: () => void
 }) {
   const imageUrl = minifig.imageUrl || minifig.variant?.imageUrl
@@ -39,35 +39,33 @@ function MinifigCard({
     minifig.status === 'owned' ? 'Owned' : minifig.status === 'wanted' ? 'Wanted' : 'Cataloged'
 
   return (
-    <div className="relative">
-      {/* Selection checkbox overlay */}
-      {selectionMode && (
-        <button
-          type="button"
-          onClick={e => {
-            e.stopPropagation()
-            onToggleSelect()
-          }}
-          className={cn(
-            'absolute top-1 left-1 z-10 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors',
-            selected
-              ? 'bg-primary border-primary text-primary-foreground'
-              : 'bg-background/80 border-muted-foreground/50 hover:border-primary',
-          )}
-        >
-          {selected && (
-            <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M2 6l3 3 5-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </button>
-      )}
+    <div className="group relative">
+      {/* Checkbox: visible on hover or when selected */}
+      <button
+        type="button"
+        onClick={e => {
+          e.stopPropagation()
+          onToggleSelect()
+        }}
+        className={cn(
+          'absolute top-1 left-1 z-10 h-5 w-5 rounded border-2 flex items-center justify-center transition-all',
+          selected
+            ? 'bg-primary border-primary text-primary-foreground opacity-100'
+            : 'bg-background/80 border-muted-foreground/50 hover:border-primary opacity-0 group-hover:opacity-100',
+        )}
+      >
+        {selected && (
+          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M2 6l3 3 5-5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </button>
       <GalleryCard
         image={
           imageUrl ? { src: imageUrl, alt: minifig.displayName, aspectRatio: 'auto' } : undefined
@@ -80,7 +78,7 @@ function MinifigCard({
         contentDrawer={true}
         title={minifig.displayName}
         subtitle={minifig.variant?.legoNumber ?? undefined}
-        onClick={selectionMode ? onToggleSelect : onClick}
+        onClick={hasSelection ? onToggleSelect : onClick}
         data-testid={`minifig-card-${minifig.id}`}
         className={cn(selected && 'ring-2 ring-primary ring-offset-1')}
         metadata={
@@ -136,8 +134,8 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
   const [page, setPage] = useState(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [selectionMode, setSelectionMode] = useState(false)
   const [bulkDeleteMinifigs, { isLoading: isDeleting }] = useBulkDeleteMinifigsMutation()
+  const hasSelection = selectedIds.size > 0
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -151,17 +149,13 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
     })
   }, [])
 
-  const clearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-    setSelectionMode(false)
-  }, [])
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return
     const ids = Array.from(selectedIds)
     await bulkDeleteMinifigs({ ids })
     setSelectedIds(new Set())
-    setSelectionMode(false)
     setPage(1)
     setAllItems([])
   }, [selectedIds, bulkDeleteMinifigs])
@@ -224,11 +218,6 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Minifig Collection</h1>
-        {!selectionMode && allItems.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => setSelectionMode(true)}>
-            Select
-          </Button>
-        )}
       </div>
 
       {/* Filters */}
@@ -274,7 +263,7 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
       </div>
 
       {/* Bulk Action Bar */}
-      {selectionMode && (
+      {hasSelection && (
         <div className="sticky top-0 z-20 flex items-center gap-3 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 backdrop-blur-sm">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
@@ -309,8 +298,8 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
                 <MinifigCard
                   minifig={minifig}
                   onClick={() => onNavigate?.(`/minifigs/${minifig.id}`)}
-                  selectionMode={selectionMode}
                   selected={selectedIds.has(minifig.id)}
+                  hasSelection={hasSelection}
                   onToggleSelect={() => toggleSelect(minifig.id)}
                 />
               </div>
