@@ -41,7 +41,16 @@ export type RecentMoc = z.infer<typeof RecentMocSchema>
 
 export const ActivityItemSchema = z.object({
   id: z.string(),
-  type: z.enum(['added', 'built', 'wishlist', 'progress']),
+  type: z.enum([
+    'added',
+    'built',
+    'wishlist',
+    'progress',
+    'set_added',
+    'set_owned',
+    'minifig_owned',
+    'minifig_wanted',
+  ]),
   message: z.string(),
   timestamp: z.string(),
 })

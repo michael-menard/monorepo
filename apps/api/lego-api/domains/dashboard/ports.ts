@@ -24,7 +24,7 @@ export interface RecentMoc {
 
 export interface ActivityItem {
   id: string
-  type: 'added' | 'progress'
+  type: 'added' | 'progress' | 'set_added' | 'set_owned' | 'minifig_owned' | 'minifig_wanted'
   message: string
   timestamp: string
 }

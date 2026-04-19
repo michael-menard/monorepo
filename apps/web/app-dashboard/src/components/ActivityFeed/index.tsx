@@ -4,7 +4,7 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Plus, Hammer, Heart, RefreshCw, Activity } from 'lucide-react'
+import { Plus, Hammer, Heart, RefreshCw, Activity, Box, User } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
 import { formatDistanceToNow } from 'date-fns'
 import type { ActivityItem, ActivityType } from '../../__types__'
@@ -19,6 +19,10 @@ const activityIcons: Record<ActivityType, typeof Plus> = {
   built: Hammer,
   wishlist: Heart,
   progress: RefreshCw,
+  set_added: Heart,
+  set_owned: Box,
+  minifig_owned: User,
+  minifig_wanted: Heart,
 }
 
 const activityColors: Record<ActivityType, string> = {
@@ -26,6 +30,10 @@ const activityColors: Record<ActivityType, string> = {
   built: 'bg-emerald-500/10 text-emerald-500',
   wishlist: 'bg-pink-500/10 text-pink-500',
   progress: 'bg-amber-500/10 text-amber-500',
+  set_added: 'bg-pink-500/10 text-pink-500',
+  set_owned: 'bg-blue-500/10 text-blue-500',
+  minifig_owned: 'bg-green-500/10 text-green-500',
+  minifig_wanted: 'bg-purple-500/10 text-purple-500',
 }
 
 export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {

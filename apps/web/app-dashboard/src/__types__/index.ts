@@ -59,7 +59,16 @@ export type PartialMoc = z.infer<typeof PartialMocSchema>
 // Activity Item
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ActivityTypeSchema = z.enum(['added', 'built', 'wishlist', 'progress'])
+export const ActivityTypeSchema = z.enum([
+  'added',
+  'built',
+  'wishlist',
+  'progress',
+  'set_added',
+  'set_owned',
+  'minifig_owned',
+  'minifig_wanted',
+])
 
 export type ActivityType = z.infer<typeof ActivityTypeSchema>
 

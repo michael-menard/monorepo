@@ -87,14 +87,32 @@ export function createDashboardRepository(
           UNION ALL
           SELECT id, title, 'progress' AS type, updated_at AS timestamp
           FROM moc_instructions WHERE user_id = ${userId} AND updated_at > created_at + interval '1 minute'
+          UNION ALL
+          SELECT id, title,
+            CASE WHEN status = 'owned' THEN 'set_owned' ELSE 'set_added' END AS type,
+            created_at AS timestamp
+          FROM sets WHERE user_id = ${userId}
+          UNION ALL
+          SELECT id, display_name AS title,
+            CASE WHEN status = 'owned' THEN 'minifig_owned' ELSE 'minifig_wanted' END AS type,
+            updated_at AS timestamp
+          FROM minifig_instances WHERE user_id = ${userId} AND status IN ('owned', 'wanted')
         ) combined
         ORDER BY timestamp DESC
         LIMIT ${limit}
       `)
+      const messageMap: Record<string, (title: string) => string> = {
+        added: t => `Added MOC: ${t}`,
+        progress: t => `Updated MOC: ${t}`,
+        set_owned: t => `Added set: ${t}`,
+        set_added: t => `Wishlisted set: ${t}`,
+        minifig_owned: t => `Owned minifig: ${t}`,
+        minifig_wanted: t => `Wanted minifig: ${t}`,
+      }
       return result.rows.map((row: any) => ({
         id: row.id,
-        type: row.type as 'added' | 'progress',
-        message: row.type === 'added' ? `Added: ${row.title}` : `Updated: ${row.title}`,
+        type: row.type,
+        message: (messageMap[row.type] ?? (t => t))(row.title),
         timestamp: new Date(row.timestamp).toISOString(),
       }))
     },
