@@ -229,6 +229,52 @@ minifigs.patch('/:id', async c => {
 })
 
 /**
+ * POST /bulk-tags - Add or remove tags from multiple minifig instances
+ * Body: { ids: string[], add?: string[], remove?: string[] }
+ */
+minifigs.post('/bulk-tags', async c => {
+  const userId = c.get('userId')
+  const body = await c.req.json()
+  const { ids, add, remove } = body as {
+    ids?: string[]
+    add?: string[]
+    remove?: string[]
+  }
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json({ error: 'VALIDATION_ERROR', message: 'ids must be a non-empty array' }, 400)
+  }
+
+  if ((!add || add.length === 0) && (!remove || remove.length === 0)) {
+    return c.json({ error: 'VALIDATION_ERROR', message: 'must provide add or remove tags' }, 400)
+  }
+
+  const normalizedAdd = (add ?? []).map(t => t.toLowerCase().trim()).filter(Boolean)
+  const normalizedRemove = new Set((remove ?? []).map(t => t.toLowerCase().trim()).filter(Boolean))
+
+  let updated = 0
+
+  for (const id of ids) {
+    // Verify ownership
+    const existing = await minifigsService.getInstance(userId, id)
+    if (!existing.ok) continue
+
+    // Get current tags
+    const currentTags = existing.data.tags ?? []
+
+    // Apply add + remove
+    const tagSet = new Set(currentTags)
+    for (const t of normalizedAdd) tagSet.add(t)
+    for (const t of normalizedRemove) tagSet.delete(t)
+
+    await syncTagsForEntity(db, schema, id, Array.from(tagSet))
+    updated++
+  }
+
+  return c.json({ updated, total: ids.length })
+})
+
+/**
  * POST /bulk-delete - Delete multiple minifig instances
  */
 minifigs.post('/bulk-delete', async c => {

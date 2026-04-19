@@ -122,6 +122,21 @@ export const minifigsApi = createApi({
     }),
 
     /**
+     * POST /minifigs/bulk-tags
+     */
+    bulkEditTags: builder.mutation<
+      { updated: number; total: number },
+      { ids: string[]; add?: string[]; remove?: string[] }
+    >({
+      query: ({ ids, add, remove }) => ({
+        url: '/minifigs/bulk-tags',
+        method: 'POST',
+        body: { ids, add, remove },
+      }),
+      invalidatesTags: [{ type: 'MinifigList' }],
+    }),
+
+    /**
      * GET /minifigs/archetypes
      */
     getArchetypes: builder.query<MinifigArchetype[], { search?: string }>({
@@ -163,6 +178,7 @@ export const {
   useUpdateVariantMutation,
   useDeleteMinifigMutation,
   useBulkDeleteMinifigsMutation,
+  useBulkEditTagsMutation,
   useGetArchetypesQuery,
   useGetVariantsQuery,
   useGetVariantByIdQuery,

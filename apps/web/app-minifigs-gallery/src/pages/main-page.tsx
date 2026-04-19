@@ -1,10 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { PersonStanding, Trash2, X } from 'lucide-react'
-import { Badge, Skeleton, Button, ConfirmationDialog, cn } from '@repo/app-component-library'
+import { PersonStanding, Trash2, X, Tags } from 'lucide-react'
+import {
+  Badge,
+  Skeleton,
+  Button,
+  ConfirmationDialog,
+  AppDialog,
+  AppDialogContent,
+  AppDialogHeader,
+  AppDialogTitle,
+  AppDialogFooter,
+  cn,
+} from '@repo/app-component-library'
 import { GalleryCard } from '@repo/gallery'
 import {
   useGetMinifigsQuery,
   useBulkDeleteMinifigsMutation,
+  useBulkEditTagsMutation,
 } from '@repo/api-client/rtk/minifigs-api'
 import type { MinifigInstance } from '@repo/api-client/schemas/minifigs'
 
@@ -135,7 +147,10 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showTagDialog, setShowTagDialog] = useState(false)
+  const [tagInput, setTagInput] = useState('')
   const [bulkDeleteMinifigs, { isLoading: isDeleting }] = useBulkDeleteMinifigsMutation()
+  const [bulkEditTags, { isLoading: isTagging }] = useBulkEditTagsMutation()
   const hasSelection = selectedIds.size > 0
 
   const toggleSelect = useCallback((id: string) => {
@@ -161,6 +176,37 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
     setPage(1)
     setAllItems([])
   }, [selectedIds, bulkDeleteMinifigs])
+
+  const handleBulkAddTags = useCallback(async () => {
+    if (selectedIds.size === 0 || !tagInput.trim()) return
+    const ids = Array.from(selectedIds)
+    const tagsToAdd = tagInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+    await bulkEditTags({ ids, add: tagsToAdd })
+    setTagInput('')
+    setShowTagDialog(false)
+    setSelectedIds(new Set())
+    setPage(1)
+    setAllItems([])
+  }, [selectedIds, tagInput, bulkEditTags])
+
+  const handleBulkRemoveTags = useCallback(
+    async (tagsToRemove: string[]) => {
+      if (selectedIds.size === 0 || tagsToRemove.length === 0) return
+      const ids = Array.from(selectedIds)
+      await bulkEditTags({ ids, remove: tagsToRemove })
+      setPage(1)
+      setAllItems([])
+    },
+    [selectedIds, bulkEditTags],
+  )
+
+  // Collect tags from selected items for removal options
+  const selectedTags = Array.from(
+    new Set(allItems.filter(m => selectedIds.has(m.id)).flatMap(m => m.tags ?? [])),
+  ).sort()
 
   const { data, isLoading, isFetching } = useGetMinifigsQuery(
     {
@@ -268,6 +314,10 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
       {hasSelection && (
         <div className="sticky top-0 z-20 flex items-center gap-3 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 backdrop-blur-sm">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button variant="outline" size="sm" onClick={() => setShowTagDialog(true)}>
+            <Tags className="h-4 w-4 mr-1" />
+            Tags
+          </Button>
           <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
             <Trash2 className="h-4 w-4 mr-1" />
             Delete
@@ -290,6 +340,69 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
         loading={isDeleting}
         onConfirm={handleBulkDelete}
       />
+
+      {/* Bulk Tag Dialog */}
+      <AppDialog open={showTagDialog} onOpenChange={setShowTagDialog}>
+        <AppDialogContent>
+          <AppDialogHeader>
+            <AppDialogTitle>
+              Edit tags for {selectedIds.size} minifig{selectedIds.size === 1 ? '' : 's'}
+            </AppDialogTitle>
+          </AppDialogHeader>
+          <div className="space-y-4">
+            {/* Add tags */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Add tags</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="tag1, tag2, ..."
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleBulkAddTags()}
+                  className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleBulkAddTags}
+                  disabled={isTagging || !tagInput.trim()}
+                >
+                  {isTagging ? 'Adding...' : 'Add'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Separate multiple tags with commas</p>
+            </div>
+
+            {/* Remove existing tags */}
+            {selectedTags.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Remove tags</label>
+                <div className="flex flex-wrap gap-1">
+                  {selectedTags.map(tag => (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-colors"
+                      onClick={() => handleBulkRemoveTags([tag])}
+                    >
+                      {tag}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Click a tag to remove it from all selected minifigs
+                </p>
+              </div>
+            )}
+          </div>
+          <AppDialogFooter>
+            <Button variant="outline" onClick={() => setShowTagDialog(false)}>
+              Done
+            </Button>
+          </AppDialogFooter>
+        </AppDialogContent>
+      </AppDialog>
 
       {/* Grid */}
       {isLoading && allItems.length === 0 ? (
