@@ -1,4 +1,4 @@
-import { eq, and, ilike, or, sql, desc, asc, inArray } from 'drizzle-orm'
+import { eq, and, ilike, or, sql, desc, asc, inArray, isNull } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err, paginate } from '@repo/api-core'
@@ -31,7 +31,7 @@ export function createMinifigInstanceRepository(
         })
         .from(minifigInstances)
         .leftJoin(minifigVariants, eq(minifigInstances.variantId, minifigVariants.id))
-        .where(eq(minifigInstances.id, id))
+        .where(and(eq(minifigInstances.id, id), isNull(minifigInstances.deletedAt)))
         .limit(1)
 
       if (!rows[0]) {
@@ -50,7 +50,7 @@ export function createMinifigInstanceRepository(
       const { page, limit } = pagination
       const offset = (page - 1) * limit
 
-      const conditions = [eq(minifigInstances.userId, userId)]
+      const conditions = [eq(minifigInstances.userId, userId), isNull(minifigInstances.deletedAt)]
 
       if (filters?.status) {
         conditions.push(eq(minifigInstances.status, filters.status))
@@ -183,9 +183,13 @@ export function createMinifigInstanceRepository(
     },
 
     async delete(id: string): Promise<Result<void, 'NOT_FOUND'>> {
-      const result = await db.delete(minifigInstances).where(eq(minifigInstances.id, id))
+      const [row] = await db
+        .update(minifigInstances)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(minifigInstances.id, id), isNull(minifigInstances.deletedAt)))
+        .returning({ id: minifigInstances.id })
 
-      if (result.rowCount === 0) {
+      if (!row) {
         return err('NOT_FOUND')
       }
 

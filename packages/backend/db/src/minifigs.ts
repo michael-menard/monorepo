@@ -169,6 +169,7 @@ export const minifigInstances = pgTable(
     // Timestamps
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   table => ({
     userIdIdx: index('minifig_instances_user_id_idx').on(table.userId),

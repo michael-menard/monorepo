@@ -23,7 +23,7 @@ export function createDashboardRepository(
           (SELECT COUNT(*)::int FROM moc_instructions WHERE user_id = ${userId}) AS total_mocs,
           (SELECT COUNT(*)::int FROM wishlist_items WHERE user_id = ${userId}) AS wishlist_count,
           (SELECT COUNT(*)::int FROM sets WHERE user_id = ${userId} AND status = 'owned') AS owned_sets_count,
-          (SELECT COUNT(*)::int FROM minifig_instances WHERE user_id = ${userId} AND status = 'owned') AS owned_minifigs_count,
+          (SELECT COUNT(*)::int FROM minifig_instances WHERE user_id = ${userId} AND status = 'owned' AND deleted_at IS NULL) AS owned_minifigs_count,
           (SELECT COUNT(DISTINCT tm.theme)::int
            FROM moc_instructions mi,
                 jsonb_array_elements_text(mi.tags) AS t
@@ -96,7 +96,7 @@ export function createDashboardRepository(
           SELECT id, display_name AS title,
             CASE WHEN status = 'owned' THEN 'minifig_owned' ELSE 'minifig_wanted' END AS type,
             updated_at AS timestamp
-          FROM minifig_instances WHERE user_id = ${userId} AND status IN ('owned', 'wanted')
+          FROM minifig_instances WHERE user_id = ${userId} AND status IN ('owned', 'wanted') AND deleted_at IS NULL
         ) combined
         ORDER BY timestamp DESC
         LIMIT ${limit}
