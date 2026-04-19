@@ -22,6 +22,8 @@ export function createDashboardRepository(
         SELECT
           (SELECT COUNT(*)::int FROM moc_instructions WHERE user_id = ${userId}) AS total_mocs,
           (SELECT COUNT(*)::int FROM wishlist_items WHERE user_id = ${userId}) AS wishlist_count,
+          (SELECT COUNT(*)::int FROM sets WHERE user_id = ${userId} AND status = 'owned') AS owned_sets_count,
+          (SELECT COUNT(*)::int FROM minifig_instances WHERE user_id = ${userId} AND status = 'owned') AS owned_minifigs_count,
           (SELECT COUNT(DISTINCT tm.theme)::int
            FROM moc_instructions mi,
                 jsonb_array_elements_text(mi.tags) AS t
@@ -34,6 +36,8 @@ export function createDashboardRepository(
       return {
         totalMocs: row?.total_mocs ?? 0,
         wishlistCount: row?.wishlist_count ?? 0,
+        ownedSetsCount: row?.owned_sets_count ?? 0,
+        ownedMinifigsCount: row?.owned_minifigs_count ?? 0,
         themeCount: row?.theme_count ?? 0,
         lastUpdated: row?.last_updated ? new Date(row.last_updated).toISOString() : null,
       }

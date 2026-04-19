@@ -1,6 +1,8 @@
 export interface DashboardStats {
   totalMocs: number
   wishlistCount: number
+  ownedSetsCount: number
+  ownedMinifigsCount: number
   themeCount: number
   lastUpdated: string | null
 }

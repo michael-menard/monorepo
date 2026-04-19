@@ -5,7 +5,7 @@
 
 import { StatsCards as BaseStatsCards } from '@repo/app-component-library'
 import type { StatItem } from '@repo/app-component-library'
-import { Blocks, Heart, Palette, Hammer } from 'lucide-react'
+import { Blocks, Box, Palette, Hammer, User } from 'lucide-react'
 import type { DashboardStats } from '@repo/api-client/rtk/dashboard-api'
 import type { DashboardStatsExtended } from '../__types__'
 
@@ -45,11 +45,18 @@ export function StatsCards({
       bgClass: 'bg-lego-red/10',
     },
     {
-      icon: Heart,
-      label: 'Wishlist Items',
-      value: stats.wishlistCount,
+      icon: Box,
+      label: 'Owned Sets',
+      value: stats.ownedSetsCount,
       colorClass: 'text-lego-blue',
       bgClass: 'bg-lego-blue/10',
+    },
+    {
+      icon: User,
+      label: 'Minifigs',
+      value: stats.ownedMinifigsCount,
+      colorClass: 'text-lego-green',
+      bgClass: 'bg-lego-green/10',
     },
     {
       icon: Palette,

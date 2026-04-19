@@ -94,6 +94,8 @@ export type RecentMocExtended = z.infer<typeof RecentMocExtendedSchema>
 export const DashboardStatsExtendedSchema = z.object({
   totalMocs: z.number().int().nonnegative(),
   wishlistCount: z.number().int().nonnegative(),
+  ownedSetsCount: z.number().int().nonnegative(),
+  ownedMinifigsCount: z.number().int().nonnegative(),
   themeCount: z.number().int().nonnegative(),
   buildProgress: z.number().int().min(0).max(100),
   lastUpdated: z.string().datetime(),
