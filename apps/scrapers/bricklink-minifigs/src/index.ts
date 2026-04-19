@@ -317,11 +317,15 @@ async function scrapeMinifigDetail(
     )
     if (nameEl) description = nameEl.textContent || ''
 
-    document.querySelectorAll('a[href*="catalogItemInv.asp"][href*="M="]').forEach(link => {
-      const text = (link.textContent || '').trim()
-      const match = text.match(/(\d+)\s+Parts/)
-      if (match) partsCount = parseInt(match[1].replace(/,/g, ''), 10)
-    })
+    document
+      .querySelectorAll(
+        'a[href*="catalogItemInv.asp"][href*="M="], a[href*="catalogItemInv.asp"][href*="S="]',
+      )
+      .forEach(link => {
+        const text = (link.textContent || '').trim()
+        const match = text.match(/(\d+)\s+(?:Parts|Items)/)
+        if (match) partsCount = parseInt(match[1].replace(/,/g, ''), 10)
+      })
 
     const name = document.title.split(' : ')[0].trim()
 
@@ -565,7 +569,48 @@ async function scrapePartsInventory(
       return results
     })
 
-    console.log(`  Parts: ${parts.length} found`)
+    // For set inventories, also find minifig items (M=) that have sub-inventories
+    const subMinifigNumbers: string[] = []
+    if (itemType === 'S') {
+      const subItems = await page.evaluate(() => {
+        const minifigLinks = document.querySelectorAll(
+          'a[href*="catalogItem.asp"][href*="M="], a[href*="catalogitem.page?M="]',
+        )
+        const numbers: string[] = []
+        for (const link of minifigLinks) {
+          const href = (link as HTMLAnchorElement).href
+          const match = href.match(/[?&]M=([^&]+)/)
+          if (match && !numbers.includes(match[1])) {
+            numbers.push(match[1])
+          }
+        }
+        return numbers
+      })
+      subMinifigNumbers.push(...subItems)
+    }
+
+    // Also follow sub-inventories for parts that have hasInventory=true (assembled parts like printed torsos)
+    const partsWithSubInv = parts.filter(p => p.hasInventory)
+
+    console.log(`  Parts: ${parts.length} found (direct)`)
+    if (subMinifigNumbers.length > 0) {
+      console.log(`  Sub-minifigs to expand: ${subMinifigNumbers.join(', ')}`)
+    }
+    if (partsWithSubInv.length > 0) {
+      console.log(
+        `  Parts with sub-inventory: ${partsWithSubInv.map(p => p.partNumber).join(', ')}`,
+      )
+    }
+
+    // Expand minifig sub-inventories (e.g., CMF set contains a minifig with head/torso/legs)
+    for (const minifigNum of subMinifigNumbers) {
+      console.log(`  Expanding minifig sub-inventory: ${minifigNum}`)
+      const subParts = await scrapePartsInventory(page, minifigNum, 'M')
+      parts.push(...subParts)
+      await page.waitForTimeout(1000)
+    }
+
+    console.log(`  Parts total: ${parts.length} (after expansion)`)
     for (const part of parts) {
       console.log(
         `    ${part.partNumber} — ${part.color || '?'} (colorId:${part.colorId ?? '?'}) qty:${part.quantity} [${part.category || part.position || '?'}]`,
