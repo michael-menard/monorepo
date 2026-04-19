@@ -143,6 +143,7 @@ function MinifigCard({
 export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }) {
   const [status, setStatus] = useState<'owned' | 'wanted' | undefined>(undefined)
   const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<string>('createdAt:desc')
   const [page, setPage] = useState(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -203,14 +204,15 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
     [selectedIds, bulkEditTags],
   )
 
+  const [sort, order] = sortBy.split(':') as [string, 'asc' | 'desc']
   const { data, isLoading, isFetching } = useGetMinifigsQuery(
     {
       status,
       search: search || undefined,
       page,
       limit: 48,
-      sort: 'createdAt',
-      order: 'desc',
+      sort,
+      order,
     },
     { pollingInterval: 10000 },
   )
@@ -308,6 +310,23 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
             </button>
           ))}
         </div>
+        <select
+          value={sortBy}
+          onChange={e => {
+            setSortBy(e.target.value)
+            resetFilters()
+          }}
+          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="createdAt:desc">Newest first</option>
+          <option value="createdAt:asc">Oldest first</option>
+          <option value="displayName:asc">Name A-Z</option>
+          <option value="displayName:desc">Name Z-A</option>
+          <option value="purchasePrice:desc">Price high-low</option>
+          <option value="purchasePrice:asc">Price low-high</option>
+          <option value="purchaseDate:desc">Purchase date (recent)</option>
+          <option value="purchaseDate:asc">Purchase date (oldest)</option>
+        </select>
       </div>
 
       {/* Bulk Action Bar */}
