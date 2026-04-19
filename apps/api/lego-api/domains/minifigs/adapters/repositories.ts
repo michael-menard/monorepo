@@ -97,6 +97,7 @@ export function createMinifigInstanceRepository(
       const sortColumn =
         {
           createdAt: minifigInstances.createdAt,
+          updatedAt: minifigInstances.updatedAt,
           displayName: minifigInstances.displayName,
           purchasePrice: minifigInstances.purchasePrice,
           purchaseDate: minifigInstances.purchaseDate,

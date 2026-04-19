@@ -320,6 +320,7 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
         >
           <option value="createdAt:desc">Newest first</option>
           <option value="createdAt:asc">Oldest first</option>
+          <option value="updatedAt:desc">Last updated</option>
           <option value="displayName:asc">Name A-Z</option>
           <option value="displayName:desc">Name Z-A</option>
           <option value="purchasePrice:desc">Price high-low</option>
