@@ -47,7 +47,6 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
               key={image.id}
               type="button"
               onClick={() => {
-                console.log('opening index', index, safeImages[index])
                 setOpenIndex(index)
               }}
               className="group relative aspect-square overflow-hidden rounded-xl bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

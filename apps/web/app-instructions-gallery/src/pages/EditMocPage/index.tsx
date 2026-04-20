@@ -338,6 +338,7 @@ export function EditMocPage({ mocIdOrSlug, className }: EditMocPageProps) {
         isSubmitting={isUpdating || hasSubmitted}
         initialValues={initialValues}
         apiError={apiError}
+        submitLabel="Save Changes"
       />
     </div>
   )

@@ -6,6 +6,7 @@
  * Story 3.1.2: Instructions Card Component
  */
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { BookOpen, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +25,7 @@ import { Button } from '@repo/app-component-library'
 import {
   useGetInstructionsQuery,
   useTriggerScraperMutation,
+  useToggleInstructionFavoriteMutation,
 } from '@repo/api-client/rtk/instructions-api'
 import { InstructionCard } from '../components/InstructionCard'
 import type { Instruction } from '../__types__'
@@ -72,6 +74,7 @@ function mapApiItem(api: any): Instruction {
 }
 
 export function MainPage({ className }: MainPageProps) {
+  const navigate = useNavigate()
   const [instructions, setInstructions] = useState<Instruction[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -150,29 +153,31 @@ export function MainPage({ className }: MainPageProps) {
     }
   }, [triggerScraper])
 
-  const handleFavorite = useCallback((id: string) => {
-    // TODO: Wire to toggle favorite mutation once backend supports it
-    setInstructions(prev =>
-      prev.map(instruction =>
-        instruction.id === id
-          ? { ...instruction, isFavorite: !instruction.isFavorite }
-          : instruction,
-      ),
-    )
-  }, [])
+  const [toggleFavorite] = useToggleInstructionFavoriteMutation()
 
-  const handleEdit = useCallback((id: string) => {
-    logger.info('instructions.gallery.edit_click', undefined, { id })
-    if (typeof window !== 'undefined') {
-      window.location.href = `/instructions/${id}/edit`
-    }
-  }, [])
+  const handleFavorite = useCallback(
+    (id: string) => {
+      const instruction = instructions.find(i => i.id === id)
+      if (!instruction) return
+      toggleFavorite({ id, isFavorite: !instruction.isFavorite })
+    },
+    [instructions, toggleFavorite],
+  )
 
-  const handleCardClick = useCallback((id: string) => {
-    if (typeof window !== 'undefined') {
-      window.location.href = `/instructions/${id}`
-    }
-  }, [])
+  const handleEdit = useCallback(
+    (id: string) => {
+      logger.info('instructions.gallery.edit_click', undefined, { id })
+      navigate({ to: `/instructions/${id}/edit` })
+    },
+    [navigate],
+  )
+
+  const handleCardClick = useCallback(
+    (id: string) => {
+      navigate({ to: `/instructions/${id}` })
+    },
+    [navigate],
+  )
 
   // Derive table items from instructions plus optional view-only metadata
   const tableItems: InstructionTableItem[] = useMemo(
@@ -327,9 +332,7 @@ export function MainPage({ className }: MainPageProps) {
                     action={{
                       label: 'Create your first MOC',
                       onClick: () => {
-                        if (typeof window !== 'undefined') {
-                          window.location.href = '/mocs/new'
-                        }
+                        navigate({ to: '/mocs/new' })
                       },
                     }}
                     data-testid="gallery-empty-state"
@@ -379,9 +382,7 @@ export function MainPage({ className }: MainPageProps) {
                 columns={mocsColumns}
                 ariaLabel="Instructions gallery table"
                 onRowClick={item => {
-                  if (typeof window !== 'undefined') {
-                    window.location.href = `/instructions/${item.slug}/edit`
-                  }
+                  navigate({ to: `/instructions/${item.slug}/edit` })
                 }}
                 hasActiveFilters={Boolean(searchTerm)}
                 onClearFilters={() => setSearchTerm('')}

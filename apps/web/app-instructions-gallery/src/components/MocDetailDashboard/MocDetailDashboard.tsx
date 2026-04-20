@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useDispatch } from 'react-redux'
 import {
   Tabs,
   TabsList,
@@ -7,6 +8,7 @@ import {
   Card,
   CardContent,
 } from '@repo/app-component-library'
+import { instructionsApi } from '@repo/api-client/rtk/instructions-api'
 import { Calendar, User, ExternalLink } from 'lucide-react'
 import type { Moc } from './__types__/moc'
 import { MetaCard } from './MetaCard'
@@ -40,7 +42,10 @@ interface MocDetailDashboardProps {
 }
 
 export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
-  const handleFilesUploaded = useCallback(() => {}, [])
+  const dispatch = useDispatch()
+  const handleFilesUploaded = useCallback(() => {
+    dispatch(instructionsApi.util.invalidateTags([{ type: 'Moc', id: moc.id }]))
+  }, [dispatch, moc.id])
 
   return (
     <div className="container mx-auto px-4 py-6 xl:py-8" data-testid="moc-detail-dashboard">

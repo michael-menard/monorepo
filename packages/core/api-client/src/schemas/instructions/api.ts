@@ -398,6 +398,7 @@ export const GetMocDetailResponseSchema = z.object({
   tags: z.array(z.string()).nullable(),
   thumbnailUrl: z.string().nullable(),
   author: z.string().nullable().optional(),
+  designerUrl: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   publishedAt: z.string().nullable().optional(),

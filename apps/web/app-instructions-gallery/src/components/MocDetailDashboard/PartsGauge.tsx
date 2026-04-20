@@ -8,6 +8,7 @@ interface PartsGaugeProps {
 }
 
 export function PartsGauge({ partsOwned, partsTotal }: PartsGaugeProps) {
+  const isUnknown = partsTotal === 0
   const percentage = partsTotal > 0 ? Math.round((partsOwned / partsTotal) * 100) : 0
   const circumference = 2 * Math.PI * 45
 
@@ -127,10 +128,10 @@ export function PartsGauge({ partsOwned, partsTotal }: PartsGaugeProps) {
               <span className="text-sm text-muted-foreground">Still Needed</span>
               <span
                 className={`text-sm font-semibold ${
-                  partsNeeded === 0 ? 'text-teal-500' : 'text-foreground'
+                  !isUnknown && partsNeeded === 0 ? 'text-teal-500' : 'text-foreground'
                 }`}
               >
-                {partsNeeded === 0 ? 'Complete!' : partsNeeded.toLocaleString()}
+                {isUnknown ? '—' : partsNeeded === 0 ? 'Complete!' : partsNeeded.toLocaleString()}
               </span>
             </div>
 

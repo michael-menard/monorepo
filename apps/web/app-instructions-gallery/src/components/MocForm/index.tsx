@@ -80,6 +80,11 @@ export interface MocFormProps {
   apiError?: string
 
   /**
+   * Custom label for the submit button (defaults to "Create MOC")
+   */
+  submitLabel?: string
+
+  /**
    * Additional class names
    */
   className?: string
@@ -93,6 +98,7 @@ export function MocForm({
   onCancel,
   isSubmitting = false,
   apiError,
+  submitLabel = 'Create MOC',
   className,
 }: MocFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -394,10 +400,10 @@ export function MocForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
+                Saving...
               </>
             ) : (
-              'Create MOC'
+              submitLabel
             )}
           </Button>
         </div>

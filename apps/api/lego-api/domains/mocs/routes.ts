@@ -587,6 +587,7 @@ mocs.get('/:id', async c => {
       tags: moc.tags,
       thumbnailUrl,
       author: moc.author ?? null,
+      designerUrl: moc.designer?.profileUrl ?? null,
       createdAt: moc.createdAt instanceof Date ? moc.createdAt.toISOString() : moc.createdAt,
       updatedAt: moc.updatedAt instanceof Date ? moc.updatedAt.toISOString() : moc.updatedAt,
       publishedAt: moc.publishedAt ?? null,

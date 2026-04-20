@@ -101,32 +101,36 @@ export const InstructionCard = ({
           )}
         </div>
       }
-      actions={
-        <div className="flex gap-1">
-          {onFavorite ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleFavorite}
-              aria-label={instruction.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              data-testid="favorite-button"
-            >
-              <Heart
-                className={cn('h-4 w-4', instruction.isFavorite && 'fill-current text-red-500')}
-              />
-            </Button>
-          ) : null}
-          {onEdit ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleEdit}
-              aria-label="Edit instruction"
-              data-testid="edit-button"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          ) : null}
+      hoverOverlay={
+        <div className="absolute inset-0 flex items-end p-4">
+          <div className="flex gap-1">
+            {onFavorite ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleFavorite}
+                aria-label={instruction.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                data-testid="favorite-button"
+                className="text-white hover:text-white hover:bg-white/20"
+              >
+                <Heart
+                  className={cn('h-4 w-4', instruction.isFavorite && 'fill-current text-red-500')}
+                />
+              </Button>
+            ) : null}
+            {onEdit ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleEdit}
+                aria-label="Edit instruction"
+                data-testid="edit-button"
+                className="text-white hover:text-white hover:bg-white/20"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
       }
     />
