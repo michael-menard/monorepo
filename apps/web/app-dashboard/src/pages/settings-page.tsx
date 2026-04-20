@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useState } from 'react'
 import { Settings } from 'lucide-react'
 import {
   AppDialog,
@@ -6,6 +6,10 @@ import {
   AppDialogHeader,
   AppDialogTitle,
   AppDialogFooter,
+  AppTabs,
+  AppTabsList,
+  AppTabsTrigger,
+  AppTabsContent,
   Button,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
@@ -19,6 +23,10 @@ import {
   useDeleteTagGloballyMutation,
 } from '@repo/api-client/rtk/dashboard-api'
 import { TagThemeBoard } from '../components/TagThemeBoard'
+
+const AppScraperQueueModule = lazy(() =>
+  import('@repo/app-scraper-queue').then(module => ({ default: module.AppScraperQueueModule })),
+)
 
 export function SettingsPage() {
   const { data: tags = [], isLoading: tagsLoading } = useGetUserTagsQuery()
@@ -80,32 +88,58 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-10rem)]">
-      <div className="space-y-1 shrink-0 mb-6">
+      <div className="space-y-1 shrink-0 mb-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />
-          Tag Theme Mappings
+          Settings
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Drag tags into theme buckets to group your collection. Tags can belong to multiple themes.
-          The dashboard chart updates automatically.
-        </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      ) : (
-        <TagThemeBoard
-          tags={tags}
-          themes={themes}
-          onAssign={handleAssign}
-          onRemove={handleRemove}
-          onCreateTheme={handleCreateTheme}
-          onDeleteTheme={handleDeleteTheme}
-          onDeleteTag={setTagToDelete}
-        />
-      )}
+      <AppTabs defaultValue="tags" className="flex-1 flex flex-col">
+        <AppTabsList variant="underline" className="shrink-0 mb-4">
+          <AppTabsTrigger variant="underline" value="tags">
+            Tag Theme Mappings
+          </AppTabsTrigger>
+          <AppTabsTrigger variant="underline" value="scraper">
+            Scrape Queue
+          </AppTabsTrigger>
+        </AppTabsList>
+
+        <AppTabsContent value="tags" className="flex-1">
+          <p className="text-sm text-muted-foreground mb-4">
+            Drag tags into theme buckets to group your collection. Tags can belong to multiple
+            themes. The dashboard chart updates automatically.
+          </p>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <TagThemeBoard
+              tags={tags}
+              themes={themes}
+              onAssign={handleAssign}
+              onRemove={handleRemove}
+              onCreateTheme={handleCreateTheme}
+              onDeleteTheme={handleDeleteTheme}
+              onDeleteTag={setTagToDelete}
+            />
+          )}
+        </AppTabsContent>
+
+        <AppTabsContent value="scraper" className="flex-1">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-20">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            }
+          >
+            <AppScraperQueueModule />
+          </Suspense>
+        </AppTabsContent>
+      </AppTabs>
 
       <AppDialog open={!!tagToDelete} onOpenChange={open => !open && setTagToDelete(null)}>
         <AppDialogContent>
