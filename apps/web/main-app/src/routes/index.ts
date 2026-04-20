@@ -22,7 +22,9 @@ import { MinifigsModule, MinifigsDetailModule } from './modules/MinifigsModule'
 // SetsGalleryModule no longer used directly — SetsModule renders it via sub-tabs
 import { UserProfileModule } from './modules/UserProfileModule'
 import { DashboardSettingsModule } from './modules/DashboardSettingsModule'
+import { ScraperModule } from './modules/ScraperModule'
 import { AdminModule } from './admin/AdminModule'
+import { ProcurementPage } from '@/pages/procurement'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
 import type { AuthState } from '@/store/slices/authSlice'
@@ -238,6 +240,32 @@ const minifigDetailRoute = createRoute({
 //   beforeLoad: RouteGuards.protected,
 // })
 
+// Procurement / Build Planner route
+const procurementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/procurement',
+  component: ProcurementPage,
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
+// Scraper Queue route
+const scraperRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/scraper',
+  component: ScraperModule,
+  pendingComponent: LoadingPage,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
+})
+
 // Stub routes for planned features
 const galleryRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -414,6 +442,8 @@ const routeTree = rootRoute.addChildren([
   setsRoute,
   minifigsRoute,
   minifigDetailRoute,
+  procurementRoute,
+  scraperRoute,
   // Stub routes for planned features
   galleryRoute,
   galleryDetailRoute,

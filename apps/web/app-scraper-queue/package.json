@@ -1,0 +1,28 @@
+{
+  "name": "@repo/app-scraper-queue",
+  "version": "1.0.0",
+  "description": "Scrape queue management micro-app",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": "./src/Module.tsx",
+      "types": "./src/Module.tsx"
+    }
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/app-component-library": "workspace:*",
+    "lucide-react": "^0.511.0",
+    "react": "^19.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0",
+    "@testing-library/react": "^16.0.0"
+  }
+}

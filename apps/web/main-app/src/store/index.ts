@@ -10,6 +10,10 @@ import { adminApi } from '@repo/api-client/rtk/admin-api'
 import { inspirationApi } from '@repo/api-client/rtk/inspiration-api'
 import { uploadsApi } from '@repo/api-client/rtk/uploads-api'
 import { userProfileApi } from '@repo/api-client/rtk/user-profile-api'
+import { scraperApi } from '@repo/api-client/rtk/scraper-api'
+// Procurement API is imported directly by components that need it
+// rather than being registered globally, to avoid store initialization issues
+// import { procurementApi } from '@repo/api-client/rtk/procurement-api'
 import { createAuthFailureHandler, AUTH_PAGES } from '@repo/api-client/errors/auth-failure'
 import { authSlice, setUnauthenticated } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
@@ -48,6 +52,7 @@ const authFailureHandler = createAuthFailureHandler({
     store.dispatch(inspirationApi.util.resetApiState())
     store.dispatch(uploadsApi.util.resetApiState())
     store.dispatch(userProfileApi.util.resetApiState())
+    // store.dispatch(procurementApi.util.resetApiState())
   },
 })
 
@@ -88,6 +93,8 @@ export const store = configureStore({
     [inspirationApi.reducerPath]: inspirationApi.reducer,
     [uploadsApi.reducerPath]: uploadsApi.reducer,
     [userProfileApi.reducerPath]: userProfileApi.reducer,
+    [scraperApi.reducerPath]: scraperApi.reducer,
+    // [procurementApi.reducerPath]: procurementApi.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -108,7 +115,9 @@ export const store = configureStore({
       .concat(adminApi.middleware)
       .concat(inspirationApi.middleware)
       .concat(uploadsApi.middleware)
-      .concat(userProfileApi.middleware),
+      .concat(userProfileApi.middleware)
+      .concat(scraperApi.middleware),
+  // .concat(procurementApi.middleware)
   devTools: import.meta.env.DEV,
 })
 
