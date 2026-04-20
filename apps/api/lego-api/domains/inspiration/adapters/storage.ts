@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   CopyObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { ok, err } from '@repo/api-core'
@@ -29,19 +30,29 @@ const MIME_TYPE_MAP: Record<string, string> = {
 /**
  * Create Inspiration Image Storage Adapter
  *
- * Handles S3 operations for inspiration images including:
- * - Presigned URL generation for uploads
+ * Handles MinIO/S3 operations for inspiration images including:
+ * - Presigned URL generation for uploads and reads
  * - Image deletion
  * - URL building
  */
 export function createInspirationImageStorage(): InspirationImageStorage {
+  const minioEndpoint = process.env.MINIO_ENDPOINT || 'http://localhost:9000'
+  const minioAccessKey = process.env.MINIO_ACCESS_KEY || 'minioadmin'
+  const minioSecretKey = process.env.MINIO_SECRET_KEY || 'minioadmin'
+
   const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'us-east-1',
+    endpoint: minioEndpoint,
+    credentials: {
+      accessKeyId: minioAccessKey,
+      secretAccessKey: minioSecretKey,
+    },
+    forcePathStyle: true, // Required for MinIO
   })
 
   const bucket =
     process.env.S3_INSPIRATION_BUCKET || process.env.S3_BUCKET || 'lego-moc-inspirations'
-  const cdnBaseUrl = process.env.CDN_BASE_URL || `https://${bucket}.s3.amazonaws.com`
+  const cdnBaseUrl = process.env.CDN_BASE_URL || `${minioEndpoint}/${bucket}`
 
   return {
     async generateUploadUrl(userId, fileName, mimeType, fileSize) {
@@ -153,6 +164,21 @@ export function createInspirationImageStorage(): InspirationImageStorage {
       } catch (error) {
         logger.error('Failed to copy image:', { sourceKey, destKey, error })
         return err('COPY_FAILED')
+      }
+    },
+
+    async generateReadUrl(key, expiresIn = 3600) {
+      try {
+        const command = new GetObjectCommand({
+          Bucket: bucket,
+          Key: key,
+        })
+
+        const url = await getSignedUrl(s3Client, command, { expiresIn })
+        return ok(url)
+      } catch (error) {
+        logger.error('Failed to generate read URL:', { key, error })
+        return err('PRESIGN_FAILED')
       }
     },
   }

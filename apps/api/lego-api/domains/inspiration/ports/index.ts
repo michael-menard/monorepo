@@ -1,6 +1,7 @@
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import type {
   Inspiration,
+  InspirationImage,
   Album,
   AlbumWithMetadata,
   UpdateInspirationInput,
@@ -278,9 +279,70 @@ export interface AlbumParentRepository {
 }
 
 /**
+ * Inspiration Image Repository Interface
+ *
+ * Manages individual image files within an inspiration.
+ */
+export interface InspirationImageRepository {
+  /**
+   * Insert a new image for an inspiration
+   */
+  insert(data: {
+    inspirationId: string
+    imageUrl: string
+    thumbnailUrl: string | null
+    previewUrl: string | null
+    originalFilename: string | null
+    mimeType: string | null
+    sizeBytes: number | null
+    fileHash: string | null
+    minioKey: string
+    processingStatus: string
+    sortOrder: number
+  }): Promise<InspirationImage>
+
+  /**
+   * Find images by inspiration ID
+   */
+  findByInspirationId(inspirationId: string): Promise<InspirationImage[]>
+
+  /**
+   * Find image by ID
+   */
+  findById(id: string): Promise<Result<InspirationImage, InspirationError>>
+
+  /**
+   * Update image (e.g., after processing completes)
+   */
+  update(
+    id: string,
+    data: Partial<{
+      thumbnailUrl: string | null
+      previewUrl: string | null
+      processingStatus: string
+    }>,
+  ): Promise<Result<InspirationImage, InspirationError>>
+
+  /**
+   * Delete an image
+   */
+  delete(id: string): Promise<Result<void, InspirationError>>
+
+  /**
+   * Find duplicate by file hash
+   */
+  findByHash(fileHash: string, userId: string): Promise<InspirationImage | null>
+
+  /**
+   * Get the maximum sort order for images in an inspiration
+   */
+  getMaxSortOrder(inspirationId: string): Promise<number>
+}
+
+/**
  * Inspiration Image Storage Interface
  *
- * Handles S3 operations for inspiration images.
+ * Handles S3/MinIO operations for inspiration images.
  */
 export interface InspirationImageStorage {
   /**
@@ -317,6 +379,11 @@ export interface InspirationImageStorage {
    * Copy an image to a new location
    */
   copyImage(sourceKey: string, destKey: string): Promise<Result<{ url: string }, 'COPY_FAILED'>>
+
+  /**
+   * Generate a presigned read URL for serving an image
+   */
+  generateReadUrl(key: string, expiresIn?: number): Promise<Result<string, 'PRESIGN_FAILED'>>
 }
 
 /**

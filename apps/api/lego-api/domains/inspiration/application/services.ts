@@ -3,6 +3,7 @@ import { ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
 import type {
   InspirationRepository,
+  InspirationImageRepository,
   AlbumRepository,
   AlbumItemRepository,
   AlbumParentRepository,
@@ -11,6 +12,7 @@ import type {
 } from '../ports/index.js'
 import type {
   Inspiration,
+  InspirationImage,
   Album,
   AlbumWithMetadata,
   CreateInspirationInput,
@@ -32,6 +34,7 @@ import { createDagValidator, type DagValidator } from './dag-validator.js'
  */
 export interface InspirationServiceDeps {
   inspirationRepo: InspirationRepository
+  imageRepo?: InspirationImageRepository
   albumRepo: AlbumRepository
   albumItemRepo: AlbumItemRepository
   albumParentRepo: AlbumParentRepository
@@ -46,8 +49,15 @@ export interface InspirationServiceDeps {
  * All I/O is done through injected ports.
  */
 export function createInspirationService(deps: InspirationServiceDeps) {
-  const { inspirationRepo, albumRepo, albumItemRepo, albumParentRepo, imageStorage, mocLinkRepo } =
-    deps
+  const {
+    inspirationRepo,
+    imageRepo,
+    albumRepo,
+    albumItemRepo,
+    albumParentRepo,
+    imageStorage,
+    mocLinkRepo,
+  } = deps
 
   // Create DAG validator for album hierarchy operations
   const dagValidator: DagValidator = createDagValidator(albumParentRepo)
@@ -560,6 +570,141 @@ export function createInspirationService(deps: InspirationServiceDeps) {
       }
 
       return albumResult
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Inspiration Images (Multi-Image Support)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Add an image to an inspiration
+     */
+    async addImageToInspiration(
+      userId: string,
+      inspirationId: string,
+      data: {
+        imageUrl: string
+        minioKey: string
+        originalFilename?: string
+        mimeType?: string
+        sizeBytes?: number
+        fileHash?: string
+      },
+    ): Promise<Result<InspirationImage, InspirationError | 'DUPLICATE_IMAGE'>> {
+      if (!imageRepo) return err('DB_ERROR')
+
+      // Verify ownership
+      const existing = await inspirationRepo.findById(inspirationId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      // Check for duplicate by hash
+      if (data.fileHash) {
+        const duplicate = await imageRepo.findByHash(data.fileHash, userId)
+        if (duplicate) {
+          return err('DUPLICATE_IMAGE' as InspirationError)
+        }
+      }
+
+      const maxSort = await imageRepo.getMaxSortOrder(inspirationId)
+
+      try {
+        const image = await imageRepo.insert({
+          inspirationId,
+          imageUrl: data.imageUrl,
+          thumbnailUrl: null,
+          previewUrl: null,
+          originalFilename: data.originalFilename ?? null,
+          mimeType: data.mimeType ?? null,
+          sizeBytes: data.sizeBytes ?? null,
+          fileHash: data.fileHash ?? null,
+          minioKey: data.minioKey,
+          processingStatus: 'pending',
+          sortOrder: maxSort + 1,
+        })
+
+        // Update the inspiration's hero image if this is the first image
+        const images = await imageRepo.findByInspirationId(inspirationId)
+        if (images.length === 1) {
+          await inspirationRepo.update(inspirationId, {
+            imageUrl: data.imageUrl,
+          })
+        }
+
+        return ok(image)
+      } catch (error) {
+        logger.error('Failed to add image to inspiration:', error)
+        return err('DB_ERROR')
+      }
+    },
+
+    /**
+     * Get all images for an inspiration
+     */
+    async getInspirationImages(
+      userId: string,
+      inspirationId: string,
+    ): Promise<Result<InspirationImage[], InspirationError>> {
+      if (!imageRepo) return err('DB_ERROR')
+
+      const existing = await inspirationRepo.findById(inspirationId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      const images = await imageRepo.findByInspirationId(inspirationId)
+      return ok(images)
+    },
+
+    /**
+     * Remove an image from an inspiration
+     */
+    async removeImageFromInspiration(
+      userId: string,
+      inspirationId: string,
+      imageId: string,
+    ): Promise<Result<void, InspirationError>> {
+      if (!imageRepo) return err('DB_ERROR')
+
+      const existing = await inspirationRepo.findById(inspirationId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      const imageResult = await imageRepo.findById(imageId)
+      if (!imageResult.ok) return imageResult
+      if (imageResult.data.inspirationId !== inspirationId) return err('FORBIDDEN')
+
+      // Delete from MinIO
+      if (imageStorage) {
+        await imageStorage.deleteImage(imageResult.data.minioKey)
+        if (imageResult.data.thumbnailUrl) {
+          const thumbKey = imageStorage.extractKeyFromUrl(imageResult.data.thumbnailUrl)
+          if (thumbKey) await imageStorage.deleteImage(thumbKey)
+        }
+        if (imageResult.data.previewUrl) {
+          const previewKey = imageStorage.extractKeyFromUrl(imageResult.data.previewUrl)
+          if (previewKey) await imageStorage.deleteImage(previewKey)
+        }
+      }
+
+      return imageRepo.delete(imageId)
+    },
+
+    /**
+     * Check if a file hash already exists (for duplicate detection during upload)
+     */
+    async checkDuplicate(
+      userId: string,
+      fileHash: string,
+    ): Promise<
+      Result<{ isDuplicate: boolean; existingImage?: InspirationImage }, InspirationError>
+    > {
+      if (!imageRepo) return ok({ isDuplicate: false })
+
+      const existing = await imageRepo.findByHash(fileHash, userId)
+      if (existing) {
+        return ok({ isDuplicate: true, existingImage: existing })
+      }
+      return ok({ isDuplicate: false })
     },
 
     // ─────────────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { Hono, Context } from 'hono'
 import { logger } from '@repo/logger'
 import { auth } from '../../middleware/auth.js'
@@ -9,11 +10,16 @@ import { getGeolocation, type GeolocationData } from '../../core/geolocation/ind
 import { createInspirationService } from './application/index.js'
 import {
   createInspirationRepository,
+  createInspirationImageRepository,
   createAlbumRepository,
   createAlbumItemRepository,
   createAlbumParentRepository,
   createInspirationImageStorage,
 } from './adapters/index.js'
+import {
+  createImageProcessingQueue,
+  createImageProcessingWorker,
+} from './workers/image-processor.js'
 import {
   CreateInspirationInputSchema,
   UpdateInspirationInputSchema,
@@ -84,6 +90,7 @@ async function getAuthFailureContext(
 // ─────────────────────────────────────────────────────────────────────────
 
 const inspirationRepo = createInspirationRepository(db, schema)
+const imageRepo = createInspirationImageRepository(db, schema)
 const albumRepo = createAlbumRepository(db, schema)
 const albumItemRepo = createAlbumItemRepository(db, schema)
 const albumParentRepo = createAlbumParentRepository(db, schema)
@@ -91,10 +98,32 @@ const imageStorage = createInspirationImageStorage()
 
 const inspirationService = createInspirationService({
   inspirationRepo,
+  imageRepo,
   albumRepo,
   albumItemRepo,
   albumParentRepo,
   imageStorage,
+})
+
+// Image processing queue and worker
+const imageProcessingQueue = createImageProcessingQueue()
+
+// Start the worker to process images in the background
+createImageProcessingWorker(async result => {
+  // Update the image record with processing results
+  await imageRepo.update(result.imageId, {
+    thumbnailUrl: result.thumbnailUrl,
+    previewUrl: result.previewUrl,
+    processingStatus: 'completed',
+  })
+
+  // Update the file hash for duplicate detection
+  // The hash is set in the original insert if provided during upload,
+  // but also computed during processing for accuracy
+  await db
+    .update(schema.inspirationImages)
+    .set({ fileHash: result.fileHash })
+    .where(eq(schema.inspirationImages.id, result.imageId))
 })
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -313,6 +342,105 @@ inspiration.delete('/:id', async c => {
   }
 
   return c.body(null, 204)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Inspiration Image Routes (Multi-Image Support)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /inspirations/:id/images - Get all images for an inspiration
+ */
+inspiration.get('/:id/images', async c => {
+  const userId = c.get('userId')
+  const inspirationId = c.req.param('id')
+
+  const result = await inspirationService.getInspirationImages(userId, inspirationId)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json({ images: result.data })
+})
+
+/**
+ * POST /inspirations/:id/images - Add an image to an inspiration
+ */
+inspiration.post('/:id/images', async c => {
+  const userId = c.get('userId')
+  const inspirationId = c.req.param('id')
+  const body = await c.req.json()
+
+  const result = await inspirationService.addImageToInspiration(userId, inspirationId, {
+    imageUrl: body.imageUrl,
+    minioKey: body.minioKey,
+    originalFilename: body.originalFilename,
+    mimeType: body.mimeType,
+    sizeBytes: body.sizeBytes,
+    fileHash: body.fileHash,
+  })
+
+  if (!result.ok) {
+    const status =
+      result.error === 'NOT_FOUND'
+        ? 404
+        : result.error === 'FORBIDDEN'
+          ? 403
+          : result.error === ('DUPLICATE_IMAGE' as string)
+            ? 409
+            : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  // Queue image processing (thumbnail + preview generation)
+  await imageProcessingQueue.add('process-image', {
+    imageId: result.data.id,
+    inspirationId,
+    minioKey: body.minioKey,
+    originalFilename: body.originalFilename || null,
+  })
+
+  return c.json(result.data, 201)
+})
+
+/**
+ * DELETE /inspirations/:id/images/:imageId - Remove an image from an inspiration
+ */
+inspiration.delete('/:id/images/:imageId', async c => {
+  const userId = c.get('userId')
+  const inspirationId = c.req.param('id')
+  const imageId = c.req.param('imageId')
+
+  const result = await inspirationService.removeImageFromInspiration(userId, inspirationId, imageId)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.body(null, 204)
+})
+
+/**
+ * POST /inspirations/check-duplicate - Check if a file hash already exists
+ */
+inspiration.post('/check-duplicate', async c => {
+  const userId = c.get('userId')
+  const body = await c.req.json()
+
+  if (!body.fileHash || typeof body.fileHash !== 'string') {
+    return c.json({ error: 'fileHash is required' }, 400)
+  }
+
+  const result = await inspirationService.checkDuplicate(userId, body.fileHash)
+
+  if (!result.ok) {
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data)
 })
 
 // ─────────────────────────────────────────────────────────────────────────

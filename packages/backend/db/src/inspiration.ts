@@ -45,6 +45,7 @@ export const inspirations = pgTable(
     // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at'), // Soft delete
   },
   table => ({
     // Indexes for common queries
@@ -52,6 +53,50 @@ export const inspirations = pgTable(
     userSortIdx: index('idx_inspirations_user_sort').on(table.userId, table.sortOrder),
     userCreatedIdx: index('idx_inspirations_user_created').on(table.userId, table.createdAt),
     titleIdx: index('idx_inspirations_title').on(table.title),
+  }),
+)
+
+/**
+ * Inspiration Images Table - Individual image files within an inspiration
+ *
+ * An inspiration is a concept with 1+ images. Images don't need to be of the
+ * same subject — they collectively represent the idea (e.g., "Hiker Motif" =
+ * tree + path + cabin images).
+ */
+export const inspirationImages = pgTable(
+  'inspiration_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    inspirationId: uuid('inspiration_id')
+      .notNull()
+      .references(() => inspirations.id, { onDelete: 'cascade' }),
+
+    // Image URLs (original + generated variants)
+    imageUrl: text('image_url').notNull(), // Original image URL in MinIO
+    thumbnailUrl: text('thumbnail_url'), // ~400px WebP thumbnail
+    previewUrl: text('preview_url'), // ~1200px WebP preview (conditional)
+
+    // File metadata
+    originalFilename: text('original_filename'),
+    mimeType: text('mime_type'),
+    sizeBytes: integer('size_bytes'),
+    fileHash: text('file_hash'), // SHA-256 hash for duplicate detection
+    minioKey: text('minio_key').notNull(), // MinIO object key for the original
+
+    // Processing status
+    processingStatus: text('processing_status').notNull().default('pending'), // pending | processing | completed | failed
+
+    // Organization
+    sortOrder: integer('sort_order').notNull().default(0), // Position within the inspiration
+
+    // Timestamps
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    inspirationIdx: index('idx_inspiration_images_inspiration').on(table.inspirationId),
+    hashIdx: index('idx_inspiration_images_hash').on(table.fileHash),
+    processingIdx: index('idx_inspiration_images_processing').on(table.processingStatus),
   }),
 )
 
@@ -79,6 +124,7 @@ export const inspirationAlbums = pgTable(
     // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at'), // Soft delete
   },
   table => ({
     // Indexes for common queries
@@ -238,8 +284,16 @@ export const albumMocs = pgTable(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const inspirationsRelations = relations(inspirations, ({ many }) => ({
+  images: many(inspirationImages),
   albumItems: many(inspirationAlbumItems),
   mocs: many(inspirationMocs),
+}))
+
+export const inspirationImagesRelations = relations(inspirationImages, ({ one }) => ({
+  inspiration: one(inspirations, {
+    fields: [inspirationImages.inspirationId],
+    references: [inspirations.id],
+  }),
 }))
 
 export const inspirationAlbumsRelations = relations(inspirationAlbums, ({ one, many }) => ({

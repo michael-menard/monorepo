@@ -33,6 +33,61 @@ export const InspirationSchema = z.object({
 export type Inspiration = z.infer<typeof InspirationSchema>
 
 /**
+ * Inspiration image schema for API responses (multi-image support)
+ */
+export const InspirationImageSchema = z.object({
+  id: z.string().uuid(),
+  inspirationId: z.string().uuid(),
+  imageUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  previewUrl: z.string().nullable(),
+  originalFilename: z.string().nullable(),
+  mimeType: z.string().nullable(),
+  sizeBytes: z.number().int().nullable(),
+  fileHash: z.string().nullable(),
+  minioKey: z.string(),
+  processingStatus: z.string(),
+  sortOrder: z.number().int(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+
+export type InspirationImage = z.infer<typeof InspirationImageSchema>
+
+/**
+ * Response schema for getting images of an inspiration
+ */
+export const InspirationImagesResponseSchema = z.object({
+  images: z.array(InspirationImageSchema),
+})
+
+export type InspirationImagesResponse = z.infer<typeof InspirationImagesResponseSchema>
+
+/**
+ * Input schema for adding an image to an inspiration
+ */
+export const AddImageToInspirationSchema = z.object({
+  imageUrl: z.string(),
+  minioKey: z.string(),
+  originalFilename: z.string().optional(),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().positive().optional(),
+  fileHash: z.string().optional(),
+})
+
+export type AddImageToInspiration = z.infer<typeof AddImageToInspirationSchema>
+
+/**
+ * Duplicate check response schema
+ */
+export const DuplicateCheckResponseSchema = z.object({
+  isDuplicate: z.boolean(),
+  existingImage: InspirationImageSchema.optional(),
+})
+
+export type DuplicateCheckResponse = z.infer<typeof DuplicateCheckResponseSchema>
+
+/**
  * Pagination schema
  */
 export const PaginationSchema = z.object({

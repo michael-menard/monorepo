@@ -38,6 +38,37 @@ export const InspirationSchema = z.object({
 export type Inspiration = z.infer<typeof InspirationSchema>
 
 /**
+ * Inspiration image schema for database results.
+ */
+export const InspirationImageSchema = z.object({
+  id: z.string().uuid(),
+  inspirationId: z.string().uuid(),
+  imageUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  previewUrl: z.string().nullable(),
+  originalFilename: z.string().nullable(),
+  mimeType: z.string().nullable(),
+  sizeBytes: z.number().int().nullable(),
+  fileHash: z.string().nullable(),
+  minioKey: z.string(),
+  processingStatus: z.string(),
+  sortOrder: z.number().int(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type InspirationImage = z.infer<typeof InspirationImageSchema>
+
+/**
+ * Inspiration with its images included.
+ */
+export const InspirationWithImagesSchema = InspirationSchema.extend({
+  images: z.array(InspirationImageSchema).default([]),
+})
+
+export type InspirationWithImages = z.infer<typeof InspirationWithImagesSchema>
+
+/**
  * Schema for creating inspirations (POST body validation).
  */
 export const CreateInspirationInputSchema = z.object({

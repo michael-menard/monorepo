@@ -11,6 +11,9 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import {
   InspirationListResponseSchema,
   InspirationSchema,
+  InspirationImageSchema,
+  InspirationImagesResponseSchema,
+  DuplicateCheckResponseSchema,
   AlbumListResponseSchema,
   AlbumWithMetadataSchema,
   AlbumSchema,
@@ -20,6 +23,10 @@ import {
   BreadcrumbsResponseSchema,
   type InspirationListResponse,
   type Inspiration,
+  type InspirationImage,
+  type InspirationImagesResponse,
+  type AddImageToInspiration,
+  type DuplicateCheckResponse,
   type AlbumListResponse,
   type AlbumWithMetadata,
   type Album,
@@ -460,6 +467,64 @@ export const inspirationApi = createApi({
       }),
       invalidatesTags: (_, __, { albumId }) => [{ type: 'AlbumItem', id: albumId }],
     }),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Inspiration Image Endpoints (Multi-Image Support)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/inspiration/:id/images - Get all images for an inspiration
+     */
+    getInspirationImages: builder.query<InspirationImagesResponse, string>({
+      query: inspirationId => `/inspiration/${inspirationId}/images`,
+      transformResponse: (response: unknown) => InspirationImagesResponseSchema.parse(response),
+      providesTags: (_, __, inspirationId) => [{ type: 'InspirationItem', id: inspirationId }],
+    }),
+
+    /**
+     * POST /api/inspiration/:id/images - Add image to an inspiration
+     */
+    addImageToInspiration: builder.mutation<
+      InspirationImage,
+      { inspirationId: string; data: AddImageToInspiration }
+    >({
+      query: ({ inspirationId, data }) => ({
+        url: `/inspiration/${inspirationId}/images`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => InspirationImageSchema.parse(response),
+      invalidatesTags: (_, __, { inspirationId }) => [
+        { type: 'InspirationItem', id: inspirationId },
+        { type: 'Inspiration', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * DELETE /api/inspiration/:id/images/:imageId - Remove image from an inspiration
+     */
+    removeImageFromInspiration: builder.mutation<void, { inspirationId: string; imageId: string }>({
+      query: ({ inspirationId, imageId }) => ({
+        url: `/inspiration/${inspirationId}/images/${imageId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, { inspirationId }) => [
+        { type: 'InspirationItem', id: inspirationId },
+        { type: 'Inspiration', id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * POST /api/inspiration/check-duplicate - Check for duplicate file hash
+     */
+    checkDuplicate: builder.mutation<DuplicateCheckResponse, { fileHash: string }>({
+      query: data => ({
+        url: '/inspiration/check-duplicate',
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => DuplicateCheckResponseSchema.parse(response),
+    }),
   }),
 })
 
@@ -495,15 +560,24 @@ export const {
   useUnlinkInspirationFromMocMutation,
   useLinkAlbumToMocMutation,
   useUnlinkAlbumFromMocMutation,
+  // Image hooks (multi-image support)
+  useGetInspirationImagesQuery,
+  useAddImageToInspirationMutation,
+  useRemoveImageFromInspirationMutation,
+  useCheckDuplicateMutation,
 } = inspirationApi
 
 // Re-export types and schemas for component use
 export {
   InspirationSchema,
+  InspirationImageSchema,
   AlbumSchema,
   type Inspiration,
+  type InspirationImage,
   type Album,
   type AlbumWithMetadata,
   type InspirationListResponse,
+  type InspirationImagesResponse,
   type AlbumListResponse,
+  type DuplicateCheckResponse,
 } from '../schemas/inspiration'

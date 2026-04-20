@@ -2,18 +2,21 @@ import { eq, and, or, ilike, sql, inArray, notInArray, desc, asc } from 'drizzle
 import type { PgDatabase } from 'drizzle-orm/pg-core'
 import { ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
+import { isNull } from 'drizzle-orm'
 import type {
   InspirationRepository,
   AlbumRepository,
   AlbumItemRepository,
   AlbumParentRepository,
+  InspirationImageRepository,
   MocLinkRepository,
 } from '../ports/index.js'
-import type { Inspiration, AlbumWithMetadata } from '../types.js'
+import type { Inspiration, InspirationImage, AlbumWithMetadata } from '../types.js'
 
 // Type for the schema with inspiration tables
 type InspirationSchema = {
   inspirations: typeof import('@repo/db').inspirations
+  inspirationImages: typeof import('@repo/db').inspirationImages
   inspirationAlbums: typeof import('@repo/db').inspirationAlbums
   inspirationAlbumItems: typeof import('@repo/db').inspirationAlbumItems
   albumParents: typeof import('@repo/db').albumParents
@@ -65,7 +68,7 @@ export function createInspirationRepository(
       const [result] = await db
         .select()
         .from(schema.inspirations)
-        .where(eq(schema.inspirations.id, id))
+        .where(and(eq(schema.inspirations.id, id), isNull(schema.inspirations.deletedAt)))
         .limit(1)
 
       if (!result) {
@@ -91,8 +94,11 @@ export function createInspirationRepository(
       const { page, limit } = pagination
       const offset = (page - 1) * limit
 
-      // Build where conditions
-      const conditions = [eq(schema.inspirations.userId, userId)]
+      // Build where conditions (exclude soft-deleted)
+      const conditions = [
+        eq(schema.inspirations.userId, userId),
+        isNull(schema.inspirations.deletedAt),
+      ]
 
       if (filters?.search) {
         conditions.push(
@@ -247,8 +253,9 @@ export function createInspirationRepository(
 
     async delete(id) {
       const [result] = await db
-        .delete(schema.inspirations)
-        .where(eq(schema.inspirations.id, id))
+        .update(schema.inspirations)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(schema.inspirations.id, id), isNull(schema.inspirations.deletedAt)))
         .returning()
 
       if (!result) {
@@ -311,7 +318,7 @@ export function createAlbumRepository(
       const [result] = await db
         .select()
         .from(schema.inspirationAlbums)
-        .where(eq(schema.inspirationAlbums.id, id))
+        .where(and(eq(schema.inspirationAlbums.id, id), isNull(schema.inspirationAlbums.deletedAt)))
         .limit(1)
 
       if (!result) {
@@ -335,7 +342,7 @@ export function createAlbumRepository(
       const [albumResult] = await db
         .select()
         .from(schema.inspirationAlbums)
-        .where(eq(schema.inspirationAlbums.id, id))
+        .where(and(eq(schema.inspirationAlbums.id, id), isNull(schema.inspirationAlbums.deletedAt)))
         .limit(1)
 
       if (!albumResult) {
@@ -421,8 +428,11 @@ export function createAlbumRepository(
       const { page, limit } = pagination
       const offset = (page - 1) * limit
 
-      // Build where conditions
-      const conditions = [eq(schema.inspirationAlbums.userId, userId)]
+      // Build where conditions (exclude soft-deleted)
+      const conditions = [
+        eq(schema.inspirationAlbums.userId, userId),
+        isNull(schema.inspirationAlbums.deletedAt),
+      ]
 
       if (filters?.search) {
         conditions.push(
@@ -640,8 +650,9 @@ export function createAlbumRepository(
 
     async delete(id) {
       const [result] = await db
-        .delete(schema.inspirationAlbums)
-        .where(eq(schema.inspirationAlbums.id, id))
+        .update(schema.inspirationAlbums)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(schema.inspirationAlbums.id, id), isNull(schema.inspirationAlbums.deletedAt)))
         .returning()
 
       if (!result) {
@@ -934,6 +945,147 @@ export function createAlbumParentRepository(
       `)
 
       return (result.rows[0] as { max_depth: number })?.max_depth || 0
+    },
+  }
+}
+
+/**
+ * Create Inspiration Image Repository
+ *
+ * Manages individual image files within an inspiration.
+ */
+export function createInspirationImageRepository(
+  db: PgDatabase<Record<string, never>>,
+  schema: InspirationSchema,
+): InspirationImageRepository {
+  function mapRow(row: typeof schema.inspirationImages.$inferSelect): InspirationImage {
+    return {
+      id: row.id,
+      inspirationId: row.inspirationId,
+      imageUrl: row.imageUrl,
+      thumbnailUrl: row.thumbnailUrl,
+      previewUrl: row.previewUrl,
+      originalFilename: row.originalFilename,
+      mimeType: row.mimeType,
+      sizeBytes: row.sizeBytes,
+      fileHash: row.fileHash,
+      minioKey: row.minioKey,
+      processingStatus: row.processingStatus,
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }
+  }
+
+  return {
+    async insert(data) {
+      const [result] = await db
+        .insert(schema.inspirationImages)
+        .values({
+          inspirationId: data.inspirationId,
+          imageUrl: data.imageUrl,
+          thumbnailUrl: data.thumbnailUrl,
+          previewUrl: data.previewUrl,
+          originalFilename: data.originalFilename,
+          mimeType: data.mimeType,
+          sizeBytes: data.sizeBytes,
+          fileHash: data.fileHash,
+          minioKey: data.minioKey,
+          processingStatus: data.processingStatus,
+          sortOrder: data.sortOrder,
+        })
+        .returning()
+
+      return mapRow(result)
+    },
+
+    async findByInspirationId(inspirationId) {
+      const results = await db
+        .select()
+        .from(schema.inspirationImages)
+        .where(eq(schema.inspirationImages.inspirationId, inspirationId))
+        .orderBy(asc(schema.inspirationImages.sortOrder))
+
+      return results.map(mapRow)
+    },
+
+    async findById(id) {
+      const [result] = await db
+        .select()
+        .from(schema.inspirationImages)
+        .where(eq(schema.inspirationImages.id, id))
+        .limit(1)
+
+      if (!result) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(mapRow(result))
+    },
+
+    async update(id, data) {
+      const updateData: Partial<typeof schema.inspirationImages.$inferInsert> = {
+        updatedAt: new Date(),
+      }
+
+      if (data.thumbnailUrl !== undefined) updateData.thumbnailUrl = data.thumbnailUrl
+      if (data.previewUrl !== undefined) updateData.previewUrl = data.previewUrl
+      if (data.processingStatus !== undefined) updateData.processingStatus = data.processingStatus
+
+      const [result] = await db
+        .update(schema.inspirationImages)
+        .set(updateData)
+        .where(eq(schema.inspirationImages.id, id))
+        .returning()
+
+      if (!result) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(mapRow(result))
+    },
+
+    async delete(id) {
+      const [result] = await db
+        .delete(schema.inspirationImages)
+        .where(eq(schema.inspirationImages.id, id))
+        .returning()
+
+      if (!result) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(undefined)
+    },
+
+    async findByHash(fileHash, userId) {
+      const results = await db
+        .select({ image: schema.inspirationImages })
+        .from(schema.inspirationImages)
+        .innerJoin(
+          schema.inspirations,
+          eq(schema.inspirationImages.inspirationId, schema.inspirations.id),
+        )
+        .where(
+          and(
+            eq(schema.inspirationImages.fileHash, fileHash),
+            eq(schema.inspirations.userId, userId),
+            isNull(schema.inspirations.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      if (results.length === 0) return null
+      return mapRow(results[0].image)
+    },
+
+    async getMaxSortOrder(inspirationId) {
+      const [result] = await db
+        .select({ max: sql<number>`COALESCE(MAX(sort_order), 0)` })
+        .from(schema.inspirationImages)
+        .where(eq(schema.inspirationImages.inspirationId, inspirationId))
+
+      return result?.max || 0
     },
   }
 }

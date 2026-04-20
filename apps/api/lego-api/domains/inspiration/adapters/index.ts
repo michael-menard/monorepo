@@ -1,5 +1,6 @@
 export {
   createInspirationRepository,
+  createInspirationImageRepository,
   createAlbumRepository,
   createAlbumItemRepository,
   createAlbumParentRepository,
