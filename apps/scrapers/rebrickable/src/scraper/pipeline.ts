@@ -436,20 +436,22 @@ export async function runPipeline(
               .onConflictDoUpdate({
                 target: instructionsTable.mocNumber,
                 set: {
-                  title: detail.title,
-                  author: detail.author || item.author,
+                  // Only overwrite fields when the new value is non-null/non-empty
+                  // This preserves existing data when a re-scrape returns partial results
+                  ...(detail.title ? { title: detail.title } : {}),
+                  ...(detail.author || item.author ? { author: detail.author || item.author } : {}),
                   downloadUrl: item.url,
-                  partsCount: detail.partsCount,
-                  fileType,
-                  fileSizeBytes: totalFileSize,
-                  contentHash,
+                  ...(detail.partsCount != null ? { partsCount: detail.partsCount } : {}),
+                  ...(fileType ? { fileType } : {}),
+                  ...(totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
+                  ...(contentHash ? { contentHash } : {}),
                   minioKey: `mocs/MOC-${item.mocNumber}/${fileName}`,
                   minioUrl: `mocs/MOC-${item.mocNumber}/${fileName}`,
-                  description: detail.description || null,
-                  descriptionHtml: detail.descriptionHtml || null,
-                  dateAdded: safeDate(detail.dateAdded),
-                  authorProfileUrl: detail.authorProfileUrl || null,
-                  tags: detail.tags.length > 0 ? detail.tags : null,
+                  ...(detail.description ? { description: detail.description } : {}),
+                  ...(detail.descriptionHtml ? { descriptionHtml: detail.descriptionHtml } : {}),
+                  ...(safeDate(detail.dateAdded) ? { dateAdded: safeDate(detail.dateAdded) } : {}),
+                  ...(detail.authorProfileUrl ? { authorProfileUrl: detail.authorProfileUrl } : {}),
+                  ...(detail.tags.length > 0 ? { tags: detail.tags } : {}),
                   scrapeRunId,
                   updatedAt: new Date(),
                 },
@@ -473,9 +475,9 @@ export async function runPipeline(
                   .onConflictDoUpdate({
                     target: [partsTable.partNumber, partsTable.color],
                     set: {
-                      name: p.name || undefined,
-                      category: p.category || undefined,
-                      imageUrl: p.imageUrl || undefined,
+                      ...(p.name ? { name: p.name } : {}),
+                      ...(p.category ? { category: p.category } : {}),
+                      ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
                     },
                   })
                   .returning()
