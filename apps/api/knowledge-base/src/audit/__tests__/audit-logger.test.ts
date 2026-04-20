@@ -127,14 +127,14 @@ describe('AuditLogger', () => {
       expect(valuesMock).toHaveBeenCalledWith(
         expect.objectContaining({
           entryId: newEntry.id,
-          operation: 'add',
-          previousValue: null,
-          newValue: expect.objectContaining({
+          action: 'add',
+          oldContent: null,
+          newContent: expect.objectContaining({
             id: newEntry.id,
             content: 'Test content',
             role: 'dev',
           }),
-          userContext: expect.objectContaining({
+          changedBy: expect.objectContaining({
             correlation_id: 'test-123',
           }),
         }),
@@ -191,11 +191,11 @@ describe('AuditLogger', () => {
       expect(valuesMock).toHaveBeenCalledWith(
         expect.objectContaining({
           entryId: previousEntry.id,
-          operation: 'update',
-          previousValue: expect.objectContaining({
+          action: 'update',
+          oldContent: expect.objectContaining({
             content: 'Old content',
           }),
-          newValue: expect.objectContaining({
+          newContent: expect.objectContaining({
             content: 'New content',
           }),
         }),
@@ -223,12 +223,12 @@ describe('AuditLogger', () => {
       expect(valuesMock).toHaveBeenCalledWith(
         expect.objectContaining({
           entryId: deletedEntry.id,
-          operation: 'delete',
-          previousValue: expect.objectContaining({
+          action: 'delete',
+          oldContent: expect.objectContaining({
             content: 'Content to delete',
             role: 'qa',
           }),
-          newValue: null,
+          newContent: null,
         }),
       )
     })

@@ -21,16 +21,15 @@ import {
   type AuditOperation,
 } from './__types__/index.js'
 
-// Explicit column selector — guard against schema-vs-DB drift
+// Explicit column selector — aligned with DB column names (migration 1174)
 const auditLogColumns = {
   id: auditLog.id,
   entryId: auditLog.entryId,
-  operation: auditLog.operation,
-  previousValue: auditLog.previousValue,
-  newValue: auditLog.newValue,
+  action: auditLog.action,
+  oldContent: auditLog.oldContent,
+  newContent: auditLog.newContent,
   timestamp: auditLog.timestamp,
-  userContext: auditLog.userContext,
-  createdAt: auditLog.createdAt,
+  changedBy: auditLog.changedBy,
 } as const
 
 /**
@@ -93,15 +92,15 @@ export async function queryAuditByEntry(
     correlation_id: correlationId,
   })
 
-  // Transform to response format
+  // Transform to response format (stable API field names)
   const responseResults: AuditLogResponse[] = results.map(row => ({
     id: row.id,
     entry_id: row.entryId,
-    operation: row.operation as AuditOperation,
-    previous_value: row.previousValue as Record<string, unknown> | null,
-    new_value: row.newValue as Record<string, unknown> | null,
+    operation: row.action as AuditOperation,
+    previous_value: row.oldContent as Record<string, unknown> | null,
+    new_value: row.newContent as Record<string, unknown> | null,
     timestamp: row.timestamp.toISOString(),
-    user_context: row.userContext as Record<string, unknown> | null,
+    user_context: row.changedBy as Record<string, unknown> | null,
   }))
 
   return {
@@ -147,7 +146,7 @@ export async function queryAuditByTimeRange(
   ]
 
   if (validated.operation) {
-    conditions.push(eq(auditLog.operation, validated.operation))
+    conditions.push(eq(auditLog.action, validated.operation))
   }
 
   // Get total count for pagination
@@ -179,15 +178,15 @@ export async function queryAuditByTimeRange(
     correlation_id: correlationId,
   })
 
-  // Transform to response format
+  // Transform to response format (stable API field names)
   const responseResults: AuditLogResponse[] = results.map(row => ({
     id: row.id,
     entry_id: row.entryId,
-    operation: row.operation as AuditOperation,
-    previous_value: row.previousValue as Record<string, unknown> | null,
-    new_value: row.newValue as Record<string, unknown> | null,
+    operation: row.action as AuditOperation,
+    previous_value: row.oldContent as Record<string, unknown> | null,
+    new_value: row.newContent as Record<string, unknown> | null,
     timestamp: row.timestamp.toISOString(),
-    user_context: row.userContext as Record<string, unknown> | null,
+    user_context: row.changedBy as Record<string, unknown> | null,
   }))
 
   return {

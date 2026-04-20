@@ -30,32 +30,27 @@ export const AuditLogEntrySchema = z.object({
   /** ID of the knowledge entry being audited (null if entry was deleted with CASCADE) */
   entry_id: z.string().uuid().nullable(),
 
-  /** Type of operation performed */
-  operation: AuditOperationSchema,
+  /** Type of operation performed (DB column: action) */
+  action: AuditOperationSchema,
 
-  /** Entry state before the operation (null for add operations) */
-  previous_value: z.record(z.unknown()).nullable(),
+  /** Entry state before the operation (null for add operations, DB column: old_content) */
+  old_content: z.record(z.unknown()).nullable(),
 
-  /** Entry state after the operation (null for delete operations) */
-  new_value: z.record(z.unknown()).nullable(),
+  /** Entry state after the operation (null for delete operations, DB column: new_content) */
+  new_content: z.record(z.unknown()).nullable(),
 
   /** When the operation occurred */
   timestamp: z.date(),
 
-  /** MCP session context (correlation_id, client info, etc.) */
-  user_context: z.record(z.unknown()).nullable(),
-
-  /** When the audit log entry was created */
-  created_at: z.date(),
+  /** MCP session context (correlation_id, client info, etc., DB column: changed_by) */
+  changed_by: z.record(z.unknown()).nullable(),
 })
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 
 /**
  * New audit log entry schema (for inserts).
  */
-export const NewAuditLogEntrySchema = AuditLogEntrySchema.omit({ created_at: true }).extend({
-  created_at: z.date().optional(),
-})
+export const NewAuditLogEntrySchema = AuditLogEntrySchema.partial({ id: true })
 export type NewAuditLogEntry = z.infer<typeof NewAuditLogEntrySchema>
 
 // ============================================================================

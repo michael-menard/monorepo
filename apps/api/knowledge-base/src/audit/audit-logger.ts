@@ -169,11 +169,11 @@ export class AuditLogger {
     try {
       await this.deps.db.insert(auditLog).values({
         entryId,
-        operation,
-        previousValue: previousValue as Record<string, unknown> | null,
-        newValue: newValue as Record<string, unknown> | null,
+        action: operation,
+        oldContent: previousValue as Record<string, unknown> | null,
+        newContent: newValue as Record<string, unknown> | null,
         timestamp: new Date(),
-        userContext: (userContext as Record<string, unknown>) ?? null,
+        changedBy: (userContext as Record<string, unknown>) ?? null,
       })
 
       const durationMs = Date.now() - startTime

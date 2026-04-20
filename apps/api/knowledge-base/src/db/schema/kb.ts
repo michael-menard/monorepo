@@ -91,12 +91,11 @@ export const auditLog = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     entryId: uuid('entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
-    operation: text('operation').notNull(),
-    previousValue: jsonb('previous_value'),
-    newValue: jsonb('new_value'),
-    userContext: jsonb('user_context'),
-    timestamp: timestamp('timestamp').notNull().defaultNow(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    action: text('action').notNull(),
+    oldContent: jsonb('old_content'),
+    newContent: jsonb('new_content'),
+    changedBy: jsonb('changed_by'),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   },
   table => ({
     entryIdIdx: index('audit_log_entry_id_idx').on(table.entryId),

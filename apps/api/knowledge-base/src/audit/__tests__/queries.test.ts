@@ -31,20 +31,20 @@ describe('queryAuditByEntry', () => {
       {
         id: 'audit-1',
         entryId: '123e4567-e89b-12d3-a456-426614174000',
-        operation: 'add',
-        previousValue: null,
-        newValue: { id: '123e4567-e89b-12d3-a456-426614174000', content: 'Test' },
+        action: 'add',
+        oldContent: null,
+        newContent: { id: '123e4567-e89b-12d3-a456-426614174000', content: 'Test' },
         timestamp: new Date('2026-01-25T10:00:00Z'),
-        userContext: { correlation_id: 'test-123' },
+        changedBy: { correlation_id: 'test-123' },
       },
       {
         id: 'audit-2',
         entryId: '123e4567-e89b-12d3-a456-426614174000',
-        operation: 'update',
-        previousValue: { content: 'Test' },
-        newValue: { content: 'Updated' },
+        action: 'update',
+        oldContent: { content: 'Test' },
+        newContent: { content: 'Updated' },
         timestamp: new Date('2026-01-25T11:00:00Z'),
-        userContext: null,
+        changedBy: null,
       },
     ]
 
@@ -207,11 +207,11 @@ describe('queryAuditByTimeRange', () => {
       {
         id: 'audit-1',
         entryId: '123e4567-e89b-12d3-a456-426614174000',
-        operation: 'delete',
-        previousValue: { content: 'Deleted' },
-        newValue: null,
+        action: 'delete',
+        oldContent: { content: 'Deleted' },
+        newContent: null,
         timestamp: new Date('2026-01-15T10:00:00Z'),
-        userContext: null,
+        changedBy: null,
       },
     ]
 

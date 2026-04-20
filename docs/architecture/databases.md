@@ -37,7 +37,7 @@ The agent infrastructure database. Stores workflow state, semantic embeddings, a
 
 | pg schema   | File                  | Purpose                                                                                                     |
 | ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `public`    | `schema/kb.ts`        | Knowledge entries, embeddings, ADRs, code standards, cohesion rules, lessons learned                        |
+| `public`    | `schema/kb.ts`        | Knowledge entries, embeddings, audit_log, ADRs, code standards, cohesion rules, lessons learned             |
 | `workflow`  | `schema/workflow.ts`  | Stories (canonical, with embedding), plans, agents, invocations, sessions, context packs, ML model registry |
 | `artifacts` | `schema/artifacts.ts` | Per-story pipeline artifacts (reviews, evidence, QA gates, checkpoints, etc.)                               |
 | `analytics` | `schema/analytics.ts` | Token usage, A/B model experiments, model assignments                                                       |
@@ -54,13 +54,15 @@ import { stories, plans, agentInvocations } from '@repo/knowledge-base/db'
 
 ---
 
-## Pipeline DB (LangGraph Checkpoints)
+## Pipeline DB (LangGraph Checkpoints) — DEPRECATED
 
-**Package:** `apps/api/pipeline`
+**Package:** `apps/api/pipeline` (no `src/` directory remains)
 **Local port:** `5434`
-**Schema file:** `src/db/schema.ts`
 
-Stores LangGraph agent graph state between steps. Intentionally isolated from the other two databases.
+> **Deprecated** as of commit d25a40e4d. BullMQ pipeline has been replaced by the LangGraph supervisor
+> architecture. This database is no longer actively used.
+
+Previously stored LangGraph agent graph state between steps.
 
 | Table                   | Purpose                                     |
 | ----------------------- | ------------------------------------------- |
@@ -76,6 +78,22 @@ Stores LangGraph agent graph state between steps. Intentionally isolated from th
 ```
 5432  — reserved (docker default, avoid conflicts)
 5433  — KB DB
-5434  — Pipeline DB
+5434  — Pipeline DB (deprecated)
 Aurora — App DB (no local instance; use RDS in dev or a local pg for integration tests)
 ```
+
+---
+
+## Migration strategies
+
+| Database | Tool                                      | Location                                                  |
+| -------- | ----------------------------------------- | --------------------------------------------------------- |
+| KB DB    | Raw SQL migrations (sequential numbering) | `apps/api/knowledge-base/src/db/migrations/`              |
+| App DB   | Drizzle Kit                               | `packages/backend/db/drizzle.config.ts` + `src/schema.ts` |
+
+---
+
+## Notable schema notes
+
+- **`public.audit_log`** (KB DB): Columns are `action`, `old_content`, `new_content`, `changed_by` (all jsonb except `action` which is text). Drizzle schema aligned to match DB column names in migration 1174.
+- **`workflow.stories`**: `phase` and `iteration` columns were intentionally removed per APRS-5040. Phase/iteration data is handled in `analytics-operations.ts`.
