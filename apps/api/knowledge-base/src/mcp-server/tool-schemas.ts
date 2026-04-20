@@ -2831,8 +2831,16 @@ Fields not supplied in the input are NOT overwritten on an existing story.
 This is the primary way to bootstrap a new story or update its metadata.
 title is required when creating a new story; optional on subsequent updates.
 
+ID resolution: provide EITHER story_id OR namespace, never both, never neither.
+- story_id: explicit ID (e.g., 'KFMB-1020') — backward compatible, used as-is
+- namespace: 'work' | 'plat' | 'lego' — auto-generates a collision-free ID from a DB sequence
+  - 'work' generates WORK-NNNN (workflow/LangGraph pipeline stories)
+  - 'plat' generates PLAT-NNNN (shared platform: UI lib, API services, KB, scrapers)
+  - 'lego' generates LEGO-NNNN (LEGO app product stories)
+
 Parameters:
-- story_id (required): Unique story identifier (e.g., 'KFMB-1020')
+- story_id (provide this OR namespace): Unique story identifier (e.g., 'KFMB-1020')
+- namespace (provide this OR story_id): 'work' | 'plat' | 'lego' — auto-generates ID from DB sequence
 - title (required on create, optional on update): Story title
 - feature (optional): Feature prefix (e.g., 'kfmb', 'wish')
 - epic (optional): Epic name
@@ -2858,7 +2866,14 @@ Parameters:
 
 Returns: The upserted story record and whether it was newly created.
 
-Example (create):
+Example (create with auto-generated ID):
+{
+  "namespace": "work",
+  "title": "Add model escalation to pipeline",
+  "feature": "orch"
+}
+
+Example (create with explicit ID — backward compatible):
 {
   "story_id": "KFMB-1020",
   "title": "kb_create_story MCP Tool",
@@ -2875,11 +2890,10 @@ Example (partial update — only merges supplied fields):
 
 Example (create with plan link):
 {
-  "story_id": "LNGG-0010",
-  "title": "LangGraph adapter base class",
-  "epic": "platform",
-  "feature": "lngg",
-  "plan_slug": "langgraph-integration-adapters"
+  "namespace": "lego",
+  "title": "Minifig gallery component",
+  "feature": "minifig",
+  "plan_slug": "minifig-gallery-redesign"
 }`,
   inputSchema: zodToMcpSchema(KbCreateStoryInputSchema),
 }

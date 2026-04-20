@@ -30,6 +30,24 @@ import { knowledgeEntries, vector } from './kb.js'
 
 const workflow = pgSchema('workflow')
 
+// ── Story ID Sequences ──────────────────────────────────────────────────────
+// Used by kb_create_story when namespace is provided instead of an explicit story_id.
+// See migration 1173_db_sequence_story_ids.sql
+
+export const STORY_SEQUENCES = {
+  work: 'workflow.work_story_seq',
+  plat: 'workflow.plat_story_seq',
+  lego: 'workflow.lego_story_seq',
+} as const
+
+export type StoryNamespace = keyof typeof STORY_SEQUENCES
+
+export const STORY_PREFIXES: Record<StoryNamespace, string> = {
+  work: 'WORK',
+  plat: 'PLAT',
+  lego: 'LEGO',
+} as const
+
 // ── Enums (workflow schema) ───────────────────────────────────────────────────
 
 export const planStatusEnum = workflow.enum('plan_status_enum', [

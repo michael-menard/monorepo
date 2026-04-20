@@ -11,7 +11,16 @@ import { z } from 'zod'
 import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
+import {
+  stories,
+  storyArtifacts,
+  storyDependencies,
+  plans,
+  planStoryLinks,
+  STORY_SEQUENCES,
+  STORY_PREFIXES,
+  type StoryNamespace,
+} from '../db/schema.js'
 import {
   StoryStateSchema,
   StoryPhaseSchema,
@@ -297,79 +306,99 @@ export type KbGetNextStoryInput = z.infer<typeof KbGetNextStoryInputSchema>
  * or merges the provided fields into the existing record (partial-merge semantics).
  * Fields not supplied in the input are NOT overwritten.
  */
-export const KbCreateStoryInputSchema = z.object({
-  /** Story ID (required, used as upsert key) */
-  story_id: z.string().min(1, 'Story ID cannot be empty'),
+export const KbCreateStoryInputSchema = z
+  .object({
+    /** Story ID (provide this OR namespace, not both) */
+    story_id: z.string().min(1, 'Story ID cannot be empty').optional(),
 
-  /** Story title (required for create, optional on update) */
-  title: z.string().min(1, 'Story title cannot be empty').optional(),
+    /** Namespace for auto-generated ID (provide this OR story_id, not both) */
+    namespace: z.enum(['work', 'plat', 'lego']).optional(),
 
-  /** Feature prefix (e.g., 'kfmb', 'wish') */
-  feature: z.string().nullable().optional(),
+    /** Story title (required for create, optional on update) */
+    title: z.string().min(1, 'Story title cannot be empty').optional(),
 
-  /** Epic name — note: epic is not a column on workflow.stories; accepted but not persisted */
-  epic: z.string().nullable().optional(),
+    /** Feature prefix (e.g., 'kfmb', 'wish') */
+    feature: z.string().nullable().optional(),
 
-  /** Relative path to story directory — not a column on workflow.stories; accepted but not persisted */
-  story_dir: z.string().nullable().optional(),
+    /** Epic name — note: epic is not a column on workflow.stories; accepted but not persisted */
+    epic: z.string().nullable().optional(),
 
-  /** Story file name — not a column on workflow.stories; accepted but not persisted */
-  story_file: z.string().optional(),
+    /** Relative path to story directory — not a column on workflow.stories; accepted but not persisted */
+    story_dir: z.string().nullable().optional(),
 
-  /** Type of story: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt' — not a column on workflow.stories; accepted but not persisted */
-  story_type: StoryTypeSchema.nullable().optional(),
+    /** Story file name — not a column on workflow.stories; accepted but not persisted */
+    story_file: z.string().optional(),
 
-  /** Story points estimate — not a column on workflow.stories; accepted but not persisted */
-  points: z.number().int().min(0).nullable().optional(),
+    /** Type of story: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt' — not a column on workflow.stories; accepted but not persisted */
+    story_type: StoryTypeSchema.nullable().optional(),
 
-  /** Priority level: 'critical' | 'high' | 'medium' | 'low' */
-  priority: StoryPrioritySchema.nullable().optional(),
+    /** Story points estimate — not a column on workflow.stories; accepted but not persisted */
+    points: z.number().int().min(0).nullable().optional(),
 
-  /** Workflow state */
-  state: StoryStateSchema.optional(),
+    /** Priority level: 'critical' | 'high' | 'medium' | 'low' */
+    priority: StoryPrioritySchema.nullable().optional(),
 
-  /** Implementation phase — not a column on workflow.stories; accepted but not persisted */
-  phase: StoryPhaseSchema.optional(),
+    /** Workflow state */
+    state: StoryStateSchema.optional(),
 
-  /** Whether story is blocked — not a column on workflow.stories; accepted but not persisted */
-  blocked: z.boolean().optional(),
+    /** Implementation phase — not a column on workflow.stories; accepted but not persisted */
+    phase: StoryPhaseSchema.optional(),
 
-  /** Reason for being blocked */
-  blocked_reason: z.string().nullable().optional(),
+    /** Whether story is blocked — not a column on workflow.stories; accepted but not persisted */
+    blocked: z.boolean().optional(),
 
-  /** Story ID that blocks this one */
-  blocked_by_story: z.string().nullable().optional(),
+    /** Reason for being blocked */
+    blocked_reason: z.string().nullable().optional(),
 
-  /** Scope flag: touches backend code — not a column on workflow.stories; accepted but not persisted */
-  touches_backend: z.boolean().optional(),
+    /** Story ID that blocks this one */
+    blocked_by_story: z.string().nullable().optional(),
 
-  /** Scope flag: touches frontend code — not a column on workflow.stories; accepted but not persisted */
-  touches_frontend: z.boolean().optional(),
+    /** Scope flag: touches backend code — not a column on workflow.stories; accepted but not persisted */
+    touches_backend: z.boolean().optional(),
 
-  /** Scope flag: touches database — not a column on workflow.stories; accepted but not persisted */
-  touches_database: z.boolean().optional(),
+    /** Scope flag: touches frontend code — not a column on workflow.stories; accepted but not persisted */
+    touches_frontend: z.boolean().optional(),
 
-  /** Scope flag: touches infrastructure — not a column on workflow.stories; accepted but not persisted */
-  touches_infra: z.boolean().optional(),
+    /** Scope flag: touches database — not a column on workflow.stories; accepted but not persisted */
+    touches_database: z.boolean().optional(),
 
-  /** Human-readable story description */
-  description: z.string().nullable().optional(),
+    /** Scope flag: touches infrastructure — not a column on workflow.stories; accepted but not persisted */
+    touches_infra: z.boolean().optional(),
 
-  /**
-   * Acceptance criteria as JSONB (arbitrary structure).
-   * Note: acceptanceCriteria is not a column on workflow.stories; not persisted.
-   */
-  acceptance_criteria: JSONValueSchema.nullable().optional(),
+    /** Human-readable story description */
+    description: z.string().nullable().optional(),
 
-  /** Non-goals for this story — not a column on workflow.stories; not persisted */
-  non_goals: z.array(z.string()).nullable().optional(),
+    /**
+     * Acceptance criteria as JSONB (arbitrary structure).
+     * Note: acceptanceCriteria is not a column on workflow.stories; not persisted.
+     */
+    acceptance_criteria: JSONValueSchema.nullable().optional(),
 
-  /** Packages touched by this story — not a column on workflow.stories; not persisted */
-  packages: z.array(z.string()).nullable().optional(),
+    /** Non-goals for this story — not a column on workflow.stories; not persisted */
+    non_goals: z.array(z.string()).nullable().optional(),
 
-  /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
-  plan_slug: z.string().nullable().optional(),
-})
+    /** Packages touched by this story — not a column on workflow.stories; not persisted */
+    packages: z.array(z.string()).nullable().optional(),
+
+    /** If provided, creates a 'spawned_from' link in plan_story_links for this plan slug */
+    plan_slug: z.string().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.story_id && data.namespace) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide story_id OR namespace, not both',
+        path: ['namespace'],
+      })
+    }
+    if (!data.story_id && !data.namespace) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Either story_id or namespace is required',
+        path: ['story_id'],
+      })
+    }
+  })
 
 export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>
 
@@ -953,6 +982,23 @@ export async function kb_create_story(
   const now = new Date()
 
   // ---------------------------------------------------------------------------
+  // Resolve story_id: either provided directly or generated from a DB sequence.
+  // When namespace is provided, call nextval() and format as PREFIX-NNNN.
+  // ---------------------------------------------------------------------------
+  let storyId: string
+
+  if (validated.story_id) {
+    storyId = validated.story_id
+  } else {
+    const ns = validated.namespace as StoryNamespace
+    const seqName = STORY_SEQUENCES[ns]
+    const prefix = STORY_PREFIXES[ns]
+    const result = await deps.db.execute(sql`SELECT nextval('${sql.raw(seqName)}') AS seq`)
+    const seqVal = Number((result as unknown as { rows: { seq: string }[] }).rows[0].seq)
+    storyId = `${prefix}-${String(seqVal).padStart(4, '0')}`
+  }
+
+  // ---------------------------------------------------------------------------
   // Atomic INSERT ON CONFLICT(story_id) DO NOTHING
   // Eliminates the SELECT-then-INSERT race condition.
   // If the insert succeeds (new row), wasCreated = true.
@@ -966,7 +1012,7 @@ export async function kb_create_story(
     const insertResult = await tx
       .insert(stories)
       .values({
-        storyId: validated.story_id,
+        storyId,
         // title is required for new stories — validated after insert attempt
         title: validated.title ?? '',
         feature: validated.feature ?? 'unknown',
@@ -985,10 +1031,8 @@ export async function kb_create_story(
       // Row was newly inserted — validate title requirement
       if (!validated.title) {
         // Roll back by deleting the placeholder row, then throw
-        await tx.delete(stories).where(eq(stories.storyId, validated.story_id))
-        throw new Error(
-          `title is required when creating a new story (story_id: ${validated.story_id})`,
-        )
+        await tx.delete(stories).where(eq(stories.storyId, storyId))
+        throw new Error(`title is required when creating a new story (story_id: ${storyId})`)
       }
 
       if (validated.plan_slug) {
@@ -996,7 +1040,7 @@ export async function kb_create_story(
           .insert(planStoryLinks)
           .values({
             planSlug: validated.plan_slug,
-            storyId: validated.story_id,
+            storyId,
             linkType: 'spawned_from',
           })
           .onConflictDoNothing()
@@ -1025,7 +1069,7 @@ export async function kb_create_story(
     const updateResult = await tx
       .update(stories)
       .set(updates)
-      .where(eq(stories.storyId, validated.story_id))
+      .where(eq(stories.storyId, storyId))
       .returning(storyColumns)
 
     if (validated.plan_slug) {
@@ -1033,7 +1077,7 @@ export async function kb_create_story(
         .insert(planStoryLinks)
         .values({
           planSlug: validated.plan_slug,
-          storyId: validated.story_id,
+          storyId,
           linkType: 'spawned_from',
         })
         .onConflictDoNothing()
@@ -1049,8 +1093,8 @@ export async function kb_create_story(
     story,
     created: wasCreated,
     message: wasCreated
-      ? `Story ${validated.story_id} created successfully`
-      : `Story ${validated.story_id} updated successfully`,
+      ? `Story ${storyId} created successfully`
+      : `Story ${storyId} updated successfully`,
   }
 }
 

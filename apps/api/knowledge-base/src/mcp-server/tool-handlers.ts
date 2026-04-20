@@ -3889,6 +3889,7 @@ export async function handleKbCreateStory(
   logger.info('kb_create_story tool invoked', {
     correlation_id: correlationId,
     story_id: inputObj?.story_id,
+    namespace: inputObj?.namespace,
   })
 
   try {
@@ -3896,11 +3897,14 @@ export async function handleKbCreateStory(
     const validated = KbCreateStoryInputSchema.parse(input)
     const result = await kb_create_story({ db: deps.db }, validated)
 
+    // The resolved story_id (either provided or sequence-generated)
+    const resolvedStoryId = result.story.storyId as string
+
     // Generate story embedding async (fire-and-forget, CDTS-2010)
     if (result.story && validated.title) {
       generateAndSaveStoryEmbedding(
         deps,
-        validated.story_id,
+        resolvedStoryId,
         validated.title,
         validated.feature,
         validated.acceptance_criteria,
@@ -3908,7 +3912,7 @@ export async function handleKbCreateStory(
       ).catch(err => {
         logger.warn('Story embedding fire-and-forget failed', {
           correlation_id: correlationId,
-          story_id: validated.story_id,
+          story_id: resolvedStoryId,
           error: err instanceof Error ? err.message : String(err),
         })
       })
@@ -3917,7 +3921,7 @@ export async function handleKbCreateStory(
     const queryTimeMs = Date.now() - startTime
     logger.info('kb_create_story succeeded', {
       correlation_id: correlationId,
-      story_id: validated.story_id,
+      story_id: resolvedStoryId,
       created: result.created,
       query_time_ms: queryTimeMs,
     })
