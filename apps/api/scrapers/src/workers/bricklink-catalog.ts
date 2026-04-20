@@ -1,0 +1,173 @@
+/**
+ * BrickLink Catalog Worker
+ *
+ * Discovers items from a BrickLink catalog list page (multi-page).
+ * Enqueues each discovered item as a child bricklink-minifig job.
+ */
+
+import { chromium, type BrowserContext, type Page } from 'playwright'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { Queue } from 'bullmq'
+import { logger } from '@repo/logger'
+import type { BricklinkCatalogJob, BricklinkMinifigJob } from '../queues.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const CHROME_PROFILE = resolve(__dirname, '../../../scrapers/bricklink-minifigs/.chrome-profile')
+
+/** Random delay between 5-8 seconds */
+function randomDelay(): number {
+  return Math.floor(Math.random() * 3001) + 5000
+}
+
+let sharedContext: BrowserContext | null = null
+
+async function getContext(): Promise<BrowserContext> {
+  if (!sharedContext) {
+    sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
+      headless: false,
+      channel: 'chrome',
+      args: ['--disable-blink-features=AutomationControlled'],
+    })
+  }
+  return sharedContext
+}
+
+export async function shutdownCatalogBrowser(): Promise<void> {
+  if (sharedContext) {
+    await sharedContext.close().catch(() => {})
+    sharedContext = null
+  }
+}
+
+export interface CatalogResult {
+  success: boolean
+  rateLimited?: boolean
+  resetHint?: string
+  error?: string
+  itemsFound: number
+  jobsEnqueued: number
+}
+
+export async function processBricklinkCatalog(
+  job: BricklinkCatalogJob,
+  minifigQueue: Queue<BricklinkMinifigJob>,
+  parentJobId: string,
+): Promise<CatalogResult> {
+  const { catalogUrl, wishlist } = job
+  const context = await getContext()
+  const page = await context.newPage()
+
+  try {
+    const allItems: Array<{ itemNumber: string; itemType: 'M' | 'S'; name: string }> = []
+    let currentPage = 1
+    let totalPages = 1
+    const baseUrl = catalogUrl.split('?')[0]
+    const queryParams = catalogUrl.includes('?') ? catalogUrl.split('?')[1] : ''
+
+    while (currentPage <= totalPages) {
+      const pageUrl =
+        currentPage === 1
+          ? catalogUrl
+          : `${baseUrl}?${queryParams}${queryParams ? '&' : ''}pg=${currentPage}`
+
+      logger.info(`[bricklink-catalog] Page ${currentPage}/${totalPages}`, { pageUrl })
+
+      await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForTimeout(randomDelay())
+
+      // Check for rate limiting
+      const bodyText = await page.evaluate(() => document.body?.innerText || '').catch(() => '')
+      if (
+        bodyText.toLowerCase().includes('rate limit') ||
+        bodyText.toLowerCase().includes('too many requests') ||
+        bodyText.toLowerCase().includes('access denied')
+      ) {
+        const resetMatch = bodyText.match(/try again in (\d+)\s*(minutes?|hours?)/i)
+        return {
+          success: false,
+          rateLimited: true,
+          resetHint: resetMatch ? `${resetMatch[1]} ${resetMatch[2]}` : undefined,
+          itemsFound: allItems.length,
+          jobsEnqueued: 0,
+        }
+      }
+
+      // Wait for items to appear
+      await page
+        .waitForSelector('a[href*="catalogitem.page?M="], a[href*="catalogitem.page?S="]', {
+          timeout: 60000,
+        })
+        .catch(() => {})
+
+      const pageResult = await page.evaluate(() => {
+        const items: Array<{ itemNumber: string; itemType: 'M' | 'S'; name: string }> = []
+
+        const itemLinks = document.querySelectorAll(
+          'a[href*="catalogitem.page?M="], a[href*="catalogitem.page?S="]',
+        )
+
+        itemLinks.forEach(link => {
+          const href = (link as HTMLAnchorElement).href
+          const text = (link.textContent || '').trim()
+
+          const match = href.match(/[?&]([MS])=([^&]+)/)
+          if (!match) return
+
+          const itemType = match[1] as 'M' | 'S'
+          const itemNumber = match[2]
+          if (items.some(item => item.itemNumber === itemNumber)) return
+
+          items.push({ itemNumber, itemType, name: text })
+        })
+
+        const bodyText = document.body.textContent || ''
+        const pageMatch = bodyText.match(/Page\s+(\d+)\s+of\s+(\d+)/i)
+        let totalPgs = 1
+        if (pageMatch) {
+          totalPgs = parseInt(pageMatch[2], 10)
+        }
+
+        return { items, totalPages: totalPgs }
+      })
+
+      allItems.push(...pageResult.items)
+      totalPages = pageResult.totalPages
+      logger.info(
+        `[bricklink-catalog] Found ${pageResult.items.length} items on page ${currentPage} (${allItems.length} total)`,
+      )
+
+      currentPage++
+    }
+
+    // Enqueue each discovered item as a child job
+    let enqueued = 0
+    for (const item of allItems) {
+      await minifigQueue.add(
+        'scrape',
+        {
+          itemNumber: item.itemNumber,
+          itemType: item.itemType,
+          wishlist,
+          parentJobId,
+        },
+        { jobId: `${parentJobId}:${item.itemNumber}` },
+      )
+      enqueued++
+    }
+
+    logger.info(`[bricklink-catalog] Enqueued ${enqueued} jobs from catalog`, { catalogUrl })
+
+    return {
+      success: true,
+      itemsFound: allItems.length,
+      jobsEnqueued: enqueued,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error('[bricklink-catalog] Failed', { error: msg, catalogUrl })
+    return { success: false, error: msg, itemsFound: 0, jobsEnqueued: 0 }
+  } finally {
+    await page.close()
+  }
+}

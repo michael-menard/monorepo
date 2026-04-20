@@ -18,6 +18,11 @@ import {
   shutdownBrowser,
   type ScrapeResult,
 } from './workers/bricklink-minifig.js'
+import { processBricklinkCatalog, shutdownCatalogBrowser } from './workers/bricklink-catalog.js'
+import { processBricklinkPrices, shutdownPricesBrowser } from './workers/bricklink-prices.js'
+import { processLegoSet } from './workers/lego-set.js'
+import { processRebrickableSet } from './workers/rebrickable-set.js'
+import { processRebrickableMocs } from './workers/rebrickable-mocs.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '../../../..')
@@ -49,69 +54,166 @@ const circuitBreaker = new CircuitBreaker(redis)
 // Workers
 // ───────────────────────────────────────────────────��─────────────────────
 
+/**
+ * Handle rate-limited results from any scraper.
+ * Trips the circuit breaker and throws to trigger BullMQ retry.
+ */
+async function handleRateLimit(
+  queue: ReturnType<typeof createQueues>[keyof ReturnType<typeof createQueues>],
+  result: { rateLimited?: boolean; resetHint?: string; itemNumber?: string },
+  label: string,
+) {
+  if (!result.rateLimited) return
+
+  let cooldownMs = 30 * 60 * 1000
+  if (result.resetHint) {
+    const match = result.resetHint.match(/(\d+)\s*(minutes?|hours?)/)
+    if (match) {
+      const value = parseInt(match[1], 10)
+      const unit = match[2].startsWith('hour') ? 60 : 1
+      cooldownMs = value * unit * 60 * 1000
+    }
+  }
+
+  await circuitBreaker.trip(
+    queue,
+    `Rate limited on ${label}: ${result.resetHint || 'unknown'}`,
+    cooldownMs,
+  )
+
+  throw new Error(`Rate limited — circuit breaker tripped for ${cooldownMs / 60000} minutes`)
+}
+
 function createWorkers() {
   const workers: Worker[] = []
 
-  // BrickLink Minifig Worker
+  // ── BrickLink Minifig ──────────────────────────────────────────────────
+
   const bricklinkMinifigWorker = new Worker(
     QUEUE_NAMES.BRICKLINK_MINIFIG,
     async job => {
-      logger.info(`[worker] Processing ${job.name} — ${job.data.itemNumber}`, {
+      logger.info(`[worker:minifig] Processing ${job.data.itemNumber}`, { jobId: job.id })
+      const result = await processBricklinkMinifig(job.data)
+      await handleRateLimit(queues.bricklinkMinifig, result, result.itemNumber)
+      if (!result.success) throw new Error(result.error || 'Scrape failed')
+
+      // Auto-enqueue price job if we got a variantId
+      if (result.variantId) {
+        await queues.bricklinkPrices.add('price', {
+          itemNumber: job.data.itemNumber,
+          itemType: job.data.itemType,
+          variantId: result.variantId,
+        })
+        logger.info(`[worker:minifig] Enqueued price job for ${job.data.itemNumber}`)
+      }
+
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(bricklinkMinifigWorker)
+
+  // ── BrickLink Catalog ──────────────────────────────────────────────────
+
+  const bricklinkCatalogWorker = new Worker(
+    QUEUE_NAMES.BRICKLINK_CATALOG,
+    async job => {
+      logger.info(`[worker:catalog] Processing catalog`, {
         jobId: job.id,
-        attempt: job.attemptsMade + 1,
+        url: job.data.catalogUrl,
       })
+      const result = await processBricklinkCatalog(job.data, queues.bricklinkMinifig, job.id!)
+      await handleRateLimit(queues.bricklinkCatalog, result, job.data.catalogUrl)
+      if (!result.success) throw new Error(result.error || 'Catalog scrape failed')
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(bricklinkCatalogWorker)
 
-      const result: ScrapeResult = await processBricklinkMinifig(job.data)
+  // ── BrickLink Prices ───────────────────────────────────────────────────
 
-      if (result.rateLimited) {
-        // Parse cooldown from hint or use default (30 min)
-        let cooldownMs = 30 * 60 * 1000
-        if (result.resetHint) {
-          const match = result.resetHint.match(/(\d+)\s*(minutes?|hours?)/)
-          if (match) {
-            const value = parseInt(match[1], 10)
-            const unit = match[2].startsWith('hour') ? 60 : 1
-            cooldownMs = value * unit * 60 * 1000
-          }
-        }
-
-        await circuitBreaker.trip(
-          queues.bricklinkMinifig,
-          `Rate limited on ${result.itemNumber}: ${result.resetHint || 'unknown'}`,
-          cooldownMs,
-        )
-
-        // Throw to trigger BullMQ retry after circuit breaker clears
-        throw new Error(`Rate limited — circuit breaker tripped for ${cooldownMs / 60000} minutes`)
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || 'Unknown scrape error')
-      }
-
+  const bricklinkPricesWorker = new Worker(
+    QUEUE_NAMES.BRICKLINK_PRICES,
+    async job => {
+      logger.info(`[worker:prices] Processing ${job.data.itemNumber}`, { jobId: job.id })
+      const result = await processBricklinkPrices(job.data)
+      await handleRateLimit(queues.bricklinkPrices, result, result.itemNumber)
+      if (!result.success && result.error) throw new Error(result.error)
       return result
     },
     {
       connection: redisConnection,
       concurrency: 1,
+      limiter: { max: 15, duration: 60 * 60 * 1000 }, // 15 per hour
     },
   )
+  workers.push(bricklinkPricesWorker)
 
-  bricklinkMinifigWorker.on('completed', job => {
-    logger.info(`[worker] Completed ${job.data.itemNumber}`, { jobId: job.id })
-  })
+  // ── LEGO.com Set ───────────────────────────────────────────────────────
 
-  bricklinkMinifigWorker.on('failed', (job, err) => {
-    logger.error(`[worker] Failed ${job?.data?.itemNumber}`, {
-      jobId: job?.id,
-      error: err.message,
-      attempt: job?.attemptsMade,
+  const legoSetWorker = new Worker(
+    QUEUE_NAMES.LEGO_SET,
+    async job => {
+      logger.info(`[worker:lego-set] Processing ${job.data.url}`, { jobId: job.id })
+      const result = await processLegoSet(job.data)
+      if (result.rateLimited) {
+        await handleRateLimit(queues.legoSet, result, job.data.url)
+      }
+      if (!result.success) throw new Error(result.error || 'Scrape failed')
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(legoSetWorker)
+
+  // ── Rebrickable Set ────────────────────────────────────────────────────
+
+  const rebrickableSetWorker = new Worker(
+    QUEUE_NAMES.REBRICKABLE_SET,
+    async job => {
+      logger.info(`[worker:rebrickable-set] Processing ${job.data.url}`, { jobId: job.id })
+      const result = await processRebrickableSet(job.data)
+      await handleRateLimit(queues.rebrickableSet, result, job.data.url)
+      if (!result.success) throw new Error(result.error || 'Scrape failed')
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(rebrickableSetWorker)
+
+  // ── Rebrickable MOCs ───────────────────────────────────────────────────
+
+  const rebrickableMocsWorker = new Worker(
+    QUEUE_NAMES.REBRICKABLE_MOCS,
+    async job => {
+      logger.info(`[worker:rebrickable-mocs] Starting pipeline`, {
+        jobId: job.id,
+        options: job.data,
+      })
+      const result = await processRebrickableMocs(job.data)
+      await handleRateLimit(queues.rebrickableMocs, result, 'moc-pipeline')
+      if (!result.success) throw new Error(result.error || 'Pipeline failed')
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(rebrickableMocsWorker)
+
+  // ── Event handlers for all workers ─────────────────────────────────────
+
+  for (const worker of workers) {
+    worker.on('completed', job => {
+      logger.info(`[worker:${worker.name}] Job completed`, { jobId: job.id })
     })
-  })
-
-  workers.push(bricklinkMinifigWorker)
-
-  // TODO: Phase 2 — add workers for remaining queue types
+    worker.on('failed', (job, err) => {
+      logger.error(`[worker:${worker.name}] Job failed`, {
+        jobId: job?.id,
+        error: err.message,
+        attempt: job?.attemptsMade,
+      })
+    })
+  }
 
   return workers
 }
@@ -137,8 +239,10 @@ async function shutdown(signal: string) {
   // Close workers (waits for current job to finish)
   await Promise.all(workers.map(w => w.close()))
 
-  // Close browser
+  // Close browsers
   await shutdownBrowser()
+  await shutdownCatalogBrowser()
+  await shutdownPricesBrowser()
 
   // Close circuit breaker timers
   circuitBreaker.destroy()
