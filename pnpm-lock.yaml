@@ -1551,6 +1551,9 @@ importers:
       '@repo/app-minifigs-gallery':
         specifier: workspace:*
         version: link:../app-minifigs-gallery
+      '@repo/app-scraper-queue':
+        specifier: workspace:*
+        version: link:../app-scraper-queue
       '@repo/app-sets-gallery':
         specifier: workspace:*
         version: link:../app-sets-gallery

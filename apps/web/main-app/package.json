@@ -34,6 +34,7 @@
     "@repo/api-client": "workspace:*",
     "@repo/app-component-library": "workspace:*",
     "@repo/app-dashboard": "workspace:*",
+    "@repo/app-scraper-queue": "workspace:*",
     "@repo/app-inspiration-gallery": "workspace:*",
     "@repo/app-instructions-gallery": "workspace:*",
     "@repo/app-minifigs-gallery": "workspace:*",
