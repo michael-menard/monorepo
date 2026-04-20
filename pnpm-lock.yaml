@@ -626,6 +626,9 @@ importers:
       '@repo/app-component-library':
         specifier: workspace:*
         version: link:../../../packages/core/app-component-library
+      '@repo/app-scraper-queue':
+        specifier: workspace:*
+        version: link:../app-scraper-queue
       '@repo/auth-hooks':
         specifier: workspace:*
         version: link:../../../packages/core/auth-hooks

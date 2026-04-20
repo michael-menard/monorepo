@@ -36,6 +36,7 @@
     "@dnd-kit/utilities": "3.2.2",
     "@repo/accessibility": "workspace:*",
     "@repo/api-client": "workspace:*",
+    "@repo/app-scraper-queue": "workspace:*",
     "@repo/app-component-library": "workspace:*",
     "@repo/auth-hooks": "workspace:*",
     "@repo/cache": "workspace:*",
