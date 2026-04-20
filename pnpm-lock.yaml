@@ -171,9 +171,6 @@ importers:
       pg:
         specifier: ^8.12.0
         version: 8.18.0
-      tiktoken:
-        specifier: 1.0.22
-        version: 1.0.22
       uuid:
         specifier: ^9.0.1
         version: 9.0.1
@@ -201,7 +198,7 @@ importers:
         version: 9.0.8
       '@vitest/coverage-v8':
         specifier: ^1.0.0
-        version: 1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1)))
+        version: 1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)))
       drizzle-kit:
         specifier: ^0.30.0
         version: 0.30.6
@@ -216,7 +213,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
 
   apps/api/lego-api:
     dependencies:
@@ -14631,6 +14628,7 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   precinct@12.2.0:
@@ -15873,9 +15871,6 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
-
-  tiktoken@1.0.22:
-    resolution: {integrity: sha512-PKvy1rVF1RibfF3JlXBSP0Jrcw2uq3yXdgcEXtKTYn3QJ/cBRBHDnrJ5jHky+MENZ6DIPwNUGWpkVx+7joCpNA==}
 
   time-span@4.0.0:
     resolution: {integrity: sha512-MyqZCTGLDZ77u4k+jqg4UlrzPTPZ49NDlaekU6uuFaJLzPIN1woaRXCbGeqOfxwc3Y37ZROGAJ614Rdv7Olt+g==}
@@ -19762,7 +19757,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.2
@@ -19864,7 +19859,7 @@ snapshots:
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -24638,11 +24633,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1)))':
+  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       istanbul-lib-coverage: 3.2.2
       istanbul-lib-report: 3.0.1
       istanbul-lib-source-maps: 5.0.6
@@ -24653,7 +24648,7 @@ snapshots:
       std-env: 3.10.0
       strip-literal: 2.1.1
       test-exclude: 6.0.0
-      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
+      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -25014,6 +25009,18 @@ snapshots:
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
       vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+    optional: true
+
+  '@vitest/ui@4.0.13(vitest@1.6.1)':
+    dependencies:
+      '@vitest/utils': 4.0.13
+      fflate: 0.8.2
+      flatted: 3.3.3
+      pathe: 2.0.3
+      sirv: 3.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
     optional: true
 
   '@vitest/ui@4.0.13(vitest@4.0.18)':
@@ -25622,7 +25629,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       http-errors: 2.0.1
       iconv-lite: 0.7.2
       on-finished: 2.4.1
@@ -26273,6 +26280,10 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
+  debug@4.4.3:
+    dependencies:
+      ms: 2.1.3
+
   debug@4.4.3(supports-color@8.1.1):
     dependencies:
       ms: 2.1.3
@@ -26776,7 +26787,7 @@ snapshots:
 
   esbuild-register@3.6.0(esbuild@0.19.12):
     dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       esbuild: 0.19.12
     transitivePeerDependencies:
       - supports-color
@@ -27143,7 +27154,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -27322,7 +27333,7 @@ snapshots:
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       depd: 2.0.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
@@ -27482,7 +27493,7 @@ snapshots:
 
   finalhandler@2.1.1:
     dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -27671,7 +27682,7 @@ snapshots:
   gel@2.2.0:
     dependencies:
       '@petamoriken/float16': 3.9.3
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       env-paths: 3.0.0
       semver: 7.7.4
       shell-quote: 1.8.3
@@ -27939,7 +27950,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -27953,7 +27964,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -28359,7 +28370,7 @@ snapshots:
   istanbul-lib-source-maps@5.0.6:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       istanbul-lib-coverage: 3.2.2
     transitivePeerDependencies:
       - supports-color
@@ -30667,7 +30678,7 @@ snapshots:
 
   router@2.2.0:
     dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -30770,7 +30781,7 @@ snapshots:
 
   send@1.2.1:
     dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -31533,8 +31544,6 @@ snapshots:
 
   through@2.3.8: {}
 
-  tiktoken@1.0.22: {}
-
   time-span@4.0.0:
     dependencies:
       convert-hrtime: 3.0.0
@@ -32216,7 +32225,7 @@ snapshots:
   vite-node@1.6.1(@types/node@20.19.33):
     dependencies:
       cac: 6.7.14
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       pathe: 1.1.2
       picocolors: 1.1.1
       vite: 5.4.21(@types/node@20.19.33)
@@ -32621,6 +32630,43 @@ snapshots:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.19.33
       '@vitest/ui': 3.2.4(vitest@1.6.1)
+      jsdom: 26.1.0(canvas@3.2.1)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)):
+    dependencies:
+      '@vitest/expect': 1.6.1
+      '@vitest/runner': 1.6.1
+      '@vitest/snapshot': 1.6.1
+      '@vitest/spy': 1.6.1
+      '@vitest/utils': 1.6.1
+      acorn-walk: 8.3.4
+      chai: 4.5.0
+      debug: 4.4.3
+      execa: 8.0.1
+      local-pkg: 0.5.1
+      magic-string: 0.30.21
+      pathe: 1.1.2
+      picocolors: 1.1.1
+      std-env: 3.10.0
+      strip-literal: 2.1.1
+      tinybench: 2.9.0
+      tinypool: 0.8.4
+      vite: 5.4.21(@types/node@20.19.33)
+      vite-node: 1.6.1(@types/node@20.19.33)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@edge-runtime/vm': 3.2.0
+      '@types/node': 20.19.33
+      '@vitest/ui': 4.0.13(vitest@1.6.1)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - less

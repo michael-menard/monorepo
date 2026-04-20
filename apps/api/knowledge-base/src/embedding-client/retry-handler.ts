@@ -8,7 +8,16 @@
  */
 
 import { OpenAI } from 'openai'
-import { encoding_for_model } from 'tiktoken'
+// tiktoken is optional — only needed when using the OpenAI provider
+// Falls back to character-based estimation (4 chars/token) when not installed
+let encoding_for_model: ((model: string) => any) | undefined
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const tiktoken = await import(/* webpackIgnore: true */ 'tiktoken' as string)
+  encoding_for_model = tiktoken.encoding_for_model
+} catch {
+  // tiktoken not installed — token counting will use character-based estimation
+}
 import { logger } from '@repo/logger'
 import type { Embedding } from './__types__/index.js'
 
@@ -123,6 +132,9 @@ function sleep(ms: number): Promise<void> {
  * @returns Token count
  */
 function countTokens(text: string, model: string): number {
+  if (!encoding_for_model) {
+    return Math.ceil(text.length / 4)
+  }
   try {
     const encoding = encoding_for_model(model as any)
     const tokens = encoding.encode(text)

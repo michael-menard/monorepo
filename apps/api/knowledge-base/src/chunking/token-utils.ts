@@ -7,7 +7,15 @@
  * @see KNOW-048 for chunking requirements
  */
 
-import { encoding_for_model } from 'tiktoken'
+// tiktoken is optional — falls back to character-based estimation (4 chars/token)
+let encoding_for_model: ((model: string) => any) | undefined
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const tiktoken = await import(/* webpackIgnore: true */ 'tiktoken' as string)
+  encoding_for_model = tiktoken.encoding_for_model
+} catch {
+  // tiktoken not installed — will use fallback estimation
+}
 
 /**
  * Simple console logger for chunking utilities.
@@ -29,16 +37,20 @@ const EMBEDDING_MODEL = 'text-embedding-3-small'
  * Cached encoder instance for performance.
  * Tiktoken encoders are expensive to create, so we cache.
  */
-let cachedEncoder: ReturnType<typeof encoding_for_model> | null = null
+let cachedEncoder: any | null = null
 
 /**
  * Get or create the tiktoken encoder.
  *
  * @returns Tiktoken encoder instance
  */
-function getEncoder(): ReturnType<typeof encoding_for_model> | null {
+function getEncoder(): any | null {
   if (cachedEncoder) {
     return cachedEncoder
+  }
+
+  if (!encoding_for_model) {
+    return null
   }
 
   try {
