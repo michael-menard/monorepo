@@ -1,6 +1,15 @@
 import { useState, useCallback } from 'react'
-import { Plus, Loader2 } from 'lucide-react'
-import { Button, Badge, cn } from '@repo/app-component-library'
+import { Plus, Loader2, Play } from 'lucide-react'
+import {
+  Button,
+  Badge,
+  AppDialog,
+  AppDialogContent,
+  AppDialogHeader,
+  AppDialogTitle,
+  AppDialogFooter,
+  cn,
+} from '@repo/app-component-library'
 import { useAddScrapeJobMutation } from '@repo/api-client/rtk/scraper-api'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -26,6 +35,14 @@ function detectType(input: string): string | null {
 export function AddJobForm() {
   const [input, setInput] = useState('')
   const [wishlist, setWishlist] = useState(false)
+  const [showMocDialog, setShowMocDialog] = useState(false)
+  const [mocOptions, setMocOptions] = useState({
+    resume: false,
+    force: false,
+    retryFailed: false,
+    retryMissing: false,
+    likedMocs: false,
+  })
   const [addJob, { isLoading }] = useAddScrapeJobMutation()
 
   const detectedType = input.trim() ? detectType(input.trim()) : null
@@ -34,7 +51,6 @@ export function AddJobForm() {
     const trimmed = input.trim()
     if (!trimmed) return
 
-    // Support comma-separated URLs
     const urls = trimmed
       .split(',')
       .map(u => u.trim())
@@ -46,6 +62,22 @@ export function AddJobForm() {
 
     setInput('')
   }, [input, wishlist, addJob])
+
+  const handleRunMocPipeline = useCallback(async () => {
+    await addJob({
+      url: 'rebrickable-mocs',
+      type: 'rebrickable-mocs',
+      ...mocOptions,
+    })
+    setShowMocDialog(false)
+    setMocOptions({
+      resume: false,
+      force: false,
+      retryFailed: false,
+      retryMissing: false,
+      likedMocs: false,
+    })
+  }, [addJob, mocOptions])
 
   return (
     <div className="space-y-3">
@@ -87,17 +119,81 @@ export function AddJobForm() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() =>
-            addJob({
-              url: 'rebrickable-mocs',
-              type: 'rebrickable-mocs',
-            })
-          }
+          onClick={() => setShowMocDialog(true)}
           disabled={isLoading}
         >
+          <Play className="h-3 w-3 mr-1" />
           Run MOC Pipeline
         </Button>
       </div>
+
+      {/* MOC Pipeline Options Dialog */}
+      <AppDialog open={showMocDialog} onOpenChange={setShowMocDialog}>
+        <AppDialogContent>
+          <AppDialogHeader>
+            <AppDialogTitle>Run Rebrickable MOC Pipeline</AppDialogTitle>
+          </AppDialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Select which pipeline mode to run. Options can be combined.
+            </p>
+            {[
+              {
+                key: 'resume' as const,
+                label: 'Resume',
+                description: 'Continue from where the last run left off',
+              },
+              {
+                key: 'retryMissing' as const,
+                label: 'Retry Missing',
+                description: 'Re-scrape MOCs with missing parts or images',
+              },
+              {
+                key: 'retryFailed' as const,
+                label: 'Retry Failed',
+                description: 'Re-try MOCs where downloads previously failed',
+              },
+              {
+                key: 'likedMocs' as const,
+                label: 'Liked MOCs',
+                description: 'Scrape liked MOCs instead of purchased',
+              },
+              {
+                key: 'force' as const,
+                label: 'Force Re-scrape',
+                description: 'Re-scrape everything, even already completed MOCs',
+              },
+            ].map(option => (
+              <label
+                key={option.key}
+                className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={mocOptions[option.key]}
+                  onChange={e =>
+                    setMocOptions(prev => ({ ...prev, [option.key]: e.target.checked }))
+                  }
+                  className="mt-0.5 rounded border-input"
+                />
+                <div>
+                  <div className="text-sm font-medium">{option.label}</div>
+                  <div className="text-xs text-muted-foreground">{option.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <AppDialogFooter>
+            <Button variant="outline" onClick={() => setShowMocDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRunMocPipeline} disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Start Pipeline
+            </Button>
+          </AppDialogFooter>
+        </AppDialogContent>
+      </AppDialog>
     </div>
   )
 }
