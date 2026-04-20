@@ -18,6 +18,8 @@
     "@repo/app-component-library": "workspace:*",
     "lucide-react": "^0.511.0",
     "react": "^19.0.0",
+    "react-redux": "^9.0.0",
+    "socket.io-client": "^4.7.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

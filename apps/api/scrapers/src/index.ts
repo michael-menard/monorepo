@@ -13,6 +13,7 @@ import Redis from 'ioredis'
 import { logger } from '@repo/logger'
 import { createQueues, QUEUE_NAMES } from './queues.js'
 import { CircuitBreaker } from './circuit-breaker.js'
+import { scraperEvents } from './events.js'
 import {
   processBricklinkMinifig,
   shutdownBrowser,
@@ -48,7 +49,11 @@ redis.on('error', err => logger.error('[worker] Redis error', err))
 // ────────────────────��──────────────────────────────────���─────────────────
 
 const queues = createQueues(redisConnection)
-const circuitBreaker = new CircuitBreaker(redis)
+const circuitBreaker = new CircuitBreaker(redis, {
+  onReset: queueName => {
+    scraperEvents.circuitBreakerReset(queueName)
+  },
+})
 
 // ────────────────────��────────────────────────────────���───────────────────
 // Workers
@@ -75,11 +80,11 @@ async function handleRateLimit(
     }
   }
 
-  await circuitBreaker.trip(
-    queue,
-    `Rate limited on ${label}: ${result.resetHint || 'unknown'}`,
-    cooldownMs,
-  )
+  const reason = `Rate limited on ${label}: ${result.resetHint || 'unknown'}`
+  const resumesAt = new Date(Date.now() + cooldownMs).toISOString()
+
+  await circuitBreaker.trip(queue, reason, cooldownMs)
+  await scraperEvents.circuitBreakerTripped(queue.name, reason, resumesAt)
 
   throw new Error(`Rate limited — circuit breaker tripped for ${cooldownMs / 60000} minutes`)
 }
@@ -203,8 +208,23 @@ function createWorkers() {
   // ── Event handlers for all workers ─────────────────────────────────────
 
   for (const worker of workers) {
+    worker.on('active', job => {
+      const type = worker.name.replace('scrape-', '')
+      scraperEvents.jobStarted(job.id!, type, job.data)
+    })
     worker.on('completed', job => {
       logger.info(`[worker:${worker.name}] Job completed`, { jobId: job.id })
+      const type = worker.name.replace('scrape-', '')
+      scraperEvents.jobCompleted(job.id!, type, job.returnvalue ?? {})
+
+      // Emit catalog expanded event if applicable
+      if (type === 'bricklink-catalog' && job.returnvalue?.jobsEnqueued) {
+        scraperEvents.catalogExpanded(
+          job.id!,
+          job.returnvalue.itemsFound,
+          job.returnvalue.jobsEnqueued,
+        )
+      }
     })
     worker.on('failed', (job, err) => {
       logger.error(`[worker:${worker.name}] Job failed`, {
@@ -212,6 +232,10 @@ function createWorkers() {
         error: err.message,
         attempt: job?.attemptsMade,
       })
+      if (job) {
+        const type = worker.name.replace('scrape-', '')
+        scraperEvents.jobFailed(job.id!, type, err.message, job.attemptsMade)
+      }
     })
   }
 

@@ -23,8 +23,14 @@ export interface CircuitBreakerState {
 
 export class CircuitBreaker {
   private timers = new Map<string, NodeJS.Timeout>()
+  private onReset?: (queueName: string) => void
 
-  constructor(private redis: Redis) {}
+  constructor(
+    private redis: Redis,
+    options?: { onReset?: (queueName: string) => void },
+  ) {
+    this.onReset = options?.onReset
+  }
 
   /**
    * Trip the circuit breaker for a queue.
@@ -84,6 +90,7 @@ export class CircuitBreaker {
 
     await this.redis.del(`${REDIS_PREFIX}${queueName}`)
     await queue.resume()
+    this.onReset?.(queueName)
 
     const timer = this.timers.get(queueName)
     if (timer) {
