@@ -61,12 +61,12 @@ export type RebrickableMocsJob = z.infer<typeof RebrickableMocsJobSchema>
 // ─────────────────────────────────────────────────────────────────────────
 
 export const QUEUE_NAMES = {
-  BRICKLINK_MINIFIG: 'scrape:bricklink-minifig',
-  BRICKLINK_CATALOG: 'scrape:bricklink-catalog',
-  BRICKLINK_PRICES: 'scrape:bricklink-prices',
-  LEGO_SET: 'scrape:lego-set',
-  REBRICKABLE_SET: 'scrape:rebrickable-set',
-  REBRICKABLE_MOCS: 'scrape:rebrickable-mocs',
+  BRICKLINK_MINIFIG: 'scrape-bricklink-minifig',
+  BRICKLINK_CATALOG: 'scrape-bricklink-catalog',
+  BRICKLINK_PRICES: 'scrape-bricklink-prices',
+  LEGO_SET: 'scrape-lego-set',
+  REBRICKABLE_SET: 'scrape-rebrickable-set',
+  REBRICKABLE_MOCS: 'scrape-rebrickable-mocs',
 } as const
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]

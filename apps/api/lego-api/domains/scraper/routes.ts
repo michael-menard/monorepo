@@ -26,12 +26,12 @@ const redisConnection = {
 }
 
 const QUEUE_NAMES = {
-  'bricklink-minifig': 'scrape:bricklink-minifig',
-  'bricklink-catalog': 'scrape:bricklink-catalog',
-  'bricklink-prices': 'scrape:bricklink-prices',
-  'lego-set': 'scrape:lego-set',
-  'rebrickable-set': 'scrape:rebrickable-set',
-  'rebrickable-mocs': 'scrape:rebrickable-mocs',
+  'bricklink-minifig': 'scrape-bricklink-minifig',
+  'bricklink-catalog': 'scrape-bricklink-catalog',
+  'bricklink-prices': 'scrape-bricklink-prices',
+  'lego-set': 'scrape-lego-set',
+  'rebrickable-set': 'scrape-rebrickable-set',
+  'rebrickable-mocs': 'scrape-rebrickable-mocs',
 } as const
 
 type ScraperType = keyof typeof QUEUE_NAMES
@@ -57,8 +57,8 @@ function getAllQueueNames(): string[] {
 // ─────────────────────────────────────────────────────────────────────────
 
 function mapJob(job: any, queueName: string): JobResponse {
-  // Derive type from queue name (e.g., "scrape:bricklink-minifig" → "bricklink-minifig")
-  const type = queueName.replace('scrape:', '')
+  // Derive type from queue name (e.g., "scrape-bricklink-minifig" → "bricklink-minifig")
+  const type = queueName.replace('scrape-', '')
   return {
     id: job.id,
     type,
