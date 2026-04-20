@@ -72,6 +72,18 @@ export interface MocWithFiles extends Moc {
   publishedAt: string | null
   ratings: { overall?: number | null; buildExperience?: number | null } | null
   notes: string | null
+  buildStatus: string
+  reviewSkippedAt: Date | null
+}
+
+export interface MocReview {
+  id: string
+  mocId: string
+  userId: string
+  status: string
+  sections: Record<string, unknown>
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface MocRepository {
@@ -85,6 +97,16 @@ export interface MocRepository {
   splitTag(userId: string, oldTag: string, newTags: string[]): Promise<{ updatedCount: number }>
   mergeTags(userId: string, oldTags: string[], newTag: string): Promise<{ updatedCount: number }>
   renameTag(userId: string, oldTag: string, newTag: string): Promise<{ updatedCount: number }>
+}
+
+export interface MocReviewRepository {
+  create(mocId: string, userId: string): Promise<MocReview>
+  findByMocAndUser(mocId: string, userId: string): Promise<MocReview | null>
+  update(
+    mocId: string,
+    userId: string,
+    data: { sections?: Record<string, unknown>; status?: string },
+  ): Promise<MocReview>
 }
 
 /**

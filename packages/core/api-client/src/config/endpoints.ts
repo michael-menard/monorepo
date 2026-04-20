@@ -76,6 +76,11 @@ export const SERVERLESS_ENDPOINTS = {
     CREATE_UPLOAD_SESSION: '/instructions/mocs/{id}/upload-sessions',
     COMPLETE_UPLOAD_SESSION: '/instructions/mocs/{id}/upload-sessions/{sessionId}/complete',
 
+    // Review endpoints (MOC Build Status & Review System)
+    CREATE_REVIEW: '/instructions/mocs/{id}/review',
+    GET_REVIEW: '/instructions/mocs/{id}/review',
+    UPDATE_REVIEW: '/instructions/mocs/{id}/review',
+
     // Legacy upload endpoint
     UPLOAD: '/instructions/mocs/upload',
   },

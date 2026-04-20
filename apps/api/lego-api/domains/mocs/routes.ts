@@ -13,6 +13,7 @@ import {
   createMocImageStorage,
   createUploadSessionRepository,
   createS3StorageAdapter,
+  createMocReviewRepository,
 } from './adapters/index.js'
 import {
   CreateMocRequestSchema,
@@ -26,11 +27,14 @@ import {
   CreateUploadSessionRequestSchema,
   CreateUploadSessionResponseSchema,
   CompleteUploadSessionResponseSchema,
+  UpdateReviewRequestSchema,
+  MocReviewResponseSchema,
 } from './types.js'
 import type { MocFile } from './ports/index.js'
 
 // Setup: Wire dependencies
 const mocRepo = createMocRepository(db, schema)
+const reviewRepo = createMocReviewRepository(db, schema)
 const imageStorage = createMocImageStorage()
 const mocService = createMocService({ mocRepo, imageStorage })
 
@@ -578,6 +582,10 @@ mocs.get('/:id', async c => {
       fileCount: moc.files.length,
     }
 
+    // Derive reviewStatus from review existence
+    const review = await reviewRepo.findByMocAndUser(moc.id, userId)
+    const reviewStatus = review ? (review.status as 'draft' | 'complete') : 'none'
+
     const response = {
       id: moc.id,
       userId: moc.userId,
@@ -596,6 +604,13 @@ mocs.get('/:id', async c => {
       dimensions: moc.dimensions ?? null,
       ratings: moc.ratings ?? null,
       notes: moc.notes ?? null,
+      buildStatus: moc.buildStatus ?? 'instructions_added',
+      reviewStatus,
+      reviewSkippedAt: moc.reviewSkippedAt
+        ? moc.reviewSkippedAt instanceof Date
+          ? moc.reviewSkippedAt.toISOString()
+          : moc.reviewSkippedAt
+        : null,
     }
 
     // Validate response with Zod
@@ -911,6 +926,169 @@ mocs.get('/:id/files/:fileId/download', async c => {
       mocId,
       fileId,
     })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review Routes (MOC Build Status & Review System)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /mocs/:id/review
+ * Create a new draft review for a MOC
+ */
+mocs.post('/:id/review', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    // Verify MOC exists and belongs to user
+    const moc = await mocRepo.getMocById(mocId, userId)
+    if (!moc) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    // Check if review already exists
+    const existing = await reviewRepo.findByMocAndUser(mocId, userId)
+    if (existing) {
+      return c.json({ error: 'CONFLICT', message: 'Review already exists for this MOC' }, 409)
+    }
+
+    const review = await reviewRepo.create(mocId, userId)
+
+    const response = MocReviewResponseSchema.parse({
+      id: review.id,
+      mocId: review.mocId,
+      userId: review.userId,
+      status: review.status,
+      sections: review.sections,
+      createdAt:
+        review.createdAt instanceof Date ? review.createdAt.toISOString() : review.createdAt,
+      updatedAt:
+        review.updatedAt instanceof Date ? review.updatedAt.toISOString() : review.updatedAt,
+    })
+
+    return c.json(response, 201)
+  } catch (error) {
+    logger.error('Unhandled error in POST /mocs/:id/review', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * GET /mocs/:id/review
+ * Get the review for a MOC
+ */
+mocs.get('/:id/review', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const review = await reviewRepo.findByMocAndUser(mocId, userId)
+    if (!review) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    const response = MocReviewResponseSchema.parse({
+      id: review.id,
+      mocId: review.mocId,
+      userId: review.userId,
+      status: review.status,
+      sections: review.sections,
+      createdAt:
+        review.createdAt instanceof Date ? review.createdAt.toISOString() : review.createdAt,
+      updatedAt:
+        review.updatedAt instanceof Date ? review.updatedAt.toISOString() : review.updatedAt,
+    })
+
+    return c.json(response, 200)
+  } catch (error) {
+    logger.error('Unhandled error in GET /mocs/:id/review', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
+/**
+ * PATCH /mocs/:id/review
+ * Update review sections and/or status
+ * When status transitions to 'complete', sync ratings back to moc_instructions
+ */
+mocs.patch('/:id/review', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  if (!userId) {
+    return c.json({ error: 'UNAUTHORIZED' }, 401)
+  }
+
+  try {
+    const body = await c.req.json()
+
+    const validated = UpdateReviewRequestSchema.safeParse(body)
+    if (!validated.success) {
+      return c.json({ error: 'VALIDATION_ERROR', details: validated.error.flatten() }, 400)
+    }
+
+    // Verify review exists
+    const existing = await reviewRepo.findByMocAndUser(mocId, userId)
+    if (!existing) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    // Merge sections if provided
+    const updateData: { sections?: Record<string, unknown>; status?: string } = {}
+    if (validated.data.sections) {
+      updateData.sections = { ...existing.sections, ...validated.data.sections }
+    }
+    if (validated.data.status) {
+      updateData.status = validated.data.status
+    }
+
+    const review = await reviewRepo.update(mocId, userId, updateData)
+
+    // Sync ratings when review is completed
+    if (validated.data.status === 'complete') {
+      const sections = review.sections as Record<string, { rating?: number }>
+      const ratings: number[] = []
+      for (const section of Object.values(sections)) {
+        if (section && typeof section.rating === 'number') {
+          ratings.push(section.rating)
+        }
+      }
+
+      const overall =
+        ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null
+      const buildExperience = (sections.buildExperience as { rating?: number })?.rating ?? null
+
+      await mocRepo.updateMoc(mocId, userId, {
+        ratings: { overall, buildExperience },
+      } as any)
+    }
+
+    const response = MocReviewResponseSchema.parse({
+      id: review.id,
+      mocId: review.mocId,
+      userId: review.userId,
+      status: review.status,
+      sections: review.sections,
+      createdAt:
+        review.createdAt instanceof Date ? review.createdAt.toISOString() : review.createdAt,
+      updatedAt:
+        review.updatedAt instanceof Date ? review.updatedAt.toISOString() : review.updatedAt,
+    })
+
+    return c.json(response, 200)
+  } catch (error) {
+    logger.error('Unhandled error in PATCH /mocs/:id/review', error, { userId, mocId })
     return c.json({ error: 'INTERNAL_ERROR' }, 500)
   }
 })

@@ -245,6 +245,12 @@ export const mocInstructions = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Build Status & Review
+    // ─────────────────────────────────────────────────────────────────────────
+    buildStatus: text('build_status').notNull().default('instructions_added'),
+    reviewSkippedAt: timestamp('review_skipped_at', { withTimezone: true }),
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Audit Trail
     // ─────────────────────────────────────────────────────────────────────────
     addedByUserId: text('added_by_user_id'), // UUID of user who first added this record
@@ -350,6 +356,28 @@ export const mocGalleryAlbums = pgTable(
     // Indexes for lazy fetching and performance
     mocIdx: index('idx_moc_gallery_albums_moc_id_lazy').on(table.mocId),
     galleryAlbumIdx: index('idx_moc_gallery_albums_gallery_album_id_lazy').on(table.galleryAlbumId),
+  }),
+)
+
+// MOC Reviews Table — one review per MOC per user, sections stored as JSONB
+export const mocReviews = pgTable(
+  'moc_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocId: uuid('moc_id')
+      .notNull()
+      .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    status: text('status').notNull().default('draft'), // 'draft' | 'complete'
+    sections: jsonb('sections').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    mocIdx: index('idx_moc_reviews_moc_id').on(table.mocId),
+    userIdx: index('idx_moc_reviews_user_id').on(table.userId),
+    statusIdx: index('idx_moc_reviews_status').on(table.status),
+    uniqueMocUser: uniqueIndex('moc_reviews_moc_user_unique').on(table.mocId, table.userId),
   }),
 )
 
@@ -473,6 +501,14 @@ export const mocInstructionsRelations = relations(mocInstructions, ({ many }) =>
   galleryImages: many(mocGalleryImages),
   galleryAlbums: many(mocGalleryAlbums),
   partsLists: many(mocPartsLists),
+  reviews: many(mocReviews),
+}))
+
+export const mocReviewsRelations = relations(mocReviews, ({ one }) => ({
+  moc: one(mocInstructions, {
+    fields: [mocReviews.mocId],
+    references: [mocInstructions.id],
+  }),
 }))
 
 export const mocFilesRelations = relations(mocFiles, ({ one, many }) => ({

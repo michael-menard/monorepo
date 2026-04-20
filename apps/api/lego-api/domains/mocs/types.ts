@@ -39,6 +39,15 @@ const DimEntrySchema = z.object({
   studsHeight: z.number().nullable().optional(),
 })
 
+const BuildStatusSchema = z.enum([
+  'instructions_added',
+  'acquiring_parts',
+  'ready_to_build',
+  'building',
+  'complete',
+  'parted_out',
+])
+
 export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
   dimensions: DimEntrySchema.extend({
     subBuilds: z
@@ -57,7 +66,97 @@ export const UpdateMocRequestSchema = CreateMocRequestSchema.partial().extend({
     .nullable()
     .optional(),
   notes: z.string().nullable().optional(),
+  buildStatus: BuildStatusSchema.optional(),
+  reviewSkippedAt: z.string().nullable().optional(),
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review Schemas
+// ─────────────────────────────────────────────────────────────────────────
+
+const ReviewSectionsSchema = z.object({
+  partsQuality: z
+    .object({
+      rating: z.number().min(1).max(5),
+      brand: z.enum(['cada', 'mould_king', 'xingbao', 'wrebbit', 'gobrick', 'lego', 'other']),
+      brandOther: z.string().optional(),
+      clutchPower: z.number().min(1).max(5),
+      colorAccuracy: z.number().min(1).max(5),
+      missingParts: z.boolean(),
+      missingPartsNotes: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  instructions: z
+    .object({
+      rating: z.number().min(1).max(5),
+      clarity: z.number().min(1).max(5),
+      stepGranularity: z.enum(['too_few', 'just_right', 'too_many']),
+      errors: z.boolean(),
+      errorsNotes: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  minifigs: z
+    .object({
+      designerIncludedMinifigs: z.boolean(),
+      rating: z.number().min(1).max(5).optional(),
+      quality: z.number().min(1).max(5).optional(),
+      printVsSticker: z.enum(['printed', 'stickered', 'mix', 'none']).optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  stickers: z
+    .object({
+      hasStickers: z.boolean(),
+      rating: z.number().min(1).max(5).optional(),
+      quality: z.number().min(1).max(5).optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  value: z
+    .object({
+      rating: z.number().min(1).max(5),
+      pricePerPiece: z.enum(['great', 'fair', 'expensive', 'overpriced']),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  buildExperience: z
+    .object({
+      rating: z.number().min(1).max(5),
+      difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
+      sessionCount: z.number().int().min(1),
+      enjoyment: z.number().min(1).max(5),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  design: z
+    .object({
+      rating: z.number().min(1).max(5),
+      notes: z.string().optional(),
+      promptChips: z.array(z.string()).optional(),
+    })
+    .optional(),
+})
+
+export const UpdateReviewRequestSchema = z.object({
+  sections: ReviewSectionsSchema.optional(),
+  status: z.enum(['draft', 'complete']).optional(),
+})
+
+export const MocReviewResponseSchema = z.object({
+  id: z.string().uuid(),
+  mocId: z.string().uuid(),
+  userId: z.string(),
+  status: z.enum(['draft', 'complete']),
+  sections: ReviewSectionsSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type UpdateReviewRequest = z.infer<typeof UpdateReviewRequestSchema>
+export type MocReviewResponse = z.infer<typeof MocReviewResponseSchema>
+export type ReviewSections = z.infer<typeof ReviewSectionsSchema>
 
 // Response schema for created MOC
 export const CreateMocResponseSchema = z.object({
@@ -117,6 +216,9 @@ export const GetMocResponseSchema = z.object({
     .nullable()
     .optional(),
   notes: z.string().nullable().optional(),
+  buildStatus: BuildStatusSchema,
+  reviewStatus: z.enum(['none', 'draft', 'complete']),
+  reviewSkippedAt: z.string().nullable().optional(),
 })
 
 // Query schema for listing MOCs

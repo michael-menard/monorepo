@@ -26,6 +26,19 @@ const lenientUuid = z.string().refine(val => uuidRegex.test(val), {
 export const InstructionTypeSchema = z.enum(['moc', 'set'])
 export type InstructionType = z.infer<typeof InstructionTypeSchema>
 
+export const BuildStatusSchema = z.enum([
+  'instructions_added',
+  'acquiring_parts',
+  'ready_to_build',
+  'building',
+  'complete',
+  'parted_out',
+])
+export type BuildStatus = z.infer<typeof BuildStatusSchema>
+
+export const ReviewStatusSchema = z.enum(['none', 'draft', 'complete'])
+export type ReviewStatus = z.infer<typeof ReviewStatusSchema>
+
 export const DifficultySchema = z.enum(['beginner', 'intermediate', 'advanced', 'expert'])
 export type Difficulty = z.infer<typeof DifficultySchema>
 
@@ -293,6 +306,10 @@ export const UpdateMocInputSchema = z.object({
   // Personal
   notes: z.string().nullable().optional(),
 
+  // Build Status & Review
+  buildStatus: BuildStatusSchema.optional(),
+  reviewSkippedAt: z.string().nullable().optional(),
+
   // Visibility
   status: StatusSchema.optional(),
   visibility: VisibilitySchema.optional(),
@@ -413,6 +430,9 @@ export const GetMocDetailResponseSchema = z.object({
     .nullable()
     .optional(),
   notes: z.string().nullable().optional(),
+  buildStatus: BuildStatusSchema,
+  reviewStatus: ReviewStatusSchema,
+  reviewSkippedAt: z.string().nullable().optional(),
 })
 
 export type GetMocDetailResponse = z.infer<typeof GetMocDetailResponseSchema>
@@ -485,3 +505,112 @@ export const CompleteUploadSessionResponseSchema = z.object({
 })
 
 export type CompleteUploadSessionResponse = z.infer<typeof CompleteUploadSessionResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review Section Schemas (MOC Build Status & Review System)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const BrandSchema = z.enum([
+  'cada',
+  'mould_king',
+  'xingbao',
+  'wrebbit',
+  'gobrick',
+  'lego',
+  'other',
+])
+export type Brand = z.infer<typeof BrandSchema>
+
+export const PartsQualitySectionSchema = z.object({
+  rating: z.number().min(1).max(5),
+  brand: BrandSchema,
+  brandOther: z.string().optional(),
+  clutchPower: z.number().min(1).max(5),
+  colorAccuracy: z.number().min(1).max(5),
+  missingParts: z.boolean(),
+  missingPartsNotes: z.string().optional(),
+  notes: z.string().optional(),
+})
+export type PartsQualitySection = z.infer<typeof PartsQualitySectionSchema>
+
+export const InstructionsSectionSchema = z.object({
+  rating: z.number().min(1).max(5),
+  clarity: z.number().min(1).max(5),
+  stepGranularity: z.enum(['too_few', 'just_right', 'too_many']),
+  errors: z.boolean(),
+  errorsNotes: z.string().optional(),
+  notes: z.string().optional(),
+})
+export type InstructionsSection = z.infer<typeof InstructionsSectionSchema>
+
+export const MinifigsSectionSchema = z.object({
+  designerIncludedMinifigs: z.boolean(),
+  rating: z.number().min(1).max(5).optional(),
+  quality: z.number().min(1).max(5).optional(),
+  printVsSticker: z.enum(['printed', 'stickered', 'mix', 'none']).optional(),
+  notes: z.string().optional(),
+})
+export type MinifigsSection = z.infer<typeof MinifigsSectionSchema>
+
+export const StickersSectionSchema = z.object({
+  hasStickers: z.boolean(),
+  rating: z.number().min(1).max(5).optional(),
+  quality: z.number().min(1).max(5).optional(),
+  notes: z.string().optional(),
+})
+export type StickersSection = z.infer<typeof StickersSectionSchema>
+
+export const ValueSectionSchema = z.object({
+  rating: z.number().min(1).max(5),
+  pricePerPiece: z.enum(['great', 'fair', 'expensive', 'overpriced']),
+  notes: z.string().optional(),
+})
+export type ValueSection = z.infer<typeof ValueSectionSchema>
+
+export const BuildExperienceSectionSchema = z.object({
+  rating: z.number().min(1).max(5),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
+  sessionCount: z.number().int().min(1),
+  enjoyment: z.number().min(1).max(5),
+  notes: z.string().optional(),
+})
+export type BuildExperienceSection = z.infer<typeof BuildExperienceSectionSchema>
+
+export const DesignSectionSchema = z.object({
+  rating: z.number().min(1).max(5),
+  notes: z.string().optional(),
+  promptChips: z.array(z.string()).optional(),
+})
+export type DesignSection = z.infer<typeof DesignSectionSchema>
+
+export const ReviewSectionsSchema = z.object({
+  partsQuality: PartsQualitySectionSchema.optional(),
+  instructions: InstructionsSectionSchema.optional(),
+  minifigs: MinifigsSectionSchema.optional(),
+  stickers: StickersSectionSchema.optional(),
+  value: ValueSectionSchema.optional(),
+  buildExperience: BuildExperienceSectionSchema.optional(),
+  design: DesignSectionSchema.optional(),
+})
+export type ReviewSections = z.infer<typeof ReviewSectionsSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review CRUD Schemas
+// ─────────────────────────────────────────────────────────────────────────
+
+export const MocReviewSchema = z.object({
+  id: lenientUuid,
+  mocId: lenientUuid,
+  userId: z.string(),
+  status: z.enum(['draft', 'complete']),
+  sections: ReviewSectionsSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+export type MocReview = z.infer<typeof MocReviewSchema>
+
+export const UpdateReviewRequestSchema = z.object({
+  sections: ReviewSectionsSchema.optional(),
+  status: z.enum(['draft', 'complete']).optional(),
+})
+export type UpdateReviewRequest = z.infer<typeof UpdateReviewRequestSchema>

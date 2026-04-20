@@ -36,6 +36,9 @@ import {
   type CreateUploadSessionRequest,
   type CreateUploadSessionResponse,
   type CompleteUploadSessionResponse,
+  MocReviewSchema,
+  type MocReview,
+  type UpdateReviewRequest,
 } from '../schemas/instructions'
 import { getServerlessCacheConfig } from './base-query'
 
@@ -100,7 +103,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
         }),
     }),
     // Story INST-1008: Updated tag types for cache invalidation
-    tagTypes: ['Moc', 'MocList', 'MocFile'],
+    tagTypes: ['Moc', 'MocList', 'MocFile', 'MocReview'],
     endpoints: builder => ({
       /**
        * GET /instructions/mocs/search - List MOC instructions with pagination and filtering
@@ -559,6 +562,60 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
         ],
       }),
 
+      // ─────────────────────────────────────────────────────────────────────
+      // Review Endpoints (MOC Build Status & Review System)
+      // ─────────────────────────────────────────────────────────────────────
+
+      /**
+       * GET /instructions/mocs/:id/review - Get the review for a MOC
+       */
+      getMocReview: builder.query<MocReview, string>({
+        query: mocId => {
+          logger.debug('Fetching MOC review', undefined, { mocId })
+          return buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_REVIEW, { id: mocId })
+        },
+        transformResponse: (response: unknown) => {
+          return MocReviewSchema.parse(response)
+        },
+        providesTags: (_result, _error, mocId) => [{ type: 'MocReview' as const, id: mocId }],
+      }),
+
+      /**
+       * POST /instructions/mocs/:id/review - Create a new draft review
+       */
+      createMocReview: builder.mutation<MocReview, string>({
+        query: mocId => ({
+          url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.CREATE_REVIEW, { id: mocId }),
+          method: 'POST',
+          body: {},
+        }),
+        transformResponse: (response: unknown) => {
+          return MocReviewSchema.parse(response)
+        },
+        invalidatesTags: (_result, _error, mocId) => [
+          { type: 'MocReview', id: mocId },
+          { type: 'Moc', id: mocId },
+        ],
+      }),
+
+      /**
+       * PATCH /instructions/mocs/:id/review - Update review sections/status
+       */
+      updateMocReview: builder.mutation<MocReview, { mocId: string; input: UpdateReviewRequest }>({
+        query: ({ mocId, input }) => ({
+          url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPDATE_REVIEW, { id: mocId }),
+          method: 'PATCH',
+          body: input,
+        }),
+        transformResponse: (response: unknown) => {
+          return MocReviewSchema.parse(response)
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'MocReview', id: mocId },
+          { type: 'Moc', id: mocId },
+        ],
+      }),
+
       /**
        * POST /scraper/trigger - Start rebrickable scraper in background
        */
@@ -663,6 +720,11 @@ export const {
   // Story INST-1105: Presigned upload session
   useCreateUploadSessionMutation,
   useCompleteUploadSessionMutation,
+  // Review hooks (MOC Build Status & Review System)
+  useGetMocReviewQuery,
+  useLazyGetMocReviewQuery,
+  useCreateMocReviewMutation,
+  useUpdateMocReviewMutation,
   // Scraper hooks
   useTriggerScraperMutation,
   useLazyGetScraperStatusQuery,

@@ -10,6 +10,7 @@ type Ratings = NonNullable<Moc['ratings']>
 interface RatingsSectionProps {
   mocId: string
   ratings: Moc['ratings']
+  readOnly?: boolean
 }
 
 function StarRating({
@@ -82,7 +83,7 @@ function StarRating({
   )
 }
 
-export function RatingsSection({ mocId, ratings }: RatingsSectionProps) {
+export function RatingsSection({ mocId, ratings, readOnly }: RatingsSectionProps) {
   const [draft, setDraft] = useState<Ratings>({
     overall: ratings?.overall ?? null,
     buildExperience: ratings?.buildExperience ?? null,
@@ -120,13 +121,13 @@ export function RatingsSection({ mocId, ratings }: RatingsSectionProps) {
           value={draft.overall}
           onChange={v => handleChange('overall', v)}
           label="Overall"
-          readonly={isLoading}
+          readonly={readOnly || isLoading}
         />
         <StarRating
           value={draft.buildExperience}
           onChange={v => handleChange('buildExperience', v)}
           label="Build"
-          readonly={isLoading}
+          readonly={readOnly || isLoading}
         />
       </div>
       {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}

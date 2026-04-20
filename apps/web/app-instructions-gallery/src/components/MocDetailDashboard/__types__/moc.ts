@@ -123,6 +123,18 @@ export const MocSchema = z.object({
     .nullable()
     .optional(),
   notes: z.string().nullable().optional(),
+  buildStatus: z
+    .enum([
+      'instructions_added',
+      'acquiring_parts',
+      'ready_to_build',
+      'building',
+      'complete',
+      'parted_out',
+    ])
+    .default('instructions_added'),
+  reviewStatus: z.enum(['none', 'draft', 'complete']).default('none'),
+  reviewSkippedAt: z.string().nullable().optional(),
 })
 
 export type Moc = z.infer<typeof MocSchema>
