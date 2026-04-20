@@ -92,6 +92,14 @@
       "import": "./src/rtk/user-profile-api.ts",
       "types": "./src/rtk/user-profile-api.ts"
     },
+    "./rtk/scraper-api": {
+      "import": "./src/rtk/scraper-api.ts",
+      "types": "./src/rtk/scraper-api.ts"
+    },
+    "./schemas/scraper": {
+      "import": "./src/schemas/scraper.ts",
+      "types": "./src/schemas/scraper.ts"
+    },
     "./schemas/inspiration": {
       "import": "./src/schemas/inspiration.ts",
       "types": "./src/schemas/inspiration.ts"
@@ -151,6 +159,18 @@
     "./schemas/uploads": {
       "import": "./src/schemas/uploads.ts",
       "types": "./src/schemas/uploads.ts"
+    },
+    "./rtk/procurement-api": {
+      "import": "./src/rtk/procurement-api.ts",
+      "types": "./src/rtk/procurement-api.ts"
+    },
+    "./schemas/procurement": {
+      "import": "./src/schemas/procurement.ts",
+      "types": "./src/schemas/procurement.ts"
+    },
+    "./rtk/recommender-api": {
+      "import": "./src/rtk/recommender-api.ts",
+      "types": "./src/rtk/recommender-api.ts"
     }
   },
   "scripts": {
