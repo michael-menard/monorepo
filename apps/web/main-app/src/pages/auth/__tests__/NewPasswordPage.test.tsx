@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useRouter } from '@tanstack/react-router'
+import { useRouter } from 'react-router-dom'
 import { NewPasswordPage } from '../NewPasswordPage'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 // Mock dependencies but unmock react-hook-form to use real validation
 vi.mock('@/services/auth/AuthProvider')
-vi.mock('@tanstack/react-router')
+vi.mock('react-router-dom')
 
 // Unmock react-hook-form and zod resolver to use real implementations
 vi.unmock('react-hook-form')

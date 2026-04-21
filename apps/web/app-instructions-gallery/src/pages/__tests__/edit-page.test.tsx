@@ -76,7 +76,7 @@ vi.mock('../LoadingPage', () => ({
 
 // Track navigate calls
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ slug: 'test-moc' }),
 }))

@@ -15,8 +15,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { router } from '../index'
 
 // Mock external dependencies to isolate router tests
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual('@tanstack/react-router')
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     redirect: vi.fn(opts => {

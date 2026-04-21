@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { GalleryDataTable, type GalleryDataTableColumn } from '../components/GalleryDataTable'
 import { GalleryDataTableSkeleton } from '../components/GalleryDataTableSkeleton'
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useSearch: vi.fn(() => ({})),
   useNavigate: vi.fn(() => vi.fn()),
 }))

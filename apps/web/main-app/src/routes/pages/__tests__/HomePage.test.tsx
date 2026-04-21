@@ -6,7 +6,7 @@ import { HomePage } from '../HomePage'
 import { authSlice } from '@/store/slices/authSlice'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }: any) => (
     <a href={to} {...props}>
       {children}

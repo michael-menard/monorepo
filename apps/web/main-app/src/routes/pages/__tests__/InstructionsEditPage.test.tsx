@@ -17,7 +17,7 @@ vi.mock('lucide-react', () => ({
 }))
 
 // Mock dependencies
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: vi.fn(() => vi.fn()),
   useParams: vi.fn(() => ({ slug: 'test-moc' })),
   Link: ({ children, to, params }: { children: React.ReactNode; to: string; params?: object }) => (

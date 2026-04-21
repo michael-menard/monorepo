@@ -10,7 +10,7 @@ import { themeSlice } from '@/store/slices/themeSlice'
 import { globalUISlice } from '@/store/slices/globalUISlice'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({
     to,
     children,

@@ -6,11 +6,11 @@ import { useNavigationSync } from '../useNavigationSync'
 import { globalUISlice, selectIsNavigating } from '@/store/slices/globalUISlice'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useRouterState: vi.fn(),
 }))
 
-import { useRouterState } from '@tanstack/react-router'
+import { useRouterState } from 'react-router-dom'
 
 const mockedUseRouterState = vi.mocked(useRouterState)
 

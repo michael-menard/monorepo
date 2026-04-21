@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Sidebar } from '../Sidebar'
 
-// Mock @tanstack/react-router
-vi.mock('@tanstack/react-router', () => ({
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, className, onClick }: any) => (
     <a href={to} className={className} onClick={onClick}>
       {children}

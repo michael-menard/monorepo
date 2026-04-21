@@ -14,7 +14,7 @@ import { globalUISlice, setSidebarOpen } from '@/store/slices/globalUISlice'
 let mockPathname = '/initial'
 
 // Mock TanStack Router - useLocation returns current pathname
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: mockPathname }),
   Link: ({ children, to, ...props }: any) =>
     React.createElement('a', { href: to, ...props }, children),

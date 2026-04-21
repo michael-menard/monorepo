@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UnauthorizedPage } from '../UnauthorizedPage'
 
-// Mock @tanstack/react-router
-vi.mock('@tanstack/react-router', () => ({
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, className }: any) => (
     <a href={to} className={className}>
       {children}

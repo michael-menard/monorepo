@@ -8,7 +8,7 @@ import {
   createRouter,
   RouterProvider,
   createRoute,
-} from '@tanstack/react-router'
+} from 'react-router-dom'
 import { type ColumnDef } from '@tanstack/react-table'
 import { GalleryDataTable } from '../components/GalleryDataTable'
 import {

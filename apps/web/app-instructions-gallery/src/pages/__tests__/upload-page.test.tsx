@@ -17,10 +17,10 @@ import { server } from '@/test/mocks/server'
 import { logger } from '@repo/logger'
 import { InstructionsNewPage } from '../upload-page'
 
-// Mock @tanstack/react-router navigation
+// Mock react-router-dom navigation
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual('@tanstack/react-router')
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,

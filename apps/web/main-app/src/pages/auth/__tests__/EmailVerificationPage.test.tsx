@@ -1,13 +1,13 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useRouter } from '@tanstack/react-router'
+import { useRouter } from 'react-router-dom'
 import { EmailVerificationPage } from '../EmailVerificationPage'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 // Mock dependencies
 vi.mock('@/services/auth/AuthProvider')
-vi.mock('@tanstack/react-router')
+vi.mock('react-router-dom')
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockUseRouter = vi.mocked(useRouter)

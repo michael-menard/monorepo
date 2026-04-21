@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react'
 import { MainPage } from '../main-page'
 
 // Mock TanStack Router Link (used by QuickActions and RecentMocsGrid)
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),

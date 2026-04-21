@@ -5,7 +5,7 @@ import {
   createRootRoute,
   createRouter,
   RouterProvider,
-} from '@tanstack/react-router'
+} from 'react-router-dom'
 import { ImpactRanking } from '../ImpactRanking'
 import type { DashboardResponse } from '../../../store/roadmapApi'
 

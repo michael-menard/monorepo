@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { NotFoundPage } from '../NotFoundPage'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }: any) => (
     <a href={to} data-testid="router-link" {...props}>
       {children}

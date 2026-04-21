@@ -47,9 +47,9 @@ vi.mock('../../components/UserSearchInput', () => ({
   }),
 }))
 
-// Mock @tanstack/react-router
+// Mock react-router-dom
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }))
 

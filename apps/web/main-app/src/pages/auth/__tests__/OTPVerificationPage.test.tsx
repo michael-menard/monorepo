@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OTPVerificationPage } from '../OTPVerificationPage'
 import { useAuth } from '@/services/auth/AuthProvider'
-import { useRouter } from '@tanstack/react-router'
+import { useRouter } from 'react-router-dom'
 
 // Mock dependencies
 vi.mock('@/services/auth/AuthProvider')
-vi.mock('@tanstack/react-router')
+vi.mock('react-router-dom')
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockUseRouter = vi.mocked(useRouter)

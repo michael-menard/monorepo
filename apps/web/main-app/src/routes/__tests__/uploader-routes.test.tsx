@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { redirect, createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router'
+import { redirect, createMemoryHistory, createRootRoute, createRouter, RouterProvider } from 'react-router-dom'
 import { EmptyDashboard } from '@repo/app-component-library'
 
 // Mock the redirect function to capture redirect params
@@ -18,8 +18,8 @@ const mockRedirect = vi.fn((opts: any) => {
   throw { type: 'redirect', ...opts }
 })
 
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual('@tanstack/react-router')
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     redirect: (opts: any) => mockRedirect(opts),

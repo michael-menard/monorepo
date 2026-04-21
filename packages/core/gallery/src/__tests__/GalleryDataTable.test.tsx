@@ -9,7 +9,7 @@ import {
 
 import React from 'react'
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useSearch: vi.fn(() => ({})),
   useNavigate: vi.fn(() => vi.fn()),
 }))

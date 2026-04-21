@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react'
 import * as React from 'react'
 
 // Mock router params
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useParams: () => ({ instructionId: 'test-instruction-id' }),
 }))
 

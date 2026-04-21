@@ -62,8 +62,8 @@ if (!('createObjectURL' in URL)) {
 }
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual('@tanstack/react-router')
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => vi.fn(),

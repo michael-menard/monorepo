@@ -5,7 +5,7 @@ import { GalleryDataTable, type GalleryDataTableColumn } from '../components/Gal
 import '@testing-library/jest-dom'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useSearch: () => ({}),
   useNavigate: () => vi.fn(),
   useRouter: () => ({

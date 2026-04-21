@@ -60,7 +60,7 @@ vi.mock('@repo/api-client/rtk/dashboard-api', () => ({
   },
 }))
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
 }))
 

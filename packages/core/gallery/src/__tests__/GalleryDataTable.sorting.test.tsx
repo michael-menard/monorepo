@@ -2,10 +2,10 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useSearch, useNavigate } from '@tanstack/react-router'
+import { useSearch, useNavigate } from 'react-router-dom'
 import { GalleryDataTable, type GalleryDataTableColumn } from '../components/GalleryDataTable'
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useSearch: vi.fn(() => ({})),
   useNavigate: vi.fn(() => vi.fn()),
 }))

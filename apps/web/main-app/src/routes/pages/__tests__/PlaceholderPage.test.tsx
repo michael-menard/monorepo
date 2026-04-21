@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PlaceholderPage } from '../PlaceholderPage'
 
-// Mock @tanstack/react-router
-vi.mock('@tanstack/react-router', () => ({
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/test-page' }),
 }))
 

@@ -10,7 +10,7 @@ import { navigationSlice } from '@/store/slices/navigationSlice'
 
 // Mock TanStack Router
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: '/' }),
   useRouter: () => ({ navigate: mockNavigate }),

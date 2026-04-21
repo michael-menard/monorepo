@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AdminModule } from '../AdminModule'
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useParams: vi.fn(),
 }))
 
@@ -28,7 +28,7 @@ describe('AdminModule', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    const router = await import('@tanstack/react-router')
+    const router = await import('react-router-dom')
     useParams = vi.mocked(router.useParams)
   })
 

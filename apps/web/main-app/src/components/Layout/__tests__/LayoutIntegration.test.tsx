@@ -20,7 +20,7 @@ vi.mock('framer-motion', () => ({
 
 // Mock TanStack Router
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: '/dashboard' }),
   Outlet: () => <div data-testid="outlet">Main Content</div>,

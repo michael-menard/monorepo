@@ -32,7 +32,7 @@ vi.mock('@/components/Navigation/NavigationProvider', () => ({
   useNavigationOptional: () => mockNavigation,
 }))
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ children, to, onClick }: any) => (
     <a href={to} onClick={onClick}>
       {children}

@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { NotFoundHandler } from '../NotFoundHandler'
 
-// Mock @tanstack/react-router
+// Mock react-router-dom
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, className, onClick }: any) => (
     <a href={to} className={className} onClick={onClick}>
       {children}

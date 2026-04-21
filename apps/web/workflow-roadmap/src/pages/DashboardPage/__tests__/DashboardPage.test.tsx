@@ -11,7 +11,7 @@ import {
   createRootRoute,
   createRouter,
   RouterProvider,
-} from '@tanstack/react-router'
+} from 'react-router-dom'
 import type { DashboardResponse } from '../../../store/roadmapApi'
 
 // Mock the RTK Query hook

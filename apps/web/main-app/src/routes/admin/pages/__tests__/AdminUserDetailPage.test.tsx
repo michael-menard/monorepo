@@ -8,7 +8,7 @@ const mockRevokeTokensMutation = vi.fn()
 const mockBlockUserMutation = vi.fn()
 const mockUnblockUserMutation = vi.fn()
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }))
 

@@ -7,7 +7,7 @@ import { SignupPage } from '../SignupPage'
 import { authSlice } from '@/store/slices/authSlice'
 
 // Clear global mocks and set up local mocks
-vi.unmock('@tanstack/react-router')
+vi.unmock('react-router-dom')
 vi.unmock('@/services/auth/AuthProvider')
 vi.unmock('@/components/Navigation/NavigationProvider')
 vi.unmock('@/components/Layout/RootLayout')
@@ -19,7 +19,7 @@ vi.unmock('framer-motion')
 
 // Mock TanStack Router
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ children, to, onClick, ...props }: any) => (
     <a href={to} onClick={onClick} {...props}>
       {children}

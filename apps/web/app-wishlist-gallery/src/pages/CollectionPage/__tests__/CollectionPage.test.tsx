@@ -15,7 +15,7 @@ import { CollectionPage } from '../index'
 import { wishlistGalleryApi } from '@repo/api-client/rtk/wishlist-gallery-api'
 
 // Mock React Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to}>{children}</a>
   ),

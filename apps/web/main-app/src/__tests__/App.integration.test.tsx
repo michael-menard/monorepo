@@ -8,7 +8,7 @@ import { themeSlice } from '../store/slices/themeSlice'
 import { navigationSlice } from '../store/slices/navigationSlice'
 
 // Mock the router
-vi.mock('@tanstack/react-router', () => {
+vi.mock('react-router-dom', () => {
   const mockRoute = {
     addChildren: vi.fn(() => mockRoute),
     id: 'mock-route',

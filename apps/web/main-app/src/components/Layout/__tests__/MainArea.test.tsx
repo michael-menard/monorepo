@@ -5,7 +5,7 @@ import { MainArea, MainAreaContainer, MainAreaHeader } from '../MainArea'
 import { Home } from 'lucide-react'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Outlet: () => <div data-testid="outlet">Page Content</div>,
 }))
 

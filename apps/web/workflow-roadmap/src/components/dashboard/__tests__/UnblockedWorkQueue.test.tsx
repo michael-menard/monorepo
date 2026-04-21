@@ -5,7 +5,7 @@ import {
   createRootRoute,
   createRouter,
   RouterProvider,
-} from '@tanstack/react-router'
+} from 'react-router-dom'
 import { UnblockedWorkQueue } from '../UnblockedWorkQueue'
 import type { DashboardResponse } from '../../../store/roadmapApi'
 

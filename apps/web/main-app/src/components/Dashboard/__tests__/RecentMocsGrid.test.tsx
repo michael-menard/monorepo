@@ -9,7 +9,7 @@ import { RecentMocsGrid } from '../RecentMocsGrid'
 import type { RecentMoc } from '@repo/api-client/rtk/dashboard-api'
 
 // Mock TanStack Router
-vi.mock('@tanstack/react-router', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({
     children,
     to,
