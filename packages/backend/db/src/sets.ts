@@ -179,6 +179,15 @@ export const sets = pgTable(
     priority: integer('priority'), // 0-5
     sortOrder: integer('sort_order'), // drag-drop ordering
 
+    // Product pricing & specs (populated by scrapers, nullable until enriched)
+    msrpPrice: decimal('msrp_price', { precision: 10, scale: 2 }),
+    msrpCurrency: text('msrp_currency').default('USD'),
+    weight: decimal('weight', { precision: 10, scale: 2 }), // grams
+    availabilityStatus: text('availability_status'), // 'available' | 'retiring_soon' | 'retired'
+    quantityWanted: integer('quantity_wanted').default(0).notNull(),
+    lastScrapedAt: timestamp('last_scraped_at'),
+    lastScrapedSource: text('last_scraped_source'),
+
     // Legacy image fields (kept for backward compat during migration)
     imageUrl: text('image_url'),
     imageVariants: jsonb('image_variants'), // WISH-2016 optimized variants
@@ -207,6 +216,49 @@ export const sets = pgTable(
     setNumberIdx: index('sets_set_number_idx').on(table.setNumber),
     storeIdIdx: index('sets_store_id_idx').on(table.storeId),
     userSortOrderIdx: index('sets_user_sort_order_idx').on(table.userId, table.sortOrder),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Set Instances — one row per physical copy owned
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const setInstances = pgTable(
+  'set_instances',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => sets.id, { onDelete: 'cascade' }),
+
+    // Condition & Status
+    condition: text('condition'), // 'new' | 'used'
+    completeness: text('completeness'), // 'sealed' | 'complete' | 'incomplete'
+    buildStatus: text('build_status').default('not_started'), // 'not_started' | 'in_progress' | 'completed' | 'parted_out'
+    includesMinifigs: boolean('includes_minifigs'),
+
+    // Purchase
+    purchasePrice: decimal('purchase_price', { precision: 10, scale: 2 }),
+    purchaseTax: decimal('purchase_tax', { precision: 10, scale: 2 }),
+    purchaseShipping: decimal('purchase_shipping', { precision: 10, scale: 2 }),
+    purchaseDate: timestamp('purchase_date'),
+    storeId: uuid('store_id').references(() => stores.id, { onDelete: 'set null' }),
+
+    // Notes
+    notes: text('notes'),
+
+    // Ordering
+    sortOrder: integer('sort_order'),
+
+    // Timestamps
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  table => ({
+    userIdIdx: index('set_instances_user_id_idx').on(table.userId),
+    setIdIdx: index('set_instances_set_id_idx').on(table.setId),
+    userSetIdx: index('set_instances_user_set_idx').on(table.userId, table.setId),
   }),
 )
 
