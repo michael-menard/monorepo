@@ -34,6 +34,10 @@
     "test": "vitest run",
     "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4"
   },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-redux": ">=8"
+  },
   "dependencies": {
     "@repo/logger": "workspace:*",
     "react-router-dom": "^7",

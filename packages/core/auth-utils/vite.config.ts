@@ -24,13 +24,14 @@ export default defineConfig(({ mode }) => {
           index: path.resolve(__dirname, 'src/index.ts'),
           'jwt/index': path.resolve(__dirname, 'src/jwt/index.ts'),
           'guards/index': path.resolve(__dirname, 'src/guards/index.ts'),
+          'layouts/index': path.resolve(__dirname, 'src/layouts/index.tsx'),
         },
         formats: ['es'],
       },
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: [/^@repo\/.*/, 'react-router-dom', 'zod'],
+        external: [/^@repo\/.*/, 'react', 'react-dom', 'react-redux', 'react-router-dom', 'zod'],
         output: {
           entryFileNames: '[name].js',
           chunkFileNames: '[name].js',

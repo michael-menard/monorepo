@@ -1,22 +1,27 @@
-import { useEffect } from 'react'
-import { useNavigation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAppDispatch } from '../store/hooks'
 import { setNavigating } from '../store/slices/globalUISlice'
 
 /**
  * Hook to sync React Router navigation state with Redux global UI state.
  *
- * Uses React Router's useNavigation() to detect when navigation is in progress
- * (loading data, submitting forms, etc.) and dispatches to Redux so any
- * component can show a loading indicator.
+ * Detects route changes via useLocation and briefly sets isNavigating=true
+ * so components can show transition indicators.
  */
 export const useNavigationSync = () => {
   const dispatch = useAppDispatch()
-  const navigation = useNavigation()
-
-  const isNavigating = navigation.state !== 'idle'
+  const location = useLocation()
+  const prevPathRef = useRef(location.pathname)
 
   useEffect(() => {
-    dispatch(setNavigating(isNavigating))
-  }, [isNavigating, dispatch])
+    if (location.pathname !== prevPathRef.current) {
+      dispatch(setNavigating(true))
+      prevPathRef.current = location.pathname
+
+      // Brief navigation state — clear after transition settles
+      const timer = setTimeout(() => dispatch(setNavigating(false)), 100)
+      return () => clearTimeout(timer)
+    }
+  }, [location.pathname, dispatch])
 }
