@@ -20,7 +20,7 @@ describe('ImageUploadZone', () => {
       <ImageUploadZone images={[]} onImagesChange={vi.fn()} maxImages={10} disabled={false} />,
     )
 
-    expect(screen.getByText('0/10 images')).toBeInTheDocument()
+    expect(screen.getByText(/0\/10 images/)).toBeInTheDocument()
   })
 
   it('adds selected image files via file input and enforces maxImages', async () => {

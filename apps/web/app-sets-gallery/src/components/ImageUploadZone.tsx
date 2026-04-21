@@ -7,6 +7,8 @@ import { Upload, X, GripVertical } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
 import { z } from 'zod'
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
 const ImageUploadZonePropsSchema = z.object({
   images: z.array(z.instanceof(File)),
   onImagesChange: z.function(z.tuple([z.array(z.instanceof(File))]), z.void()),
@@ -40,7 +42,9 @@ export const ImageUploadZone = ({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    const imageFiles = files.filter(file =>
+      (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type),
+    )
 
     if (images.length + imageFiles.length > maxImages) {
       const remaining = maxImages - images.length
@@ -58,7 +62,9 @@ export const ImageUploadZone = ({
     setDragOver(false)
 
     const files = Array.from(e.dataTransfer.files)
-    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    const imageFiles = files.filter(file =>
+      (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type),
+    )
 
     if (images.length + imageFiles.length > maxImages) {
       const remaining = maxImages - images.length
@@ -113,12 +119,12 @@ export const ImageUploadZone = ({
           Drag and drop images here, or click to select
         </label>
         <p className="text-xs text-muted-foreground">
-          {images.length}/{maxImages} images
+          JPG, PNG, or WebP &middot; {images.length}/{maxImages} images
         </p>
         <input
           id="image-upload-input"
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.webp"
           multiple
           onChange={handleFileSelect}
           disabled={disabled || images.length >= maxImages}

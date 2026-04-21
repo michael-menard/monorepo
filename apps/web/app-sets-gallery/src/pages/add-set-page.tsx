@@ -76,18 +76,20 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
       const newSet = await addSet(createInput).unwrap()
 
       // Upload images (best-effort)
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
       for (const image of images) {
         try {
+          const contentType = allowedTypes.includes(image.type) ? image.type : 'image/jpeg'
           const presign = await presignSetImage({
             setId: newSet.id,
             filename: image.name,
-            contentType: image.type || 'application/octet-stream',
+            contentType,
           }).unwrap()
 
           await uploadToPresignedUrl({
             url: presign.uploadUrl,
             file: image,
-            contentType: image.type || 'application/octet-stream',
+            contentType,
           })
 
           await registerSetImage({
