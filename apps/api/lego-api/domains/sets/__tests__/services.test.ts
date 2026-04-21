@@ -7,7 +7,7 @@ import type {
   StoreRepository,
   ImageStorage,
 } from '../ports/index.js'
-import type { Set, SetImage } from '../types.js'
+import type { Set, SetImage, SetInstance } from '../types.js'
 
 /**
  * Sets Service Unit Tests
@@ -74,29 +74,31 @@ function createMockSetImageRepo(): SetImageRepository {
   }
 }
 
+const mockInstance: SetInstance = {
+  id: 'inst-123',
+  userId: 'user-123',
+  setId: '123e4567-e89b-12d3-a456-426614174000',
+  condition: null,
+  completeness: null,
+  buildStatus: 'not_started',
+  includesMinifigs: null,
+  purchasePrice: null,
+  purchaseTax: null,
+  purchaseShipping: null,
+  purchaseDate: null,
+  storeId: null,
+  notes: null,
+  sortOrder: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
 function createMockSetInstanceRepo(): SetInstanceRepository {
   return {
     findBySetId: vi.fn().mockResolvedValue([]),
     findById: vi.fn().mockResolvedValue({ ok: false, error: 'NOT_FOUND' }),
-    insert: vi.fn().mockResolvedValue({
-      id: 'inst-123',
-      userId: 'user-123',
-      setId: '123e4567-e89b-12d3-a456-426614174000',
-      condition: null,
-      completeness: null,
-      buildStatus: 'not_started',
-      includesMinifigs: null,
-      purchasePrice: null,
-      purchaseTax: null,
-      purchaseShipping: null,
-      purchaseDate: null,
-      storeId: null,
-      notes: null,
-      sortOrder: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }),
-    update: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+    insert: vi.fn().mockResolvedValue({ ...mockInstance }),
+    update: vi.fn().mockResolvedValue({ ok: true, data: { ...mockInstance } }),
     delete: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
     countBySetId: vi.fn().mockResolvedValue(0),
   }
@@ -378,6 +380,200 @@ describe('SetsService', () => {
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.error).toBe('FORBIDDEN')
+      }
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Set Instance Operations
+  // ─────────────────────────────────────────────────────────────────────
+
+  describe('createSetInstance', () => {
+    it('creates instance with correct defaults', async () => {
+      const result = await service.createSetInstance('user-123', mockSet.id, {})
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.id).toBe('inst-123')
+        expect(result.data.setId).toBe(mockSet.id)
+        expect(result.data.userId).toBe('user-123')
+      }
+      expect(setInstanceRepo.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          setId: mockSet.id,
+          userId: 'user-123',
+        }),
+      )
+    })
+
+    it('auto-flips status to owned when first instance and status is wanted', async () => {
+      // Set is wanted, no existing instances
+      vi.mocked(setRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockSet, status: 'wanted' },
+      })
+      vi.mocked(setInstanceRepo.countBySetId).mockResolvedValue(0)
+
+      const result = await service.createSetInstance('user-123', mockSet.id, {})
+
+      expect(result.ok).toBe(true)
+      expect(setRepo.update).toHaveBeenCalledWith(mockSet.id, {
+        status: 'owned',
+        statusChangedAt: expect.any(Date),
+      })
+    })
+
+    it('does NOT flip status when set already has instances', async () => {
+      // Set is wanted but already has 1 instance
+      vi.mocked(setRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockSet, status: 'wanted' },
+      })
+      vi.mocked(setInstanceRepo.countBySetId).mockResolvedValue(1)
+
+      const result = await service.createSetInstance('user-123', mockSet.id, {})
+
+      expect(result.ok).toBe(true)
+      expect(setRepo.update).not.toHaveBeenCalled()
+    })
+
+    it('does NOT change quantityWanted', async () => {
+      vi.mocked(setRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockSet, status: 'wanted' },
+      })
+      vi.mocked(setInstanceRepo.countBySetId).mockResolvedValue(0)
+
+      await service.createSetInstance('user-123', mockSet.id, {})
+
+      // The update call should only contain status and statusChangedAt
+      const updateCall = vi.mocked(setRepo.update).mock.calls[0]
+      expect(updateCall).toBeDefined()
+      const updateData = updateCall[1] as Record<string, unknown>
+      expect(updateData).not.toHaveProperty('quantityWanted')
+    })
+
+    it('returns NOT_FOUND for non-existent set', async () => {
+      vi.mocked(setRepo.findById).mockResolvedValue({ ok: false, error: 'NOT_FOUND' })
+
+      const result = await service.createSetInstance('user-123', 'nonexistent', {})
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+    })
+
+    it('returns FORBIDDEN for wrong user', async () => {
+      const result = await service.createSetInstance('other-user', mockSet.id, {})
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('FORBIDDEN')
+      }
+    })
+  })
+
+  describe('updateSetInstance', () => {
+    it('updates individual fields', async () => {
+      vi.mocked(setInstanceRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockInstance },
+      })
+      const updatedInstance = { ...mockInstance, condition: 'used' as const, notes: 'Shelf wear' }
+      vi.mocked(setInstanceRepo.update).mockResolvedValue({
+        ok: true,
+        data: updatedInstance,
+      })
+
+      const result = await service.updateSetInstance('user-123', 'inst-123', {
+        condition: 'used',
+        notes: 'Shelf wear',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.condition).toBe('used')
+        expect(result.data.notes).toBe('Shelf wear')
+      }
+      expect(setInstanceRepo.update).toHaveBeenCalledWith('inst-123', {
+        condition: 'used',
+        notes: 'Shelf wear',
+      })
+    })
+
+    it('returns NOT_FOUND for non-existent instance', async () => {
+      vi.mocked(setInstanceRepo.findById).mockResolvedValue({ ok: false, error: 'NOT_FOUND' })
+
+      const result = await service.updateSetInstance('user-123', 'nonexistent', {
+        notes: 'test',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+    })
+  })
+
+  describe('deleteSetInstance', () => {
+    it('removes instance', async () => {
+      vi.mocked(setInstanceRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockInstance },
+      })
+
+      const result = await service.deleteSetInstance('user-123', 'inst-123')
+
+      expect(result.ok).toBe(true)
+      expect(setInstanceRepo.delete).toHaveBeenCalledWith('inst-123')
+    })
+
+    it('does NOT auto-flip status back to wanted', async () => {
+      vi.mocked(setInstanceRepo.findById).mockResolvedValue({
+        ok: true,
+        data: { ...mockInstance },
+      })
+
+      await service.deleteSetInstance('user-123', 'inst-123')
+
+      // setRepo.update should NOT be called (no status flip on delete)
+      expect(setRepo.update).not.toHaveBeenCalled()
+    })
+
+    it('returns NOT_FOUND for non-existent instance', async () => {
+      vi.mocked(setInstanceRepo.findById).mockResolvedValue({ ok: false, error: 'NOT_FOUND' })
+
+      const result = await service.deleteSetInstance('user-123', 'nonexistent')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+    })
+  })
+
+  describe('listSetInstances', () => {
+    it('returns instances for a set', async () => {
+      vi.mocked(setInstanceRepo.findBySetId).mockResolvedValue([mockInstance])
+
+      const result = await service.listSetInstances('user-123', mockSet.id)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].id).toBe('inst-123')
+      }
+    })
+
+    it('returns empty array when no instances', async () => {
+      vi.mocked(setInstanceRepo.findBySetId).mockResolvedValue([])
+
+      const result = await service.listSetInstances('user-123', mockSet.id)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data).toHaveLength(0)
       }
     })
   })
