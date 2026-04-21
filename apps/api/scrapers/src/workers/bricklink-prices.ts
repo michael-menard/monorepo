@@ -6,8 +6,9 @@
  */
 
 import { chromium, type BrowserContext, type Page } from 'playwright'
-import { resolve, dirname } from 'path'
+import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { unlinkSync } from 'fs'
 import { logger } from '@repo/logger'
 import type { BricklinkPricesJob } from '../queues.js'
 
@@ -24,6 +25,11 @@ let sharedContext: BrowserContext | null = null
 
 async function getContext(): Promise<BrowserContext> {
   if (!sharedContext) {
+    try {
+      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
+    } catch {
+      // Lock doesn't exist — fine
+    }
     sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
       headless: false,
       channel: 'chrome',

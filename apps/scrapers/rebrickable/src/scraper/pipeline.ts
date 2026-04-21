@@ -38,6 +38,681 @@ import { ProgressTracker } from '../utils/progress.js'
 import type { CliOptions } from '../__types__/index.js'
 import type { Browser, BrowserContext, Page } from 'playwright'
 
+/**
+ * --list-only mode: Login, paginate purchases/liked page, output MOC list as JSON to stdout.
+ * No detail scraping, no downloads, no DB writes.
+ */
+export async function runListOnly(
+  options: CliOptions,
+  config: {
+    username: string
+    password: string
+    userSlug: string
+    rateLimit: number
+    minDelayMs: number
+  },
+): Promise<void> {
+  const rateLimiter = new TokenBucketRateLimiter({
+    requestsPerMinute: config.rateLimit,
+    minDelayMs: config.minDelayMs,
+  })
+
+  let browser: Browser | undefined
+  let context: BrowserContext | undefined
+  let page: Page | undefined
+
+  try {
+    // Launch browser
+    const isFirstRun = !hasExistingSession()
+    const browserResult = await createStealthBrowser({
+      headed: options.headed || isFirstRun,
+    })
+    browser = browserResult.browser
+    context = browserResult.context
+    page = browserResult.page
+
+    // Login
+    const loginPage = new LoginPage(page)
+    const sessionValid = await loginPage.checkSessionValid()
+    if (!sessionValid) {
+      logger.info('[list-only] No valid session, logging in...')
+      await loginPage.login(config.username, config.password)
+      await saveSession(context)
+    } else {
+      logger.info('[list-only] Existing session is valid')
+    }
+
+    // Build instruction list
+    let instructionList: Array<{
+      mocNumber: string
+      title: string
+      url: string
+      author: string
+    }>
+
+    if (options.likedMocs) {
+      const likedMocsPage = new LikedMocsPage(page)
+      await rateLimiter.acquire()
+      await likedMocsPage.navigate(config.userSlug)
+      await waitBetweenPages()
+      instructionList = await likedMocsPage.scrapeAllInstructions(options.limit)
+    } else {
+      const purchasesPage = new PurchasesPage(page)
+      await rateLimiter.acquire()
+      await purchasesPage.navigate(config.userSlug)
+      await waitBetweenPages()
+      instructionList = await purchasesPage.scrapeAllInstructions(options.limit)
+    }
+
+    if (options.limit) {
+      instructionList = instructionList.slice(0, options.limit)
+    }
+
+    const output = instructionList.map(item => ({
+      mocNumber: item.mocNumber,
+      title: item.title,
+      url: item.url,
+      author: item.author,
+    }))
+
+    // Write JSON to a temp file so the worker can read it cleanly
+    // without parsing stdout (which is mixed with logger output).
+    const { writeFile } = await import('fs/promises')
+    const { tmpdir } = await import('os')
+    const { join } = await import('path')
+    const outPath = join(tmpdir(), `rebrickable-list-${Date.now()}.json`)
+    await writeFile(outPath, JSON.stringify(output))
+    // Print the file path on a known line so the worker can find it
+    process.stdout.write(`__MOC_LIST_FILE__${outPath}\n`)
+
+    logger.info(`[list-only] Listed ${output.length} MOCs`)
+  } finally {
+    if (context) await saveSession(context).catch(() => {})
+    if (browser) await browser.close().catch(() => {})
+  }
+}
+
+/**
+ * --single mode: Scrape exactly one MOC by number using the full pipeline logic.
+ * Reuses the existing pipeline's per-MOC processing (detail, download, DB upsert, gallery sync).
+ */
+export async function runSingle(
+  options: CliOptions,
+  config: {
+    username: string
+    password: string
+    userSlug: string
+    bucket: string
+    rateLimit: number
+    minDelayMs: number
+  },
+): Promise<void> {
+  const mocNumber = options.single!
+  const mocUrl = `https://rebrickable.com/mocs/MOC-${mocNumber}/`
+
+  logger.info(`[single] Scraping single MOC: MOC-${mocNumber}`)
+
+  // Run the normal pipeline with a synthetic instruction list of one item
+  // We set likedMocs=false, retryFailed=false, retryMissing=false to avoid those branches,
+  // and inject our single MOC via a patched flow.
+  // The simplest approach: call runPipeline but override the instruction list.
+  // Instead, we pass through to runPipeline with a temporary override.
+  // Actually, the cleanest approach is to run the pipeline normally — it will
+  // paginate but we only process one item. But that's wasteful.
+  // Instead, directly invoke the single-MOC processing inline.
+
+  const db = getDbClient()
+  const galleryPool = createGalleryPool()
+  const galleryDb = drizzle(galleryPool, { schema: gallerySchema })
+  const syncUserId = process.env.SYNC_USER_ID || ''
+  const rateLimiter = new TokenBucketRateLimiter({
+    requestsPerMinute: config.rateLimit,
+    minDelayMs: config.minDelayMs,
+  })
+  const retry = new RetryHandler()
+
+  let browser: Browser | undefined
+  let context: BrowserContext | undefined
+  let page: Page | undefined
+
+  try {
+    if (!options.dryRun) {
+      await initBucket(config.bucket)
+    }
+
+    // Create scrape run
+    const [run] = await db
+      .insert(scrapeRuns)
+      .values({
+        status: 'running',
+        config: { mode: 'single', mocNumber, options, ...config, password: '***' },
+      })
+      .returning()
+    const scrapeRunId = run.id
+    const checkpoint = new CheckpointManager(scrapeRunId)
+
+    // Skip if already completed (unless --force)
+    if (!options.force && (await checkpoint.isCompleted(mocNumber))) {
+      logger.info(`[single] MOC-${mocNumber} already completed — use --force to re-scrape`)
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1, instructionsFound: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    // Launch browser
+    const isFirstRun = !hasExistingSession()
+    const browserResult = await createStealthBrowser({
+      headed: options.headed || isFirstRun,
+    })
+    browser = browserResult.browser
+    context = browserResult.context
+    page = browserResult.page
+
+    // Login
+    const loginPage = new LoginPage(page)
+    const sessionValid = await loginPage.checkSessionValid()
+    if (!sessionValid) {
+      logger.info('[single] No valid session, logging in...')
+      await loginPage.login(config.username, config.password)
+      await saveSession(context)
+    }
+
+    await db.update(scrapeRuns).set({ instructionsFound: 1 }).where(eq(scrapeRuns.id, scrapeRunId))
+
+    // Navigate to MOC detail
+    await rateLimiter.acquire()
+    await humanWait('thinking')
+    const mocPage = new MocDetailPage(page)
+    await retry.execute(() => mocPage.navigate(mocUrl), `navigate MOC-${mocNumber}`)
+    await waitBetweenPages()
+
+    // Scrape detail
+    const detail = await retry.execute(
+      () => mocPage.scrapeDetail(mocNumber),
+      `scrape MOC-${mocNumber}`,
+    )
+
+    const images = await mocPage.scrapeImages(mocNumber)
+    if (images.length > 0) {
+      logger.info(`[single] MOC-${mocNumber}: downloaded ${images.length} images`)
+    }
+
+    await checkpoint.save(mocNumber, 'detail_scraped', {
+      ...(detail as unknown as Record<string, unknown>),
+      rebrickableUrl: mocUrl,
+    })
+
+    if (options.dryRun) {
+      logger.info(
+        `[single] MOC-${mocNumber} — ${detail.title} (dry run, ${detail.partsCount} parts)`,
+      )
+      await checkpoint.save(mocNumber, 'completed')
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), downloaded: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    // Download files
+    const fileList = await mocPage.scrapeFileList()
+    let primaryDownloadPath: string | null = null
+    let totalFileSize = 0
+
+    if (fileList.length > 0) {
+      logger.info(`[single] MOC-${mocNumber}: found ${fileList.length} files to download`)
+
+      for (let fi = 0; fi < fileList.length; fi++) {
+        const file = fileList[fi]
+        logger.info(
+          `[single] MOC-${mocNumber}: downloading file ${fi + 1}/${fileList.length}: ${file.fileName}`,
+        )
+
+        const downloadPath = await retry.execute(
+          () => mocPage.triggerDownload(file, mocNumber),
+          `download MOC-${mocNumber} file ${fi + 1}`,
+        )
+
+        if (downloadPath) {
+          const buffer = await readFile(downloadPath)
+          totalFileSize += buffer.length
+          const fileName = basename(downloadPath)
+          await uploadInstruction(downloadPath, mocNumber, fileName, config.bucket)
+          logger.info(
+            `[single] MOC-${mocNumber}: uploaded ${fileName} (${formatBytes(buffer.length)})`,
+          )
+
+          if (!primaryDownloadPath) {
+            primaryDownloadPath = downloadPath
+          }
+        }
+      }
+    }
+
+    if (primaryDownloadPath) {
+      const buffer = await readFile(primaryDownloadPath)
+      const contentHash = computeHash(buffer)
+      const fileName = basename(primaryDownloadPath)
+      const fileType = extname(fileName).replace('.', '').toUpperCase()
+
+      await checkpoint.save(mocNumber, 'downloaded', {
+        filePath: primaryDownloadPath,
+        fileName,
+        fileSize: totalFileSize,
+        contentHash,
+        fileCount: fileList.length,
+      })
+      await checkpoint.save(mocNumber, 'uploaded')
+
+      const normalizedParts = normalizeParts(detail.parts)
+
+      const instructionResult = await db
+        .insert(instructionsTable)
+        .values({
+          mocNumber,
+          title: detail.title,
+          author: detail.author,
+          rebrickableUrl: mocUrl,
+          downloadUrl: mocUrl,
+          partsCount: detail.partsCount,
+          fileType,
+          fileSizeBytes: totalFileSize,
+          contentHash,
+          minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
+          minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
+          description: detail.description || null,
+          descriptionHtml: detail.descriptionHtml || null,
+          dateAdded: safeDate(detail.dateAdded),
+          authorProfileUrl: detail.authorProfileUrl || null,
+          tags: detail.tags.length > 0 ? detail.tags : null,
+          scrapeRunId,
+        })
+        .onConflictDoUpdate({
+          target: instructionsTable.mocNumber,
+          set: {
+            ...(detail.title ? { title: detail.title } : {}),
+            ...(detail.author ? { author: detail.author } : {}),
+            downloadUrl: mocUrl,
+            ...(detail.partsCount != null ? { partsCount: detail.partsCount } : {}),
+            ...(fileType ? { fileType } : {}),
+            ...(totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
+            ...(contentHash ? { contentHash } : {}),
+            minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
+            minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
+            ...(detail.description ? { description: detail.description } : {}),
+            ...(detail.descriptionHtml ? { descriptionHtml: detail.descriptionHtml } : {}),
+            ...(safeDate(detail.dateAdded) ? { dateAdded: safeDate(detail.dateAdded) } : {}),
+            ...(detail.authorProfileUrl ? { authorProfileUrl: detail.authorProfileUrl } : {}),
+            ...(detail.tags.length > 0 ? { tags: detail.tags } : {}),
+            scrapeRunId,
+            updatedAt: new Date(),
+          },
+        })
+        .returning()
+
+      const inst = instructionResult[0]
+
+      if (normalizedParts.length > 0) {
+        for (const p of normalizedParts) {
+          const [part] = await db
+            .insert(partsTable)
+            .values({
+              partNumber: p.partNumber,
+              color: p.color,
+              name: p.name,
+              category: p.category,
+              imageUrl: p.imageUrl,
+            })
+            .onConflictDoUpdate({
+              target: [partsTable.partNumber, partsTable.color],
+              set: {
+                ...(p.name ? { name: p.name } : {}),
+                ...(p.category ? { category: p.category } : {}),
+                ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
+              },
+            })
+            .returning()
+
+          await db
+            .insert(instructionPartsTable)
+            .values({
+              instructionId: inst.id,
+              partId: part.id,
+              quantity: p.quantity,
+              isSpare: p.isSpare ?? 0,
+            })
+            .onConflictDoUpdate({
+              target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
+              set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
+            })
+        }
+        logger.info(
+          `[single] MOC-${mocNumber}: linked ${normalizedParts.length} parts to instruction`,
+        )
+      }
+
+      // Gallery sync
+      if (syncUserId) {
+        const galleryParts: GalleryPartData[] = normalizedParts.map(p => ({
+          partNumber: p.partNumber,
+          partName: p.name,
+          color: p.color,
+          quantity: p.quantity,
+        }))
+
+        const galleryMocId = await writeToGallery(galleryDb as any, syncUserId, {
+          mocNumber,
+          title: detail.title,
+          author: detail.author,
+          description: detail.description || null,
+          descriptionHtml: detail.descriptionHtml || null,
+          dateAdded: safeDate(detail.dateAdded),
+          authorProfileUrl: detail.authorProfileUrl || null,
+          tags: detail.tags.length > 0 ? detail.tags : null,
+          partsCount: detail.partsCount,
+          rebrickableUrl: mocUrl,
+          s3Key: `mocs/MOC-${mocNumber}/${fileName}`,
+          fileType,
+          parts: galleryParts.length > 0 ? galleryParts : undefined,
+        })
+
+        if (galleryMocId && images.length > 0) {
+          for (const img of images) {
+            const imgFileName = basename(img.filePath)
+            await uploadImage(img.filePath, mocNumber, imgFileName, config.bucket)
+          }
+          const minioImages = await listImages(mocNumber, config.bucket)
+          if (minioImages.length > 0) {
+            const imageData = minioImages.map(key => ({
+              s3Key: key,
+              fileName: key.split('/').pop() || 'unknown',
+            }))
+            await writeImagesToGallery(galleryDb as any, galleryMocId, imageData)
+          }
+        }
+      }
+
+      await checkpoint.save(mocNumber, 'completed')
+    } else {
+      logger.warn(`[single] No files downloaded for MOC-${mocNumber}`)
+    }
+
+    // Scrape parts from inventory tab
+    const partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
+    if (partsResult.parts.length > 0) {
+      logger.info(
+        `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
+      )
+    }
+
+    // Enrichment
+    if (!options.dryRun) {
+      const summary = await enrichScrapeRun(scrapeRunId)
+      await db
+        .update(scrapeRuns)
+        .set({
+          status: 'completed',
+          completedAt: new Date(),
+          downloaded: primaryDownloadPath ? 1 : 0,
+          skipped: 0,
+          summary: summary as any,
+        })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+    } else {
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), downloaded: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+    }
+
+    logger.info(`[single] MOC-${mocNumber} — complete`)
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    logger.error(`[single] Failed MOC-${mocNumber}: ${errMsg}`)
+    throw error
+  } finally {
+    if (context) await saveSession(context).catch(() => {})
+    if (browser) await browser.close().catch(() => {})
+    await galleryPool.end().catch(() => {})
+    await closeDbClient()
+  }
+}
+
+/**
+ * --retry-missing --single mode: Backfill a single MOC.
+ * Assesses what's missing (detail, images, gallery meta) and patches selectively.
+ */
+export async function runBackfillSingle(
+  options: CliOptions,
+  config: {
+    username: string
+    password: string
+    bucket: string
+    rateLimit: number
+    minDelayMs: number
+  },
+): Promise<void> {
+  const mocNumber = options.single!
+  logger.info(`[backfill-single] Backfilling MOC-${mocNumber}`)
+
+  const db = getDbClient()
+  const galleryPool = createGalleryPool()
+  const galleryDb = drizzle(galleryPool, { schema: gallerySchema })
+  const rateLimiter = new TokenBucketRateLimiter({
+    requestsPerMinute: config.rateLimit,
+    minDelayMs: config.minDelayMs,
+  })
+  const retry = new RetryHandler()
+
+  let browser: Browser | undefined
+  let context: BrowserContext | undefined
+  let page: Page | undefined
+
+  try {
+    await initBucket(config.bucket)
+
+    // Create scrape run
+    const [run] = await db
+      .insert(scrapeRuns)
+      .values({ status: 'running', config: { mode: 'backfill-single', mocNumber } })
+      .returning()
+    const scrapeRunId = run.id
+    const checkpoint = new CheckpointManager(scrapeRunId)
+
+    // Skip if already backfilled (unless --force)
+    if (!options.force && (await checkpoint.hasBackfillCompleted(mocNumber))) {
+      logger.info(`[backfill-single] MOC-${mocNumber} already backfilled — use --force to redo`)
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1, instructionsFound: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    // Load instruction from DB
+    const [instr] = await db
+      .select()
+      .from(instructionsTable)
+      .where(eq(instructionsTable.mocNumber, mocNumber))
+      .limit(1)
+
+    if (!instr) {
+      logger.warn(
+        `[backfill-single] MOC-${mocNumber} not found in instructions table — nothing to backfill`,
+      )
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    if (!instr.minioKey || instr.minioKey.length === 0) {
+      logger.warn(`[backfill-single] MOC-${mocNumber} has no MinIO file — run normal scrape first`)
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    await db.update(scrapeRuns).set({ instructionsFound: 1 }).where(eq(scrapeRuns.id, scrapeRunId))
+
+    // Assess what needs backfilling
+    const needs = await assessBackfillNeeds(instr, galleryDb as any, config.bucket)
+    const needsBrowser = needs.scraperDetailMissing || needs.imagesMissingInMinio
+
+    if (!needsBrowser && !needs.imagesMissingInGallery && !needs.galleryMetaMissing) {
+      logger.info(`[backfill-single] MOC-${mocNumber} — nothing missing, already complete`)
+      await checkpoint.save(mocNumber, 'backfill_completed', { reason: 'nothing_missing' })
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
+    logger.info(
+      `[backfill-single] MOC-${mocNumber}: needs=${JSON.stringify({
+        scraperDetail: needs.scraperDetailMissing,
+        minioImages: needs.imagesMissingInMinio,
+        galleryImages: needs.imagesMissingInGallery,
+        galleryMeta: needs.galleryMetaMissing,
+      })}`,
+    )
+
+    let updatedInstr = instr
+
+    // Browser visit if needed
+    if (needsBrowser) {
+      const isFirstRun = !hasExistingSession()
+      const browserResult = await createStealthBrowser({
+        headed: options.headed || isFirstRun,
+      })
+      browser = browserResult.browser
+      context = browserResult.context
+      page = browserResult.page
+
+      const loginPage = new LoginPage(page)
+      const sessionValid = await loginPage.checkSessionValid()
+      if (!sessionValid) {
+        await loginPage.login(config.username, config.password)
+        await saveSession(context)
+      }
+
+      await rateLimiter.acquire()
+      await humanWait('thinking')
+
+      const mocPage = new MocDetailPage(page)
+      await retry.execute(() => mocPage.navigate(instr.rebrickableUrl), `navigate MOC-${mocNumber}`)
+      await waitBetweenPages()
+
+      // Re-scrape detail if fields are missing
+      if (needs.scraperDetailMissing) {
+        const detail = await retry.execute(
+          () => mocPage.scrapeDetail(mocNumber),
+          `scrape detail MOC-${mocNumber}`,
+        )
+
+        const scraperPatch: Record<string, unknown> = { updatedAt: new Date() }
+        if (!instr.description && detail.description) scraperPatch.description = detail.description
+        if (!instr.descriptionHtml && detail.descriptionHtml)
+          scraperPatch.descriptionHtml = detail.descriptionHtml
+        if (!instr.authorProfileUrl && detail.authorProfileUrl)
+          scraperPatch.authorProfileUrl = detail.authorProfileUrl
+        if ((!instr.tags || (instr.tags as string[]).length === 0) && detail.tags.length > 0)
+          scraperPatch.tags = detail.tags
+        if (!instr.dateAdded && detail.dateAdded)
+          scraperPatch.dateAdded = safeDate(detail.dateAdded)
+        if (!instr.author && detail.author) scraperPatch.author = detail.author
+
+        if (Object.keys(scraperPatch).length > 1) {
+          await db
+            .update(instructionsTable)
+            .set(scraperPatch as any)
+            .where(eq(instructionsTable.mocNumber, mocNumber))
+          logger.info(
+            `[backfill-single] MOC-${mocNumber}: patched ${Object.keys(scraperPatch)
+              .filter(k => k !== 'updatedAt')
+              .join(', ')}`,
+          )
+        }
+
+        const refreshed = await db
+          .select()
+          .from(instructionsTable)
+          .where(eq(instructionsTable.mocNumber, mocNumber))
+          .limit(1)
+        if (refreshed[0]) updatedInstr = refreshed[0]
+      }
+
+      // Scrape + upload images if missing from MinIO
+      if (needs.imagesMissingInMinio && !options.dryRun) {
+        const images = await mocPage.scrapeImages(mocNumber)
+        for (const img of images) {
+          const fileName = basename(img.filePath)
+          await uploadImage(img.filePath, mocNumber, fileName, config.bucket)
+        }
+        if (images.length > 0) {
+          logger.info(
+            `[backfill-single] MOC-${mocNumber}: uploaded ${images.length} images to MinIO`,
+          )
+        }
+      }
+    }
+
+    // Sync images + gallery meta
+    if (!options.dryRun) {
+      const galleryMoc = await findGalleryMoc(galleryDb as any, mocNumber)
+      if (galleryMoc) {
+        const minioImages = await listImages(mocNumber, config.bucket)
+        if (minioImages.length > 0 && needs.imagesMissingInGallery) {
+          const imageData = minioImages.map(key => ({
+            s3Key: key,
+            fileName: key.split('/').pop() || 'unknown',
+          }))
+          await writeImagesToGallery(galleryDb as any, galleryMoc.id, imageData)
+        }
+        if (needs.galleryMetaMissing || needs.scraperDetailMissing) {
+          await patchGalleryMeta(galleryDb as any, galleryMoc.id, {
+            description: updatedInstr.description,
+            descriptionHtml: updatedInstr.descriptionHtml,
+            tags: updatedInstr.tags as string[] | null,
+            dateAdded: updatedInstr.dateAdded,
+            authorProfileUrl: updatedInstr.authorProfileUrl,
+            author: updatedInstr.author,
+          })
+        }
+      }
+    }
+
+    await checkpoint.save(mocNumber, 'backfill_completed', {
+      scraperDetailPatched: needs.scraperDetailMissing,
+      imagesUploaded: needs.imagesMissingInMinio,
+      galleryImagesLinked: needs.imagesMissingInGallery,
+      galleryMetaPatched: needs.galleryMetaMissing,
+    })
+
+    await db
+      .update(scrapeRuns)
+      .set({ status: 'completed', completedAt: new Date(), downloaded: 1 })
+      .where(eq(scrapeRuns.id, scrapeRunId))
+
+    logger.info(`[backfill-single] MOC-${mocNumber} — complete`)
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    logger.error(`[backfill-single] Failed MOC-${mocNumber}: ${errMsg}`)
+    throw error
+  } finally {
+    if (context) await saveSession(context).catch(() => {})
+    if (browser) await browser.close().catch(() => {})
+    await galleryPool.end().catch(() => {})
+    await closeDbClient()
+  }
+}
+
 export async function runPipeline(
   options: CliOptions,
   config: {

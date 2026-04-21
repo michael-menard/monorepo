@@ -87,6 +87,17 @@ export const scraperApi = createApi({
     }),
 
     /**
+     * DELETE /scraper/jobs?status=... — Clear all jobs with a given status
+     */
+    clearJobsByStatus: builder.mutation<{ success: boolean; removed: number }, string>({
+      query: status => ({
+        url: `/scraper/jobs?status=${status}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
+    }),
+
+    /**
      * POST /scraper/jobs/:id/retry — Retry a failed job
      */
     retryScrapeJob: builder.mutation<{ success: boolean; status: string }, string>({
@@ -104,6 +115,50 @@ export const scraperApi = createApi({
       query: () => ({ url: '/scraper/queues' }),
       providesTags: ['ScraperQueues'],
     }),
+
+    /**
+     * POST /scraper/queues/:name/pause — Pause a single queue
+     */
+    pauseQueue: builder.mutation<{ success: boolean; queue: string; isPaused: boolean }, string>({
+      query: name => ({
+        url: `/scraper/queues/${name}/pause`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['ScraperQueues'],
+    }),
+
+    /**
+     * POST /scraper/queues/:name/resume — Resume a single queue
+     */
+    resumeQueue: builder.mutation<{ success: boolean; queue: string; isPaused: boolean }, string>({
+      query: name => ({
+        url: `/scraper/queues/${name}/resume`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['ScraperQueues'],
+    }),
+
+    /**
+     * POST /scraper/queues/pause-all — Pause all queues
+     */
+    pauseAllQueues: builder.mutation<{ success: boolean; isPaused: boolean }, void>({
+      query: () => ({
+        url: '/scraper/queues/pause-all',
+        method: 'POST',
+      }),
+      invalidatesTags: ['ScraperQueues'],
+    }),
+
+    /**
+     * POST /scraper/queues/resume-all — Resume all queues
+     */
+    resumeAllQueues: builder.mutation<{ success: boolean; isPaused: boolean }, void>({
+      query: () => ({
+        url: '/scraper/queues/resume-all',
+        method: 'POST',
+      }),
+      invalidatesTags: ['ScraperQueues'],
+    }),
   }),
 })
 
@@ -112,6 +167,11 @@ export const {
   useGetScrapeJobsQuery,
   useGetScrapeJobByIdQuery,
   useCancelScrapeJobMutation,
+  useClearJobsByStatusMutation,
   useRetryScrapeJobMutation,
   useGetQueueHealthQuery,
+  usePauseQueueMutation,
+  useResumeQueueMutation,
+  usePauseAllQueuesMutation,
+  useResumeAllQueuesMutation,
 } = scraperApi

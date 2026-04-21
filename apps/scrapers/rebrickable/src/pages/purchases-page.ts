@@ -27,7 +27,9 @@ export class PurchasesPage extends BasePage {
 
       // Stop early if we have enough for the limit
       if (limit && allItems.length >= limit) {
-        logger.info(`[purchases] Collected ${allItems.length} items, limit is ${limit} — stopping pagination early`)
+        logger.info(
+          `[purchases] Collected ${allItems.length} items, limit is ${limit} — stopping pagination early`,
+        )
         break
       }
 
@@ -38,34 +40,39 @@ export class PurchasesPage extends BasePage {
       await waitForPagination()
     }
 
-    logger.info(`[purchases] Found ${allItems.length} purchased instructions across ${pageNum} pages`)
+    logger.info(
+      `[purchases] Found ${allItems.length} purchased instructions across ${pageNum} pages`,
+    )
     return allItems
   }
 
   private async scrapeCurrentPage(): Promise<ScrapedInstructionListItem[]> {
     const items: ScrapedInstructionListItem[] = []
 
+    // Wait for MOC links to be present before evaluating
+    await this.page.waitForSelector('a[href*="/mocs/MOC-"]', { timeout: 10000 }).catch(() => {
+      logger.warn('[purchases] No MOC links found on page')
+    })
+
     // Each purchased MOC is a row/card on the page with a link to the MOC detail
     // The MOC links follow the pattern /mocs/MOC-{number}/...
-    const rawItems = await this.page.$$eval(
-      'a[href*="/mocs/MOC-"]',
-      links =>
-        links
-          .map(link => {
-            const href = link.getAttribute('href') || ''
-            const text = link.textContent?.trim() || ''
+    const rawItems = await this.page.$$eval('a[href*="/mocs/MOC-"]', links =>
+      links
+        .map(link => {
+          const href = link.getAttribute('href') || ''
+          const text = link.textContent?.trim() || ''
 
-            // Extract MOC number from URL
-            const mocMatch = href.match(/MOC-(\d+)/)
-            const mocNumber = mocMatch ? mocMatch[1] : ''
+          // Extract MOC number from URL
+          const mocMatch = href.match(/MOC-(\d+)/)
+          const mocNumber = mocMatch ? mocMatch[1] : ''
 
-            return {
-              mocNumber,
-              title: text,
-              url: href.startsWith('http') ? href : `https://rebrickable.com${href}`,
-            }
-          })
-          .filter(item => item.mocNumber && item.title),
+          return {
+            mocNumber,
+            title: text,
+            url: href.startsWith('http') ? href : `https://rebrickable.com${href}`,
+          }
+        })
+        .filter(item => item.mocNumber && item.title),
     )
 
     // Deduplicate by MOC number
@@ -113,7 +120,9 @@ export class PurchasesPage extends BasePage {
       const nextPage = nextHref.match(/page=(\d+)/)?.[1]
 
       if (nextPage && parseInt(nextPage) <= parseInt(currentPage)) {
-        logger.info(`[purchases] Next page ${nextPage} <= current ${currentPage} — stopping to prevent loop`)
+        logger.info(
+          `[purchases] Next page ${nextPage} <= current ${currentPage} — stopping to prevent loop`,
+        )
         return false
       }
 

@@ -6,8 +6,9 @@
  * Price guides are handled by the separate bricklink-prices queue.
  */
 
-import { resolve, dirname } from 'path'
+import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { unlinkSync } from 'fs'
 import { chromium, type BrowserContext, type Page } from 'playwright'
 import { initializeBucket, uploadToS3 } from '@repo/s3-client'
 import { logger } from '@repo/logger'
@@ -38,6 +39,12 @@ let contextRefCount = 0
  */
 async function getContext(): Promise<BrowserContext> {
   if (!sharedContext) {
+    // Remove stale lock from previous crashed Chrome instance
+    try {
+      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
+    } catch {
+      // Lock doesn't exist — fine
+    }
     sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
       headless: false,
       channel: 'chrome',

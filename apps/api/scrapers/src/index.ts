@@ -24,6 +24,7 @@ import { processBricklinkPrices, shutdownPricesBrowser } from './workers/brickli
 import { processLegoSet } from './workers/lego-set.js'
 import { processRebrickableSet } from './workers/rebrickable-set.js'
 import { processRebrickableMocs } from './workers/rebrickable-mocs.js'
+import { processRebrickableMocSingle } from './workers/rebrickable-moc-single.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '../../../..')
@@ -187,7 +188,7 @@ function createWorkers() {
   )
   workers.push(rebrickableSetWorker)
 
-  // ── Rebrickable MOCs ───────────────────────────────────────────────────
+  // ── Rebrickable MOCs (discovery) ────────────────────────────────────────
 
   const rebrickableMocsWorker = new Worker(
     QUEUE_NAMES.REBRICKABLE_MOCS,
@@ -196,14 +197,43 @@ function createWorkers() {
         jobId: job.id,
         options: job.data,
       })
-      const result = await processRebrickableMocs(job.data)
+      await job.updateProgress({ stage: 'Starting discovery...' })
+      const result = await processRebrickableMocs(
+        job.data,
+        queues.rebrickableMocSingle,
+        job.id!,
+        msg => job.updateProgress({ stage: msg }),
+      )
       await handleRateLimit(queues.rebrickableMocs, result, 'moc-pipeline')
       if (!result.success) throw new Error(result.error || 'Pipeline failed')
+
+      // Emit discovery expanded event if child jobs were enqueued
+      if (result.jobsEnqueued) {
+        scraperEvents.mocDiscoveryExpanded(job.id!, result.itemsFound ?? 0, result.jobsEnqueued)
+      }
+
       return result
     },
     { connection: redisConnection, concurrency: 1 },
   )
   workers.push(rebrickableMocsWorker)
+
+  // ── Rebrickable MOC Single ────────────────────────────────────────────
+
+  const rebrickableMocSingleWorker = new Worker(
+    QUEUE_NAMES.REBRICKABLE_MOC_SINGLE,
+    async job => {
+      const moc = job.data.mocNumber
+      logger.info(`[worker:rebrickable-moc-single] Processing MOC-${moc}`, { jobId: job.id })
+      await job.updateProgress({ stage: `Scraping MOC-${moc}...` })
+      const result = await processRebrickableMocSingle(job.data)
+      await handleRateLimit(queues.rebrickableMocSingle, result, result.mocNumber)
+      if (!result.success) throw new Error(result.error || 'Scrape failed')
+      return result
+    },
+    { connection: redisConnection, concurrency: 1 },
+  )
+  workers.push(rebrickableMocSingleWorker)
 
   // ── Event handlers for all workers ─────────────────────────────────────
 

@@ -48,6 +48,11 @@ export class LikedMocsPage extends BasePage {
   private async scrapeCurrentPage(): Promise<ScrapedInstructionListItem[]> {
     const items: ScrapedInstructionListItem[] = []
 
+    // Wait for MOC containers to be present before evaluating
+    await this.page.waitForSelector('.set-col-main', { timeout: 10000 }).catch(() => {
+      logger.warn('[liked-mocs] No .set-col-main elements found on page')
+    })
+
     // Each MOC is a .set-tn container. The .js-sort-data div holds data attributes.
     // Premium MOCs have a <span class="label label-dark-blue" title="Premium MOC"> inside .js-set-actions.
     // We skip disabled MOCs (they have <small class="text-right trunc">(disabled)</small>).

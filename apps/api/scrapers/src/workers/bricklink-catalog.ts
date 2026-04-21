@@ -6,8 +6,9 @@
  */
 
 import { chromium, type BrowserContext, type Page } from 'playwright'
-import { resolve, dirname } from 'path'
+import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { unlinkSync } from 'fs'
 import { Queue } from 'bullmq'
 import { logger } from '@repo/logger'
 import type { BricklinkCatalogJob, BricklinkMinifigJob } from '../queues.js'
@@ -24,6 +25,12 @@ let sharedContext: BrowserContext | null = null
 
 async function getContext(): Promise<BrowserContext> {
   if (!sharedContext) {
+    // Remove stale lock from previous crashed Chrome instance
+    try {
+      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
+    } catch {
+      // Lock doesn't exist — fine
+    }
     sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
       headless: false,
       channel: 'chrome',
@@ -73,8 +80,30 @@ export async function processBricklinkCatalog(
 
       logger.info(`[bricklink-catalog] Page ${currentPage}/${totalPages}`, { pageUrl })
 
-      await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
       await page.waitForTimeout(randomDelay())
+
+      // Check if BrickLink redirected us away (e.g. notFound.asp)
+      const currentUrl = page.url()
+      if (currentUrl.includes('notFound') || !currentUrl.includes('catalogList')) {
+        logger.warn(`[bricklink-catalog] Redirected away from catalog`, {
+          expected: pageUrl,
+          actual: currentUrl,
+        })
+        // Try once more — BrickLink sometimes redirects on first load
+        await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
+        await page.waitForTimeout(randomDelay())
+
+        const retryUrl = page.url()
+        if (retryUrl.includes('notFound') || !retryUrl.includes('catalogList')) {
+          return {
+            success: false,
+            error: `BrickLink redirected to ${retryUrl} — catalog URL may be invalid or session expired`,
+            itemsFound: 0,
+            jobsEnqueued: 0,
+          }
+        }
+      }
 
       // Check for rate limiting
       const bodyText = await page.evaluate(() => document.body?.innerText || '').catch(() => '')

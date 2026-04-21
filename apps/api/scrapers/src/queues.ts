@@ -49,12 +49,20 @@ export const RebrickableMocsJobSchema = z.object({
   likedMocs: z.boolean().default(false),
 })
 
+export const RebrickableMocSingleJobSchema = z.object({
+  mocNumber: z.string().min(1),
+  force: z.boolean().default(false),
+  retryMissing: z.boolean().default(false),
+  parentJobId: z.string().optional(),
+})
+
 export type BricklinkMinifigJob = z.infer<typeof BricklinkMinifigJobSchema>
 export type BricklinkCatalogJob = z.infer<typeof BricklinkCatalogJobSchema>
 export type BricklinkPricesJob = z.infer<typeof BricklinkPricesJobSchema>
 export type LegoSetJob = z.infer<typeof LegoSetJobSchema>
 export type RebrickableSetJob = z.infer<typeof RebrickableSetJobSchema>
 export type RebrickableMocsJob = z.infer<typeof RebrickableMocsJobSchema>
+export type RebrickableMocSingleJob = z.infer<typeof RebrickableMocSingleJobSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
 // Queue Names
@@ -67,6 +75,7 @@ export const QUEUE_NAMES = {
   LEGO_SET: 'scrape-lego-set',
   REBRICKABLE_SET: 'scrape-rebrickable-set',
   REBRICKABLE_MOCS: 'scrape-rebrickable-mocs',
+  REBRICKABLE_MOC_SINGLE: 'scrape-rebrickable-moc-single',
 } as const
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
@@ -127,6 +136,17 @@ export function createQueues(connection: ConnectionOptions) {
     },
   })
 
+  const rebrickableMocSingle = new Queue<RebrickableMocSingleJob>(
+    QUEUE_NAMES.REBRICKABLE_MOC_SINGLE,
+    {
+      connection,
+      defaultJobOptions: {
+        ...defaultJobOptions,
+        attempts: 2,
+      },
+    },
+  )
+
   return {
     bricklinkMinifig,
     bricklinkCatalog,
@@ -134,6 +154,7 @@ export function createQueues(connection: ConnectionOptions) {
     legoSet,
     rebrickableSet,
     rebrickableMocs,
+    rebrickableMocSingle,
   }
 }
 

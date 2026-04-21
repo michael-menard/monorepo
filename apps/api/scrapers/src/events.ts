@@ -118,4 +118,31 @@ export const scraperEvents = {
       data: { jobId, itemsFound, jobsEnqueued },
     })
   },
+
+  mocDiscoveryExpanded(jobId: string, itemsFound: number, jobsEnqueued: number) {
+    return emit({
+      type: 'moc_discovery_expanded',
+      title: 'MOC Discovery Expanded',
+      message: `Found ${itemsFound} MOCs, enqueued ${jobsEnqueued} individual jobs`,
+      data: { jobId, itemsFound, jobsEnqueued },
+    })
+  },
+
+  queuePaused(queueName: string) {
+    return emit({
+      type: 'queue_paused',
+      title: 'Queue Paused',
+      message: `Queue ${queueName} paused`,
+      data: { queueName },
+    })
+  },
+
+  queueResumed(queueName: string) {
+    return emit({
+      type: 'queue_resumed',
+      title: 'Queue Resumed',
+      message: `Queue ${queueName} resumed`,
+      data: { queueName },
+    })
+  },
 }

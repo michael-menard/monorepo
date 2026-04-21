@@ -7,6 +7,7 @@ export const ScraperTypeSchema = z.enum([
   'lego-set',
   'rebrickable-set',
   'rebrickable-mocs',
+  'rebrickable-moc-single',
 ])
 
 export type ScraperType = z.infer<typeof ScraperTypeSchema>
@@ -20,6 +21,7 @@ export const ScrapeJobSchema = z.object({
   attemptsMade: z.number(),
   failedReason: z.string().nullable().optional(),
   createdAt: z.string(),
+  processedAt: z.string().nullable().optional(),
   finishedAt: z.string().nullable().optional(),
   parentJobId: z.string().nullable().optional(),
   children: z.array(z.lazy(() => ScrapeJobSchema)).optional(),
@@ -34,6 +36,7 @@ export const QueueHealthSchema = z.object({
   completed: z.number(),
   failed: z.number(),
   delayed: z.number(),
+  isPaused: z.boolean(),
   circuitBreaker: z.object({
     isOpen: z.boolean(),
     trippedAt: z.string().nullable(),

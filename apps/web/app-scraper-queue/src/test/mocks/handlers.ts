@@ -39,12 +39,13 @@ const mockJobs = [
 ]
 
 const mockQueues = [
-  { name: 'bricklink-minifig', waiting: 2, active: 1, completed: 10, failed: 0, delayed: 0, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
-  { name: 'bricklink-catalog', waiting: 0, active: 0, completed: 3, failed: 0, delayed: 0, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
-  { name: 'bricklink-prices', waiting: 5, active: 0, completed: 8, failed: 1, delayed: 3, circuitBreaker: { isOpen: true, trippedAt: '2026-04-20T10:00:00Z', resumesAt: '2026-04-20T10:30:00Z', reason: 'Rate limited on cas002' } },
-  { name: 'lego-set', waiting: 0, active: 0, completed: 5, failed: 0, delayed: 0, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
-  { name: 'rebrickable-set', waiting: 0, active: 0, completed: 2, failed: 0, delayed: 0, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
-  { name: 'rebrickable-mocs', waiting: 0, active: 0, completed: 1, failed: 0, delayed: 0, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'bricklink-minifig', waiting: 2, active: 1, completed: 10, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'bricklink-catalog', waiting: 0, active: 0, completed: 3, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'bricklink-prices', waiting: 5, active: 0, completed: 8, failed: 1, delayed: 3, isPaused: false, circuitBreaker: { isOpen: true, trippedAt: '2026-04-20T10:00:00Z', resumesAt: '2026-04-20T10:30:00Z', reason: 'Rate limited on cas002' } },
+  { name: 'lego-set', waiting: 0, active: 0, completed: 5, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'rebrickable-set', waiting: 0, active: 0, completed: 2, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'rebrickable-mocs', waiting: 0, active: 0, completed: 1, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
+  { name: 'rebrickable-moc-single', waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, isPaused: false, circuitBreaker: { isOpen: false, trippedAt: null, resumesAt: null, reason: null } },
 ]
 
 export const handlers = [

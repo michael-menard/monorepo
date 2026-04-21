@@ -13,6 +13,7 @@ name: langgraph-workflow
 # Services:
 #   PostgreSQL: localhost:5432
 #   Redis: localhost:6379
+#   Notifications: http://localhost:3098 (WebSocket + REST)
 #   Prometheus: http://localhost:9090
 #   Grafana: http://localhost:3003 (admin/admin)
 #   OTel Collector: localhost:4317 (gRPC), localhost:4318 (HTTP)
@@ -160,9 +161,53 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 minioadmin minioadmin;
       mc mb local/workflow-artifacts --ignore-existing;
+      mc mb local/rebrickable-instructions --ignore-existing;
       exit 0;
       "
     restart: 'no'
+
+  # ── Scrape Queue Infrastructure ──────────────────────────────────────────
+  #
+  # The scrape queue needs:
+  #   - Redis (above)            — BullMQ job queues
+  #   - PostgreSQL (above)       — rebrickable scraper DB + gallery DB
+  #   - MinIO (above)            — instruction file + image storage
+  #   - Notifications server     — WebSocket events to scraper queue UI
+  #
+  # The scraper worker itself runs on the host (not containerized) because
+  # it spawns Playwright browser processes and uses the host Chrome profile.
+  # Start it with: cd apps/api/scrapers && pnpm dev
+
+  # Notifications Server — WebSocket relay for real-time UI events
+  #   Scraper worker → POST /events → Socket.io → Browser
+  #
+  # Dev mode: mounts the monorepo with host node_modules (pnpm workspace deps).
+  # Requires: pnpm install has been run on the host first.
+  notifications-server:
+    image: oven/bun:1
+    container_name: monorepo-notifications
+    working_dir: /app/apps/api/notifications-server
+    command: bun run src/index.ts
+    ports:
+      - '3098:3098'
+    volumes:
+      - ..:/app
+    environment:
+      NOTIFICATIONS_PORT: '3098'
+      REDIS_URL: 'redis://redis:6379'
+      NOTIFICATIONS_HMAC_SECRET: '${NOTIFICATIONS_HMAC_SECRET:-}'
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Healthcheck: bun image lacks curl/wget. Bun's fetch works but JIT warmup
+    # makes each check take ~8-10s. Use generous timeouts to accommodate.
+    healthcheck:
+      test: ['CMD', 'bun', '-e', 'await fetch("http://localhost:3098/health")']
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
   # Knowledge Base PostgreSQL with pgvector + PgBouncer
   # Architecture: MCP processes (port 5433) -> PgBouncer -> PostgreSQL

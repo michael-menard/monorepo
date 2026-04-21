@@ -10,6 +10,8 @@ export const CliOptionsSchema = z.object({
   retryFailed: z.boolean().default(false),
   retryMissing: z.boolean().default(false),
   likedMocs: z.boolean().default(false),
+  listOnly: z.boolean().default(false),
+  single: z.string().optional(),
   limit: z.number().int().positive().optional(),
   ignoreRobots: z.boolean().default(false),
 })

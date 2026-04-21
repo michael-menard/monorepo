@@ -1,13 +1,20 @@
-import { useEffect } from 'react'
-import { Radar, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Radar, Wifi, WifiOff, AlertTriangle, Pause, Play, CirclePause } from 'lucide-react'
 import {
   Badge,
+  Button,
   AppTabs,
   AppTabsList,
   AppTabsTrigger,
   AppTabsContent,
 } from '@repo/app-component-library'
-import { scraperApi, useGetQueueHealthQuery } from '@repo/api-client/rtk/scraper-api'
+import {
+  scraperApi,
+  useGetQueueHealthQuery,
+  usePauseAllQueuesMutation,
+  useResumeAllQueuesMutation,
+} from '@repo/api-client/rtk/scraper-api'
 import { useDispatch } from 'react-redux'
 import { UrlJobForm, MocPipelineForm } from '../components/AddJobForm'
 import { JobBoard } from '../components/JobBoard'
@@ -63,10 +70,12 @@ function TabLabel({ name, label }: { name: string; label: string }) {
 
   const pending = (queue?.waiting ?? 0) + (queue?.active ?? 0)
   const isBroken = queue?.circuitBreaker.isOpen ?? false
+  const isPaused = queue?.isPaused ?? false
 
   return (
     <span className="flex items-center gap-1.5">
       {isBroken && <AlertTriangle className="h-3 w-3 text-red-500" />}
+      {isPaused && <CirclePause className="h-3 w-3 text-yellow-500" />}
       {label}
       {pending > 0 && (
         <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] leading-none">
@@ -78,8 +87,15 @@ function TabLabel({ name, label }: { name: string; label: string }) {
 }
 
 export function MainPage() {
+  const [activeTab, setActiveTab] = useState('bricklink-minifig')
   const { events, isConnected } = useScraperEvents()
   const dispatch = useDispatch()
+  const { data: healthData } = useGetQueueHealthQuery(undefined, { pollingInterval: 10000 })
+  const [pauseAll, { isLoading: isPausingAll }] = usePauseAllQueuesMutation()
+  const [resumeAll, { isLoading: isResumingAll }] = useResumeAllQueuesMutation()
+
+  const allPaused = healthData?.queues.every(q => q.isPaused) ?? false
+  const somePaused = healthData?.queues.some(q => q.isPaused) ?? false
 
   // Invalidate RTK caches on WebSocket events
   useEffect(() => {
@@ -92,8 +108,11 @@ export function MainPage() {
         'job_completed',
         'job_failed',
         'catalog_expanded',
+        'moc_discovery_expanded',
         'circuit_breaker_tripped',
         'circuit_breaker_reset',
+        'queue_paused',
+        'queue_resumed',
       ].includes(latest.type)
     ) {
       dispatch(scraperApi.util.invalidateTags(['ScraperJobs', 'ScraperQueues']))
@@ -108,17 +127,38 @@ export function MainPage() {
           <Radar className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight">Scrape Queue</h1>
         </div>
-        <Badge
-          variant="outline"
-          className={isConnected ? 'text-green-600 border-green-600/30' : 'text-muted-foreground'}
-        >
-          {isConnected ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
-          {isConnected ? 'Live' : 'Offline'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={allPaused || somePaused ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => (allPaused ? resumeAll() : pauseAll())}
+            disabled={isPausingAll || isResumingAll}
+          >
+            {allPaused ? (
+              <>
+                <Play className="h-3 w-3 mr-1" />
+                Resume All
+              </>
+            ) : (
+              <>
+                <Pause className="h-3 w-3 mr-1" />
+                Pause All
+              </>
+            )}
+          </Button>
+          <Badge
+            variant="outline"
+            className={isConnected ? 'text-green-600 border-green-600/30' : 'text-muted-foreground'}
+          >
+            {isConnected ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+            {isConnected ? 'Live' : 'Offline'}
+          </Badge>
+        </div>
       </div>
 
       {/* Tabbed scraper queues */}
-      <AppTabs defaultValue="bricklink-minifig">
+      <AppTabs defaultValue="bricklink-minifig" onValueChange={setActiveTab}>
         <AppTabsList variant="default" className="flex-wrap">
           {TABS.map(tab => (
             <AppTabsTrigger key={tab.key} value={tab.key} variant="default">
@@ -127,16 +167,30 @@ export function MainPage() {
           ))}
         </AppTabsList>
 
-        {TABS.map(tab => (
-          <AppTabsContent key={tab.key} value={tab.key} className="space-y-4 mt-4">
-            {/* Per-tab form */}
-            <div className="bg-card border border-border rounded-lg p-4">{tab.form}</div>
-
-            {/* Per-tab job board */}
-            <JobBoard scraperType={tab.key} />
-          </AppTabsContent>
-        ))}
+        <div className="mt-4 relative">
+          <AnimatePresence mode="wait">
+            {TABS.map(
+              tab =>
+                tab.key === activeTab && (
+                  <motion.div
+                    key={tab.key}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15, ease: 'easeInOut' }}
+                  >
+                    <AppTabsContent value={tab.key} forceMount className="mt-0">
+                      <div className="bg-card border border-border rounded-lg p-4">{tab.form}</div>
+                    </AppTabsContent>
+                  </motion.div>
+                ),
+            )}
+          </AnimatePresence>
+        </div>
       </AppTabs>
+
+      {/* Unified job board — all scrapers */}
+      <JobBoard />
     </div>
   )
 }

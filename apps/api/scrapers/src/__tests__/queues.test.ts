@@ -7,17 +7,19 @@ import {
   LegoSetJobSchema,
   RebrickableSetJobSchema,
   RebrickableMocsJobSchema,
+  RebrickableMocSingleJobSchema,
 } from '../queues.js'
 
 describe('Queue Names', () => {
-  it('defines all 6 queues', () => {
-    expect(Object.keys(QUEUE_NAMES)).toHaveLength(6)
+  it('defines all 7 queues', () => {
+    expect(Object.keys(QUEUE_NAMES)).toHaveLength(7)
     expect(QUEUE_NAMES.BRICKLINK_MINIFIG).toBe('scrape-bricklink-minifig')
     expect(QUEUE_NAMES.BRICKLINK_CATALOG).toBe('scrape-bricklink-catalog')
     expect(QUEUE_NAMES.BRICKLINK_PRICES).toBe('scrape-bricklink-prices')
     expect(QUEUE_NAMES.LEGO_SET).toBe('scrape-lego-set')
     expect(QUEUE_NAMES.REBRICKABLE_SET).toBe('scrape-rebrickable-set')
     expect(QUEUE_NAMES.REBRICKABLE_MOCS).toBe('scrape-rebrickable-mocs')
+    expect(QUEUE_NAMES.REBRICKABLE_MOC_SINGLE).toBe('scrape-rebrickable-moc-single')
   })
 })
 
@@ -127,6 +129,40 @@ describe('Job Schemas', () => {
       })
       expect(result.resume).toBe(true)
       expect(result.force).toBe(true)
+    })
+  })
+
+  describe('RebrickableMocSingleJobSchema', () => {
+    it('accepts valid single MOC job', () => {
+      const result = RebrickableMocSingleJobSchema.safeParse({ mocNumber: '12345' })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.mocNumber).toBe('12345')
+        expect(result.data.force).toBe(false)
+      }
+    })
+
+    it('accepts with force flag', () => {
+      const result = RebrickableMocSingleJobSchema.parse({ mocNumber: '12345', force: true })
+      expect(result.force).toBe(true)
+    })
+
+    it('accepts with parentJobId', () => {
+      const result = RebrickableMocSingleJobSchema.parse({
+        mocNumber: '12345',
+        parentJobId: 'job-abc-123',
+      })
+      expect(result.parentJobId).toBe('job-abc-123')
+    })
+
+    it('rejects empty mocNumber', () => {
+      const result = RebrickableMocSingleJobSchema.safeParse({ mocNumber: '' })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing mocNumber', () => {
+      const result = RebrickableMocSingleJobSchema.safeParse({})
+      expect(result.success).toBe(false)
     })
   })
 })

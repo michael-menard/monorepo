@@ -241,12 +241,12 @@ describe('DELETE /scraper/jobs/:id', () => {
 })
 
 describe('GET /scraper/queues', () => {
-  it('returns health for all 6 queues', async () => {
+  it('returns health for all 7 queues', async () => {
     const { status, body } = await api('/scraper/queues')
 
     expect(status).toBe(200)
     expect(body.queues).toBeDefined()
-    expect(body.queues.length).toBe(6)
+    expect(body.queues.length).toBe(7)
 
     for (const queue of body.queues) {
       expect(queue.name).toBeTruthy()
@@ -255,6 +255,7 @@ describe('GET /scraper/queues', () => {
       expect(typeof queue.completed).toBe('number')
       expect(typeof queue.failed).toBe('number')
       expect(typeof queue.delayed).toBe('number')
+      expect(typeof queue.isPaused).toBe('boolean')
       expect(queue.circuitBreaker).toBeDefined()
       expect(typeof queue.circuitBreaker.isOpen).toBe('boolean')
     }
@@ -270,5 +271,6 @@ describe('GET /scraper/queues', () => {
     expect(names).toContain('lego-set')
     expect(names).toContain('rebrickable-set')
     expect(names).toContain('rebrickable-mocs')
+    expect(names).toContain('rebrickable-moc-single')
   })
 })

@@ -21,6 +21,8 @@ describe('CliOptionsSchema', () => {
     expect(result.dryRun).toBe(false)
     expect(result.resume).toBe(false)
     expect(result.force).toBe(false)
+    expect(result.listOnly).toBe(false)
+    expect(result.single).toBeUndefined()
     expect(result.limit).toBeUndefined()
     expect(result.ignoreRobots).toBe(false)
   })
@@ -38,6 +40,21 @@ describe('CliOptionsSchema', () => {
 
   it('rejects negative limit', () => {
     expect(() => CliOptionsSchema.parse({ limit: -1 })).toThrow()
+  })
+
+  it('parses --list-only flag', () => {
+    const result = CliOptionsSchema.parse({ listOnly: true })
+    expect(result.listOnly).toBe(true)
+  })
+
+  it('parses --single with MOC number', () => {
+    const result = CliOptionsSchema.parse({ single: '12345' })
+    expect(result.single).toBe('12345')
+  })
+
+  it('accepts --single as undefined by default', () => {
+    const result = CliOptionsSchema.parse({})
+    expect(result.single).toBeUndefined()
   })
 })
 
