@@ -111,3 +111,4 @@ tree/
 .sonar/
 sonar-project.properties.bak
 sonarqube-plugins/*.jar
+apps/api/scrapers/bricklink-minifigs/.chrome-profile/
