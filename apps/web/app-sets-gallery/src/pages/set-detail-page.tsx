@@ -5,10 +5,10 @@
  * Story sets-2001: Sets Gallery MVP (Detail View)
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-import { ArrowLeft, Edit, Trash2, Blocks, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Blocks, CheckCircle2, Minus, Plus } from 'lucide-react'
 import { z } from 'zod'
 import {
   Badge,
@@ -27,6 +27,7 @@ import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@
 import {
   useGetSetByIdQuery,
   useDeleteSetMutation,
+  useUpdateSetMutation,
   useGetSetPartsQuery,
 } from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
@@ -77,17 +78,23 @@ function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
 }
 
 function buildLightboxImages(set: Set | undefined | null): LightboxImage[] {
-  if (!set || !set.images.length) {
-    return []
+  if (!set) return []
+
+  if (set.images.length > 0) {
+    const sortedImages = [...set.images].sort((a, b) => a.position - b.position)
+    return sortedImages.map((image, index) => ({
+      src: image.imageUrl,
+      alt: `${set.title} - Image ${index + 1}`,
+      title: index === 0 ? set.title : undefined,
+    }))
   }
 
-  const sortedImages = [...set.images].sort((a, b) => a.position - b.position)
+  // Fall back to the primary imageUrl when the set_images array is empty
+  if (set.imageUrl) {
+    return [{ src: set.imageUrl, alt: set.title, title: set.title }]
+  }
 
-  return sortedImages.map((image, index) => ({
-    src: image.imageUrl,
-    alt: `${set.title} - Image ${index + 1}`,
-    title: index === 0 ? set.title : undefined,
-  }))
+  return []
 }
 
 /**
@@ -179,6 +186,44 @@ export function SetDetailNotFound({ onBack }: { onBack: () => void }) {
   )
 }
 
+function QuantityStepper({
+  label,
+  value,
+  onUpdate,
+}: {
+  label: string
+  value: number
+  onUpdate: (value: number) => void
+}) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-2 mt-1">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onUpdate(Math.max(1, value - 1))}
+          disabled={value <= 1}
+          aria-label={`Decrease ${label.toLowerCase()}`}
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+        <span className="text-sm font-medium tabular-nums w-6 text-center">{value}</span>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onUpdate(value + 1)}
+          aria-label={`Increase ${label.toLowerCase()}`}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 /**
  * Error state for forbidden / generic errors
  */
@@ -219,9 +264,23 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   })
 
   const [deleteSet] = useDeleteSetMutation()
+  const [updateSet] = useUpdateSetMutation()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { success: toastSuccess, error: toastError } = useToast()
+
+  const handleQuantityUpdate = useCallback(
+    async (quantity: number) => {
+      if (!set) return
+      try {
+        await updateSet({ id: set.id, data: { quantity } }).unwrap()
+        toastSuccess('Updated', 'Quantity updated successfully.')
+      } catch (err) {
+        toastError(err, 'Failed to update quantity')
+      }
+    },
+    [set, updateSet, toastSuccess, toastError],
+  )
 
   const lightboxImages = useMemo(() => buildLightboxImages(set), [set])
   const lightbox = useLightbox(lightboxImages.length)
@@ -244,7 +303,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
 
     setIsDeleting(true)
     try {
-      await deleteSet({ id: set.id, title: set.title }).unwrap()
+      await deleteSet({ id: set.id }).unwrap()
       toastSuccess(`"${set.title}" deleted`, 'The set has been removed from your collection.')
       navigate({ to: '/' })
     } catch (err) {
@@ -551,12 +610,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                     </Badge>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Quantity</p>
-                  <p className="text-sm mt-1" data-testid="set-detail-quantity">
-                    {set.quantity}
-                  </p>
-                </div>
+                <QuantityStepper
+                  label="Quantity"
+                  value={set.quantity}
+                  onUpdate={handleQuantityUpdate}
+                />
               </div>
 
               {/* Tags already rendered above in the theme section */}
