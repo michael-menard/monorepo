@@ -155,7 +155,7 @@ export function AddItemPage() {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLoading && !hasSubmitted) {
-        void navigate('/')
+        void navigate('..')
       }
     }
     window.addEventListener('keydown', handleEscape)
@@ -221,7 +221,7 @@ export function AddItemPage() {
       showSuccessToast('Item added!', `${data.title} has been added to your wishlist.`, 5000)
 
       // WISH-2032: Navigate immediately (optimistic)
-      void navigate('/')
+      void navigate('..')
 
       try {
         // Trigger mutation with error callback for rollback
@@ -233,7 +233,7 @@ export function AddItemPage() {
             setRecoveredFormData(data)
 
             // WISH-2032: On error, navigate back to form
-            void navigate('/add')
+            void navigate('add')
 
             // Get error message
             const errorMessage =

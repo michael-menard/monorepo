@@ -128,7 +128,7 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
           label: 'View in Collection',
           onClick: () => {
             try {
-              navigate('/collection')
+              navigate('collection')
             } catch (error) {
               toast.error('Could not navigate to collection', {
                 description: 'Please navigate manually',

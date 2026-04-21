@@ -284,7 +284,7 @@ function InstructionsNewContent() {
           fileMapRef.current.clear()
 
           // Navigate to the new MOC page
-          navigate(`/instructions/${result.data.slug}`)
+          navigate(result.data.slug)
         } else {
           const { error } = result
 

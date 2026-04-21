@@ -219,7 +219,7 @@ export function DraggableWishlistGallery({
       {
         key: 'a',
         handler: () => {
-          navigate('/add')
+          navigate('add')
           announce('Navigating to add item page')
         },
         description: 'Add item',

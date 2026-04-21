@@ -286,12 +286,12 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   const lightbox = useLightbox(lightboxImages.length)
 
   const handleBack = () => {
-    navigate('/')
+    navigate('..')
   }
 
   const handleEdit = () => {
     if (!setId) return
-    navigate(`/${setId}/edit`)
+    navigate(setId)
   }
 
   const handleDelete = () => {
@@ -305,7 +305,7 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     try {
       await deleteSet({ id: set.id }).unwrap()
       toastSuccess(`"${set.title}" deleted`, 'The set has been removed from your collection.')
-      navigate('/')
+      navigate('..')
     } catch (err) {
       toastError(err, `Failed to delete "${set.title}"`)
       setShowDeleteDialog(false)

@@ -7,7 +7,10 @@
  */
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedLayout, GuestLayout, AdminLayout } from '@repo/auth-utils/layouts'
+// Auth layout routes — RootLayout currently handles auth-conditional rendering,
+// so these are imported but only AdminLayout is used for now.
+// TODO: Refactor RootLayout to remove its auth checks and use these exclusively.
+import { AdminLayout } from '@repo/auth-utils/layouts'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { LoadingPage } from './pages/LoadingPage'
 
@@ -41,7 +44,7 @@ const DashboardModule = lazy(() =>
   import('@repo/app-dashboard').then(m => ({ default: m.DashboardModule })),
 )
 const InspirationModule = lazy(() =>
-  import('@repo/app-inspiration-gallery').then(m => ({ default: m.InspirationModule })),
+  import('@repo/app-inspiration-gallery').then(m => ({ default: m.AppInspirationGalleryModule })),
 )
 const SettingsModule = lazy(() =>
   import('@repo/app-dashboard').then(m => ({ default: m.SettingsModule })),
@@ -70,105 +73,100 @@ function SuspenseWrapper({ children }: { children: React.ReactNode }) {
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Guest-only routes */}
-      <Route element={<GuestLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/auth/otp-verification" element={<OTPVerificationPage />} />
-        <Route path="/auth/verify-email" element={<EmailVerificationPage />} />
-        <Route path="/auth/new-password" element={<NewPasswordPage />} />
-      </Route>
+      {/* Auth pages */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/auth/otp-verification" element={<OTPVerificationPage />} />
+      <Route path="/auth/verify-email" element={<EmailVerificationPage />} />
+      <Route path="/auth/new-password" element={<NewPasswordPage />} />
 
-      {/* Protected routes — require authentication */}
-      <Route element={<ProtectedLayout />}>
-        {/* Micro-app modules with wildcard delegation */}
-        <Route
-          path="/sets/*"
-          element={
-            <SuspenseWrapper>
-              <SetsModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/wishlist/*"
-          element={
-            <SuspenseWrapper>
-              <WishlistModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/minifigs/*"
-          element={
-            <SuspenseWrapper>
-              <MinifigsModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/instructions/*"
-          element={
-            <SuspenseWrapper>
-              <InstructionsModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <SuspenseWrapper>
-              <DashboardModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/settings/*"
-          element={
-            <SuspenseWrapper>
-              <SettingsModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/procurement"
-          element={
-            <SuspenseWrapper>
-              <ProcurementPage />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/inspiration"
-          element={
-            <SuspenseWrapper>
-              <InspirationModule />
-            </SuspenseWrapper>
-          }
-        />
-        <Route
-          path="/profile/:id"
-          element={
-            <SuspenseWrapper>
-              <UserProfilePage />
-            </SuspenseWrapper>
-          }
-        />
+      {/* Micro-app modules with wildcard delegation */}
+      <Route
+        path="/sets/*"
+        element={
+          <SuspenseWrapper>
+          <SetsModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/wishlist/*"
+        element={
+          <SuspenseWrapper>
+          <WishlistModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/minifigs/*"
+        element={
+          <SuspenseWrapper>
+          <MinifigsModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/instructions/*"
+        element={
+          <SuspenseWrapper>
+          <InstructionsModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <SuspenseWrapper>
+          <DashboardModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/settings/*"
+        element={
+          <SuspenseWrapper>
+          <SettingsModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/procurement"
+        element={
+          <SuspenseWrapper>
+          <ProcurementPage />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/inspiration"
+        element={
+          <SuspenseWrapper>
+          <InspirationModule />
+          </SuspenseWrapper>
+        }
+      />
+      <Route
+        path="/profile/:id"
+        element={
+          <SuspenseWrapper>
+          <UserProfilePage />
+          </SuspenseWrapper>
+        }
+      />
 
-        {/* Admin routes */}
-        <Route element={<AdminLayout />}>
-          <Route
-            path="/admin/*"
-            element={
-              <SuspenseWrapper>
-                <AdminModule />
-              </SuspenseWrapper>
-            }
-          />
-        </Route>
+      {/* Admin routes */}
+      <Route element={<AdminLayout />}>
+      <Route
+        path="/admin/*"
+        element={
+          <SuspenseWrapper>
+          <AdminModule />
+          </SuspenseWrapper>
+        }
+      />
       </Route>
 
       {/* Legacy redirects */}

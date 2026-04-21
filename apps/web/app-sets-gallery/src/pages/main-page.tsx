@@ -133,11 +133,11 @@ export function MainPage({ className }: MainPageProps) {
   }
 
   const handleSetClick = (set: Set) => {
-    navigate(`/${set.id}`)
+    navigate(set.id)
   }
 
   const handleEditSet = (set: Set) => {
-    navigate(`/${set.id}/edit`)
+    navigate(set.id)
   }
 
   const handleRequestDeleteSet = (set: Set) => {
@@ -207,7 +207,7 @@ export function MainPage({ className }: MainPageProps) {
                     <p className="text-muted-foreground">Manage and track your LEGO sets</p>
                   </div>
                   <Button
-                    onClick={() => navigate('/new')}
+                    onClick={() => navigate('new')}
                     className="gap-2 h-11 px-5 shadow-lg backdrop-blur-sm bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-0 cursor-pointer"
                   >
                     <Plus className="mr-2 h-4 w-4" />

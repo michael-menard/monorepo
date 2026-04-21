@@ -196,14 +196,14 @@ export function MainPage({ className }: MainPageProps) {
   const handleEdit = useCallback(
     (id: string) => {
       logger.info('instructions.gallery.edit_click', undefined, { id })
-      navigate(`/instructions/${id}`)
+      navigate(id)
     },
     [navigate],
   )
 
   const handleCardClick = useCallback(
     (id: string) => {
-      navigate(`/instructions/${id}`)
+      navigate(id)
     },
     [navigate],
   )
@@ -361,7 +361,7 @@ export function MainPage({ className }: MainPageProps) {
                     action={{
                       label: 'Create your first MOC',
                       onClick: () => {
-                        navigate('/mocs/new')
+                        navigate('new')
                       },
                     }}
                     data-testid="gallery-empty-state"
@@ -412,7 +412,7 @@ export function MainPage({ className }: MainPageProps) {
                 columns={mocsColumns}
                 ariaLabel="Instructions gallery table"
                 onRowClick={item => {
-                  navigate(`/instructions/${item.slug}`)
+                  navigate(item.slug)
                 }}
                 hasActiveFilters={Boolean(searchTerm)}
                 onClearFilters={() => setSearchTerm('')}

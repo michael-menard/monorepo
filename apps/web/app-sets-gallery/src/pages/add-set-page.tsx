@@ -121,7 +121,7 @@ export function AddSetPage({ onBack }: { onBack?: () => void }) {
       if (onBack) {
         onBack()
       } else {
-        navigate(`/${newSet.id}`)
+        navigate(newSet.id)
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
