@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createSetsService } from '../application/services.js'
-import type { SetRepository, SetImageRepository, ImageStorage } from '../ports/index.js'
+import type {
+  SetRepository,
+  SetImageRepository,
+  SetInstanceRepository,
+  StoreRepository,
+  ImageStorage,
+} from '../ports/index.js'
 import type { Set, SetImage } from '../types.js'
 
 /**
@@ -68,25 +74,65 @@ function createMockSetImageRepo(): SetImageRepository {
   }
 }
 
+function createMockSetInstanceRepo(): SetInstanceRepository {
+  return {
+    findBySetId: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue({ ok: false, error: 'NOT_FOUND' }),
+    insert: vi.fn().mockResolvedValue({
+      id: 'inst-123',
+      userId: 'user-123',
+      setId: '123e4567-e89b-12d3-a456-426614174000',
+      condition: null,
+      completeness: null,
+      buildStatus: 'not_started',
+      includesMinifigs: null,
+      purchasePrice: null,
+      purchaseTax: null,
+      purchaseShipping: null,
+      purchaseDate: null,
+      storeId: null,
+      notes: null,
+      sortOrder: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+    update: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+    delete: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
+    countBySetId: vi.fn().mockResolvedValue(0),
+  }
+}
+
+function createMockStoreRepo(): StoreRepository {
+  return {
+    findAll: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue({ ok: false, error: 'NOT_FOUND' }),
+  }
+}
+
 function createMockStorage(): ImageStorage {
   return {
     upload: vi.fn().mockResolvedValue({ ok: true, data: { url: 'https://bucket.s3.amazonaws.com/test.webp' } }),
     delete: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
     extractKeyFromUrl: vi.fn().mockReturnValue('sets/user-123/123e4567/test.webp'),
+    generatePresignedUrl: vi.fn().mockResolvedValue({ ok: true, data: { uploadUrl: 'https://presign.url', imageUrl: 'https://image.url' } }),
   }
 }
 
 describe('SetsService', () => {
   let setRepo: SetRepository
   let setImageRepo: SetImageRepository
+  let setInstanceRepo: SetInstanceRepository
+  let storeRepo: StoreRepository
   let imageStorage: ImageStorage
   let service: ReturnType<typeof createSetsService>
 
   beforeEach(() => {
     setRepo = createMockSetRepo()
     setImageRepo = createMockSetImageRepo()
+    setInstanceRepo = createMockSetInstanceRepo()
+    storeRepo = createMockStoreRepo()
     imageStorage = createMockStorage()
-    service = createSetsService({ setRepo, setImageRepo, imageStorage })
+    service = createSetsService({ setRepo, setImageRepo, setInstanceRepo, storeRepo, imageStorage })
   })
 
   describe('getSet', () => {

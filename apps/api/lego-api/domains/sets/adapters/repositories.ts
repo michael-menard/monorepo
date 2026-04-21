@@ -4,8 +4,21 @@ import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err, paginate } from '@repo/api-core'
 import type * as schema from '@repo/db'
 import { toCloudFrontUrl } from '../../../core/cdn/index.js'
-import type { SetRepository, SetImageRepository, StoreRepository } from '../ports/index.js'
-import type { Set, SetImage, Store, UpdateSetImageInput } from '../types.js'
+import type {
+  SetRepository,
+  SetImageRepository,
+  SetInstanceRepository,
+  StoreRepository,
+} from '../ports/index.js'
+import type {
+  Set,
+  SetImage,
+  SetInstance,
+  Store,
+  UpdateSetImageInput,
+  CreateSetInstanceInput,
+  UpdateSetInstanceInput,
+} from '../types.js'
 
 type Schema = typeof schema
 
@@ -432,6 +445,122 @@ export function createSetImageRepository(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Set Instance Repository
+// ─────────────────────────────────────────────────────────────────────────
+
+export function createSetInstanceRepository(
+  db: NodePgDatabase<Schema>,
+  schema: Schema,
+): SetInstanceRepository {
+  const { setInstances } = schema
+
+  return {
+    async findBySetId(setId: string): Promise<SetInstance[]> {
+      const rows = await db
+        .select()
+        .from(setInstances)
+        .where(eq(setInstances.setId, setId))
+        .orderBy(asc(setInstances.sortOrder))
+
+      return rows.map(mapRowToSetInstance)
+    },
+
+    async findById(id: string): Promise<Result<SetInstance, 'NOT_FOUND'>> {
+      const rows = await db
+        .select()
+        .from(setInstances)
+        .where(eq(setInstances.id, id))
+        .limit(1)
+
+      if (!rows[0]) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(mapRowToSetInstance(rows[0]))
+    },
+
+    async insert(
+      data: CreateSetInstanceInput & { setId: string; userId: string },
+    ): Promise<SetInstance> {
+      const [row] = await db
+        .insert(setInstances)
+        .values({
+          userId: data.userId,
+          setId: data.setId,
+          condition: data.condition ?? null,
+          completeness: data.completeness ?? null,
+          buildStatus: data.buildStatus ?? 'not_started',
+          includesMinifigs: data.includesMinifigs ?? null,
+          purchasePrice: data.purchasePrice ?? null,
+          purchaseTax: data.purchaseTax ?? null,
+          purchaseShipping: data.purchaseShipping ?? null,
+          purchaseDate: data.purchaseDate ?? null,
+          storeId: data.storeId ?? null,
+          notes: data.notes ?? null,
+          sortOrder: data.sortOrder ?? null,
+        })
+        .returning()
+
+      return mapRowToSetInstance(row)
+    },
+
+    async update(
+      id: string,
+      data: UpdateSetInstanceInput,
+    ): Promise<Result<SetInstance, 'NOT_FOUND'>> {
+      const updateData: Record<string, unknown> = {}
+
+      if (data.condition !== undefined) updateData.condition = data.condition
+      if (data.completeness !== undefined) updateData.completeness = data.completeness
+      if (data.buildStatus !== undefined) updateData.buildStatus = data.buildStatus
+      if (data.includesMinifigs !== undefined) updateData.includesMinifigs = data.includesMinifigs
+      if (data.purchasePrice !== undefined) updateData.purchasePrice = data.purchasePrice
+      if (data.purchaseTax !== undefined) updateData.purchaseTax = data.purchaseTax
+      if (data.purchaseShipping !== undefined) updateData.purchaseShipping = data.purchaseShipping
+      if (data.purchaseDate !== undefined) updateData.purchaseDate = data.purchaseDate
+      if (data.storeId !== undefined) updateData.storeId = data.storeId
+      if (data.notes !== undefined) updateData.notes = data.notes
+      if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder
+
+      if (Object.keys(updateData).length === 0) {
+        return this.findById(id)
+      }
+
+      const [row] = await db
+        .update(setInstances)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(setInstances.id, id))
+        .returning()
+
+      if (!row) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(mapRowToSetInstance(row))
+    },
+
+    async delete(id: string): Promise<Result<void, 'NOT_FOUND'>> {
+      const result = await db.delete(setInstances).where(eq(setInstances.id, id))
+
+      if (result.rowCount === 0) {
+        return err('NOT_FOUND')
+      }
+
+      return ok(undefined)
+    },
+
+    async countBySetId(setId: string): Promise<number> {
+      const result = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(setInstances)
+        .where(eq(setInstances.setId, setId))
+
+      return result[0]?.count ?? 0
+    },
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -489,6 +618,29 @@ function mapRowToSetImage(row: {
     thumbnailUrl: row.thumbnailUrl,
     position: row.position,
     createdAt: row.createdAt,
+  }
+}
+
+function mapRowToSetInstance(
+  row: typeof import('@repo/db').setInstances.$inferSelect,
+): SetInstance {
+  return {
+    id: row.id,
+    userId: row.userId,
+    setId: row.setId,
+    condition: (row.condition as SetInstance['condition']) ?? null,
+    completeness: (row.completeness as SetInstance['completeness']) ?? null,
+    buildStatus: (row.buildStatus as SetInstance['buildStatus']) ?? null,
+    includesMinifigs: row.includesMinifigs ?? null,
+    purchasePrice: row.purchasePrice ?? null,
+    purchaseTax: row.purchaseTax ?? null,
+    purchaseShipping: row.purchaseShipping ?? null,
+    purchaseDate: row.purchaseDate ?? null,
+    storeId: row.storeId ?? null,
+    notes: row.notes ?? null,
+    sortOrder: row.sortOrder ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }
 

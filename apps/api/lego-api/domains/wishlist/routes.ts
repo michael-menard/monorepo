@@ -8,6 +8,8 @@ import { createSetsService } from '../sets/application/index.js'
 import {
   createSetRepository,
   createSetImageRepository,
+  createSetInstanceRepository,
+  createStoreRepository,
   createImageStorage,
 } from '../sets/adapters/index.js'
 import { extractClientIp } from '../../core/utils/ip.js'
@@ -107,10 +109,14 @@ const imageStorage = createWishlistImageStorage()
 // Create Sets service for cross-domain purchase operations (WISH-2042)
 const setRepo = createSetRepository(db, schema)
 const setImageRepo = createSetImageRepository(db, schema)
+const setInstanceRepo = createSetInstanceRepository(db, schema)
+const setsStoreRepo = createStoreRepository(db, schema)
 const setsImageStorage = createImageStorage()
 const setsService = createSetsService({
   setRepo,
   setImageRepo,
+  setInstanceRepo,
+  storeRepo: setsStoreRepo,
   imageStorage: setsImageStorage,
 })
 

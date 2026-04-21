@@ -23,6 +23,9 @@ export type Completeness = z.infer<typeof CompletenessSchema>
 export const BuildStatusSchema = z.enum(['not_started', 'in_progress', 'completed', 'parted_out'])
 export type BuildStatus = z.infer<typeof BuildStatusSchema>
 
+export const AvailabilityStatusSchema = z.enum(['available', 'retiring_soon', 'retired'])
+export type AvailabilityStatus = z.infer<typeof AvailabilityStatusSchema>
+
 // ─────────────────────────────────────────────────────────────────────────
 // Image Variants (WISH-2016)
 // ─────────────────────────────────────────────────────────────────────────
@@ -216,6 +219,15 @@ export const UpdateSetInputSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
   imageUrl: z.string().url().nullable().optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+
+  // Product pricing & specs (populated by scrapers)
+  msrpPrice: z.string().nullable().optional(),
+  msrpCurrency: z.string().max(10).nullable().optional(),
+  weight: z.string().nullable().optional(),
+  availabilityStatus: AvailabilityStatusSchema.nullable().optional(),
+  quantityWanted: z.number().int().min(0).optional(),
+  lastScrapedAt: z.coerce.date().nullable().optional(),
+  lastScrapedSource: z.string().max(200).nullable().optional(),
 })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetInputSchema>
@@ -380,6 +392,73 @@ export const UploadedFileSchema = z.object({
 })
 
 export type UploadedFile = z.infer<typeof UploadedFileSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set Instance — one row per physical copy owned
+// ─────────────────────────────────────────────────────────────────────────
+
+export const SetInstanceSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
+  setId: z.string().uuid(),
+
+  // Condition & Status
+  condition: ConditionSchema.nullable(),
+  completeness: CompletenessSchema.nullable(),
+  buildStatus: BuildStatusSchema.nullable(),
+  includesMinifigs: z.boolean().nullable(),
+
+  // Purchase
+  purchasePrice: z.string().nullable(),
+  purchaseTax: z.string().nullable(),
+  purchaseShipping: z.string().nullable(),
+  purchaseDate: z.date().nullable(),
+  storeId: z.string().uuid().nullable(),
+
+  // Notes
+  notes: z.string().nullable(),
+
+  // Ordering
+  sortOrder: z.number().int().nullable(),
+
+  // Timestamps
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type SetInstance = z.infer<typeof SetInstanceSchema>
+
+export const CreateSetInstanceInputSchema = z.object({
+  condition: ConditionSchema.optional(),
+  completeness: CompletenessSchema.optional(),
+  buildStatus: BuildStatusSchema.optional(),
+  includesMinifigs: z.boolean().optional(),
+  purchasePrice: z.string().optional(),
+  purchaseTax: z.string().optional(),
+  purchaseShipping: z.string().optional(),
+  purchaseDate: z.coerce.date().optional(),
+  storeId: z.string().uuid().optional(),
+  notes: z.string().max(5000).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+})
+
+export type CreateSetInstanceInput = z.infer<typeof CreateSetInstanceInputSchema>
+
+export const UpdateSetInstanceInputSchema = z.object({
+  condition: ConditionSchema.nullable().optional(),
+  completeness: CompletenessSchema.nullable().optional(),
+  buildStatus: BuildStatusSchema.nullable().optional(),
+  includesMinifigs: z.boolean().nullable().optional(),
+  purchasePrice: z.string().nullable().optional(),
+  purchaseTax: z.string().nullable().optional(),
+  purchaseShipping: z.string().nullable().optional(),
+  purchaseDate: z.coerce.date().nullable().optional(),
+  storeId: z.string().uuid().nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  sortOrder: z.number().int().min(0).nullable().optional(),
+})
+
+export type UpdateSetInstanceInput = z.infer<typeof UpdateSetInstanceInputSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
 // Error Types

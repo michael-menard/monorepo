@@ -7,6 +7,7 @@
 export {
   createSetRepository,
   createSetImageRepository,
+  createSetInstanceRepository,
   createStoreRepository,
   createPartsLookup,
 } from './repositories.js'

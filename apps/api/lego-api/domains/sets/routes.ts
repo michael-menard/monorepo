@@ -5,6 +5,7 @@ import { createSetsService } from './application/index.js'
 import {
   createSetRepository,
   createSetImageRepository,
+  createSetInstanceRepository,
   createStoreRepository,
   createImageStorage,
   createPartsLookup,
@@ -20,6 +21,8 @@ import {
   ReorderInputSchema,
   PurchaseInputSchema,
   BuildStatusUpdateInputSchema,
+  CreateSetInstanceInputSchema,
+  UpdateSetInstanceInputSchema,
 } from './types.js'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -28,6 +31,7 @@ import {
 
 const setRepo = createSetRepository(db, schema)
 const setImageRepo = createSetImageRepository(db, schema)
+const setInstanceRepo = createSetInstanceRepository(db, schema)
 const storeRepo = createStoreRepository(db, schema)
 const imageStorage = createImageStorage()
 
@@ -36,6 +40,7 @@ const partsLookup = createPartsLookup(db, schema)
 const setsService = createSetsService({
   setRepo,
   setImageRepo,
+  setInstanceRepo,
   storeRepo,
   imageStorage,
 })
@@ -159,6 +164,7 @@ sets.get('/:id', async c => {
   return c.json({
     ...result.data.set,
     images: result.data.images,
+    instances: result.data.instances,
   })
 })
 
@@ -313,6 +319,92 @@ sets.patch('/:id/build-status', async c => {
   }
 
   return c.json(result.data)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set Instance Routes
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /:setId/instances - List instances for a set
+ */
+sets.get('/:setId/instances', async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('setId')
+
+  const result = await setsService.listSetInstances(userId, setId)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
+})
+
+/**
+ * POST /:setId/instances - Create instance for a set
+ */
+sets.post('/:setId/instances', async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('setId')
+
+  const body = await c.req.json()
+  const input = CreateSetInstanceInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await setsService.createSetInstance(userId, setId, input.data)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data, 201)
+})
+
+/**
+ * PATCH /instances/:instanceId - Update instance
+ */
+sets.patch('/instances/:instanceId', async c => {
+  const userId = c.get('userId')
+  const instanceId = c.req.param('instanceId')
+
+  const body = await c.req.json()
+  const input = UpdateSetInstanceInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await setsService.updateSetInstance(userId, instanceId, input.data)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
+})
+
+/**
+ * DELETE /instances/:instanceId - Delete instance
+ */
+sets.delete('/instances/:instanceId', async c => {
+  const userId = c.get('userId')
+  const instanceId = c.req.param('instanceId')
+
+  const result = await setsService.deleteSetInstance(userId, instanceId)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.body(null, 204)
 })
 
 // ─────────────────────────────────────────────────────────────────────────

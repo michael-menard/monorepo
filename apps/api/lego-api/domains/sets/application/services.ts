@@ -3,15 +3,19 @@ import { ok, err } from '@repo/api-core'
 import type {
   SetRepository,
   SetImageRepository,
+  SetInstanceRepository,
   StoreRepository,
   ImageStorage,
 } from '../ports/index.js'
 import type {
   Set,
   SetImage,
+  SetInstance,
   Store,
   CreateSetInput,
   UpdateSetInput,
+  CreateSetInstanceInput,
+  UpdateSetInstanceInput,
   ReorderInput,
   PurchaseInput,
   CreateSetImageInput,
@@ -29,6 +33,7 @@ import { generateSetImageKey, generateSetThumbnailKey } from '../adapters/storag
 export interface SetsServiceDeps {
   setRepo: SetRepository
   setImageRepo: SetImageRepository
+  setInstanceRepo: SetInstanceRepository
   storeRepo: StoreRepository
   imageStorage: ImageStorage
 }
@@ -38,7 +43,7 @@ export interface SetsServiceDeps {
 // ─────────────────────────────────────────────────────────────────────────
 
 export function createSetsService(deps: SetsServiceDeps) {
-  const { setRepo, setImageRepo, storeRepo, imageStorage } = deps
+  const { setRepo, setImageRepo, setInstanceRepo, storeRepo, imageStorage } = deps
 
   return {
     // ─────────────────────────────────────────────────────────────────────
@@ -111,17 +116,21 @@ export function createSetsService(deps: SetsServiceDeps) {
     async getSetWithImages(
       userId: string,
       setId: string,
-    ): Promise<Result<{ set: Set; images: SetImage[] }, SetError>> {
+    ): Promise<Result<{ set: Set; images: SetImage[]; instances: SetInstance[] }, SetError>> {
       const setResult = await this.getSet(userId, setId)
       if (!setResult.ok) {
         return setResult
       }
 
-      const images = await setImageRepo.findBySetId(setId)
+      const [images, instances] = await Promise.all([
+        setImageRepo.findBySetId(setId),
+        setInstanceRepo.findBySetId(setId),
+      ])
 
       return ok({
         set: setResult.data,
         images,
+        instances,
       })
     },
 
@@ -185,6 +194,15 @@ export function createSetsService(deps: SetsServiceDeps) {
       if (input.priority !== undefined) updateData.priority = input.priority
       if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder
       if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl
+      if (input.msrpPrice !== undefined) updateData.msrpPrice = input.msrpPrice
+      if (input.msrpCurrency !== undefined) updateData.msrpCurrency = input.msrpCurrency
+      if (input.weight !== undefined) updateData.weight = input.weight
+      if (input.availabilityStatus !== undefined)
+        updateData.availabilityStatus = input.availabilityStatus
+      if (input.quantityWanted !== undefined) updateData.quantityWanted = input.quantityWanted
+      if (input.lastScrapedAt !== undefined) updateData.lastScrapedAt = input.lastScrapedAt
+      if (input.lastScrapedSource !== undefined)
+        updateData.lastScrapedSource = input.lastScrapedSource
 
       return setRepo.update(setId, updateData)
     },
@@ -289,6 +307,84 @@ export function createSetsService(deps: SetsServiceDeps) {
       }
 
       return setRepo.update(setId, { buildStatus })
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Set Instance Operations
+    // ─────────────────────────────────────────────────────────────────────
+
+    async listSetInstances(
+      userId: string,
+      setId: string,
+    ): Promise<Result<SetInstance[], SetError>> {
+      const setResult = await this.getSet(userId, setId)
+      if (!setResult.ok) return setResult
+
+      const instances = await setInstanceRepo.findBySetId(setId)
+      return ok(instances)
+    },
+
+    async createSetInstance(
+      userId: string,
+      setId: string,
+      input: CreateSetInstanceInput,
+    ): Promise<Result<SetInstance, SetError>> {
+      const setResult = await this.getSet(userId, setId)
+      if (!setResult.ok) return setResult
+
+      try {
+        // Auto-flip: if this is the first instance and set is 'wanted', flip to 'owned'
+        const currentCount = await setInstanceRepo.countBySetId(setId)
+        if (currentCount === 0 && setResult.data.status === 'wanted') {
+          await setRepo.update(setId, {
+            status: 'owned',
+            statusChangedAt: new Date(),
+          })
+        }
+
+        const instance = await setInstanceRepo.insert({
+          ...input,
+          setId,
+          userId,
+        })
+
+        return ok(instance)
+      } catch (error) {
+        console.error('Failed to create set instance:', error)
+        return err('DB_ERROR')
+      }
+    },
+
+    async updateSetInstance(
+      userId: string,
+      instanceId: string,
+      input: UpdateSetInstanceInput,
+    ): Promise<Result<SetInstance, SetError>> {
+      // Verify instance exists
+      const instanceResult = await setInstanceRepo.findById(instanceId)
+      if (!instanceResult.ok) return instanceResult
+
+      // Verify ownership via set
+      const setResult = await this.getSet(userId, instanceResult.data.setId)
+      if (!setResult.ok) return setResult
+
+      return setInstanceRepo.update(instanceId, input)
+    },
+
+    async deleteSetInstance(
+      userId: string,
+      instanceId: string,
+    ): Promise<Result<void, SetError>> {
+      // Verify instance exists
+      const instanceResult = await setInstanceRepo.findById(instanceId)
+      if (!instanceResult.ok) return instanceResult
+
+      // Verify ownership via set
+      const setResult = await this.getSet(userId, instanceResult.data.setId)
+      if (!setResult.ok) return setResult
+
+      // Do NOT auto-flip status back on delete
+      return setInstanceRepo.delete(instanceId)
     },
 
     // ─────────────────────────────────────────────────────────────────────

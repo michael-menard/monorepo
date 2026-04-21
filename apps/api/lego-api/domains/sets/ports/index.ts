@@ -1,5 +1,14 @@
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
-import type { Set, SetImage, Store, UpdateSetInput, UpdateSetImageInput } from '../types.js'
+import type {
+  Set,
+  SetImage,
+  SetInstance,
+  Store,
+  UpdateSetInput,
+  UpdateSetImageInput,
+  CreateSetInstanceInput,
+  UpdateSetInstanceInput,
+} from '../types.js'
 
 /**
  * Unified Sets Domain Ports
@@ -66,6 +75,28 @@ export interface SetImageRepository {
   delete(id: string): Promise<Result<void, 'NOT_FOUND'>>
   deleteBySetId(setId: string): Promise<void>
   getNextPosition(setId: string): Promise<number>
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Image Storage
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set Instance Repository
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SetInstanceRepository {
+  findBySetId(setId: string): Promise<SetInstance[]>
+  findById(id: string): Promise<Result<SetInstance, 'NOT_FOUND'>>
+  insert(
+    data: CreateSetInstanceInput & { setId: string; userId: string },
+  ): Promise<SetInstance>
+  update(
+    id: string,
+    data: UpdateSetInstanceInput,
+  ): Promise<Result<SetInstance, 'NOT_FOUND'>>
+  delete(id: string): Promise<Result<void, 'NOT_FOUND'>>
+  countBySetId(setId: string): Promise<number>
 }
 
 // ─────────────────────────────────────────────────────────────────────────
