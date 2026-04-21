@@ -5,7 +5,7 @@
  * Displays an instruction item in the gallery using the shared GalleryCard component.
  */
 import { useCallback } from 'react'
-import { Heart, Pencil } from 'lucide-react'
+import { Heart, Pencil, Hammer } from 'lucide-react'
 import { GalleryCard } from '@repo/gallery'
 import { Badge, Button, cn } from '@repo/app-component-library'
 import type { Instruction } from '../../__types__'
@@ -15,6 +15,8 @@ export interface InstructionCardProps {
   instruction: Instruction
   /** Handler for favorite action */
   onFavorite?: (id: string) => void
+  /** Handler for want-to-build toggle (procurement) */
+  onWantToBuild?: (id: string) => void
   /** Handler for edit action */
   onEdit?: (id: string) => void
   /** Handler for click/navigation */
@@ -39,6 +41,7 @@ export interface InstructionCardProps {
 export const InstructionCard = ({
   instruction,
   onFavorite,
+  onWantToBuild,
   onEdit,
   onClick,
   className,
@@ -53,6 +56,14 @@ export const InstructionCard = ({
       onFavorite?.(instruction.id)
     },
     [onFavorite, instruction.id],
+  )
+
+  const handleWantToBuild = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onWantToBuild?.(instruction.id)
+    },
+    [onWantToBuild, instruction.id],
   )
 
   const handleEdit = useCallback(
@@ -86,6 +97,15 @@ export const InstructionCard = ({
             <Badge variant="secondary" data-testid="piece-count-badge">
               {instruction.pieceCount.toLocaleString()} pieces
             </Badge>
+            {instruction.wantToBuild && (
+              <Badge
+                className="bg-amber-500/15 text-amber-600 border-amber-500/30"
+                data-testid="want-to-build-badge"
+              >
+                <Hammer className="mr-1 h-3 w-3" />
+                Build Plan
+              </Badge>
+            )}
             <span className="text-sm text-muted-foreground" data-testid="theme-tag">
               {instruction.theme}
             </span>
@@ -115,6 +135,25 @@ export const InstructionCard = ({
               >
                 <Heart
                   className={cn('h-4 w-4', instruction.isFavorite && 'fill-current text-red-500')}
+                />
+              </Button>
+            ) : null}
+            {onWantToBuild ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleWantToBuild}
+                aria-label={
+                  instruction.wantToBuild ? 'Remove from build plan' : 'Add to build plan'
+                }
+                data-testid="want-to-build-button"
+                className="text-white hover:text-white hover:bg-white/20"
+              >
+                <Hammer
+                  className={cn(
+                    'h-4 w-4',
+                    instruction.wantToBuild && 'fill-current text-amber-400',
+                  )}
                 />
               </Button>
             ) : null}

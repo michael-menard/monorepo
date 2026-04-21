@@ -251,6 +251,11 @@ export const mocInstructions = pgTable(
     reviewSkippedAt: timestamp('review_skipped_at', { withTimezone: true }),
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Procurement
+    // ─────────────────────────────────────────────────────────────────────────
+    wantToBuild: boolean('want_to_build').default(false), // Heart icon toggle for procurement planning
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Audit Trail
     // ─────────────────────────────────────────────────────────────────────────
     addedByUserId: text('added_by_user_id'), // UUID of user who first added this record
@@ -380,6 +385,129 @@ export const mocReviews = pgTable(
     uniqueMocUser: uniqueIndex('moc_reviews_moc_user_unique').on(table.mocId, table.userId),
   }),
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Procurement Tables
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Marketplace Listings — cached pricing data from BrickLink, Brick Owl, Webrick
+ */
+export const marketplaceListings = pgTable(
+  'marketplace_listings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    source: text('source').notNull(), // 'bricklink' | 'brickowl' | 'webrick'
+    storeId: text('store_id'), // nullable (null for Webrick — single vendor)
+    storeName: text('store_name'),
+    partNumber: text('part_number').notNull(), // LEGO design ID (canonical)
+    colorRaw: text('color_raw'), // as scraped from source
+    colorCanonical: text('color_canonical'), // normalized (nullable until mapping solved)
+    condition: text('condition').notNull(), // 'new' | 'used'
+    priceOriginal: text('price_original').notNull(), // numeric as text for precision
+    currencyOriginal: text('currency_original').notNull(), // 'USD', 'EUR', 'GBP', etc.
+    priceUsd: text('price_usd').notNull(), // converted at scrape time
+    exchangeRate: text('exchange_rate').notNull(), // rate used for conversion
+    quantityAvailable: integer('quantity_available').notNull(),
+    minBuy: text('min_buy'), // store minimum order (nullable)
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), // fetched_at + TTL
+  },
+  table => ({
+    partIdx: index('idx_marketplace_part').on(table.partNumber, table.colorRaw),
+    expiresIdx: index('idx_marketplace_expires').on(table.expiresAt),
+    sourcePartIdx: uniqueIndex('marketplace_listings_unique').on(
+      table.source,
+      table.storeId,
+      table.partNumber,
+      table.colorRaw,
+      table.condition,
+    ),
+  }),
+)
+
+/**
+ * Parts Inventory — loose parts the user owns (manual entry + set/MOC disassembly)
+ */
+export const partsInventory = pgTable(
+  'parts_inventory',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    partNumber: text('part_number').notNull(),
+    color: text('color').notNull(),
+    quantity: integer('quantity').notNull().default(0),
+    source: text('source'), // 'manual' | 'disassembled_set' | 'disassembled_moc'
+    sourceId: uuid('source_id'), // FK to sets or moc_instructions if from disassembly
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  table => ({
+    userIdx: index('idx_parts_inventory_user').on(table.userId),
+    partColorIdx: index('idx_parts_inventory_part_color').on(table.partNumber, table.color),
+    uniquePartSource: uniqueIndex('parts_inventory_unique').on(
+      table.partNumber,
+      table.color,
+      table.source,
+      table.sourceId,
+    ),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build Projects (AI Part Recommender)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build Projects — saved concept recommendations from the AI Part Recommender.
+ * Each project captures a character concept and the parts selected to build it.
+ * Projects bridge to procurement: parts with source 'external' or 'wishlist' need acquiring.
+ */
+export const buildProjects = pgTable(
+  'build_projects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    name: text('name').notNull(),
+    concept: text('concept').notNull(),
+    searchSignals: jsonb('search_signals').$type<Record<string, string[]>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    userIdx: index('idx_build_projects_user').on(table.userId),
+  }),
+)
+
+export const buildProjectParts = pgTable(
+  'build_project_parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => buildProjects.id, { onDelete: 'cascade' }),
+    partNumber: text('part_number').notNull(),
+    color: text('color').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    source: text('source').notNull(), // 'collection' | 'wishlist' | 'external'
+    explanation: text('explanation'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    projectIdx: index('idx_build_project_parts_project').on(table.projectId),
+  }),
+)
+
+export const buildProjectsRelations = relations(buildProjects, ({ many }) => ({
+  parts: many(buildProjectParts),
+}))
+
+export const buildProjectPartsRelations = relations(buildProjectParts, ({ one }) => ({
+  project: one(buildProjects, {
+    fields: [buildProjectParts.projectId],
+    references: [buildProjects.id],
+  }),
+}))
 
 export const wishlistItems = pgTable(
   'wishlist_items',

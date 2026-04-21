@@ -21,10 +21,17 @@ export type BuildStatus = z.infer<typeof BuildStatusSchema>
 // Theme Breakdown
 // ─────────────────────────────────────────────────────────────────────────────
 
+export const ThemeTagSchema = z.object({
+  tag: z.string(),
+  mocCount: z.number().int().nonnegative(),
+})
+
+export type ThemeTag = z.infer<typeof ThemeTagSchema>
+
 export const ThemeBreakdownSchema = z.object({
   theme: z.string(),
   mocCount: z.number().int().nonnegative(),
-  setCount: z.number().int().nonnegative(),
+  tags: z.array(ThemeTagSchema),
 })
 
 export type ThemeBreakdown = z.infer<typeof ThemeBreakdownSchema>
@@ -106,6 +113,7 @@ export const DashboardStatsExtendedSchema = z.object({
   ownedSetsCount: z.number().int().nonnegative(),
   ownedMinifigsCount: z.number().int().nonnegative(),
   themeCount: z.number().int().nonnegative(),
+  plannedBuildsCount: z.number().int().nonnegative(),
   buildProgress: z.number().int().min(0).max(100),
   lastUpdated: z.string().datetime(),
 })

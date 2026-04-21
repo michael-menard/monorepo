@@ -1262,4 +1262,36 @@ mocs.post('/:id/upload-sessions/:sessionId/complete', async c => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────────────────
+// Want-to-Build Toggle (Procurement)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * PATCH /mocs/:id/want-to-build — toggle procurement flag
+ */
+mocs.patch('/:id/want-to-build', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  try {
+    const body = await c.req.json()
+    const wantToBuild = body?.wantToBuild === true
+
+    const [result] = await db
+      .update(schema.mocInstructions)
+      .set({ wantToBuild, updatedAt: new Date() })
+      .where(and(eq(schema.mocInstructions.id, mocId), eq(schema.mocInstructions.userId, userId)))
+      .returning({ id: schema.mocInstructions.id })
+
+    if (!result) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    return c.json({ success: true, wantToBuild })
+  } catch (error) {
+    logger.error('Failed to toggle want-to-build', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
 export default mocs

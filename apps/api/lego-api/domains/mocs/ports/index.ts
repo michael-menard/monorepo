@@ -45,6 +45,7 @@ export interface MocListItem extends Moc {
   thumbnailUrl: string | null
   totalPieceCount: number | null
   publishedAt: Date | null
+  wantToBuild: boolean
 }
 
 export interface MocListResult {

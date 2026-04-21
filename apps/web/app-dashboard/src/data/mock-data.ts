@@ -16,7 +16,10 @@ import type {
 export const dashboardStats: DashboardStatsExtended = {
   totalMocs: 47,
   wishlistCount: 23,
+  ownedSetsCount: 31,
+  ownedMinifigsCount: 89,
   themeCount: 12,
+  plannedBuildsCount: 5,
   buildProgress: 68,
   lastUpdated: new Date().toISOString(),
 }
@@ -28,12 +31,55 @@ export const buildStatus: BuildStatus = {
 }
 
 export const themeBreakdown: ThemeBreakdown[] = [
-  { theme: 'Star Wars', mocCount: 15, setCount: 8 },
-  { theme: 'Technic', mocCount: 12, setCount: 5 },
-  { theme: 'City', mocCount: 8, setCount: 12 },
-  { theme: 'Creator', mocCount: 6, setCount: 4 },
-  { theme: 'Architecture', mocCount: 4, setCount: 3 },
-  { theme: 'Speed Champions', mocCount: 2, setCount: 6 },
+  {
+    theme: 'Star Wars',
+    mocCount: 15,
+    tags: [
+      { tag: 'UCS', mocCount: 6 },
+      { tag: 'X-Wing', mocCount: 5 },
+      { tag: 'AT-AT', mocCount: 4 },
+    ],
+  },
+  {
+    theme: 'Technic',
+    mocCount: 12,
+    tags: [
+      { tag: 'Supercar', mocCount: 7 },
+      { tag: 'Crane', mocCount: 5 },
+    ],
+  },
+  {
+    theme: 'City',
+    mocCount: 8,
+    tags: [
+      { tag: 'Modular', mocCount: 5 },
+      { tag: 'Train', mocCount: 3 },
+    ],
+  },
+  {
+    theme: 'Creator',
+    mocCount: 6,
+    tags: [
+      { tag: '3-in-1', mocCount: 4 },
+      { tag: 'Expert', mocCount: 2 },
+    ],
+  },
+  {
+    theme: 'Architecture',
+    mocCount: 4,
+    tags: [
+      { tag: 'Skyline', mocCount: 3 },
+      { tag: 'Landmark', mocCount: 1 },
+    ],
+  },
+  {
+    theme: 'Speed Champions',
+    mocCount: 2,
+    tags: [
+      { tag: 'F1', mocCount: 1 },
+      { tag: 'Rally', mocCount: 1 },
+    ],
+  },
 ]
 
 export const partsCoverage: PartsCoverage = {

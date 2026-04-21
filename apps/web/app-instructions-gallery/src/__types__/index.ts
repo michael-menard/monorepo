@@ -35,6 +35,8 @@ export const InstructionSchema = z.object({
   updatedAt: z.string().datetime().optional(),
   /** Whether the user has favorited this instruction */
   isFavorite: z.boolean().optional().default(false),
+  /** Whether the user wants to build this MOC (procurement planning) */
+  wantToBuild: z.boolean().optional().default(false),
 })
 
 export type Instruction = z.infer<typeof InstructionSchema>

@@ -186,7 +186,7 @@ function EmptyState({ title, description }: { title: string; description: string
  * - Loading skeleton state
  * - Error state with message
  * - Empty state when all values are zero
- * - Responsive grid (1/2/3 columns)
+ * - Responsive grid — columns auto-scale to item count
  * - Accessible with ARIA labels
  *
  * @example
@@ -200,6 +200,16 @@ function EmptyState({ title, description }: { title: string; description: string
  * />
  * ```
  */
+/** Map item count → Tailwind lg column class (static strings so Tailwind can detect them) */
+const lgColsClass: Record<number, string> = {
+  1: 'lg:grid-cols-1',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+  5: 'lg:grid-cols-5',
+  6: 'lg:grid-cols-6',
+}
+
 export function StatsCards({
   items,
   isLoading = false,
@@ -219,7 +229,11 @@ export function StatsCards({
 
   return (
     <div
-      className={cn('grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3', className)}
+      className={cn(
+        'grid w-full grid-cols-1 gap-4 md:grid-cols-2',
+        lgColsClass[Math.min(items.length, 6)] ?? 'lg:grid-cols-3',
+        className,
+      )}
       role="region"
       aria-label={ariaLabel}
     >

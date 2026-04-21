@@ -19,6 +19,7 @@ import {
   GanttChart,
   ArrowRightLeft,
   Trash2,
+  CheckCircle2,
 } from 'lucide-react'
 import { useState, useEffect, useRef, startTransition, useMemo } from 'react'
 import { useSelector } from 'react-redux'
@@ -30,6 +31,7 @@ import {
   useUpdatePlanMutation,
   useLazyGetPlanImpactQuery,
   useRetirePlanMutation,
+  useCompletePlanMutation,
   type Plan,
 } from '../../store/roadmapApi'
 import { useStorySSE } from '../../hooks/useStorySSE'
@@ -43,6 +45,7 @@ import { TimelineView } from '../../components/plan-details/TimelineView'
 import { DependencyGraph } from '../../components/plan-details/DependencyGraph'
 import { KanbanView } from '../../components/plan-details/KanbanView'
 import { PlanRetireDialog } from '../../components/plan-details/PlanRetireDialog'
+import { PlanCompleteDialog } from '../../components/plan-details/PlanCompleteDialog'
 
 export function PlanDetailsPage() {
   const { slug } = useParams({ from: '/plan/$slug' })
@@ -168,6 +171,21 @@ export function PlanDetailsPage() {
   const [triggerImpact, { data: impactData, isFetching: isLoadingImpact }] =
     useLazyGetPlanImpactQuery()
   const [retirePlan] = useRetirePlanMutation()
+  const [completePlan] = useCompletePlanMutation()
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+
+  const handleCompleteConfirm = async () => {
+    setIsCompleting(true)
+    try {
+      await completePlan(slug).unwrap()
+      setShowCompleteDialog(false)
+    } catch (_err) {
+      // keep dialog open on error
+    } finally {
+      setIsCompleting(false)
+    }
+  }
 
   const openRetireDialog = (action: 'delete' | 'supersede') => {
     setRetireAction(action)
@@ -403,8 +421,17 @@ export function PlanDetailsPage() {
           </CustomButton>
           {slugCopied ? <span className="text-xs text-emerald-400 font-mono">copied!</span> : null}
         </div>
-        {data.status !== 'superseded' && (
+        {data.status !== 'superseded' && data.status !== 'implemented' && (
           <div className="flex items-center gap-2 mt-3">
+            <CustomButton
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCompleteDialog(true)}
+              className="bg-emerald-500/10 text-emerald-400 border-0 hover:bg-emerald-500/20 hover:text-emerald-300"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              Mark Complete
+            </CustomButton>
             <CustomButton
               variant="outline"
               size="sm"
@@ -436,6 +463,18 @@ export function PlanDetailsPage() {
           isLoadingImpact={isLoadingImpact}
           isRetiring={isRetiring}
           onConfirm={handleRetireConfirm}
+        />
+        <PlanCompleteDialog
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          planTitle={data.title}
+          totalStories={storiesData?.length ?? 0}
+          nonTerminalCount={
+            storiesData?.filter(s => s.state && !['cancelled', 'completed'].includes(s.state))
+              .length ?? 0
+          }
+          isCompleting={isCompleting}
+          onConfirm={handleCompleteConfirm}
         />
       </div>
 

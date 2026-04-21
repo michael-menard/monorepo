@@ -31,3 +31,8 @@ export {
   type RadialStackedBarChartProps,
   type RadialStackedBarDataPoint,
 } from './components/RadialStackedBarChart'
+export {
+  SunburstChart,
+  type SunburstChartProps,
+  type SunburstNode,
+} from './components/SunburstChart'

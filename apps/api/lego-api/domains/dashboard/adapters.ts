@@ -30,7 +30,8 @@ export function createDashboardRepository(
            JOIN tag_theme_mappings tm ON LOWER(t) = LOWER(tm.tag)
            WHERE mi.user_id = ${userId}
           ) AS theme_count,
-          (SELECT MAX(updated_at) FROM moc_instructions WHERE user_id = ${userId}) AS last_updated
+          (SELECT MAX(updated_at) FROM moc_instructions WHERE user_id = ${userId}) AS last_updated,
+          (SELECT COUNT(*)::int FROM build_projects WHERE user_id = ${userId}) AS planned_builds_count
       `)
       const row = result.rows[0] as any
       return {
@@ -39,26 +40,48 @@ export function createDashboardRepository(
         ownedSetsCount: row?.owned_sets_count ?? 0,
         ownedMinifigsCount: row?.owned_minifigs_count ?? 0,
         themeCount: row?.theme_count ?? 0,
+        plannedBuildsCount: row?.planned_builds_count ?? 0,
         lastUpdated: row?.last_updated ? new Date(row.last_updated).toISOString() : null,
       }
     },
 
     async getThemeBreakdown(userId: string): Promise<ThemeBreakdownItem[]> {
       const result = await db.execute(sql`
-        SELECT tm.theme, COUNT(DISTINCT mi.id)::int AS moc_count, 0 AS set_count
+        SELECT
+          tm.theme,
+          tm.tag,
+          COUNT(DISTINCT mi.id)::int AS moc_count
         FROM moc_instructions mi,
              jsonb_array_elements_text(mi.tags) AS t
         JOIN tag_theme_mappings tm ON LOWER(t) = LOWER(tm.tag)
         WHERE mi.user_id = ${userId}
-        GROUP BY tm.theme
-        ORDER BY moc_count DESC
-        LIMIT 10
+        GROUP BY tm.theme, tm.tag
+        ORDER BY tm.theme, moc_count DESC
       `)
-      return result.rows.map((row: any) => ({
-        theme: row.theme,
-        mocCount: row.moc_count,
-        setCount: row.set_count,
-      }))
+
+      // Group rows by theme
+      const themeMap = new Map<
+        string,
+        { mocCount: number; tags: { tag: string; mocCount: number }[] }
+      >()
+      for (const row of result.rows as any[]) {
+        let entry = themeMap.get(row.theme)
+        if (!entry) {
+          entry = { mocCount: 0, tags: [] }
+          themeMap.set(row.theme, entry)
+        }
+        entry.mocCount += row.moc_count
+        entry.tags.push({ tag: row.tag, mocCount: row.moc_count })
+      }
+
+      return [...themeMap.entries()]
+        .sort((a, b) => b[1].mocCount - a[1].mocCount)
+        .slice(0, 12)
+        .map(([theme, data]) => ({
+          theme,
+          mocCount: data.mocCount,
+          tags: data.tags,
+        }))
     },
 
     async getRecentMocs(userId: string, limit: number): Promise<RecentMoc[]> {

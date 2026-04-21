@@ -218,6 +218,9 @@ export const MocInstructionsSchema = z.object({
   thumbnailUrl: z.string().nullable(),
   totalPieceCount: z.number().int().nullable(),
 
+  // Procurement
+  wantToBuild: z.boolean().nullable().optional(),
+
   // Timestamps
   publishedAt: z.string().nullable(),
   createdAt: z.string(),

@@ -379,6 +379,13 @@ export const roadmapApi = createApi({
       }),
       invalidatesTags: ['Plans', 'Stories', 'Dashboard'],
     }),
+    completePlan: builder.mutation<{ success: boolean; completedStories: number }, string>({
+      query: slug => ({
+        url: `/roadmap/${slug}/complete`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Plans', 'Stories', 'Dashboard'],
+    }),
     updateStoryContentSection: builder.mutation<
       { storyId: string; sectionName: string },
       { storyId: string; sectionName: string; contentText: string }
@@ -408,6 +415,7 @@ export const {
   useLazyGetPlanImpactQuery,
   useReorderPlansMutation,
   useRetirePlanMutation,
+  useCompletePlanMutation,
   useUpdatePlanMutation,
   useUpdateStoryMutation,
   useUpdateStoryContentSectionMutation,

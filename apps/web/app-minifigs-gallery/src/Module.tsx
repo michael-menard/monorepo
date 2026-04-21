@@ -11,9 +11,10 @@ import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { MinifigDetailPage } from './pages/minifig-detail-page'
+import { CustomsPage } from './pages/customs-page'
 
 const AppMinifigsGalleryModulePropsSchema = z.object({
-  mode: z.enum(['gallery', 'detail']).default('gallery'),
+  mode: z.enum(['gallery', 'detail', 'customs']).default('gallery'),
   minifigId: z.string().optional(),
   className: z.string().optional(),
 })
@@ -35,6 +36,8 @@ export function AppMinifigsGalleryModule({
       <ModuleLayout className={className}>
         {mode === 'detail' && minifigId ? (
           <MinifigDetailPage minifigId={minifigId} onNavigate={onNavigate} />
+        ) : mode === 'customs' ? (
+          <CustomsPage />
         ) : (
           <MainPage onNavigate={onNavigate} />
         )}

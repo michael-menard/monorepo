@@ -27,6 +27,7 @@ import {
   useTriggerScraperMutation,
   useToggleInstructionFavoriteMutation,
 } from '@repo/api-client/rtk/instructions-api'
+// Want-to-build toggle uses direct fetch to avoid requiring procurement API in global store
 import { InstructionCard } from '../components/InstructionCard'
 import type { Instruction } from '../__types__'
 import {
@@ -70,6 +71,7 @@ function mapApiItem(api: any): Instruction {
         : String(api.updatedAt)
       : undefined,
     isFavorite: api.isFeatured,
+    wantToBuild: api.wantToBuild ?? false,
   }
 }
 
@@ -162,6 +164,33 @@ export function MainPage({ className }: MainPageProps) {
       toggleFavorite({ id, isFavorite: !instruction.isFavorite })
     },
     [instructions, toggleFavorite],
+  )
+
+  const handleWantToBuild = useCallback(
+    async (id: string) => {
+      const instruction = instructions.find(i => i.id === id)
+      if (!instruction) return
+
+      const newValue = !instruction.wantToBuild
+
+      // Optimistic update
+      setInstructions(prev => prev.map(i => (i.id === id ? { ...i, wantToBuild: newValue } : i)))
+      accumulatedRef.current.set(id, { ...instruction, wantToBuild: newValue })
+
+      try {
+        await fetch(`/api/mocs/${id}/want-to-build`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ wantToBuild: newValue }),
+        })
+      } catch {
+        // Revert on failure
+        setInstructions(prev => prev.map(i => (i.id === id ? { ...i, wantToBuild: !newValue } : i)))
+        accumulatedRef.current.set(id, { ...instruction, wantToBuild: !newValue })
+      }
+    },
+    [instructions],
   )
 
   const handleEdit = useCallback(
@@ -350,6 +379,7 @@ export function MainPage({ className }: MainPageProps) {
                           instruction={instruction}
                           onClick={handleCardClick}
                           onFavorite={handleFavorite}
+                          onWantToBuild={handleWantToBuild}
                           onEdit={handleEdit}
                         />
                       )

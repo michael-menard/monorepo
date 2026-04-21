@@ -34,4 +34,6 @@ export const {
   featureFlags,
   userProfiles,
   activityEvents,
+  buildProjects,
+  buildProjectParts,
 } = schema

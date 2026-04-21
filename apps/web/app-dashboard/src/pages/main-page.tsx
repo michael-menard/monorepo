@@ -56,10 +56,10 @@ export function MainPage({ className }: MainPageProps) {
               ownedSetsCount: data?.stats.ownedSetsCount ?? 0,
               ownedMinifigsCount: data?.stats.ownedMinifigsCount ?? 0,
               themeCount: data?.stats.themeCount ?? 0,
+              plannedBuildsCount: data?.stats.plannedBuildsCount ?? 0,
               lastUpdated: data?.stats.lastUpdated ?? new Date().toISOString(),
             }}
             isLoading={isLoading}
-            className="grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4"
           />
         </section>
 

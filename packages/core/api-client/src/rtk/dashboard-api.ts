@@ -17,15 +17,21 @@ export const DashboardStatsSchema = z.object({
   ownedSetsCount: z.number().int().nonnegative().optional().default(0),
   ownedMinifigsCount: z.number().int().nonnegative().optional().default(0),
   themeCount: z.number().int().nonnegative(),
+  plannedBuildsCount: z.number().int().nonnegative().optional().default(0),
   lastUpdated: z.string(),
 })
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>
 
+export const ThemeTagItemSchema = z.object({
+  tag: z.string(),
+  mocCount: z.number().int().nonnegative(),
+})
+
 export const ThemeBreakdownItemSchema = z.object({
   theme: z.string(),
   mocCount: z.number().int().nonnegative(),
-  setCount: z.number().int().nonnegative(),
+  tags: z.array(ThemeTagItemSchema),
 })
 
 export const RecentMocSchema = z.object({

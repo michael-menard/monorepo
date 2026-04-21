@@ -5,7 +5,7 @@
 
 import { StatsCards as BaseStatsCards } from '@repo/app-component-library'
 import type { StatItem } from '@repo/app-component-library'
-import { Blocks, Box, Palette, Hammer, User } from 'lucide-react'
+import { Blocks, Box, Palette, Hammer, User, Wrench } from 'lucide-react'
 import type { DashboardStats } from '@repo/api-client/rtk/dashboard-api'
 import type { DashboardStatsExtended } from '../__types__'
 
@@ -64,6 +64,13 @@ export function StatsCards({
       value: stats.themeCount,
       colorClass: 'text-lego-yellow',
       bgClass: 'bg-lego-yellow/10',
+    },
+    {
+      icon: Wrench,
+      label: 'Planned Builds',
+      value: stats.plannedBuildsCount ?? 0,
+      colorClass: 'text-orange-600 dark:text-orange-400',
+      bgClass: 'bg-orange-600/10 dark:bg-orange-400/10',
     },
   ]
 

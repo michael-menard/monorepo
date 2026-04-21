@@ -202,6 +202,7 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         totalPieceCount: row.totalPieceCount,
         publishedAt:
           row.publishedAt instanceof Date ? row.publishedAt.toISOString() : row.publishedAt,
+        wantToBuild: row.wantToBuild ?? false,
       }))
 
       return { items, total }

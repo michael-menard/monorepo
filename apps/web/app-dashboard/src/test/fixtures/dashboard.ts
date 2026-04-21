@@ -13,7 +13,10 @@ export const dashboardStatsFixtures = {
   standard: {
     totalMocs: 42,
     wishlistCount: 15,
+    ownedSetsCount: 10,
+    ownedMinifigsCount: 24,
     themeCount: 8,
+    plannedBuildsCount: 3,
     lastUpdated: '2025-11-29T12:00:00Z',
   } satisfies DashboardStats,
 
@@ -21,7 +24,10 @@ export const dashboardStatsFixtures = {
   largeNumbers: {
     totalMocs: 1234567,
     wishlistCount: 9876,
+    ownedSetsCount: 456,
+    ownedMinifigsCount: 789,
     themeCount: 543,
+    plannedBuildsCount: 21,
     lastUpdated: '2025-11-29T12:00:00Z',
   } satisfies DashboardStats,
 
@@ -29,7 +35,10 @@ export const dashboardStatsFixtures = {
   empty: {
     totalMocs: 0,
     wishlistCount: 0,
+    ownedSetsCount: 0,
+    ownedMinifigsCount: 0,
     themeCount: 0,
+    plannedBuildsCount: 0,
     lastUpdated: '2025-11-29T12:00:00Z',
   } satisfies DashboardStats,
 
@@ -37,7 +46,10 @@ export const dashboardStatsFixtures = {
   partial: {
     totalMocs: 1,
     wishlistCount: 0,
+    ownedSetsCount: 0,
+    ownedMinifigsCount: 0,
     themeCount: 0,
+    plannedBuildsCount: 0,
     lastUpdated: '2025-11-29T12:00:00Z',
   } satisfies DashboardStats,
 
@@ -45,7 +57,10 @@ export const dashboardStatsFixtures = {
   minimal: {
     totalMocs: 1,
     wishlistCount: 1,
+    ownedSetsCount: 1,
+    ownedMinifigsCount: 1,
     themeCount: 1,
+    plannedBuildsCount: 1,
     lastUpdated: '2025-11-29T12:00:00Z',
   } satisfies DashboardStats,
 
@@ -53,7 +68,10 @@ export const dashboardStatsFixtures = {
   recentlyUpdated: {
     totalMocs: 25,
     wishlistCount: 10,
+    ownedSetsCount: 8,
+    ownedMinifigsCount: 15,
     themeCount: 5,
+    plannedBuildsCount: 2,
     lastUpdated: new Date().toISOString(),
   } satisfies DashboardStats,
 }

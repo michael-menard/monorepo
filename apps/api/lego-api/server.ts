@@ -45,6 +45,8 @@ import dashboard from './domains/dashboard/routes.js'
 import minifigs from './domains/minifigs/routes.js'
 import scraper from './domains/scraper/routes.js'
 import userProfile from './domains/user-profile/routes.js'
+import procurement from './domains/procurement/routes.js'
+import recommender from './domains/recommender/routes.js'
 
 const app = new Hono()
 
@@ -115,6 +117,8 @@ app.route('/dashboard', dashboard)
 app.route('/minifigs', minifigs)
 app.route('/scraper', scraper)
 app.route('/user', userProfile)
+app.route('/procurement', procurement)
+app.route('/recommender', recommender)
 
 // Root endpoint
 app.get('/', c => {

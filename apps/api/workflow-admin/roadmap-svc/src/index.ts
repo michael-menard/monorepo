@@ -19,6 +19,7 @@ import {
   updateStoryContentSection,
   getPlanImpactAnalysis,
   executePlanRetire,
+  executePlanComplete,
   getActiveAgents,
   RetireActionSchema,
   type PlanListParams,
@@ -227,6 +228,21 @@ app.post('/api/v1/roadmap/:slug/retire', async c => {
   } catch (error) {
     logger.error('Failed to retire plan', { error: String(error), slug })
     return c.json({ error: 'Failed to retire plan', detail: String(error) }, 500)
+  }
+})
+
+app.post('/api/v1/roadmap/:slug/complete', async c => {
+  const slug = c.req.param('slug')
+
+  try {
+    const result = await executePlanComplete(slug)
+    if (!result.success) {
+      return c.json({ error: result.error }, 404)
+    }
+    return c.json({ success: true, completedStories: result.completedStories })
+  } catch (error) {
+    logger.error('Failed to complete plan', { error: String(error), slug })
+    return c.json({ error: 'Failed to complete plan', detail: String(error) }, 500)
   }
 })
 

@@ -4,13 +4,19 @@ export interface DashboardStats {
   ownedSetsCount: number
   ownedMinifigsCount: number
   themeCount: number
+  plannedBuildsCount: number
   lastUpdated: string | null
+}
+
+export interface ThemeTagItem {
+  tag: string
+  mocCount: number
 }
 
 export interface ThemeBreakdownItem {
   theme: string
   mocCount: number
-  setCount: number
+  tags: ThemeTagItem[]
 }
 
 export interface RecentMoc {

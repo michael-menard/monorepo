@@ -275,6 +275,7 @@ export const MocListItemSchema = z.object({
   tags: z.array(z.string()).nullable(),
   thumbnailUrl: z.string().nullable(),
   totalPieceCount: z.number().int().nullable(),
+  wantToBuild: z.boolean().optional().default(false),
   publishedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),

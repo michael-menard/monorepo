@@ -9,7 +9,14 @@ import {
   AppTabsList,
   AppTabsTrigger,
 } from '@repo/app-component-library'
-import { LayoutDashboard, BookOpen, Package, PersonStanding, Lightbulb } from 'lucide-react'
+import {
+  LayoutDashboard,
+  BookOpen,
+  Package,
+  PersonStanding,
+  Lightbulb,
+  ShoppingCart,
+} from 'lucide-react'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
 import { Header } from './Header'
@@ -29,6 +36,7 @@ const mainNavItems = [
   { id: 'sets', label: 'Sets', href: '/sets', icon: Package },
   { id: 'minifigs', label: 'Minifigs', href: '/minifigs', icon: PersonStanding },
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
+  { id: 'procurement', label: 'Build Planner', href: '/procurement', icon: ShoppingCart },
 ]
 
 // LEGO brick building animation for loading states
