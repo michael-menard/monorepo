@@ -4,8 +4,8 @@
  * Verifies that the sets gallery main page:
  * - Fetches data via useGetSetsQuery (backed by MSW /api/sets)
  * - Renders cards in grid view by default
- * - Wires search, theme, isBuilt filters and sort options to the API
- * - Renders pagination controls and responds to page changes
+ * - Wires search, build status filters and sort options to the API
+ * - Loads more items via infinite scroll sentinel
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
@@ -18,32 +18,60 @@ import { http, HttpResponse } from 'msw'
 
 import { setsApi } from '@repo/api-client/rtk/sets-api'
 import type { SetListResponse } from '@repo/api-client/schemas/sets'
+import type { Set } from '@repo/api-client/schemas/sets'
 import { server } from '../../test/mocks/server'
 import { MainPage } from '../main-page'
 
 const API_BASE_URL = 'http://localhost:3001'
 
+function makeSet(overrides: Partial<Set> & { id: string; title: string }): Set {
+  return {
+    userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    status: 'owned',
+    statusChangedAt: null,
+    setNumber: null,
+    sourceUrl: null,
+    storeId: null,
+    storeName: null,
+    pieceCount: null,
+    brand: null,
+    year: null,
+    theme: null,
+    description: null,
+    dimensions: null,
+    releaseDate: null,
+    retireDate: null,
+    notes: null,
+    condition: null,
+    completeness: null,
+    buildStatus: null,
+    purchasePrice: null,
+    purchaseTax: null,
+    purchaseShipping: null,
+    purchaseDate: null,
+    quantity: 1,
+    priority: null,
+    sortOrder: null,
+    imageUrl: null,
+    imageVariants: null,
+    images: [],
+    tags: [],
+    createdAt: new Date('2025-01-01').toISOString(),
+    updatedAt: new Date('2025-01-01').toISOString(),
+    ...overrides,
+  }
+}
+
 const baseSetListResponse: SetListResponse = {
   items: [
-    {
+    makeSet({
       id: '11111111-1111-1111-1111-111111111111',
-      userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       title: 'Downtown Diner',
       setNumber: '10260',
-      store: 'LEGO',
-      sourceUrl: null,
       pieceCount: 2480,
-      releaseDate: null,
       theme: 'Creator Expert',
       tags: ['modular', 'city'],
-      notes: null,
-      isBuilt: false,
-      quantity: 1,
-      purchasePrice: null,
-      tax: null,
-      shipping: null,
-      purchaseDate: null,
-      wishlistItemId: null,
+      buildStatus: null,
       images: [
         {
           id: '11111111-1111-1111-1111-000000000001',
@@ -54,26 +82,16 @@ const baseSetListResponse: SetListResponse = {
       ],
       createdAt: new Date('2025-01-01').toISOString(),
       updatedAt: new Date('2025-01-01').toISOString(),
-    },
-    {
+    }),
+    makeSet({
       id: '22222222-2222-2222-2222-222222222222',
-      userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       title: 'Corner Garage',
       setNumber: '10264',
-      store: 'LEGO',
-      sourceUrl: null,
       pieceCount: 2569,
-      releaseDate: null,
       theme: 'Creator Expert',
       tags: ['modular'],
-      notes: null,
-      isBuilt: true,
+      buildStatus: 'completed',
       quantity: 2,
-      purchasePrice: null,
-      tax: null,
-      shipping: null,
-      purchaseDate: null,
-      wishlistItemId: null,
       images: [
         {
           id: '22222222-2222-2222-2222-000000000002',
@@ -84,17 +102,13 @@ const baseSetListResponse: SetListResponse = {
       ],
       createdAt: new Date('2025-01-02').toISOString(),
       updatedAt: new Date('2025-01-02').toISOString(),
-    },
+    }),
   ],
   pagination: {
     page: 1,
-    limit: 20,
+    limit: 40,
     total: 2,
     totalPages: 1,
-  },
-  filters: {
-    availableThemes: ['Creator Expert'],
-    availableTags: ['modular', 'city'],
   },
 }
 
@@ -124,61 +138,56 @@ const renderMainPage = () => {
 
 describe('Sets MainPage', () => {
   beforeEach(() => {
-    // Dynamic handler that respects query params for search, theme, isBuilt, sort and pagination
+    // Dynamic handler that respects query params for search, sort and pagination
     server.use(
       http.get(`${API_BASE_URL}/api/sets`, ({ request }) => {
         const url = new URL(request.url)
 
         const search = url.searchParams.get('search')?.toLowerCase() ?? ''
-        const theme = url.searchParams.get('theme')
         const isBuiltParam = url.searchParams.get('isBuilt')
-        const sortField = (url.searchParams.get('sortField') ?? 'createdAt') as
+        const sort = (url.searchParams.get('sort') ?? 'createdAt') as
           | 'title'
           | 'pieceCount'
-          | 'purchaseDate'
           | 'purchasePrice'
           | 'createdAt'
-        const sortDirection = url.searchParams.get('sortDirection') ?? 'desc'
+        const order = url.searchParams.get('order') ?? 'desc'
         const page = Number(url.searchParams.get('page') ?? '1')
-        const limit = Number(url.searchParams.get('limit') ?? '20')
+        const limit = Number(url.searchParams.get('limit') ?? '40')
 
         let items = [...baseSetListResponse.items]
 
         if (search) {
           items = items.filter(item => {
-            const q = search
             return (
-              item.title.toLowerCase().includes(q) ||
-              (item.setNumber ?? '').toLowerCase().includes(q) ||
-              (item.theme ?? '').toLowerCase().includes(q)
+              item.title.toLowerCase().includes(search) ||
+              (item.setNumber ?? '').toLowerCase().includes(search) ||
+              (item.theme ?? '').toLowerCase().includes(search)
             )
           })
         }
 
-        if (theme) {
-          items = items.filter(item => item.theme === theme)
-        }
-
         if (isBuiltParam !== null) {
           const isBuilt = isBuiltParam === 'true'
-          items = items.filter(item => item.isBuilt === isBuilt)
+          items = items.filter(item =>
+            isBuilt
+              ? item.buildStatus === 'completed' || item.buildStatus === 'parted_out'
+              : item.buildStatus !== 'completed' && item.buildStatus !== 'parted_out',
+          )
         }
 
         items.sort((a, b) => {
-          const dir = sortDirection === 'asc' ? 1 : -1
+          const dir = order === 'asc' ? 1 : -1
 
-          switch (sortField) {
+          switch (sort) {
             case 'title':
               return a.title.localeCompare(b.title) * dir
             case 'pieceCount':
               return ((a.pieceCount ?? 0) - (b.pieceCount ?? 0)) * dir
-            case 'purchaseDate':
-              return (
-                new Date(a.purchaseDate ?? 0).getTime() -
-                new Date(b.purchaseDate ?? 0).getTime()
-              ) * dir
-            case 'purchasePrice':
-              return ((a.purchasePrice ?? 0) - (b.purchasePrice ?? 0)) * dir
+            case 'purchasePrice': {
+              const aPrice = a.purchasePrice ? parseFloat(a.purchasePrice) : 0
+              const bPrice = b.purchasePrice ? parseFloat(b.purchasePrice) : 0
+              return (aPrice - bPrice) * dir
+            }
             case 'createdAt':
             default:
               return (
@@ -200,7 +209,6 @@ describe('Sets MainPage', () => {
             total,
             totalPages: Math.max(1, Math.ceil(total / limit)),
           },
-          filters: baseSetListResponse.filters,
         }
 
         return HttpResponse.json(response)
@@ -221,7 +229,7 @@ describe('Sets MainPage', () => {
     expect(screen.getByText('Corner Garage')).toBeInTheDocument()
   })
 
-  it('renders filter bar with search, theme, build status, and sort controls', async () => {
+  it('renders filter bar with search, build status, and sort controls', async () => {
     renderMainPage()
 
     await waitFor(() => {
@@ -230,10 +238,6 @@ describe('Sets MainPage', () => {
 
     // Search input
     expect(screen.getByLabelText(/search sets/i)).toBeInTheDocument()
-
-    // Theme select (All themes + Creator Expert)
-    const themeSelect = screen.getByLabelText('Filter by theme')
-    expect(themeSelect).toBeInTheDocument()
 
     // Build status select
     const buildStatusSelect = screen.getByLabelText('Filter by build status')
@@ -285,7 +289,6 @@ describe('Sets MainPage', () => {
 
     // Default sort is "createdAt desc" - both items render in descending creation order
     const grid = screen.getByTestId('gallery-grid')
-    // SetCard uses data-testid="set-card-{uuid}" pattern
     const cornerGarage = within(grid).getByTestId('set-card-22222222-2222-2222-2222-222222222222')
     const downtownDiner = within(grid).getByTestId('set-card-11111111-1111-1111-1111-111111111111')
     expect(cornerGarage).toBeInTheDocument()
@@ -296,30 +299,23 @@ describe('Sets MainPage', () => {
     expect(downtownDiner.textContent).toContain('Downtown Diner')
   })
 
-  it('renders pagination controls when there are multiple pages', async () => {
-    // Override handler to return enough items for pagination (limit=20, totalPages=2)
+  it('shows infinite scroll sentinel when more pages are available', async () => {
+    // Override handler to return enough items for multiple pages
     server.use(
       http.get(`${API_BASE_URL}/api/sets`, ({ request }) => {
         const url = new URL(request.url)
         const page = Number(url.searchParams.get('page') ?? '1')
-        const limit = Number(url.searchParams.get('limit') ?? '20')
+        const limit = Number(url.searchParams.get('limit') ?? '40')
 
-        // Create 25 items to trigger 2 pages with default limit=20
-        const allItems = Array.from({ length: 25 }, (_, i) => ({
-          ...baseSetListResponse.items[0],
-          id: `${String(i + 1).padStart(8, '0')}-0000-0000-0000-000000000000`,
-          title: `Set ${i + 1}`,
-          images: [
-            {
-              id: `${String(i + 1).padStart(8, '0')}-0000-0000-0000-111111111111`,
-              imageUrl: `https://example.com/set-${i + 1}.jpg`,
-              thumbnailUrl: `https://example.com/set-${i + 1}-thumb.jpg`,
-              position: 0,
-            },
-          ],
-          createdAt: new Date(2025, 0, i + 1).toISOString(),
-          updatedAt: new Date(2025, 0, i + 1).toISOString(),
-        }))
+        // Create 60 items to trigger 2 pages with limit=40
+        const allItems = Array.from({ length: 60 }, (_, i) =>
+          makeSet({
+            id: `${String(i + 1).padStart(8, '0')}-0000-0000-0000-000000000000`,
+            title: `Set ${i + 1}`,
+            createdAt: new Date(2025, 0, i + 1).toISOString(),
+            updatedAt: new Date(2025, 0, i + 1).toISOString(),
+          }),
+        )
 
         const start = (page - 1) * limit
         const pagedItems = allItems.slice(start, start + limit)
@@ -332,12 +328,10 @@ describe('Sets MainPage', () => {
             total: allItems.length,
             totalPages: Math.ceil(allItems.length / limit),
           },
-          filters: baseSetListResponse.filters,
-        })
+        } satisfies SetListResponse)
       }),
     )
 
-    const user = userEvent.setup()
     renderMainPage()
 
     // Wait for page 1 content
@@ -345,20 +339,8 @@ describe('Sets MainPage', () => {
       expect(screen.getByText('Set 1')).toBeInTheDocument()
     })
 
-    // Pagination should be visible with 25 items / 20 per page = 2 pages
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Go to page 1' })).toHaveAttribute('aria-current', 'page')
-    })
-
-    // Click page 2
-    const page2Button = screen.getByRole('button', { name: 'Go to page 2' })
-    await user.click(page2Button)
-
-    await waitFor(() => {
-      // On page 2 we should see items 21-25
-      expect(screen.getByText('Set 21')).toBeInTheDocument()
-      expect(screen.queryByText('Set 1')).not.toBeInTheDocument()
-    })
+    // Infinite scroll sentinel should be present
+    expect(screen.getByTestId('infinite-scroll-sentinel')).toBeInTheDocument()
   })
 
   it('navigates to the add set page when the Add Set button is clicked', async () => {
@@ -372,11 +354,6 @@ describe('Sets MainPage', () => {
     const addButton = screen.getByRole('button', { name: /add set/i })
     await user.click(addButton)
 
-    // Since we are using MemoryRouter without a full app shell, we can at least
-    // assert that the navigation intent is expressed via the href on the button
-    // (react-router-dom's Link-equivalent behavior).
-    // The button is a real button that calls navigate('/sets/add'), so here we
-    // just assert the click does not throw and the test harness stays stable.
     expect(addButton).toBeEnabled()
   })
 })

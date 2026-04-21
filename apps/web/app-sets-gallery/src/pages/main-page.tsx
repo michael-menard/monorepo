@@ -3,14 +3,15 @@
  *
  * The primary page component for the App Sets Gallery module.
  */
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { z } from 'zod'
-import { Plus } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { Button, cn, ConfirmationDialog, useToast } from '@repo/app-component-library'
 import {
   useViewMode,
+  useInfiniteScroll,
   GalleryViewToggle,
   GalleryDataTable,
   GalleryPagination,
@@ -44,12 +45,15 @@ type SortField = 'title' | 'pieceCount' | 'purchasePrice' | 'createdAt'
 export function MainPage({ className }: MainPageProps) {
   const navigate = useNavigate()
   const [viewMode, setViewMode] = useViewMode('sets')
+  const LIMIT = 40
   const [searchTerm, setSearchTerm] = useState('')
   const [_theme, _setTheme] = useState<string | null>(null)
   const [builtFilter, setBuiltFilter] = useState<BuiltFilterValue>('all')
   const [sortField, setSortField] = useState<SortField>('createdAt')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [accumulatedSets, setAccumulatedSets] = useState<Set[]>([])
+  const accumulatedRef = useRef<Map<string, Set>>(new Map())
   const [deleteTarget, setDeleteTarget] = useState<Set | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const { success: toastSuccess, error: toastError } = useToast()
@@ -67,14 +71,44 @@ export function MainPage({ className }: MainPageProps) {
       isBuilt: builtFilter === 'all' ? undefined : builtFilter === 'built',
       sort: sortField,
       order: 'desc',
-      page,
-      limit: pageSize,
+      page: currentPage,
+      limit: LIMIT,
     },
     { refetchOnFocus: true, refetchOnMountOrArgChange: true },
   )
 
-  const sets: Set[] = setsData?.items ?? []
-  const pagination = setsData?.pagination
+  // Accumulate pages into a deduped map
+  useEffect(() => {
+    if (!setsData) return
+    setTotalPages(setsData.pagination.totalPages)
+    setsData.items.forEach(set => {
+      accumulatedRef.current.set(set.id, set)
+    })
+    setAccumulatedSets(Array.from(accumulatedRef.current.values()))
+  }, [setsData])
+
+  const hasMore = currentPage < totalPages
+  const isLoadingMore = isFetching && currentPage > 1
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isFetching) setCurrentPage(p => p + 1)
+  }, [hasMore, isFetching])
+
+  const resetAccumulator = useCallback(() => {
+    accumulatedRef.current.clear()
+    setAccumulatedSets([])
+    setCurrentPage(1)
+    setTotalPages(1)
+  }, [])
+
+  const { sentinelRef } = useInfiniteScroll({
+    hasMore,
+    isLoading: isFetching,
+    onLoadMore: handleLoadMore,
+    enabled: viewMode === 'grid' && !searchTerm,
+  })
+
+  const sets = accumulatedSets
 
   const sortOptions: { value: SortField; label: string }[] = [
     { value: 'createdAt', label: 'Recently added' },
@@ -85,26 +119,17 @@ export function MainPage({ className }: MainPageProps) {
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
-    setPage(1)
+    resetAccumulator()
   }
 
   const handleBuiltFilterChange = (value: BuiltFilterValue) => {
     setBuiltFilter(value)
-    setPage(1)
+    resetAccumulator()
   }
 
   const handleSortFieldChange = (value: SortField) => {
     setSortField(value)
-    setPage(1)
-  }
-
-  const handlePageChange = (nextPage: number) => {
-    setPage(nextPage)
-  }
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size)
-    setPage(1)
+    resetAccumulator()
   }
 
   const handleSetClick = (set: Set) => {
@@ -124,7 +149,7 @@ export function MainPage({ className }: MainPageProps) {
 
     setIsDeleting(true)
     try {
-      await deleteSet({ id: deleteTarget.id, title: deleteTarget.title }).unwrap()
+      await deleteSet({ id: deleteTarget.id }).unwrap()
       toastSuccess(
         `"${deleteTarget.title}" deleted`,
         'The set has been removed from your collection.',
@@ -218,7 +243,7 @@ export function MainPage({ className }: MainPageProps) {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.15, ease: 'easeOut' }}
                     >
-                      <GalleryGrid items={sets} isLoading={isLoading || isFetching}>
+                      <GalleryGrid items={sets} isLoading={isLoading && sets.length === 0}>
                         {set => (
                           <SetCard
                             set={set}
@@ -252,16 +277,36 @@ export function MainPage({ className }: MainPageProps) {
                   )}
                 </AnimatePresence>
 
-                {/* Pagination */}
-                {pagination && pagination.totalPages > 1 ? (
+                {/* Infinite scroll sentinel (grid view only) */}
+                {viewMode === 'grid' && hasMore && !searchTerm && (
+                  <div
+                    ref={sentinelRef}
+                    className="flex justify-center py-8"
+                    data-testid="infinite-scroll-sentinel"
+                  >
+                    {isLoadingMore && (
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Loading more sets...
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pagination for datatable view */}
+                {viewMode === 'datatable' &&
+                setsData?.pagination &&
+                setsData.pagination.totalPages > 1 ? (
                   <div className="pt-4 flex justify-center">
                     <GalleryPagination
-                      currentPage={pagination.page}
-                      totalPages={pagination.totalPages}
-                      pageSize={pagination.limit}
-                      onPageChange={handlePageChange}
-                      onPageSizeChange={handlePageSizeChange}
-                      showPageSizeSelector
+                      currentPage={setsData.pagination.page}
+                      totalPages={setsData.pagination.totalPages}
+                      pageSize={setsData.pagination.limit}
+                      onPageChange={p => {
+                        resetAccumulator()
+                        setCurrentPage(p)
+                      }}
+                      onPageSizeChange={() => {}}
                     />
                   </div>
                 ) : null}
