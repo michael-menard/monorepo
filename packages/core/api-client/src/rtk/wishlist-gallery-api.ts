@@ -27,7 +27,6 @@ import {
   SetSchema,
   ReorderResponseSchema,
   PresignResponseSchema,
-  type Set,
 } from '../schemas/sets'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 

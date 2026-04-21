@@ -9,7 +9,6 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import {
   validateAriaAttributes,
-  getAccessibleName,
   getAccessibleDescription,
 } from '@repo/accessibility-testing'
 import { TagInput } from '../../../components/TagInput'

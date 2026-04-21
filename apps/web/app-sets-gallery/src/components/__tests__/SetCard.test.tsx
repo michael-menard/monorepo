@@ -13,22 +13,35 @@ import { SetCard } from '../SetCard'
 const baseSet: Set = {
   id: '11111111-1111-1111-1111-111111111111',
   userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  status: 'owned',
+  statusChangedAt: null,
   title: 'Downtown Diner',
   setNumber: '10260',
-  store: 'LEGO',
   sourceUrl: null,
+  storeId: null,
+  storeName: null,
   pieceCount: 2480,
-  releaseDate: null,
+  brand: null,
+  year: null,
   theme: 'Creator Expert',
-  tags: ['modular', 'city'],
+  description: null,
+  dimensions: null,
+  releaseDate: null,
+  retireDate: null,
   notes: null,
-  isBuilt: false,
-  quantity: 1,
+  condition: null,
+  completeness: null,
+  buildStatus: null,
   purchasePrice: null,
-  tax: null,
-  shipping: null,
+  purchaseTax: null,
+  purchaseShipping: null,
   purchaseDate: null,
-  wishlistItemId: null,
+  quantity: 1,
+  priority: null,
+  sortOrder: null,
+  imageUrl: null,
+  imageVariants: null,
+  tags: ['modular', 'city'],
   images: [
     {
       id: 'img-1',
@@ -59,7 +72,7 @@ describe('SetCard (SetGalleryCard)', () => {
     expect(pieces).toHaveTextContent('pieces')
 
     const theme = screen.getByTestId('set-card-theme')
-    expect(theme).toHaveTextContent('Creator Expert')
+    expect(theme).toHaveTextContent('modular')
 
     const buildStatus = screen.getByTestId('set-card-build-status')
     expect(buildStatus).toHaveTextContent('Not built yet')
@@ -72,8 +85,8 @@ describe('SetCard (SetGalleryCard)', () => {
     expect(quantity).toHaveTextContent('x3')
   })
 
-  it('shows "Built" status when isBuilt is true', () => {
-    renderCard({ isBuilt: true })
+  it('shows "Built" status when buildStatus is completed', () => {
+    renderCard({ buildStatus: 'completed' })
 
     const buildStatus = screen.getByTestId('set-card-build-status')
     expect(buildStatus).toHaveTextContent('Built')
