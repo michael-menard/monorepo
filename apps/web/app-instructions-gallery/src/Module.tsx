@@ -1,62 +1,38 @@
 /**
- * InstuctionsGallery Module
+ * Instructions Gallery Module
  *
- * Main entry point for the Instuctions Gallery feature module.
+ * Main entry point for the Instructions Gallery feature module.
  * This module is designed to be lazy-loaded by the shell app.
- * Handles internal routing for gallery, upload, detail, edit, and create views.
- *
- * Story INST-1102: Added 'create' mode for Create Basic MOC
+ * Uses React Router v7 for internal routing.
  */
-import { z } from 'zod'
+import { Routes, Route } from 'react-router-dom'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
-import { UploadPage } from './pages/UploadPage'
-import { MocDetailModule } from './pages/MocDetailModule'
 import { CreateMocPage } from './pages/CreateMocPage'
-import { EditMocPage } from './pages/EditMocPage'
+import { MocDetailModule } from './pages/MocDetailModule'
 
 /**
- * Gallery view modes controlled by the host application.
- */
-const GalleryModeSchema = z.enum(['gallery', 'upload', 'detail', 'edit', 'create'])
-
-export type GalleryMode = z.infer<typeof GalleryModeSchema>
-
-/**
- * Module props schema - validated at runtime
- */
-const InstuctionsGalleryModulePropsSchema = z.object({
-  /** Which view to render */
-  mode: GalleryModeSchema,
-  /** Identifier for the current MOC when in detail/edit modes (slug or id). */
-  mocIdOrSlug: z.string().optional(),
-  /** Optional className for styling */
-  className: z.string().optional(),
-})
-
-export type InstuctionsGalleryModuleProps = z.infer<typeof InstuctionsGalleryModulePropsSchema>
-
-/**
- * InstuctionsGallery Module Component
+ * Instructions Module Component
  *
  * This is the main export that the shell app will lazy-load.
- * The host app is responsible for routing and passes the desired view via props.
+ * Routing is handled internally via React Router relative paths.
  */
-export function InstuctionsGalleryModule({
-  mode,
-  mocIdOrSlug,
-  className,
-}: InstuctionsGalleryModuleProps) {
+export function InstructionsModule() {
   return (
-    <ModuleLayout className={className}>
-      {mode === 'gallery' && <MainPage />}
-      {mode === 'upload' && <UploadPage />}
-      {mode === 'detail' && <MocDetailModule mocIdOrSlug={mocIdOrSlug} />}
-      {mode === 'edit' && !!mocIdOrSlug && <EditMocPage mocIdOrSlug={mocIdOrSlug} />}
-      {mode === 'create' && <CreateMocPage />}
+    <ModuleLayout>
+      <Routes>
+        <Route index element={<MainPage />} />
+        <Route path="new" element={<CreateMocPage />} />
+        <Route path=":idOrSlug" element={<MocDetailModule />} />
+      </Routes>
     </ModuleLayout>
   )
 }
 
+/**
+ * Backward-compatible alias (preserves original typo)
+ */
+export const InstuctionsGalleryModule = InstructionsModule
+
 // Default export for lazy loading
-export default InstuctionsGalleryModule
+export default InstructionsModule

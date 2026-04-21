@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Upload, AlertCircle, Loader2 } from 'lucide-react'
@@ -174,7 +174,7 @@ function InstructionsNewContent() {
   }, [reset, resetForm, uploadManager, defaultMocValues])
 
   const _handleCancel = useCallback(() => {
-    navigate({ to: '/dashboard' })
+    navigate('/dashboard')
   }, [navigate])
 
   // BUGF-032: File selection with presigned URL API call
@@ -284,7 +284,7 @@ function InstructionsNewContent() {
           fileMapRef.current.clear()
 
           // Navigate to the new MOC page
-          navigate({ to: `/instructions/${result.data.slug}` })
+          navigate(`/instructions/${result.data.slug}`)
         } else {
           const { error } = result
 

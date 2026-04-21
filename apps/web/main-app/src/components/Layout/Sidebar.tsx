@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { CustomButton, AppBadge, cn } from '@repo/app-component-library'
 import { motion } from 'framer-motion'

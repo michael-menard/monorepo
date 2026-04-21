@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import type { DashboardResponse } from '../../store/roadmapApi'
 
 export function ImpactRanking({ stories }: { stories: DashboardResponse['impactRanking'] }) {
@@ -19,8 +19,7 @@ export function ImpactRanking({ stories }: { stories: DashboardResponse['impactR
               #{i + 1}
             </span>
             <Link
-              to="/story/$storyId"
-              params={{ storyId: story.storyId }}
+              to={`/story/${story.storyId}`}
               className="font-mono text-xs text-cyan-400 hover:text-cyan-300 hover:underline shrink-0"
             >
               {story.storyId}

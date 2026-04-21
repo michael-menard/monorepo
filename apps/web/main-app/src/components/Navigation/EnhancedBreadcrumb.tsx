@@ -1,6 +1,6 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, Home, ArrowLeft } from 'lucide-react'
 import { Button, Badge, cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
@@ -36,7 +36,7 @@ export function EnhancedBreadcrumb({
 
   // Handle back navigation
   const handleBack = () => {
-    navigate({ to: '..' })
+    navigate('..')
     trackNavigation('breadcrumb_back', {
       source: 'breadcrumb',
       timestamp: new Date().toISOString(),
@@ -197,13 +197,13 @@ export function CompactBreadcrumb({ className }: { className?: string }) {
 
   const handleBack = () => {
     if (parentItem?.href) {
-      navigate({ to: parentItem.href })
+      navigate(parentItem.href)
       trackNavigation('compact_breadcrumb_back', {
         source: 'compact_breadcrumb',
         timestamp: new Date().toISOString(),
       })
     } else {
-      navigate({ to: '..' })
+      navigate('..')
     }
   }
 

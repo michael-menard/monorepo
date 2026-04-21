@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Copy, Check } from 'lucide-react'
 import { PriorityTag, GenericTag } from '@repo/app-component-library'
@@ -22,8 +22,7 @@ function PlanTitleCell({ plan, onTagClick }: { plan: Plan; onTagClick?: (tag: st
     <div className="min-w-0">
       <div className="flex items-center gap-1.5 group/title">
         <Link
-          to="/plan/$slug"
-          params={{ slug: plan.planSlug }}
+          to={`/plan/${plan.planSlug}`}
           className="flex items-center gap-1.5 no-underline min-w-0"
           onClick={e => e.stopPropagation()}
         >

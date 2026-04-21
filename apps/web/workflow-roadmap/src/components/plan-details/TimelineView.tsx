@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { PIPELINE_STAGES, getPriorityColor } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
 
@@ -88,8 +88,7 @@ export function TimelineView({ stories }: { stories: PlanStory[] }) {
                   <div key={story.storyId} className="flex items-center gap-0">
                     {/* Name */}
                     <Link
-                      to="/story/$storyId"
-                      params={{ storyId: story.storyId }}
+                      to={`/story/${story.storyId}`}
                       className="w-52 shrink-0 flex flex-col px-2 py-1 hover:bg-slate-800/50 rounded transition-colors"
                     >
                       <div className="flex items-center gap-1.5">

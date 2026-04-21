@@ -33,7 +33,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          router: ['@tanstack/react-router'],
+          router: ['react-router-dom'],
           ui: ['@repo/app-component-library'],
         },
       },
@@ -43,7 +43,7 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      '@tanstack/react-router',
+      'react-router-dom',
       '@repo/app-component-library',
       '@repo/api-client',
       '@repo/cache',

@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { AppBadge, StateTag, PriorityTag } from '@repo/app-component-library'
 import { ChevronRight } from 'lucide-react'
 import { CopyButton } from '../shared/CopyButton'
@@ -28,8 +28,7 @@ export function StoryHeader({
               </li>
               <li>
                 <Link
-                  to="/plan/$slug"
-                  params={{ slug: fromPlan.slug }}
+                  to={`/plan/${fromPlan.slug}`}
                   className="hover:text-cyan-400 transition-colors"
                 >
                   {fromPlan.title}
@@ -76,7 +75,7 @@ export function StoryHeader({
           {data.linkedPlans.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
               {data.linkedPlans.map(lp => (
-                <Link key={lp.planSlug} to="/plan/$slug" params={{ slug: lp.planSlug }}>
+                <Link key={lp.planSlug} to={`/plan/${lp.planSlug}`}>
                   <AppBadge
                     variant="outline"
                     className="font-mono text-xs text-cyan-500/60 border-cyan-500/20 hover:border-cyan-400/40 transition-colors"

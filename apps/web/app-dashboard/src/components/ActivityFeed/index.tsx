@@ -3,7 +3,7 @@
  * Timeline of recent user activities
  */
 
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Plus, Hammer, Heart, RefreshCw, Activity, Box, User } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
 import { formatDistanceToNow } from 'date-fns'

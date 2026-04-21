@@ -55,13 +55,13 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          router: ['@tanstack/react-router'],
+          router: ['react-router-dom'],
         },
       },
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', '@tanstack/react-router'],
+    include: ['react', 'react-dom', 'react-router-dom'],
     exclude: [
       '@repo/api-client',
       '@repo/app-component-library',

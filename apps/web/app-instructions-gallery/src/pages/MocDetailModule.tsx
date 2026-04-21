@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { z } from 'zod'
+import { useParams } from 'react-router-dom'
 import { useGetMocDetailQuery } from '@repo/api-client/rtk/instructions-api'
 import type { GetMocDetailResponse } from '@repo/api-client'
 import { createLogger } from '@repo/logger'
@@ -8,12 +8,6 @@ import { MocDetailDashboard } from '../components/MocDetailDashboard/MocDetailDa
 import { MocSchema, type Moc } from '../components/MocDetailDashboard/__types__/moc'
 
 const logger = createLogger('app-instructions-gallery:MocDetailModule')
-
-const MocDetailModulePropsSchema = z.object({
-  mocIdOrSlug: z.string().optional(),
-})
-
-export type MocDetailModuleProps = z.infer<typeof MocDetailModulePropsSchema>
 
 /**
  * Map backend API response to frontend Moc type
@@ -64,8 +58,9 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
   }
 }
 
-export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
-  const id = mocIdOrSlug ?? ''
+export function MocDetailModule() {
+  const { idOrSlug } = useParams<{ idOrSlug: string }>()
+  const id = idOrSlug ?? ''
 
   const { data, isLoading, isError, error, refetch } = useGetMocDetailQuery(id, {
     skip: !id,

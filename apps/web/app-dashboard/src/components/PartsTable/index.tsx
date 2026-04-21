@@ -3,7 +3,7 @@
  * Table showing MOCs that need parts with coverage percentage
  */
 
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
 import {
   Card,
@@ -113,8 +113,7 @@ export function PartsTable({ data, isLoading }: PartsTableProps) {
                 <TableRow key={moc.id} className="group">
                   <TableCell className="text-xs md:text-sm font-medium pl-4">
                     <Link
-                      to="/mocs/$mocId"
-                      params={{ mocId: moc.id }}
+                      to={`/mocs/${moc.id}`}
                       className="hover:text-primary hover:underline"
                     >
                       {moc.name}

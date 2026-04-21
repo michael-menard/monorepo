@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   Button,
   Card,
@@ -25,7 +25,7 @@ const maskEmail = (email: string): string => {
 }
 
 export function EmailVerificationPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { confirmSignUp, resendSignUpCode, pendingVerificationEmail } = useAuth()
   const [otpCode, setOtpCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function EmailVerificationPage() {
   // Redirect if no pending email
   useEffect(() => {
     if (!email) {
-      router.navigate({ to: '/register' })
+      navigate('/register')
     }
   }, [email, router])
 
@@ -47,7 +47,7 @@ export function EmailVerificationPage() {
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-        router.navigate({ to: '/login' })
+        navigate('/login')
       }, 3000)
       return () => clearTimeout(timer)
     }
@@ -105,7 +105,7 @@ export function EmailVerificationPage() {
 
   const handleBackToSignup = () => {
     sessionStorage.removeItem('pendingVerificationEmail')
-    router.navigate({ to: '/register' })
+    navigate('/register')
   }
 
   if (!email) {
@@ -145,7 +145,7 @@ export function EmailVerificationPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => router.navigate({ to: '/login' })}
+              onClick={() => navigate('/login')}
               data-testid="go-to-login-button"
             >
               Go to Login Now

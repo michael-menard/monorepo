@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react'
-import { useNavigate, Link as RouterLink } from '@tanstack/react-router'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { ChevronLeft, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -155,7 +155,7 @@ export function AddItemPage() {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLoading && !hasSubmitted) {
-        void navigate({ to: '/' })
+        void navigate('/')
       }
     }
     window.addEventListener('keydown', handleEscape)
@@ -221,7 +221,7 @@ export function AddItemPage() {
       showSuccessToast('Item added!', `${data.title} has been added to your wishlist.`, 5000)
 
       // WISH-2032: Navigate immediately (optimistic)
-      void navigate({ to: '/' })
+      void navigate('/')
 
       try {
         // Trigger mutation with error callback for rollback
@@ -233,7 +233,7 @@ export function AddItemPage() {
             setRecoveredFormData(data)
 
             // WISH-2032: On error, navigate back to form
-            void navigate({ to: '/add' })
+            void navigate('/add')
 
             // Get error message
             const errorMessage =

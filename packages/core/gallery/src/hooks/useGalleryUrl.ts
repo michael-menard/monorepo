@@ -110,12 +110,12 @@ const parseTags = (value: string | string[] | undefined): string[] => {
  *
  * @example
  * ```tsx
- * // In a route component with TanStack Router
- * import { useSearch, useNavigate } from '@tanstack/react-router'
+ * // In a route component with React Router
+ * import { useSearchParams, useNavigate } from 'react-router-dom'
  *
  * function GalleryPage() {
- *   const search = useSearch({ from: '/gallery' })
- *   const navigate = useNavigate({ from: '/gallery' })
+ *   const [searchParams] = useSearchParams()
+ *   const navigate = useNavigate()
  *
  *   const {
  *     state,

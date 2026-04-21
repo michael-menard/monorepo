@@ -2,11 +2,11 @@
  * Story 3.1.9: Unsaved Changes Prompt Hook
  *
  * Blocks SPA navigation with custom dialog and browser refresh/close with native prompt.
- * Uses TanStack Router's useBlocker for SPA navigation blocking.
+ * Uses React Router's useBlocker for SPA navigation blocking.
  */
 
 import { useEffect, useCallback, useState } from 'react'
-import { useBlocker } from '@tanstack/react-router'
+import { useBlocker } from 'react-router-dom'
 import { logger } from '@repo/logger'
 
 export interface UseUnsavedChangesPromptOptions {
@@ -33,7 +33,7 @@ export interface UseUnsavedChangesPromptResult {
  * Hook to prompt user when navigating away with unsaved changes.
  *
  * Features:
- * - SPA navigation: Shows custom React dialog via TanStack Router useBlocker
+ * - SPA navigation: Shows custom React dialog via React Router useBlocker
  * - Browser refresh/close: Shows native beforeunload prompt
  * - Logs guard blocks for observability
  */
@@ -43,17 +43,14 @@ export function useUnsavedChangesPrompt(
   const { isDirty, route, userId, sessionId } = options
   const [showDialog, setShowDialog] = useState(false)
 
-  // TanStack Router navigation blocker
-  const blocker = useBlocker({
-    condition: isDirty,
-  })
+  // React Router navigation blocker
+  const blocker = useBlocker(isDirty)
 
   // When blocker is triggered, show our custom dialog
   useEffect(() => {
-    if (blocker.status === 'blocked') {
+    if (blocker.state === 'blocked') {
       setShowDialog(true)
-      // blocker.next contains the target location when blocked
-      const targetPath = blocker.next?.pathname
+      const targetPath = blocker.location?.pathname
       logger.warn('Navigation blocked - unsaved changes', {
         route,
         userId,
@@ -61,7 +58,7 @@ export function useUnsavedChangesPrompt(
         targetPath,
       })
     }
-  }, [blocker.status, blocker.next?.pathname, route, userId, sessionId])
+  }, [blocker.state, blocker.location?.pathname, route, userId, sessionId])
 
   // Handle beforeunload for browser refresh/close
   useEffect(() => {
@@ -92,7 +89,7 @@ export function useUnsavedChangesPrompt(
   // Confirm stay - reset blocker and hide dialog
   const confirmStay = useCallback(() => {
     setShowDialog(false)
-    if (blocker.status === 'blocked') {
+    if (blocker.state === 'blocked') {
       blocker.reset()
     }
     logger.info('User chose to stay on page', { route, userId, sessionId })
@@ -101,7 +98,7 @@ export function useUnsavedChangesPrompt(
   // Confirm leave - proceed with navigation
   const confirmLeave = useCallback(() => {
     setShowDialog(false)
-    if (blocker.status === 'blocked') {
+    if (blocker.state === 'blocked') {
       blocker.proceed()
     }
     logger.info('User chose to leave page', { route, userId, sessionId })

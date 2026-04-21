@@ -1,7 +1,14 @@
 import { z } from 'zod'
-import { redirect } from '@tanstack/react-router'
 import { logger } from '@repo/logger'
 import { isTokenExpired, getTokenScopes } from '../jwt'
+
+/**
+ * @deprecated Use layout components from '@repo/auth-utils/layouts' instead.
+ * The redirect function is no longer used with React Router v7.
+ */
+const redirect = (opts: { to: string; search?: Record<string, unknown> }) => {
+  throw new Error(`Redirect to ${opts.to} — use layout components instead`)
+}
 
 /**
  * AuthState schema for route guard context

@@ -6,5 +6,5 @@
  * Story wish-2001: Wishlist Gallery MVP
  */
 
-export { AppWishlistGalleryModule, AppWishlistGalleryModule as default } from './Module'
+export { WishlistModule, AppWishlistGalleryModule, WishlistModule as default } from './Module'
 export type { AppWishlistGalleryModuleProps } from './Module'

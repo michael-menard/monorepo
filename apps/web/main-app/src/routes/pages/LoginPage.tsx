@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -87,7 +87,8 @@ const legoBrickVariants = {
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const search = useSearch({ strict: false }) as { redirect?: string; expired?: string }
+  const [searchParams] = useSearchParams()
+  const search = { redirect: searchParams.get('redirect') ?? undefined, expired: searchParams.get('expired') ?? undefined }
   const { signIn, signInWithSocial, isLoading } = useAuth()
   const auth = useSelector(selectAuth)
   const navigationContext = useNavigationOptional()
@@ -103,7 +104,7 @@ export function LoginPage() {
   // This handles the case where auth state resolves after the route guard already ran
   useEffect(() => {
     if (auth.isAuthenticated && !auth.isLoading) {
-      navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     }
   }, [auth.isAuthenticated, auth.isLoading, navigate])
 
@@ -151,7 +152,7 @@ export function LoginPage() {
           source: 'login_page',
           redirectTo,
         })
-        navigate({ to: redirectTo })
+        navigate(redirectTo)
       } else if (result.requiresChallenge && result.challenge) {
         // Multi-step authentication required - route based on challenge type
         trackNavigation('login_challenge_required', {
@@ -164,14 +165,14 @@ export function LoginPage() {
           case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
           case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
           case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
-            navigate({ to: '/auth/otp-verification' })
+            navigate('/auth/otp-verification')
             break
           case 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED':
-            navigate({ to: '/auth/new-password' })
+            navigate('/auth/new-password')
             break
           default:
             // Fallback to OTP page for unknown challenge types
-            navigate({ to: '/auth/otp-verification' })
+            navigate('/auth/otp-verification')
         }
       } else {
         setError(result.error || 'Login failed. Please try again.')

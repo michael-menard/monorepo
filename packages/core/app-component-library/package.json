@@ -87,7 +87,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@repo/api-client": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@tanstack/react-router": "1.159.5",
+    "react-router-dom": "^7",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

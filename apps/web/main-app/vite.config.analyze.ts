@@ -33,7 +33,7 @@ export default defineConfig({
         manualChunks: {
           // Vendor chunks
           react: ['react', 'react-dom'],
-          router: ['@tanstack/react-router'],
+          router: ['react-router-dom'],
           redux: ['@reduxjs/toolkit', 'react-redux'],
           // UI components are imported directly, no barrel file
           icons: ['lucide-react'],
@@ -65,7 +65,7 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      '@tanstack/react-router',
+      'react-router-dom',
       '@reduxjs/toolkit',
       'react-redux',
       'lucide-react',

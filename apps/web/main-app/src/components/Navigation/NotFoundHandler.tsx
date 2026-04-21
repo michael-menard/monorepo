@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Button,
   Card,
@@ -31,12 +31,12 @@ export function NotFoundHandler({
   const { trackNavigation } = useNavigation()
 
   const handleBack = () => {
-    navigate({ to: '..' })
+    navigate('..')
     trackNavigation('404_back', { source: 'not_found_handler' })
   }
 
   const handleHome = () => {
-    navigate({ to: '/' })
+    navigate('/')
     trackNavigation('404_home', { source: 'not_found_handler' })
   }
 

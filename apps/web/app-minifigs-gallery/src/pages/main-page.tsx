@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PersonStanding, Trash2, X, Tags } from 'lucide-react'
 import {
   Badge,
@@ -140,7 +141,8 @@ function MinifigCard({
   )
 }
 
-export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }) {
+export function MainPage() {
+  const navigate = useNavigate()
   const [status, setStatus] = useState<'owned' | 'wanted' | undefined>(undefined)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<string>('createdAt:desc')
@@ -444,7 +446,7 @@ export function MainPage({ onNavigate }: { onNavigate?: (path: string) => void }
               <div key={minifig.id} className="min-w-0 overflow-hidden">
                 <MinifigCard
                   minifig={minifig}
-                  onClick={() => onNavigate?.(`/minifigs/${minifig.id}`)}
+                  onClick={() => navigate(minifig.id)}
                   selected={selectedIds.has(minifig.id)}
                   hasSelection={hasSelection}
                   onToggleSelect={() => toggleSelect(minifig.id)}

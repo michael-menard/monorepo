@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { AppBadge, PriorityTag } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
 import { useGetActiveAgentsQuery } from '../../store/roadmapApi'
@@ -75,8 +75,7 @@ export function KanbanView({ stories }: { stories: PlanStory[] }) {
                   return (
                     <Link
                       key={story.storyId}
-                      to="/story/$storyId"
-                      params={{ storyId: story.storyId }}
+                      to={`/story/${story.storyId}`}
                       className={`block ${story.isExternal ? 'border-dashed' : ''} bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 hover:border-cyan-500/40 hover:bg-slate-800 transition-colors`}
                     >
                       <div className="flex items-center justify-between mb-1.5">

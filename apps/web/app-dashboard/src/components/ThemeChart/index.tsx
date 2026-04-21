@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Settings2 } from 'lucide-react'
 import { SunburstChart } from '@repo/charts'
 import type { SunburstNode } from '@repo/charts'
@@ -66,7 +66,7 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
             Collection by Theme
           </CardTitle>
           <Link
-            to="/settings"
+            to="/settings/themes"
             className="relative z-10 p-2 -m-2 text-muted-foreground hover:text-foreground transition-colors"
             title="Manage tag-theme mappings"
           >

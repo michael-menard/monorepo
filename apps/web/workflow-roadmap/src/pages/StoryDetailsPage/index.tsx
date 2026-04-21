@@ -1,4 +1,4 @@
-import { useParams, useLocation, Link } from '@tanstack/react-router'
+import { useParams, useLocation, Link } from 'react-router-dom'
 import {
   CustomButton,
   Textarea,
@@ -29,9 +29,9 @@ import { VerificationTab } from '../../components/story-details/VerificationTab'
 import { DetailCard } from '../../components/shared/DetailCard'
 
 export function StoryDetailsPage() {
-  const { storyId } = useParams({ from: '/story/$storyId' })
+  const { storyId = '' } = useParams<{ storyId: string }>()
   const location = useLocation()
-  const fromPlan = (location.state as { fromPlan?: { slug: string; title: string } })?.fromPlan
+  const fromPlan = (location.state as { fromPlan?: { slug: string; title: string } } | null)?.fromPlan
   const { data, error, isLoading } = useGetStoryByIdQuery(storyId, { pollingInterval: 30_000 })
   useStorySSE()
   const [updateStory] = useUpdateStoryMutation()
@@ -109,8 +109,7 @@ export function StoryDetailsPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <Link
-          to={fromPlan ? '/plan/$slug' : '/'}
-          params={fromPlan ? { slug: fromPlan.slug } : undefined}
+          to={fromPlan ? `/plan/${fromPlan.slug}` : '/'}
           className="inline-flex items-center text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

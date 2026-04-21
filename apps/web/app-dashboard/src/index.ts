@@ -4,5 +4,7 @@
  * Dashboard module entry point for lazy-loading by main-app shell.
  */
 
-export { AppDashboardModule, AppDashboardModule as default } from './Module'
-export type { AppDashboardModuleProps } from './Module'
+export { DashboardModule, AppDashboardModule, DashboardModule as default } from './Module'
+export type { DashboardModuleProps } from './Module'
+
+export { SettingsModule } from './SettingsModule'

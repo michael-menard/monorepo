@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import {
   createColumnHelper,
   flexRender,
@@ -26,8 +26,7 @@ const columns = [
     size: 130,
     cell: info => (
       <Link
-        to="/story/$storyId"
-        params={{ storyId: info.getValue() }}
+        to={`/story/${info.getValue()}`}
         className="font-mono text-xs text-cyan-400 hover:text-cyan-300 hover:underline"
       >
         {info.getValue()}
@@ -54,8 +53,7 @@ const columns = [
           {plans.slice(0, 2).map(p => (
             <Link
               key={p.planSlug}
-              to="/plan/$slug"
-              params={{ slug: p.planSlug }}
+              to={`/plan/${p.planSlug}`}
               className="text-xs text-slate-400 hover:text-cyan-400 truncate max-w-[140px]"
               title={p.title}
             >

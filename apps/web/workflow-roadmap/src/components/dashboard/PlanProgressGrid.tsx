@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import type { DashboardResponse } from '../../store/roadmapApi'
 
 type PlanProgressItem = DashboardResponse['planProgress'][number]
@@ -27,8 +27,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 function PlanCard({ plan }: { plan: PlanProgressItem }) {
   return (
     <Link
-      to="/plan/$slug"
-      params={{ slug: plan.planSlug }}
+      to={`/plan/${plan.planSlug}`}
       className={`block rounded-lg border border-slate-700/50 border-l-4 ${healthBorder[plan.health]} bg-slate-800/30 p-4 hover:bg-slate-800/50 transition-colors`}
     >
       <div className="flex items-start justify-between gap-2 mb-2">

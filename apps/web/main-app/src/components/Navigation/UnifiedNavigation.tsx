@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logger } from '@repo/logger'
 import { Button, Avatar, AvatarFallback, AvatarImage, cn } from '@repo/app-component-library'
@@ -85,7 +85,7 @@ export function UnifiedNavigation({ className }: UnifiedNavigationProps) {
       setIsUserMenuOpen(false)
 
       // Navigate to home page
-      navigate({ to: '/' })
+      navigate('/')
     } catch (error) {
       logger.error('Logout error:', error)
       // Even if logout fails, clear localStorage for security
@@ -98,7 +98,7 @@ export function UnifiedNavigation({ className }: UnifiedNavigationProps) {
 
       // Close user menu and navigate anyway
       setIsUserMenuOpen(false)
-      navigate({ to: '/' })
+      navigate('/')
     }
   }
 

@@ -23,11 +23,11 @@
     "@repo/app-component-library": "workspace:*",
     "@repo/gallery": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@tanstack/react-router": "^1.130.2",
-    "react-redux": "^9.2.0",
     "lucide-react": "^0.476.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7",
     "zod": "^3.25.76"
   },
   "devDependencies": {

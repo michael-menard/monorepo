@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
@@ -48,7 +48,7 @@ const legoBrickVariants = {
 }
 
 export function ForgotPasswordPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { forgotPassword, isLoading } = useAuth()
   const navigationContext = useNavigationOptional()
   const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
@@ -149,7 +149,7 @@ export function ForgotPasswordPage() {
     trackNavigation('continue_to_reset_password', {
       source: 'forgot_password_page',
     })
-    router.navigate({ to: '/reset-password' })
+    navigate('/reset-password')
   }
 
   return (

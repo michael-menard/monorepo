@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
@@ -73,7 +73,7 @@ const legoBrickVariants = {
 }
 
 export function ResetPasswordPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { confirmResetPassword, forgotPassword, isLoading } = useAuth()
   const navigationContext = useNavigationOptional()
   const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
@@ -152,7 +152,7 @@ export function ResetPasswordPage() {
         })
         // Auto-redirect to login after 3 seconds
         setTimeout(() => {
-          router.navigate({ to: '/login' })
+          navigate('/login')
         }, 3000)
       } else if (result.error?.includes('LimitExceededException')) {
         handleSubmitRateLimitError()
@@ -253,7 +253,7 @@ export function ResetPasswordPage() {
 
               <div className="space-y-3">
                 <Button
-                  onClick={() => router.navigate({ to: '/login' })}
+                  onClick={() => navigate('/login')}
                   className={cn(
                     'w-full h-11 bg-gradient-to-r from-sky-500 to-teal-500',
                     'hover:from-sky-600 hover:to-teal-600',

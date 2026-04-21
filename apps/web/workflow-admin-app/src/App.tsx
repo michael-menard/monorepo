@@ -1,16 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { ThemeProvider, Toaster, TooltipProvider } from '@repo/app-component-library'
 import { Provider } from 'react-redux'
-import {
-  RouterProvider,
-  createRouter,
-  createBrowserHistory,
-  createRootRoute,
-  createRoute,
-  Outlet,
-  Link,
-  ScrollRestoration,
-} from '@tanstack/react-router'
+import { BrowserRouter, Routes, Route, Outlet, Link, ScrollRestoration } from 'react-router-dom'
 import { Hexagon, GitBranch } from 'lucide-react'
 import { store } from './store'
 import { THRASH_THRESHOLD } from './constants'
@@ -112,37 +103,17 @@ function HomePage() {
   )
 }
 
-const rootRoute = createRootRoute({ component: ShellLayout })
-
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: HomePage,
-})
-
-const roadmapRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/roadmap',
-  component: RoadmapModulePage,
-})
-
-const roadmapSplatRoute = createRoute({
-  getParentRoute: () => roadmapRoute,
-  path: '$',
-  component: () => null,
-})
-
-const routeTree = rootRoute.addChildren([indexRoute, roadmapRoute.addChildren([roadmapSplatRoute])])
-
-const router = createRouter({
-  routeTree,
-  history: createBrowserHistory(),
-})
-
 export function App() {
   return (
     <Provider store={store}>
-      <RouterProvider router={router} />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<ShellLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="roadmap/*" element={<RoadmapModulePage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </Provider>
   )
 }

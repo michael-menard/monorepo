@@ -3,7 +3,7 @@
  * Used for routes that are planned but not yet implemented
  */
 
-import { useLocation } from '@tanstack/react-router'
+import { useLocation } from 'react-router-dom'
 import { Construction } from 'lucide-react'
 
 export function PlaceholderPage() {

@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -219,7 +219,7 @@ export function DraggableWishlistGallery({
       {
         key: 'a',
         handler: () => {
-          navigate({ to: '/add' })
+          navigate('/add')
           announce('Navigating to add item page')
         },
         description: 'Add item',

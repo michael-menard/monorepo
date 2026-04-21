@@ -2,7 +2,7 @@ import * as React from 'react'
 import { z } from 'zod'
 import type { LucideIcon } from 'lucide-react'
 import { Blocks, Images, Heart, BookOpen } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { cn } from '../_lib/utils'
 import { Button } from '../_primitives/button'
 

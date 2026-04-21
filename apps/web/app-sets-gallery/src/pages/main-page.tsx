@@ -4,7 +4,7 @@
  * The primary page component for the App Sets Gallery module.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { z } from 'zod'
 import { Loader2, Plus } from 'lucide-react'
@@ -133,11 +133,11 @@ export function MainPage({ className }: MainPageProps) {
   }
 
   const handleSetClick = (set: Set) => {
-    navigate({ to: `/${set.id}` })
+    navigate(`/${set.id}`)
   }
 
   const handleEditSet = (set: Set) => {
-    navigate({ to: `/${set.id}/edit` })
+    navigate(`/${set.id}/edit`)
   }
 
   const handleRequestDeleteSet = (set: Set) => {
@@ -207,7 +207,7 @@ export function MainPage({ className }: MainPageProps) {
                     <p className="text-muted-foreground">Manage and track your LEGO sets</p>
                   </div>
                   <Button
-                    onClick={() => navigate({ to: '/add' })}
+                    onClick={() => navigate('/new')}
                     className="gap-2 h-11 px-5 shadow-lg backdrop-blur-sm bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-0 cursor-pointer"
                   >
                     <Plus className="mr-2 h-4 w-4" />

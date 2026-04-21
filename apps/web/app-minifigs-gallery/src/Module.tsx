@@ -2,10 +2,13 @@
  * AppMinifigsGallery Module
  *
  * Main entry point for the Minifig Collection feature module.
- * Lazy-loaded by the shell app. Props-driven — the shell controls which
- * view is active via `mode` and passes navigation callbacks.
+ * Uses React Router v7 for internal routing. When embedded in a shell
+ * that uses a different router (e.g. TanStack Router), the module
+ * provides its own BrowserRouter with basename="/minifigs" so that
+ * internal navigation updates the real browser URL. For standalone
+ * dev, App.tsx provides its own BrowserRouter.
  */
-import { z } from 'zod'
+import { Routes, Route, BrowserRouter, useInRouterContext } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
@@ -13,37 +16,35 @@ import { MainPage } from './pages/main-page'
 import { MinifigDetailPage } from './pages/minifig-detail-page'
 import { CustomsPage } from './pages/customs-page'
 
-const AppMinifigsGalleryModulePropsSchema = z.object({
-  mode: z.enum(['gallery', 'detail', 'customs']).default('gallery'),
-  minifigId: z.string().optional(),
-  className: z.string().optional(),
-})
-
-type AppMinifigsGalleryModuleSchemaProps = z.infer<typeof AppMinifigsGalleryModulePropsSchema>
-
-export type AppMinifigsGalleryModuleProps = AppMinifigsGalleryModuleSchemaProps & {
-  onNavigate?: (path: string) => void
+function MinifigsRoutes() {
+  return (
+    <Routes>
+      <Route index element={<MainPage />} />
+      <Route path="customs" element={<CustomsPage />} />
+      <Route path=":id" element={<MinifigDetailPage />} />
+    </Routes>
+  )
 }
 
-export function AppMinifigsGalleryModule({
-  mode = 'gallery',
-  minifigId,
-  className,
-  onNavigate,
-}: AppMinifigsGalleryModuleProps) {
+export function MinifigsModule({ className }: { className?: string }) {
+  const hasRouter = useInRouterContext()
+
   return (
     <Provider store={store}>
       <ModuleLayout className={className}>
-        {mode === 'detail' && minifigId ? (
-          <MinifigDetailPage minifigId={minifigId} onNavigate={onNavigate} />
-        ) : mode === 'customs' ? (
-          <CustomsPage />
+        {hasRouter ? (
+          <MinifigsRoutes />
         ) : (
-          <MainPage onNavigate={onNavigate} />
+          <BrowserRouter basename="/minifigs">
+            <MinifigsRoutes />
+          </BrowserRouter>
         )}
       </ModuleLayout>
     </Provider>
   )
 }
 
-export default AppMinifigsGalleryModule
+/** @deprecated Use MinifigsModule instead */
+export const AppMinifigsGalleryModule = MinifigsModule
+
+export default MinifigsModule

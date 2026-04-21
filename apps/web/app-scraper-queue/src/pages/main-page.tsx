@@ -120,7 +120,7 @@ export function MainPage() {
   }, [events, dispatch])
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-6 flex flex-col gap-6 h-[calc(100vh-8rem)]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -189,8 +189,10 @@ export function MainPage() {
         </div>
       </AppTabs>
 
-      {/* Unified job board — all scrapers */}
-      <JobBoard />
+      {/* Unified job board — all scrapers, fills remaining height */}
+      <div className="flex-1 min-h-0">
+        <JobBoard />
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useParams, useSearch, useNavigate, Link } from '@tanstack/react-router'
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import {
   AppInput,
   AppTabs,
@@ -48,7 +48,7 @@ import { PlanRetireDialog } from '../../components/plan-details/PlanRetireDialog
 import { PlanCompleteDialog } from '../../components/plan-details/PlanCompleteDialog'
 
 export function PlanDetailsPage() {
-  const { slug } = useParams({ from: '/plan/$slug' })
+  const { slug = '' } = useParams<{ slug: string }>()
   const { data, error, isLoading } = useGetPlanBySlugQuery(slug)
   const [updatePlan] = useUpdatePlanMutation()
   const { data: storiesData, isLoading: isLoadingStories } = useGetStoriesByPlanSlugQuery(slug, {
@@ -156,15 +156,18 @@ export function PlanDetailsPage() {
     })
   }, [storiesData, storySearch, storyStateFilter, storyPriorityFilter, hideCompleted])
 
-  const { tab: urlTab } = useSearch({ from: '/plan/$slug' })
-  const navigate = useNavigate({ from: '/plan/$slug' })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   type Tab = 'table' | 'kanban' | 'timeline' | 'deps'
+  const urlTab = searchParams.get('tab') as Tab | null
   const activeTab: Tab = urlTab ?? 'deps'
-  const setActiveTab = (t: Tab) =>
-    navigate({
-      search: t === 'deps' ? {} : { tab: t },
-      replace: true,
-    })
+  const setActiveTab = (t: Tab) => {
+    if (t === 'deps') {
+      setSearchParams({}, { replace: true })
+    } else {
+      setSearchParams({ tab: t }, { replace: true })
+    }
+  }
   const [slugCopied, setSlugCopied] = useState(false)
   const [retireAction, setRetireAction] = useState<'delete' | 'supersede' | null>(null)
   const [isRetiring, setIsRetiring] = useState(false)
@@ -198,7 +201,7 @@ export function PlanDetailsPage() {
     try {
       await retirePlan({ slug, action: retireAction }).unwrap()
       setRetireAction(null)
-      navigate({ to: '/' })
+      navigate('/')
     } catch (_err) {
       // keep dialog open on error
     } finally {
@@ -209,7 +212,13 @@ export function PlanDetailsPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      const go = (t: Tab) => navigate({ search: t === 'deps' ? {} : { tab: t }, replace: true })
+      const go = (t: Tab) => {
+        if (t === 'deps') {
+          setSearchParams({}, { replace: true })
+        } else {
+          setSearchParams({ tab: t }, { replace: true })
+        }
+      }
       if (e.key === 't' || e.key === 'T') go('table')
       if (e.key === 'k' || e.key === 'K') go('kanban')
       if (e.key === 'g' || e.key === 'G') go('timeline')
@@ -217,7 +226,7 @@ export function PlanDetailsPage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [navigate])
+  }, [setSearchParams])
 
   const handleCopySlug = () => {
     if (!data) return
@@ -325,7 +334,7 @@ export function PlanDetailsPage() {
               size="sm"
               disabled={!prevSlug}
               onClick={() => {
-                if (prevSlug) navigate({ to: '/plan/$slug', params: { slug: prevSlug } })
+                if (prevSlug) navigate(`/plan/${prevSlug}`)
               }}
               className="h-7 px-2 text-slate-400 hover:text-cyan-400 disabled:opacity-30"
               title="Previous plan"
@@ -338,7 +347,7 @@ export function PlanDetailsPage() {
               size="sm"
               disabled={!nextSlug}
               onClick={() => {
-                if (nextSlug) navigate({ to: '/plan/$slug', params: { slug: nextSlug } })
+                if (nextSlug) navigate(`/plan/${nextSlug}`)
               }}
               className="h-7 px-2 text-slate-400 hover:text-cyan-400 disabled:opacity-30"
               title="Next plan"

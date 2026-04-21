@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { logger } from '@repo/logger'
 import {
   setActiveRoute,
@@ -84,7 +84,7 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
       })
 
       // Use TanStack Router navigation
-      navigate({ to: item.href })
+      navigate(item.href)
     },
     [navigate, trackNavigation],
   )

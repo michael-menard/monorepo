@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import {
@@ -66,7 +66,7 @@ const legoBrickVariants = {
  * Separated from RootLayout so AuthProvider can wrap it while being
  * inside the RouterProvider context.
  */
-function RootLayoutContent() {
+function RootLayoutContent({ children }: { children?: React.ReactNode }) {
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
@@ -90,7 +90,7 @@ function RootLayoutContent() {
 
   const handleTabChange = (value: string) => {
     if (value) {
-      navigate({ to: value })
+      navigate(value)
     }
   }
 
@@ -154,7 +154,7 @@ function RootLayoutContent() {
   if (!auth.isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname} />
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>{children}</MainArea>
       </div>
     )
   }
@@ -206,7 +206,7 @@ function RootLayoutContent() {
         </div>
 
         {/* Main content area */}
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname} />
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>{children}</MainArea>
 
         {/* Footer with slide-up animation */}
         <motion.div
@@ -226,13 +226,14 @@ function RootLayoutContent() {
  * AuthProvider is placed here (inside RouterProvider) so it has
  * access to TanStack Router's navigation context.
  */
-export function RootLayout() {
-  const Provider = import.meta.env.VITE_AUTH_BYPASS === 'true' ? DevAuthProvider : AuthProvider
+export function RootLayout({ children }: { children?: React.ReactNode }) {
+  const AuthProviderComponent =
+    import.meta.env.VITE_AUTH_BYPASS === 'true' ? DevAuthProvider : AuthProvider
 
   return (
-    <Provider>
-      <RootLayoutContent />
-    </Provider>
+    <AuthProviderComponent>
+      <RootLayoutContent>{children}</RootLayoutContent>
+    </AuthProviderComponent>
   )
 }
 

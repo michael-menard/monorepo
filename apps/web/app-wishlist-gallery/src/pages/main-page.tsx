@@ -13,7 +13,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { z } from 'zod'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   GalleryGrid,
@@ -607,7 +607,7 @@ function WishlistMainPageContent({
             action={{
               label: 'Add First Item',
               onClick: () => {
-                void navigateToAdd({ to: '/add' })
+                void navigateToAdd('/add')
               },
             }}
           />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   Button,
   Card,
@@ -13,7 +13,7 @@ import { useAuth } from '@/services/auth/AuthProvider'
 import { AuthLayout } from '@/components/Layout/RootLayout'
 
 export function OTPVerificationPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { confirmSignIn, currentChallenge, clearChallenge, isLoading } = useAuth()
   const [otpCode, setOtpCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +22,7 @@ export function OTPVerificationPage() {
   // Redirect if no active challenge
   useEffect(() => {
     if (!currentChallenge) {
-      router.navigate({ to: '/login' })
+      navigate('/login')
     }
   }, [currentChallenge, router])
 
@@ -42,7 +42,7 @@ export function OTPVerificationPage() {
 
       if (result.success) {
         // Navigate to dashboard on successful verification
-        router.navigate({ to: '/' })
+        navigate('/')
       } else if (result.error === 'Additional challenge required') {
         // Another challenge step is required - currentChallenge is already updated
         // The component will re-render with the new challenge info
@@ -61,7 +61,7 @@ export function OTPVerificationPage() {
 
   const handleBackToLogin = () => {
     clearChallenge()
-    router.navigate({ to: '/login' })
+    navigate('/login')
   }
 
   const getChallengeTitle = () => {

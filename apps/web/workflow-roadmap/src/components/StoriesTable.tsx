@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import {
   createColumnHelper,
   flexRender,
@@ -38,16 +38,15 @@ function relativeTime(iso: string | null) {
 }
 
 function createColumns(activeAgentMap: Map<string, ActiveAgent>, fromPlan?: FromPlanInfo) {
-  const stateUpdater = fromPlan ? (((prev: any) => ({ ...prev, fromPlan })) as any) : undefined
+  const linkState = fromPlan ? { fromPlan } : undefined
   return [
     col.accessor('storyId', {
       header: 'Story ID',
       size: 120,
       cell: info => (
         <Link
-          to="/story/$storyId"
-          params={{ storyId: info.getValue() }}
-          state={stateUpdater}
+          to={`/story/${info.getValue()}`}
+          state={linkState}
           className="font-mono text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
         >
           {info.getValue()}
@@ -61,9 +60,8 @@ function createColumns(activeAgentMap: Map<string, ActiveAgent>, fromPlan?: From
         const row = info.row.original
         return (
           <Link
-            to="/story/$storyId"
-            params={{ storyId: row.storyId }}
-            state={stateUpdater}
+            to={`/story/${row.storyId}`}
+            state={linkState}
             className="block no-underline transition-colors group/title"
           >
             <div className="line-clamp-2 group-hover/title:text-cyan-400 group-hover/title:underline">
@@ -113,9 +111,8 @@ function createColumns(activeAgentMap: Map<string, ActiveAgent>, fromPlan?: From
         const val = info.getValue()
         return val ? (
           <Link
-            to="/story/$storyId"
-            params={{ storyId: val }}
-            state={stateUpdater}
+            to={`/story/${val}`}
+            state={linkState}
             className="font-mono text-sm text-red-400 hover:text-red-300 hover:underline"
           >
             {val}

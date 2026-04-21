@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { Hub } from 'aws-amplify/utils'
 import { logger } from '@repo/logger'
 import {
@@ -618,12 +618,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       dispatch(setUnauthenticated())
 
       // Redirect to login page (AC: 5)
-      navigate({ to: '/login' })
+      navigate('/login')
     } catch (error) {
       logger.error('Sign out failed:', error)
       // Even if Amplify signOut fails, still clear local state
       dispatch(setUnauthenticated())
-      navigate({ to: '/login' })
+      navigate('/login')
     }
   }
 

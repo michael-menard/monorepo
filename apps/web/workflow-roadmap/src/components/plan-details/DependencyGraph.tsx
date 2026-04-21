@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Copy, CheckCheck } from 'lucide-react'
 import { getStoryStateColor, getPriorityColor } from '@repo/app-component-library'
 import type { PlanStory } from '../../store/roadmapApi'
@@ -164,8 +164,7 @@ export function DependencyGraph({ stories }: { stories: PlanStory[] }) {
                 return (
                   <Link
                     key={story.storyId}
-                    to="/story/$storyId"
-                    params={{ storyId: story.storyId }}
+                    to={`/story/${story.storyId}`}
                     className={`relative flex flex-col rounded-md ${story.isExternal ? 'border-dashed' : ''} border px-3 py-3 min-w-[200px] max-w-[280px] min-h-[120px] cursor-pointer transition-colors hover:bg-slate-800/40 no-underline ${done ? `opacity-50 ${cardBorder}` : cardBorder} bg-slate-900/60`}
                   >
                     {/* State indicator bar */}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -37,7 +37,7 @@ const PAGE_SIZE = 20
 export { StoryGauge } from './StoryGauge'
 
 export function RoadmapPage() {
-  const navigate = useNavigate({ from: '/' })
+  const navigate = useNavigate()
   const dispatch = useDispatch()
 
   const { status, priority, type, tag, excludeCompleted, search, sortKey, sortDirection } =
@@ -163,7 +163,7 @@ export function RoadmapPage() {
   )
 
   const handleRowClick = (plan: Plan) => {
-    navigate({ to: '/plan/$slug', params: { slug: plan.planSlug } })
+    navigate(`/plan/${plan.planSlug}`)
   }
 
   // --- Error ---

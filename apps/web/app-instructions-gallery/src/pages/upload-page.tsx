@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -159,7 +159,7 @@ function InstructionsNewContent() {
   }, [reset, resetForm, uploadManager, defaultMocValues])
 
   const handleCancel = useCallback(() => {
-    navigate({ to: '/dashboard' })
+    navigate('/dashboard')
   }, [navigate])
 
   // File selection handlers (BUGF-032: real presigned URL API)
@@ -246,7 +246,7 @@ function InstructionsNewContent() {
           uploadManager.clear()
 
           // Navigate to the new MOC page
-          navigate({ to: `/instructions/${result.data.slug}` })
+          navigate(`/instructions/${result.data.slug}`)
         } else {
           const { error } = result
 

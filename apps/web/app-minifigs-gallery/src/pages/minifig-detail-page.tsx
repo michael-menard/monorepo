@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Trash2,
@@ -300,13 +301,10 @@ function QuantityStepper({
 // Detail Page
 // ─────────────────────────────────────────────────────────────────────────
 
-export function MinifigDetailPage({
-  minifigId,
-  onNavigate,
-}: {
-  minifigId: string
-  onNavigate?: (path: string) => void
-}) {
+export function MinifigDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const minifigId = id!
   const { data: minifig, isLoading, isError } = useGetMinifigByIdQuery(minifigId)
   const [deleteMinifig] = useDeleteMinifigMutation()
   const [updateMinifig] = useUpdateMinifigMutation()
@@ -341,7 +339,7 @@ export function MinifigDetailPage({
     [minifig, updateVariant, toastSuccess, toastError],
   )
 
-  const handleBack = () => onNavigate?.('/minifigs')
+  const handleBack = () => navigate('..')
 
   const handleDelete = async () => {
     if (!minifig) return
@@ -349,7 +347,7 @@ export function MinifigDetailPage({
     try {
       await deleteMinifig({ id: minifig.id, displayName: minifig.displayName }).unwrap()
       toastSuccess(`"${minifig.displayName}" deleted`, 'Minifig removed from collection.')
-      onNavigate?.('/minifigs')
+      navigate('..')
     } catch (_err) {
       toastError(_err, `Failed to delete "${minifig.displayName}"`)
       setShowDeleteDialog(false)

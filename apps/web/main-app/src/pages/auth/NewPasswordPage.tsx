@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -40,7 +40,7 @@ const NewPasswordSchema = z
 type NewPasswordFormData = z.infer<typeof NewPasswordSchema>
 
 export function NewPasswordPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { confirmSignIn, currentChallenge, clearChallenge, isLoading } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -59,10 +59,10 @@ export function NewPasswordPage() {
   // Redirect if no active challenge or wrong challenge type
   useEffect(() => {
     if (!currentChallenge) {
-      router.navigate({ to: '/login' })
+      navigate('/login')
     } else if (currentChallenge.challengeName !== 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
       // Wrong challenge type - redirect to appropriate page
-      router.navigate({ to: '/auth/otp-verification' })
+      navigate('/auth/otp-verification')
     }
   }, [currentChallenge, router])
 
@@ -75,10 +75,10 @@ export function NewPasswordPage() {
 
       if (result.success) {
         // Navigate to dashboard on successful password change
-        router.navigate({ to: '/' })
+        navigate('/')
       } else if (result.error === 'Additional challenge required') {
         // Another challenge step is required (e.g., MFA after password change)
-        router.navigate({ to: '/auth/otp-verification' })
+        navigate('/auth/otp-verification')
       } else {
         setError(result.error || 'Failed to set new password. Please try again.')
       }
@@ -91,7 +91,7 @@ export function NewPasswordPage() {
 
   const handleBackToLogin = () => {
     clearChallenge()
-    router.navigate({ to: '/login' })
+    navigate('/login')
   }
 
   if (

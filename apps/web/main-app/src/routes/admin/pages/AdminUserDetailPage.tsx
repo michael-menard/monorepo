@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   User,
@@ -26,16 +26,14 @@ import {
   useUnblockUserMutation,
 } from '@/store'
 
-interface AdminUserDetailPageProps {
-  userId: string
-}
-
 /**
  * Admin User Detail Page
  *
  * Shows detailed user information and admin actions.
  */
-export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
+export function AdminUserDetailPage() {
+  const { userId } = useParams<{ userId: string }>()
+  if (!userId) return null
   const navigate = useNavigate()
   const { data: user, isLoading, error } = useGetUserDetailQuery(userId)
   const [revokeTokens, { isLoading: isRevoking }] = useRevokeTokensMutation()
@@ -48,7 +46,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   const [showUnblockDialog, setShowUnblockDialog] = useState(false)
 
   const handleBack = () => {
-    navigate({ to: '/admin/users' })
+    navigate('/admin/users')
   }
 
   const handleRevokeTokens = async () => {

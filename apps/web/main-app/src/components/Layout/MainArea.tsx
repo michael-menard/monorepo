@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@repo/app-component-library'
 
@@ -6,6 +6,7 @@ interface MainAreaProps {
   className?: string
   isPageTransitioning?: boolean
   currentPath?: string
+  children?: ReactNode
 }
 
 // Page transition variants
@@ -39,6 +40,7 @@ export function MainArea({
   className,
   isPageTransitioning = false,
   currentPath = '/',
+  children,
 }: MainAreaProps) {
   return (
     <main
@@ -84,8 +86,8 @@ export function MainArea({
             </motion.div>
           ) : null}
 
-          {/* Main content outlet */}
-          <Outlet />
+          {/* Main content */}
+          {children}
         </motion.div>
       </AnimatePresence>
     </main>

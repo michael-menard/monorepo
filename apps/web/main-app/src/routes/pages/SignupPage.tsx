@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -113,7 +113,7 @@ export function SignupPage() {
   // This handles the case where auth state resolves after the route guard already ran
   useEffect(() => {
     if (auth.isAuthenticated && !auth.isLoading) {
-      navigate({ to: '/dashboard' })
+      navigate('/dashboard')
     }
   }, [auth.isAuthenticated, auth.isLoading, navigate])
 
@@ -161,10 +161,7 @@ export function SignupPage() {
 
         // Navigate to email verification page after a short delay
         setTimeout(() => {
-          navigate({
-            to: '/auth/verify-email',
-            search: { email: data.email },
-          })
+          navigate(`/auth/verify-email?email=${encodeURIComponent(data.email)}`)
         }, 2000)
       } else {
         setError(result.error || 'Signup failed. Please try again.')

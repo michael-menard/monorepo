@@ -3,7 +3,7 @@
  * Story 2.7: Quick action buttons for common tasks
  */
 
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Button } from '@repo/app-component-library'
 import { Plus, Images, Heart } from 'lucide-react'
 

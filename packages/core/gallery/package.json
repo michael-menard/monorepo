@@ -29,6 +29,7 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7",
     "sonner": "^2.0.6",
     "zod": "^3.24.0"
   },
@@ -44,13 +45,7 @@
     "vitest": "^3.0.5"
   },
   "peerDependencies": {
-    "@tanstack/react-router": "^1.130.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@tanstack/react-router": {
-      "optional": true
-    }
   }
 }

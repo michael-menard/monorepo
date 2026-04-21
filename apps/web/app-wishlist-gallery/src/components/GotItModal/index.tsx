@@ -13,7 +13,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useForm, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import {
   AppDialog,
   AppDialogContent,
@@ -128,7 +128,7 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
           label: 'View in Collection',
           onClick: () => {
             try {
-              navigate({ to: '/collection' })
+              navigate('/collection')
             } catch (error) {
               toast.error('Could not navigate to collection', {
                 description: 'Please navigate manually',

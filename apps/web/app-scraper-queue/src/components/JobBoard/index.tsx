@@ -5,7 +5,7 @@
  * Waiting column supports drag-and-drop reordering.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -225,6 +225,8 @@ const LANE_COLORS: Record<string, string> = {
   completed: 'border-t-green-500',
 }
 
+const PAGE_SIZE = 20
+
 function SwimLane({
   title,
   status,
@@ -237,15 +239,41 @@ function SwimLane({
   sortable?: boolean
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const visibleJobs = jobs.slice(0, visibleCount)
+  const hasMore = visibleCount < jobs.length
+
+  // Reset visible count when job list changes significantly
+  useEffect(() => {
+    if (jobs.length <= PAGE_SIZE) setVisibleCount(PAGE_SIZE)
+  }, [jobs.length])
+
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore) {
+          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, jobs.length))
+        }
+      },
+      { root: scrollRef.current, threshold: 0.1 },
+    )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, jobs.length])
 
   return (
     <div
       className={cn(
-        'flex flex-col rounded-lg border border-border border-t-2 bg-muted/30 min-h-[200px]',
+        'flex flex-col rounded-lg border border-border border-t-2 bg-muted/30 min-h-0',
         LANE_COLORS[status],
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <span className="text-sm font-medium">{title}</span>
         <div className="flex items-center gap-1.5">
           {jobs.length > 0 && (
@@ -268,16 +296,20 @@ function SwimLane({
           </Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[400px]">
+      <div ref={scrollRef} className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0">
         {sortable ? (
-          <SortableContext items={jobs.map(j => j.id)} strategy={verticalListSortingStrategy}>
-            {jobs.map(job => (
+          <SortableContext
+            items={visibleJobs.map(j => j.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {visibleJobs.map(job => (
               <SortableJobCard key={job.id} job={job} />
             ))}
           </SortableContext>
         ) : (
-          jobs.map(job => <JobCard key={job.id} job={job} />)
+          visibleJobs.map(job => <JobCard key={job.id} job={job} />)
         )}
+        {hasMore && <div ref={sentinelRef} className="h-1" />}
         {jobs.length === 0 && (
           <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">
             No jobs
@@ -294,7 +326,7 @@ function SwimLane({
 
 export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const queryParams = scraperType ? { type: scraperType as any } : undefined
-  const { data } = useGetScrapeJobsQuery(queryParams, { pollingInterval: 5000 })
+  const { data } = useGetScrapeJobsQuery(queryParams, { pollingInterval: 3000 })
   const { data: healthData } = useGetQueueHealthQuery(undefined, { pollingInterval: 10000 })
   const [pauseQueue, { isLoading: isPausing }] = usePauseQueueMutation()
   const [resumeQueue, { isLoading: isResuming }] = useResumeQueueMutation()
@@ -319,7 +351,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const active = allJobs.filter(j => j.status === 'active')
   const failed = allJobs.filter(j => j.status === 'failed')
-  const completed = allJobs.filter(j => j.status === 'completed').slice(0, 20)
+  const completed = allJobs.filter(j => j.status === 'completed')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -337,10 +369,10 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col h-full gap-2">
       {/* Per-queue pause control (only when viewing a specific queue) */}
       {scraperType && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between shrink-0">
           <div className="flex-1">
             {isPaused && (
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md px-3 py-1.5 text-xs">
@@ -371,7 +403,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-3 flex-1 min-h-0">
           <SwimLane title="Waiting" status="waiting" jobs={waiting} sortable />
           <SwimLane title="Active" status="active" jobs={active} />
           <SwimLane title="Failed" status="failed" jobs={failed} />

@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { AppBadge } from '@repo/app-component-library'
 import type { DashboardResponse } from '../../store/roadmapApi'
 
@@ -24,8 +24,7 @@ export function StoryAgingList({ stories }: { stories: DashboardResponse['agingS
             className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-slate-800/30 transition-colors"
           >
             <Link
-              to="/story/$storyId"
-              params={{ storyId: story.storyId }}
+              to={`/story/${story.storyId}`}
               className="font-mono text-xs text-cyan-400 hover:text-cyan-300 hover:underline shrink-0"
             >
               {story.storyId}

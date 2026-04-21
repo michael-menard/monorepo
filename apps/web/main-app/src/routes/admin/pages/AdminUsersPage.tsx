@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { Shield, Users } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
 import { UserTable } from '../components/UserTable'
@@ -37,7 +37,7 @@ export function AdminUsersPage() {
 
   const handleUserClick = useCallback(
     (userId: string) => {
-      navigate({ to: '/admin/users/$userId', params: { userId } })
+      navigate(`/admin/users/${userId}`)
     },
     [navigate],
   )

@@ -43,7 +43,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          router: ['@tanstack/react-router'],
+          router: ['react-router-dom'],
           // UI components are imported directly, no barrel file
           auth: ['aws-amplify', '@aws-amplify/ui-react'],
         },
@@ -52,7 +52,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     force: true,
-    include: ['react', 'react-dom', '@tanstack/react-router'],
+    include: ['react', 'react-dom', 'react-router-dom'],
     exclude: [
       // Exclude all workspace packages from pre-bundling
       '@repo/api-client',

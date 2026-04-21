@@ -4,7 +4,7 @@
  * Story 3.1.39: Added edit link for My MOCs (AC: 3)
  */
 
-import { Link } from '@tanstack/react-router'
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@repo/app-component-library'
 import { Blocks, Clock, Pencil } from 'lucide-react'
 import type { RecentMoc } from '@repo/api-client/rtk/dashboard-api'
@@ -47,7 +47,7 @@ export function RecentMocsGrid({ mocs }: RecentMocsGridProps) {
       <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
         {mocs.map(moc => (
           <div key={moc.id} className="flex-shrink-0 relative">
-            <Link to="/gallery/$mocId" params={{ mocId: moc.id }}>
+            <Link to={`/instructions/${moc.id}`}>
               <Card className="w-40 md:w-auto bg-card/80 dark:bg-surface backdrop-blur-sm border border-border dark:border-surface-border hover:border-primary/50 dark:hover:border-glow-primary hover:shadow-md dark:hover:shadow-glow-primary transition-all duration-200 cursor-pointer group">
                 <CardContent className="p-3">
                   {/* Thumbnail */}
@@ -78,8 +78,7 @@ export function RecentMocsGrid({ mocs }: RecentMocsGridProps) {
             {/* Story 3.1.39: Edit button overlay (AC: 3) - outside Link to avoid nesting */}
             {moc.slug ? (
               <Link
-                to="/mocs/$slug/edit"
-                params={{ slug: moc.slug }}
+                to={`/instructions/${moc.slug}`}
                 className="absolute top-4 right-4 p-1.5 rounded-full bg-background/80 dark:bg-surface/80 opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity duration-200 hover:bg-primary hover:text-primary-foreground z-10"
                 aria-label={`Edit ${moc.title}`}
               >

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react'
-import { useSearch, useNavigate } from '@tanstack/react-router'
+import { useSearchParams } from 'react-router-dom'
 import { type SortingState } from '@tanstack/react-table'
 
 /**
@@ -13,12 +13,11 @@ import { type SortingState } from '@tanstack/react-table'
  * @returns [sortingState, setSortingState] - TanStack Table compatible sorting state and setter
  */
 export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingState) => void] {
-  const search = useSearch({ strict: false }) as Record<string, string | undefined>
-  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // Parse URL to get current sorting state
   const sorting: SortingState = useMemo(() => {
-    const sortParam = search?.sort
+    const sortParam = searchParams.get('sort')
     if (!sortParam) return []
 
     // Split by comma for multiple sorts
@@ -39,7 +38,7 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
     }
 
     return sorts
-  }, [search?.sort, maxSorts])
+  }, [searchParams, maxSorts])
 
   // Update URL when sorting changes
   const setSorting = useCallback(
@@ -47,29 +46,28 @@ export function useSortFromURL(maxSorts = 2): [SortingState, (sorting: SortingSt
       // Handle functional updates
       const resolvedSorting = typeof newSorting === 'function' ? newSorting(sorting) : newSorting
 
-      navigate({
-        replace: true,
-        // Cast to router search reducer type to satisfy @tanstack/router generics
-        search: ((prev: any) => {
-          const next = { ...prev } as any
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
 
           if (resolvedSorting.length === 0) {
             // Remove sort param when no sorting
-            delete (next as { sort?: string }).sort
+            next.delete('sort')
           } else {
             // Build comma-separated sort string for multiple sorts
             const sortString = resolvedSorting
               .slice(0, maxSorts) // Enforce max sorts limit
               .map(({ id, desc }) => `${id}:${desc ? 'desc' : 'asc'}`)
               .join(',')
-            ;(next as { sort?: string }).sort = sortString
+            next.set('sort', sortString)
           }
 
           return next
-        }) as any,
-      })
+        },
+        { replace: true },
+      )
     },
-    [navigate, sorting, maxSorts],
+    [setSearchParams, sorting, maxSorts],
   )
 
   return [sorting, setSorting]

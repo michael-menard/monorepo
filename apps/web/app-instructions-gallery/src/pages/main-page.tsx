@@ -6,7 +6,7 @@
  * Story 3.1.2: Instructions Card Component
  */
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { BookOpen, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -196,14 +196,14 @@ export function MainPage({ className }: MainPageProps) {
   const handleEdit = useCallback(
     (id: string) => {
       logger.info('instructions.gallery.edit_click', undefined, { id })
-      navigate({ to: `/instructions/${id}/edit` })
+      navigate(`/instructions/${id}`)
     },
     [navigate],
   )
 
   const handleCardClick = useCallback(
     (id: string) => {
-      navigate({ to: `/instructions/${id}` })
+      navigate(`/instructions/${id}`)
     },
     [navigate],
   )
@@ -361,7 +361,7 @@ export function MainPage({ className }: MainPageProps) {
                     action={{
                       label: 'Create your first MOC',
                       onClick: () => {
-                        navigate({ to: '/mocs/new' })
+                        navigate('/mocs/new')
                       },
                     }}
                     data-testid="gallery-empty-state"
@@ -412,7 +412,7 @@ export function MainPage({ className }: MainPageProps) {
                 columns={mocsColumns}
                 ariaLabel="Instructions gallery table"
                 onRowClick={item => {
-                  navigate({ to: `/instructions/${item.slug}/edit` })
+                  navigate(`/instructions/${item.slug}`)
                 }}
                 hasActiveFilters={Boolean(searchTerm)}
                 onClearFilters={() => setSearchTerm('')}

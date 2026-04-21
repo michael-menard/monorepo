@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       rollupOptions: {
-        external: ['react', 'react-dom', /^@repo\/.*/, '@tanstack/react-router', 'zod'],
+        external: ['react', 'react-dom', /^@repo\/.*/, 'react-router-dom', 'zod'],
         output: {
           entryFileNames: '[name].js',
           chunkFileNames: '[name].js',

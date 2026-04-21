@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { useParams } from '@tanstack/react-router'
+import { Routes, Route } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 
 // Lazy load pages
@@ -24,17 +24,19 @@ function AdminLoadingFallback() {
 /**
  * Admin Module
  *
- * Handles routing between admin user list and detail pages.
- * All routes are protected by RouteGuards.admin.
+ * Owns its internal routes under /admin/*.
+ * Protected by AdminLayout in the shell router.
  */
 export function AdminModule() {
-  const params = useParams({ strict: false })
-  const userId = (params as { userId?: string }).userId
-
   return (
     <div className="container mx-auto py-6">
       <Suspense fallback={<AdminLoadingFallback />}>
-        {userId ? <AdminUserDetailPage userId={userId} /> : <AdminUsersPage />}
+        <Routes>
+          <Route index element={<AdminUsersPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/:userId" element={<AdminUserDetailPage />} />
+
+        </Routes>
       </Suspense>
     </div>
   )
