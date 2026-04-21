@@ -5,6 +5,7 @@
  * collection (owned) operations. Replaces separate wishlist and sets schemas.
  */
 import { z } from 'zod'
+import { MinifigInstanceSchema } from './minifigs'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Enums
@@ -80,6 +81,53 @@ export const SetImageSchema = z.object({
 export type SetImage = z.infer<typeof SetImageSchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Set Instance (per-copy tracking)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const AvailabilityStatusSchema = z.enum(['available', 'retiring_soon', 'retired'])
+export type AvailabilityStatus = z.infer<typeof AvailabilityStatusSchema>
+
+export const SetInstanceSchema = z.object({
+  id: z.string().uuid(),
+  setId: z.string().uuid(),
+  condition: ConditionSchema.nullable(),
+  completeness: CompletenessSchema.nullable(),
+  buildStatus: BuildStatusSchema.nullable(),
+  includesMinifigs: z.boolean().nullable(),
+  purchasePrice: z.string().nullable(),
+  purchaseTax: z.string().nullable(),
+  purchaseShipping: z.string().nullable(),
+  purchaseDate: z.string().datetime().nullable(),
+  storeId: z.string().uuid().nullable(),
+  notes: z.string().nullable(),
+  sortOrder: z.number().int().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+
+export type SetInstance = z.infer<typeof SetInstanceSchema>
+
+export const CreateSetInstanceInputSchema = z.object({
+  condition: ConditionSchema.optional(),
+  completeness: CompletenessSchema.optional(),
+  buildStatus: BuildStatusSchema.optional(),
+  includesMinifigs: z.boolean().optional(),
+  purchasePrice: z.string().optional(),
+  purchaseTax: z.string().optional(),
+  purchaseShipping: z.string().optional(),
+  purchaseDate: z.string().datetime().optional(),
+  storeId: z.string().uuid().optional(),
+  notes: z.string().max(5000).optional(),
+  sortOrder: z.number().int().optional(),
+})
+
+export type CreateSetInstanceInput = z.infer<typeof CreateSetInstanceInputSchema>
+
+export const UpdateSetInstanceInputSchema = CreateSetInstanceInputSchema.partial()
+
+export type UpdateSetInstanceInput = z.infer<typeof UpdateSetInstanceInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Unified Set Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -148,6 +196,15 @@ export const SetSchema = z.object({
   priority: z.number().int().nullable(),
   sortOrder: z.number().int().nullable(),
 
+  // Product details
+  msrpPrice: z.string().nullable().optional(),
+  msrpCurrency: z.string().nullable().optional(),
+  weight: z.string().nullable().optional(),
+  availabilityStatus: AvailabilityStatusSchema.nullable().optional(),
+  quantityWanted: z.number().int().optional(),
+  lastScrapedAt: z.string().datetime().nullable().optional(),
+  lastScrapedSource: z.string().nullable().optional(),
+
   // Images
   imageUrl: z.string().url().nullable(),
   imageVariants: ImageVariantsSchema.nullable().optional(),
@@ -155,6 +212,12 @@ export const SetSchema = z.object({
 
   // Tags
   tags: z.array(z.string()).optional(),
+
+  // Instances (per-copy tracking)
+  instances: z.array(SetInstanceSchema).default([]),
+
+  // Minifigs (linked minifig instances)
+  minifigs: z.array(MinifigInstanceSchema).default([]),
 
   // Timestamps
   createdAt: z.string().datetime(),
@@ -211,6 +274,13 @@ export const UpdateSetSchema = CreateSetSchema.partial()
   .extend({
     status: SetStatusSchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
+    msrpPrice: z.string().optional(),
+    msrpCurrency: z.string().optional(),
+    weight: z.string().optional(),
+    availabilityStatus: AvailabilityStatusSchema.optional(),
+    quantityWanted: z.number().int().optional(),
+    lastScrapedAt: z.string().datetime().optional(),
+    lastScrapedSource: z.string().optional(),
   })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetSchema>

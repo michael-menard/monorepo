@@ -5,19 +5,24 @@
  * Replaces separate wishlist-gallery-api and old sets-api.
  */
 
+import { z } from 'zod'
 import { createApi } from '@reduxjs/toolkit/query/react'
 import {
   SetListResponseSchema,
   SetSchema,
   SetImageSchema,
+  SetInstanceSchema,
   ReorderResponseSchema,
   SetPartsResponseSchema,
   type SetListResponse,
   type Set,
   type SetImage,
+  type SetInstance,
   type SetListQuery,
   type CreateSetInput,
   type UpdateSetInput,
+  type CreateSetInstanceInput,
+  type UpdateSetInstanceInput,
   type BatchReorder,
   type ReorderResponse,
   type PurchaseInput,
@@ -32,7 +37,7 @@ export const setsApi = createApi({
   baseQuery: createServerlessBaseQuery({
     enablePerformanceMonitoring: true,
   }),
-  tagTypes: ['Set', 'SetList', 'Store'],
+  tagTypes: ['Set', 'SetList', 'SetInstance', 'Store'],
   endpoints: builder => ({
     /**
      * GET /api/sets
@@ -263,6 +268,77 @@ export const setsApi = createApi({
     }),
 
     /**
+     * GET /api/sets/:setId/instances
+     */
+    getSetInstances: builder.query<SetInstance[], string>({
+      query: setId => `/sets/${setId}/instances`,
+      transformResponse: (response: unknown) => z.array(SetInstanceSchema).parse(response),
+      providesTags: (result, _error, setId) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'SetInstance' as const, id })),
+              { type: 'SetInstance' as const, id: `SET-${setId}` },
+            ]
+          : [{ type: 'SetInstance' as const, id: `SET-${setId}` }],
+      ...getServerlessCacheConfig('medium'),
+    }),
+
+    /**
+     * POST /api/sets/:setId/instances
+     */
+    createSetInstance: builder.mutation<
+      SetInstance,
+      { setId: string; data: CreateSetInstanceInput }
+    >({
+      query: ({ setId, data }) => ({
+        url: `/sets/${setId}/instances`,
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => SetInstanceSchema.parse(response),
+      invalidatesTags: (_result, _error, { setId }) => [
+        { type: 'Set' as const, id: setId },
+        { type: 'SetList' as const, id: 'LIST' },
+        { type: 'SetInstance' as const, id: `SET-${setId}` },
+      ],
+    }),
+
+    /**
+     * PATCH /api/sets/:setId/instances/:instanceId
+     */
+    updateSetInstance: builder.mutation<
+      SetInstance,
+      { setId: string; instanceId: string; data: UpdateSetInstanceInput }
+    >({
+      query: ({ setId, instanceId, data }) => ({
+        url: `/sets/${setId}/instances/${instanceId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => SetInstanceSchema.parse(response),
+      invalidatesTags: (_result, _error, { setId, instanceId }) => [
+        { type: 'Set' as const, id: setId },
+        { type: 'SetInstance' as const, id: instanceId },
+      ],
+    }),
+
+    /**
+     * DELETE /api/sets/:setId/instances/:instanceId
+     */
+    deleteSetInstance: builder.mutation<void, { setId: string; instanceId: string }>({
+      query: ({ setId, instanceId }) => ({
+        url: `/sets/${setId}/instances/${instanceId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { setId, instanceId }) => [
+        { type: 'Set' as const, id: setId },
+        { type: 'SetList' as const, id: 'LIST' },
+        { type: 'SetInstance' as const, id: instanceId },
+        { type: 'SetInstance' as const, id: `SET-${setId}` },
+      ],
+    }),
+
+    /**
      * GET /api/sets/stores
      */
     getStores: builder.query<Store[], void>({
@@ -288,4 +364,8 @@ export const {
   useDeleteSetImageMutation,
   useGetSetPartsQuery,
   useGetStoresQuery,
+  useGetSetInstancesQuery,
+  useCreateSetInstanceMutation,
+  useUpdateSetInstanceMutation,
+  useDeleteSetInstanceMutation,
 } = setsApi
