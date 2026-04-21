@@ -1,14 +1,14 @@
 /**
  * Set Detail Page
  *
- * Displays detailed information about a specific set using the real Sets API.
- * Story sets-2001: Sets Gallery MVP (Detail View)
+ * Redesigned detail view with hero section, instances table, minifigs grid,
+ * notes, and provenance footer.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-import { ArrowLeft, Edit, Trash2, Blocks, CheckCircle2, Minus, Plus } from 'lucide-react'
+import { ArrowLeft, Check, Plus } from 'lucide-react'
 import { z } from 'zod'
 import {
   Badge,
@@ -17,8 +17,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
-  ConfirmationDialog,
   Skeleton,
   cn,
   useToast,
@@ -26,11 +24,15 @@ import {
 import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@repo/gallery'
 import {
   useGetSetByIdQuery,
-  useDeleteSetMutation,
   useUpdateSetMutation,
-  useGetSetPartsQuery,
+  useCreateSetInstanceMutation,
 } from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
+import { InstancesTable } from '../components/InstancesTable'
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 const SetDetailPagePropsSchema = z.object({
   className: z.string().optional(),
@@ -38,39 +40,50 @@ const SetDetailPagePropsSchema = z.object({
 
 export type SetDetailPageProps = z.infer<typeof SetDetailPagePropsSchema>
 
-function formatBuildStatus(status: string | null | undefined): string {
-  switch (status) {
-    case 'completed':
-      return 'Built'
-    case 'in_progress':
-      return 'In Progress'
-    case 'parted_out':
-      return 'Parted Out'
-    default:
-      return 'In pieces'
-  }
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-function getBuildStatusVariant(
-  status: string | null | undefined,
-): 'default' | 'secondary' | 'outline' {
-  if (status === 'completed' || status === 'parted_out') return 'default'
-  if (status === 'in_progress') return 'secondary'
-  return 'outline'
-}
-
-function formatDate(isoDate: string | null | undefined): string | null {
-  if (!isoDate) return null
+function formatDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return '\u2014'
   const date = new Date(isoDate)
-  if (Number.isNaN(date.getTime())) return null
+  if (Number.isNaN(date.getTime())) return '\u2014'
   return date.toLocaleDateString()
 }
 
-function formatCurrency(value: string | number | null | undefined): string | null {
-  if (value === null || value === undefined) return null
+function formatCurrency(
+  value: string | number | null | undefined,
+  currency?: string | null,
+): string {
+  if (value === null || value === undefined) return '\u2014'
   const num = typeof value === 'string' ? parseFloat(value) : value
-  if (Number.isNaN(num)) return null
-  return `$${num.toFixed(2)}`
+  if (Number.isNaN(num)) return '\u2014'
+  const symbol = currency === 'EUR' ? '\u20AC' : currency === 'GBP' ? '\u00A3' : '$'
+  return `${symbol}${num.toFixed(2)}`
+}
+
+function formatWeight(grams: string | null | undefined): string {
+  if (!grams) return '\u2014'
+  const num = parseFloat(grams)
+  if (Number.isNaN(num)) return '\u2014'
+  if (num >= 1000) return `${(num / 1000).toFixed(2)} kg`
+  return `${num} g`
+}
+
+function formatAvailability(status: string | null | undefined): {
+  label: string
+  variant: 'default' | 'secondary' | 'outline' | 'destructive'
+} {
+  switch (status) {
+    case 'available':
+      return { label: 'Available', variant: 'default' }
+    case 'retiring_soon':
+      return { label: 'Retiring Soon', variant: 'secondary' }
+    case 'retired':
+      return { label: 'Retired', variant: 'destructive' }
+    default:
+      return { label: '\u2014', variant: 'outline' }
+  }
 }
 
 function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
@@ -89,7 +102,6 @@ function buildLightboxImages(set: Set | undefined | null): LightboxImage[] {
     }))
   }
 
-  // Fall back to the primary imageUrl when the set_images array is empty
   if (set.imageUrl) {
     return [{ src: set.imageUrl, alt: set.title, title: set.title }]
   }
@@ -97,67 +109,50 @@ function buildLightboxImages(set: Set | undefined | null): LightboxImage[] {
   return []
 }
 
-/**
- * Skeleton for Set Detail Page while loading
- */
+function formatDimension(
+  dim: { cm?: number | null; inches?: number | null } | null | undefined,
+): string {
+  if (!dim) return '\u2014'
+  if (dim.inches != null) return `${dim.inches}"`
+  if (dim.cm != null) return `${dim.cm} cm`
+  return '\u2014'
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+
 export function SetDetailSkeleton() {
   return (
-    <div className="container mx-auto py-6 space-y-6" data-testid="set-detail-skeleton">
-      {/* Header skeleton */}
+    <div className="container mx-auto py-6 space-y-8" data-testid="set-detail-skeleton">
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-28" />
-        <Skeleton className="h-8 w-64 flex-1" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-32" />
         </div>
+        <Skeleton className="h-10 w-28" />
       </div>
-
-      {/* Content grid skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Images skeleton */}
         <div className="lg:col-span-2">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="aspect-square rounded-lg" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
             ))}
           </div>
         </div>
-
-        {/* Sidebar skeleton */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-24" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-6 w-20" />
-              </div>
-              <div>
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-6 w-24" />
-              </div>
-              <div>
-                <Skeleton className="h-4 w-20 mb-2" />
-                <div className="flex gap-1">
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-6 w-16" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        <div>
           <Card>
             <CardHeader>
               <Skeleton className="h-6 w-32" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-28" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -166,10 +161,11 @@ export function SetDetailSkeleton() {
   )
 }
 
-/**
- * 404-style not found state for Set Detail Page
- */
-export function SetDetailNotFound({ onBack }: { onBack: () => void }) {
+// ---------------------------------------------------------------------------
+// Error States
+// ---------------------------------------------------------------------------
+
+function SetDetailNotFound({ onBack }: { onBack: () => void }) {
   return (
     <div className="container mx-auto py-6" data-testid="set-detail-not-found">
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
@@ -186,47 +182,6 @@ export function SetDetailNotFound({ onBack }: { onBack: () => void }) {
   )
 }
 
-function QuantityStepper({
-  label,
-  value,
-  onUpdate,
-}: {
-  label: string
-  value: number
-  onUpdate: (value: number) => void
-}) {
-  return (
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <div className="flex items-center gap-2 mt-1">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onUpdate(Math.max(1, value - 1))}
-          disabled={value <= 1}
-          aria-label={`Decrease ${label.toLowerCase()}`}
-        >
-          <Minus className="h-3.5 w-3.5" />
-        </Button>
-        <span className="text-sm font-medium tabular-nums w-6 text-center">{value}</span>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onUpdate(value + 1)}
-          aria-label={`Increase ${label.toLowerCase()}`}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Error state for forbidden / generic errors
- */
 function SetDetailError({ message, onBack }: { message: string; onBack: () => void }) {
   return (
     <div className="container mx-auto py-6" data-testid="set-detail-error">
@@ -241,78 +196,269 @@ function SetDetailError({ message, onBack }: { message: string; onBack: () => vo
   )
 }
 
-/**
- * Set Detail Page Component
- */
+// ---------------------------------------------------------------------------
+// Spec Row (for product specs card)
+// ---------------------------------------------------------------------------
+
+function SpecRow({ label, value }: { label: string; value: string }) {
+  const isPlaceholder = value === '\u2014'
+  return (
+    <div className="flex items-center justify-between text-sm py-1.5">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn('font-medium', isPlaceholder && 'text-muted-foreground/50')}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Editable Notes
+// ---------------------------------------------------------------------------
+
+function EditableNotes({
+  value,
+  onSave,
+}: {
+  value: string | null | undefined
+  onSave: (val: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus()
+      textareaRef.current.selectionStart = textareaRef.current.value.length
+    }
+  }, [editing])
+
+  useEffect(() => {
+    if (saved) {
+      const t = setTimeout(() => setSaved(false), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [saved])
+
+  if (editing) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          ref={textareaRef}
+          className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          defaultValue={value ?? ''}
+          onBlur={e => {
+            setEditing(false)
+            if (e.target.value !== (value ?? '')) {
+              onSave(e.target.value)
+              setSaved(true)
+            }
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Escape') {
+              setEditing(false)
+            }
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Click away or press Escape to finish editing
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'text-left w-full cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2 transition-colors',
+        'inline-flex items-start gap-2',
+      )}
+      onClick={() => setEditing(true)}
+      aria-label="Click to edit notes"
+    >
+      <span className={cn('text-sm whitespace-pre-line', !value && 'text-muted-foreground italic')}>
+        {value || 'Click to add notes...'}
+      </span>
+      {saved ? <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" /> : null}
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Editable Quantity Wanted
+// ---------------------------------------------------------------------------
+
+function EditableQuantityWanted({
+  value,
+  onSave,
+}: {
+  value: number | undefined
+  onSave: (val: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  useEffect(() => {
+    if (saved) {
+      const t = setTimeout(() => setSaved(false), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [saved])
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        min={0}
+        className="h-7 w-16 rounded-md border border-input bg-background px-2 text-sm"
+        defaultValue={value ?? 0}
+        onBlur={e => {
+          setEditing(false)
+          const num = parseInt(e.target.value, 10)
+          if (!Number.isNaN(num) && num !== (value ?? 0)) {
+            onSave(num)
+            setSaved(true)
+          }
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') setEditing(false)
+        }}
+      />
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity text-sm"
+      onClick={() => setEditing(true)}
+      aria-label="Edit quantity wanted"
+    >
+      <span className="font-medium">{value ?? 0}</span>
+      {saved ? <Check className="h-3 w-3 text-green-500" /> : null}
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Minifigs Grid
+// ---------------------------------------------------------------------------
+
+function MinifigsGrid({ minifigs }: { minifigs: Set['minifigs'] }) {
+  if (!minifigs || minifigs.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+        No minifig data available
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {minifigs.map(fig => (
+        <div
+          key={fig.id}
+          className="border rounded-lg p-3 flex flex-col items-center gap-2 text-center"
+        >
+          {fig.imageUrl ? (
+            <img
+              src={fig.imageUrl}
+              alt={fig.displayName}
+              className="h-20 w-20 object-contain rounded"
+            />
+          ) : (
+            <div className="h-20 w-20 bg-muted rounded flex items-center justify-center">
+              <span className="text-muted-foreground text-xs">No image</span>
+            </div>
+          )}
+          <p className="text-xs font-medium leading-tight line-clamp-2">{fig.displayName}</p>
+          {fig.quantityOwned > 1 && (
+            <Badge variant="secondary" className="text-xs">
+              x{fig.quantityOwned}
+            </Badge>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
 export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   const { id } = useParams()
   const navigate = useNavigate()
-
   const setId = id ?? ''
 
-  const {
-    data: set,
-    isLoading,
-    isError,
-    error,
-  } = useGetSetByIdQuery(setId, {
-    skip: !setId,
-  })
+  const { data: set, isLoading, isError, error } = useGetSetByIdQuery(setId, { skip: !setId })
 
-  const { data: partsData, isLoading: partsLoading } = useGetSetPartsQuery(setId, {
-    skip: !setId,
-  })
-
-  const [deleteSet] = useDeleteSetMutation()
   const [updateSet] = useUpdateSetMutation()
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [createInstance] = useCreateSetInstanceMutation()
   const { success: toastSuccess, error: toastError } = useToast()
 
-  const handleQuantityUpdate = useCallback(
-    async (quantity: number) => {
+  const lightboxImages = useMemo(() => buildLightboxImages(set), [set])
+  const lightbox = useLightbox(lightboxImages.length)
+
+  const handleBack = () => navigate('..')
+
+  const handleAddCopy = useCallback(async () => {
+    if (!set) return
+    try {
+      await createInstance({
+        setId: set.id,
+        data: {
+          condition: 'new',
+          completeness: 'complete',
+          buildStatus: 'not_started',
+        },
+      }).unwrap()
+      toastSuccess('Added', 'New copy added to your collection.')
+    } catch (err) {
+      toastError(err, 'Failed to add copy')
+    }
+  }, [set, createInstance, toastSuccess, toastError])
+
+  const handleNotesUpdate = useCallback(
+    async (notes: string) => {
       if (!set) return
       try {
-        await updateSet({ id: set.id, data: { quantity } }).unwrap()
-        toastSuccess('Updated', 'Quantity updated successfully.')
+        await updateSet({ id: set.id, data: { notes } }).unwrap()
+        toastSuccess('Updated', 'Notes saved.')
       } catch (err) {
-        toastError(err, 'Failed to update quantity')
+        toastError(err, 'Failed to update notes')
       }
     },
     [set, updateSet, toastSuccess, toastError],
   )
 
-  const lightboxImages = useMemo(() => buildLightboxImages(set), [set])
-  const lightbox = useLightbox(lightboxImages.length)
+  const handleQuantityWantedUpdate = useCallback(
+    async (quantityWanted: number) => {
+      if (!set) return
+      try {
+        await updateSet({ id: set.id, data: { quantityWanted } }).unwrap()
+        toastSuccess('Updated', 'Quantity wanted updated.')
+      } catch (err) {
+        toastError(err, 'Failed to update')
+      }
+    },
+    [set, updateSet, toastSuccess, toastError],
+  )
 
-  const handleBack = () => {
-    navigate('..')
-  }
-
-  const handleEdit = () => {
-    if (!setId) return
-    navigate(setId)
-  }
-
-  const handleDelete = () => {
-    setShowDeleteDialog(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!set) return
-
-    setIsDeleting(true)
-    try {
-      await deleteSet({ id: set.id }).unwrap()
-      toastSuccess(`"${set.title}" deleted`, 'The set has been removed from your collection.')
-      navigate('..')
-    } catch (err) {
-      toastError(err, `Failed to delete "${set.title}"`)
-      setShowDeleteDialog(false)
-    } finally {
-      setIsDeleting(false)
-    }
-  }
+  // --- Loading / Error states ---
 
   if (!setId) {
     return (
@@ -323,16 +469,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     )
   }
 
-  if (isLoading && !set) {
-    return <SetDetailSkeleton />
-  }
+  if (isLoading && !set) return <SetDetailSkeleton />
 
   if (isError || (!set && !isLoading)) {
     if (isFetchBaseQueryError(error)) {
-      if (error.status === 404) {
-        return <SetDetailNotFound onBack={handleBack} />
-      }
-
+      if (error.status === 404) return <SetDetailNotFound onBack={handleBack} />
       if (error.status === 403) {
         return (
           <SetDetailError
@@ -342,7 +483,6 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
         )
       }
     }
-
     return (
       <SetDetailError
         message="Failed to load set details. Please try again from the sets gallery."
@@ -351,77 +491,65 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     )
   }
 
-  if (!set) {
-    return <SetDetailSkeleton />
-  }
+  if (!set) return <SetDetailSkeleton />
 
-  const purchasePrice = formatCurrency(set.purchasePrice)
-  const tax = formatCurrency(set.purchaseTax)
-  const shipping = formatCurrency(set.purchaseShipping)
+  // --- Derived values ---
 
-  const totalNumeric =
-    (set.purchasePrice ? parseFloat(set.purchasePrice) : 0) +
-    (set.purchaseTax ? parseFloat(set.purchaseTax) : 0) +
-    (set.purchaseShipping ? parseFloat(set.purchaseShipping) : 0)
-
-  const total = totalNumeric > 0 ? formatCurrency(totalNumeric) : null
-
-  const hasPurchaseInfo =
-    purchasePrice !== null ||
-    tax !== null ||
-    shipping !== null ||
-    !!set.purchaseDate ||
-    total !== null
-
-  const hasTags = (set.tags?.length ?? 0) > 0
-  const hasNotes = !!set.notes
+  const availability = formatAvailability(set.availabilityStatus)
 
   return (
     <div
-      className={cn('container mx-auto py-6 space-y-6', className)}
+      className={cn('container mx-auto py-6 space-y-8', className)}
       data-testid="set-detail-page"
     >
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
+      {/* ================================================================= */}
+      {/* SECTION 1: Header                                                  */}
+      {/* ================================================================= */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-3">
           <Button
             variant="ghost"
+            size="icon"
             onClick={handleBack}
-            data-testid="set-detail-back-button"
+            className="mt-1 shrink-0"
             aria-label="Back to sets gallery"
+            data-testid="set-detail-back-button"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sets
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight" data-testid="set-detail-title">
               {set.title}
             </h1>
-            {set.setNumber ? (
-              <p className="text-muted-foreground text-sm">Set #{set.setNumber}</p>
-            ) : null}
+            <div className="flex items-center gap-2 flex-wrap">
+              {set.setNumber ? (
+                <span className="text-muted-foreground text-sm font-mono">#{set.setNumber}</span>
+              ) : null}
+              {set.theme ? (
+                <Badge variant="secondary" data-testid="set-detail-theme-badge">
+                  {set.theme}
+                </Badge>
+              ) : null}
+              <Badge variant={availability.variant} data-testid="set-detail-availability-badge">
+                {availability.label}
+              </Badge>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleEdit} data-testid="set-detail-edit-button">
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            data-testid="set-detail-delete-button"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" onClick={handleAddCopy} data-testid="set-detail-add-copy">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Copy
           </Button>
         </div>
       </div>
 
-      {/* Content grid */}
+      {/* ================================================================= */}
+      {/* SECTION 2: Hero (2/3 gallery + 1/3 specs)                         */}
+      {/* ================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Images gallery */}
+        {/* Left: Image gallery */}
         <div className="lg:col-span-2" data-testid="set-detail-images-section">
           {lightboxImages.length > 0 ? (
             <GalleryGrid columns={{ sm: 2, md: 3 }}>
@@ -449,326 +577,97 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
           )}
         </div>
 
-        {/* Sidebar: set details + purchase info */}
-        <div className="space-y-6" data-testid="set-detail-sidebar">
-          {/* Set details */}
+        {/* Right: Product specs */}
+        <div data-testid="set-detail-specs">
           <Card>
             <CardHeader>
-              <CardTitle>Set details</CardTitle>
-              <CardDescription>Core information about this set</CardDescription>
+              <CardTitle>Product Specs</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Description */}
-              {set.description ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Description</p>
-                  <p className="text-sm mt-1">{set.description}</p>
-                </div>
-              ) : null}
-
-              {/* Set number & piece count */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Set number</p>
-                  <p className="text-sm font-mono mt-1">
-                    {set.setNumber ? `#${set.setNumber}` : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pieces</p>
-                  <p className="text-sm mt-1" data-testid="set-detail-piece-count">
-                    {typeof set.pieceCount === 'number'
-                      ? `${set.pieceCount.toLocaleString()} pieces`
-                      : 'Unknown'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Dimensions */}
-              {set.dimensions ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
-                  <div className="grid grid-cols-3 gap-2 mt-1">
-                    {set.dimensions.height ? (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">H: </span>
-                        {set.dimensions.height.inches != null
-                          ? `${set.dimensions.height.inches}"`
-                          : set.dimensions.height.cm != null
-                            ? `${set.dimensions.height.cm} cm`
-                            : '—'}
-                      </div>
-                    ) : null}
-                    {set.dimensions.width ? (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">W: </span>
-                        {set.dimensions.width.inches != null
-                          ? `${set.dimensions.width.inches}"`
-                          : set.dimensions.width.cm != null
-                            ? `${set.dimensions.width.cm} cm`
-                            : '—'}
-                      </div>
-                    ) : null}
-                    {set.dimensions.depth ? (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">D: </span>
-                        {set.dimensions.depth.inches != null
-                          ? `${set.dimensions.depth.inches}"`
-                          : set.dimensions.depth.cm != null
-                            ? `${set.dimensions.depth.cm} cm`
-                            : '—'}
-                      </div>
-                    ) : null}
-                  </div>
-                  {set.dimensions.studsWidth ||
-                  set.dimensions.studsDepth ||
-                  set.dimensions.studsHeight ? (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Studs:{' '}
-                      {[
-                        set.dimensions.studsWidth && `${set.dimensions.studsWidth}W`,
-                        set.dimensions.studsDepth && `${set.dimensions.studsDepth}D`,
-                        set.dimensions.studsHeight && `${set.dimensions.studsHeight}H`,
-                      ]
-                        .filter(Boolean)
-                        .join(' × ')}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Brand */}
-              {set.brand ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Brand</p>
-                  <p className="text-sm mt-1" data-testid="set-detail-brand">
-                    {set.brand}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Theme */}
-              {set.theme ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Theme</p>
-                  <Badge data-testid="set-detail-theme-badge">{set.theme}</Badge>
-                </div>
-              ) : null}
-
-              {/* Year & availability */}
-              {set.year || set.releaseDate || set.retireDate ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Released</p>
-                  <p className="text-sm mt-1" data-testid="set-detail-year">
-                    {set.year ?? '—'}
-                    {set.releaseDate || set.retireDate ? (
-                      <span className="text-muted-foreground ml-1">
-                        ({formatDate(set.releaseDate) ?? '?'}
-                        {' to '}
-                        {formatDate(set.retireDate) ?? '?'})
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Tags */}
-              {set.tags && set.tags.length > 0 ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tags</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {set.tags.map(tag => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Build status + quantity */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Build status</p>
-                  <div className="mt-1">
-                    <Badge
-                      variant={getBuildStatusVariant(set.buildStatus)}
-                      className="inline-flex items-center gap-1 text-xs"
-                      data-testid="set-detail-build-status"
-                    >
-                      {set.buildStatus === 'completed' || set.buildStatus === 'parted_out' ? (
-                        <>
-                          <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                          {formatBuildStatus(set.buildStatus)}
-                        </>
-                      ) : (
-                        <>
-                          <Blocks className="h-3 w-3" aria-hidden="true" />
-                          {formatBuildStatus(set.buildStatus)}
-                        </>
-                      )}
-                    </Badge>
-                  </div>
-                </div>
-                <QuantityStepper
-                  label="Quantity"
-                  value={set.quantity}
-                  onUpdate={handleQuantityUpdate}
+            <CardContent className="divide-y">
+              <SpecRow
+                label="Pieces"
+                value={
+                  typeof set.pieceCount === 'number' ? set.pieceCount.toLocaleString() : '\u2014'
+                }
+              />
+              <SpecRow
+                label="Minifigs"
+                value={set.minifigs.length > 0 ? String(set.minifigs.length) : '\u2014'}
+              />
+              <SpecRow label="MSRP" value={formatCurrency(set.msrpPrice, set.msrpCurrency)} />
+              <SpecRow label="Weight" value={formatWeight(set.weight)} />
+              <SpecRow label="Height" value={formatDimension(set.dimensions?.height)} />
+              <SpecRow label="Width" value={formatDimension(set.dimensions?.width)} />
+              <SpecRow label="Depth" value={formatDimension(set.dimensions?.depth)} />
+              {set.dimensions?.studsWidth ||
+              set.dimensions?.studsDepth ||
+              set.dimensions?.studsHeight ? (
+                <SpecRow
+                  label="Studs"
+                  value={[
+                    set.dimensions.studsWidth && `${set.dimensions.studsWidth}W`,
+                    set.dimensions.studsDepth && `${set.dimensions.studsDepth}D`,
+                    set.dimensions.studsHeight && `${set.dimensions.studsHeight}H`,
+                  ]
+                    .filter(Boolean)
+                    .join(' \u00D7 ')}
                 />
-              </div>
-
-              {/* Tags already rendered above in the theme section */}
-              {hasTags ? <div data-testid="set-detail-tags" className="hidden" /> : null}
-
-              {/* Created / updated */}
-              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-                <div>
-                  <p className="font-medium">Added</p>
-                  <p className="mt-0.5">{formatDate(set.createdAt) ?? 'Unknown'}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Last updated</p>
-                  <p className="mt-0.5">{formatDate(set.updatedAt) ?? 'Unknown'}</p>
-                </div>
-              </div>
+              ) : null}
+              <SpecRow label="Year" value={set.year != null ? String(set.year) : '\u2014'} />
+              <SpecRow label="Brand" value={set.brand ?? '\u2014'} />
+              <SpecRow label="Release Date" value={formatDate(set.releaseDate)} />
+              <SpecRow label="Retire Date" value={formatDate(set.retireDate)} />
+              <SpecRow label="Availability" value={availability.label} />
             </CardContent>
           </Card>
-
-          {/* Purchase info */}
-          {hasPurchaseInfo ? (
-            <Card data-testid="set-detail-purchase-card">
-              <CardHeader>
-                <CardTitle>Purchase information</CardTitle>
-                <CardDescription>How and when you acquired this set</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {purchasePrice !== null ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Price paid</span>
-                    <span className="font-medium" data-testid="set-detail-price">
-                      {purchasePrice}
-                    </span>
-                  </div>
-                ) : null}
-
-                {tax !== null ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span className="font-medium" data-testid="set-detail-tax">
-                      {tax}
-                    </span>
-                  </div>
-                ) : null}
-
-                {shipping !== null ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-medium" data-testid="set-detail-shipping">
-                      {shipping}
-                    </span>
-                  </div>
-                ) : null}
-
-                {set.purchaseDate ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Purchase date</span>
-                    <span className="font-medium" data-testid="set-detail-purchase-date">
-                      {formatDate(set.purchaseDate) ?? 'Unknown'}
-                    </span>
-                  </div>
-                ) : null}
-
-                {total !== null ? (
-                  <>
-                    <hr className="my-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-semibold" data-testid="set-detail-total">
-                        {total}
-                      </span>
-                    </div>
-                  </>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Notes */}
-          {hasNotes ? (
-            <Card data-testid="set-detail-notes-card">
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-line">{set.notes}</p>
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
       </div>
 
-      {/* Parts List */}
-      {partsLoading ? (
-        <Card data-testid="set-detail-parts-skeleton">
-          <CardHeader>
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-4 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-8 w-full" />
-              ))}
-            </div>
+      {/* ================================================================= */}
+      {/* SECTION 3: Instances Table                                         */}
+      {/* ================================================================= */}
+      <section data-testid="set-detail-instances-section">
+        <h2 className="text-lg font-semibold mb-3">Your Copies</h2>
+        <InstancesTable setId={set.id} instances={set.instances} />
+      </section>
+
+      {/* ================================================================= */}
+      {/* SECTION 4: Minifigs Grid                                           */}
+      {/* ================================================================= */}
+      <section data-testid="set-detail-minifigs-section">
+        <h2 className="text-lg font-semibold mb-3">Minifigs</h2>
+        <MinifigsGrid minifigs={set.minifigs} />
+      </section>
+
+      {/* ================================================================= */}
+      {/* SECTION 5: Notes                                                   */}
+      {/* ================================================================= */}
+      <section data-testid="set-detail-notes-section">
+        <h2 className="text-lg font-semibold mb-3">Notes</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <EditableNotes value={set.notes} onSave={handleNotesUpdate} />
           </CardContent>
         </Card>
-      ) : partsData && partsData.partsLists.length > 0 ? (
-        <Card data-testid="set-detail-parts-card">
-          <CardHeader>
-            <CardTitle>Parts</CardTitle>
-            <CardDescription>
-              {partsData.partsLists
-                .reduce((sum, list) => {
-                  const count = list.totalPartsCount ? parseInt(list.totalPartsCount, 10) : 0
-                  return sum + count
-                }, 0)
-                .toLocaleString()}{' '}
-              total parts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {partsData.partsLists.map(list => (
-              <div key={list.id}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-muted-foreground">
-                        <th className="pb-2 pr-4 font-medium">Part</th>
-                        <th className="pb-2 pr-4 font-medium">Color</th>
-                        <th className="pb-2 font-medium text-right">Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.parts.map(part => (
-                        <tr key={part.id} className="border-b last:border-0">
-                          <td className="py-1.5 pr-4">
-                            <span className="font-medium">{part.partName}</span>
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {part.partId}
-                            </span>
-                          </td>
-                          <td className="py-1.5 pr-4">{part.color}</td>
-                          <td className="py-1.5 text-right font-mono">{part.quantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+      </section>
+
+      {/* ================================================================= */}
+      {/* SECTION 6: Provenance Footer                                       */}
+      {/* ================================================================= */}
+      <section
+        className="border-t pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground"
+        data-testid="set-detail-provenance"
+      >
+        <div className="flex items-center gap-4">
+          {set.lastScrapedAt ? <span>Last scraped: {formatDate(set.lastScrapedAt)}</span> : null}
+          {set.lastScrapedSource ? <span>Source: {set.lastScrapedSource}</span> : null}
+          {!set.lastScrapedAt && !set.lastScrapedSource && <span>No scrape data available</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Quantity wanted:</span>
+          <EditableQuantityWanted value={set.quantityWanted} onSave={handleQuantityWantedUpdate} />
+        </div>
+      </section>
 
       {/* Lightbox */}
       <GalleryLightbox
@@ -776,34 +675,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
         open={lightbox.open}
         currentIndex={lightbox.currentIndex}
         onOpenChange={open => {
-          if (!open) {
-            lightbox.closeLightbox()
-          }
+          if (!open) lightbox.closeLightbox()
         }}
         onNext={lightbox.next}
         onPrev={lightbox.prev}
         data-testid="set-detail-lightbox"
-      />
-
-      {/* Delete confirmation dialog */}
-      <ConfirmationDialog
-        title="Delete set?"
-        description={
-          set
-            ? `Are you sure you want to delete "${set.title}"${set.setNumber ? ` (#${set.setNumber})` : ''} from your collection? This action cannot be undone.`
-            : 'Are you sure you want to delete this set? This action cannot be undone.'
-        }
-        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
-        cancelText="Cancel"
-        variant="destructive"
-        open={showDeleteDialog}
-        onOpenChange={open => {
-          if (!open && !isDeleting) {
-            setShowDeleteDialog(false)
-          }
-        }}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteDialog(false)}
       />
     </div>
   )

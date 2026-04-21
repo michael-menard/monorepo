@@ -50,6 +50,8 @@ const baseSet: Set = {
       position: 0,
     },
   ],
+  instances: [],
+  minifigs: [],
   createdAt: new Date('2025-01-01').toISOString(),
   updatedAt: new Date('2025-01-01').toISOString(),
 }

@@ -73,6 +73,8 @@ const mockSet = {
       position: 1,
     },
   ],
+  instances: [],
+  minifigs: [],
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 }
