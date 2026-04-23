@@ -29,6 +29,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   GripVertical,
   RefreshCw,
@@ -496,44 +497,54 @@ function BulkActionBar({
   onClearSelection: () => void
   isDeleting: boolean
 }) {
-  if (selectedCount === 0) return null
-
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg shadow-sm shrink-0">
-      <Badge variant="secondary" className="text-xs">
-        {selectedCount} selected
-      </Badge>
-      <div className="flex-1" />
-      {hasFailedSelected && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={onBulkRetry}
-          disabled={isDeleting}
+    <AnimatePresence>
+      {selectedCount > 0 && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="overflow-hidden shrink-0"
         >
-          <RefreshCw className="h-3 w-3 mr-1" />
-          Retry selected
-        </Button>
+          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg shadow-sm">
+            <Badge variant="secondary" className="text-xs">
+              {selectedCount} selected
+            </Badge>
+            <div className="flex-1" />
+            {hasFailedSelected && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={onBulkRetry}
+                disabled={isDeleting}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry selected
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
+              Delete selected
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-1.5" onClick={onClearSelection}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </motion.div>
       )}
-      <Button
-        variant="destructive"
-        size="sm"
-        className="h-7 text-xs"
-        onClick={onBulkDelete}
-        disabled={isDeleting}
-      >
-        {isDeleting ? (
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-        ) : (
-          <Trash2 className="h-3 w-3 mr-1" />
-        )}
-        Delete selected
-      </Button>
-      <Button variant="ghost" size="sm" className="h-7 px-1.5" onClick={onClearSelection}>
-        <X className="h-3 w-3" />
-      </Button>
-    </div>
+    </AnimatePresence>
   )
 }
 
@@ -553,8 +564,11 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const queue = scraperType ? healthData?.queues.find(q => q.name === scraperType) : undefined
   const isPaused = queue?.isPaused ?? false
 
-  // Track locally hidden jobs so they don't flicker back during polling
+  // Track locally hidden jobs (deleted) so they don't flicker back during polling
   const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set())
+
+  // Track jobs retried via drag — shown in waiting lane until server confirms
+  const [retryingJobIds, setRetryingJobIds] = useState<Set<string>>(new Set())
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -596,6 +610,20 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     })
   }, [data?.jobs, hiddenJobIds.size])
 
+  // Clear retrying IDs once the server shows them as waiting (no longer failed)
+  useEffect(() => {
+    if (!data?.jobs || retryingJobIds.size === 0) return
+    setRetryingJobIds(prev => {
+      const next = new Set<string>()
+      for (const id of prev) {
+        const job = data.jobs.find(j => j.id === id)
+        // Keep overriding until server confirms the status change
+        if (job && job.status === 'failed') next.add(id)
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [data?.jobs, retryingJobIds.size])
+
   // Clean selection when jobs disappear
   useEffect(() => {
     if (!data?.jobs || selectedIds.size === 0) return
@@ -619,10 +647,9 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const handleRetry = useCallback(
     (id: string) => {
-      hideJob(id)
       retryJobMutation(id)
     },
-    [hideJob, retryJobMutation],
+    [retryJobMutation],
   )
 
   const toggleSelect = useCallback((id: string) => {
@@ -665,7 +692,12 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const handleBulkRetry = useCallback(async () => {
     const ids = [...selectedIds]
-    hideJobs(ids)
+    setRetryingJobIds(prev => {
+      const next = new Set(prev)
+      for (const id of ids) next.add(id)
+      return next
+    })
+    setSelectedIds(new Set())
     await Promise.allSettled(
       ids.map(id =>
         retryJobMutation(id)
@@ -673,7 +705,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
           .catch(() => {}),
       ),
     )
-  }, [selectedIds, hideJobs, retryJobMutation])
+  }, [selectedIds, retryJobMutation])
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
 
@@ -685,7 +717,12 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const jobKey = (j: ScrapeJob) => `${j.type}:${j.id}`
 
   const waiting = allJobs
-    .filter(j => j.status === 'waiting' || j.status === 'delayed')
+    .filter(
+      j =>
+        j.status === 'waiting' ||
+        j.status === 'delayed' ||
+        (j.status === 'failed' && retryingJobIds.has(j.id)),
+    )
     .sort((a, b) => {
       const ai = waitingOrder.indexOf(jobKey(a))
       const bi = waitingOrder.indexOf(jobKey(b))
@@ -694,7 +731,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     })
 
   const active = allJobs.filter(j => j.status === 'active')
-  const failed = allJobs.filter(j => j.status === 'failed')
+  const failed = allJobs.filter(j => j.status === 'failed' && !retryingJobIds.has(j.id))
   const completed = allJobs.filter(j => j.status === 'completed')
 
   const hasFailedSelected = failed.some(j => selectedIds.has(j.id))
@@ -751,12 +788,38 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
     const to = findContainer(overId, waitingSortableIds, failedSortableIds)
 
+    // Cross-lane: failed → waiting = retry at drop position
     if (from === 'failed' && to === 'waiting') {
       const job = sortableIdToJob.get(activeId)
-      if (job) handleRetry(job.id)
+      if (!job) return
+
+      const newKey = jobKey(job)
+
+      // Fire the retry mutation (don't hide — retryingJobIds handles the visual move)
+      setRetryingJobIds(prev => new Set(prev).add(job.id))
+      retryJobMutation(job.id)
+
+      // Determine where to insert in the waiting order
+      const currentIds = [...waitingSortableIds]
+      const overIndex = currentIds.indexOf(overId)
+
+      if (overIndex >= 0) {
+        // Dropped over a specific waiting card — check if above or below its center
+        const overRect = over.rect
+        const draggedTop = dragActive.rect.current.translated?.top ?? 0
+        const overCenter = overRect.top + overRect.height / 2
+        const insertIndex = draggedTop > overCenter ? overIndex + 1 : overIndex
+        currentIds.splice(insertIndex, 0, newKey)
+      } else {
+        // Dropped on the lane droppable itself (empty lane or below all cards)
+        currentIds.push(newKey)
+      }
+
+      setWaitingOrder(currentIds)
       return
     }
 
+    // Same-lane reorder within waiting
     if (from === 'waiting' && to === 'waiting' && activeId !== overId) {
       const oldIndex = waitingSortableIds.indexOf(activeId)
       const newIndex = waitingSortableIds.indexOf(overId)
