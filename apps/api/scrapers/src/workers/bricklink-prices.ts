@@ -11,6 +11,7 @@ import {
   getSharedPage,
   resetPage,
   shutdownBrowser as shutdownPricesBrowser,
+  navigateWithRetry,
   waitForAgeGate,
   checkRateLimited,
 } from './shared-browser.js'
@@ -75,21 +76,7 @@ export async function processBricklinkPrices(job: BricklinkPricesJob): Promise<P
     const url = `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}#T=P`
     logger.info(`[bricklink-prices] Scraping price guide for ${itemType}=${itemNumber}`)
 
-    // Navigate with retry — BrickLink sometimes aborts on redirects (age gate, login, etc.)
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
-        break
-      } catch (navError) {
-        const navMsg = navError instanceof Error ? navError.message : String(navError)
-        if (attempt === 0 && navMsg.includes('ERR_ABORTED')) {
-          logger.warn(`[bricklink-prices] Navigation aborted for ${itemNumber}, retrying...`)
-          await page.waitForTimeout(3000)
-          continue
-        }
-        throw navError
-      }
-    }
+    await navigateWithRetry(page, url)
 
     await waitForAgeGate(page)
     await page.waitForTimeout(randomDelay())

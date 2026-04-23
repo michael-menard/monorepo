@@ -12,6 +12,7 @@ import {
   getSharedPage,
   resetPage,
   shutdownBrowser as shutdownCatalogBrowser,
+  navigateWithRetry,
 } from './shared-browser.js'
 
 /** Random delay between 5-8 seconds */
@@ -53,7 +54,7 @@ export async function processBricklinkCatalog(
 
       logger.info(`[bricklink-catalog] Page ${currentPage}/${totalPages}`, { pageUrl })
 
-      await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
+      await navigateWithRetry(page, pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
       await page.waitForTimeout(randomDelay())
 
       // Check if BrickLink redirected us away (e.g. notFound.asp)
@@ -64,7 +65,7 @@ export async function processBricklinkCatalog(
           actual: currentUrl,
         })
         // Try once more — BrickLink sometimes redirects on first load
-        await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
+        await navigateWithRetry(page, pageUrl, { waitUntil: 'networkidle', timeout: 60000 })
         await page.waitForTimeout(randomDelay())
 
         const retryUrl = page.url()

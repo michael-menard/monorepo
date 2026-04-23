@@ -13,6 +13,7 @@ import {
   getSharedPage,
   resetPage,
   shutdownBrowser,
+  navigateWithRetry,
   waitForAgeGate,
   checkRateLimited,
 } from './shared-browser.js'
@@ -54,7 +55,7 @@ export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise
     const detailUrl = `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}#T=S`
     logger.info(`[bricklink-minifig] Scraping ${itemType}=${itemNumber}`, { detailUrl })
 
-    await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await navigateWithRetry(page, detailUrl, { timeout: 60000 })
     await waitForAgeGate(page)
     await page.waitForTimeout(randomDelay())
 

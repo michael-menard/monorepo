@@ -17,7 +17,7 @@ import { scraperEvents } from './events.js'
 import { processBricklinkMinifig, type ScrapeResult } from './workers/bricklink-minifig.js'
 import { processBricklinkCatalog } from './workers/bricklink-catalog.js'
 import { processBricklinkPrices } from './workers/bricklink-prices.js'
-import { shutdownBrowser } from './workers/shared-browser.js'
+import { shutdownBrowser, setNavigationBlockHandler } from './workers/shared-browser.js'
 import { processLegoSet } from './workers/lego-set.js'
 import { processRebrickableSet } from './workers/rebrickable-set.js'
 import { processRebrickableMocs } from './workers/rebrickable-mocs.js'
@@ -53,9 +53,25 @@ const circuitBreaker = new CircuitBreaker(redis, {
   },
 })
 
-// ────────────────────��────────────────────────────────���───────────────────
+// ── Navigation block handler (ERR_ABORTED circuit breaker) ───────────────
+
+const BRICKLINK_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
+
+setNavigationBlockHandler(async () => {
+  const reason = 'BrickLink blocking navigation (consecutive ERR_ABORTED errors)'
+  const resumesAt = new Date(Date.now() + BRICKLINK_COOLDOWN_MS).toISOString()
+
+  // Pause all BrickLink queues
+  const blQueues = [queues.bricklinkMinifig, queues.bricklinkCatalog, queues.bricklinkPrices]
+  for (const q of blQueues) {
+    await circuitBreaker.trip(q, reason, BRICKLINK_COOLDOWN_MS)
+    await scraperEvents.circuitBreakerTripped(q.name, reason, resumesAt)
+  }
+})
+
+// ───────────────────────────────────────────────────────────────────────
 // Workers
-// ───────────────────────────────────────────────────��─────────────────────
+// ───────────────────────────────────────────────────────────────────────
 
 /**
  * Handle rate-limited results from any scraper.

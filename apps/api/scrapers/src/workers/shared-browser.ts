@@ -4,6 +4,9 @@
  * Single Chrome instance shared across minifig, catalog, and prices workers.
  * Uses a persistent profile for session cookies and a single reusable page
  * to avoid Chrome profile recovery dialogs.
+ *
+ * Tracks consecutive navigation failures (ERR_ABORTED) and can trip a
+ * circuit breaker to pause all BrickLink queues when the site is blocking us.
  */
 
 import { resolve, dirname, join } from 'path'
@@ -17,6 +20,46 @@ const CHROME_PROFILE = resolve(__dirname, '../../../scrapers/bricklink-minifigs/
 
 let sharedContext: BrowserContext | null = null
 let sharedPage: Page | null = null
+
+// ── Navigation failure tracking ──────────────────────────────────────────
+
+const NAV_FAILURE_THRESHOLD = 3
+let consecutiveNavFailures = 0
+let onNavigationBlock: (() => Promise<void>) | null = null
+
+/**
+ * Register a callback that fires when consecutive ERR_ABORTED failures
+ * hit the threshold. Typically wired to trip the circuit breaker.
+ */
+export function setNavigationBlockHandler(handler: () => Promise<void>): void {
+  onNavigationBlock = handler
+}
+
+/** Reset the consecutive failure counter (called on successful navigation). */
+function resetNavFailures(): void {
+  if (consecutiveNavFailures > 0) {
+    logger.info(
+      `[browser] Navigation succeeded — resetting failure counter (was ${consecutiveNavFailures})`,
+    )
+  }
+  consecutiveNavFailures = 0
+}
+
+/** Increment the failure counter and trip the block handler if threshold reached. */
+async function recordNavFailure(url: string, error: string): Promise<void> {
+  consecutiveNavFailures++
+  logger.warn(`[browser] Navigation failure ${consecutiveNavFailures}/${NAV_FAILURE_THRESHOLD}`, {
+    url,
+    error,
+  })
+
+  if (consecutiveNavFailures >= NAV_FAILURE_THRESHOLD && onNavigationBlock) {
+    logger.error(
+      `[browser] ${NAV_FAILURE_THRESHOLD} consecutive navigation failures — triggering block handler`,
+    )
+    await onNavigationBlock()
+  }
+}
 
 /**
  * Get or create the shared browser page.
@@ -146,6 +189,40 @@ export async function waitForAgeGate(page: Page): Promise<void> {
 
   logger.warn('[browser] Timed out waiting for birthday verification — continuing...')
   await dismissCookiePopup(page)
+}
+
+/**
+ * Navigate to a URL with ERR_ABORTED retry and failure tracking.
+ * Retries once on ERR_ABORTED, then records the failure.
+ * Resets the failure counter on success.
+ */
+export async function navigateWithRetry(
+  page: Page,
+  url: string,
+  options: { waitUntil?: 'domcontentloaded' | 'networkidle'; timeout?: number } = {},
+): Promise<void> {
+  const waitUntil = options.waitUntil ?? 'domcontentloaded'
+  const timeout = options.timeout ?? 30000
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await page.goto(url, { waitUntil, timeout })
+      resetNavFailures()
+      return
+    } catch (navError) {
+      const msg = navError instanceof Error ? navError.message : String(navError)
+      if (msg.includes('ERR_ABORTED')) {
+        if (attempt === 0) {
+          logger.warn(`[browser] Navigation aborted, retrying in 3s...`, { url })
+          await page.waitForTimeout(3000)
+          continue
+        }
+        // Second attempt also failed — record and throw
+        await recordNavFailure(url, msg)
+      }
+      throw navError
+    }
+  }
 }
 
 /**
