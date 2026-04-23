@@ -3,7 +3,7 @@
  *
  * Columns: Waiting | Active | Failed | Completed
  * Waiting column supports drag-and-drop reordering.
- * Failed jobs can be dragged to the Waiting lane to retry.
+ * Failed jobs can be dragged to the Waiting lane to retry (cards part to make room).
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -12,8 +12,8 @@ import {
   closestCenter,
   DragOverlay,
   useDroppable,
-  useDraggable,
   type DragStartEvent,
+  type DragOverEvent,
   type DragEndEvent,
   type CollisionDetection,
   pointerWithin,
@@ -201,18 +201,19 @@ function JobCard({ job, isDraggable }: { job: ScrapeJob; isDraggable?: boolean }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Sortable Job Card (for waiting lane)
+// Sortable Job Card (for waiting + failed lanes)
 // ─────────────────────────────────────────────────────────────────────────
 
-function SortableJobCard({ job }: { job: ScrapeJob }) {
+function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: job.id,
+    id: sortableId,
+    data: { job },
   })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
   }
 
   return (
@@ -223,18 +224,14 @@ function SortableJobCard({ job }: { job: ScrapeJob }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Draggable Job Card (for failed lane — cross-lane drag to retry)
+// Droppable Lane Wrapper (makes empty lanes a valid drop target)
 // ─────────────────────────────────────────────────────────────────────────
 
-function DraggableJobCard({ job }: { job: ScrapeJob }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `failed:${job.id}`,
-    data: { job, source: 'failed' },
-  })
-
+function DroppableLane({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id })
   return (
-    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.3 : 1 }} {...attributes} {...listeners}>
-      <JobCard job={job} isDraggable />
+    <div ref={setNodeRef} className="min-h-[40px]">
+      {children}
     </div>
   )
 }
@@ -256,17 +253,13 @@ function SwimLane({
   title,
   status,
   jobs,
-  sortable,
-  draggable,
-  droppable,
+  sortableIds,
   isDropTarget,
 }: {
   title: string
   status: string
   jobs: ScrapeJob[]
-  sortable?: boolean
-  draggable?: boolean
-  droppable?: boolean
+  sortableIds?: string[]
   isDropTarget?: boolean
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
@@ -274,20 +267,13 @@ function SwimLane({
   const sentinelRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: `lane:${status}`,
-    disabled: !droppable,
-  })
-
   const visibleJobs = jobs.slice(0, visibleCount)
   const hasMore = visibleCount < jobs.length
 
-  // Reset visible count when job list changes significantly
   useEffect(() => {
     if (jobs.length <= PAGE_SIZE) setVisibleCount(PAGE_SIZE)
   }, [jobs.length])
 
-  // Infinite scroll via IntersectionObserver
   useEffect(() => {
     if (!sentinelRef.current || !hasMore) return
     const observer = new IntersectionObserver(
@@ -302,21 +288,20 @@ function SwimLane({
     return () => observer.disconnect()
   }, [hasMore, jobs.length])
 
-  const showDropHighlight = droppable && (isOver || isDropTarget)
+  const isSortable = !!sortableIds
 
   return (
     <div
-      ref={droppable ? setNodeRef : undefined}
       className={cn(
         'flex flex-col rounded-lg border border-border border-t-2 bg-muted/30 min-h-0 transition-colors',
         LANE_COLORS[status],
-        showDropHighlight && 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20',
+        isDropTarget && 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20',
       )}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <span className="text-sm font-medium">
           {title}
-          {showDropHighlight && (
+          {isDropTarget && (
             <span className="ml-1.5 text-xs text-blue-500 font-normal">Drop to retry</span>
           )}
         </span>
@@ -342,22 +327,21 @@ function SwimLane({
         </div>
       </div>
       <div ref={scrollRef} className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0">
-        {sortable ? (
-          <SortableContext
-            items={visibleJobs.map(j => j.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {visibleJobs.map(job => (
-              <SortableJobCard key={job.id} job={job} />
-            ))}
-          </SortableContext>
-        ) : draggable ? (
-          visibleJobs.map(job => <DraggableJobCard key={job.id} job={job} />)
+        {isSortable ? (
+          <DroppableLane id={`lane:${status}`}>
+            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {visibleJobs.map((job, i) => (
+                  <SortableJobCard key={sortableIds[i]} job={job} sortableId={sortableIds[i]} />
+                ))}
+              </div>
+            </SortableContext>
+          </DroppableLane>
         ) : (
           visibleJobs.map(job => <JobCard key={job.id} job={job} />)
         )}
         {hasMore && <div ref={sentinelRef} className="h-1" />}
-        {jobs.length === 0 && (
+        {jobs.length === 0 && !isSortable && (
           <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">
             No jobs
           </div>
@@ -365,6 +349,23 @@ function SwimLane({
       </div>
     </div>
   )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Helpers: find which container a sortable ID belongs to
+// ─────────────────────────────────────────────────────────────────────────
+
+function findContainer(
+  id: string,
+  waitingIds: string[],
+  failedIds: string[],
+): 'waiting' | 'failed' | null {
+  if (waitingIds.includes(id)) return 'waiting'
+  if (failedIds.includes(id)) return 'failed'
+  // Check lane droppable IDs
+  if (id === 'lane:waiting') return 'waiting'
+  if (id === 'lane:failed') return 'failed'
+  return null
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -385,15 +386,13 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const allJobs = data?.jobs ?? []
 
   // Group by status
-  const [waitingJobs, setWaitingJobs] = useState<string[]>([])
-  const [draggingFromFailed, setDraggingFromFailed] = useState(false)
+  const [waitingOrder, setWaitingOrder] = useState<string[]>([])
 
   const waiting = allJobs
     .filter(j => j.status === 'waiting' || j.status === 'delayed')
     .sort((a, b) => {
-      // Respect drag order if set, otherwise by created time
-      const ai = waitingJobs.indexOf(a.id)
-      const bi = waitingJobs.indexOf(b.id)
+      const ai = waitingOrder.indexOf(a.id)
+      const bi = waitingOrder.indexOf(b.id)
       if (ai >= 0 && bi >= 0) return ai - bi
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     })
@@ -402,75 +401,103 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const failed = allJobs.filter(j => j.status === 'failed')
   const completed = allJobs.filter(j => j.status === 'completed')
 
-  // Find the job being dragged (for DragOverlay)
+  // Sortable IDs: waiting uses plain IDs, failed uses prefixed IDs
+  const waitingSortableIds = waiting.map(j => j.id)
+  const failedSortableIds = failed.map(j => `failed:${j.id}`)
+
+  // Drag state
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [overContainer, setOverContainer] = useState<string | null>(null)
   const activeJob = activeJobId
     ? allJobs.find(j => j.id === activeJobId || `failed:${j.id}` === activeJobId)
     : null
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  // Custom collision: failed cards use rectIntersection (targets lane containers),
-  // waiting cards use closestCenter (targets sortable items within the lane)
+  // Collision detection: use closestCenter for within-container,
+  // but also check lane droppables for cross-container moves
   const collisionDetection: CollisionDetection = useCallback(args => {
-    const dragId = String(args.active.id)
-    if (dragId.startsWith('failed:')) {
-      // For cross-lane drops, find droppable containers the dragged item overlaps
-      // Filter to only lane:* droppables to avoid matching sortable items
-      const collisions = rectIntersection(args)
-      const laneCollisions = collisions.filter(c => String(c.id).startsWith('lane:'))
-      return laneCollisions.length > 0 ? laneCollisions : collisions
+    // First check if pointer is within a lane droppable
+    const pointerCollisions = pointerWithin(args)
+    const laneHit = pointerCollisions.find(c => String(c.id).startsWith('lane:'))
+
+    // Then get closest sortable items
+    const centerCollisions = closestCenter(args)
+
+    // If we have a lane hit, prefer sortable items within that lane,
+    // but fall back to the lane itself (for empty lanes)
+    if (laneHit) {
+      if (centerCollisions.length > 0) return centerCollisions
+      return [laneHit]
     }
-    return closestCenter(args)
+
+    return centerCollisions
   }, [])
 
   function handleDragStart(event: DragStartEvent) {
-    const id = String(event.active.id)
-    setActiveJobId(id)
-    setDraggingFromFailed(id.startsWith('failed:'))
+    setActiveJobId(String(event.active.id))
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { active: dragActive, over } = event
+    if (!over) {
+      setOverContainer(null)
+      return
+    }
+
+    const activeId = String(dragActive.id)
+    const overId = String(over.id)
+
+    const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
+    const to = findContainer(overId, waitingSortableIds, failedSortableIds)
+
+    // Show drop highlight when failed card is over waiting lane
+    if (from === 'failed' && to === 'waiting') {
+      setOverContainer('waiting')
+    } else {
+      setOverContainer(null)
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active: dragActive, over } = event
     setActiveJobId(null)
-    setDraggingFromFailed(false)
+    setOverContainer(null)
 
     if (!over) return
 
-    const dragId = String(dragActive.id)
+    const activeId = String(dragActive.id)
     const overId = String(over.id)
 
-    // Cross-lane: failed job dropped onto waiting lane → retry
-    // Accept drop on the lane container OR any sortable item within it
-    if (dragId.startsWith('failed:')) {
-      const waitingIds = new Set(waiting.map(j => j.id))
-      if (overId === 'lane:waiting' || waitingIds.has(overId)) {
-        const jobId = dragId.replace('failed:', '')
-        retryJob(jobId)
-      }
+    const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
+    const to = findContainer(overId, waitingSortableIds, failedSortableIds)
+
+    // Cross-lane: failed → waiting = retry
+    if (from === 'failed' && to === 'waiting') {
+      const jobId = activeId.replace('failed:', '')
+      retryJob(jobId)
       return
     }
 
-    // Same-lane: reorder within waiting
-    if (!dragId.startsWith('failed:') && dragId !== overId) {
-      const ids = waiting.map(j => j.id)
-      const oldIndex = ids.indexOf(dragId)
+    // Same-lane reorder within waiting
+    if (from === 'waiting' && to === 'waiting' && activeId !== overId) {
+      const ids = waitingSortableIds
+      const oldIndex = ids.indexOf(activeId)
       const newIndex = ids.indexOf(overId)
 
       if (oldIndex >= 0 && newIndex >= 0) {
-        setWaitingJobs(arrayMove(ids, oldIndex, newIndex))
+        setWaitingOrder(arrayMove(ids, oldIndex, newIndex))
       }
     }
   }
 
   function handleDragCancel() {
     setActiveJobId(null)
-    setDraggingFromFailed(false)
+    setOverContainer(null)
   }
 
   return (
     <div className="flex flex-col h-full gap-2">
-      {/* Per-queue pause control (only when viewing a specific queue) */}
       {scraperType && (
         <div className="flex items-center justify-between shrink-0">
           <div className="flex-1">
@@ -506,6 +533,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
         sensors={sensors}
         collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
@@ -514,12 +542,11 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             title="Waiting"
             status="waiting"
             jobs={waiting}
-            sortable
-            droppable
-            isDropTarget={draggingFromFailed}
+            sortableIds={waitingSortableIds}
+            isDropTarget={overContainer === 'waiting'}
           />
           <SwimLane title="Active" status="active" jobs={active} />
-          <SwimLane title="Failed" status="failed" jobs={failed} draggable />
+          <SwimLane title="Failed" status="failed" jobs={failed} sortableIds={failedSortableIds} />
           <SwimLane title="Completed" status="completed" jobs={completed} />
         </div>
         <DragOverlay>
