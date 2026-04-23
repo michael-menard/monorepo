@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { auth } from '../../middleware/auth.js'
-import { db, schema, setMinifigs } from '../../composition/index.js'
+import { db, schema } from '../../composition/index.js'
+import { setMinifigs } from '../../composition/database.js'
 import { createSetsService } from './application/index.js'
 import {
   createSetRepository,
