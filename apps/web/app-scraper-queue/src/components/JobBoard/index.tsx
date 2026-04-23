@@ -140,14 +140,16 @@ function JobCard({
   isDraggable,
   activatorRef,
   dragListeners,
+  onDelete,
+  onRetry,
 }: {
   job: ScrapeJob
   isDraggable?: boolean
   activatorRef?: (node: HTMLElement | null) => void
   dragListeners?: Record<string, unknown>
+  onDelete?: (id: string) => void
+  onRetry?: (id: string) => void
 }) {
-  const [cancelJob, { isLoading: isCancelling }] = useCancelScrapeJobMutation()
-  const [retryJob, { isLoading: isRetrying }] = useRetryScrapeJobMutation()
   const isActive = job.status === 'active'
   const elapsed = useElapsedTime(job.processedAt, isActive)
   const progressMsg = getProgressMessage(job.progress)
@@ -177,35 +179,16 @@ function JobCard({
       {job.failedReason && <p className="text-red-500 truncate">{job.failedReason}</p>}
 
       <div className="flex justify-end gap-1">
-        {job.status === 'failed' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5"
-            onClick={() => retryJob(job.id)}
-            disabled={isRetrying}
-          >
-            {isRetrying ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
+        {job.status === 'failed' && onRetry && (
+          <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={() => onRetry(job.id)}>
+            <RefreshCw className="h-3 w-3" />
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-1.5"
-          onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
-          onClick={() => cancelJob(job.id)}
-          disabled={isCancelling}
-        >
-          {isCancelling ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
+        {onDelete && (
+          <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={() => onDelete(job.id)}>
             <Trash2 className="h-3 w-3" />
-          )}
-        </Button>
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -217,7 +200,17 @@ function JobCard({
 // Sortable Job Card (for waiting + failed lanes)
 // ─────────────────────────────────────────────────────────────────────────
 
-function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: string }) {
+function SortableJobCard({
+  job,
+  sortableId,
+  onDelete,
+  onRetry,
+}: {
+  job: ScrapeJob
+  sortableId: string
+  onDelete?: (id: string) => void
+  onRetry?: (id: string) => void
+}) {
   const {
     attributes,
     listeners,
@@ -239,7 +232,14 @@ function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: stri
 
   return (
     <div ref={setNodeRef} style={style} role="listitem">
-      <JobCard job={job} isDraggable activatorRef={setActivatorNodeRef} dragListeners={listeners} />
+      <JobCard
+        job={job}
+        isDraggable
+        activatorRef={setActivatorNodeRef}
+        dragListeners={listeners}
+        onDelete={onDelete}
+        onRetry={onRetry}
+      />
     </div>
   )
 }
@@ -276,12 +276,16 @@ function SwimLane({
   jobs,
   sortableIds,
   isDropTarget,
+  onDelete,
+  onRetry,
 }: {
   title: string
   status: string
   jobs: ScrapeJob[]
   sortableIds?: string[]
   isDropTarget?: boolean
+  onDelete?: (id: string) => void
+  onRetry?: (id: string) => void
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -358,13 +362,17 @@ function SwimLane({
                     key={visibleSortableIds![i]}
                     job={job}
                     sortableId={visibleSortableIds![i]}
+                    onDelete={onDelete}
+                    onRetry={onRetry}
                   />
                 ))}
               </div>
             </SortableContext>
           </DroppableLane>
         ) : (
-          visibleJobs.map(job => <JobCard key={job.id} job={job} />)
+          visibleJobs.map(job => (
+            <JobCard key={job.id} job={job} onDelete={onDelete} onRetry={onRetry} />
+          ))
         )}
         {hasMore && <div ref={sentinelRef} className="h-1" />}
         {jobs.length === 0 && !isSortable && (
@@ -404,12 +412,50 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const { data: healthData } = useGetQueueHealthQuery(undefined, { pollingInterval: 10000 })
   const [pauseQueue, { isLoading: isPausing }] = usePauseQueueMutation()
   const [resumeQueue, { isLoading: isResuming }] = useResumeQueueMutation()
-  const [retryJob] = useRetryScrapeJobMutation()
+  const [retryJobMutation] = useRetryScrapeJobMutation()
+  const [cancelJobMutation] = useCancelScrapeJobMutation()
 
   const queue = scraperType ? healthData?.queues.find(q => q.name === scraperType) : undefined
   const isPaused = queue?.isPaused ?? false
 
-  const allJobs = data?.jobs ?? []
+  // Track locally hidden jobs (deleted or retried) so they don't flicker
+  // back when polling returns stale data before the server processes the mutation
+  const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set())
+
+  const hideJob = useCallback((id: string) => {
+    setHiddenJobIds(prev => new Set(prev).add(id))
+  }, [])
+
+  // Clear hidden IDs when poll data no longer contains them (server caught up)
+  useEffect(() => {
+    if (!data?.jobs || hiddenJobIds.size === 0) return
+    const serverIds = new Set(data.jobs.map(j => j.id))
+    setHiddenJobIds(prev => {
+      const next = new Set<string>()
+      for (const id of prev) {
+        if (serverIds.has(id)) next.add(id) // still in server response, keep hiding
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [data?.jobs, hiddenJobIds.size])
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      hideJob(id)
+      cancelJobMutation(id)
+    },
+    [hideJob, cancelJobMutation],
+  )
+
+  const handleRetry = useCallback(
+    (id: string) => {
+      hideJob(id)
+      retryJobMutation(id)
+    },
+    [hideJob, retryJobMutation],
+  )
+
+  const allJobs = (data?.jobs ?? []).filter(j => !hiddenJobIds.has(j.id))
 
   // Group by status
   const [waitingOrder, setWaitingOrder] = useState<string[]>([])
@@ -504,10 +550,27 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
     const to = findContainer(overId, waitingSortableIds, failedSortableIds)
 
-    // Cross-lane: failed → waiting = retry
+    // Cross-lane: failed → waiting = retry at drop position
     if (from === 'failed' && to === 'waiting') {
       const job = sortableIdToJob.get(activeId)
-      if (job) retryJob(job.id)
+      if (!job) return
+
+      const newKey = jobKey(job)
+      handleRetry(job.id)
+
+      // Determine insertion index based on where the card was dropped
+      const currentIds = [...waitingSortableIds]
+      const overIndex = currentIds.indexOf(overId)
+
+      if (overIndex >= 0) {
+        // Dropped over a specific waiting card — insert at that position
+        currentIds.splice(overIndex, 0, newKey)
+      } else {
+        // Dropped on the lane itself (empty lane or bottom) — append
+        currentIds.push(newKey)
+      }
+
+      setWaitingOrder(currentIds)
       return
     }
 
@@ -576,10 +639,18 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             jobs={waiting}
             sortableIds={waitingSortableIds}
             isDropTarget={overContainer === 'waiting'}
+            onDelete={handleDelete}
           />
-          <SwimLane title="Active" status="active" jobs={active} />
-          <SwimLane title="Failed" status="failed" jobs={failed} sortableIds={failedSortableIds} />
-          <SwimLane title="Completed" status="completed" jobs={completed} />
+          <SwimLane title="Active" status="active" jobs={active} onDelete={handleDelete} />
+          <SwimLane
+            title="Failed"
+            status="failed"
+            jobs={failed}
+            sortableIds={failedSortableIds}
+            onDelete={handleDelete}
+            onRetry={handleRetry}
+          />
+          <SwimLane title="Completed" status="completed" jobs={completed} onDelete={handleDelete} />
         </div>
         <DragOverlay>
           {activeJob ? (
