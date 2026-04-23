@@ -61,121 +61,48 @@ const legoBrickVariants = {
   },
 }
 
-/**
- * Inner layout component that renders the actual layout content.
- * Separated from RootLayout so AuthProvider can wrap it while being
- * inside the RouterProvider context.
- */
-function RootLayoutContent({ children }: { children?: React.ReactNode }) {
-  const dispatch = useDispatch()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const auth = useSelector(selectAuth)
-  const [isPageTransitioning, setIsPageTransitioning] = useState(false)
+// ─────────────────────────────────────────────────────────────────────────
+// Unauthenticated Layout — no header, no footer, no navigation
+// ─────────────────────────────────────────────────────────────────────────
 
-  // Determine which tab should be active based on current route
-  const getTabFromPath = (path: string) => {
-    if (path === '/' || path === '/dashboard' || path.startsWith('/dashboard/')) {
-      return '/dashboard'
-    }
-    for (const item of mainNavItems) {
-      if (path === item.href || path.startsWith(item.href + '/')) {
-        return item.href
-      }
-    }
-    // Return empty string for non-nav routes (settings, profile, help, etc.)
-    return ''
-  }
+function UnauthenticatedLayout({
+  children,
+  isPageTransitioning,
+  currentPath,
+}: {
+  children: React.ReactNode
+  isPageTransitioning: boolean
+  currentPath: string
+}) {
+  return (
+    <div className="min-h-screen bg-background">
+      <MainArea isPageTransitioning={isPageTransitioning} currentPath={currentPath}>
+        {children}
+      </MainArea>
+    </div>
+  )
+}
 
-  // Track active tab in local state so Radix updates immediately on click,
-  // avoiding the flash where the route hasn't updated yet but Radix re-reads
-  // the controlled value from the stale location.
-  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname))
+// ─────────────────────────────────────────────────────────────────────────
+// Authenticated Layout — header, tabs, sidebar, footer
+// ─────────────────────────────────────────────────────────────────────────
 
-  // Sync tab state when route changes (back/forward, programmatic navigation)
-  useEffect(() => {
-    setActiveTab(getTabFromPath(location.pathname))
-  }, [location.pathname])
-
-  const handleTabChange = (value: string) => {
-    if (value) {
-      setActiveTab(value)
-      navigate(value)
-    }
-  }
-
-  // Sync router navigation state with Redux (Story 1.31)
-  // Must be inside RouterProvider context
-  useNavigationSync()
-
-  // Automatically refresh tokens before they expire (Story 1.28)
-  // Must be inside AuthProvider context
-  useTokenRefresh()
-
-  // Update active route when location changes with smooth transitions
-  useEffect(() => {
-    setIsPageTransitioning(true)
-    dispatch(setActiveRoute(location.pathname))
-
-    // Reset transition state after animation
-    const timer = setTimeout(() => setIsPageTransitioning(false), 300)
-    return () => clearTimeout(timer)
-  }, [location.pathname, dispatch])
-
-  // LEGO brick building loading animation
-  if (auth.isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-teal-50 dark:from-sky-950 dark:to-teal-950">
-        <div className="text-center space-y-6">
-          {/* LEGO brick building animation */}
-          <div className="flex justify-center gap-2">
-            {[...Array(4)].map((_, i) => (
-              <motion.div
-                key={i}
-                className={cn(
-                  'h-8 w-8 rounded-lg shadow-lg flex items-center justify-center',
-                  i === 0 && 'bg-red-500',
-                  i === 1 && 'bg-blue-500',
-                  i === 2 && 'bg-yellow-500',
-                  i === 3 && 'bg-green-500',
-                )}
-                variants={legoBrickVariants}
-                initial="initial"
-                animate="animate"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                <div className="h-3 w-3 rounded-full bg-white/80 shadow-inner"></div>
-              </motion.div>
-            ))}
-          </div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-            <LoadingSpinner size="lg" className="text-sky-500" />
-            <p className="text-muted-foreground mt-4 font-medium">
-              Building your LEGO MOC experience...
-            </p>
-          </motion.div>
-        </div>
-      </div>
-    )
-  }
-
-  // Unauthenticated users get minimal layout (no header, sidebar, or footer)
-  // This applies to both auth pages and any other pages they might access
-  if (!auth.isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>
-          {children}
-        </MainArea>
-      </div>
-    )
-  }
-
-  // Authenticated layout with full navigation and LEGO-inspired design
+function AuthenticatedLayout({
+  children,
+  activeTab,
+  onTabChange,
+  isPageTransitioning,
+  currentPath,
+}: {
+  children: React.ReactNode
+  activeTab: string
+  onTabChange: (value: string) => void
+  isPageTransitioning: boolean
+  currentPath: string
+}) {
   return (
     <NavigationProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
-        {/* Page transition spinner - shows during route navigation */}
         <PageTransitionSpinner />
 
         {/* Header */}
@@ -188,13 +115,13 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
           <Header />
         </motion.div>
 
-        {/* Mobile sidebar drawer - uses globalUISlice */}
+        {/* Mobile sidebar drawer */}
         <MobileSidebar />
 
-        {/* Navigation tabs - hidden on mobile, shown on md+ */}
+        {/* Navigation tabs — hidden on mobile, shown on md+ */}
         <div className="hidden md:block border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <AppTabs value={activeTab} onValueChange={handleTabChange}>
+            <AppTabs value={activeTab} onValueChange={onTabChange}>
               <AppTabsList variant="underline" className="h-11 w-full justify-start">
                 {mainNavItems.map(item => {
                   const Icon = item.icon
@@ -216,11 +143,11 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
         </div>
 
         {/* Main content area */}
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={currentPath}>
           {children}
         </MainArea>
 
-        {/* Footer with slide-up animation */}
+        {/* Footer */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -233,10 +160,125 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Loading Layout — shown while auth state is resolving
+// ─────────────────────────────────────────────────────────────────────────
+
+function LoadingLayout() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-teal-50 dark:from-sky-950 dark:to-teal-950">
+      <div className="text-center space-y-6">
+        <div className="flex justify-center gap-2">
+          {[...Array(4)].map((_, i) => (
+            <motion.div
+              key={i}
+              className={cn(
+                'h-8 w-8 rounded-lg shadow-lg flex items-center justify-center',
+                i === 0 && 'bg-red-500',
+                i === 1 && 'bg-blue-500',
+                i === 2 && 'bg-yellow-500',
+                i === 3 && 'bg-green-500',
+              )}
+              variants={legoBrickVariants}
+              initial="initial"
+              animate="animate"
+              style={{ animationDelay: `${i * 0.1}s` }}
+            >
+              <div className="h-3 w-3 rounded-full bg-white/80 shadow-inner"></div>
+            </motion.div>
+          ))}
+        </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+          <LoadingSpinner size="lg" className="text-sky-500" />
+          <p className="text-muted-foreground mt-4 font-medium">
+            Building your LEGO MOC experience...
+          </p>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Root Layout Content — switches between layouts based on auth state
+// ─────────────────────────────────────────────────────────────────────────
+
+function RootLayoutContent({ children }: { children?: React.ReactNode }) {
+  const dispatch = useDispatch()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const auth = useSelector(selectAuth)
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false)
+
+  const getTabFromPath = (path: string) => {
+    if (path === '/' || path === '/dashboard' || path.startsWith('/dashboard/')) {
+      return '/dashboard'
+    }
+    for (const item of mainNavItems) {
+      if (path === item.href || path.startsWith(item.href + '/')) {
+        return item.href
+      }
+    }
+    return ''
+  }
+
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname))
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname))
+  }, [location.pathname])
+
+  const handleTabChange = (value: string) => {
+    if (value) {
+      setActiveTab(value)
+      navigate(value)
+    }
+  }
+
+  useNavigationSync()
+  useTokenRefresh()
+
+  useEffect(() => {
+    setIsPageTransitioning(true)
+    dispatch(setActiveRoute(location.pathname))
+    const timer = setTimeout(() => setIsPageTransitioning(false), 300)
+    return () => clearTimeout(timer)
+  }, [location.pathname, dispatch])
+
+  if (auth.isLoading) {
+    return <LoadingLayout />
+  }
+
+  if (!auth.isAuthenticated) {
+    return (
+      <UnauthenticatedLayout
+        isPageTransitioning={isPageTransitioning}
+        currentPath={location.pathname}
+      >
+        {children}
+      </UnauthenticatedLayout>
+    )
+  }
+
+  return (
+    <AuthenticatedLayout
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      isPageTransitioning={isPageTransitioning}
+      currentPath={location.pathname}
+    >
+      {children}
+    </AuthenticatedLayout>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Exported Layouts
+// ─────────────────────────────────────────────────────────────────────────
+
 /**
- * Root layout component that wraps content with AuthProvider.
- * AuthProvider is placed here (inside RouterProvider) so it has
- * access to TanStack Router's navigation context.
+ * Root layout — wraps content with AuthProvider, switches between
+ * AuthenticatedLayout and UnauthenticatedLayout based on auth state.
  */
 export function RootLayout({ children }: { children?: React.ReactNode }) {
   const AuthProviderComponent =
@@ -250,12 +292,12 @@ export function RootLayout({ children }: { children?: React.ReactNode }) {
 }
 
 /**
- * Layout for authentication pages
+ * Layout for authentication pages (login, register, forgot password).
+ * Centered card with gradient background blobs.
  */
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 min-h-screen bg-gradient-to-br from-background via-background to-muted overflow-hidden">
-      {/* Background gradient blobs reused from HomePage for consistent auth styling */}
       <div className="absolute inset-0 pointer-events-none opacity-60">
         <div className="absolute right-[-10%] top-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-cyan-400/50 via-blue-500/40 to-transparent blur-3xl animate-float" />
         <div className="absolute left-[-15%] bottom-[-15%] w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-teal-400/50 via-emerald-500/40 to-transparent blur-3xl animate-float-delayed" />
@@ -269,14 +311,11 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         <div className="absolute left-[55%] top-[60%] w-[180px] h-[180px] rounded-full bg-gradient-to-tr from-blue-400/30 via-cyan-500/20 to-transparent blur-xl animate-float-delayed" />
       </div>
 
-      {/* Centered auth content with liquid glass aesthetic */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="relative backdrop-blur-2xl bg-gray-500/5 dark:bg-gray-400/5 border border-white/10 dark:border-white/5 rounded-3xl p-8 md:p-10 shadow-2xl">
-            {/* Glass overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-gray-400/10 dark:from-gray-300/5 dark:via-transparent dark:to-gray-500/5 rounded-3xl pointer-events-none" />
             <div className="absolute inset-0 rounded-3xl shadow-inner pointer-events-none" />
-
             <div className="relative z-10">{children}</div>
           </div>
         </div>
@@ -286,7 +325,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Layout for error pages
+ * Layout for error pages (404, 500, etc.)
  */
 export function ErrorLayout({ children }: { children: React.ReactNode }) {
   return (
