@@ -238,7 +238,7 @@ function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: stri
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} role="listitem">
       <JobCard job={job} isDraggable activatorRef={setActivatorNodeRef} dragListeners={listeners} />
     </div>
   )
