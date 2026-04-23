@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 import { auth } from '../../middleware/auth.js'
-import { db, schema } from '../../composition/index.js'
+import { db, schema, setMinifigs } from '../../composition/index.js'
 import { createSetsService } from './application/index.js'
 import {
   createSetRepository,
@@ -64,6 +65,56 @@ sets.use('*', auth)
 sets.get('/stores', async c => {
   const stores = await setsService.listStores()
   return c.json(stores)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Set Minifigs Routes (catalog join data)
+// ─────────────────────────────────────────────────────────────────────────
+
+const SetMinifigInputSchema = z.object({
+  setNumber: z.string().min(1),
+  minifigNumber: z.string().min(1),
+  quantity: z.number().int().positive().default(1),
+})
+
+/**
+ * POST /minifigs - Upsert a set_minifigs join row (used by scrapers)
+ */
+sets.post('/minifigs', async c => {
+  const body = await c.req.json()
+  const input = SetMinifigInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const { setNumber, minifigNumber, quantity } = input.data
+
+  const [row] = await db
+    .insert(setMinifigs)
+    .values({ setNumber, minifigNumber, quantity })
+    .onConflictDoUpdate({
+      target: [setMinifigs.setNumber, setMinifigs.minifigNumber],
+      set: { quantity, updatedAt: new Date() },
+    })
+    .returning()
+
+  return c.json(row, 201)
+})
+
+/**
+ * GET /minifigs?setNumber=75192-1 - List minifigs for a set
+ */
+sets.get('/minifigs', async c => {
+  const setNumber = c.req.query('setNumber')
+
+  if (!setNumber) {
+    return c.json({ error: 'setNumber query param required' }, 400)
+  }
+
+  const rows = await db.select().from(setMinifigs).where(eq(setMinifigs.setNumber, setNumber))
+
+  return c.json({ items: rows })
 })
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -558,6 +558,57 @@ scraper.post('/queues/:name/resume', async c => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────
+// POST /scraper/backfill/bricklink-sets — Enqueue BrickLink scrapes for all un-scraped sets
+// ─────────────────────────────────────────────────────────────────────────
+
+scraper.post('/backfill/bricklink-sets', async c => {
+  const { db, schema } = await import('../../composition/index.js')
+  const { sql } = await import('drizzle-orm')
+
+  // Find all sets that haven't been scraped from BrickLink
+  const unscrapedSets = await db
+    .select({
+      id: schema.sets.id,
+      setNumber: schema.sets.setNumber,
+    })
+    .from(schema.sets)
+    .where(
+      sql`(${schema.sets.scrapedSources} IS NULL OR NOT ('bricklink' = ANY(${schema.sets.scrapedSources})))`,
+    )
+
+  // Filter out sets without a set number
+  const setsToScrape = unscrapedSets.filter(s => s.setNumber)
+
+  if (setsToScrape.length === 0) {
+    return c.json({
+      success: true,
+      message: 'All sets already scraped from BrickLink',
+      enqueued: 0,
+    })
+  }
+
+  const queue = getQueue(QUEUE_NAMES['bricklink-minifig'])
+
+  let enqueued = 0
+  for (const set of setsToScrape) {
+    await queue.add(
+      'scrape',
+      {
+        itemNumber: set.setNumber!,
+        itemType: 'S',
+        wishlist: false,
+        setId: set.id,
+      },
+      { jobId: `backfill-bl-${set.setNumber}` },
+    )
+    enqueued++
+  }
+
+  logger.info(`Backfill: enqueued ${enqueued} BrickLink set scrapes`)
+  return c.json({ success: true, enqueued, total: setsToScrape.length })
+})
+
+// ─────────────────────────────────────────────────────────────────────────
 // Legacy endpoints (preserved for backward compatibility)
 // ─────────────────────────────────────────────────────────────────────────
 

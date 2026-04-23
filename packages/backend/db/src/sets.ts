@@ -188,6 +188,27 @@ export const sets = pgTable(
     lastScrapedAt: timestamp('last_scraped_at'),
     lastScrapedSource: text('last_scraped_source'),
 
+    // BrickLink enrichment
+    priceGuide: jsonb('price_guide').$type<{
+      newSales?: {
+        timesSold: number
+        totalQty: number
+        minPrice: number
+        avgPrice: number
+        qtyAvgPrice: number
+        maxPrice: number
+      }
+      usedSales?: {
+        timesSold: number
+        totalQty: number
+        minPrice: number
+        avgPrice: number
+        qtyAvgPrice: number
+        maxPrice: number
+      }
+    }>(),
+    scrapedSources: text('scraped_sources').array().default([]),
+
     // Legacy image fields (kept for backward compat during migration)
     imageUrl: text('image_url'),
     imageVariants: jsonb('image_variants'), // WISH-2016 optimized variants
@@ -282,5 +303,30 @@ export const setImages = pgTable(
   },
   table => ({
     setIdIdx: index('set_images_set_id_idx').on(table.setId),
+  }),
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Set Minifigs — many-to-many join linking sets to minifigs they contain
+// Uses text keys (not FKs) following the moc_source_sets pattern.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const setMinifigs = pgTable(
+  'set_minifigs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    setNumber: text('set_number').notNull(),
+    minifigNumber: text('minifig_number').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  table => ({
+    setNumberIdx: index('set_minifigs_set_number_idx').on(table.setNumber),
+    minifigNumberIdx: index('set_minifigs_minifig_number_idx').on(table.minifigNumber),
+    uniqueSetMinifig: uniqueIndex('set_minifigs_set_number_minifig_number_key').on(
+      table.setNumber,
+      table.minifigNumber,
+    ),
   }),
 )

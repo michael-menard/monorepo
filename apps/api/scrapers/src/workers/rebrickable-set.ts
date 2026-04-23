@@ -28,6 +28,7 @@ export interface RebrickableSetResult {
   resetHint?: string
   error?: string
   setId?: string
+  setNumber?: string
   url: string
 }
 
@@ -147,7 +148,7 @@ export async function processRebrickableSet(job: RebrickableSetJob): Promise<Reb
     const saved = await res.json()
     logger.info(`[rebrickable-set] Saved ${scraped.name} as ${saved.id}`)
 
-    return { success: true, setId: saved.id, url }
+    return { success: true, setId: saved.id, setNumber: scraped.setNumber, url }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     logger.error('[rebrickable-set] Failed', { error: msg, url })

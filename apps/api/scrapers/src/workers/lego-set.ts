@@ -45,6 +45,7 @@ export interface LegoSetResult {
   rateLimited?: boolean
   error?: string
   setId?: string
+  setNumber?: string
   url: string
 }
 
@@ -163,7 +164,7 @@ export async function processLegoSet(job: LegoSetJob): Promise<LegoSetResult> {
     const saved = await res.json()
     logger.info(`[lego-set] Saved ${product.name} as ${saved.id}`)
 
-    return { success: true, setId: saved.id, url }
+    return { success: true, setId: saved.id, setNumber: product.productId, url }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     logger.error('[lego-set] Failed', { error: msg, url })

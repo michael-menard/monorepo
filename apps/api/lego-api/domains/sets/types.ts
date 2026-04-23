@@ -228,6 +228,34 @@ export const UpdateSetInputSchema = z.object({
   quantityWanted: z.number().int().min(0).optional(),
   lastScrapedAt: z.coerce.date().nullable().optional(),
   lastScrapedSource: z.string().max(200).nullable().optional(),
+
+  // BrickLink enrichment
+  priceGuide: z
+    .object({
+      newSales: z
+        .object({
+          timesSold: z.number(),
+          totalQty: z.number(),
+          minPrice: z.number(),
+          avgPrice: z.number(),
+          qtyAvgPrice: z.number(),
+          maxPrice: z.number(),
+        })
+        .optional(),
+      usedSales: z
+        .object({
+          timesSold: z.number(),
+          totalQty: z.number(),
+          minPrice: z.number(),
+          avgPrice: z.number(),
+          qtyAvgPrice: z.number(),
+          maxPrice: z.number(),
+        })
+        .optional(),
+    })
+    .nullable()
+    .optional(),
+  scrapedSources: z.array(z.string()).optional(),
 })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetInputSchema>

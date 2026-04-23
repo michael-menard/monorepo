@@ -17,6 +17,7 @@ import {
   waitForAgeGate,
   checkRateLimited,
 } from './shared-browser.js'
+import { processBricklinkSet } from './bricklink-set.js'
 
 const API_BASE = process.env.LEGO_API_URL || 'http://localhost:9100'
 const S3_BUCKET = process.env.S3_BUCKET || 'lego-moc-files'
@@ -30,6 +31,9 @@ export interface ScrapeResult {
   variantId?: string
   instanceId?: string
   itemNumber: string
+  // Set-specific fields (when itemType='S')
+  setId?: string
+  minifigs?: Array<{ minifigNumber: string; quantity: number }>
 }
 
 export { shutdownBrowser }
@@ -45,6 +49,20 @@ function randomDelay(): number {
  * Does NOT scrape price guides (separate queue).
  */
 export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise<ScrapeResult> {
+  // Delegate set scraping to dedicated handler
+  if (job.itemType === 'S') {
+    const setResult = await processBricklinkSet(job)
+    return {
+      success: setResult.success,
+      rateLimited: setResult.rateLimited,
+      resetHint: setResult.resetHint,
+      error: setResult.error,
+      itemNumber: setResult.itemNumber,
+      setId: setResult.setId,
+      minifigs: setResult.minifigs,
+    }
+  }
+
   const { itemNumber, itemType, wishlist } = job
   const page = await getSharedPage()
 
@@ -128,20 +146,12 @@ export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise
       }
     }
 
-    // 3. Extract CMF series if applicable
-    let cmfSeries: string | undefined
-    if (itemType === 'S' && basicInfo.category) {
-      const seriesMatch = basicInfo.category.match(/Series\s+\d+/i)
-      cmfSeries = seriesMatch ? seriesMatch[0] : undefined
-    }
-
-    // 4. Save variant via API
+    // 3. Save variant via API
     const variantPayload = {
       legoNumber: itemNumber,
       name: basicInfo.description || basicInfo.name,
       theme: basicInfo.category || undefined,
       year: basicInfo.yearReleased ? parseInt(basicInfo.yearReleased, 10) : undefined,
-      cmfSeries,
       imageUrl: primaryImageUrl,
       bricklinkUrl: `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}`,
     }
@@ -180,7 +190,7 @@ export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise
         displayName: basicInfo.description || basicInfo.name,
         variantId: variant.id,
         status: wishlist ? 'wanted' : 'none',
-        sourceType: itemType === 'S' ? 'cmf_pack' : 'bricklink',
+        sourceType: 'bricklink',
         imageUrl: primaryImageUrl,
       }
 

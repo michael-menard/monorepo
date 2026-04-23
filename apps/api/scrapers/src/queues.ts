@@ -18,6 +18,7 @@ export const BricklinkMinifigJobSchema = z.object({
   itemType: z.enum(['M', 'S']).default('M'),
   wishlist: z.boolean().default(false),
   parentJobId: z.string().optional(),
+  setId: z.string().uuid().optional(), // For itemType='S': existing set UUID to enrich
 })
 
 export const BricklinkCatalogJobSchema = z.object({

@@ -37,4 +37,5 @@ export const {
   buildProjects,
   buildProjectParts,
   mocSourceSets,
+  setMinifigs,
 } = schema

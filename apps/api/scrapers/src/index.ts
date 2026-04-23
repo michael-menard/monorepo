@@ -111,13 +111,45 @@ function createWorkers() {
   const bricklinkMinifigWorker = new Worker(
     QUEUE_NAMES.BRICKLINK_MINIFIG,
     async job => {
-      logger.info(`[worker:minifig] Processing ${job.data.itemNumber}`, { jobId: job.id })
+      logger.info(`[worker:minifig] Processing ${job.data.itemNumber} (${job.data.itemType})`, {
+        jobId: job.id,
+      })
       const result = await processBricklinkMinifig(job.data)
       await handleRateLimit(queues.bricklinkMinifig, result, result.itemNumber)
       if (!result.success) throw new Error(result.error || 'Scrape failed')
 
-      // Auto-enqueue price job if we got a variantId
-      if (result.variantId) {
+      if (job.data.itemType === 'S' && result.minifigs?.length) {
+        // Set scrape completed — enqueue minifig jobs for each discovered minifig
+        let enqueued = 0
+        for (const mf of result.minifigs) {
+          await queues.bricklinkMinifig.add(
+            'scrape',
+            {
+              itemNumber: mf.minifigNumber,
+              itemType: 'M' as const,
+              wishlist: false,
+              parentJobId: job.id,
+            },
+            { jobId: `${job.id}-${mf.minifigNumber}` },
+          )
+          enqueued++
+        }
+        logger.info(
+          `[worker:minifig] Set ${job.data.itemNumber}: enqueued ${enqueued} minifig jobs`,
+        )
+
+        // Cross-enqueue rebrickable set scrape if not already scraped
+        try {
+          const setNumber = job.data.itemNumber
+          const rbSetNumber = /-\d+$/.test(setNumber) ? setNumber : `${setNumber}-1`
+          const rbUrl = `https://rebrickable.com/sets/${rbSetNumber}/`
+          await queues.rebrickableSet.add('scrape', { url: rbUrl, wishlist: false })
+          logger.info(`[worker:minifig] Cross-enqueued Rebrickable scrape for ${rbSetNumber}`)
+        } catch (e) {
+          logger.warn(`[worker:minifig] Failed to cross-enqueue Rebrickable scrape`, { error: e })
+        }
+      } else if (result.variantId) {
+        // Minifig scrape completed — auto-enqueue price job
         await queues.bricklinkPrices.add('price', {
           itemNumber: job.data.itemNumber,
           itemType: job.data.itemType,
@@ -188,6 +220,34 @@ function createWorkers() {
         await handleRateLimit(queues.legoSet, result, job.data.url)
       }
       if (!result.success) throw new Error(result.error || 'Scrape failed')
+
+      // Cross-enqueue BrickLink + Rebrickable set scrapes
+      if (result.setNumber) {
+        const blSetNumber = /-\d+$/.test(result.setNumber)
+          ? result.setNumber
+          : `${result.setNumber}-1`
+        try {
+          await queues.bricklinkMinifig.add('scrape', {
+            itemNumber: result.setNumber,
+            itemType: 'S' as const,
+            wishlist: false,
+            setId: result.setId,
+          })
+          logger.info(`[worker:lego-set] Cross-enqueued BrickLink scrape for ${result.setNumber}`)
+        } catch (e) {
+          logger.warn(`[worker:lego-set] Failed to cross-enqueue BrickLink`, { error: e })
+        }
+        try {
+          await queues.rebrickableSet.add('scrape', {
+            url: `https://rebrickable.com/sets/${blSetNumber}/`,
+            wishlist: false,
+          })
+          logger.info(`[worker:lego-set] Cross-enqueued Rebrickable scrape for ${blSetNumber}`)
+        } catch (e) {
+          logger.warn(`[worker:lego-set] Failed to cross-enqueue Rebrickable`, { error: e })
+        }
+      }
+
       return result
     },
     { connection: redisConnection, concurrency: 1 },
@@ -203,6 +263,24 @@ function createWorkers() {
       const result = await processRebrickableSet(job.data)
       await handleRateLimit(queues.rebrickableSet, result, job.data.url)
       if (!result.success) throw new Error(result.error || 'Scrape failed')
+
+      // Cross-enqueue BrickLink set scrape
+      if (result.setNumber) {
+        try {
+          await queues.bricklinkMinifig.add('scrape', {
+            itemNumber: result.setNumber,
+            itemType: 'S' as const,
+            wishlist: false,
+            setId: result.setId,
+          })
+          logger.info(
+            `[worker:rebrickable-set] Cross-enqueued BrickLink scrape for ${result.setNumber}`,
+          )
+        } catch (e) {
+          logger.warn(`[worker:rebrickable-set] Failed to cross-enqueue BrickLink`, { error: e })
+        }
+      }
+
       return result
     },
     {
