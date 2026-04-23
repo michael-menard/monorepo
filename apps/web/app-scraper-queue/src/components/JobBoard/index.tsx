@@ -135,7 +135,15 @@ function ActiveCardWrapper({ children }: { children: React.ReactNode }) {
   )
 }
 
-function JobCard({ job, isDraggable }: { job: ScrapeJob; isDraggable?: boolean }) {
+function JobCard({
+  job,
+  isDraggable,
+  dragListeners,
+}: {
+  job: ScrapeJob
+  isDraggable?: boolean
+  dragListeners?: Record<string, unknown>
+}) {
   const [cancelJob, { isLoading: isCancelling }] = useCancelScrapeJobMutation()
   const [retryJob, { isLoading: isRetrying }] = useRetryScrapeJobMutation()
   const isActive = job.status === 'active'
@@ -151,7 +159,10 @@ function JobCard({ job, isDraggable }: { job: ScrapeJob; isDraggable?: boolean }
     >
       <div className="flex items-center gap-1.5">
         {isDraggable && (
-          <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab shrink-0" />
+          <GripVertical
+            className="h-3 w-3 text-muted-foreground cursor-grab shrink-0"
+            {...dragListeners}
+          />
         )}
         {isActive && <Loader2 className="h-3 w-3 text-blue-500 animate-spin shrink-0" />}
         <span className="font-medium truncate flex-1">{getJobLabel(job)}</span>
@@ -217,8 +228,8 @@ function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: stri
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <JobCard job={job} isDraggable />
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <JobCard job={job} isDraggable dragListeners={listeners} />
     </div>
   )
 }
