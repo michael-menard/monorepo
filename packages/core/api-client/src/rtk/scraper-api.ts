@@ -101,8 +101,12 @@ export const scraperApi = createApi({
 
         try {
           await queryFulfilled
-        } catch {
-          patches.forEach(p => p?.undo())
+        } catch (err) {
+          // 404 means job is already gone — keep the optimistic removal
+          const is404 = (err as any)?.error?.status === 404
+          if (!is404) {
+            patches.forEach(p => p?.undo())
+          }
         }
       },
     }),
