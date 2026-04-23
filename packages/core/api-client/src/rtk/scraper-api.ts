@@ -84,28 +84,25 @@ export const scraperApi = createApi({
         url: `/scraper/jobs/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
-      async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
-        // Patch all cached getScrapeJobs queries to remove this job
-        const patches = scraperApi.util
-          .selectInvalidatedBy(getState(), ['ScraperJobs'])
-          .map(({ endpointName, originalArgs }) => {
-            if (endpointName !== 'getScrapeJobs') return null
-            return dispatch(
-              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
-                draft.jobs = draft.jobs.filter(j => j.id !== id)
-              }),
-            )
-          })
-          .filter(Boolean)
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        // Optimistic: remove job from the unfiltered query cache
+        const patch = dispatch(
+          scraperApi.util.updateQueryData('getScrapeJobs', undefined, draft => {
+            draft.jobs = draft.jobs.filter(j => j.id !== id)
+          }),
+        )
 
         try {
           await queryFulfilled
+          // Server confirmed deletion — invalidate to sync counts
+          dispatch(scraperApi.util.invalidateTags(['ScraperJobs', 'ScraperQueues']))
         } catch (err) {
           // 404 means job is already gone — keep the optimistic removal
           const is404 = (err as any)?.error?.status === 404
-          if (!is404) {
-            patches.forEach(p => p?.undo())
+          if (is404) {
+            dispatch(scraperApi.util.invalidateTags(['ScraperJobs', 'ScraperQueues']))
+          } else {
+            patch.undo()
           }
         }
       },
@@ -120,24 +117,18 @@ export const scraperApi = createApi({
         url: `/scraper/jobs?status=${status}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
-      async onQueryStarted(status, { dispatch, queryFulfilled, getState }) {
-        const patches = scraperApi.util
-          .selectInvalidatedBy(getState(), ['ScraperJobs'])
-          .map(({ endpointName, originalArgs }) => {
-            if (endpointName !== 'getScrapeJobs') return null
-            return dispatch(
-              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
-                draft.jobs = draft.jobs.filter(j => j.status !== status)
-              }),
-            )
-          })
-          .filter(Boolean)
+      async onQueryStarted(status, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          scraperApi.util.updateQueryData('getScrapeJobs', undefined, draft => {
+            draft.jobs = draft.jobs.filter(j => j.status !== status)
+          }),
+        )
 
         try {
           await queryFulfilled
+          dispatch(scraperApi.util.invalidateTags(['ScraperJobs', 'ScraperQueues']))
         } catch {
-          patches.forEach(p => p?.undo())
+          patch.undo()
         }
       },
     }),
@@ -151,29 +142,23 @@ export const scraperApi = createApi({
         url: `/scraper/jobs/${id}/retry`,
         method: 'POST',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
-      async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
-        const patches = scraperApi.util
-          .selectInvalidatedBy(getState(), ['ScraperJobs'])
-          .map(({ endpointName, originalArgs }) => {
-            if (endpointName !== 'getScrapeJobs') return null
-            return dispatch(
-              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
-                const job = draft.jobs.find(j => j.id === id)
-                if (job) {
-                  job.status = 'waiting'
-                  job.failedReason = null
-                  job.attemptsMade = 0
-                }
-              }),
-            )
-          })
-          .filter(Boolean)
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          scraperApi.util.updateQueryData('getScrapeJobs', undefined, draft => {
+            const job = draft.jobs.find(j => j.id === id)
+            if (job) {
+              job.status = 'waiting'
+              job.failedReason = null
+              job.attemptsMade = 0
+            }
+          }),
+        )
 
         try {
           await queryFulfilled
+          dispatch(scraperApi.util.invalidateTags(['ScraperJobs', 'ScraperQueues']))
         } catch {
-          patches.forEach(p => p?.undo())
+          patch.undo()
         }
       },
     }),
