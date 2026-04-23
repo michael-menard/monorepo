@@ -181,6 +181,7 @@ function JobCard({
             variant="ghost"
             size="sm"
             className="h-6 px-1.5"
+            onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
             onClick={() => retryJob(job.id)}
             disabled={isRetrying}
           >
@@ -195,6 +196,7 @@ function JobCard({
           variant="ghost"
           size="sm"
           className="h-6 px-1.5"
+          onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
           onClick={() => cancelJob(job.id)}
           disabled={isCancelling}
         >
