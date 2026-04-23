@@ -268,6 +268,7 @@ function SwimLane({
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const visibleJobs = jobs.slice(0, visibleCount)
+  const visibleSortableIds = sortableIds?.slice(0, visibleCount)
   const hasMore = visibleCount < jobs.length
 
   useEffect(() => {
@@ -329,10 +330,14 @@ function SwimLane({
       <div ref={scrollRef} className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0">
         {isSortable ? (
           <DroppableLane id={`lane:${status}`}>
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <SortableContext items={visibleSortableIds!} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {visibleJobs.map((job, i) => (
-                  <SortableJobCard key={sortableIds[i]} job={job} sortableId={sortableIds[i]} />
+                  <SortableJobCard
+                    key={visibleSortableIds![i]}
+                    job={job}
+                    sortableId={visibleSortableIds![i]}
+                  />
                 ))}
               </div>
             </SortableContext>
@@ -388,11 +393,13 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   // Group by status
   const [waitingOrder, setWaitingOrder] = useState<string[]>([])
 
+  const jobKey = (j: ScrapeJob) => `${j.type}:${j.id}`
+
   const waiting = allJobs
     .filter(j => j.status === 'waiting' || j.status === 'delayed')
     .sort((a, b) => {
-      const ai = waitingOrder.indexOf(a.id)
-      const bi = waitingOrder.indexOf(b.id)
+      const ai = waitingOrder.indexOf(jobKey(a))
+      const bi = waitingOrder.indexOf(jobKey(b))
       if (ai >= 0 && bi >= 0) return ai - bi
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     })
@@ -401,16 +408,20 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const failed = allJobs.filter(j => j.status === 'failed')
   const completed = allJobs.filter(j => j.status === 'completed')
 
-  // Sortable IDs: waiting uses plain IDs, failed uses prefixed IDs
-  const waitingSortableIds = waiting.map(j => j.id)
-  const failedSortableIds = failed.map(j => `failed:${j.id}`)
+  // Unique sortable IDs: type:id to avoid collisions across queues
+  // Failed lane adds "failed:" prefix for container detection
+  const waitingSortableIds = waiting.map(jobKey)
+  const failedSortableIds = failed.map(j => `failed:${jobKey(j)}`)
+
+  // Reverse lookup: sortable ID → job
+  const sortableIdToJob = new Map<string, ScrapeJob>()
+  for (const j of waiting) sortableIdToJob.set(jobKey(j), j)
+  for (const j of failed) sortableIdToJob.set(`failed:${jobKey(j)}`, j)
 
   // Drag state
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [overContainer, setOverContainer] = useState<string | null>(null)
-  const activeJob = activeJobId
-    ? allJobs.find(j => j.id === activeJobId || `failed:${j.id}` === activeJobId)
-    : null
+  const activeJob = activeJobId ? (sortableIdToJob.get(activeJobId) ?? null) : null
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -474,8 +485,8 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
     // Cross-lane: failed → waiting = retry
     if (from === 'failed' && to === 'waiting') {
-      const jobId = activeId.replace('failed:', '')
-      retryJob(jobId)
+      const job = sortableIdToJob.get(activeId)
+      if (job) retryJob(job.id)
       return
     }
 
