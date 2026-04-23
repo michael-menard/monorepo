@@ -410,16 +410,16 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  // Custom collision: failed cards use pointerWithin (targets lane containers),
+  // Custom collision: failed cards use rectIntersection (targets lane containers),
   // waiting cards use closestCenter (targets sortable items within the lane)
   const collisionDetection: CollisionDetection = useCallback(args => {
     const dragId = String(args.active.id)
     if (dragId.startsWith('failed:')) {
-      // pointerWithin finds which droppable container the pointer is inside
-      const pointerCollisions = pointerWithin(args)
-      if (pointerCollisions.length > 0) return pointerCollisions
-      // Fallback to rect intersection for edge cases
-      return rectIntersection(args)
+      // For cross-lane drops, find droppable containers the dragged item overlaps
+      // Filter to only lane:* droppables to avoid matching sortable items
+      const collisions = rectIntersection(args)
+      const laneCollisions = collisions.filter(c => String(c.id).startsWith('lane:'))
+      return laneCollisions.length > 0 ? laneCollisions : collisions
     }
     return closestCenter(args)
   }, [])
@@ -441,9 +441,13 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     const overId = String(over.id)
 
     // Cross-lane: failed job dropped onto waiting lane → retry
-    if (dragId.startsWith('failed:') && overId === 'lane:waiting') {
-      const jobId = dragId.replace('failed:', '')
-      retryJob(jobId)
+    // Accept drop on the lane container OR any sortable item within it
+    if (dragId.startsWith('failed:')) {
+      const waitingIds = new Set(waiting.map(j => j.id))
+      if (overId === 'lane:waiting' || waitingIds.has(overId)) {
+        const jobId = dragId.replace('failed:', '')
+        retryJob(jobId)
+      }
       return
     }
 
