@@ -77,35 +77,101 @@ export const scraperApi = createApi({
 
     /**
      * DELETE /scraper/jobs/:id — Cancel/remove a job
+     * Optimistic update: removes the job from cache immediately.
      */
     cancelScrapeJob: builder.mutation<{ success: boolean }, string>({
       query: id => ({
         url: `/scraper/jobs/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
+      invalidatesTags: ['ScraperQueues'],
+      async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
+        // Patch all cached getScrapeJobs queries to remove this job
+        const patches = scraperApi.util
+          .selectInvalidatedBy(getState(), ['ScraperJobs'])
+          .map(({ endpointName, originalArgs }) => {
+            if (endpointName !== 'getScrapeJobs') return null
+            return dispatch(
+              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
+                draft.jobs = draft.jobs.filter(j => j.id !== id)
+              }),
+            )
+          })
+          .filter(Boolean)
+
+        try {
+          await queryFulfilled
+        } catch {
+          patches.forEach(p => p?.undo())
+        }
+      },
     }),
 
     /**
      * DELETE /scraper/jobs?status=... — Clear all jobs with a given status
+     * Optimistic update: removes matching jobs from cache immediately.
      */
     clearJobsByStatus: builder.mutation<{ success: boolean; removed: number }, string>({
       query: status => ({
         url: `/scraper/jobs?status=${status}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
+      invalidatesTags: ['ScraperQueues'],
+      async onQueryStarted(status, { dispatch, queryFulfilled, getState }) {
+        const patches = scraperApi.util
+          .selectInvalidatedBy(getState(), ['ScraperJobs'])
+          .map(({ endpointName, originalArgs }) => {
+            if (endpointName !== 'getScrapeJobs') return null
+            return dispatch(
+              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
+                draft.jobs = draft.jobs.filter(j => j.status !== status)
+              }),
+            )
+          })
+          .filter(Boolean)
+
+        try {
+          await queryFulfilled
+        } catch {
+          patches.forEach(p => p?.undo())
+        }
+      },
     }),
 
     /**
      * POST /scraper/jobs/:id/retry — Retry a failed job
+     * Optimistic update: moves job to waiting status immediately.
      */
     retryScrapeJob: builder.mutation<{ success: boolean; status: string }, string>({
       query: id => ({
         url: `/scraper/jobs/${id}/retry`,
         method: 'POST',
       }),
-      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
+      invalidatesTags: ['ScraperQueues'],
+      async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
+        const patches = scraperApi.util
+          .selectInvalidatedBy(getState(), ['ScraperJobs'])
+          .map(({ endpointName, originalArgs }) => {
+            if (endpointName !== 'getScrapeJobs') return null
+            return dispatch(
+              scraperApi.util.updateQueryData('getScrapeJobs', originalArgs, draft => {
+                const job = draft.jobs.find(j => j.id === id)
+                if (job) {
+                  job.status = 'waiting'
+                  job.failedReason = null
+                  job.attemptsMade = 0
+                }
+              }),
+            )
+          })
+          .filter(Boolean)
+
+        try {
+          await queryFulfilled
+        } catch {
+          patches.forEach(p => p?.undo())
+        }
+      },
     }),
 
     /**
