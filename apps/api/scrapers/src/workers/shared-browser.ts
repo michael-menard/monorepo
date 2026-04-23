@@ -11,7 +11,8 @@
 
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { unlinkSync } from 'fs'
+import { unlinkSync, readFileSync } from 'fs'
+import { execSync } from 'child_process'
 import { chromium, type BrowserContext, type Page } from 'playwright'
 import { logger } from '@repo/logger'
 
@@ -68,8 +69,25 @@ async function recordNavFailure(url: string, error: string): Promise<void> {
  */
 export async function getSharedPage(): Promise<Page> {
   if (!sharedContext) {
+    // Kill any orphaned Chrome process using this profile (e.g. after pkill of worker)
     try {
-      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
+      const lockPath = join(CHROME_PROFILE, 'SingletonLock')
+      const lockTarget = readFileSync(lockPath, 'utf8')
+      // SingletonLock contains hostname-pid, e.g. "Michaels-Mac-mini-5024"
+      const pidMatch = lockTarget.match(/-(\d+)$/)
+      if (pidMatch) {
+        const stalePid = pidMatch[1]
+        try {
+          execSync(`kill ${stalePid}`, { timeout: 5000 })
+          logger.warn(`[browser] Killed orphaned Chrome process (PID ${stalePid})`)
+          // Give it a moment to release the profile
+          await new Promise(r => setTimeout(r, 1000))
+        } catch {
+          // Process already gone — fine
+        }
+      }
+      unlinkSync(lockPath)
+      logger.info('[browser] Removed stale SingletonLock')
     } catch {
       // Lock doesn't exist — fine
     }
