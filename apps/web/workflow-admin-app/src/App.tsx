@@ -1,5 +1,11 @@
 import { lazy, Suspense } from 'react'
-import { ThemeProvider, Toaster, TooltipProvider } from '@repo/app-component-library'
+import {
+  ThemeProvider,
+  Toaster,
+  TooltipProvider,
+  AppShellHeader,
+  LiveIndicator,
+} from '@repo/app-component-library'
 import { Provider } from 'react-redux'
 import { BrowserRouter, Routes, Route, Outlet, Link, ScrollRestoration } from 'react-router-dom'
 import { Hexagon, GitBranch } from 'lucide-react'
@@ -28,50 +34,39 @@ function RoadmapModulePage() {
   )
 }
 
+function WorkflowBrand() {
+  return (
+    <Link to="/" className="flex items-center gap-2">
+      <div className="relative">
+        <Hexagon className="h-7 w-7 text-cyan-500" aria-hidden="true" />
+        <GitBranch
+          className="h-3.5 w-3.5 text-cyan-300 absolute inset-0 m-auto"
+          aria-hidden="true"
+        />
+      </div>
+      <span className="text-lg font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+        WORKFLOW ROADMAP
+      </span>
+    </Link>
+  )
+}
+
 function ShellLayout() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="workflow-admin-theme">
       <TooltipProvider>
         <ScrollRestoration />
         <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-950 text-slate-100">
-          <header className="border-b border-slate-700/50 bg-black/40 backdrop-blur-md sticky top-0 z-50">
-            <nav
-              aria-label="Shell navigation"
-              className="container mx-auto px-4 py-3 flex items-center gap-3"
-            >
-              <Link to="/" className="flex items-center gap-2">
-                <div className="relative">
-                  <Hexagon className="h-7 w-7 text-cyan-500" aria-hidden="true" />
-                  <GitBranch
-                    className="h-3.5 w-3.5 text-cyan-300 absolute inset-0 m-auto"
-                    aria-hidden="true"
-                  />
-                </div>
-                <span className="text-lg font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                  WORKFLOW ROADMAP
-                </span>
-              </Link>
-              <Link
-                to="/roadmap"
-                className="text-sm font-medium text-slate-400 hover:text-cyan-400 transition-colors [&.active]:text-cyan-400"
-              >
-                Roadmap
-              </Link>
-              <Link
-                to="/roadmap/dashboard"
-                className="text-sm font-medium text-slate-400 hover:text-cyan-400 transition-colors [&.active]:text-cyan-400"
-              >
-                Dashboard
-              </Link>
-              <div role="status" className="ml-auto flex items-center gap-2">
-                <div
-                  className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse"
-                  aria-hidden="true"
-                />
-                <span className="text-xs font-mono text-slate-400">LIVE</span>
-              </div>
-            </nav>
-          </header>
+          <AppShellHeader
+            variant="dark"
+            brand={<WorkflowBrand />}
+            navItems={[
+              { label: 'Roadmap', href: '/roadmap' },
+              { label: 'Dashboard', href: '/roadmap/dashboard' },
+            ]}
+            actions={<LiveIndicator />}
+            linkComponent={Link}
+          />
           <main>
             <Outlet />
           </main>

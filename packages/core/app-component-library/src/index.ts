@@ -8,6 +8,24 @@ export { cn } from './_lib/utils'
 // Providers (re-exported from internal)
 export { ThemeProvider, useTheme } from './_providers/ThemeProvider'
 
+// Layout
+export {
+  ModuleLayout,
+  PageContainer,
+  ContentArea,
+  ContentSection,
+  ContentHeader,
+  AppShellHeader,
+  LiveIndicator,
+} from './layout'
+export type {
+  ModuleLayoutProps,
+  PageContainerProps,
+  ContentAreaProps,
+  AppShellHeaderProps,
+  AppShellNavItem,
+} from './layout'
+
 // Inputs
 export { AppInput } from './inputs/AppInput'
 export type { AppInputProps } from './inputs/AppInput'
